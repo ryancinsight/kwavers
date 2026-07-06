@@ -5,7 +5,7 @@ use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,
     delta_bmode_db as core_delta_bmode_db, simulate_receive_rf as core_simulate_receive_rf,
 };
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -55,7 +55,7 @@ pub fn simulate_receive_rf<'py>(
         ));
     }
     let rf = core_simulate_receive_rf(sp, sa, ep, c, fs, f0, frac_bw, n_samples);
-    Ok(rf.into_pyarray(py).unbind())
+    Ok(rf.to_pyarray(py).unbind())
 }
 
 /// B-mode envelope detection: the analytic-signal magnitude `|z(t)|`, where
@@ -72,7 +72,7 @@ pub fn simulate_receive_rf<'py>(
 pub fn bmode_envelope(py: Python<'_>, rf: PyReadonlyArray1<f64>) -> PyResult<Py<PyArray1<f64>>> {
     let rf_arr = rf.as_array().to_owned();
     let env = py.detach(|| core_bmode_envelope(&rf_arr));
-    Ok(env.into_pyarray(py).unbind())
+    Ok(env.to_pyarray(py).unbind())
 }
 
 /// Log-compress an envelope image with a fixed sequence reference.
@@ -88,7 +88,7 @@ pub fn bmode_db_fixed_reference(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let out = py.detach(|| core_bmode_db_fixed_reference(env, reference, floor_db));
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Baseline-relative delta B-mode in dB.
@@ -107,5 +107,6 @@ pub fn delta_bmode_db(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let out = py.detach(|| core_delta_bmode_db(env, base, epsilon));
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
+

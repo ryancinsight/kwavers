@@ -1,7 +1,7 @@
 //! PyO3 wrappers for basic transducer directivity and apodization helpers.
 
 use kwavers_physics::analytical::transducer;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -26,7 +26,7 @@ pub fn circular_piston_directivity(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::circular_piston_directivity(t_slice, ka);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the linear-array factor as a function of angle.
@@ -54,7 +54,7 @@ pub fn linear_array_factor(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::linear_array_factor(t_slice, k, d_m, n, steer_rad);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute grating-lobe angles for a uniform linear array.
@@ -75,7 +75,7 @@ pub fn grating_lobe_angles(
     steer_rad: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = transducer::grating_lobe_angles(k, d_m, steer_rad);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute element apodization weights for a given window type.
@@ -97,7 +97,7 @@ pub fn apodization_weights(
     window_type: String,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = transducer::apodization_weights(n, &window_type);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute apodization weights and normalized FFT-shifted response.
@@ -120,9 +120,9 @@ pub fn apodization_window_response(
     let response = transducer::apodization_window_response(n_elements, &window_type, nfft)
         .map_err(PyValueError::new_err)?;
     Ok((
-        response.weights.into_pyarray(py).unbind(),
-        response.cycles_per_aperture.into_pyarray(py).unbind(),
-        response.response_db.into_pyarray(py).unbind(),
+        response.weights.to_pyarray(py).unbind(),
+        response.cycles_per_aperture.to_pyarray(py).unbind(),
+        response.response_db.to_pyarray(py).unbind(),
     ))
 }
 
@@ -151,7 +151,7 @@ pub fn circular_piston_onaxis(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::circular_piston_onaxis(z_s, radius_m, freq_hz, p0_pa, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the on-axis pressure of a focused-bowl (spherically focused) transducer.
@@ -182,5 +182,6 @@ pub fn focused_bowl_onaxis(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         transducer::focused_bowl_onaxis(z_s, bowl_radius_m, focal_length_m, freq_hz, p0_pa, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

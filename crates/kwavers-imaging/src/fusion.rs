@@ -6,7 +6,7 @@
 //! These are pure data models with no physics implementation, suitable for use
 //! by the clinical layer according to clean architecture principles.
 
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Fused imaging result combining multiple modalities

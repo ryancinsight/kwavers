@@ -1,7 +1,7 @@
 //! PyO3 wrappers for electronic steering and sparse-aperture helpers.
 
 use kwavers_physics::analytical::transducer;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -73,7 +73,7 @@ pub fn delay_law_steer_2d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::delay_law_steer_2d(ex, ez, focal_range_m, steer_rad, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Aperiodic ("sparse") linear element layout — same aperture and element
@@ -100,7 +100,7 @@ pub fn linear_array_aperiodic_positions(
     jitter_frac: f64,
 ) -> Py<PyArray1<f64>> {
     let x = transducer::linear_array_aperiodic_positions(n, aperture_m, jitter_frac);
-    x.into_pyarray(py).unbind()
+    x.to_pyarray(py).unbind()
 }
 
 /// Steered far-field beam pattern of a linear array.
@@ -138,7 +138,7 @@ pub fn steered_beam_pattern_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::steered_beam_pattern_1d(ex, obs, k, steer_theta, ka_elem);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Grating-lobe ratio versus steering angle — the basis of the steering
@@ -184,7 +184,7 @@ pub fn steering_grating_lobe_ratio_1d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         transducer::steering_grating_lobe_ratio_1d(ex, st, obs, k, ka_elem, mainlobe_halfwidth_rad);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Safe steering half-angle — the largest steering excursion from broadside
@@ -253,3 +253,4 @@ pub fn electronic_steering_efficiency(
         dr_lat_m, dr_ax_m, f0_hz, c_m_s, apodized,
     ))
 }
+

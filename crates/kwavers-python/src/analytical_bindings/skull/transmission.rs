@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::skull as skull_mod;
 use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -67,7 +67,8 @@ pub fn skull_transmission_spectrum(
     let (mag, phase) =
         skull_mod::skull_transmission_spectrum(f_s, z_water, z_skull, z_brain, c_skull, d_skull_m);
     Ok((
-        mag.into_pyarray(py).unbind(),
-        phase.into_pyarray(py).unbind(),
+        mag.to_pyarray(py).unbind(),
+        phase.to_pyarray(py).unbind(),
     ))
 }
+

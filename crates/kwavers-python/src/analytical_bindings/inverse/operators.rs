@@ -2,7 +2,7 @@
 
 use super::arrays::{array2_from_flat, flatten_array2};
 use kwavers_physics::analytical::inverse as inverse_mod;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -47,7 +47,7 @@ pub fn matrix_singular_values(
 ) -> PyResult<Py<PyArray1<f64>>> {
     let flat = flatten_array2(matrix.as_array(), nrows, ncols);
     let result = inverse_mod::matrix_singular_values(&flat, nrows, ncols);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the L-curve (residual norm vs. solution norm) for Tikhonov regularisation.
@@ -79,5 +79,6 @@ pub fn tikhonov_lcurve(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (res, sol) = inverse_mod::tikhonov_lcurve(&a_flat, b_s, nrows, ncols, lam_s);
-    Ok((res.into_pyarray(py).unbind(), sol.into_pyarray(py).unbind()))
+    Ok((res.to_pyarray(py).unbind(), sol.to_pyarray(py).unbind()))
 }
+

@@ -1,7 +1,7 @@
 //! Contrast-enhanced ultrasound analytical bindings.
 
 use kwavers_physics::analytical::bbb as bbb_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -33,7 +33,7 @@ pub fn ceus_backscatter_signal(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = bbb_mod::ceus_backscatter_signal(c_s, sigma_bs_m2, thickness_m);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// CEUS backscatter signal plus peak-normalised dB display payload.
@@ -53,9 +53,10 @@ pub fn ceus_backscatter_display<'py>(
         .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("signal", display.signal.into_pyarray(py))?;
-    out.set_item("signal_db", display.signal_db.into_pyarray(py))?;
+    out.set_item("signal", display.signal.to_pyarray(py))?;
+    out.set_item("signal_db", display.signal_db.to_pyarray(py))?;
     out.set_item("peak_concentration_ul_ml", display.peak_concentration_ul_ml)?;
     out.set_item("peak_signal", display.peak_signal)?;
     Ok(out)
 }
+

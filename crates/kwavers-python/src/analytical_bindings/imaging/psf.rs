@@ -1,7 +1,7 @@
 //! Point-spread and resolution imaging bindings.
 
 use kwavers_physics::analytical::imaging;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -26,7 +26,7 @@ pub fn lateral_psf_sinc2(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = imaging::lateral_psf_sinc2(x_s, f_number, wavelength_m);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the axial point-spread function using a rectangular-spectrum model.
@@ -50,7 +50,7 @@ pub fn axial_psf_rect(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = imaging::axial_psf_rect(z_s, c, bandwidth_hz);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the plane-wave compounding lateral PSF.
@@ -76,7 +76,7 @@ pub fn pw_compounding_lateral_psf(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = imaging::pw_compounding_lateral_psf(x_s, n_angles, f_number, wavelength_m);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the −6 dB lateral resolution.
@@ -94,3 +94,4 @@ pub fn pw_compounding_lateral_psf(
 pub fn lateral_resolution_m(f_number: f64, wavelength_m: f64) -> PyResult<f64> {
     Ok(imaging::lateral_resolution_m(f_number, wavelength_m))
 }
+

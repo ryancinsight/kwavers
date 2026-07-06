@@ -1,7 +1,7 @@
 //! IVUS B-mode RF, scan-conversion, and display bindings.
 
 use kwavers_physics::analytical::imaging;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -68,7 +68,7 @@ pub fn ivus_polar_bmode_rf(
             )
         })
         .map_err(PyValueError::new_err)?;
-    Ok(rf.into_pyarray(py).unbind())
+    Ok(rf.to_pyarray(py).unbind())
 }
 
 /// Nearest-neighbour IVUS polar-to-Cartesian scan conversion.
@@ -100,7 +100,7 @@ pub fn ivus_scan_convert(
     let image = py
         .detach(|| imaging::ivus_scan_convert(polar_values, radius_axis, theta_axis, radius, theta))
         .map_err(PyValueError::new_err)?;
-    Ok(image.into_pyarray(py).unbind())
+    Ok(image.to_pyarray(py).unbind())
 }
 
 /// Complete IVUS B-mode RF-to-display fixture for Chapter 30.
@@ -182,10 +182,11 @@ pub fn ivus_bmode_image<'py>(
         .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("rf", image.rf.into_pyarray(py))?;
-    out.set_item("envelope", image.envelope.into_pyarray(py))?;
-    out.set_item("db", image.db.into_pyarray(py))?;
-    out.set_item("polar", image.polar.into_pyarray(py))?;
-    out.set_item("cartesian", image.cartesian.into_pyarray(py))?;
+    out.set_item("rf", image.rf.to_pyarray(py))?;
+    out.set_item("envelope", image.envelope.to_pyarray(py))?;
+    out.set_item("db", image.db.to_pyarray(py))?;
+    out.set_item("polar", image.polar.to_pyarray(py))?;
+    out.set_item("cartesian", image.cartesian.to_pyarray(py))?;
     Ok(out)
 }
+

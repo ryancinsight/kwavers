@@ -1,7 +1,7 @@
 //! Validated time series of 3-D acoustic pressure snapshots.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::ops::Deref;
 
 /// An ordered series of 3-D pressure-field snapshots \[Pa\] sampled during a
@@ -29,18 +29,18 @@ impl PressureFieldSeries {
     /// Returns [`KwaversError::InvalidInput`] if `snapshots` is empty or if any
     /// snapshot's spatial dimensions differ from the first.
     pub fn new(snapshots: Vec<Array3<f64>>) -> KwaversResult<Self> {
-        let dim = snapshots
+        let shape = snapshots
             .first()
             .ok_or_else(|| {
                 KwaversError::InvalidInput(
                     "PressureFieldSeries requires at least one pressure snapshot".to_owned(),
                 )
             })?
-            .dim();
-        if let Some(bad) = snapshots.iter().position(|field| field.dim() != dim) {
+            .shape();
+        if let Some(bad) = snapshots.iter().position(|field| field.shape() != shape) {
             return Err(KwaversError::InvalidInput(format!(
-                "PressureFieldSeries snapshot {bad} has dimensions {:?}, expected {dim:?}",
-                snapshots[bad].dim()
+                "PressureFieldSeries snapshot {bad} has dimensions {:?}, expected {shape:?}",
+                snapshots[bad].shape()
             )));
         }
         Ok(Self(snapshots))
@@ -48,9 +48,9 @@ impl PressureFieldSeries {
 
     /// Spatial dimensions `(nx, ny, nz)` shared by every snapshot.
     #[must_use]
-    pub fn spatial_dim(&self) -> (usize, usize, usize) {
+    pub fn spatial_dim(&self) -> [usize; 3] {
         // Non-empty by construction invariant.
-        self.0[0].dim()
+        self.0[0].shape()
     }
 
     /// Consume the series, returning the underlying snapshot vector.
@@ -74,12 +74,12 @@ mod tests {
 
     #[test]
     fn new_accepts_uniform_nonempty_series_and_preserves_order() {
-        let a = Array3::<f64>::from_elem((4, 5, 6), 1.0);
-        let b = Array3::<f64>::from_elem((4, 5, 6), 2.0);
+        let a = Array3::<f64>::from_elem([4, 5, 6], 1.0);
+        let b = Array3::<f64>::from_elem([4, 5, 6], 2.0);
         let series = PressureFieldSeries::new(vec![a, b]).expect("uniform dims accepted");
 
         assert_eq!(series.len(), 2);
-        assert_eq!(series.spatial_dim(), (4, 5, 6));
+        assert_eq!(series.spatial_dim(), [4, 5, 6]);
         // Deref-to-slice access preserves snapshot order and values.
         assert_eq!(series[0][[0, 0, 0]], 1.0);
         assert_eq!(series.last().unwrap()[[3, 4, 5]], 2.0);
@@ -98,15 +98,15 @@ mod tests {
 
     #[test]
     fn new_rejects_dimensionally_ragged_series() {
-        let a = Array3::<f64>::zeros((4, 5, 6));
-        let ragged = Array3::<f64>::zeros((4, 5, 7));
+        let a = Array3::<f64>::zeros([4, 5, 6]);
+        let ragged = Array3::<f64>::zeros([4, 5, 7]);
         let result = PressureFieldSeries::new(vec![a, ragged]);
         match result {
             Err(KwaversError::InvalidInput(message)) => {
                 // The offending index (1) and both shapes must be reported.
                 assert!(message.contains("snapshot 1"), "got: {message}");
-                assert!(message.contains("(4, 5, 7)"), "got: {message}");
-                assert!(message.contains("(4, 5, 6)"), "got: {message}");
+                assert!(message.contains("[4, 5, 7]"), "got: {message}");
+                assert!(message.contains("[4, 5, 6]"), "got: {message}");
             }
             other => panic!("expected InvalidInput for ragged series, got {other:?}"),
         }
@@ -114,7 +114,7 @@ mod tests {
 
     #[test]
     fn into_inner_round_trips_the_snapshots() {
-        let a = Array3::<f64>::from_elem((2, 2, 2), 3.0);
+        let a = Array3::<f64>::from_elem([2, 2, 2], 3.0);
         let series = PressureFieldSeries::new(vec![a.clone()]).unwrap();
         let recovered = series.into_inner();
         assert_eq!(recovered.len(), 1);

@@ -1,7 +1,7 @@
 //! Cavitation probability and threshold PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -35,7 +35,7 @@ pub fn intrinsic_threshold_cavitation_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = cavitation::intrinsic_threshold_cavitation_probability(p_s, p_threshold, sigma_pa);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Frequency-dependent intrinsic cavitation threshold (Vlaisavljevich 2015 log-linear fit).
@@ -68,7 +68,7 @@ pub fn frequency_dependent_intrinsic_threshold_pa(
         p_t_1mhz_pa,
         slope_pa_per_decade,
     );
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Cumulative cavitation probability over N independent single-pulse trials.
@@ -98,7 +98,7 @@ pub fn cumulative_cavitation_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = cavitation::cumulative_cavitation_probability(p_single, n_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// PRF efficacy factor — residual-bubble shielding model (Macoskey 2018).
@@ -128,5 +128,6 @@ pub fn prf_efficacy_factor(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         cavitation::prf_efficacy_factor(prf_s, bubble_dissolution_time_s, shielding_coefficient);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

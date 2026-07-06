@@ -79,8 +79,25 @@ fn resample_to_target_grid<'py>(
 ) -> Py<PyArray3<f64>> {
     use kwavers_physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
     let arr = source_image.as_array().to_owned();
-    let resampled = py.detach(|| kwavers_resample(&arr, &transform, target_dims));
-    PyArray3::from_owned_array(py, resampled).into()
+    let shape = arr.shape();
+    let source_leto = leto::Array3::from_shape_vec(
+        [shape[0], shape[1], shape[2]],
+        arr.iter().copied().collect(),
+    )
+    .expect("ndarray source image shape must match contiguous voxel payload");
+    let target = [target_dims.0, target_dims.1, target_dims.2];
+
+    let resampled = py.detach(|| kwavers_resample(&source_leto, &transform, target));
+    let out = ndarray::Array3::from_shape_vec(
+        (target[0], target[1], target[2]),
+        resampled
+            .as_slice_memory_order()
+            .expect("Leto resample output should be contiguous")
+            .to_vec(),
+    )
+    .expect("target dimensions must match resampled voxel payload");
+
+    PyArray3::from_owned_array(py, out).into()
 }
 
 #[pyfunction]

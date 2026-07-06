@@ -4,7 +4,7 @@ use kwavers_diagnostics::reconstruction::transcranial_ust::{
 };
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use ndarray::Array1;
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -147,38 +147,38 @@ pub fn run_transcranial_ust_volume_inversion_from_ritk_ct<'py>(
     )?;
 
     let volume_shape = result.ct_hu.dim();
-    out.set_item("ct_hu", result.ct_hu.into_pyarray(py))?;
+    out.set_item("ct_hu", result.ct_hu.to_pyarray(py))?;
     out.set_item(
         "target_sound_speed_m_s",
-        result.target_sound_speed_m_s.into_pyarray(py),
+        result.target_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "initial_sound_speed_m_s",
-        result.initial_sound_speed_m_s.into_pyarray(py),
+        result.initial_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "migration_sound_speed_m_s",
-        result.migration_sound_speed_m_s.into_pyarray(py),
+        result.migration_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "reconstruction_sound_speed_m_s",
-        result.reconstruction_sound_speed_m_s.into_pyarray(py),
+        result.reconstruction_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "enhanced_reconstruction_sound_speed_m_s",
         result
             .enhanced_reconstruction_sound_speed_m_s
-            .into_pyarray(py),
+            .to_pyarray(py),
     )?;
-    out.set_item("brain_mask", result.brain_mask.into_pyarray(py))?;
-    out.set_item("skull_mask", result.skull_mask.into_pyarray(py))?;
+    out.set_item("brain_mask", result.brain_mask.to_pyarray(py))?;
+    out.set_item("skull_mask", result.skull_mask.to_pyarray(py))?;
     out.set_item(
         "synthetic_data",
-        Array1::from(result.synthetic_data).into_pyarray(py),
+        Array1::from(result.synthetic_data).to_pyarray(py),
     )?;
     out.set_item(
         "residual_history",
-        Array1::from(result.residual_history).into_pyarray(py),
+        Array1::from(result.residual_history).to_pyarray(py),
     )?;
     out.set_item("metrics", metrics)?;
     out.set_item("spacing_m", acoustic.spacing_m)?;
@@ -222,3 +222,4 @@ pub fn run_transcranial_ust_volume_inversion_from_ritk_ct<'py>(
     out.set_item("harmonic_count", harmonic_count)?;
     Ok(out)
 }
+

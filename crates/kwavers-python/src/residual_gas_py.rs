@@ -10,7 +10,7 @@
 
 use kwavers_physics::acoustics::bubble_dynamics::{EpsteinPlessetDissolution, GasDiffusionParams};
 use kwavers_simulation::multi_physics::residual_gas::ResidualGasField;
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -69,7 +69,7 @@ impl PyResidualGasField {
         self.inner
             .void_fraction()
             .to_owned()
-            .into_pyarray(py)
+            .to_pyarray(py)
             .into()
     }
 
@@ -85,7 +85,7 @@ impl PyResidualGasField {
     ) -> Py<PyArray3<f64>> {
         self.inner
             .sound_speed_field(c_liquid, rho_liquid, c_gas, rho_gas)
-            .into_pyarray(py)
+            .to_pyarray(py)
             .into()
     }
 
@@ -104,7 +104,7 @@ impl PyResidualGasField {
     ) -> Py<PyArray3<f64>> {
         self.inner
             .attenuation_field(freq_hz, c_liquid, rho_liquid, mu_liquid, p0_pa, polytropic)
-            .into_pyarray(py)
+            .to_pyarray(py)
             .into()
     }
 
@@ -123,3 +123,4 @@ impl PyResidualGasField {
         self.inner.total_gas_volume(dv_m3)
     }
 }
+

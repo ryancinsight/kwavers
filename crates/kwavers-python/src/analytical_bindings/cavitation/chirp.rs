@@ -1,7 +1,7 @@
 //! Frequency-swept cavitation and shielding-control PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1};
+use numpy::{ToPyArray, PyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -347,10 +347,10 @@ pub fn staged_sonication_sweep(
         &cfg,
     );
     Ok((
-        p.stage.into_pyarray(py).unbind(),
-        p.frequency_hz.into_pyarray(py).unbind(),
-        p.cavitation_activity.into_pyarray(py).unbind(),
-        p.residual_void.into_pyarray(py).unbind(),
+        p.stage.to_pyarray(py).unbind(),
+        p.frequency_hz.to_pyarray(py).unbind(),
+        p.cavitation_activity.to_pyarray(py).unbind(),
+        p.residual_void.to_pyarray(py).unbind(),
         p.peak_activity_stage,
         p.residual_peak,
         p.residual_at_end,
@@ -502,10 +502,10 @@ pub fn simulate_shielding_trace(
     let t =
         cavitation::simulate_shielding(drive_pressure_pa, &freq, &protocol, &prod, &medium, &cfg);
     Ok((
-        t.time_s.into_pyarray(py).unbind(),
-        t.void_fraction.into_pyarray(py).unbind(),
-        t.delivered_fraction.into_pyarray(py).unbind(),
-        t.delivered_pressure_pa.into_pyarray(py).unbind(),
+        t.time_s.to_pyarray(py).unbind(),
+        t.void_fraction.to_pyarray(py).unbind(),
+        t.delivered_fraction.to_pyarray(py).unbind(),
+        t.delivered_pressure_pa.to_pyarray(py).unbind(),
         t.peak_void_fraction,
         t.mean_void_fraction,
         t.mean_delivered_fraction_on,
@@ -612,3 +612,4 @@ pub fn compare_shielding_control(
     out.extend_from_slice(&row(&c.pulsed_swept));
     Ok(out)
 }
+

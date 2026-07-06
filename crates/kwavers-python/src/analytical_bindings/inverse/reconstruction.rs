@@ -2,7 +2,7 @@
 
 use super::arrays::{array2_from_flat, flatten_array2};
 use kwavers_physics::analytical::inverse as inverse_mod;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -19,8 +19,8 @@ pub fn gaussian_deconvolution_fixture(
         .map_err(PyValueError::new_err)?;
     Ok((
         array2_from_flat(py, n, n, fixture.matrix)?,
-        fixture.truth_signal.into_pyarray(py).unbind(),
-        fixture.observed_signal.into_pyarray(py).unbind(),
+        fixture.truth_signal.to_pyarray(py).unbind(),
+        fixture.observed_signal.to_pyarray(py).unbind(),
     ))
 }
 
@@ -60,5 +60,6 @@ pub fn born_inversion_regularized(
     let (re, im) = inverse_mod::born_inversion_regularized(
         &gr_flat, &gi_flat, yr_s, yi_s, nrows, ncols, lambda,
     );
-    Ok((re.into_pyarray(py).unbind(), im.into_pyarray(py).unbind()))
+    Ok((re.to_pyarray(py).unbind(), im.to_pyarray(py).unbind()))
 }
+

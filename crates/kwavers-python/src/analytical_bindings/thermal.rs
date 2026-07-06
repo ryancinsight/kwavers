@@ -3,7 +3,7 @@
 mod acoustic;
 
 use kwavers_physics::analytical::thermal;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -60,7 +60,7 @@ pub fn bioheat_focal_temperature_rise(
         cb_blood,
         t_body_c,
     );
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// One-dimensional steady-state Pennes slab temperature profile.
@@ -151,7 +151,7 @@ pub fn pennes_steady_state_temperature_profile(
         body_temperature_c,
         heat_source_w_m3,
     );
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Adiabatic (no-perfusion) single-pulse temperature rise from a heat source.
@@ -188,5 +188,6 @@ pub fn adiabatic_temperature_rise_kelvin(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = thermal::adiabatic_temperature_rise_kelvin(q_s, tau_s, density, specific_heat);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

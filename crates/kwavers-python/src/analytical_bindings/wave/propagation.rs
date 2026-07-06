@@ -2,7 +2,7 @@
 //! reflection/transmission, power-law attenuation, Stokes–Kirchhoff absorption).
 
 use kwavers_physics::analytical::wave;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -31,7 +31,7 @@ pub fn standing_wave_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::standing_wave_1d(p0, k, x_slice, omega_t);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute a 1-D plane-wave pressure field.
@@ -59,7 +59,7 @@ pub fn plane_wave_pressure_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::plane_wave_pressure_1d(amplitude, k, x_slice, omega_t);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute pressure and particle velocity for a 1-D progressive plane wave.
@@ -87,8 +87,8 @@ pub fn plane_wave_pressure_velocity_1d(
     )
     .map_err(PyValueError::new_err)?;
     Ok((
-        pressure.into_pyarray(py).unbind(),
-        velocity.into_pyarray(py).unbind(),
+        pressure.to_pyarray(py).unbind(),
+        velocity.to_pyarray(py).unbind(),
     ))
 }
 
@@ -109,7 +109,7 @@ pub fn gaussian_modulated_pulse_1d(
     let result =
         wave::gaussian_modulated_pulse_1d(x_slice, center_m, sigma_m, wavelength_m, amplitude_pa)
             .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// d'Alembert zero-initial-velocity split-pulse solution on a uniform 1-D axis.
@@ -129,7 +129,7 @@ pub fn dalembert_split_solution_1d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::dalembert_split_solution_1d(x_slice, p_slice, shift_m)
         .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute spherical-wave pressure at radial distances *r*.
@@ -155,7 +155,7 @@ pub fn spherical_wave_pressure(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::spherical_wave_pressure(amplitude, k, r_slice);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute normalized spherical and cylindrical spreading intensity envelopes.
@@ -171,8 +171,8 @@ pub fn geometric_spreading_intensity_envelopes(
     let (spherical, cylindrical) =
         wave::geometric_spreading_intensity_envelopes(r_slice).map_err(PyValueError::new_err)?;
     Ok((
-        spherical.into_pyarray(py).unbind(),
-        cylindrical.into_pyarray(py).unbind(),
+        spherical.to_pyarray(py).unbind(),
+        cylindrical.to_pyarray(py).unbind(),
     ))
 }
 
@@ -229,7 +229,7 @@ pub fn power_law_attenuation_np_m(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::power_law_attenuation_np_m(f_slice, alpha0, y);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute power-law absorption α(f) = α0 * f^y in dB/(cm·MHz^y).
@@ -253,7 +253,7 @@ pub fn absorption_power_law_db_cm(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::absorption_power_law_db_cm(f_slice, alpha0, y);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Stokes-Kirchhoff thermoviscous absorption coefficient [Np/m].
@@ -283,5 +283,6 @@ pub fn stokes_kirchhoff_absorption_np_m(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::stokes_kirchhoff_absorption_np_m(f_slice, delta_m2_s, c0);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

@@ -5,7 +5,7 @@ use kwavers_analysis::signal_processing::doppler::{
 };
 use kwavers_physics::analytical::imaging::{self, ContrastAgentDopplerConfig};
 use ndarray::Array2;
-use numpy::{IntoPyArray, PyReadonlyArray1};
+use numpy::{ToPyArray, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -69,11 +69,11 @@ pub fn contrast_agent_doppler_spectrum<'py>(
     .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("slow_time_s", spectrum.slow_time_s.into_pyarray(py))?;
-    out.set_item("iq_real", spectrum.iq_real.into_pyarray(py))?;
-    out.set_item("iq_imag", spectrum.iq_imag.into_pyarray(py))?;
-    out.set_item("velocity_m_s", spectrum.velocity_m_s.into_pyarray(py))?;
-    out.set_item("power", spectrum.power.into_pyarray(py))?;
+    out.set_item("slow_time_s", spectrum.slow_time_s.to_pyarray(py))?;
+    out.set_item("iq_real", spectrum.iq_real.to_pyarray(py))?;
+    out.set_item("iq_imag", spectrum.iq_imag.to_pyarray(py))?;
+    out.set_item("velocity_m_s", spectrum.velocity_m_s.to_pyarray(py))?;
+    out.set_item("power", spectrum.power.to_pyarray(py))?;
     out.set_item("doppler_shift_hz", spectrum.doppler_shift_hz)?;
     out.set_item("estimated_shift_hz", spectrum.estimated_shift_hz)?;
     out.set_item("estimated_velocity_m_s", spectrum.estimated_velocity_m_s)?;
@@ -146,26 +146,26 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
         .flat_map(|direction| direction.iter().copied())
         .collect();
     let out = PyDict::new(py);
-    out.set_item("cw_velocity_m_s", fixture.cw_velocity_m_s.into_pyarray(py))?;
-    out.set_item("cw_power", fixture.cw_power.into_pyarray(py))?;
+    out.set_item("cw_velocity_m_s", fixture.cw_velocity_m_s.to_pyarray(py))?;
+    out.set_item("cw_power", fixture.cw_power.to_pyarray(py))?;
     out.set_item(
         "pulsed_wave_nyquist_velocity_m_s",
         fixture.pulsed_wave_nyquist_velocity_m_s,
     )?;
-    out.set_item("beam_angles_rad", fixture.beam_angles_rad.into_pyarray(py))?;
+    out.set_item("beam_angles_rad", fixture.beam_angles_rad.to_pyarray(py))?;
     out.set_item(
         "beam_directions",
         Array2::from_shape_vec((fixture.beam_directions.len(), 2), beam_direction_flat)
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
-            .into_pyarray(py),
+            .to_pyarray(py),
     )?;
     out.set_item(
         "projected_velocity_m_s",
-        fixture.projected_velocity_m_s.into_pyarray(py),
+        fixture.projected_velocity_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "true_velocity_m_s",
-        vec![fixture.true_velocity_m_s.vx, fixture.true_velocity_m_s.vz].into_pyarray(py),
+        vec![fixture.true_velocity_m_s.vx, fixture.true_velocity_m_s.vz].to_pyarray(py),
     )?;
     out.set_item(
         "recovered_velocity_m_s",
@@ -173,8 +173,9 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
             fixture.recovered_velocity_m_s.vx,
             fixture.recovered_velocity_m_s.vz,
         ]
-        .into_pyarray(py),
+        .to_pyarray(py),
     )?;
     out.set_item("vector_error_m_s", fixture.vector_error_m_s)?;
     Ok(out)
 }
+

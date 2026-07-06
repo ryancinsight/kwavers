@@ -2,7 +2,7 @@
 
 use super::arrays::as_slices;
 use kwavers_math::statistics;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -19,7 +19,7 @@ pub fn validation_psnr_from_relative_rmse(
     let result = py
         .detach(|| statistics::validation_psnr_from_relative_rmse(relative_rmse))
         .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Root-mean-square error `RMSE = √(mean((a−b)²))` between `a` and `b` (book §19.3).
@@ -39,3 +39,4 @@ pub fn psnr(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64>
     let (a_s, b_s) = as_slices(&a, &b)?;
     Ok(statistics::psnr(a_s, b_s))
 }
+

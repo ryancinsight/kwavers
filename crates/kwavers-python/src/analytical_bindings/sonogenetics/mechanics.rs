@@ -1,7 +1,7 @@
 //! Acoustic force and streaming bindings for sonogenetics.
 
 use kwavers_physics::analytical::sonogenetics;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -28,7 +28,7 @@ pub fn radiation_force_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = sonogenetics::radiation_force_1d(i_s, alpha_np_m, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Gor'kov monopole (compressibility) contrast factor `f₁ = 1 − κ̃` (Eq. 17.3),
@@ -112,3 +112,4 @@ pub fn acoustic_streaming_velocity(
         i_w_m2, mu_pa_s, alpha_np_m, c, l_m,
     ))
 }
+

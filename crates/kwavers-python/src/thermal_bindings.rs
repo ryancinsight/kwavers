@@ -22,7 +22,7 @@
 //! `ThermalDiffusionSolver::update` expects for its `external_source` argument.
 
 use ndarray::{Array1, Array2, Array3};
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -357,7 +357,7 @@ impl ThermalSimulation {
                 sensor_data
                     .slice(ndarray::s![..n_sensors, ..])
                     .to_owned()
-                    .into_pyarray(py)
+                    .to_pyarray(py)
                     .into(),
             )
         } else {
@@ -366,13 +366,13 @@ impl ThermalSimulation {
 
         let thermal_dose_out: Option<Py<PyArray3<f64>>> = solver
             .thermal_dose()
-            .map(|d| d.to_owned().into_pyarray(py).into());
+            .map(|d| d.to_owned().to_pyarray(py).into());
 
         Ok(ThermalResult {
-            temperature: temp_celsius.into_pyarray(py).into(),
+            temperature: temp_celsius.to_pyarray(py).into(),
             temperature_at_sensors,
             thermal_dose: thermal_dose_out,
-            time: time_vec.into_pyarray(py).into(),
+            time: time_vec.to_pyarray(py).into(),
             time_steps,
             dt,
         })
@@ -399,3 +399,4 @@ pub fn register_thermal(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ThermalResult>()?;
     Ok(())
 }
+

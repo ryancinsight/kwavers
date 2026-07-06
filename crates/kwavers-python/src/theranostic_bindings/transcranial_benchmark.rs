@@ -8,7 +8,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     SkullAdaptiveBenchmarkConfig, TranscranialFusPlanConfig,
 };
 use ndarray::Array3;
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -112,26 +112,26 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "reference_pressure_pa",
-        result.reference_pressure_pa.into_pyarray(py),
+        result.reference_pressure_pa.to_pyarray(py),
     )?;
     out.set_item(
         "baseline_pressure_pa",
-        result.baseline_pressure_pa.into_pyarray(py),
+        result.baseline_pressure_pa.to_pyarray(py),
     )?;
-    out.set_item("phases_rad", result.phases_rad.into_pyarray(py))?;
-    out.set_item("delays_s", result.delays_s.into_pyarray(py))?;
-    out.set_item("skull_lengths_m", result.skull_lengths_m.into_pyarray(py))?;
+    out.set_item("phases_rad", result.phases_rad.to_pyarray(py))?;
+    out.set_item("delays_s", result.delays_s.to_pyarray(py))?;
+    out.set_item("skull_lengths_m", result.skull_lengths_m.to_pyarray(py))?;
     out.set_item(
         "amplitude_weights",
-        result.amplitude_weights.into_pyarray(py),
+        result.amplitude_weights.to_pyarray(py),
     )?;
     out.set_item(
         "element_positions_m",
-        placement_result.element_positions_m.into_pyarray(py),
+        placement_result.element_positions_m.to_pyarray(py),
     )?;
     out.set_item(
         "active_elements",
-        placement_result.active_elements.into_pyarray(py),
+        placement_result.active_elements.to_pyarray(py),
     )?;
     out.set_item(
         "focus_index",
@@ -262,3 +262,4 @@ fn brain_centroid(brain_mask: &Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
+

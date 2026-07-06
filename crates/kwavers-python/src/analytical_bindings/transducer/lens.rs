@@ -1,6 +1,6 @@
 //! PyO3 wrappers for static acoustic-lens helpers.
 
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -32,7 +32,7 @@ pub fn acoustic_lens_delay_profile(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let lens = AcousticLens::silicone(focal_length_m, aperture_m);
     let tau = lens.aperture_delay_profile(radii, medium_sound_speed);
-    Ok(ndarray::Array1::from(tau).into_pyarray(py).unbind())
+    Ok(ndarray::Array1::from(tau).to_pyarray(py).unbind())
 }
 
 /// Fresnel zone-plate boundary radii within the aperture.
@@ -57,7 +57,7 @@ pub fn fresnel_zone_radii(
     use kwavers_transducer::transducers::physics::materials::FresnelZonePlate;
     let zp = FresnelZonePlate::new(focal_length_m, wavelength_m, aperture_radius_m);
     Ok(ndarray::Array1::from(zp.zone_radii())
-        .into_pyarray(py)
+        .to_pyarray(py)
         .unbind())
 }
 
@@ -96,8 +96,8 @@ pub fn isoplanatic_steering_curve(
         }
     }
     Ok((
-        ndarray::Array1::from(thetas).into_pyarray(py).unbind(),
-        ndarray::Array1::from(tzs).into_pyarray(py).unbind(),
+        ndarray::Array1::from(thetas).to_pyarray(py).unbind(),
+        ndarray::Array1::from(tzs).to_pyarray(py).unbind(),
     ))
 }
 
@@ -128,5 +128,6 @@ pub fn corrective_lens_thickness(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let p = clt(phase, frequency_hz, c_water, c_lens, min_thickness_m);
-    Ok(ndarray::Array1::from(p).into_pyarray(py).unbind())
+    Ok(ndarray::Array1::from(p).to_pyarray(py).unbind())
 }
+

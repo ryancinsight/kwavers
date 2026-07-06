@@ -1,7 +1,7 @@
 //! Arrhenius damage and combined kill-probability safety bindings.
 
 use kwavers_physics::analytical::safety;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -65,7 +65,7 @@ pub fn arrhenius_cumulative(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::arrhenius_cumulative(t_s, dt_s, a_per_s, ea_j_mol);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Cumulative thermal cell-death probability P_death(t) = 1 − exp(−Ω(t)).
@@ -95,7 +95,7 @@ pub fn arrhenius_kill_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::arrhenius_kill_probability(t_s, dt_s, a_per_s, ea_j_mol);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Per-voxel thermal kill probability for a steady temperature held for a fixed
@@ -125,7 +125,7 @@ pub fn arrhenius_steady_kill_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::arrhenius_steady_kill_probability(t_s, duration_s, a_per_s, ea_j_mol);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Combine independent mechanical and thermal kill probabilities into one
@@ -156,5 +156,6 @@ pub fn combined_kill_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::combined_kill_probability(m, t);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

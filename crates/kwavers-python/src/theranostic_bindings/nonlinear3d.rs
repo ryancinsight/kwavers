@@ -3,7 +3,7 @@
 use kwavers_therapy::therapy::theranostic_guidance::{
     run_theranostic_nonlinear_3d, AnatomyKind, Nonlinear3dConfig,
 };
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList};
@@ -136,60 +136,60 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     use ndarray::Array1;
     let out = PyDict::new(py);
     out.set_item("anatomy", config.anatomy.label())?;
-    out.set_item("ct_hu", result.ct_hu.into_pyarray(py))?;
-    out.set_item("label", result.label.into_pyarray(py))?;
-    out.set_item("body_mask", result.body_mask.into_pyarray(py))?;
-    out.set_item("target_mask", result.target_mask.into_pyarray(py))?;
-    out.set_item("inversion_mask", result.inversion_mask.into_pyarray(py))?;
+    out.set_item("ct_hu", result.ct_hu.to_pyarray(py))?;
+    out.set_item("label", result.label.to_pyarray(py))?;
+    out.set_item("body_mask", result.body_mask.to_pyarray(py))?;
+    out.set_item("target_mask", result.target_mask.to_pyarray(py))?;
+    out.set_item("inversion_mask", result.inversion_mask.to_pyarray(py))?;
     out.set_item(
         "background_sound_speed_m_s",
-        result.background_sound_speed_m_s.into_pyarray(py),
+        result.background_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "true_sound_speed_m_s",
-        result.true_sound_speed_m_s.into_pyarray(py),
+        result.true_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_sound_speed_m_s",
-        result.reconstructed_sound_speed_m_s.into_pyarray(py),
+        result.reconstructed_sound_speed_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_delta_c_m_s",
-        result.reconstructed_delta_c_m_s.into_pyarray(py),
+        result.reconstructed_delta_c_m_s.to_pyarray(py),
     )?;
-    out.set_item("background_beta", result.background_beta.into_pyarray(py))?;
-    out.set_item("true_beta", result.true_beta.into_pyarray(py))?;
+    out.set_item("background_beta", result.background_beta.to_pyarray(py))?;
+    out.set_item("true_beta", result.true_beta.to_pyarray(py))?;
     out.set_item(
         "reconstructed_beta",
-        result.reconstructed_beta.into_pyarray(py),
+        result.reconstructed_beta.to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_delta_beta",
-        result.reconstructed_delta_beta.into_pyarray(py),
+        result.reconstructed_delta_beta.to_pyarray(py),
     )?;
     out.set_item(
         "multiparameter_fwi_score",
-        result.multiparameter_fwi_score.into_pyarray(py),
+        result.multiparameter_fwi_score.to_pyarray(py),
     )?;
     out.set_item(
         "nonlinear_fusion_score",
-        result.nonlinear_fusion_score.into_pyarray(py),
+        result.nonlinear_fusion_score.to_pyarray(py),
     )?;
     out.set_item(
         "westervelt_peak_pressure_pa",
-        result.westervelt_peak_pressure_pa.into_pyarray(py),
+        result.westervelt_peak_pressure_pa.to_pyarray(py),
     )?;
     out.set_item(
         "cavitation_source_density",
-        result.cavitation_source_density.into_pyarray(py),
+        result.cavitation_source_density.to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_cavitation_density",
-        result.reconstructed_cavitation_density.into_pyarray(py),
+        result.reconstructed_cavitation_density.to_pyarray(py),
     )?;
     out.set_item(
         "fwi_objective_history",
-        Array1::from(result.fwi_objective_history).into_pyarray(py),
+        Array1::from(result.fwi_objective_history).to_pyarray(py),
     )?;
     let fwi_iteration_diagnostics = PyList::empty(py);
     for diagnostic in &result.fwi_iteration_diagnostics {
@@ -207,15 +207,15 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("fwi_iteration_diagnostics", fwi_iteration_diagnostics)?;
     out.set_item(
         "cavitation_objective_history",
-        Array1::from(result.cavitation_objective_history).into_pyarray(py),
+        Array1::from(result.cavitation_objective_history).to_pyarray(py),
     )?;
     out.set_item(
         "therapy_points_m",
-        points3_to_array(&result.therapy_points_m).into_pyarray(py),
+        points3_to_array(&result.therapy_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "receiver_points_m",
-        points3_to_array(&result.receiver_points_m).into_pyarray(py),
+        points3_to_array(&result.receiver_points_m).to_pyarray(py),
     )?;
     out.set_item("spacing_m", result.spacing_m)?;
     out.set_item("dt_s", result.dt_s)?;
@@ -363,3 +363,4 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("metrics", metrics)?;
     Ok(out)
 }
+

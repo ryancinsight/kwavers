@@ -1,7 +1,7 @@
 //! Mechanosensitive-channel activation bindings.
 
 use kwavers_physics::analytical::sonogenetics;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -28,5 +28,6 @@ pub fn hill_activation_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = sonogenetics::hill_activation_probability(p_s, p_threshold_pa, hill_n);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

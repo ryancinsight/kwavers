@@ -1,7 +1,7 @@
 //! Spectral absorption and Gruneisen photoacoustic bindings.
 
 use kwavers_physics::analytical::photoacoustics;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -22,7 +22,7 @@ pub fn hbo2_molar_absorption(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::hbo2_molar_absorption(w_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Return the molar absorption spectrum of deoxyhaemoglobin (Hb).
@@ -42,7 +42,7 @@ pub fn hb_molar_absorption(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::hb_molar_absorption(w_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the Grüneisen parameter of water as a function of temperature.
@@ -62,7 +62,7 @@ pub fn gruneisen_parameter_water(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::gruneisen_parameter_water(t_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the Grüneisen parameter of generic soft tissue vs temperature
@@ -83,5 +83,6 @@ pub fn gruneisen_parameter_soft_tissue(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::gruneisen_parameter_soft_tissue(t_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

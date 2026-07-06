@@ -1,7 +1,7 @@
 //! Skull surface-heating bindings.
 
 use kwavers_physics::analytical::skull as skull_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -31,5 +31,6 @@ pub fn skull_surface_temperature_rise(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         skull_mod::skull_surface_temperature_rise(t_s, heat_flux, k_skull, rho_skull, cp_skull);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
+

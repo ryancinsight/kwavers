@@ -1,7 +1,7 @@
 //! Standing-wave suppression and modulation bindings.
 
 use kwavers_physics::analytical::rtm as rtm_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -25,7 +25,7 @@ pub fn temporal_modulation_frequencies(
     d_back_m: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = rtm_mod::temporal_modulation_frequencies(f0_hz, m_steps, c, d_back_m);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the axial spatial frequency of the standing-wave pattern [cycles/m].
@@ -105,7 +105,7 @@ pub fn standing_wave_field_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = rtm_mod::standing_wave_field_1d(x_s, freq_hz, c, r_back);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute exact statistical moments of the standing-wave intensity pattern.
@@ -125,3 +125,4 @@ pub fn standing_wave_field_1d(
 pub fn standing_wave_intensity_statistics(r_back: f64) -> PyResult<(f64, f64, f64)> {
     Ok(rtm_mod::standing_wave_intensity_statistics(r_back))
 }
+

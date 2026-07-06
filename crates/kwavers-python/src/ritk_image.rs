@@ -1,10 +1,11 @@
 //! RITK-backed medical image loading shared by PyO3 bindings.
 
-use burn::backend::NdArray as NdArrayBackend;
+use coeus_core::SequentialBackend;
 use ndarray::Array3;
-use numpy::{IntoPyArray, PyArray3};
+use numpy::{ToPyArray, PyArray3};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
+use ritk_io::ImageReader;
 use std::path::Path;
 
 /// Load a NIfTI volume (CT, segmentation, …) via RITK (`ritk-io`) — the kwavers
@@ -21,36 +22,28 @@ use std::path::Path;
 pub fn load_ct_nifti(py: Python<'_>, path: &str) -> PyResult<(Py<PyArray3<f64>>, (f64, f64, f64))> {
     let (volume, spacing) = load_ritk_nifti(Path::new(path))?;
     Ok((
-        volume.into_pyarray(py).unbind(),
+        volume.to_pyarray(py).unbind(),
         (spacing[0], spacing[1], spacing[2]),
     ))
 }
 
 pub fn load_ritk_nifti(path: &Path) -> PyResult<(Array3<f64>, [f64; 3])> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
-    let image = ritk_io::read_nifti::<Backend, _>(path, &device).map_err(|err| {
+    let reader = ritk_io::format::nifti::native::NiftiReader::new(SequentialBackend);
+    let image = reader.read(path).map_err(|err| {
         PyRuntimeError::new_err(format!(
             "RITK NIfTI load failed for '{}': {err}",
             path.display()
         ))
     })?;
-    let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().as_slice().to_vec();
-    if spacing.len() != 3 {
-        return Err(PyRuntimeError::new_err(format!(
-            "RITK image spacing rank {} is not 3",
-            spacing.len()
-        )));
-    }
 
-    let tensor_data = image.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
-        .map_err(|err| PyRuntimeError::new_err(format!("RITK tensor is not f32: {err:?}")))?;
+    let [depth, rows, cols] = image.shape();
+    let spacing = image.spacing();
+    let values = image.data_slice().map_err(|err| {
+        PyRuntimeError::new_err(format!("RITK image data is not contiguous f32: {err}"))
+    })?;
     if values.len() != depth * rows * cols {
         return Err(PyRuntimeError::new_err(format!(
-            "RITK tensor length {} does not match shape [{depth}, {rows}, {cols}]",
+            "RITK image data length {} does not match shape [{depth}, {rows}, {cols}]",
             values.len()
         )));
     }
@@ -65,3 +58,4 @@ pub fn load_ritk_nifti(path: &Path) -> PyResult<(Array3<f64>, [f64; 3])> {
     }
     Ok((volume, [spacing[2], spacing[1], spacing[0]]))
 }
+

@@ -8,7 +8,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     plan_abdominal_array_placement,
     synthetic::{synthetic_abdominal_kidney_phantom, synthetic_abdominal_liver_phantom},
 };
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -97,23 +97,23 @@ pub fn plan_abdominal_array_placement_from_ritk_ct<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "body_surface_points_m",
-        points3_to_array(&placement.body_surface_points_m).into_pyarray(py),
+        points3_to_array(&placement.body_surface_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "organ_surface_points_m",
-        points3_to_array(&placement.organ_surface_points_m).into_pyarray(py),
+        points3_to_array(&placement.organ_surface_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "therapy_elements_m",
-        points3_to_array(&placement.therapy_elements_m).into_pyarray(py),
+        points3_to_array(&placement.therapy_elements_m).to_pyarray(py),
     )?;
     out.set_item(
         "beam_start_points_m",
-        points3_to_array(&placement.beam_start_points_m).into_pyarray(py),
+        points3_to_array(&placement.beam_start_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "beam_end_points_m",
-        points3_to_array(&placement.beam_end_points_m).into_pyarray(py),
+        points3_to_array(&placement.beam_end_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "focus_m",
@@ -143,3 +143,4 @@ pub fn plan_abdominal_array_placement_from_ritk_ct<'py>(
     out.set_item("synthetic_phantom", synthetic)?;
     Ok(out)
 }
+

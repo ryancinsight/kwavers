@@ -7,7 +7,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
 use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray2, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
 
@@ -59,7 +59,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_observation<'py>(
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(pressure.into_pyarray(py).into())
+    Ok(pressure.to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -110,7 +110,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_second_order_observation<'py>
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(pressure.into_pyarray(py).into())
+    Ok(pressure.to_pyarray(py).into())
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -124,3 +124,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     Ok(())
 }
+

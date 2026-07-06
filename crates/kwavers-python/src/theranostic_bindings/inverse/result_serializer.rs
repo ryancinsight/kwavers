@@ -7,7 +7,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     TRANSMIT_SCHEDULE_MODEL,
 };
 use ndarray::{Array1, Array3};
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -97,69 +97,69 @@ pub(super) fn result_to_dict<'py>(
     let placement_body_surface_points = points3_to_array(&placement_context.body_surface_points_m);
     out.set_item("anatomy", prepared.anatomy.label())?;
     out.set_item("device_model", layout.model_name.clone())?;
-    out.set_item("ct_hu", prepared.ct_hu.into_pyarray(py))?;
-    out.set_item("label", prepared.label.into_pyarray(py))?;
-    out.set_item("sound_speed_m_s", prepared.sound_speed_m_s.into_pyarray(py))?;
+    out.set_item("ct_hu", prepared.ct_hu.to_pyarray(py))?;
+    out.set_item("label", prepared.label.to_pyarray(py))?;
+    out.set_item("sound_speed_m_s", prepared.sound_speed_m_s.to_pyarray(py))?;
     out.set_item(
         "attenuation_np_per_m_mhz",
-        prepared.attenuation_np_per_m_mhz.into_pyarray(py),
+        prepared.attenuation_np_per_m_mhz.to_pyarray(py),
     )?;
-    out.set_item("body_mask", prepared.body_mask.into_pyarray(py))?;
-    out.set_item("organ_mask", prepared.organ_mask.into_pyarray(py))?;
-    out.set_item("target_mask", prepared.target_mask.into_pyarray(py))?;
-    out.set_item("exposure", result.exposure.into_pyarray(py))?;
+    out.set_item("body_mask", prepared.body_mask.to_pyarray(py))?;
+    out.set_item("organ_mask", prepared.organ_mask.to_pyarray(py))?;
+    out.set_item("target_mask", prepared.target_mask.to_pyarray(py))?;
+    out.set_item("exposure", result.exposure.to_pyarray(py))?;
     out.set_item(
         "exposure_raw_peak_pressure",
-        result.exposure_raw_peak_pressure.into_pyarray(py),
+        result.exposure_raw_peak_pressure.to_pyarray(py),
     )?;
-    out.set_item("lesion_target", result.lesion_target.into_pyarray(py))?;
+    out.set_item("lesion_target", result.lesion_target.to_pyarray(py))?;
     out.set_item(
         "anatomy_reconstruction",
-        result.anatomy_reconstruction.into_pyarray(py),
+        result.anatomy_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "active_lesion_reconstruction",
-        result.active_lesion_reconstruction.into_pyarray(py),
+        result.active_lesion_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "waveform_rtm_reconstruction",
-        result.waveform_rtm_reconstruction.into_pyarray(py),
+        result.waveform_rtm_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "elastic_shear_reconstruction",
-        result.elastic_shear_reconstruction.into_pyarray(py),
+        result.elastic_shear_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "subharmonic_reconstruction",
-        result.subharmonic_reconstruction.into_pyarray(py),
+        result.subharmonic_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "harmonic_reconstruction",
-        result.harmonic_reconstruction.into_pyarray(py),
+        result.harmonic_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "ultraharmonic_reconstruction",
-        result.ultraharmonic_reconstruction.into_pyarray(py),
+        result.ultraharmonic_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "fused_reconstruction",
-        result.fused_reconstruction.into_pyarray(py),
+        result.fused_reconstruction.to_pyarray(py),
     )?;
     out.set_item(
         "therapy_x_m",
-        point_axis(&layout.therapy_elements, true).into_pyarray(py),
+        point_axis(&layout.therapy_elements, true).to_pyarray(py),
     )?;
     out.set_item(
         "therapy_y_m",
-        point_axis(&layout.therapy_elements, false).into_pyarray(py),
+        point_axis(&layout.therapy_elements, false).to_pyarray(py),
     )?;
     out.set_item(
         "imaging_x_m",
-        point_axis(&layout.imaging_receivers, true).into_pyarray(py),
+        point_axis(&layout.imaging_receivers, true).to_pyarray(py),
     )?;
     out.set_item(
         "imaging_y_m",
-        point_axis(&layout.imaging_receivers, false).into_pyarray(py),
+        point_axis(&layout.imaging_receivers, false).to_pyarray(py),
     )?;
     out.set_item("focus_m", (layout.focus_m.x_m, layout.focus_m.y_m))?;
     out.set_item(
@@ -208,28 +208,28 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("geometry_model", layout.model_name.clone())?;
     out.set_item("placement_metrics", placement_dict(py, &placement)?)?;
     out.set_item("placement_context_model", placement_context_model)?;
-    out.set_item("placement_ct_hu", placement_context.ct_hu.into_pyarray(py))?;
+    out.set_item("placement_ct_hu", placement_context.ct_hu.to_pyarray(py))?;
     out.set_item(
         "placement_body_mask",
-        placement_context.body_mask.into_pyarray(py),
+        placement_context.body_mask.to_pyarray(py),
     )?;
     out.set_item(
         "placement_target_mask",
-        placement_context.target_mask.into_pyarray(py),
+        placement_context.target_mask.to_pyarray(py),
     )?;
     out.set_item("placement_spacing_m", placement_spacing_m)?;
     out.set_item("placement_slice_index", placement_context.slice_index)?;
     out.set_item(
         "placement_therapy_points_m",
-        placement_therapy_points.into_pyarray(py),
+        placement_therapy_points.to_pyarray(py),
     )?;
     out.set_item(
         "placement_imaging_points_m",
-        placement_imaging_points.into_pyarray(py),
+        placement_imaging_points.to_pyarray(py),
     )?;
     out.set_item(
         "placement_body_surface_points_m",
-        placement_body_surface_points.into_pyarray(py),
+        placement_body_surface_points.to_pyarray(py),
     )?;
     out.set_item("placement_focus_m", placement_focus_m)?;
     out.set_item("placement_skin_contact_m", placement_skin_contact_m)?;
@@ -313,7 +313,7 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("active_voxels", result.active_voxels)?;
     out.set_item(
         "objective_history",
-        Array1::from(result.objective_history).into_pyarray(py),
+        Array1::from(result.objective_history).to_pyarray(py),
     )?;
     let metrics = PyDict::new(py);
     metrics.set_item("anatomy", metric_dict(py, &result.anatomy_metrics)?)?;
@@ -333,3 +333,4 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("metrics", metrics)?;
     Ok(out)
 }
+

@@ -18,7 +18,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstSourceScalingPolicy, BreastUstTable1Parity,
 };
 use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyList, PyModule};
@@ -103,7 +103,7 @@ pub fn breast_fwi_source_receiver_mask<'py>(
 ) -> PyResult<Py<PyArray3<bool>>> {
     let mask = breast_ust_source_receiver_mask(observation_shape, circumferential_elements, rows)
         .map_err(kwavers_to_value_py)?;
-    Ok(mask.into_pyarray(py).into())
+    Ok(mask.to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -115,7 +115,7 @@ pub fn breast_fwi_passive_receiver_mask<'py>(
 ) -> PyResult<Py<PyArray3<bool>>> {
     let mask = breast_ust_passive_receiver_mask(observation_shape, circumferential_elements, rows)
         .map_err(kwavers_to_value_py)?;
-    Ok(mask.into_pyarray(py).into())
+    Ok(mask.to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -484,3 +484,4 @@ fn table1_parity_to_dict<'py>(
 fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }
+

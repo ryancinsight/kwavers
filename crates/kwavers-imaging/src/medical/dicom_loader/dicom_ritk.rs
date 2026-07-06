@@ -1,13 +1,13 @@
 //! ritk-io → kwavers DICOM adapter (SSOT bridge).
 //!
 //! This module is the canonical seam between the ritk-io DICOM reader (which
-//! returns a Burn `Image<B, 3>`) and the kwavers `Array3<f64>` consumer.
+//! returns a native Coeus-backed image) and the kwavers `Array3<f64>` consumer.
 //! Both `kwavers_imaging::medical::dicom_loader::DicomImageLoader` and the
 //! therapy orchestrator's CT-loading branch route through these helpers.
 //!
 //! # Why this exists
 //!
-//! `ritk_io::scan_dicom_directory` and `ritk_io::load_dicom_series::<B>` own
+//! `ritk_io::scan_dicom_directory` and `ritk_io::load_native_dicom_series` own
 //! the DICOM transfer-syntax decoding, slice-spatial sorting, and
 //! Image-Position/Image-Orientation handling. The kwavers domain layer,
 //! however, operates on `Array3<f64>` plus a `MedicalImageMetadata` record
@@ -26,10 +26,11 @@
 
 use std::path::Path;
 
+use coeus_core::SequentialBackend;
 use ndarray::Array3;
-use ritk_io::{load_dicom_series, scan_dicom_directory, DicomSeriesInfo};
+use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 
-use crate::medical::ritk_bridge::{image_to_volume, AdapterBackend};
+use crate::medical::ritk_bridge::native_image_to_volume;
 use crate::medical::MedicalImageMetadata;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -139,15 +140,14 @@ pub fn load_series_with_uid<P: AsRef<Path>>(
 /// Returns an error if ritk-io fails to decode the series or if the
 /// returned tensor is not contiguous `f32`.
 pub fn load_series(info: &DicomSeriesInfo) -> KwaversResult<DicomSeriesVolume> {
-    let device = Default::default();
-    let image = load_dicom_series::<AdapterBackend>(info, &device).map_err(|e| {
+    let image = load_native_dicom_series(info, &SequentialBackend).map_err(|e| {
         KwaversError::InternalError(format!(
             "ritk-io failed to decode DICOM series '{}': {e}",
             info.series_instance_uid()
         ))
     })?;
 
-    let vol = image_to_volume(&image)?;
+    let vol = native_image_to_volume(&image)?;
 
     let metadata = MedicalImageMetadata {
         dimensions: vol.dimensions,

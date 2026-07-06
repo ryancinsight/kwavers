@@ -1,7 +1,7 @@
 //! Source and pressure-signal photoacoustic bindings.
 
 use kwavers_physics::analytical::photoacoustics;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -43,7 +43,7 @@ pub fn pa_sphere_pressure_signal(
         r_det_m,
         initial_pressure_pa,
     );
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute a Gaussian absorber initial-pressure profile and bipolar PA signal.
@@ -92,11 +92,12 @@ pub fn gaussian_absorber_photoacoustic_profile<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "initial_pressure_pa",
-        profile.initial_pressure_pa.into_pyarray(py),
+        profile.initial_pressure_pa.to_pyarray(py),
     )?;
     out.set_item(
         "surface_signal_pa_per_m",
-        profile.surface_signal_pa_per_m.into_pyarray(py),
+        profile.surface_signal_pa_per_m.to_pyarray(py),
     )?;
     Ok(out)
 }
+

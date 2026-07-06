@@ -12,7 +12,7 @@ use kwavers_solver::inverse::elastography::elastic_fwi::{
     reconstruct_lesion_transmission, TransmissionFwiParams,
 };
 use ndarray::{Array2, Array3};
-use numpy::{IntoPyArray, PyArray2, PyReadonlyArray2};
+use numpy::{ToPyArray, PyArray2, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -86,10 +86,11 @@ pub fn elastic_shear_fwi_reconstruct(
         .map_err(to_py)?;
 
     let rec2d = Array2::from_shape_fn((nx, ny), |(i, j)| rec[[i, j, 0]]);
-    Ok(rec2d.into_pyarray(py).into())
+    Ok(rec2d.to_pyarray(py).into())
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(elastic_shear_fwi_reconstruct, m)?)?;
     Ok(())
 }
+

@@ -6,7 +6,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstAliPhantomHdf5Config, BreastUstAliPhantomLoadConfig, BreastUstAliPhantomMat5Config,
     BreastUstMriBreastSide, BreastUstPhantomStorageOrder, BreastUstSoundSpeedUnit,
 };
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -67,7 +67,7 @@ pub fn load_ali_2025_breast_fwi_phantom<'py>(
         .map_err(kwavers_to_py)?;
 
     let out = PyDict::new(py);
-    out.set_item("sound_speed_m_s", phantom.sound_speed_m_s.into_pyarray(py))?;
+    out.set_item("sound_speed_m_s", phantom.sound_speed_m_s.to_pyarray(py))?;
     out.set_item("spacing_m", phantom.spacing_m)?;
     out.set_item("dataset_path", phantom.dataset_path)?;
     out.set_item("source_path", phantom.source_path.display().to_string())?;
@@ -116,3 +116,4 @@ fn parse_storage_order(order: &str) -> PyResult<BreastUstPhantomStorageOrder> {
         ))),
     }
 }
+

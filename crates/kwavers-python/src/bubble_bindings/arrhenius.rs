@@ -23,7 +23,7 @@
 //! - Henriques & Moritz (1947) Am. J. Pathol. 23:695
 
 use ndarray::Array1;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -68,7 +68,7 @@ pub fn compute_arrhenius_damage(
     }
     let n = temps.len();
     if n < 2 {
-        return Ok(Array1::<f64>::zeros(n).into_pyarray(py).into());
+        return Ok(Array1::<f64>::zeros(n).to_pyarray(py).into());
     }
     let dt_s = (times[n - 1] - times[0]) / (n - 1) as f64; // uniform step
     let celsius: Vec<f64> = temps.iter().map(|&t_k| t_k - KELVIN_OFFSET_C).collect();
@@ -78,5 +78,6 @@ pub fn compute_arrhenius_damage(
         a_hz,
         ea_j_per_mol,
     );
-    Ok(Array1::from(omega).into_pyarray(py).into())
+    Ok(Array1::from(omega).to_pyarray(py).into())
 }
+

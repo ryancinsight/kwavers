@@ -9,7 +9,7 @@ use kwavers_physics::field_surrogate::{
     place_kernel_at_focus as kwavers_place_kernel_at_focus, resample_trilinear,
     FocalKernel as KwaversFocalKernel, KernelCube as KwaversKernelCube,
 };
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -136,7 +136,7 @@ impl FocalKernel {
 
     /// Return a copy of the field array as a numpy array.
     fn field<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray3<f64>> {
-        self.inner.field.clone().into_pyarray(py)
+        self.inner.field.clone().to_pyarray(py)
     }
 
     fn __repr__(&self) -> String {
@@ -245,7 +245,7 @@ impl KernelCube {
             self.inner
                 .query(f0, pnp, target_shape, target_focus_idx, target_dx_m)
         });
-        Ok(env.into_pyarray(py))
+        Ok(env.to_pyarray(py))
     }
 
     fn __repr__(&self) -> String {
@@ -290,7 +290,7 @@ fn place_kernel_at_focus<'py>(
         };
         kwavers_place_kernel_at_focus(&resampled, target_shape, target_focus_idx)
     });
-    Ok(placed.into_pyarray(py))
+    Ok(placed.to_pyarray(py))
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -299,3 +299,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(place_kernel_at_focus, m)?)?;
     Ok(())
 }
+

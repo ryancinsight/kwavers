@@ -11,7 +11,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
 };
 use ndarray::Array1;
 use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -41,14 +41,14 @@ impl PyFrequencyObservation {
 
     #[getter]
     pub fn observed_pressure<'py>(&self, py: Python<'py>) -> Py<PyArray2<Complex64>> {
-        self.inner.observed_pressure.clone().into_pyarray(py).into()
+        self.inner.observed_pressure.clone().to_pyarray(py).into()
     }
 }
 
 #[pyfunction]
 pub fn ali_2025_breast_fwi_frequency_sweep_hz<'py>(py: Python<'py>) -> Py<PyArray1<f64>> {
     Array1::from(ali_2025_frequency_sweep_hz())
-        .into_pyarray(py)
+        .to_pyarray(py)
         .into()
 }
 
@@ -66,7 +66,7 @@ pub fn simulate_breast_fwi_frequency_observation<'py>(
             simulate_frequency_observation(&sound_speed, &array.inner, frequency_hz, &config.inner)
         })
         .map_err(kwavers_to_py)?;
-    Ok(pressure.into_pyarray(py).into())
+    Ok(pressure.to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -105,10 +105,10 @@ pub fn invert_breast_fwi<'py>(
         .map_err(kwavers_to_py)?;
 
     let out = PyDict::new(py);
-    out.set_item("sound_speed_m_s", result.sound_speed_m_s.into_pyarray(py))?;
+    out.set_item("sound_speed_m_s", result.sound_speed_m_s.to_pyarray(py))?;
     out.set_item(
         "objective_history",
-        Array1::from(result.objective_history).into_pyarray(py),
+        Array1::from(result.objective_history).to_pyarray(py),
     )?;
     out.set_item("frequencies_used", result.frequencies_used)?;
     out.set_item("transmissions_used", result.transmissions_used)?;
@@ -117,3 +117,4 @@ pub fn invert_breast_fwi<'py>(
     out.set_item("solver_model_family", result.solver_model_family)?;
     Ok(out)
 }
+

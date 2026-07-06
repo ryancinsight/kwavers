@@ -1,6 +1,6 @@
 //! Elastography domain definitions
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Inversion method for elasticity reconstruction
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -51,9 +51,9 @@ impl ElasticityMap {
     /// - Young's modulus: E = 3μ = 3ρcs² (Poisson's ratio ≈ 0.5)
     #[must_use]
     pub fn from_shear_wave_speed(shear_wave_speed: Array3<f64>, density: f64) -> Self {
-        let (nx, ny, nz) = shear_wave_speed.dim();
-        let mut shear_modulus = Array3::zeros((nx, ny, nz));
-        let mut youngs_modulus = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = shear_wave_speed.shape();
+        let mut shear_modulus = Array3::zeros([nx, ny, nz]);
+        let mut youngs_modulus = Array3::zeros([nx, ny, nz]);
 
         for k in 0..nz {
             for j in 0..ny {
@@ -84,7 +84,11 @@ impl ElasticityMap {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let mean = self.youngs_modulus.mean().unwrap_or(0.0);
+        let mean = if self.youngs_modulus.size() > 0 {
+            self.youngs_modulus.iter().copied().sum::<f64>() / self.youngs_modulus.size() as f64
+        } else {
+            0.0
+        };
         (min, max, mean)
     }
 }

@@ -11,7 +11,7 @@ use kwavers_math::{
 };
 use ndarray::{Array1, Array3};
 use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -35,7 +35,7 @@ pub fn fft1<'py>(
         ));
     }
     let spectrum = py.detach(|| fft_1d_array(&arr));
-    Ok(spectrum.into_pyarray(py).into())
+    Ok(spectrum.to_pyarray(py).into())
 }
 
 /// Inverse 1-D DFT of a complex spectrum.
@@ -58,7 +58,7 @@ pub fn ifft1<'py>(
         ));
     }
     let signal = py.detach(|| ifft_1d_array(&arr));
-    Ok(signal.into_pyarray(py).into())
+    Ok(signal.to_pyarray(py).into())
 }
 
 /// Forward 3-D DFT of a real-valued field.
@@ -82,7 +82,7 @@ pub fn fft3<'py>(
         ));
     }
     let spectrum = py.detach(|| fft_3d_array(&arr));
-    Ok(spectrum.into_pyarray(py).into())
+    Ok(spectrum.to_pyarray(py).into())
 }
 
 /// Inverse 3-D DFT of a complex spectrum.
@@ -106,7 +106,7 @@ pub fn ifft3<'py>(
         ));
     }
     let field = py.detach(|| ifft_3d_array(&arr));
-    Ok(field.into_pyarray(py).into())
+    Ok(field.to_pyarray(py).into())
 }
 
 /// Demeaned Hann-windowed one-sided power spectrum of a 1-D real profile.
@@ -157,8 +157,8 @@ pub fn demeaned_hann_power_spectrum_1d<'py>(
     }
 
     Ok((
-        Array1::from_vec(frequency).into_pyarray(py).into(),
-        Array1::from_vec(power).into_pyarray(py).into(),
+        Array1::from_vec(frequency).to_pyarray(py).into(),
+        Array1::from_vec(power).to_pyarray(py).into(),
     ))
 }
 
@@ -171,3 +171,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(demeaned_hann_power_spectrum_1d, m)?)?;
     Ok(())
 }
+

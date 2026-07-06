@@ -6,7 +6,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
 };
 use ndarray::Array1;
-use numpy::{IntoPyArray, PyReadonlyArray3};
+use numpy::{ToPyArray, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -109,11 +109,11 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "frequencies_hz",
-        Array1::from(dataset.frequencies_hz.clone()).into_pyarray(py),
+        Array1::from(dataset.frequencies_hz.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "observed_pressure",
-        dataset.observed_pressure.into_pyarray(py),
+        dataset.observed_pressure.to_pyarray(py),
     )?;
     out.set_item("transmissions", dataset.transmissions)?;
     out.set_item("receivers", dataset.receivers)?;
@@ -125,3 +125,4 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     out.set_item("model_family", dataset.model_family)?;
     Ok(out)
 }
+

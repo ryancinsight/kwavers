@@ -1,7 +1,7 @@
 //! Skull attenuation and aberration bindings.
 
 use kwavers_physics::analytical::skull as skull_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -26,7 +26,7 @@ pub fn skull_insertion_loss_two_way_db(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = skull_mod::skull_insertion_loss_two_way_db(f_s, thickness_cm, alpha0);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Generate a random phase screen modelling skull aberration.
@@ -47,7 +47,7 @@ pub fn skull_phase_screen(
     seed: u64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = skull_mod::skull_phase_screen(n, sigma_phi_rad, seed);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the Strehl ratio for a given wavefront-error standard deviation.
@@ -64,3 +64,4 @@ pub fn skull_phase_screen(
 pub fn strehl_ratio(sigma_phi_rad: f64) -> PyResult<f64> {
     Ok(skull_mod::strehl_ratio(sigma_phi_rad))
 }
+

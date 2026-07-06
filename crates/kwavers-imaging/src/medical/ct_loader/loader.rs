@@ -68,7 +68,9 @@ impl Default for CTImageLoader {
 
 impl MedicalImageLoader for CTImageLoader {
     fn load(&mut self, path: &str) -> KwaversResult<Array3<f64>> {
-        use crate::medical::ritk_bridge::{image_to_volume, AdapterBackend};
+        use crate::medical::ritk_bridge::native_image_to_volume;
+        use coeus_core::SequentialBackend;
+        use ritk_io::ImageReader;
 
         if !std::path::Path::new(path).exists() {
             return Err(KwaversError::InvalidInput(format!(
@@ -76,13 +78,14 @@ impl MedicalImageLoader for CTImageLoader {
             )));
         }
 
-        // ritk owns medical-image I/O: decode the .nii/.nii.gz via ritk-io into a
-        // ritk-core image, then bridge it to kwavers' `(x, y, z)` Array3<f64>.
-        let device = Default::default();
-        let image = ritk_io::read_nifti::<AdapterBackend, _>(path, &device).map_err(|e| {
+        // ritk owns medical-image I/O: decode .nii/.nii.gz through the native
+        // Coeus-backed RITK reader, then bridge it to kwavers' `(x, y, z)`
+        // Array3<f64> boundary.
+        let reader = ritk_io::format::nifti::native::NiftiReader::new(SequentialBackend);
+        let image = reader.read(path).map_err(|e| {
             KwaversError::InvalidInput(format!("ritk-io failed to read NIfTI '{path}': {e}"))
         })?;
-        let vol = image_to_volume(&image)?;
+        let vol = native_image_to_volume(&image)?;
 
         if vol.dimensions.0 == 0 || vol.dimensions.1 == 0 || vol.dimensions.2 == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {

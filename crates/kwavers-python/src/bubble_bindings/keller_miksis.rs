@@ -17,7 +17,7 @@
 //! - de Jong et al. (1994) Ultrasonics 32:447 (linear shell viscosity).
 
 use ndarray::Array1;
-use numpy::{IntoPyArray, PyArray1};
+use numpy::{ToPyArray, PyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -107,9 +107,9 @@ pub fn solve_keller_miksis(
         c_l,
     );
     Ok((
-        Array1::from(time).into_pyarray(py).into(),
-        Array1::from(radius).into_pyarray(py).into(),
-        Array1::from(rdot).into_pyarray(py).into(),
+        Array1::from(time).to_pyarray(py).into(),
+        Array1::from(radius).to_pyarray(py).into(),
+        Array1::from(rdot).to_pyarray(py).into(),
     ))
 }
 
@@ -161,3 +161,4 @@ pub fn solve_keller_herring(
         xi_s,
     )
 }
+

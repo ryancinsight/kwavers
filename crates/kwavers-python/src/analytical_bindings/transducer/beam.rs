@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::transducer;
 use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -34,7 +34,7 @@ pub fn delay_law_focus_2d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::delay_law_focus_2d(ex, ez, x_f, z_f, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the complex 2-D beam pattern for a phased array.
@@ -94,8 +94,8 @@ pub fn beam_pattern_2d(
     let imag_arr = Array2::from_shape_vec((nx, nz), imag_flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        real_arr.into_pyarray(py).unbind(),
-        imag_arr.into_pyarray(py).unbind(),
+        real_arr.to_pyarray(py).unbind(),
+        imag_arr.to_pyarray(py).unbind(),
     ))
 }
 
@@ -128,7 +128,7 @@ pub fn beam_pattern_magnitude(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = transducer::beam_pattern_magnitude(t_slice, k, d_m, n, steer_rad, ka_elem);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Magnitude of the 2-D complex beam pattern, normalised to its peak.
@@ -184,5 +184,6 @@ pub fn beam_pattern_2d_magnitude(
     let flat = transducer::beam_pattern_2d_magnitude(x_s, z_s, ex, ez, freq_hz, c, w_s, d_s);
     let arr = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr.into_pyarray(py).unbind())
+    Ok(arr.to_pyarray(py).unbind())
 }
+

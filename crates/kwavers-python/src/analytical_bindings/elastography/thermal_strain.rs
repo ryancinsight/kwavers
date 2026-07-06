@@ -6,7 +6,7 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::{
 };
 use kwavers_physics::analytical::elastography;
 use ndarray::Array3;
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -47,8 +47,8 @@ pub fn thermal_strain_rf_fixture(
     let tracked = Array3::from_shape_vec((n_lines, 1, nz), tracked)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        reference.into_pyarray(py).unbind(),
-        tracked.into_pyarray(py).unbind(),
+        reference.to_pyarray(py).unbind(),
+        tracked.to_pyarray(py).unbind(),
     ))
 }
 
@@ -137,8 +137,9 @@ pub fn thermal_strain_reconstruct(
         .reconstruct_temperature(&reference, &tracked)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        result.displacement.into_pyarray(py).unbind(),
-        result.strain.into_pyarray(py).unbind(),
-        result.temperature_change.into_pyarray(py).unbind(),
+        result.displacement.to_pyarray(py).unbind(),
+        result.strain.to_pyarray(py).unbind(),
+        result.temperature_change.to_pyarray(py).unbind(),
     ))
 }
+

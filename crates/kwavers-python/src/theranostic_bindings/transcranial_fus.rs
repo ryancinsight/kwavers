@@ -19,7 +19,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
-use numpy::{IntoPyArray, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{ToPyArray, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -263,7 +263,7 @@ pub fn gbm_subspot_raster_py<'py>(
         .map_err(kwavers_to_py)?;
     let covered_fraction = gbm_subspot_covered_fraction(&tumor, &spots, spacing, pitch_m);
     let out = PyDict::new(py);
-    out.set_item("indices", spots.into_pyarray(py))?;
+    out.set_item("indices", spots.to_pyarray(py))?;
     out.set_item("covered_fraction", covered_fraction)?;
     Ok(out)
 }
@@ -321,11 +321,11 @@ pub fn bbb_opening_from_subspots_py<'py>(
         .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?;
 
     let out = PyDict::new(py);
-    out.set_item("dose", dose.into_pyarray(py))?;
-    out.set_item("permeability", permeability.into_pyarray(py))?;
-    out.set_item("stable_cavitation_probability", stable.into_pyarray(py))?;
-    out.set_item("inertial_cavitation_risk", inertial.into_pyarray(py))?;
-    out.set_item("opened_mask", opened_mask.into_pyarray(py))?;
+    out.set_item("dose", dose.to_pyarray(py))?;
+    out.set_item("permeability", permeability.to_pyarray(py))?;
+    out.set_item("stable_cavitation_probability", stable.to_pyarray(py))?;
+    out.set_item("inertial_cavitation_risk", inertial.to_pyarray(py))?;
+    out.set_item("opened_mask", opened_mask.to_pyarray(py))?;
     Ok(out)
 }
 
@@ -408,14 +408,14 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "peak_temperature_c",
-        result.peak_temperature_c.into_pyarray(py),
+        result.peak_temperature_c.to_pyarray(py),
     )?;
     out.set_item(
         "final_temperature_c",
-        result.final_temperature_c.into_pyarray(py),
+        result.final_temperature_c.to_pyarray(py),
     )?;
-    out.set_item("cem43_min", result.cem43_min.into_pyarray(py))?;
-    out.set_item("lesion_mask", result.lesion_mask.into_pyarray(py))?;
+    out.set_item("cem43_min", result.cem43_min.to_pyarray(py))?;
+    out.set_item("lesion_mask", result.lesion_mask.to_pyarray(py))?;
     Ok(out)
 }
 
@@ -428,49 +428,49 @@ fn plan_to_pydict<'py>(
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
-    out.set_item("pressure_pa", plan.pressure_pa.clone().into_pyarray(py))?;
+    out.set_item("pressure_pa", plan.pressure_pa.clone().to_pyarray(py))?;
     out.set_item(
         "intensity_w_m2",
-        plan.intensity_w_m2.clone().into_pyarray(py),
+        plan.intensity_w_m2.clone().to_pyarray(py),
     )?;
     out.set_item(
         "mechanical_index",
-        plan.mechanical_index.clone().into_pyarray(py),
+        plan.mechanical_index.clone().to_pyarray(py),
     )?;
     out.set_item(
         "cavitation_probability",
-        plan.cavitation_probability.clone().into_pyarray(py),
+        plan.cavitation_probability.clone().to_pyarray(py),
     )?;
-    out.set_item("phases_rad", plan.phases_rad.clone().into_pyarray(py))?;
-    out.set_item("delays_s", plan.delays_s.clone().into_pyarray(py))?;
+    out.set_item("phases_rad", plan.phases_rad.clone().to_pyarray(py))?;
+    out.set_item("delays_s", plan.delays_s.clone().to_pyarray(py))?;
     out.set_item(
         "skull_lengths_m",
-        plan.skull_lengths_m.clone().into_pyarray(py),
+        plan.skull_lengths_m.clone().to_pyarray(py),
     )?;
     out.set_item(
         "amplitude_weights",
-        plan.amplitude_weights.clone().into_pyarray(py),
+        plan.amplitude_weights.clone().to_pyarray(py),
     )?;
     out.set_item(
         "element_positions_m",
-        plan.element_positions_m.clone().into_pyarray(py),
+        plan.element_positions_m.clone().to_pyarray(py),
     )?;
     out.set_item(
         "subspot_indices",
-        plan.subspot_indices.clone().into_pyarray(py),
+        plan.subspot_indices.clone().to_pyarray(py),
     )?;
-    out.set_item("bbb_dose", plan.bbb_dose.clone().into_pyarray(py))?;
+    out.set_item("bbb_dose", plan.bbb_dose.clone().to_pyarray(py))?;
     out.set_item(
         "bbb_permeability",
-        plan.bbb_permeability.clone().into_pyarray(py),
+        plan.bbb_permeability.clone().to_pyarray(py),
     )?;
     out.set_item(
         "bbb_stable_cavitation",
-        plan.bbb_stable_cavitation.clone().into_pyarray(py),
+        plan.bbb_stable_cavitation.clone().to_pyarray(py),
     )?;
     out.set_item(
         "bbb_inertial_risk",
-        plan.bbb_inertial_risk.clone().into_pyarray(py),
+        plan.bbb_inertial_risk.clone().to_pyarray(py),
     )?;
     out.set_item(
         "focus_index",
@@ -513,3 +513,4 @@ fn brain_centroid(brain_mask: &ndarray::Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
+

@@ -1,7 +1,7 @@
 //! Passive cavitation receive and coherence PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -38,7 +38,7 @@ pub fn receiver_channel_psd_from_source(
     });
     let arr = ndarray::Array2::from_shape_vec((recv.nrows(), psd.len()), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr.into_pyarray(py).unbind())
+    Ok(arr.to_pyarray(py).unbind())
 }
 
 /// Sum receiver-channel PSDs into the measured array spectrum.
@@ -51,7 +51,7 @@ pub fn integrate_channel_psd(
     let arr = channel_psd.as_array();
     let flat: Vec<f64> = arr.iter().copied().collect();
     let out = py.detach(|| cavitation::integrate_channel_psd(&flat, arr.nrows(), arr.ncols()));
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Synthetic passive RF received from one cavitation point source.
@@ -107,7 +107,7 @@ pub fn passive_cavitation_point_source_rf(
     }
     let arr = ndarray::Array2::from_shape_vec((recv.nrows(), n_samples), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr.into_pyarray(py).unbind())
+    Ok(arr.to_pyarray(py).unbind())
 }
 
 /// Van Cittert-Zernike coherence for an incoherent planar source.
@@ -126,5 +126,6 @@ pub fn van_cittert_zernike_coherence(
     let coherence =
         cavitation::van_cittert_zernike_coherence(delta_x, source_extent_m, depth_m, wavelength_m)
             .map_err(PyValueError::new_err)?;
-    Ok(coherence.into_pyarray(py).unbind())
+    Ok(coherence.to_pyarray(py).unbind())
 }
+
