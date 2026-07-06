@@ -19,7 +19,6 @@ use crate::interface::pinn_beamforming::{
     BeamformingTrainingMetrics, InterfacePinnBeamformingResult, ModelInfo, PinnBeamformingConfig,
     PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
 use ndarray::{Array1, Array2, Array3};
 use std::sync::{Arc, Mutex};
@@ -28,43 +27,46 @@ use std::sync::{Arc, Mutex};
 use crate::inverse::pinn::ml::BurnLossWeights;
 use crate::inverse::pinn::ml::{BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer};
 
-/// Adapter that implements PinnBeamformingProvider using Burn-based PINNs.
+/// Adapter that implements PinnBeamformingProvider using coeus-backed PINNs.
 ///
-/// This adapter maintains the Burn PINN model internally and translates between
-/// the solver-agnostic interface types and Burn-specific types.
-impl<B: burn::tensor::backend::Backend> std::fmt::Debug for BurnPinnBeamformingAdapter<B> {
+/// This adapter maintains the PINN model internally and translates between
+/// the solver-agnostic interface types and the network's `Var`-based types.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for BurnPinnBeamformingAdapter<B>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BurnPinnBeamformingAdapter")
             .field("config", &self.config)
             .field("is_trained", &self.is_trained)
             .field("metadata", &self.metadata)
             .field("model", &"<Arc<Mutex<Option<BurnPINN1DWave>>>>")
-            .field("device", &"<B::Device>")
             .finish()
     }
 }
 
-pub struct BurnPinnBeamformingAdapter<B: burn::tensor::backend::Backend> {
-    /// Underlying Burn PINN model
+pub struct BurnPinnBeamformingAdapter<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    /// Underlying PINN model
     model: Arc<Mutex<Option<BurnPINN1DWave<B>>>>,
     /// Model configuration
     config: BurnPINNConfig,
-    /// Backend device
-    device: B::Device,
     /// Is model trained?
     is_trained: bool,
     /// Model metadata
     metadata: ModelInfo,
 }
 
-impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPinnBeamformingAdapter<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create new adapter with the given configuration.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn new(config: BurnPINNConfig, device: B::Device) -> KwaversResult<Self> {
+    pub fn new(config: BurnPINNConfig) -> KwaversResult<Self> {
         let metadata = ModelInfo {
-            name: "Burn PINN 1D Wave Beamformer".to_string(),
+            name: "Coeus PINN 1D Wave Beamformer".to_string(),
             version: "1.0.0".to_string(),
             num_parameters: Self::estimate_parameters(&config),
             dimensions: vec![1], // 1D wave equation
@@ -74,7 +76,6 @@ impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
         Ok(Self {
             model: Arc::new(Mutex::new(None)),
             config,
-            device,
             is_trained: false,
             metadata,
         })
@@ -117,7 +118,7 @@ impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
             .map_err(|e| KwaversError::InternalError(format!("Failed to lock model: {}", e)))?;
 
         if model_lock.is_none() {
-            let model = BurnPINN1DWave::new(self.config.clone(), &self.device)?;
+            let model = BurnPINN1DWave::new(self.config.clone())?;
             *model_lock = Some(model);
         }
 
@@ -127,7 +128,15 @@ impl<B: burn::tensor::backend::Backend> BurnPinnBeamformingAdapter<B> {
 
 impl<B> PinnBeamformingProvider for BurnPinnBeamformingAdapter<B>
 where
-    B: AutodiffBackend + 'static,
+    B: coeus_ops::BackendOps<f32>
+        + coeus_ops::CpuBackend
+        + Default
+        + std::fmt::Debug
+        + Send
+        + Sync
+        + 'static,
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     fn beamform(
         &self,
@@ -166,7 +175,7 @@ where
                 .lock()
                 .map_err(|e| KwaversError::InternalError(format!("Failed to lock model: {e}")))?;
             match model_lock.as_ref() {
-                Some(model) => model.predict(&x_flat, &t_flat, &self.device)?,
+                Some(model) => model.predict(&x_flat, &t_flat)?,
                 None => return Err(KwaversError::InternalError("Model not initialized".into())),
             }
         };
@@ -245,9 +254,8 @@ where
         let epochs = 1000_usize;
         let wave_speed = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
-        let mut trainer = BurnPINNTrainer::<B>::new(self.config.clone(), &self.device)?;
-        let burn_metrics =
-            trainer.train(&x_data, &t_data, &u_data, wave_speed, &self.device, epochs)?;
+        let mut trainer = BurnPINNTrainer::<B>::new(self.config.clone())?;
+        let burn_metrics = trainer.train(&x_data, &t_data, &u_data, wave_speed, epochs)?;
 
         // Store trained model; release lock before mutating self.
         {
@@ -306,12 +314,10 @@ where
 ///
 #[cfg(feature = "pinn")]
 pub fn create_burn_beamforming_provider() -> KwaversResult<Box<dyn PinnBeamformingProvider>> {
-    type Backend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+    type Backend = coeus_core::MoiraiBackend;
 
     let config = BurnPINNConfig::default();
-    let device = Default::default();
-
-    let adapter = BurnPinnBeamformingAdapter::<Backend>::new(config, device)?;
+    let adapter = BurnPinnBeamformingAdapter::<Backend>::new(config)?;
     Ok(Box::new(adapter))
 }
 
@@ -321,11 +327,10 @@ mod tests {
 
     #[test]
     fn test_adapter_creation() {
-        type Backend = burn::backend::NdArray<f32>;
+        type Backend = coeus_core::MoiraiBackend;
         let config = BurnPINNConfig::default();
-        let device = Default::default();
 
-        let result = BurnPinnBeamformingAdapter::<Backend>::new(config, device);
+        let result = BurnPinnBeamformingAdapter::<Backend>::new(config);
         let _adapter = result.unwrap();
     }
 
@@ -339,7 +344,7 @@ mod tests {
         };
 
         let params =
-            BurnPinnBeamformingAdapter::<burn::backend::NdArray<f32>>::estimate_parameters(&config);
+            BurnPinnBeamformingAdapter::<coeus_core::MoiraiBackend>::estimate_parameters(&config);
 
         // Expected: (2*64+64) + (64*64+64) + (64*1+1) = 192 + 4160 + 65 = 4417
         assert_eq!(params, 4417);
@@ -347,15 +352,13 @@ mod tests {
 
     #[test]
     fn test_model_info() {
-        // AutodiffBackend required by PinnBeamformingProvider impl bound.
-        type Backend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+        type Backend = coeus_core::MoiraiBackend;
         let config = BurnPINNConfig::default();
-        let device = Default::default();
 
-        let adapter = BurnPinnBeamformingAdapter::<Backend>::new(config, device).unwrap();
+        let adapter = BurnPinnBeamformingAdapter::<Backend>::new(config).unwrap();
         let info = adapter.model_info();
 
-        assert_eq!(info.name, "Burn PINN 1D Wave Beamformer");
+        assert_eq!(info.name, "Coeus PINN 1D Wave Beamformer");
         assert!(!info.is_trained);
         assert_eq!(info.dimensions, vec![1]);
         assert!(info.num_parameters > 0);

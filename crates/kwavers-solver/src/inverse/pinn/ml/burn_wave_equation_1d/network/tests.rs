@@ -1,84 +1,91 @@
 use super::super::config::BurnPINNConfig;
 use super::core::BurnPINN1DWave;
-use burn::backend::NdArray;
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
+use coeus_core::MoiraiBackend;
 use ndarray::Array1;
 
-type TestBackend = NdArray<f32>;
+type TestBackend = MoiraiBackend;
 
 #[test]
 fn test_pinn_creation() {
-    let device = Default::default();
     let config = BurnPINNConfig::default();
-    let result = BurnPINN1DWave::<TestBackend>::new(config, &device);
+    let result = BurnPINN1DWave::<TestBackend>::new(config);
     let _pinn = result.unwrap();
 }
 
 #[test]
 fn test_pinn_invalid_config_empty_layers() {
-    let device = Default::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![],
         ..Default::default()
     };
-    let result = BurnPINN1DWave::<TestBackend>::new(config, &device);
+    let result = BurnPINN1DWave::<TestBackend>::new(config);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_pinn_forward_pass() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
-    let x = Tensor::<TestBackend, 1>::from_floats([0.5], &device).reshape([1, 1]);
-    let t = Tensor::<TestBackend, 1>::from_floats([0.1], &device).reshape([1, 1]);
+    let x = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[0.5f32], &backend),
+        false,
+    );
+    let t = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[0.1f32], &backend),
+        false,
+    );
 
-    let u = pinn.forward(x, t);
+    let u = pinn.forward(&x, &t);
 
-    assert_eq!(u.dims(), [1, 1]);
-    let u_val = u.to_data().as_slice::<f32>().unwrap()[0];
+    assert_eq!(u.tensor.shape(), &[1, 1]);
+    let u_val = u.tensor.as_slice()[0];
     assert!(u_val.is_finite());
 }
 
 #[test]
 fn test_pinn_forward_pass_batch() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
-    let x = Tensor::<TestBackend, 1>::from_floats([0.0, 0.5, 1.0], &device).reshape([3, 1]);
-    let t = Tensor::<TestBackend, 1>::from_floats([0.0, 0.1, 0.2], &device).reshape([3, 1]);
+    let x = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.0f32, 0.5, 1.0], &backend),
+        false,
+    );
+    let t = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.0f32, 0.1, 0.2], &backend),
+        false,
+    );
 
-    let u = pinn.forward(x, t);
-    assert_eq!(u.dims(), [3, 1]);
+    let u = pinn.forward(&x, &t);
+    assert_eq!(u.tensor.shape(), &[3, 1]);
 
-    let binding = u.to_data();
-    let u_vals = binding.as_slice::<f32>().unwrap();
-    for &val in u_vals {
+    for &val in u.tensor.as_slice() {
         assert!(val.is_finite());
     }
 }
 
 #[test]
 fn test_pinn_predict() {
-    let device = Default::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
     let x = Array1::from_vec(vec![0.0, 0.5, 1.0]);
     let t = Array1::from_vec(vec![0.0, 0.1, 0.2]);
 
-    let result = pinn.predict(&x, &t, &device);
+    let result = pinn.predict(&x, &t);
 
     let u = result.unwrap();
     assert_eq!(u.shape(), &[3, 1]);
@@ -89,24 +96,15 @@ fn test_pinn_predict() {
 
 #[test]
 fn test_pinn_predict_mismatched_lengths() {
-    let device = Default::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
     let x = Array1::from_vec(vec![0.0, 0.5]);
     let t = Array1::from_vec(vec![0.0, 0.1, 0.2]);
 
-    let result = pinn.predict(&x, &t, &device);
+    let result = pinn.predict(&x, &t);
     assert!(result.is_err());
-}
-
-#[test]
-fn test_pinn_device() {
-    let device = Default::default();
-    let config = BurnPINNConfig::default();
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
-    let _ = pinn.device();
 }

@@ -107,14 +107,18 @@
 //! let pde_loss = residual.powf_scalar(2.0).mean();
 //! ```
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 use super::{config::BurnLossWeights, network::BurnPINN1DWave};
 
 #[cfg(test)]
 mod tests;
 
-impl<B: AutodiffBackend> BurnPINN1DWave<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN1DWave<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Compute PDE residual using automatic differentiation
     ///
     /// Calculates the residual of the 1D wave equation: r = ∂²u/∂t² - c²∂²u/∂x²
@@ -163,49 +167,48 @@ impl<B: AutodiffBackend> BurnPINN1DWave<B> {
     /// - Well-trained: ||r||² < 1e-4
     pub fn compute_pde_residual(
         &self,
-        x: Tensor<B, 2>,
-        t: Tensor<B, 2>,
+        x: &Var<f32, B>,
+        t: &Var<f32, B>,
         wave_speed: f64,
-    ) -> Tensor<B, 2> {
+    ) -> Var<f32, B> {
         let c_squared = (wave_speed * wave_speed) as f32;
+        let backend = B::default();
 
-        let x_grad = x.clone().require_grad();
-        let t_for_x = t.clone();
-
-        let u_for_x_deriv = self.forward(x_grad.clone(), t_for_x);
-        let grad_u_x = u_for_x_deriv.backward();
-
+        let x_grad = Var::new(x.tensor.clone(), true);
+        let u_for_x_deriv = self.forward(&x_grad, t);
+        u_for_x_deriv.backward();
         let _du_dx = x_grad
-            .grad(&grad_u_x)
-            .unwrap_or_else(|| Tensor::zeros(x.shape(), &x.device()));
+            .grad()
+            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend));
 
-        let x_grad_2 = x.clone().require_grad();
-        let u_xx = self.forward(x_grad_2.clone(), t.clone());
-        let grad_u_xx = u_xx.backward();
+        let x_grad_2 = Var::new(x.tensor.clone(), true);
+        let u_xx = self.forward(&x_grad_2, t);
+        u_xx.backward();
         let d2u_dx2 = x_grad_2
-            .grad(&grad_u_xx)
-            .unwrap_or_else(|| Tensor::zeros(x.shape(), &x.device()));
+            .grad()
+            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend));
 
-        let t_grad = t.clone().require_grad();
-        let x_for_t = x.clone();
-
-        let u_for_t_deriv = self.forward(x_for_t, t_grad.clone());
-        let grad_u_t = u_for_t_deriv.backward();
-
+        let t_grad = Var::new(t.tensor.clone(), true);
+        let u_for_t_deriv = self.forward(x, &t_grad);
+        u_for_t_deriv.backward();
         let _du_dt = t_grad
-            .grad(&grad_u_t)
-            .unwrap_or_else(|| Tensor::zeros(t.shape(), &t.device()));
+            .grad()
+            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(t.tensor.shape(), &backend));
 
-        let t_grad_2 = t.clone().require_grad();
-        let u_tt = self.forward(x.clone(), t_grad_2.clone());
-        let grad_u_tt = u_tt.backward();
+        let t_grad_2 = Var::new(t.tensor.clone(), true);
+        let u_tt = self.forward(x, &t_grad_2);
+        u_tt.backward();
         let d2u_dt2 = t_grad_2
-            .grad(&grad_u_tt)
-            .unwrap_or_else(|| Tensor::zeros(t.shape(), &t.device()));
+            .grad()
+            .unwrap_or_else(|| coeus_tensor::Tensor::zeros_on(t.tensor.shape(), &backend));
 
-        let residual_inner = d2u_dt2 - d2u_dx2.mul_scalar(c_squared);
-
-        Tensor::from_inner(residual_inner)
+        // Wrap the extracted (already-detached) second derivatives as fresh
+        // leaves: the weight gradients they contribute to the physics loss
+        // were already accumulated by the four `backward()` calls above, so
+        // this residual value itself does not need further grad-tracking.
+        let d2u_dt2 = Var::new(d2u_dt2, false);
+        let d2u_dx2 = Var::new(d2u_dx2, false);
+        coeus_autograd::sub(&d2u_dt2, &coeus_autograd::scalar_mul(&d2u_dx2, c_squared))
     }
 
     /// Compute physics-informed loss function with all components
@@ -234,31 +237,38 @@ impl<B: AutodiffBackend> BurnPINN1DWave<B> {
     ///
     /// Tuple of (total_loss, data_loss, pde_loss, bc_loss) where each is a scalar tensor [1]
     #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::type_complexity)] // (total, data, pde, bc) mirrors the original burn API 1:1
     pub fn compute_physics_loss(
         &self,
-        x_data: Tensor<B, 2>,
-        t_data: Tensor<B, 2>,
-        u_data: Tensor<B, 2>,
-        x_collocation: Tensor<B, 2>,
-        t_collocation: Tensor<B, 2>,
-        x_boundary: Tensor<B, 2>,
-        t_boundary: Tensor<B, 2>,
-        u_boundary: Tensor<B, 2>,
+        x_data: &Var<f32, B>,
+        t_data: &Var<f32, B>,
+        u_data: &Var<f32, B>,
+        x_collocation: &Var<f32, B>,
+        t_collocation: &Var<f32, B>,
+        x_boundary: &Var<f32, B>,
+        t_boundary: &Var<f32, B>,
+        u_boundary: &Var<f32, B>,
         wave_speed: f64,
         loss_weights: BurnLossWeights,
-    ) -> (Tensor<B, 1>, Tensor<B, 1>, Tensor<B, 1>, Tensor<B, 1>) {
+    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
         let u_pred_data = self.forward(x_data, t_data);
-        let data_loss = (u_pred_data - u_data).powf_scalar(2.0).mean();
+        let data_diff = coeus_autograd::sub(&u_pred_data, u_data);
+        let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&data_diff, &data_diff));
 
         let residual = self.compute_pde_residual(x_collocation, t_collocation, wave_speed);
-        let pde_loss = residual.powf_scalar(2.0).mean();
+        let pde_loss = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
 
         let u_pred_boundary = self.forward(x_boundary, t_boundary);
-        let bc_loss = (u_pred_boundary - u_boundary).powf_scalar(2.0).mean();
+        let bc_diff = coeus_autograd::sub(&u_pred_boundary, u_boundary);
+        let bc_loss = coeus_autograd::mean(&coeus_autograd::mul(&bc_diff, &bc_diff));
 
-        let total_loss = data_loss.clone() * (loss_weights.data as f32)
-            + pde_loss.clone() * (loss_weights.pde as f32)
-            + bc_loss.clone() * (loss_weights.boundary as f32);
+        let total_loss = coeus_autograd::add(
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(&data_loss, loss_weights.data as f32),
+                &coeus_autograd::scalar_mul(&pde_loss, loss_weights.pde as f32),
+            ),
+            &coeus_autograd::scalar_mul(&bc_loss, loss_weights.boundary as f32),
+        );
 
         (total_loss, data_loss, pde_loss, bc_loss)
     }

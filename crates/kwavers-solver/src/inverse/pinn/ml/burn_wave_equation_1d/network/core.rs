@@ -20,11 +20,8 @@
 //!   Neural Networks, 2(5):359-366. DOI: 10.1016/0893-6080(89)90020-8
 
 use super::super::config::BurnPINNConfig;
-use burn::{
-    module::Module,
-    nn::{Linear, LinearConfig},
-    tensor::{backend::Backend, Tensor},
-};
+use coeus_autograd::Var;
+use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{Array1, Array2};
 
@@ -35,27 +32,38 @@ use ndarray::{Array1, Array2};
 ///
 /// By the Universal Approximation Theorem (Hornik et al. 1989), this architecture
 /// can approximate any continuous function to arbitrary accuracy.
-#[derive(Module, Debug)]
-pub struct BurnPINN1DWave<B: Backend> {
+#[derive(Clone)]
+pub struct BurnPINN1DWave<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Input layer (2 inputs: x, t) → first hidden layer.
-    input_layer: Linear<B>,
+    input_layer: Linear<f32, B>,
 
     /// Hidden layers with tanh activation.
-    hidden_layers: Vec<Linear<B>>,
+    hidden_layers: Vec<Linear<f32, B>>,
 
     /// Output layer (last hidden layer → 1 output: u).
-    output_layer: Linear<B>,
+    output_layer: Linear<f32, B>,
 }
 
-impl<B: Backend> BurnPINN1DWave<B> {
-    /// Create a new Burn-based PINN for 1D wave equation.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for BurnPINN1DWave<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BurnPINN1DWave")
+            .field("hidden_layers", &self.hidden_layers.len())
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN1DWave<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
+    /// Create a new PINN for the 1D wave equation.
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
-    pub fn new(config: BurnPINNConfig, device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(config: BurnPINNConfig) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
             return Err(KwaversError::InvalidInput(
                 "Must have at least one hidden layer".into(),
@@ -64,17 +72,17 @@ impl<B: Backend> BurnPINN1DWave<B> {
 
         let input_size = 2;
         let first_hidden_size = config.hidden_layers[0];
-        let input_layer = LinearConfig::new(input_size, first_hidden_size).init(device);
+        let input_layer = Linear::new(input_size, first_hidden_size, true);
 
         let mut hidden_layers = Vec::new();
         for i in 0..config.hidden_layers.len() - 1 {
             let in_size = config.hidden_layers[i];
             let out_size = config.hidden_layers[i + 1];
-            hidden_layers.push(LinearConfig::new(in_size, out_size).init(device));
+            hidden_layers.push(Linear::new(in_size, out_size, true));
         }
 
         let last_hidden_size = *config.hidden_layers.last().unwrap();
-        let output_layer = LinearConfig::new(last_hidden_size, 1).init(device);
+        let output_layer = Linear::new(last_hidden_size, 1, true);
 
         Ok(Self {
             input_layer,
@@ -83,9 +91,38 @@ impl<B: Backend> BurnPINN1DWave<B> {
         })
     }
 
-    /// Get the device this network is allocated on.
-    pub fn device(&self) -> B::Device {
-        self.input_layer.devices()[0].clone()
+    /// Collect all trainable parameters, in the order `load_parameters` expects them back.
+    pub fn parameters(&self) -> Vec<Var<f32, B>> {
+        let mut params = self.input_layer.parameters();
+        for layer in &self.hidden_layers {
+            params.extend(layer.parameters());
+        }
+        params.extend(self.output_layer.parameters());
+        params
+    }
+
+    /// Write optimizer-updated parameter values back into this network's layers.
+    ///
+    /// # Panics
+    /// - Panics if `params.len()` does not match `self.parameters().len()`.
+    pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
+        let mut offset = 0;
+        let n_in = self.input_layer.parameters().len();
+        self.input_layer.load_parameters(&params[offset..offset + n_in]);
+        offset += n_in;
+        for layer in &mut self.hidden_layers {
+            let n = layer.parameters().len();
+            layer.load_parameters(&params[offset..offset + n]);
+            offset += n;
+        }
+        let n_out = self.output_layer.parameters().len();
+        self.output_layer
+            .load_parameters(&params[offset..offset + n_out]);
+        assert_eq!(
+            offset + n_out,
+            params.len(),
+            "load_parameters: parameter count mismatch"
+        );
     }
 
     /// Forward pass through the network.
@@ -100,14 +137,14 @@ impl<B: Backend> BurnPINN1DWave<B> {
     /// # Returns
     ///
     /// Predicted field values u(x,t) [batch_size, 1]
-    pub fn forward(&self, x: Tensor<B, 2>, t: Tensor<B, 2>) -> Tensor<B, 2> {
-        let input = Tensor::cat(vec![x, t], 1);
-        let mut h = self.input_layer.forward(input);
+    pub fn forward(&self, x: &Var<f32, B>, t: &Var<f32, B>) -> Var<f32, B> {
+        let input = coeus_autograd::cat(&[x, t], 1);
+        let mut h = self.input_layer.forward(&input);
         for layer in &self.hidden_layers {
-            h = layer.forward(h);
-            h = h.tanh();
+            h = layer.forward(&h);
+            h = coeus_autograd::tanh(&h);
         }
-        self.output_layer.forward(h)
+        self.output_layer.forward(&h)
     }
 
     /// Predict field values at given spatial and temporal coordinates.
@@ -118,7 +155,6 @@ impl<B: Backend> BurnPINN1DWave<B> {
     ///
     /// * `x` - Spatial coordinates (m) [n_points]
     /// * `t` - Time coordinates (s) [n_points]
-    /// * `device` - Device to run computations on
     ///
     /// # Returns
     ///
@@ -127,15 +163,7 @@ impl<B: Backend> BurnPINN1DWave<B> {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
-    pub fn predict(
-        &self,
-        x: &Array1<f64>,
-        t: &Array1<f64>,
-        device: &B::Device,
-    ) -> KwaversResult<Array2<f64>> {
+    pub fn predict(&self, x: &Array1<f64>, t: &Array1<f64>) -> KwaversResult<Array2<f64>> {
         if x.len() != t.len() {
             return Err(KwaversError::InvalidInput(
                 "x and t must have same length".into(),
@@ -146,18 +174,19 @@ impl<B: Backend> BurnPINN1DWave<B> {
         let x_vec: Vec<f32> = x.iter().map(|&v| v as f32).collect();
         let t_vec: Vec<f32> = t.iter().map(|&v| v as f32).collect();
 
-        let x_tensor = Tensor::<B, 1>::from_floats(x_vec.as_slice(), device).reshape([n, 1]);
-        let t_tensor = Tensor::<B, 1>::from_floats(t_vec.as_slice(), device).reshape([n, 1]);
+        let backend = B::default();
+        let x_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x_vec, &backend),
+            false,
+        );
+        let t_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t_vec, &backend),
+            false,
+        );
 
-        let u_tensor = self.forward(x_tensor, t_tensor);
-        let u_data = u_tensor.to_data();
-        let u_vec: Vec<f64> = u_data
-            .as_slice::<f32>()
-            .unwrap()
-            .iter()
-            .map(|&v| v as f64)
-            .collect();
+        let u_var = self.forward(&x_var, &t_var);
+        let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();
 
-        Ok(Array2::from_shape_vec((x.len(), 1), u_vec).unwrap())
+        Ok(Array2::from_shape_vec((n, 1), u_vec).unwrap())
     }
 }

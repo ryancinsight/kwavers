@@ -2,11 +2,11 @@ use super::{
     BurnLossWeights, BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
     SimpleOptimizer,
 };
-use burn::backend::{Autodiff, NdArray};
+use coeus_core::MoiraiBackend;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::{Array1, Array2};
 
-type TestBackend = Autodiff<NdArray<f32>>;
+type TestBackend = MoiraiBackend;
 
 #[test]
 fn test_public_api_types_available() {
@@ -17,7 +17,6 @@ fn test_public_api_types_available() {
 
 #[test]
 fn test_end_to_end_cpu_training() {
-    let device = Default::default();
 
     // Create configuration
     let config = BurnPINNConfig {
@@ -28,7 +27,7 @@ fn test_end_to_end_cpu_training() {
     };
 
     // Create trainer
-    let mut trainer = BurnPINNTrainer::<TestBackend>::new(config, &device).unwrap();
+    let mut trainer = BurnPINNTrainer::<TestBackend>::new(config).unwrap();
 
     // Synthetic training data
     let n = 20;
@@ -38,7 +37,7 @@ fn test_end_to_end_cpu_training() {
 
     // Train
     let metrics = trainer
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 10)
+        .train(&x_data, &t_data, &u_data, 343.0, 10)
         .unwrap();
 
     // Verify metrics
@@ -54,7 +53,7 @@ fn test_end_to_end_cpu_training() {
     // Predict after training
     let x_test = Array1::linspace(-1.0, 1.0, 5);
     let t_test = Array1::linspace(0.0, 0.1, 5);
-    let u_pred = trainer.pinn().predict(&x_test, &t_test, &device).unwrap();
+    let u_pred = trainer.pinn().predict(&x_test, &t_test).unwrap();
 
     assert_eq!(u_pred.shape(), &[5, 1]);
     for &val in u_pred.iter() {
@@ -122,11 +121,10 @@ fn test_metrics_numerical_issues_detection() {
 
 #[test]
 fn test_network_creation_via_public_api() {
-    let device = Default::default();
     let config = BurnPINNConfig::default();
 
     // Should be able to create network directly
-    let network = BurnPINN1DWave::<TestBackend>::new(config, &device);
+    let network = BurnPINN1DWave::<TestBackend>::new(config);
     let _network = network.unwrap();
 }
 
@@ -139,7 +137,6 @@ fn test_optimizer_creation_via_public_api() {
 
 #[test]
 fn test_multi_epoch_convergence() {
-    let device = Default::default();
 
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
@@ -148,7 +145,7 @@ fn test_multi_epoch_convergence() {
         ..Default::default()
     };
 
-    let mut trainer = BurnPINNTrainer::<TestBackend>::new(config, &device).unwrap();
+    let mut trainer = BurnPINNTrainer::<TestBackend>::new(config).unwrap();
 
     let n = 15;
     let x_data = Array1::linspace(-1.0, 1.0, n);
@@ -157,7 +154,7 @@ fn test_multi_epoch_convergence() {
 
     // Train for more epochs
     let metrics = trainer
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 50)
+        .train(&x_data, &t_data, &u_data, 343.0, 50)
         .unwrap();
 
     assert_eq!(metrics.epochs_completed, 50);
@@ -173,7 +170,6 @@ fn test_multi_epoch_convergence() {
 
 #[test]
 fn test_different_wave_speeds() {
-    let device = Default::default();
 
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
@@ -188,39 +184,31 @@ fn test_different_wave_speeds() {
     let u_data = Array2::zeros((n, 1));
 
     // Train with air speed of sound
-    let mut trainer1 = BurnPINNTrainer::<TestBackend>::new(config.clone(), &device).unwrap();
+    let mut trainer1 = BurnPINNTrainer::<TestBackend>::new(config.clone()).unwrap();
     let metrics1 = trainer1
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 10)
+        .train(&x_data, &t_data, &u_data, 343.0, 10)
         .unwrap();
     assert!(metrics1.total_loss.last().unwrap().is_finite());
 
     // Train with water speed of sound
-    let mut trainer2 = BurnPINNTrainer::<TestBackend>::new(config, &device).unwrap();
+    let mut trainer2 = BurnPINNTrainer::<TestBackend>::new(config).unwrap();
     let metrics2 = trainer2
-        .train(
-            &x_data,
-            &t_data,
-            &u_data,
-            SOUND_SPEED_WATER_SIM,
-            &device,
-            10,
-        )
+        .train(&x_data, &t_data, &u_data, SOUND_SPEED_WATER_SIM, 10)
         .unwrap();
     assert!(metrics2.total_loss.last().unwrap().is_finite());
 }
 
 #[test]
 fn test_pinn_predict_interface() {
-    let device = Default::default();
     let config = BurnPINNConfig::default();
 
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
     // Test prediction
     let x = Array1::linspace(-1.0, 1.0, 10);
     let t = Array1::linspace(0.0, 0.1, 10);
 
-    let u = pinn.predict(&x, &t, &device).unwrap();
+    let u = pinn.predict(&x, &t).unwrap();
 
     assert_eq!(u.shape(), &[10, 1]);
     for &val in u.iter() {
@@ -230,7 +218,6 @@ fn test_pinn_predict_interface() {
 
 #[test]
 fn test_complete_workflow() {
-    let device = Default::default();
 
     // 1. Create configuration
     let config = BurnPINNConfig {
@@ -244,7 +231,7 @@ fn test_complete_workflow() {
     assert!(config.validate().is_ok());
 
     // 3. Create trainer
-    let mut trainer = BurnPINNTrainer::<TestBackend>::new(config, &device).unwrap();
+    let mut trainer = BurnPINNTrainer::<TestBackend>::new(config).unwrap();
 
     // 4. Prepare data
     let n = 15;
@@ -254,7 +241,7 @@ fn test_complete_workflow() {
 
     // 5. Train
     let metrics = trainer
-        .train(&x_data, &t_data, &u_data, 343.0, &device, 20)
+        .train(&x_data, &t_data, &u_data, 343.0, 20)
         .unwrap();
 
     // 6. Verify training
@@ -264,7 +251,7 @@ fn test_complete_workflow() {
     // 7. Make predictions
     let x_test = Array1::linspace(-1.0, 1.0, 5);
     let t_test = Array1::linspace(0.0, 0.1, 5);
-    let u_pred = trainer.pinn().predict(&x_test, &t_test, &device).unwrap();
+    let u_pred = trainer.pinn().predict(&x_test, &t_test).unwrap();
 
     // 8. Verify predictions
     assert_eq!(u_pred.shape(), &[5, 1]);

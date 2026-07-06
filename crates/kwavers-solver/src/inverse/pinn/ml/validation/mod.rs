@@ -19,7 +19,6 @@ pub use metrics::{compute_correlation, compute_mean_relative_error, compute_vali
 
 use crate::inverse::pinn::ml::burn_wave_equation_1d::BurnPINN1DWave;
 use crate::inverse::pinn::ml::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
@@ -100,11 +99,14 @@ impl PinnValidationReport {
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
-pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
+pub fn validate_pinn_vs_fdtd<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     pinn: &BurnPINN1DWave<B>,
-    device: &B::Device,
     fdtd_config: FDTDConfig,
-) -> KwaversResult<PinnValidationReport> {
+) -> KwaversResult<PinnValidationReport>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     use std::time::Instant;
 
     let fdtd_start = Instant::now();
@@ -133,7 +135,7 @@ pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
     }
     let x = Array1::from_vec(x);
     let t = Array1::from_vec(t);
-    let pinn_prediction_flat = pinn.predict(&x, &t, device)?;
+    let pinn_prediction_flat = pinn.predict(&x, &t)?;
     let pinn_prediction = ndarray::Array2::from_shape_vec(
         (fdtd_config.nx, fdtd_config.nt),
         pinn_prediction_flat.iter().copied().collect(),

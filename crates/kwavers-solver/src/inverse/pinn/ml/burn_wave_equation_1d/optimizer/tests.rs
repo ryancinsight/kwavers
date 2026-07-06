@@ -3,10 +3,23 @@
 use super::core::SimpleOptimizer;
 use crate::inverse::pinn::ml::burn_wave_equation_1d::config::BurnPINNConfig;
 use crate::inverse::pinn::ml::burn_wave_equation_1d::network::BurnPINN1DWave;
-use burn::backend::{Autodiff, NdArray};
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
+use coeus_core::MoiraiBackend;
 
-type TestBackend = Autodiff<NdArray<f32>>;
+type TestBackend = MoiraiBackend;
+
+fn var2(vals: &[f32], backend: &TestBackend) -> Var<f32, TestBackend> {
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![vals.len(), 1], vals, backend),
+        false,
+    )
+}
+
+fn zero_grad(pinn: &BurnPINN1DWave<TestBackend>) {
+    for p in pinn.parameters() {
+        p.zero_grad();
+    }
+}
 
 #[test]
 fn test_optimizer_creation() {
@@ -22,48 +35,52 @@ fn test_optimizer_learning_rate() {
 
 #[test]
 fn test_optimizer_step_compiles() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
     let optimizer = SimpleOptimizer::new(0.001);
 
-    let x = Tensor::<TestBackend, 2>::from_floats([[0.5]], &device);
-    let t = Tensor::<TestBackend, 2>::from_floats([[0.1]], &device);
-    let u = pinn.forward(x, t);
-    let loss = u.powf_scalar(2.0).mean();
+    let x = var2(&[0.5], &backend);
+    let t = var2(&[0.1], &backend);
+    let u = pinn.forward(&x, &t);
+    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
 
-    let grads = loss.backward();
-    let _updated_pinn = optimizer.step(pinn, &grads);
+    zero_grad(&pinn);
+    loss.backward();
+    let _updated_pinn = optimizer.step(pinn);
 }
 
 #[test]
 fn test_optimizer_step_updates_parameters() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![5, 5],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
-    let x = Tensor::<TestBackend, 2>::from_floats([[0.5]], &device);
-    let t = Tensor::<TestBackend, 2>::from_floats([[0.1]], &device);
-    let u_before = pinn.forward(x.clone(), t.clone());
-    let u_before_val: f32 = u_before.clone().into_scalar();
+    let x = var2(&[0.5], &backend);
+    let t = var2(&[0.1], &backend);
+    let u_before = pinn.forward(&x, &t);
+    let u_before_val = u_before.tensor.as_slice()[0];
 
     let optimizer = SimpleOptimizer::new(0.1);
 
-    let target = Tensor::<TestBackend, 2>::from_floats([[1.0]], &device);
-    let loss = (u_before - target).powf_scalar(2.0).mean();
-    let grads = loss.backward();
+    let target = var2(&[1.0], &backend);
+    let diff = coeus_autograd::sub(&u_before, &target);
+    let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
 
-    let updated_pinn = optimizer.step(pinn, &grads);
+    zero_grad(&pinn);
+    loss.backward();
 
-    let u_after = updated_pinn.forward(x, t);
-    let u_after_val: f32 = u_after.into_scalar();
+    let updated_pinn = optimizer.step(pinn);
+
+    let u_after = updated_pinn.forward(&x, &t);
+    let u_after_val = u_after.tensor.as_slice()[0];
 
     assert!(u_before_val.is_finite());
     assert!(u_after_val.is_finite());
@@ -71,30 +88,32 @@ fn test_optimizer_step_updates_parameters() {
 
 #[test]
 fn test_optimizer_multiple_steps() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![5, 5],
         ..Default::default()
     };
-    let mut pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
+    let mut pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
 
     let optimizer = SimpleOptimizer::new(0.01);
 
-    let x = Tensor::<TestBackend, 2>::from_floats([[0.5]], &device);
-    let t = Tensor::<TestBackend, 2>::from_floats([[0.1]], &device);
-    let target = Tensor::<TestBackend, 2>::from_floats([[0.0]], &device);
+    let x = var2(&[0.5], &backend);
+    let t = var2(&[0.1], &backend);
+    let target = var2(&[0.0], &backend);
 
     let mut losses = Vec::new();
 
     for _ in 0..5 {
-        let u = pinn.forward(x.clone(), t.clone());
-        let loss = (u - target.clone()).powf_scalar(2.0).mean();
+        let u = pinn.forward(&x, &t);
+        let diff = coeus_autograd::sub(&u, &target);
+        let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
 
-        let loss_val: f32 = loss.clone().into_scalar();
+        let loss_val = loss.tensor.as_slice()[0];
         losses.push(loss_val);
 
-        let grads = loss.backward();
-        pinn = optimizer.step(pinn, &grads);
+        zero_grad(&pinn);
+        loss.backward();
+        pinn = optimizer.step(pinn);
     }
 
     for &loss in &losses {
@@ -106,7 +125,7 @@ fn test_optimizer_multiple_steps() {
 
 #[test]
 fn test_optimizer_with_different_learning_rates() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![5, 5],
         ..Default::default()
@@ -121,37 +140,49 @@ fn test_optimizer_with_different_learning_rates() {
     let optimizer_large = SimpleOptimizer::new(0.1);
     assert_eq!(optimizer_large.learning_rate(), 0.1);
 
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config, &device).unwrap();
-    let x = Tensor::<TestBackend, 2>::from_floats([[0.5]], &device);
-    let t = Tensor::<TestBackend, 2>::from_floats([[0.1]], &device);
-    let u = pinn.forward(x, t);
-    let loss = u.powf_scalar(2.0).mean();
-    let grads = loss.backward();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config).unwrap();
+    let x = var2(&[0.5], &backend);
+    let t = var2(&[0.1], &backend);
 
-    let _ = optimizer_small.step(pinn.clone(), &grads);
-    let _ = optimizer_medium.step(pinn.clone(), &grads);
-    let _ = optimizer_large.step(pinn, &grads);
+    let u = pinn.forward(&x, &t);
+    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
+    zero_grad(&pinn);
+    loss.backward();
+    let pinn = optimizer_small.step(pinn.clone());
+
+    let u = pinn.forward(&x, &t);
+    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
+    zero_grad(&pinn);
+    loss.backward();
+    let pinn = optimizer_medium.step(pinn.clone());
+
+    let u = pinn.forward(&x, &t);
+    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
+    zero_grad(&pinn);
+    loss.backward();
+    let _ = optimizer_large.step(pinn);
 }
 
 #[test]
 fn test_gradient_mapper_preserves_structure() {
-    let device = Default::default();
+    let backend = TestBackend::default();
     let config = BurnPINNConfig {
         hidden_layers: vec![10, 10],
         ..Default::default()
     };
-    let pinn = BurnPINN1DWave::<TestBackend>::new(config.clone(), &device).unwrap();
+    let pinn = BurnPINN1DWave::<TestBackend>::new(config.clone()).unwrap();
 
     let optimizer = SimpleOptimizer::new(0.001);
 
-    let x = Tensor::<TestBackend, 2>::from_floats([[0.5]], &device);
-    let t = Tensor::<TestBackend, 2>::from_floats([[0.1]], &device);
-    let u = pinn.forward(x.clone(), t.clone());
-    let loss = u.powf_scalar(2.0).mean();
-    let grads = loss.backward();
+    let x = var2(&[0.5], &backend);
+    let t = var2(&[0.1], &backend);
+    let u = pinn.forward(&x, &t);
+    let loss = coeus_autograd::mean(&coeus_autograd::mul(&u, &u));
+    zero_grad(&pinn);
+    loss.backward();
 
-    let updated_pinn = optimizer.step(pinn, &grads);
+    let updated_pinn = optimizer.step(pinn);
 
-    let u_after = updated_pinn.forward(x, t);
-    assert_eq!(u_after.dims(), [1, 1]);
+    let u_after = updated_pinn.forward(&x, &t);
+    assert_eq!(u_after.tensor.shape(), &[1, 1]);
 }

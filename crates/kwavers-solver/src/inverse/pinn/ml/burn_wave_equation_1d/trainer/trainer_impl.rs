@@ -1,6 +1,6 @@
 use ndarray::{Array1, Array2};
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -11,20 +11,24 @@ use super::super::{
 
 /// PINN trainer for 1D wave equation with physics-informed learning
 #[derive(Debug)]
-pub struct BurnPINNTrainer<B: AutodiffBackend> {
+pub struct BurnPINNTrainer<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     pub(super) pinn: BurnPINN1DWave<B>,
     pub(super) optimizer: SimpleOptimizer,
     pub(super) config: BurnPINNConfig,
 }
 
-impl<B: AutodiffBackend> BurnPINNTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINNTrainer<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// New.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn new(config: BurnPINNConfig, device: &B::Device) -> KwaversResult<Self> {
+    pub fn new(config: BurnPINNConfig) -> KwaversResult<Self> {
         config.validate()?;
-        let pinn = BurnPINN1DWave::<B>::new(config.clone(), device)?;
+        let pinn = BurnPINN1DWave::<B>::new(config.clone())?;
         let optimizer = SimpleOptimizer::new(config.learning_rate as f32);
         Ok(Self {
             pinn,
@@ -43,18 +47,9 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
         t_data: &Array1<f64>,
         u_data: &Array2<f64>,
         wave_speed: f64,
-        device: &B::Device,
         epochs: usize,
     ) -> KwaversResult<BurnTrainingMetrics> {
-        self.train_with_callback(
-            x_data,
-            t_data,
-            u_data,
-            wave_speed,
-            device,
-            epochs,
-            |_, _| true,
-        )
+        self.train_with_callback(x_data, t_data, u_data, wave_speed, epochs, |_, _| true)
     }
     /// Train with callback.
     /// # Panics
@@ -73,7 +68,6 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
         t_data: &Array1<f64>,
         u_data: &Array2<f64>,
         wave_speed: f64,
-        device: &B::Device,
         epochs: usize,
         mut callback: F,
     ) -> KwaversResult<BurnTrainingMetrics>
@@ -96,18 +90,25 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
 
         let start_time = Instant::now();
         let mut metrics = BurnTrainingMetrics::new();
+        let backend = B::default();
 
         let n_data = x_data.len();
         let x_data_vec: Vec<f32> = x_data.iter().map(|&v| v as f32).collect();
         let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
         let u_data_vec: Vec<f32> = u_data.iter().map(|&v| v as f32).collect();
 
-        let x_data_tensor =
-            Tensor::<B, 1>::from_floats(x_data_vec.as_slice(), device).reshape([n_data, 1]);
-        let t_data_tensor =
-            Tensor::<B, 1>::from_floats(t_data_vec.as_slice(), device).reshape([n_data, 1]);
-        let u_data_tensor =
-            Tensor::<B, 1>::from_floats(u_data_vec.as_slice(), device).reshape([n_data, 1]);
+        let x_data_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], &x_data_vec, &backend),
+            false,
+        );
+        let t_data_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], &t_data_vec, &backend),
+            false,
+        );
+        let u_data_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_data, 1], &u_data_vec, &backend),
+            false,
+        );
 
         let n_colloc = self.config.num_collocation_points;
         let x_colloc_vec: Vec<f32> = (0..n_colloc)
@@ -115,10 +116,14 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
             .collect();
         let t_colloc_vec: Vec<f32> = (0..n_colloc).map(|i| i as f32 / n_colloc as f32).collect();
 
-        let x_colloc_tensor =
-            Tensor::<B, 1>::from_floats(x_colloc_vec.as_slice(), device).reshape([n_colloc, 1]);
-        let t_colloc_tensor =
-            Tensor::<B, 1>::from_floats(t_colloc_vec.as_slice(), device).reshape([n_colloc, 1]);
+        let x_colloc_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_colloc, 1], &x_colloc_vec, &backend),
+            false,
+        );
+        let t_colloc_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_colloc, 1], &t_colloc_vec, &backend),
+            false,
+        );
 
         let n_bc = 10;
         let x_bc_vec: Vec<f32> = vec![-1.0; n_bc / 2]
@@ -128,31 +133,44 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
         let t_bc_vec: Vec<f32> = vec![0.0; n_bc];
         let u_bc_vec: Vec<f32> = vec![0.0; n_bc];
 
-        let x_bc_tensor =
-            Tensor::<B, 1>::from_floats(x_bc_vec.as_slice(), device).reshape([n_bc, 1]);
-        let t_bc_tensor =
-            Tensor::<B, 1>::from_floats(t_bc_vec.as_slice(), device).reshape([n_bc, 1]);
-        let u_bc_tensor =
-            Tensor::<B, 1>::from_floats(u_bc_vec.as_slice(), device).reshape([n_bc, 1]);
+        let x_bc_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_bc, 1], &x_bc_vec, &backend),
+            false,
+        );
+        let t_bc_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_bc, 1], &t_bc_vec, &backend),
+            false,
+        );
+        let u_bc_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_bc, 1], &u_bc_vec, &backend),
+            false,
+        );
 
         for epoch in 0..epochs {
+            // Var gradients accumulate across `backward()` calls (unlike burn's
+            // per-call-graph `Gradients`, which is implicitly fresh each step);
+            // zero them before this epoch's forward+backward or they carry over.
+            for p in self.pinn.parameters() {
+                p.zero_grad();
+            }
+
             let (total_loss, data_loss, pde_loss, bc_loss) = self.pinn.compute_physics_loss(
-                x_data_tensor.clone(),
-                t_data_tensor.clone(),
-                u_data_tensor.clone(),
-                x_colloc_tensor.clone(),
-                t_colloc_tensor.clone(),
-                x_bc_tensor.clone(),
-                t_bc_tensor.clone(),
-                u_bc_tensor.clone(),
+                &x_data_var,
+                &t_data_var,
+                &u_data_var,
+                &x_colloc_var,
+                &t_colloc_var,
+                &x_bc_var,
+                &t_bc_var,
+                &u_bc_var,
                 wave_speed,
                 self.config.loss_weights,
             );
 
-            let total_val = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let data_val = data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let pde_val = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let total_val = total_loss.tensor.as_slice()[0] as f64;
+            let data_val = data_loss.tensor.as_slice()[0] as f64;
+            let pde_val = pde_loss.tensor.as_slice()[0] as f64;
+            let bc_val = bc_loss.tensor.as_slice()[0] as f64;
 
             if !total_val.is_finite()
                 || !data_val.is_finite()
@@ -172,8 +190,8 @@ impl<B: AutodiffBackend> BurnPINNTrainer<B> {
 
             metrics.record_epoch(total_val, data_val, pde_val, bc_val);
 
-            let grads = total_loss.backward();
-            self.pinn = self.optimizer.step(self.pinn.clone(), &grads);
+            total_loss.backward();
+            self.pinn = self.optimizer.step(self.pinn.clone());
 
             if epoch % 100 == 0 || epoch == epochs - 1 {
                 log::info!(
