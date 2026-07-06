@@ -1,5 +1,4 @@
 use super::*;
-use crate::validation::gpu_cpu_equivalence::DEFAULT_RELATIVE_TOLERANCE;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_medium::HomogeneousMedium;
 
@@ -54,13 +53,33 @@ fn create_test_256() -> (Grid, HomogeneousMedium) {
     (grid, medium)
 }
 
+fn assert_real_gpu_provider_unavailable(report: &EquivalenceReport) {
+    assert!(
+        !report.passed(),
+        "FDTD GPU equivalence must not pass without a real GPU provider"
+    );
+    let reason = report
+        .failure_reason
+        .as_deref()
+        .expect("unavailable FDTD GPU provider must be surfaced");
+    assert!(
+        reason.contains("FDTD provider-generic Leto/Hephaestus GPU equivalence"),
+        "failure reason must name the missing provider, got {reason}"
+    );
+    assert!(
+        reason.contains("provider trait implementation")
+            && reason.contains("previous path only ran the CPU solver"),
+        "failure reason must prevent CPU-vs-CPU equivalence claims, got {reason}"
+    );
+}
+
 // ============================================================================
 // TEST MATRIX IMPLEMENTATION
 // ============================================================================
 
 /// Test Matrix: 64³ Homogeneous Medium + Plane Wave
-/// Status: IMPLEMENTED
-/// Expected: Deterministic operations should produce bitwise-identical results
+/// Status: CPU reference implemented; real FDTD GPU provider trait unavailable.
+/// Expected: report surfaces unavailable GPU provider, not CPU-vs-CPU parity.
 /// # Panics
 /// - Panics if `Validation should complete`.
 ///
@@ -71,18 +90,7 @@ fn test_matrix_64_homogeneous_plane_wave() {
     let report =
         validate_gpu_cpu_equivalence(&grid, &medium, 50).expect("Validation should complete");
 
-    // Assertions on computed VALUES, not just Result variants
-    assert!(
-        report.max_relative_error < DEFAULT_RELATIVE_TOLERANCE || report.gpu_time_ms == 0.0,
-        "Max relative error {:.6e} exceeds threshold {:.6e}",
-        report.max_relative_error,
-        DEFAULT_RELATIVE_TOLERANCE
-    );
-
-    assert!(
-        report.max_absolute_error >= 0.0,
-        "Absolute error must be non-negative"
-    );
+    assert_real_gpu_provider_unavailable(&report);
     assert_eq!(
         report.total_points,
         64 * 64 * 64,
@@ -103,16 +111,12 @@ fn test_matrix_128_heterogeneous_point_source() {
     let report =
         validate_gpu_cpu_equivalence(&grid, &medium, 30).expect("Validation should complete");
 
-    assert!(report.max_absolute_error >= 0.0);
+    assert_real_gpu_provider_unavailable(&report);
     assert_eq!(
         report.total_points,
         128 * 128 * 128,
         "Should compare all grid points"
     );
-
-    if report.passed() {
-        println!("128³ test passed: speedup = {:.2}×", report.speedup);
-    }
 }
 
 /// Test Matrix: 256³ Absorbing + Custom Source
@@ -129,14 +133,7 @@ fn test_matrix_256_absorbing_custom_source() {
     let report =
         validate_gpu_cpu_equivalence(&grid, &medium, 20).expect("Validation should complete");
 
-    // Large grid should achieve good GPU utilization
-    if report.passed() && report.gpu_time_ms > 0.0 {
-        assert!(
-            report.speedup > 5.0,
-            "Large grid should achieve >5× speedup, got {:.2}×",
-            report.speedup
-        );
-    }
+    assert_real_gpu_provider_unavailable(&report);
 }
 
 /// Test equivalence_config function
@@ -155,6 +152,7 @@ fn test_validate_equivalence_config() {
     .expect("Config validation should complete");
 
     assert_eq!(report.total_points, 32 * 32 * 32);
+    assert_real_gpu_provider_unavailable(&report);
 }
 
 /// Test CFL timestep calculation

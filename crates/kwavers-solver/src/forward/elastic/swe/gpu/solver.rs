@@ -9,10 +9,11 @@ use kwavers_grid::Grid;
 use ndarray::Array3;
 use std::collections::HashMap;
 
-/// GPU-accelerated 3D elastic wave solver
+/// Legacy 3D elastic-wave GPU performance model.
 ///
-/// KNOWN_LIMITATION: This is a CPU simulation of GPU functionality.
-/// Actual CUDA/OpenCL/wgpu implementation is needed for real GPU acceleration.
+/// This path estimates GPU memory and kernel timing but does not dispatch real
+/// GPU work. Production WGPU or CUDA execution belongs in provider-generic
+/// Hephaestus implementations in `kwavers-gpu`.
 #[derive(Debug)]
 pub struct GPUElasticWaveSolver3D {
     device: GPUDevice,

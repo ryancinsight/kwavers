@@ -1,7 +1,13 @@
 //! GPU/CPU Equivalence Validation Module
 //!
-//! Provides rigorous validation that GPU and CPU implementations produce
+//! Provides rigorous validation that real GPU and CPU implementations produce
 //! equivalent results within IEEE 754 machine epsilon bounds.
+//!
+//! FDTD validation currently returns a report with an unavailable-provider
+//! failure reason until the FDTD path has a real provider-generic
+//! Leto/Hephaestus GPU trait implementation. WGPU and CUDA belong behind that
+//! trait seam; this module must not treat a CPU fallback as GPU equivalence
+//! evidence.
 //!
 //! # Mathematical Foundation
 //!

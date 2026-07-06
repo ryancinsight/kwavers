@@ -1,18 +1,87 @@
-//! GPU Buffer Management
+//! Provider-owned GPU buffer management.
 //!
 //! Handles allocation, transfer, and lifecycle of GPU buffers.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 use std::collections::HashMap;
 use wgpu;
 
-/// Buffer manager for GPU memory
+/// Provider contract for backend buffer managers.
+pub trait BackendBufferProvider: std::fmt::Debug {
+    /// Get total allocated memory.
+    fn total_allocated(&self) -> usize;
+
+    /// Clear provider-owned buffer pool state.
+    fn clear_pool(&mut self);
+}
+
+/// Provider-generic backend buffer manager.
+#[derive(Debug)]
+pub struct GpuBackendBufferManager<P = WgpuBackendBufferManager>
+where
+    P: BackendBufferProvider,
+{
+    provider: P,
+}
+
+impl GpuBackendBufferManager<WgpuBackendBufferManager> {
+    /// Create a new WGPU buffer manager.
+    #[must_use]
+    pub fn new(device: &wgpu::Device) -> Self {
+        WgpuBackendBufferManager::new(device).into()
+    }
+}
+
+impl<P> GpuBackendBufferManager<P>
+where
+    P: BackendBufferProvider,
+{
+    /// Build a generic wrapper from a concrete buffer provider.
+    #[must_use]
+    pub const fn from_provider(provider: P) -> Self {
+        Self { provider }
+    }
+
+    /// Borrow the concrete buffer provider.
+    #[must_use]
+    pub const fn provider(&self) -> &P {
+        &self.provider
+    }
+
+    /// Mutably borrow the concrete buffer provider.
+    #[must_use]
+    pub fn provider_mut(&mut self) -> &mut P {
+        &mut self.provider
+    }
+
+    /// Get total allocated memory.
+    #[must_use]
+    pub fn total_allocated(&self) -> usize {
+        self.provider.total_allocated()
+    }
+
+    /// Clear buffer pool state.
+    pub fn clear_pool(&mut self) {
+        self.provider.clear_pool();
+    }
+}
+
+impl<P> From<P> for GpuBackendBufferManager<P>
+where
+    P: BackendBufferProvider,
+{
+    fn from(provider: P) -> Self {
+        Self::from_provider(provider)
+    }
+}
+
+/// WGPU buffer manager for GPU memory.
 ///
 /// Manages allocation, reuse, and transfer of GPU buffers.
 /// Implements buffer pooling to reduce allocation overhead.
 #[derive(Debug)]
-pub struct GpuBackendBufferManager {
+pub struct WgpuBackendBufferManager {
     /// Device reference (non-owning)
     _device_ptr: *const wgpu::Device,
 
@@ -32,7 +101,17 @@ struct BufferKey {
     usage: u32,
 }
 
-impl GpuBackendBufferManager {
+impl BackendBufferProvider for WgpuBackendBufferManager {
+    fn total_allocated(&self) -> usize {
+        self.total_allocated
+    }
+
+    fn clear_pool(&mut self) {
+        self.buffer_pool.clear();
+    }
+}
+
+impl WgpuBackendBufferManager {
     /// Create a new buffer manager
     pub fn new(device: &wgpu::Device) -> Self {
         Self {
@@ -88,19 +167,22 @@ impl GpuBackendBufferManager {
         self.buffer_pool.entry(key).or_default().push(buffer);
     }
 
-    /// Create buffer from Array3<f64> data
+    /// Create buffer for provider-native scalar data.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn create_buffer_from_array(
+    pub fn create_buffer_from_provider_array(
         &mut self,
         device: &wgpu::Device,
-        data: &Array3<f64>,
+        data: &LetoArray3<f32>,
         usage: wgpu::BufferUsages,
     ) -> KwaversResult<wgpu::Buffer> {
-        // Convert f64 to f32 for GPU (most GPUs don't support f64 efficiently)
-        let data_f32: Vec<f32> = data.iter().map(|&x| x as f32).collect();
-        let byte_data: &[u8] = bytemuck::cast_slice(&data_f32);
+        let data_contiguous = data.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput(
+                "buffer_upload: provider array must be dense row-major Leto Array3".to_string(),
+            )
+        })?;
+        let byte_data: &[u8] = bytemuck::cast_slice(data_contiguous);
 
         let buffer = self.get_buffer(
             device,
@@ -114,39 +196,52 @@ impl GpuBackendBufferManager {
         Ok(buffer)
     }
 
-    /// Create buffer from Array3<f64> using queue write
+    /// Write provider-native scalar data into an existing buffer.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn write_array_to_buffer(
+    pub fn write_provider_array_to_buffer(
         &self,
         queue: &wgpu::Queue,
         buffer: &wgpu::Buffer,
-        data: &Array3<f64>,
+        data: &LetoArray3<f32>,
     ) -> KwaversResult<()> {
-        // Convert f64 to f32
-        let data_f32: Vec<f32> = data.iter().map(|&x| x as f32).collect();
-        let byte_data = bytemuck::cast_slice(&data_f32);
+        let data_contiguous = data.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput(
+                "buffer_upload: provider array must be dense row-major Leto Array3".to_string(),
+            )
+        })?;
+        let byte_data = bytemuck::cast_slice(data_contiguous);
 
         queue.write_buffer(buffer, 0, byte_data);
 
         Ok(())
     }
 
-    /// Read buffer data into Array3<f64>
+    /// Read buffer data into provider-native scalar storage.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    pub async fn read_buffer_to_array(
+    pub async fn read_buffer_to_provider_array(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         buffer: &wgpu::Buffer,
-        shape: (usize, usize, usize),
-    ) -> KwaversResult<Array3<f64>> {
+        shape: [usize; 3],
+    ) -> KwaversResult<LetoArray3<f32>> {
+        self.read_buffer_to_provider_array_blocking(device, queue, buffer, shape)
+    }
+
+    fn read_buffer_to_provider_array_blocking(
+        &self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        buffer: &wgpu::Buffer,
+        shape: [usize; 3],
+    ) -> KwaversResult<LetoArray3<f32>> {
         // Create staging buffer for readback
         let size = buffer.size();
         let staging_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -191,13 +286,11 @@ impl GpuBackendBufferManager {
         // Read data
         let data_view = buffer_slice.get_mapped_range();
         let data_f32: &[f32] = bytemuck::cast_slice(&data_view);
+        let data = data_f32.to_vec();
 
-        // Convert f32 back to f64
-        let data_f64: Vec<f64> = data_f32.iter().map(|&x| x as f64).collect();
-
-        // Reshape to Array3
-        let array = Array3::from_shape_vec(shape, data_f64).map_err(|e| {
-            KwaversError::GpuError(format!("shape: Failed to reshape array: {}", e))
+        // Reshape to Leto Array3.
+        let array = LetoArray3::from_shape_vec(shape, data).map_err(|e| {
+            KwaversError::GpuError(format!("shape: Failed to reshape Leto array: {}", e))
         })?;
 
         // Unmap buffer
@@ -211,14 +304,14 @@ impl GpuBackendBufferManager {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn read_buffer_to_array_sync(
+    pub fn read_buffer_to_provider_array_sync(
         &self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
         buffer: &wgpu::Buffer,
-        shape: (usize, usize, usize),
-    ) -> KwaversResult<Array3<f64>> {
-        pollster::block_on(self.read_buffer_to_array(device, queue, buffer, shape))
+        shape: [usize; 3],
+    ) -> KwaversResult<LetoArray3<f32>> {
+        self.read_buffer_to_provider_array_blocking(device, queue, buffer, shape)
     }
 
     /// Get total allocated memory
@@ -232,12 +325,14 @@ impl GpuBackendBufferManager {
     }
 }
 
-// Safety: GpuBackendBufferManager is Send (device pointer is just for tracking, not dereferencing)
-unsafe impl Send for GpuBackendBufferManager {}
+// Safety: WgpuBackendBufferManager is Send (device pointer is just for tracking, not dereferencing)
+unsafe impl Send for WgpuBackendBufferManager {}
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::gpu::{GpuDevice, GpuDeviceProvider};
+    use hephaestus_wgpu::WgpuDevice;
 
     #[test]
     fn test_buffer_key() {
@@ -260,35 +355,25 @@ mod tests {
 
     #[test]
     fn test_buffer_manager_creation() {
-        // Need actual device for full test
-        // This is a minimal smoke test
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
-
-        // Try to get adapter (wgpu ≥ 25: request_adapter returns Result).
-        if let Ok(adapter) =
-            pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::default(),
-                compatible_surface: None,
-                force_fallback_adapter: false,
-            }))
-        {
-            // wgpu ≥ 26: single-arg request_device; the former trace arg is now a
-            // `trace` field on DeviceDescriptor.
-            if let Ok((device, _queue)) =
-                pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-                    label: Some("test-device"),
-                    required_features: wgpu::Features::empty(),
-                    required_limits: wgpu::Limits::default(),
-                    memory_hints: Default::default(),
-                    trace: wgpu::Trace::Off,
-                }))
-            {
-                let manager = GpuBackendBufferManager::new(&device);
-                assert_eq!(manager.total_allocated(), 0);
-            }
+        if let Ok(provider) = GpuDevice::<WgpuDevice>::try_create_with_features_and_limits(
+            WgpuDevice::acquisition_preference(),
+            &[],
+            WgpuDevice::required_limits(),
+        ) {
+            let manager = WgpuBackendBufferManager::new(provider.wgpu_device());
+            assert_eq!(manager.total_allocated(), 0);
         }
+    }
+
+    #[test]
+    fn backend_buffer_manager_wrapper_is_generic_over_provider_trait() {
+        fn assert_provider<P>()
+        where
+            P: BackendBufferProvider,
+        {
+            let _ = core::mem::size_of::<GpuBackendBufferManager<P>>();
+        }
+
+        assert_provider::<WgpuBackendBufferManager>();
     }
 }

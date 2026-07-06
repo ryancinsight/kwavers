@@ -1,22 +1,22 @@
-//! GPU compute operations
+//! WGPU compute command helpers.
 
 mod fdtd_cpu;
 mod fdtd_gpu;
 #[cfg(test)]
 mod tests;
 
-pub use fdtd_cpu::FdtdGpuDispatcher;
-pub use fdtd_gpu::{FdtdGpuShaderDispatcher, PressureParams};
+pub use fdtd_cpu::FdtdCpuReferenceDispatcher;
+pub use fdtd_gpu::{PressureParams, WgpuFdtdPressureDispatcher};
 
-/// GPU compute manager
+/// WGPU command helper for bind-group layout and compute-pass recording.
 #[derive(Debug)]
-pub struct GpuCompute {
+pub struct WgpuComputeCommands {
     bind_group_layouts: Vec<wgpu::BindGroupLayout>,
     command_encoder: Option<wgpu::CommandEncoder>,
 }
 
-impl GpuCompute {
-    /// Create a new compute manager
+impl WgpuComputeCommands {
+    /// Create a new WGPU compute command helper.
     pub fn new(device: &wgpu::Device) -> Self {
         let storage_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("Storage Layout"),

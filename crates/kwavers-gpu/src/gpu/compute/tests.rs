@@ -1,7 +1,27 @@
 use super::*;
 use approx::assert_abs_diff_eq;
+use kwavers_core::error::KwaversError;
+use leto::Array3 as LetoArray3;
 
-// ── FdtdGpuShaderDispatcher tests ─────────────────────────────────────────
+#[test]
+fn wgpu_compute_commands_name_is_provider_specific() {
+    assert!(std::mem::size_of::<WgpuComputeCommands>() > 0);
+}
+
+#[test]
+fn wgpu_fdtd_pressure_dispatcher_uses_provider_contract() {
+    fn assert_provider<P>()
+    where
+        P: crate::backend::provider::GpuKernelProvider<Scalar = f32>,
+    {
+        let _ = core::mem::size_of::<P>();
+        let _ = core::mem::size_of::<<P as crate::backend::provider::GpuProviderBackend>::Device>();
+    }
+
+    assert_provider::<WgpuFdtdPressureDispatcher>();
+}
+
+// ── WgpuFdtdPressureDispatcher tests ──────────────────────────────────────
 
 /// `PressureParams` must be `Pod` + `Zeroable` (compile-time assertion).
 /// This guarantees safe byte-level copy to the GPU uniform buffer.
@@ -55,7 +75,7 @@ fn test_fdtd_wgsl_shader_content() {
     );
 }
 
-// ── FdtdGpuDispatcher tests (CPU fallback) ────────────────────────────────
+// ── FdtdCpuReferenceDispatcher tests ──────────────────────────────────────
 
 /// Uniform pressure field: Laplacian = 0, so p_new = 2*p_curr - p_prev.
 /// # Panics
@@ -64,9 +84,9 @@ fn test_fdtd_wgsl_shader_content() {
 #[test]
 fn test_fdtd_gpu_uniform_field() {
     let (nx, ny, nz) = (8, 8, 8);
-    let mut disp = FdtdGpuDispatcher::new(nx, ny, nz).unwrap();
-    let p_curr = ndarray::Array3::from_elem((nx, ny, nz), 1.0_f64);
-    let p_prev = ndarray::Array3::from_elem((nx, ny, nz), 0.5_f64);
+    let mut disp = FdtdCpuReferenceDispatcher::new(nx, ny, nz).unwrap();
+    let p_curr = LetoArray3::from_elem([nx, ny, nz], 1.0_f64);
+    let p_prev = LetoArray3::from_elem([nx, ny, nz], 0.5_f64);
     let coeff = 0.25_f64;
     let p_new = disp.update_pressure(&p_curr, &p_prev, coeff).unwrap();
     for k in 1..nz - 1 {
@@ -85,8 +105,8 @@ fn test_fdtd_gpu_uniform_field() {
 #[test]
 fn test_fdtd_gpu_linear_ramp_zero_laplacian() {
     let (nx, ny, nz) = (8, 8, 8);
-    let mut disp = FdtdGpuDispatcher::new(nx, ny, nz).unwrap();
-    let mut p_curr = ndarray::Array3::zeros((nx, ny, nz));
+    let mut disp = FdtdCpuReferenceDispatcher::new(nx, ny, nz).unwrap();
+    let mut p_curr = LetoArray3::zeros([nx, ny, nz]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -112,13 +132,21 @@ fn test_fdtd_gpu_linear_ramp_zero_laplacian() {
 ///
 #[test]
 fn test_fdtd_gpu_dimension_mismatch_error() {
-    let mut disp = FdtdGpuDispatcher::new(8, 8, 8).unwrap();
-    let p_wrong = ndarray::Array3::zeros((4, 4, 4));
-    let p_curr = ndarray::Array3::zeros((8, 8, 8));
-    let mut output = ndarray::Array3::zeros((8, 8, 8));
-    assert!(disp
+    let mut disp = FdtdCpuReferenceDispatcher::new(8, 8, 8).unwrap();
+    let p_wrong = LetoArray3::zeros([4, 4, 4]);
+    let p_curr = LetoArray3::zeros([8, 8, 8]);
+    let mut output = LetoArray3::zeros([8, 8, 8]);
+
+    let error = disp
         .update_pressure_into(&p_wrong, &p_curr, 0.25, &mut output)
-        .is_err());
+        .expect_err("shape mismatch must return InvalidInput");
+
+    match error {
+        KwaversError::InvalidInput(message) => {
+            assert!(message.contains("[8, 8, 8]"));
+        }
+        other => panic!("expected InvalidInput, got {other:?}"),
+    }
 }
 
 /// Grid too small (< 3 in any axis) returns an error.
@@ -127,10 +155,10 @@ fn test_fdtd_gpu_dimension_mismatch_error() {
 ///
 #[test]
 fn test_fdtd_gpu_minimum_dimension_check() {
-    assert!(FdtdGpuDispatcher::new(2, 8, 8).is_err());
-    assert!(FdtdGpuDispatcher::new(8, 2, 8).is_err());
-    assert!(FdtdGpuDispatcher::new(8, 8, 2).is_err());
-    let _disp = FdtdGpuDispatcher::new(3, 3, 3).unwrap();
+    assert!(FdtdCpuReferenceDispatcher::new(2, 8, 8).is_err());
+    assert!(FdtdCpuReferenceDispatcher::new(8, 2, 8).is_err());
+    assert!(FdtdCpuReferenceDispatcher::new(8, 8, 2).is_err());
+    let _disp = FdtdCpuReferenceDispatcher::new(3, 3, 3).unwrap();
 }
 
 /// update_pressure_into and update_pressure return identical results.
@@ -140,17 +168,17 @@ fn test_fdtd_gpu_minimum_dimension_check() {
 #[test]
 fn test_fdtd_gpu_into_matches_alloc() {
     let (nx, ny, nz) = (6, 6, 6);
-    let mut disp = FdtdGpuDispatcher::new(nx, ny, nz).unwrap();
-    let p_curr = ndarray::Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+    let mut disp = FdtdCpuReferenceDispatcher::new(nx, ny, nz).unwrap();
+    let p_curr = LetoArray3::from_shape_fn([nx, ny, nz], |[i, j, k]| {
         ((i * 3 + j * 5 + k * 7) as f64) * 0.01
     });
-    let p_prev = ndarray::Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+    let p_prev = LetoArray3::from_shape_fn([nx, ny, nz], |[i, j, k]| {
         ((i * 2 + j * 4 + k * 6) as f64) * 0.005
     });
     let coeff = 0.3;
 
     let p_alloc = disp.update_pressure(&p_curr, &p_prev, coeff).unwrap();
-    let mut p_into = ndarray::Array3::from_elem((nx, ny, nz), 123.456_f64);
+    let mut p_into = LetoArray3::from_elem([nx, ny, nz], 123.456_f64);
     disp.update_pressure_into(&p_curr, &p_prev, coeff, &mut p_into)
         .unwrap();
 

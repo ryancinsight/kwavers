@@ -1,13 +1,48 @@
-//! Pipeline execution methods for PipelineManager.
+//! WGPU pipeline execution methods for WgpuPipelineManager.
 
-use super::super::super::buffers::GpuBackendBufferManager;
-use super::super::super::init::WGPUContext;
+use super::super::super::buffers::WgpuBackendBufferManager;
+use super::super::super::init::GpuProviderContext;
 use super::super::types::PipelineType;
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 use wgpu;
 
-impl super::PipelineManager {
+#[repr(C)]
+#[derive(Clone, Copy, Debug, bytemuck::Pod, bytemuck::Zeroable)]
+struct DerivativeParams {
+    nx: u32,
+    ny: u32,
+    nz: u32,
+    direction: u32,
+}
+
+fn validate_non_empty_shape(operation: &str, shape: [usize; 3]) -> KwaversResult<()> {
+    if shape.contains(&0) {
+        return Err(KwaversError::InvalidInput(format!(
+            "{operation}: all dimensions must be non-zero; got {shape:?}"
+        )));
+    }
+
+    Ok(())
+}
+
+fn validate_matching_shape(
+    operation: &str,
+    name: &str,
+    expected: [usize; 3],
+    actual: [usize; 3],
+) -> KwaversResult<()> {
+    if actual != expected {
+        return Err(KwaversError::InvalidInput(format!(
+            "{operation}: {name} shape {actual:?} must match input shape {expected:?}"
+        )));
+    }
+
+    Ok(())
+}
+
+impl super::WgpuPipelineManager {
     /// Execute element-wise multiply.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -17,11 +52,11 @@ impl super::PipelineManager {
     ///
     pub fn execute_element_wise_multiply(
         &self,
-        a: &Array3<f64>,
-        b: &Array3<f64>,
-        out: &mut Array3<f64>,
-        context: &WGPUContext,
-        buffer_manager: &GpuBackendBufferManager,
+        a: &LetoArray3<f32>,
+        b: &LetoArray3<f32>,
+        out: &mut LetoArray3<f32>,
+        context: &GpuProviderContext<WgpuDevice>,
+        buffer_manager: &WgpuBackendBufferManager,
     ) -> KwaversResult<()> {
         let pipeline = self
             .pipelines
@@ -33,7 +68,11 @@ impl super::PipelineManager {
             })?;
 
         let shape = a.shape();
-        let n_elements = shape[0] * shape[1] * shape[2];
+        validate_non_empty_shape("element_wise_multiply", shape)?;
+        validate_matching_shape("element_wise_multiply", "rhs", shape, b.shape())?;
+        validate_matching_shape("element_wise_multiply", "output", shape, out.shape())?;
+
+        let n_elements = shape.iter().product::<usize>();
         let buffer_size = n_elements * std::mem::size_of::<f32>();
 
         let buffer_a = context.device().create_buffer(&wgpu::BufferDescriptor {
@@ -57,8 +96,8 @@ impl super::PipelineManager {
             mapped_at_creation: false,
         });
 
-        buffer_manager.write_array_to_buffer(context.queue(), &buffer_a, a)?;
-        buffer_manager.write_array_to_buffer(context.queue(), &buffer_b, b)?;
+        buffer_manager.write_provider_array_to_buffer(context.queue(), &buffer_a, a)?;
+        buffer_manager.write_provider_array_to_buffer(context.queue(), &buffer_b, b)?;
 
         let layout = self
             .layouts
@@ -105,11 +144,11 @@ impl super::PipelineManager {
 
         context.queue().submit(std::iter::once(encoder.finish()));
 
-        *out = buffer_manager.read_buffer_to_array_sync(
+        *out = buffer_manager.read_buffer_to_provider_array_sync(
             context.device(),
             context.queue(),
             &buffer_out,
-            (shape[0], shape[1], shape[2]),
+            shape,
         )?;
 
         Ok(())
@@ -125,13 +164,20 @@ impl super::PipelineManager {
     ///
     pub fn execute_spatial_derivative(
         &self,
-        field: &Array3<f64>,
+        field: &LetoArray3<f32>,
         direction: usize,
-        out: &mut Array3<f64>,
-        _context: &WGPUContext,
-        _buffer_manager: &GpuBackendBufferManager,
+        out: &mut LetoArray3<f32>,
+        context: &GpuProviderContext<WgpuDevice>,
+        buffer_manager: &WgpuBackendBufferManager,
     ) -> KwaversResult<()> {
-        let _pipeline = self
+        if direction > 2 {
+            return Err(KwaversError::InvalidInput(format!(
+                "spatial derivative direction must be 0, 1, or 2; got {}",
+                direction
+            )));
+        }
+
+        let pipeline = self
             .pipelines
             .get(&PipelineType::SpatialDerivative)
             .ok_or_else(|| {
@@ -140,64 +186,105 @@ impl super::PipelineManager {
                 )
             })?;
 
-        let (nx, ny, nz) = field.dim();
-        let mut result = Array3::<f64>::zeros((nx, ny, nz));
+        let [nx, ny, nz] = field.shape();
+        validate_non_empty_shape("spatial_derivative", [nx, ny, nz])?;
+        validate_matching_shape("spatial_derivative", "output", [nx, ny, nz], out.shape())?;
 
-        match direction {
-            0 => {
-                for j in 0..ny {
-                    for k in 0..nz {
-                        if nx >= 2 {
-                            result[[0, j, k]] = field[[1, j, k]] - field[[0, j, k]];
-                        }
-                        for i in 1..nx.saturating_sub(1) {
-                            result[[i, j, k]] = (field[[i + 1, j, k]] - field[[i - 1, j, k]]) * 0.5;
-                        }
-                        if nx >= 2 {
-                            result[[nx - 1, j, k]] = field[[nx - 1, j, k]] - field[[nx - 2, j, k]];
-                        }
-                    }
-                }
-            }
-            1 => {
-                for i in 0..nx {
-                    for k in 0..nz {
-                        if ny >= 2 {
-                            result[[i, 0, k]] = field[[i, 1, k]] - field[[i, 0, k]];
-                        }
-                        for j in 1..ny.saturating_sub(1) {
-                            result[[i, j, k]] = (field[[i, j + 1, k]] - field[[i, j - 1, k]]) * 0.5;
-                        }
-                        if ny >= 2 {
-                            result[[i, ny - 1, k]] = field[[i, ny - 1, k]] - field[[i, ny - 2, k]];
-                        }
-                    }
-                }
-            }
-            2 => {
-                for i in 0..nx {
-                    for j in 0..ny {
-                        if nz >= 2 {
-                            result[[i, j, 0]] = field[[i, j, 1]] - field[[i, j, 0]];
-                        }
-                        for k in 1..nz.saturating_sub(1) {
-                            result[[i, j, k]] = (field[[i, j, k + 1]] - field[[i, j, k - 1]]) * 0.5;
-                        }
-                        if nz >= 2 {
-                            result[[i, j, nz - 1]] = field[[i, j, nz - 1]] - field[[i, j, nz - 2]];
-                        }
-                    }
-                }
-            }
-            _ => {
-                return Err(KwaversError::InvalidInput(format!(
-                    "spatial derivative direction must be 0, 1, or 2; got {}",
-                    direction
-                )));
-            }
+        let n_elements = nx * ny * nz;
+        let buffer_size = n_elements * std::mem::size_of::<f32>();
+
+        let buffer_field = context.device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("spatial-derivative-field"),
+            size: buffer_size as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let buffer_out = context.device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("spatial-derivative-output"),
+            size: buffer_size as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+
+        let params = DerivativeParams {
+            nx: nx as u32,
+            ny: ny as u32,
+            nz: nz as u32,
+            direction: direction as u32,
+        };
+        let params_buffer = context.device().create_buffer(&wgpu::BufferDescriptor {
+            label: Some("spatial-derivative-params"),
+            size: std::mem::size_of::<DerivativeParams>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        buffer_manager.write_provider_array_to_buffer(context.queue(), &buffer_field, field)?;
+        context
+            .queue()
+            .write_buffer(&params_buffer, 0, bytemuck::bytes_of(&params));
+
+        let layout = self
+            .layouts
+            .get(&PipelineType::SpatialDerivative)
+            .ok_or_else(|| {
+                KwaversError::GpuError(
+                    "SpatialDerivative layout: Bind group layout not compiled".to_string(),
+                )
+            })?;
+        let bind_group = context
+            .device()
+            .create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("spatial-derivative-bind-group"),
+                layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: buffer_field.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: buffer_out.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: buffer_out.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: params_buffer.as_entire_binding(),
+                    },
+                ],
+            });
+
+        let mut encoder =
+            context
+                .device()
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                    label: Some("spatial-derivative-encoder"),
+                });
+
+        {
+            let mut compute_pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("spatial-derivative-pass"),
+                timestamp_writes: None,
+            });
+
+            compute_pass.set_pipeline(pipeline);
+            compute_pass.set_bind_group(0, &bind_group, &[]);
+            compute_pass.dispatch_workgroups((n_elements as u32).div_ceil(256), 1, 1);
         }
 
-        *out = result;
+        context.queue().submit(std::iter::once(encoder.finish()));
+
+        *out = buffer_manager.read_buffer_to_provider_array_sync(
+            context.device(),
+            context.queue(),
+            &buffer_out,
+            [nx, ny, nz],
+        )?;
+
         Ok(())
     }
 }

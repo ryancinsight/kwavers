@@ -7,8 +7,13 @@
 /// offset 8:  nz    (u32)
 /// offset 12: coeff (f32)   // (c·dt/dx)²
 /// ```
+use crate::backend::{
+    init::GpuProviderContext,
+    provider::{GpuKernelProvider, GpuProviderBackend},
+};
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use std::sync::Arc;
+use kwavers_solver::backend::traits::BackendCapabilities;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -23,7 +28,7 @@ pub struct PressureParams {
     pub coeff: f32,
 }
 
-/// GPU dispatcher that loads and dispatches the `fdtd_pressure.wgsl` compute
+/// WGPU dispatcher that loads and dispatches the `fdtd_pressure.wgsl` compute
 /// shader for the scalar wave equation pressure update.
 ///
 /// # Algorithm — Yee (1966) scalar wave equation
@@ -49,15 +54,14 @@ pub struct PressureParams {
 /// - Moczo P et al. (2014). The Finite-Difference Modelling of Earthquake
 ///   Motions. Cambridge Univ. Press. (6-point Laplacian, §3.1)
 #[derive(Debug)]
-pub struct FdtdGpuShaderDispatcher {
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
+pub struct WgpuFdtdPressureDispatcher {
+    context: GpuProviderContext<WgpuDevice>,
     pipeline: wgpu::ComputePipeline,
     bind_group_layout_0: wgpu::BindGroupLayout,
     bind_group_layout_1: wgpu::BindGroupLayout,
 }
 
-impl FdtdGpuShaderDispatcher {
+impl WgpuFdtdPressureDispatcher {
     /// Create a new dispatcher, compiling `fdtd_pressure.wgsl` and building
     /// the compute pipeline.
     ///
@@ -65,7 +69,9 @@ impl FdtdGpuShaderDispatcher {
     ///
     /// Returns `ComputeError` if the wgpu device does not support the required
     /// features.
-    pub fn new(device: Arc<wgpu::Device>, queue: Arc<wgpu::Queue>) -> KwaversResult<Self> {
+    pub fn new() -> KwaversResult<Self> {
+        let context = GpuProviderContext::<WgpuDevice>::new()?;
+        let device = context.device();
         let shader_src = include_str!("../shaders/fdtd_pressure.wgsl");
         let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fdtd_pressure"),
@@ -138,8 +144,7 @@ impl FdtdGpuShaderDispatcher {
         });
 
         Ok(Self {
-            device,
-            queue,
+            context,
             pipeline,
             bind_group_layout_0: bgl0,
             bind_group_layout_1: bgl1,
@@ -168,46 +173,45 @@ impl FdtdGpuShaderDispatcher {
         let n = p_curr.len();
         if p_prev.len() != n {
             return Err(KwaversError::InvalidInput(
-                "FdtdGpuShaderDispatcher::dispatch: p_curr and p_prev length mismatch".into(),
+                "WgpuFdtdPressureDispatcher::dispatch: p_curr and p_prev length mismatch".into(),
             ));
         }
+        let device = self.context.device();
+        let queue = self.context.queue();
         let buf_size = std::mem::size_of_val(p_curr) as u64;
         let usage_src = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
         let usage_dst = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC;
 
-        let buf_curr = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let buf_curr = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_p_curr"),
             size: buf_size,
             usage: usage_src,
             mapped_at_creation: false,
         });
-        let buf_prev = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let buf_prev = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_p_prev"),
             size: buf_size,
             usage: usage_src,
             mapped_at_creation: false,
         });
-        let buf_new = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let buf_new = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_p_new"),
             size: buf_size,
             usage: usage_dst,
             mapped_at_creation: false,
         });
-        let buf_params = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let buf_params = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_params"),
             size: std::mem::size_of::<PressureParams>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        self.queue
-            .write_buffer(&buf_curr, 0, bytemuck::cast_slice(p_curr));
-        self.queue
-            .write_buffer(&buf_prev, 0, bytemuck::cast_slice(p_prev));
-        self.queue
-            .write_buffer(&buf_params, 0, bytemuck::bytes_of(&params));
+        queue.write_buffer(&buf_curr, 0, bytemuck::cast_slice(p_curr));
+        queue.write_buffer(&buf_prev, 0, bytemuck::cast_slice(p_prev));
+        queue.write_buffer(&buf_params, 0, bytemuck::bytes_of(&params));
 
-        let bg0 = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bg0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fdtd_bg0"),
             layout: &self.bind_group_layout_0,
             entries: &[
@@ -225,7 +229,7 @@ impl FdtdGpuShaderDispatcher {
                 },
             ],
         });
-        let bg1 = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bg1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("fdtd_bg1"),
             layout: &self.bind_group_layout_1,
             entries: &[wgpu::BindGroupEntry {
@@ -234,11 +238,9 @@ impl FdtdGpuShaderDispatcher {
             }],
         });
 
-        let mut encoder = self
-            .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-                label: Some("fdtd_encoder"),
-            });
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("fdtd_encoder"),
+        });
         {
             let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
                 label: Some("fdtd_pass"),
@@ -253,7 +255,7 @@ impl FdtdGpuShaderDispatcher {
             pass.dispatch_workgroups(wx, wy, wz);
         }
 
-        let staging = self.device.create_buffer(&wgpu::BufferDescriptor {
+        let staging = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_staging"),
             size: buf_size,
             usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
@@ -261,17 +263,18 @@ impl FdtdGpuShaderDispatcher {
         });
         encoder.copy_buffer_to_buffer(&buf_new, 0, &staging, 0, buf_size);
 
-        self.queue.submit(std::iter::once(encoder.finish()));
+        queue.submit(std::iter::once(encoder.finish()));
 
         let slice = staging.slice(..);
         let (sender, receiver) = std::sync::mpsc::channel();
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = sender.send(r);
         });
-        let _ = self.device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::Wait);
         receiver
             .recv()
-            .map_err(|e| KwaversError::GpuError(format!("GPU map_async failed: {e}")))??;
+            .map_err(|e| KwaversError::GpuError(format!("GPU map_async failed: {e}")))?
+            .map_err(|e| crate::gpu::map_buffer_async_error("FDTD readback", e))?;
 
         let data = slice.get_mapped_range();
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
@@ -279,5 +282,57 @@ impl FdtdGpuShaderDispatcher {
         staging.unmap();
 
         Ok(result)
+    }
+}
+
+impl GpuProviderBackend for WgpuFdtdPressureDispatcher {
+    type Device = WgpuDevice;
+
+    fn hephaestus_device(&self) -> &Self::Device {
+        self.context.hephaestus_device()
+    }
+
+    fn device_name(&self) -> &str {
+        self.context.device_name()
+    }
+
+    fn synchronize(&self) -> KwaversResult<()> {
+        self.context.synchronize()
+    }
+}
+
+impl GpuKernelProvider for WgpuFdtdPressureDispatcher {
+    type Scalar = f32;
+
+    fn capabilities(&self) -> BackendCapabilities {
+        let limits = self.context.hephaestus_device().device_limits();
+        BackendCapabilities {
+            supports_fft: false,
+            supports_f64: false,
+            supports_f32: true,
+            supports_async: true,
+            max_parallelism: limits.max_compute_invocations_per_workgroup as usize,
+            supports_unified_memory: false,
+        }
+    }
+
+    fn is_available(&self) -> bool {
+        true
+    }
+
+    fn available_memory(&self) -> usize {
+        match usize::try_from(
+            self.context
+                .hephaestus_device()
+                .device_limits()
+                .max_buffer_size,
+        ) {
+            Ok(bytes) => bytes,
+            Err(_) => usize::MAX,
+        }
+    }
+
+    fn estimate_peak_performance(&self) -> f64 {
+        0.0
     }
 }

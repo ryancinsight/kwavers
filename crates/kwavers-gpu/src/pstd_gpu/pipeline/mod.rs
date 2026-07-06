@@ -9,7 +9,9 @@
 mod auto_device;
 mod bgl;
 mod bind_groups;
+mod buffers;
 mod construction;
+mod pipelines;
 
 /// Medium acoustic property arrays (input slices for `GpuPstdSolver::new`).
 pub struct MediumArrays<'a> {
@@ -63,3 +65,8 @@ pub struct AbsorptionArrays<'a> {
     /// Absorption coefficient η.
     pub eta: &'a [f32],
 }
+
+pub use bgl::{PstdBindGroupLayoutProvider, WgpuPstdBindGroupLayoutFactory};
+pub use bind_groups::{PstdBindGroupProvider, WgpuPstdBindGroupFactory};
+pub use buffers::{PstdBufferProvider, WgpuPstdBufferFactory};
+pub use pipelines::{PstdPipelineProvider, WgpuPstdPipelineFactory};

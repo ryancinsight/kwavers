@@ -3,15 +3,37 @@
 //! Defines the abstraction layer for different computational backends (CPU, GPU, etc.)
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Type of compute backend
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BackendType {
-    /// CPU-based (parallel with rayon)
+    /// CPU-based provider.
     CPU,
-    /// GPU-based (WGPU for cross-platform)
-    GPU,
+    /// GPU-based provider selected at the integration boundary.
+    GPU(GpuProvider),
+}
+
+impl BackendType {
+    /// Returns the GPU provider for GPU backends.
+    #[must_use]
+    pub const fn gpu_provider(self) -> Option<GpuProvider> {
+        match self {
+            Self::CPU => None,
+            Self::GPU(provider) => Some(provider),
+        }
+    }
+}
+
+/// Concrete GPU provider behind a compute backend implementation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum GpuProvider {
+    /// WGPU/WebGPU provider.
+    Wgpu,
+    /// CUDA provider.
+    Cuda,
+    /// Metal provider.
+    Metal,
 }
 
 /// Compute device information
@@ -42,7 +64,11 @@ pub struct ComputeDevice {
 /// Backend capabilities
 #[derive(Debug, Clone)]
 pub struct BackendCapabilities {
-    /// Supports FFT operations
+    /// Supports FFT operations exposed through this backend trait.
+    ///
+    /// GPU FFT is owned by Apollo through `kwavers_math::fft::gpu_fft`, so a
+    /// `ComputeBackend` implementation reports `false` here unless it exposes
+    /// FFT methods through this trait.
     pub supports_fft: bool,
 
     /// Supports 64-bit floating point
@@ -61,13 +87,26 @@ pub struct BackendCapabilities {
     pub supports_unified_memory: bool,
 }
 
-/// Backend abstraction trait
+/// Backend abstraction trait.
+///
+/// The scalar type is part of the backend contract so GPU providers can expose
+/// their native precision through one trait surface instead of a parallel
+/// WGPU/CUDA API.
 pub trait ComputeBackend {
+    /// Scalar type accepted by this backend's operation kernels.
+    type Scalar: Copy + Send + Sync + 'static;
+
     /// Get backend type
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn backend_type(&self) -> BackendType;
+
+    /// Get the concrete GPU provider, if this backend is GPU-backed.
+    #[must_use]
+    fn gpu_provider(&self) -> Option<GpuProvider> {
+        self.backend_type().gpu_provider()
+    }
 
     /// Get backend capabilities
     /// # Errors
@@ -100,8 +139,8 @@ pub trait ComputeBackend {
     fn select_device(&mut self, device_id: usize) -> KwaversResult<()>;
 
     // NOTE: 3D FFT is intentionally NOT part of this trait. GPU FFT is owned by
-    // Apollo (`kwavers_math::fft::gpu_fft`, backed by `apollofft-wgpu`) — the
-    // single source of truth — so the backend does not reimplement it.
+    // Apollo (`kwavers_math::fft::gpu_fft`, via Apollo's `FftBackend` trait) —
+    // the single source of truth — so the backend does not reimplement it.
 
     /// Element-wise multiplication
     /// # Errors
@@ -109,9 +148,9 @@ pub trait ComputeBackend {
     ///
     fn element_wise_multiply(
         &self,
-        a: &Array3<f64>,
-        b: &Array3<f64>,
-        out: &mut Array3<f64>,
+        a: &Array3<Self::Scalar>,
+        b: &Array3<Self::Scalar>,
+        out: &mut Array3<Self::Scalar>,
     ) -> KwaversResult<()>;
 
     /// Apply spatial derivative
@@ -120,9 +159,9 @@ pub trait ComputeBackend {
     ///
     fn apply_spatial_derivative(
         &self,
-        field: &Array3<f64>,
+        field: &Array3<Self::Scalar>,
         direction: usize,
-        out: &mut Array3<f64>,
+        out: &mut Array3<Self::Scalar>,
     ) -> KwaversResult<()>;
 
     /// Estimate performance for a given problem size

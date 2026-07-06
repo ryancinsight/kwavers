@@ -4,69 +4,100 @@ use super::types::{
     GpuAffinity, GpuCommunicationChannel, GpuTransferStatus, MultiGpuPerformanceSummary,
     PendingTransfer,
 };
-use crate::gpu::{CoreGpuCapabilities, CoreGpuContext};
+use crate::gpu::{CoreGpuContext, GpuDeviceProvider};
+use hephaestus_core::{DeviceFeature, DeviceLimits, DevicePreference};
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
 /// Multi-GPU context for distributed computing.
+///
+/// `P` is the concrete Hephaestus GPU provider. The default preserves the
+/// current WGPU/WGSL implementation, while CUDA can use the same topology and
+/// scheduling surface once selected at the type level.
 #[derive(Debug)]
-pub struct MultiGpuContext {
-    contexts: Vec<CoreGpuContext>,
+pub struct MultiGpuContext<P = WgpuDevice>
+where
+    P: GpuDeviceProvider,
+{
+    contexts: Vec<CoreGpuContext<P>>,
     affinity: GpuAffinity,
     peer_accessibility: Vec<Vec<bool>>,
     communication_channels: HashMap<(usize, usize), GpuCommunicationChannel>,
 }
 
-impl MultiGpuContext {
-    /// Create a new multi-GPU context.
-    /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub async fn new() -> KwaversResult<Self> {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
-
-        let mut contexts = Vec::new();
-        let mut peer_accessibility = Vec::new();
-
-        let adapters = instance.enumerate_adapters(wgpu::Backends::all());
-        let mut adapter_count = 0;
-
-        for adapter in adapters {
-            if matches!(adapter.get_info().backend, wgpu::Backend::BrowserWebGpu) {
-                continue;
-            }
-
-            let context = Self::create_context_for_adapter(adapter).await?;
-            contexts.push(context);
-
-            if peer_accessibility.is_empty() {
-                peer_accessibility = vec![vec![true; 1]; 1];
-            } else {
-                let n = peer_accessibility.len();
-                for row in peer_accessibility.iter_mut() {
-                    row.push(true);
-                }
-                peer_accessibility.push(vec![true; n + 1]);
-            }
-
-            adapter_count += 1;
-            if adapter_count >= 4 {
-                break;
-            }
+impl<P> MultiGpuContext<P>
+where
+    P: GpuDeviceProvider,
+{
+    #[cfg(test)]
+    pub(super) fn with_test_channels(
+        communication_channels: HashMap<(usize, usize), GpuCommunicationChannel>,
+    ) -> Self {
+        Self {
+            contexts: Vec::new(),
+            affinity: GpuAffinity::None,
+            peer_accessibility: vec![vec![true; 2]; 2],
+            communication_channels,
         }
+    }
+
+    /// Create a provider-generic multi-GPU context with explicit acquisition
+    /// requirements.
+    ///
+    /// This constructor is the generic WGPU/CUDA seam. It binds only to the
+    /// Hephaestus acquisition trait exposed through [`GpuDeviceProvider`], so a
+    /// provider either returns real acquired devices or reports an acquisition
+    /// error.
+    ///
+    /// # Errors
+    ///
+    /// Returns a system resource error when provider discovery fails or fewer
+    /// than two matching devices are available.
+    ///
+    // The constructor remains async to preserve the existing public API even
+    // though Hephaestus owns the blocking provider discovery path.
+    #[allow(clippy::unused_async)]
+    pub async fn new_with_requirements(
+        label_prefix: &str,
+        max_devices: usize,
+        device_preference: DevicePreference,
+        optional_features: &[DeviceFeature],
+        required_limits: DeviceLimits,
+    ) -> KwaversResult<Self> {
+        let providers = P::try_acquire_devices(
+            label_prefix,
+            max_devices,
+            device_preference,
+            optional_features,
+            required_limits,
+        )
+        .map_err(|e| {
+            KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
+                resource: format!(
+                    "{:?} GPU device initialization failed: {e}",
+                    P::provider_kind()
+                ),
+            })
+        })?;
+
+        let contexts: Vec<_> = providers
+            .into_iter()
+            .map(CoreGpuContext::<P>::from_provider)
+            .collect();
 
         if contexts.len() < 2 {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: "Multiple GPU devices required for multi-GPU context".to_string(),
+                    resource: format!(
+                        "Multiple {:?} GPU devices required for multi-GPU context",
+                        P::provider_kind()
+                    ),
                 },
             ));
         }
 
+        let peer_accessibility = vec![vec![true; contexts.len()]; contexts.len()];
         let communication_channels = Self::initialize_communication_channels(&contexts);
         let affinity = Self::determine_affinity(&contexts);
 
@@ -78,64 +109,8 @@ impl MultiGpuContext {
         })
     }
 
-    async fn create_context_for_adapter(adapter: wgpu::Adapter) -> KwaversResult<CoreGpuContext> {
-        let info = adapter.get_info();
-        let limits = adapter.limits();
-
-        log::info!(
-            "Multi-GPU: Initializing {} ({:?}) - Driver: {}",
-            info.name,
-            info.backend,
-            info.driver
-        );
-
-        let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                label: Some(&format!("Multi-GPU Device: {}", info.name)),
-                required_features: wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
-                    | wgpu::Features::PUSH_CONSTANTS,
-                required_limits: wgpu::Limits {
-                    max_buffer_size: limits.max_buffer_size,
-                    max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
-                    max_compute_workgroup_storage_size: 16384,
-                    max_compute_invocations_per_workgroup: 256,
-                    max_compute_workgroup_size_x: 256,
-                    max_compute_workgroup_size_y: 256,
-                    max_compute_workgroup_size_z: 64,
-                    max_push_constant_size: 128,
-                    ..Default::default()
-                },
-                memory_hints: wgpu::MemoryHints::default(),
-                trace: wgpu::Trace::Off,
-            })
-            .await
-            .map_err(|e| {
-                KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device initialization failed: {}", e),
-                })
-            })?;
-
-        let capabilities = CoreGpuCapabilities {
-            max_buffer_size: limits.max_buffer_size,
-            max_workgroup_size: [
-                limits.max_compute_workgroup_size_x,
-                limits.max_compute_workgroup_size_y,
-                limits.max_compute_workgroup_size_z,
-            ],
-            max_compute_invocations: limits.max_compute_invocations_per_workgroup,
-            supports_f64: adapter.features().contains(wgpu::Features::SHADER_F64),
-            supports_atomics: true,
-        };
-
-        Ok(CoreGpuContext {
-            device,
-            queue,
-            capabilities,
-        })
-    }
-
     fn initialize_communication_channels(
-        contexts: &[CoreGpuContext],
+        contexts: &[CoreGpuContext<P>],
     ) -> HashMap<(usize, usize), GpuCommunicationChannel> {
         let mut channels = HashMap::new();
 
@@ -155,7 +130,7 @@ impl MultiGpuContext {
         channels
     }
 
-    fn determine_affinity(contexts: &[CoreGpuContext]) -> GpuAffinity {
+    fn determine_affinity(contexts: &[CoreGpuContext<P>]) -> GpuAffinity {
         if contexts.len() <= 2 {
             GpuAffinity::None
         } else {
@@ -170,12 +145,12 @@ impl MultiGpuContext {
     }
 
     /// Get GPU context by index.
-    pub fn get_context(&self, index: usize) -> Option<&CoreGpuContext> {
+    pub fn get_context(&self, index: usize) -> Option<&CoreGpuContext<P>> {
         self.contexts.get(index)
     }
 
     /// Get all GPU contexts.
-    pub fn get_all_contexts(&self) -> &[CoreGpuContext] {
+    pub fn get_all_contexts(&self) -> &[CoreGpuContext<P>] {
         &self.contexts
     }
 
@@ -330,5 +305,27 @@ impl MultiGpuContext {
                 GpuAffinity::Custom { .. } => "Custom".to_string(),
             },
         }
+    }
+}
+
+impl MultiGpuContext<WgpuDevice> {
+    /// Create a new WGPU multi-GPU context for the current WGSL kernels.
+    ///
+    /// # Errors
+    ///
+    /// Returns a system resource error when WGPU discovery fails or fewer than
+    /// two matching devices are available.
+    pub async fn new() -> KwaversResult<Self> {
+        Self::new_with_requirements(
+            "Multi-GPU Device",
+            4,
+            DevicePreference::HighPerformance,
+            &[
+                DeviceFeature::MappablePrimaryBuffers,
+                DeviceFeature::PushConstants,
+            ],
+            CoreGpuContext::required_limits(),
+        )
+        .await
     }
 }

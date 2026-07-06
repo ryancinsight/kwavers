@@ -5,6 +5,7 @@ mod readback;
 use once_cell::sync::OnceCell;
 use wgpu::util::DeviceExt;
 
+use crate::gpu::{CoreGpuContext, GpuDevice};
 use kwavers_core::error::KwaversResult;
 
 /// GPU buffer wrapper providing safe, high-level buffer operations
@@ -143,6 +144,30 @@ impl GpuBufferData {
         Ok(Self::new(device, "kwavers_buffer", size, usage))
     }
 
+    /// Create an empty GPU buffer through a provider-owned context.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    pub fn create_in_context(
+        context: &CoreGpuContext,
+        size: usize,
+        usage: wgpu::BufferUsages,
+    ) -> KwaversResult<Self> {
+        Self::create(context.device(), size, usage)
+    }
+
+    /// Create an empty GPU buffer through a provider-owned device.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    pub fn create_on_device(
+        device: &GpuDevice,
+        size: usize,
+        usage: wgpu::BufferUsages,
+    ) -> KwaversResult<Self> {
+        Self::create(device.wgpu_device(), size, usage)
+    }
+
     /// Create a GPU buffer initialized with data (unlabeled convenience form).
     ///
     /// Allocates GPU memory and immediately copies the provided data.
@@ -174,6 +199,32 @@ impl GpuBufferData {
         Ok(Self::new_with_data(device, "kwavers_buffer", data, usage))
     }
 
+    /// Create a GPU buffer initialized with data through a provider-owned
+    /// context.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    pub fn create_with_data_in_context<T: bytemuck::Pod>(
+        context: &CoreGpuContext,
+        data: &[T],
+        usage: wgpu::BufferUsages,
+    ) -> KwaversResult<Self> {
+        Self::create_with_data(context.device(), data, usage)
+    }
+
+    /// Create a GPU buffer initialized with data through a provider-owned
+    /// device.
+    ///
+    /// # Errors
+    /// - Returns [`Err`] if an internal constraint is violated.
+    pub fn create_with_data_on_device<T: bytemuck::Pod>(
+        device: &GpuDevice,
+        data: &[T],
+        usage: wgpu::BufferUsages,
+    ) -> KwaversResult<Self> {
+        Self::create_with_data(device.wgpu_device(), data, usage)
+    }
+
     /// Write data to GPU buffer.
     ///
     /// Synchronously writes data from CPU to GPU using the queue.
@@ -194,6 +245,16 @@ impl GpuBufferData {
     pub fn write<T: bytemuck::Pod>(&self, queue: &wgpu::Queue, data: &[T]) {
         let bytes = bytemuck::cast_slice(data);
         queue.write_buffer(&self.buffer, 0, bytes);
+    }
+
+    /// Write data through a provider-owned context.
+    pub fn write_in_context<T: bytemuck::Pod>(&self, context: &CoreGpuContext, data: &[T]) {
+        self.write(context.queue(), data);
+    }
+
+    /// Write data through a provider-owned device.
+    pub fn write_on_device<T: bytemuck::Pod>(&self, device: &GpuDevice, data: &[T]) {
+        self.write(device.wgpu_queue(), data);
     }
 
     /// Get reference to underlying wgpu buffer.

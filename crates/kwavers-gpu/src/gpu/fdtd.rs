@@ -1,6 +1,10 @@
-//! GPU-accelerated FDTD acoustic solver (collocated, first-order Euler split).
+//! Provider-trait FDTD acoustic solver boundary.
 //!
-//! Uses `fdtd.wgsl` which provides two entry points dispatched in sequence:
+//! The current concrete implementation is WGPU/WGSL because the real FDTD
+//! kernels in this crate are WGSL. CUDA and future providers implement the
+//! [`FdtdGpuProvider`] trait only after they own real kernels for this contract.
+//!
+//! `WgpuFdtd` uses `fdtd.wgsl` which provides two entry points dispatched in sequence:
 //! 1. `velocity_update` — reads p, writes v_new (bindings 0, 1, 2)
 //! 2. `pressure_update` — reads v_new, writes p_new (bindings 0, 1, 2)
 //!
@@ -8,14 +12,79 @@
 //! that arises when pressure and velocity are updated in a single kernel while
 //! both buffers are bound as `read_write`.
 //!
-//! For second-order-accurate leapfrog FDTD, use [`super::compute::FdtdGpuShaderDispatcher`]
-//! which dispatches `fdtd_pressure.wgsl` (three-buffer leapfrog, correct staggering).
+//! For second-order-accurate leapfrog FDTD, use
+//! [`super::compute::WgpuFdtdPressureDispatcher`] which dispatches
+//! `fdtd_pressure.wgsl` (three-buffer leapfrog, correct staggering).
 
+use std::future::Future;
+
+use crate::{
+    backend::{
+        init::GpuProviderContext,
+        provider::{GpuKernelProvider, GpuProviderBackend},
+    },
+    gpu::GpuDeviceProvider,
+};
+use hephaestus_core::{DeviceFeature, DeviceLimits};
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use kwavers_solver::backend::traits::BackendCapabilities;
+use leto::Array3 as LetoArray3;
 
-/// GPU-accelerated FDTD solver: two-pass collocated Euler split.
+/// Provider execution seam for FDTD pressure transfer and stepping.
+///
+/// This trait is generic over the Hephaestus provider through
+/// [`GpuKernelProvider::Device`]. WGPU implements it with real WGSL kernels;
+/// CUDA must add a separate real implementation before satisfying this trait.
+pub trait FdtdGpuProvider: GpuKernelProvider {
+    /// Build the provider-specific FDTD solver for `grid`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a GPU error when provider acquisition or kernel construction
+    /// fails.
+    fn new(grid: &Grid) -> KwaversResult<Self>
+    where
+        Self: Sized;
+
+    /// Upload a provider-native pressure field to GPU memory.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the pressure layout cannot be represented by the
+    /// provider kernel contract.
+    fn upload_pressure(&self, pressure: &LetoArray3<Self::Scalar>) -> KwaversResult<()>;
+
+    /// Download the provider-native pressure field from GPU memory.
+    ///
+    /// # Errors
+    ///
+    /// Propagates provider transfer or readback failures.
+    fn download_pressure<'a>(
+        &'a self,
+        grid: &'a Grid,
+    ) -> impl Future<Output = KwaversResult<LetoArray3<Self::Scalar>>> + 'a;
+
+    /// Download the provider-native pressure field without requiring callers
+    /// to own an async runtime.
+    ///
+    /// # Errors
+    ///
+    /// Propagates provider transfer or readback failures.
+    fn download_pressure_blocking(&self, grid: &Grid) -> KwaversResult<LetoArray3<Self::Scalar>> {
+        pollster::block_on(self.download_pressure(grid))
+    }
+
+    /// Encode one FDTD step into the provider command stream.
+    ///
+    /// # Errors
+    ///
+    /// Returns a GPU error when the provider cannot encode the step.
+    fn step(&self, grid: &Grid, dt: Self::Scalar) -> KwaversResult<()>;
+}
+
+/// WGPU FDTD solver: two-pass collocated Euler split.
 ///
 /// Step sequence per time step:
 ///   1. Dispatch `velocity_update` pipeline → writes updated velocity.
@@ -25,7 +94,8 @@ use ndarray::Array3;
 /// Separation at the command-encoder level provides the required synchronization
 /// barrier between the two passes.
 #[derive(Debug)]
-pub struct FdtdGpu {
+pub struct WgpuFdtd {
+    context: GpuProviderContext<WgpuDevice>,
     velocity_pipeline: wgpu::ComputePipeline,
     pressure_pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
@@ -37,7 +107,7 @@ pub struct FdtdGpu {
     workgroup_size: [u32; 3],
 }
 
-impl FdtdGpu {
+impl WgpuFdtd {
     /// Build GPU pipelines for the two-pass FDTD solver.
     ///
     /// Compiles `fdtd.wgsl` once; creates separate `ComputePipeline` objects for
@@ -45,7 +115,17 @@ impl FdtdGpu {
     ///
     /// # Errors
     /// Propagates [`KwaversError::GpuError`] on pipeline creation failure.
-    pub fn new(device: &wgpu::Device, grid: &Grid) -> KwaversResult<Self> {
+    pub fn new(grid: &Grid) -> KwaversResult<Self> {
+        <Self as FdtdGpuProvider>::new(grid)
+    }
+
+    fn build(grid: &Grid) -> KwaversResult<Self> {
+        let context = GpuProviderContext::<WgpuDevice>::with_features_and_limits(
+            WgpuDevice::acquisition_preference(),
+            &[DeviceFeature::PushConstants],
+            fdtd_required_limits(),
+        )?;
+        let device = context.device();
         let shader_source = include_str!("shaders/fdtd.wgsl");
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("fdtd"),
@@ -167,6 +247,7 @@ impl FdtdGpu {
         });
 
         Ok(Self {
+            context,
             velocity_pipeline,
             pressure_pipeline,
             bind_group,
@@ -177,23 +258,36 @@ impl FdtdGpu {
         })
     }
 
-    /// Upload pressure field to GPU.
-    pub fn upload_pressure(&self, queue: &wgpu::Queue, pressure: &Array3<f64>) {
-        let data: Vec<f32> = pressure.iter().map(|&x| x as f32).collect();
-        queue.write_buffer(&self.pressure_buffer, 0, bytemuck::cast_slice(&data));
+    /// Upload a provider-native pressure field to GPU.
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::InvalidInput`] when the Leto field is not stored
+    /// as one dense row-major slice.
+    pub fn upload_pressure(&self, pressure: &LetoArray3<f32>) -> KwaversResult<()> {
+        <Self as FdtdGpuProvider>::upload_pressure(self, pressure)
     }
 
-    /// Download pressure field from GPU.
+    /// Download a provider-native pressure field from GPU.
     ///
     /// # Errors
     /// Propagates [`KwaversError::GpuError`] on GPU read-back failure.
-    pub async fn download_pressure(
-        &self,
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        grid: &Grid,
-    ) -> KwaversResult<Array3<f64>> {
+    pub async fn download_pressure(&self, grid: &Grid) -> KwaversResult<LetoArray3<f32>> {
+        self.download_pressure_impl(grid).await
+    }
+
+    /// Download a provider-native pressure field from GPU without requiring
+    /// callers to own an async runtime.
+    ///
+    /// # Errors
+    /// Propagates [`KwaversError::GpuError`] on GPU read-back failure.
+    pub fn download_pressure_blocking(&self, grid: &Grid) -> KwaversResult<LetoArray3<f32>> {
+        <Self as FdtdGpuProvider>::download_pressure_blocking(self, grid)
+    }
+
+    async fn download_pressure_impl(&self, grid: &Grid) -> KwaversResult<LetoArray3<f32>> {
         let size = (grid.nx * grid.ny * grid.nz * std::mem::size_of::<f32>()) as u64;
+        let device = self.context.device();
+        let queue = self.context.queue();
 
         let staging = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("fdtd_staging"),
@@ -221,13 +315,12 @@ impl FdtdGpu {
 
         let data = slice.get_mapped_range();
         let floats: &[f32] = bytemuck::cast_slice(&data);
-        let plane = grid.ny * grid.nz;
-        let result = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
-            floats[i * plane + j * grid.nz + k] as f64
-        });
+        let result_values = floats.to_vec();
         drop(data);
         staging.unmap();
-        Ok(result)
+        LetoArray3::from_shape_vec([grid.nx, grid.ny, grid.nz], result_values).map_err(|e| {
+            KwaversError::InvalidInput(format!("Invalid FDTD pressure readback shape: {e}"))
+        })
     }
 
     /// Encode one FDTD time step: velocity_update → barrier → pressure_update.
@@ -235,7 +328,7 @@ impl FdtdGpu {
     /// The command encoder imposes the required ordering barrier between the two
     /// compute passes, preventing the pressure_update kernel from reading velocity
     /// values before velocity_update has finished writing them.
-    pub fn step(&self, encoder: &mut wgpu::CommandEncoder, grid: &Grid, dt: f32) {
+    pub fn encode_step(&self, encoder: &mut wgpu::CommandEncoder, grid: &Grid, dt: f32) {
         let push = [grid.nx as u32, grid.ny as u32, grid.nz as u32, dt.to_bits()];
         let wg_x = (grid.nx as u32).div_ceil(self.workgroup_size[0]);
         let wg_y = (grid.ny as u32).div_ceil(self.workgroup_size[1]);
@@ -264,5 +357,100 @@ impl FdtdGpu {
             pass.set_push_constants(0, bytemuck::cast_slice(&push));
             pass.dispatch_workgroups(wg_x, wg_y, wg_z);
         }
+    }
+}
+
+impl GpuProviderBackend for WgpuFdtd {
+    type Device = WgpuDevice;
+
+    fn hephaestus_device(&self) -> &Self::Device {
+        self.context.hephaestus_device()
+    }
+
+    fn device_name(&self) -> &str {
+        self.context.device_name()
+    }
+
+    fn synchronize(&self) -> KwaversResult<()> {
+        self.context.synchronize()
+    }
+}
+
+impl GpuKernelProvider for WgpuFdtd {
+    type Scalar = f32;
+
+    fn capabilities(&self) -> BackendCapabilities {
+        let limits = self.context.hephaestus_device().device_limits();
+        BackendCapabilities {
+            supports_fft: false,
+            supports_f64: false,
+            supports_f32: true,
+            supports_async: true,
+            max_parallelism: limits.max_compute_invocations_per_workgroup as usize,
+            supports_unified_memory: false,
+        }
+    }
+
+    fn is_available(&self) -> bool {
+        true
+    }
+
+    fn available_memory(&self) -> usize {
+        match usize::try_from(
+            self.context
+                .hephaestus_device()
+                .device_limits()
+                .max_buffer_size,
+        ) {
+            Ok(bytes) => bytes,
+            Err(_) => usize::MAX,
+        }
+    }
+
+    fn estimate_peak_performance(&self) -> f64 {
+        0.0
+    }
+}
+
+impl FdtdGpuProvider for WgpuFdtd {
+    fn new(grid: &Grid) -> KwaversResult<Self> {
+        Self::build(grid)
+    }
+
+    fn upload_pressure(&self, pressure: &LetoArray3<Self::Scalar>) -> KwaversResult<()> {
+        let data = pressure.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput(
+                "FDTD pressure field must be dense row-major Leto Array3".to_string(),
+            )
+        })?;
+        self.context
+            .queue()
+            .write_buffer(&self.pressure_buffer, 0, bytemuck::cast_slice(data));
+        Ok(())
+    }
+
+    fn download_pressure<'a>(
+        &'a self,
+        grid: &'a Grid,
+    ) -> impl Future<Output = KwaversResult<LetoArray3<Self::Scalar>>> + 'a {
+        self.download_pressure_impl(grid)
+    }
+
+    fn step(&self, grid: &Grid, dt: Self::Scalar) -> KwaversResult<()> {
+        let device = self.context.device();
+        let queue = self.context.queue();
+        let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("fdtd_step"),
+        });
+        self.encode_step(&mut encoder, grid, dt);
+        queue.submit(std::iter::once(encoder.finish()));
+        Ok(())
+    }
+}
+
+fn fdtd_required_limits() -> DeviceLimits {
+    DeviceLimits {
+        max_push_constant_size: 128,
+        ..WgpuDevice::required_limits()
     }
 }

@@ -2,6 +2,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
+use crate::gpu::{CoreGpuContext, GpuDevice};
+
 use super::GpuBufferData;
 
 impl GpuBufferData {
@@ -77,9 +79,13 @@ impl GpuBufferData {
 
             let _ = device.poll(wgpu::PollType::Wait);
 
-            receiver.recv_async().await.map_err(|e| {
-                KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
-            })??;
+            receiver
+                .recv_async()
+                .await
+                .map_err(|e| {
+                    KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
+                })?
+                .map_err(|e| crate::gpu::map_buffer_async_error("primary buffer readback", e))?;
 
             let data = buffer_slice.get_mapped_range();
             let result = bytemuck::cast_slice(&data).to_vec();
@@ -122,9 +128,13 @@ impl GpuBufferData {
 
         let _ = device.poll(wgpu::PollType::Wait);
 
-        receiver.recv_async().await.map_err(|e| {
-            KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
-        })??;
+        receiver
+            .recv_async()
+            .await
+            .map_err(|e| {
+                KwaversError::Io(std::io::Error::other(format!("Failed to map buffer: {e}")))
+            })?
+            .map_err(|e| crate::gpu::map_buffer_async_error("staging buffer readback", e))?;
 
         let data = buffer_slice.get_mapped_range();
         let result = bytemuck::cast_slice(&data).to_vec();
@@ -133,5 +143,33 @@ impl GpuBufferData {
         staging.unmap();
 
         Ok(result)
+    }
+
+    /// Read buffer data through a provider-owned context without requiring the
+    /// caller to own an async runtime.
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the readback preconditions are
+    ///   violated.
+    /// - Propagates any [`KwaversError`] returned by GPU readback.
+    pub fn read_to_vec_in_context<T: bytemuck::Pod>(
+        &self,
+        context: &CoreGpuContext,
+    ) -> KwaversResult<Vec<T>> {
+        pollster::block_on(self.read_to_vec(context.device(), context.queue()))
+    }
+
+    /// Read buffer data through a provider-owned device without requiring the
+    /// caller to own an async runtime.
+    ///
+    /// # Errors
+    /// - Returns [`KwaversError::System`] if the readback preconditions are
+    ///   violated.
+    /// - Propagates any [`KwaversError`] returned by GPU readback.
+    pub fn read_to_vec_on_device<T: bytemuck::Pod>(
+        &self,
+        device: &GpuDevice,
+    ) -> KwaversResult<Vec<T>> {
+        pollster::block_on(self.read_to_vec(device.wgpu_device(), device.wgpu_queue()))
     }
 }

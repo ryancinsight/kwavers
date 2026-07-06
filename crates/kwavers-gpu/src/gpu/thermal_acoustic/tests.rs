@@ -1,4 +1,45 @@
 use super::config::GpuThermalAcousticConfig;
+use super::{
+    GpuThermalAcousticBuffers, GpuThermalAcousticSolver, ThermalAcousticBufferProvider,
+    ThermalAcousticSolverProvider, WgpuThermalAcousticBuffers, WgpuThermalAcousticSolverProvider,
+};
+
+#[test]
+fn thermal_acoustic_buffers_are_generic_over_provider_trait() {
+    fn assert_provider<P>()
+    where
+        P: ThermalAcousticBufferProvider,
+    {
+        let _ = core::mem::size_of::<GpuThermalAcousticBuffers<P>>();
+    }
+
+    assert_provider::<WgpuThermalAcousticBuffers>();
+}
+
+#[test]
+fn wgpu_thermal_acoustic_buffers_declare_native_scalar() {
+    fn assert_scalar<P>()
+    where
+        P: ThermalAcousticBufferProvider<Scalar = f32>,
+    {
+        let _ = core::mem::size_of::<GpuThermalAcousticBuffers<P>>();
+    }
+
+    assert_scalar::<WgpuThermalAcousticBuffers>();
+}
+
+#[test]
+fn thermal_acoustic_solver_is_generic_over_provider_trait() {
+    fn assert_provider<P>()
+    where
+        P: ThermalAcousticSolverProvider,
+    {
+        let _ = core::mem::size_of::<GpuThermalAcousticSolver<P>>();
+        let _ = core::mem::size_of::<<P as crate::backend::provider::GpuProviderBackend>::Device>();
+    }
+
+    assert_provider::<WgpuThermalAcousticSolverProvider>();
+}
 
 #[test]
 fn test_config_validation() {
@@ -8,24 +49,30 @@ fn test_config_validation() {
 
 #[test]
 fn test_config_cfl_acoustic_violation() {
-    let mut config = GpuThermalAcousticConfig::default();
-    config.dt = 1.0;
+    let config = GpuThermalAcousticConfig {
+        dt: 1.0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(format!("{err:?}").contains("acoustic"));
 }
 
 #[test]
 fn test_config_cfl_thermal_violation() {
-    let mut config = GpuThermalAcousticConfig::default();
-    config.alpha_thermal = 30.0;
+    let config = GpuThermalAcousticConfig {
+        alpha_thermal: 30.0,
+        ..Default::default()
+    };
     let err = config.validate().unwrap_err();
     assert!(format!("{err:?}").contains("thermal"));
 }
 
 #[test]
 fn test_config_invalid_grid() {
-    let mut config = GpuThermalAcousticConfig::default();
-    config.nx = 0;
+    let config = GpuThermalAcousticConfig {
+        nx: 0,
+        ..Default::default()
+    };
     assert!(config.validate().is_err());
 }
 

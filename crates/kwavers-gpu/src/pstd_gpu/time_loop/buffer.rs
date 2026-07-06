@@ -1,26 +1,20 @@
 //! Packed source/sensor buffer helpers and run-cache management.
 //!
-//! SRP: changes when the GPU buffer packing format or cache invalidation policy changes.
+//! SRP: changes when GPU buffer packing or cache invalidation policy changes.
 
-use super::super::GpuPstdSolver;
-use wgpu::util::DeviceExt;
+use super::super::pipeline::{
+    PstdBindGroupProvider, PstdBufferProvider, WgpuPstdBindGroupFactory, WgpuPstdBufferFactory,
+};
+use super::super::state::WgpuPstdState;
+use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 
 const EMPTY_STORAGE_BUFFER_U32: [u32; 1] = [0];
-
-// ─── Packed buffer layout ────────────────────────────────────────────────────
-//
-// `source_data` GPU buffer: `[bitcast<f32>(indices[n_src]) | signals[n_src * nt]]`.
-// Indices occupy a stable prefix; signals occupy the tail and are overwritten each
-// scan line (cache hit) without reallocating the buffer or rebuilding bind groups.
-// Empty source/sensor sets still bind a one-element zero sentinel because WebGPU
-// storage buffers must have non-zero size; dispatch parameters carry the real
-// count, so shaders do not consume the sentinel when the count is zero.
 
 pub(super) fn packed_signal_len(n_points: usize, signal_len: usize) -> usize {
     n_points.max(1) + signal_len.max(1)
 }
 
-/// Rebuild the packed buffer from scratch (cache miss).
+/// Rebuild the packed buffer from scratch for a cache miss.
 pub(super) fn rewrite_packed_source_buffer(
     buffer: &mut Vec<f32>,
     indices: &[u32],
@@ -40,7 +34,7 @@ pub(super) fn rewrite_packed_source_buffer(
     }
 }
 
-/// Overwrite only the signal tail (cache hit); no reallocation.
+/// Overwrite only the signal tail for a cache hit.
 pub(super) fn overwrite_packed_signal_tail(
     buffer: &mut Vec<f32>,
     prefix_len: usize,
@@ -57,16 +51,10 @@ pub(super) fn overwrite_packed_signal_tail(
     }
 }
 
-impl GpuPstdSolver {
-    /// Allocate all run-scoped GPU buffers and rebuild bind groups (cache miss).
-    ///
-    /// Called when `n_sensors`, `n_src`, or `n_vel_x` changes between `run` calls.
-    /// Updates `self.cache_*` fields and sets the cache-key counters.
-    /// # Panics
-    /// - Panics if an internal invariant assumed to hold at this call site is violated.
-    ///
+impl WgpuPstdState {
     pub(super) fn build_run_cache(
         &mut self,
+        nt: usize,
         sensor_indices: &[u32],
         source_indices: &[u32],
         source_signals: &[f32],
@@ -77,7 +65,6 @@ impl GpuPstdSolver {
         let n_src = source_indices.len();
         let n_vel_x = vel_x_indices.len();
         let sensor_count = n_sensors.max(1);
-        let nt = self.nt;
 
         rewrite_packed_source_buffer(
             &mut self.scratch_source_data,
@@ -91,143 +78,59 @@ impl GpuPstdSolver {
         } else {
             sensor_indices
         };
+        let buffers = WgpuPstdBufferFactory::new(self.context.device());
+        let sensor_len = sensor_count * nt;
 
-        self.cache_sensor_indices_buf = Some(self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("sensor_indices"),
-                contents: bytemuck::cast_slice(si_data),
-                usage: wgpu::BufferUsages::STORAGE,
-            },
-        ));
+        self.run_cache.sensor_indices_buf = Some(buffers.static_storage(si_data, "sensor_indices"));
+        self.run_cache.sensor_data_buf =
+            Some(buffers.read_write_storage::<f32>(sensor_len, "sensor_data"));
+        self.run_cache.source_data_buf =
+            Some(buffers.upload_storage(&self.scratch_source_data, "source_data"));
+        self.run_cache.vel_x_data_buf =
+            Some(buffers.upload_storage(&self.scratch_vel_x_data, "vel_x_data"));
+        self.run_cache.staging_buf =
+            Some(buffers.map_read_buffer::<f32>(sensor_len, "sensor_staging"));
 
-        self.cache_sensor_data_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("sensor_data"),
-            size: (sensor_count * nt * std::mem::size_of::<f32>()) as u64,
-            usage: wgpu::BufferUsages::STORAGE
-                | wgpu::BufferUsages::COPY_SRC
-                | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        }));
+        let buf_si = self.run_cache.sensor_indices_buf.as_ref().unwrap();
+        let buf_sd = self.run_cache.sensor_data_buf.as_ref().unwrap();
+        let buf_src = self.run_cache.source_data_buf.as_ref().unwrap();
+        let buf_vel = self.run_cache.vel_x_data_buf.as_ref().unwrap();
 
-        self.cache_source_data_buf = Some(self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("source_data"),
-                contents: bytemuck::cast_slice(&self.scratch_source_data),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            },
-        ));
-
-        self.cache_vel_x_data_buf = Some(self.device.create_buffer_init(
-            &wgpu::util::BufferInitDescriptor {
-                label: Some("vel_x_data"),
-                contents: bytemuck::cast_slice(&self.scratch_vel_x_data),
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            },
-        ));
-
-        self.cache_staging_buf = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("sensor_staging"),
-            size: (sensor_count * nt * std::mem::size_of::<f32>()) as u64,
-            usage: wgpu::BufferUsages::MAP_READ | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        }));
-
-        let buf_si = self.cache_sensor_indices_buf.as_ref().unwrap();
-        let buf_sd = self.cache_sensor_data_buf.as_ref().unwrap();
-        let buf_src = self.cache_source_data_buf.as_ref().unwrap();
-        let buf_vel = self.cache_vel_x_data_buf.as_ref().unwrap();
-
-        self.cache_bg_sensor = Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("bg_sensor_run"),
-            layout: &self.bgl_sensor,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: self.buf_pml_sgx.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: self.buf_pml_sgy.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: self.buf_pml_sgz.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: self.buf_pml_xyz.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: self.buf_shifts_all.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: buf_si.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: buf_sd.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 7,
-                    resource: buf_src.as_entire_binding(),
-                },
+        let bind_groups = WgpuPstdBindGroupFactory::new(self.context.device());
+        self.run_cache.bg_sensor = Some(bind_groups.bind_group(
+            "bg_sensor_run",
+            &self.layouts.sensor,
+            [
+                &self.pml_shift_buffers.pml_sgx,
+                &self.pml_shift_buffers.pml_sgy,
+                &self.pml_shift_buffers.pml_sgz,
+                &self.pml_shift_buffers.pml_xyz,
+                &self.pml_shift_buffers.shifts_all,
+                buf_si,
+                buf_sd,
+                buf_src,
             ],
-        }));
+        ));
+        self.run_cache.bg_sensor_vel = Some(bind_groups.bind_group(
+            "bg_sensor_vel_run",
+            &self.layouts.sensor,
+            [
+                &self.pml_shift_buffers.pml_sgx,
+                &self.pml_shift_buffers.pml_sgy,
+                &self.pml_shift_buffers.pml_sgz,
+                &self.pml_shift_buffers.pml_xyz,
+                &self.pml_shift_buffers.shifts_all,
+                buf_si,
+                buf_sd,
+                buf_vel,
+            ],
+        ));
 
-        self.cache_bg_sensor_vel =
-            Some(self.device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("bg_sensor_vel_run"),
-                layout: &self.bgl_sensor,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: self.buf_pml_sgx.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: self.buf_pml_sgy.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: self.buf_pml_sgz.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: self.buf_pml_xyz.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: self.buf_shifts_all.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 5,
-                        resource: buf_si.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 6,
-                        resource: buf_sd.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 7,
-                        resource: buf_vel.as_entire_binding(),
-                    },
-                ],
-            }));
-
-        self.cache_n_sensors = n_sensors;
-        self.cache_n_src = n_src;
-        self.cache_n_vel_x = n_vel_x;
+        self.run_cache.n_sensors = n_sensors;
+        self.run_cache.n_src = n_src;
+        self.run_cache.n_vel_x = n_vel_x;
     }
 
-    /// Overwrite signal tails in cached GPU buffers (cache hit).
-    ///
-    /// `write_buffer` enqueues a PCIe upload; the GPU sees updated data before
-    /// the first dispatch of the new run.  The stable index prefix is untouched.
-    /// # Panics
-    /// - Panics if `cache hit`.
-    ///
     pub(super) fn refresh_signal_tails(
         &mut self,
         source_signals: &[f32],
@@ -237,15 +140,16 @@ impl GpuPstdSolver {
     ) {
         overwrite_packed_signal_tail(&mut self.scratch_source_data, n_src_safe, source_signals);
         overwrite_packed_signal_tail(&mut self.scratch_vel_x_data, n_vel_safe, vel_x_signals);
-        self.queue.write_buffer(
-            self.cache_source_data_buf.as_ref().expect("cache hit"),
+        let commands = WgpuPstdCommandProvider::new(self.device(), self.queue());
+        commands.write_buffer(
+            self.run_cache.source_data_buf.as_ref().expect("cache hit"),
             (n_src_safe * std::mem::size_of::<f32>()) as u64,
-            bytemuck::cast_slice(&self.scratch_source_data[n_src_safe..]),
+            &self.scratch_source_data[n_src_safe..],
         );
-        self.queue.write_buffer(
-            self.cache_vel_x_data_buf.as_ref().expect("cache hit"),
+        commands.write_buffer(
+            self.run_cache.vel_x_data_buf.as_ref().expect("cache hit"),
             (n_vel_safe * std::mem::size_of::<f32>()) as u64,
-            bytemuck::cast_slice(&self.scratch_vel_x_data[n_vel_safe..]),
+            &self.scratch_vel_x_data[n_vel_safe..],
         );
     }
 }

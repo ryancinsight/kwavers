@@ -1,36 +1,36 @@
 use super::super::super::{GpuPstdSolver, PstdParams};
-use super::super::bgl::{build_bgl_absorb, build_bgl_fields, build_bgl_kspace, build_bgl_sensor};
 use super::super::bind_groups::{
     build_bg_absorb, build_bg_fields, build_bg_kspace, AbsorbBuffers, FieldBuffers, KspaceBuffers,
 };
-use super::super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
+use super::super::{
+    AbsorptionArrays, MediumArrays, PmlArrays, PstdBindGroupLayoutProvider, PstdBufferProvider,
+    PstdPipelineProvider, SolverParams, WgpuPstdBindGroupFactory, WgpuPstdBindGroupLayoutFactory,
+    WgpuPstdBufferFactory, WgpuPstdPipelineFactory,
+};
 use super::kspace::{precompute_kspace_shifts, KSpaceGridParams};
+use crate::backend::init::GpuProviderContext;
+use crate::pstd_gpu::state::{
+    PstdStateBuilder, WgpuPstdAbsorptionBuffers, WgpuPstdFieldBuffers, WgpuPstdKspaceBuffers,
+    WgpuPstdLayouts, WgpuPstdMediumBuffers, WgpuPstdPermanentBindGroups, WgpuPstdPipelines,
+    WgpuPstdPmlShiftBuffers, WgpuPstdRunCache, WgpuPstdState, WgpuPstdStateProvider,
+};
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use std::sync::Arc;
-use wgpu::util::DeviceExt;
 
-impl GpuPstdSolver {
-    /// Create a new GPU PSTD solver.
-    ///
-    /// See `mod.rs` for argument documentation and bind-group layout.
-    pub fn new(
-        device: Arc<wgpu::Device>,
-        queue: Arc<wgpu::Queue>,
+impl PstdStateBuilder for WgpuPstdStateProvider {
+    type Context = GpuProviderContext<WgpuDevice>;
+
+    fn build_state(
+        context: Self::Context,
         grid: &Grid,
         medium: MediumArrays<'_>,
         solver: SolverParams,
         pml: PmlArrays<'_>,
         absorption: AbsorptionArrays<'_>,
-    ) -> Result<Self, String> {
+    ) -> Result<WgpuPstdState, String> {
         let MediumArrays { c0_flat, rho0_flat } = medium;
-        let SolverParams {
-            dt,
-            nt,
-            c_ref,
-            nonlinear,
-            absorbing,
-        } = solver;
+        let SolverParams { dt, c_ref, .. } = solver;
         let PmlArrays {
             x: pml_x,
             y: pml_y,
@@ -85,42 +85,43 @@ impl GpuPstdSolver {
 
         let rho0_inv: Vec<f32> = rho0_flat.iter().map(|&r| 1.0 / r).collect();
         let c0_sq: Vec<f32> = c0_flat.iter().map(|&c| c * c).collect();
+        let device = context.device();
+        let buffers = WgpuPstdBufferFactory::new(device);
 
         // ── Buffer helpers ────────────────────────────────────────────────────
-        let mk_ro = |data: &[f32], label: &str| -> wgpu::Buffer {
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some(label),
-                contents: bytemuck::cast_slice(data),
-                usage: wgpu::BufferUsages::STORAGE
-                    | wgpu::BufferUsages::COPY_DST
-                    | wgpu::BufferUsages::COPY_SRC,
-            })
+        let mk_ro = |data: &[f32], label: &'static str| -> wgpu::Buffer {
+            buffers.read_only_storage(data, label)
         };
         // Allocated uninitialised — GPU zero-fills before first read via zero_acoustic_fields.
-        let mk_rw = |n: usize, extra: wgpu::BufferUsages, label: &str| -> wgpu::Buffer {
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some(label),
-                size: (n * std::mem::size_of::<f32>()) as u64,
-                usage: wgpu::BufferUsages::STORAGE
-                    | wgpu::BufferUsages::COPY_SRC
-                    | wgpu::BufferUsages::COPY_DST
-                    | extra,
-                mapped_at_creation: false,
-            })
+        let mk_rw = |n: usize, label: &'static str| -> wgpu::Buffer {
+            buffers.read_write_storage::<f32>(n, label)
         };
 
         // ── Allocate GPU buffers ──────────────────────────────────────────────
-        let buf_p = mk_rw(total, wgpu::BufferUsages::empty(), "buf_p");
-        let buf_ux = mk_rw(total, wgpu::BufferUsages::empty(), "buf_ux");
-        let buf_uy = mk_rw(total, wgpu::BufferUsages::empty(), "buf_uy");
-        let buf_uz = mk_rw(total, wgpu::BufferUsages::empty(), "buf_uz");
-        let buf_rhox = mk_rw(total, wgpu::BufferUsages::empty(), "buf_rhox");
-        let buf_rhoy = mk_rw(total, wgpu::BufferUsages::empty(), "buf_rhoy");
-        let buf_rhoz = mk_rw(total, wgpu::BufferUsages::empty(), "buf_rhoz");
+        let buf_p = mk_rw(total, "buf_p");
+        let buf_ux = mk_rw(total, "buf_ux");
+        let buf_uy = mk_rw(total, "buf_uy");
+        let buf_uz = mk_rw(total, "buf_uz");
+        let buf_rhox = mk_rw(total, "buf_rhox");
+        let buf_rhoy = mk_rw(total, "buf_rhoy");
+        let buf_rhoz = mk_rw(total, "buf_rhoz");
+        let field_buffers = WgpuPstdFieldBuffers {
+            p: buf_p,
+            ux: buf_ux,
+            uy: buf_uy,
+            uz: buf_uz,
+            rhox: buf_rhox,
+            rhoy: buf_rhoy,
+            rhoz: buf_rhoz,
+        };
         let buf_source_kappa = mk_ro(&source_kappa_f32, "source_kappa");
 
-        let buf_kspace_re = mk_rw(total, wgpu::BufferUsages::empty(), "kspace_re");
-        let buf_kspace_im = mk_rw(total, wgpu::BufferUsages::empty(), "kspace_im");
+        let buf_kspace_re = mk_rw(total, "kspace_re");
+        let buf_kspace_im = mk_rw(total, "kspace_im");
+        let kspace_buffers = WgpuPstdKspaceBuffers {
+            re: buf_kspace_re,
+            im: buf_kspace_im,
+        };
         let buf_kappa = mk_ro(&kappa_f32, "kappa");
         let buf_rho0_inv = mk_ro(&rho0_inv, "rho0_inv");
         let buf_c0_sq = mk_ro(&c0_sq, "c0_sq");
@@ -151,73 +152,80 @@ impl GpuPstdSolver {
             twiddle_data[464 + k] = a.sin() as f32;
         }
         let buf_alpha_decay = mk_ro(&twiddle_data, "twiddle_fft");
+        let medium_buffers = WgpuPstdMediumBuffers {
+            kappa: buf_kappa,
+            rho0_inv: buf_rho0_inv,
+            c0_sq: buf_c0_sq,
+            rho0: buf_rho0,
+            bon_a: buf_bon_a,
+            alpha_decay: buf_alpha_decay,
+            source_kappa: buf_source_kappa,
+        };
 
         let buf_absorb_nabla1 = mk_ro(absorb_nabla1, "absorb_nabla1");
         let buf_absorb_nabla2 = mk_ro(absorb_nabla2, "absorb_nabla2");
         let buf_absorb_tau = mk_ro(absorb_tau, "absorb_tau");
         let buf_absorb_eta = mk_ro(absorb_eta, "absorb_eta");
-        let buf_absorb_scratch_kre = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_kre");
-        let buf_absorb_scratch_kim = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_kim");
-        let buf_absorb_scratch_l1 = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l1");
-        let buf_absorb_scratch_l2 = mk_rw(total, wgpu::BufferUsages::empty(), "absorb_l2");
+        let buf_absorb_scratch_kre = mk_rw(total, "absorb_kre");
+        let buf_absorb_scratch_kim = mk_rw(total, "absorb_kim");
+        let buf_absorb_scratch_l1 = mk_rw(total, "absorb_l1");
+        let buf_absorb_scratch_l2 = mk_rw(total, "absorb_l2");
+        let absorption_buffers = WgpuPstdAbsorptionBuffers {
+            nabla1: buf_absorb_nabla1,
+            nabla2: buf_absorb_nabla2,
+            tau: buf_absorb_tau,
+            eta: buf_absorb_eta,
+            scratch_kre: buf_absorb_scratch_kre,
+            scratch_kim: buf_absorb_scratch_kim,
+            scratch_l1: buf_absorb_scratch_l1,
+            scratch_l2: buf_absorb_scratch_l2,
+        };
 
         let buf_pml_sgx = mk_ro(pml_sgx, "pml_sgx");
         let buf_pml_sgy = mk_ro(pml_sgy, "pml_sgy");
         let buf_pml_sgz = mk_ro(pml_sgz, "pml_sgz");
         let buf_pml_xyz = mk_ro(&pml_xyz, "pml_xyz");
         let buf_shifts_all = mk_ro(&shifts_all, "shifts_all");
+        let pml_shift_buffers = WgpuPstdPmlShiftBuffers {
+            pml_sgx: buf_pml_sgx,
+            pml_sgy: buf_pml_sgy,
+            pml_sgz: buf_pml_sgz,
+            pml_xyz: buf_pml_xyz,
+            shifts_all: buf_shifts_all,
+        };
+
+        let pipelines = WgpuPstdPipelineFactory::new(device);
 
         // ── Shader ────────────────────────────────────────────────────────────
-        let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("pstd_shader"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("../../shaders/pstd.wgsl").into()),
-        });
+        let shader =
+            pipelines.shader_module(include_str!("../../shaders/pstd.wgsl"), "pstd_shader");
 
         // ── Bind group layouts ────────────────────────────────────────────────
-        let bgl_fields = build_bgl_fields(&device);
-        let bgl_kspace = build_bgl_kspace(&device);
-        let bgl_sensor = build_bgl_sensor(&device);
-        let bgl_absorb = build_bgl_absorb(&device);
+        let bind_group_layouts = WgpuPstdBindGroupLayoutFactory::new(device);
+        let bgl_fields = bind_group_layouts.fields_layout();
+        let bgl_kspace = bind_group_layouts.kspace_layout();
+        let bgl_sensor = bind_group_layouts.sensor_layout();
+        let bgl_absorb = bind_group_layouts.absorb_layout();
 
         // ── Pipeline layouts ──────────────────────────────────────────────────
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("pstd_pipeline_layout"),
-            bind_group_layouts: &[&bgl_fields, &bgl_kspace, &bgl_sensor],
-            push_constant_ranges: &[wgpu::PushConstantRange {
-                stages: wgpu::ShaderStages::COMPUTE,
-                range: 0..std::mem::size_of::<PstdParams>() as u32,
-            }],
-        });
-        let pipeline_layout_absorb =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("pstd_pipeline_layout_absorb"),
-                bind_group_layouts: &[&bgl_fields, &bgl_kspace, &bgl_sensor, &bgl_absorb],
-                push_constant_ranges: &[wgpu::PushConstantRange {
-                    stages: wgpu::ShaderStages::COMPUTE,
-                    range: 0..std::mem::size_of::<PstdParams>() as u32,
-                }],
-            });
+        let push_constant_bytes = std::mem::size_of::<PstdParams>();
+        let pipeline_layout = pipelines.pipeline_layout(
+            &[&bgl_fields, &bgl_kspace, &bgl_sensor],
+            push_constant_bytes,
+            "pstd_pipeline_layout",
+        );
+        let pipeline_layout_absorb = pipelines.pipeline_layout(
+            &[&bgl_fields, &bgl_kspace, &bgl_sensor, &bgl_absorb],
+            push_constant_bytes,
+            "pstd_pipeline_layout_absorb",
+        );
 
         // ── Compile compute pipelines ─────────────────────────────────────────
         let mk_pl = |entry: &'static str| -> wgpu::ComputePipeline {
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(entry),
-                layout: Some(&pipeline_layout),
-                module: &shader,
-                entry_point: Some(entry),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None,
-            })
+            pipelines.compute_pipeline(&pipeline_layout, &shader, entry)
         };
         let mk_pl_absorb = |entry: &'static str| -> wgpu::ComputePipeline {
-            device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-                label: Some(entry),
-                layout: Some(&pipeline_layout_absorb),
-                module: &shader,
-                entry_point: Some(entry),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                cache: None,
-            })
+            pipelines.compute_pipeline(&pipeline_layout_absorb, &shader, entry)
         };
 
         let pipeline_zero_fields = mk_pl("zero_acoustic_fields");
@@ -243,133 +251,141 @@ impl GpuPstdSolver {
         let pipeline_absorb_pressure_correction = mk_pl_absorb("absorb_pressure_correction");
         let pipeline_absorb_save_kspace = mk_pl_absorb("absorb_save_kspace");
         let pipeline_restore_and_shift = mk_pl_absorb("restore_and_shift_apply");
+        let pstd_pipelines = WgpuPstdPipelines {
+            zero_fields: pipeline_zero_fields,
+            zero_kspace: pipeline_zero_kspace,
+            fft: pipeline_fft,
+            kspace_shift: pipeline_kspace_shift,
+            vel_update: pipeline_vel_update,
+            dens_update: pipeline_dens_update,
+            snapshot_rho0_plus_rho: pipeline_snapshot_rho0_plus_rho,
+            pres_density: pipeline_pres_density,
+            record: pipeline_record,
+            inject_src: pipeline_inject_src,
+            inject_vel_x: pipeline_inject_vel_x,
+            apply_source_kappa: pipeline_apply_source_kappa,
+            add_kspace_to_field_ux: pipeline_add_kspace_to_field_ux,
+            copy_field_to_k: pipeline_copy_field_to_k,
+            absorb_mul_nabla: pipeline_absorb_mul_nabla,
+            absorb_copy_to_scratch: pipeline_absorb_copy_to_scratch,
+            absorb_accum_div_u: pipeline_absorb_accum_div_u,
+            absorb_prep_l1_kspace: pipeline_absorb_prep_l1_kspace,
+            absorb_prep_l2_kspace: pipeline_absorb_prep_l2_kspace,
+            absorb_pressure_correction: pipeline_absorb_pressure_correction,
+            absorb_save_kspace: pipeline_absorb_save_kspace,
+            restore_and_shift: pipeline_restore_and_shift,
+        };
 
         // ── Build permanent bind groups ───────────────────────────────────────
+        let bind_groups = WgpuPstdBindGroupFactory::new(device);
         let bg_fields = build_bg_fields(
-            &device,
+            &bind_groups,
             &bgl_fields,
             &FieldBuffers {
-                p: &buf_p,
-                ux: &buf_ux,
-                uy: &buf_uy,
-                uz: &buf_uz,
-                rhox: &buf_rhox,
-                rhoy: &buf_rhoy,
-                rhoz: &buf_rhoz,
-                source_kappa: &buf_source_kappa,
+                p: &field_buffers.p,
+                ux: &field_buffers.ux,
+                uy: &field_buffers.uy,
+                uz: &field_buffers.uz,
+                rhox: &field_buffers.rhox,
+                rhoy: &field_buffers.rhoy,
+                rhoz: &field_buffers.rhoz,
+                source_kappa: &medium_buffers.source_kappa,
             },
         );
         let bg_kspace = build_bg_kspace(
-            &device,
+            &bind_groups,
             &bgl_kspace,
             &KspaceBuffers {
-                kspace_re: &buf_kspace_re,
-                kspace_im: &buf_kspace_im,
-                kappa: &buf_kappa,
-                rho0_inv: &buf_rho0_inv,
-                c0_sq: &buf_c0_sq,
-                rho0: &buf_rho0,
-                bon_a: &buf_bon_a,
-                alpha_decay: &buf_alpha_decay,
+                kspace_re: &kspace_buffers.re,
+                kspace_im: &kspace_buffers.im,
+                kappa: &medium_buffers.kappa,
+                rho0_inv: &medium_buffers.rho0_inv,
+                c0_sq: &medium_buffers.c0_sq,
+                rho0: &medium_buffers.rho0,
+                bon_a: &medium_buffers.bon_a,
+                alpha_decay: &medium_buffers.alpha_decay,
             },
         );
         let bg_absorb = build_bg_absorb(
-            &device,
+            &bind_groups,
             &bgl_absorb,
             &AbsorbBuffers {
-                nabla1: &buf_absorb_nabla1,
-                nabla2: &buf_absorb_nabla2,
-                tau: &buf_absorb_tau,
-                eta: &buf_absorb_eta,
-                scratch_kre: &buf_absorb_scratch_kre,
-                scratch_kim: &buf_absorb_scratch_kim,
-                scratch_l1: &buf_absorb_scratch_l1,
-                scratch_l2: &buf_absorb_scratch_l2,
+                nabla1: &absorption_buffers.nabla1,
+                nabla2: &absorption_buffers.nabla2,
+                tau: &absorption_buffers.tau,
+                eta: &absorption_buffers.eta,
+                scratch_kre: &absorption_buffers.scratch_kre,
+                scratch_kim: &absorption_buffers.scratch_kim,
+                scratch_l1: &absorption_buffers.scratch_l1,
+                scratch_l2: &absorption_buffers.scratch_l2,
             },
         );
-
-        Ok(Self {
-            device,
-            queue,
-            nx,
-            ny,
-            nz,
-            nt,
-            dt,
-            buf_p,
-            buf_ux,
-            buf_uy,
-            buf_uz,
-            buf_rhox,
-            buf_rhoy,
-            buf_rhoz,
-            buf_kspace_re,
-            buf_kspace_im,
-            buf_kappa,
-            buf_rho0_inv,
-            buf_c0_sq,
-            buf_rho0,
-            buf_bon_a,
-            buf_alpha_decay,
-            nonlinear,
-            absorbing,
-            buf_pml_sgx,
-            buf_pml_sgy,
-            buf_pml_sgz,
-            buf_pml_xyz,
-            buf_shifts_all,
-            pipeline_zero_fields,
-            pipeline_zero_kspace,
-            pipeline_fft,
-            pipeline_kspace_shift,
-            pipeline_vel_update,
-            pipeline_dens_update,
-            pipeline_snapshot_rho0_plus_rho,
-            pipeline_pres_density,
-            pipeline_record,
-            pipeline_inject_src,
-            pipeline_inject_vel_x,
-            pipeline_apply_source_kappa,
-            pipeline_add_kspace_to_field_ux,
-            pipeline_copy_field_to_k,
-            pipeline_absorb_mul_nabla,
-            pipeline_absorb_copy_to_scratch,
-            pipeline_absorb_accum_div_u,
-            pipeline_absorb_prep_l1_kspace,
-            pipeline_absorb_prep_l2_kspace,
-            pipeline_absorb_pressure_correction,
-            pipeline_absorb_save_kspace,
-            pipeline_restore_and_shift,
-            buf_absorb_nabla1,
-            buf_absorb_nabla2,
-            buf_absorb_tau,
-            buf_absorb_eta,
-            buf_absorb_scratch_kre,
-            buf_absorb_scratch_kim,
-            buf_absorb_scratch_l1,
-            buf_absorb_scratch_l2,
-            bg_fields,
-            bg_kspace,
-            bg_absorb,
-            bgl_sensor,
-            pipeline_layout,
+        let permanent_bind_groups = WgpuPstdPermanentBindGroups {
+            fields: bg_fields,
+            kspace: bg_kspace,
+            absorb: bg_absorb,
+        };
+        let layouts = WgpuPstdLayouts { sensor: bgl_sensor };
+        let state = WgpuPstdState {
+            context,
+            field_buffers,
+            kspace_buffers,
+            medium_buffers,
+            absorption_buffers,
+            pml_shift_buffers,
+            pipelines: pstd_pipelines,
+            permanent_bind_groups,
+            layouts,
+            run_cache: WgpuPstdRunCache::default(),
             scratch_c0_sq: vec![0.0f32; total],
             scratch_rho0_inv: vec![0.0f32; total],
             scratch_rho0_flat: vec![0.0f32; total],
             scratch_source_kappa_ones: vec![1.0f32; total],
             scratch_source_data: Vec::new(),
             scratch_vel_x_data: Vec::new(),
-            cache_sensor_indices_buf: None,
-            cache_sensor_data_buf: None,
-            cache_source_data_buf: None,
-            cache_vel_x_data_buf: None,
-            cache_staging_buf: None,
-            cache_bg_sensor: None,
-            cache_bg_sensor_vel: None,
-            cache_n_sensors: 0,
-            cache_n_src: 0,
-            cache_n_vel_x: 0,
-            buf_source_kappa,
+        };
+
+        Ok(state)
+    }
+}
+
+impl<P> GpuPstdSolver<P>
+where
+    P: PstdStateBuilder,
+{
+    /// Create a new GPU PSTD solver.
+    ///
+    /// See `mod.rs` for argument documentation and bind-group layout.
+    pub fn new(
+        context: P::Context,
+        grid: &Grid,
+        medium: MediumArrays<'_>,
+        solver: SolverParams,
+        pml: PmlArrays<'_>,
+        absorption: AbsorptionArrays<'_>,
+    ) -> Result<Self, String> {
+        let nx = grid.nx;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        let SolverParams {
+            dt,
+            nt,
+            nonlinear,
+            absorbing,
+            ..
+        } = solver;
+        let state = P::build_state(context, grid, medium, solver, pml, absorption)?;
+
+        Ok(Self {
+            nx,
+            ny,
+            nz,
+            nt,
+            dt,
+            state,
+            _provider: std::marker::PhantomData,
+            nonlinear,
+            absorbing,
         })
     }
 }

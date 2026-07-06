@@ -1,6 +1,8 @@
 //! GPU PSTD run tests — pressure source, velocity source, multi-source, and benchmark.
 
-use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use super::super::{
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
 fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
@@ -9,7 +11,7 @@ fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
     let rho0v = vec![1000.0f32; n3];
     let ones = vec![1.0f32; n3];
     let zeros = vec![0.0f32; n3];
-    GpuPstdSolver::with_auto_device(
+    GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
         &kwavers_grid::Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap(),
         MediumArrays {
             c0_flat: &c0v,
@@ -131,7 +133,7 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
     let rho0v = vec![1000.0f32; total];
     let ones = vec![1.0f32; total];
     let zeros = vec![0.0f32; total];
-    let solver = GpuPstdSolver::with_auto_device(
+    let solver = GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
         &kwavers_grid::Grid::new(nx, ny, nz, 1e-4, 1e-4, 1e-4).unwrap(),
         MediumArrays {
             c0_flat: &c0v,
@@ -208,7 +210,7 @@ fn bench_gpu_pstd_bmode_grid() {
     let rho0v = vec![1000.0f32; total];
     let ones = vec![1.0f32; total];
     let zeros = vec![0.0f32; total];
-    let solver = GpuPstdSolver::with_auto_device(
+    let solver = GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
         &kwavers_grid::Grid::new(nx, ny, nz, dx, dx, dx).unwrap(),
         MediumArrays {
             c0_flat: &c0v,

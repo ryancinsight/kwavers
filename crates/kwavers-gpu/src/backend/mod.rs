@@ -1,6 +1,10 @@
-//! GPU Backend Implementation (WGPU)
+//! GPU backend implementation.
 //!
-//! Production-ready GPU acceleration using WGPU for cross-platform compatibility.
+//! Production GPU acceleration through a provider-generic Hephaestus boundary.
+//! The default provider is WGPU because the current shader implementations are
+//! WGSL; CUDA satisfies the provider identity/acquisition seam independently,
+//! and belongs behind [`GpuComputeProvider`] only once Kwavers owns CUDA
+//! kernels for the operations exposed here.
 //!
 //! ## Architecture
 //!
@@ -12,7 +16,8 @@
 //! ├──────────────────┼──────────────────┤
 //! │  Buffer Manager  │  Pipeline Mgr    │
 //! ├──────────────────┼──────────────────┤
-//! │  Compute Shaders (WGSL)             │
+//! │  Provider Dispatch (WGPU/CUDA seam) │
+//! │  Compute Shaders (WGSL today)       │
 //! │  - FFT           - Operators        │
 //! │  - Utils         - K-space          │
 //! └─────────────────────────────────────┘
@@ -20,37 +25,36 @@
 //!
 //! ## Features
 //!
-//! - **Cross-platform:** Supports Vulkan, Metal, DirectX 12, OpenGL ES
-//! - **Automatic fallback:** Gracefully falls back to CPU if GPU unavailable
+//! - **Provider-generic:** WGPU is the default provider; CUDA uses the same trait seam
+//! - **Explicit availability:** device acquisition failures are surfaced to callers
 //! - **Memory management:** Efficient buffer pooling and reuse
 //! - **Pipeline caching:** Compile shaders once, reuse for performance
 //!
 //! ## Usage
 //!
 //! ```rust,ignore
-//! use kwavers_solver::backend::gpu::GPUBackend;
+//! use kwavers_gpu::backend::GPUBackend;
 //!
-//! // Create GPU backend (auto-selects best available device)
+//! // Create default WGPU-backed GPU backend
 //! let mut backend = GPUBackend::new()?;
 //!
-//! // Execute operations
-//! backend.fft_3d(&mut data)?;
-//! backend.element_wise_multiply(&a, &b, &mut out)?;
+//! // Execute provider-native operations
+//! backend.dispatch_element_wise_multiply(&a, &b, &mut out)?;
 //!
 //! // Synchronize and retrieve results
 //! backend.synchronize()?;
 //! ```
 //!
-//! ## Performance
+//! ## Performance Metadata
 //!
-//! Typical speedups vs CPU (rayon parallel):
-//! - FFT 3D (256³): 15-25×
-//! - Element-wise ops: 8-12×
-//! - K-space operators: 10-20×
-//! - Overall simulation: 8-20×
+//! Provider performance reporting is evidence-bound. WGPU reports unknown peak
+//! throughput as `0.0` because portable WGPU adapter metadata does not expose a
+//! calibrated FLOP/s model; providers with benchmark-backed models can override
+//! the generic estimate method.
 //!
 //! ## References
 //!
+//! - Hephaestus: local Atlas GPU provider crates
 //! - WGPU: https://wgpu.rs/
 //! - WGSL Spec: https://www.w3.org/TR/WGSL/
 //! - k-Wave GPU: CUDA implementation patterns
@@ -61,48 +65,44 @@ pub mod init;
 pub mod performance_monitor;
 pub mod physics_kernels;
 pub mod pipeline;
+pub mod provider;
 pub mod realtime_loop;
 
-use buffers::GpuBackendBufferManager;
-use init::WGPUContext;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::backend::traits::{
     BackendCapabilities, BackendType, ComputeBackend, ComputeDevice,
 };
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 use physics_kernels::PhysicsKernelRegistry;
-use pipeline::PipelineManager;
 use realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
 use std::collections::HashMap;
 
 // Re-export key Phase 4 types for public API
+pub use buffers::{BackendBufferProvider, GpuBackendBufferManager, WgpuBackendBufferManager};
 pub use performance_monitor::{BudgetAnalysis, GpuStepMetrics};
 pub use physics_kernels::{PhysicsKernel, WorkgroupConfig};
+#[cfg(feature = "cuda-provider")]
+pub use provider::CudaElementWiseProvider;
+pub use provider::{
+    ElementWiseMultiplyProvider, GpuComputeProvider, GpuKernelProvider, GpuProviderBackend,
+    SpatialDerivativeProvider, WgpuComputeProvider,
+};
 pub use realtime_loop::{GpuRealtimeSimulationStatistics, StepResult};
 
-/// GPU backend using WGPU
+/// GPU backend generic over a concrete Hephaestus provider.
 ///
-/// Provides GPU-accelerated operations for ultrasound simulation.
+/// Provides GPU-accelerated operations for ultrasound simulation through `P`.
 /// Automatically handles device selection, memory management, and pipeline compilation.
 #[derive(Debug)]
-pub struct GPUBackend {
-    /// WGPU context (instance, adapter, device, queue)
-    context: WGPUContext,
-
-    /// Buffer manager for memory allocation
-    buffer_manager: GpuBackendBufferManager,
-
-    /// Pipeline manager for compute shader execution
-    pipeline_manager: PipelineManager,
-
-    /// Backend capabilities
-    capabilities: BackendCapabilities,
-
-    /// Is successfully initialized
-    initialized: bool,
+pub struct GPUBackend<P = WgpuComputeProvider>
+where
+    P: GpuComputeProvider,
+{
+    /// Concrete GPU provider implementation.
+    provider: P,
 }
 
-impl GPUBackend {
+impl GPUBackend<WgpuComputeProvider> {
     /// Create a new GPU backend
     ///
     /// Attempts to initialize WGPU with the following priority:
@@ -115,87 +115,90 @@ impl GPUBackend {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new() -> KwaversResult<Self> {
-        // Initialize WGPU context
-        let context = WGPUContext::new()?;
+        WgpuComputeProvider::new().map(Self::from_provider)
+    }
+}
 
-        // Query device capabilities
-        let capabilities = Self::query_capabilities(&context);
-
-        // Initialize buffer manager
-        let buffer_manager = GpuBackendBufferManager::new(context.device());
-
-        // Initialize pipeline manager (compiles shaders)
-        let pipeline_manager = PipelineManager::new(context.device())?;
-
-        Ok(Self {
-            context,
-            buffer_manager,
-            pipeline_manager,
-            capabilities,
-            initialized: true,
-        })
+impl<P> GPUBackend<P>
+where
+    P: GpuComputeProvider,
+{
+    /// Create a backend from a concrete GPU provider.
+    #[must_use]
+    pub const fn from_provider(provider: P) -> Self {
+        Self { provider }
     }
 
-    /// Query GPU capabilities
-    fn query_capabilities(context: &WGPUContext) -> BackendCapabilities {
-        let limits = context.device().limits();
-        let features = context.device().features();
-
-        BackendCapabilities {
-            supports_fft: true,
-            supports_f64: features.contains(wgpu::Features::SHADER_F64), // Rare on GPUs
-            supports_f32: true,
-            supports_async: true,
-            max_parallelism: limits.max_compute_invocations_per_workgroup as usize,
-            supports_unified_memory: false, // Most GPUs use discrete memory
-        }
+    /// Borrow the concrete GPU provider.
+    #[must_use]
+    pub const fn provider(&self) -> &P {
+        &self.provider
     }
 
     /// Get device name for logging
     pub fn device_name(&self) -> &str {
-        self.context.device_name()
+        self.provider.device_name()
     }
 
     /// Get available GPU memory (estimated)
     pub fn available_memory(&self) -> usize {
-        // Most GPUs don't expose memory info directly
-        // Return conservative estimate based on typical configurations
-        4 * 1024 * 1024 * 1024 // 4 GB
+        self.provider.available_memory()
+    }
+
+    /// Execute provider-native element-wise multiplication.
+    ///
+    /// # Errors
+    ///
+    /// Propagates provider transfer, dispatch, or readback failures.
+    pub fn dispatch_element_wise_multiply(
+        &self,
+        a: &LetoArray3<P::Scalar>,
+        b: &LetoArray3<P::Scalar>,
+        out: &mut LetoArray3<P::Scalar>,
+    ) -> KwaversResult<()> {
+        self.provider.element_wise_multiply(a, b, out)
+    }
+
+    /// Execute provider-native spatial derivative.
+    ///
+    /// # Errors
+    ///
+    /// Propagates provider dispatch failures or invalid derivative directions.
+    pub fn dispatch_spatial_derivative(
+        &self,
+        field: &LetoArray3<P::Scalar>,
+        direction: usize,
+        out: &mut LetoArray3<P::Scalar>,
+    ) -> KwaversResult<()> {
+        self.provider
+            .apply_spatial_derivative(field, direction, out)
     }
 }
 
-impl ComputeBackend for GPUBackend {
+impl<P> ComputeBackend for GPUBackend<P>
+where
+    P: GpuComputeProvider,
+{
+    type Scalar = P::Scalar;
+
     fn backend_type(&self) -> BackendType {
-        BackendType::GPU
+        BackendType::GPU(self.provider.provider_kind())
     }
 
     fn capabilities(&self) -> BackendCapabilities {
-        self.capabilities.clone()
+        self.provider.capabilities()
     }
 
     fn is_available(&self) -> bool {
-        self.initialized
+        self.provider.is_available()
     }
 
     fn synchronize(&self) -> KwaversResult<()> {
-        // Wait for all GPU operations to complete. `PollType::Wait` blocks until
-        // the queue is drained; the returned maintain status is informational so
-        // it is intentionally discarded (matches the pstd_gpu poll idiom).
-        self.context.queue().submit(std::iter::empty());
-        let _ = self.context.device().poll(wgpu::PollType::Wait);
-        Ok(())
+        self.provider.synchronize()
     }
 
     fn devices(&self) -> Vec<ComputeDevice> {
-        vec![ComputeDevice {
-            id: 0,
-            name: self.device_name().to_string(),
-            backend_type: BackendType::GPU,
-            total_memory: self.available_memory(),
-            available_memory: self.available_memory(),
-            compute_units: self.capabilities.max_parallelism,
-            peak_performance: self.estimate_peak_performance(),
-        }]
+        self.provider.devices()
     }
 
     fn select_device(&mut self, device_id: usize) -> KwaversResult<()> {
@@ -211,58 +214,32 @@ impl ComputeBackend for GPUBackend {
 
     fn element_wise_multiply(
         &self,
-        a: &Array3<f64>,
-        b: &Array3<f64>,
-        out: &mut Array3<f64>,
+        a: &LetoArray3<Self::Scalar>,
+        b: &LetoArray3<Self::Scalar>,
+        out: &mut LetoArray3<Self::Scalar>,
     ) -> KwaversResult<()> {
-        // Implementation delegated to pipeline manager
-        self.pipeline_manager.execute_element_wise_multiply(
-            a,
-            b,
-            out,
-            &self.context,
-            &self.buffer_manager,
-        )
+        self.provider.element_wise_multiply(a, b, out)
     }
 
     fn apply_spatial_derivative(
         &self,
-        field: &Array3<f64>,
+        field: &LetoArray3<Self::Scalar>,
         direction: usize,
-        out: &mut Array3<f64>,
+        out: &mut LetoArray3<Self::Scalar>,
     ) -> KwaversResult<()> {
-        // Implementation delegated to pipeline manager
-        self.pipeline_manager.execute_spatial_derivative(
-            field,
-            direction,
-            out,
-            &self.context,
-            &self.buffer_manager,
-        )
+        self.provider
+            .apply_spatial_derivative(field, direction, out)
     }
 
     fn estimate_performance(&self, problem_size: (usize, usize, usize)) -> f64 {
-        let (nx, ny, nz) = problem_size;
-        let total_points = (nx * ny * nz) as f64;
-
-        // GPU performance estimate
-        let fft_flops = total_points * total_points.log2() * 5.0;
-        let other_flops = total_points * 10.0;
-
-        // GPU typically 20-30x faster for large problems
-        let speedup = if total_points > 1e7 {
-            25.0
-        } else if total_points > 1e6 {
-            15.0
-        } else {
-            5.0
-        };
-
-        (fft_flops + other_flops) * speedup
+        self.provider.estimate_performance(problem_size)
     }
 }
 
-impl GPUBackend {
+impl<P> GPUBackend<P>
+where
+    P: GpuComputeProvider,
+{
     /// Create a real-time multiphysics simulation orchestrator
     ///
     /// Initializes a GPU-accelerated real-time loop with performance monitoring,
@@ -299,14 +276,16 @@ impl GPUBackend {
         RealtimeSimulationOrchestrator::new(config, kernel_registry)
     }
 
-    /// Execute a single GPU multiphysics timestep
+    /// Execute a single GPU multiphysics scheduling timestep.
     ///
-    /// Performs one coupled multiphysics update across acoustic, optical, and thermal
-    /// fields with async I/O support for checkpointing.
+    /// Validates the `leto` field state against the registered kernel schedule,
+    /// records per-kernel execution estimates, and advances realtime budget
+    /// accounting. Concrete WGPU or CUDA command dispatch stays behind the
+    /// provider-specific kernel implementations.
     ///
     /// # Arguments
     ///
-    /// * `fields` - HashMap of field arrays indexed by domain name
+    /// * `fields` - Leto field arrays indexed by domain name
     /// * `dt` - Timestep size (seconds)
     /// * `time` - Current simulation time (seconds)
     /// * `grid` - Computational grid with spacing and extents
@@ -316,33 +295,18 @@ impl GPUBackend {
     ///
     /// StepResult containing execution time, budget status, and kernel count
     ///
-    /// # Notes
-    ///
-    /// In production, this would:
-    /// - Upload fields to GPU memory
-    /// - Dispatch acoustic, optical, and thermal kernels
-    /// - Execute conservative interpolation for coupling
-    /// - Download results to CPU
-    /// - Handle potential budget violations with warnings
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn multiphysics_step(
         &self,
-        fields: &mut HashMap<String, Array3<f64>>,
+        fields: &mut HashMap<String, LetoArray3<f64>>,
         dt: f64,
         time: f64,
         grid: &kwavers_grid::Grid,
         orchestrator: &mut RealtimeSimulationOrchestrator,
     ) -> KwaversResult<StepResult> {
         orchestrator.step(fields, dt, time, grid)
-    }
-
-    /// Estimate peak GPU performance (FLOPS)
-    fn estimate_peak_performance(&self) -> f64 {
-        // Conservative estimate: 5 TFLOPS for modern integrated GPU
-        // High-end discrete GPU can reach 20+ TFLOPS
-        5e12
     }
 }
 

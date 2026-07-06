@@ -1,9 +1,9 @@
 //! `encode_pressure_record`: pressure-from-density, absorption correction, sensor recording.
 
-use super::super::super::GpuPstdSolver;
+use super::super::super::state::WgpuPstdState;
 use super::StepCtx;
 
-impl GpuPstdSolver {
+impl WgpuPstdState {
     /// Encode pressure-from-density, absorption correction, and sensor recording.
     ///
     /// `pres_density` accumulates `rhox + rhoy + rhoz` into `field_p`.  When
@@ -20,7 +20,7 @@ impl GpuPstdSolver {
         self.dispatch(
             cpass,
             &ctx.params(step, 0),
-            &self.pipeline_pres_density,
+            &self.pipelines.pres_density,
             bg,
             ew,
             "pres",
@@ -29,7 +29,7 @@ impl GpuPstdSolver {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_absorb_pressure_correction,
+                &self.pipelines.absorb_pressure_correction,
                 bg,
                 ew,
                 "abs_pres_corr",
@@ -39,7 +39,7 @@ impl GpuPstdSolver {
             self.dispatch(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_record,
+                &self.pipelines.record,
                 bg,
                 StepCtx::ceil_div(ctx.n_sensors as usize, 256),
                 "rec",

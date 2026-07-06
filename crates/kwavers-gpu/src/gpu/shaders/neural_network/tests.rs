@@ -1,10 +1,9 @@
 use super::*;
 use approx::assert_relative_eq;
+use hephaestus_core::DevicePreference;
 
-async fn create_test_gpu_device() -> Option<GpuDevice> {
-    GpuDevice::create(wgpu::PowerPreference::HighPerformance)
-        .await
-        .ok()
+fn create_test_gpu_device() -> Option<GpuDevice> {
+    pollster::block_on(GpuDevice::create(DevicePreference::HighPerformance)).ok()
 }
 
 fn expected_activation(input: &[f32], activation_type: u32) -> Vec<f32> {
@@ -21,14 +20,14 @@ fn expected_activation(input: &[f32], activation_type: u32) -> Vec<f32> {
     }
 }
 
-#[tokio::test]
-async fn test_gpu_activation_matches_contract() {
-    let Some(device) = create_test_gpu_device().await else {
+#[test]
+fn test_gpu_activation_matches_contract() {
+    let Some(device) = create_test_gpu_device() else {
         eprintln!("GPU not available, skipping test");
         return;
     };
 
-    let shader = NeuralNetworkShader::new(&device).await.unwrap();
+    let shader = pollster::block_on(NeuralNetworkShader::new(&device)).unwrap();
     let input = vec![-2.0_f32, -0.5, 0.0, 0.5, 2.0];
 
     for activation_type in 0..=3 {
@@ -41,14 +40,14 @@ async fn test_gpu_activation_matches_contract() {
     }
 }
 
-#[tokio::test]
-async fn test_gpu_activation_rejects_unknown_type() {
-    let Some(device) = create_test_gpu_device().await else {
+#[test]
+fn test_gpu_activation_rejects_unknown_type() {
+    let Some(device) = create_test_gpu_device() else {
         eprintln!("GPU not available, skipping test");
         return;
     };
 
-    let shader = NeuralNetworkShader::new(&device).await.unwrap();
+    let shader = pollster::block_on(NeuralNetworkShader::new(&device)).unwrap();
     let err = shader.activate(&[1.0_f32, 2.0, 3.0], 99).unwrap_err();
     assert!(format!("{err:?}").contains("Unknown activation type"));
 }

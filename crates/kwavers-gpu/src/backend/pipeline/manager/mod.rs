@@ -1,4 +1,4 @@
-//! Pipeline manager for compute shader compilation and execution.
+//! WGPU pipeline manager for compute shader compilation and execution.
 
 use super::types::PipelineType;
 use kwavers_core::error::KwaversResult;
@@ -8,15 +8,15 @@ use wgpu;
 mod compile;
 mod execute;
 
-/// Pipeline manager for compute shader execution.
+/// WGPU pipeline manager for WGSL compute shader execution.
 #[derive(Debug)]
-pub struct PipelineManager {
+pub struct WgpuPipelineManager {
     pub(super) pipelines: HashMap<PipelineType, wgpu::ComputePipeline>,
     pub(super) layouts: HashMap<PipelineType, wgpu::BindGroupLayout>,
 }
 
-impl PipelineManager {
-    /// Create a new pipeline manager and compile all shaders.
+impl WgpuPipelineManager {
+    /// Create a new WGPU pipeline manager and compile all shaders.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///

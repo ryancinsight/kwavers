@@ -4,9 +4,10 @@
 //! All methods operate on an already-open `ComputePass` to eliminate the
 //! ~250 µs D3D12 UAV barrier that wgpu inserts at every pass boundary.
 
-use super::super::{GpuPstdSolver, PstdParams};
+use super::super::{state::WgpuPstdState, PstdParams};
+use super::encode::StepCtx;
 
-impl GpuPstdSolver {
+impl WgpuPstdState {
     /// Encode one dispatch into `cpass` (3-group pipeline layout).
     ///
     /// Push constants carry `params` inline — no `write_buffer()` per dispatch.
@@ -23,8 +24,8 @@ impl GpuPstdSolver {
     ) {
         cpass.set_pipeline(pipeline);
         cpass.set_push_constants(0, bytemuck::bytes_of(params));
-        cpass.set_bind_group(0, &self.bg_fields, &[]);
-        cpass.set_bind_group(1, &self.bg_kspace, &[]);
+        cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
+        cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);
         cpass.dispatch_workgroups(workgroups, 1, 1);
     }
@@ -45,10 +46,10 @@ impl GpuPstdSolver {
     ) {
         cpass.set_pipeline(pipeline);
         cpass.set_push_constants(0, bytemuck::bytes_of(params));
-        cpass.set_bind_group(0, &self.bg_fields, &[]);
-        cpass.set_bind_group(1, &self.bg_kspace, &[]);
+        cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
+        cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);
-        cpass.set_bind_group(3, &self.bg_absorb, &[]);
+        cpass.set_bind_group(3, &self.permanent_bind_groups.absorb, &[]);
         cpass.dispatch_workgroups(workgroups, 1, 1);
     }
 
@@ -67,8 +68,8 @@ impl GpuPstdSolver {
     ) {
         cpass.set_pipeline(pipeline);
         cpass.set_push_constants(0, bytemuck::bytes_of(params));
-        cpass.set_bind_group(0, &self.bg_fields, &[]);
-        cpass.set_bind_group(1, &self.bg_kspace, &[]);
+        cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
+        cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);
         cpass.dispatch_workgroups(workgroups_x, workgroups_y, 1);
     }
@@ -84,8 +85,8 @@ impl GpuPstdSolver {
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         bg_sensor: &wgpu::BindGroup,
+        ctx: &StepCtx,
         step: u32,
-        n_sensors: u32,
         inverse: u32,
         axis: u32,
         n_fft: u32,
@@ -93,27 +94,27 @@ impl GpuPstdSolver {
         log2n: u32,
     ) {
         let params = PstdParams {
-            nx: self.nx as u32,
-            ny: self.ny as u32,
-            nz: self.nz as u32,
+            nx: ctx.nx,
+            ny: ctx.ny,
+            nz: ctx.nz,
             axis,
             n_fft,
             n_batches,
             log2n,
             inverse,
             step,
-            dt: self.dt as f32,
-            n_sensors,
-            nt: self.nt as u32,
-            nonlinear: if self.nonlinear { 1 } else { 0 },
-            absorbing: if self.absorbing { 1 } else { 0 },
+            dt: ctx.dt,
+            n_sensors: ctx.n_sensors,
+            nt: ctx.nt,
+            nonlinear: ctx.nonlinear,
+            absorbing: ctx.absorbing,
         };
         let wg_x = n_batches.min(65535);
         let wg_y = n_batches.div_ceil(65535);
         self.dispatch_2d(
             cpass,
             &params,
-            &self.pipeline_fft,
+            &self.pipelines.fft,
             bg_sensor,
             wg_x,
             wg_y,
@@ -129,15 +130,15 @@ impl GpuPstdSolver {
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         bg_sensor: &wgpu::BindGroup,
+        ctx: &StepCtx,
         step: u32,
-        n_sensors: u32,
     ) {
-        let (nx, ny, nz) = (self.nx as u32, self.ny as u32, self.nz as u32);
+        let (nx, ny, nz) = (ctx.nx, ctx.ny, ctx.nz);
         self.dispatch_fft_lane(
             cpass,
             bg_sensor,
+            ctx,
             step,
-            n_sensors,
             0,
             2,
             nz,
@@ -147,8 +148,8 @@ impl GpuPstdSolver {
         self.dispatch_fft_lane(
             cpass,
             bg_sensor,
+            ctx,
             step,
-            n_sensors,
             0,
             1,
             ny,
@@ -158,8 +159,8 @@ impl GpuPstdSolver {
         self.dispatch_fft_lane(
             cpass,
             bg_sensor,
+            ctx,
             step,
-            n_sensors,
             0,
             0,
             nx,
@@ -175,15 +176,15 @@ impl GpuPstdSolver {
         &self,
         cpass: &mut wgpu::ComputePass<'_>,
         bg_sensor: &wgpu::BindGroup,
+        ctx: &StepCtx,
         step: u32,
-        n_sensors: u32,
     ) {
-        let (nx, ny, nz) = (self.nx as u32, self.ny as u32, self.nz as u32);
+        let (nx, ny, nz) = (ctx.nx, ctx.ny, ctx.nz);
         self.dispatch_fft_lane(
             cpass,
             bg_sensor,
+            ctx,
             step,
-            n_sensors,
             1,
             0,
             nx,
@@ -193,8 +194,8 @@ impl GpuPstdSolver {
         self.dispatch_fft_lane(
             cpass,
             bg_sensor,
+            ctx,
             step,
-            n_sensors,
             1,
             1,
             ny,
@@ -204,8 +205,8 @@ impl GpuPstdSolver {
         self.dispatch_fft_lane(
             cpass,
             bg_sensor,
+            ctx,
             step,
-            n_sensors,
             1,
             2,
             nz,

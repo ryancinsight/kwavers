@@ -15,8 +15,8 @@ impl NeuralNetworkShader {
             return self.activate_cpu(input, activation_type);
         }
 
-        let device = self.device.device();
-        let queue = self.device.queue();
+        let device = self.device.wgpu_device();
+        let queue = self.device.wgpu_queue();
 
         let data_bytes = std::mem::size_of_val(input) as u64;
         if data_bytes == 0 {

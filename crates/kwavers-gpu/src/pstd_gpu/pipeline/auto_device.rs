@@ -2,17 +2,37 @@
 //!
 //! SRP: changes when adapter selection policy or device descriptor changes.
 
-use super::super::GpuPstdSolver;
+use super::super::{
+    state::{PstdAutoDeviceProvider, WgpuPstdStateProvider},
+    GpuPstdSolver,
+};
 use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
+use crate::{backend::init::GpuProviderContext, gpu::GpuDeviceProvider};
+use hephaestus_core::DeviceFeature;
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_grid::Grid;
-use std::sync::Arc;
 
-impl GpuPstdSolver {
+impl PstdAutoDeviceProvider for WgpuPstdStateProvider {
+    fn acquire_auto_context() -> Result<Self::Context, String> {
+        GpuProviderContext::<WgpuDevice>::with_features_and_limits(
+            WgpuDevice::acquisition_preference(),
+            &[DeviceFeature::PushConstants],
+            pstd_required_limits(),
+        )
+        .map_err(|e| format!("GPU device creation failed: {e}"))
+    }
+}
+
+impl<P> GpuPstdSolver<P>
+where
+    P: PstdAutoDeviceProvider,
+{
     /// Create a `GpuPstdSolver` by automatically selecting the best available
     /// GPU adapter.  Returns `Err` if no adapter is found or device creation fails.
     ///
-    /// This constructor owns the wgpu device lifecycle, so callers do not need
-    /// to add `wgpu` or `pollster` as direct dependencies.
+    /// This constructor delegates device acquisition to Hephaestus, so PSTD
+    /// joins the Atlas GPU provider seam while the existing kernels continue
+    /// to consume the raw WGPU handles exposed by the provider.
     pub fn with_auto_device(
         grid: &Grid,
         medium: MediumArrays<'_>,
@@ -20,45 +40,15 @@ impl GpuPstdSolver {
         pml: PmlArrays<'_>,
         absorption: AbsorptionArrays<'_>,
     ) -> Result<Self, String> {
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
+        let context = P::acquire_auto_context()?;
 
-        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-            power_preference: wgpu::PowerPreference::HighPerformance,
-            compatible_surface: None,
-            force_fallback_adapter: false,
-        }))
-        .map_err(|_| "No GPU adapter available".to_string())?;
+        Self::new(context, grid, medium, solver, pml, absorption)
+    }
+}
 
-        // Query adapter's native limits; use them as a ceiling so we don't
-        // exceed what the hardware supports but do raise the WebGPU defaults
-        // (e.g. max_storage_buffers_per_shader_stage is 8 by default but the
-        // PSTD kspace bind group uses 10 storage buffers).
-        let native_limits = adapter.limits();
-        let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-            label: Some("pstd_auto"),
-            required_features: wgpu::Features::PUSH_CONSTANTS,
-            required_limits: wgpu::Limits {
-                max_push_constant_size: 128,
-                max_storage_buffers_per_shader_stage:
-                    native_limits.max_storage_buffers_per_shader_stage,
-                ..wgpu::Limits::default()
-            },
-            memory_hints: wgpu::MemoryHints::default(),
-            trace: wgpu::Trace::Off,
-        }))
-        .map_err(|e| format!("GPU device creation failed: {e}"))?;
-
-        Self::new(
-            Arc::new(device),
-            Arc::new(queue),
-            grid,
-            medium,
-            solver,
-            pml,
-            absorption,
-        )
+fn pstd_required_limits() -> hephaestus_core::DeviceLimits {
+    hephaestus_core::DeviceLimits {
+        max_push_constant_size: 128,
+        ..WgpuDevice::required_limits()
     }
 }

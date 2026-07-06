@@ -4,8 +4,8 @@ use crate::backend::performance_monitor::{BudgetAnalysis, GpuPerformanceMonitor,
 use crate::backend::physics_kernels::PhysicsKernelRegistry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use leto::Array3 as LetoArray3;
 use log::debug;
-use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -55,7 +55,7 @@ impl RealtimeSimulationOrchestrator {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     pub fn step(
         &mut self,
-        fields: &mut HashMap<String, Array3<f64>>,
+        fields: &mut HashMap<String, LetoArray3<f64>>,
         dt: f64,
         time: f64,
         grid: &Grid,
@@ -121,7 +121,7 @@ impl RealtimeSimulationOrchestrator {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     pub fn simulate(
         &mut self,
-        fields: &mut HashMap<String, Array3<f64>>,
+        fields: &mut HashMap<String, LetoArray3<f64>>,
         t_start: f64,
         t_end: f64,
         mut dt: f64,

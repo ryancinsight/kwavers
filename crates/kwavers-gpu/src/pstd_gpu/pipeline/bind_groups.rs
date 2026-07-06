@@ -41,36 +41,75 @@ pub(super) struct AbsorbBuffers<'a> {
     pub scratch_l2: &'a wgpu::Buffer,
 }
 
-/// Assemble an 8-binding bind group whose slots are filled in array order.
-fn bind_group(
-    device: &wgpu::Device,
-    label: &str,
-    layout: &wgpu::BindGroupLayout,
-    buffers: [&wgpu::Buffer; 8],
-) -> wgpu::BindGroup {
-    let entries: Vec<wgpu::BindGroupEntry> = buffers
-        .iter()
-        .enumerate()
-        .map(|(i, b)| wgpu::BindGroupEntry {
-            binding: i as u32,
-            resource: b.as_entire_binding(),
+/// Provider contract for PSTD bind-group assembly.
+pub trait PstdBindGroupProvider {
+    /// Provider-owned buffer type.
+    type Buffer;
+    /// Provider-owned bind-group-layout type.
+    type BindGroupLayout;
+    /// Provider-owned bind-group type.
+    type BindGroup;
+
+    /// Assemble an 8-binding bind group whose slots are filled in array order.
+    fn bind_group(
+        &self,
+        label: &'static str,
+        layout: &Self::BindGroupLayout,
+        buffers: [&Self::Buffer; 8],
+    ) -> Self::BindGroup;
+}
+
+/// WGPU PSTD bind-group provider.
+pub struct WgpuPstdBindGroupFactory<'a> {
+    device: &'a wgpu::Device,
+}
+
+impl<'a> WgpuPstdBindGroupFactory<'a> {
+    /// Create a WGPU PSTD bind-group factory.
+    #[must_use]
+    pub const fn new(device: &'a wgpu::Device) -> Self {
+        Self { device }
+    }
+}
+
+impl PstdBindGroupProvider for WgpuPstdBindGroupFactory<'_> {
+    type Buffer = wgpu::Buffer;
+    type BindGroupLayout = wgpu::BindGroupLayout;
+    type BindGroup = wgpu::BindGroup;
+
+    fn bind_group(
+        &self,
+        label: &'static str,
+        layout: &Self::BindGroupLayout,
+        buffers: [&Self::Buffer; 8],
+    ) -> Self::BindGroup {
+        let entries: Vec<wgpu::BindGroupEntry> = buffers
+            .iter()
+            .enumerate()
+            .map(|(i, b)| wgpu::BindGroupEntry {
+                binding: i as u32,
+                resource: b.as_entire_binding(),
+            })
+            .collect();
+        self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some(label),
+            layout,
+            entries: &entries,
         })
-        .collect();
-    device.create_bind_group(&wgpu::BindGroupDescriptor {
-        label: Some(label),
-        layout,
-        entries: &entries,
-    })
+    }
 }
 
 /// Build group(0): field buffers (p, ux, uy, uz, rhox, rhoy, rhoz, source_kappa).
 pub(super) fn build_bg_fields(
-    device: &wgpu::Device,
+    provider: &impl PstdBindGroupProvider<
+        Buffer = wgpu::Buffer,
+        BindGroup = wgpu::BindGroup,
+        BindGroupLayout = wgpu::BindGroupLayout,
+    >,
     layout: &wgpu::BindGroupLayout,
     f: &FieldBuffers,
 ) -> wgpu::BindGroup {
-    bind_group(
-        device,
+    provider.bind_group(
         "bg_fields",
         layout,
         [
@@ -89,12 +128,15 @@ pub(super) fn build_bg_fields(
 /// Build group(1): k-space + medium (kspace_re, kspace_im, kappa, rho0_inv,
 /// c0_sq, rho0, bon_a, alpha_decay).
 pub(super) fn build_bg_kspace(
-    device: &wgpu::Device,
+    provider: &impl PstdBindGroupProvider<
+        Buffer = wgpu::Buffer,
+        BindGroup = wgpu::BindGroup,
+        BindGroupLayout = wgpu::BindGroupLayout,
+    >,
     layout: &wgpu::BindGroupLayout,
     k: &KspaceBuffers,
 ) -> wgpu::BindGroup {
-    bind_group(
-        device,
+    provider.bind_group(
         "bg_kspace",
         layout,
         [
@@ -113,12 +155,15 @@ pub(super) fn build_bg_kspace(
 /// Build group(2): absorption operators + scratch (nabla1, nabla2, tau, eta,
 /// scratch_kre, scratch_kim, scratch_l1, scratch_l2).
 pub(super) fn build_bg_absorb(
-    device: &wgpu::Device,
+    provider: &impl PstdBindGroupProvider<
+        Buffer = wgpu::Buffer,
+        BindGroup = wgpu::BindGroup,
+        BindGroupLayout = wgpu::BindGroupLayout,
+    >,
     layout: &wgpu::BindGroupLayout,
     a: &AbsorbBuffers,
 ) -> wgpu::BindGroup {
-    bind_group(
-        device,
+    provider.bind_group(
         "bg_absorb",
         layout,
         [

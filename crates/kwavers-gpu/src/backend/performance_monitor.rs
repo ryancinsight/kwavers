@@ -214,12 +214,12 @@ impl GpuPerformanceMonitor {
             (false, overage_percent)
         };
 
-        let bottleneck = if metrics.gpu_utilization < 70.0 {
-            BottleneckType::CPUPreprocessing
-        } else if metrics.transfer_overhead_percent > metrics.io_overhead_percent {
+        let bottleneck = if metrics.transfer_overhead_percent > metrics.io_overhead_percent {
             BottleneckType::DataTransfer
         } else if metrics.io_overhead_percent > 5.0 {
             BottleneckType::IO
+        } else if metrics.gpu_utilization < 70.0 {
+            BottleneckType::CPUPreprocessing
         } else {
             BottleneckType::GPUCompute
         };

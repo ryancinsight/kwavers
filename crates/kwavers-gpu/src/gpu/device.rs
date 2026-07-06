@@ -1,291 +1,359 @@
-//! GPU device management
+//! Backend-neutral GPU device management.
 //!
-//! This module provides high-level GPU device initialization and management.
-//! It handles device discovery, capability querying, and resource management.
-//!
-//! # Examples
-//!
-//! ```no_run
-//! # use kwavers::gpu::device::GpuDevice;
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! // Create a GPU device with high performance preference
-//! let device = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await?;
-//!
-//! // Query device information
-//! let info = device.info();
-//! println!("Using GPU: {}", info.name);
-//! println!("Backend: {}", info.backend);
-//!
-//! // Check device limits
-//! let limits = device.limits();
-//! println!("Max buffer size: {} bytes", limits.max_buffer_size);
-//! # Ok(())
-//! # }
-//! ```
+//! This module wraps the Hephaestus device-acquisition and capability traits so
+//! kwavers code can bind to a generic GPU provider. WGPU-specific shader code
+//! uses the `GpuDevice<WgpuDevice>` specialization for raw `wgpu` handles; a
+//! CUDA provider can implement [`GpuDeviceProvider`] without changing generic
+//! callers.
 
+use hephaestus_core::{ComputeDevice, ComputeDeviceAcquisition};
+pub use hephaestus_core::{DeviceFeature, DeviceLimits, DevicePreference};
+#[cfg(feature = "cuda-provider")]
+use hephaestus_cuda::CudaDevice;
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use std::sync::Arc;
+use kwavers_solver::backend::traits::GpuProvider;
 
-/// Information about a GPU device
+/// Information about a GPU device.
 ///
-/// Contains metadata about the GPU including name, vendor, device type, and backend.
-/// This information is useful for debugging, logging, and device selection.
-///
-/// # Fields
-///
-/// * `name` - Human-readable device name (e.g., "NVIDIA GeForce RTX 3080")
-/// * `vendor` - PCI vendor ID (e.g., 0x10DE for NVIDIA)
-/// * `device_type` - Device type as string (e.g., "DiscreteGpu", "IntegratedGpu")
-/// * `backend` - Graphics backend being used (e.g., "Vulkan", "Metal", "Dx12")
-#[derive(Debug, Clone)]
+/// Contains metadata useful for diagnostics and device selection. Backends
+/// supply these values through [`GpuDeviceProvider`].
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct GpuDeviceInfo {
-    /// Device name
+    /// Human-readable device name.
     pub name: String,
-    /// PCI vendor ID
+    /// PCI vendor ID, or `0` when the backend does not expose one.
     pub vendor: u32,
-    /// Device type (DiscreteGpu, IntegratedGpu, VirtualGpu, Cpu, Other)
+    /// Device type, such as `DiscreteGpu`, `IntegratedGpu`, or `Cuda`.
     pub device_type: String,
-    /// Graphics backend (Vulkan, Metal, Dx12, Dx11, Gl, BrowserWebGpu)
+    /// Provider backend, such as `Vulkan`, `Dx12`, `Metal`, or `cuda`.
     pub backend: String,
 }
 
-/// GPU device wrapper providing high-level device management
+/// Kwavers GPU provider contract.
 ///
-/// `GpuDevice` encapsulates a wgpu device and queue, providing a convenient
-/// interface for GPU resource management. It handles device initialization,
-/// capability querying, and provides access to device limits and features.
-///
-/// The device and queue are reference-counted (Arc) to allow safe sharing
-/// across threads and components.
-///
-/// # Examples
-///
-/// ```no_run
-/// # use kwavers::gpu::device::GpuDevice;
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// // Create device with power preference
-/// let device = GpuDevice::create(wgpu::PowerPreference::LowPower).await?;
-///
-/// // Use device for buffer operations
-/// let buffer = device.device().create_buffer(&wgpu::BufferDescriptor {
-///     label: Some("my_buffer"),
-///     size: 1024,
-///     usage: wgpu::BufferUsages::STORAGE,
-///     mapped_at_creation: false,
-/// });
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Debug, Clone)]
-pub struct GpuDevice {
-    device: Arc<wgpu::Device>,
-    queue: Arc<wgpu::Queue>,
-    info: GpuDeviceInfo,
-    limits: wgpu::Limits,
+/// This trait keeps high-level device management generic over Hephaestus
+/// providers. WGPU, CUDA, and future providers supply metadata and inherit
+/// acquisition, limits, feature checks, transfers, and synchronization from
+/// Hephaestus' backend-neutral traits.
+pub trait GpuDeviceProvider: ComputeDeviceAcquisition {
+    /// Provider identity surfaced at the solver/backend boundary.
+    fn provider_kind() -> GpuProvider;
+
+    /// Label used when acquiring a provider device.
+    fn acquisition_label() -> &'static str;
+
+    /// Device preference used for the default Kwavers GPU context.
+    fn acquisition_preference() -> DevicePreference {
+        DevicePreference::HighPerformance
+    }
+
+    /// Optional provider features requested by the default Kwavers GPU context.
+    fn optional_features() -> &'static [DeviceFeature];
+
+    /// Minimum provider limits required by the default Kwavers GPU context.
+    fn required_limits() -> DeviceLimits;
+
+    /// Return provider metadata for diagnostics.
+    fn device_info(&self) -> GpuDeviceInfo;
+
+    /// Return whether this provider supports the atomic operations required by
+    /// Kwavers core GPU kernels.
+    fn supports_core_atomics() -> bool {
+        false
+    }
 }
 
-impl GpuDevice {
-    /// Create a new GPU device with specified power preference
-    ///
-    /// Initializes a GPU device by requesting an adapter and device from wgpu.
-    /// This is an async operation that may take some time depending on the system.
-    ///
-    /// # Arguments
-    ///
-    /// * `power_preference` - Hint for device selection:
-    ///   - `HighPerformance` - Prefer discrete/powerful GPUs
-    ///   - `LowPower` - Prefer integrated/power-efficient GPUs
-    ///
-    /// # Returns
-    ///
-    /// Returns `Ok(GpuDevice)` on success, or an error if no suitable GPU is found.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - No GPU adapter matching the criteria is found
-    /// - Device creation fails (e.g., driver issues, insufficient permissions)
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use kwavers::gpu::device::GpuDevice;
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// // Create high-performance device for compute
-    /// let device = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await?;
-    ///
-    /// // Create low-power device for mobile
-    /// let mobile_device = GpuDevice::create(wgpu::PowerPreference::LowPower).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn create(power_preference: wgpu::PowerPreference) -> KwaversResult<Self> {
-        let instance = wgpu::Instance::default();
+impl GpuDeviceProvider for WgpuDevice {
+    fn provider_kind() -> GpuProvider {
+        GpuProvider::Wgpu
+    }
 
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference,
-                force_fallback_adapter: false,
-                compatible_surface: None,
-            })
-            .await
-            .map_err(|_| {
-                KwaversError::Config(ConfigError::InvalidValue {
-                    parameter: "gpu".to_string(),
-                    value: "none".to_string(),
-                    constraint: "GPU adapter not found".to_string(),
-                })
-            })?;
+    fn acquisition_label() -> &'static str {
+        "kwavers-wgpu-device"
+    }
 
-        let adapter_info = adapter.get_info();
-        let limits = adapter.limits();
+    fn optional_features() -> &'static [DeviceFeature] {
+        &[DeviceFeature::ShaderF64]
+    }
 
-        let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                label: Some("kwavers_gpu"),
-                required_features: wgpu::Features::empty(),
-                required_limits: wgpu::Limits::default(),
-                memory_hints: Default::default(),
-                trace: wgpu::Trace::Off,
-            })
-            .await
-            .map_err(|e| {
-                KwaversError::Config(ConfigError::InvalidValue {
-                    parameter: "gpu_device".to_string(),
-                    value: format!("{:?}", e),
-                    constraint: "Failed to create GPU device".to_string(),
-                })
-            })?;
+    fn required_limits() -> DeviceLimits {
+        let base = minimal_compute_limits();
+        DeviceLimits {
+            max_buffer_size: base.max_buffer_size,
+            max_compute_workgroup_size_x: 256,
+            max_compute_workgroup_size_y: 256,
+            max_compute_workgroup_size_z: 64,
+            max_compute_invocations_per_workgroup: 256,
+            max_compute_workgroup_storage_size: base.max_compute_workgroup_storage_size,
+            max_storage_buffers_per_shader_stage: base.max_storage_buffers_per_shader_stage,
+            max_push_constant_size: 0,
+        }
+    }
 
-        Ok(Self {
-            device: Arc::new(device),
-            queue: Arc::new(queue),
-            info: GpuDeviceInfo {
-                name: adapter_info.name,
-                vendor: adapter_info.vendor,
-                device_type: format!("{:?}", adapter_info.device_type),
-                backend: format!("{:?}", adapter_info.backend),
+    fn device_info(&self) -> GpuDeviceInfo {
+        match self.adapter_info() {
+            Some(info) => GpuDeviceInfo {
+                name: info.name.clone(),
+                vendor: info.vendor,
+                device_type: format!("{:?}", info.device_type),
+                backend: format!("{:?}", info.backend),
             },
+            None => GpuDeviceInfo {
+                name: self.backend_name().to_string(),
+                vendor: 0,
+                device_type: "Unknown".to_string(),
+                backend: self.backend_name().to_string(),
+            },
+        }
+    }
+
+    fn supports_core_atomics() -> bool {
+        true
+    }
+}
+
+#[cfg(feature = "cuda-provider")]
+impl GpuDeviceProvider for CudaDevice {
+    fn provider_kind() -> GpuProvider {
+        GpuProvider::Cuda
+    }
+
+    fn acquisition_label() -> &'static str {
+        "kwavers-cuda-device"
+    }
+
+    fn optional_features() -> &'static [DeviceFeature] {
+        &[]
+    }
+
+    fn required_limits() -> DeviceLimits {
+        let base = minimal_compute_limits();
+        DeviceLimits {
+            max_buffer_size: base.max_buffer_size,
+            max_compute_workgroup_size_x: base.max_compute_workgroup_size_x,
+            max_compute_workgroup_size_y: base.max_compute_workgroup_size_y,
+            max_compute_workgroup_size_z: base.max_compute_workgroup_size_z,
+            max_compute_invocations_per_workgroup: base.max_compute_invocations_per_workgroup,
+            max_compute_workgroup_storage_size: base.max_compute_workgroup_storage_size,
+            max_storage_buffers_per_shader_stage: None,
+            max_push_constant_size: 0,
+        }
+    }
+
+    fn device_info(&self) -> GpuDeviceInfo {
+        GpuDeviceInfo {
+            name: self.backend_name().to_string(),
+            vendor: 0,
+            device_type: "Cuda".to_string(),
+            backend: self.backend_name().to_string(),
+        }
+    }
+}
+
+/// GPU device wrapper over a concrete Hephaestus provider.
+///
+/// The default provider is Hephaestus WGPU because the current kwavers shader
+/// modules are WGSL. Generic code should use the backend-neutral methods on
+/// this type; raw WGPU handles are intentionally available only on
+/// `GpuDevice<WgpuDevice>`.
+#[derive(Debug, Clone)]
+pub struct GpuDevice<P = WgpuDevice>
+where
+    P: GpuDeviceProvider,
+{
+    provider: P,
+    info: GpuDeviceInfo,
+    limits: DeviceLimits,
+}
+
+impl<P> GpuDevice<P>
+where
+    P: GpuDeviceProvider,
+{
+    /// Acquire a device using a backend-neutral preference.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the concrete provider cannot acquire a matching
+    /// device or satisfy the requested baseline limits.
+    pub async fn create(device_preference: DevicePreference) -> KwaversResult<Self> {
+        Self::try_create(device_preference)
+    }
+
+    /// Acquire a device synchronously using a backend-neutral preference.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the concrete provider cannot acquire a matching
+    /// device or satisfy the requested baseline limits.
+    pub fn try_create(device_preference: DevicePreference) -> KwaversResult<Self> {
+        Self::try_create_with_features_and_limits(device_preference, &[], minimal_compute_limits())
+    }
+
+    /// Acquire a device with requested optional features and minimum limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the concrete provider cannot acquire a matching
+    /// device, enable a requested optional feature, or satisfy `required_limits`.
+    pub async fn create_with_features_and_limits(
+        device_preference: DevicePreference,
+        optional_features: &[DeviceFeature],
+        required_limits: DeviceLimits,
+    ) -> KwaversResult<Self> {
+        Self::try_create_with_features_and_limits(
+            device_preference,
+            optional_features,
+            required_limits,
+        )
+    }
+
+    /// Acquire a device synchronously with requested optional features and limits.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the concrete provider cannot acquire a matching
+    /// device, enable a requested optional feature, or satisfy `required_limits`.
+    pub fn try_create_with_features_and_limits(
+        device_preference: DevicePreference,
+        optional_features: &[DeviceFeature],
+        required_limits: DeviceLimits,
+    ) -> KwaversResult<Self> {
+        let provider = P::try_acquire_device(
+            P::acquisition_label(),
+            device_preference,
+            optional_features,
+            required_limits,
+        )
+        .map_err(|e| {
+            KwaversError::Config(ConfigError::InvalidValue {
+                parameter: "gpu_device".to_string(),
+                value: format!("{e}"),
+                constraint: "Failed to acquire Hephaestus GPU device".to_string(),
+            })
+        })?;
+
+        Ok(Self::from_provider(provider))
+    }
+
+    /// Construct a device wrapper from an already-acquired provider.
+    #[must_use]
+    pub fn from_provider(provider: P) -> Self {
+        let info = provider.device_info();
+        let limits = provider.device_limits();
+        Self {
+            provider,
+            info,
             limits,
-        })
+        }
     }
 
-    /// Get reference to underlying wgpu device
-    ///
-    /// Provides access to the wgpu device for buffer creation, shader compilation,
-    /// and other GPU operations.
-    ///
-    /// # Returns
-    ///
-    /// Reference to the underlying `wgpu::Device`.
-    pub fn device(&self) -> &wgpu::Device {
-        &self.device
+    /// Borrow the concrete Hephaestus provider.
+    #[must_use]
+    pub const fn provider(&self) -> &P {
+        &self.provider
     }
 
-    /// Get reference to device queue
-    ///
-    /// The queue is used for submitting command buffers, writing to buffers,
-    /// and other GPU submission operations.
-    ///
-    /// # Returns
-    ///
-    /// Reference to the underlying `wgpu::Queue`.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn queue(&self) -> &wgpu::Queue {
-        &self.queue
-    }
-
-    /// Get device information
-    ///
-    /// Returns metadata about the GPU including name, vendor, and backend.
-    /// Useful for logging, debugging, and device-specific optimizations.
-    ///
-    /// # Returns
-    ///
-    /// Reference to `GpuDeviceInfo` containing device metadata.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use kwavers::gpu::device::GpuDevice;
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let device = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await?;
-    /// let info = device.info();
-    /// println!("GPU: {} (Vendor: 0x{:X})", info.name, info.vendor);
-    /// println!("Backend: {}", info.backend);
-    /// # Ok(())
-    /// # }
-    /// ```
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn info(&self) -> &GpuDeviceInfo {
+    /// Get device information.
+    #[must_use]
+    pub const fn info(&self) -> &GpuDeviceInfo {
         &self.info
     }
 
-    /// Get device limits
-    ///
-    /// Returns the device's resource limits including maximum buffer sizes,
-    /// workgroup dimensions, and other constraints. These limits determine
-    /// what operations are possible on the device.
-    ///
-    /// # Returns
-    ///
-    /// Reference to `wgpu::Limits` containing device constraints.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use kwavers::gpu::device::GpuDevice;
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let device = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await?;
-    /// let limits = device.limits();
-    /// println!("Max buffer size: {} bytes", limits.max_buffer_size);
-    /// println!("Max workgroup size: {:?}", (
-    ///     limits.max_compute_workgroup_size_x,
-    ///     limits.max_compute_workgroup_size_y,
-    ///     limits.max_compute_workgroup_size_z
-    /// ));
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn limits(&self) -> &wgpu::Limits {
+    /// Get backend-neutral device limits.
+    #[must_use]
+    pub const fn limits(&self) -> &DeviceLimits {
         &self.limits
     }
 
-    /// Check if device supports a specific feature
+    /// Check whether the acquired provider enabled a backend-neutral feature.
+    #[must_use]
+    pub fn supports_feature(&self, feature: DeviceFeature) -> bool {
+        self.provider.supports_device_feature(feature)
+    }
+
+    /// Synchronize queued provider work.
     ///
-    /// Tests whether the GPU supports an optional wgpu feature.
-    /// This is useful for enabling advanced functionality when available.
+    /// # Errors
     ///
-    /// # Arguments
-    ///
-    /// * `feature` - The feature to check (e.g., `Features::TIMESTAMP_QUERY`)
-    ///
-    /// # Returns
-    ///
-    /// `true` if the feature is supported, `false` otherwise.
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// # use kwavers::gpu::device::GpuDevice;
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let device = GpuDevice::create(wgpu::PowerPreference::HighPerformance).await?;
-    ///
-    /// if device.supports_feature(wgpu::Features::TIMESTAMP_QUERY) {
-    ///     println!("GPU supports timestamp queries for profiling");
-    /// }
-    ///
-    /// if device.supports_feature(wgpu::Features::SHADER_F64) {
-    ///     println!("GPU supports 64-bit floating point in shaders");
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn supports_feature(&self, feature: wgpu::Features) -> bool {
-        self.device.features().contains(feature)
+    /// Returns a GPU error when provider synchronization fails.
+    pub fn synchronize(&self) -> KwaversResult<()> {
+        self.provider
+            .synchronize()
+            .map_err(|e| KwaversError::GpuError(format!("GPU synchronize: {e}")))
+    }
+}
+
+impl GpuDevice<WgpuDevice> {
+    /// Borrow the underlying WGPU device for WGSL shader modules.
+    #[must_use]
+    pub fn wgpu_device(&self) -> &wgpu::Device {
+        self.provider.inner()
+    }
+
+    /// Borrow the underlying WGPU queue for WGSL shader modules.
+    #[must_use]
+    pub fn wgpu_queue(&self) -> &wgpu::Queue {
+        self.provider.queue()
+    }
+}
+
+pub(crate) const fn minimal_compute_limits() -> DeviceLimits {
+    DeviceLimits {
+        max_buffer_size: 128 * 1024 * 1024,
+        max_compute_workgroup_size_x: 256,
+        max_compute_workgroup_size_y: 256,
+        max_compute_workgroup_size_z: 64,
+        max_compute_invocations_per_workgroup: 256,
+        max_compute_workgroup_storage_size: 16 * 1024,
+        max_storage_buffers_per_shader_stage: Some(8),
+        max_push_constant_size: 0,
+    }
+}
+
+#[cfg(test)]
+mod provider_capability_tests {
+    use super::*;
+
+    #[test]
+    fn wgpu_provider_declares_core_atomic_support() {
+        assert!(
+            <WgpuDevice as GpuDeviceProvider>::supports_core_atomics(),
+            "WGPU provider preserves the core atomic capability previously reported by CoreGpuContext"
+        );
+    }
+}
+
+#[cfg(all(test, feature = "cuda-provider"))]
+mod cuda_tests {
+    use super::*;
+
+    #[test]
+    fn cuda_device_satisfies_kwavers_provider_contract() {
+        fn assert_provider<P: GpuDeviceProvider>() {}
+
+        assert_provider::<CudaDevice>();
+        assert_eq!(
+            <CudaDevice as GpuDeviceProvider>::provider_kind(),
+            GpuProvider::Cuda
+        );
+        assert_eq!(
+            <CudaDevice as GpuDeviceProvider>::acquisition_label(),
+            "kwavers-cuda-device"
+        );
+        assert_eq!(
+            <CudaDevice as GpuDeviceProvider>::required_limits()
+                .max_storage_buffers_per_shader_stage,
+            None
+        );
+        assert!(
+            <CudaDevice as GpuDeviceProvider>::optional_features().is_empty(),
+            "CUDA provider acquisition must not inherit WGPU-only optional features"
+        );
+        assert!(
+            !<CudaDevice as GpuDeviceProvider>::supports_core_atomics(),
+            "CUDA core atomic support must not be claimed until Kwavers owns CUDA kernels for that contract"
+        );
     }
 }

@@ -1,4 +1,4 @@
-﻿//! GPU-resident PSTD (Pseudospectral Time Domain) acoustic solver.
+//! GPU-resident PSTD (Pseudospectral Time Domain) acoustic solver.
 //!
 //! # Design
 //!
@@ -45,12 +45,19 @@
 mod medium_update;
 mod pipeline;
 mod runner;
+mod state;
 mod time_loop;
 
-use std::sync::Arc;
+use std::marker::PhantomData;
 
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
-pub use runner::{cpml_thickness_limits, run_gpu_pstd, GpuPstdRunConfig};
+pub use runner::{
+    cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_provider, GpuPstdRunConfig,
+};
+pub use state::{
+    PstdAutoDeviceProvider, PstdMediumUpdateState, PstdRunInputs, PstdRunScalars, PstdRunState,
+    PstdStateBuilder, PstdStateProvider, WgpuPstdStateProvider,
+};
 
 /// Per-run timing profile for GPU PSTD execution.
 ///
@@ -98,145 +105,38 @@ pub(super) struct PstdParams {
 ///
 /// Keeps all field data on the GPU throughout the time loop; sensor readings
 /// are downloaded in a single transfer after all time steps complete.
-// Several `buf_*` fields are owned `wgpu::Buffer` resources bound into the
-// pipeline bind groups at construction and driven entirely by GPU dispatch;
-// they are never re-read through `self.<field>` on the Rust side, so the
-// `dead_code` lint flags them even though they are load-bearing (the struct
-// must own them for the bind groups to stay valid for the solver's lifetime).
+// Provider-owned state keeps GPU handles alive for bind groups that outlive
+// construction and are driven by dispatch-only Rust paths.
 #[allow(dead_code)]
-pub struct GpuPstdSolver {
+pub struct GpuPstdSolver<P: PstdStateProvider = WgpuPstdStateProvider> {
     // Note: Manual Debug impl because wgpu types don't implement Debug.
-    pub(super) device: Arc<wgpu::Device>,
-    pub(super) queue: Arc<wgpu::Queue>,
-
     pub(super) nx: usize,
     pub(super) ny: usize,
     pub(super) nz: usize,
     pub(super) nt: usize,
     pub(super) dt: f64,
 
-    // Field buffers â€” group(0)
-    pub(super) buf_p: wgpu::Buffer,
-    pub(super) buf_ux: wgpu::Buffer,
-    pub(super) buf_uy: wgpu::Buffer,
-    pub(super) buf_uz: wgpu::Buffer,
-    pub(super) buf_rhox: wgpu::Buffer,
-    pub(super) buf_rhoy: wgpu::Buffer,
-    pub(super) buf_rhoz: wgpu::Buffer,
-    // K-space + medium â€” group(1): bindings 0-7
-    // kspace2_re/im removed: kspace_shift_apply now writes in-place.
-    pub(super) buf_kspace_re: wgpu::Buffer,
-    pub(super) buf_kspace_im: wgpu::Buffer,
-    pub(super) buf_kappa: wgpu::Buffer,
-    pub(super) buf_rho0_inv: wgpu::Buffer,
-    pub(super) buf_c0_sq: wgpu::Buffer,
-    pub(super) buf_rho0: wgpu::Buffer,
-    pub(super) buf_bon_a: wgpu::Buffer, // B/(2A) per voxel; 0.0 for linear sims
-    pub(super) buf_alpha_decay: wgpu::Buffer, // exp(-alpha_Np*c0*dt) per voxel; 1.0 for lossless
-
-    // Fractional-Laplacian absorption operators (group 3)
-    // Precomputed constants for Treeby & Cox (2010) Eqs. 9â€“10, 19â€“21.
-    pub(super) buf_absorb_nabla1: wgpu::Buffer, // |k|^(y-2) in FFT order
-    pub(super) buf_absorb_nabla2: wgpu::Buffer, // |k|^(y-1) in FFT order
-    pub(super) buf_absorb_tau: wgpu::Buffer,    // -2*alpha0*c0^(y-1) per voxel
-    pub(super) buf_absorb_eta: wgpu::Buffer,    // 2*alpha0*c0^y*tan(pi*y/2) per voxel
-    pub(super) buf_absorb_scratch_kre: wgpu::Buffer, // temp kspace re save
-    pub(super) buf_absorb_scratch_kim: wgpu::Buffer, // temp kspace im save
-    pub(super) buf_absorb_scratch_l1: wgpu::Buffer, // L1 = IFFT(nabla1*FFT(div_u))
-    pub(super) buf_absorb_scratch_l2: wgpu::Buffer, // L2 = IFFT(nabla2*FFT(div_u))
+    // Provider-owned GPU buffers, pipelines, bind groups, layouts, and caches.
+    pub(in crate::pstd_gpu) state: P::State,
+    _provider: PhantomData<P>,
 
     // Physics flags (drive shader branches via push-constant nonlinear/absorbing)
     pub(super) nonlinear: bool,
     pub(super) absorbing: bool,
-
-    // PML + shifts + sensor/source â€” group(3)
-    pub(super) buf_pml_sgx: wgpu::Buffer,
-    pub(super) buf_pml_sgy: wgpu::Buffer,
-    pub(super) buf_pml_sgz: wgpu::Buffer,
-    pub(super) buf_pml_xyz: wgpu::Buffer, // packed [pml_x | pml_y | pml_z]
-    pub(super) buf_shifts_all: wgpu::Buffer, // packed 12 Ã— 1D shift arrays
-
-    // Pipelines
-    pub(super) pipeline_zero_fields: wgpu::ComputePipeline,
-    /// Zeros kspace_re and kspace_im in a single compute pass (no CPU-side clear_buffer).
-    /// Enables keeping a single ComputePassEncoder open for the whole time step,
-    /// replacing the two encoder.clear_buffer() calls that would end the pass.
-    pub(super) pipeline_zero_kspace: wgpu::ComputePipeline,
-    pub(super) pipeline_fft: wgpu::ComputePipeline,
-    pub(super) pipeline_kspace_shift: wgpu::ComputePipeline,
-    pub(super) pipeline_vel_update: wgpu::ComputePipeline,
-    pub(super) pipeline_dens_update: wgpu::ComputePipeline,
-    pub(super) pipeline_snapshot_rho0_plus_rho: wgpu::ComputePipeline,
-    pub(super) pipeline_pres_density: wgpu::ComputePipeline,
-    pub(super) pipeline_record: wgpu::ComputePipeline,
-    pub(super) pipeline_inject_src: wgpu::ComputePipeline,
-    pub(super) pipeline_inject_vel_x: wgpu::ComputePipeline,
-    pub(super) pipeline_apply_source_kappa: wgpu::ComputePipeline,
-    pub(super) pipeline_add_kspace_to_field_ux: wgpu::ComputePipeline,
-    pub(super) buf_source_kappa: wgpu::Buffer,
-    pub(super) pipeline_copy_field_to_k: wgpu::ComputePipeline,
-
-    // Fractional-Laplacian absorption pipelines (use 4-group layout)
-    // Correct k-Wave C++ pressure-based formula (computePressureLinearPowerLaw):
-    //   L1 = IFFT(nabla1 Â· FFT(Ïâ‚€ Â· div_u_total)),  L2 = IFFT(nabla2 Â· FFT(Ï_total))
-    //   p += câ‚€Â² Â· (Ï„ Â· L1 âˆ’ Î· Â· L2)
-    pub(super) pipeline_absorb_mul_nabla: wgpu::ComputePipeline,
-    pub(super) pipeline_absorb_copy_to_scratch: wgpu::ComputePipeline,
-    pub(super) pipeline_absorb_accum_div_u: wgpu::ComputePipeline,
-    pub(super) pipeline_absorb_prep_l1_kspace: wgpu::ComputePipeline,
-    pub(super) pipeline_absorb_prep_l2_kspace: wgpu::ComputePipeline,
-    pub(super) pipeline_absorb_pressure_correction: wgpu::ComputePipeline,
-    /// Save kspace_re/im â†’ absorb_scratch_kre/kim.
-    /// Used during velocity loop to cache FFT(p) for reuse across all 3 axes,
-    /// saving 2 full 3D FFTs per time step.
-    pub(super) pipeline_absorb_save_kspace: wgpu::ComputePipeline,
-    /// Restore kspace_re/im â† absorb_scratch_kre/kim.
-    /// Fused restore-from-scratch + kspace-shift for velocity axes 1 and 2.
-    /// Reads FFT(p) from absorb_scratch_kre/kim, applies kappa x shift,
-    /// writes result directly into kspace_re/im, saving one full-N memory
-    /// round-trip (4N f32) and one GPU dispatch per axis vs. the two-shader path.
-    pub(super) pipeline_restore_and_shift: wgpu::ComputePipeline,
-
-    // Bind groups (sensor group rebuilt per run)
-    pub(super) bg_fields: wgpu::BindGroup,
-    pub(super) bg_kspace: wgpu::BindGroup,
-    pub(super) bg_absorb: wgpu::BindGroup, // group(3): absorption operators
-
-    // Bind group layouts and pipeline layout (kept for rebuilding)
-    pub(super) bgl_sensor: wgpu::BindGroupLayout,
-    pub(super) pipeline_layout: wgpu::PipelineLayout,
-
     // â”€â”€ CPU-side medium scratch buffers (preallocated to avoid per-scan-line malloc) â”€â”€
     // update_medium_variable() computes c0Â² and 1/Ïâ‚€ here before write_buffer upload.
     // Sized to nx*ny*nz at construction; never reallocated.
-    pub(super) scratch_c0_sq: Vec<f32>,
-    pub(super) scratch_rho0_inv: Vec<f32>,
-    pub(super) scratch_rho0_flat: Vec<f32>,
     // Persistent unity staging buffer for disable_source_correction(); avoids a
     // per-call allocation when the caller needs raw additive injection.
-    pub(super) scratch_source_kappa_ones: Vec<f32>,
     // Packed host-side source upload buffers. The index prefix is stable across
     // cache-hit runs, so only the signal tail is overwritten between scan lines.
-    pub(super) scratch_source_data: Vec<f32>,
-    pub(super) scratch_vel_x_data: Vec<f32>,
-
     // â”€â”€ Cached run() buffers (reused when sensor/source layout is unchanged) â”€â”€
     // Allocated on first run(); reused on subsequent calls to eliminate per-scan-line
     // VRAM allocation overhead (~500Âµs per allocation on discrete GPUs).
     // Invalidated and reallocated only when n_sensors / n_src / n_vel_x changes.
-    pub(super) cache_sensor_indices_buf: Option<wgpu::Buffer>,
-    pub(super) cache_sensor_data_buf: Option<wgpu::Buffer>,
-    pub(super) cache_source_data_buf: Option<wgpu::Buffer>,
-    pub(super) cache_vel_x_data_buf: Option<wgpu::Buffer>,
-    pub(super) cache_staging_buf: Option<wgpu::Buffer>,
-    pub(super) cache_bg_sensor: Option<wgpu::BindGroup>,
-    pub(super) cache_bg_sensor_vel: Option<wgpu::BindGroup>,
-    pub(super) cache_n_sensors: usize,
-    pub(super) cache_n_src: usize,
-    pub(super) cache_n_vel_x: usize,
 }
 
-impl std::fmt::Debug for GpuPstdSolver {
+impl<P: PstdStateProvider> std::fmt::Debug for GpuPstdSolver<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GpuPstdSolver")
             .field("nx", &self.nx)
