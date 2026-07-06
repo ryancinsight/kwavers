@@ -3,11 +3,11 @@
 //! This module consolidates test utilities to avoid duplication
 //! and maintain SSOT (Single Source of Truth) principle.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Create a test field with specified dimensions
 pub fn create_test_field(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
     // Add a simple pattern for testing
     for i in 0..nx {
         for j in 0..ny {

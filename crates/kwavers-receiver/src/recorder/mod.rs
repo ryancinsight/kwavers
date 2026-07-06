@@ -11,6 +11,8 @@ pub mod storage;
 pub mod traits;
 pub mod velocity_statistics;
 
+pub(super) const STATISTICS_CHUNK_SIZE: usize = 4096;
+
 pub use complex::Recorder;
 pub use config::{RecorderConfig, RecordingMode};
 pub use fields::{SensorRecordField, SensorRecordSpec};

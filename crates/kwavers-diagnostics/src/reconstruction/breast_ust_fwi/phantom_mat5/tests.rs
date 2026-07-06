@@ -104,7 +104,7 @@ fn write_element(out: &mut Vec<u8>, data_type: u32, payload: &[u8]) {
     out.extend_from_slice(&data_type.to_le_bytes());
     out.extend_from_slice(&(payload.len() as u32).to_le_bytes());
     out.extend_from_slice(payload);
-    while out.len() % 8 != 0 {
+    while !out.len().is_multiple_of(8) {
         out.push(0);
     }
 }

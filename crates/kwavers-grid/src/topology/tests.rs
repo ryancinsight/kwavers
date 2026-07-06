@@ -96,8 +96,8 @@ fn test_cylindrical_meshgrid() {
     let z_mesh = topo.z_mesh();
     let r_mesh = topo.r_mesh();
 
-    assert_eq!(z_mesh.dim(), (4, 3));
-    assert_eq!(r_mesh.dim(), (4, 3));
+    assert_eq!(z_mesh.shape(), [4, 3]);
+    assert_eq!(r_mesh.shape(), [4, 3]);
 
     assert_eq!(z_mesh[[2, 0]], 2.0);
     assert_eq!(r_mesh[[0, 2]], 2.0);
@@ -107,11 +107,11 @@ fn test_cylindrical_meshgrid() {
 fn test_topology_field_creation() {
     let cart = CartesianTopology::new([10, 10, 10], [1e-3, 1e-3, 1e-3], [0.0, 0.0, 0.0]).unwrap();
     let field = cart.create_field();
-    assert_eq!(field.dim(), (10, 10, 10));
+    assert_eq!(field.shape(), [10, 10, 10]);
 
     let cyl = CylindricalTopology::new(64, 32, 1e-4, 1e-4).unwrap();
     let cyl_field = cyl.create_field();
-    assert_eq!(cyl_field.dim(), (64, 32, 1));
+    assert_eq!(cyl_field.shape(), [64, 32, 1]);
 }
 
 #[test]

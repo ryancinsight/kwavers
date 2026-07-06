@@ -4,7 +4,7 @@ use super::CPMLBoundary;
 use crate::{Boundary, PmlExpFactors};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayViewMut3, Zip};
+use ndarray::{Array3, ArrayViewMut3};
 
 impl Boundary for CPMLBoundary {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
@@ -13,7 +13,7 @@ impl Boundary for CPMLBoundary {
 
     fn apply_acoustic(
         &mut self,
-        mut field: ArrayViewMut3<f64>,
+        field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
@@ -21,10 +21,13 @@ impl Boundary for CPMLBoundary {
         // (split-field PML, applied twice per step = net exp(-sigma*dt)).
         let dt = self.estimate_dt_from_grid(grid);
 
-        Zip::indexed(&mut field).par_for_each(|(i, j, k), val| {
-            let s_x = self.profiles.sigma_x[i];
-            let s_y = self.profiles.sigma_y[j];
-            let s_z = self.profiles.sigma_z[k];
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+            let s_x = sigma_x[i];
+            let s_y = sigma_y[j];
+            let s_z = sigma_z[k];
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
@@ -43,10 +46,13 @@ impl Boundary for CPMLBoundary {
     ) -> KwaversResult<()> {
         let dt = self.estimate_dt_from_grid(grid);
 
-        Zip::indexed(field).par_for_each(|(i, j, k), val| {
-            let s_x = self.profiles.sigma_x[i];
-            let s_y = self.profiles.sigma_y[j];
-            let s_z = self.profiles.sigma_z[k];
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        crate::parallel::for_each_indexed_mut(field.view_mut(), |(i, j, k), val| {
+            let s_x = sigma_x[i];
+            let s_y = sigma_y[j];
+            let s_z = sigma_z[k];
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
@@ -72,17 +78,20 @@ impl Boundary for CPMLBoundary {
     ///
     fn apply_acoustic_directional(
         &mut self,
-        mut field: ArrayViewMut3<f64>,
+        field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
         axis: usize,
     ) -> KwaversResult<()> {
         let dt = self.estimate_dt_from_grid(grid);
-        Zip::indexed(&mut field).par_for_each(|(i, j, k), val| {
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
             let sigma = match axis {
-                0 => self.profiles.sigma_x[i],
-                1 => self.profiles.sigma_y[j],
-                _ => self.profiles.sigma_z[k],
+                0 => sigma_x[i],
+                1 => sigma_y[j],
+                _ => sigma_z[k],
             };
             if sigma > 0.0 {
                 *val *= (-sigma * dt * 0.5).exp();
@@ -107,17 +116,20 @@ impl Boundary for CPMLBoundary {
     ///
     fn apply_velocity_pml_directional(
         &mut self,
-        mut field: ArrayViewMut3<f64>,
+        field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
         axis: usize,
     ) -> KwaversResult<()> {
         let dt = self.estimate_dt_from_grid(grid);
-        Zip::indexed(&mut field).par_for_each(|(i, j, k), val| {
+        let sigma_x = &self.profiles.sigma_x_sgx;
+        let sigma_y = &self.profiles.sigma_y_sgy;
+        let sigma_z = &self.profiles.sigma_z_sgz;
+        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
             let sigma = match axis {
-                0 => self.profiles.sigma_x_sgx[i],
-                1 => self.profiles.sigma_y_sgy[j],
-                _ => self.profiles.sigma_z_sgz[k],
+                0 => sigma_x[i],
+                1 => sigma_y[j],
+                _ => sigma_z[k],
             };
             if sigma > 0.0 {
                 *val *= (-sigma * dt * 0.5).exp();

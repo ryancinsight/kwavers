@@ -68,7 +68,7 @@ pub(super) struct WavefieldRun {
     pub(super) traces: Vec<f32>,
     /// Checkpoint snapshots stored every `interval` steps.
     pub(super) checkpoints: Option<Vec<f32>>,
-    /// Checkpoint interval K = ceil(√T).
+    /// Checkpoint interval selected from a replay-work target and memory budget.
     pub(super) checkpoint_interval: usize,
 }
 
@@ -137,9 +137,24 @@ pub(super) struct CheckpointSchedule {
 }
 
 impl CheckpointSchedule {
-    pub(super) fn new(time_steps: usize) -> Self {
-        let interval = (time_steps as f64).sqrt().ceil() as usize;
-        let interval = interval.max(1);
+    pub(super) fn new(time_steps: usize, cell_count: usize) -> Self {
+        const TARGET_REPLAY_INTERVAL: usize = 8;
+        const MAX_CHECKPOINT_BYTES: usize = 256 * 1024 * 1024;
+        const BYTES_PER_SLOT_CELL: usize = 2 * std::mem::size_of::<f32>();
+
+        let sqrt_interval = (time_steps as f64).sqrt().ceil() as usize;
+        let replay_interval = sqrt_interval.clamp(1, TARGET_REPLAY_INTERVAL);
+        let max_slots = if cell_count == 0 {
+            1
+        } else {
+            MAX_CHECKPOINT_BYTES / (BYTES_PER_SLOT_CELL * cell_count)
+        };
+        let budget_interval = if max_slots <= 1 {
+            time_steps.max(1)
+        } else {
+            time_steps.div_ceil(max_slots - 1).max(1)
+        };
+        let interval = replay_interval.max(budget_interval);
         Self {
             interval,
             time_steps,

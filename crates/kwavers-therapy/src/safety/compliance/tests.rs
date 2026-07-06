@@ -85,8 +85,10 @@ fn test_config_builder() {
 
 #[test]
 fn test_invalid_config() {
-    let mut config = ComplianceConfig::default();
-    config.max_power = -1.0;
+    let config = ComplianceConfig {
+        max_power: -1.0,
+        ..ComplianceConfig::default()
+    };
 
     assert!(config.validate().is_err());
 }
@@ -111,8 +113,10 @@ fn test_invalid_config() {
 #[test]
 fn test_temperature_rise_uses_tissue_impedance_not_water() {
     // Build a validator with a large max_temp_rise so the cap is not hit.
-    let mut config = ComplianceConfig::default();
-    config.max_temp_rise = 100.0;
+    let config = ComplianceConfig {
+        max_temp_rise: 100.0,
+        ..ComplianceConfig::default()
+    };
     let mut validator = EnhancedComplianceValidator::new(config).unwrap();
 
     let params = ClinicalTherapyParameters {

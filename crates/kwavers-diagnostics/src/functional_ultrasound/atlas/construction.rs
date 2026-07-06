@@ -1,8 +1,8 @@
 //! `BrainAtlas` constructors and analytical default phantom.
 
-use ndarray::Array3;
-
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
+use ndarray::Array3;
 
 use super::BrainAtlas;
 
@@ -16,7 +16,7 @@ impl BrainAtlas {
     /// # Errors
     /// Propagates validation errors from `with_annotation`.
     pub fn new(
-        reference_image: Array3<f64>,
+        reference_image: LetoArray3<f64>,
         voxel_size: [f64; 3],
         brain_center: [f64; 3],
     ) -> KwaversResult<Self> {
@@ -43,12 +43,13 @@ impl BrainAtlas {
     /// not match the reference shape, when voxel size is non-positive, or when
     /// any reference image value is non-finite.
     pub fn with_annotation(
-        reference_image: Array3<f64>,
+        reference_image: LetoArray3<f64>,
         annotation: Array3<u32>,
         voxel_size: [f64; 3],
         brain_center: [f64; 3],
     ) -> KwaversResult<Self> {
-        let shape = reference_image.dim();
+        let reference_shape = reference_image.shape();
+        let shape = (reference_shape[0], reference_shape[1], reference_shape[2]);
 
         if shape.0 == 0 || shape.1 == 0 || shape.2 == 0 {
             return Err(KwaversError::InvalidInput(
@@ -113,7 +114,8 @@ impl BrainAtlas {
     /// Propagates validation errors from `with_annotation`.
     pub fn load_default() -> KwaversResult<Self> {
         let (nx, ny, nz) = DEFAULT_SHAPE;
-        let mut reference_image = Array3::zeros(DEFAULT_SHAPE);
+        let mut reference_image =
+            LetoArray3::zeros([DEFAULT_SHAPE.0, DEFAULT_SHAPE.1, DEFAULT_SHAPE.2]);
         let mut annotation = Array3::zeros(DEFAULT_SHAPE);
 
         for i in 0..nx {

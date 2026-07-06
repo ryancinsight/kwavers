@@ -1,6 +1,6 @@
-//! Rayon-parallel medium property iterator.
+//! Provider-parallel medium property iterator.
 
-use rayon::prelude::*;
+use moirai_parallel::{fold_reduce_with, map_collect_index_with, Adaptive};
 
 use crate::{AcousticProperties, CoreMedium, Medium};
 use kwavers_grid::Grid;
@@ -25,40 +25,9 @@ impl<'a> ParallelMediumIterator<'a> {
         F: Fn(MediumProperties) -> T + Sync + Send,
         T: Send,
     {
-        (0..self.grid.size())
-            .into_par_iter()
-            .map(|idx| {
-                let k = idx % self.grid.nz;
-                let j = (idx / self.grid.nz) % self.grid.ny;
-                let i = idx / (self.grid.ny * self.grid.nz);
-
-                let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-
-                let properties = MediumProperties {
-                    density: crate::density_at(self.medium, x, y, z, self.grid),
-                    sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid),
-                    absorption: AcousticProperties::absorption_coefficient(
-                        self.medium,
-                        x,
-                        y,
-                        z,
-                        self.grid,
-                        CoreMedium::reference_frequency(self.medium),
-                    ),
-                    nonlinearity: AcousticProperties::nonlinearity_coefficient(
-                        self.medium,
-                        x,
-                        y,
-                        z,
-                        self.grid,
-                    ),
-                    position: (x, y, z),
-                    indices: (i, j, k),
-                };
-
-                f(properties)
-            })
-            .collect()
+        map_collect_index_with::<Adaptive, _, _>(self.grid.size(), |idx| {
+            f(self.properties_at_index(idx))
+        })
     }
 
     /// Filter and collect in parallel
@@ -66,43 +35,50 @@ impl<'a> ParallelMediumIterator<'a> {
     where
         F: Fn(&MediumProperties) -> bool + Sync + Send,
     {
-        (0..self.grid.size())
-            .into_par_iter()
-            .filter_map(|idx| {
-                let k = idx % self.grid.nz;
-                let j = (idx / self.grid.nz) % self.grid.ny;
-                let i = idx / (self.grid.ny * self.grid.nz);
-
-                let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
-
-                let properties = MediumProperties {
-                    density: crate::density_at(self.medium, x, y, z, self.grid),
-                    sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid),
-                    absorption: AcousticProperties::absorption_coefficient(
-                        self.medium,
-                        x,
-                        y,
-                        z,
-                        self.grid,
-                        CoreMedium::reference_frequency(self.medium),
-                    ),
-                    nonlinearity: AcousticProperties::nonlinearity_coefficient(
-                        self.medium,
-                        x,
-                        y,
-                        z,
-                        self.grid,
-                    ),
-                    position: (x, y, z),
-                    indices: (i, j, k),
-                };
-
+        fold_reduce_with::<Adaptive, Vec<MediumProperties>, _, _, _>(
+            self.grid.size(),
+            Vec::new,
+            |mut values, idx| {
+                let properties = self.properties_at_index(idx);
                 if predicate(&properties) {
-                    Some(properties)
-                } else {
-                    None
+                    values.push(properties);
                 }
-            })
-            .collect()
+                values
+            },
+            |mut left, right| {
+                left.extend(right);
+                left
+            },
+        )
+    }
+
+    fn properties_at_index(&self, idx: usize) -> MediumProperties {
+        let k = idx % self.grid.nz;
+        let j = (idx / self.grid.nz) % self.grid.ny;
+        let i = idx / (self.grid.ny * self.grid.nz);
+
+        let (x, y, z) = self.grid.indices_to_coordinates(i, j, k);
+
+        MediumProperties {
+            density: crate::density_at(self.medium, x, y, z, self.grid),
+            sound_speed: crate::sound_speed_at(self.medium, x, y, z, self.grid),
+            absorption: AcousticProperties::absorption_coefficient(
+                self.medium,
+                x,
+                y,
+                z,
+                self.grid,
+                CoreMedium::reference_frequency(self.medium),
+            ),
+            nonlinearity: AcousticProperties::nonlinearity_coefficient(
+                self.medium,
+                x,
+                y,
+                z,
+                self.grid,
+            ),
+            position: (x, y, z),
+            indices: (i, j, k),
+        }
     }
 }

@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 use super::{GeometricDomain, GeometryDimension, PointLocation};
 
@@ -134,7 +134,7 @@ impl GeometricDomain for RectangularDomain {
         }
 
         let n = self.min.len();
-        let mut normal = Array1::zeros(n);
+        let mut normal = Array1::zeros([n]);
 
         for i in 0..n {
             if (point[i] - self.min[i]).abs() < tolerance {
@@ -146,7 +146,9 @@ impl GeometricDomain for RectangularDomain {
 
         let norm = normal.iter().map(|x| x * x).sum::<f64>().sqrt();
         if norm > 0.0 {
-            normal /= norm;
+            for i in 0..n {
+                normal[i] /= norm;
+            }
         }
 
         Some(normal)
@@ -167,7 +169,7 @@ impl GeometricDomain for RectangularDomain {
         };
 
         let dim = self.min.len();
-        let mut points = Array2::zeros((n_points, dim));
+        let mut points = Array2::zeros([n_points, dim]);
 
         for i in 0..n_points {
             for j in 0..dim {
@@ -189,7 +191,7 @@ impl GeometricDomain for RectangularDomain {
         };
 
         let dim = self.min.len();
-        let mut points = Array2::zeros((n_points, dim));
+        let mut points = Array2::zeros([n_points, dim]);
 
         for i in 0..n_points {
             let face = rng.gen_range(0..(2 * dim));

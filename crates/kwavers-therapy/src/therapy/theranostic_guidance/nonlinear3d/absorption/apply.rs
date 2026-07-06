@@ -2,7 +2,7 @@
 //! for the fractional-Laplacian absorption operator. See `absorption` module
 //! docs for the discretisation derivation and self-adjointness proof.
 
-use rayon::prelude::*;
+use moirai_parallel::{enumerate_mut_with, map_collect_index_with, Adaptive};
 
 use super::spectrum::spectral_filter;
 use super::FractionalLaplacianAbsorption;
@@ -32,7 +32,7 @@ impl FractionalLaplacianAbsorption {
         let l_y_curr = spectral_filter(self.n, current, &self.k_pow_y);
 
         // ── Apply correction: next += -dt·τ·(L_y(p[n]) - L_y(p[n-1]))
-        next.par_iter_mut().enumerate().for_each(|(i, dst)| {
+        enumerate_mut_with::<Adaptive, _, _>(next, |i, dst| {
             *dst += -self.dt_tau[i] * (l_y_curr[i] - l_y_prev[i]);
         });
 
@@ -70,25 +70,16 @@ impl FractionalLaplacianAbsorption {
         debug_assert_eq!(adj_curr.len(), cells);
         debug_assert_eq!(adj_prev.len(), cells);
 
-        let scaled_tau: Vec<f64> = adj_next
-            .par_iter()
-            .zip(self.dt_tau.par_iter())
-            .map(|(a, t)| a * t)
-            .collect();
+        let scaled_tau: Vec<f64> =
+            map_collect_index_with::<Adaptive, _, _>(cells, |i| adj_next[i] * self.dt_tau[i]);
         let l_y_tau = spectral_filter(self.n, &scaled_tau, &self.k_pow_y);
 
-        adj_curr
-            .par_iter_mut()
-            .zip(l_y_tau.par_iter())
-            .for_each(|(dst, &t)| {
-                *dst -= t;
-            });
-        adj_prev
-            .par_iter_mut()
-            .zip(l_y_tau.par_iter())
-            .for_each(|(dst, &t)| {
-                *dst += t;
-            });
+        enumerate_mut_with::<Adaptive, _, _>(adj_curr, |i, dst| {
+            *dst -= l_y_tau[i];
+        });
+        enumerate_mut_with::<Adaptive, _, _>(adj_prev, |i, dst| {
+            *dst += l_y_tau[i];
+        });
     }
 
     /// Reset cached state so the next call to `apply` recomputes

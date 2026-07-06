@@ -62,7 +62,7 @@ fn ellipse_membership_respects_semi_axes() {
 fn rasterize_has_expected_shape_and_finite_values() {
     let p = SheppLogan::modified();
     let img = p.rasterize(64);
-    assert_eq!(img.dim(), (64, 64));
+    assert_eq!(img.shape(), [64, 64]);
     assert!(img.iter().all(|v| v.is_finite()));
     // Corners are outside the head ⇒ 0.
     assert_eq!(img[[0, 0]], 0.0);

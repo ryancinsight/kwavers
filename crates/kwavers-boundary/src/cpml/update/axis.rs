@@ -10,7 +10,8 @@
 use super::super::memory::CPMLMemory;
 use super::super::profiles::CPMLProfiles;
 use super::CPMLUpdater;
-use ndarray::{Array1, Array3, Axis, Slice, Zip};
+use leto::Array1;
+use ndarray::{Array3, Axis, Slice};
 
 /// `axis`-th component of a 3-D dimension tuple.
 #[inline]
@@ -33,22 +34,26 @@ fn update_memory_along(
     let left_count = thickness.min(n);
 
     // Left strip: grid coordinate == in-slice coordinate along `axis`.
-    Zip::indexed(psi.slice_axis_mut(Axis(axis), Slice::new(0, Some(left_count as isize), 1)))
-        .and(gradient.slice_axis(Axis(axis), Slice::new(0, Some(left_count as isize), 1)))
-        .par_for_each(|(i, j, k), psi, &g| {
+    crate::parallel::for_each_indexed_pair_mut(
+        psi.slice_axis_mut(Axis(axis), Slice::new(0, Some(left_count as isize), 1)),
+        gradient.slice_axis(Axis(axis), Slice::new(0, Some(left_count as isize), 1)),
+        |(i, j, k), psi, &g| {
             let c = [i, j, k][axis];
             *psi = b[c].mul_add(*psi, a[c] * g);
-        });
+        },
+    );
 
     // Right strip: grid coordinate == right_start + in-slice coordinate.
     if n > thickness {
         let right_start = n - thickness;
-        Zip::indexed(psi.slice_axis_mut(Axis(axis), Slice::new(thickness as isize, None, 1)))
-            .and(gradient.slice_axis(Axis(axis), Slice::new(right_start as isize, None, 1)))
-            .par_for_each(|(i, j, k), psi, &g| {
+        crate::parallel::for_each_indexed_pair_mut(
+            psi.slice_axis_mut(Axis(axis), Slice::new(thickness as isize, None, 1)),
+            gradient.slice_axis(Axis(axis), Slice::new(right_start as isize, None, 1)),
+            |(i, j, k), psi, &g| {
                 let c = right_start + [i, j, k][axis];
                 *psi = b[c].mul_add(*psi, a[c] * g);
-            });
+            },
+        );
     }
 }
 
@@ -65,24 +70,26 @@ fn apply_correction_along(
     let left_count = thickness.min(n);
 
     // Left strip.
-    Zip::indexed(gradient.slice_axis_mut(Axis(axis), Slice::new(0, Some(left_count as isize), 1)))
-        .and(psi.slice_axis(Axis(axis), Slice::new(0, Some(left_count as isize), 1)))
-        .par_for_each(|(i, j, k), g, &psi| {
+    crate::parallel::for_each_indexed_pair_mut(
+        gradient.slice_axis_mut(Axis(axis), Slice::new(0, Some(left_count as isize), 1)),
+        psi.slice_axis(Axis(axis), Slice::new(0, Some(left_count as isize), 1)),
+        |(i, j, k), g, &psi| {
             let c = [i, j, k][axis];
             *g = *g / kappa[c] + psi;
-        });
+        },
+    );
 
     // Right strip.
     if n > thickness {
         let right_start = n - thickness;
-        Zip::indexed(
+        crate::parallel::for_each_indexed_pair_mut(
             gradient.slice_axis_mut(Axis(axis), Slice::new(right_start as isize, None, 1)),
-        )
-        .and(psi.slice_axis(Axis(axis), Slice::new(thickness as isize, None, 1)))
-        .par_for_each(|(i, j, k), g, &psi| {
-            let c = right_start + [i, j, k][axis];
-            *g = *g / kappa[c] + psi;
-        });
+            psi.slice_axis(Axis(axis), Slice::new(thickness as isize, None, 1)),
+            |(i, j, k), g, &psi| {
+                let c = right_start + [i, j, k][axis];
+                *g = *g / kappa[c] + psi;
+            },
+        );
     }
 }
 

@@ -27,8 +27,10 @@ fn test_thermal_index_violation() {
     let mut controller = create_test_controller();
     controller.start_monitoring(0.0);
 
-    let mut metrics = SafetyMetrics::default();
-    metrics.thermal_index = 6.5;
+    let metrics = SafetyMetrics {
+        thermal_index: 6.5,
+        ..SafetyMetrics::default()
+    };
 
     let action = controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(action, TherapyAction::Stop);
@@ -39,8 +41,10 @@ fn test_thermal_index_warning() {
     let mut controller = create_test_controller();
     controller.start_monitoring(0.0);
 
-    let mut metrics = SafetyMetrics::default();
-    metrics.thermal_index = 5.0; // 83% of TI_LIMIT_SOFT_TISSUE
+    let metrics = SafetyMetrics {
+        thermal_index: 5.0, // 83% of TI_LIMIT_SOFT_TISSUE
+        ..SafetyMetrics::default()
+    };
 
     let action = controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(action, TherapyAction::ReducePower);
@@ -51,8 +55,10 @@ fn test_mechanical_index_safe() {
     let mut controller = create_test_controller();
     controller.start_monitoring(0.0);
 
-    let mut metrics = SafetyMetrics::default();
-    metrics.mechanical_index = 1.5;
+    let metrics = SafetyMetrics {
+        mechanical_index: 1.5,
+        ..SafetyMetrics::default()
+    };
 
     let action = controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(action, TherapyAction::Continue);
@@ -63,8 +69,10 @@ fn test_cavitation_dose_exceeds() {
     let mut controller = create_test_controller();
     controller.start_monitoring(0.0);
 
-    let mut metrics = SafetyMetrics::default();
-    metrics.cavitation_dose = 1.1;
+    let metrics = SafetyMetrics {
+        cavitation_dose: 1.1,
+        ..SafetyMetrics::default()
+    };
 
     let action = controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(action, TherapyAction::Stop);
@@ -88,14 +96,18 @@ fn test_power_reduction_factor() {
     assert_eq!(controller.power_reduction_factor(), 1.0); // Continue
 
     // Trigger ReducePower via thermal index at 83% of limit
-    let mut metrics = SafetyMetrics::default();
-    metrics.thermal_index = 5.0; // > 80% of TI_LIMIT_SOFT_TISSUE
+    let metrics = SafetyMetrics {
+        thermal_index: 5.0, // > 80% of TI_LIMIT_SOFT_TISSUE
+        ..SafetyMetrics::default()
+    };
     controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(controller.power_reduction_factor(), 0.5);
 
     // Trigger Stop via thermal index above limit
-    let mut metrics = SafetyMetrics::default();
-    metrics.thermal_index = 7.0;
+    let metrics = SafetyMetrics {
+        thermal_index: 7.0,
+        ..SafetyMetrics::default()
+    };
     controller.evaluate_safety(metrics, 1.0).unwrap();
     assert_eq!(controller.power_reduction_factor(), 0.0);
 }

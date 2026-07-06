@@ -4,7 +4,7 @@ use super::super::core::PhotoacousticSimulator;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_initial_pressure_computation() {
@@ -21,7 +21,7 @@ fn test_initial_pressure_computation() {
 
     let fluence = simulator.compute_fluence().unwrap();
     let pressure_data = simulator.compute_initial_pressure(&fluence).unwrap();
-    assert_eq!(pressure_data.pressure.dim(), (16, 16, 8));
+    assert_eq!(pressure_data.pressure.shape(), [16, 16, 8]);
     assert!(pressure_data.max_pressure > 0.0);
 
     for &val in pressure_data.pressure.iter() {
@@ -43,7 +43,7 @@ fn test_spherical_spreading_correction() {
     let parameters = kwavers_imaging::photoacoustic::PhotoacousticParameters::default();
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
-    let mut pressure_fields = vec![Array3::<f64>::zeros((16, 16, 8))];
+    let mut pressure_fields = vec![Array3::<f64>::zeros([16, 16, 8])];
     pressure_fields[0].fill(1.0);
     let time_points = vec![0.0];
 
@@ -51,7 +51,7 @@ fn test_spherical_spreading_correction() {
         .time_reversal_reconstruction(&pressure_fields, &time_points)
         .unwrap();
 
-    assert_eq!(reconstructed.dim(), (16, 16, 8));
+    assert_eq!(reconstructed.shape(), [16, 16, 8]);
 
     let center_value = reconstructed[[8, 8, 4]];
     let edge_value = reconstructed[[0, 0, 0]];

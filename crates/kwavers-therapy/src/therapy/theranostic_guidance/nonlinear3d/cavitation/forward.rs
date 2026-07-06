@@ -7,8 +7,8 @@
 //! outside that treatment window, including skin/source boundary cells, emit no
 //! passive cavitation source even if their source-injection pressure is high.
 
+use moirai_parallel::{fold_reduce_with, map_collect_index_with, Adaptive};
 use ndarray::Array3;
-use rayon::prelude::*;
 
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
 use kwavers_physics::acoustics::bubble_dynamics::{
@@ -29,17 +29,22 @@ pub(super) fn cavitation_source(
         peak_pressure.as_slice_memory_order(),
         volume.inversion_mask.as_slice_memory_order(),
     ) {
-        let max_pressure = pressures
-            .par_iter()
-            .zip(source_mask.par_iter())
-            .filter_map(|(&pressure, &active)| active.then_some(pressure))
-            .reduce(|| 0.0, f64::max)
-            .max(1.0);
-        let values = pressures
-            .par_iter()
-            .zip(source_mask.par_iter())
-            .map(|(&pressure, &active)| cavitation_value(active, pressure, max_pressure, config))
-            .collect::<Vec<_>>();
+        let max_pressure = fold_reduce_with::<Adaptive, f64, _, _, _>(
+            pressures.len(),
+            || 0.0,
+            |acc, i| {
+                if source_mask[i] {
+                    acc.max(pressures[i])
+                } else {
+                    acc
+                }
+            },
+            f64::max,
+        )
+        .max(1.0);
+        let values = map_collect_index_with::<Adaptive, _, _>(pressures.len(), |i| {
+            cavitation_value(source_mask[i], pressures[i], max_pressure, config)
+        });
         return Array3::from_shape_vec(dim, values)
             .expect("contiguous cavitation source length must match grid shape");
     }

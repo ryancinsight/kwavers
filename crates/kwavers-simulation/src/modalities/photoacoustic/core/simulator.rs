@@ -7,6 +7,7 @@ use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_medium::Medium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_source::GridSource;
+use leto::Array3 as LetoArray3;
 use ndarray::Array3;
 
 use super::super::optics;
@@ -74,7 +75,7 @@ impl PhotoacousticSimulator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn compute_fluence(&self) -> KwaversResult<Array3<f64>> {
+    pub fn compute_fluence(&self) -> KwaversResult<LetoArray3<f64>> {
         self.compute_fluence_at_wavelength(
             self.parameters
                 .wavelengths
@@ -88,7 +89,10 @@ impl PhotoacousticSimulator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn compute_fluence_at_wavelength(&self, wavelength_nm: f64) -> KwaversResult<Array3<f64>> {
+    pub fn compute_fluence_at_wavelength(
+        &self,
+        wavelength_nm: f64,
+    ) -> KwaversResult<LetoArray3<f64>> {
         optics::compute_fluence_at_wavelength(
             &self.grid,
             &self.optical_properties,
@@ -101,7 +105,7 @@ impl PhotoacousticSimulator {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn compute_multi_wavelength_fluence(&self) -> KwaversResult<Vec<Array3<f64>>> {
+    pub fn compute_multi_wavelength_fluence(&self) -> KwaversResult<Vec<LetoArray3<f64>>> {
         optics::compute_multi_wavelength_fluence(
             &self.grid,
             &self.optical_properties,

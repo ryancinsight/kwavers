@@ -17,7 +17,7 @@ use kwavers_core::constants::tissue_acoustics::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::Complex64;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Frequency-dependent tissue properties
 #[derive(Debug, Clone)]
@@ -221,7 +221,7 @@ impl FreqDispersionCorrection {
         k_vec: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        Zip::from(spectrum).and(k_vec).par_for_each(|s, &k_mag| {
+        crate::parallel::zip_mut_ref(spectrum, k_vec, |s, &k_mag| {
             if k_mag > 0.0 {
                 // Frequency from wavenumber
                 let freq = k_mag * self.properties.c0 / (TWO_PI);

@@ -64,7 +64,7 @@ fn swi_decreases_after_optimization() {
 
     // SWI must be non-negative and bounded by 1.
     assert!(
-        swi_init >= 0.0 && swi_init <= 1.0,
+        (0.0..=1.0).contains(&swi_init),
         "initial SWI {swi_init} not in [0,1]"
     );
 
@@ -138,7 +138,7 @@ fn geometry_scalars_consistent() {
 
     assert_eq!(result.nx, config.nx);
     assert_eq!(result.ny, config.ny);
-    assert_eq!((result.dx_m - config.dx_m).abs() < 1e-15, true);
+    assert!((result.dx_m - config.dx_m).abs() < 1e-15);
     assert_eq!(result.n_elements, config.n_elements);
     assert_eq!(result.element_ys.len(), config.n_elements);
     assert_eq!(result.reflector_x_start, config.layer_x_start);

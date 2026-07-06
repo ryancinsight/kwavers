@@ -56,7 +56,7 @@ mod tests;
 use super::config::CPMLConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array1;
+use leto::Array1;
 
 /// CPML absorption and stretching profiles.
 ///
@@ -158,31 +158,31 @@ impl CPMLProfiles {
 
     fn neutral(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            sigma_x: Array1::zeros(nx),
-            sigma_y: Array1::zeros(ny),
-            sigma_z: Array1::zeros(nz),
-            sigma_x_sgx: Array1::zeros(nx),
-            sigma_y_sgy: Array1::zeros(ny),
-            sigma_z_sgz: Array1::zeros(nz),
-            kappa_x: Array1::ones(nx),
-            kappa_y: Array1::ones(ny),
-            kappa_z: Array1::ones(nz),
-            alpha_x: Array1::zeros(nx),
-            alpha_y: Array1::zeros(ny),
-            alpha_z: Array1::zeros(nz),
-            a_x: Array1::zeros(nx),
-            a_y: Array1::zeros(ny),
-            a_z: Array1::zeros(nz),
-            b_x: Array1::ones(nx),
-            b_y: Array1::ones(ny),
-            b_z: Array1::ones(nz),
+            sigma_x: Array1::zeros([nx]),
+            sigma_y: Array1::zeros([ny]),
+            sigma_z: Array1::zeros([nz]),
+            sigma_x_sgx: Array1::zeros([nx]),
+            sigma_y_sgy: Array1::zeros([ny]),
+            sigma_z_sgz: Array1::zeros([nz]),
+            kappa_x: Array1::ones([nx]),
+            kappa_y: Array1::ones([ny]),
+            kappa_z: Array1::ones([nz]),
+            alpha_x: Array1::zeros([nx]),
+            alpha_y: Array1::zeros([ny]),
+            alpha_z: Array1::zeros([nz]),
+            a_x: Array1::zeros([nx]),
+            a_y: Array1::zeros([ny]),
+            a_z: Array1::zeros([nz]),
+            b_x: Array1::ones([nx]),
+            b_y: Array1::ones([ny]),
+            b_z: Array1::ones([nz]),
             // Neutral PML: exp(-0 * dt/2) = 1.0 — no attenuation.
-            pml_vel_x: Array1::ones(nx),
-            pml_vel_y: Array1::ones(ny),
-            pml_vel_z: Array1::ones(nz),
-            pml_den_x: Array1::ones(nx),
-            pml_den_y: Array1::ones(ny),
-            pml_den_z: Array1::ones(nz),
+            pml_vel_x: Array1::ones([nx]),
+            pml_vel_y: Array1::ones([ny]),
+            pml_vel_z: Array1::ones([nz]),
+            pml_den_x: Array1::ones([nx]),
+            pml_den_y: Array1::ones([ny]),
+            pml_den_z: Array1::ones([nz]),
         }
     }
 

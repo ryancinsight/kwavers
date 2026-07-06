@@ -19,7 +19,7 @@ fn test_fluence_computation() {
     let simulator = PhotoacousticSimulator::new(grid, parameters, &medium).unwrap();
 
     let fluence_data = simulator.compute_fluence().unwrap();
-    assert_eq!(fluence_data.dim(), (16, 16, 8));
+    assert_eq!(fluence_data.shape(), [16, 16, 8]);
 
     let surface_fluence = fluence_data[[8, 8, 0]];
     let deep_fluence = fluence_data[[8, 8, 7]];
@@ -59,7 +59,7 @@ fn test_multi_wavelength_fluence() {
     );
 
     for field in &fields {
-        assert_eq!(field.dim(), (8, 8, 4));
+        assert_eq!(field.shape(), [8, 8, 4]);
         for &val in field.iter() {
             assert!(val >= 0.0, "Fluence must be non-negative");
             assert!(val.is_finite(), "Fluence must be finite");

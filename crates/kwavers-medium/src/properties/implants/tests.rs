@@ -3,9 +3,11 @@ use super::*;
 #[test]
 fn test_metallic_implants_high_impedance() {
     // Metals should have very high acoustic impedance
-    assert!(TITANIUM_GRADE5.impedance > 20_000_000.0);
-    assert!(STAINLESS_STEEL_316L.impedance > 40_000_000.0);
-    assert!(PLATINUM.impedance > 80_000_000.0);
+    const {
+        assert!(TITANIUM_GRADE5.impedance > 20_000_000.0);
+        assert!(STAINLESS_STEEL_316L.impedance > 40_000_000.0);
+        assert!(PLATINUM.impedance > 80_000_000.0);
+    }
 }
 
 #[test]
@@ -21,22 +23,28 @@ fn test_polymer_impedance_closer_to_tissue() {
 #[test]
 fn test_metallic_implant_thermal_conductivity() {
     // Metals should have high thermal conductivity
-    assert!(TITANIUM_GRADE5.thermal_conductivity > 5.0);
-    assert!(STAINLESS_STEEL_316L.thermal_conductivity > 10.0);
-    assert!(PLATINUM.thermal_conductivity > 50.0);
+    const {
+        assert!(TITANIUM_GRADE5.thermal_conductivity > 5.0);
+        assert!(STAINLESS_STEEL_316L.thermal_conductivity > 10.0);
+        assert!(PLATINUM.thermal_conductivity > 50.0);
+    }
 }
 
 #[test]
 fn test_ceramic_acoustic_properties() {
     // Ceramics should have high sound speeds
-    assert!(ALUMINA.sound_speed > 10_000.0);
-    assert!(ZIRCONIA.sound_speed > 5_000.0);
+    const {
+        assert!(ALUMINA.sound_speed > 10_000.0);
+        assert!(ZIRCONIA.sound_speed > 5_000.0);
+    }
 }
 
 #[test]
 fn test_silicone_lower_impedance() {
     // Silicone has lower impedance than tissue
-    assert!(SILICONE_RUBBER.impedance < 1_200_000.0);
+    const {
+        assert!(SILICONE_RUBBER.impedance < 1_200_000.0);
+    }
 }
 
 #[test]
@@ -79,16 +87,20 @@ fn test_implant_tissue_reflection() {
 #[test]
 fn test_composite_properties_between_constituents() {
     // CFRP should have properties between pure carbon (~10k m/s) and resin (~2k m/s)
-    assert!(CFRP.sound_speed > 2000.0);
-    assert!(CFRP.sound_speed < 5000.0);
+    const {
+        assert!(CFRP.sound_speed > 2000.0);
+        assert!(CFRP.sound_speed < 5000.0);
+    }
 }
 
 #[test]
 fn test_hydroxyapatite_bone_match() {
     // HA impedance should be closer to bone than pure polymer
     // Typical cortical bone impedance: ~7-8 MΛ
-    assert!(HYDROXYAPATITE.impedance > 5_000_000.0);
-    assert!(HYDROXYAPATITE.impedance < 15_000_000.0);
+    const {
+        assert!(HYDROXYAPATITE.impedance > 5_000_000.0);
+        assert!(HYDROXYAPATITE.impedance < 15_000_000.0);
+    }
 }
 
 #[test]
@@ -124,6 +136,8 @@ fn test_optical_opacity_for_metals() {
 #[test]
 fn test_pmma_optical_clarity() {
     // PMMA should have low optical absorption (used in lenses)
-    assert!(PMMA.optical_absorption < 1.0);
-    assert!(PMMA.refractive_index > 1.4);
+    const {
+        assert!(PMMA.optical_absorption < 1.0);
+        assert!(PMMA.refractive_index > 1.4);
+    }
 }

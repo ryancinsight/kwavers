@@ -1,5 +1,5 @@
 use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
-use ndarray::{ArrayView3, ArrayViewMut3};
+use leto::{ArrayView3, ArrayViewMut3, Layout as LetoLayout};
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr::NonNull;
 
@@ -184,7 +184,10 @@ impl SoAFieldStorage {
         nz: usize,
     ) -> Option<ArrayView3<'_, f64>> {
         let slice = self.field(index)?;
-        ArrayView3::from_shape((nx, ny, nz), slice).ok()
+        LetoLayout::<3>::c_contiguous([nx, ny, nz])
+            .ok()
+            .filter(|l| l.size() == slice.len())
+            .map(|layout| ArrayView3::new(layout, slice))
     }
 
     /// Create a mutable 3D view of field `index` with given dimensions
@@ -197,7 +200,10 @@ impl SoAFieldStorage {
         nz: usize,
     ) -> Option<ArrayViewMut3<'_, f64>> {
         let slice = self.field_mut(index)?;
-        ArrayViewMut3::from_shape((nx, ny, nz), slice).ok()
+        LetoLayout::<3>::c_contiguous([nx, ny, nz])
+            .ok()
+            .filter(|l| l.size() == slice.len())
+            .map(|layout| ArrayViewMut3::new(layout, slice))
     }
 
     /// Perform sequential first-touch initialization

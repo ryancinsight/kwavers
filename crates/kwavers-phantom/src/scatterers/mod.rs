@@ -39,7 +39,7 @@
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 /// A single discrete point scatterer.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -195,7 +195,7 @@ impl ScattererCloud {
         }
 
         let n_elements = element_positions.len();
-        let mut rf = Array2::<f64>::zeros((n_elements, config.num_samples));
+        let mut rf = Array2::<f64>::zeros([n_elements, config.num_samples]);
         let two_over_c = 2.0 / config.sound_speed;
         // Power-law attenuation coefficient at the centre frequency, in Np/m:
         // α₀[dB/(cm·MHz)] · f₀[MHz] · 100[cm/m] / NP_TO_DB[dB/Np].  Zero ⇒ lossless.

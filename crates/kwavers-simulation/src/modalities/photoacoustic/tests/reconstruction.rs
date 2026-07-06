@@ -6,7 +6,7 @@ use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_analytical_validation() {
@@ -47,7 +47,7 @@ fn test_universal_back_projection_algorithm() {
     let source_z = 4.0;
 
     for &time in time_points.iter() {
-        let mut field = Array3::<f64>::zeros((16, 16, 8));
+        let mut field = Array3::<f64>::zeros([16, 16, 8]);
         for i in 0..16 {
             for j in 0..16 {
                 for k in 0..8 {
@@ -72,7 +72,7 @@ fn test_universal_back_projection_algorithm() {
         .time_reversal_reconstruction(&pressure_fields, &time_points)
         .unwrap();
 
-    assert_eq!(reconstructed.dim(), (16, 16, 8));
+    assert_eq!(reconstructed.shape(), [16, 16, 8]);
 
     let mut max_intensity = f64::NEG_INFINITY;
     let mut min_intensity = f64::INFINITY;
@@ -100,7 +100,7 @@ fn test_universal_back_projection_algorithm() {
 fn test_detector_interpolation_accuracy() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
 
-    let mut field = Array3::<f64>::zeros((8, 8, 4));
+    let mut field = Array3::<f64>::zeros([8, 8, 4]);
     field[[2, 2, 1]] = 1.0;
     field[[3, 2, 1]] = 2.0;
     field[[2, 3, 1]] = 3.0;

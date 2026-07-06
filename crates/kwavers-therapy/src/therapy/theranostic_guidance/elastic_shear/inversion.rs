@@ -1,31 +1,23 @@
-//! Iterative elastic FWI loop with parallel speculative line-search.
+//! Iterative elastic FWI loop with ordered backtracking line search.
 //!
-//! # Parallelism
+//! # Line search
 //!
 //! Each outer FWI iteration contains an inner line-search over up to
-//! `ELASTIC_FWI_MAX_LINE_SEARCH_STEPS` candidate step sizes, each requiring
-//! a full elastic PSTD forward propagation (`propagate_traces`).  The
-//! propagations are **independent** (different scale factors, otherwise
-//! identical inputs), so they are launched in parallel via Rayon.
-//!
-//! After all candidates complete, the **first** (largest scale, index 0) one
-//! that strictly decreases the objective is accepted — preserving the descent
-//! semantics of the original sequential loop exactly.  Propagation errors on
-//! non-required candidates are skipped; the first error encountered before an
-//! accepting candidate is propagated.
+//! `ELASTIC_FWI_MAX_LINE_SEARCH_STEPS` candidate step sizes. Each candidate
+//! requires a full elastic PSTD forward propagation, so candidates are
+//! evaluated lazily in descending step-size order.
 //!
 //! # Theorem (descent correctness)
-//! Sequential loop: accept the first `k ∈ {0,1,2,3}` with `f(m + sₖ·g) < f(m)`.
-//! Parallel loop: compute all `{f(m + s₀·g), …, f(m + s₃·g)}` concurrently,
-//! then scan in order 0 → 3 and accept the first improving index `k`.
-//! The accepted index is identical to the sequential result because both
-//! criteria are "first-improving in order 0→3".  ∎
+//!
+//! The accepted candidate is the first `k` in `0..MAX_STEPS` for which
+//! `f(model + step_k * gradient) < f(model)`. Lazy ordered evaluation yields
+//! the same accepted index as eager evaluation because later candidates cannot
+//! precede the first improving candidate in that total order.
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::ElasticPstdVelocitySource;
 use ndarray::{Array2, Array3};
-use rayon::prelude::*;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::exposure::normalize_positive;
@@ -39,7 +31,7 @@ use super::types::ElasticFwiInversion;
 const ELASTIC_FWI_MAX_LINE_SEARCH_STEPS: usize = 4;
 const ELASTIC_FWI_INITIAL_STEP: f64 = 0.75;
 
-/// One speculative line-search candidate: `(updated model, simulated traces,
+/// One line-search candidate: `(updated model, simulated traces,
 /// data residual, objective value)`.
 type ElasticCandidate = (Array2<f64>, Array2<f64>, Array2<f64>, f64);
 
@@ -79,50 +71,26 @@ pub(super) fn run_iterative_elastic_fwi(
             &prepared.body_mask,
         );
 
-        // ── Parallel speculative line-search ─────────────────────────────
-        // All ELASTIC_FWI_MAX_LINE_SEARCH_STEPS candidate propagations are
-        // launched concurrently.  Results are collected in step-index order;
-        // the sequential scan below preserves the "first-improving" descent
-        // semantics exactly.
-        let candidate_results: Vec<KwaversResult<ElasticCandidate>> = (0
-            ..ELASTIC_FWI_MAX_LINE_SEARCH_STEPS)
-            .into_par_iter()
-            .map(|search_step| {
-                let scale = ELASTIC_FWI_INITIAL_STEP * 0.5_f64.powi(search_step as i32);
-                let candidate = candidate_model(&model, &gradient, &prepared.body_mask, scale);
-                let candidate_medium = elastic_medium(
-                    prepared,
-                    &candidate,
-                    config.elastic_shear_speed_m_s,
-                    lesion_fraction,
-                );
-                let candidate_traces = propagate_traces(
-                    grid,
-                    candidate_medium,
-                    dt_s,
-                    predicted_traces.ncols(),
-                    source,
-                    receiver_mask,
-                )?;
-                let candidate_residual = observed_traces - &candidate_traces;
-                let candidate_objective = fwi_objective(&candidate_residual);
-                Ok((
-                    candidate,
-                    candidate_traces,
-                    candidate_residual,
-                    candidate_objective,
-                ))
-            })
-            .collect();
-
-        // Sequential selection: first improving step in scale-descending
-        // order.  Propagates errors only for candidates preceding any
-        // accepted step.
+        // Ordered backtracking line search: evaluate only the candidates that
+        // can affect the first-improving descent decision.
         let mut accepted = None;
-        for result in candidate_results {
-            let (candidate, traces, resid, obj) = result?;
-            if obj < objective {
-                accepted = Some((candidate, traces, resid, obj));
+        for search_step in 0..ELASTIC_FWI_MAX_LINE_SEARCH_STEPS {
+            let (candidate, traces, candidate_residual, candidate_objective) = evaluate_candidate(
+                prepared,
+                config,
+                grid,
+                source,
+                receiver_mask,
+                observed_traces,
+                predicted_traces.ncols(),
+                dt_s,
+                lesion_fraction,
+                &model,
+                &gradient,
+                search_step,
+            )?;
+            if candidate_objective < objective {
+                accepted = Some((candidate, traces, candidate_residual, candidate_objective));
                 break;
             }
         }
@@ -146,6 +114,47 @@ pub(super) fn run_iterative_elastic_fwi(
         objective_history,
         final_residual_energy: trace_energy(&residual),
     })
+}
+
+#[allow(clippy::too_many_arguments)]
+fn evaluate_candidate(
+    prepared: &PreparedTheranosticSlice,
+    config: &TheranosticInverseConfig,
+    grid: &Grid,
+    source: &ElasticPstdVelocitySource,
+    receiver_mask: &Array3<bool>,
+    observed_traces: &Array2<f64>,
+    time_steps: usize,
+    dt_s: f64,
+    lesion_fraction: f64,
+    model: &Array2<f64>,
+    gradient: &Array2<f64>,
+    search_step: usize,
+) -> KwaversResult<ElasticCandidate> {
+    let scale = ELASTIC_FWI_INITIAL_STEP * 0.5_f64.powi(search_step as i32);
+    let candidate = candidate_model(model, gradient, &prepared.body_mask, scale);
+    let candidate_medium = elastic_medium(
+        prepared,
+        &candidate,
+        config.elastic_shear_speed_m_s,
+        lesion_fraction,
+    );
+    let candidate_traces = propagate_traces(
+        grid,
+        candidate_medium,
+        dt_s,
+        time_steps,
+        source,
+        receiver_mask,
+    )?;
+    let candidate_residual = observed_traces - &candidate_traces;
+    let candidate_objective = fwi_objective(&candidate_residual);
+    Ok((
+        candidate,
+        candidate_traces,
+        candidate_residual,
+        candidate_objective,
+    ))
 }
 
 fn candidate_model(

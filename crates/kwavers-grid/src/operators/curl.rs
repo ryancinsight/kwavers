@@ -1,9 +1,10 @@
 //! Curl operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use crate::compat::ndarray::{Array3, ArrayView3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::Array3 as LetoArray3;
 use num_traits::Float;
 
 /// Compute curl of a vector field
@@ -21,7 +22,7 @@ pub fn curl<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync,
+    T: Float + Clone + Send + Sync + Default,
 {
     let shape = vx.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -53,6 +54,98 @@ where
     let mut curl_x = Array3::<T>::zeros((nx, ny, nz));
     let mut curl_y = Array3::<T>::zeros((nx, ny, nz));
     let mut curl_z = Array3::<T>::zeros((nx, ny, nz));
+
+    let coeffs = FDCoefficients::first_derivative::<T>(order);
+    let stencil_radius = coeffs.len();
+
+    let dx_inv = T::one() / T::from(grid.dx).unwrap();
+    let dy_inv = T::one() / T::from(grid.dy).unwrap();
+    let dz_inv = T::one() / T::from(grid.dz).unwrap();
+
+    // Compute curl in interior points
+    for i in stencil_radius..nx - stencil_radius {
+        for j in stencil_radius..ny - stencil_radius {
+            for k in stencil_radius..nz - stencil_radius {
+                let mut dvz_dy = T::zero();
+                let mut dvy_dz = T::zero();
+                let mut dvx_dz = T::zero();
+                let mut dvz_dx = T::zero();
+                let mut dvy_dx = T::zero();
+                let mut dvx_dy = T::zero();
+
+                for (n, &coeff) in coeffs.iter().enumerate() {
+                    let offset = n + 1;
+
+                    // For curl_x = ∂vz/∂y - ∂vy/∂z
+                    dvz_dy = dvz_dy + coeff * (vz[[i, j + offset, k]] - vz[[i, j - offset, k]]);
+                    dvy_dz = dvy_dz + coeff * (vy[[i, j, k + offset]] - vy[[i, j, k - offset]]);
+
+                    // For curl_y = ∂vx/∂z - ∂vz/∂x
+                    dvx_dz = dvx_dz + coeff * (vx[[i, j, k + offset]] - vx[[i, j, k - offset]]);
+                    dvz_dx = dvz_dx + coeff * (vz[[i + offset, j, k]] - vz[[i - offset, j, k]]);
+
+                    // For curl_z = ∂vy/∂x - ∂vx/∂y
+                    dvy_dx = dvy_dx + coeff * (vy[[i + offset, j, k]] - vy[[i - offset, j, k]]);
+                    dvx_dy = dvx_dy + coeff * (vx[[i, j + offset, k]] - vx[[i, j - offset, k]]);
+                }
+
+                curl_x[[i, j, k]] = dvz_dy * dy_inv - dvy_dz * dz_inv;
+                curl_y[[i, j, k]] = dvx_dz * dz_inv - dvz_dx * dx_inv;
+                curl_z[[i, j, k]] = dvy_dx * dx_inv - dvx_dy * dy_inv;
+            }
+        }
+    }
+
+    Ok((curl_x, curl_y, curl_z))
+}
+
+/// Compute curl of a leto 3D vector field.
+/// # Errors
+/// - Propagates any [`KwaversError`] returned by called functions.
+///
+/// # Panics
+/// - Panics if an internal invariant assumed to hold at this call site is violated.
+///
+pub fn curl_leto<T>(
+    vx: &LetoArray3<T>,
+    vy: &LetoArray3<T>,
+    vz: &LetoArray3<T>,
+    grid: &Grid,
+    order: FdAccuracyOrder,
+) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
+where
+    T: Float + Clone + Send + Sync + Default,
+{
+    let shape = vx.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+
+    // Validate grid compatibility and vector field consistency
+    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
+        return Err(kwavers_core::error::KwaversError::Grid(
+            kwavers_core::error::GridError::DimensionMismatch {
+                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
+                actual: format!("({}, {}, {})", nx, ny, nz),
+            },
+        ));
+    }
+
+    if vy.shape() != shape || vz.shape() != shape {
+        return Err(kwavers_core::error::KwaversError::Grid(
+            kwavers_core::error::GridError::DimensionMismatch {
+                expected: "Vector field components must have same dimensions".to_owned(),
+                actual: format!(
+                    "vx: {:?}, vy: {:?}, vz: {:?}",
+                    vx.shape(),
+                    vy.shape(),
+                    vz.shape()
+                ),
+            },
+        ));
+    }
+
+    let mut curl_x = LetoArray3::<T>::zeros([nx, ny, nz]);
+    let mut curl_y = LetoArray3::<T>::zeros([nx, ny, nz]);
+    let mut curl_z = LetoArray3::<T>::zeros([nx, ny, nz]);
 
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();

@@ -20,7 +20,7 @@
 //! # Implementation
 //!
 //! The triple-loop form is replaced by slice operations so the compiler can
-//! autovectorize and rayon can parallelise over the transverse dimensions.
+//! autovectorize over the transverse dimensions.
 //! The cost is still O(N³) but the constant factor is much smaller.
 //!
 //! ## Algorithm (axis=0 case; axes 1 and 2 are analogous)
@@ -31,8 +31,7 @@
 //!
 //! Step 2 reads the slice `u[0..n-1]` (offset by −1 in axis 0) and adds it
 //! into `u_ns[1..]`.  The read and write slices are non-overlapping in memory,
-//! so the operation is safe without auxiliary storage.  ndarray's `Zip`
-//! parallelises the inner loop over the remaining two axes.
+//! so the operation is safe without auxiliary storage.
 //!
 //! # References
 //!

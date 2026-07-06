@@ -38,7 +38,8 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::photoacoustic::InitialPressure;
 use kwavers_medium::properties::OpticalPropertyData;
-use ndarray::Array3;
+use leto::Array3;
+use ndarray::Array3 as NdArray3;
 
 /// Compute initial pressure distribution from optical absorption.
 ///
@@ -48,13 +49,13 @@ use ndarray::Array3;
 ///
 pub fn compute_initial_pressure(
     grid: &Grid,
-    optical_properties: &Array3<OpticalPropertyData>,
+    optical_properties: &NdArray3<OpticalPropertyData>,
     fluence: &Array3<f64>,
     gruneisen_parameters: &[f64],
     wavelengths: &[f64],
 ) -> KwaversResult<InitialPressure> {
     let (nx, ny, nz) = grid.dimensions();
-    let mut pressure = Array3::zeros((nx, ny, nz));
+    let mut pressure = Array3::zeros([nx, ny, nz]);
     let mut max_pressure: f64 = 0.0;
 
     let operating_wavelength = wavelengths.first().copied().unwrap_or(750.0);
@@ -98,7 +99,7 @@ pub fn compute_initial_pressure(
 ///
 pub fn compute_multi_wavelength_pressure(
     grid: &Grid,
-    optical_properties: &Array3<OpticalPropertyData>,
+    optical_properties: &NdArray3<OpticalPropertyData>,
     fluence_fields: &[Array3<f64>],
     gruneisen_parameters: &[f64],
     wavelengths: &[f64],

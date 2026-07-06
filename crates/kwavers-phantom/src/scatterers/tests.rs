@@ -38,7 +38,7 @@ fn single_scatterer_lands_at_round_trip_delay_with_inverse_square_amplitude() {
         rf[[0, n_delay]]
     );
     // Energy is concentrated at the delay sample only (impulse pulse).
-    let total: f64 = rf.row(0).iter().map(|&v| v.abs()).sum();
+    let total: f64 = rf.iter().map(|&v| v.abs()).sum();
     assert!(
         (total - expected_amp).abs() < 1e-9,
         "echo must be a single nonzero sample"

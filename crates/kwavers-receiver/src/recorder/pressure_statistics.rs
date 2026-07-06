@@ -3,11 +3,15 @@
 //! Accumulates per-voxel statistics over the simulation time loop, matching
 //! k-Wave's `sensor.record = {'p_max', 'p_min', 'p_rms', 'p_final'}` behaviour.
 //!
-//! All accumulations use `ndarray::Zip::par_for_each` via rayon for O(N³)
-//! parallelism with no intermediate allocations.
+//! Standard-layout accumulations use Moirai chunk dispatch for O(N^3)
+//! parallelism with no intermediate allocations; non-standard layouts retain
+//! sequential ndarray semantics.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use moirai_parallel::{for_each_chunk_quad_mut_enumerated_with, Adaptive};
 use ndarray::{Array1, Array3, Zip};
+
+use super::STATISTICS_CHUNK_SIZE;
 
 /// Spatial statistics for pressure field over time
 #[derive(Debug, Clone)]
@@ -43,7 +47,8 @@ impl PressureFieldStatistics {
     /// Accumulate one time step of pressure data.
     ///
     /// Updates max, min, squared sum, and final field element-wise.
-    /// Single-pass, fully parallelised — O(N³), no intermediate allocation.
+    /// Single-pass, provider-parallelized for standard layouts:
+    /// O(N^3), no intermediate allocation.
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
@@ -54,21 +59,52 @@ impl PressureFieldStatistics {
             "pressure field shape mismatch in PressureFieldStatistics::update"
         );
 
-        Zip::from(&mut self.p_max)
-            .and(&mut self.p_min)
-            .and(&mut self.p_squared_sum)
-            .and(&mut self.p_final)
-            .and(pressure)
-            .par_for_each(|pmax, pmin, sq, pfin, &p| {
-                if p > *pmax {
-                    *pmax = p;
-                }
-                if p < *pmin {
-                    *pmin = p;
-                }
-                *sq += p * p;
-                *pfin = p;
-            });
+        match (
+            self.p_max.as_slice_mut(),
+            self.p_min.as_slice_mut(),
+            self.p_squared_sum.as_slice_mut(),
+            self.p_final.as_slice_mut(),
+            pressure.as_slice(),
+        ) {
+            (Some(p_max), Some(p_min), Some(p_squared_sum), Some(p_final), Some(pressure)) => {
+                for_each_chunk_quad_mut_enumerated_with::<Adaptive, _, _, _, _, _>(
+                    p_max,
+                    p_min,
+                    p_squared_sum,
+                    p_final,
+                    STATISTICS_CHUNK_SIZE,
+                    |chunk_index, p_max, p_min, p_squared_sum, p_final| {
+                        let base = chunk_index * STATISTICS_CHUNK_SIZE;
+                        for lane in 0..p_max.len() {
+                            let p = pressure[base + lane];
+                            if p > p_max[lane] {
+                                p_max[lane] = p;
+                            }
+                            if p < p_min[lane] {
+                                p_min[lane] = p;
+                            }
+                            p_squared_sum[lane] += p * p;
+                            p_final[lane] = p;
+                        }
+                    },
+                );
+            }
+            _ => Zip::from(&mut self.p_max)
+                .and(&mut self.p_min)
+                .and(&mut self.p_squared_sum)
+                .and(&mut self.p_final)
+                .and(pressure)
+                .for_each(|pmax, pmin, sq, pfin, &p| {
+                    if p > *pmax {
+                        *pmax = p;
+                    }
+                    if p < *pmin {
+                        *pmin = p;
+                    }
+                    *sq += p * p;
+                    *pfin = p;
+                }),
+        }
 
         self.time_step_count += 1;
     }

@@ -3,9 +3,11 @@
 //! Unified Laplacian operator implementation for discretized grids.
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
+use crate::compat::ndarray::{Array3, ArrayView3, ArrayViewMut3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
+use leto::Array3 as LetoArray3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Configuration for Laplacian computation
 #[derive(Debug, Clone)]
@@ -89,6 +91,36 @@ impl LaplacianOperator {
         Ok(result)
     }
 
+    /// Compute Laplacian for a leto-backed scalar field.
+    /// # Errors
+    /// - Returns [`Err`] if conversion fails or an internal constraint is violated.
+    ///
+    pub fn apply_leto(&self, field: &LetoArray3<f64>) -> KwaversResult<LetoArray3<f64>> {
+        let [nx, ny, nz] = field.shape();
+        let mut values = Vec::with_capacity(nx * ny * nz);
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    values.push(field[[i, j, k]]);
+                }
+            }
+        }
+
+        let field_nd = Array3::from_shape_vec((nx, ny, nz), values).map_err(|e| {
+            kwavers_core::error::KwaversError::InvalidInput(format!(
+                "failed to convert leto field to ndarray: {e}"
+            ))
+        })?;
+        let result_nd = self.apply(field_nd.view())?;
+        let result_vals: Vec<f64> = result_nd.iter().copied().collect();
+
+        LetoArray3::from_vec([nx, ny, nz], result_vals).map_err(|e| {
+            kwavers_core::error::KwaversError::InvalidInput(format!(
+                "failed to convert ndarray result to leto: {e}"
+            ))
+        })
+    }
+
     /// Compute Laplacian in-place (zero-copy when possible)
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
@@ -134,23 +166,46 @@ impl LaplacianOperator {
     #[inline]
     fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
         let (nx, ny, nz) = input.dim();
-        Zip::indexed(&mut output.slice_mut(s![1..nx - 1, 1..ny - 1, 1..nz - 1])).par_for_each(
-            |(i, j, k), out| {
-                let i = i + 1;
-                let j = j + 1;
-                let k = k + 1;
-                let d2_dx2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i + 1, j, k]])
-                    + input[[i - 1, j, k]])
-                    * self.dx2_inv;
-                let d2_dy2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j + 1, k]])
-                    + input[[i, j - 1, k]])
-                    * self.dy2_inv;
-                let d2_dz2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, k + 1]])
-                    + input[[i, j, k - 1]])
-                    * self.dz2_inv;
-                *out = d2_dx2 + d2_dy2 + d2_dz2;
-            },
-        );
+        if nx <= 2 || ny <= 2 || nz <= 2 {
+            return;
+        }
+
+        if let Some(output) = output.as_slice_mut() {
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(output, ny * nz, |i, plane| {
+                if i == 0 || i + 1 == nx {
+                    return;
+                }
+                for j in 1..ny - 1 {
+                    let row_offset = j * nz;
+                    for k in 1..nz - 1 {
+                        plane[row_offset + k] = self.second_order_value(input, i, j, k);
+                    }
+                }
+            });
+            return;
+        }
+
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
+                    output[[i, j, k]] = self.second_order_value(input, i, j, k);
+                }
+            }
+        }
+    }
+
+    #[inline]
+    fn second_order_value(&self, input: ArrayView3<f64>, i: usize, j: usize, k: usize) -> f64 {
+        let d2_dx2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i + 1, j, k]])
+            + input[[i - 1, j, k]])
+            * self.dx2_inv;
+        let d2_dy2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j + 1, k]])
+            + input[[i, j - 1, k]])
+            * self.dy2_inv;
+        let d2_dz2 = (2.0f64.mul_add(-input[[i, j, k]], input[[i, j, k + 1]])
+            + input[[i, j, k - 1]])
+            * self.dz2_inv;
+        d2_dx2 + d2_dy2 + d2_dz2
     }
 
     fn apply_higher_order_interior(
@@ -278,6 +333,19 @@ pub fn laplacian(
     operator.apply(field)
 }
 
+/// Compute Laplacian for a leto-backed scalar field.
+/// # Errors
+/// - Returns [`Err`] if array conversion fails or an internal constraint is violated.
+///
+pub fn laplacian_leto(
+    field: &LetoArray3<f64>,
+    grid: &Grid,
+    order: FdAccuracyOrder,
+) -> KwaversResult<LetoArray3<f64>> {
+    let operator = LaplacianOperator::with_order(grid, order);
+    operator.apply_leto(field)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -324,6 +392,42 @@ mod tests {
             for j in 1..9 {
                 for i in 1..9 {
                     assert_relative_eq!(result[[i, j, k]], 0.0, epsilon = 1e-10);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn test_laplacian_nonstandard_output_view() {
+        let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
+        let mut field = Array3::zeros((10, 10, 10));
+        for k in 0..10 {
+            for j in 0..10 {
+                for i in 0..10 {
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    field[[i, j, k]] = x * x + y * y + z * z;
+                }
+            }
+        }
+
+        let operator = LaplacianOperator::second_order(&grid);
+        let expected = operator.apply(field.view()).unwrap();
+        let mut storage = Array3::zeros((12, 10, 10));
+        {
+            let mut output = storage.slice_mut(crate::compat::ndarray::s![1..11, .., ..]);
+            operator.apply_mut(field.view(), output.view_mut()).unwrap();
+        }
+
+        for k in 1..9 {
+            for j in 1..9 {
+                for i in 1..9 {
+                    assert_relative_eq!(
+                        storage[[i + 1, j, k]],
+                        expected[[i, j, k]],
+                        epsilon = 1e-10
+                    );
                 }
             }
         }

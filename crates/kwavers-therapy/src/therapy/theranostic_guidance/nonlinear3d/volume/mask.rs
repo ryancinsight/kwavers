@@ -159,77 +159,6 @@ fn target_neighbors_3d(
     neighbors.into_iter().take(count)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn abdominal_target_mask_uses_one_connected_treatment_component() {
-        let mut label = Array3::<i16>::zeros((8, 8, 4));
-        for idx in [
-            (1, 1, 1),
-            (1, 2, 1),
-            (2, 1, 1),
-            (2, 1, 2),
-            (6, 6, 1),
-            (6, 5, 1),
-            (6, 6, 2),
-        ] {
-            label[idx] = 2;
-        }
-
-        let target = target_mask_full(&label).unwrap();
-
-        assert!(target[[1, 1, 1]]);
-        assert!(target[[1, 2, 1]]);
-        assert!(target[[2, 1, 1]]);
-        assert!(target[[2, 1, 2]]);
-        assert!(!target[[6, 6, 1]]);
-        assert!(!target[[6, 5, 1]]);
-        assert!(!target[[6, 6, 2]]);
-        assert_eq!(target.iter().filter(|active| **active).count(), 4);
-    }
-
-    #[test]
-    fn single_target_label_volume_demotes_nonselected_tumours_to_organ() {
-        let mut label = Array3::<i16>::zeros((4, 4, 2));
-        label[[1, 1, 0]] = 2;
-        label[[3, 3, 0]] = 2;
-        let mut target = Array3::<bool>::from_elem(label.dim(), false);
-        target[[1, 1, 0]] = true;
-
-        let filtered = single_target_label_volume(&label, &target);
-
-        assert_eq!(filtered[[1, 1, 0]], 2);
-        assert_eq!(filtered[[3, 3, 0]], 1);
-    }
-
-    #[test]
-    fn body_mask_preserves_enclosed_internal_gas_and_excludes_exterior_air() {
-        let mut ct = Array3::<f64>::from_elem((7, 7, 7), -1000.0);
-        let label = Array3::<i16>::zeros((7, 7, 7));
-        for ix in 1..6 {
-            for iy in 1..6 {
-                for iz in 1..6 {
-                    ct[[ix, iy, iz]] = 40.0;
-                }
-            }
-        }
-        ct[[3, 3, 3]] = -900.0;
-
-        let body = body_mask_full(AnatomyKind::Liver, &ct, Some(&label));
-
-        assert!(
-            body[[3, 3, 3]],
-            "enclosed gas must remain in the patient support"
-        );
-        assert!(
-            !body[[0, 0, 0]],
-            "boundary-connected CT air must remain exterior"
-        );
-    }
-}
-
 fn synthetic_brain_target(
     ct: &Array3<f64>,
     body: &Array3<bool>,
@@ -307,4 +236,75 @@ pub(super) fn inversion_mask(
         }
         false
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn abdominal_target_mask_uses_one_connected_treatment_component() {
+        let mut label = Array3::<i16>::zeros((8, 8, 4));
+        for idx in [
+            (1, 1, 1),
+            (1, 2, 1),
+            (2, 1, 1),
+            (2, 1, 2),
+            (6, 6, 1),
+            (6, 5, 1),
+            (6, 6, 2),
+        ] {
+            label[idx] = 2;
+        }
+
+        let target = target_mask_full(&label).unwrap();
+
+        assert!(target[[1, 1, 1]]);
+        assert!(target[[1, 2, 1]]);
+        assert!(target[[2, 1, 1]]);
+        assert!(target[[2, 1, 2]]);
+        assert!(!target[[6, 6, 1]]);
+        assert!(!target[[6, 5, 1]]);
+        assert!(!target[[6, 6, 2]]);
+        assert_eq!(target.iter().filter(|active| **active).count(), 4);
+    }
+
+    #[test]
+    fn single_target_label_volume_demotes_nonselected_tumours_to_organ() {
+        let mut label = Array3::<i16>::zeros((4, 4, 2));
+        label[[1, 1, 0]] = 2;
+        label[[3, 3, 0]] = 2;
+        let mut target = Array3::<bool>::from_elem(label.dim(), false);
+        target[[1, 1, 0]] = true;
+
+        let filtered = single_target_label_volume(&label, &target);
+
+        assert_eq!(filtered[[1, 1, 0]], 2);
+        assert_eq!(filtered[[3, 3, 0]], 1);
+    }
+
+    #[test]
+    fn body_mask_preserves_enclosed_internal_gas_and_excludes_exterior_air() {
+        let mut ct = Array3::<f64>::from_elem((7, 7, 7), -1000.0);
+        let label = Array3::<i16>::zeros((7, 7, 7));
+        for ix in 1..6 {
+            for iy in 1..6 {
+                for iz in 1..6 {
+                    ct[[ix, iy, iz]] = 40.0;
+                }
+            }
+        }
+        ct[[3, 3, 3]] = -900.0;
+
+        let body = body_mask_full(AnatomyKind::Liver, &ct, Some(&label));
+
+        assert!(
+            body[[3, 3, 3]],
+            "enclosed gas must remain in the patient support"
+        );
+        assert!(
+            !body[[0, 0, 0]],
+            "boundary-connected CT air must remain exterior"
+        );
+    }
 }

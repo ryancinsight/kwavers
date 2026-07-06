@@ -252,6 +252,12 @@ pub(super) fn adjoint_image(
     // backward adjoint advance (both use the same `c²·dt²` field).
     let c2dt2 = c2dt2_field(grid, speed_m_s);
 
+    let mut fwd_prev = vec![0.0_f32; n];
+    let mut fwd_curr = vec![0.0_f32; n];
+    let mut fwd_next = vec![0.0_f32; n];
+    let mut fwd_psi_x = vec![0.0_f32; n];
+    let mut fwd_psi_y = vec![0.0_f32; n];
+
     for reverse in 0..grid.time_steps {
         let step = grid.time_steps - 1 - reverse;
 
@@ -262,11 +268,11 @@ pub(super) fn adjoint_image(
         let ck_step = schedule.preceding_checkpoint(step);
         let ck_slot = schedule.slot_for(ck_step);
         let base = ck_slot * 2 * n;
-        let mut fwd_prev = checkpoints[base..base + n].to_vec();
-        let mut fwd_curr = checkpoints[base + n..base + 2 * n].to_vec();
-        let mut fwd_next = vec![0.0_f32; n];
-        let mut fwd_psi_x = vec![0.0_f32; n];
-        let mut fwd_psi_y = vec![0.0_f32; n];
+        fwd_prev.copy_from_slice(&checkpoints[base..base + n]);
+        fwd_curr.copy_from_slice(&checkpoints[base + n..base + 2 * n]);
+        fwd_next.fill(0.0);
+        fwd_psi_x.fill(0.0);
+        fwd_psi_y.fill(0.0);
 
         // Exact Griewank replay with source injection.
         for fwd_step in ck_step..step {

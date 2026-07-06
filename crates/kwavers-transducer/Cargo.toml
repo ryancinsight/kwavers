@@ -17,6 +17,7 @@ kwavers-medium = { path = "../kwavers-medium" }
 kwavers-source = { path = "../kwavers-source" }
 kwavers-receiver = { path = "../kwavers-receiver" }
 ndarray = { version = "0.16", features = ["serde"] }
+leto = { workspace = true }
 moirai-parallel = { workspace = true }
 nalgebra = { version = "0.32" }
 num-complex = "0.4"

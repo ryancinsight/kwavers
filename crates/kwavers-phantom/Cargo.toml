@@ -12,7 +12,7 @@ kwavers-core = { path = "../kwavers-core" }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-optics = { path = "../kwavers-optics" }
-ndarray = { workspace = true }
+leto = { workspace = true }
 
 [dev-dependencies]
 approx = "0.5"

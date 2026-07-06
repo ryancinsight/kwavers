@@ -33,12 +33,11 @@ pub(super) fn nearest_mask_distance_m(mask: &Array2<bool>, spacing_m: f64, point
     let cx = (nx - 1) as f64 * 0.5;
     let cy = (ny - 1) as f64 * 0.5;
     mask.indexed_iter()
-        .filter_map(|((ix, iy), active)| {
-            active.then(|| {
-                let x_m = (ix as f64 - cx) * spacing_m;
-                let y_m = (iy as f64 - cy) * spacing_m;
-                (x_m - point.x_m).hypot(y_m - point.y_m)
-            })
+        .filter(|&(_, active)| *active)
+        .map(|((ix, iy), _)| {
+            let x_m = (ix as f64 - cx) * spacing_m;
+            let y_m = (iy as f64 - cy) * spacing_m;
+            (x_m - point.x_m).hypot(y_m - point.y_m)
         })
         .fold(f64::INFINITY, f64::min)
 }

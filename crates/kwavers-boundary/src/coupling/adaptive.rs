@@ -166,7 +166,7 @@ impl BoundaryCondition for AdaptiveBoundary {
 
     fn apply_scalar_spatial(
         &mut self,
-        mut field: ArrayViewMut3<f64>,
+        field: ArrayViewMut3<f64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,
@@ -181,7 +181,8 @@ impl BoundaryCondition for AdaptiveBoundary {
 
         // Apply absorption: u(t+Δt) = u(t) × exp(-α·Δt)
         let absorption = self.current_absorption();
-        field.par_mapv_inplace(|x| x * (-absorption * _dt).exp());
+        let decay = (-absorption * _dt).exp();
+        crate::parallel::for_each_mut(field, |x| *x *= decay);
 
         Ok(())
     }

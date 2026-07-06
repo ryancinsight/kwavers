@@ -14,8 +14,8 @@ pub mod laplacian;
 
 // Re-export main types
 pub use coefficients::{FDCoefficients, FdAccuracyOrder};
-pub use curl::curl;
-pub use divergence::divergence;
-pub use gradient::gradient;
+pub use curl::{curl, curl_leto};
+pub use divergence::{divergence, divergence_leto};
+pub use gradient::{gradient, gradient_leto};
 pub use gradient_optimized::{GradientCache, GradientOperator, GradientOperatorBuilder};
-pub use laplacian::laplacian;
+pub use laplacian::{laplacian, laplacian_leto};

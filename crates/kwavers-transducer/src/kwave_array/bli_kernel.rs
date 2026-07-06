@@ -39,9 +39,9 @@ impl KWaveArray {
     pub(super) fn map_surface_sample<F>(
         &self,
         grid: &kwavers_grid::Grid,
-        x_vec: &ndarray::Array1<f64>,
-        y_vec: &ndarray::Array1<f64>,
-        z_vec: &ndarray::Array1<f64>,
+        x_vec: &leto::Array1<f64>,
+        y_vec: &leto::Array1<f64>,
+        z_vec: &leto::Array1<f64>,
         point: [f64; 3],
         scale: f64,
         mask_only: bool,
@@ -136,7 +136,7 @@ impl KWaveArray {
     /// Find the index of the coordinate value nearest to `value` in `coords`,
     /// returning `(index, coords[index])`.
     pub(super) fn nearest_coordinate_index(
-        coords: &ndarray::Array1<f64>,
+        coords: &leto::Array1<f64>,
         value: f64,
     ) -> (usize, f64) {
         let mut best_index = 0usize;

@@ -202,7 +202,7 @@ impl BeamformingCalculator {
             self.sound_speed,
         )
         .expect("Focus delay calculation failed - invalid geometry or medium parameters")
-        .to_vec()
+        .into_vec()
     }
 
     /// Calculate phase delays for beam steering to spherical angles.
@@ -252,7 +252,7 @@ impl BeamformingCalculator {
             self.sound_speed,
         )
         .expect("Steering delay calculation failed")
-        .to_vec()
+        .into_vec()
     }
 
     /// Calculate phase delays for plane wave transmission.
@@ -297,7 +297,7 @@ impl BeamformingCalculator {
             self.sound_speed,
         )
         .expect("Plane wave delay calculation failed")
-        .to_vec()
+        .into_vec()
     }
 
     /// Calculate beam width for given aperture configuration.

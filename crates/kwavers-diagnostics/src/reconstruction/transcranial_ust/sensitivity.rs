@@ -1,6 +1,5 @@
 //! Finite-frequency source/receiver sensitivity assembly.
 
-use rayon::prelude::*;
 use std::f64::consts::TAU;
 
 use super::{
@@ -11,13 +10,14 @@ use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use kwavers_transducer::transducers::TransducerGeometry;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Build the row-normalized Born sensitivity matrix.
 ///
 /// Rows are source-major, receiver-offset-major, frequency-major, and
 /// harmonic-major.
 /// The parallel chunk traversal preserves that deterministic row contract while
-/// assigning independent rows to Rayon workers.
+/// assigning independent rows to the Atlas Moirai provider.
 pub(super) fn build_sensitivity_matrix(
     medium: &AcousticSlice,
     config: &LinearBornInversionConfig,
@@ -43,72 +43,69 @@ pub(super) fn build_sensitivity_matrix(
     let traveltime_integrals = aberration_model
         .then(|| build_element_voxel_traveltime_integrals(medium, geometry, active));
 
-    matrix
-        .par_chunks_mut(ncols)
-        .enumerate()
-        .for_each(|(row, row_values)| {
-            let source_idx = row / (offset_count * frequency_count * harmonic_count);
-            let offset_idx = (row / (frequency_count * harmonic_count)) % offset_count;
-            let frequency_idx = (row / harmonic_count) % frequency_count;
-            let harmonic_idx = row % harmonic_count;
-            let source = geometry.elements[source_idx];
-            let receiver_idx = receiver_indices[source_idx * offset_count + offset_idx];
-            let receiver = geometry.elements[receiver_idx];
-            let frequency_hz = config.frequencies_hz[frequency_idx];
-            let harmonic_order = harmonic_idx + 1;
-            let channel_frequency_hz = harmonic_order as f64 * frequency_hz;
-            let frequency_mhz = channel_frequency_hz * 1.0e-6;
-            let k = TAU * channel_frequency_hz / SOUND_SPEED_TISSUE;
-            let omega = TAU * channel_frequency_hz;
-            let mut norm2 = 0.0;
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(&mut matrix, ncols, |row, row_values| {
+        let source_idx = row / (offset_count * frequency_count * harmonic_count);
+        let offset_idx = (row / (frequency_count * harmonic_count)) % offset_count;
+        let frequency_idx = (row / harmonic_count) % frequency_count;
+        let harmonic_idx = row % harmonic_count;
+        let source = geometry.elements[source_idx];
+        let receiver_idx = receiver_indices[source_idx * offset_count + offset_idx];
+        let receiver = geometry.elements[receiver_idx];
+        let frequency_hz = config.frequencies_hz[frequency_idx];
+        let harmonic_order = harmonic_idx + 1;
+        let channel_frequency_hz = harmonic_order as f64 * frequency_hz;
+        let frequency_mhz = channel_frequency_hz * 1.0e-6;
+        let k = TAU * channel_frequency_hz / SOUND_SPEED_TISSUE;
+        let omega = TAU * channel_frequency_hz;
+        let mut norm2 = 0.0;
 
-            for (col, voxel) in active.iter().enumerate() {
-                let ds = distance(
-                    source.x_m, source.y_m, source.z_m, voxel.x_m, voxel.y_m, voxel.z_m,
-                );
-                let dr = distance(
-                    receiver.x_m,
-                    receiver.y_m,
-                    receiver.z_m,
-                    voxel.x_m,
-                    voxel.y_m,
-                    voxel.z_m,
-                );
-                let spreading = (ds * dr).sqrt().max(1.0e-6);
-                let attenuation = attenuation_integrals.as_ref().map_or(1.0, |integrals| {
-                    let source_path = integrals[source_idx * ncols + col];
-                    let receiver_path = integrals[receiver_idx * ncols + col];
-                    (-(source_path + receiver_path) * frequency_mhz).exp()
-                });
-                let harmonic = if harmonic_order == 1 {
-                    1.0
-                } else {
-                    second_harmonic_factor(config, frequency_hz, ds + dr)
-                };
-                // Phase: CT-derived skull travel-time ω·(τ_s+τ_r) when the
-                // aberration model is active, else the constant-tissue phase
-                // k·(ds+dr). The two coincide for a homogeneous c = SOUND_SPEED_TISSUE
-                // medium since τ = (ds+dr)/SOUND_SPEED_TISSUE there.
-                let phase = traveltime_integrals.as_ref().map_or_else(
-                    || k * (ds + dr),
-                    |integrals| {
-                        omega
-                            * (integrals[source_idx * ncols + col]
-                                + integrals[receiver_idx * ncols + col])
-                    },
-                );
-                let value = pixel_area * attenuation * harmonic * phase.cos() / spreading;
-                row_values[col] = value;
-                norm2 += value * value;
-            }
+        for (col, voxel) in active.iter().enumerate() {
+            let ds = distance(
+                source.x_m, source.y_m, source.z_m, voxel.x_m, voxel.y_m, voxel.z_m,
+            );
+            let dr = distance(
+                receiver.x_m,
+                receiver.y_m,
+                receiver.z_m,
+                voxel.x_m,
+                voxel.y_m,
+                voxel.z_m,
+            );
+            let spreading = (ds * dr).sqrt().max(1.0e-6);
+            let attenuation = attenuation_integrals.as_ref().map_or(1.0, |integrals| {
+                let source_path = integrals[source_idx * ncols + col];
+                let receiver_path = integrals[receiver_idx * ncols + col];
+                (-(source_path + receiver_path) * frequency_mhz).exp()
+            });
+            let harmonic = if harmonic_order == 1 {
+                1.0
+            } else {
+                second_harmonic_factor(config, frequency_hz, ds + dr)
+            };
+            // Phase: CT-derived skull travel-time ω·(τ_s+τ_r) when the
+            // aberration model is active, else the constant-tissue phase
+            // k·(ds+dr). The two coincide for a homogeneous c = SOUND_SPEED_TISSUE
+            // medium since τ = (ds+dr)/SOUND_SPEED_TISSUE there.
+            let phase = traveltime_integrals.as_ref().map_or_else(
+                || k * (ds + dr),
+                |integrals| {
+                    omega
+                        * (integrals[source_idx * ncols + col]
+                            + integrals[receiver_idx * ncols + col])
+                },
+            );
+            let value = pixel_area * attenuation * harmonic * phase.cos() / spreading;
+            row_values[col] = value;
+            norm2 += value * value;
+        }
 
-            let norm = norm2.sqrt();
-            if norm > 0.0 {
-                for value in row_values {
-                    *value /= norm;
-                }
+        let norm = norm2.sqrt();
+        if norm > 0.0 {
+            for value in row_values {
+                *value /= norm;
             }
-        });
+        }
+    });
     matrix
 }
 
@@ -131,10 +128,10 @@ fn build_element_voxel_attenuation_integrals(
 ) -> Vec<f64> {
     let ncols = active.len();
     let mut integrals = vec![0.0; geometry.len() * ncols];
-    integrals
-        .par_chunks_mut(ncols)
-        .enumerate()
-        .for_each(|(element_idx, row)| {
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        &mut integrals,
+        ncols,
+        |element_idx, row| {
             let element = geometry.elements[element_idx];
             for (col, voxel) in active.iter().enumerate() {
                 row[col] = attenuation_line_integral(
@@ -147,7 +144,8 @@ fn build_element_voxel_attenuation_integrals(
                     voxel.z_m,
                 );
             }
-        });
+        },
+    );
     integrals
 }
 
@@ -186,10 +184,10 @@ fn build_element_voxel_traveltime_integrals(
 ) -> Vec<f64> {
     let ncols = active.len();
     let mut integrals = vec![0.0; geometry.len() * ncols];
-    integrals
-        .par_chunks_mut(ncols)
-        .enumerate()
-        .for_each(|(element_idx, row)| {
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        &mut integrals,
+        ncols,
+        |element_idx, row| {
             let element = geometry.elements[element_idx];
             for (col, voxel) in active.iter().enumerate() {
                 row[col] = slowness_line_integral(
@@ -202,7 +200,8 @@ fn build_element_voxel_traveltime_integrals(
                     voxel.z_m,
                 );
             }
-        });
+        },
+    );
     integrals
 }
 

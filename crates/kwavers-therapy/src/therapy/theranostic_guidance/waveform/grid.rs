@@ -109,22 +109,6 @@ pub(super) fn acoustic_grid(
     // CFL stability: λ_CFL = c·dt/dx ≤ 1/√2 (von Neumann, Fornberg 1988, §4).
     let dt_s = 0.35 * dx / (std::f64::consts::SQRT_2 * cmax);
 
-    // Padded domain extent (diagonal half-extent) drives the two-way travel
-    // time budget. Water sound speed governs propagation in the coupling
-    // margin where the aperture lives.
-    let aperture_extent = layout
-        .therapy_elements
-        .iter()
-        .chain(layout.imaging_receivers.iter())
-        .map(|point| point.x_m.hypot(point.y_m))
-        .fold(0.0, f64::max);
-    let domain_half_x = (nx.saturating_sub(1) as f64) * 0.5 * dx;
-    let domain_half_y = (ny.saturating_sub(1) as f64) * 0.5 * dx;
-    let domain_extent = domain_half_x.hypot(domain_half_y);
-    let travel_time_s = 2.0 * (aperture_extent + domain_extent) / SOUND_SPEED_WATER_SIM.max(1.0);
-    let pulse_time_s = 5.0 / frequency_hz;
-    let time_steps = (((travel_time_s + pulse_time_s) / dt_s).ceil() as usize).max(96);
-
     let focus = layout.focus_m;
 
     // Place sources at their TRUE physical positions in the padded grid.
@@ -208,6 +192,11 @@ pub(super) fn acoustic_grid(
         .map(|point| point_to_padded_cell(*point, nx, ny, dx))
         .collect();
 
+    let travel_time_s =
+        acoustic_recording_window_s(layout, body_half_x, body_half_y, &source_delays_s);
+    let pulse_time_s = 5.0 / frequency_hz;
+    let time_steps = (((travel_time_s + pulse_time_s) / dt_s).ceil() as usize).max(96);
+
     // Carrying-medium reference speed (currently unused except via the public
     // medium helper invariants; keep the call to maintain semantic parity in
     // case future regression tests probe these helpers indirectly).
@@ -240,6 +229,61 @@ pub(super) fn acoustic_grid(
         body_dims_coarse: (nx_b_coarse, ny_b_coarse),
         refinement,
     }
+}
+
+fn acoustic_recording_window_s(
+    layout: &super::super::geometry::DeviceLayout,
+    body_half_x: f64,
+    body_half_y: f64,
+    source_delays_s: &[f64],
+) -> f64 {
+    let body_corners = [
+        Point2 {
+            x_m: -body_half_x,
+            y_m: -body_half_y,
+        },
+        Point2 {
+            x_m: -body_half_x,
+            y_m: body_half_y,
+        },
+        Point2 {
+            x_m: body_half_x,
+            y_m: -body_half_y,
+        },
+        Point2 {
+            x_m: body_half_x,
+            y_m: body_half_y,
+        },
+    ];
+    let receivers = layout
+        .therapy_elements
+        .iter()
+        .chain(layout.imaging_receivers.iter())
+        .copied()
+        .collect::<Vec<_>>();
+    let mut max_distance_m = 0.0_f64;
+    for source in &layout.therapy_elements {
+        for corner in body_corners {
+            max_distance_m = max_distance_m.max(point_distance(*source, corner));
+            for receiver in &receivers {
+                max_distance_m = max_distance_m
+                    .max(point_distance(*source, corner) + point_distance(corner, *receiver));
+            }
+        }
+        for receiver in &receivers {
+            max_distance_m = max_distance_m.max(point_distance(*source, *receiver));
+        }
+    }
+    let max_source_delay_s = source_delays_s
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite())
+        .fold(0.0_f64, f64::max);
+    max_source_delay_s + max_distance_m / SOUND_SPEED_WATER_SIM.max(1.0)
+}
+
+fn point_distance(lhs: Point2, rhs: Point2) -> f64 {
+    (lhs.x_m - rhs.x_m).hypot(lhs.y_m - rhs.y_m)
 }
 
 /// Build a padded simulation for a **passive cavitation emission**.

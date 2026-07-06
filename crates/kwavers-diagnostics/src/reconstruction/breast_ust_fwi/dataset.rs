@@ -13,6 +13,8 @@ use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
+#[cfg(feature = "gpu")]
+use leto::Array3 as LetoArray3;
 use ndarray::{s, Array2, Array3};
 use num_complex::Complex64;
 
@@ -284,7 +286,7 @@ fn try_run_gpu_pstd_transmit(
 ) -> Option<Array2<f64>> {
     use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let mut sensor_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut sensor_mask = LetoArray3::<bool>::from_elem([nx, ny, nz], false);
     for &(i, j, k) in receiver_indices {
         sensor_mask[[i, j, k]] = true;
     }
@@ -305,7 +307,9 @@ fn try_run_gpu_pstd_transmit(
         pml_inside: config.cpml_thickness_cells > 0,
         pml_alpha_xyz: None,
     };
-    run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config).ok()
+    let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config).ok()?;
+    let [rows, cols] = traces.shape();
+    Array2::from_shape_vec((rows, cols), traces.into_vec()).ok()
 }
 
 #[cfg(test)]

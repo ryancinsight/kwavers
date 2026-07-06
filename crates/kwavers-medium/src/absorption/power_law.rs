@@ -5,6 +5,8 @@ use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
 use kwavers_core::constants::{DB_TO_NP, REFERENCE_FREQUENCY_HZ};
 use serde::{Deserialize, Serialize};
 
+use crate::parallel::for_each_mut;
+
 /// Power-law absorption model configuration
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct PowerLawAbsorption {
@@ -132,7 +134,7 @@ impl PowerLawModel {
                 if freq > 0.0 {
                     let alpha = self.config.absorption_at_frequency(freq);
                     let attenuation = (-alpha * distance).exp();
-                    slice.par_mapv_inplace(|c| c * attenuation);
+                    for_each_mut(&mut slice, |c| *c *= attenuation);
                 }
             });
     }

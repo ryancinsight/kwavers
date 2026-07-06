@@ -23,7 +23,7 @@
 //! - Toft, P. (1996). *The Radon Transform — Theory and Implementation*, PhD
 //!   thesis (modified Shepp–Logan intensities).
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// One additive ellipse of the phantom.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -148,7 +148,7 @@ impl SheppLogan {
     /// index increases with `x`. Pixel centres are sampled.
     #[must_use]
     pub fn rasterize(&self, n: usize) -> Array2<f64> {
-        Array2::from_shape_fn((n, n), |(row, col)| {
+        Array2::from_shape_fn([n, n], |[row, col]| {
             // Pixel-centre coordinates in [-1, 1].
             let x = 2.0 * (col as f64 + 0.5) / n as f64 - 1.0;
             let y = 2.0 * (row as f64 + 0.5) / n as f64 - 1.0;

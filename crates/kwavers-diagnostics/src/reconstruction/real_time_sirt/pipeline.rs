@@ -20,8 +20,8 @@ use crate::reconstruction::acoustic_projection::{
     backproject_acoustic, project_acoustic, AcousticProjectionGeometry,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
 use ndarray::{Array1, Array3};
-use rayon::prelude::*;
 use std::time::Instant;
 
 /// Compute the per-sensor squared row norm `‖A_row_s‖²` for the acoustic projection matrix.
@@ -42,7 +42,7 @@ use std::time::Instant;
 /// ```
 ///
 /// This is computed once per geometry/grid-shape pair and cached in
-/// `RealTimeSirtPipeline::row_norm_sq_cache`. Parallelised over sensors via Rayon.
+/// `RealTimeSirtPipeline::row_norm_sq_cache`. Parallelised over sensors via Moirai.
 /// The lower clamp at `f64::EPSILON` prevents a zero-denominator singularity
 /// for far-field sensors whose stencil weight is below double-precision roundoff.
 ///
@@ -60,28 +60,106 @@ fn compute_row_norm_sq(
     let f_c = geom.center_frequency_hz;
     let zs = geom.element_z;
 
-    geom.element_x
-        .par_iter()
-        .map(|&xs| {
-            let mut norm_sq = 0.0_f64;
-            for i in 0..nx {
-                let xv = i as f64 * dx;
-                let dx2 = (xv - xs) * (xv - xs);
-                for j in 0..ny {
-                    let yv = j as f64 * dy;
-                    let dxy2 = yv.mul_add(yv, dx2);
-                    for k in 0..nz {
-                        let zv = k as f64 * dz;
-                        let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
-                        let weight = (-2.0 * alpha * f_c * r).exp() / r;
-                        norm_sq += weight * weight;
-                    }
+    map_collect_index_with::<Adaptive, _, _>(geom.element_x.len(), |sensor_idx| {
+        let xs = geom.element_x[sensor_idx];
+        let mut norm_sq = 0.0_f64;
+        for i in 0..nx {
+            let xv = i as f64 * dx;
+            let dx2 = (xv - xs) * (xv - xs);
+            for j in 0..ny {
+                let yv = j as f64 * dy;
+                let dxy2 = yv.mul_add(yv, dx2);
+                for k in 0..nz {
+                    let zv = k as f64 * dz;
+                    let r = (zv - zs).mul_add(zv - zs, dxy2).sqrt().max(1e-6);
+                    let weight = (-2.0 * alpha * f_c * r).exp() / r;
+                    norm_sq += weight * weight;
                 }
             }
-            // Clamp away from zero to prevent div-by-zero in D_R[s] = 1/‖A_row_s‖²
-            norm_sq.max(f64::EPSILON)
-        })
-        .collect()
+        }
+        // Clamp away from zero to prevent div-by-zero in D_R[s] = 1/‖A_row_s‖²
+        norm_sq.max(f64::EPSILON)
+    })
+}
+
+fn smooth_x_pass(
+    a: &Array3<f64>,
+    b: &mut Array3<f64>,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    wn: f64,
+    w0: f64,
+) {
+    let plane_len = ny * nz;
+    let a_slice = a
+        .as_slice_memory_order()
+        .expect("invariant: Array3 smoothing read buffer is contiguous");
+    let b_slice = b
+        .as_slice_memory_order_mut()
+        .expect("invariant: Array3 smoothing write buffer is contiguous");
+    let interior = &mut b_slice[plane_len..(nx - 1) * plane_len];
+
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        interior,
+        plane_len,
+        |chunk_idx, plane| {
+            let i = chunk_idx + 1;
+            let center_base = i * plane_len;
+            let left_base = center_base - plane_len;
+            let right_base = center_base + plane_len;
+
+            for (offset, dst) in plane.iter_mut().enumerate() {
+                *dst = wn * a_slice[left_base + offset]
+                    + w0 * a_slice[center_base + offset]
+                    + wn * a_slice[right_base + offset];
+            }
+        },
+    );
+}
+
+fn smooth_y_pass(a: &Array3<f64>, b: &mut Array3<f64>, ny: usize, nz: usize, wn: f64, w0: f64) {
+    let plane_len = ny * nz;
+    let a_slice = a
+        .as_slice_memory_order()
+        .expect("invariant: Array3 smoothing read buffer is contiguous");
+    let b_slice = b
+        .as_slice_memory_order_mut()
+        .expect("invariant: Array3 smoothing write buffer is contiguous");
+
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(b_slice, plane_len, |i, plane| {
+        let plane_base = i * plane_len;
+        for j in 1..ny - 1 {
+            let row_base = j * nz;
+            let left_base = plane_base + (j - 1) * nz;
+            let center_base = plane_base + row_base;
+            let right_base = plane_base + (j + 1) * nz;
+
+            for k in 0..nz {
+                plane[row_base + k] = wn * a_slice[left_base + k]
+                    + w0 * a_slice[center_base + k]
+                    + wn * a_slice[right_base + k];
+            }
+        }
+    });
+}
+
+fn smooth_z_pass(a: &Array3<f64>, b: &mut Array3<f64>, nz: usize, wn: f64, w0: f64) {
+    let a_slice = a
+        .as_slice_memory_order()
+        .expect("invariant: Array3 smoothing read buffer is contiguous");
+    let b_slice = b
+        .as_slice_memory_order_mut()
+        .expect("invariant: Array3 smoothing write buffer is contiguous");
+
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(b_slice, nz, |row_idx, row| {
+        let row_base = row_idx * nz;
+        for k in 1..nz - 1 {
+            row[k] = wn * a_slice[row_base + k - 1]
+                + w0 * a_slice[row_base + k]
+                + wn * a_slice[row_base + k + 1];
+        }
+    });
 }
 
 /// Streaming SIRT reconstruction pipeline.
@@ -159,7 +237,7 @@ impl RealTimeSirtPipeline {
             // Row normalisation D_R[s] = 1/‖A_row_s‖² (Dines & Kak 1979 §III).
             //
             // Row norms depend only on the geometry and grid shape, not on the
-            // RF data.  Cache them: first call computes in parallel (Rayon over
+            // RF data.  Cache them: first call computes in parallel (Moirai over
             // elements); subsequent calls reuse the cached vector.  Invalidate
             // when grid shape changes (geometry is fixed for the pipeline lifetime).
             let grid_shape = (nx, ny, nz);
@@ -288,7 +366,7 @@ impl RealTimeSirtPipeline {
     /// pattern: two `Array3` allocations (down from four in the original), with
     /// `Array3::assign` (memcpy, no allocation) used to propagate edge-plane
     /// values between passes.  Each pass interior is computed in parallel via
-    /// `ndarray::Zip::par_for_each`.
+    /// Moirai chunk dispatch.
     ///
     /// ## Correctness invariant
     ///
@@ -311,8 +389,6 @@ impl RealTimeSirtPipeline {
         let w0 = 1.0 / norm_w;
         let wn = wn / norm_w;
 
-        use ndarray::s;
-
         // Two allocations total (down from four).  After each pass we swap
         // buffers and `assign` so that edge-plane values in the write buffer
         // always reflect the most recent read buffer state before interior
@@ -321,36 +397,18 @@ impl RealTimeSirtPipeline {
         let mut b = a.clone(); // write buffer (edge planes pre-filled)
 
         // --- X pass: interior i ∈ [1, nx−2] ---
-        ndarray::Zip::from(b.slice_mut(s![1..nx - 1, .., ..]))
-            .and(a.slice(s![..nx - 2, .., ..]))
-            .and(a.slice(s![1..nx - 1, .., ..]))
-            .and(a.slice(s![2..nx, .., ..]))
-            .par_for_each(|dst, &left, &center, &right| {
-                *dst = wn * left + w0 * center + wn * right;
-            });
+        smooth_x_pass(&a, &mut b, nx, ny, nz, wn, w0);
         std::mem::swap(&mut a, &mut b);
         // Propagate current result (in a) into b so j/k edge planes are correct.
         b.assign(&a);
 
         // --- Y pass: interior j ∈ [1, ny−2] ---
-        ndarray::Zip::from(b.slice_mut(s![.., 1..ny - 1, ..]))
-            .and(a.slice(s![.., ..ny - 2, ..]))
-            .and(a.slice(s![.., 1..ny - 1, ..]))
-            .and(a.slice(s![.., 2..ny, ..]))
-            .par_for_each(|dst, &left, &center, &right| {
-                *dst = wn * left + w0 * center + wn * right;
-            });
+        smooth_y_pass(&a, &mut b, ny, nz, wn, w0);
         std::mem::swap(&mut a, &mut b);
         b.assign(&a);
 
         // --- Z pass: interior k ∈ [1, nz−2] ---
-        ndarray::Zip::from(b.slice_mut(s![.., .., 1..nz - 1]))
-            .and(a.slice(s![.., .., ..nz - 2]))
-            .and(a.slice(s![.., .., 1..nz - 1]))
-            .and(a.slice(s![.., .., 2..nz]))
-            .par_for_each(|dst, &left, &center, &right| {
-                *dst = wn * left + w0 * center + wn * right;
-            });
+        smooth_z_pass(&a, &mut b, nz, wn, w0);
         Ok(b)
     }
 

@@ -28,8 +28,8 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::Array3;
 
 /// Reconstruct initial pressure `p₀(r)` from pressure snapshots via
 /// time-reversed delay-and-sum back-projection.
@@ -52,7 +52,7 @@ pub fn time_reversal_reconstruction(
     n_detectors: usize,
 ) -> KwaversResult<Array3<f64>> {
     let (nx, ny, nz) = grid.dimensions();
-    let mut reconstructed = Array3::<f64>::zeros((nx, ny, nz));
+    let mut reconstructed = Array3::<f64>::zeros([nx, ny, nz]);
     let detectors = compute_detector_positions(grid, n_detectors);
     let n_time = time_points.len().min(pressure_fields.len());
     if n_time == 0 {
@@ -168,7 +168,7 @@ pub fn interpolate_detector_signal(
     y_det: f64,
     z_det: f64,
 ) -> f64 {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let x_clamp = x_det.clamp(0.0, (nx - 1) as f64);
     let y_clamp = y_det.clamp(0.0, (ny - 1) as f64);
     let z_clamp = z_det.clamp(0.0, (nz - 1) as f64);

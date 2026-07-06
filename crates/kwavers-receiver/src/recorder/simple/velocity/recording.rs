@@ -51,7 +51,7 @@ impl SensorRecorder {
         uy: &Array3<f64>,
         uz: &Array3<f64>,
     ) -> KwaversResult<()> {
-        // Full-grid statistics (O(N³), parallelised inside accumulator).
+        // Full-grid statistics (O(N^3), provider-parallelized inside accumulator).
         if let Some(ref mut s) = self.ux_stats {
             s.update(ux);
         }

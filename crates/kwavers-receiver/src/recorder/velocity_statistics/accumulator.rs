@@ -31,15 +31,17 @@
 //! - Treeby & Cox (2010). k-Wave MATLAB toolbox documentation, `sensor.record`.
 
 use kwavers_core::error::KwaversResult;
+use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
 use ndarray::{Array1, Array3, Zip};
 
+use super::super::STATISTICS_CHUNK_SIZE;
 use super::helpers::{fill_field_at_positions, validate_sample_output_len};
 
 /// Per-component velocity statistics accumulator.
 ///
 /// Stores running max, min, and squared sum for one velocity component
-/// (ux, uy, or uz). All operations are parallelised over the spatial
-/// domain via rayon.
+/// (ux, uy, or uz). Standard-layout updates are provider-parallelized over the
+/// spatial domain through Moirai.
 #[derive(Debug, Clone)]
 pub struct VelocityComponentStats {
     /// Element-wise maximum u_α over all recorded time steps.
@@ -68,8 +70,8 @@ impl VelocityComponentStats {
 
     /// Accumulate one time step of data.
     ///
-    /// Updates max, min, and squared sum element-wise.  O(N³) but fully
-    /// parallelised via rayon — no allocation.
+    /// Updates max, min, and squared sum element-wise. O(N^3), with Moirai
+    /// chunk dispatch for standard layouts and no allocation.
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
@@ -81,19 +83,47 @@ impl VelocityComponentStats {
             "velocity field shape mismatch in VelocityComponentStats::update"
         );
 
-        Zip::from(&mut self.u_max)
-            .and(&mut self.u_min)
-            .and(&mut self.u_squared_sum)
-            .and(field)
-            .par_for_each(|u_max, u_min, sq_sum, &u| {
-                if u > *u_max {
-                    *u_max = u;
-                }
-                if u < *u_min {
-                    *u_min = u;
-                }
-                *sq_sum += u * u;
-            });
+        match (
+            self.u_max.as_slice_mut(),
+            self.u_min.as_slice_mut(),
+            self.u_squared_sum.as_slice_mut(),
+            field.as_slice(),
+        ) {
+            (Some(u_max), Some(u_min), Some(u_squared_sum), Some(field)) => {
+                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                    u_max,
+                    u_min,
+                    u_squared_sum,
+                    STATISTICS_CHUNK_SIZE,
+                    |chunk_index, u_max, u_min, u_squared_sum| {
+                        let base = chunk_index * STATISTICS_CHUNK_SIZE;
+                        for lane in 0..u_max.len() {
+                            let u = field[base + lane];
+                            if u > u_max[lane] {
+                                u_max[lane] = u;
+                            }
+                            if u < u_min[lane] {
+                                u_min[lane] = u;
+                            }
+                            u_squared_sum[lane] += u * u;
+                        }
+                    },
+                );
+            }
+            _ => Zip::from(&mut self.u_max)
+                .and(&mut self.u_min)
+                .and(&mut self.u_squared_sum)
+                .and(field)
+                .for_each(|u_max, u_min, sq_sum, &u| {
+                    if u > *u_max {
+                        *u_max = u;
+                    }
+                    if u < *u_min {
+                        *u_min = u;
+                    }
+                    *sq_sum += u * u;
+                }),
+        }
 
         self.time_step_count += 1;
     }

@@ -212,9 +212,9 @@ pub enum KwaversError {
         message: String,
     },
 
-    /// NdArray shape errors
+    /// Array shape errors
     #[error("Shape error: {0}")]
-    Shape(#[from] ndarray::ShapeError),
+    Shape(String),
 
     /// Anyhow errors
     #[error(transparent)]
@@ -234,13 +234,6 @@ impl From<String> for KwaversError {
 impl From<&str> for KwaversError {
     fn from(s: &str) -> Self {
         Self::InvalidInput(s.to_owned())
-    }
-}
-
-#[cfg(feature = "gpu")]
-impl From<wgpu::BufferAsyncError> for KwaversError {
-    fn from(err: wgpu::BufferAsyncError) -> Self {
-        Self::GpuError(format!("Buffer async error: {:?}", err))
     }
 }
 

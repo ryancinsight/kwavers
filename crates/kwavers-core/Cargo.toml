@@ -12,8 +12,11 @@ repository = "https://github.com/ryancinsight/kwavers"
 # crate) are optional + feature-gated so the foundation stays a clean leaf; the
 # `kwavers` facade enables the features it needs (see features below).
 [dependencies]
+# ndarray retained for iterators.rs view API compatibility with kwavers-solver/boundary/physics
+# until those crates are fully migrated to leto.
 ndarray = { version = "0.16", features = ["serde"] }
 moirai-parallel = { workspace = true }
+leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 # `std` feature so `log::SetLoggerError` implements `std::error::Error`
@@ -26,14 +29,11 @@ anyhow = "1.0"
 # Optional integrations (off by default → clean leaf). Each is referenced only by
 # a `#[cfg(feature = …)]`-gated `From<…>`/variant on `KwaversError` (orphan-rule-
 # bound to this crate); the `kwavers` facade enables the ones it needs.
-wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 flume = { version = "0.11", optional = true }
 ritk-registration = { workspace = true, optional = true }
 nifti = { version = "0.17.0", optional = true }
 
 [features]
-# `From<wgpu::BufferAsyncError>` for KwaversError.
-gpu = ["dep:wgpu"]
 # `From<flume::RecvError>` for KwaversError.
 channels = ["dep:flume"]
 # `From<ritk_registration::…RegistrationError>` for KwaversError.

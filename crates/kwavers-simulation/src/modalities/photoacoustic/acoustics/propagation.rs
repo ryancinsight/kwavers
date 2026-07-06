@@ -21,7 +21,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::photoacoustic::InitialPressure;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Propagate acoustic wave using second-order finite difference method.
 ///
@@ -46,7 +46,7 @@ pub fn propagate_acoustic_wave(
 
     let p_curr = initial_pressure.pressure.clone();
     let p_prev = p_curr.clone();
-    let mut p_next = Array3::zeros((nx, ny, nz));
+    let mut p_next = Array3::zeros([nx, ny, nz]);
 
     let c2_dt2 = (speed_of_sound * speed_of_sound) * (dt * dt);
     let inv_dx2 = 1.0 / (grid.dx * grid.dx);

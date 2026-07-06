@@ -386,7 +386,9 @@ mod tests {
             BRAIN_GRAY_MATTER.sound_speed,
             BRAIN_WHITE_MATTER.sound_speed
         );
-        assert!(BRAIN_GRAY_MATTER.perfusion_rate > BRAIN_WHITE_MATTER.perfusion_rate);
+        const {
+            assert!(BRAIN_GRAY_MATTER.perfusion_rate > BRAIN_WHITE_MATTER.perfusion_rate);
+        }
     }
 
     #[test]

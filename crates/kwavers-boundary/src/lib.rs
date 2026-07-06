@@ -60,7 +60,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3, ArrayViewMut3};
+use leto::Array1;
+use ndarray::{Array3, ArrayViewMut3};
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -70,6 +71,7 @@ pub mod coupling;
 pub mod cpml;
 pub mod fem;
 pub mod field_updater;
+mod parallel;
 pub mod periodic;
 pub mod pml;
 pub mod smoothing;

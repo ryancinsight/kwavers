@@ -1,6 +1,6 @@
 // time/mod.rs
 use log::debug;
-use ndarray::Array1;
+use leto::Array1;
 
 #[derive(Debug, Clone)]
 pub struct Time {
@@ -68,7 +68,14 @@ impl Time {
 
     #[must_use]
     pub fn time_vector(&self) -> Array1<f64> {
-        Array1::linspace(0.0, self.t_max, self.n_steps)
+        let n = self.n_steps;
+        Array1::from_shape_fn([n], |[i]| {
+            if n <= 1 {
+                0.0
+            } else {
+                i as f64 * self.t_max / (n - 1) as f64
+            }
+        })
     }
 
     #[must_use]

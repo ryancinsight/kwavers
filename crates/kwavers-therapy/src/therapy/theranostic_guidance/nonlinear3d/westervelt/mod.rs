@@ -34,9 +34,8 @@
 //!   algebraically equivalent to storing `(steps + 1)` adjoint states because
 //!   the Westervelt recurrence has temporal stencil width three; the reverse
 //!   sweep never reads an adjoint state after it shifts past this window.
-//! - The forward cell update is rayon-parallel: each cell writes only to its
-//!   own `next[i]`, so the outer 3-D loop dispatches through
-//!   `par_iter_mut().enumerate()` without coloring, atomics, or locks.
+//! - The forward cell update is Moirai-parallel over x-slabs: each worker
+//!   writes only to its owned `next` slab without coloring, atomics, or locks.
 //! - The four rotating buffers (older, previous, current, next) are
 //!   `mem::swap`-rotated each step. No `vec![0.0; cells]` allocation occurs
 //!   inside the time loop.

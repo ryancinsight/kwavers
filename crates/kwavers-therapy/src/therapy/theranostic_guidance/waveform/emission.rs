@@ -44,8 +44,8 @@
 
 use std::collections::HashMap;
 
+use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::{Array1, Array2};
-use rayon::prelude::*;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::geometry::{DeviceLayout, Point2};
@@ -230,9 +230,8 @@ fn eikonal_delay_matrix(sim: &PaddedSimulation, grid_cells: &[(usize, usize)]) -
     unique_cells.sort_unstable();
     unique_cells.dedup();
 
-    let solved: HashMap<usize, Vec<f64>> = unique_cells
-        .par_iter()
-        .map(|&cell| {
+    let solved: HashMap<usize, Vec<f64>> =
+        map_collect_with::<Adaptive, _, _, _>(&unique_cells, |&cell| {
             let travel_time = eikonal_travel_time(&sim.speed_baseline, dx, (cell / ny, cell % ny));
             let column: Vec<f64> = grid_cells
                 .iter()
@@ -240,6 +239,7 @@ fn eikonal_delay_matrix(sim: &PaddedSimulation, grid_cells: &[(usize, usize)]) -
                 .collect();
             (cell, column)
         })
+        .into_iter()
         .collect();
 
     let mut delays = Array2::<f64>::zeros((grid_cells.len(), n_receivers));

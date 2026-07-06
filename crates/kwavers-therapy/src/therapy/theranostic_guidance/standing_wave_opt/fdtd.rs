@@ -23,8 +23,8 @@
 //! arrived and steady state is established), giving the full complex
 //! pressure field due to unit-amplitude driving of element i.
 
+use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::{Array2, Zip};
-use rayon::prelude::*;
 
 use super::config::StandingWaveOptConfig;
 
@@ -130,7 +130,8 @@ pub(super) fn compute_green_function(
     (acc_re.mapv(|v| v * scale), acc_im.mapv(|v| v * scale))
 }
 
-/// Precompute Green's function columns for all elements in parallel via Rayon.
+/// Precompute Green's function columns for all elements through the Atlas
+/// parallel execution provider.
 ///
 /// Returns `(G_re, G_im)` each of length `n_elements`, where `G_re[i]` and
 /// `G_im[i]` are `Array2<f64>` of shape `(nx, ny)`.
@@ -140,9 +141,9 @@ pub(super) fn compute_all_green_functions(
     element_ys: &[usize],
     config: &StandingWaveOptConfig,
 ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
-    let pairs: Vec<(Array2<f64>, Array2<f64>)> = element_ys
-        .par_iter()
-        .map(|&ey| compute_green_function(c_map, damp, ey, config))
-        .collect();
+    let pairs: Vec<(Array2<f64>, Array2<f64>)> =
+        map_collect_with::<Adaptive, _, _, _>(element_ys, |&ey| {
+            compute_green_function(c_map, damp, ey, config)
+        });
     pairs.into_iter().unzip()
 }

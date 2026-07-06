@@ -90,7 +90,8 @@ pub(super) fn volume_from_storage_order(
     }
     match order {
         BreastUstPhantomStorageOrder::CContiguous => {
-            Array3::from_shape_vec((dims[0], dims[1], dims[2]), values).map_err(KwaversError::from)
+            Array3::from_shape_vec((dims[0], dims[1], dims[2]), values)
+                .map_err(|e| KwaversError::Shape(e.to_string()))
         }
         BreastUstPhantomStorageOrder::FortranContiguous => Ok(Array3::from_shape_fn(
             (dims[0], dims[1], dims[2]),

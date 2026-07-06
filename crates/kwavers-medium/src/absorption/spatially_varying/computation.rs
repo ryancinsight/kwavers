@@ -1,6 +1,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use num_complex::Complex;
+
+use crate::parallel::{zip_mut_ref, zip_mut_three_refs, zip_mut_two_refs};
 
 use super::SpatiallyVaryingAbsorption;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -30,22 +32,22 @@ impl SpatiallyVaryingAbsorption {
 
         let freq_ratio = frequency / self.f_ref;
 
-        Zip::from(&mut alpha_field)
-            .and(&self.alpha_0_field)
-            .and(&self.gamma_field)
-            .par_for_each(|alpha, &alpha_0, &gamma| {
+        zip_mut_two_refs(
+            &mut alpha_field,
+            &self.alpha_0_field,
+            &self.gamma_field,
+            |alpha, &alpha_0, &gamma| {
                 *alpha = alpha_0 * freq_ratio.powf(gamma);
-            });
+            },
+        );
 
         if let Some(ref temp_field) = self.temperature_field {
             let ref_temp = self.reference_temperature;
             let temp_coeff = self.temperature_coefficient;
-            Zip::from(&mut alpha_field)
-                .and(temp_field)
-                .par_for_each(|alpha, &temp| {
-                    let delta_t = temp - ref_temp;
-                    *alpha *= temp_coeff.mul_add(delta_t, 1.0);
-                });
+            zip_mut_ref(&mut alpha_field, temp_field, |alpha, &temp| {
+                let delta_t = temp - ref_temp;
+                *alpha *= temp_coeff.mul_add(delta_t, 1.0);
+            });
         }
 
         alpha_field
@@ -68,12 +70,10 @@ impl SpatiallyVaryingAbsorption {
 
         let alpha_field = self.compute_absorption_field(frequency);
 
-        Zip::from(field)
-            .and(&alpha_field)
-            .par_for_each(|f, &alpha| {
-                let attenuation = (-alpha * dx).exp();
-                *f *= attenuation;
-            });
+        zip_mut_ref(field, &alpha_field, |f, &alpha| {
+            let attenuation = (-alpha * dx).exp();
+            *f *= attenuation;
+        });
 
         Ok(())
     }
@@ -97,12 +97,10 @@ impl SpatiallyVaryingAbsorption {
 
         let alpha_field = self.compute_absorption_field(frequency);
 
-        Zip::from(field)
-            .and(&alpha_field)
-            .par_for_each(|f, &alpha| {
-                let attenuation = (-alpha * ds / 3.0_f64.sqrt()).exp();
-                *f *= attenuation;
-            });
+        zip_mut_ref(field, &alpha_field, |f, &alpha| {
+            let attenuation = (-alpha * ds / 3.0_f64.sqrt()).exp();
+            *f *= attenuation;
+        });
 
         Ok(())
     }
@@ -130,15 +128,17 @@ impl SpatiallyVaryingAbsorption {
 
         let omega = TWO_PI * frequency;
 
-        Zip::from(&mut c_field)
-            .and(c0_field)
-            .and(&self.alpha_0_field)
-            .and(&self.gamma_field)
-            .par_for_each(|c, &c0, &alpha_0, &gamma| {
+        zip_mut_three_refs(
+            &mut c_field,
+            c0_field,
+            &self.alpha_0_field,
+            &self.gamma_field,
+            |c, &c0, &alpha_0, &gamma| {
                 let tan_term = (std::f64::consts::PI * gamma / 2.0).tan();
                 let dispersion_factor = (alpha_0 * tan_term).mul_add(omega.powf(gamma - 1.0), 1.0);
                 *c = c0 / dispersion_factor;
-            });
+            },
+        );
 
         Ok(c_field)
     }

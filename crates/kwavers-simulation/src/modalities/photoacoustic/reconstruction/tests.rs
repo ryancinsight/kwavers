@@ -6,7 +6,7 @@ use super::core::{
 use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_detector_position_computation() {
@@ -35,7 +35,7 @@ fn test_detector_position_computation() {
 #[test]
 fn test_trilinear_interpolation_at_grid_points() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let mut field = Array3::<f64>::zeros((8, 8, 4));
+    let mut field = Array3::<f64>::zeros([8, 8, 4]);
 
     field[[2, 2, 1]] = 1.0;
     field[[3, 2, 1]] = 2.0;
@@ -52,7 +52,7 @@ fn test_trilinear_interpolation_at_grid_points() {
 #[test]
 fn test_trilinear_interpolation_midpoint() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let mut field = Array3::<f64>::zeros((8, 8, 4));
+    let mut field = Array3::<f64>::zeros([8, 8, 4]);
 
     field[[2, 2, 1]] = 1.0;
     field[[3, 2, 1]] = 2.0;
@@ -71,7 +71,7 @@ fn test_trilinear_interpolation_midpoint() {
 #[test]
 fn test_boundary_clamping() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
-    let field = Array3::<f64>::from_elem((8, 8, 4), 1.0);
+    let field = Array3::<f64>::from_elem([8, 8, 4], 1.0);
 
     let value_outside = interpolate_detector_signal(&grid, &field, -1.0, -1.0, -1.0);
     assert_eq!(value_outside, field[[0, 0, 0]]);
@@ -95,7 +95,7 @@ fn test_time_reversal_reconstruction_basic() {
     let speed_of_sound = SOUND_SPEED_WATER_SIM;
 
     for &time in time_points.iter() {
-        let mut field = Array3::<f64>::zeros((16, 16, 8));
+        let mut field = Array3::<f64>::zeros([16, 16, 8]);
         for i in 0..16 {
             for j in 0..16 {
                 for k in 0..8 {
@@ -122,7 +122,7 @@ fn test_time_reversal_reconstruction_basic() {
         time_reversal_reconstruction(&grid, &pressure_fields, &time_points, speed_of_sound, 36)
             .unwrap();
 
-    assert_eq!(reconstructed.dim(), (16, 16, 8));
+    assert_eq!(reconstructed.shape(), [16, 16, 8]);
 
     let mut max_intensity = f64::NEG_INFINITY;
     let mut min_intensity = f64::INFINITY;
@@ -150,7 +150,7 @@ fn test_time_reversal_reconstruction_basic() {
 fn test_spherical_spreading_correction() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
 
-    let pressure_fields = vec![Array3::<f64>::from_elem((16, 16, 8), 1.0)];
+    let pressure_fields = vec![Array3::<f64>::from_elem([16, 16, 8], 1.0)];
     let time_points = vec![0.0];
 
     let reconstructed = time_reversal_reconstruction(

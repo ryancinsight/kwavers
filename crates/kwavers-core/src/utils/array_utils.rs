@@ -2,7 +2,7 @@
 //!
 //! Implements DRY principle by providing reusable array initialization functions
 
-use ndarray::{Array3, Array4};
+use leto::{Array3, Array4};
 
 /// Create a zero-initialized 3D array with the given dimensions
 ///
@@ -13,7 +13,7 @@ use ndarray::{Array3, Array4};
 #[inline]
 #[must_use]
 pub fn zeros_3d(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
-    Array3::zeros((nx, ny, nz))
+    Array3::zeros([nx, ny, nz])
 }
 
 /// Create a zero-initialized 4D array with the given dimensions
@@ -26,7 +26,7 @@ pub fn zeros_3d(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
 #[inline]
 #[must_use]
 pub fn zeros_4d(n0: usize, n1: usize, n2: usize, n3: usize) -> Array4<f64> {
-    Array4::zeros((n0, n1, n2, n3))
+    Array4::zeros([n0, n1, n2, n3])
 }
 
 /// Create a 3D array filled with a specific value
@@ -39,21 +39,14 @@ pub fn zeros_4d(n0: usize, n1: usize, n2: usize, n3: usize) -> Array4<f64> {
 #[inline]
 #[must_use]
 pub fn filled_3d(nx: usize, ny: usize, nz: usize, value: f64) -> Array3<f64> {
-    Array3::from_elem((nx, ny, nz), value)
+    Array3::from_elem([nx, ny, nz], value)
 }
 
-/// Clone and convert a 3D array to ensure contiguous memory layout
-///
-/// # Arguments
-/// * `array` - Array to clone and make contiguous
+/// Clone an owned 3D array (always contiguous in leto)
 #[inline]
 #[must_use]
 pub fn to_contiguous_3d(array: &Array3<f64>) -> Array3<f64> {
-    if array.is_standard_layout() {
-        array.clone()
-    } else {
-        array.to_owned()
-    }
+    array.clone()
 }
 
 #[cfg(test)]
@@ -63,14 +56,14 @@ mod tests {
     #[test]
     fn test_zeros_3d() {
         let arr = zeros_3d(2, 3, 4);
-        assert_eq!(arr.shape(), &[2, 3, 4]);
+        assert_eq!(arr.shape(), [2, 3, 4]);
         assert!(arr.iter().all(|&x| x == 0.0));
     }
 
     #[test]
     fn test_filled_3d() {
         let arr = filled_3d(2, 2, 2, 5.0);
-        assert_eq!(arr.shape(), &[2, 2, 2]);
+        assert_eq!(arr.shape(), [2, 2, 2]);
         assert!(arr.iter().all(|&x| x == 5.0));
     }
 }

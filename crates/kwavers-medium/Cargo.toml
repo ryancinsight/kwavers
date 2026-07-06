@@ -11,12 +11,12 @@ repository = "https://github.com/ryancinsight/kwavers"
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
 nalgebra = { version = "0.32" }
 num-complex = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-rayon = "1.10"
+moirai-parallel = { workspace = true }
 
 [dev-dependencies]
 approx = "0.5"

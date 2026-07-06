@@ -4,7 +4,7 @@ use super::CPMLBoundary;
 use crate::traits::{AbsorbingBoundary, BoundaryCondition, BoundaryDirections};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::{Array3, ArrayViewMut3, Zip};
+use ndarray::{Array3, ArrayViewMut3};
 
 // Implement new BoundaryCondition trait system
 impl BoundaryCondition for CPMLBoundary {
@@ -31,10 +31,13 @@ impl BoundaryCondition for CPMLBoundary {
         };
 
         // Apply damping using sigma profiles
-        Zip::indexed(field).par_for_each(|(i, j, k), val| {
-            let s_x = self.profiles.sigma_x[i];
-            let s_y = self.profiles.sigma_y[j];
-            let s_z = self.profiles.sigma_z[k];
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+            let s_x = sigma_x[i];
+            let s_y = sigma_y[j];
+            let s_z = sigma_z[k];
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
@@ -59,10 +62,13 @@ impl BoundaryCondition for CPMLBoundary {
             self.estimate_dt_from_spacing(&spacing)
         };
 
-        Zip::indexed(field).par_for_each(|(i, j, k), val| {
-            let s_x = self.profiles.sigma_x[i];
-            let s_y = self.profiles.sigma_y[j];
-            let s_z = self.profiles.sigma_z[k];
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        crate::parallel::for_each_indexed_mut(field.view_mut(), |(i, j, k), val| {
+            let s_x = sigma_x[i];
+            let s_y = sigma_y[j];
+            let s_z = sigma_z[k];
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {

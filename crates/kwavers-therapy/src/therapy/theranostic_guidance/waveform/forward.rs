@@ -1,10 +1,15 @@
 //! Forward propagation for the 2-D acoustic waveform simulation.
 
+use moirai_parallel::{
+    enumerate_mut_with, for_each_chunk_mut_enumerated_with,
+    for_each_chunk_pair_mut_enumerated_with, Adaptive,
+};
 use ndarray::Array2;
-use rayon::prelude::*;
 
 use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
 use super::utils::{linear, ricker};
+
+const WAVEFORM_FIELD_CHUNK: usize = 1024;
 
 pub(super) fn propagate(
     grid: &AcousticGrid,
@@ -19,7 +24,7 @@ pub(super) fn propagate(
     let mut psi_x = vec![0.0_f32; n];
     let mut psi_y = vec![0.0_f32; n];
 
-    let schedule = CheckpointSchedule::new(grid.time_steps);
+    let schedule = CheckpointSchedule::new(grid.time_steps, n);
     // Each slot stores a consecutive pair (previous, current) so the adjoint
     // replay can initialise the second-order scheme without the O(|p|)
     // zero-velocity error that arises when both are set to the same snapshot.
@@ -146,65 +151,55 @@ pub(super) fn step_wavefield_cpml(
     // only its own prior `psi` value and the read-only `current` neighbours, so
     // rows are independent and the per-cell arithmetic is identical to the
     // sequential form — parallelising over rows is bit-exact.
-    psi_x
-        .par_chunks_mut(ny)
-        .enumerate()
-        .for_each(|(ix, psi_row)| {
-            if ix == 0 || ix + 1 >= nx {
-                return;
-            }
-            let ax = grid.cpml.a_x[ix];
-            let bx = grid.cpml.b_x[ix];
-            if ax == 0.0 && bx == 1.0 {
-                return;
-            }
-            for iy in 0..ny {
-                let dpx = (current[linear(ix + 1, iy, ny)] - current[linear(ix - 1, iy, ny)])
-                    / (2.0 * dx);
-                psi_row[iy] = bx * psi_row[iy] + ax * dpx;
-            }
-        });
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(psi_x, ny, |ix, psi_row| {
+        if ix == 0 || ix + 1 >= nx {
+            return;
+        }
+        let ax = grid.cpml.a_x[ix];
+        let bx = grid.cpml.b_x[ix];
+        if ax == 0.0 && bx == 1.0 {
+            return;
+        }
+        for iy in 0..ny {
+            let dpx =
+                (current[linear(ix + 1, iy, ny)] - current[linear(ix - 1, iy, ny)]) / (2.0 * dx);
+            psi_row[iy] = bx * psi_row[iy] + ax * dpx;
+        }
+    });
 
-    psi_y
-        .par_chunks_mut(ny)
-        .enumerate()
-        .for_each(|(ix, psi_row)| {
-            for iy in 1..ny - 1 {
-                let ay = grid.cpml.a_y[iy];
-                let by_ = grid.cpml.b_y[iy];
-                if ay == 0.0 && by_ == 1.0 {
-                    continue;
-                }
-                let dpy = (current[linear(ix, iy + 1, ny)] - current[linear(ix, iy - 1, ny)])
-                    / (2.0 * dx);
-                psi_row[iy] = by_ * psi_row[iy] + ay * dpy;
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(psi_y, ny, |ix, psi_row| {
+        for iy in 1..ny - 1 {
+            let ay = grid.cpml.a_y[iy];
+            let by_ = grid.cpml.b_y[iy];
+            if ay == 0.0 && by_ == 1.0 {
+                continue;
             }
-        });
+            let dpy =
+                (current[linear(ix, iy + 1, ny)] - current[linear(ix, iy - 1, ny)]) / (2.0 * dx);
+            psi_row[iy] = by_ * psi_row[iy] + ay * dpy;
+        }
+    });
 
-    next.par_chunks_mut(ny)
-        .enumerate()
-        .skip(2)
-        .take(nx.saturating_sub(4))
-        .for_each(|(ix, row)| {
-            for iy in 2..ny - 2 {
-                let idx = linear(ix, iy, ny);
-                let lx = (-current[linear(ix - 2, iy, ny)]
-                    + 16.0 * current[linear(ix - 1, iy, ny)]
-                    - 30.0 * current[idx]
-                    + 16.0 * current[linear(ix + 1, iy, ny)]
-                    - current[linear(ix + 2, iy, ny)])
-                    * inv12dx2;
-                let ly = (-current[linear(ix, iy - 2, ny)]
-                    + 16.0 * current[linear(ix, iy - 1, ny)]
-                    - 30.0 * current[idx]
-                    + 16.0 * current[linear(ix, iy + 1, ny)]
-                    - current[linear(ix, iy + 2, ny)])
-                    * inv12dx2;
-                let cpml_correction = psi_x[idx] + psi_y[idx];
-                row[iy] =
-                    2.0 * current[idx] - previous[idx] + c2dt2[idx] * (lx + ly + cpml_correction);
-            }
-        });
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(next, ny, |ix, row| {
+        if ix < 2 || ix + 2 >= nx {
+            return;
+        }
+        for iy in 2..ny - 2 {
+            let idx = linear(ix, iy, ny);
+            let lx = (-current[linear(ix - 2, iy, ny)] + 16.0 * current[linear(ix - 1, iy, ny)]
+                - 30.0 * current[idx]
+                + 16.0 * current[linear(ix + 1, iy, ny)]
+                - current[linear(ix + 2, iy, ny)])
+                * inv12dx2;
+            let ly = (-current[linear(ix, iy - 2, ny)] + 16.0 * current[linear(ix, iy - 1, ny)]
+                - 30.0 * current[idx]
+                + 16.0 * current[linear(ix, iy + 1, ny)]
+                - current[linear(ix, iy + 2, ny)])
+                * inv12dx2;
+            let cpml_correction = psi_x[idx] + psi_y[idx];
+            row[iy] = 2.0 * current[idx] - previous[idx] + c2dt2[idx] * (lx + ly + cpml_correction);
+        }
+    });
 }
 
 /// Apply per-cell fractional amplitude decay (Treeby & Cox 2010, §II.A).
@@ -212,10 +207,9 @@ pub(super) fn step_wavefield_cpml(
 /// `p^{n+1}[i,j] *= (1 - α_cell[i,j])`
 #[inline]
 pub(super) fn apply_attenuation(grid: &AcousticGrid, pressure: &mut [f32]) {
-    pressure
-        .par_iter_mut()
-        .zip(grid.alpha_np_per_step.par_iter())
-        .for_each(|(p, &alpha)| *p *= 1.0 - alpha);
+    enumerate_mut_with::<Adaptive, _, _>(pressure, |idx, p| {
+        *p *= 1.0 - grid.alpha_np_per_step[idx];
+    });
 }
 
 #[inline]
@@ -224,14 +218,23 @@ pub(super) fn apply_attenuation_and_update_peak(
     pressure: &mut [f32],
     peak: &mut [f32],
 ) {
-    pressure
-        .par_iter_mut()
-        .zip(grid.alpha_np_per_step.par_iter())
-        .zip(peak.par_iter_mut())
-        .for_each(|((p, &alpha), peak_value)| {
-            *p *= 1.0 - alpha;
-            *peak_value = (*peak_value).max((*p).abs());
-        });
+    for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+        pressure,
+        peak,
+        WAVEFORM_FIELD_CHUNK,
+        |chunk_idx, pressure_chunk, peak_chunk| {
+            let offset = chunk_idx * WAVEFORM_FIELD_CHUNK;
+            for (local_idx, (p, peak_value)) in pressure_chunk
+                .iter_mut()
+                .zip(peak_chunk.iter_mut())
+                .enumerate()
+            {
+                let alpha = grid.alpha_np_per_step[offset + local_idx];
+                *p *= 1.0 - alpha;
+                *peak_value = (*peak_value).max((*p).abs());
+            }
+        },
+    );
 }
 
 /// Inject the Ricker-wavelet pressure source at all source cells.

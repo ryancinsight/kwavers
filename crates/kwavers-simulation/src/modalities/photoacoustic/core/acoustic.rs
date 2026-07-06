@@ -5,8 +5,8 @@ use kwavers_imaging::photoacoustic::{InitialPressure, PhotoacousticResult, Press
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
 };
-use kwavers_solver::reconstruction::Reconstructor;
-use ndarray::{Array2, Array3};
+use leto::Array3;
+use ndarray::Array2;
 
 use super::super::acoustics;
 use super::super::reconstruction;
@@ -97,7 +97,7 @@ impl PhotoacousticSimulator {
         let reconstructed_image = self.reconstruct_with_solver(&pressure_fields, &time_points)?;
 
         let signal_power = reconstructed_image.iter().map(|&x| x * x).sum::<f64>()
-            / reconstructed_image.len() as f64;
+            / reconstructed_image.size() as f64;
         let noise_power = 1e-12;
         let snr = 10.0 * (signal_power / noise_power).log10();
 
@@ -146,10 +146,13 @@ impl PhotoacousticSimulator {
             regularization_parameter: 0.0,
         };
 
-        let reconstructor = PhotoacousticReconstructor::new(config);
-        let recon_config = kwavers_solver::reconstruction::ReconstructionConfig::default();
-
-        reconstructor.reconstruct(&sensor_data, &detector_positions, &self.grid, &recon_config)
+        PhotoacousticReconstructor::new(config).universal_back_projection_leto(
+            sensor_data.view(),
+            &detector_positions,
+            [self.grid.nx, self.grid.ny, self.grid.nz],
+            self.parameters.speed_of_sound,
+            1.0 / (time_points[1] - time_points[0]),
+        )
     }
 
     /// Time Reversal Reconstruction (Universal Back-Projection)

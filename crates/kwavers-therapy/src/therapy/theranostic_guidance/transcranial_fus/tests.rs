@@ -58,7 +58,7 @@ fn observables_energy_positive() {
         acoustic_fus_observables(&pressure, 650_000.0, DENSITY_BRAIN, SOUND_SPEED_TISSUE, 1.9);
     assert!(intensity.iter().all(|&v| v > 0.0));
     assert!(mi.iter().all(|&v| v > 0.0));
-    assert!(cavitation.iter().all(|&v| v >= 0.0 && v <= 1.0));
+    assert!(cavitation.iter().all(|&v| (0.0..=1.0).contains(&v)));
 }
 
 #[test]
@@ -117,7 +117,7 @@ fn bbb_dose_nonnegative() {
         2.5,
     );
     assert!(dose.iter().all(|&v: &f32| v >= 0.0));
-    assert!(perm.iter().all(|&v: &f32| v >= 0.0 && v <= 1.0));
+    assert!(perm.iter().all(|&v: &f32| (0.0..=1.0).contains(&v)));
     assert!(stable.iter().all(|&v: &f32| v >= 0.0));
     assert!(inertial.iter().all(|&v: &f32| v >= 0.0));
 }

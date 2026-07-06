@@ -45,7 +45,7 @@ use medium::GpuMediumSnapshot;
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -55,6 +55,7 @@ use kwavers_solver::config::SolverConfiguration;
 use kwavers_solver::feature::SolverFeature;
 use kwavers_solver::interface::{Solver, SolverStatistics};
 use kwavers_source::{GridSource, Source};
+use leto::Array1 as LetoArray1;
 use ndarray::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::{Duration, Instant};
@@ -176,7 +177,7 @@ impl GpuPstdSimulationAdapter {
         let mut pml_z = vec![1.0f32; total];
 
         if self.pml_inside {
-            let exp_half = |sigma: &ndarray::Array1<f64>| -> Vec<f32> {
+            let exp_half = |sigma: &LetoArray1<f64>| -> Vec<f32> {
                 sigma
                     .iter()
                     .map(|&s| (-s * dt * 0.5).exp() as f32)
@@ -261,7 +262,7 @@ impl GpuPstdSimulationAdapter {
         };
 
         // ── Construct GPU solver ──────────────────────────────────────────────
-        let mut gpu_solver = GpuPstdSolver::with_auto_device(
+        let mut gpu_solver = GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
             &self.grid,
             MediumArrays {
                 c0_flat: &self.medium.c0_flat,

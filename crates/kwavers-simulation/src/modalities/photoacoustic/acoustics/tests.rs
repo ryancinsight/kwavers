@@ -9,7 +9,7 @@ use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
 use kwavers_grid::Grid;
 use kwavers_imaging::photoacoustic::InitialPressure;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_initial_pressure_computation() {
@@ -26,7 +26,7 @@ fn test_initial_pressure_computation() {
         crate::modalities::photoacoustic::optics::initialize_optical_properties(&grid, &medium)
             .unwrap();
 
-    let fluence = Array3::from_elem((16, 16, 8), 1e6);
+    let fluence = Array3::from_elem([16, 16, 8], 1e6);
 
     let initial_pressure = compute_initial_pressure(
         &grid,
@@ -37,7 +37,7 @@ fn test_initial_pressure_computation() {
     )
     .unwrap();
 
-    assert_eq!(initial_pressure.pressure.dim(), (16, 16, 8));
+    assert_eq!(initial_pressure.pressure.shape(), [16, 16, 8]);
     assert!(initial_pressure.max_pressure > 0.0);
 
     for &val in initial_pressure.pressure.iter() {
@@ -61,7 +61,7 @@ fn test_wavelength_dependent_gruneisen() {
         crate::modalities::photoacoustic::optics::initialize_optical_properties(&grid, &medium)
             .unwrap();
 
-    let fluence = Array3::from_elem((8, 8, 4), 1e6);
+    let fluence = Array3::from_elem([8, 8, 4], 1e6);
 
     let pressure_visible = compute_initial_pressure(
         &grid,
@@ -103,8 +103,8 @@ fn test_multi_wavelength_pressure() {
             .unwrap();
 
     let fluence_fields = vec![
-        Array3::from_elem((8, 8, 4), 1e6),
-        Array3::from_elem((8, 8, 4), 1.2e6),
+        Array3::from_elem([8, 8, 4], 1e6),
+        Array3::from_elem([8, 8, 4], 1.2e6),
     ];
 
     let pressures = compute_multi_wavelength_pressure(
@@ -118,7 +118,7 @@ fn test_multi_wavelength_pressure() {
 
     assert_eq!(pressures.len(), 2);
     for pressure in &pressures {
-        assert_eq!(pressure.pressure.dim(), (8, 8, 4));
+        assert_eq!(pressure.pressure.shape(), [8, 8, 4]);
         assert!(pressure.max_pressure > 0.0);
     }
 }
@@ -127,7 +127,7 @@ fn test_multi_wavelength_pressure() {
 fn test_acoustic_wave_propagation() {
     let grid = Grid::new(16, 16, 8, 0.001, 0.001, 0.001).unwrap();
 
-    let mut pressure = Array3::zeros((16, 16, 8));
+    let mut pressure = Array3::zeros([16, 16, 8]);
     pressure[[8, 8, 4]] = MPA_TO_PA;
 
     let initial_pressure = InitialPressure {
@@ -163,7 +163,7 @@ fn test_acoustic_wave_propagation() {
 fn test_cfl_condition() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
 
-    let pressure = Array3::from_elem((8, 8, 4), 1e5);
+    let pressure = Array3::from_elem([8, 8, 4], 1e5);
     let initial_pressure = InitialPressure {
         pressure: pressure.clone(),
         max_pressure: 1e5,

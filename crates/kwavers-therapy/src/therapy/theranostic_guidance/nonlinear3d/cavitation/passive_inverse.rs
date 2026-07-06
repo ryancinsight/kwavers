@@ -6,8 +6,8 @@
 //! The inverse solves the nonnegative Tikhonov problem by projected gradient
 //! descent with a fixed step bounded by the Frobenius norm of the operator.
 
+use moirai_parallel::{enumerate_mut_with, fold_reduce_with, Adaptive};
 use ndarray::Array3;
-use rayon::prelude::*;
 
 use kwavers_core::constants::SOUND_SPEED_TISSUE;
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
@@ -69,32 +69,30 @@ impl PassiveOperator {
         }
         // Row-parallel dense Green's-function fill: each row depends only on
         // the row's receiver position and reads `active` immutably.
-        values
-            .par_chunks_mut(cols)
-            .zip(aperture.receivers.par_iter())
-            .for_each(|(row_slice, receiver)| {
-                let rp = grid_point_m(*receiver, n, spacing_m);
-                let receiver_idx_f = [receiver.x as f64, receiver.y as f64, receiver.z as f64];
-                for (col, cell) in active.iter().enumerate() {
-                    let idx = grid_index(*cell, n);
-                    let vp = grid_point_m(idx, n, spacing_m);
-                    let r = (rp.x_m - vp.x_m)
-                        .hypot(rp.y_m - vp.y_m)
-                        .hypot(rp.z_m - vp.z_m)
-                        .max(min_distance_m);
-                    let source_idx_f = [idx.x as f64, idx.y as f64, idx.z as f64];
-                    let path_alpha = integrate_power_law_attenuation_along_ray(
-                        attenuation_field,
-                        power_law_y_field,
-                        source_idx_f,
-                        receiver_idx_f,
-                        spacing_m,
-                        subharmonic_mhz,
-                    );
-                    row_slice[col] =
-                        (-path_alpha).exp() * (k_subharmonic * r).cos() / (FOUR_PI * r);
-                }
-            });
+        let receivers = &aperture.receivers;
+        enumerate_mut_with::<Adaptive, _, _>(&mut values, |entry, value| {
+            let row = entry / cols;
+            let col = entry % cols;
+            let receiver = receivers[row];
+            let rp = grid_point_m(receiver, n, spacing_m);
+            let receiver_idx_f = [receiver.x as f64, receiver.y as f64, receiver.z as f64];
+            let idx = grid_index(active[col], n);
+            let vp = grid_point_m(idx, n, spacing_m);
+            let r = (rp.x_m - vp.x_m)
+                .hypot(rp.y_m - vp.y_m)
+                .hypot(rp.z_m - vp.z_m)
+                .max(min_distance_m);
+            let source_idx_f = [idx.x as f64, idx.y as f64, idx.z as f64];
+            let path_alpha = integrate_power_law_attenuation_along_ray(
+                attenuation_field,
+                power_law_y_field,
+                source_idx_f,
+                receiver_idx_f,
+                spacing_m,
+                subharmonic_mhz,
+            );
+            *value = (-path_alpha).exp() * (k_subharmonic * r).cos() / (FOUR_PI * r);
+        });
         Self { values, rows, cols }
     }
 
@@ -109,14 +107,13 @@ impl PassiveOperator {
         debug_assert_eq!(out.len(), self.rows);
         let cols = self.cols;
         if cols == 0 {
-            out.par_iter_mut().for_each(|value| *value = 0.0);
+            out.fill(0.0);
             return;
         }
-        out.par_iter_mut()
-            .zip(self.values.par_chunks(cols))
-            .for_each(|(out_value, row)| {
-                *out_value = row.iter().zip(model.iter()).map(|(a, x)| a * x).sum();
-            });
+        enumerate_mut_with::<Adaptive, _, _>(out, |row_index, out_value| {
+            let row = &self.values[row_index * cols..(row_index + 1) * cols];
+            *out_value = row.iter().zip(model.iter()).map(|(a, x)| a * x).sum();
+        });
     }
 
     pub(super) fn normal_gradient_into(
@@ -132,19 +129,22 @@ impl PassiveOperator {
         // Column-parallel A^T r + lambda * model; each grad cell sums
         // contributions from every row of `values` (the dense Green's matrix).
         let cols = self.cols;
-        grad.par_iter_mut()
-            .enumerate()
-            .for_each(|(col, grad_value)| {
-                let mut sum = lambda * model[col];
-                for (row, residual_value) in residual.iter().enumerate() {
-                    sum += self.values[row * cols + col] * residual_value;
-                }
-                *grad_value = sum;
-            });
+        enumerate_mut_with::<Adaptive, _, _>(grad, |col, grad_value| {
+            let mut sum = lambda * model[col];
+            for (row, residual_value) in residual.iter().enumerate() {
+                sum += self.values[row * cols + col] * residual_value;
+            }
+            *grad_value = sum;
+        });
     }
 
     pub(super) fn frobenius_norm_squared(&self) -> f64 {
-        self.values.par_iter().map(|value| value * value).sum()
+        fold_reduce_with::<Adaptive, f64, _, _, _>(
+            self.values.len(),
+            || 0.0,
+            |sum, i| sum + self.values[i] * self.values[i],
+            |left, right| left + right,
+        )
     }
 }
 
@@ -167,24 +167,28 @@ pub(super) fn solve_projected_tikhonov(
     let mut objective_history = Vec::with_capacity(config.cavitation_iterations);
     for _ in 0..config.cavitation_iterations {
         operator.apply_into(&model, &mut prediction);
-        residual
-            .par_iter_mut()
-            .zip(prediction.par_iter())
-            .zip(data.par_iter())
-            .for_each(|((residual_value, prediction_value), data_value)| {
-                *residual_value = prediction_value - data_value;
-            });
+        enumerate_mut_with::<Adaptive, _, _>(&mut residual, |i, residual_value| {
+            *residual_value = prediction[i] - data[i];
+        });
         objective_history.push(
-            0.5 * residual.par_iter().map(|value| value * value).sum::<f64>()
-                + 0.5 * lambda * model.par_iter().map(|value| value * value).sum::<f64>(),
+            0.5 * fold_reduce_with::<Adaptive, f64, _, _, _>(
+                residual.len(),
+                || 0.0,
+                |sum, i| sum + residual[i] * residual[i],
+                |left, right| left + right,
+            ) + 0.5
+                * lambda
+                * fold_reduce_with::<Adaptive, f64, _, _, _>(
+                    model.len(),
+                    || 0.0,
+                    |sum, i| sum + model[i] * model[i],
+                    |left, right| left + right,
+                ),
         );
         operator.normal_gradient_into(&residual, &model, lambda, &mut grad);
-        model
-            .par_iter_mut()
-            .zip(grad.par_iter())
-            .for_each(|(value, g)| {
-                *value = (*value - step * g).max(0.0);
-            });
+        enumerate_mut_with::<Adaptive, _, _>(&mut model, |i, value| {
+            *value = (*value - step * grad[i]).max(0.0);
+        });
     }
     InverseResult {
         model,
