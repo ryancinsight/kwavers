@@ -7,7 +7,8 @@ use kwavers_core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 
-use ndarray::{Array3, Zip};
+use crate::parallel::for_each_indexed_mut;
+use ndarray::Array3;
 use std::f64;
 
 /// Represents a nonlinear wave model solver.
@@ -150,7 +151,7 @@ impl NonlinearWave {
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
-        Zip::indexed(&mut k_squared).par_for_each(|(i, j, k), val| {
+        for_each_indexed_mut(k_squared.view_mut(), |(i, j, k), val| {
             *val = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
         });
 
