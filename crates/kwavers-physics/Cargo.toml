@@ -17,7 +17,7 @@ kwavers-receiver = { path = "../kwavers-receiver" }
 kwavers-source = { path = "../kwavers-source" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
 ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
 num-complex = "0.4"
 num-traits = "0.2"
