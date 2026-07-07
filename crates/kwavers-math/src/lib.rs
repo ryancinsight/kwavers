@@ -30,6 +30,7 @@ pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
 pub mod optimization;
+mod parallel;
 pub mod signal;
 pub mod simd;
 pub mod simd_safe;
