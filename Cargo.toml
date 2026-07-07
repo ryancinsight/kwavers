@@ -30,7 +30,6 @@ leto-ops = { path = "../leto/crates/leto-ops", default-features = false, feature
 eunomia = { path = "../eunomia/crates/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
-nalgebra = { version = "0.33", features = ["serde-serialize"] }
 dicom = "0.8.0"
 nifti = "0.17.0"
 anyhow = "1.0"
@@ -40,7 +39,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-ndarray = { version = "0.16", features = ["rayon"] }
+ndarray = { version = "0.16" }
 gaia = { git = "https://github.com/ryancinsight/gaia", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
