@@ -35,11 +35,11 @@
 //! ```
 
 #[cfg(feature = "pinn")]
-use burn::backend::ndarray::NdArrayDevice;
+use coeus_autograd::{mean, mul, sub, Var};
 #[cfg(feature = "pinn")]
-use burn::backend::{Autodiff, NdArray};
+use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]
-use burn::tensor::Tensor;
+use coeus_tensor::Tensor;
 #[cfg(feature = "pinn")]
 use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "pinn")]
@@ -50,7 +50,7 @@ use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D};
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
-type AutodiffBackend = Autodiff<NdArray>;
+type AutodiffBackend = MoiraiBackend;
 
 /// Training parameters for PINN experiments
 #[cfg(feature = "pinn")]
@@ -148,7 +148,6 @@ fn train_pinn(
     inputs: &[[f64; 3]],
     targets: &[[f64; 2]],
     config: &ExperimentConfig,
-    device: &NdArrayDevice,
 ) -> KwaversResult<(ElasticPINN2D<AutodiffBackend>, Vec<f64>)> {
     println!("Starting PINN training...");
     println!("Configuration: {:?}", config);
@@ -197,26 +196,35 @@ fn train_pinn(
         .flat_map(|u| [u[0] as f32, u[1] as f32])
         .collect();
 
-    let t_tensor = Tensor::<AutodiffBackend, 2>::from_floats(t_data.as_slice(), device)
-        .reshape([inputs.len(), 1]);
-    let x_tensor = Tensor::<AutodiffBackend, 2>::from_floats(x_data.as_slice(), device)
-        .reshape([inputs.len(), 1]);
-    let y_tensor = Tensor::<AutodiffBackend, 2>::from_floats(y_data.as_slice(), device)
-        .reshape([inputs.len(), 1]);
-    let target_tensor = Tensor::<AutodiffBackend, 2>::from_floats(target_data.as_slice(), device)
-        .reshape([targets.len(), 2]);
+    let backend = AutodiffBackend::default();
+    let t_tensor = Var::new(
+        Tensor::from_slice_on(vec![inputs.len(), 1], t_data.as_slice(), &backend),
+        false,
+    );
+    let x_tensor = Var::new(
+        Tensor::from_slice_on(vec![inputs.len(), 1], x_data.as_slice(), &backend),
+        false,
+    );
+    let y_tensor = Var::new(
+        Tensor::from_slice_on(vec![inputs.len(), 1], y_data.as_slice(), &backend),
+        false,
+    );
+    let target_tensor = Var::new(
+        Tensor::from_slice_on(vec![targets.len(), 2], target_data.as_slice(), &backend),
+        false,
+    );
 
     let start_time = Instant::now();
 
     for epoch in 0..config.epochs {
-        let predicted = model.forward(x_tensor.clone(), y_tensor.clone(), t_tensor.clone());
+        let predicted = model.forward(&x_tensor, &y_tensor, &t_tensor);
+        let diff = sub(&predicted, &target_tensor);
+        let sq = mul(&diff, &diff);
+        let loss = mean(&sq);
+        loss.backward();
+        optimizer.step(&mut model);
 
-        let diff = predicted - target_tensor.clone();
-        let loss = (diff.clone() * diff).mean();
-        let grads = loss.backward();
-        model = optimizer.step(model, grads);
-
-        let loss_value: f64 = f64::from(loss.into_scalar());
+        let loss_value = loss.tensor.as_slice()[0] as f64;
         loss_history.push(loss_value);
 
         if epoch % 100 == 0 {
@@ -256,14 +264,13 @@ fn h_refinement_study(
         let (inputs, targets) = generate_training_data(solution, num_points, domain_size, t_max);
 
         // Create model
-        let device = NdArrayDevice::default();
         let pinn_config = Config {
             hidden_layers: vec![64, 64, 64, 64],
             learning_rate: 1e-3,
             n_epochs: 500,
             ..Default::default()
         };
-        let model = ElasticPINN2D::<AutodiffBackend>::new(&pinn_config, &device)?;
+        let model = ElasticPINN2D::<AutodiffBackend>::new(&pinn_config)?;
 
         // Training config
         let config = ExperimentConfig {
@@ -273,7 +280,7 @@ fn h_refinement_study(
         };
 
         // Train model
-        let (_model, loss_history) = train_pinn(model, &inputs, &targets, &config, &device)?;
+        let (_model, loss_history) = train_pinn(model, &inputs, &targets, &config)?;
 
         // Compute final error
         let final_loss = loss_history.last().copied().unwrap_or(f64::INFINITY);
@@ -303,53 +310,67 @@ fn h_refinement_study(
 fn validate_gradients(
     model: &ElasticPINN2D<AutodiffBackend>,
     test_point: [f64; 3],
-    device: &NdArrayDevice,
 ) -> KwaversResult<()> {
     println!("\n=== Gradient Validation ===");
 
     let eps = 1e-5;
+    let backend = AutodiffBackend::default();
 
-    let t = Tensor::<AutodiffBackend, 2>::from_floats([test_point[0] as f32].as_ref(), device)
-        .reshape([1, 1]);
-    let x = Tensor::<AutodiffBackend, 2>::from_floats([test_point[1] as f32].as_ref(), device)
-        .reshape([1, 1])
-        .require_grad();
-    let y = Tensor::<AutodiffBackend, 2>::from_floats([test_point[2] as f32].as_ref(), device)
-        .reshape([1, 1]);
+    let t = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [test_point[0] as f32].as_ref(), &backend),
+        false,
+    );
+    let x = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [test_point[1] as f32].as_ref(), &backend),
+        true,
+    );
+    let y = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [test_point[2] as f32].as_ref(), &backend),
+        false,
+    );
 
-    let output = model.forward(x.clone(), y, t);
-    let u_x = output.slice([0..1, 0..1]).mean();
-    let grads = u_x.backward();
+    let output = model.forward(&x, &y, &t);
+    let u_x = mean(&output);
+    u_x.backward();
     let x_grad_tensor = x
-        .grad(&grads)
+        .grad()
         .ok_or_else(|| KwaversError::InvalidInput("missing gradient for x tensor".to_string()))?;
-    let autodiff_grad_x: f64 = f64::from(x_grad_tensor.mean().into_scalar());
+    let autodiff_grad_x = x_grad_tensor.as_slice()[0] as f64;
 
     // Finite-difference gradient
     let mut point_plus = test_point;
     point_plus[1] += eps;
-    let t_plus = Tensor::<AutodiffBackend, 2>::from_floats([point_plus[0] as f32].as_ref(), device)
-        .reshape([1, 1]);
-    let x_plus = Tensor::<AutodiffBackend, 2>::from_floats([point_plus[1] as f32].as_ref(), device)
-        .reshape([1, 1]);
-    let y_plus = Tensor::<AutodiffBackend, 2>::from_floats([point_plus[2] as f32].as_ref(), device)
-        .reshape([1, 1]);
-    let output_plus = model.forward(x_plus, y_plus, t_plus);
-    let u_plus: f64 = f64::from(output_plus.slice([0..1, 0..1]).mean().into_scalar());
+    let t_plus = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [point_plus[0] as f32].as_ref(), &backend),
+        false,
+    );
+    let x_plus = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [point_plus[1] as f32].as_ref(), &backend),
+        false,
+    );
+    let y_plus = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [point_plus[2] as f32].as_ref(), &backend),
+        false,
+    );
+    let output_plus = model.forward(&x_plus, &y_plus, &t_plus);
+    let u_plus = output_plus.tensor.as_slice()[0] as f64;
 
     let mut point_minus = test_point;
     point_minus[1] -= eps;
-    let t_minus =
-        Tensor::<AutodiffBackend, 2>::from_floats([point_minus[0] as f32].as_ref(), device)
-            .reshape([1, 1]);
-    let x_minus =
-        Tensor::<AutodiffBackend, 2>::from_floats([point_minus[1] as f32].as_ref(), device)
-            .reshape([1, 1]);
-    let y_minus =
-        Tensor::<AutodiffBackend, 2>::from_floats([point_minus[2] as f32].as_ref(), device)
-            .reshape([1, 1]);
-    let output_minus = model.forward(x_minus, y_minus, t_minus);
-    let u_minus: f64 = f64::from(output_minus.slice([0..1, 0..1]).mean().into_scalar());
+    let t_minus = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [point_minus[0] as f32].as_ref(), &backend),
+        false,
+    );
+    let x_minus = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [point_minus[1] as f32].as_ref(), &backend),
+        false,
+    );
+    let y_minus = Var::new(
+        Tensor::from_slice_on(vec![1, 1], [point_minus[2] as f32].as_ref(), &backend),
+        false,
+    );
+    let output_minus = model.forward(&x_minus, &y_minus, &t_minus);
+    let u_minus = output_minus.tensor.as_slice()[0] as f64;
 
     let fd_grad_x = (u_plus - u_minus) / (2.0 * eps);
 
@@ -406,20 +427,19 @@ fn main() -> KwaversResult<()> {
     let (inputs, targets) = generate_training_data(&solution, num_points, domain_size, t_max);
     println!("Generated {} training samples", inputs.len());
 
-    let device = NdArrayDevice::default();
     let pinn_config = Config {
         hidden_layers: vec![64, 64, 64, 64],
         learning_rate: 1e-3,
         n_epochs: 1000,
         ..Default::default()
     };
-    let model = ElasticPINN2D::<AutodiffBackend>::new(&pinn_config, &device)?;
+    let model = ElasticPINN2D::<AutodiffBackend>::new(&pinn_config)?;
 
     let config = ExperimentConfig::default();
-    let (model, _loss_history) = train_pinn(model, &inputs, &targets, &config, &device)?;
+    let (model, _loss_history) = train_pinn(model, &inputs, &targets, &config)?;
 
     // Gradient validation (on trained model)
-    validate_gradients(&model, [0.0, 0.025, 0.025], &device)?;
+    validate_gradients(&model, [0.0, 0.025, 0.025])?;
 
     // H-refinement study
     let resolutions = vec![16, 32, 64];

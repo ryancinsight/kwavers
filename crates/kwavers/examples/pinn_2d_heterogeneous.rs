@@ -33,10 +33,10 @@ use ndarray::{Array1, Array2};
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
-use burn::backend::NdArray;
+use coeus_core::MoiraiBackend;
 
 #[cfg(feature = "pinn")]
-type Backend = burn::backend::Autodiff<NdArray<f32>>;
+type Backend = MoiraiBackend;
 
 /// Layered medium wave speed function
 /// c(x,y) = 1500 m/s (water) for y < 0.5, 3000 m/s (tissue) for y >= 0.5
@@ -187,9 +187,8 @@ fn main() -> KwaversResult<()> {
     println!("   Training epochs: {}", epochs);
     println!();
 
-    // Initialize Burn backend
-    let device: <Backend as burn::tensor::backend::Backend>::Device = Default::default();
-    println!("🔥 Burn Backend: Initialized (CPU with Autodiff)");
+    // Initialize backend
+    println!("🔥 Backend: Moirai (CPU)");
     println!();
 
     // Create PINN configuration optimized for heterogeneous media
@@ -248,7 +247,6 @@ fn main() -> KwaversResult<()> {
         let _pinn = BurnPINN2DWave::<Backend>::new_heterogeneous(
             pinn_config.clone(),
             wave_speed_fn,
-            &device,
         )?;
         println!("✅ Heterogeneous PINN: Created successfully");
         println!();
@@ -267,8 +265,7 @@ fn main() -> KwaversResult<()> {
         println!("   Test points: {}", x_test.len());
 
         // Create trainer
-        let trainer =
-            BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
+        let trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry)?;
         println!("✅ PINN Trainer: Created successfully");
         println!();
 
@@ -283,7 +280,6 @@ fn main() -> KwaversResult<()> {
             &u_train,
             1500.0, // Default fallback (not used in heterogeneous mode)
             &pinn_config,
-            &device,
             epochs,
         )?;
         let training_time = start_time.elapsed();
@@ -309,7 +305,7 @@ fn main() -> KwaversResult<()> {
         println!();
 
         // Make predictions
-        let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test, &device)?;
+        let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test)?;
         println!("   Predictions completed");
 
         // Compute error statistics

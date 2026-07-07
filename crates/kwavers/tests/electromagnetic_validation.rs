@@ -17,7 +17,7 @@
 //! 2. Or refactor imports to use existing PINN architecture
 
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 use kwavers_solver::inverse::pinn::ml::electromagnetic::{EMProblemType, ElectromagneticDomain};
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
@@ -26,17 +26,17 @@ use kwavers_solver::inverse::pinn::ml::physics::{
 };
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 use kwavers_solver::inverse::pinn::ml::PinnEMSource;
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 use std::collections::HashMap;
 
-#[cfg(feature = "pinn")]
-type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
+type TestBackend = coeus_core::MoiraiBackend;
 
 // ============================================================================
 // ELECTROSTATIC FIELD VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_electrostatic_laplace_equation() {
     // Test electrostatic field solution for Laplace equation ∇²φ = 0
@@ -49,37 +49,6 @@ fn validate_electrostatic_laplace_equation() {
         0.0,                         // σ
         vec![2.0, 2.0],              // domain size
     );
-
-    // Create test points
-    let x_vals: Vec<f32> = vec![0.25, 0.5, 0.75];
-    let y_vals: Vec<f32> = vec![0.25, 0.5, 0.75];
-    let mut x_tensor = Vec::new();
-    let mut y_tensor = Vec::new();
-    let mut t_tensor = Vec::new();
-
-    for &x in &x_vals {
-        for &y in &y_vals {
-            x_tensor.push(x);
-            y_tensor.push(y);
-            t_tensor.push(0.0); // time-independent
-        }
-    }
-
-    let device = Default::default();
-
-    let _x = Tensor::<TestBackend, 1>::from_floats(x_tensor.as_slice(), &device)
-        .reshape([x_tensor.len(), 1]);
-    let _y = Tensor::<TestBackend, 1>::from_floats(y_tensor.as_slice(), &device)
-        .reshape([y_tensor.len(), 1]);
-    let _t = Tensor::<TestBackend, 1>::from_floats(t_tensor.as_slice(), &device)
-        .reshape([t_tensor.len(), 1]);
-
-    let _physics_params = PhysicsParameters {
-        material_properties: HashMap::new(),
-        domain_params: HashMap::new(),
-        boundary_values: HashMap::new(),
-        initial_values: HashMap::new(),
-    };
 
     // Test that domain can be created and validated
     assert!(
@@ -108,7 +77,7 @@ fn validate_electrostatic_laplace_equation() {
     );
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_electrostatic_poisson_equation() {
     // Test electrostatic field solution for Poisson equation ∇²φ = -ρ/ε
@@ -126,9 +95,9 @@ fn validate_electrostatic_poisson_equation() {
     assert!(domain.validate().is_ok());
 
     // Test that charge density computation doesn't panic
-    let device = Default::default();
-    let x = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
-    let y = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
+    let backend = TestBackend::default();
+    let x = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
+    let y = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
 
     let physics_params = PhysicsParameters {
         material_properties: HashMap::new(),
@@ -160,7 +129,7 @@ fn validate_electrostatic_poisson_equation() {
     }
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_magnetostatic_vector_potential() {
     // Test magnetostatic field solution using vector potential A
@@ -177,9 +146,9 @@ fn validate_magnetostatic_vector_potential() {
     assert!(domain.validate().is_ok());
 
     // Test current density computation
-    let device = Default::default();
-    let x = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
-    let y = Tensor::<TestBackend, 2>::from_floats([0.25, 0.5, 0.75, 1.0], &device).reshape([4, 1]);
+    let backend = TestBackend::default();
+    let x = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
+    let y = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
 
     let physics_params = PhysicsParameters {
         material_properties: HashMap::new(),
@@ -215,7 +184,7 @@ fn validate_magnetostatic_vector_potential() {
 // TIME-HARMONIC ELECTROMAGNETIC WAVE VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_time_harmonic_wave_equation() {
     // Test time-harmonic electromagnetic waves ∇×∇×E - k²E = 0
@@ -256,7 +225,7 @@ fn validate_time_harmonic_wave_equation() {
     );
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_maxwell_equations_consistency() {
     // Test consistency of Maxwell's equations implementation
@@ -309,7 +278,7 @@ fn validate_maxwell_equations_consistency() {
 // BOUNDARY CONDITION VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_perfect_electric_conductor_boundary() {
     // Test PEC boundary condition: E_tangential = 0
@@ -343,7 +312,7 @@ fn validate_perfect_electric_conductor_boundary() {
     );
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_perfect_magnetic_conductor_boundary() {
     // Test PMC boundary condition: H_tangential = 0
@@ -381,7 +350,7 @@ fn validate_perfect_magnetic_conductor_boundary() {
 // MATERIAL PROPERTY VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_material_properties() {
     // Test material property validation and speed of light calculation
@@ -442,7 +411,7 @@ fn validate_material_properties() {
     );
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_domain_builder_methods() {
     // Test domain builder pattern and configuration methods
@@ -477,7 +446,7 @@ fn validate_domain_builder_methods() {
 // PERFORMANCE AND SCALING VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_domain_scaling_properties() {
     // Test that domain properties scale appropriately with problem size
@@ -509,7 +478,7 @@ fn validate_domain_scaling_properties() {
     assert!((small_domain.c - large_domain.c).abs() < 1e-10);
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_problem_type_consistency() {
     // Test that different problem types maintain consistent interfaces
@@ -570,7 +539,7 @@ fn validate_problem_type_consistency() {
 // INTEGRATION WITH PINN FRAMEWORK
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_pinn_integration_interface() {
     // Test integration with PINN framework physics domain interface
@@ -608,7 +577,7 @@ fn validate_pinn_integration_interface() {
     assert!(domain.coupling_interfaces().is_empty());
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_physics_parameter_handling() {
     // Test physics parameter handling and material property updates
@@ -648,7 +617,7 @@ fn validate_physics_parameter_handling() {
 // ANALYTICAL SOLUTION VALIDATION
 // ============================================================================
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_analytical_electrostatic_solution() {
     // Test against analytical solution for electrostatic potential between plates
@@ -676,7 +645,7 @@ fn validate_analytical_electrostatic_solution() {
     assert!(!bc_specs.is_empty());
 }
 
-#[cfg(feature = "pinn")]
+#[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 #[test]
 fn validate_wave_propagation_setup() {
     // Test wave propagation domain setup and validation

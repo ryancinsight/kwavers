@@ -4,7 +4,7 @@
 //! showing how pre-trained models can be efficiently adapted to new physics scenarios.
 
 #[cfg(feature = "pinn")]
-use burn::backend::{Autodiff, NdArray};
+use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::transfer_learning::{
     FreezeStrategy, TransferLearner, TransferLearningConfig,
@@ -16,10 +16,9 @@ use kwavers_solver::inverse::pinn::ml::{
 
 #[cfg(feature = "pinn")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    type Backend = Autodiff<NdArray<f32>>;
-    let device = Default::default();
+    type Backend = MoiraiBackend;
 
-    let source_model = BurnPINN2DWave::<Backend>::new(BurnPINN2DConfig::default(), &device)?;
+    let source_model = BurnPINN2DWave::<Backend>::new(BurnPINN2DConfig::default())?;
 
     let transfer_config = TransferLearningConfig {
         fine_tune_lr: 1e-4,

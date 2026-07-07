@@ -1,16 +1,14 @@
 #[cfg(feature = "pinn")]
-use burn::backend::{Autodiff, NdArray};
+use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]
-use burn::tensor::Tensor;
+use coeus_tensor::Tensor;
 #[cfg(feature = "pinn")]
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-#[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::AdaptiveCollocationSampler;
 #[cfg(feature = "pinn")]
 use std::time::Duration;
 
 #[cfg(feature = "pinn")]
-type Backend = Autodiff<NdArray<f32>>;
+type Backend = MoiraiBackend;
 
 #[cfg(feature = "pinn")]
 fn benchmark_split_coordinates(c: &mut Criterion) {
@@ -24,14 +22,13 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
         group.throughput(Throughput::Elements(size as u64));
 
         // Create random points tensor [size, 3]
-        let device = Default::default();
+        let backend = Backend::default();
         let points_data: Vec<f32> = (0..size * 3).map(|_| rand::random::<f32>()).collect();
-        let points =
-            Tensor::<Backend, 1>::from_floats(points_data.as_slice(), &device).reshape([size, 3]);
+        let points = Tensor::<f32, Backend>::from_slice_on(vec![size, 3], &points_data, &backend);
 
         group.bench_with_input(BenchmarkId::new("slow_cpu", size), &size, |b, _| {
             b.iter(|| {
-                let (x, y, t) = split_coordinates_slow(black_box(&points));
+                let (x, y, t) = split_coordinates_slow(black_box(&points), &backend);
                 black_box((x, y, t));
             });
         });
@@ -49,11 +46,12 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
 
 #[cfg(feature = "pinn")]
 fn split_coordinates_slow(
-    points: &Tensor<Backend, 2>,
-) -> (Tensor<Backend, 1>, Tensor<Backend, 1>, Tensor<Backend, 1>) {
-    let points_data = points.clone().to_data();
-    let values = points_data.to_vec::<f32>().unwrap_or_default();
-    let total_points = points.shape().dims[0];
+    points: &Tensor<f32, Backend>,
+    backend: &Backend,
+) -> (Tensor<f32, Backend>, Tensor<f32, Backend>, Tensor<f32, Backend>) {
+    let values = points.to_contiguous();
+    let values = values.as_slice();
+    let total_points = points.shape()[0];
     let mut x_coords = Vec::with_capacity(total_points);
     let mut y_coords = Vec::with_capacity(total_points);
     let mut t_coords = Vec::with_capacity(total_points);
@@ -66,22 +64,30 @@ fn split_coordinates_slow(
         }
     }
 
-    let device = points.device();
-    let x = Tensor::<Backend, 1>::from_floats(x_coords.as_slice(), &device);
-    let y = Tensor::<Backend, 1>::from_floats(y_coords.as_slice(), &device);
-    let t = Tensor::<Backend, 1>::from_floats(t_coords.as_slice(), &device);
+    let x = Tensor::from_slice_on(vec![total_points], &x_coords, backend);
+    let y = Tensor::from_slice_on(vec![total_points], &y_coords, backend);
+    let t = Tensor::from_slice_on(vec![total_points], &t_coords, backend);
 
     (x, y, t)
 }
 
 #[cfg(feature = "pinn")]
 fn split_coordinates_fast(
-    points: &Tensor<Backend, 2>,
-) -> (Tensor<Backend, 1>, Tensor<Backend, 1>, Tensor<Backend, 1>) {
-    let total_points = points.shape().dims[0];
-    let x = points.clone().slice([0..total_points, 0..1]).flatten(0, 1);
-    let y = points.clone().slice([0..total_points, 1..2]).flatten(0, 1);
-    let t = points.clone().slice([0..total_points, 2..3]).flatten(0, 1);
+    points: &Tensor<f32, Backend>,
+) -> (Tensor<f32, Backend>, Tensor<f32, Backend>, Tensor<f32, Backend>) {
+    let total_points = points.shape()[0];
+    let x = points
+        .slice(&[(0, total_points), (0, 1)])
+        .to_contiguous()
+        .reshape(vec![total_points]);
+    let y = points
+        .slice(&[(0, total_points), (1, 2)])
+        .to_contiguous()
+        .reshape(vec![total_points]);
+    let t = points
+        .slice(&[(0, total_points), (2, 3)])
+        .to_contiguous()
+        .reshape(vec![total_points]);
     (x, y, t)
 }
 
