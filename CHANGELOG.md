@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Changed (2026-07-07) - kwavers-physics acoustic heat-source Moirai traversal [patch]
+- [patch] Routed `acoustics::conservation::heat::acoustic_heat_source` through
+  the crate-local Moirai-backed `parallel` traversal SSOT instead of direct
+  ndarray/Rayon `Zip::par_for_each`. Added `zip_mut_five_refs` so heat-source
+  output consumes pressure, velocity magnitude, density, sound speed, and
+  absorption in one pass. Verification: `rustup run nightly cargo check -p
+  kwavers-physics --lib` passed; `rustup run nightly cargo nextest run -p
+  kwavers-physics heat_source --status-level fail` passed 9/9 with 1704
+  skipped; and a scoped source audit found no `Zip|par_for_each|rayon` tokens
+  in `heat.rs`. Residual direct solver/physics `.par_for_each` holdouts are now
+  49 sites outside RTM inherent, sonogenetics, and acoustic heat-source
+  traversal; `cargo clippy -p kwavers-physics --lib -- -D warnings` is blocked
+  before this package by local dependency `ritk-transform` Burn `Module` derive
+  errors in the concurrent RITK provider migration diff.
+
 ### Changed (2026-07-07) - kwavers-physics sonogenetics Moirai traversal [patch]
 - [patch] Routed `acoustics::therapy::sonogenetics` gating and volumetric ARF
   field traversal through the crate-local Moirai-backed `parallel` traversal
@@ -12,8 +27,9 @@
   nextest run -p kwavers-physics sonogenetics --status-level fail` passed 53/53
   with 1660 skipped; and a scoped source audit found no
   `Zip|par_for_each|rayon` tokens under the sonogenetics cone. Residual direct
-  solver/physics `.par_for_each` holdouts are now 51 sites outside RTM inherent
-  and sonogenetics; `cargo clippy -p kwavers-physics --lib -- -D warnings` is
+  solver/physics `.par_for_each` holdouts are now 49 sites outside RTM inherent,
+  sonogenetics, and acoustic heat-source traversal; `cargo clippy -p
+  kwavers-physics --lib -- -D warnings` is
   blocked before this package by pre-existing `kwavers-math` dead-code
   diagnostics in the concurrent eigendecomposition Leto-vs-ndarray migration
   diff.
@@ -27,8 +43,9 @@
   kwavers-solver --lib` passed; `rustup run nightly cargo nextest run -p
   kwavers-solver rtm --status-level fail` passed 10/10 with 916 skipped; and a
   scoped source audit found no `Zip|par_for_each|rayon` tokens under the RTM
-  inherent cone. Residual direct ndarray/Rayon solver/physics holdouts are 51
-  `.par_for_each` sites outside RTM inherent and sonogenetics; `cargo fmt -p
+  inherent cone. Residual direct ndarray/Rayon solver/physics holdouts are 49
+  `.par_for_each` sites outside RTM inherent, sonogenetics, and acoustic
+  heat-source traversal; `cargo fmt -p
   kwavers-solver
   --check` remains blocked by pre-existing formatting drift in
   `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`, and

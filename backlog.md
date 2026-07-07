@@ -3,6 +3,26 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## DONE: kwavers-physics acoustic heat-source Moirai traversal [patch]
+
+Routed `crates/kwavers-physics/src/acoustics/conservation/heat.rs` through the
+crate-local Moirai-backed `parallel` traversal SSOT instead of direct
+ndarray/Rayon `Zip::par_for_each`. Added the missing `zip_mut_five_refs`
+traversal arity so heat-source output can consume pressure, velocity magnitude,
+density, sound speed, and absorption in one pass.
+
+Evidence tier: compile-time integration, focused empirical tests, and static
+source audit. `rustup run nightly cargo check -p kwavers-physics --lib` passed;
+`rustup run nightly cargo nextest run -p kwavers-physics heat_source
+--status-level fail` passed 9/9 with 1704 skipped; scoped source audit found no
+`Zip|par_for_each|rayon` hits in `heat.rs`.
+
+Residual: broader `kwavers-solver`/`kwavers-physics` direct `.par_for_each`
+holdouts are now 49 sites outside RTM inherent, sonogenetics, and acoustic
+heat-source traversal. Package clippy remains blocked before this package by
+local dependency `ritk-transform` Burn `Module` derive errors in the concurrent
+RITK provider migration diff.
+
 ## DONE: kwavers-physics sonogenetics Moirai traversal [patch]
 
 Routed `crates/kwavers-physics/src/acoustics/therapy/sonogenetics` gating and
@@ -19,7 +39,8 @@ source audit. `rustup run nightly cargo check -p kwavers-physics --lib` passed;
 no `Zip|par_for_each|rayon` hits under the sonogenetics cone.
 
 Residual: broader `kwavers-solver`/`kwavers-physics` direct `.par_for_each`
-holdouts are now 51 sites outside RTM inherent and sonogenetics. Package clippy
+holdouts are now 49 sites outside RTM inherent, sonogenetics, and acoustic
+heat-source traversal. Package clippy
 is blocked before this package by pre-existing `kwavers-math` dead-code
 diagnostics in the concurrent eigendecomposition Leto-vs-ndarray migration diff.
 
@@ -38,7 +59,8 @@ fail` passed 10/10 with 916 skipped; and scoped source audit found no
 `Zip|par_for_each|rayon` hits under the RTM inherent cone.
 
 Residual: broader `kwavers-solver`/`kwavers-physics` direct ndarray/Rayon
-holdouts remain outside RTM inherent and sonogenetics: 51 `.par_for_each`
+holdouts remain outside RTM inherent, sonogenetics, and acoustic heat-source
+traversal: 49 `.par_for_each`
 sites, enumerated in
 `gap_audit.md`. Package fmt is still blocked by pre-existing formatting drift in
 `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`; package

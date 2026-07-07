@@ -1,6 +1,8 @@
 //! Acoustic-to-thermal coupling source terms.
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
+
+use crate::parallel::{zip_mut_five_refs, zip_mut_three_refs};
 
 /// Compute volumetric heat source from acoustic absorption [W/m^3].
 ///
@@ -20,30 +22,34 @@ pub fn acoustic_heat_source(
     absorption: &Array3<f64>,
 ) -> Array3<f64> {
     let shape = pressure.dim();
-    // Pass 1: |v|² per cell (≤6 Zip arity limit: 3 velocity + 1 output = 4 total).
+    // Pass 1: |v|² per cell.
     let mut v_sq = Array3::zeros(shape);
-    Zip::from(&mut v_sq)
-        .and(velocity_x)
-        .and(velocity_y)
-        .and(velocity_z)
-        .par_for_each(|vs, &vx, &vy, &vz| {
+    zip_mut_three_refs(
+        v_sq.view_mut(),
+        velocity_x.view(),
+        velocity_y.view(),
+        velocity_z.view(),
+        |vs: &mut f64, &vx: &f64, &vy: &f64, &vz: &f64| {
             *vs = vz.mul_add(vz, vx.mul_add(vx, vy * vy));
-        });
-    // Pass 2: Q = 2αce  where  e = P²/(2ρc²) + ½ρ|v|²  (6 arrays: q,p,v_sq,ρ,c,α).
+        },
+    );
+    // Pass 2: Q = 2αce where e = P²/(2ρc²) + ½ρ|v|².
     let mut q = Array3::zeros(shape);
-    Zip::from(&mut q)
-        .and(pressure)
-        .and(&v_sq)
-        .and(density)
-        .and(sound_speed)
-        .and(absorption)
-        .par_for_each(|qv, &p, &vs, &rho, &c, &alpha| {
+    zip_mut_five_refs(
+        q.view_mut(),
+        pressure.view(),
+        v_sq.view(),
+        density.view(),
+        sound_speed.view(),
+        absorption.view(),
+        |qv: &mut f64, &p: &f64, &vs: &f64, &rho: &f64, &c: &f64, &alpha: &f64| {
             if rho > 0.0 && c > 0.0 {
                 let energy_density =
                     (0.5 * rho).mul_add(vs, super::acoustic_potential_energy_density(p, rho, c));
                 *qv = 2.0 * alpha * c * energy_density;
             }
-        });
+        },
+    );
     q
 }
 

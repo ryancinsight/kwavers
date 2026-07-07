@@ -14,6 +14,23 @@ do not assert an unconfirmed physics error.
 
 ### Atlas provider migration residuals (2026-07-01)
 
+- **kwavers-physics acoustic heat-source direct ndarray/Rayon edge - RESOLVED [patch].**
+  `acoustics::conservation::heat::acoustic_heat_source` now routes through the
+  crate-local Moirai-backed `parallel` traversal SSOT instead of direct
+  ndarray/Rayon `Zip::par_for_each`. `parallel.rs` now owns the missing
+  `zip_mut_five_refs` arity so heat-source output consumes pressure, velocity
+  magnitude, density, sound speed, and absorption in one pass. Evidence tier:
+  compile-time integration, focused empirical tests, and static source audit.
+  `rustup run nightly cargo check -p kwavers-physics --lib` passed; `rustup run
+  nightly cargo nextest run -p kwavers-physics heat_source --status-level fail`
+  passed 9/9 with 1704 skipped; scoped `rg` found no
+  `Zip|par_for_each|rayon` hits in
+  `crates/kwavers-physics/src/acoustics/conservation/heat.rs`.
+  Residual: broader solver/physics direct `.par_for_each` holdouts are now 49
+  sites outside RTM inherent, sonogenetics, and acoustic heat-source traversal.
+  Package clippy remains blocked before this package by local dependency
+  `ritk-transform` Burn `Module` derive errors in the concurrent RITK provider
+  migration diff.
 - **kwavers-physics sonogenetics direct ndarray/Rayon edge - RESOLVED [patch].**
   `acoustics::therapy::sonogenetics` gating and volumetric ARF field traversal
   now route through the crate-local Moirai-backed `parallel` traversal SSOT
@@ -27,8 +44,9 @@ do not assert an unconfirmed physics error.
   fail` passed 53/53 with 1660 skipped; scoped `rg` found no
   `Zip|par_for_each|rayon` hits under
   `crates/kwavers-physics/src/acoustics/therapy/sonogenetics`.
-  Residual: broader solver/physics direct `.par_for_each` holdouts are now 51
-  sites outside RTM inherent and sonogenetics. Package clippy is blocked before
+  Residual: broader solver/physics direct `.par_for_each` holdouts are now 49
+  sites outside RTM inherent, sonogenetics, and acoustic heat-source traversal.
+  Package clippy is blocked before
   this package by pre-existing `kwavers-math` dead-code diagnostics in the
   concurrent eigendecomposition Leto-vs-ndarray migration diff.
 - **kwavers-solver RTM inherent direct ndarray/Rayon edge - RESOLVED [patch].**
@@ -43,7 +61,8 @@ do not assert an unconfirmed physics error.
   10/10 with 916 skipped; scoped `rg` found no `Zip|par_for_each|rayon` hits
   under `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`.
   Residual: broader solver/physics direct ndarray/Rayon holdouts remain outside
-  RTM inherent and sonogenetics: 51 `.par_for_each` sites across
+  RTM inherent, sonogenetics, and acoustic heat-source traversal: 49
+  `.par_for_each` sites across
   `crates/kwavers-solver/src/forward/elastic/swe/stress/divergence.rs`,
   `crates/kwavers-solver/src/forward/elastic/swe/integration/integrator/mod.rs`,
   `crates/kwavers-solver/src/forward/nonlinear/westervelt_spectral/spectral.rs`,
@@ -51,7 +70,6 @@ do not assert an unconfirmed physics error.
   `crates/kwavers-solver/src/forward/nonlinear/kuznetsov/solver/{rhs,model_impl}.rs`,
   `crates/kwavers-solver/src/forward/pstd/extensions/{elastic,elastic_orchestrator/pml/mod}.rs`,
   `crates/kwavers-solver/src/multiphysics/fluid_structure/{interface,solver/struct_impl}.rs`,
-  `crates/kwavers-physics/src/acoustics/conservation/heat.rs`,
   `crates/kwavers-physics/src/acoustics/mechanics/acoustic_wave/nonlinear/{wave_model,numerical_methods/spectral/mod,numerical_methods/nonlinear_term}.rs`,
   and `crates/kwavers-physics/src/acoustics/mechanics/cavitation/damage/model.rs`.
   Package fmt is still blocked by pre-existing formatting drift in
