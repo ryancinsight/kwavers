@@ -87,24 +87,29 @@
 //! ## Examples
 //!
 //! ```rust,ignore
-//! use burn::backend::{Autodiff, NdArray};
-//! use burn::tensor::Tensor;
+//! use coeus_autograd::Var;
 //!
-//! type Backend = Autodiff<NdArray<f32>>;
+//! type Backend = coeus_core::MoiraiBackend;
+//! let backend = Backend::default();
 //!
-//! let device = Default::default();
 //! let config = BurnPINNConfig::default();
-//! let pinn = BurnPINN1DWave::<Backend>::new(config, &device)?;
+//! let pinn = BurnPINN1DWave::<Backend>::new(config)?;
 //!
-//! // Collocation points for PDE residual
-//! let x_colloc = Tensor::<Backend, 2>::from_floats([[0.5], [0.6], [0.7]], &device);
-//! let t_colloc = Tensor::<Backend, 2>::from_floats([[0.1], [0.2], [0.3]], &device);
+//! // Collocation points for PDE residual (leaf `Var`s over `[N, 1]` tensors)
+//! let x_colloc = Var::new(
+//!     coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.5, 0.6, 0.7], &backend),
+//!     false,
+//! );
+//! let t_colloc = Var::new(
+//!     coeus_tensor::Tensor::from_slice_on(vec![3, 1], &[0.1, 0.2, 0.3], &backend),
+//!     false,
+//! );
 //!
 //! // Compute PDE residual
-//! let residual = pinn.compute_pde_residual(x_colloc, t_colloc, 343.0);
+//! let residual = pinn.compute_pde_residual(&x_colloc, &t_colloc, 343.0);
 //!
 //! // PDE loss: enforce wave equation
-//! let pde_loss = residual.powf_scalar(2.0).mean();
+//! let pde_loss = coeus_autograd::mean(&coeus_autograd::mul(&residual, &residual));
 //! ```
 
 use coeus_autograd::Var;
@@ -237,7 +242,7 @@ where
     ///
     /// Tuple of (total_loss, data_loss, pde_loss, bc_loss) where each is a scalar tensor [1]
     #[allow(clippy::too_many_arguments)]
-    #[allow(clippy::type_complexity)] // (total, data, pde, bc) mirrors the original burn API 1:1
+    #[allow(clippy::type_complexity)] // 4 independent scalar losses (total, data, pde, bc); no cohesive grouping
     pub fn compute_physics_loss(
         &self,
         x_data: &Var<f32, B>,

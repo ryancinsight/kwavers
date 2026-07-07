@@ -21,9 +21,8 @@ kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-physics = { path = "../kwavers-physics" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+ndarray = { version = "0.16", features = ["serde"] }
 ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
-nalgebra = { version = "0.32" }
 num-complex = "0.4"
 num-traits = "0.2"
 serde = { version = "1.0", features = ["derive"] }
@@ -48,10 +47,6 @@ coeus-nn = { workspace = true, optional = true }
 coeus-optim = { workspace = true, optional = true }
 coeus-ops = { workspace = true, optional = true }
 
-# burn deep learning framework — optional, used by PINN submodule during migration.
-# After coeus-based PINN replacement is complete this dep will be removed entirely.
-burn = { version = "0.19", default-features = false, features = ["std", "train", "ndarray", "autodiff"], optional = true }
-
 # Typed errors for the PINN training/distributed subsystem.
 thiserror = { workspace = true, optional = true }
 
@@ -62,7 +57,6 @@ test-util = []
 gpu = ["kwavers-math/gpu"]
 pinn = [
     "dep:thiserror",
-    "dep:burn",
     "dep:coeus-core",
     "dep:coeus-tensor",
     "dep:coeus-autograd",
