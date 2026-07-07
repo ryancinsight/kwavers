@@ -32,7 +32,15 @@ impl TranscranialAberrationCorrection {
         let yj = (target_point[1] / self.grid.dy).clamp(0.0, ny.saturating_sub(2) as f64);
         let zk = (target_point[2] / self.grid.dz).clamp(0.0, nz.saturating_sub(2) as f64);
 
-        let p2_interp = trilinear_index_space(field, xi, yj, zk);
+        // `trilinear_index_space` operates on leto's native array type; `field`
+        // is the ndarray type this module's public API uses, so convert at
+        // the call site rather than changing the function signature.
+        let field_leto = leto::Array3::from_shape_vec(
+            [nx, ny, nz],
+            field.iter().copied().collect(),
+        )
+        .expect("field dimensions are already validated via field.dim()");
+        let p2_interp = trilinear_index_space(&field_leto, xi, yj, zk);
         let rho0 = DENSITY_WATER_NOMINAL;
         p2_interp / (2.0 * rho0 * self.reference_speed)
     }
