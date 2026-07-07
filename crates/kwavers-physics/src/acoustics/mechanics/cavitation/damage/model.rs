@@ -2,8 +2,9 @@
 
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
+use crate::parallel::zip_mut_ref;
 use kwavers_core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use std::f64::consts::PI;
 
 /// Cavitation damage model
@@ -162,13 +163,11 @@ impl CavitationDamage {
         let density = self.material.density;
         let mut depth = Array3::zeros(self.erosion_rate.dim());
 
-        Zip::from(&mut depth)
-            .and(&self.erosion_rate)
-            .par_for_each(|out, &rate| {
-                if rate > 0.0 {
-                    *out = rate * time / density;
-                }
-            });
+        zip_mut_ref(depth.view_mut(), self.erosion_rate.view(), |out, &rate| {
+            if rate > 0.0 {
+                *out = rate * time / density;
+            }
+        });
 
         depth
     }
