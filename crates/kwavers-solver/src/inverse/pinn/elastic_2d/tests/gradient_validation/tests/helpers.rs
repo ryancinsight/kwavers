@@ -1,7 +1,18 @@
-use super::{TestAutodiffBackend, TestBackend};
+use super::TestBackend;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
-use burn::tensor::Tensor;
+use crate::inverse::pinn::ml::autodiff_utils::compute_second_derivative_2d;
+use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
+
+type B = TestBackend;
+
+fn var_point(v: f64) -> Var<f32, B> {
+    let backend = B::default();
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v as f32], &backend),
+        false,
+    )
+}
 
 /// Compute central finite difference approximation of ∂f/∂x
 ///
@@ -10,57 +21,41 @@ use kwavers_core::error::KwaversResult;
 /// ```text
 /// ∂f/∂x ≈ (f(x+h) - f(x-h)) / (2h)
 /// ```
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
 pub(super) fn central_difference_x(
-    model: &ElasticPINN2D<TestBackend>,
+    model: &ElasticPINN2D<B>,
     x: f64,
     y: f64,
     t: f64,
     component: usize,
     h: f64,
 ) -> f64 {
-    let device = Default::default();
+    let y_t = var_point(y);
+    let t_t = var_point(t);
+    let u_plus = model.forward(&var_point(x + h), &y_t, &t_t);
+    let u_minus = model.forward(&var_point(x - h), &y_t, &t_t);
 
-    let x_plus = Tensor::<TestBackend, 2>::from_floats([[(x + h) as f32]], &device);
-    let y_t = Tensor::<TestBackend, 2>::from_floats([[y as f32]], &device);
-    let t_t = Tensor::<TestBackend, 2>::from_floats([[t as f32]], &device);
-    let u_plus = model.forward(x_plus, y_t.clone(), t_t.clone());
-
-    let x_minus = Tensor::<TestBackend, 2>::from_floats([[(x - h) as f32]], &device);
-    let u_minus = model.forward(x_minus, y_t, t_t);
-
-    let u_plus_val = u_plus.to_data().as_slice::<f32>().unwrap()[component] as f64;
-    let u_minus_val = u_minus.to_data().as_slice::<f32>().unwrap()[component] as f64;
+    let u_plus_val = u_plus.tensor.as_slice()[component] as f64;
+    let u_minus_val = u_minus.tensor.as_slice()[component] as f64;
 
     (u_plus_val - u_minus_val) / (2.0 * h)
 }
 
 /// Compute central finite difference approximation of ∂f/∂y
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
 pub(super) fn central_difference_y(
-    model: &ElasticPINN2D<TestBackend>,
+    model: &ElasticPINN2D<B>,
     x: f64,
     y: f64,
     t: f64,
     component: usize,
     h: f64,
 ) -> f64 {
-    let device = Default::default();
+    let x_t = var_point(x);
+    let t_t = var_point(t);
+    let u_plus = model.forward(&x_t, &var_point(y + h), &t_t);
+    let u_minus = model.forward(&x_t, &var_point(y - h), &t_t);
 
-    let x_t = Tensor::<TestBackend, 2>::from_floats([[x as f32]], &device);
-    let y_plus = Tensor::<TestBackend, 2>::from_floats([[(y + h) as f32]], &device);
-    let t_t = Tensor::<TestBackend, 2>::from_floats([[t as f32]], &device);
-    let u_plus = model.forward(x_t.clone(), y_plus, t_t.clone());
-
-    let y_minus = Tensor::<TestBackend, 2>::from_floats([[(y - h) as f32]], &device);
-    let u_minus = model.forward(x_t, y_minus, t_t);
-
-    let u_plus_val = u_plus.to_data().as_slice::<f32>().unwrap()[component] as f64;
-    let u_minus_val = u_minus.to_data().as_slice::<f32>().unwrap()[component] as f64;
+    let u_plus_val = u_plus.tensor.as_slice()[component] as f64;
+    let u_minus_val = u_minus.tensor.as_slice()[component] as f64;
 
     (u_plus_val - u_minus_val) / (2.0 * h)
 }
@@ -72,142 +67,103 @@ pub(super) fn central_difference_y(
 /// ```text
 /// ∂²f/∂x² ≈ (f(x+h) - 2f(x) + f(x-h)) / h²
 /// ```
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
 pub(super) fn second_difference_xx(
-    model: &ElasticPINN2D<TestBackend>,
+    model: &ElasticPINN2D<B>,
     x: f64,
     y: f64,
     t: f64,
     component: usize,
     h: f64,
 ) -> f64 {
-    let device = Default::default();
+    let y_t = var_point(y);
+    let t_t = var_point(t);
 
-    let y_t = Tensor::<TestBackend, 2>::from_floats([[y as f32]], &device);
-    let t_t = Tensor::<TestBackend, 2>::from_floats([[t as f32]], &device);
+    let u_plus = model.forward(&var_point(x + h), &y_t, &t_t);
+    let u_center = model.forward(&var_point(x), &y_t, &t_t);
+    let u_minus = model.forward(&var_point(x - h), &y_t, &t_t);
 
-    let x_plus = Tensor::<TestBackend, 2>::from_floats([[(x + h) as f32]], &device);
-    let u_plus = model.forward(x_plus, y_t.clone(), t_t.clone());
-
-    let x_center = Tensor::<TestBackend, 2>::from_floats([[x as f32]], &device);
-    let u_center = model.forward(x_center, y_t.clone(), t_t.clone());
-
-    let x_minus = Tensor::<TestBackend, 2>::from_floats([[(x - h) as f32]], &device);
-    let u_minus = model.forward(x_minus, y_t, t_t);
-
-    let u_plus_val = u_plus.to_data().as_slice::<f32>().unwrap()[component] as f64;
-    let u_center_val = u_center.to_data().as_slice::<f32>().unwrap()[component] as f64;
-    let u_minus_val = u_minus.to_data().as_slice::<f32>().unwrap()[component] as f64;
+    let u_plus_val = u_plus.tensor.as_slice()[component] as f64;
+    let u_center_val = u_center.tensor.as_slice()[component] as f64;
+    let u_minus_val = u_minus.tensor.as_slice()[component] as f64;
 
     (u_plus_val - 2.0 * u_center_val + u_minus_val) / (h * h)
 }
 
-/// Compute autodiff gradient ∂u/∂x at a point
+/// Compute autodiff gradient ∂u/∂x at a point via true (first-order) reverse-mode autodiff.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-///
-/// # Panics
-/// - Panics if `Gradient should exist`.
-///
 pub(super) fn autodiff_gradient_x(
-    model: &ElasticPINN2D<TestAutodiffBackend>,
+    model: &ElasticPINN2D<B>,
     x: f64,
     y: f64,
     t: f64,
     component: usize,
 ) -> KwaversResult<f64> {
-    let device = Default::default();
+    let x_t = Var::new(x_leaf(x), true);
+    let y_t = var_point(y);
+    let t_t = var_point(t);
 
-    let x_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[x as f32]], &device).require_grad();
-    let y_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[y as f32]], &device);
-    let t_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[t as f32]], &device);
+    let u = model.forward(&x_t, &y_t, &t_t);
+    let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
+    coeus_autograd::sum(&u_component).backward();
 
-    let u = model.forward(x_t.clone(), y_t, t_t);
-    let u_component = u.slice([0..1, component..component + 1]);
-
-    let grads = u_component.backward();
-    let du_dx_inner = x_t.grad(&grads).expect("Gradient should exist");
-
-    let du_dx =
-        Tensor::<TestAutodiffBackend, 2>::from_data(du_dx_inner.into_data(), &Default::default());
-    let du_dx_val = du_dx.to_data().as_slice::<f32>().unwrap()[0] as f64;
-
-    Ok(du_dx_val)
+    let du_dx = x_t.grad().expect("Gradient should exist");
+    Ok(du_dx.as_slice()[0] as f64)
 }
 
-/// Compute autodiff gradient ∂u/∂y at a point
+/// Compute autodiff gradient ∂u/∂y at a point via true (first-order) reverse-mode autodiff.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-///
-/// # Panics
-/// - Panics if `Gradient should exist`.
-///
 pub(super) fn autodiff_gradient_y(
-    model: &ElasticPINN2D<TestAutodiffBackend>,
+    model: &ElasticPINN2D<B>,
     x: f64,
     y: f64,
     t: f64,
     component: usize,
 ) -> KwaversResult<f64> {
-    let device = Default::default();
+    let x_t = var_point(x);
+    let y_t = Var::new(x_leaf(y), true);
+    let t_t = var_point(t);
 
-    let x_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[x as f32]], &device);
-    let y_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[y as f32]], &device).require_grad();
-    let t_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[t as f32]], &device);
+    let u = model.forward(&x_t, &y_t, &t_t);
+    let u_component = coeus_autograd::slice(&u, &[(0, 1), (component, component + 1)]);
+    coeus_autograd::sum(&u_component).backward();
 
-    let u = model.forward(x_t, y_t.clone(), t_t);
-    let u_component = u.slice([0..1, component..component + 1]);
-
-    let grads = u_component.backward();
-    let du_dy_inner = y_t.grad(&grads).expect("Gradient should exist");
-
-    let du_dy =
-        Tensor::<TestAutodiffBackend, 2>::from_data(du_dy_inner.into_data(), &Default::default());
-    let du_dy_val = du_dy.to_data().as_slice::<f32>().unwrap()[0] as f64;
-
-    Ok(du_dy_val)
+    let du_dy = y_t.grad().expect("Gradient should exist");
+    Ok(du_dy.as_slice()[0] as f64)
 }
 
-/// Compute autodiff second derivative ∂²u/∂x²
+fn x_leaf(v: f64) -> coeus_tensor::Tensor<f32, B> {
+    let backend = B::default();
+    coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v as f32], &backend)
+}
+
+/// Compute second derivative ∂²u/∂x² at a point.
+///
+/// `coeus_autograd` has no double-backward support (`Var::grad()` returns a
+/// plain, non-differentiable `Tensor` — see
+/// [`crate::inverse::pinn::ml::autodiff_utils::second_order`]'s
+/// module-level weight-gradient contract), so this delegates to
+/// [`compute_second_derivative_2d`]'s finite-difference implementation
+/// rather than a nested-autodiff reconstruction.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-///
-/// # Panics
-/// - Panics if `First gradient should exist`.
-/// - Panics if `Second gradient should exist`.
-///
 pub(super) fn autodiff_second_derivative_xx(
-    model: &ElasticPINN2D<TestAutodiffBackend>,
+    model: &ElasticPINN2D<B>,
     x: f64,
     y: f64,
     t: f64,
     component: usize,
 ) -> KwaversResult<f64> {
-    let device = Default::default();
-
-    let x_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[x as f32]], &device).require_grad();
-    let y_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[y as f32]], &device);
-    let t_t = Tensor::<TestAutodiffBackend, 2>::from_floats([[t as f32]], &device);
-
-    let u = model.forward(x_t.clone(), y_t, t_t);
-    let u_component = u.slice([0..1, component..component + 1]);
-
-    let grads_first = u_component.backward();
-    let du_dx_inner = x_t.grad(&grads_first).expect("First gradient should exist");
-    let du_dx =
-        Tensor::<TestAutodiffBackend, 2>::from_data(du_dx_inner.into_data(), &Default::default())
-            .require_grad();
-
-    let grads_second = du_dx.backward();
-    let d2u_dx2_inner = x_t
-        .grad(&grads_second)
-        .expect("Second gradient should exist");
-    let d2u_dx2 =
-        Tensor::<TestAutodiffBackend, 2>::from_data(d2u_dx2_inner.into_data(), &Default::default());
-
-    let d2u_dx2_val = d2u_dx2.to_data().as_slice::<f32>().unwrap()[0] as f64;
-
-    Ok(d2u_dx2_val)
+    let backend = B::default();
+    let input = coeus_tensor::Tensor::from_slice_on(vec![1, 3], &[t as f32, x as f32, y as f32], &backend);
+    let forward = |combined: &Var<f32, B>| -> Var<f32, B> {
+        let n = combined.tensor.shape()[0];
+        let t = coeus_autograd::slice(combined, &[(0, n), (0, 1)]);
+        let x = coeus_autograd::slice(combined, &[(0, n), (1, 2)]);
+        let y = coeus_autograd::slice(combined, &[(0, n), (2, 3)]);
+        model.forward(&x, &y, &t)
+    };
+    let d2u_dx2 = compute_second_derivative_2d(forward, &input, component, 1)?;
+    Ok(d2u_dx2.tensor.as_slice()[0] as f64)
 }

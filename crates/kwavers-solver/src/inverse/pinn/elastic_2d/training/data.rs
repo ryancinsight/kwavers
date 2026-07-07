@@ -3,10 +3,7 @@
 //! This module defines the data containers and metrics used during
 //! physics-informed neural network training.
 
-#[cfg(feature = "pinn")]
 use super::super::loss::data::*;
-#[cfg(feature = "pinn")]
-use burn::tensor::backend::AutodiffBackend;
 
 // ============================================================================
 // Training Data Container
@@ -15,9 +12,8 @@ use burn::tensor::backend::AutodiffBackend;
 /// Training data container
 ///
 /// Aggregates all data required for PINN training.
-#[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
-pub struct TrainingData<B: AutodiffBackend> {
+pub struct TrainingData<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Interior collocation points for PDE residual
     pub collocation: CollocationData<B>,
     /// Boundary condition data

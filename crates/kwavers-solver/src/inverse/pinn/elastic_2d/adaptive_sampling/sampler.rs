@@ -1,12 +1,8 @@
-#[cfg(feature = "pinn")]
 use super::BatchIterator;
-#[cfg(feature = "pinn")]
 use kwavers_core::error::{KwaversError, KwaversResult};
-#[cfg(feature = "pinn")]
 use rand::prelude::*;
 
 /// Adaptive sampling strategy: how collocation points are selected.
-#[cfg(feature = "pinn")]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElasticAdaptiveSamplingStrategy {
     Uniform,
@@ -25,7 +21,6 @@ pub enum ElasticAdaptiveSamplingStrategy {
     },
 }
 
-#[cfg(feature = "pinn")]
 impl Default for ElasticAdaptiveSamplingStrategy {
     fn default() -> Self {
         ElasticAdaptiveSamplingStrategy::ResidualWeighted {
@@ -36,7 +31,6 @@ impl Default for ElasticAdaptiveSamplingStrategy {
 }
 
 /// Adaptive collocation point sampler with mini-batching.
-#[cfg(feature = "pinn")]
 #[derive(Debug)]
 pub struct AdaptiveSampler {
     pub strategy: ElasticAdaptiveSamplingStrategy,
@@ -46,7 +40,6 @@ pub struct AdaptiveSampler {
     current_indices: Vec<usize>,
 }
 
-#[cfg(feature = "pinn")]
 impl AdaptiveSampler {
     pub fn new(
         strategy: ElasticAdaptiveSamplingStrategy,

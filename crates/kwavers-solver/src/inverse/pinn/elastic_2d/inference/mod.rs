@@ -51,40 +51,34 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 
 use ndarray::{Array1, Array2, Array3};
 
-#[cfg(feature = "pinn")]
-use burn::tensor::{backend::Backend, Tensor};
+use coeus_autograd::Var;
 
-#[cfg(feature = "pinn")]
 use super::model::ElasticPINN2D;
 
-#[cfg(all(test, feature = "pinn"))]
+#[cfg(test)]
 mod tests;
 
 /// ElasticPinnPredictor for trained PINN model
 ///
 /// Provides high-level interface for model inference and evaluation.
-#[cfg(feature = "pinn")]
 #[derive(Debug)]
-pub struct ElasticPinnPredictor<B: Backend> {
+pub struct ElasticPinnPredictor<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Trained PINN model
     model: ElasticPINN2D<B>,
-    /// Device for computation
-    device: B::Device,
 }
 
-#[cfg(feature = "pinn")]
-impl<B: Backend> ElasticPinnPredictor<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ElasticPinnPredictor<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new predictor from a trained model
     ///
     /// # Arguments
     ///
     /// * `model` - Trained PINN model
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn new(model: ElasticPINN2D<B>) -> Self {
-        let device = model.device();
-        Self { model, device }
+        Self { model }
     }
 
     /// Predict displacement at a single point
@@ -100,22 +94,16 @@ impl<B: Backend> ElasticPinnPredictor<B> {
     /// Displacement vector [u_x, u_y]
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn predict_point(&self, x: f64, y: f64, t: f64) -> KwaversResult<[f64; 2]> {
-        // Create tensors for single point
-        let x_tensor = Tensor::<B, 2>::from_floats([[x as f32]], &self.device);
-        let y_tensor = Tensor::<B, 2>::from_floats([[y as f32]], &self.device);
-        let t_tensor = Tensor::<B, 2>::from_floats([[t as f32]], &self.device);
-
-        // Forward pass
-        let output = self.model.forward(x_tensor, y_tensor, t_tensor);
-
-        // Extract values
-        let data = output.to_data();
-        let slice = data
-            .as_slice::<f32>()
-            .map_err(|_| KwaversError::InvalidInput("Failed to extract tensor data".to_string()))?;
-
+        let backend = B::default();
+        let mk = |v: f64| {
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![1, 1], &[v as f32], &backend),
+                false,
+            )
+        };
+        let output = self.model.forward(&mk(x), &mk(y), &mk(t));
+        let slice = output.tensor.as_slice();
         Ok([slice[0] as f64, slice[1] as f64])
     }
 
@@ -131,7 +119,6 @@ impl<B: Backend> ElasticPinnPredictor<B> {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn predict_batch(&self, points: &[(f64, f64, f64)]) -> KwaversResult<Array2<f64>> {
         if points.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -140,25 +127,24 @@ impl<B: Backend> ElasticPinnPredictor<B> {
         }
 
         let n = points.len();
+        let backend = B::default();
 
-        // Extract coordinates
         let x_data: Vec<f32> = points.iter().map(|(x, _, _)| *x as f32).collect();
         let y_data: Vec<f32> = points.iter().map(|(_, y, _)| *y as f32).collect();
         let t_data: Vec<f32> = points.iter().map(|(_, _, t)| *t as f32).collect();
 
-        // Create tensors
-        let x_tensor = Tensor::<B, 1>::from_floats(x_data.as_slice(), &self.device).reshape([n, 1]);
-        let y_tensor = Tensor::<B, 1>::from_floats(y_data.as_slice(), &self.device).reshape([n, 1]);
-        let t_tensor = Tensor::<B, 1>::from_floats(t_data.as_slice(), &self.device).reshape([n, 1]);
+        let mk = |data: &[f32]| {
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], data, &backend),
+                false,
+            )
+        };
+        let x_var = mk(&x_data);
+        let y_var = mk(&y_data);
+        let t_var = mk(&t_data);
 
-        // Forward pass
-        let output = self.model.forward(x_tensor, y_tensor, t_tensor);
-
-        // Convert to ndarray
-        let data = output.to_data();
-        let slice = data
-            .as_slice::<f32>()
-            .map_err(|_| KwaversError::InvalidInput("Failed to extract tensor data".to_string()))?;
+        let output = self.model.forward(&x_var, &y_var, &t_var);
+        let slice = output.tensor.as_slice();
 
         let values: Vec<f64> = slice.iter().map(|&v| v as f64).collect();
         Array2::from_shape_vec((n, 2), values)
@@ -178,7 +164,6 @@ impl<B: Backend> ElasticPinnPredictor<B> {
     /// Displacement field [Nx, Ny, 2] where last dimension is (u_x, u_y)
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn evaluate_field(
         &self,
         x_grid: &Array1<f64>,
@@ -225,7 +210,6 @@ impl<B: Backend> ElasticPinnPredictor<B> {
     /// Displacement time series [N_times, 2]
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     pub fn time_series(&self, x: f64, y: f64, times: &Array1<f64>) -> KwaversResult<Array2<f64>> {
         let points: Vec<(f64, f64, f64)> = times.iter().map(|&t| (x, y, t)).collect();
         self.predict_batch(&points)
@@ -244,7 +228,6 @@ impl<B: Backend> ElasticPinnPredictor<B> {
     /// Magnitude field [Nx, Ny] where magnitude = sqrt(u_x^2 + u_y^2)
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
     pub fn magnitude_field(
         &self,
         x_grid: &Array1<f64>,
@@ -280,58 +263,5 @@ impl<B: Backend> ElasticPinnPredictor<B> {
     /// (λ, μ, ρ) if optimized, otherwise None
     pub fn material_parameters(&self) -> (Option<f64>, Option<f64>, Option<f64>) {
         self.model.estimated_parameters()
-    }
-}
-
-/// Non-Burn fallback
-#[cfg(not(feature = "pinn"))]
-#[derive(Debug)]
-pub struct ElasticPinnPredictor {
-    _phantom: std::marker::PhantomData<()>,
-}
-
-#[cfg(not(feature = "pinn"))]
-impl ElasticPinnPredictor {
-    /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    #[must_use]
-    pub fn new(_model: ()) -> Self {
-        Self {
-            _phantom: std::marker::PhantomData,
-        }
-    }
-    /// Predict point.
-    /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
-    pub fn predict_point(&self, _x: f64, _y: f64, _t: f64) -> KwaversResult<[f64; 2]> {
-        Err(KwaversError::InvalidInput(
-            "ElasticPinnPredictor requires 'burn' feature to be enabled".to_owned(),
-        ))
-    }
-    /// Predict batch.
-    /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
-    pub fn predict_batch(&self, _points: &[(f64, f64, f64)]) -> KwaversResult<Array2<f64>> {
-        Err(KwaversError::InvalidInput(
-            "ElasticPinnPredictor requires 'burn' feature to be enabled".to_owned(),
-        ))
-    }
-    /// Evaluate field.
-    /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    ///
-    pub fn evaluate_field(
-        &self,
-        _x_grid: &Array1<f64>,
-        _y_grid: &Array1<f64>,
-        _t: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        Err(KwaversError::InvalidInput(
-            "ElasticPinnPredictor requires 'burn' feature to be enabled".to_owned(),
-        ))
     }
 }

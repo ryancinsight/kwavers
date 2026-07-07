@@ -1,13 +1,10 @@
-use burn::backend::{Autodiff, NdArray};
-
 mod analytic;
 mod first_deriv;
 mod helpers;
 mod property;
 mod second_deriv;
 
-pub(super) type TestAutodiffBackend = Autodiff<NdArray<f32>>;
-pub(super) type TestBackend = NdArray<f32>;
+pub(super) type TestBackend = coeus_core::MoiraiBackend;
 
 /// Finite difference step size for first derivatives
 pub(super) const FD_H_FIRST: f64 = 1e-5;

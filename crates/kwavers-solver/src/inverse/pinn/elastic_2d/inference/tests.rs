@@ -1,14 +1,13 @@
 use super::*;
 use crate::inverse::pinn::elastic_2d::Config;
-use burn::backend::NdArray;
 
-type TestBackend = NdArray<f32>;
+
+type TestBackend = coeus_core::MoiraiBackend;
 
 #[test]
 fn test_predictor_creation() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     assert!(predictor.model().num_parameters() > 0);
@@ -17,8 +16,7 @@ fn test_predictor_creation() {
 #[test]
 fn test_single_point_prediction() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let result = predictor.predict_point(0.5, 0.5, 0.1);
@@ -30,8 +28,7 @@ fn test_single_point_prediction() {
 #[test]
 fn test_batch_prediction() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let points = vec![(0.5, 0.5, 0.1), (0.6, 0.6, 0.2), (0.7, 0.7, 0.3)];
@@ -44,8 +41,7 @@ fn test_batch_prediction() {
 #[test]
 fn test_empty_batch_error() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let points: Vec<(f64, f64, f64)> = vec![];
@@ -56,8 +52,7 @@ fn test_empty_batch_error() {
 #[test]
 fn test_field_evaluation() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let x_grid = Array1::linspace(0.0, 1.0, 5);
@@ -73,8 +68,7 @@ fn test_field_evaluation() {
 #[test]
 fn test_time_series() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let times = Array1::linspace(0.0, 1.0, 10);
@@ -87,8 +81,7 @@ fn test_time_series() {
 #[test]
 fn test_magnitude_field() {
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let x_grid = Array1::linspace(0.0, 1.0, 5);
@@ -109,8 +102,7 @@ fn test_magnitude_field() {
 #[test]
 fn test_material_parameters_inverse() {
     let config = Config::inverse_problem(1e9, 5e8, 1000.0);
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let (lambda, mu, rho) = predictor.material_parameters();
@@ -122,8 +114,7 @@ fn test_material_parameters_inverse() {
 #[test]
 fn test_material_parameters_forward() {
     let config = Config::forward_problem(1e9, 5e8, 1000.0);
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
     let (lambda, mu, rho) = predictor.material_parameters();

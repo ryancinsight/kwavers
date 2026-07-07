@@ -3,7 +3,6 @@
 //! Implements gradient descent optimizers with persistent state for
 //! physics-informed neural network training.
 
-pub mod mappers;
 pub mod pinn_optimizer;
 pub mod types;
 
@@ -12,5 +11,4 @@ mod tests;
 
 pub use types::OptimizerAlgorithm;
 
-#[cfg(feature = "pinn")]
 pub use pinn_optimizer::PINNOptimizer;

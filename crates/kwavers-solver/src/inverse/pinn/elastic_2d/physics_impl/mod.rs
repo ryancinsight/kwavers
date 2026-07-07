@@ -79,5 +79,4 @@ pub mod solver;
 pub mod traits;
 
 // Re-export main types for convenience
-#[cfg(feature = "pinn")]
 pub use solver::ElasticPINN2DSolver;

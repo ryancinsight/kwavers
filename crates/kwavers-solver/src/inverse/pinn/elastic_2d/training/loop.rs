@@ -3,19 +3,14 @@
 //! This module implements the high-level training procedure that coordinates
 //! data loading, loss computation, optimization, and convergence checking.
 
-#[cfg(feature = "pinn")]
-use super::super::model::ElasticPINN2D;
-#[cfg(feature = "pinn")]
-use burn::tensor::backend::AutodiffBackend;
+use coeus_autograd::Var;
 
-#[cfg(feature = "pinn")]
+use super::super::model::ElasticPINN2D;
 use super::{data::*, optimizer::*, scheduler::*};
 
-#[cfg(feature = "pinn")]
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Training configuration
-#[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
 pub struct ElasticPinnLoopConfig {
     /// Maximum number of training epochs
@@ -38,7 +33,7 @@ pub struct ElasticPinnLoopConfig {
 /// 1. Forward pass at collocation, boundary, and initial-condition points.
 /// 2. PDE residual: ρ ∂²u/∂t² − ∇·σ = 0 (elastic wave equation).
 /// 3. Weighted total loss = w_pde·L_pde + w_bc·L_bc + w_ic·L_ic + w_data·L_data.
-/// 4. Backward pass (Burn autodiff).
+/// 4. Backward pass (`coeus_autograd`).
 /// 5. Optimizer step (SGD / Adam / AdamW via `PINNOptimizer`).
 /// 6. LR scheduler update.
 /// 7. Convergence check: max−min of last `convergence_window` total losses < tolerance.
@@ -50,16 +45,18 @@ pub struct ElasticPinnLoopConfig {
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-#[cfg(feature = "pinn")]
-pub fn train_pinn<B: AutodiffBackend>(
+pub fn train_pinn<B>(
     model: &mut ElasticPINN2D<B>,
     training_data: &TrainingData<B>,
     optimizer: &mut PINNOptimizer<B>,
     scheduler: &mut LRScheduler,
     config: &ElasticPinnLoopConfig,
-) -> KwaversResult<ElasticPinnTrainingMetrics> {
-    use burn::tensor::Tensor;
+) -> KwaversResult<ElasticPinnTrainingMetrics>
+where
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     use std::time::Instant;
 
     use super::super::loss::pde_residual::compute_elastic_wave_pde_residual;
@@ -80,76 +77,71 @@ pub fn train_pinn<B: AutodiffBackend>(
         let epoch_start = Instant::now();
         let lr = scheduler.get_lr();
 
-        // ── Forward pass at collocation points ────────────────────────────────
-        // model.forward → [N_colloc, 2]: column 0 = u (x-disp), column 1 = v (y-disp)
-        let out_colloc = model.forward(
-            training_data.collocation.x.clone(),
-            training_data.collocation.y.clone(),
-            training_data.collocation.t.clone(),
-        );
-        let n_colloc = out_colloc.dims()[0];
-        let u_colloc = out_colloc.clone().slice([0..n_colloc, 0..1]);
-        let v_colloc = out_colloc.slice([0..n_colloc, 1..2]);
+        for p in model.parameters() {
+            p.zero_grad();
+        }
 
         // ── PDE residual: ρ ∂²u/∂t² − ∇·σ ───────────────────────────────────
         let (residual_x, residual_y) = compute_elastic_wave_pde_residual(
-            u_colloc,
-            v_colloc,
-            training_data.collocation.x.clone(),
-            training_data.collocation.y.clone(),
-            training_data.collocation.t.clone(),
+            model,
+            &training_data.collocation.x,
+            &training_data.collocation.y,
+            &training_data.collocation.t,
             rho,
             lambda,
             mu,
-        );
-        let pde_loss = loss_computer.pde_loss::<B>(residual_x, residual_y);
+        )?;
+        let pde_loss = loss_computer.pde_loss::<B>(&residual_x, &residual_y);
 
         // ── Boundary condition loss ───────────────────────────────────────────
         let out_bc = model.forward(
-            training_data.boundary.x.clone(),
-            training_data.boundary.y.clone(),
-            training_data.boundary.t.clone(),
+            &training_data.boundary.x,
+            &training_data.boundary.y,
+            &training_data.boundary.t,
         );
-        let bc_loss =
-            loss_computer.boundary_loss::<B>(out_bc, training_data.boundary.values.clone());
+        let bc_loss = loss_computer.boundary_loss::<B>(&out_bc, &training_data.boundary.values);
 
         // ── Initial condition loss ────────────────────────────────────────────
-        let out_ic = model.forward(
-            training_data.initial.x.clone(),
-            training_data.initial.y.clone(),
-            Tensor::<B, 2>::zeros_like(&training_data.initial.x),
+        let backend = B::default();
+        let zero_t = Var::new(
+            coeus_tensor::Tensor::zeros_on(training_data.initial.x.tensor.shape(), &backend),
+            false,
         );
+        let out_ic = model.forward(&training_data.initial.x, &training_data.initial.y, &zero_t);
         // velocity target: zero (quiescent start assumed when none provided)
-        let zero_vel = Tensor::<B, 2>::zeros_like(&training_data.initial.displacement);
+        let zero_vel = Var::new(
+            coeus_tensor::Tensor::zeros_on(training_data.initial.displacement.tensor.shape(), &backend),
+            false,
+        );
         let ic_loss = loss_computer.initial_loss::<B>(
-            out_ic,
-            zero_vel,
-            training_data.initial.displacement.clone(),
-            training_data.initial.velocity.clone(),
+            &out_ic,
+            &zero_vel,
+            &training_data.initial.displacement,
+            &training_data.initial.velocity,
         );
 
         // ── Optional data loss from observations ─────────────────────────────
         let data_loss_opt = training_data.observations.as_ref().map(|obs| {
-            let out_obs = model.forward(obs.x.clone(), obs.y.clone(), obs.t.clone());
-            loss_computer.data_loss::<B>(out_obs, obs.displacement.clone())
+            let out_obs = model.forward(&obs.x, &obs.y, &obs.t);
+            loss_computer.data_loss::<B>(&out_obs, &obs.displacement)
         });
 
         // ── Total weighted loss ───────────────────────────────────────────────
         let total_loss = loss_computer.total_loss::<B>(
-            pde_loss.clone(),
-            bc_loss.clone(),
-            ic_loss.clone(),
-            data_loss_opt.clone(),
+            &pde_loss,
+            &bc_loss,
+            &ic_loss,
+            data_loss_opt.as_ref(),
         );
 
-        // Extract scalar values before backward consumes total_loss.
-        let total_val: f64 = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-        let pde_val: f64 = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-        let bc_val: f64 = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-        let ic_val: f64 = ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-        let data_val: f64 = data_loss_opt
+        // Extract scalar values before backward.
+        let total_val = total_loss.tensor.as_slice()[0] as f64;
+        let pde_val = pde_loss.tensor.as_slice()[0] as f64;
+        let bc_val = bc_loss.tensor.as_slice()[0] as f64;
+        let ic_val = ic_loss.tensor.as_slice()[0] as f64;
+        let data_val = data_loss_opt
             .as_ref()
-            .map(|t| t.clone().into_data().as_slice::<f32>().unwrap()[0] as f64)
+            .map(|t| t.tensor.as_slice()[0] as f64)
             .unwrap_or(0.0);
 
         if !total_val.is_finite()
@@ -168,8 +160,8 @@ pub fn train_pinn<B: AutodiffBackend>(
         }
 
         // ── Backward + optimizer step ─────────────────────────────────────────
-        let grads = total_loss.backward();
-        *model = optimizer.step(model.clone(), grads);
+        total_loss.backward();
+        optimizer.step(model);
 
         // ── LR scheduler ─────────────────────────────────────────────────────
         scheduler.step(Some(total_val));
@@ -215,12 +207,16 @@ pub fn train_pinn<B: AutodiffBackend>(
 /// # Errors
 /// Propagates any [`KwaversError`] returned by [`train_pinn`] (e.g. a tensor /
 /// autodiff backend failure during an epoch).
-#[cfg(feature = "pinn")]
-pub fn train_simple<B: AutodiffBackend>(
+pub fn train_simple<B>(
     model: &mut ElasticPINN2D<B>,
     max_epochs: usize,
     learning_rate: f64,
-) -> KwaversResult<ElasticPinnTrainingMetrics> {
+) -> KwaversResult<ElasticPinnTrainingMetrics>
+where
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     let config = ElasticPinnLoopConfig {
         max_epochs,
         convergence_tolerance: 1e-6,
@@ -230,28 +226,30 @@ pub fn train_simple<B: AutodiffBackend>(
     };
 
     // Create dummy training data (would be provided by user)
-    let device = model.device();
+    let backend = B::default();
+    let zeros = |shape: Vec<usize>| Var::new(coeus_tensor::Tensor::zeros_on(shape, &backend), false);
+
     let collocation = super::super::loss::data::CollocationData {
-        x: burn::tensor::Tensor::<B, 2>::zeros([100, 1], &device),
-        y: burn::tensor::Tensor::<B, 2>::zeros([100, 1], &device),
-        t: burn::tensor::Tensor::<B, 2>::zeros([100, 1], &device),
+        x: zeros(vec![100, 1]),
+        y: zeros(vec![100, 1]),
+        t: zeros(vec![100, 1]),
         source_x: None,
         source_y: None,
     };
 
     let boundary = super::super::loss::data::BoundaryData {
-        x: burn::tensor::Tensor::<B, 2>::zeros([50, 1], &device),
-        y: burn::tensor::Tensor::<B, 2>::zeros([50, 1], &device),
-        t: burn::tensor::Tensor::<B, 2>::zeros([50, 1], &device),
+        x: zeros(vec![50, 1]),
+        y: zeros(vec![50, 1]),
+        t: zeros(vec![50, 1]),
         boundary_type: vec![],
-        values: burn::tensor::Tensor::<B, 2>::zeros([50, 2], &device),
+        values: zeros(vec![50, 2]),
     };
 
     let initial = super::super::loss::data::InitialData {
-        x: burn::tensor::Tensor::<B, 2>::zeros([25, 1], &device),
-        y: burn::tensor::Tensor::<B, 2>::zeros([25, 1], &device),
-        displacement: burn::tensor::Tensor::<B, 2>::zeros([25, 2], &device),
-        velocity: burn::tensor::Tensor::<B, 2>::zeros([25, 2], &device),
+        x: zeros(vec![25, 1]),
+        y: zeros(vec![25, 1]),
+        displacement: zeros(vec![25, 2]),
+        velocity: zeros(vec![25, 2]),
     };
 
     let training_data = TrainingData {
@@ -261,7 +259,7 @@ pub fn train_simple<B: AutodiffBackend>(
         observations: None,
     };
 
-    let mut optimizer = PINNOptimizer::sgd(learning_rate, 0.0);
+    let mut optimizer = PINNOptimizer::sgd(model, learning_rate, 0.0);
     let mut scheduler = LRScheduler::constant(learning_rate);
 
     train_pinn(
@@ -276,10 +274,8 @@ pub fn train_simple<B: AutodiffBackend>(
 #[cfg(test)]
 mod tests {
     use super::super::data::ElasticPinnTrainingMetrics;
-    #[cfg(feature = "pinn")]
     use super::ElasticPinnLoopConfig;
 
-    #[cfg(feature = "pinn")]
     #[test]
     fn test_training_config() {
         let config = ElasticPinnLoopConfig {
@@ -340,5 +336,22 @@ mod tests {
             !metrics.has_converged(1e-7, 5),
             "Should not converge with tolerance < actual variation"
         );
+    }
+
+    #[test]
+    fn smoke_train_simple_runs_and_produces_finite_metrics() {
+        use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
+        use crate::inverse::pinn::elastic_2d::training::train_simple;
+        use crate::inverse::pinn::elastic_2d::Config;
+        type B = coeus_core::MoiraiBackend;
+
+        let config = Config {
+            hidden_layers: vec![4],
+            ..Config::default()
+        };
+        let mut model = ElasticPINN2D::<B>::new(&config).unwrap();
+        let metrics = train_simple(&mut model, 3, 1e-3).unwrap();
+        assert_eq!(metrics.epochs_completed, 3);
+        assert!(metrics.final_loss().unwrap().is_finite());
     }
 }

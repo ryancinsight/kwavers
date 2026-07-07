@@ -3,21 +3,19 @@
 //! This module contains all the trait implementations that allow the
 //! ElasticPINN2DSolver to satisfy the domain-layer physics specifications.
 
-#[cfg(feature = "pinn")]
 use super::solver::ElasticPINN2DSolver;
-#[cfg(feature = "pinn")]
 use kwavers_physics::foundations::{
     AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, TimeIntegration,
 };
 
-#[cfg(feature = "pinn")]
 use ndarray::{ArrayD, IxDyn};
 
-#[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
-
-#[cfg(feature = "pinn")]
-impl<B: Backend> AutodiffWaveEquation for ElasticPINN2DSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffWaveEquation
+    for ElasticPINN2DSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     fn domain(&self) -> &Domain {
         &self.domain
     }
@@ -96,8 +94,12 @@ impl<B: Backend> AutodiffWaveEquation for ElasticPINN2DSolver<B> {
     }
 }
 
-#[cfg(feature = "pinn")]
-impl<B: Backend> AutodiffElasticWaveEquation for ElasticPINN2DSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffElasticWaveEquation
+    for ElasticPINN2DSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     fn lame_lambda(&self) -> ArrayD<f64> {
         // Get current parameter (learned or fixed)
         let (lambda, _, _) = self.current_parameters();
