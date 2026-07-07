@@ -27,8 +27,9 @@
       55 `.par_for_each` sites outside this RTM inherent slice (exact paths in
       gap_audit.md), and package fmt is blocked by pre-existing formatting
       drift in `forward/fdtd/electromagnetic/tests.rs`. Package clippy is
-      blocked by the concurrent forward FDTD/hybrid/PSTD Leto-vs-ndarray
-      migration diff outside this slice.
+      blocked by pre-existing `kwavers-math` dead-code diagnostics in the
+      concurrent eigendecomposition Leto-vs-ndarray migration diff outside this
+      slice.
 ## Sprint K Atlas provider migration — IN PROGRESS (2026-07-01)
 - [x] [patch] GPU provider-neutral backend boundary: make
       `kwavers-solver::backend::BackendType` carry an explicit

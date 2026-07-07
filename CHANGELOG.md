@@ -15,8 +15,9 @@
   `.par_for_each` sites outside this slice; `cargo fmt -p kwavers-solver
   --check` remains blocked by pre-existing formatting drift in
   `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`, and
-  `cargo clippy -p kwavers-solver --lib --no-deps -- -D warnings` is blocked
-  by the concurrent forward FDTD/hybrid/PSTD Leto-vs-ndarray migration diff.
+  `cargo clippy -p kwavers-solver --lib -- -D warnings` is blocked by
+  pre-existing `kwavers-math` dead-code diagnostics in the concurrent
+  eigendecomposition Leto-vs-ndarray migration diff.
 
 ### Changed (2026-07-05) - kwavers-math numeric SSOT Phase-1A pilot [patch]
 - [patch] Phase-1A closed `kwavers_math::linear_algebra::NumericOps<T>` against the eunomia numeric SSOT. `num_traits::{Float, NumCast, Zero}` is replaced by `eunomia::RealField` (re-exported from `eunomia::traits::field`) and `eunomia::NumericElement::ZERO`. Super-traits `Clone + Zero` (and the vestigial `NumCast`) are dropped to `Copy + PartialOrd`. The six method bodies (`dot_product`, `normalize`, `add_arrays`, `scale_array`, `l2_norm`, `max_abs`, `safe_divide`) use `T::ZERO` instead of `T::zero()`. `max_abs` folds via `if val > acc { val } else { acc }` driven by `T: PartialOrd` because `eunomia::RealField` does not propagate a `max` method. `eunomia = { workspace = true }` is now declared in `crates/kwavers-math/Cargo.toml`; `num-traits` is retained only for `linear_algebra::sparse::csr.rs` (Phase-1B blocker — `num_complex::Complex64` does not impl `eunomia::NumericElement` under eunomia's `private::Sealed` float traits). Completion condition: `cargo build -p kwavers-math` succeeds; `numeric_ops.rs` drops from the kwavers xtask `legacy-migration-audit` source-legacy list. Residual: csr.rs Phase-1B queued under `CR-EUNOMIA-COMPLEX`.
