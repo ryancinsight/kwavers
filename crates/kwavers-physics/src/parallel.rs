@@ -1,6 +1,9 @@
 //! Atlas parallel-provider adapters for physics field traversal.
 
-use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
+use moirai_parallel::{
+    enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with,
+    for_each_chunk_triple_mut_enumerated_with, Adaptive,
+};
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
 
 const FIELD_CHUNK_SIZE: usize = 1024;
@@ -11,6 +14,11 @@ fn grid_index(idx: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
     let i = idx / plane;
     let rem = idx % plane;
     (i, rem / nz, rem % nz)
+}
+
+#[inline]
+fn linear_index(index: (usize, usize, usize), ny: usize, nz: usize) -> usize {
+    (index.0 * ny + index.1) * nz + index.2
 }
 
 /// Apply an indexed mutation over a 3-D view.
@@ -186,6 +194,64 @@ pub(crate) fn for_each_indexed_mut_four_refs<T, U, V, W, X, F>(
             .and(third)
             .and(fourth)
             .for_each(f),
+    }
+}
+
+/// Apply an indexed mutation over three mutable 3-D views.
+#[inline]
+pub(crate) fn for_each_indexed_three_mut<T, U, V, F>(
+    mut first: ArrayViewMut3<'_, T>,
+    mut second: ArrayViewMut3<'_, U>,
+    mut third: ArrayViewMut3<'_, V>,
+    f: F,
+) where
+    T: Send,
+    U: Send,
+    V: Send,
+    F: Fn(usize, &mut T, &mut U, &mut V) + Send + Sync,
+{
+    assert_eq!(
+        first.dim(),
+        second.dim(),
+        "invariant: physics indexed triple output second shape mismatch"
+    );
+    assert_eq!(
+        first.dim(),
+        third.dim(),
+        "invariant: physics indexed triple output third shape mismatch"
+    );
+
+    let (_nx, ny, nz) = first.dim();
+    match (
+        first.as_slice_memory_order_mut(),
+        second.as_slice_memory_order_mut(),
+        third.as_slice_memory_order_mut(),
+    ) {
+        (Some(first), Some(second), Some(third)) => {
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                first,
+                second,
+                third,
+                FIELD_CHUNK_SIZE,
+                |chunk_index, first_chunk, second_chunk, third_chunk| {
+                    let start = chunk_index * FIELD_CHUNK_SIZE;
+                    for (offset, ((first_value, second_value), third_value)) in first_chunk
+                        .iter_mut()
+                        .zip(second_chunk.iter_mut())
+                        .zip(third_chunk.iter_mut())
+                        .enumerate()
+                    {
+                        f(start + offset, first_value, second_value, third_value);
+                    }
+                },
+            );
+        }
+        _ => Zip::indexed(first)
+            .and(second)
+            .and(third)
+            .for_each(|index, first, second, third| {
+                f(linear_index(index, ny, nz), first, second, third);
+            }),
     }
 }
 
