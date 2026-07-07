@@ -1,5 +1,6 @@
 //! Therapy calculator orchestration
 
+use crate::parallel::zip_indexed_mut_ref3;
 use kwavers_core::constants::fundamental::DENSITY_TISSUE;
 use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
@@ -13,7 +14,7 @@ use kwavers_physics::therapy::types::{
     DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,
 };
 use kwavers_solver::forward::thermal::PennesSolver;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use std::sync::Arc;
 
 /// Main therapy calculator
@@ -127,9 +128,10 @@ impl TherapyCalculator {
         let mut heat_source = Array3::zeros(self.grid_shape);
 
         // Q = 2 * α * I, where I = p²/(2*ρ*c)
-        Zip::indexed(&mut heat_source)
-            .and(pressure)
-            .for_each(|(i, j, k), q, &p| {
+        zip_indexed_mut_ref3(
+            heat_source.view_mut(),
+            pressure.view(),
+            |(i, j, k), q, &p| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -150,7 +152,8 @@ impl TherapyCalculator {
 
                 // Heat generation rate [W/m³]
                 *q = 2.0 * alpha * intensity;
-            });
+            },
+        );
 
         Ok(heat_source)
     }
@@ -187,5 +190,36 @@ impl TherapyCalculator {
             self.parameters.treatment_duration,
             self.metrics.summary()
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kwavers_medium::HomogeneousMedium;
+
+    #[test]
+    fn heat_source_matches_absorbed_intensity_formula() {
+        let grid = Grid::new(2, 2, 1, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+        let density = 1_000.0;
+        let sound_speed = 1_500.0;
+        let absorption = 3.0;
+        let mut medium = HomogeneousMedium::new(density, sound_speed, 0.0, 0.0, &grid);
+        medium
+            .set_acoustic_properties(absorption, 0.0, 5.0)
+            .unwrap();
+        let medium: Arc<dyn Medium> = Arc::new(medium);
+        let parameters = DomainTherapyParameters::new(1.0e6, 1.0e6, 1.0);
+        let calculator = TherapyCalculator::new(DomainTherapyModality::HIFU, parameters, &grid);
+        let pressure =
+            Array3::from_shape_vec((grid.nx, grid.ny, grid.nz), vec![0.0, 10.0, 20.0, 30.0])
+                .unwrap();
+
+        let heat_source = calculator
+            .calculate_heat_source(&pressure, &medium, &grid)
+            .unwrap();
+        let expected = pressure.mapv(|p| absorption * p * p / (density * sound_speed));
+
+        assert_eq!(heat_source, expected);
     }
 }
