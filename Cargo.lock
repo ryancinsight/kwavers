@@ -5051,6 +5051,7 @@ dependencies = [
  "kwavers-math",
  "kwavers-medium",
  "kwavers-signal",
+ "moirai-parallel",
  "ndarray",
  "num-complex",
  "serde",
