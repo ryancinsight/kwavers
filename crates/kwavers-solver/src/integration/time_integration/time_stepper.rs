@@ -8,7 +8,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, SystemError};
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 use std::collections::VecDeque;
 
 fn add_scaled_inplace(target: &mut Array3<f64>, rhs: &Array3<f64>, scale: f64) {
@@ -17,18 +17,16 @@ fn add_scaled_inplace(target: &mut Array3<f64>, rhs: &Array3<f64>, scale: f64) {
         rhs.dim(),
         "invariant: add_scaled_inplace shape mismatch"
     );
-    match (
-        target.as_slice_memory_order_mut(),
-        rhs.as_slice_memory_order(),
-    ) {
+    match (target.as_slice_mut(), rhs.as_slice()) {
         (Some(target_slice), Some(rhs_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(target_slice, |idx, value| {
                 *value += scale * rhs_slice[idx];
             });
         }
-        _ => Zip::from(target)
-            .and(rhs)
-            .for_each(|value, &rhs| *value += scale * rhs),
+        _ => target
+            .iter_mut()
+            .zip(rhs.iter())
+            .for_each(|(value, &rhs)| *value += scale * rhs),
     }
 }
 
@@ -45,11 +43,11 @@ fn combine_rk4_inplace(
     assert_eq!(field.dim(), k3.dim(), "invariant: RK4 k3 shape mismatch");
     assert_eq!(field.dim(), k4.dim(), "invariant: RK4 k4 shape mismatch");
     match (
-        field.as_slice_memory_order_mut(),
-        k1.as_slice_memory_order(),
-        k2.as_slice_memory_order(),
-        k3.as_slice_memory_order(),
-        k4.as_slice_memory_order(),
+        field.as_slice_mut(),
+        k1.as_slice(),
+        k2.as_slice(),
+        k3.as_slice(),
+        k4.as_slice(),
     ) {
         (Some(field_slice), Some(k1_slice), Some(k2_slice), Some(k3_slice), Some(k4_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(field_slice, |idx, value| {
@@ -58,13 +56,14 @@ fn combine_rk4_inplace(
                         + k4_slice[idx]);
             });
         }
-        _ => Zip::from(field)
-            .and(k1)
-            .and(k2)
-            .and(k3)
-            .and(k4)
-            .for_each(|r, k1, k2, k3, k4| {
-                *r += dt / 6.0 * (2.0f64.mul_add(*k3, 2.0f64.mul_add(*k2, *k1)) + *k4);
+        _ => field
+            .iter_mut()
+            .zip(k1.iter())
+            .zip(k2.iter())
+            .zip(k3.iter())
+            .zip(k4.iter())
+            .for_each(|((((r, &k1), &k2), &k3), &k4)| {
+                *r += dt / 6.0 * (2.0f64.mul_add(k3, 2.0f64.mul_add(k2, k1)) + k4);
             }),
     }
 }
@@ -81,22 +80,17 @@ fn adams_bashforth2_inplace(
         f_nm1.dim(),
         "invariant: AB2 f_nm1 shape mismatch"
     );
-    match (
-        field.as_slice_memory_order_mut(),
-        f_n.as_slice_memory_order(),
-        f_nm1.as_slice_memory_order(),
-    ) {
+    match (field.as_slice_mut(), f_n.as_slice(), f_nm1.as_slice()) {
         (Some(field_slice), Some(f_n_slice), Some(f_nm1_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(field_slice, |idx, value| {
                 *value += dt * 1.5f64.mul_add(f_n_slice[idx], -(0.5 * f_nm1_slice[idx]));
             });
         }
-        _ => Zip::from(field)
-            .and(f_n)
-            .and(f_nm1)
-            .for_each(|r, fn_val, fnm1_val| {
-                *r += dt * 1.5f64.mul_add(*fn_val, -(0.5 * *fnm1_val));
-            }),
+        _ => field.iter_mut().zip(f_n.iter()).zip(f_nm1.iter()).for_each(
+            |((r, &fn_val), &fnm1_val)| {
+                *r += dt * 1.5f64.mul_add(fn_val, -(0.5 * fnm1_val));
+            },
+        ),
     }
 }
 
@@ -119,10 +113,10 @@ fn adams_bashforth3_inplace(
         "invariant: AB3 f_nm2 shape mismatch"
     );
     match (
-        field.as_slice_memory_order_mut(),
-        f_n.as_slice_memory_order(),
-        f_nm1.as_slice_memory_order(),
-        f_nm2.as_slice_memory_order(),
+        field.as_slice_mut(),
+        f_n.as_slice(),
+        f_nm1.as_slice(),
+        f_nm2.as_slice(),
     ) {
         (Some(field_slice), Some(f_n_slice), Some(f_nm1_slice), Some(f_nm2_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(field_slice, |idx, value| {
@@ -134,15 +128,18 @@ fn adams_bashforth3_inplace(
                     );
             });
         }
-        _ => Zip::from(field).and(f_n).and(f_nm1).and(f_nm2).for_each(
-            |r, fn_val, fnm1_val, fnm2_val| {
+        _ => field
+            .iter_mut()
+            .zip(f_n.iter())
+            .zip(f_nm1.iter())
+            .zip(f_nm2.iter())
+            .for_each(|(((r, &fn_val), &fnm1_val), &fnm2_val)| {
                 *r += dt
                     * (5.0_f64 / 12.0).mul_add(
-                        *fnm2_val,
-                        (23.0_f64 / 12.0).mul_add(*fn_val, -(16.0_f64 / 12.0 * *fnm1_val)),
+                        fnm2_val,
+                        (23.0_f64 / 12.0).mul_add(fn_val, -(16.0_f64 / 12.0 * fnm1_val)),
                     );
-            },
-        ),
+            }),
     }
 }
 
@@ -460,5 +457,89 @@ impl TimeStepper for AdamsBashforth {
     fn reset(&mut self) {
         self.rhs_history.clear();
         self.step_count = 0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use ndarray::{Array3, ShapeBuilder};
+
+    use super::{
+        adams_bashforth2_inplace, adams_bashforth3_inplace, add_scaled_inplace, combine_rk4_inplace,
+    };
+
+    #[test]
+    fn add_scaled_inplace_preserves_logical_order_for_nonstandard_rhs() {
+        let shape = (2, 3, 4);
+        let mut target = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
+        let rhs =
+            Array3::from_shape_fn(shape.f(), |(i, j, k)| (1000 + 100 * i + 10 * j + k) as f64);
+
+        assert!(
+            rhs.as_slice().is_none(),
+            "test invariant: rhs must force logical-iterator fallback"
+        );
+        add_scaled_inplace(&mut target, &rhs, 0.25);
+
+        assert_eq!(
+            target,
+            Array3::from_shape_fn(shape, |(i, j, k)| {
+                (100 * i + 10 * j + k) as f64 + 0.25 * (1000 + 100 * i + 10 * j + k) as f64
+            })
+        );
+    }
+
+    #[test]
+    fn combine_rk4_inplace_preserves_logical_order_for_nonstandard_stages() {
+        let shape = (2, 3, 4);
+        let mut field = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
+        let k1 = Array3::from_shape_fn(shape.f(), |(i, j, k)| (1 + i + j + k) as f64);
+        let k2 = Array3::from_shape_fn(shape, |(i, j, k)| (2 + i + j + k) as f64);
+        let k3 = Array3::from_shape_fn(shape.f(), |(i, j, k)| (3 + i + j + k) as f64);
+        let k4 = Array3::from_shape_fn(shape, |(i, j, k)| (4 + i + j + k) as f64);
+        let dt = 0.5;
+
+        combine_rk4_inplace(&mut field, &k1, &k2, &k3, &k4, dt);
+
+        assert_eq!(
+            field,
+            Array3::from_shape_fn(shape, |(i, j, k)| {
+                let base = (100 * i + 10 * j + k) as f64;
+                let s = (i + j + k) as f64;
+                base + dt / 6.0 * ((1.0 + s) + 2.0 * (2.0 + s) + 2.0 * (3.0 + s) + (4.0 + s))
+            })
+        );
+    }
+
+    #[test]
+    fn adams_bashforth_inplace_preserves_logical_order_for_nonstandard_history() {
+        let shape = (2, 3, 4);
+        let mut ab2_field = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
+        let f_n = Array3::from_shape_fn(shape.f(), |(i, j, k)| (1 + i + j + k) as f64);
+        let f_nm1 = Array3::from_shape_fn(shape, |(i, j, k)| (2 + i + j + k) as f64);
+        let dt = 0.25;
+
+        adams_bashforth2_inplace(&mut ab2_field, &f_n, &f_nm1, dt);
+        assert_eq!(
+            ab2_field,
+            Array3::from_shape_fn(shape, |(i, j, k)| {
+                let base = (100 * i + 10 * j + k) as f64;
+                let s = (i + j + k) as f64;
+                base + dt * (1.5 * (1.0 + s) - 0.5 * (2.0 + s))
+            })
+        );
+
+        let mut ab3_field = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
+        let f_nm2 = Array3::from_shape_fn(shape.f(), |(i, j, k)| (3 + i + j + k) as f64);
+        adams_bashforth3_inplace(&mut ab3_field, &f_n, &f_nm1, &f_nm2, dt);
+        assert_eq!(
+            ab3_field,
+            Array3::from_shape_fn(shape, |(i, j, k)| {
+                let base = (100 * i + 10 * j + k) as f64;
+                let s = (i + j + k) as f64;
+                base + dt
+                    * (23.0 / 12.0 * (1.0 + s) - 16.0 / 12.0 * (2.0 + s) + 5.0 / 12.0 * (3.0 + s))
+            })
+        );
     }
 }
