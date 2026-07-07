@@ -1,10 +1,5 @@
-//! Complex Linear Algebra Operations
-//!
-//! This module provides linear algebra operations for complex-valued matrices
-//! and vectors, essential for narrowband beamforming algorithms like MVDR/Capon.
-
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2, Storage};
 use num_complex::Complex;
 
 /// Complex linear algebra operations for beamforming
@@ -12,42 +7,36 @@ use num_complex::Complex;
 pub struct ComplexLinearAlgebra;
 
 impl ComplexLinearAlgebra {
-    /// Solve a complex linear system Ax = b
-    ///
-    /// # Arguments
-    /// * `a` - Complex coefficient matrix (n×n)
-    /// * `b` - Complex right-hand side vector (n)
-    ///
-    /// # Returns
-    /// Complex solution vector x
-    /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    ///
+    /// Solve a complex linear system Ax = b using Gaussian elimination with partial pivoting.
     pub fn solve_linear_system_complex(
         a: &Array2<Complex<f64>>,
         b: &Array1<Complex<f64>>,
     ) -> KwaversResult<Array1<Complex<f64>>> {
-        let n = a.nrows();
-        if a.ncols() != n || b.len() != n {
+        let n = a.shape()[0];
+        if a.shape()[1] != n || b.shape()[0] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "solve_linear_system_complex".to_owned(),
-                expected: format!("{}×{} matrix and {} vector", n, n, n),
-                actual: format!("{}×{} matrix and {} vector", a.nrows(), a.ncols(), b.len()),
+                expected: format!("{n}×{n} matrix and {n} vector"),
+                actual: format!(
+                    "{}×{} matrix and {} vector",
+                    a.shape()[0],
+                    a.shape()[1],
+                    b.shape()[0]
+                ),
             }));
         }
 
-        // Gaussian elimination with partial pivoting for complex matrices
-        let mut a_copy = a.clone();
-        let mut b_copy = b.clone();
+        let mut a_data = a.storage().as_slice().to_vec();
+        let mut b_data = b.storage().as_slice().to_vec();
 
         // Forward elimination
         for i in 0..n {
             // Find pivot (largest magnitude)
             let mut max_row = i;
-            let mut max_val = a_copy[[i, i]].norm();
+            let mut max_val = a_data[i * n + i].norm_sqr();
 
             for k in (i + 1)..n {
-                let val = a_copy[[k, i]].norm();
+                let val = a_data[k * n + i].norm_sqr();
                 if val > max_val {
                     max_val = val;
                     max_row = k;
@@ -57,99 +46,88 @@ impl ComplexLinearAlgebra {
             // Swap rows if needed
             if max_row != i {
                 for j in 0..n {
-                    let temp = a_copy[[i, j]];
-                    a_copy[[i, j]] = a_copy[[max_row, j]];
-                    a_copy[[max_row, j]] = temp;
+                    a_data.swap(i * n + j, max_row * n + j);
                 }
-                let temp = b_copy[i];
-                b_copy[i] = b_copy[max_row];
-                b_copy[max_row] = temp;
+                b_data.swap(i, max_row);
             }
 
             // Check for singularity
-            if a_copy[[i, i]].norm() < 1e-12 {
+            if a_data[i * n + i].norm_sqr() < 1e-24 {
                 return Err(KwaversError::Numerical(NumericalError::SingularMatrix {
                     operation: "solve_linear_system_complex".to_owned(),
                     condition_number: f64::INFINITY,
                 }));
             }
 
-            let pivot = a_copy[[i, i]];
-            let pivot_row = a_copy.row(i).to_owned();
-            let pivot_b = b_copy[i];
+            let pivot = a_data[i * n + i];
 
-            // Eliminate
+            // Eliminate below
             for k in (i + 1)..n {
-                let factor = a_copy[[k, i]] / pivot;
+                let factor = a_data[k * n + i] / pivot;
                 for j in i..n {
-                    a_copy[[k, j]] -= factor * pivot_row[j];
+                    let v = a_data[k * n + j];
+                    a_data[k * n + j] = v - factor * a_data[i * n + j];
                 }
-                b_copy[k] -= factor * pivot_b;
+                b_data[k] = b_data[k] - factor * b_data[i];
             }
         }
 
         // Back substitution
-        let mut x = Array1::zeros(n);
+        let mut x = vec![Complex::new(0.0, 0.0); n];
         for i in (0..n).rev() {
             let mut sum = Complex::new(0.0, 0.0);
             for j in (i + 1)..n {
-                sum += a_copy[[i, j]] * x[j];
+                sum += a_data[i * n + j] * x[j];
             }
-            x[i] = (b_copy[i] - sum) / a_copy[[i, i]];
+            x[i] = (b_data[i] - sum) / a_data[i * n + i];
         }
 
-        Ok(x)
+        Ok(Array1::from(x))
     }
 
-    /// Compute inverse of a complex matrix
-    ///
-    /// # Arguments
-    /// * `matrix` - Complex square matrix (n×n)
-    ///
-    /// # Returns
-    /// Complex inverse matrix
-    /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
+    /// Compute inverse of a complex matrix via column-wise solves.
     pub fn matrix_inverse_complex(
         matrix: &Array2<Complex<f64>>,
     ) -> KwaversResult<Array2<Complex<f64>>> {
-        let n = matrix.nrows();
-        if matrix.ncols() != n {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "matrix_inverse_complex".to_owned(),
-                expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                expected: format!("{n}×{n} square matrix"),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
-        // Create identity matrix
-        let identity = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
-        let mut result = Array2::zeros((n, n));
+        let mut result = vec![Complex::new(0.0, 0.0); n * n];
 
         // Solve for each column of the identity matrix
-        for i in 0..n {
-            let b = identity.column(i).to_owned();
-            let x = Self::solve_linear_system_complex(matrix, &b)?;
-            result.column_mut(i).assign(&x);
+        for col in 0..n {
+            let mut e = vec![Complex::new(0.0, 0.0); n];
+            e[col] = Complex::new(1.0, 0.0);
+            let e_array = Array1::from(e);
+            let x = Self::solve_linear_system_complex(matrix, &e_array)?;
+            let xs = x.storage().as_slice();
+            for row in 0..n {
+                result[row * n + col] = xs[row];
+            }
         }
 
-        Ok(result)
+        Array2::from_shape_vec([n, n], result)
+            .map_err(|e| KwaversError::Numerical(NumericalError::SolverFailed {
+                method: "matrix_inverse_complex".to_owned(),
+                reason: e.to_string(),
+            }))
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
-    use num_complex::Complex;
 
     #[test]
     fn test_solve_complex_linear_system() {
-        // Simple 2×2 complex system
         let a = Array2::from_shape_vec(
-            (2, 2),
+            [2, 2],
             vec![
                 Complex::new(2.0, 1.0),
                 Complex::new(1.0, 0.0),
@@ -159,14 +137,20 @@ mod tests {
         )
         .unwrap();
 
-        let b = Array1::from_vec(vec![Complex::new(3.0, 1.0), Complex::new(2.0, -1.0)]);
+        let b = Array1::from(vec![Complex::new(3.0, 1.0), Complex::new(2.0, -1.0)]);
 
         let x = ComplexLinearAlgebra::solve_linear_system_complex(&a, &b).unwrap();
 
-        // Verify solution by checking Ax = b
-        let ax = a.dot(&x);
+        // Verify Ax = b
+        let a_sl = a.storage().as_slice();
+        let x_sl = x.storage().as_slice();
+        let b_sl = b.storage().as_slice();
         for i in 0..2 {
-            assert!((ax[i] - b[i]).norm() < 1e-10);
+            let mut sum = Complex::new(0.0, 0.0);
+            for j in 0..2 {
+                sum = sum + a_sl[i * 2 + j] * x_sl[j];
+            }
+            assert!((sum - b_sl[i]).norm() < 1e-10);
         }
     }
 }

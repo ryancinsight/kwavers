@@ -77,8 +77,6 @@ impl CalibrationManager {
         measurements: &[f64],
         reflectors: &[[f64; 3]],
     ) -> KwaversResult<[f64; 3]> {
-        use nalgebra::{DMatrix, DVector};
-
         let n = reflectors.len();
         if n < 4 || measurements.len() < n {
             return Err(kwavers_core::error::KwaversError::InvalidInput(
@@ -86,8 +84,8 @@ impl CalibrationManager {
             ));
         }
 
-        let mut a_matrix = DMatrix::zeros(n - 1, 3);
-        let mut b_vector = DVector::zeros(n - 1);
+        let mut a_matrix = Array2::zeros((n - 1, 3));
+        let mut b_vector = Array1::zeros(n - 1);
 
         let ref_pos = &reflectors[0];
         let ref_dist = measurements[0];
@@ -96,11 +94,11 @@ impl CalibrationManager {
             let pos = &reflectors[i];
             let dist_diff = measurements[i] - ref_dist;
 
-            a_matrix[(i - 1, 0)] = 2.0 * (pos[0] - ref_pos[0]);
-            a_matrix[(i - 1, 1)] = 2.0 * (pos[1] - ref_pos[1]);
-            a_matrix[(i - 1, 2)] = 2.0 * (pos[2] - ref_pos[2]);
+            a_matrix[[i - 1, 0]] = 2.0 * (pos[0] - ref_pos[0]);
+            a_matrix[[i - 1, 1]] = 2.0 * (pos[1] - ref_pos[1]);
+            a_matrix[[i - 1, 2]] = 2.0 * (pos[2] - ref_pos[2]);
 
-            b_vector[i - 1] = dist_diff.mul_add(
+            b_vector[[i - 1]] = dist_diff.mul_add(
                 dist_diff,
                 -pos[2].mul_add(pos[2], pos[0].mul_add(pos[0], pos[1] * pos[1])),
             ) + ref_pos[2].mul_add(
@@ -109,20 +107,20 @@ impl CalibrationManager {
             );
         }
 
-        let at_a = a_matrix.transpose() * &a_matrix;
-        let at_b = a_matrix.transpose() * b_vector;
+        let a_t = a_matrix.t().to_owned();
+        let at_a = a_t.dot(&a_matrix);
+        let at_b = a_t.dot(&b_vector);
 
-        let decomp = at_a.lu();
-        let solution = decomp
-            .solve(&at_b)
-            .ok_or(kwavers_core::error::KwaversError::Numerical(
+        let solution = solve_linear_system(&at_a, &at_b).ok_or(
+            kwavers_core::error::KwaversError::Numerical(
                 kwavers_core::error::NumericalError::SolverFailed {
-                    method: "LU decomposition".to_owned(),
+                    method: "Gaussian elimination".to_owned(),
                     reason: "Singular matrix in triangulation".to_owned(),
                 },
-            ))?;
+            ),
+        )?;
 
-        Ok([solution[0], solution[1], solution[2]])
+        Ok(solution)
     }
 
     /// Process external tracking data with Kalman filtering.
@@ -170,4 +168,58 @@ impl CalibrationManager {
     pub fn data(&self) -> &CalibrationData {
         &self.data
     }
+}
+
+fn solve_linear_system(a: &Array2<f64>, b: &Array1<f64>) -> Option<[f64; 3]> {
+    if a.nrows() != 3 || a.ncols() != 3 || b.len() != 3 {
+        return None;
+    }
+
+    let mut aug = [[0.0; 4]; 3];
+    for i in 0..3 {
+        for j in 0..3 {
+            aug[i][j] = a[[i, j]];
+        }
+        aug[i][3] = b[i];
+    }
+
+    let eps = 1e-15;
+    for i in 0..3 {
+        let mut pivot = i;
+        let mut max_abs = aug[i][i].abs();
+        for (r, row) in aug.iter().enumerate().skip(i + 1) {
+            let cand = row[i].abs();
+            if cand > max_abs {
+                max_abs = cand;
+                pivot = r;
+            }
+        }
+        if max_abs <= eps {
+            return None;
+        }
+        if pivot != i {
+            aug.swap(i, pivot);
+        }
+
+        let diag = aug[i][i];
+        for v in aug[i].iter_mut().skip(i) {
+            *v /= diag;
+        }
+
+        for r in 0..3 {
+            if r == i {
+                continue;
+            }
+            let factor = aug[r][i];
+            if factor.abs() <= eps {
+                continue;
+            }
+            let row_i = aug[i];
+            for (c, v) in aug[r].iter_mut().enumerate().skip(i) {
+                *v -= factor * row_i[c];
+            }
+        }
+    }
+
+    Some([aug[0][3], aug[1][3], aug[2][3]])
 }
