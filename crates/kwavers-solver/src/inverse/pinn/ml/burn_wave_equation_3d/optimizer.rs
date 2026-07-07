@@ -34,7 +34,11 @@ impl SimpleOptimizer3D {
     pub fn step<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         mut network: PINN3DNetwork<B>,
-    ) -> PINN3DNetwork<B> {
+    ) -> PINN3DNetwork<B>
+    where
+        B::DeviceBuffer<f32>:
+            coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+    {
         let mut opt = SGD::new(network.parameters(), self.learning_rate, 0.0);
         opt.step();
         network.load_parameters(&opt.params);

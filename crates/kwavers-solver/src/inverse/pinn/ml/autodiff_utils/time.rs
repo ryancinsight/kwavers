@@ -3,7 +3,7 @@
 //! # References
 //! - Raissi et al. (2019): "Physics-informed neural networks". *J. Comput. Phys.*, 378, 686–707.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 /// Compute first-order time derivative ∂u/∂t.
 ///
@@ -15,39 +15,39 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 /// # Returns
 /// Tensor of shape `[batch, 1]` containing ∂u/∂t for the specified component.
 ///
-/// # Burn 0.19+ autodiff pattern
+/// # coeus_autograd pattern
 /// ```text
-/// input_grad = input.require_grad()
-/// output = forward(input_grad)
-/// grads = output.sum().backward()
-/// du_dt = input_grad.grad(&grads)[:, 0]   // column 0 = time
+/// input_grad = Var::new(input.clone(), true)
+/// output = forward(&input_grad)
+/// sum(output_component).backward()
+/// du_dt = input_grad.grad()[:, 0]   // column 0 = time
 /// ```
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
-///
 pub fn compute_time_derivative<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
+    input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
+) -> Result<coeus_tensor::Tensor<f32, B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B>,
 {
-    let input_grad = input.clone().require_grad();
-    let output = forward_fn(input_grad.clone());
-    let component = output
-        .clone()
-        .slice([0..output.dims()[0], output_component..output_component + 1]);
-    let grads = component.sum().backward();
+    let batch = input.shape()[0];
+    let input_grad = Var::new(input.clone(), true);
+    let output = forward_fn(&input_grad);
+    let component = coeus_autograd::slice(&output, &[(0, batch), (output_component, output_component + 1)]);
+    coeus_autograd::sum(&component).backward();
     let dt_grad = input_grad
-        .grad(&grads)
+        .grad()
         .ok_or_else(|| {
             kwavers_core::error::KwaversError::InternalError(
                 "Failed to compute time derivative gradient".into(),
             )
         })?
-        .slice([0..input.dims()[0], 0..1]);
+        .slice(&[(0, batch), (0, 1)])
+        .to_contiguous();
     Ok(dt_grad)
 }
 
@@ -66,50 +66,52 @@ where
 /// ```text
 /// ∂²u/∂t² ≈ (u(t+ε) − 2u(t) + u(t−ε)) / ε²
 /// ```
-/// Truncation error O(ε²). Nested autodiff in Burn requires InnerBackend tensor handling;
-/// finite differences provide a pragmatic alternative on non-throughput-critical PDE paths.
+/// Truncation error O(ε²).
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-///
 pub fn compute_second_time_derivative<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
+    input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
+) -> Result<coeus_tensor::Tensor<f32, B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B>,
 {
-    let eps = 1e-4;
-    let batch = input.dims()[0];
+    let eps = 1e-4_f32;
+    let batch = input.shape()[0];
+    let backend = B::default();
 
-    let t_col = input.clone().slice([0..batch, 0..1]);
-    let x_col = input.clone().slice([0..batch, 1..2]);
-    let y_col = input.clone().slice([0..batch, 2..3]);
+    let raw = input.as_slice();
+    let mut plus = raw.to_vec();
+    let mut minus = raw.to_vec();
+    for row in 0..batch {
+        plus[row * 3] += eps;
+        minus[row * 3] -= eps;
+    }
+    let input_plus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &plus, &backend);
+    let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
 
-    let t_plus = t_col.clone().add_scalar(eps);
-    let t_minus = t_col.sub_scalar(eps);
+    let output = forward_fn(&Var::new(input.clone(), false));
+    let u_t = coeus_autograd::slice(&output, &[(0, batch), (output_component, output_component + 1)]);
 
-    let input_plus = Tensor::cat(vec![t_plus, x_col.clone(), y_col.clone()], 1);
-    let input_minus = Tensor::cat(vec![t_minus, x_col, y_col], 1);
+    let output_plus = forward_fn(&Var::new(input_plus, false));
+    let u_t_plus = coeus_autograd::slice(
+        &output_plus,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
-    let output = forward_fn(input.clone());
-    let u_t = output
-        .clone()
-        .slice([0..output.dims()[0], output_component..output_component + 1]);
+    let output_minus = forward_fn(&Var::new(input_minus, false));
+    let u_t_minus = coeus_autograd::slice(
+        &output_minus,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
-    let output_plus = forward_fn(input_plus);
-    let u_t_plus = output_plus.clone().slice([
-        0..output_plus.dims()[0],
-        output_component..output_component + 1,
-    ]);
-
-    let output_minus = forward_fn(input_minus);
-    let u_t_minus = output_minus.clone().slice([
-        0..output_minus.dims()[0],
-        output_component..output_component + 1,
-    ]);
-
-    let d2u_dt2 = (u_t_plus + u_t_minus - u_t * 2.0) / (eps * eps);
-    Ok(d2u_dt2.inner())
+    let two_u = coeus_autograd::scalar_mul(&u_t, 2.0);
+    let d2u_dt2 = coeus_autograd::scalar_mul(
+        &coeus_autograd::sub(&coeus_autograd::add(&u_t_plus, &u_t_minus), &two_u),
+        1.0 / (eps * eps),
+    );
+    Ok(d2u_dt2.tensor)
 }

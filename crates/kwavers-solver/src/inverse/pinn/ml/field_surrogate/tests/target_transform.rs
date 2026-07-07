@@ -126,12 +126,16 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
         batch_size: 64,
     };
     let (pmin, pmax, prms) = infer_grid(&net, &params).unwrap();
-    let bound_pa = p_max_pa as f64 * 1.0;
+    // `TargetTransform::inverse` clamps its input to `[-1, 1]` before
+    // inverting, so |p| saturates at |p|_max when the (unbounded,
+    // linear-output-layer) untrained network emits |t_norm| >= 1. At
+    // that boundary `T⁻¹(±1)` is exactly `±|p|_max` in real arithmetic,
+    // but f32 `ln`/`exp_m1` carries ~1 ULP relative round-trip error
+    // (f32::EPSILON ≈ 1.19e-7); allow a 10x-margin relative tolerance
+    // on top of the exact bound rather than an unattainable exact `<=`.
+    let bound_pa = p_max_pa as f64 * (1.0 + 10.0 * f32::EPSILON as f64);
     for v in pmin.iter().chain(pmax.iter()).chain(prms.iter()) {
         assert!(v.is_finite(), "non-finite Pa from infer_grid: {v}");
-        // Inverse signed-log1p can only saturate at the calibrated
-        // |p|_max when |t| = 1; an untrained net rarely saturates,
-        // so all values must lie strictly within ±|p|_max.
         assert!(v.abs() <= bound_pa, "infer_grid Pa exceeds |p|_max: {v}");
     }
 }

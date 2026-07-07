@@ -2,6 +2,10 @@ use super::core::BurnPINN3DWave;
 use crate::inverse::pinn::ml::burn_wave_equation_3d::config::BurnPINN3DConfig;
 use coeus_autograd::Var;
 
+/// Collocation coordinate tensors `(x, y, z, t)`, each leaf `Var<f32,B>` `[n_points, 1]`.
+#[allow(clippy::type_complexity)] // 4 independent coordinate tensors, no cohesive grouping
+type CollocationTensors<B> = (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>);
+
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN3DWave<B>
 where
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
@@ -12,7 +16,7 @@ where
     pub(crate) fn generate_collocation_points(
         &self,
         config: &BurnPINN3DConfig,
-    ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+    ) -> CollocationTensors<B> {
         let n_points = config.num_collocation_points;
         let mut x_points = Vec::with_capacity(n_points);
         let mut y_points = Vec::with_capacity(n_points);

@@ -51,7 +51,19 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
     }
 }
 
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DynamicTanh<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Default for DynamicTanh<B>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DynamicTanh<B>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
     /// Construct with `α = 1.0` (recovers vanilla `tanh`), `γ = 1.0`,
     /// `β = 0.0`. Starting from the vanilla-tanh fixed point keeps
     /// the early-training landscape identical to a plain `tanh()`

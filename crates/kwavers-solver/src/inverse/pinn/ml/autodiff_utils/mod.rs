@@ -1,16 +1,16 @@
-//! Burn autodiff utilities for PINN gradient computation.
+//! `coeus_autograd` utilities for PINN gradient computation.
 //!
-//! This module centralizes Burn autodiff derivative helpers and keeps each
-//! derivative family in a separate file. The public API remains the function
-//! set exposed by the former monolithic module.
+//! This module centralizes derivative helpers over a generic
+//! `Fn(&Var<f32,B>) -> Var<f32,B>` forward pass and keeps each
+//! derivative family in a separate file.
 //!
 //! # Gradient Computation Pattern
 //!
 //! ```rust,ignore
-//! let input = input.require_grad();
-//! let output = model.forward(input.clone());
-//! let grads = output.backward();
-//! let grad_tensor = input.grad(&grads);
+//! let input_grad = Var::new(input.clone(), true);
+//! let output = model_forward(&input_grad);
+//! output.backward();
+//! let grad_tensor = input_grad.grad();
 //! ```
 //!
 //! # Mathematical Specifications

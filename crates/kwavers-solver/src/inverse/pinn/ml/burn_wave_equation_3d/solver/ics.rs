@@ -14,7 +14,8 @@ type InitialConditionTensors<B> = (
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN3DWave<B>
 where
-    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     /// Compute temporal derivative ∂u/∂t at t=0 via forward finite difference
     ///

@@ -100,7 +100,6 @@ impl FieldSurrogateTrainingConfig {
 /// All inputs are pre-normalised to the network's `[-1, 1]` input
 /// space; targets are pre-normalised against the per-channel scales
 /// stored in the surrounding training context.
-#[derive(Debug)]
 pub struct TrainingBatch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Network inputs `[batch, 5]`.
     pub inputs: Var<f32, B>,
@@ -130,6 +129,18 @@ pub struct TrainingBatch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend +
     /// network's `[-1, 1]` `p_max` channel back to physical Pa for
     /// the Helmholtz residual.
     pub p_max_scale_pa: f32,
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for TrainingBatch<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TrainingBatch")
+            .field("num_groups", &self.num_groups)
+            .field("coord_half_m", &self.coord_half_m)
+            .field("p_max_scale_pa", &self.p_max_scale_pa)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Per-step loss values returned from a training step.

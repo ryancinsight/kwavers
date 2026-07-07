@@ -104,9 +104,16 @@ impl TargetTransform {
     }
 
     /// Map a `[-1, 1]` network output back to physical Pa.
+    ///
+    /// `t_norm` is clamped to `[-1, 1]` before inversion: the network's
+    /// output layer is a plain affine map with no bounding activation
+    /// (see [`super::network`]), so an untrained or adversarial network
+    /// can emit magnitudes far outside the calibrated domain, which
+    /// would otherwise overflow `expm1` to `±inf`.
     #[inline]
     #[must_use]
     pub fn inverse(&self, t_norm: f32) -> f32 {
+        let t_norm = t_norm.clamp(-1.0, 1.0);
         match *self {
             Self::Linear { scale_pa } => t_norm * scale_pa,
             Self::SignedLog1p { p_eps_pa, t_max } => {

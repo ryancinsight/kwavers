@@ -39,7 +39,8 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> BurnPINN3DWave<B>
 where
-    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     /// Create a new 3D PINN solver
     /// # Errors
@@ -105,7 +106,7 @@ where
         let t_var = Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], t, &backend), false);
 
         let u_pred = self.pinn.forward(&x_var, &y_var, &z_var, &t_var);
-        Ok(u_pred.tensor.as_slice().to_vec())
+        Self::extract_column_vec(&u_pred)
     }
 
     /// Scalar f32.

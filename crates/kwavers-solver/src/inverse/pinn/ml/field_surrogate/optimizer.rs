@@ -29,7 +29,11 @@ impl ParamFieldOptimizer {
     pub fn step<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
         mut net: ParamFieldPINNNetwork<B>,
-    ) -> ParamFieldPINNNetwork<B> {
+    ) -> ParamFieldPINNNetwork<B>
+    where
+        B::DeviceBuffer<f32>:
+            coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+    {
         let mut opt = SGD::new(net.parameters(), self.learning_rate, 0.0);
         opt.step();
         net.load_parameters(&opt.params);

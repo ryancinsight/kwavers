@@ -3,13 +3,10 @@
 //! # References
 //! - Raissi et al. (2019): "Physics-informed neural networks". *J. Comput. Phys.*, 378, 686–707.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 /// 2D gradient component pair `(∂u/∂x, ∂u/∂y)`, each `[batch, 1]`.
-type GradientPair2D<B> = (
-    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
-    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
-);
+type GradientPair2D<B> = (coeus_tensor::Tensor<f32, B>, coeus_tensor::Tensor<f32, B>);
 
 /// Compute spatial gradient ∂u/∂x and ∂u/∂y for a 2D displacement field.
 ///
@@ -21,35 +18,36 @@ type GradientPair2D<B> = (
 /// # Returns
 /// Tuple `(∂u/∂x, ∂u/∂y)`, each of shape `[batch, 1]`.
 ///
-/// # Burn 0.19+ autodiff pattern
-/// Columns 1 and 2 of `input.grad(&grads)` yield ∂/∂x and ∂/∂y respectively.
+/// # coeus_autograd pattern
+/// A fresh leaf `Var` tracks the input; after `.backward()` on the summed
+/// output component, columns 1 and 2 of `input_grad.grad()` yield ∂/∂x and
+/// ∂/∂y respectively.
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
-///
 pub fn compute_spatial_gradient_2d<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
+    input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
 ) -> Result<GradientPair2D<B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B>,
 {
-    let input_grad = input.clone().require_grad();
-    let output = forward_fn(input_grad.clone());
-    let component = output
-        .clone()
-        .slice([0..output.dims()[0], output_component..output_component + 1]);
-    let grads = component.sum().backward();
+    let batch = input.shape()[0];
+    let input_grad = Var::new(input.clone(), true);
+    let output = forward_fn(&input_grad);
+    let component = coeus_autograd::slice(&output, &[(0, batch), (output_component, output_component + 1)]);
+    coeus_autograd::sum(&component).backward();
 
-    let grad_tensor = input_grad.grad(&grads).ok_or_else(|| {
+    let grad_tensor = input_grad.grad().ok_or_else(|| {
         kwavers_core::error::KwaversError::InternalError(
             "Failed to compute spatial gradient".into(),
         )
     })?;
 
-    let dx_grad = grad_tensor.clone().slice([0..input.dims()[0], 1..2]);
-    let dy_grad = grad_tensor.slice([0..input.dims()[0], 2..3]);
+    let dx_grad = grad_tensor.slice(&[(0, batch), (1, 2)]).to_contiguous();
+    let dy_grad = grad_tensor.slice(&[(0, batch), (2, 3)]).to_contiguous();
 
     Ok((dx_grad, dy_grad))
 }
@@ -71,42 +69,47 @@ where
 /// is computed from a distinct scalar reduction of its corresponding output slice.
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
-///
 pub fn compute_divergence_2d<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
-) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
+    input: &coeus_tensor::Tensor<f32, B>,
+) -> Result<coeus_tensor::Tensor<f32, B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B>,
 {
+    let batch = input.shape()[0];
+
     // ∂u_x/∂x — backward through u_x component
-    let input_grad = input.clone().require_grad();
-    let output = forward_fn(input_grad.clone());
-    let u_x = output.clone().slice([0..output.dims()[0], 0..1]);
-    let grads_x = u_x.sum().backward();
+    let input_grad = Var::new(input.clone(), true);
+    let output = forward_fn(&input_grad);
+    let u_x = coeus_autograd::slice(&output, &[(0, batch), (0, 1)]);
+    coeus_autograd::sum(&u_x).backward();
     let du_x_dx = input_grad
-        .grad(&grads_x)
+        .grad()
         .ok_or_else(|| {
             kwavers_core::error::KwaversError::InternalError(
                 "Failed to compute ∂u_x/∂x gradient".into(),
             )
         })?
-        .slice([0..input.dims()[0], 1..2]);
+        .slice(&[(0, batch), (1, 2)])
+        .to_contiguous();
 
     // ∂u_y/∂y — backward through u_y component
-    let input_grad = input.clone().require_grad();
-    let output = forward_fn(input_grad.clone());
-    let u_y = output.clone().slice([0..output.dims()[0], 1..2]);
-    let grads_y = u_y.sum().backward();
+    let input_grad = Var::new(input.clone(), true);
+    let output = forward_fn(&input_grad);
+    let u_y = coeus_autograd::slice(&output, &[(0, batch), (1, 2)]);
+    coeus_autograd::sum(&u_y).backward();
     let du_y_dy = input_grad
-        .grad(&grads_y)
+        .grad()
         .ok_or_else(|| {
             kwavers_core::error::KwaversError::InternalError(
                 "Failed to compute ∂u_y/∂y gradient".into(),
             )
         })?
-        .slice([0..input.dims()[0], 2..3]);
+        .slice(&[(0, batch), (2, 3)])
+        .to_contiguous();
 
-    Ok(du_x_dx + du_y_dy)
+    let backend = B::default();
+    Ok(coeus_ops::add(&du_x_dx, &du_y_dy, &backend))
 }
