@@ -3,7 +3,9 @@ use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
+
+use crate::parallel::for_each_indexed_mut_three_refs;
 
 #[derive(Debug, Clone)]
 pub struct RadicalInitiation {
@@ -31,11 +33,12 @@ impl RadicalInitiation {
     ) {
         debug!("Updating radical initiation from cavitation and light");
 
-        Zip::indexed(&mut self.radical_concentration)
-            .and(p)
-            .and(light)
-            .and(bubble_radius)
-            .for_each(|(i, j, k), conc, &p_val, &light_val, &r_val| {
+        for_each_indexed_mut_three_refs(
+            self.radical_concentration.view_mut(),
+            p.view(),
+            light.view(),
+            bubble_radius.view(),
+            |(i, j, k), conc, &p_val, &light_val, &r_val| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -60,6 +63,7 @@ impl RadicalInitiation {
                     *conc += 1e-6; // Incremental radical increase
                 }
                 *conc = conc.max(0.0);
-            });
+            },
+        );
     }
 }

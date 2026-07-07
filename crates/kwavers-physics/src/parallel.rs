@@ -5,6 +5,14 @@ use ndarray::{ArrayView3, ArrayViewMut3, Zip};
 
 const FIELD_CHUNK_SIZE: usize = 1024;
 
+#[inline]
+fn grid_index(idx: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
+    let plane = ny * nz;
+    let i = idx / plane;
+    let rem = idx % plane;
+    (i, rem / nz, rem % nz)
+}
+
 /// Apply an indexed mutation over a 3-D view.
 #[inline]
 pub(crate) fn for_each_indexed_mut<T, F>(mut values: ArrayViewMut3<'_, T>, f: F)
@@ -16,10 +24,7 @@ where
     if let Some(slice) = values.as_slice_memory_order_mut() {
         let f_ref = &f;
         enumerate_mut_with::<Adaptive, _, _>(slice, |idx, value| {
-            let plane = ny * nz;
-            let i = idx / plane;
-            let rem = idx % plane;
-            f_ref((i, rem / nz, rem % nz), value);
+            f_ref(grid_index(idx, ny, nz), value);
         });
     } else {
         Zip::indexed(values).for_each(f);
@@ -51,13 +56,136 @@ pub(crate) fn for_each_indexed_pair_mut<T, U, F>(
         (Some(values), Some(input)) => {
             let f_ref = &f;
             enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                let plane = ny * nz;
-                let i = idx / plane;
-                let rem = idx % plane;
-                f_ref((i, rem / nz, rem % nz), value, &input[idx]);
+                f_ref(grid_index(idx, ny, nz), value, &input[idx]);
             });
         }
         _ => Zip::indexed(values).and(input).for_each(f),
+    }
+}
+
+/// Apply an indexed mutation over one mutable and three immutable 3-D views.
+#[inline]
+pub(crate) fn for_each_indexed_mut_three_refs<T, U, V, W, F>(
+    mut values: ArrayViewMut3<'_, T>,
+    first: ArrayView3<'_, U>,
+    second: ArrayView3<'_, V>,
+    third: ArrayView3<'_, W>,
+    f: F,
+) where
+    T: Send,
+    U: Sync,
+    V: Sync,
+    W: Sync,
+    F: Fn((usize, usize, usize), &mut T, &U, &V, &W) + Send + Sync,
+{
+    assert_eq!(
+        values.dim(),
+        first.dim(),
+        "invariant: physics indexed zip first shape mismatch"
+    );
+    assert_eq!(
+        values.dim(),
+        second.dim(),
+        "invariant: physics indexed zip second shape mismatch"
+    );
+    assert_eq!(
+        values.dim(),
+        third.dim(),
+        "invariant: physics indexed zip third shape mismatch"
+    );
+
+    let (_nx, ny, nz) = values.dim();
+    match (
+        values.as_slice_memory_order_mut(),
+        first.as_slice_memory_order(),
+        second.as_slice_memory_order(),
+        third.as_slice_memory_order(),
+    ) {
+        (Some(values), Some(first), Some(second), Some(third)) => {
+            let f_ref = &f;
+            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
+                f_ref(
+                    grid_index(idx, ny, nz),
+                    value,
+                    &first[idx],
+                    &second[idx],
+                    &third[idx],
+                );
+            });
+        }
+        _ => Zip::indexed(values)
+            .and(first)
+            .and(second)
+            .and(third)
+            .for_each(f),
+    }
+}
+
+/// Apply an indexed mutation over one mutable and four immutable 3-D views.
+#[inline]
+pub(crate) fn for_each_indexed_mut_four_refs<T, U, V, W, X, F>(
+    mut values: ArrayViewMut3<'_, T>,
+    first: ArrayView3<'_, U>,
+    second: ArrayView3<'_, V>,
+    third: ArrayView3<'_, W>,
+    fourth: ArrayView3<'_, X>,
+    f: F,
+) where
+    T: Send,
+    U: Sync,
+    V: Sync,
+    W: Sync,
+    X: Sync,
+    F: Fn((usize, usize, usize), &mut T, &U, &V, &W, &X) + Send + Sync,
+{
+    assert_eq!(
+        values.dim(),
+        first.dim(),
+        "invariant: physics indexed zip first shape mismatch"
+    );
+    assert_eq!(
+        values.dim(),
+        second.dim(),
+        "invariant: physics indexed zip second shape mismatch"
+    );
+    assert_eq!(
+        values.dim(),
+        third.dim(),
+        "invariant: physics indexed zip third shape mismatch"
+    );
+    assert_eq!(
+        values.dim(),
+        fourth.dim(),
+        "invariant: physics indexed zip fourth shape mismatch"
+    );
+
+    let (_nx, ny, nz) = values.dim();
+    match (
+        values.as_slice_memory_order_mut(),
+        first.as_slice_memory_order(),
+        second.as_slice_memory_order(),
+        third.as_slice_memory_order(),
+        fourth.as_slice_memory_order(),
+    ) {
+        (Some(values), Some(first), Some(second), Some(third), Some(fourth)) => {
+            let f_ref = &f;
+            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
+                f_ref(
+                    grid_index(idx, ny, nz),
+                    value,
+                    &first[idx],
+                    &second[idx],
+                    &third[idx],
+                    &fourth[idx],
+                );
+            });
+        }
+        _ => Zip::indexed(values)
+            .and(first)
+            .and(second)
+            .and(third)
+            .and(fourth)
+            .for_each(f),
     }
 }
 
