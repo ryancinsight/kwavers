@@ -14,7 +14,9 @@
 //! `1/Z_smooth = f/Z_inside + (1-f)/Z_outside`
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
+
+use crate::parallel::for_each_indexed_pair_mut;
 
 /// Subgrid averaging configuration
 #[derive(Debug, Clone)]
@@ -75,58 +77,62 @@ impl SubgridAveraging {
         let half_kernel = self.config.kernel_size / 2;
 
         // Apply smoothing at boundary cells (where geometry is between 0 and 1)
-        Zip::indexed(geometry).for_each(|(i, j, k), &vol_frac| {
-            // Only smooth cells near boundary (partial volume fraction)
-            if vol_frac > self.config.min_volume_fraction
-                && vol_frac < (1.0 - self.config.min_volume_fraction)
-            {
-                // Average over neighboring cells
-                let mut sum = 0.0;
-                let mut weight_sum = 0.0;
+        for_each_indexed_pair_mut(
+            smoothed.view_mut(),
+            geometry.view(),
+            |(i, j, k), smooth, &vol_frac| {
+                // Only smooth cells near boundary (partial volume fraction)
+                if vol_frac > self.config.min_volume_fraction
+                    && vol_frac < (1.0 - self.config.min_volume_fraction)
+                {
+                    // Average over neighboring cells
+                    let mut sum = 0.0;
+                    let mut weight_sum = 0.0;
 
-                for di in 0..self.config.kernel_size {
-                    for dj in 0..self.config.kernel_size {
-                        for dk in 0..self.config.kernel_size {
-                            let ii = (i as isize + di as isize - half_kernel as isize)
-                                .max(0)
-                                .min((nx - 1) as isize)
-                                as usize;
-                            let jj = (j as isize + dj as isize - half_kernel as isize)
-                                .max(0)
-                                .min((ny - 1) as isize)
-                                as usize;
-                            let kk = (k as isize + dk as isize - half_kernel as isize)
-                                .max(0)
-                                .min((nz - 1) as isize)
-                                as usize;
+                    for di in 0..self.config.kernel_size {
+                        for dj in 0..self.config.kernel_size {
+                            for dk in 0..self.config.kernel_size {
+                                let ii = (i as isize + di as isize - half_kernel as isize)
+                                    .max(0)
+                                    .min((nx - 1) as isize)
+                                    as usize;
+                                let jj = (j as isize + dj as isize - half_kernel as isize)
+                                    .max(0)
+                                    .min((ny - 1) as isize)
+                                    as usize;
+                                let kk = (k as isize + dk as isize - half_kernel as isize)
+                                    .max(0)
+                                    .min((nz - 1) as isize)
+                                    as usize;
 
-                            let geom_weight = geometry[[ii, jj, kk]];
-                            let prop_val = property[[ii, jj, kk]];
+                                let geom_weight = geometry[[ii, jj, kk]];
+                                let prop_val = property[[ii, jj, kk]];
 
-                            if self.config.harmonic_average {
-                                // Harmonic averaging (better for impedance)
-                                if prop_val.abs() > 1e-10 {
-                                    sum += geom_weight / prop_val;
+                                if self.config.harmonic_average {
+                                    // Harmonic averaging (better for impedance)
+                                    if prop_val.abs() > 1e-10 {
+                                        sum += geom_weight / prop_val;
+                                        weight_sum += geom_weight;
+                                    }
+                                } else {
+                                    // Arithmetic averaging
+                                    sum += geom_weight * prop_val;
                                     weight_sum += geom_weight;
                                 }
-                            } else {
-                                // Arithmetic averaging
-                                sum += geom_weight * prop_val;
-                                weight_sum += geom_weight;
                             }
                         }
                     }
-                }
 
-                if weight_sum > self.config.min_volume_fraction {
-                    smoothed[[i, j, k]] = if self.config.harmonic_average {
-                        weight_sum / sum
-                    } else {
-                        sum / weight_sum
-                    };
+                    if weight_sum > self.config.min_volume_fraction {
+                        *smooth = if self.config.harmonic_average {
+                            weight_sum / sum
+                        } else {
+                            sum / weight_sum
+                        };
+                    }
                 }
-            }
-        });
+            },
+        );
 
         Ok(smoothed)
     }
