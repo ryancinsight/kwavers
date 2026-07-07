@@ -59,7 +59,12 @@ where
 /// - `output_component`: Output component index.
 ///
 /// # Returns
-/// Tensor `[batch, 1]` containing ∂²u/∂t².
+/// `Var` `[batch, 1]` containing ∂²u/∂t², still connected to the network's
+/// weight graph: built entirely from finite-difference arithmetic on three
+/// independent forward passes (never through a `Var::grad()` extraction),
+/// so a subsequent `.backward()` on a loss containing this value correctly
+/// updates the weights used inside `forward_fn` (see
+/// [`super::second_order`]'s module-level weight-gradient contract).
 ///
 /// # Mathematical Note
 /// Central finite-difference approximation (ε = 1e-4):
@@ -73,7 +78,7 @@ pub fn compute_second_time_derivative<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
-) -> Result<coeus_tensor::Tensor<f32, B>, kwavers_core::error::KwaversError>
+) -> Result<Var<f32, B>, kwavers_core::error::KwaversError>
 where
     B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
@@ -113,5 +118,5 @@ where
         &coeus_autograd::sub(&coeus_autograd::add(&u_t_plus, &u_t_minus), &two_u),
         1.0 / (eps * eps),
     );
-    Ok(d2u_dt2.tensor)
+    Ok(d2u_dt2)
 }

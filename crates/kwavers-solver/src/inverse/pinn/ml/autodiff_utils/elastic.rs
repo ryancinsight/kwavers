@@ -11,14 +11,23 @@ use super::spatial::compute_spatial_gradient_2d;
 use super::time::compute_second_time_derivative;
 
 /// 2D infinitesimal strain components `(ε_xx, ε_yy, ε_xy)`, each `[batch, 1]`.
+///
+/// Built from [`compute_spatial_gradient_2d`]'s `Var::grad()`-derived
+/// values: these are **detached** from the network's weight graph (see
+/// [`super::second_order`]'s module-level weight-gradient contract) — this
+/// function is for reporting/monitoring the strain field, not for a loss
+/// term that must backprop through the strain computation into weights.
 type StrainTensor2D<B> = (
     coeus_tensor::Tensor<f32, B>,
     coeus_tensor::Tensor<f32, B>,
     coeus_tensor::Tensor<f32, B>,
 );
 
-/// 2D elastic-wave PDE residual components `(residual_x, residual_y)`, each `[batch, 1]`.
-type ElasticResidual2D<B> = (coeus_tensor::Tensor<f32, B>, coeus_tensor::Tensor<f32, B>);
+/// 2D elastic-wave PDE residual components `(residual_x, residual_y)`, each
+/// `[batch, 1]`, still connected to the network's weight graph (see
+/// [`super::second_order`]'s module-level weight-gradient contract) — safe
+/// to square, mean, and `.backward()` as a trained loss term.
+type ElasticResidual2D<B> = (Var<f32, B>, Var<f32, B>);
 
 /// Compute infinitesimal strain tensor ε = ½(∇u + ∇uᵀ) for a 2D displacement field.
 ///
@@ -27,7 +36,8 @@ type ElasticResidual2D<B> = (coeus_tensor::Tensor<f32, B>, coeus_tensor::Tensor<
 /// - `input`: Input tensor `[batch, 3]`.
 ///
 /// # Returns
-/// Tuple `(ε_xx, ε_yy, ε_xy)`, each of shape `[batch, 1]`.
+/// Tuple `(ε_xx, ε_yy, ε_xy)`, each of shape `[batch, 1]` — detached values,
+/// see the type-level doc on [`StrainTensor2D`].
 ///
 /// # Mathematical Note
 /// For displacement field u = [u_x, u_y]:
@@ -71,7 +81,8 @@ where
 /// - `mu`: Shear modulus μ (Pa).
 ///
 /// # Returns
-/// Tuple `(residual_x, residual_y)` for each vector component; zero for an exact solution.
+/// Tuple `(residual_x, residual_y)` for each vector component; zero for an
+/// exact solution. Both are live `Var`s — see [`ElasticResidual2D`].
 ///
 /// # Mathematical Specification
 /// Isotropic elastic wave equation (Achenbach 1973, §1.2):
@@ -104,22 +115,22 @@ where
     // Inertia: ρ ∂²u/∂t²
     let d2u_x_dt2 = compute_second_time_derivative(forward_fn.clone(), input, 0)?;
     let d2u_y_dt2 = compute_second_time_derivative(forward_fn.clone(), input, 1)?;
-    let accel_x = coeus_autograd::scalar_mul(&Var::new(d2u_x_dt2, false), rho);
-    let accel_y = coeus_autograd::scalar_mul(&Var::new(d2u_y_dt2, false), rho);
+    let accel_x = coeus_autograd::scalar_mul(&d2u_x_dt2, rho);
+    let accel_y = coeus_autograd::scalar_mul(&d2u_y_dt2, rho);
 
     // P-wave term: (λ + 2μ)∇(∇·u)
     let (d_div_dx, d_div_dy) = compute_gradient_of_divergence_2d(forward_fn.clone(), input)?;
-    let p_wave_x = coeus_autograd::scalar_mul(&Var::new(d_div_dx, false), p_wave_coeff);
-    let p_wave_y = coeus_autograd::scalar_mul(&Var::new(d_div_dy, false), p_wave_coeff);
+    let p_wave_x = coeus_autograd::scalar_mul(&d_div_dx, p_wave_coeff);
+    let p_wave_y = coeus_autograd::scalar_mul(&d_div_dy, p_wave_coeff);
 
     // S-wave term: μ∇²u
     let lap_u_x = compute_laplacian_2d(forward_fn.clone(), input, 0)?;
     let lap_u_y = compute_laplacian_2d(forward_fn, input, 1)?;
-    let s_wave_x = coeus_autograd::scalar_mul(&Var::new(lap_u_x, false), mu);
-    let s_wave_y = coeus_autograd::scalar_mul(&Var::new(lap_u_y, false), mu);
+    let s_wave_x = coeus_autograd::scalar_mul(&lap_u_x, mu);
+    let s_wave_y = coeus_autograd::scalar_mul(&lap_u_y, mu);
 
     let residual_x = coeus_autograd::sub(&coeus_autograd::sub(&accel_x, &p_wave_x), &s_wave_x);
     let residual_y = coeus_autograd::sub(&coeus_autograd::sub(&accel_y, &p_wave_y), &s_wave_y);
 
-    Ok((residual_x.tensor, residual_y.tensor))
+    Ok((residual_x, residual_y))
 }
