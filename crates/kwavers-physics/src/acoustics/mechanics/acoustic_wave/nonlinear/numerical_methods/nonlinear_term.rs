@@ -3,9 +3,10 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use super::super::wave_model::NonlinearWave;
+use crate::parallel::for_each_indexed_four_mut_ref;
 
 impl NonlinearWave {
     /// Computes the nonlinear source term for the Westervelt acoustic wave equation.
@@ -63,12 +64,13 @@ impl NonlinearWave {
         let mut laplacian_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
 
         // Spectral differentiation in one indexed pass over the filtered spectrum.
-        Zip::indexed(&pressure_k)
-            .and(&mut grad_x_k)
-            .and(&mut grad_y_k)
-            .and(&mut grad_z_k)
-            .and(&mut laplacian_k)
-            .par_for_each(|(i, j, k), &pk, gx, gy, gz, lap| {
+        for_each_indexed_four_mut_ref(
+            grad_x_k.view_mut(),
+            grad_y_k.view_mut(),
+            grad_z_k.view_mut(),
+            laplacian_k.view_mut(),
+            pressure_k.view(),
+            |(i, j, k), gx, gy, gz, lap, &pk| {
                 let kxi = kx_s[i];
                 let kyj = ky_s[j];
                 let kzk = kz_s[k];
@@ -77,7 +79,8 @@ impl NonlinearWave {
                 *gy = pk * Complex::new(0.0, kyj);
                 *gz = pk * Complex::new(0.0, kzk);
                 *lap = pk * (-k2);
-            });
+            },
+        );
 
         let p_filt = ifft_3d_array(&pressure_k);
         let grad_x = ifft_3d_array(&grad_x_k);
