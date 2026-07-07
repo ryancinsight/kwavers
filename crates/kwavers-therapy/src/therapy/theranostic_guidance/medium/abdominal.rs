@@ -21,7 +21,9 @@ use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2, Array3, Axis, Zip};
+use ndarray::{s, Array2, Array3, Axis};
+
+use crate::parallel::{zip_three_mut_two_refs, zip_two_mut_four_refs};
 
 /// Abdominal acoustic-property maps: `(sound speed, attenuation, body mask,
 /// organ mask, target mask)`, all sharing the input CT shape.
@@ -233,9 +235,10 @@ fn organ_reference_speed(anatomy: AnatomyKind) -> f64 {
 
 /// Derive voxel-wise acoustic property maps from HU values and segmentation labels.
 ///
-/// All output arrays share the shape of `ct`.  The computation uses two
-/// [`ndarray::Zip`] passes over the output and input arrays simultaneously,
-/// eliminating per-element random indexing and enabling LLVM auto-vectorisation.
+/// All output arrays share the shape of `ct`. The computation uses two
+/// provider-owned Moirai-backed passes over the output and input arrays
+/// simultaneously, eliminating per-element random indexing while keeping a
+/// sequential fallback for non-standard ndarray layouts.
 ///
 /// # Tissue classification hierarchy (evaluated top-to-bottom; later rules override)
 ///
@@ -260,24 +263,27 @@ fn abdominal_properties(
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);
     let mut target = Array2::<bool>::from_elem((nx, ny), false);
     // Pass 1: classify each voxel into anatomical masks.
-    Zip::from(&mut body)
-        .and(&mut organ)
-        .and(&mut target)
-        .and(body_support)
-        .and(label)
-        .for_each(|bod, org, tgt, &support, &lab| {
+    zip_three_mut_two_refs(
+        body.view_mut(),
+        organ.view_mut(),
+        target.view_mut(),
+        body_support.view(),
+        label.view(),
+        |bod, org, tgt, &support, &lab| {
             *org = lab == 1 || lab == 2;
             *tgt = lab == 2;
             *bod = support || *org || *tgt;
-        });
+        },
+    );
     // Pass 2: map masks + HU to acoustic properties.
-    Zip::from(&mut speed)
-        .and(&mut attenuation)
-        .and(&body)
-        .and(&organ)
-        .and(&target)
-        .and(ct)
-        .for_each(|spd, att, &bod, &org, &tgt, &hu| {
+    zip_two_mut_four_refs(
+        speed.view_mut(),
+        attenuation.view_mut(),
+        body.view(),
+        organ.view(),
+        target.view(),
+        ct.view(),
+        |spd, att, &bod, &org, &tgt, &hu| {
             if bod {
                 *spd = SOFT_TISSUE_HU_BASE_SPEED_M_S
                     + ABDOM_BG_SPEED_SLOPE_M_S_PER_HU
@@ -303,7 +309,8 @@ fn abdominal_properties(
                         * (hu - ABDOM_CALCIFICATION_HU_THRESHOLD).clamp(0.0, ABDOM_CALC_HU_RANGE);
                 *att = ABDOM_CALC_ATTENUATION_DB_CM_MHZ;
             }
-        });
+        },
+    );
     (speed, attenuation, body, organ, target)
 }
 
