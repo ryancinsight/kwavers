@@ -1,0 +1,74 @@
+# Legacy Migration Audit (kwavers) — kwavers-Atlas-migration-push ceremony
+#
+# Formalizes the parallel-surface SSOT for the kwavers workspace by
+# gating every push and PR through
+# `cargo run -p xtask -- legacy-migration-audit`. The xtask scans
+# `kwavers/src/` for the `LEGACY_SOURCE_TOKENS` ban list
+# (nalgebra::, ndarray::, burn::, burn_ndarray, tokio::, rayon::,
+# approx::, num_traits::, rustfft::) plus `LEGACY_MANIFEST_DEPS`
+# (nalgebra, nalgebra-sparse, ndarray, burn, burn-ndarray, tokio,
+# rayon, approx, num-traits, rustfft) and exits non-zero on any
+# allowlist drift that `xtask/legacy_surface.allowlist` does not
+# pre-approve.
+#
+# Note: This workflow deliberately does NOT call
+# `--refresh-legacy-allowlist`. Refreshing the allowlist is
+# intentional-only under human review.
+
+name: Legacy Migration Audit (kwavers)
+
+on:
+  push:
+    branches:
+      - main
+      - codex/kwavers-atlas-integration
+  pull_request:
+    branches:
+      - main
+      - codex/kwavers-atlas-integration
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: read
+
+jobs:
+  audit-legacy-migration:
+    name: Audit legacy migration (xtask legacy-migration-audit)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install stable toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Cargo registry, index, git, and build artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: cargo-ubuntu-latest-stable-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            cargo-ubuntu-latest-stable-
+
+      - name: Run xtask legacy-migration-audit
+        id: audit
+        shell: bash
+        run: |
+          set -o pipefail
+          cargo run -p xtask -- legacy-migration-audit 2>&1 | tee audit_log.txt
+
+      - name: Upload audit log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kwavers-legacy-migration-audit-log
+          path: audit_log.txt
+          if-no-files-found: warn
