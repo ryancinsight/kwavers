@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use ndarray::{Array3, ShapeBuilder};
 use num_complex::Complex;
 
 #[test]
@@ -52,6 +52,51 @@ fn test_inplace_operations() {
     // a = a * b + c = 6 * 2 + 3 = 15
     fma_inplace(&mut a, &b, &c);
     assert!(a.iter().all(|&value| value == 15.0));
+}
+
+#[test]
+fn inplace_operations_preserve_logical_order_for_nonstandard_layouts() {
+    use inplace_ops::*;
+
+    let shape = (2, 3, 4);
+    let mut add_target = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
+    let add_input =
+        Array3::from_shape_fn(shape.f(), |(i, j, k)| (1000 + 100 * i + 10 * j + k) as f64);
+
+    assert!(
+        add_input.as_slice().is_none(),
+        "test invariant: input must force logical-iterator fallback"
+    );
+    add_inplace(&mut add_target, &add_input);
+
+    assert_eq!(
+        add_target,
+        Array3::from_shape_fn(shape, |(i, j, k)| {
+            (100 * i + 10 * j + k) as f64 + (1000 + 100 * i + 10 * j + k) as f64
+        })
+    );
+
+    let mut sub_target = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
+    sub_inplace(&mut sub_target, &add_input);
+    assert_eq!(
+        sub_target,
+        Array3::from_shape_fn(shape, |(i, j, k)| {
+            (100 * i + 10 * j + k) as f64 - (1000 + 100 * i + 10 * j + k) as f64
+        })
+    );
+
+    let mut fma_target =
+        Array3::from_shape_fn(shape, |(i, j, k)| 1.0 + (100 * i + 10 * j + k) as f64);
+    let multiplier = Array3::from_shape_fn(shape.f(), |(i, j, k)| 2.0 + (i + j + k) as f64);
+    let addend = Array3::from_shape_fn(shape, |(i, j, k)| (i * j + k) as f64);
+    fma_inplace(&mut fma_target, &multiplier, &addend);
+    assert_eq!(
+        fma_target,
+        Array3::from_shape_fn(shape, |(i, j, k)| {
+            (1.0 + (100 * i + 10 * j + k) as f64)
+                .mul_add(2.0 + (i + j + k) as f64, (i * j + k) as f64)
+        })
+    );
 }
 
 #[test]
