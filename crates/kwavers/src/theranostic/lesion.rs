@@ -30,7 +30,9 @@
 use kwavers_physics::acoustics::bubble_dynamics::wood_sound_speed;
 use kwavers_physics::thermal::TemperatureCoefficients;
 use leto::Array3 as LetoArray3;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
+
+use crate::parallel::zip_mut_ref;
 
 /// CEM43 thermal dose [equivalent minutes at 43 °C] at which soft tissue is
 /// taken as coagulated/ablated.
@@ -111,8 +113,13 @@ pub fn cavitation_perturbed_sound_speed(
     base_c: &Array3<f64>,
     void_fraction: &Array3<f64>,
 ) -> Array3<f64> {
+    assert_eq!(
+        base_c.dim(),
+        void_fraction.dim(),
+        "invariant: cavitation lesion perturbation requires matching base and void-fraction shapes"
+    );
     let mut out = base_c.clone();
-    Zip::from(&mut out).and(void_fraction).for_each(|c, &beta| {
+    zip_mut_ref(out.view_mut(), void_fraction.view(), |c, &beta| {
         *c = wood_sound_speed(beta, *c, RHO_LIQUID_DEFAULT, C_GAS_DEFAULT, RHO_GAS_DEFAULT);
     });
     out
@@ -202,6 +209,15 @@ mod tests {
             c_small < 1000.0,
             "β=1e-4 should collapse c below 1000, got {c_small}"
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "cavitation lesion perturbation")]
+    fn cavitation_rejects_shape_mismatch() {
+        let base = Array3::from_elem((2, 1, 1), 1540.0);
+        let beta = Array3::from_elem((1, 1, 1), 0.0);
+
+        let _ = cavitation_perturbed_sound_speed(&base, &beta);
     }
 
     #[test]

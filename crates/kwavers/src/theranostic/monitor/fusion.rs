@@ -21,6 +21,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
 
+use crate::parallel::zip_two_mut_two_refs;
+
 /// Relative trust placed in each modality when forming the union channel.
 #[derive(Clone, Copy, Debug)]
 pub struct FusionWeights {
@@ -97,14 +99,16 @@ pub fn fuse_lesion_map(
 
     let mut agreement = Array2::zeros(q.raw_dim());
     let mut union = Array2::zeros(q.raw_dim());
-    ndarray::Zip::from(&mut agreement)
-        .and(&mut union)
-        .and(&q)
-        .and(&p)
-        .for_each(|a, u, &qv, &pv| {
+    zip_two_mut_two_refs(
+        agreement.view_mut(),
+        union.view_mut(),
+        q.view(),
+        p.view(),
+        |a, u, &qv, &pv| {
             *a = (qv * pv).sqrt();
             *u = (wq * qv).max(wp * pv) / w_max;
-        });
+        },
+    );
     Ok(FusedLesion { agreement, union })
 }
 
