@@ -2,6 +2,9 @@ use super::array::TransducerArray2D;
 use super::types::{ApodizationType, TransducerArray2DConfig};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_grid::Grid;
+use kwavers_source::Source;
+use ndarray::Array3;
 
 fn create_test_config() -> TransducerArray2DConfig {
     TransducerArray2DConfig {
@@ -83,4 +86,20 @@ fn test_aperture_calculation() {
 
     let expected = 15.0 * 0.5e-3 + 0.3e-3;
     assert!((array.aperture_width() - expected).abs() < 1e-10);
+}
+
+#[test]
+fn add_mask_into_accumulates_cached_mask() {
+    let config = create_test_config();
+    let mut array = TransducerArray2D::new(config, SOUND_SPEED_TISSUE, MHZ_TO_HZ).unwrap();
+    let grid = Grid::new(4, 3, 2, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let grid_id = (&grid as *const Grid) as u64;
+
+    array.cached_grid_id = Some(grid_id);
+    array.cached_mask = Some(Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.0));
+
+    let mut mask = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    array.add_mask_into(&grid, &mut mask);
+
+    assert_eq!(mask, Array3::from_elem((grid.nx, grid.ny, grid.nz), 3.0));
 }

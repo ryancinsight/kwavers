@@ -1,10 +1,11 @@
 //! `impl Source for TransducerArray2D`.
 
 use super::array::TransducerArray2D;
+use crate::parallel::zip_mut_ref;
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 impl Source for TransducerArray2D {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
@@ -34,9 +35,9 @@ impl Source for TransducerArray2D {
         let grid_id = grid_ptr as u64;
         if let Some(ref cached_mask) = self.cached_mask {
             if self.cached_grid_id == Some(grid_id) {
-                Zip::from(mask)
-                    .and(cached_mask)
-                    .for_each(|dst, &src| *dst += src);
+                zip_mut_ref(mask.view_mut(), cached_mask.view(), |dst, &src| {
+                    *dst += src;
+                });
                 return;
             }
         }
