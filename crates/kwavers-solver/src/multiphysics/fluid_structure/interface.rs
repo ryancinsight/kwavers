@@ -1,4 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
 
 ///
@@ -114,15 +115,46 @@ impl FsiInterface {
 
     /// Set interface location from spatial predicate
     ///
-    /// Uses a level set function to determine interface location.
+    /// Uses a level set function to determine interface location. Atlas-typed
+    /// migration from `ndarray::Zip::indexed(...).par_for_each` (which forced
+    /// the `ndarray/rayon` feature) to `moirai_parallel::enumerate_mut_with`
+    /// so the FSI mask fan-out routes through Moirai instead of the legacy
+    /// rayon-backed ndarray parallel module.
     pub fn set_interface_from_level_set<F>(&mut self, level_set: F)
     where
         F: Fn(usize, usize, usize) -> f64 + Sync,
     {
-        ndarray::Zip::indexed(&mut self.interface_mask).par_for_each(|(i, j, k), mask| {
-            // Interface where level set changes sign
+        let shape = self.interface_mask.shape();
+        let nx = shape[0];
+        let ny = shape[1];
+        let nz = shape[2];
+        debug_assert_eq!(nx * ny * nz, self.interface_mask.len());
+
+        if let Some(interface_mask) = self.interface_mask.as_slice_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(interface_mask, |index, mask| {
+                let i = index / (ny * nz);
+                let j = (index % (ny * nz)) / nz;
+                let k = index % nz;
+                // Interface where level set changes sign
+                let phi_ijk = level_set(i, j, k);
+                *mask = if i > 0 && j > 0 && k > 0 {
+                    let phi_im = level_set(i - 1, j, k);
+                    let phi_jm = level_set(i, j - 1, k);
+                    let phi_km = level_set(i, j, k - 1);
+                    (phi_ijk * phi_im < 0.0)
+                        || (phi_ijk * phi_jm < 0.0)
+                        || (phi_ijk * phi_km < 0.0)
+                } else {
+                    false
+                };
+            });
+            return;
+        }
+
+        // Fallback when the mask is non-contiguous (rare; preserved for safety).
+        ndarray::Zip::indexed(&mut self.interface_mask).for_each(|(i, j, k), mask| {
             let phi_ijk = level_set(i, j, k);
-            let is_interface = if i > 0 && j > 0 && k > 0 {
+            *mask = if i > 0 && j > 0 && k > 0 {
                 let phi_im = level_set(i - 1, j, k);
                 let phi_jm = level_set(i, j - 1, k);
                 let phi_km = level_set(i, j, k - 1);
@@ -130,7 +162,6 @@ impl FsiInterface {
             } else {
                 false
             };
-            *mask = is_interface;
         });
     }
 
