@@ -20,7 +20,9 @@ fail` passed 10/10 with 916 skipped; and scoped source audit found no
 Residual: broader `kwavers-solver`/`kwavers-physics` direct ndarray/Rayon
 holdouts remain outside RTM inherent: 55 `.par_for_each` sites, enumerated in
 `gap_audit.md`. Package fmt is still blocked by pre-existing formatting drift in
-`crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`.
+`crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`; package
+clippy is blocked by the concurrent forward FDTD/hybrid/PSTD Leto-vs-ndarray
+migration diff outside this slice.
 
 ## TODO: kwavers-gpu kernel-buffer provider trait migration [arch]
 
