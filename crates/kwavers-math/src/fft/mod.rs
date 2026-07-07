@@ -15,6 +15,7 @@ pub use apollo::{
     fftfreq, fftshift, ifftshift, rfftfreq, FftPlan1D, FftPlan2D, FftPlan3D, Normalization,
     PlanCacheProvider, Shape1D, Shape2D, Shape3D,
 };
+use ndarray::{s, Array1, Array2, Array3, ArrayBase, Data, DataMut, Dimension, Zip};
 pub use num_complex::{Complex32, Complex64};
 use std::sync::Arc;
 
@@ -89,7 +90,6 @@ pub use kspace::KSpaceCalculator;
 pub use utils::{analytic_signal_1d, apply_spectral_response_1d};
 
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{s, Array1, Array2, Array3, ArrayBase, Data, DataMut, Dimension, Zip};
 use std::cell::RefCell;
 
 const FFT_ASSIGN_CHUNK_LEN: usize = 4096;

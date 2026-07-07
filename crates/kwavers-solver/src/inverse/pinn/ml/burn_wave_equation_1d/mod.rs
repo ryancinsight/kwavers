@@ -73,23 +73,19 @@
 //! ### CPU Backend (Default)
 //!
 //! ```rust,ignore
-//! use burn::backend::{Autodiff, NdArray};
 //! use kwavers_solver::inverse::pinn::ml::burn_wave_equation_1d::{
 //!     BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer
 //! };
 //! use ndarray::Array1;
 //!
-//! // Backend type
-//! type Backend = Autodiff<NdArray<f32>>;
-//!
-//! // Device
-//! let device = Default::default();
+//! // Coeus compute backend (self-instantiates via `Default`; no device handle).
+//! type Backend = coeus_core::MoiraiBackend;
 //!
 //! // Configuration
 //! let config = BurnPINNConfig::default();
 //!
 //! // Create trainer
-//! let mut trainer = BurnPINNTrainer::<Backend>::new(config, &device)?;
+//! let mut trainer = BurnPINNTrainer::<Backend>::new(config)?;
 //!
 //! // Generate or load training data
 //! let x_data = Array1::linspace(-1.0, 1.0, 100);
@@ -102,14 +98,13 @@
 //!     &t_data,
 //!     &u_data,
 //!     343.0,  // wave speed (m/s)
-//!     &device,
 //!     1000    // epochs
 //! )?;
 //!
 //! // Make predictions
 //! let x_test = Array1::linspace(-1.0, 1.0, 200);
 //! let t_test = Array1::linspace(0.0, 0.1, 200);
-//! let u_pred = trainer.pinn().predict(&x_test, &t_test, &device)?;
+//! let u_pred = trainer.pinn().predict(&x_test, &t_test)?;
 //! ```
 //!
 //! ## Configuration Presets
@@ -193,7 +188,8 @@
 //!
 //! ### Frameworks
 //!
-//! - **Burn Framework**: https://burn.dev/ (v0.18+ API)
+//! - **Coeus**: Atlas-native autodiff/NN stack (`coeus_autograd`, `coeus_nn`,
+//!   `coeus_optim`) over the `MoiraiBackend` compute backend.
 //! - **Rust**: Edition 2021
 //!
 //! ## Performance Notes

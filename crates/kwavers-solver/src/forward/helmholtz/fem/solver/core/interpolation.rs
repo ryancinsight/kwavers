@@ -1,8 +1,10 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use nalgebra::{Matrix3, Vector3};
 use ndarray::{Array1, ArrayView2};
 use num_complex::Complex64;
+
+type Vec3 = [f64; 3];
+type Mat3 = [[f64; 3]; 3];
 
 impl FemHelmholtzSolver {
     /// Interpolate the nodal solution at arbitrary query points via barycentric coordinates.
@@ -61,21 +63,15 @@ impl FemHelmholtzSolver {
         p2: [f64; 3],
         p3: [f64; 3],
     ) -> KwaversResult<(f64, f64, f64, f64)> {
-        let a = Vector3::new(p0[0], p0[1], p0[2]);
-        let b = Vector3::new(p1[0], p1[1], p1[2]);
-        let c = Vector3::new(p2[0], p2[1], p2[2]);
-        let d = Vector3::new(p3[0], p3[1], p3[2]);
-        let p = Vector3::new(point[0], point[1], point[2]);
-
-        let m = Matrix3::from_columns(&[b - a, c - a, d - a]);
-        let inv = m.try_inverse().ok_or_else(|| {
+        let m = mat3_from_cols(v_sub(p1, p0), v_sub(p2, p0), v_sub(p3, p0));
+        let inv = mat3_inverse(m).ok_or_else(|| {
             KwaversError::Numerical(NumericalError::SingularMatrix {
                 operation: "element_interpolation".to_owned(),
                 condition_number: 0.0,
             })
         })?;
 
-        let uvw = inv * (p - a);
+        let uvw = mat3_mul_vec(inv, v_sub(point, p0));
         let u = uvw[0];
         let v = uvw[1];
         let w = uvw[2];
@@ -83,4 +79,64 @@ impl FemHelmholtzSolver {
 
         Ok((u, v, w, t))
     }
+}
+
+#[inline]
+fn v_sub(a: Vec3, b: Vec3) -> Vec3 {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn mat3_from_cols(c0: Vec3, c1: Vec3, c2: Vec3) -> Mat3 {
+    [[c0[0], c1[0], c2[0]], [c0[1], c1[1], c2[1]], [c0[2], c1[2], c2[2]]]
+}
+
+#[inline]
+fn mat3_mul_vec(m: Mat3, v: Vec3) -> Vec3 {
+    [
+        m[0][0].mul_add(v[0], m[0][1].mul_add(v[1], m[0][2] * v[2])),
+        m[1][0].mul_add(v[0], m[1][1].mul_add(v[1], m[1][2] * v[2])),
+        m[2][0].mul_add(v[0], m[2][1].mul_add(v[1], m[2][2] * v[2])),
+    ]
+}
+
+#[inline]
+fn mat3_determinant(m: Mat3) -> f64 {
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+}
+
+#[inline]
+fn mat3_inverse(m: Mat3) -> Option<Mat3> {
+    let det = mat3_determinant(m);
+    if det.abs() < 1e-14 {
+        return None;
+    }
+
+    let inv_det = 1.0 / det;
+    let cofactor = [
+        [
+            m[1][1] * m[2][2] - m[1][2] * m[2][1],
+            -(m[1][0] * m[2][2] - m[1][2] * m[2][0]),
+            m[1][0] * m[2][1] - m[1][1] * m[2][0],
+        ],
+        [
+            -(m[0][1] * m[2][2] - m[0][2] * m[2][1]),
+            m[0][0] * m[2][2] - m[0][2] * m[2][0],
+            -(m[0][0] * m[2][1] - m[0][1] * m[2][0]),
+        ],
+        [
+            m[0][1] * m[1][2] - m[0][2] * m[1][1],
+            -(m[0][0] * m[1][2] - m[0][2] * m[1][0]),
+            m[0][0] * m[1][1] - m[0][1] * m[1][0],
+        ],
+    ];
+
+    // inverse = adjugate / det = transpose(cofactor) / det
+    Some([
+        [cofactor[0][0] * inv_det, cofactor[1][0] * inv_det, cofactor[2][0] * inv_det],
+        [cofactor[0][1] * inv_det, cofactor[1][1] * inv_det, cofactor[2][1] * inv_det],
+        [cofactor[0][2] * inv_det, cofactor[1][2] * inv_det, cofactor[2][2] * inv_det],
+    ])
 }

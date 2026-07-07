@@ -136,6 +136,9 @@ plotters = { version = "0.3", default-features = false, features = [
 ] }
 
 burn = { version = "0.19", default-features = false, features = ["std", "ndarray", "autodiff"] }
+coeus-core = { workspace = true }
+coeus-autograd = { workspace = true }
+coeus-tensor = { workspace = true }
 tempfile = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)

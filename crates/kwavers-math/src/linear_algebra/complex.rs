@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{Array1, Array2, Storage};
+use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 /// Complex linear algebra operations for beamforming
@@ -26,8 +26,8 @@ impl ComplexLinearAlgebra {
             }));
         }
 
-        let mut a_data = a.storage().as_slice().to_vec();
-        let mut b_data = b.storage().as_slice().to_vec();
+        let mut a_data: Vec<Complex<f64>> = a.iter().copied().collect();
+        let mut b_data: Vec<Complex<f64>> = b.iter().copied().collect();
 
         // Forward elimination
         for i in 0..n {
@@ -106,9 +106,8 @@ impl ComplexLinearAlgebra {
             e[col] = Complex::new(1.0, 0.0);
             let e_array = Array1::from(e);
             let x = Self::solve_linear_system_complex(matrix, &e_array)?;
-            let xs = x.storage().as_slice();
             for row in 0..n {
-                result[row * n + col] = xs[row];
+                result[row * n + col] = x[row];
             }
         }
 
@@ -142,15 +141,12 @@ mod tests {
         let x = ComplexLinearAlgebra::solve_linear_system_complex(&a, &b).unwrap();
 
         // Verify Ax = b
-        let a_sl = a.storage().as_slice();
-        let x_sl = x.storage().as_slice();
-        let b_sl = b.storage().as_slice();
         for i in 0..2 {
             let mut sum = Complex::new(0.0, 0.0);
             for j in 0..2 {
-                sum = sum + a_sl[i * 2 + j] * x_sl[j];
+                sum += a[[i, j]] * x[j];
             }
-            assert!((sum - b_sl[i]).norm() < 1e-10);
+            assert!((sum - b[i]).norm() < 1e-10);
         }
     }
 }

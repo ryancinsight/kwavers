@@ -1,6 +1,5 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
-use nalgebra::{Matrix3, Vector3};
 use ndarray::Array1;
 use num_complex::Complex64;
 
@@ -13,6 +12,9 @@ use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::BemFemCoupler;
 use kwavers_core::constants::numerical::TWO_PI;
+
+type Vec3 = [f64; 3];
+type Mat3 = [[f64; 3]; 3];
 
 impl BemFemCoupler {
     /// Solve the BEM system via rigid-scattering CFIE for the given `wavenumber`.
@@ -80,34 +82,34 @@ impl BemFemCoupler {
 
         // Reference-element shape-function gradients for linear tetrahedra.
         let grad_ref = [
-            Vector3::new(-1.0, -1.0, -1.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(0.0, 0.0, 1.0),
+            [-1.0, -1.0, -1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
         ];
 
         for element in &fem_mesh.elements {
             let n_indices = element.nodes;
-            let p0 = Vector3::from(fem_mesh.nodes[n_indices[0]].coordinates);
-            let p1 = Vector3::from(fem_mesh.nodes[n_indices[1]].coordinates);
-            let p2 = Vector3::from(fem_mesh.nodes[n_indices[2]].coordinates);
-            let p3 = Vector3::from(fem_mesh.nodes[n_indices[3]].coordinates);
+            let p0 = fem_mesh.nodes[n_indices[0]].coordinates;
+            let p1 = fem_mesh.nodes[n_indices[1]].coordinates;
+            let p2 = fem_mesh.nodes[n_indices[2]].coordinates;
+            let p3 = fem_mesh.nodes[n_indices[3]].coordinates;
 
-            let jacobian = Matrix3::from_columns(&[p1 - p0, p2 - p0, p3 - p0]);
+            let jacobian = mat3_from_cols(v_sub(p1, p0), v_sub(p2, p0), v_sub(p3, p0));
 
-            if let Some(inv_j) = jacobian.try_inverse() {
-                let inv_j_t = inv_j.transpose();
-                let det_j = jacobian.determinant().abs();
+            if let Some(inv_j) = mat3_inverse(jacobian) {
+                let inv_j_t = mat3_transpose(inv_j);
+                let det_j = mat3_determinant(jacobian).abs();
                 let volume = det_j / 6.0;
 
-                let mut grads = [Vector3::zeros(); 4];
+                let mut grads = [[0.0; 3]; 4];
                 for k in 0..4 {
-                    grads[k] = inv_j_t * grad_ref[k];
+                    grads[k] = mat3_mul_vec(inv_j_t, grad_ref[k]);
                 }
 
                 for i in 0..4 {
                     for j in 0..4 {
-                        let k_val = grads[i].dot(&grads[j]) * volume;
+                        let k_val = v_dot(grads[i], grads[j]) * volume;
                         let delta = if i == j { 1.0 } else { 0.0 };
                         let m_val = (1.0 + delta) * volume / 20.0;
                         let val =
@@ -176,4 +178,77 @@ impl BemFemCoupler {
 
         Ok(())
     }
+}
+
+#[inline]
+fn v_sub(a: Vec3, b: Vec3) -> Vec3 {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn v_dot(a: Vec3, b: Vec3) -> f64 {
+    a[0].mul_add(b[0], a[1].mul_add(b[1], a[2] * b[2]))
+}
+
+#[inline]
+fn mat3_from_cols(c0: Vec3, c1: Vec3, c2: Vec3) -> Mat3 {
+    [[c0[0], c1[0], c2[0]], [c0[1], c1[1], c2[1]], [c0[2], c1[2], c2[2]]]
+}
+
+#[inline]
+fn mat3_mul_vec(m: Mat3, v: Vec3) -> Vec3 {
+    [
+        m[0][0].mul_add(v[0], m[0][1].mul_add(v[1], m[0][2] * v[2])),
+        m[1][0].mul_add(v[0], m[1][1].mul_add(v[1], m[1][2] * v[2])),
+        m[2][0].mul_add(v[0], m[2][1].mul_add(v[1], m[2][2] * v[2])),
+    ]
+}
+
+#[inline]
+fn mat3_transpose(m: Mat3) -> Mat3 {
+    [
+        [m[0][0], m[1][0], m[2][0]],
+        [m[0][1], m[1][1], m[2][1]],
+        [m[0][2], m[1][2], m[2][2]],
+    ]
+}
+
+#[inline]
+fn mat3_determinant(m: Mat3) -> f64 {
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+}
+
+#[inline]
+fn mat3_inverse(m: Mat3) -> Option<Mat3> {
+    let det = mat3_determinant(m);
+    if det.abs() < 1e-14 {
+        return None;
+    }
+
+    let inv_det = 1.0 / det;
+    let cofactor = [
+        [
+            m[1][1] * m[2][2] - m[1][2] * m[2][1],
+            -(m[1][0] * m[2][2] - m[1][2] * m[2][0]),
+            m[1][0] * m[2][1] - m[1][1] * m[2][0],
+        ],
+        [
+            -(m[0][1] * m[2][2] - m[0][2] * m[2][1]),
+            m[0][0] * m[2][2] - m[0][2] * m[2][0],
+            -(m[0][0] * m[2][1] - m[0][1] * m[2][0]),
+        ],
+        [
+            m[0][1] * m[1][2] - m[0][2] * m[1][1],
+            -(m[0][0] * m[1][2] - m[0][2] * m[1][0]),
+            m[0][0] * m[1][1] - m[0][1] * m[1][0],
+        ],
+    ];
+
+    Some([
+        [cofactor[0][0] * inv_det, cofactor[1][0] * inv_det, cofactor[2][0] * inv_det],
+        [cofactor[0][1] * inv_det, cofactor[1][1] * inv_det, cofactor[2][1] * inv_det],
+        [cofactor[0][2] * inv_det, cofactor[1][2] * inv_det, cofactor[2][2] * inv_det],
+    ])
 }

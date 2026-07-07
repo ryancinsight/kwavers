@@ -72,10 +72,6 @@ pub mod fdtd_reference;
 #[cfg(feature = "pinn")]
 pub mod validation;
 
-/// Burn → Coeus compatibility shim used by all PINN submodules.
-#[cfg(feature = "pinn")]
-pub mod burn_compat;
-
 // Sprint 143 Phase 2: Burn-based PINN with automatic differentiation
 #[cfg(feature = "pinn")]
 pub mod burn_wave_equation_1d;
