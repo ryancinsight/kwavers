@@ -15,8 +15,9 @@ use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::acoustics::analysis::calculate_mechanical_index;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
+use crate::parallel::zip_mut_ref;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water
 /// at 1 MHz, based on the Apfel-Holland theoretical framework.
@@ -127,10 +128,20 @@ impl CavitationModel {
         (peak_negative_pressure.abs() / ambient_pressure).min(1.0)
     }
 
-    /// Update cavitation state based on pressure field (vectorized)
-    ///
-    /// Uses `ndarray::Zip` for cache-friendly vectorized iteration instead of
-    /// scalar `indexed_iter`.
+    #[must_use]
+    fn cavitating_average_intensity(&self) -> Option<f64> {
+        let (intensity_sum, count) = self
+            .states
+            .iter()
+            .filter(|state| state.is_cavitating)
+            .fold((0.0_f64, 0_u64), |(sum, count), state| {
+                (sum + state.intensity, count + 1)
+            });
+
+        (count > 0).then(|| intensity_sum / count as f64)
+    }
+
+    /// Update cavitation state based on pressure field.
     pub fn update_states(
         &mut self,
         pressure_field: &Array3<f64>,
@@ -141,13 +152,10 @@ impl CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        // Accumulate dose updates in a local variable to avoid borrow conflict
-        let mut dose_intensity_sum = 0.0;
-        let mut dose_count = 0u64;
-
-        Zip::from(&mut self.states)
-            .and(pressure_field)
-            .for_each(|state, &p| {
+        zip_mut_ref(
+            self.states.view_mut(),
+            pressure_field.view(),
+            |state, &p| {
                 // Check for cavitation
                 let was_cavitating = state.is_cavitating;
                 state.is_cavitating = p < -threshold;
@@ -158,19 +166,16 @@ impl CavitationModel {
                     state.mechanical_index = calculate_mechanical_index(p, frequency);
                     state.intensity =
                         Self::compute_intensity(state.peak_negative_pressure, ambient_pressure);
-
-                    dose_intensity_sum += state.intensity;
-                    dose_count += 1;
                 } else if was_cavitating {
                     // Just stopped cavitating
                     state.duration = 0.0;
                     state.intensity = 0.0;
                 }
-            });
+            },
+        );
 
         // Update dose with average intensity across cavitating points
-        if dose_count > 0 {
-            let avg_intensity = dose_intensity_sum / dose_count as f64;
+        if let Some(avg_intensity) = self.cavitating_average_intensity() {
             self.dose.update(avg_intensity, dt, time);
         }
     }
@@ -193,13 +198,10 @@ impl CavitationCore for CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        // Accumulate dose in local variables to avoid borrow conflict
-        let mut dose_intensity_sum = 0.0;
-        let mut dose_count = 0u64;
-
-        Zip::from(&mut self.states)
-            .and(pressure_field)
-            .for_each(|state, &pressure| {
+        zip_mut_ref(
+            self.states.view_mut(),
+            pressure_field.view(),
+            |state, &pressure| {
                 if pressure < -threshold {
                     if !state.is_cavitating {
                         state.is_cavitating = true;
@@ -210,18 +212,15 @@ impl CavitationCore for CavitationModel {
                     // SSOT: delegate to the single authoritative intensity formula
                     state.intensity =
                         Self::compute_intensity(state.peak_negative_pressure, ambient_pressure);
-
-                    dose_intensity_sum += state.intensity;
-                    dose_count += 1;
                 } else {
                     state.is_cavitating = false;
                     state.intensity = 0.0;
                 }
-            });
+            },
+        );
 
         // Fix: divide by cavitating count, not total grid size
-        if dose_count > 0 {
-            let avg_intensity = dose_intensity_sum / dose_count as f64;
+        if let Some(avg_intensity) = self.cavitating_average_intensity() {
             self.dose.update(avg_intensity, dt, dt);
         }
 
