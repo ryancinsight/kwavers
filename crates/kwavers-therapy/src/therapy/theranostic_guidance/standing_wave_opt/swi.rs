@@ -23,9 +23,10 @@
 //! expected standing-wave bin, avoiding a full FFT dependency for a single
 //! frequency component.
 
-use ndarray::{Array2, Zip};
+use ndarray::Array2;
 
 use super::config::StandingWaveOptConfig;
+use crate::parallel::zip_two_mut_two_refs;
 use kwavers_core::constants::numerical::TWO_PI;
 
 // ---------------------------------------------------------------------------
@@ -50,14 +51,16 @@ pub(super) fn superpose(
     for ((&phi, gre), gim) in phases.iter().zip(g_re).zip(g_im) {
         let c = phi.cos();
         let s = phi.sin();
-        Zip::from(&mut p_re)
-            .and(&mut p_im)
-            .and(gre)
-            .and(gim)
-            .for_each(|pr, pi, &gr, &gi| {
+        zip_two_mut_two_refs(
+            p_re.view_mut(),
+            p_im.view_mut(),
+            gre.view(),
+            gim.view(),
+            |pr, pi, &gr, &gi| {
                 *pr += c * gr - s * gi;
                 *pi += s * gr + c * gi;
-            });
+            },
+        );
     }
     (p_re, p_im)
 }
