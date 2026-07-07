@@ -14,6 +14,32 @@ do not assert an unconfirmed physics error.
 
 ### Atlas provider migration residuals (2026-07-01)
 
+- **kwavers-solver RTM inherent direct ndarray/Rayon edge - RESOLVED [patch].**
+  `inverse::reconstruction::seismic::rtm::inherent` now routes wavefield
+  stencils, decimated wavefield interpolation, source illumination, Laplacian
+  filtering, image post-processing, and imaging-condition updates through the
+  private Moirai-backed `parallel::for_each_view_mut` strided-view seam instead
+  of direct ndarray/Rayon `Zip::par_for_each`. Evidence tier: compile-time
+  integration, focused empirical tests, and static source audit.
+  `rustup run nightly cargo check -p kwavers-solver --lib` passed; `rustup run
+  nightly cargo nextest run -p kwavers-solver rtm --status-level fail` passed
+  10/10 with 916 skipped; scoped `rg` found no `Zip|par_for_each|rayon` hits
+  under `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`.
+  Residual: broader solver/physics direct ndarray/Rayon holdouts remain outside
+  RTM inherent: 55 `.par_for_each` sites across
+  `crates/kwavers-solver/src/forward/elastic/swe/stress/divergence.rs`,
+  `crates/kwavers-solver/src/forward/elastic/swe/integration/integrator/mod.rs`,
+  `crates/kwavers-solver/src/forward/nonlinear/westervelt_spectral/spectral.rs`,
+  `crates/kwavers-solver/src/forward/nonlinear/kuznetsov/{workspace,spectral,numerical,nonlinear,diffusion,operator_splitting/mod}.rs`,
+  `crates/kwavers-solver/src/forward/nonlinear/kuznetsov/solver/{rhs,model_impl}.rs`,
+  `crates/kwavers-solver/src/forward/pstd/extensions/{elastic,elastic_orchestrator/pml/mod}.rs`,
+  `crates/kwavers-solver/src/multiphysics/fluid_structure/{interface,solver/struct_impl}.rs`,
+  `crates/kwavers-physics/src/acoustics/conservation/heat.rs`,
+  `crates/kwavers-physics/src/acoustics/mechanics/acoustic_wave/nonlinear/{wave_model,numerical_methods/spectral/mod,numerical_methods/nonlinear_term}.rs`,
+  `crates/kwavers-physics/src/acoustics/mechanics/cavitation/damage/model.rs`,
+  and `crates/kwavers-physics/src/acoustics/therapy/sonogenetics/{arf_field,channels/gating}.rs`.
+  Package fmt is still blocked by pre-existing formatting drift in
+  `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`.
 - **Phase-1A kwavers-math numeric SSOT pilot - RESOLVED [patch].** The `kwavers_math::linear_algebra::NumericOps<T>` trait moved from `num_traits::{Float, NumCast, Zero}` to `eunomia::RealField` + `NumericElement::ZERO`. `crates/kwavers-math/Cargo.toml` declares `eunomia = { workspace = true }` while retaining `num-traits` (csr.rs only); super-traits `Clone + Zero` + vestigial `NumCast` are dropped to `Copy + PartialOrd`; the six method bodies use `T::ZERO` instead of `T::zero()`; `max_abs` uses a `PartialOrd`-driven fold because `eunomia::RealField` does not propagate a `max` method. Evidence tier: focused compile validation plus kwavers xtask lexical audit. Verification: `cargo build -p kwavers-math` exits 0; `cargo run -p xtask -- legacy-migration-audit` no longer lists `numeric_ops.rs` in the source-legacy per-file output.
 - **Atlas extension: eunomia Complex64 SSOT for csr.rs - OPENED [arch].** Phase-1A closed `kwavers-math::linear_algebra::numeric_ops` but the `num_complex::Complex64 → CsrScalar` impl in `linear_algebra::sparse::csr.rs` cannot drop `num_traits::Zero` because `eunomia::NumericElement` and `eunomia::FloatElement` are `private::Sealed`. Atlas extension request `CR-EUNOMIA-COMPLEX`: unsealed `eunomia::Scalar` supertrait, OR a native `eunomia::Complex` with `magnitude`/`norm` derivations usable from `CsrScalar::magnitude`. Until that lands, `kwavers-math/Cargo.toml` carries both `num-traits` (csr.rs only) and `eunomia` (numeric_ops + downstream); the xtask audit tracks csr.rs as the lone remaining source-legacy entry under `crates/kwavers-math/src/linear_algebra/sparse`.
 - **GPU backend provider boundary - RESOLVED [patch].** The solver-owned

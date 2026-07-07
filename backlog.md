@@ -3,6 +3,25 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## DONE: kwavers-solver RTM inherent Moirai traversal [patch]
+
+Routed `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`
+through the private Moirai strided-view helper instead of direct ndarray/Rayon
+`Zip::par_for_each`. The slice covers wavefield update, decimated wavefield
+interpolation, source illumination, Laplacian filter, post-processing
+normalisation, and all six RTM imaging conditions.
+
+Evidence tier: compile-time integration, focused empirical tests, and static
+source audit. `rustup run nightly cargo check -p kwavers-solver --lib` passed;
+`rustup run nightly cargo nextest run -p kwavers-solver rtm --status-level
+fail` passed 10/10 with 916 skipped; and scoped source audit found no
+`Zip|par_for_each|rayon` hits under the RTM inherent cone.
+
+Residual: broader `kwavers-solver`/`kwavers-physics` direct ndarray/Rayon
+holdouts remain outside RTM inherent: 55 `.par_for_each` sites, enumerated in
+`gap_audit.md`. Package fmt is still blocked by pre-existing formatting drift in
+`crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`.
+
 ## TODO: kwavers-gpu kernel-buffer provider trait migration [arch]
 
 Lift concrete WGPU buffer allocation, pipeline execution, and shader dispatch

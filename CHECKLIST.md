@@ -10,6 +10,23 @@
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
 - [x] [patch] kwavers-math numeric SSOT Phase-1A pilot: port the generic `NumericOps<T>` trait from `num_traits::{Float, NumCast, Zero}` to `eunomia::RealField` + `NumericElement::ZERO`. Add `eunomia = { workspace = true }` to `crates/kwavers-math/Cargo.toml` while retaining `num-traits` for the csr.rs blocker; prune `Clone + Zero` supertraits to `Copy + PartialOrd`; rewrite the six bodies (`dot_product`, `normalize`, `add_arrays`, `scale_array`, `l2_norm`, `max_abs`, `safe_divide`) to use `T::ZERO`; the `max_abs` fold uses `if val > acc { val } else { acc }` instead of `acc.max(val)` because eunomia's super-trait chain does not propagate `max`. Completion condition: `cargo build -p kwavers-math` succeeds, `numeric_ops.rs` drops from the kwavers xtask `legacy-migration-audit` source-legacy list, and downstream `NumericOps` callers can swap `num_traits::Float` for `eunomia::RealField`. Verification: `cargo build -p kwavers-math` exits 0, `cargo run -p xtask -- legacy-migration-audit` shows `numeric_ops.rs` absent from source-legacy per-file. Residual: csr.rs Phase-1B requires an Atlas extension (queued below) for `num_complex::Complex64` ↔ `eunomia::NumericElement`.
+- [x] [patch] kwavers-solver RTM inherent Moirai traversal slice: route
+      `inverse::reconstruction::seismic::rtm::inherent` wavefield,
+      propagation interpolation, illumination, Laplacian filtering,
+      post-processing, and imaging-condition passes through the private
+      `parallel::for_each_view_mut` Moirai strided-view seam instead of
+      ndarray/Rayon `Zip::par_for_each`. Completion condition: the RTM
+      inherent cone has no direct `Zip`, `par_for_each`, or `rayon` tokens,
+      `kwavers-solver` compiles, and focused RTM tests pass. Verification:
+      `rustup run nightly cargo check -p kwavers-solver --lib` passed,
+      `rustup run nightly cargo nextest run -p kwavers-solver rtm
+      --status-level fail` passed 10/10 with 916 skipped, and scoped `rg`
+      found no `Zip|par_for_each|rayon` hits under
+      `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`.
+      Residual: broader solver/physics direct ndarray/Rayon holdouts remain at
+      55 `.par_for_each` sites outside this RTM inherent slice (exact paths in
+      gap_audit.md), and package fmt is blocked by pre-existing formatting
+      drift in `forward/fdtd/electromagnetic/tests.rs`.
 ## Sprint K Atlas provider migration — IN PROGRESS (2026-07-01)
 - [x] [patch] GPU provider-neutral backend boundary: make
       `kwavers-solver::backend::BackendType` carry an explicit

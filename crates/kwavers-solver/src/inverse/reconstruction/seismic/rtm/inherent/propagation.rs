@@ -11,17 +11,18 @@
 //!
 //! # Wavefield update
 //! Each step delegates to [`super::wavefield::update_wavefield`], which uses
-//! parallel 4th-order finite-difference stencils.
+//! Moirai-backed 4th-order finite-difference stencils.
 //!
 //! Reference: Claerbout (1985), *Imaging the Earth's Interior*, Ch. 3.
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{s, Array3, Array4, Zip};
+use ndarray::{s, Array3, Array4};
 
 use super::super::super::constants::RTM_STORAGE_DECIMATION;
 use super::super::super::wavelet::SeismicRickerWavelet;
 use super::super::types::ReverseTimeMigration;
+use super::parallel::for_each_view_mut;
 
 impl ReverseTimeMigration {
     /// Forward-propagate the source wavelet; return the (possibly
@@ -123,12 +124,9 @@ impl ReverseTimeMigration {
                 let snap1 = decimated.slice(s![t_dec, .., .., ..]);
                 let snap2 = decimated.slice(s![t_dec + 1, .., .., ..]);
 
-                Zip::from(full.slice_mut(s![t, .., .., ..]))
-                    .and(&snap1)
-                    .and(&snap2)
-                    .par_for_each(|f, &s1, &s2| {
-                        *f = (1.0 - weight).mul_add(s1, weight * s2);
-                    });
+                for_each_view_mut(full.slice_mut(s![t, .., .., ..]), |idx, f| {
+                    *f = (1.0 - weight).mul_add(snap1[idx], weight * snap2[idx]);
+                });
             }
         }
 
