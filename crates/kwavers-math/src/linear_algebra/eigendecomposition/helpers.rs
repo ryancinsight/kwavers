@@ -6,20 +6,6 @@ use num_complex::Complex;
 /// `(Q, R)` factor pair from a complex QR decomposition.
 type ComplexQr = (Array2<Complex<f64>>, Array2<Complex<f64>>);
 
-/// Compute complex matrix-matrix product.
-fn mat_mul_complex(a: &Array2<Complex<f64>>, b: &Array2<Complex<f64>>) -> Array2<Complex<f64>> {
-    let m = a.shape()[0];
-    let n = a.shape()[1];
-    let p = b.shape()[1];
-    Array2::from_shape_fn([m, p], |[i, j]| {
-        let mut sum = Complex::new(0.0, 0.0);
-        for k in 0..n {
-            sum += a[[i, k]] * b[[k, j]];
-        }
-        sum
-    })
-}
-
 impl EigenSolver {
     /// Verify hermitian.
     /// # Errors
@@ -44,14 +30,6 @@ impl EigenSolver {
         }
 
         Ok(())
-    }
-
-    /// Compute matrix-matrix product for complex matrices.
-    pub(super) fn mat_mul(
-        a: &Array2<Complex<f64>>,
-        b: &Array2<Complex<f64>>,
-    ) -> Array2<Complex<f64>> {
-        mat_mul_complex(a, b)
     }
 
     /// Qr decomposition.

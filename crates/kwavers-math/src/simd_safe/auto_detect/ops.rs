@@ -1,7 +1,9 @@
 //! Shared Hermes/Moirai-backed dense array operations for SIMD dispatch.
 
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
+
+use crate::parallel::zip_mut_two_refs;
 
 const SIMD_SAFE_CHUNK_LEN: usize = 4096;
 
@@ -27,10 +29,9 @@ pub(in crate::simd_safe::auto_detect) fn add_arrays(
         return;
     }
 
-    Zip::from(out)
-        .and(a)
-        .and(b)
-        .for_each(|out, &a, &b| *out = a + b);
+    zip_mut_two_refs(out.view_mut(), a.view(), b.view(), |out, &a, &b| {
+        *out = a + b;
+    });
 }
 
 pub(in crate::simd_safe::auto_detect) fn scale_array(array: &mut Array3<f64>, scalar: f64) {
@@ -74,8 +75,7 @@ pub(in crate::simd_safe::auto_detect) fn fma_arrays(
         return;
     }
 
-    Zip::from(c)
-        .and(a)
-        .and(b)
-        .for_each(|c, &a, &b| *c += multiplier * a * b);
+    zip_mut_two_refs(c.view_mut(), a.view(), b.view(), |c, &a, &b| {
+        *c += multiplier * a * b;
+    });
 }
