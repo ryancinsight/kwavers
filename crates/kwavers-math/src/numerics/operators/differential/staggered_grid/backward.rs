@@ -3,9 +3,8 @@
 //! SRP: changes when the backward stencil or boundary treatment changes.
 
 use super::operator::StaggeredGridOperator;
-use crate::numerics::operators::differential::traversal;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{s, Array3, ArrayView3, Zip};
+use leto::{Array3, ArrayView3};
 
 impl StaggeredGridOperator {
     /// Apply backward difference in X into a pre-allocated buffer.
@@ -23,7 +22,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -33,38 +32,25 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
-            (nx, ny, nz),
+            dst.shape(),
+            [nx, ny, nz],
             "apply_backward_x_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
-            dst.dim()
+            dst.shape()
         );
         let dx = self.dx;
-        if field.is_standard_layout() {
-            if let Some(field_values) = field.as_slice() {
-                if traversal::try_fill_standard_layout(dst, |i, j, k| {
-                    let center = traversal::row_major_index(i, j, k, ny, nz);
-                    if i == 0 {
-                        (field_values[traversal::row_major_index(1, j, k, ny, nz)]
-                            - field_values[center])
-                            / dx
-                    } else {
-                        (field_values[center]
-                            - field_values[traversal::row_major_index(i - 1, j, k, ny, nz)])
-                            / dx
-                    }
-                }) {
-                    return Ok(());
+        for i in 1..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    dst[[i, j, k]] = (field[[i, j, k]] - field[[i - 1, j, k]]) / dx;
                 }
             }
         }
-        Zip::from(dst.slice_mut(s![1.., .., ..]))
-            .and(field.slice(s![1.., .., ..]))
-            .and(field.slice(s![..nx - 1, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
-        Zip::from(dst.slice_mut(s![0, .., ..]))
-            .and(field.slice(s![1, .., ..]))
-            .and(field.slice(s![0, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dx);
+        // Boundary i=0: forward difference
+        for j in 0..ny {
+            for k in 0..nz {
+                dst[[0, j, k]] = (field[[1, j, k]] - field[[0, j, k]]) / dx;
+            }
+        }
         Ok(())
     }
 
@@ -82,7 +68,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -92,38 +78,25 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
-            (nx, ny, nz),
+            dst.shape(),
+            [nx, ny, nz],
             "apply_backward_y_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
-            dst.dim()
+            dst.shape()
         );
         let dy = self.dy;
-        if field.is_standard_layout() {
-            if let Some(field_values) = field.as_slice() {
-                if traversal::try_fill_standard_layout(dst, |i, j, k| {
-                    let center = traversal::row_major_index(i, j, k, ny, nz);
-                    if j == 0 {
-                        (field_values[traversal::row_major_index(i, 1, k, ny, nz)]
-                            - field_values[center])
-                            / dy
-                    } else {
-                        (field_values[center]
-                            - field_values[traversal::row_major_index(i, j - 1, k, ny, nz)])
-                            / dy
-                    }
-                }) {
-                    return Ok(());
+        for i in 0..nx {
+            for j in 1..ny {
+                for k in 0..nz {
+                    dst[[i, j, k]] = (field[[i, j, k]] - field[[i, j - 1, k]]) / dy;
                 }
             }
         }
-        Zip::from(dst.slice_mut(s![.., 1.., ..]))
-            .and(field.slice(s![.., 1.., ..]))
-            .and(field.slice(s![.., ..ny - 1, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
-        Zip::from(dst.slice_mut(s![.., 0, ..]))
-            .and(field.slice(s![.., 1, ..]))
-            .and(field.slice(s![.., 0, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dy);
+        // Boundary j=0: forward difference
+        for i in 0..nx {
+            for k in 0..nz {
+                dst[[i, 0, k]] = (field[[i, 1, k]] - field[[i, 0, k]]) / dy;
+            }
+        }
         Ok(())
     }
 
@@ -141,7 +114,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -151,38 +124,25 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
-            (nx, ny, nz),
+            dst.shape(),
+            [nx, ny, nz],
             "apply_backward_z_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
-            dst.dim()
+            dst.shape()
         );
         let dz = self.dz;
-        if field.is_standard_layout() {
-            if let Some(field_values) = field.as_slice() {
-                if traversal::try_fill_standard_layout(dst, |i, j, k| {
-                    let center = traversal::row_major_index(i, j, k, ny, nz);
-                    if k == 0 {
-                        (field_values[traversal::row_major_index(i, j, 1, ny, nz)]
-                            - field_values[center])
-                            / dz
-                    } else {
-                        (field_values[center]
-                            - field_values[traversal::row_major_index(i, j, k - 1, ny, nz)])
-                            / dz
-                    }
-                }) {
-                    return Ok(());
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 1..nz {
+                    dst[[i, j, k]] = (field[[i, j, k]] - field[[i, j, k - 1]]) / dz;
                 }
             }
         }
-        Zip::from(dst.slice_mut(s![.., .., 1..]))
-            .and(field.slice(s![.., .., 1..]))
-            .and(field.slice(s![.., .., ..nz - 1]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
-        Zip::from(dst.slice_mut(s![.., .., 0]))
-            .and(field.slice(s![.., .., 1]))
-            .and(field.slice(s![.., .., 0]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) / dz);
+        // Boundary k=0: forward difference
+        for i in 0..nx {
+            for j in 0..ny {
+                dst[[i, j, 0]] = (field[[i, j, 1]] - field[[i, j, 0]]) / dz;
+            }
+        }
         Ok(())
     }
 
@@ -194,7 +154,7 @@ impl StaggeredGridOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_backward_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -203,7 +163,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 1..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -225,7 +185,7 @@ impl StaggeredGridOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_backward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -234,7 +194,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 1..ny {
                 for k in 0..nz {
@@ -256,7 +216,7 @@ impl StaggeredGridOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_backward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -265,7 +225,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 1..nz {

@@ -1,10 +1,9 @@
 //! Gradient operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::ndarray::{Array3, ArrayView3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 use num_traits::Float;
 
 /// Compute the gradient of a 3D field
@@ -35,9 +34,9 @@ where
         ));
     }
 
-    let mut grad_x = Array3::<T>::zeros((nx, ny, nz));
-    let mut grad_y = Array3::<T>::zeros((nx, ny, nz));
-    let mut grad_z = Array3::<T>::zeros((nx, ny, nz));
+    let mut grad_x = Array3::<T>::zeros([nx, ny, nz]);
+    let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
+    let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
 
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
@@ -93,88 +92,20 @@ where
     Ok((grad_x, grad_y, grad_z))
 }
 
-/// Compute the gradient of a 3D leto field.
+/// Compute the gradient of a 3D leto array field.
+///
+/// Delegates to [`gradient`] since both now use leto types.
+/// Kept for API compatibility.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
 pub fn gradient_leto<T>(
-    field: &LetoArray3<T>,
+    field: &Array3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
     T: Float + Clone + Send + Sync + Default,
 {
-    let shape = field.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-    // Validate grid compatibility
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    let mut grad_x = LetoArray3::<T>::zeros([nx, ny, nz]);
-    let mut grad_y = LetoArray3::<T>::zeros([nx, ny, nz]);
-    let mut grad_z = LetoArray3::<T>::zeros([nx, ny, nz]);
-
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
-    let stencil_radius = coeffs.len();
-
-    // X-direction gradient
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
-    for i in stencil_radius..nx - stencil_radius {
-        for j in 0..ny {
-            for k in 0..nz {
-                let mut grad_val = T::zero();
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val =
-                        grad_val + coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
-                }
-                grad_x[[i, j, k]] = grad_val * dx_inv;
-            }
-        }
-    }
-
-    // Y-direction gradient
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
-    for i in 0..nx {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in 0..nz {
-                let mut grad_val = T::zero();
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val =
-                        grad_val + coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
-                }
-                grad_y[[i, j, k]] = grad_val * dy_inv;
-            }
-        }
-    }
-
-    // Z-direction gradient
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in stencil_radius..nz - stencil_radius {
-                let mut grad_val = T::zero();
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    grad_val =
-                        grad_val + coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
-                }
-                grad_z[[i, j, k]] = grad_val * dz_inv;
-            }
-        }
-    }
-
-    Ok((grad_x, grad_y, grad_z))
+    gradient(&field.view(), grid, order)
 }

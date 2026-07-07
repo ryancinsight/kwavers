@@ -5,6 +5,8 @@
 
 use super::stiffness::AnisotropicStiffnessTensor;
 use kwavers_core::error::KwaversResult;
+use kwavers_math::linear_algebra::EigenDecomposition;
+use leto::Array2 as LetoArray2;
 use ndarray::{Array1, Array2};
 
 /// Christoffel equation solver for anisotropic wave propagation
@@ -126,38 +128,17 @@ impl ChristoffelEquation {
     ///
     /// [`phase_velocities`]: Self::phase_velocities
     /// [`polarization_vectors`]: Self::polarization_vectors
-    fn sorted_eigen(&self, direction: &[f64; 3]) -> ([f64; 3], [[f64; 3]; 3]) {
-        use nalgebra::{Matrix3, SymmetricEigen};
+    fn sorted_eigen(&self, direction: &[f64; 3]) -> KwaversResult<([f64; 3], [[f64; 3]; 3])> {
         let g = self.christoffel_matrix(direction);
-        let m = Matrix3::new(
-            g[[0, 0]],
-            g[[0, 1]],
-            g[[0, 2]],
-            g[[1, 0]],
-            g[[1, 1]],
-            g[[1, 2]],
-            g[[2, 0]],
-            g[[2, 1]],
-            g[[2, 2]],
-        );
-        let eig = SymmetricEigen::new(m);
-        let mut order = [0usize, 1, 2];
-        order.sort_by(|&a, &b| {
-            eig.eigenvalues[b]
-                .partial_cmp(&eig.eigenvalues[a])
-                .unwrap_or(core::cmp::Ordering::Equal)
-        });
+        let m = LetoArray2::from_shape_fn([3, 3], |[i, j]| g[[i, j]]);
+        let (eigvals, eigvecs) = EigenDecomposition::eigendecomposition(&m)?;
         let mut vals = [0.0; 3];
         let mut vecs = [[0.0; 3]; 3];
-        for (k, &o) in order.iter().enumerate() {
-            vals[k] = eig.eigenvalues[o];
-            vecs[k] = [
-                eig.eigenvectors[(0, o)],
-                eig.eigenvectors[(1, o)],
-                eig.eigenvectors[(2, o)],
-            ];
+        for k in 0..3 {
+            vals[k] = eigvals[k];
+            vecs[k] = [eigvecs[[0, k]], eigvecs[[1, k]], eigvecs[[2, k]]];
         }
-        (vals, vecs)
+        Ok((vals, vecs))
     }
 
     /// Solve for the three phase velocities along `direction`, sorted descending
@@ -174,7 +155,7 @@ impl ChristoffelEquation {
                 "ChristoffelEquation density must be positive".to_owned(),
             ));
         }
-        let (vals, _) = self.sorted_eigen(direction);
+        let (vals, _) = self.sorted_eigen(direction)?;
         Ok([
             (vals[0].max(0.0) / self.density).sqrt(),
             (vals[1].max(0.0) / self.density).sqrt(),
@@ -190,7 +171,7 @@ impl ChristoffelEquation {
     ///
     /// [`phase_velocities`]: Self::phase_velocities
     pub fn polarization_vectors(&self, direction: &[f64; 3]) -> KwaversResult<[Array1<f64>; 3]> {
-        let (_, vecs) = self.sorted_eigen(direction);
+        let (_, vecs) = self.sorted_eigen(direction)?;
         Ok([
             Array1::from(vecs[0].to_vec()),
             Array1::from(vecs[1].to_vec()),
@@ -244,7 +225,7 @@ impl ChristoffelEquation {
             direction[1] / norm,
             direction[2] / norm,
         ];
-        let (vals, vecs) = self.sorted_eigen(&n);
+        let (vals, vecs) = self.sorted_eigen(&n)?;
 
         let mut out = [[0.0_f64; 3]; 3];
         for m in 0..3 {

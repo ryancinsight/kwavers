@@ -1,6 +1,6 @@
 //! FDTD solver plugin implementation
 
-use ndarray::Array4;
+use ndarray::{Array4, ArrayViewMut3};
 use std::fmt::Debug;
 
 use super::{FdtdConfig, FdtdSolver};
@@ -41,6 +41,25 @@ impl FdtdPlugin {
             solver: None,
         })
     }
+}
+
+fn apply_acoustic_to_ndarray_view(
+    boundary: &mut dyn kwavers_boundary::Boundary,
+    mut field: ArrayViewMut3<'_, f64>,
+    grid: &Grid,
+    time_step: usize,
+) -> KwaversResult<()> {
+    let (nx, ny, nz) = field.dim();
+    let mut leto_field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| field[[i, j, k]]);
+    boundary.apply_acoustic(leto_field.view_mut(), grid, time_step)?;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = leto_field[[i, j, k]];
+            }
+        }
+    }
+    Ok(())
 }
 
 impl crate::plugin::Plugin for FdtdPlugin {
@@ -152,7 +171,8 @@ impl crate::plugin::Plugin for FdtdPlugin {
         // Perform time step
         solver.step_forward()?;
 
-        context.boundary.apply_acoustic(
+        apply_acoustic_to_ndarray_view(
+            context.boundary,
             solver.fields.p.view_mut(),
             grid,
             solver.time_step_index,

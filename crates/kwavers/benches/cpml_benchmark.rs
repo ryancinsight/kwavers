@@ -15,6 +15,26 @@ use kwavers_boundary::Boundary;
 use kwavers_grid::Grid;
 use ndarray::Array3;
 
+fn apply_acoustic_to_ndarray_field(
+    boundary: &mut dyn Boundary,
+    field: &mut Array3<f64>,
+    grid: &Grid,
+    step: usize,
+) {
+    let (nx, ny, nz) = field.dim();
+    let mut leto_field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| field[[i, j, k]]);
+    boundary
+        .apply_acoustic(leto_field.view_mut(), grid, step)
+        .expect("boundary apply should succeed");
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = leto_field[[i, j, k]];
+            }
+        }
+    }
+}
+
 /// Benchmark CPML gradient correction for various grid sizes
 fn cpml_gradient_correction_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("cpml_gradient_correction");
@@ -48,13 +68,11 @@ fn cpml_field_update_benchmark(c: &mut Criterion) {
         let config = CPMLConfig::with_thickness(10);
         let mut boundary = CPMLBoundary::new(config, &grid, 1500.0)
             .expect("CPML boundary creation should succeed");
-        let mut field = grid.create_field();
+        let mut field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
-                boundary
-                    .apply_acoustic(field.view_mut(), &grid, 0)
-                    .expect("CPML field update should succeed");
+                apply_acoustic_to_ndarray_field(&mut boundary, &mut field, &grid, 0);
                 black_box(&field);
             });
         });
@@ -73,13 +91,11 @@ fn pml_apply_benchmark(c: &mut Criterion) {
         let config = DomainPmlConfig::default();
         let mut boundary =
             DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
-        let mut field = grid.create_field();
+        let mut field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, _| {
             b.iter(|| {
-                boundary
-                    .apply_acoustic(field.view_mut(), &grid, 0)
-                    .expect("PML apply should succeed");
+                apply_acoustic_to_ndarray_field(&mut boundary, &mut field, &grid, 0);
                 black_box(&field);
             });
         });
@@ -148,16 +164,14 @@ fn cpml_vs_pml_thickness_comparison(c: &mut Criterion) {
         let config = DomainPmlConfig::default();
         let mut boundary =
             DomainPMLBoundary::new(config).expect("PML boundary creation should succeed");
-        let mut field = grid.create_field();
+        let mut field = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
         group.bench_with_input(
             BenchmarkId::new("pml", format!("{}", size)),
             size,
             |b, _| {
                 b.iter(|| {
-                    boundary
-                        .apply_acoustic(field.view_mut(), &grid, 0)
-                        .expect("PML apply should succeed");
+                    apply_acoustic_to_ndarray_field(&mut boundary, &mut field, &grid, 0);
                     black_box(&field);
                 });
             },

@@ -71,7 +71,7 @@ impl PseudospectralDerivative {
     /// k[i] = 2π·i / (N·d)        for i = 0..N/2
     /// k[i] = 2π·(i−N) / (N·d)   for i = N/2..N
     pub(super) fn wavenumber_vector(n: usize, d: f64) -> Array1<f64> {
-        let mut k = Array1::zeros(n);
+        let mut k = Array1::zeros([n]);
         let dk = TWO_PI / ((n as f64) * d);
 
         for i in 0..n / 2 {
@@ -95,7 +95,7 @@ impl PseudospectralDerivative {
     ///
     pub fn derivative_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let mut derivative = Array3::zeros(field.dim());
-        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().0);
+        let mut line_workspace = Array1::<Complex64>::zeros(field.shape()[0]);
         self.derivative_x_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
@@ -126,7 +126,7 @@ impl PseudospectralDerivative {
     ///
     pub fn derivative_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let mut derivative = Array3::zeros(field.dim());
-        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().1);
+        let mut line_workspace = Array1::<Complex64>::zeros(field.shape()[1]);
         self.derivative_y_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
@@ -156,7 +156,7 @@ impl PseudospectralDerivative {
     ///
     pub fn derivative_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let mut derivative = Array3::zeros(field.dim());
-        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().2);
+        let mut line_workspace = Array1::<Complex64>::zeros(field.shape()[2]);
         self.derivative_z_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
@@ -197,8 +197,8 @@ impl PseudospectralDerivative {
 
         match AXIS {
             0 => {
-                validate_axis_len(nx, self.kx.len(), self.dx, self.dy, self.dz)?;
-                validate_line_workspace(line_workspace.len(), nx)?;
+                validate_axis_len(nx, self.kx.shape()[0], self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.shape()[0], nx)?;
                 for j in 0..ny {
                     for k in 0..nz {
                         for i in 0..nx {
@@ -212,8 +212,8 @@ impl PseudospectralDerivative {
                 }
             }
             1 => {
-                validate_axis_len(ny, self.ky.len(), self.dx, self.dy, self.dz)?;
-                validate_line_workspace(line_workspace.len(), ny)?;
+                validate_axis_len(ny, self.ky.shape()[0], self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.shape()[0], ny)?;
                 for i in 0..nx {
                     for k in 0..nz {
                         for j in 0..ny {
@@ -227,8 +227,8 @@ impl PseudospectralDerivative {
                 }
             }
             2 => {
-                validate_axis_len(nz, self.kz.len(), self.dx, self.dy, self.dz)?;
-                validate_line_workspace(line_workspace.len(), nz)?;
+                validate_axis_len(nz, self.kz.shape()[0], self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.shape()[0], nz)?;
                 for i in 0..nx {
                     for j in 0..ny {
                         for k in 0..nz {

@@ -1,6 +1,6 @@
 //! SWAR (SIMD Within A Register) fallback implementations
 
-use ndarray::Array3;
+use leto::Array3;
 
 pub fn add_fields_swar(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
     if let (Some(a_slice), Some(b_slice), Some(out_slice)) =

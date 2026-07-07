@@ -82,18 +82,6 @@ pub fn ifft_shift_2d(spectrum: &mut Array2<Complex64>) {
 
 /// Apply a real-valued frequency response to a 1-D trace using the Apollo
 /// FFT cache.
-///
-/// ## Theorem
-/// Let `X[k]` be the discrete Fourier transform of `x[n]`.  For any real
-/// frequency response `H[k]`, the inverse transform of `H[k]X[k]` is the
-/// discrete linear filter induced by the convolution theorem.
-///
-/// ## Proof sketch
-/// The Apollo plan computes the unnormalized DFT pair.  Multiplication in the
-/// spectral domain and inverse transformation therefore correspond exactly to
-/// circular convolution in the discrete domain.  The caller supplies the
-/// desired frequency response, so this helper is a thin implementation of the
-/// theorem rather than a heuristic approximation.
 #[must_use]
 pub fn apply_spectral_response_1d<F>(
     signal: &Array1<f64>,
@@ -118,25 +106,11 @@ where
         *coeff *= response(idx, freq, nyquist);
     }
 
-    // Apollo uses FFTW-compatible 1/N inverse normalisation;
-    // no additional scaling is required.
     ifft_1d_complex_inplace(&mut spectrum);
     Array1::from_shape_fn(n, |idx| spectrum[idx].re)
 }
 
 /// Compute the discrete analytic signal of a real trace.
-///
-/// ## Theorem
-/// For a real sequence `x[n]`, the mask `[1, 2, ..., 2, 1, 0, ..., 0]` applied
-/// to its discrete spectrum yields the analytic signal whose real part equals
-/// `x[n]` and whose imaginary part is the discrete Hilbert transform.
-///
-/// ## Proof sketch
-/// The discrete Hilbert transform suppresses the negative-frequency half of
-/// the spectrum and doubles the positive-frequency half.  The inverse DFT then
-/// reconstructs the complex analytic signal.  DC and Nyquist bins remain
-/// unchanged to preserve the real-valued symmetry constraints for even-length
-/// sequences.
 #[must_use]
 pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
     let n = signal.len();
@@ -166,8 +140,6 @@ pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
         }
     }
 
-    // Apollo uses FFTW-compatible 1/N inverse normalisation;
-    // no additional scaling is required.
     ifft_1d_complex_inplace(&mut spectrum);
     spectrum
 }

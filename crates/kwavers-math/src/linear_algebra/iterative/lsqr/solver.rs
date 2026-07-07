@@ -7,13 +7,39 @@
 //! - Paige CC, Saunders MA (1982). "LSQR: An algorithm for sparse linear equations
 //!   and sparse least squares." *ACM Trans Math Software* 8(1):43–71.
 
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 use super::types::{LsqrConfig, LsqrResult, StopReason};
 
 /// Compute L2 norm of a vector
 fn norm_l2(v: &Array1<f64>) -> f64 {
     v.iter().map(|x| x * x).sum::<f64>().sqrt()
+}
+
+/// Matrix-vector product `y = A·x`.
+fn mat_vec_mul(a: &Array2<f64>, x: &Array1<f64>) -> Array1<f64> {
+    let m = a.shape()[0];
+    let n = a.shape()[1];
+    Array1::from_shape_fn([m], |[i]| {
+        let mut sum = 0.0;
+        for j in 0..n {
+            sum += a[[i, j]] * x[[j]];
+        }
+        sum
+    })
+}
+
+/// Transpose matrix-vector product `y = Aᵀ·x`.
+fn t_mat_vec_mul(a: &Array2<f64>, x: &Array1<f64>) -> Array1<f64> {
+    let m = a.shape()[0];
+    let n = a.shape()[1];
+    Array1::from_shape_fn([n], |[j]| {
+        let mut sum = 0.0;
+        for i in 0..m {
+            sum += a[[i, j]] * x[[i]];
+        }
+        sum
+    })
 }
 
 /// LSQR Solver for least-squares problems
@@ -35,8 +61,9 @@ impl LsqrSolver {
     /// and Givens QR factorisation.
     #[must_use]
     pub fn solve(&self, a_matrix: &Array2<f64>, b_vector: &Array1<f64>) -> LsqrResult {
-        let (_m, n) = a_matrix.dim();
-        let mut x = Array1::zeros(n);
+        let m = a_matrix.shape()[0];
+        let n = a_matrix.shape()[1];
+        let mut x = Array1::zeros([n]);
 
         // Initialise Lanczos bidiagonalisation
         let mut u = b_vector.clone();
@@ -54,8 +81,10 @@ impl LsqrSolver {
             };
         }
 
-        u /= beta;
-        let mut v = a_matrix.t().dot(&u);
+        for i in 0..m {
+            u[[i]] /= beta;
+        }
+        let mut v = t_mat_vec_mul(a_matrix, &u);
         let mut alpha = norm_l2(&v);
 
         if alpha < 1e-12 {
@@ -70,7 +99,9 @@ impl LsqrSolver {
             };
         }
 
-        v /= alpha;
+        for i in 0..n {
+            v[[i]] /= alpha;
+        }
 
         // QR factorisation state (Paige & Saunders 1982, Table 1)
         let mut w = v.clone();
@@ -87,16 +118,26 @@ impl LsqrSolver {
 
         for _iteration in 1..=self.config.max_iterations {
             // Bidiagonalisation step
-            let mut u_new = a_matrix.dot(&v) - alpha * &u;
+            let mut u_new = mat_vec_mul(a_matrix, &v);
+            for i in 0..m {
+                u_new[[i]] -= alpha * u[[i]];
+            }
             let beta_new = norm_l2(&u_new);
             if beta_new > 1e-12 {
-                u_new /= beta_new;
+                for i in 0..m {
+                    u_new[[i]] /= beta_new;
+                }
             }
 
-            let mut v_new = a_matrix.t().dot(&u_new) - beta_new * &v;
+            let mut v_new = t_mat_vec_mul(a_matrix, &u_new);
+            for i in 0..n {
+                v_new[[i]] -= beta_new * v[[i]];
+            }
             let alpha_new = norm_l2(&v_new);
             if alpha_new > 1e-12 {
-                v_new /= alpha_new;
+                for i in 0..n {
+                    v_new[[i]] /= alpha_new;
+                }
             }
 
             // Givens rotation (Paige & Saunders 1982, Table 1, step 3)
@@ -117,8 +158,12 @@ impl LsqrSolver {
             phi_bar *= s;
 
             // Solution and search-direction update
-            x = x + (phi / rho) * &w;
-            w = v_new.clone() - (theta_next / rho) * &w;
+            for i in 0..n {
+                x[[i]] += (phi / rho) * w[[i]];
+            }
+            for (wi, vi) in w.iter_mut().zip(v_new.iter()) {
+                *wi = *vi - (theta_next / rho) * *wi;
+            }
 
             rho_bar = rho_bar_next;
             rho_values.push(rho.abs());

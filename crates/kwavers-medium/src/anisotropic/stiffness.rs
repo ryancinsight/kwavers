@@ -181,16 +181,15 @@ impl AnisotropicStiffnessTensor {
         true
     }
 
-    /// Calculate determinant of 2D array using nalgebra LU decomposition
-    ///
-    /// Uses nalgebra's robust LU decomposition with partial pivoting for numerical stability.
+    /// Calculate determinant of 2D array using LU elimination with partial pivoting.
     ///
     /// # References
     /// - Golub & Van Loan (2013): "Matrix Computations", Algorithm 3.4.1
     fn determinant_2d(matrix: &Array2<f64>) -> f64 {
-        use nalgebra::DMatrix;
-
         let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
+            return 0.0;
+        }
 
         // Fast path for small matrices
         if n == 1 {
@@ -199,21 +198,52 @@ impl AnisotropicStiffnessTensor {
             return matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[1, 0]]));
         }
 
-        // For larger matrices (3x3 and above), use nalgebra's LU decomposition
-        // Convert ndarray to nalgebra DMatrix
-        let mut na_matrix = DMatrix::zeros(n, n);
+        let mut a = matrix.to_owned();
+        let mut sign = 1.0;
+        let mut det = 1.0;
+        let eps = 1e-15;
+
         for i in 0..n {
-            for j in 0..n {
-                na_matrix[(i, j)] = matrix[[i, j]];
+            // Partial pivoting
+            let mut pivot_row = i;
+            let mut pivot_abs = a[[i, i]].abs();
+            for r in (i + 1)..n {
+                let cand = a[[r, i]].abs();
+                if cand > pivot_abs {
+                    pivot_abs = cand;
+                    pivot_row = r;
+                }
+            }
+
+            if pivot_abs <= eps {
+                return 0.0;
+            }
+
+            if pivot_row != i {
+                for c in 0..n {
+                    let tmp = a[[i, c]];
+                    a[[i, c]] = a[[pivot_row, c]];
+                    a[[pivot_row, c]] = tmp;
+                }
+                sign = -sign;
+            }
+
+            let pivot = a[[i, i]];
+            det *= pivot;
+
+            for r in (i + 1)..n {
+                let factor = a[[r, i]] / pivot;
+                for c in (i + 1)..n {
+                    a[[r, c]] -= factor * a[[i, c]];
+                }
             }
         }
 
-        // Compute LU decomposition with partial pivoting
-        // det(A) = det(P) * det(L) * det(U) = (-1)^p * ∏ u_ii
-        // where p is the number of permutations in P
-        match na_matrix.clone().lu().determinant() {
-            det if det.is_finite() => det,
-            _ => 0.0, // Handle NaN/Inf cases
+        let out = sign * det;
+        if out.is_finite() {
+            out
+        } else {
+            0.0
         }
     }
 
@@ -222,34 +252,13 @@ impl AnisotropicStiffnessTensor {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
-        use nalgebra::DMatrix;
-
-        // Convert to nalgebra matrix
-        let mut matrix = DMatrix::zeros(6, 6);
-        for i in 0..6 {
-            for j in 0..6 {
-                matrix[(i, j)] = self.c[[i, j]];
-            }
-        }
-
-        // Compute inverse
-        match matrix.try_inverse() {
-            Some(inv) => {
-                // Convert back to ndarray
-                let mut compliance = Array2::zeros((6, 6));
-                for i in 0..6 {
-                    for j in 0..6 {
-                        compliance[[i, j]] = inv[(i, j)];
-                    }
-                }
-                Ok(compliance)
-            }
-            None => Err(KwaversError::Validation(ValidationError::FieldValidation {
+        Self::inverse_2d(&self.c).ok_or_else(|| {
+            KwaversError::Validation(ValidationError::FieldValidation {
                 field: "stiffness_matrix".to_owned(),
                 value: "singular".to_owned(),
                 constraint: "Stiffness matrix must be invertible".to_owned(),
-            })),
-        }
+            })
+        })
     }
 
     /// Apply rotation to stiffness tensor
@@ -259,6 +268,75 @@ impl AnisotropicStiffnessTensor {
         Self {
             c: rotated,
             anisotropy_type: self.anisotropy_type,
+        }
+    }
+
+    fn inverse_2d(matrix: &Array2<f64>) -> Option<Array2<f64>> {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
+            return None;
+        }
+
+        let mut a = matrix.to_owned();
+        let mut inv = Array2::zeros((n, n));
+        for i in 0..n {
+            inv[[i, i]] = 1.0;
+        }
+
+        let eps = 1e-15;
+        for i in 0..n {
+            // Partial pivoting
+            let mut pivot_row = i;
+            let mut pivot_abs = a[[i, i]].abs();
+            for r in (i + 1)..n {
+                let cand = a[[r, i]].abs();
+                if cand > pivot_abs {
+                    pivot_abs = cand;
+                    pivot_row = r;
+                }
+            }
+
+            if pivot_abs <= eps {
+                return None;
+            }
+
+            if pivot_row != i {
+                for c in 0..n {
+                    let tmp = a[[i, c]];
+                    a[[i, c]] = a[[pivot_row, c]];
+                    a[[pivot_row, c]] = tmp;
+
+                    let tmp_inv = inv[[i, c]];
+                    inv[[i, c]] = inv[[pivot_row, c]];
+                    inv[[pivot_row, c]] = tmp_inv;
+                }
+            }
+
+            let pivot = a[[i, i]];
+            for c in 0..n {
+                a[[i, c]] /= pivot;
+                inv[[i, c]] /= pivot;
+            }
+
+            for r in 0..n {
+                if r == i {
+                    continue;
+                }
+                let factor = a[[r, i]];
+                if factor.abs() <= eps {
+                    continue;
+                }
+                for c in 0..n {
+                    a[[r, c]] -= factor * a[[i, c]];
+                    inv[[r, c]] -= factor * inv[[i, c]];
+                }
+            }
+        }
+
+        if inv.iter().all(|v| v.is_finite()) {
+            Some(inv)
+        } else {
+            None
         }
     }
 }

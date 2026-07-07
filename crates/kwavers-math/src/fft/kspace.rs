@@ -3,9 +3,8 @@
 //! This module handles wavenumber calculations for pseudospectral methods.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::{Array1 as LetoArray1, Array3 as LetoArray3};
+use leto::{Array1, Array3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
 const KSPACE_CHUNK_LEN: usize = 4096;
@@ -18,17 +17,11 @@ impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
     #[must_use]
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
-        Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| TWO_PI * cycles_per_unit)
-    }
-
-    /// Generate k-space wavenumbers for one dimension in leto format.
-    #[must_use]
-    pub fn generate_k_vector_leto(n: usize, dx: f64) -> LetoArray1<f64> {
         let values = apollo::fftfreq(n, dx)
             .into_iter()
             .map(|cycles_per_unit| TWO_PI * cycles_per_unit)
             .collect::<Vec<_>>();
-        LetoArray1::from_vec([n], values).expect("k-space vector shape must match data length")
+        Array1::from_vec([n], values).expect("k-space vector shape must match data length")
     }
 
     /// Generate 3D k-squared array for Laplacian operations
@@ -50,7 +43,7 @@ impl KSpaceCalculator {
         let ky = Self::generate_k_vector(ny, dy);
         let kz = Self::generate_k_vector(nz, dz);
 
-        let mut k_squared = Array3::zeros((nx, ny, nz));
+        let mut k_squared = Array3::zeros([nx, ny, nz]);
 
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
@@ -76,25 +69,6 @@ impl KSpaceCalculator {
         );
 
         k_squared
-    }
-
-    /// Generate 3D k-squared array for Laplacian operations in leto format.
-    /// # Panics
-    /// - Panics if ndarray→leto conversion fails for a contiguous generated buffer.
-    ///
-    #[must_use]
-    pub fn generate_k_squared_leto(
-        nx: usize,
-        ny: usize,
-        nz: usize,
-        dx: f64,
-        dy: f64,
-        dz: f64,
-    ) -> LetoArray3<f64> {
-        let k_squared = Self::generate_k_squared(nx, ny, nz, dx, dy, dz);
-        let values: Vec<f64> = k_squared.iter().copied().collect();
-        LetoArray3::from_vec([nx, ny, nz], values)
-            .expect("k-squared shape must match contiguous data length")
     }
 
     /// Calculate maximum stable k-space value

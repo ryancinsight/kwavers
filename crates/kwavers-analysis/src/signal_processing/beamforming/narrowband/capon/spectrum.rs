@@ -6,6 +6,7 @@ use crate::signal_processing::beamforming::utils::steering::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::LinearAlgebra;
+use leto::Array2 as LetoArray2;
 use ndarray::{Array2, Array3};
 use num_complex::Complex64;
 
@@ -92,14 +93,15 @@ pub fn capon_spatial_spectrum_point(
     )?;
 
     // Invert the real covariance matrix.
-    let r_inv = LinearAlgebra::matrix_inverse(&r)?;
+    let r_leto = LetoArray2::from_shape_fn([n_sensors, n_sensors], |[i, j]| r[(i, j)]);
+    let r_inv = LinearAlgebra::matrix_inverse(&r_leto)?;
 
     // Compute denominator a^H R^{-1} a.
     let mut denom = Complex64::new(0.0, 0.0);
     for i in 0..n_sensors {
         let mut tmp = Complex64::new(0.0, 0.0);
         for j in 0..n_sensors {
-            tmp += Complex64::new(r_inv[(i, j)], 0.0) * a[j];
+            tmp += Complex64::new(r_inv[[i, j]], 0.0) * a[j];
         }
         denom += a[i].conj() * tmp;
     }

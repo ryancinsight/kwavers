@@ -4,7 +4,7 @@
 //! memory safety practices with comprehensive safety documentation.
 
 use crate::simd_safe::auto_detect::ops;
-use ndarray::Array3;
+    use leto::Array3;
 
 /// Add two arrays using AVX2 instructions
 ///
@@ -38,13 +38,13 @@ pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multipl
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+use leto::Array3;
 
     #[test]
     fn test_avx2_add() {
-        let a = Array3::<f64>::ones((2, 2, 2));
-        let b = Array3::<f64>::ones((2, 2, 2)) * 2.0;
-        let mut out = Array3::<f64>::zeros((2, 2, 2));
+        let a = Array3::<f64>::ones([2, 2, 2]);
+        let b = Array3::<f64>::from_elem([2, 2, 2], 2.0);
+        let mut out = Array3::<f64>::zeros([2, 2, 2]);
 
         add_arrays(&a, &b, &mut out);
 
@@ -53,7 +53,7 @@ mod tests {
 
     #[test]
     fn test_avx2_scale() {
-        let mut array = Array3::<f64>::ones((2, 2, 2)) * 2.0;
+        let mut array = Array3::<f64>::from_elem([2, 2, 2], 2.0);
         scale_array(&mut array, 3.0);
         assert!(array.iter().all(|&x| (x - 6.0).abs() < 1e-10));
     }

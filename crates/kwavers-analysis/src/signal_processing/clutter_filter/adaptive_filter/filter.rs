@@ -1,4 +1,5 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
+use leto::Array2 as LetoArray2;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::EigenDecomposition;
 use ndarray::{Array1, Array2};
@@ -127,10 +128,13 @@ impl AdaptiveFilter {
             }
         }
 
-        let (eigenvalues, eigenvectors) = EigenDecomposition::eigendecomposition(&covariance)?;
+        let covariance_leto =
+            LetoArray2::from_shape_fn([n_frames, n_frames], |[i, j]| covariance[[i, j]]);
+        let (eigenvalues, eigenvectors) =
+            EigenDecomposition::eigendecomposition(&covariance_leto)?;
 
         // Sort descending
-        let mut indices: Vec<usize> = (0..eigenvalues.len()).collect();
+        let mut indices: Vec<usize> = (0..n_frames).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
         let sorted_eigenvalues: Array1<f64> = indices.iter().map(|&i| eigenvalues[i]).collect();

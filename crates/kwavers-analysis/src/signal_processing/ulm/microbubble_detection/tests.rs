@@ -3,6 +3,7 @@ use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
 use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::linear_algebra::LinearAlgebra;
+use leto::Array2 as LetoArray2;
 use ndarray::Array2;
 
 /// Generate a deterministic pseudo-noise matrix using a simple LCG for portability.
@@ -26,7 +27,8 @@ fn test_svht_noise_only() {
     let n_px = 50usize;
     let n_t = 100usize;
     let noise = make_noise_matrix(n_px, n_t, 42);
-    let (_u, sigma, _vt) = LinearAlgebra::svd(&noise).unwrap();
+    let noise_leto = LetoArray2::from_shape_fn([n_px, n_t], |[i, j]| noise[[i, j]]);
+    let (_u, sigma, _v) = LinearAlgebra::svd(&noise_leto).unwrap();
 
     let k = svht_threshold(&sigma, n_px, n_t);
     assert!(k <= 5, "SVHT on noise should give k≈0, got k={k}");

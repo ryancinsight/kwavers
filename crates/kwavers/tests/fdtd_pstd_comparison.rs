@@ -20,6 +20,7 @@ use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMetho
 use kwavers_solver::pstd::PSTDConfig;
 use kwavers_solver::pstd::PSTDPlugin;
 use kwavers_source::NullSource;
+use leto::ArrayViewMut3;
 use ndarray::{Array3, Array4};
 use plotters::prelude::*;
 use std::fs;
@@ -40,7 +41,7 @@ impl kwavers_boundary::Boundary for NullBoundary {
     }
     fn apply_acoustic(
         &mut self,
-        _field: ndarray::ArrayViewMut3<f64>,
+        _field: ArrayViewMut3<f64>,
         _grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
@@ -56,7 +57,7 @@ impl kwavers_boundary::Boundary for NullBoundary {
     }
     fn apply_light(
         &mut self,
-        _field: ndarray::ArrayViewMut3<f64>,
+        _field: ArrayViewMut3<f64>,
         _grid: &Grid,
         _time_step: usize,
     ) {

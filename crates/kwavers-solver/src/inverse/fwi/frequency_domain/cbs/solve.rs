@@ -55,7 +55,8 @@ use super::green::{
 use super::grid::GridSpec;
 use super::potential::{convergence_epsilon, pointwise_preconditioner, shifted_potential};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use nalgebra::{DMatrix, DVector};
+use kwavers_math::linear_algebra::complex::ComplexLinearAlgebra;
+use leto::{Array1, Array2};
 use num_complex::Complex64;
 
 /// CBS fixed-point solver settings.
@@ -267,13 +268,17 @@ fn solve_adjoint_dense_free_space(
     config: CbsConfig,
 ) -> KwaversResult<CbsSolution> {
     let operator = dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted);
-    let adjoint_operator = operator.adjoint();
-    let rhs = DVector::from_column_slice(adjoint_rhs);
-    let solution = adjoint_operator.clone().lu().solve(&rhs).ok_or_else(|| {
-        KwaversError::InvalidInput("dense CBS adjoint operator is singular".to_owned())
-    })?;
-    let residual = &adjoint_operator * &solution - &rhs;
-    let relative_residual = residual.norm() / norm(adjoint_rhs).max(f64::EPSILON);
+    let adjoint_operator = adjoint_matrix(&operator);
+    let rhs = Array1::from(adjoint_rhs.to_vec());
+    let solution = ComplexLinearAlgebra::solve_linear_system_complex(&adjoint_operator, &rhs)?;
+    let lhs = matvec(&adjoint_operator, &solution);
+    let residual_norm = lhs
+        .iter()
+        .zip(rhs.iter())
+        .map(|(left, right)| (*left - *right).norm_sqr())
+        .sum::<f64>()
+        .sqrt();
+    let relative_residual = residual_norm / norm(adjoint_rhs).max(f64::EPSILON);
     if !relative_residual.is_finite() || relative_residual > config.relative_tolerance {
         return Err(KwaversError::InvalidInput(format!(
             "dense CBS adjoint residual {} exceeds tolerance {}",
@@ -459,17 +464,37 @@ fn dense_free_space_operator_matrix(
     reference_wavenumber: f64,
     epsilon: f64,
     shifted_potential: &[Complex64],
-) -> DMatrix<Complex64> {
+) -> Array2<Complex64> {
     let centers = grid.centers();
     let shifted_k = shifted_wavenumber(reference_wavenumber, epsilon);
     let min_distance = grid.min_distance_m();
     let cell_volume = grid.cell_volume_m3();
-    DMatrix::from_fn(grid.len(), grid.len(), |row, column| {
+    Array2::from_shape_fn([grid.len(), grid.len()], |[row, column]| {
         identity_entry(row, column)
             + shifted_outgoing_green(centers[column].1, centers[row].1, shifted_k, min_distance)
                 * shifted_potential[column]
                 * cell_volume
     })
+}
+
+fn adjoint_matrix(matrix: &Array2<Complex64>) -> Array2<Complex64> {
+    let nrows = matrix.shape()[0];
+    let ncols = matrix.shape()[1];
+    Array2::from_shape_fn([ncols, nrows], |[i, j]| matrix[[j, i]].conj())
+}
+
+fn matvec(matrix: &Array2<Complex64>, vector: &Array1<Complex64>) -> Array1<Complex64> {
+    let nrows = matrix.shape()[0];
+    let ncols = matrix.shape()[1];
+    let mut result = Array1::zeros([nrows]);
+    for i in 0..nrows {
+        let mut acc = Complex64::new(0.0, 0.0);
+        for j in 0..ncols {
+            acc += matrix[[i, j]] * vector[j];
+        }
+        result[i] = acc;
+    }
+    result
 }
 
 #[inline]

@@ -2,7 +2,7 @@
 
 use super::{IterativeSolver, SolverConfig};
 use crate::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
+use leto::Array1;
 use num_complex::Complex64;
 
 #[test]
@@ -11,13 +11,16 @@ fn test_bicgstab_complex_identity() {
     a.set_diagonal(0, Complex64::new(1.0, 0.0));
     a.set_diagonal(1, Complex64::new(1.0, 0.0));
 
-    let b = Array1::from_vec(vec![Complex64::new(1.0, 1.0), Complex64::new(2.0, 2.0)]);
+    let b = Array1::from_shape_fn([2], |[i]| match i {
+        0 => Complex64::new(1.0, 1.0),
+        _ => Complex64::new(2.0, 2.0),
+    });
 
     let solver = IterativeSolver::create(SolverConfig::default());
-    let x = solver.bicgstab_complex(&a, b.view(), None).unwrap();
+    let x = solver.bicgstab_complex(&a, &b, None).unwrap();
 
-    assert!((x[0] - Complex64::new(1.0, 1.0)).norm() < 1e-6);
-    assert!((x[1] - Complex64::new(2.0, 2.0)).norm() < 1e-6);
+    assert!((x[[0]] - Complex64::new(1.0, 1.0)).norm() < 1e-6);
+    assert!((x[[1]] - Complex64::new(2.0, 2.0)).norm() < 1e-6);
 }
 
 #[test]
@@ -27,11 +30,14 @@ fn test_bicgstab_complex_diagonal() {
     a.set_diagonal(0, Complex64::new(2.0, 1.0));
     a.set_diagonal(1, Complex64::new(3.0, 2.0));
 
-    let b = Array1::from_vec(vec![Complex64::new(2.0, 1.0), Complex64::new(3.0, 2.0)]);
+    let b = Array1::from_shape_fn([2], |[i]| match i {
+        0 => Complex64::new(2.0, 1.0),
+        _ => Complex64::new(3.0, 2.0),
+    });
 
     let solver = IterativeSolver::create(SolverConfig::default());
-    let x = solver.bicgstab_complex(&a, b.view(), None).unwrap();
+    let x = solver.bicgstab_complex(&a, &b, None).unwrap();
 
-    assert!((x[0] - Complex64::new(1.0, 0.0)).norm() < 1e-6);
-    assert!((x[1] - Complex64::new(1.0, 0.0)).norm() < 1e-6);
+    assert!((x[[0]] - Complex64::new(1.0, 0.0)).norm() < 1e-6);
+    assert!((x[[1]] - Complex64::new(1.0, 0.0)).norm() < 1e-6);
 }

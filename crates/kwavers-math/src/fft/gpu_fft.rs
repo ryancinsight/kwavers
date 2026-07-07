@@ -56,7 +56,6 @@ pub use apollo::{FftBackend, GpuFft3d, GpuFft3dBuffers, WgpuBackend};
 mod tests {
     use super::{FftBackend, WgpuBackend};
     use crate::fft::{fft_3d_array, Shape3D};
-    use ndarray::Array3;
 
     fn try_plan(shape: Shape3D) -> Option<apollo::GpuFft3d> {
         let backend = match WgpuBackend::try_default() {
@@ -80,23 +79,17 @@ mod tests {
         )
     }
 
-    fn leto_field(field: &Array3<f64>) -> leto::Array3<f64> {
-        let (nx, ny, nz) = field.dim();
-        leto::Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
-            .expect("test field must map to Leto storage with identical shape")
-    }
-
     #[test]
     fn apollo_wgpu_fft_matches_cpu_spectrum_for_power_of_two_shape() {
         let shape = Shape3D::new(2, 4, 2).unwrap();
         let Some(plan) = try_plan(shape) else {
             return;
         };
-        let field = Array3::from_shape_fn((shape.nx, shape.ny, shape.nz), |(i, j, k)| {
+        let field = leto::Array3::from_shape_fn([shape.nx, shape.ny, shape.nz], |[i, j, k]| {
             (i as f64 + 1.0) - 0.25 * (j as f64) + 0.125 * (k as f64)
         });
 
-        let gpu = plan.forward(&leto_field(&field));
+        let gpu = plan.forward(&field);
         let cpu = fft_3d_array(&field);
 
         assert_eq!(gpu.len(), 2 * shape.volume());

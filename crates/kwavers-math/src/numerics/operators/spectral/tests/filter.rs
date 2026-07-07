@@ -41,7 +41,7 @@ fn test_spectral_filter_smooth() {
 #[test]
 fn spectral_filter_preserves_constant_field() {
     let filter = SpectralFilter::new(0.5, SpectralFilterType::SharpCutoff);
-    let field = Array3::from_elem((8, 4, 2), 3.25);
+    let field = Array3::from_shape_fn((8, 4, 2), |_| 3.25);
 
     let filtered = filter.apply(field.view()).unwrap();
 
@@ -107,7 +107,9 @@ fn spectral_filter_apply_into_reuses_workspaces_and_matches_apply() {
         assert_abs_diff_eq!(*actual, *expected, epsilon = 1e-12);
     }
 
-    field.mapv_inplace(|value| 0.5 * value);
+    for value in field.iter_mut() {
+        *value *= 0.5;
+    }
     let expected_second = filter.apply(field.view()).unwrap();
     filter
         .apply_into(field.view(), &mut spectrum, &mut output)

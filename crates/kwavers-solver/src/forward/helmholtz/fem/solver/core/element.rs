@@ -1,6 +1,6 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use nalgebra::{Matrix3, Vector3};
+use leto::geometry::Vector3;
 use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 
@@ -11,6 +11,23 @@ type ElementMatrices = (
     Vec<Array2<Complex64>>,
     Vec<Array1<Complex64>>,
 );
+
+fn inverse_rows_from_columns(
+    col0: Vector3<f64>,
+    col1: Vector3<f64>,
+    col2: Vector3<f64>,
+) -> Option<[Vector3<f64>; 3]> {
+    let det = col0.dot(col1.cross(col2));
+    if det.abs() < 1e-14 {
+        return None;
+    }
+    let inv_det = 1.0 / det;
+    Some([
+        col1.cross(col2) * inv_det,
+        col2.cross(col0) * inv_det,
+        col0.cross(col1) * inv_det,
+    ])
+}
 
 impl FemHelmholtzSolver {
     /// Compute per-element stiffness K_e, consistent mass M_e, and RHS f_e.
@@ -35,14 +52,16 @@ impl FemHelmholtzSolver {
             let p2 = self.mesh.nodes[element.nodes[2]].coordinates;
             let p3 = self.mesh.nodes[element.nodes[3]].coordinates;
 
-            let v0 = Vector3::from(p0);
-            let v1 = Vector3::from(p1);
-            let v2 = Vector3::from(p2);
-            let v3 = Vector3::from(p3);
+            let v0 = Vector3::new(p0[0], p0[1], p0[2]);
+            let v1 = Vector3::new(p1[0], p1[1], p1[2]);
+            let v2 = Vector3::new(p2[0], p2[1], p2[2]);
+            let v3 = Vector3::new(p3[0], p3[1], p3[2]);
 
             // Jacobian J = [p₁−p₀ | p₂−p₀ | p₃−p₀]
-            let j_mat = Matrix3::from_columns(&[v1 - v0, v2 - v0, v3 - v0]);
-            let det_j = j_mat.determinant();
+            let col0 = v1 - v0;
+            let col1 = v2 - v0;
+            let col2 = v3 - v0;
+            let det_j = col0.dot(col1.cross(col2));
             let volume = det_j.abs() / 6.0;
 
             if volume < 1e-14 {
@@ -52,13 +71,12 @@ impl FemHelmholtzSolver {
                 }));
             }
 
-            let j_inv_t = j_mat
-                .try_inverse()
-                .ok_or(KwaversError::Numerical(NumericalError::SingularMatrix {
+            let inv_rows = inverse_rows_from_columns(col0, col1, col2).ok_or(
+                KwaversError::Numerical(NumericalError::SingularMatrix {
                     operation: "jacobian_inverse".to_owned(),
                     condition_number: 0.0,
-                }))?
-                .transpose();
+                }),
+            )?;
 
             let grad_phi_ref = [
                 Vector3::new(-1.0, -1.0, -1.0),
@@ -69,7 +87,9 @@ impl FemHelmholtzSolver {
 
             let mut grad_phi_phys = [Vector3::zeros(); 4];
             for k in 0..4 {
-                grad_phi_phys[k] = j_inv_t * grad_phi_ref[k];
+                grad_phi_phys[k] = inv_rows[0] * grad_phi_ref[k].x
+                    + inv_rows[1] * grad_phi_ref[k].y
+                    + inv_rows[2] * grad_phi_ref[k].z;
             }
 
             // Stiffness: K_ij = V (∇φᵢ · ∇φⱼ)
@@ -77,7 +97,7 @@ impl FemHelmholtzSolver {
             for r in 0..4 {
                 for c in 0..4 {
                     k_elem[[r, c]] =
-                        Complex64::from(grad_phi_phys[r].dot(&grad_phi_phys[c]) * volume);
+                        Complex64::from(grad_phi_phys[r].dot(grad_phi_phys[c]) * volume);
                 }
             }
 

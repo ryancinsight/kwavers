@@ -1,23 +1,23 @@
 //! Shared traversal helpers for regularization gradients.
 
+use leto::{Array, Storage, StorageMut};
+use leto_ops::zip_mut_with;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{ArrayBase, Data, DataMut, Dimension, Zip};
 
 const REGULARIZATION_CHUNK_LEN: usize = 4096;
 
-pub(super) fn for_each_pair_mut<Sg, Sm, D, F>(
-    gradient: &mut ArrayBase<Sg, D>,
-    model: &ArrayBase<Sm, D>,
+pub(super) fn for_each_pair_mut<Sg, Sm, F, const N: usize>(
+    gradient: &mut Array<f64, Sg, N>,
+    model: &Array<f64, Sm, N>,
     f: F,
 ) where
-    Sg: DataMut<Elem = f64>,
-    Sm: Data<Elem = f64>,
-    D: Dimension,
+    Sg: StorageMut<f64>,
+    Sm: Storage<f64>,
     F: Fn(&mut f64, f64) + Send + Sync + Copy,
 {
     assert_eq!(
-        gradient.dim(),
-        model.dim(),
+        gradient.shape(),
+        model.shape(),
         "regularization gradient and model shapes must match"
     );
 
@@ -37,7 +37,7 @@ pub(super) fn for_each_pair_mut<Sg, Sm, D, F>(
         }
     }
 
-    Zip::from(gradient)
-        .and(model)
-        .for_each(|gradient_value, &model_value| f(gradient_value, model_value));
+    let mut gradient_view = gradient.view_mut();
+    let model_view = model.view();
+    let _ = zip_mut_with(&mut gradient_view, &model_view, |g, m| f(g, *m));
 }

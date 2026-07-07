@@ -1,7 +1,7 @@
 //! `ModelRegularizer1D` — regularization on 1D vector models.
 
 use super::{config::RegularizationConfig, ops::for_each_pair_mut};
-use ndarray::Array1;
+use leto::Array1;
 
 /// 1D Regularizer for vector models
 #[derive(Debug)]
@@ -41,12 +41,12 @@ impl ModelRegularizer1D {
     }
 
     fn apply_smoothness(&self, gradient: &mut Array1<f64>) {
-        let n = gradient.len();
+        let n = gradient.shape()[0];
         if n < 3 {
             return;
         }
 
-        let mut laplacian = Array1::zeros(n);
+        let mut laplacian = Array1::zeros([n]);
         for i in 1..n - 1 {
             laplacian[i] = 2.0f64.mul_add(-gradient[i], gradient[i + 1] + gradient[i - 1]);
         }

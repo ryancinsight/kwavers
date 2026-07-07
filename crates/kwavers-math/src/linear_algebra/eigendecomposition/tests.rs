@@ -1,10 +1,30 @@
 use super::*;
-use ndarray::Array2;
+use leto::{Array1, Array2};
 use num_complex::Complex;
+
+fn extract_column(matrix: &Array2<Complex<f64>>, col: usize) -> Array1<Complex<f64>> {
+    let rows = matrix.shape()[0];
+    Array1::from_shape_fn([rows], |[i]| matrix[[i, col]])
+}
+
+fn mat_vec_mul_complex(
+    matrix: &Array2<Complex<f64>>,
+    vector: &Array1<Complex<f64>>,
+) -> Array1<Complex<f64>> {
+    let rows = matrix.shape()[0];
+    let cols = matrix.shape()[1];
+    Array1::from_shape_fn([rows], |[i]| {
+        let mut sum = Complex::new(0.0, 0.0);
+        for j in 0..cols {
+            sum = sum + matrix[[i, j]] * vector[[j]];
+        }
+        sum
+    })
+}
 
 fn create_hermitian_2x2() -> Array2<Complex<f64>> {
     Array2::from_shape_vec(
-        (2, 2),
+        [2, 2],
         vec![
             Complex::new(2.0, 0.0),
             Complex::new(1.0, 1.0),
@@ -17,7 +37,7 @@ fn create_hermitian_2x2() -> Array2<Complex<f64>> {
 
 fn create_hermitian_3x3() -> Array2<Complex<f64>> {
     Array2::from_shape_vec(
-        (3, 3),
+        [3, 3],
         vec![
             Complex::new(2.0, 0.0),
             Complex::new(1.0, 1.0),
@@ -40,16 +60,16 @@ fn test_jacobi_2x2_hermitian() {
 
     let result = EigenSolver::jacobi_hermitian(&matrix, config).unwrap();
 
-    assert_eq!(result.eigenvalues.len(), 2);
-    assert!(result.eigenvalues[0] > result.eigenvalues[1]);
+    assert_eq!(result.eigenvalues.size(), 2);
+    assert!(result.eigenvalues[[0]] > result.eigenvalues[[1]]);
 
     for k in 0..2 {
-        let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.column(k);
-        let av = matrix.dot(&v.to_owned());
+        let lambda = result.eigenvalues[[k]];
+        let v = extract_column(&result.eigenvectors, k);
+        let av = mat_vec_mul_complex(&matrix, &v);
 
         for i in 0..2 {
-            let error = (av[i] - lambda * v[i]).norm();
+            let error = (av[[i]] - lambda * v[[i]]).norm();
             assert!(
                 error < 1.5,
                 "Eigenvalue equation failed for λ[{}]: error = {}",
@@ -67,17 +87,18 @@ fn test_qr_algorithm_3x3_hermitian() {
 
     let result = EigenSolver::qr_algorithm(&matrix, config).unwrap();
 
-    assert_eq!(result.eigenvalues.len(), 3);
-    assert!(result.eigenvalues[0] > result.eigenvalues[1]);
-    assert!(result.eigenvalues[1] > result.eigenvalues[2]);
+    assert_eq!(result.eigenvalues.size(), 3);
+    assert!(result.eigenvalues[[0]] > result.eigenvalues[[1]]);
+    assert!(result.eigenvalues[[1]] > result.eigenvalues[[2]]);
 
     for k in 0..3 {
-        let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.column(k);
-        let av = matrix.dot(&v.to_owned());
+        let lambda = result.eigenvalues[[k]];
+
+        let v = extract_column(&result.eigenvectors, k);
+        let av = mat_vec_mul_complex(&matrix, &v);
 
         for i in 0..3 {
-            let error = (av[i] - lambda * v[i]).norm();
+            let error = (av[[i]] - lambda * v[[i]]).norm();
             assert!(
                 error < 2.0,
                 "QR eigenvalue equation failed for λ[{}]: error = {}",
@@ -112,9 +133,9 @@ fn test_eigenvalue_sorting() {
 
     let result = EigenSolver::qr_algorithm(&matrix, config).unwrap();
 
-    for i in 0..result.eigenvalues.len() - 1 {
+    for i in 0..result.eigenvalues.size() - 1 {
         assert!(
-            result.eigenvalues[i] >= result.eigenvalues[i + 1],
+            result.eigenvalues[[i]] >= result.eigenvalues[[i + 1]],
             "Eigenvalues not in descending order"
         );
     }
@@ -123,7 +144,7 @@ fn test_eigenvalue_sorting() {
 #[test]
 fn test_non_hermitian_matrix_rejected() {
     let matrix = Array2::from_shape_vec(
-        (2, 2),
+        [2, 2],
         vec![
             Complex::new(1.0, 0.0),
             Complex::new(1.0, 0.0),
@@ -142,7 +163,7 @@ fn test_non_hermitian_matrix_rejected() {
 #[test]
 fn test_dimension_mismatch_rejected() {
     let matrix = Array2::from_shape_vec(
-        (2, 3),
+        [2, 3],
         vec![
             Complex::new(1.0, 0.0),
             Complex::new(0.0, 0.0),

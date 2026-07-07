@@ -1,6 +1,6 @@
 use crate::linear_algebra::tolerance;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use num_complex::Complex;
 
 /// Eigenvalue decomposition operations
@@ -20,12 +20,12 @@ impl EigenDecomposition {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn eigendecomposition(matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
-        let n = matrix.nrows();
-        if matrix.ncols() != n {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "eigendecomposition".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -74,12 +74,12 @@ impl EigenDecomposition {
     pub fn hermitian_eigendecomposition_complex(
         matrix: &Array2<Complex<f64>>,
     ) -> KwaversResult<(Array1<f64>, Array2<Complex<f64>>)> {
-        let n = matrix.nrows();
-        if matrix.ncols() != n {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "hermitian_eigendecomposition_complex".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -111,7 +111,13 @@ impl EigenDecomposition {
         }
 
         let mut h = matrix.clone();
-        let mut v = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
+        let mut v = Array2::from_shape_fn([n, n], |[i, j]| {
+            if i == j {
+                Complex::new(1.0, 0.0)
+            } else {
+                Complex::new(0.0, 0.0)
+            }
+        });
 
         for _sweep in 0..tolerance::HERMITIAN_EIG_MAX_SWEEPS {
             let mut max_offdiag = 0.0;
@@ -180,16 +186,16 @@ impl EigenDecomposition {
             }
         }
 
-        let mut eigenvals = Array1::zeros(n);
+        let mut eigenvals = Array1::zeros([n]);
         for i in 0..n {
-            eigenvals[i] = h[[i, i]].re;
+            eigenvals[[i]] = h[[i, i]].re;
         }
 
         let mut indices: Vec<usize> = (0..n).collect();
-        indices.sort_by(|&i, &j| eigenvals[j].total_cmp(&eigenvals[i]));
+        indices.sort_by(|&i, &j| eigenvals[[j]].total_cmp(&eigenvals[[i]]));
 
-        let sorted_eigenvals = Array1::from_shape_fn(n, |i| eigenvals[indices[i]]);
-        let sorted_eigenvecs = Array2::from_shape_fn((n, n), |(i, j)| v[[i, indices[j]]]);
+        let sorted_eigenvals = Array1::from_shape_fn([n], |[i]| eigenvals[[indices[i]]]);
+        let sorted_eigenvecs = Array2::from_shape_fn([n, n], |[i, j]| v[[i, indices[j]]]);
 
         Ok((sorted_eigenvals, sorted_eigenvecs))
     }

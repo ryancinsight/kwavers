@@ -2,7 +2,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::{ComplexLinearAlgebra, EigenDecomposition};
-use ndarray::{s, Array1, Array2};
+use leto::{Array1 as LetoArray1, Array2 as LetoArray2};
+use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
 
@@ -103,24 +104,25 @@ impl EigenspaceMV {
             r_loaded[(i, i)] += Complex64::new(self.diagonal_loading, 0.0);
         }
 
+        let r_loaded_leto = LetoArray2::from_shape_fn([n, n], |[i, j]| r_loaded[(i, j)]);
         let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&r_loaded)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&r_loaded_leto)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
         let mut p_s = Array2::<Complex64>::zeros((n, n));
         for &idx in indices.iter().take(self.num_sources) {
-            let eigenvec = eigenvectors.slice(s![.., idx]);
-
             for i in 0..n {
                 for j in 0..n {
-                    p_s[(i, j)] += eigenvec[i] * eigenvec[j].conj();
+                    p_s[(i, j)] += eigenvectors[[i, idx]] * eigenvectors[[j, idx]].conj();
                 }
             }
         }
 
-        let r_inv_a = ComplexLinearAlgebra::solve_linear_system_complex(&r_loaded, steering)?;
+        let steering_leto = LetoArray1::from_shape_fn([n], |[i]| steering[i]);
+        let r_inv_a =
+            ComplexLinearAlgebra::solve_linear_system_complex(&r_loaded_leto, &steering_leto)?;
 
         let mut ps_r_inv_a = Array1::<Complex64>::zeros(n);
         for i in 0..n {
@@ -205,8 +207,9 @@ impl EigenspaceMV {
             }
         }
 
+        let covariance_leto = LetoArray2::from_shape_fn([n, n], |[i, j]| covariance[(i, j)]);
         let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(covariance)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&covariance_leto)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
@@ -214,10 +217,9 @@ impl EigenspaceMV {
         // aᴴ P_s a = Σ_{k<K} |e_kᴴ a|²  (P_s = Σ_{k<K} e_k e_kᴴ, Hermitian projector).
         let mut projection_power = 0.0_f64;
         for &idx in indices.iter().take(self.num_sources) {
-            let eigenvec = eigenvectors.slice(s![.., idx]);
             let mut e_h_a = Complex64::zero();
             for j in 0..n {
-                e_h_a += eigenvec[j].conj() * steering[j];
+                e_h_a += eigenvectors[[j, idx]].conj() * steering[j];
             }
             projection_power += e_h_a.norm_sqr();
         }

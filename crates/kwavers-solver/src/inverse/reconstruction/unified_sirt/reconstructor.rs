@@ -10,6 +10,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::inverse_problems::ModelRegularizer3D;
+use leto::Array3 as LetoArray3;
 use log::debug;
 use ndarray::{Array1, Array2, Array3};
 
@@ -86,8 +87,19 @@ impl SirtReconstructor {
 
             if self.config.regularization.is_active() {
                 let mut image_3d = self.reshape_to_3d(&x, grid_size);
-                let model_3d = Array3::zeros(grid_size);
-                regularizer.apply_to_gradient(&mut image_3d, &model_3d);
+                let mut image_3d_leto =
+                    LetoArray3::from_shape_fn([grid_size.0, grid_size.1, grid_size.2], |[i, j, k]| {
+                        image_3d[[i, j, k]]
+                    });
+                let model_3d = LetoArray3::zeros([grid_size.0, grid_size.1, grid_size.2]);
+                regularizer.apply_to_gradient(&mut image_3d_leto, &model_3d);
+                for i in 0..grid_size.0 {
+                    for j in 0..grid_size.1 {
+                        for k in 0..grid_size.2 {
+                            image_3d[[i, j, k]] = image_3d_leto[[i, j, k]];
+                        }
+                    }
+                }
                 x = self.reshape_to_1d(&image_3d);
             }
 

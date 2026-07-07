@@ -119,7 +119,9 @@ impl SpectralFilter {
         validate_workspace("spectrum", spectrum.dim(), field.dim())?;
         validate_workspace("output", output.dim(), field.dim())?;
 
-        output.assign(&field);
+        for (o, f) in output.iter_mut().zip(field.iter()) {
+            *o = *f;
+        }
         fft_3d_array_into(output, spectrum);
 
         for i in 0..nx {

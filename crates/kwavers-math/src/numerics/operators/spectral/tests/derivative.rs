@@ -3,11 +3,11 @@ use crate::numerics::operators::spectral::derivative::PseudospectralDerivative;
 use crate::numerics::operators::spectral::trait_def::SpectralOperatorTrait;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use ndarray::Array3;
+use ndarray::{Array1, Array3};
 use std::f64::consts::PI;
 
 fn assert_arrays_close(actual: &Array3<f64>, expected: &Array3<f64>, epsilon: f64) {
-    assert_eq!(actual.dim(), expected.dim());
+    assert_eq!(actual.shape(), expected.shape());
     for (actual, expected) in actual.iter().zip(expected.iter()) {
         assert_abs_diff_eq!(*actual, *expected, epsilon = epsilon);
     }
@@ -19,7 +19,7 @@ fn test_wavenumber_vector() {
     let d = 0.1;
     let k = PseudospectralDerivative::wavenumber_vector(n, d);
 
-    assert_eq!(k.len(), n);
+    assert_eq!(k.shape()[0], n);
     assert_abs_diff_eq!(k[0], 0.0, epsilon = 1e-15);
     assert_abs_diff_eq!(k[1], -k[n - 1], epsilon = 1e-10);
 }
@@ -29,9 +29,9 @@ fn test_pseudospectral_creation() {
     let op = PseudospectralDerivative::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
 
     let (kx, ky, kz) = op.wavenumber_grid();
-    assert_eq!(kx.len(), 64);
-    assert_eq!(ky.len(), 64);
-    assert_eq!(kz.len(), 64);
+    assert_eq!(kx.shape()[0], 64);
+    assert_eq!(ky.shape()[0], 64);
+    assert_eq!(kz.shape()[0], 64);
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
     }
 
     let expected_x = op.derivative_x(field.view()).unwrap();
-    let mut line_x = ndarray::Array1::<Complex64>::zeros(nx);
+    let mut line_x = Array1::<Complex64>::zeros(nx);
     let mut out_x = Array3::<f64>::zeros((nx, ny, nz));
     let line_x_ptr = line_x.as_ptr();
     let out_x_ptr = out_x.as_ptr();
@@ -171,7 +171,7 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
     assert_arrays_close(&out_x, &expected_x, 1e-12);
 
     let expected_y = op.derivative_y(field.view()).unwrap();
-    let mut line_y = ndarray::Array1::<Complex64>::zeros(ny);
+    let mut line_y = Array1::<Complex64>::zeros(ny);
     let mut out_y = Array3::<f64>::zeros((nx, ny, nz));
     let line_y_ptr = line_y.as_ptr();
     let out_y_ptr = out_y.as_ptr();
@@ -182,7 +182,7 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
     assert_arrays_close(&out_y, &expected_y, 1e-12);
 
     let expected_z = op.derivative_z(field.view()).unwrap();
-    let mut line_z = ndarray::Array1::<Complex64>::zeros(nz);
+    let mut line_z = Array1::<Complex64>::zeros(nz);
     let mut out_z = Array3::<f64>::zeros((nx, ny, nz));
     let line_z_ptr = line_z.as_ptr();
     let out_z_ptr = out_z.as_ptr();
@@ -197,7 +197,7 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
 fn spectral_derivative_into_rejects_mismatched_workspaces() {
     let op = PseudospectralDerivative::new(4, 4, 4, 0.1, 0.1, 0.1).unwrap();
     let field = Array3::<f64>::zeros((4, 4, 4));
-    let mut line = ndarray::Array1::<Complex64>::zeros(3);
+    let mut line = Array1::<Complex64>::zeros(3);
     let mut output = Array3::<f64>::zeros((4, 4, 4));
 
     let error = op
@@ -205,7 +205,7 @@ fn spectral_derivative_into_rejects_mismatched_workspaces() {
         .unwrap_err();
     assert!(format!("{error}").contains("line workspace length"));
 
-    line = ndarray::Array1::<Complex64>::zeros(4);
+    line = Array1::<Complex64>::zeros(4);
     output = Array3::<f64>::zeros((4, 4, 3));
     let error = op
         .derivative_x_into(field.view(), &mut line, &mut output)
@@ -220,7 +220,7 @@ fn test_derivative_of_constant_is_zero() {
     let nz = 32;
 
     let op = PseudospectralDerivative::new(nx, ny, nz, 0.1, 0.1, 0.1).unwrap();
-    let field = Array3::from_elem((nx, ny, nz), 5.0);
+    let field = Array3::from_shape_fn((nx, ny, nz), |_| 5.0);
 
     let deriv_x = op.derivative_x(field.view()).unwrap();
     let deriv_y = op.derivative_y(field.view()).unwrap();
@@ -277,3 +277,4 @@ fn test_spectral_accuracy_exponential() {
         max_error
     );
 }
+

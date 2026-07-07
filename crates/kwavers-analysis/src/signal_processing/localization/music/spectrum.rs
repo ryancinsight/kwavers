@@ -1,4 +1,5 @@
 use crate::signal_processing::localization::SourceLocation;
+use leto::Array2 as LetoArray2;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::EigenDecomposition;
 use ndarray::Array2;
@@ -190,8 +191,10 @@ impl MUSICProcessor {
 
         let covariance = self.estimate_covariance(snapshots)?;
 
+        let covariance_leto =
+            LetoArray2::from_shape_fn([num_sensors, num_sensors], |[i, j]| covariance[(i, j)]);
         let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&covariance)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&covariance_leto)?;
 
         let num_sources = if let Some(k) = self.config.num_sources {
             k
@@ -199,7 +202,7 @@ impl MUSICProcessor {
             let model_config = ModelOrderConfig::new(num_sensors, num_snapshots)?
                 .with_criterion(self.config.model_order_criterion);
             let estimator = ModelOrderEstimator::new(model_config)?;
-            let real_eigenvalues: Vec<f64> = eigenvalues.to_vec();
+            let real_eigenvalues: Vec<f64> = eigenvalues.iter().copied().collect();
             let result = estimator.estimate(&real_eigenvalues)?;
             result.num_sources
         };

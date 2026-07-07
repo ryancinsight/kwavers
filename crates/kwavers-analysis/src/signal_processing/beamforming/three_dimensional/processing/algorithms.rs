@@ -110,7 +110,7 @@ impl BeamformingProcessor3D {
     ///
     /// Forwards to [`super::super::cpu::mvdr_cpu`] which implements spatially-smoothed
     /// covariance estimation (Shan & Kailath 1985), relative diagonal loading,
-    /// and Cholesky/LU solve via nalgebra.
+    /// and a pivoted dense linear solve.
     ///
     /// # References
     /// - Capon (1969): original MVDR

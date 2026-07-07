@@ -10,7 +10,7 @@ mod tests;
 
 use super::csr::CompressedSparseRowMatrix;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, ArrayView1};
+use leto::Array1;
 use num_complex::Complex64;
 
 /// Solver configuration.
@@ -51,6 +51,33 @@ pub struct IterativeSolver {
     pub(super) config: SolverConfig,
 }
 
+fn dot(a: &Array1<f64>, b: &Array1<f64>) -> f64 {
+    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+}
+
+fn scale_inplace(x: &mut Array1<f64>, a: f64) {
+    for xi in x.iter_mut() {
+        *xi *= a;
+    }
+}
+
+fn axpy(a: f64, x: &Array1<f64>, y: &mut Array1<f64>) {
+    for (yi, xi) in y.iter_mut().zip(x.iter()) {
+        *yi += a * *xi;
+    }
+}
+
+fn conj_dot_complex(a: &Array1<Complex64>, b: &Array1<Complex64>) -> Complex64 {
+    a.iter()
+        .zip(b.iter())
+        .map(|(x, y)| x.conj() * y)
+        .sum()
+}
+
+fn norm_sqr_complex(a: &Array1<Complex64>) -> f64 {
+    a.iter().map(|c| c.norm_sqr()).sum()
+}
+
 impl IterativeSolver {
     /// Create solver with configuration.
     #[must_use]
@@ -69,8 +96,8 @@ impl IterativeSolver {
     pub fn conjugate_gradient(
         &self,
         a: &CompressedSparseRowMatrix,
-        b: ArrayView1<f64>,
-        x0: Option<ArrayView1<f64>>,
+        b: &Array1<f64>,
+        x0: Option<&Array1<f64>>,
     ) -> KwaversResult<Array1<f64>> {
         if a.rows != a.cols {
             return Err(KwaversError::Numerical(NumericalError::Instability {
@@ -80,36 +107,36 @@ impl IterativeSolver {
         }
 
         let n = a.rows;
-        let mut x = x0.map_or_else(|| Array1::zeros(n), |v| v.to_owned());
+        let mut x = x0.map_or_else(|| Array1::zeros([n]), |v| v.clone());
 
-        let mut r = b.to_owned() - a.multiply_vector(x.view())?;
+        let mut r = {
+            let mut tmp = b.clone();
+            let ax = a.multiply_vector(&x)?;
+            for i in 0..n {
+                tmp[[i]] -= ax[[i]];
+            }
+            tmp
+        };
         let mut p = r.clone();
-        let mut rsold = r.dot(&r);
+        let mut rsold = dot(&r, &r);
 
-        for iteration in 0..self.config.max_iterations {
-            let ap = a.multiply_vector(p.view())?;
-            let alpha = rsold / p.dot(&ap);
+        for _iteration in 0..self.config.max_iterations {
+            let ap = a.multiply_vector(&p)?;
+            let alpha = rsold / dot(&p, &ap);
 
-            x = x + alpha * &p;
-            r = r - alpha * &ap;
+            axpy(alpha, &p, &mut x);
+            axpy(-alpha, &ap, &mut r);
 
-            let rsnew = r.dot(&r);
+            let rsnew = dot(&r, &r);
 
             if rsnew.sqrt() < self.config.tolerance {
                 return Ok(x);
             }
 
             let beta = rsnew / rsold;
-            p = &r + beta * p;
+            scale_inplace(&mut p, beta);
+            axpy(1.0, &r, &mut p);
             rsold = rsnew;
-
-            if iteration % 50 == 0 {
-                log::debug!(
-                    "CG iteration {}: residual = {:.2e}",
-                    iteration,
-                    rsnew.sqrt()
-                );
-            }
         }
 
         Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
@@ -126,8 +153,8 @@ impl IterativeSolver {
     pub fn bicgstab(
         &self,
         a: &CompressedSparseRowMatrix,
-        b: ArrayView1<f64>,
-        x0: Option<ArrayView1<f64>>,
+        b: &Array1<f64>,
+        x0: Option<&Array1<f64>>,
     ) -> KwaversResult<Array1<f64>> {
         self.bicgstab_real(a, b, x0)
     }
@@ -139,8 +166,8 @@ impl IterativeSolver {
     pub fn bicgstab_complex(
         &self,
         a: &CompressedSparseRowMatrix<Complex64>,
-        b: ArrayView1<Complex64>,
-        x0: Option<ArrayView1<Complex64>>,
+        b: &Array1<Complex64>,
+        x0: Option<&Array1<Complex64>>,
     ) -> KwaversResult<Array1<Complex64>> {
         self.bicgstab_complex_impl(a, b, x0)
     }

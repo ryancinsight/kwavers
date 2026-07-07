@@ -11,10 +11,27 @@
 //! - Si (2015): "TetGen: A quality tetrahedral mesh generator"
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use nalgebra::{Matrix3, Vector3};
+use leto::geometry::Vector3;
 use std::collections::HashMap;
 
 use super::types::{BoundingBox, MeshBoundaryType, MeshNode, MeshStatistics, Tetrahedron};
+
+fn inverse_rows_from_columns(
+    col0: Vector3<f64>,
+    col1: Vector3<f64>,
+    col2: Vector3<f64>,
+) -> Option<[Vector3<f64>; 3]> {
+    let det = col0.dot(col1.cross(col2));
+    if det.abs() < 1e-14 {
+        return None;
+    }
+    let inv_det = 1.0 / det;
+    Some([
+        col1.cross(col2) * inv_det,
+        col2.cross(col0) * inv_det,
+        col0.cross(col1) * inv_det,
+    ])
+}
 
 /// Tetrahedral mesh for 3D FEM
 #[derive(Debug, Clone)]
@@ -320,15 +337,14 @@ impl TetrahedralMesh {
         let d = Vector3::new(d[0], d[1], d[2]);
         let p = Vector3::new(point[0], point[1], point[2]);
 
-        let m = Matrix3::from_columns(&[b - a, c - a, d - a]);
-        let Some(inv) = m.try_inverse() else {
+        let Some(inv_rows) = inverse_rows_from_columns(b - a, c - a, d - a) else {
             return false;
         };
 
-        let uvw = inv * (p - a);
-        let u = uvw[0];
-        let v = uvw[1];
-        let w = uvw[2];
+        let pa = p - a;
+        let u = inv_rows[0].dot(pa);
+        let v = inv_rows[1].dot(pa);
+        let w = inv_rows[2].dot(pa);
         let t = 1.0 - u - v - w;
 
         let eps = 1e-12;

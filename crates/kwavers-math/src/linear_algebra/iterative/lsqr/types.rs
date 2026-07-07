@@ -1,6 +1,6 @@
 //! LSQR configuration and result types.
 
-use ndarray::Array1;
+use leto::Array1;
 
 /// Configuration for LSQR solver
 #[derive(Debug, Clone, Copy)]

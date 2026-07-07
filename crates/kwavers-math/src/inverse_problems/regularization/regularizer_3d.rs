@@ -1,7 +1,7 @@
 //! `ModelRegularizer3D` — regularization on 3D spatial model arrays.
 
 use super::{config::RegularizationConfig, ops::for_each_pair_mut};
-use ndarray::Array3;
+use leto::Array3;
 
 /// 3D Model Regularizer
 ///
@@ -52,7 +52,7 @@ impl ModelRegularizer3D {
     /// Apply Total Variation regularization
     /// Edge-preserving penalty: grad_reg = λ·∇·(∇m/|∇m|)
     fn apply_total_variation(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        let (nx, ny, nz) = model.dim();
+        let [nx, ny, nz] = model.shape();
         let eps = self.config.tv_epsilon;
 
         for i in 1..nx - 1 {
@@ -78,8 +78,8 @@ impl ModelRegularizer3D {
     /// Apply smoothness regularization using Laplacian
     /// Penalizes second derivatives: grad_reg = λ·∇²m
     fn apply_smoothness(&self, gradient: &mut Array3<f64>) {
-        let (nx, ny, nz) = gradient.dim();
-        let mut laplacian = Array3::zeros(gradient.dim());
+        let [nx, ny, nz] = gradient.shape();
+        let mut laplacian = Array3::zeros([nx, ny, nz]);
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {

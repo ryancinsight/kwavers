@@ -672,8 +672,13 @@ impl CavitationCloudDynamics {
                 m[[a, b]] -= d[a] * g[[a, b]];
             }
         }
-        match LinearAlgebra::solve_linear_system(&m, &e) {
-            Ok(s) => apply_g(s.as_slice().unwrap_or(&[])),
+        let m_leto = leto::Array2::from_shape_fn([n, n], |[i, j]| m[[i, j]]);
+        let e_leto = leto::Array1::from_shape_fn([n], |[i]| e[i]);
+        match LinearAlgebra::solve_linear_system(&m_leto, &e_leto) {
+            Ok(s) => {
+                let strengths: Vec<f64> = (0..n).map(|i| s[[i]]).collect();
+                apply_g(&strengths)
+            }
             Err(_) => {
                 // Singular/ill-posed system: surface via the fallback path (a damped
                 // fixed point), never silent zeros.

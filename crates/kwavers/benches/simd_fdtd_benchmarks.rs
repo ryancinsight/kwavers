@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_math::simd_safe::SimdOps;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Generate test data for FDTD benchmarking
 fn generate_test_data(
@@ -13,10 +13,10 @@ fn generate_test_data(
     ny: usize,
     nz: usize,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>) {
-    let mut pressure = Array3::zeros((nx, ny, nz));
-    let mut divergence = Array3::zeros((nx, ny, nz));
-    let mut density = Array3::zeros((nx, ny, nz));
-    let mut sound_speed = Array3::zeros((nx, ny, nz));
+    let mut pressure = Array3::zeros([nx, ny, nz]);
+    let mut divergence = Array3::zeros([nx, ny, nz]);
+    let mut density = Array3::zeros([nx, ny, nz]);
+    let mut sound_speed = Array3::zeros([nx, ny, nz]);
 
     // Fill with realistic test data
     for i in 0..nx {
@@ -45,7 +45,7 @@ fn scalar_pressure_update(
     sound_speed: &Array3<f64>,
     dt: f64,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
 
     for i in 0..nx {
         for j in 0..ny {
@@ -121,8 +121,8 @@ fn bench_simd_operations(c: &mut Criterion) {
     let sizes = [1000, 10000, 100000];
 
     for &size in &sizes {
-        let a = Array3::from_elem((10, 10, size), 1.0_f64);
-        let b = Array3::from_elem((10, 10, size), 2.0_f64);
+        let a = Array3::from_elem([10, 10, size], 1.0_f64);
+        let b = Array3::from_elem([10, 10, size], 2.0_f64);
 
         group.bench_with_input(
             BenchmarkId::new("add_fields", size),

@@ -64,9 +64,31 @@ mod density_cartesian;
 
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
+use kwavers_boundary::Boundary;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
-use ndarray::Array3;
+use ndarray::{Array3, ArrayViewMut3};
+
+fn apply_directional_to_ndarray_view(
+    boundary: &mut dyn Boundary,
+    mut field: ArrayViewMut3<'_, f64>,
+    grid: &Grid,
+    step: usize,
+    axis: usize,
+) -> KwaversResult<()> {
+    let (nx, ny, nz) = field.dim();
+    let mut leto_field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| field[[i, j, k]]);
+    boundary.apply_acoustic_directional(leto_field.view_mut(), grid, step, axis)?;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = leto_field[[i, j, k]];
+            }
+        }
+    }
+    Ok(())
+}
 
 const PRESSURE_UPDATE_CHUNK: usize = 4096;
 
@@ -349,19 +371,22 @@ impl PSTDSolver {
 
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
-                boundary.apply_acoustic_directional(
+                apply_directional_to_ndarray_view(
+                    boundary.as_mut(),
                     self.rhox.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
-                boundary.apply_acoustic_directional(
+                apply_directional_to_ndarray_view(
+                    boundary.as_mut(),
                     self.rhoy.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
-                boundary.apply_acoustic_directional(
+                apply_directional_to_ndarray_view(
+                    boundary.as_mut(),
                     self.rhoz.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
@@ -377,19 +402,19 @@ impl PSTDSolver {
                     &mut self.rhox,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_acoustic_directional(field, grid, step, 0),
+                    |field| apply_directional_to_ndarray_view(boundary.as_mut(), field, grid, step, 0),
                 )?;
                 Self::apply_x_plane_pml_bypass(
                     &mut self.rhoy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_acoustic_directional(field, grid, step, 1),
+                    |field| apply_directional_to_ndarray_view(boundary.as_mut(), field, grid, step, 1),
                 )?;
                 Self::apply_x_plane_pml_bypass(
                     &mut self.rhoz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_acoustic_directional(field, grid, step, 2),
+                    |field| apply_directional_to_ndarray_view(boundary.as_mut(), field, grid, step, 2),
                 )?;
             }
             Ok(())

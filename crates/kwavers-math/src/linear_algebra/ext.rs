@@ -2,16 +2,16 @@ use crate::linear_algebra::{
     ComplexLinearAlgebra, EigenDecomposition, LinearAlgebra, VectorOperations,
 };
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2, Array3};
 use num_complex::Complex;
 
 /// Compute L2 norm of a 3D array.
 #[must_use]
-pub fn norm_l2(array: &ndarray::Array3<f64>) -> f64 {
+pub fn norm_l2(array: &Array3<f64>) -> f64 {
     VectorOperations::norm_l2(array)
 }
 
-/// Extension trait providing fluent ndarray linear-algebra operations.
+/// Extension trait providing fluent linear-algebra operations on [`Array2`].
 pub trait LinearAlgebraExt<T> {
     /// Solve linear system `self x = b`.
     /// # Errors

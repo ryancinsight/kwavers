@@ -187,6 +187,7 @@ fn main() {
     // lesion boundary (Venkatakrishnan 2013; Lustig 2007).
     let pnp_processor = make_processor(4);
     let mut recon_pnp = start.clone();
+    let skull_mask_leto = leto::Array3::from_shape_fn([NX, NY, 1], |[i, j, k]| skull_mask[[i, j, k]]);
     for _ in 0..7 {
         recon_pnp = pnp_processor
             .invert_multi_source_masked(
@@ -199,7 +200,9 @@ fn main() {
                 &grid,
             )
             .expect("PnP masked FWI burst");
-        recon_pnp = tv_denoise_chambolle(&recon_pnp, 0.4, 60, Some(&skull_mask));
+        let recon_pnp_leto = leto::Array3::from_shape_fn([NX, NY, 1], |[i, j, k]| recon_pnp[[i, j, k]]);
+        let denoised = tv_denoise_chambolle(&recon_pnp_leto, 0.4, 60, Some(&skull_mask_leto));
+        recon_pnp = Array3::from_shape_fn((NX, NY, 1), |(i, j, k)| denoised[[i, j, k]]);
     }
 
     // Brain-region accuracy (skull excluded): RMS error, lesion-peak recovery,

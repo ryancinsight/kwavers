@@ -1,7 +1,7 @@
 //! `ModelRegularizer2D` — regularization on 2D spatial model arrays.
 
 use super::{config::RegularizationConfig, ops::for_each_pair_mut};
-use ndarray::Array2;
+use leto::Array2;
 
 /// 2D Model Regularizer
 ///
@@ -47,7 +47,7 @@ impl ModelRegularizer2D {
     }
 
     fn apply_total_variation(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        let (nx, ny) = model.dim();
+        let [nx, ny] = model.shape();
         let eps = self.config.tv_epsilon;
 
         for i in 1..nx - 1 {
@@ -66,8 +66,8 @@ impl ModelRegularizer2D {
     }
 
     fn apply_smoothness(&self, gradient: &mut Array2<f64>) {
-        let (nx, ny) = gradient.dim();
-        let mut laplacian = Array2::zeros(gradient.dim());
+        let [nx, ny] = gradient.shape();
+        let mut laplacian = Array2::zeros([nx, ny]);
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {

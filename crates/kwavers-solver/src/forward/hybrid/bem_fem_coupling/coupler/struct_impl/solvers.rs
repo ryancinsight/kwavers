@@ -1,6 +1,7 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
-use nalgebra::{Matrix3, Vector3};
+use leto::geometry::Vector3;
+use leto::Array1 as LetoArray1;
 use ndarray::Array1;
 use num_complex::Complex64;
 
@@ -13,6 +14,23 @@ use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::BemFemCoupler;
 use kwavers_core::constants::numerical::TWO_PI;
+
+fn inverse_rows_from_columns(
+    col0: Vector3<f64>,
+    col1: Vector3<f64>,
+    col2: Vector3<f64>,
+) -> Option<[Vector3<f64>; 3]> {
+    let det = col0.dot(col1.cross(col2));
+    if det.abs() < 1e-14 {
+        return None;
+    }
+    let inv_det = 1.0 / det;
+    Some([
+        col1.cross(col2) * inv_det,
+        col2.cross(col0) * inv_det,
+        col0.cross(col1) * inv_det,
+    ])
+}
 
 impl BemFemCoupler {
     /// Solve the BEM system via rigid-scattering CFIE for the given `wavenumber`.
@@ -88,26 +106,45 @@ impl BemFemCoupler {
 
         for element in &fem_mesh.elements {
             let n_indices = element.nodes;
-            let p0 = Vector3::from(fem_mesh.nodes[n_indices[0]].coordinates);
-            let p1 = Vector3::from(fem_mesh.nodes[n_indices[1]].coordinates);
-            let p2 = Vector3::from(fem_mesh.nodes[n_indices[2]].coordinates);
-            let p3 = Vector3::from(fem_mesh.nodes[n_indices[3]].coordinates);
+            let p0 = Vector3::new(
+                fem_mesh.nodes[n_indices[0]].coordinates[0],
+                fem_mesh.nodes[n_indices[0]].coordinates[1],
+                fem_mesh.nodes[n_indices[0]].coordinates[2],
+            );
+            let p1 = Vector3::new(
+                fem_mesh.nodes[n_indices[1]].coordinates[0],
+                fem_mesh.nodes[n_indices[1]].coordinates[1],
+                fem_mesh.nodes[n_indices[1]].coordinates[2],
+            );
+            let p2 = Vector3::new(
+                fem_mesh.nodes[n_indices[2]].coordinates[0],
+                fem_mesh.nodes[n_indices[2]].coordinates[1],
+                fem_mesh.nodes[n_indices[2]].coordinates[2],
+            );
+            let p3 = Vector3::new(
+                fem_mesh.nodes[n_indices[3]].coordinates[0],
+                fem_mesh.nodes[n_indices[3]].coordinates[1],
+                fem_mesh.nodes[n_indices[3]].coordinates[2],
+            );
 
-            let jacobian = Matrix3::from_columns(&[p1 - p0, p2 - p0, p3 - p0]);
+            let col0 = p1 - p0;
+            let col1 = p2 - p0;
+            let col2 = p3 - p0;
 
-            if let Some(inv_j) = jacobian.try_inverse() {
-                let inv_j_t = inv_j.transpose();
-                let det_j = jacobian.determinant().abs();
+            if let Some(inv_rows) = inverse_rows_from_columns(col0, col1, col2) {
+                let det_j = col0.dot(col1.cross(col2)).abs();
                 let volume = det_j / 6.0;
 
                 let mut grads = [Vector3::zeros(); 4];
                 for k in 0..4 {
-                    grads[k] = inv_j_t * grad_ref[k];
+                    grads[k] = inv_rows[0] * grad_ref[k].x
+                        + inv_rows[1] * grad_ref[k].y
+                        + inv_rows[2] * grad_ref[k].z;
                 }
 
                 for i in 0..4 {
                     for j in 0..4 {
-                        let k_val = grads[i].dot(&grads[j]) * volume;
+                        let k_val = grads[i].dot(grads[j]) * volume;
                         let delta = if i == j { 1.0 } else { 0.0 };
                         let m_val = (1.0 + delta) * volume / 20.0;
                         let val =
@@ -168,7 +205,11 @@ impl BemFemCoupler {
         let solver = IterativeSolver::create(config);
 
         let initial_guess = Array1::from_vec(fem_field.to_vec());
-        let solution = solver.bicgstab_complex(matrix, rhs.view(), Some(initial_guess.view()))?;
+        let rhs_leto = LetoArray1::from_shape_fn([rhs.len()], |[i]| rhs[i]);
+        let initial_guess_leto =
+            LetoArray1::from_shape_fn([initial_guess.len()], |[i]| initial_guess[i]);
+        let solution =
+            solver.bicgstab_complex(matrix, &rhs_leto, Some(&initial_guess_leto))?;
 
         for i in 0..num_nodes {
             fem_field[i] = solution[i];

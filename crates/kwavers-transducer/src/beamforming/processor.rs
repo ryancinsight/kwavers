@@ -2,8 +2,9 @@
 
 // Import config from domain layer (single source of truth for configuration)
 use crate::beamforming::BeamformingConfig;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
+use leto::Array2 as LetoArray2;
 use ndarray::{Array1, Array2, Array3};
 
 /// Beamforming processor for array algorithms
@@ -50,8 +51,26 @@ impl BeamformingProcessor {
     pub fn eigendecomposition(
         &self,
         matrix: &Array2<f64>,
-    ) -> KwaversResult<(ndarray::Array1<f64>, Array2<f64>)> {
-        EigenDecomposition::eigendecomposition(matrix)
+    ) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
+        let leto_matrix = LetoArray2::from_shape_vec(
+            [matrix.nrows(), matrix.ncols()],
+            matrix.iter().copied().collect(),
+        )
+        .map_err(|err| {
+            KwaversError::InvalidInput(format!("failed to convert matrix to leto array: {err}"))
+        })?;
+        let (values, vectors) = EigenDecomposition::eigendecomposition(&leto_matrix)?;
+        let values_nd = Array1::from_vec(values.iter().copied().collect());
+        let vectors_nd = Array2::from_shape_vec(
+            (vectors.shape()[0], vectors.shape()[1]),
+            vectors.iter().copied().collect(),
+        )
+        .map_err(|err| {
+            KwaversError::InvalidInput(format!(
+                "failed to convert eigendecomposition vectors to ndarray: {err}"
+            ))
+        })?;
+        Ok((values_nd, vectors_nd))
     }
 
     /// Compute matrix inverse
@@ -59,7 +78,23 @@ impl BeamformingProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        LinearAlgebra::matrix_inverse(matrix)
+        let leto_matrix = LetoArray2::from_shape_vec(
+            [matrix.nrows(), matrix.ncols()],
+            matrix.iter().copied().collect(),
+        )
+        .map_err(|err| {
+            KwaversError::InvalidInput(format!("failed to convert matrix to leto array: {err}"))
+        })?;
+        let inverse = LinearAlgebra::matrix_inverse(&leto_matrix)?;
+        Array2::from_shape_vec(
+            (inverse.shape()[0], inverse.shape()[1]),
+            inverse.iter().copied().collect(),
+        )
+        .map_err(|err| {
+            KwaversError::InvalidInput(format!(
+                "failed to convert inverse matrix to ndarray: {err}"
+            ))
+        })
     }
 
     /// Compute geometric **propagation delays / time-of-flight (TOF)** (seconds) from each sensor

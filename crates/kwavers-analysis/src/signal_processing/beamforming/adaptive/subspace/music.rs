@@ -2,7 +2,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::EigenDecomposition;
-use ndarray::{s, Array1, Array2};
+use leto::Array2 as LetoArray2;
+use ndarray::{Array1, Array2};
 use num_complex::Complex64;
 use num_traits::Zero;
 
@@ -82,8 +83,9 @@ impl MUSIC {
             }
         }
 
+        let covariance_leto = LetoArray2::from_shape_fn([n, n], |[i, j]| covariance[(i, j)]);
         let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(covariance)?;
+            EigenDecomposition::hermitian_eigendecomposition_complex(&covariance_leto)?;
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
@@ -92,11 +94,9 @@ impl MUSIC {
 
         let mut en_h_a_norm_sq = 0.0;
         for &idx in indices.iter().skip(noise_start) {
-            let eigenvec = eigenvectors.slice(s![.., idx]);
-
             let mut e_h_a = Complex64::zero();
             for j in 0..n {
-                e_h_a += eigenvec[j].conj() * steering[j];
+                e_h_a += eigenvectors[[j, idx]].conj() * steering[j];
             }
 
             en_h_a_norm_sq += e_h_a.norm_sqr();

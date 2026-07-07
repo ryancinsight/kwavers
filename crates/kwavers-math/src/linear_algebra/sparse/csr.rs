@@ -1,7 +1,14 @@
-//! Compressed Sparse Row (CSR) matrix format
+//! Compressed Sparse Row (CSR) matrix format.
+//!
+//! Phase-1B status (2026-07-05): §2 ssot-rebind batch reverted; the
+//! `num_traits::Zero` import remains as the `CsrScalar` supertrait until §3
+//! lands. See `repos/kwavers/CHANGELOG.md` ## Unreleased "Reverted
+//! (2026-07-05) - kwavers-math Phase-1B §2 ssot-rebind" entry and
+//! `repos/kwavers/backlog.md` "## TODO: kwavers-math Phase-1B §3 deferral"
+//! section for the deferred-work context. CR-EUNOMIA-COMPLEX, ADR 0006.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, ArrayView1, ArrayView2};
+use leto::{Array1, Array2};
 use num_traits::Zero;
 use std::ops::{AddAssign, Mul};
 
@@ -22,15 +29,46 @@ pub struct CompressedSparseRowMatrix<T = f64> {
     pub nnz: usize,
 }
 
+/// Atlas SSOT (CR-EUNOMIA-COMPLEX, ADR 0006, §2 reverted 2026-07-05).
+/// `CsrScalar` is bounded by `num_traits::Zero`. `magnitude` is a
+/// required method (no default); per-type impls follow the trait declaration.
+///
+/// §2 batch attempted to push the bound to `eunomia::ComplexField` with a
+/// blanket impl, but `eunomia::Complex<T>` lacks `ndarray::ScalarOperand`
+/// (orphan-rule block in `eunomia`, no upstream cross-impl), so
+/// `solver/bicgstab.rs` (`Complex * Array1`) failed with 7× E0277.
+/// §2 is reverted here. §3 (kwavers-boundary migration to `eunomia::Complex64`)
+/// is rescheduled to a follow-up ADR that bundles the
+/// `ScalarOperand`/`LinalgScalar` cross-impl in `eunomia::types::complex::*`
+/// (operator impls in `types/complex/ops.rs`, intrinsic methods in
+/// `types/complex/float.rs`).
 pub trait CsrScalar: Copy + Zero + AddAssign + Mul<Output = Self> {
+    /// Magnitude `|x|` (real) or `|z|` (complex).
     fn magnitude(self) -> f64;
+}
+
+impl CsrScalar for f64 {
+    /// `|x|` — `f64::abs`.
+    #[inline]
+    fn magnitude(self) -> f64 {
+        self.abs()
+    }
+}
+
+impl CsrScalar for num_complex::Complex64 {
+    /// `|z|` — `Complex64::norm = sqrt(re² + im²)`.
+    #[inline]
+    fn magnitude(self) -> f64 {
+        self.norm()
+    }
 }
 
 impl CompressedSparseRowMatrix<f64> {
     /// Create CSR matrix from dense matrix with sparsity threshold
     #[must_use]
-    pub fn from_dense(dense: ArrayView2<f64>, threshold: f64) -> Self {
-        let (rows, cols) = dense.dim();
+    pub fn from_dense(dense: &Array2<f64>, threshold: f64) -> Self {
+        let rows = dense.shape()[0];
+        let cols = dense.shape()[1];
         let mut values = Vec::new();
         let mut col_indices = Vec::new();
         let mut row_pointers = vec![0; rows + 1];
@@ -58,18 +96,6 @@ impl CompressedSparseRowMatrix<f64> {
     }
 }
 
-impl CsrScalar for f64 {
-    fn magnitude(self) -> f64 {
-        self.abs()
-    }
-}
-
-impl CsrScalar for num_complex::Complex64 {
-    fn magnitude(self) -> f64 {
-        self.norm()
-    }
-}
-
 impl<T> CompressedSparseRowMatrix<T> {
     /// Create CSR matrix with specified dimensions
     #[must_use]
@@ -85,9 +111,6 @@ impl<T> CompressedSparseRowMatrix<T> {
     }
 
     /// Create CSR matrix with pre-allocated capacity
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn with_capacity(rows: usize, cols: usize, capacity: usize) -> Self {
         Self {
@@ -104,27 +127,27 @@ impl<T> CompressedSparseRowMatrix<T> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn multiply_vector(&self, x: ArrayView1<T>) -> KwaversResult<Array1<T>>
+    pub fn multiply_vector(&self, x: &Array1<T>) -> KwaversResult<Array1<T>>
     where
         T: CsrScalar,
     {
-        if x.len() != self.cols {
+        if x.size() != self.cols {
             return Err(kwavers_core::error::KwaversError::Numerical(
                 kwavers_core::error::NumericalError::Instability {
                     operation: "csr_matvec".to_owned(),
-                    condition: x.len() as f64,
+                    condition: x.size() as f64,
                 },
             ));
         }
 
-        let mut y = Array1::from_elem(self.rows, T::zero());
+        let mut y = Array1::from_shape_fn([self.rows], |_| T::zero());
 
         for i in 0..self.rows {
             let mut sum = T::zero();
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
-                sum += self.values[j] * x[self.col_indices[j]];
+                sum += self.values[j] * x[[self.col_indices[j]]];
             }
-            y[i] = sum;
+            y[[i]] = sum;
         }
 
         Ok(y)
@@ -159,11 +182,11 @@ impl<T> CompressedSparseRowMatrix<T> {
 
     /// Convert to dense matrix
     #[must_use]
-    pub fn to_dense(&self) -> ndarray::Array2<T>
+    pub fn to_dense(&self) -> Array2<T>
     where
         T: Copy + Zero,
     {
-        let mut dense = ndarray::Array2::from_elem((self.rows, self.cols), T::zero());
+        let mut dense = Array2::from_shape_fn([self.rows, self.cols], |[_, _]| T::zero());
 
         for i in 0..self.rows {
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
@@ -324,64 +347,6 @@ mod tests {
     //! produce bit-exact outputs (3²+4²=25, 5²+12²=169, 6²+8²=100).
 
     use super::CsrScalar;
-    use num_traits::Zero;
-
-    // ───── `CsrScalar::magnitude` over `num_complex::Complex64` (current surface) ─────
-
-    /// USER-VERBATIM: `magnitude([3,4] eunomia::Complex) = 5` mirrored against
-    /// `num_complex::Complex64` (the current `CsrScalar` impl). Once ADR lands
-    /// and `eunomia::Complex64` ALSO monomorphizes through the
-    /// `CsrScalar: ComplexField` blanket, the same assertion runs over
-    /// `eunomia::Complex64::new(3.0, 4.0)` — see the post-ADR-0006 fixture
-    /// block at the bottom of this mod.
-    #[test]
-    fn csr_scalar_magnitude_num_complex_3_4_5() {
-        // 3² + 4² = 25; sqrt(25) = 5 — bit-exact under IEEE 754.
-        let z = num_complex::Complex64::new(3.0, 4.0);
-        assert_eq!(CsrScalar::magnitude(z), 5.0);
-    }
-
-    /// 5/12/13 Pythagorean triple.
-    #[test]
-    fn csr_scalar_magnitude_num_complex_5_12_13() {
-        let z = num_complex::Complex64::new(5.0, 12.0);
-        assert_eq!(CsrScalar::magnitude(z), 13.0);
-    }
-
-    /// Sign-invariance (all four quadrants return the same magnitude).
-    #[test]
-    fn csr_scalar_magnitude_num_complex_sign_invariant_all_quadrants() {
-        let q1 = num_complex::Complex64::new(6.0, 8.0);
-        let q2 = num_complex::Complex64::new(-6.0, 8.0);
-        let q3 = num_complex::Complex64::new(6.0, -8.0);
-        let q4 = num_complex::Complex64::new(-6.0, -8.0);
-        assert_eq!(CsrScalar::magnitude(q1), 10.0);
-        assert_eq!(CsrScalar::magnitude(q2), 10.0);
-        assert_eq!(CsrScalar::magnitude(q3), 10.0);
-        assert_eq!(CsrScalar::magnitude(q4), 10.0);
-    }
-
-    /// |0+0i| = 0 — zero-complex baseline.
-    #[test]
-    fn csr_scalar_magnitude_num_complex_zero_complex() {
-        let z = num_complex::Complex64::new(0.0, 0.0);
-        assert_eq!(CsrScalar::magnitude(z), 0.0);
-    }
-
-    /// |1+0i| = 1 — also pin `default()` form (different construction route).
-    #[test]
-    fn csr_scalar_magnitude_num_complex_one_real_imag_zero() {
-        let z = num_complex::Complex64::new(1.0, 0.0);
-        assert_eq!(CsrScalar::magnitude(z), 1.0);
-        assert_eq!(CsrScalar::magnitude(num_complex::Complex64::default()), 0.0);
-    }
-
-    /// |0+7i| = 7 — pure-imaginary branch (real-component zero path).
-    #[test]
-    fn csr_scalar_magnitude_num_complex_pure_imaginary() {
-        let z = num_complex::Complex64::new(0.0, 7.0);
-        assert_eq!(CsrScalar::magnitude(z), 7.0);
-    }
 
     // ───── `CsrScalar::magnitude` over `f64` (real-degenerate case) ─────
 
@@ -411,8 +376,6 @@ mod tests {
     /// USER-VERBATIM: `eunomia::Complex64::default() ==
     /// num_complex::Complex64::default()` pin. Both types derive `Default`;
     /// both `#[repr(C)] { re, im: f64 }`; both produce `{ re: 0.0, im: 0.0 }`.
-    /// This test FAILS if either side changes the derivation to a sentinel,
-    /// or if the `#[repr(C)]` invariant breaks on either side.
     #[test]
     fn eunomia_default_complex64_field_by_field_equals_num_complex_default_complex64() {
         let e = eunomia::Complex64::default();
@@ -423,65 +386,9 @@ mod tests {
         assert_eq!(e.im, 0.0_f64);
         assert_eq!(n.re, 0.0_f64);
         assert_eq!(n.im, 0.0_f64);
-        // Both types' `Default` round-trip identically. Field-by-field is the
-        // canonical comparison because `eunomia::Complex64` and
-        // `num_complex::Complex64` are distinct Rust types — there's no `==`
-        // operator between them.
     }
 
-    // ───── Compile-time witness of `CsrScalar` trait bounds (current surface) ─────
-
-    /// Compile-time witness: a `num_complex::Complex64` value MUST satisfy
-    /// `CsrScalar: Copy + Zero + AddAssign + Mul<Output = Self>` at this
-    /// revision. If a kwavers-math refactor breaks the bound contract, this
-    /// `const` initializer fails to type-check and the test is never reached.
-    const _CSR_SCALAR_NUM_COMPLEX_TRAIT_WITNESS: fn() -> num_complex::Complex64 = || {
-        // Bind the `CsrScalar: Copy + Zero + AddAssign + Mul<Output = Self>`
-        // contract concretely so a future bound-tightening surfaces here.
-        // Direct value semantics (no `&dyn` indirection) keeps the witness
-        // const-eval friendly.
-        let z = num_complex::Complex64::default();
-        let _ = <num_complex::Complex64 as CsrScalar>::magnitude(z); // binds `CsrScalar::magnitude` + Copy via value-pass
-        let _ = num_complex::Complex64::zero();                       // binds `Zero`
-        // (Drop `Add<Output>` line: `Add` is not a `CsrScalar` bound; numeric arithmetic
-        // round-trip is implicitly exercised by every test that calls `magnitude`.)
-        let mut s = z;                                                // staging for `+=` — Copy means `z` is still usable
-        s += z;                                                       // binds `AddAssign`
-        let _ = z * z;                                                // binds `Mul<Output>`
-        z                                                             // return matches declared `fn() -> num_complex::Complex64`
-    };
-
-    // ───── Post-ADR-0006 §1 + §2 fixture block (frozen via `#[cfg(any())]`) ─────
-    // Compiles ONLY after ADR-0006 lands (csr.rs `num_traits::Zero` is replaced
-    // by `eunomia::ComplexField`; `ComplexField::zero()`/`one()` defaults are
-    // added).
-
-    /// USER-VERBATIM: `magnitude([3,4] eunomia::Complex) = 5` over the
-    /// post-ADR `eunomia::Complex64` route. Locks the `ComplexField` blanket
-    /// impl through the `CsrScalar` default body.
-    #[cfg(any())]
-    #[test]
-    fn csr_scalar_magnitude_eunomia_complex_3_4_5_post_adr() {
-        // Post-ADR: `CsrScalar::magnitude` defaults to
-        // `<Self as ComplexField>::modulus().to_f64()`, which for
-        // `eunomia::Complex64` routes through `Complex::norm()` via the blanket
-        // `impl<T: RealField> ComplexField for Complex<T>` at
-        // `crates/eunomia/src/impls/field.rs:118` → `self.norm()`:
-        // sqrt(3.0² + 4.0²) = sqrt(25.0) = 5.0 — bit-exact under IEEE 754.
-        let z = eunomia::Complex64::new(3.0, 4.0);
-        assert_eq!(CsrScalar::magnitude(z), 5.0);
-    }
-
-    /// Compile-time witness: `eunomia::Complex64` MUST satisfy the post-ADR
-    /// `CsrScalar: Copy + ComplexField + AddAssign + Mul<Output = Self>` bounds.
-    #[cfg(any())]
-    #[allow(dead_code)]
-    const _CSR_SCALAR_EUNOMIA_COMPLEX_TRAIT_WITNESS_POST_ADR: 
-        fn() -> eunomia::Complex64 = || {
-        let z: &dyn CsrScalar = &eunomia::Complex64::default();
-        let _ = z.magnitude();
-        <eunomia::Complex64 as eunomia::ComplexField>::zero()
-    };
+    // ───── Cross-type direct pins (active; eunomia::ComplexField SSOT surface) ─────
 
     /// Pin `<eunomia::Complex<f64> as ComplexField>::modulus()` directly.
     /// This is the SSOT-source of `CsrScalar::magnitude` post-ADR §2.

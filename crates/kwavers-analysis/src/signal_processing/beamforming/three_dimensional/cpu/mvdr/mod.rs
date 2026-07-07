@@ -59,8 +59,7 @@
 //!   interference." *IEEE Trans. Acoust. Speech Signal Process.* 33(3), 527–536.
 
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use nalgebra::{DMatrix, DVector};
-use ndarray::{Array3, Array4};
+use ndarray::{Array1, Array2, Array3, Array4};
 
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -73,8 +72,8 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// 2. Build the spatially-smoothed covariance matrix over overlapping sub-apertures
 ///    of size `subarray_size` using all N time samples.
 /// 3. Add relative diagonal loading: R_δ = R + δ·(tr(R)/L)·I.
-/// 4. Solve the symmetric positive-definite system R_δ **u** = **1** via
-///    Cholesky factorisation (O(L³)).
+/// 4. Solve the loaded linear system R_δ **u** = **1** with a pivoted dense
+///    linear solve (O(L³)).
 /// 5. Compute output power P = 1/(1^T **u**) and accumulate the average
 ///    beamformed amplitude |P·u^T x̄| where x̄ = (1/N) Σ_n x[n].
 ///
@@ -197,7 +196,7 @@ pub fn mvdr_cpu(
             .collect();
 
         // Spatially-smoothed covariance accumulator (L×L, real symmetric).
-        let mut r_accum = DMatrix::<f64>::zeros(l, l);
+        let mut r_accum = Array2::<f64>::zeros((l, l));
 
         for qx in 0..n_sub_x {
             for qy in 0..n_sub_y {
@@ -218,20 +217,21 @@ pub fn mvdr_cpu(
 
                     // Build L×N delay-aligned data matrix X (averaged over frames).
                     // X[i][n] = (1/N_f) Σ_f x_i^f[n + τ_i]
-                    let mut x_mat = DMatrix::<f64>::zeros(l, samples);
+                    let mut x_mat = Array2::<f64>::zeros((l, samples));
                     for (i, &ch) in sub_channels.iter().enumerate() {
                         let tau = delays_s[ch];
                         for n in 0..samples {
                             let sample_sum: f64 = (0..frames)
                                 .map(|f| rf_get(f, ch, tau + n as f32) as f64)
                                 .sum();
-                            x_mat[(i, n)] = sample_sum / frames.max(1) as f64;
+                            x_mat[[i, n]] = sample_sum / frames.max(1) as f64;
                         }
                     }
 
                     // R_q = X X^T / N
                     let n_f64 = samples as f64;
-                    r_accum += &x_mat * x_mat.transpose() * (1.0 / n_f64);
+                    let x_t = x_mat.t().to_owned();
+                    r_accum += &(x_mat.dot(&x_t) * (1.0 / n_f64));
                 }
             }
         }
@@ -240,21 +240,17 @@ pub fn mvdr_cpu(
         let r_avg = r_accum / n_subarrays as f64;
 
         // Diagonal loading: R_δ = R + δ · (tr(R)/L) · I
-        let trace = r_avg.trace();
+        let trace = (0..l).map(|i| r_avg[[i, i]]).sum::<f64>();
         let loading = diagonal_loading as f64 * trace / l as f64;
-        let r_loaded = r_avg + DMatrix::<f64>::identity(l, l) * loading;
+        let mut r_loaded = r_avg;
+        for i in 0..l {
+            r_loaded[[i, i]] += loading;
+        }
 
-        // Solve R_δ u = 1 via Cholesky.
-        let ones = DVector::<f64>::from_element(l, 1.0_f64);
-        let u = match r_loaded.clone().cholesky() {
-            Some(chol) => chol.solve(&ones),
-            None => {
-                // Fall back to LU if Cholesky fails (e.g. insufficient loading).
-                match r_loaded.lu().solve(&ones) {
-                    Some(sol) => sol,
-                    None => return 0.0, // Singular system output remains 0.
-                }
-            }
+        let ones = Array1::<f64>::ones(l);
+        let u = match solve_linear_system(&r_loaded, &ones) {
+            Some(sol) => sol,
+            None => return 0.0, // Singular system output remains 0.
         };
 
         // MVDR output power P = 1 / (1^T u).
@@ -276,12 +272,12 @@ pub fn mvdr_cpu(
             })
             .collect();
 
-        let mut x_bar = DVector::<f64>::zeros(l);
+        let mut x_bar = Array1::<f64>::zeros(l);
         for (i, &ch) in sub0_channels.iter().enumerate() {
             let tau = delays_s[ch];
             let mean_sample: f64 =
                 (0..frames).map(|f| rf_get(f, ch, tau) as f64).sum::<f64>() / frames.max(1) as f64;
-            x_bar[i] = mean_sample;
+            x_bar[[i]] = mean_sample;
         }
 
         (p * u.dot(&x_bar)).abs() as f32
@@ -290,6 +286,66 @@ pub fn mvdr_cpu(
     Array3::from_shape_vec((vol_x, vol_y, vol_z), flat).map_err(|e| {
         KwaversError::InvalidInput(format!("MVDR CPU: output volume shape error: {e}"))
     })
+}
+
+fn solve_linear_system(a: &Array2<f64>, b: &Array1<f64>) -> Option<Array1<f64>> {
+    let n = a.nrows();
+    if a.ncols() != n || b.len() != n {
+        return None;
+    }
+
+    let mut a_data: Vec<f64> = a.iter().copied().collect();
+    let mut b_data: Vec<f64> = b.iter().copied().collect();
+    let eps = 1e-15;
+
+    // Forward elimination with partial pivoting.
+    for i in 0..n {
+        let mut pivot_row = i;
+        let mut max_abs = a_data[i * n + i].abs();
+        for r in (i + 1)..n {
+            let cand = a_data[r * n + i].abs();
+            if cand > max_abs {
+                max_abs = cand;
+                pivot_row = r;
+            }
+        }
+        if max_abs <= eps {
+            return None;
+        }
+
+        if pivot_row != i {
+            for c in 0..n {
+                a_data.swap(i * n + c, pivot_row * n + c);
+            }
+            b_data.swap(i, pivot_row);
+        }
+
+        let pivot = a_data[i * n + i];
+        for r in (i + 1)..n {
+            let factor = a_data[r * n + i] / pivot;
+            a_data[r * n + i] = 0.0;
+            for c in (i + 1)..n {
+                a_data[r * n + c] -= factor * a_data[i * n + c];
+            }
+            b_data[r] -= factor * b_data[i];
+        }
+    }
+
+    // Back substitution.
+    let mut x = vec![0.0_f64; n];
+    for i in (0..n).rev() {
+        let mut rhs = b_data[i];
+        for c in (i + 1)..n {
+            rhs -= a_data[i * n + c] * x[c];
+        }
+        let diag = a_data[i * n + i];
+        if diag.abs() <= eps {
+            return None;
+        }
+        x[i] = rhs / diag;
+    }
+
+    Some(Array1::from(x))
 }
 
 #[cfg(test)]

@@ -3,13 +3,13 @@
 //! ## Design
 //!
 //! Signatures match the x86_64 variants so the dispatcher compiles and
-//! executes correctly on aarch64 targets.  The current bodies use ndarray
-//! `Zip`-based implementations identical to the x86_64 fallback path —
+//! executes correctly on aarch64 targets.  The current bodies use leto
+//! `zip_mut_with`-based implementations identical to the x86_64 fallback path —
 //! LLVM autovectorises these to ASIMD/NEON instructions on `-C target-cpu=native`.
 //!
 //! ## Theorem: LLVM autovectorisation contract
 //!
-//! ndarray `Zip::for_each` over contiguous f64 slices emits a loop with no
+//! leto `zip_mut_with` over contiguous f64 slices emits a loop with no
 //! aliasing.  LLVM's autovectoriser is guaranteed to fold independent
 //! element-wise operations into NEON `FADD`/`FMUL`/`VFMA` instructions when:
 //!   1. The slice is contiguous (ndarray layout check is statically verifiable
@@ -22,7 +22,7 @@
 
 pub mod neon {
     use crate::simd_safe::auto_detect::ops;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Add two arrays element-wise: `out[i] = a[i] + b[i]`.
     ///

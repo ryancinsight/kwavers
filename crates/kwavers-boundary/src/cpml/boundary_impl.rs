@@ -4,7 +4,8 @@ use super::CPMLBoundary;
 use crate::{Boundary, PmlExpFactors};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayViewMut3};
+use leto::ArrayViewMut3;
+use ndarray::Array3;
 
 impl Boundary for CPMLBoundary {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {
@@ -13,7 +14,7 @@ impl Boundary for CPMLBoundary {
 
     fn apply_acoustic(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
@@ -24,16 +25,20 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+        let [nx, ny, nz] = field.shape();
+        for i in 0..nx {
             let s_x = sigma_x[i];
-            let s_y = sigma_y[j];
-            let s_z = sigma_z[k];
-            let sigma_total = s_x + s_y + s_z;
-
-            if sigma_total > 0.0 {
-                *val *= (-sigma_total * dt * 0.5).exp();
+            for j in 0..ny {
+                let s_y = sigma_y[j];
+                for k in 0..nz {
+                    let s_z = sigma_z[k];
+                    let sigma_total = s_x + s_y + s_z;
+                    if sigma_total > 0.0 {
+                        field[[i, j, k]] *= (-sigma_total * dt * 0.5).exp();
+                    }
+                }
             }
-        });
+        }
 
         Ok(())
     }
@@ -78,7 +83,7 @@ impl Boundary for CPMLBoundary {
     ///
     fn apply_acoustic_directional(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
         axis: usize,
@@ -87,16 +92,21 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
-            let sigma = match axis {
-                0 => sigma_x[i],
-                1 => sigma_y[j],
-                _ => sigma_z[k],
-            };
-            if sigma > 0.0 {
-                *val *= (-sigma * dt * 0.5).exp();
+        let [nx, ny, nz] = field.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let sigma = match axis {
+                        0 => sigma_x[i],
+                        1 => sigma_y[j],
+                        _ => sigma_z[k],
+                    };
+                    if sigma > 0.0 {
+                        field[[i, j, k]] *= (-sigma * dt * 0.5).exp();
+                    }
+                }
             }
-        });
+        }
         Ok(())
     }
 
@@ -116,7 +126,7 @@ impl Boundary for CPMLBoundary {
     ///
     fn apply_velocity_pml_directional(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
         axis: usize,
@@ -125,16 +135,21 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x_sgx;
         let sigma_y = &self.profiles.sigma_y_sgy;
         let sigma_z = &self.profiles.sigma_z_sgz;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
-            let sigma = match axis {
-                0 => sigma_x[i],
-                1 => sigma_y[j],
-                _ => sigma_z[k],
-            };
-            if sigma > 0.0 {
-                *val *= (-sigma * dt * 0.5).exp();
+        let [nx, ny, nz] = field.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let sigma = match axis {
+                        0 => sigma_x[i],
+                        1 => sigma_y[j],
+                        _ => sigma_z[k],
+                    };
+                    if sigma > 0.0 {
+                        field[[i, j, k]] *= (-sigma * dt * 0.5).exp();
+                    }
+                }
             }
-        });
+        }
         Ok(())
     }
 

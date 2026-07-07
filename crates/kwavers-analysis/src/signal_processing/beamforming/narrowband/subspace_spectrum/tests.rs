@@ -17,6 +17,7 @@ use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteer
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, TWO_PI};
 use kwavers_math::linear_algebra::EigenDecomposition;
+use leto::Array2 as LetoArray2;
 use ndarray::{Array1, Array2, Array3};
 use num_complex::Complex64;
 
@@ -75,8 +76,9 @@ fn eigenvalue_split_matches_theorem_22_2() {
         }
     }
 
+    let r_leto = LetoArray2::from_shape_fn([n, n], |[i, j]| r[(i, j)]);
     let (eigenvalues, _) =
-        EigenDecomposition::hermitian_eigendecomposition_complex(&r).expect("eig");
+        EigenDecomposition::hermitian_eigendecomposition_complex(&r_leto).expect("eig");
     let mut vals: Vec<f64> = (0..n).map(|i| eigenvalues[i]).collect();
     vals.sort_by(|a, b| b.total_cmp(a));
 

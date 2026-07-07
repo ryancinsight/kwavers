@@ -1,6 +1,6 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use nalgebra::Vector3;
+use leto::geometry::Vector3;
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -171,14 +171,14 @@ impl BemFemInterface {
                     fem_mesh.nodes.get(n2_idx),
                     fem_mesh.nodes.get(n3_idx),
                 ) {
-                    let v1 = Vector3::from(n1.coordinates);
-                    let v2 = Vector3::from(n2.coordinates);
-                    let v3 = Vector3::from(n3.coordinates);
+                    let v1 = Vector3::new(n1.coordinates[0], n1.coordinates[1], n1.coordinates[2]);
+                    let v2 = Vector3::new(n2.coordinates[0], n2.coordinates[1], n2.coordinates[2]);
+                    let v3 = Vector3::new(n3.coordinates[0], n3.coordinates[1], n3.coordinates[2]);
 
                     // Compute face normal (unnormalized to weight by area)
                     let edge1 = v2 - v1;
                     let edge2 = v3 - v1;
-                    let mut face_normal = edge1.cross(&edge2);
+                    let mut face_normal = edge1.cross(edge2);
 
                     // Identify the 4th node (opposite node)
                     // element.nodes has 4 indices. face_nodes has 3.
@@ -191,12 +191,16 @@ impl BemFemInterface {
 
                     if let Some(opp_idx) = opp_node_idx {
                         if let Some(opp_node) = fem_mesh.nodes.get(opp_idx) {
-                            let v_opp = Vector3::from(opp_node.coordinates);
+                            let v_opp = Vector3::new(
+                                opp_node.coordinates[0],
+                                opp_node.coordinates[1],
+                                opp_node.coordinates[2],
+                            );
                             // Vector from a face vertex to opposite node
                             let to_interior = v_opp - v1;
 
                             // If normal points towards interior (dot > 0), flip it
-                            if face_normal.dot(&to_interior) > 0.0 {
+                            if face_normal.dot(to_interior) > 0.0 {
                                 face_normal = -face_normal;
                             }
                         }
@@ -217,7 +221,7 @@ impl BemFemInterface {
             if let Some(normal) = accumulated_normals.get(&node_idx) {
                 let norm = normal.norm();
                 if norm > 1e-12 {
-                    let n = normal / norm;
+                    let n = *normal / norm;
                     normals.push((n.x, n.y, n.z));
                 } else {
                     normals.push((0.0, 0.0, 1.0)); // Fallback for degenerate geometry

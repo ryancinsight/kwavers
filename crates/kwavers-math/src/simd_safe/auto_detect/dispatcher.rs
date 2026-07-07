@@ -6,7 +6,7 @@
 use super::capability::SimdCapability;
 use super::ops;
 use super::x86_64;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Automatic SIMD dispatcher
 #[derive(Debug)]
@@ -116,7 +116,7 @@ impl Default for SimdAuto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_simd_auto_creation() {
@@ -135,9 +135,9 @@ mod tests {
     #[test]
     fn test_add_operation() {
         let simd = SimdAuto::new();
-        let a = Array3::<f64>::ones((2, 2, 2));
-        let b = Array3::<f64>::ones((2, 2, 2)) * 2.0;
-        let mut out = Array3::<f64>::zeros((2, 2, 2));
+        let a = Array3::<f64>::ones([2, 2, 2]);
+        let b = Array3::<f64>::from_elem([2, 2, 2], 2.0);
+        let mut out = Array3::<f64>::zeros([2, 2, 2]);
 
         simd.add_inplace(&a, &b, &mut out);
 
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn test_scale_operation() {
         let simd = SimdAuto::new();
-        let mut array = Array3::<f64>::ones((2, 2, 2)) * 2.0;
+        let mut array = Array3::<f64>::from_elem([2, 2, 2], 2.0);
 
         simd.scale_inplace(&mut array, 3.0);
 

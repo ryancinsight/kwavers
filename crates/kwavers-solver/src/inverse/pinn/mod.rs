@@ -104,22 +104,6 @@
 //! - **GPU**: pending Coeus training backend routed through Hephaestus provider
 //!   traits; WGPU and CUDA are provider implementations behind that seam
 //!
-//! ## Tensor Interoperability
-//!
-//! The `kwavers_math::tensor` module provides conversion between ndarray (used by
-//! forward solvers) and Burn tensors (used by PINNs):
-//!
-//! ```rust,ignore
-//! // Forward solver output (ndarray)
-//! let pressure_field: ArrayD<f64> = acoustic_solver.pressure();
-//!
-//! // Convert to Burn tensor for PINN training
-//! let burn_tensor = Tensor::<B, 3>::from_data(pressure_field.into());
-//!
-//! // Train PINN to match forward solver (verification)
-//! pinn.train(burn_tensor, collocation_points);
-//! ```
-//!
 //! # Module Organization
 //!
 //! ```text

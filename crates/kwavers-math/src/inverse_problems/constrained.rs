@@ -14,7 +14,7 @@
 //! unconstrained minimiser onto the box, and projected gradient descent converges
 //! to it.
 
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 /// Pointwise box constraints `lower ≤ m(r) ≤ upper` on a model field.
 #[derive(Debug, Clone, Copy)]
@@ -102,9 +102,9 @@ where
     constraints.project(&mut model); // start feasible
     for _ in 0..iterations {
         let grad = gradient(&model);
-        Zip::from(&mut model)
-            .and(&grad)
-            .for_each(|m, &g| *m -= step * g);
+        for (m, g) in model.iter_mut().zip(grad.iter()) {
+            *m -= step * g;
+        }
         constraints.project(&mut model);
     }
     model
@@ -113,7 +113,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn new_orders_bounds() {
@@ -128,8 +128,10 @@ mod tests {
         assert_eq!(c.project_value(1800.0), 1650.0); // above → upper
         assert_eq!(c.project_value(1540.0), 1540.0); // inside → unchanged
 
-        let mut field =
-            Array3::from_shape_vec((2, 1, 2), vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
+        let mut field = Array3::zeros([2, 1, 2]);
+        for (v, &d) in field.iter_mut().zip([1200.0, 1540.0, 1800.0, 1500.0].iter()) {
+            *v = d;
+        }
         c.project(&mut field);
         assert_eq!(
             field.iter().cloned().collect::<Vec<_>>(),
@@ -143,11 +145,26 @@ mod tests {
         // minimiser is clip(t, [lo, hi]) element-wise.
         let c = BoxConstraints::sound_speed_tissue(); // [1400, 1650]
                                                       // target field: below / inside / above the box
-        let target = Array3::from_shape_vec((3, 1, 1), vec![1000.0, 1500.0, 2000.0]).unwrap();
+        let target = {
+            let mut tmp = Array3::zeros([3, 1, 1]);
+            for (v, &d) in tmp.iter_mut().zip([1000.0, 1500.0, 2000.0].iter()) {
+                *v = d;
+            }
+            tmp
+        };
         let t = target.clone();
-        let start = Array3::from_elem((3, 1, 1), 1540.0);
+        let start = Array3::from_shape_fn([3, 1, 1], |_| 1540.0);
 
-        let result = projected_gradient_descent(start, c, 0.5, 200, move |m| m - &t);
+        let result = projected_gradient_descent(start, c, 0.5, 200, {
+            let t = t.clone();
+            move |m: &Array3<f64>| {
+                let mut r = Array3::zeros(m.shape());
+                for (rv, (mv, tv)) in r.iter_mut().zip(m.iter().zip(t.iter())) {
+                    *rv = mv - tv;
+                }
+                r
+            }
+        });
 
         let got: Vec<f64> = result.iter().cloned().collect();
         // clip(1000,…)=1400 ; clip(1500)=1500 ; clip(2000,…)=1650
@@ -166,9 +183,18 @@ mod tests {
     fn pgd_keeps_feasible_model_unchanged_at_optimum() {
         // if the start already equals the (feasible) target, the gradient is zero
         let c = BoxConstraints::new(0.0, 10.0);
-        let target = Array3::from_elem((4, 4, 4), 5.0);
+        let target = Array3::from_shape_fn([4, 4, 4], |_| 5.0);
         let t = target.clone();
-        let result = projected_gradient_descent(target, c, 0.3, 50, move |m| m - &t);
+        let result = projected_gradient_descent(target, c, 0.3, 50, {
+            let t = t.clone();
+            move |m: &Array3<f64>| {
+                let mut r = Array3::zeros(m.shape());
+                for (rv, (mv, tv)) in r.iter_mut().zip(m.iter().zip(t.iter())) {
+                    *rv = mv - tv;
+                }
+                r
+            }
+        });
         assert!(result.iter().all(|&m| (m - 5.0).abs() < 1e-12));
     }
 }

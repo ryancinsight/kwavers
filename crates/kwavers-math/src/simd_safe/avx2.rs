@@ -2,7 +2,7 @@
 
 #![allow(unsafe_code)]
 
-use ndarray::Array3;
+use leto::Array3;
 
 #[inline]
 unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {

@@ -1,6 +1,6 @@
 use super::{EigenResult, EigenSolver, EigenSolverConfig};
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use num_complex::Complex;
 
 impl EigenSolver {
@@ -26,13 +26,13 @@ impl EigenSolver {
         matrix: &Array2<Complex<f64>>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
-        let n = matrix.nrows();
+        let n = matrix.shape()[0];
 
-        if matrix.ncols() != n {
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "qr_algorithm".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -44,7 +44,6 @@ impl EigenSolver {
 
         let mut h = matrix.clone();
         let mut q = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
-        let mut eigenvalues = Array1::zeros(n);
         let mut iterations = 0;
 
         for iter in 0..config.max_iterations {
@@ -61,13 +60,13 @@ impl EigenSolver {
             }
 
             let (q_iter, r) = Self::qr_decomposition(&h, n)?;
-            h = r.dot(&q_iter);
+            h = Self::mat_mul(&r, &q_iter);
 
             for i in 0..n {
                 h[[i, i]] += Complex::new(shift, 0.0);
             }
 
-            q = q.dot(&q_iter);
+            q = Self::mat_mul(&q, &q_iter);
 
             let off_diag_norm = Self::compute_off_diagonal_norm(&h, n);
             if off_diag_norm < config.tolerance {
@@ -75,6 +74,7 @@ impl EigenSolver {
             }
         }
 
+        let mut eigenvalues = Array1::zeros([n]);
         for i in 0..n {
             eigenvalues[i] = h[[i, i]].re;
         }
@@ -133,13 +133,13 @@ impl EigenSolver {
         matrix: &Array2<Complex<f64>>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
-        let n = matrix.nrows();
+        let n = matrix.shape()[0];
 
-        if matrix.ncols() != n {
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "jacobi_hermitian".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -147,7 +147,6 @@ impl EigenSolver {
 
         let mut h = matrix.clone();
         let mut v = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
-        let mut eigenvalues = Array1::zeros(n);
         let mut iterations = 0;
 
         for sweep in 0..config.max_iterations {
@@ -212,6 +211,7 @@ impl EigenSolver {
             }
         }
 
+        let mut eigenvalues = Array1::zeros([n]);
         for i in 0..n {
             eigenvalues[i] = h[[i, i]].re;
         }

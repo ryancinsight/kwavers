@@ -48,10 +48,32 @@
 
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
+use kwavers_boundary::Boundary;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_grid::Grid;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array1, Array2, Array3, ArrayView2, ArrayViewMut2};
+use ndarray::{s, Array1, Array2, Array3, ArrayView2, ArrayViewMut2, ArrayViewMut3};
+
+fn apply_velocity_pml_to_ndarray_view(
+    boundary: &mut dyn Boundary,
+    mut field: ArrayViewMut3<'_, f64>,
+    grid: &Grid,
+    step: usize,
+    axis: usize,
+) -> KwaversResult<()> {
+    let (nx, ny, nz) = field.dim();
+    let mut leto_field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| field[[i, j, k]]);
+    boundary.apply_velocity_pml_directional(leto_field.view_mut(), grid, step, axis)?;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = leto_field[[i, j, k]];
+            }
+        }
+    }
+    Ok(())
+}
 
 #[derive(Clone, Copy)]
 enum VelocityAxis {
@@ -619,19 +641,22 @@ impl PSTDSolver {
 
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
-                boundary.apply_velocity_pml_directional(
+                apply_velocity_pml_to_ndarray_view(
+                    boundary.as_mut(),
                     self.fields.ux.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
-                boundary.apply_velocity_pml_directional(
+                apply_velocity_pml_to_ndarray_view(
+                    boundary.as_mut(),
                     self.fields.uy.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
-                boundary.apply_velocity_pml_directional(
+                apply_velocity_pml_to_ndarray_view(
+                    boundary.as_mut(),
                     self.fields.uz.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
@@ -647,19 +672,19 @@ impl PSTDSolver {
                     &mut self.fields.ux,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 0),
+                    |field| apply_velocity_pml_to_ndarray_view(boundary.as_mut(), field, grid, step, 0),
                 )?;
                 Self::apply_x_plane_pml_bypass(
                     &mut self.fields.uy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 1),
+                    |field| apply_velocity_pml_to_ndarray_view(boundary.as_mut(), field, grid, step, 1),
                 )?;
                 Self::apply_x_plane_pml_bypass(
                     &mut self.fields.uz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 2),
+                    |field| apply_velocity_pml_to_ndarray_view(boundary.as_mut(), field, grid, step, 2),
                 )?;
             }
             Ok(())

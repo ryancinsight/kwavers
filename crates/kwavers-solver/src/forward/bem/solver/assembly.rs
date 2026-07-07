@@ -5,6 +5,7 @@ use kwavers_math::linear_algebra::sparse::{
     solver::{IterativeSolver, SolverConfig, SparsePreconditioner},
     CompressedSparseRowMatrix,
 };
+use leto::Array1 as LetoArray1;
 use ndarray::Array1;
 use num_complex::Complex64;
 
@@ -104,6 +105,8 @@ impl BemSolver {
             verbose: false,
         };
         let solver = IterativeSolver::create(solver_config);
-        solver.bicgstab_complex(a_matrix, b_vector.view(), None)
+        let b_leto = LetoArray1::from_shape_fn([b_vector.len()], |[i]| b_vector[i]);
+        let x_leto = solver.bicgstab_complex(a_matrix, &b_leto, None)?;
+        Ok(Array1::from_shape_fn(x_leto.shape()[0], |i| x_leto[[i]]))
     }
 }

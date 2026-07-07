@@ -6,7 +6,7 @@
 
 use super::csr::CompressedSparseRowMatrix;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Eigenvalue solver for sparse matrices
 #[derive(Debug)]
@@ -19,9 +19,6 @@ pub struct EigenvalueSolver {
 
 impl EigenvalueSolver {
     /// Create eigenvalue solver
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn create(max_iterations: usize, tolerance: f64) -> Self {
         Self {
@@ -47,31 +44,38 @@ impl EigenvalueSolver {
         }
 
         let n = matrix.rows;
-        let mut v = Array1::from_elem(n, 1.0 / (n as f64).sqrt());
+        let mut v = Array1::from_shape_fn([n], |_| 1.0 / (n as f64).sqrt());
         let mut eigenvalue = 0.0;
 
         for iteration in 0..self.max_iterations {
             let v_prev = v.clone();
 
             // v = A * v
-            v = matrix.multiply_vector(v.view())?;
+            v = matrix.multiply_vector(&v)?;
 
             // Normalize
-            let norm = v.dot(&v).sqrt();
+            let norm = v.iter().map(|x| x * x).sum::<f64>().sqrt();
             if norm < 1e-14 {
                 return Err(KwaversError::Numerical(NumericalError::Instability {
                     operation: "power_iteration".to_owned(),
                     condition: norm,
                 }));
             }
-            v /= norm;
+            for i in 0..n {
+                v[[i]] /= norm;
+            }
 
             // Rayleigh quotient
-            let av = matrix.multiply_vector(v.view())?;
-            eigenvalue = v.dot(&av);
+            let av = matrix.multiply_vector(&v)?;
+            eigenvalue = v.iter().zip(av.iter()).map(|(a, b)| a * b).sum();
 
             // Check convergence
-            let diff = (&v - &v_prev).dot(&(&v - &v_prev)).sqrt();
+            let diff = v
+                .iter()
+                .zip(v_prev.iter())
+                .map(|(a, b)| (a - b).powi(2))
+                .sum::<f64>()
+                .sqrt();
             if diff < self.tolerance {
                 return Ok((eigenvalue, v));
             }
@@ -118,15 +122,13 @@ impl EigenvalueSolver {
         }
 
         // Initial guess - random vector
-        let mut v = Array1::from(
-            (0..n)
-                .map(|_| rand::random::<f64>() - 0.5)
-                .collect::<Vec<_>>(),
-        );
+        let mut v = Array1::from_shape_fn([n], |_| rand::random::<f64>() - 0.5);
 
         // Normalize
-        let norm = v.dot(&v).sqrt();
-        v /= norm;
+        let norm = v.iter().map(|x| x * x).sum::<f64>().sqrt();
+        for i in 0..n {
+            v[[i]] /= norm;
+        }
 
         let mut eigenvalue = 0.0;
 
@@ -134,14 +136,14 @@ impl EigenvalueSolver {
         for _iter in 0..self.max_iterations {
             // Solve (A - shift*I) * w = v using simple iterative method
             // For production use, should implement LU decomposition or GMRES
-            let mut w = Array1::zeros(n);
+            let mut w = Array1::zeros([n]);
 
             // Simple Jacobi iteration for linear solve (A - shift*I)w = v
             for _jacobi in 0..50 {
-                let mut w_next = Array1::zeros(n);
+                let mut w_next = Array1::zeros([n]);
 
                 for i in 0..n {
-                    let mut sum = v[i];
+                    let mut sum = v[[i]];
                     let mut diagonal = 1.0; // Default diagonal element
 
                     for j in shifted.row_pointers[i]..shifted.row_pointers[i + 1] {
@@ -151,12 +153,12 @@ impl EigenvalueSolver {
                         if col == i {
                             diagonal = val;
                         } else {
-                            sum -= val * w[col];
+                            sum -= val * w[[col]];
                         }
                     }
 
                     if diagonal.abs() > 1e-14 {
-                        w_next[i] = sum / diagonal;
+                        w_next[[i]] = sum / diagonal;
                     }
                 }
 
@@ -165,8 +167,8 @@ impl EigenvalueSolver {
 
             // Rayleigh quotient: λ = v^T * A * w / (v^T * w)
             let av = self.matrix_vector_multiply(matrix, &w)?;
-            let numerator = v.dot(&av);
-            let denominator = v.dot(&w);
+            let numerator = v.iter().zip(av.iter()).map(|(a, b)| a * b).sum::<f64>();
+            let denominator = v.iter().zip(w.iter()).map(|(a, b)| a * b).sum::<f64>();
 
             if denominator.abs() < 1e-14 {
                 return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
@@ -181,9 +183,11 @@ impl EigenvalueSolver {
             // Check convergence
             if (lambda - eigenvalue).abs() < self.tolerance {
                 // Normalize eigenvector
-                let norm = w.dot(&w).sqrt();
+                let norm = w.iter().map(|x| x * x).sum::<f64>().sqrt();
                 if norm > 1e-14 {
-                    w /= norm;
+                    for i in 0..n {
+                        w[[i]] /= norm;
+                    }
                 }
                 return Ok((lambda, w));
             }
@@ -191,9 +195,9 @@ impl EigenvalueSolver {
             eigenvalue = lambda;
 
             // Normalize for next iteration
-            let norm = w.dot(&w).sqrt();
+            let norm = w.iter().map(|x| x * x).sum::<f64>().sqrt();
             if norm > 1e-14 {
-                v = w / norm;
+                v = Array1::from_shape_fn([n], |[i]| w[[i]] / norm);
             } else {
                 return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
                     method: "inverse_power_iteration".to_owned(),
@@ -219,13 +223,13 @@ impl EigenvalueSolver {
         matrix: &CompressedSparseRowMatrix,
         x: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let mut result = Array1::zeros(matrix.rows);
+        let mut result = Array1::zeros([matrix.rows]);
 
         for i in 0..matrix.rows {
             for j in matrix.row_pointers[i]..matrix.row_pointers[i + 1] {
                 let col = matrix.col_indices[j];
                 let val = matrix.values[j];
-                result[i] += val * x[col];
+                result[[i]] += val * x[[col]];
             }
         }
 

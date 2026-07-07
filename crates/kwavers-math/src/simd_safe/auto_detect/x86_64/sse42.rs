@@ -4,7 +4,7 @@
 //! safety practices from IEEE TSE 2022.
 
 use crate::simd_safe::auto_detect::ops;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Add two arrays using SSE4.2 instructions
 ///

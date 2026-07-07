@@ -8,6 +8,7 @@ use crate::signal_processing::beamforming::narrowband::snapshots::{
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
+use leto::{Array1 as LetoArray1, Array2 as LetoArray2};
 use ndarray::Array3;
 use num_complex::Complex64;
 
@@ -111,7 +112,9 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
         .into_array();
 
     // 5) Compute denom = aᴴ R^{-1} a via linear solve R y = a.
-    let y = ComplexLinearAlgebra::solve_linear_system_complex(&r, &a)?;
+    let r_leto = LetoArray2::from_shape_fn([n_sensors, n_sensors], |[i, j]| r[(i, j)]);
+    let a_leto = LetoArray1::from_shape_fn([n_sensors], |[i]| a[i]);
+    let y = ComplexLinearAlgebra::solve_linear_system_complex(&r_leto, &a_leto)?;
 
     let mut denom = Complex64::new(0.0, 0.0);
     for i in 0..n_sensors {

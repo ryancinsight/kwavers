@@ -176,6 +176,7 @@ pub trait Plugin: Debug + Send + Sync {
 pub mod test_support {
     use super::fields::PluginFields;
     use super::PluginContext;
+    use leto::ArrayViewMut3;
     use kwavers_boundary::Boundary;
     use kwavers_core::error::KwaversResult;
     use kwavers_grid::Grid;
@@ -192,7 +193,7 @@ pub mod test_support {
 
         fn apply_acoustic(
             &mut self,
-            _field: ndarray::ArrayViewMut3<f64>,
+            _field: ArrayViewMut3<f64>,
             _grid: &Grid,
             _time_step: usize,
         ) -> KwaversResult<()> {
@@ -210,7 +211,7 @@ pub mod test_support {
 
         fn apply_light(
             &mut self,
-            _field: ndarray::ArrayViewMut3<f64>,
+            _field: ArrayViewMut3<f64>,
             _grid: &Grid,
             _time_step: usize,
         ) {

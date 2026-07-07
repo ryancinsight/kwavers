@@ -27,7 +27,8 @@ use super::types::SvdClutterConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{s, Array1, Array2};
+use leto::Array2 as LetoArray2;
+use ndarray::Array2;
 
 /// SVD spatiotemporal clutter filter.
 ///
@@ -69,7 +70,8 @@ impl UlmSvdClutterFilter {
             }));
         }
 
-        let (u, sigma, vt) = LinearAlgebra::svd(iq_data)?;
+        let iq_leto = LetoArray2::from_shape_fn([n_px, n_t], |[i, j]| iq_data[[i, j]]);
+        let (u, sigma, v) = LinearAlgebra::svd(&iq_leto)?;
 
         let k = if self.config.fixed_clutter_rank > 0 {
             self.config.fixed_clutter_rank.min(sigma.len())
@@ -87,19 +89,22 @@ impl UlmSvdClutterFilter {
         // LinearAlgebra::svd returns (U, Σ, V) where V columns = right singular vectors.
         // Reconstruction: V_k^T = first k columns of V, transposed.
         let tissue = {
-            let u_k = u.slice(s![.., 0..k]).to_owned();
-            let sigma_k = sigma.slice(s![0..k]).to_owned();
-            let v_k = vt.slice(s![.., 0..k]).to_owned();
-            let vt_k = v_k.t().to_owned();
-            let mut us = u_k;
-            for (j, &s_j) in sigma_k.iter().enumerate() {
+            let mut us = Array2::<f64>::zeros((n_px, k));
+            for j in 0..k {
+                let s_j = sigma[j];
                 for i in 0..n_px {
-                    us[[i, j]] *= s_j;
+                    us[[i, j]] = u[[i, j]] * s_j;
                 }
             }
-            let mut result = Array2::<f64>::zeros((n_px, n_t));
-            ndarray::linalg::general_mat_mul(1.0, &us, &vt_k, 0.0, &mut result);
-            result
+
+            let mut vt_k = Array2::<f64>::zeros((k, n_t));
+            for j in 0..k {
+                for t in 0..n_t {
+                    vt_k[[j, t]] = v[[t, j]];
+                }
+            }
+
+            us.dot(&vt_k)
         };
 
         let bubble = iq_data - &tissue;
@@ -126,7 +131,7 @@ impl UlmSvdClutterFilter {
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
 #[must_use]
-pub(super) fn svht_threshold(sigma: &Array1<f64>, n_rows: usize, n_cols: usize) -> usize {
+pub(super) fn svht_threshold(sigma: &[f64], n_rows: usize, n_cols: usize) -> usize {
     let (n, m) = if n_rows <= n_cols {
         (n_rows, n_cols)
     } else {

@@ -22,7 +22,6 @@ leto = { workspace = true }
 moirai-parallel = { workspace = true }
 num-complex = "0.4"
 num-traits = "0.2"
-nalgebra = { version = "0.32" }
 rand = "0.8"
 log = "0.4"
 anyhow = "1.0"

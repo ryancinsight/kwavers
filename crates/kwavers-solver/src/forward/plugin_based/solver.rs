@@ -64,6 +64,25 @@ impl std::fmt::Debug for PluginBasedSolver {
     }
 }
 
+fn apply_acoustic_to_ndarray_view(
+    boundary: &mut dyn Boundary,
+    mut field: ndarray::ArrayViewMut3<'_, f64>,
+    grid: &Grid,
+    time_step: usize,
+) -> KwaversResult<()> {
+    let (nx, ny, nz) = field.dim();
+    let mut leto_field = leto::Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| field[[i, j, k]]);
+    boundary.apply_acoustic(leto_field.view_mut(), grid, time_step)?;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                field[[i, j, k]] = leto_field[[i, j, k]];
+            }
+        }
+    }
+    Ok(())
+}
+
 impl PluginBasedSolver {
     /// Create a new plugin-based solver
     pub fn new(
@@ -275,8 +294,12 @@ impl PluginBasedSolver {
             .field_registry
             .get_field_mut(UnifiedFieldType::Pressure)
         {
-            self.boundary
-                .apply_acoustic(pressure, &self.grid, self.current_step)?;
+            apply_acoustic_to_ndarray_view(
+                self.boundary.as_mut(),
+                pressure,
+                &self.grid,
+                self.current_step,
+            )?;
         }
 
         self.current_step += 1;

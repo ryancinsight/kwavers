@@ -7,7 +7,6 @@
 //! classification) previously co-located in `kwavers-domain`.
 
 pub mod adapter;
-pub mod compat;
 pub mod config;
 pub mod coordinates;
 pub mod error;

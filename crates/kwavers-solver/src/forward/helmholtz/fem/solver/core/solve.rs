@@ -4,6 +4,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::sparse::solver::{
     IterativeSolver, SolverConfig, SparsePreconditioner,
 };
+use leto::Array1 as LetoArray1;
 
 impl FemHelmholtzSolver {
     /// Solve the assembled system via BiCGSTAB with the configured preconditioner.
@@ -35,13 +36,19 @@ impl FemHelmholtzSolver {
         };
 
         let solver = IterativeSolver::create(config);
+        let rhs_leto = LetoArray1::from_shape_fn([self.rhs.len()], |[i]| self.rhs[i]);
         let x0 = if self.solution.iter().any(|c| c.norm() > 0.0) {
-            Some(self.solution.view())
+            Some(LetoArray1::from_shape_fn([self.solution.len()], |[i]| {
+                self.solution[i]
+            }))
         } else {
             None
         };
 
-        self.solution = solver.bicgstab_complex(&self.system_matrix, self.rhs.view(), x0)?;
+        let solved = solver.bicgstab_complex(&self.system_matrix, &rhs_leto, x0.as_ref())?;
+        for i in 0..self.solution.len() {
+            self.solution[i] = solved[[i]];
+        }
         Ok(())
     }
 }

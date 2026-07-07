@@ -3,10 +3,9 @@
 use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use super::cache::GradientCache;
 use super::operator::BoundaryStrategy;
-use crate::compat::ndarray::{Array3, ArrayView3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 use num_traits::Float;
 
 /// Optimized gradient computation with caching and parallelization
@@ -23,7 +22,7 @@ pub fn gradient_optimized<T>(
     cache: Option<&GradientCache<T>>,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync,
+    T: Float + Clone + Send + Sync + Default,
 {
     let shape = field.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -37,9 +36,9 @@ where
         ));
     }
 
-    let mut grad_x = Array3::<T>::zeros((nx, ny, nz));
-    let mut grad_y = Array3::<T>::zeros((nx, ny, nz));
-    let mut grad_z = Array3::<T>::zeros((nx, ny, nz));
+    let mut grad_x = Array3::<T>::zeros([nx, ny, nz]);
+    let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
+    let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
 
     let coeffs = if let Some(cache) = cache {
         cache.get_coefficients(order)
@@ -117,7 +116,7 @@ pub fn gradient_with_boundaries<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync,
+    T: Float + Clone + Send + Sync + Default,
 {
     gradient_with_strategy(field, grid, order, BoundaryStrategy::ZeroPadding)
 }
@@ -135,7 +134,7 @@ pub(super) fn gradient_with_strategy<T>(
     boundary_strategy: BoundaryStrategy,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync,
+    T: Float + Clone + Send + Sync + Default,
 {
     let shape = field.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -149,9 +148,9 @@ where
         ));
     }
 
-    let mut grad_x = Array3::<T>::zeros((nx, ny, nz));
-    let mut grad_y = Array3::<T>::zeros((nx, ny, nz));
-    let mut grad_z = Array3::<T>::zeros((nx, ny, nz));
+    let mut grad_x = Array3::<T>::zeros([nx, ny, nz]);
+    let mut grad_y = Array3::<T>::zeros([nx, ny, nz]);
+    let mut grad_z = Array3::<T>::zeros([nx, ny, nz]);
 
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let _stencil_radius = coeffs.len();
@@ -245,92 +244,38 @@ where
 }
 
 /// Optimized gradient computation for leto fields.
+///
+/// Delegates to [`gradient_optimized`] since both now use leto types.
+/// Kept for API compatibility.
 /// # Errors
-/// - Returns [`Err`] if field conversion fails or an internal constraint is violated.
+/// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn gradient_optimized_leto<T>(
-    field: &LetoArray3<T>,
+    field: &Array3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
     cache: Option<&GradientCache<T>>,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync,
+    T: Float + Clone + Send + Sync + Default,
 {
-    let [nx, ny, nz] = field.shape();
-    let mut values = Vec::with_capacity(nx * ny * nz);
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                values.push(field[[i, j, k]].clone());
-            }
-        }
-    }
-    let field_nd = Array3::from_shape_vec((nx, ny, nz), values).map_err(|e| {
-        kwavers_core::error::KwaversError::InvalidInput(format!(
-            "failed to convert leto field to ndarray: {e}"
-        ))
-    })?;
-
-    let (gx, gy, gz) = gradient_optimized(&field_nd.view(), grid, order, cache)?;
-    let gx_shape = gx.shape();
-    let gy_shape = gy.shape();
-    let gz_shape = gz.shape();
-    let gx_vals: Vec<T> = gx.iter().cloned().collect();
-    let gy_vals: Vec<T> = gy.iter().cloned().collect();
-    let gz_vals: Vec<T> = gz.iter().cloned().collect();
-
-    let gx_leto = LetoArray3::from_vec([gx_shape[0], gx_shape[1], gx_shape[2]], gx_vals)
-        .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-    let gy_leto = LetoArray3::from_vec([gy_shape[0], gy_shape[1], gy_shape[2]], gy_vals)
-        .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-    let gz_leto = LetoArray3::from_vec([gz_shape[0], gz_shape[1], gz_shape[2]], gz_vals)
-        .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-
-    Ok((gx_leto, gy_leto, gz_leto))
+    gradient_optimized(&field.view(), grid, order, cache)
 }
 
 /// Gradient computation with boundary handling for leto fields.
+///
+/// Delegates to [`gradient_with_boundaries`] since both now use leto types.
+/// Kept for API compatibility.
 /// # Errors
-/// - Returns [`Err`] if field conversion fails or an internal constraint is violated.
+/// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn gradient_with_boundaries_leto<T>(
-    field: &LetoArray3<T>,
+    field: &Array3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
+) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync,
+    T: Float + Clone + Send + Sync + Default,
 {
-    let [nx, ny, nz] = field.shape();
-    let mut values = Vec::with_capacity(nx * ny * nz);
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                values.push(field[[i, j, k]].clone());
-            }
-        }
-    }
-    let field_nd = Array3::from_shape_vec((nx, ny, nz), values).map_err(|e| {
-        kwavers_core::error::KwaversError::InvalidInput(format!(
-            "failed to convert leto field to ndarray: {e}"
-        ))
-    })?;
-
-    let (gx, gy, gz) = gradient_with_boundaries(&field_nd.view(), grid, order)?;
-    let gx_shape = gx.shape();
-    let gy_shape = gy.shape();
-    let gz_shape = gz.shape();
-    let gx_vals: Vec<T> = gx.iter().cloned().collect();
-    let gy_vals: Vec<T> = gy.iter().cloned().collect();
-    let gz_vals: Vec<T> = gz.iter().cloned().collect();
-
-    let gx_leto = LetoArray3::from_vec([gx_shape[0], gx_shape[1], gx_shape[2]], gx_vals)
-        .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-    let gy_leto = LetoArray3::from_vec([gy_shape[0], gy_shape[1], gy_shape[2]], gy_vals)
-        .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-    let gz_leto = LetoArray3::from_vec([gz_shape[0], gz_shape[1], gz_shape[2]], gz_vals)
-        .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-
-    Ok((gx_leto, gy_leto, gz_leto))
+    gradient_with_boundaries(&field.view(), grid, order)
 }

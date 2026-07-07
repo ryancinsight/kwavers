@@ -13,7 +13,7 @@
 //! - [`das`]: Delay-and-Sum with fractional-delay linear interpolation and
 //!   full apodization support.
 //! - [`mvdr`]: MVDR with spatially-smoothed covariance (Shan & Kailath 1985),
-//!   relative diagonal loading, and Cholesky/LU solve via nalgebra.
+//!   relative diagonal loading, and pivoted dense linear solve.
 
 pub mod das;
 pub mod mvdr;

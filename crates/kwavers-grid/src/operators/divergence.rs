@@ -1,10 +1,9 @@
 //! Divergence operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::ndarray::{Array3, ArrayView3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 use num_traits::Float;
 
 /// Compute divergence of a vector field
@@ -51,7 +50,7 @@ where
         ));
     }
 
-    let mut divergence = Array3::<T>::zeros((nx, ny, nz));
+    let mut divergence = Array3::<T>::zeros([nx, ny, nz]);
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
 
@@ -94,103 +93,36 @@ where
 }
 
 /// Compute divergence of a leto 3D vector field.
+///
+/// Delegates to [`divergence`] since both now use leto types.
+/// Kept for API compatibility.
 /// # Errors
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
 pub fn divergence_leto<T>(
-    vx: &LetoArray3<T>,
-    vy: &LetoArray3<T>,
-    vz: &LetoArray3<T>,
+    vx: &Array3<T>,
+    vy: &Array3<T>,
+    vz: &Array3<T>,
     grid: &Grid,
     order: FdAccuracyOrder,
-) -> KwaversResult<LetoArray3<T>>
+) -> KwaversResult<Array3<T>>
 where
     T: Float + Clone + Send + Sync + Default,
 {
-    let shape = vx.shape();
-    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
-
-    // Validate grid compatibility and vector field consistency
-    if (nx, ny, nz) != (grid.nx, grid.ny, grid.nz) {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: format!("({}, {}, {})", grid.nx, grid.ny, grid.nz),
-                actual: format!("({}, {}, {})", nx, ny, nz),
-            },
-        ));
-    }
-
-    if vy.shape() != shape || vz.shape() != shape {
-        return Err(kwavers_core::error::KwaversError::Grid(
-            kwavers_core::error::GridError::DimensionMismatch {
-                expected: "Vector field components must have same dimensions".to_owned(),
-                actual: format!(
-                    "vx: {:?}, vy: {:?}, vz: {:?}",
-                    vx.shape(),
-                    vy.shape(),
-                    vz.shape()
-                ),
-            },
-        ));
-    }
-
-    let mut divergence = LetoArray3::<T>::zeros([nx, ny, nz]);
-    let coeffs = FDCoefficients::first_derivative::<T>(order);
-    let stencil_radius = coeffs.len();
-
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
-
-    // Compute divergence in interior points
-    for i in stencil_radius..nx - stencil_radius {
-        for j in stencil_radius..ny - stencil_radius {
-            for k in stencil_radius..nz - stencil_radius {
-                let mut div_x = T::zero();
-                let mut div_y = T::zero();
-                let mut div_z = T::zero();
-
-                // ∂vx/∂x
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    div_x = div_x + coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
-                }
-
-                // ∂vy/∂y
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    div_y = div_y + coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
-                }
-
-                // ∂vz/∂z
-                for (n, &coeff) in coeffs.iter().enumerate() {
-                    let offset = n + 1;
-                    div_z = div_z + coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
-                }
-
-                divergence[[i, j, k]] = div_x * dx_inv + div_y * dy_inv + div_z * dz_inv;
-            }
-        }
-    }
-
-    Ok(divergence)
+    divergence(&vx.view(), &vy.view(), &vz.view(), grid, order)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use ndarray::Array3;
 
     #[test]
     fn test_divergence_constant_field() -> KwaversResult<()> {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0)?;
-        let vx = Array3::<f64>::ones((5, 5, 5));
-        let vy = Array3::<f64>::ones((5, 5, 5));
-        let vz = Array3::<f64>::ones((5, 5, 5));
+        let vx = Array3::<f64>::from_elem([5, 5, 5], 1.0_f64);
+        let vy = Array3::<f64>::from_elem([5, 5, 5], 1.0_f64);
+        let vz = Array3::<f64>::from_elem([5, 5, 5], 1.0_f64);
 
         let div = divergence(
             &vx.view(),
@@ -209,9 +141,9 @@ mod tests {
     #[test]
     fn test_divergence_linear_field() -> KwaversResult<()> {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0)?;
-        let mut vx = Array3::<f64>::zeros((5, 5, 5));
-        let mut vy = Array3::<f64>::zeros((5, 5, 5));
-        let mut vz = Array3::<f64>::zeros((5, 5, 5));
+        let mut vx = Array3::<f64>::zeros([5, 5, 5]);
+        let mut vy = Array3::<f64>::zeros([5, 5, 5]);
+        let mut vz = Array3::<f64>::zeros([5, 5, 5]);
 
         // Create linear field: vx = x, vy = 2y, vz = 3z
         // Divergence should be 1 + 2 + 3 = 6

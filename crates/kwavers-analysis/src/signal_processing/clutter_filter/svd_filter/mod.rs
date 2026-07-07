@@ -22,6 +22,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::LinearAlgebra;
+use leto::Array2 as LetoArray2;
 use ndarray::{Array1, Array2, Axis};
 
 #[cfg(test)]
@@ -181,11 +182,14 @@ impl SignalSvdClutterFilter {
 
         // Step 2: Compute SVD: S = UΣV^T
         // Note: LinearAlgebra::svd returns (U, Σ, V), not (U, Σ, V^T)
-        let (u, mut sigma, v) = LinearAlgebra::svd(&centered_data)?;
+        let centered_leto =
+            LetoArray2::from_shape_fn([n_pixels, n_frames], |[i, j]| centered_data[[i, j]]);
+        let (u, mut sigma, v) = LinearAlgebra::svd(&centered_leto)?;
 
         // Step 3: Determine clutter rank
         let clutter_rank = if self.config.auto_rank_selection {
-            self.estimate_clutter_rank(&sigma)?
+            let sigma_array = Array1::from_vec(sigma.clone());
+            self.estimate_clutter_rank(&sigma_array)?
         } else {
             self.config.clutter_rank.min(sigma.len())
         };
@@ -211,7 +215,13 @@ impl SignalSvdClutterFilter {
         }
 
         // Then compute (U * Σ) * V^T
-        let filtered_data = u_sigma.dot(&v.t());
+        let mut vt = Array2::<f64>::zeros((rank, n_frames));
+        for j in 0..rank {
+            for t in 0..n_frames {
+                vt[[j, t]] = v[[t, j]];
+            }
+        }
+        let filtered_data = u_sigma.dot(&vt);
 
         // Step 6: Add back temporal means
         let mut final_data = filtered_data;

@@ -9,6 +9,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::sparse::{
     solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };
+use leto::Array1 as LetoArray1;
 use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::Array1;
 use num_complex::Complex64;
@@ -112,12 +113,13 @@ impl BemSolver {
             verbose: false,
         };
         let solver = kwavers_math::linear_algebra::sparse::IterativeSolver::create(solver_config);
-        let p_scat = solver.bicgstab_complex(&a_matrix, rhs_arr.view(), None)?;
+        let rhs_leto = LetoArray1::from_shape_fn([rhs_arr.len()], |[i]| rhs_arr[i]);
+        let p_scat = solver.bicgstab_complex(&a_matrix, &rhs_leto, None)?;
 
         let p_total: Vec<Complex64> = p_inc
             .iter()
-            .zip(p_scat.iter())
-            .map(|(&pi, &ps)| pi + ps)
+            .enumerate()
+            .map(|(i, &pi)| pi + p_scat[[i]])
             .collect();
 
         Ok(p_total)
