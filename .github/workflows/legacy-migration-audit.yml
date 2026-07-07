@@ -54,7 +54,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: cargo-ubuntu-latest-stable-${{ hashFiles('**/Cargo.lock') }}
+          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
             cargo-ubuntu-latest-stable-
 
