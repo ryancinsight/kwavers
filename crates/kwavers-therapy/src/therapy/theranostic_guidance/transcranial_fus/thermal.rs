@@ -63,7 +63,7 @@
 //! - Hasgall et al. (2022). IT'IS database v4.1. doi:10.13099/VIP21000-04-1.
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::medical::{
@@ -75,6 +75,10 @@ use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUC
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN};
 use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE,
+};
+
+use crate::parallel::{
+    zip_mut_five_refs, zip_mut_three_refs, zip_three_mut_three_refs, zip_two_mut_ref,
 };
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
@@ -163,13 +167,14 @@ pub fn transcranial_pennes_thermal_dose(
     let mut perf_c = Array3::<f64>::zeros((nx, ny, nz));
     let mut heat_rcp = Array3::<f64>::zeros((nx, ny, nz));
 
-    Zip::from(&mut kappa)
-        .and(&mut perf_c)
-        .and(&mut heat_rcp)
-        .and(skull_mask)
-        .and(brain_mask)
-        .and(intensity_w_m2)
-        .for_each(|kap, pc, hr, &is_skull, &is_brain, &i_val| {
+    zip_three_mut_three_refs(
+        kappa.view_mut(),
+        perf_c.view_mut(),
+        heat_rcp.view_mut(),
+        skull_mask.view(),
+        brain_mask.view(),
+        intensity_w_m2.view(),
+        |kap, pc, hr, &is_skull, &is_brain, &i_val| {
             let (rho, cp, k, perf, alpha) = if is_skull {
                 (SKULL_RHO, SKULL_CP, SKULL_K, SKULL_PERF, alpha_skull)
             } else if is_brain {
@@ -193,7 +198,8 @@ pub fn transcranial_pennes_thermal_dose(
             *kap = k / rho_cp;
             *pc = perf * DENSITY_BLOOD * SPECIFIC_HEAT_BLOOD_PLASMA / rho_cp;
             *hr = 2.0 * alpha * f64::from(i_val) / rho_cp;
-        });
+        },
+    );
 
     // Explicit Euler time loop.
     let mut temp = Array3::<f64>::from_elem((nx, ny, nz), baseline_c);
@@ -210,22 +216,25 @@ pub fn transcranial_pennes_thermal_dose(
 
         // dT/dt = kappa*∇²T - perf_c*(T-T_a) + heat_rcp
         let mut new_temp = Array3::<f64>::zeros((nx, ny, nz));
-        Zip::from(&mut new_temp)
-            .and(&temp)
-            .and(&lap)
-            .and(&kappa)
-            .and(&perf_c)
-            .and(&heat_rcp)
-            .for_each(|nt, &t, &l, &kap, &pc, &hr| {
+        zip_mut_five_refs(
+            new_temp.view_mut(),
+            temp.view(),
+            lap.view(),
+            kappa.view(),
+            perf_c.view(),
+            heat_rcp.view(),
+            |nt, &t, &l, &kap, &pc, &hr| {
                 *nt = t + dt_s * (kap.mul_add(l, hr) - pc * (t - baseline_c));
-            });
+            },
+        );
         temp = new_temp;
 
         // Update peak temperature and accumulate CEM43.
-        Zip::from(&mut peak)
-            .and(&mut cem43)
-            .and(&temp)
-            .for_each(|p, c, &t| {
+        zip_two_mut_ref(
+            peak.view_mut(),
+            cem43.view_mut(),
+            temp.view(),
+            |p, c, &t| {
                 if t > *p {
                     *p = t;
                 }
@@ -236,18 +245,21 @@ pub fn transcranial_pennes_thermal_dose(
                     THERMAL_DOSE_R_BELOW_43C
                 };
                 *c += (dt_s / SECONDS_PER_MINUTE) * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t);
-            });
+            },
+        );
     }
 
     // Lesion mask: CEM43 >= 240 min AND in brain AND not in skull.
     let mut lesion_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
-    Zip::from(&mut lesion_mask)
-        .and(&cem43)
-        .and(brain_mask)
-        .and(skull_mask)
-        .for_each(|b, &c, &is_brain, &is_skull| {
+    zip_mut_three_refs(
+        lesion_mask.view_mut(),
+        cem43.view(),
+        brain_mask.view(),
+        skull_mask.view(),
+        |b, &c, &is_brain, &is_skull| {
             *b = c >= CEM43_LESION_THRESHOLD && is_brain && !is_skull;
-        });
+        },
+    );
 
     TranscranialThermalResult {
         peak_temperature_c: peak.mapv(|v| v as f32),
