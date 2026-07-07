@@ -3,6 +3,26 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## DONE: kwavers-physics sonogenetics Moirai traversal [patch]
+
+Routed `crates/kwavers-physics/src/acoustics/therapy/sonogenetics` gating and
+volumetric ARF field traversal through the crate-local Moirai-backed
+`parallel` SSOT instead of direct ndarray/Rayon `Zip::par_for_each`. Added the
+missing `zip_mut_ref` and `zip_two_mut_four_refs` traversal arities so one-input
+updates and ARF finalization share the traversal SSOT while ARF still computes
+intensity and body-force outputs in one fused pass over the four input fields.
+
+Evidence tier: compile-time integration, focused empirical tests, and static
+source audit. `rustup run nightly cargo check -p kwavers-physics --lib` passed;
+`rustup run nightly cargo nextest run -p kwavers-physics sonogenetics
+--status-level fail` passed 53/53 with 1660 skipped; scoped source audit found
+no `Zip|par_for_each|rayon` hits under the sonogenetics cone.
+
+Residual: broader `kwavers-solver`/`kwavers-physics` direct `.par_for_each`
+holdouts are now 51 sites outside RTM inherent and sonogenetics. Package clippy
+is blocked before this package by pre-existing `kwavers-math` dead-code
+diagnostics in the concurrent eigendecomposition Leto-vs-ndarray migration diff.
+
 ## DONE: kwavers-solver RTM inherent Moirai traversal [patch]
 
 Routed `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`
@@ -18,7 +38,8 @@ fail` passed 10/10 with 916 skipped; and scoped source audit found no
 `Zip|par_for_each|rayon` hits under the RTM inherent cone.
 
 Residual: broader `kwavers-solver`/`kwavers-physics` direct ndarray/Rayon
-holdouts remain outside RTM inherent: 55 `.par_for_each` sites, enumerated in
+holdouts remain outside RTM inherent and sonogenetics: 51 `.par_for_each`
+sites, enumerated in
 `gap_audit.md`. Package fmt is still blocked by pre-existing formatting drift in
 `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`; package
 clippy is blocked by pre-existing `kwavers-math` dead-code diagnostics in the

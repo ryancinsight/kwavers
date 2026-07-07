@@ -1,10 +1,11 @@
 //! Open-probability equations for mechanosensitive channel gates.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array3, Zip};
+use ndarray::Array3;
 
 use super::constants::K_B;
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};
+use crate::parallel::zip_mut_ref;
 
 /// Compute per-voxel open probability using the Boltzmann two-state model.
 ///
@@ -38,12 +39,14 @@ pub fn boltzmann_p_open(
     let a = params.gating_area_m2;
     let t_half = params.half_tension_n_per_m;
     let mut out = Array3::<f64>::zeros(membrane_tension.dim());
-    Zip::from(&mut out)
-        .and(membrane_tension)
-        .par_for_each(|p, &dt| {
+    zip_mut_ref(
+        out.view_mut(),
+        membrane_tension.view(),
+        |p: &mut f64, &dt: &f64| {
             let exponent = -a * (dt - t_half) / kbt;
             *p = 1.0 / (1.0 + exponent.exp());
-        });
+        },
+    );
     Ok(out)
 }
 
@@ -70,11 +73,13 @@ pub fn pressure_threshold_p_open(
     let p_half = params.half_pressure_pa;
     let s = params.steepness_pa;
     let mut out = Array3::<f64>::zeros(radiation_pressure.dim());
-    Zip::from(&mut out)
-        .and(radiation_pressure)
-        .par_for_each(|p, &p_rad| {
+    zip_mut_ref(
+        out.view_mut(),
+        radiation_pressure.view(),
+        |p: &mut f64, &p_rad: &f64| {
             *p = 1.0 / (1.0 + (-(p_rad - p_half) / s).exp());
-        });
+        },
+    );
     Ok(out)
 }
 

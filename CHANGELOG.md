@@ -2,6 +2,22 @@
 
 ## Unreleased
 
+### Changed (2026-07-07) - kwavers-physics sonogenetics Moirai traversal [patch]
+- [patch] Routed `acoustics::therapy::sonogenetics` gating and volumetric ARF
+  field traversal through the crate-local Moirai-backed `parallel` traversal
+  SSOT instead of direct ndarray/Rayon `Zip::par_for_each`. Added
+  `zip_mut_ref` and `zip_two_mut_four_refs` so one-input updates and ARF's
+  intensity/body-force update share the traversal SSOT. Verification: `rustup
+  run nightly cargo check -p kwavers-physics --lib` passed; `rustup run nightly cargo
+  nextest run -p kwavers-physics sonogenetics --status-level fail` passed 53/53
+  with 1660 skipped; and a scoped source audit found no
+  `Zip|par_for_each|rayon` tokens under the sonogenetics cone. Residual direct
+  solver/physics `.par_for_each` holdouts are now 51 sites outside RTM inherent
+  and sonogenetics; `cargo clippy -p kwavers-physics --lib -- -D warnings` is
+  blocked before this package by pre-existing `kwavers-math` dead-code
+  diagnostics in the concurrent eigendecomposition Leto-vs-ndarray migration
+  diff.
+
 ### Changed (2026-07-07) - kwavers-solver RTM inherent Moirai traversal [patch]
 - [patch] Routed `inverse::reconstruction::seismic::rtm::inherent` wavefield,
   propagation interpolation, source illumination, Laplacian filtering,
@@ -11,8 +27,9 @@
   kwavers-solver --lib` passed; `rustup run nightly cargo nextest run -p
   kwavers-solver rtm --status-level fail` passed 10/10 with 916 skipped; and a
   scoped source audit found no `Zip|par_for_each|rayon` tokens under the RTM
-  inherent cone. Residual direct ndarray/Rayon solver/physics holdouts are 55
-  `.par_for_each` sites outside this slice; `cargo fmt -p kwavers-solver
+  inherent cone. Residual direct ndarray/Rayon solver/physics holdouts are 51
+  `.par_for_each` sites outside RTM inherent and sonogenetics; `cargo fmt -p
+  kwavers-solver
   --check` remains blocked by pre-existing formatting drift in
   `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`, and
   `cargo clippy -p kwavers-solver --lib -- -D warnings` is blocked by

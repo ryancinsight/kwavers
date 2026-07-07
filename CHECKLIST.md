@@ -30,6 +30,24 @@
       blocked by pre-existing `kwavers-math` dead-code diagnostics in the
       concurrent eigendecomposition Leto-vs-ndarray migration diff outside this
       slice.
+- [x] [patch] kwavers-physics sonogenetics Moirai traversal slice: route
+      `acoustics::therapy::sonogenetics` gating and ARF accumulation/finalize
+      loops through the crate-local Moirai-backed `parallel` traversal SSOT
+      instead of direct ndarray/Rayon `Zip::par_for_each`. Add the missing
+      `zip_mut_ref` and `zip_two_mut_four_refs` arities to
+      `crates/kwavers-physics/src/parallel.rs` so one-input updates and ARF's
+      fused intensity/body-force output pass share the traversal SSOT.
+      Completion condition: the sonogenetics cone has no direct
+      `Zip|par_for_each|rayon` tokens, `kwavers-physics` compiles, and focused
+      sonogenetics tests pass. Verification: `rustup run nightly cargo check -p
+      kwavers-physics --lib` passed; `rustup run nightly cargo nextest run -p
+      kwavers-physics sonogenetics --status-level fail` passed 53/53 with 1660
+      skipped; scoped `rg` found no direct provider tokens under
+      `crates/kwavers-physics/src/acoustics/therapy/sonogenetics`. Residual:
+      broader solver/physics direct `.par_for_each` holdouts are now 51 sites;
+      package clippy is blocked before this package by pre-existing
+      `kwavers-math` dead-code diagnostics in the concurrent eigendecomposition
+      Leto-vs-ndarray migration diff.
 ## Sprint K Atlas provider migration — IN PROGRESS (2026-07-01)
 - [x] [patch] GPU provider-neutral backend boundary: make
       `kwavers-solver::backend::BackendType` carry an explicit

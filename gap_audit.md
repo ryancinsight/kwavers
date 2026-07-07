@@ -14,6 +14,23 @@ do not assert an unconfirmed physics error.
 
 ### Atlas provider migration residuals (2026-07-01)
 
+- **kwavers-physics sonogenetics direct ndarray/Rayon edge - RESOLVED [patch].**
+  `acoustics::therapy::sonogenetics` gating and volumetric ARF field traversal
+  now route through the crate-local Moirai-backed `parallel` traversal SSOT
+  instead of direct ndarray/Rayon `Zip::par_for_each`. `parallel.rs` now owns
+  the missing `zip_mut_ref` and `zip_two_mut_four_refs` arities so one-input
+  updates and ARF's intensity/body-force update share the traversal SSOT.
+  Evidence tier:
+  compile-time integration, focused empirical tests, and static source audit.
+  `rustup run nightly cargo check -p kwavers-physics --lib` passed; `rustup run
+  nightly cargo nextest run -p kwavers-physics sonogenetics --status-level
+  fail` passed 53/53 with 1660 skipped; scoped `rg` found no
+  `Zip|par_for_each|rayon` hits under
+  `crates/kwavers-physics/src/acoustics/therapy/sonogenetics`.
+  Residual: broader solver/physics direct `.par_for_each` holdouts are now 51
+  sites outside RTM inherent and sonogenetics. Package clippy is blocked before
+  this package by pre-existing `kwavers-math` dead-code diagnostics in the
+  concurrent eigendecomposition Leto-vs-ndarray migration diff.
 - **kwavers-solver RTM inherent direct ndarray/Rayon edge - RESOLVED [patch].**
   `inverse::reconstruction::seismic::rtm::inherent` now routes wavefield
   stencils, decimated wavefield interpolation, source illumination, Laplacian
@@ -26,7 +43,7 @@ do not assert an unconfirmed physics error.
   10/10 with 916 skipped; scoped `rg` found no `Zip|par_for_each|rayon` hits
   under `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`.
   Residual: broader solver/physics direct ndarray/Rayon holdouts remain outside
-  RTM inherent: 55 `.par_for_each` sites across
+  RTM inherent and sonogenetics: 51 `.par_for_each` sites across
   `crates/kwavers-solver/src/forward/elastic/swe/stress/divergence.rs`,
   `crates/kwavers-solver/src/forward/elastic/swe/integration/integrator/mod.rs`,
   `crates/kwavers-solver/src/forward/nonlinear/westervelt_spectral/spectral.rs`,
@@ -36,8 +53,7 @@ do not assert an unconfirmed physics error.
   `crates/kwavers-solver/src/multiphysics/fluid_structure/{interface,solver/struct_impl}.rs`,
   `crates/kwavers-physics/src/acoustics/conservation/heat.rs`,
   `crates/kwavers-physics/src/acoustics/mechanics/acoustic_wave/nonlinear/{wave_model,numerical_methods/spectral/mod,numerical_methods/nonlinear_term}.rs`,
-  `crates/kwavers-physics/src/acoustics/mechanics/cavitation/damage/model.rs`,
-  and `crates/kwavers-physics/src/acoustics/therapy/sonogenetics/{arf_field,channels/gating}.rs`.
+  and `crates/kwavers-physics/src/acoustics/mechanics/cavitation/damage/model.rs`.
   Package fmt is still blocked by pre-existing formatting drift in
   `crates/kwavers-solver/src/forward/fdtd/electromagnetic/tests.rs`; package
   clippy is blocked by pre-existing `kwavers-math` dead-code diagnostics in the
