@@ -1,23 +1,21 @@
 // src/utils/iterators.rs
-//! Zero-cost iterator abstractions for efficient physics simulations
+//! Zero-cost iterator abstractions for efficient physics simulations.
 //!
-//! This module provides iterator-based patterns that leverage Rust's zero-cost abstractions
-//! to achieve high performance while maintaining readable and maintainable code.
+//! Uses ndarray view types to maintain compatibility with callers in kwavers-solver
+//! and other partially-migrated crates. Will be updated to leto views once all
+//! callers are migrated.
 
-use leto::{Array3, ArrayView3, ArrayViewMut3};
 use moirai_parallel::{enumerate_mut_with, for_each_index_with, for_each_mut_with, Adaptive};
+use ndarray::{ArrayBase, ArrayView3, ArrayViewMut3, DataMut, Dimension};
 
-/// Apply an indexed mutation over a 3-D leto array view.
-///
-/// Standard-layout views use the Atlas Moirai provider; non-standard views
-/// retain sequential view traversal semantics.
+/// Apply an indexed mutation over a 3-D ndarray view.
 pub fn for_each_indexed_mut<T, F>(mut values: ArrayViewMut3<'_, T>, f: F)
 where
     T: Send,
     F: Fn((usize, usize, usize), &mut T) + Send + Sync,
 {
-    let [nx, ny, nz] = values.shape();
-    if let Some(slice) = values.as_mut_slice() {
+    let (nx, ny, nz) = values.dim();
+    if let Some(slice) = values.as_slice_mut() {
         let f_ref = &f;
         enumerate_mut_with::<Adaptive, _, _>(slice, |idx, value| {
             let plane = ny * nz;
@@ -36,7 +34,7 @@ where
     }
 }
 
-/// Apply an indexed mutation over paired 3-D array views.
+/// Apply an indexed mutation over paired 3-D ndarray views.
 pub fn for_each_indexed_pair_mut<T, U, F>(
     mut values: ArrayViewMut3<'_, T>,
     input: ArrayView3<'_, U>,
@@ -47,13 +45,13 @@ pub fn for_each_indexed_pair_mut<T, U, F>(
     F: Fn((usize, usize, usize), &mut T, &U) + Send + Sync,
 {
     debug_assert_eq!(
-        values.shape(),
-        input.shape(),
+        values.dim(),
+        input.dim(),
         "invariant: paired 3-D traversal shape mismatch"
     );
 
-    let [_nx, ny, nz] = values.shape();
-    match (values.as_mut_slice(), input.as_slice()) {
+    let (_nx, ny, nz) = values.dim();
+    match (values.as_slice_mut(), input.as_slice()) {
         (Some(values_slice), Some(input_slice)) => {
             let f_ref = &f;
             enumerate_mut_with::<Adaptive, _, _>(values_slice, |idx, value| {
@@ -64,7 +62,7 @@ pub fn for_each_indexed_pair_mut<T, U, F>(
             });
         }
         _ => {
-            let [nx, ny, nz] = values.shape();
+            let (nx, ny, nz) = values.dim();
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz {
@@ -76,26 +74,22 @@ pub fn for_each_indexed_pair_mut<T, U, F>(
     }
 }
 
-/// Apply a scalar value transform to a leto 3-D array in place.
-pub fn apply_inplace<T, F>(values: &mut Array3<T>, f: F)
+/// Apply a scalar value transform to an ndarray in place.
+pub fn apply_inplace<T, S, D, F>(values: &mut ArrayBase<S, D>, f: F)
 where
     T: Copy + Send,
+    S: DataMut<Elem = T>,
+    D: Dimension,
     F: Fn(T) -> T + Send + Sync,
 {
-    if let Some(slice) = values.as_slice_mut() {
+    if let Some(slice) = values.as_slice_memory_order_mut() {
         for_each_mut_with::<Adaptive, _, _>(slice, |value| {
             *value = f(*value);
         });
     } else {
-        let [nx, ny, nz] = values.shape();
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let v = values[[i, j, k]];
-                    values[[i, j, k]] = f(v);
-                }
-            }
-        }
+        values.map_inplace(|value| {
+            *value = f(*value);
+        });
     }
 }
 
@@ -113,7 +107,7 @@ where
 {
     #[must_use]
     pub fn new(array: ArrayViewMut3<'a, T>) -> Self {
-        let [nx, ny, nz] = array.shape();
+        let (nx, ny, nz) = array.dim();
         Self { array, nx, ny, nz }
     }
 
@@ -165,7 +159,7 @@ where
 {
     #[must_use]
     pub fn new(array: ArrayViewMut3<'a, T>) -> Self {
-        let [nx, ny, nz] = array.shape();
+        let (nx, ny, nz) = array.dim();
         Self { array, nx, ny, nz }
     }
 
@@ -205,7 +199,7 @@ pub struct IteratorGradientComputer<'a> {
 impl<'a> IteratorGradientComputer<'a> {
     #[must_use]
     pub fn new(array: ArrayView3<'a, f64>) -> Self {
-        let [nx, ny, nz] = array.shape();
+        let (nx, ny, nz) = array.dim();
         Self { array, nx, ny, nz }
     }
 
@@ -233,11 +227,11 @@ impl<'a> IteratorGradientComputer<'a> {
 
     #[must_use]
     pub fn collect_gradients(&self, dx: f64, dy: f64, dz: f64)
-        -> (Array3<f64>, Array3<f64>, Array3<f64>)
+        -> (ndarray::Array3<f64>, ndarray::Array3<f64>, ndarray::Array3<f64>)
     {
-        let mut gx = Array3::zeros([self.nx, self.ny, self.nz]);
-        let mut gy = Array3::zeros([self.nx, self.ny, self.nz]);
-        let mut gz = Array3::zeros([self.nx, self.ny, self.nz]);
+        let mut gx = ndarray::Array3::zeros((self.nx, self.ny, self.nz));
+        let mut gy = ndarray::Array3::zeros((self.nx, self.ny, self.nz));
+        let mut gz = ndarray::Array3::zeros((self.nx, self.ny, self.nz));
 
         let dx_inv = 1.0 / (2.0 * dx);
         let dy_inv = 1.0 / (2.0 * dy);
@@ -263,10 +257,11 @@ impl<'a> IteratorGradientComputer<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::Array3;
 
     #[test]
     fn apply_inplace_updates_values() {
-        let mut data = Array3::from_shape_vec([1, 2, 3], vec![1i32, 2, 3, 4, 5, 6])
+        let mut data = Array3::from_shape_vec((1, 2, 3), vec![1i32, 2, 3, 4, 5, 6])
             .expect("shape matches data length");
         apply_inplace(&mut data, |value| value * value);
         let values: Vec<i32> = data.iter().copied().collect();
@@ -275,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_chunked_processor() {
-        let mut data = Array3::<f64>::zeros([10, 10, 10]);
+        let mut data = Array3::<f64>::zeros((10, 10, 10));
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {
@@ -294,7 +289,7 @@ mod tests {
 
     #[test]
     fn test_gradient_computer() {
-        let mut array = Array3::<f64>::zeros([10, 10, 10]);
+        let mut array = Array3::<f64>::zeros((10, 10, 10));
         for i in 0..10 {
             for j in 0..10 {
                 for k in 0..10 {

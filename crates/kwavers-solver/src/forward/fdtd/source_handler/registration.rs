@@ -19,13 +19,13 @@ impl SourceHandler {
     ) -> KwaversResult<()> {
         let mask = source.create_mask(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
-        if mask.dim() != shape {
+        if mask.shape() != shape {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Source mask shape mismatch: expected {:?}, got {:?}",
                         shape,
-                        mask.dim()
+                        mask.shape()
                     ),
                 },
             ));

@@ -4606,6 +4606,7 @@ dependencies = [
  "libc",
  "log",
  "moirai-parallel",
+ "ndarray",
  "nifti",
  "ritk-registration",
  "serde",

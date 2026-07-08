@@ -12,7 +12,7 @@ mod scaling;
 pub(super) fn collect_pressure_indices_fortran(
     mask: &Array3<f64>,
 ) -> Vec<(usize, usize, usize, f64)> {
-    let (nx, ny, nz) = mask.dim();
+    let (nx, ny, nz) = mask.shape();
     let mut indices = Vec::new();
     for k in 0..nz {
         for j in 0..ny {
@@ -92,13 +92,13 @@ impl SourceHandler {
         let mut p_indices = Vec::new();
         let mut source_propagation_dim = 0.0;
         if let Some(mask) = &source.p_mask {
-            if mask.dim() != shape {
+            if mask.shape() != shape {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Pressure source mask shape mismatch: expected {:?}, got {:?}",
                             shape,
-                            mask.dim()
+                            mask.shape()
                         ),
                     },
                 ));
@@ -145,13 +145,13 @@ impl SourceHandler {
 
         let mut u_indices = Vec::new();
         if let Some(mask) = &source.u_mask {
-            if mask.dim() != shape {
+            if mask.shape() != shape {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Velocity source mask shape mismatch: expected {:?}, got {:?}",
                             shape,
-                            mask.dim()
+                            mask.shape()
                         ),
                     },
                 ));

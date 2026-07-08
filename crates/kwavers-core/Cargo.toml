@@ -12,6 +12,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 # crate) are optional + feature-gated so the foundation stays a clean leaf; the
 # `kwavers` facade enables the features it needs (see features below).
 [dependencies]
+ndarray = { workspace = true }
 # ndarray retained for iterators.rs view API compatibility with kwavers-solver/boundary/physics
 # until those crates are fully migrated to leto.
 moirai-parallel = { workspace = true }
