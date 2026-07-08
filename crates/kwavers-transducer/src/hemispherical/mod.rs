@@ -34,7 +34,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_signal::{Signal, SineWave};
 use kwavers_source::Source;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Hemispherical array transducer
@@ -95,13 +95,13 @@ impl HemisphericalArray {
 
 impl Source for HemisphericalArray {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
 
         for element in &self.elements {

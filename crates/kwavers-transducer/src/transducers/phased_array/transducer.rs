@@ -11,7 +11,7 @@ use kwavers_medium::Medium;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 use std::sync::Arc;
 
 /// Phased array transducer with electronic beam control
@@ -148,10 +148,10 @@ impl PhasedArrayTransducer {
 
     /// Calculate pressure field at given time
     pub fn calculate_field(&self, grid: &Grid, time: f64) -> Array3<f64> {
-        let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
         // Generate element signals
-        let mut element_signals = Array1::zeros(self.config.num_elements);
+        let mut element_signals = Array1::zeros([self.config.num_elements]);
         for (i, element) in self.elements.iter().enumerate() {
             let signal_value = self.signal.amplitude(time);
             element_signals[i] = element.apply_modulation(signal_value, time);
@@ -230,13 +230,13 @@ impl PhasedArrayTransducer {
 impl Source for PhasedArrayTransducer {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
         // Create mask with source at element positions
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
 
         for element in &self.elements {

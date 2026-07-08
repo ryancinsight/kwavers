@@ -1186,7 +1186,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-autograd"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "apollo-fft",
  "coeus-core",
@@ -1200,7 +1200,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-core"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -1214,7 +1214,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-leto"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "coeus-core",
  "leto",
@@ -1223,7 +1223,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-nn"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -1236,7 +1236,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-ops"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -1252,7 +1252,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-optim"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -1263,7 +1263,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-sparse"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -1273,7 +1273,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-tensor"
-version = "0.5.8"
+version = "0.5.9"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -1534,9 +1534,9 @@ checksum = "790eea4361631c5e7d22598ecd5723ff611904e3344ce8720784c93e3d83d40b"
 
 [[package]]
 name = "crossbeam-channel"
-version = "0.5.15"
+version = "0.5.16"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82b8f8f868b36967f9606790d1903570de9ceaf870a7bf9fbbd3016d636a2cb2"
+checksum = "d85363c37faeca707aef026efa9f3b34d077bce547e48f770770625c6013679e"
 dependencies = [
  "crossbeam-utils",
 ]
@@ -4593,7 +4593,6 @@ dependencies = [
  "log",
  "moirai-parallel",
  "ndarray",
- "num-complex",
  "serde",
 ]
 
@@ -4607,7 +4606,6 @@ dependencies = [
  "libc",
  "log",
  "moirai-parallel",
- "ndarray",
  "nifti",
  "ritk-registration",
  "serde",
@@ -4666,9 +4664,8 @@ dependencies = [
  "approx",
  "kwavers-core",
  "kwavers-grid",
+ "kwavers-math",
  "leto",
- "ndarray",
- "num-complex",
 ]
 
 [[package]]
@@ -4712,7 +4709,6 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
- "ndarray",
  "num-traits",
  "proptest",
  "rand 0.8.5",
@@ -4900,8 +4896,6 @@ dependencies = [
  "kwavers-math",
  "leto",
  "log",
- "ndarray",
- "num-complex",
  "proptest",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
@@ -4933,7 +4927,6 @@ dependencies = [
  "log",
  "moirai-parallel",
  "ndarray",
- "num-complex",
  "serde",
  "serde_json",
  "toml 0.8.23",
@@ -4993,8 +4986,8 @@ dependencies = [
  "kwavers-math",
  "kwavers-medium",
  "kwavers-signal",
+ "leto",
  "moirai-parallel",
- "ndarray",
  "num-complex",
  "serde",
 ]
@@ -7239,6 +7232,7 @@ dependencies = [
 name = "ritk-core"
 version = "0.9.0"
 dependencies = [
+ "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "mnemosyne",
@@ -7267,6 +7261,7 @@ version = "0.2.60"
 dependencies = [
  "anyhow",
  "apollo-fft",
+ "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "eunomia",
@@ -7368,6 +7363,7 @@ name = "ritk-jpeg"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "image 0.24.9",
  "ritk-core",
@@ -7390,6 +7386,7 @@ name = "ritk-metaimage"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "bytemuck",
  "coeus-core",
  "flate2",
@@ -7404,6 +7401,7 @@ name = "ritk-mgh"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "flate2",
  "ritk-core",
@@ -7417,6 +7415,7 @@ name = "ritk-minc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "consus-core",
  "consus-hdf5",
@@ -7432,6 +7431,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "burn",
+ "burn-ndarray",
  "bytemuck",
  "coeus-tensor",
  "onnx-ir",
@@ -7456,6 +7456,7 @@ name = "ritk-nifti"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "flate2",
  "ritk-core",
@@ -7469,6 +7470,7 @@ name = "ritk-nrrd"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "bytemuck",
  "coeus-core",
  "flate2",
@@ -7483,6 +7485,7 @@ name = "ritk-png"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "image 0.24.9",
  "ritk-core",
@@ -7496,6 +7499,7 @@ version = "0.53.0"
 dependencies = [
  "anyhow",
  "burn",
+ "burn-ndarray",
  "bytemuck",
  "coeus-autograd",
  "coeus-core",
@@ -7525,6 +7529,7 @@ name = "ritk-segmentation"
 version = "0.2.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-tensor",
  "moirai",
  "ritk-core",
@@ -7547,6 +7552,7 @@ name = "ritk-statistics"
 version = "0.1.1"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "moirai",
@@ -7560,6 +7566,7 @@ name = "ritk-tensor-ops"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "coeus-leto",
  "coeus-ops",
@@ -7574,6 +7581,7 @@ name = "ritk-tiff"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "burn-ndarray",
  "coeus-core",
  "ritk-core",
  "ritk-image",
@@ -7586,6 +7594,7 @@ name = "ritk-transform"
 version = "0.1.0"
 dependencies = [
  "burn",
+ "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "ritk-core",
@@ -7616,6 +7625,7 @@ name = "ritk-wgpu-compat"
 version = "0.1.0"
 dependencies = [
  "burn",
+ "burn-ndarray",
 ]
 
 [[package]]

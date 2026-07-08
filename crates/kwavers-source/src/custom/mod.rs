@@ -6,7 +6,7 @@
 use crate::{Source, SourceField};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -60,18 +60,18 @@ impl SimpleCustomSource {
 
 impl Source for SimpleCustomSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
 
         for (pos_idx, (x, y, z)) in self.positions.iter().enumerate() {
             if let Some((i, j, k)) = grid.position_to_indices(*x, *y, *z) {
-                mask[(i, j, k)] = self.weights[pos_idx];
+                mask[[i, j, k]] = self.weights[pos_idx];
             }
         }
     }
@@ -186,15 +186,15 @@ impl FunctionSource {
 
 impl Source for FunctionSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
-        for ((i, j, k), val) in mask.indexed_iter_mut() {
+        for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid array layout") {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;
@@ -205,9 +205,9 @@ impl Source for FunctionSource {
     }
 
     fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
-        for ((i, j, k), val) in mask.indexed_iter_mut() {
+        for ([i, j, k], val) in mask.indexed_iter_mut().expect("valid array layout") {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;

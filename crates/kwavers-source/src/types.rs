@@ -6,12 +6,11 @@
 
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt::Debug;
 
 // GridSource re-exported by parent mod
 
-use crate::parallel::zip_mut_ref;
 use serde::{Deserialize, Serialize};
 
 /// Type of source injection
@@ -105,11 +104,11 @@ pub trait Source: Debug + Sync + Send {
     /// Implementations override this method when their mask algebra is exactly
     /// additive without extra collision state.
     fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         let source_mask = self.create_mask(grid);
-        zip_mut_ref(mask.view_mut(), source_mask.view(), |dst, &src| {
+        for (dst, &src) in mask.iter_mut().zip(source_mask.iter()) {
             *dst += src;
-        });
+        }
     }
 
     /// Write this source's spatial mask into a caller-owned buffer.
@@ -120,7 +119,7 @@ pub trait Source: Debug + Sync + Send {
     /// `create_mask(grid)` into `out`. This lets solvers reuse one mask buffer
     /// across timesteps without changing source superposition semantics.
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
         self.add_mask_into(grid, mask);
     }
@@ -152,7 +151,7 @@ pub trait Source: Debug + Sync + Send {
         // Fallback implementation - inefficient but maintains compatibility
         if let Some((i, j, k)) = grid.position_to_indices(x, y, z) {
             let mask = self.create_mask(grid);
-            mask.get((i, j, k)).copied().unwrap_or(0.0) * self.amplitude(t)
+            mask.get([i, j, k]).ok().copied().unwrap_or(0.0) * self.amplitude(t)
         } else {
             0.0
         }
@@ -251,7 +250,7 @@ pub trait Source: Debug + Sync + Send {
 mod tests {
     use super::*;
     use kwavers_signal::{NullSignal, Signal};
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[derive(Debug)]
     struct DefaultMaskSource {
@@ -298,7 +297,7 @@ mod tests {
             )
             .unwrap(),
         );
-        let mut target = Array3::from_elem((grid.nx, grid.ny, grid.nz), 10.0);
+        let mut target = Array3::from_elem([grid.nx, grid.ny, grid.nz], 10.0);
         let expected = source.create_mask(&grid).mapv(|value| value + 10.0);
 
         source.add_mask_into(&grid, &mut target);

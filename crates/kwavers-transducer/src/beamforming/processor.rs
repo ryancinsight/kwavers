@@ -115,7 +115,8 @@ impl BeamformingProcessor {
         delays: &[f64],
         weights: &[f64],
     ) -> KwaversResult<Array3<f64>> {
-        let (n_elements, _channels, n_samples) = sensor_data.dim();
+        let shape = sensor_data.shape();
+        let (n_elements, _channels, n_samples) = (shape[0], shape[1], shape[2]);
 
         if delays.len() != n_elements || weights.len() != n_elements {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
@@ -192,7 +193,7 @@ impl BeamformingProcessor {
         }
 
         // Compute sample covariance R = (1/N) Σ x(n)x^T(n)
-        let mut covariance = Array2::zeros((n_elements, n_elements));
+        let mut covariance = Array2::zeros([n_elements, n_elements]);
         for t in 0..n_samples {
             for i in 0..n_elements {
                 for j in 0..n_elements {

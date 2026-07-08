@@ -53,7 +53,7 @@ impl CavitationDamage {
 
         self.impact_pressure.fill(0.0);
 
-        for ((i, j, k), &is_collapsing) in bubble_states.is_collapsing.indexed_iter() {
+        for ([i, j, k], &is_collapsing) in bubble_states.is_collapsing.indexed_iter() {
             if is_collapsing > 0.5 {
                 let r = bubble_states.radius[[i, j, k]];
                 let v = bubble_states.velocity[[i, j, k]].abs();

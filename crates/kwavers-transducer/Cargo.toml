@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
@@ -20,7 +21,6 @@ ndarray = { version = "0.16", features = ["serde"] }
 leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }
-num-complex = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 

@@ -34,7 +34,7 @@ impl Modulation for PhaseModulation {
 
     fn demodulate(&self, signal: &[f64], t: &[f64]) -> KwaversResult<Vec<f64>> {
         use crate::analytic::instantaneous_phase;
-        use ndarray::Array1;
+        use leto::Array1;
 
         if signal.is_empty() {
             return Ok(Vec::new());
@@ -55,11 +55,13 @@ impl Modulation for PhaseModulation {
         let omega_c = TWO_PI * self.params.carrier_freq;
         let beta = self.params.modulation_index;
 
-        let phase_wrapped = instantaneous_phase(&Array1::from_vec(signal.to_vec()));
+        let phase_wrapped = instantaneous_phase(
+            &Array1::from_vec([signal.len()], signal.to_vec()).expect("signal shape must match"),
+        );
         let mut phase_unwrapped = Vec::with_capacity(phase_wrapped.len());
 
-        if let Some(&first) = phase_wrapped.first() {
-            phase_unwrapped.push(first);
+        if !phase_wrapped.is_empty() {
+            phase_unwrapped.push(phase_wrapped[0]);
         }
 
         let two_pi = TWO_PI;

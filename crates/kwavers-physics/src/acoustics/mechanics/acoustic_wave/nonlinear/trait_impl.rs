@@ -32,7 +32,10 @@ impl AcousticWaveModel for NonlinearWave {
         // Create source term array
         let source_mask = source.create_mask(grid);
         let amplitude = source.amplitude(t);
-        let source_term = source_mask * amplitude;
+        let mut source_term = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        for (dst, &src) in source_term.iter_mut().zip(source_mask.iter()) {
+            *dst = src * amplitude;
+        }
 
         // Update using the nonlinear wave equation
         // Note: We pass a reference to avoid cloning, and the inner method is renamed

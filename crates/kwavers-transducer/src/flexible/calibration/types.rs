@@ -11,7 +11,7 @@ pub struct CalibrationData {
     /// Calibration quality metrics
     pub quality_metrics: CalibrationQualityMetrics,
     /// Reference configuration
-    pub reference_geometry: Option<NdArray2<f64>>,
+    pub reference_geometry: Option<Array2<f64>>,
 }
 
 /// Geometry snapshot at a specific time

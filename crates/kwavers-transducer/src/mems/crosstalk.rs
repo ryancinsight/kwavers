@@ -41,7 +41,7 @@
 //!   infinite rigid plane." *J. Acoust. Soc. Am.* 32(6), 730–737.
 //! - Kinsler, Frey, Coppens & Sanders, *Fundamentals of Acoustics* (4th ed.), §7.
 
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex;
 use std::f64::consts::{FRAC_PI_2, TAU};
 
@@ -93,9 +93,9 @@ pub fn crosstalk_matrix(
 ) -> Array2<Complex<f64>> {
     let n = positions.len();
     if areas.len() != n {
-        return Array2::zeros((0, 0));
+        return Array2::zeros([0, 0]);
     }
-    let mut z = Array2::<Complex<f64>>::zeros((n, n));
+    let mut z = Array2::<Complex<f64>>::zeros([n, n]);
     for i in 0..n {
         for j in (i + 1)..n {
             let d = separation(positions[i], positions[j]);
@@ -200,7 +200,7 @@ mod tests {
         let w = omega(5e6);
         let z = crosstalk_matrix(&positions, &areas, w, RHO, C);
 
-        assert_eq!(z.dim(), (4, 4));
+        assert_eq!(z.shape(), (4, 4));
         for i in 0..4 {
             assert!(z[[i, i]].norm() <= 1e-300, "diagonal must be zero");
             for j in 0..4 {
@@ -228,6 +228,6 @@ mod tests {
         let positions = vec![[0.0, 0.0, 0.0], [1e-4, 0.0, 0.0]];
         let areas = vec![a]; // wrong length
         let z = crosstalk_matrix(&positions, &areas, omega(5e6), RHO, C);
-        assert_eq!(z.dim(), (0, 0));
+        assert_eq!(z.shape(), (0, 0));
     }
 }

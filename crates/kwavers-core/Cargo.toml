@@ -14,7 +14,6 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 # ndarray retained for iterators.rs view API compatibility with kwavers-solver/boundary/physics
 # until those crates are fully migrated to leto.
-ndarray = { version = "0.16", features = ["serde"] }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

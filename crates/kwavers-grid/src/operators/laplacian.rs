@@ -85,40 +85,18 @@ impl LaplacianOperator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn apply(&self, field: ArrayView3<'_, f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut result = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = field.shape();
+        let mut result = Array3::zeros([nx, ny, nz]);
         self.apply_mut(field, result.view_mut())?;
         Ok(result)
     }
 
     /// Compute Laplacian for a leto-backed scalar field.
     /// # Errors
-    /// - Returns [`Err`] if conversion fails or an internal constraint is violated.
+    /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_leto(&self, field: &LetoArray3<f64>) -> KwaversResult<LetoArray3<f64>> {
-        let [nx, ny, nz] = field.shape();
-        let mut values = Vec::with_capacity(nx * ny * nz);
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    values.push(field[[i, j, k]]);
-                }
-            }
-        }
-
-        let field_nd = Array3::from_shape_vec((nx, ny, nz), values).map_err(|e| {
-            kwavers_core::error::KwaversError::InvalidInput(format!(
-                "failed to convert leto field to ndarray: {e}"
-            ))
-        })?;
-        let result_nd = self.apply(field_nd.view())?;
-        let result_vals: Vec<f64> = result_nd.iter().copied().collect();
-
-        LetoArray3::from_vec([nx, ny, nz], result_vals).map_err(|e| {
-            kwavers_core::error::KwaversError::InvalidInput(format!(
-                "failed to convert ndarray result to leto: {e}"
-            ))
-        })
+        self.apply(field.view())
     }
 
     /// Compute Laplacian in-place (zero-copy when possible)
@@ -130,11 +108,11 @@ impl LaplacianOperator {
         input: ArrayView3<f64>,
         mut output: ArrayViewMut3<f64>,
     ) -> KwaversResult<()> {
-        if input.dim() != output.dim() {
+        if input.shape() != output.shape() {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                 "Output dimensions {:?} don't match input {:?}",
-                output.dim(),
-                input.dim()
+                output.shape(),
+                input.shape()
             )));
         }
 
@@ -146,11 +124,11 @@ impl LaplacianOperator {
 
         // Handle interior points
         if self.config.order == FdAccuracyOrder::Second {
-            self.apply_second_order_interior(input, output.view_mut());
+            self.apply_second_order_interior(input, output.reborrow());
         } else {
             self.apply_higher_order_interior(
                 input,
-                output.view_mut(),
+                output.reborrow(),
                 radius,
                 center_coeff,
                 &side_coeffs,
@@ -158,19 +136,19 @@ impl LaplacianOperator {
         }
 
         // Apply boundary conditions
-        self.apply_boundary_conditions(input, output.view_mut(), radius);
+        self.apply_boundary_conditions(input, output.reborrow(), radius);
 
         Ok(())
     }
 
     #[inline]
     fn apply_second_order_interior(&self, input: ArrayView3<f64>, mut output: ArrayViewMut3<f64>) {
-        let (nx, ny, nz) = input.dim();
+        let [nx, ny, nz] = input.shape();
         if nx <= 2 || ny <= 2 || nz <= 2 {
             return;
         }
 
-        if let Some(output) = output.as_slice_mut() {
+        if let Some(output) = output.as_mut_slice() {
             for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(output, ny * nz, |i, plane| {
                 if i == 0 || i + 1 == nx {
                     return;
@@ -216,7 +194,7 @@ impl LaplacianOperator {
         center_coeff: f64,
         side_coeffs: &[f64],
     ) {
-        let (nx, ny, nz) = input.dim();
+        let [nx, ny, nz] = input.shape();
         for k in radius..nz - radius {
             for j in radius..ny - radius {
                 for i in radius..nx - radius {
@@ -248,10 +226,10 @@ impl LaplacianOperator {
         match self.config.boundary {
             LaplacianBoundary::Dirichlet => {}
             LaplacianBoundary::Neumann => {
-                self.apply_neumann_boundaries(input, output.view_mut(), radius);
+                self.apply_neumann_boundaries(input, output.reborrow(), radius);
             }
             LaplacianBoundary::Periodic => {
-                self.apply_periodic_boundaries(input, output.view_mut(), radius);
+                self.apply_periodic_boundaries(input, output.reborrow(), radius);
             }
         }
     }
@@ -262,7 +240,7 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
         radius: usize,
     ) {
-        let (nx, ny, nz) = input.dim();
+        let [nx, ny, nz] = input.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..radius.min(nx) {
@@ -292,7 +270,7 @@ impl LaplacianOperator {
         mut output: ArrayViewMut3<f64>,
         _radius: usize,
     ) {
-        let (nx, ny, nz) = input.dim();
+        let [nx, ny, nz] = input.shape();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -335,7 +313,7 @@ pub fn laplacian(
 
 /// Compute Laplacian for a leto-backed scalar field.
 /// # Errors
-/// - Returns [`Err`] if array conversion fails or an internal constraint is violated.
+/// - Returns [`Err`] if an internal constraint is violated.
 ///
 pub fn laplacian_leto(
     field: &LetoArray3<f64>,
@@ -355,7 +333,7 @@ mod tests {
     #[test]
     fn test_laplacian_constant_field() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let field = Array3::from_elem((10, 10, 10), 5.0);
+        let field = Array3::from_elem([10, 10, 10], 5.0);
 
         let operator = LaplacianOperator::second_order(&grid);
         let result = operator.apply(field.view()).unwrap();
@@ -373,7 +351,7 @@ mod tests {
     #[test]
     fn test_laplacian_linear_field() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let mut field = Array3::zeros((10, 10, 10));
+        let mut field = Array3::zeros([10, 10, 10]);
 
         // Create linear field: f(x,y,z) = x + y + z
         for k in 0..10 {
@@ -400,7 +378,7 @@ mod tests {
     #[test]
     fn test_laplacian_nonstandard_output_view() {
         let grid = Grid::new(10, 10, 10, 0.1, 0.1, 0.1).unwrap();
-        let mut field = Array3::zeros((10, 10, 10));
+        let mut field = Array3::zeros([10, 10, 10]);
         for k in 0..10 {
             for j in 0..10 {
                 for i in 0..10 {
@@ -414,10 +392,10 @@ mod tests {
 
         let operator = LaplacianOperator::second_order(&grid);
         let expected = operator.apply(field.view()).unwrap();
-        let mut storage = Array3::zeros((12, 10, 10));
+        let mut storage = Array3::zeros([12, 10, 10]);
         {
-            let mut output = storage.slice_mut(crate::compat::ndarray::s![1..11, .., ..]);
-            operator.apply_mut(field.view(), output.view_mut()).unwrap();
+            let mut output = storage.slice_mut(&[(1, 11, 1), (0, 10, 1), (0, 10, 1)]).unwrap();
+            operator.apply_mut(field.view(), output.reborrow()).unwrap();
         }
 
         for k in 1..9 {
@@ -436,7 +414,7 @@ mod tests {
     #[test]
     fn test_different_orders() {
         let grid = Grid::new(20, 20, 20, 0.1, 0.1, 0.1).unwrap();
-        let mut field = Array3::zeros((20, 20, 20));
+        let mut field = Array3::zeros([20, 20, 20]);
 
         // Create a smooth test field
         for k in 0..20 {
@@ -459,7 +437,11 @@ mod tests {
         let result4 = op4.apply(field.view()).unwrap();
 
         // Higher order should be more accurate (different from second order)
-        let diff: f64 = (&result4 - &result2).mapv(f64::abs).sum();
+        let diff: f64 = result4
+            .iter()
+            .zip(result2.iter())
+            .map(|(lhs, rhs)| (lhs - rhs).abs())
+            .sum();
         assert!(diff > 1e-6, "Fourth order should differ from second order");
     }
 }

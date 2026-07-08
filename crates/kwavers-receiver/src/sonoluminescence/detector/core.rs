@@ -5,8 +5,7 @@ use super::types::{DetectorConfig, SonoluminescenceEvent, SonoluminescenceStatis
 use kwavers_core::constants::fundamental::{PLANCK, SPEED_OF_LIGHT, STEFAN_BOLTZMANN};
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::optical::WIEN_CONSTANT;
-use kwavers_field::BubbleStateFields;
-use ndarray::Array3;
+use kwavers_field::{Array3, BubbleStateFields};
 use std::collections::HashMap;
 
 /// Sonoluminescence detector and analyzer
@@ -59,7 +58,7 @@ impl SonoluminescenceDetector {
         self.current_time += dt;
         let mut new_events = Vec::new();
 
-        let (nx, ny, nz) = bubble_states.radius.dim();
+        let [nx, ny, nz] = bubble_states.radius.shape();
 
         for i in 0..nx {
             for j in 0..ny {

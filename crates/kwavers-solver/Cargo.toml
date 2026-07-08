@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
@@ -23,7 +24,6 @@ kwavers-signal = { path = "../kwavers-signal" }
 kwavers-physics = { path = "../kwavers-physics" }
 ndarray = { version = "0.16", features = ["serde"] }
 ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
-num-complex = "0.4"
 num-traits = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = { workspace = true }

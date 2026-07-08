@@ -2,7 +2,7 @@
 
 use super::CalibrationManager;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 impl CalibrationManager {
     /// Detect local pressure-field peaks above 3 × RMS, separated by at least
@@ -12,7 +12,7 @@ impl CalibrationManager {
         pressure_field: &Array3<f64>,
         wavelength: f64,
     ) -> KwaversResult<Vec<[f64; 3]>> {
-        let (nx, ny, nz) = pressure_field.dim();
+        let [nx, ny, nz] = pressure_field.shape();
         let mut peaks = Vec::new();
 
         let rms: f64 =
@@ -94,7 +94,7 @@ impl CalibrationManager {
         reflectors: &[[f64; 3]],
     ) -> KwaversResult<Array2<f64>> {
         let num_elements = correspondences.len();
-        let mut positions = Array2::zeros((num_elements, 3));
+        let mut positions = Array2::zeros([num_elements, 3]);
 
         for (i, &(_, reflector_idx)) in correspondences.iter().enumerate() {
             if reflector_idx < reflectors.len() {
@@ -114,7 +114,7 @@ impl CalibrationManager {
         correspondences: &[(usize, usize)],
     ) {
         let num_correspondences = correspondences.len();
-        let num_elements = positions.nrows();
+        let num_elements = positions.shape()[0];
         let correspondence_ratio = num_correspondences as f64 / num_elements.max(1) as f64;
 
         self.data.quality_metrics.position_uncertainty = 1e-3 / correspondence_ratio;

@@ -162,14 +162,14 @@ impl MatrixArray {
 }
 
 impl Source for MatrixArray {
-    fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
-        let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
+    fn create_mask(&self, grid: &Grid) -> leto::Array3<f64> {
+        let mut mask = leto::Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
-    fn create_mask_into(&self, grid: &Grid, mask: &mut ndarray::Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+    fn create_mask_into(&self, grid: &Grid, mask: &mut leto::Array3<f64>) {
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
@@ -183,7 +183,7 @@ impl Source for MatrixArray {
                 let idx = iy * self.num_x + ix;
 
                 if let Some((gx, gy, gz)) = grid.position_to_indices(x_elem, y_elem, self.z_pos) {
-                    mask[(gx, gy, gz)] = self.apodization_weights[idx];
+                    mask[[gx, gy, gz]] = self.apodization_weights[idx];
                 }
             }
         }

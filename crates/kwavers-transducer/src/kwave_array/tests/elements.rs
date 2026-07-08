@@ -57,7 +57,7 @@ fn test_build_per_element_source_superposition() {
     // per-cell signal built as Σᵢ Wᵢ[c] · sᵢ[t], setting s1 = s2 = s
     // must reproduce the shared-signal result (W_sum[c] · s[t]).
     use kwavers_grid::Grid;
-    use ndarray::Array2;
+    use leto::Array2;
 
     let dx = 5.0e-4;
     let grid = Grid::new(61, 61, 61, dx, dx, dx).expect("grid");
@@ -83,7 +83,7 @@ fn test_build_per_element_source_superposition() {
         .expect("build per-element source");
     let w_sum = arr.get_array_weighted_mask(&grid);
 
-    let (nx, ny, nz) = mask_unit.dim();
+    let [nx, ny, nz] = mask_unit.shape();
     let mut active_cells = Vec::new();
     for k in 0..nz {
         for j in 0..ny {
@@ -125,7 +125,7 @@ fn test_disc_source_profile_radial_power_contract() {
 #[test]
 fn test_profiled_disc_enters_per_element_source_weights() {
     use kwavers_grid::Grid;
-    use ndarray::Array2;
+    use leto::Array2;
 
     let dx = 5.0e-4;
     let grid = Grid::new(61, 61, 61, dx, dx, dx).expect("grid");
@@ -177,7 +177,7 @@ fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
     // Regression: per-element source assembly must preserve the weighted-mask
     // superposition contract without requiring one dense 3-D mask per element.
     use kwavers_grid::Grid;
-    use ndarray::Array2;
+    use leto::Array2;
 
     let dx = 5.0e-4;
     let grid = Grid::new(41, 41, 9, dx, dx, dx).expect("grid");

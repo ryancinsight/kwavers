@@ -9,7 +9,7 @@ use kwavers_core::{
 };
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
 use super::validation::{
@@ -267,7 +267,7 @@ impl BowlTransducer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         let omega = TWO_PI * self.config.frequency;
         let focus_delays = self.calculate_focus_delays();
 

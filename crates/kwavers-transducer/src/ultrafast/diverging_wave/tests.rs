@@ -1,7 +1,7 @@
 use super::config::DivergingWaveConfig;
 use super::processor::DivergingWave;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Build a small N-element array with uniform pitch `pitch` centred at x=0.
 fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
@@ -200,7 +200,7 @@ fn test_transmit_delay_surface_shape() {
     let z_px = Array1::linspace(0.005, 0.030, 32);
     let surf = dw.transmit_delay_surface(&x_px, &z_px).unwrap();
     assert_eq!(
-        surf.dim(),
+        surf.shape(),
         (8, 16 * 32),
         "transmit_delay_surface shape mismatch"
     );
@@ -217,7 +217,7 @@ fn test_sta_delay_table_shape() {
     let z_px = Array1::linspace(0.005, 0.020, 16);
     let table = dw.sta_delay_table(&x_px, &z_px).unwrap();
     assert_eq!(
-        table.dim(),
+        table.shape(),
         (4, 4, 8 * 16),
         "sta_delay_table shape mismatch"
     );

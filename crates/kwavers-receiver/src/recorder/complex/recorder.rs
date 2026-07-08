@@ -4,6 +4,7 @@ use crate::sonoluminescence::{SonoluminescenceDetector, SonoluminescenceEvent};
 use crate::GridSensorSet;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::time::Time;
+use kwavers_field::Array3 as FieldArray3;
 use kwavers_field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use kwavers_field::BubbleStateFields;
 use kwavers_grid::Grid;
@@ -238,20 +239,25 @@ impl Recorder {
         if let Some(ref mut detector) = self.sl_detector {
             let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
             let bubble_radius = fields.index_axis(Axis(0), BUBBLE_RADIUS_IDX).to_owned();
+            let field_shape = [pressure_field.shape()[0], pressure_field.shape()[1], pressure_field.shape()[2]];
 
             let bubble_states = BubbleStateFields {
-                radius: bubble_radius,
-                velocity: Array3::zeros(pressure_field.dim()),
-                temperature: Array3::zeros(pressure_field.dim()),
-                pressure: pressure_field.clone(),
-                is_collapsing: Array3::zeros(pressure_field.dim()),
-                compression_ratio: Array3::from_elem(pressure_field.dim(), 1.0),
+                radius: bubble_radius.into(),
+                velocity: FieldArray3::zeros(field_shape),
+                temperature: FieldArray3::zeros(field_shape),
+                pressure: pressure_field.clone().into(),
+                is_collapsing: FieldArray3::zeros(field_shape),
+                compression_ratio: FieldArray3::from_elem(field_shape, 1.0),
             };
 
             let initial_radius = bubble_states.radius.clone();
             let dt = self.time.dt;
-            let events =
-                detector.detect_events(&bubble_states, &pressure_field, &initial_radius, dt);
+            let events = detector.detect_events(
+                &bubble_states,
+                &bubble_states.pressure,
+                &initial_radius,
+                dt,
+            );
             for event in events {
                 self.sl_events.push(event.clone());
                 let (i, j, k) = event.position;

@@ -17,7 +17,7 @@
 use apollo::{fft_1d_array, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::Complex64;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 fn leto_signal(signal: &Array1<f64>) -> leto::Array1<f64> {
     leto::Array1::from_shape_vec([signal.len()], signal.iter().copied().collect())
@@ -25,7 +25,8 @@ fn leto_signal(signal: &Array1<f64>) -> leto::Array1<f64> {
 }
 
 fn ndarray_complex_signal(signal: leto::Array1<ApolloComplex64>) -> Array1<Complex64> {
-    Array1::from_vec(signal.into_vec())
+    let len = signal.len();
+    Array1::from_vec([len], signal.into_vec()).expect("analytic signal shape must match")
 }
 
 /// Compute the Hilbert transform of a real signal using FFT
@@ -156,10 +157,10 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
     let n = phase.len();
 
     if n < 3 {
-        return Array1::zeros(n);
+        return Array1::zeros([n]);
     }
 
-    let mut freq = Array1::zeros(n);
+    let mut freq = Array1::zeros([n]);
     let factor = 1.0 / (TWO_PI * dt);
 
     // Forward difference for first point
@@ -197,11 +198,13 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
 /// 2D array of analytic signals
 #[must_use]
 pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
-    let (nrows, ncols) = data.dim();
-    let mut result = Array2::from_elem((nrows, ncols), Complex64::new(0.0, 0.0));
+    let [nrows, ncols] = data.shape();
+    let mut result = Array2::from_elem([nrows, ncols], Complex64::new(0.0, 0.0));
 
-    for (i, row) in data.outer_iter().enumerate() {
-        let analytic = hilbert_transform(&row.to_owned());
+    for i in 0..nrows {
+        let row = Array1::from_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+            .expect("row shape must match");
+        let analytic = hilbert_transform(&row);
         for (j, &val) in analytic.iter().enumerate() {
             result[[i, j]] = val;
         }
@@ -213,11 +216,13 @@ pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
 /// Compute envelope for each row of a 2D array
 #[must_use]
 pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
-    let (nrows, ncols) = data.dim();
-    let mut result = Array2::zeros((nrows, ncols));
+    let [nrows, ncols] = data.shape();
+    let mut result = Array2::zeros([nrows, ncols]);
 
-    for (i, row) in data.outer_iter().enumerate() {
-        let envelope = instantaneous_envelope(&row.to_owned());
+    for i in 0..nrows {
+        let row = Array1::from_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+            .expect("row shape must match");
+        let envelope = instantaneous_envelope(&row);
         for (j, &val) in envelope.iter().enumerate() {
             result[[i, j]] = val;
         }
@@ -229,11 +234,13 @@ pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
 /// Compute phase for each row of a 2D array
 #[must_use]
 pub fn instantaneous_phase_2d(data: &Array2<f64>) -> Array2<f64> {
-    let (nrows, ncols) = data.dim();
-    let mut result = Array2::zeros((nrows, ncols));
+    let [nrows, ncols] = data.shape();
+    let mut result = Array2::zeros([nrows, ncols]);
 
-    for (i, row) in data.outer_iter().enumerate() {
-        let phase = instantaneous_phase(&row.to_owned());
+    for i in 0..nrows {
+        let row = Array1::from_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+            .expect("row shape must match");
+        let phase = instantaneous_phase(&row);
         for (j, &val) in phase.iter().enumerate() {
             result[[i, j]] = val;
         }

@@ -192,7 +192,7 @@ impl DivergingWave {
         let nz = z_pixels.len();
         let n_pixels = nx * nz;
 
-        let mut table = Array3::zeros((n, n, n_pixels));
+        let mut table = Array3::zeros([n, n, n_pixels]);
 
         for tx in 0..n {
             let xi = self.config.element_positions[tx];

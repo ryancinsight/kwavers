@@ -4,7 +4,7 @@
 
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Bubble state fields for interfacing with physics modules
 #[derive(Debug)]
@@ -20,6 +20,8 @@ pub struct BubbleStateFields {
 impl BubbleStateFields {
     #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
+        let shape = [shape.0, shape.1, shape.2];
+
         Self {
             radius: Array3::zeros(shape),
             temperature: Array3::from_elem(shape, ROOM_TEMPERATURE_K),

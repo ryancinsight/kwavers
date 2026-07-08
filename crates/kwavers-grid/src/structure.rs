@@ -285,13 +285,13 @@ impl Grid {
     /// Create a zero-initialized field with grid dimensions
     #[inline]
     pub fn create_field(&self) -> Array3<f64> {
-        Array3::zeros((self.nx, self.ny, self.nz))
+        Array3::zeros([self.nx, self.ny, self.nz])
     }
 
     /// Create a zero-initialized Leto field with grid dimensions.
     #[inline]
     pub fn create_field_leto(&self) -> leto::Array3<f64> {
-        leto::Array3::zeros([self.nx, self.ny, self.nz])
+        self.create_field()
     }
 }
 

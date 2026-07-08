@@ -2,7 +2,7 @@
 
 use super::types::{ApodizationType, Array2dElement, TransducerArray2DConfig};
 use kwavers_signal::Signal;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;
 

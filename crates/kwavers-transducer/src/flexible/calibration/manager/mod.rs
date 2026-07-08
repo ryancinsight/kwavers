@@ -2,7 +2,8 @@
 
 use super::types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot, KalmanState};
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array2 as LetoArray2, Array3};
+use ndarray::{Array1, Array2 as NdArray2};
 
 mod acoustic;
 mod kalman;
@@ -53,9 +54,9 @@ impl CalibrationManager {
         known_reflectors: &[[f64; 3]],
         frequency: f64,
         sound_speed: f64,
-    ) -> KwaversResult<Array2<f64>> {
+    ) -> KwaversResult<LetoArray2<f64>> {
         let wavelength = sound_speed / frequency;
-        let (_nx, _ny, _nz) = pressure_field.dim();
+        let [_nx, _ny, _nz] = pressure_field.shape();
 
         let peaks = self.extract_peaks(pressure_field, wavelength)?;
         let correspondences = self.match_reflectors(&peaks, known_reflectors)?;
@@ -84,7 +85,7 @@ impl CalibrationManager {
             ));
         }
 
-        let mut a_matrix = Array2::zeros((n - 1, 3));
+        let mut a_matrix = NdArray2::zeros((n - 1, 3));
         let mut b_vector = Array1::zeros(n - 1);
 
         let ref_pos = &reflectors[0];
@@ -129,10 +130,10 @@ impl CalibrationManager {
     ///
     pub fn process_external_tracking(
         &mut self,
-        tracking_data: &Array2<f64>,
+        tracking_data: &NdArray2<f64>,
         measurement_noise: f64,
         timestamp: f64,
-    ) -> KwaversResult<Array2<f64>> {
+    ) -> KwaversResult<NdArray2<f64>> {
         let dt = timestamp - self.last_calibration_time;
         let num_elements = tracking_data.nrows();
 
@@ -170,7 +171,7 @@ impl CalibrationManager {
     }
 }
 
-fn solve_linear_system(a: &Array2<f64>, b: &Array1<f64>) -> Option<[f64; 3]> {
+fn solve_linear_system(a: &NdArray2<f64>, b: &Array1<f64>) -> Option<[f64; 3]> {
     if a.nrows() != 3 || a.ncols() != 3 || b.len() != 3 {
         return None;
     }

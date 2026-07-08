@@ -4,5 +4,5 @@
 //! migrate incrementally without depending on `ndarray` directly.
 
 pub mod ndarray {
-    pub use ::ndarray::{s, Array1, Array2, Array3, ArrayView3, ArrayViewMut3};
+    pub use leto::{Array1, Array2, Array3, ArrayView3, ArrayViewMut3};
 }

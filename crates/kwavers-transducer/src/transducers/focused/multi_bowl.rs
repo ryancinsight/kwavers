@@ -8,7 +8,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
 #[derive(Debug)]
@@ -73,7 +73,7 @@ impl MultiBowlArray {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut combined_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut combined_source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
         // Add contributions from each bowl
         for (i, bowl) in self.bowls.iter().enumerate() {

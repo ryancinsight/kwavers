@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
 use kwavers_source::Source;
-use ndarray::Array3;
+use leto::Array3;
 
 fn create_test_config() -> TransducerArray2DConfig {
     TransducerArray2DConfig {
@@ -96,10 +96,10 @@ fn add_mask_into_accumulates_cached_mask() {
     let grid_id = (&grid as *const Grid) as u64;
 
     array.cached_grid_id = Some(grid_id);
-    array.cached_mask = Some(Array3::from_elem((grid.nx, grid.ny, grid.nz), 2.0));
+    array.cached_mask = Some(Array3::from_elem([grid.nx, grid.ny, grid.nz], 2.0));
 
-    let mut mask = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    let mut mask = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     array.add_mask_into(&grid, &mut mask);
 
-    assert_eq!(mask, Array3::from_elem((grid.nx, grid.ny, grid.nz), 3.0));
+    assert_eq!(mask, Array3::from_elem([grid.nx, grid.ny, grid.nz], 3.0));
 }

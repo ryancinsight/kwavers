@@ -4,7 +4,7 @@ use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_receiver::array::{Position, Sensor, SensorArray, SensorArrayGeometry};
-use ndarray::Array2;
+use leto::Array2;
 
 fn create_test_array(n_sensors: usize) -> SensorArray {
     let sensors: Vec<Sensor> = (0..n_sensors)

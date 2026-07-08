@@ -119,7 +119,7 @@ impl GradientOperator {
         cache: Option<&GradientCache<T>>,
     ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
     where
-        T: Float + Clone + Send + Sync,
+        T: Float + Clone + Send + Sync + Default,
     {
         let _chunk_size = self.chunk_size.max(1);
         if self.parallel {
@@ -135,7 +135,7 @@ impl GradientOperator {
 
     /// Compute gradient for leto arrays using the same operator configuration.
     /// # Errors
-    /// - Returns [`Err`] if conversion fails or an internal constraint is violated.
+    /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn compute_leto<T>(
         &self,
@@ -145,39 +145,9 @@ impl GradientOperator {
         cache: Option<&GradientCache<T>>,
     ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
     where
-        T: Float + Clone + Send + Sync,
+        T: Float + Clone + Send + Sync + Default,
     {
-        let [nx, ny, nz] = field.shape();
-        let mut values = Vec::with_capacity(nx * ny * nz);
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    values.push(field[[i, j, k]].clone());
-                }
-            }
-        }
-
-        let field_nd = Array3::from_shape_vec((nx, ny, nz), values).map_err(|e| {
-            kwavers_core::error::KwaversError::InvalidInput(format!(
-                "failed to convert leto field to ndarray: {e}"
-            ))
-        })?;
-        let (gx, gy, gz) = self.compute(&field_nd.view(), grid, order, cache)?;
-
-        let gx_shape = gx.shape();
-        let gy_shape = gy.shape();
-        let gz_shape = gz.shape();
-        let gx_vals: Vec<T> = gx.iter().cloned().collect();
-        let gy_vals: Vec<T> = gy.iter().cloned().collect();
-        let gz_vals: Vec<T> = gz.iter().cloned().collect();
-
-        let gx_leto = LetoArray3::from_vec([gx_shape[0], gx_shape[1], gx_shape[2]], gx_vals)
-            .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-        let gy_leto = LetoArray3::from_vec([gy_shape[0], gy_shape[1], gy_shape[2]], gy_vals)
-            .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-        let gz_leto = LetoArray3::from_vec([gz_shape[0], gz_shape[1], gz_shape[2]], gz_vals)
-            .map_err(|e| kwavers_core::error::KwaversError::InvalidInput(format!("{e}")))?;
-
-        Ok((gx_leto, gy_leto, gz_leto))
+        let field_view = field.view();
+        self.compute(&field_view, grid, order, cache)
     }
 }

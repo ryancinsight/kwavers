@@ -3,7 +3,8 @@
 //! This module provides utilities for creating and manipulating field arrays.
 
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4};
+use kwavers_math::fft::Complex64;
+use leto::{Array3, Array4};
 
 /// Field operations for grid-based arrays
 #[derive(Debug)]
@@ -14,33 +15,33 @@ impl FieldOperations {
     #[must_use]
     #[inline]
     pub fn create_field(grid: &Grid) -> Array3<f64> {
-        Array3::zeros((grid.nx, grid.ny, grid.nz))
+        Array3::zeros([grid.nx, grid.ny, grid.nz])
     }
 
     /// Create a zero-initialized complex 3D field array
     #[must_use]
     #[inline]
-    pub fn create_complex_field(grid: &Grid) -> Array3<num_complex::Complex<f64>> {
-        Array3::zeros((grid.nx, grid.ny, grid.nz))
+    pub fn create_complex_field(grid: &Grid) -> Array3<Complex64> {
+        Array3::zeros([grid.nx, grid.ny, grid.nz])
     }
 
     /// Create multiple fields as a 4D array
     #[must_use]
     #[inline]
     pub fn create_field_bundle(grid: &Grid, n_fields: usize) -> Array4<f64> {
-        Array4::zeros((n_fields, grid.nx, grid.ny, grid.nz))
+        Array4::zeros([n_fields, grid.nx, grid.ny, grid.nz])
     }
 
     /// Create a field initialized with a constant value
     #[must_use]
     #[inline]
     pub fn create_constant_field(grid: &Grid, value: f64) -> Array3<f64> {
-        Array3::from_elem((grid.nx, grid.ny, grid.nz), value)
+        Array3::from_elem([grid.nx, grid.ny, grid.nz], value)
     }
 
     /// Apply periodic boundary conditions to a field
     pub fn apply_periodic_boundary(field: &mut Array3<f64>) {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // X boundaries - proper periodic wrapping
         for j in 0..ny {

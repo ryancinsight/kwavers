@@ -26,7 +26,7 @@
 //! - Ghiglia, D. C., & Pritt, M. D. (1998). *Two-Dimensional Phase Unwrapping*.
 
 use core::f64::consts::TAU;
-use ndarray::Array2;
+use leto::Array2;
 use std::collections::VecDeque;
 
 #[inline]
@@ -39,11 +39,10 @@ fn wrap_to_pi(d: f64) -> f64 {
 /// (`+1`/`0`/`−1`). Output shape is `(nr−1, nc−1)`; a residue-free field is all 0.
 #[must_use]
 pub fn phase_residues(wrapped: &Array2<f64>) -> Array2<i32> {
-    let (nr, nc) = wrapped.dim();
+    let [nr, nc] = wrapped.shape();
     if nr < 2 || nc < 2 {
-        return Array2::zeros((nr.saturating_sub(1), nc.saturating_sub(1)));
-    }
-    let mut res = Array2::zeros((nr - 1, nc - 1));
+        return Array2::zeros([nr.saturating_sub(1), nc.saturating_sub(1)]);    }
+    let mut res = Array2::zeros([nr - 1, nc - 1]);
     for r in 0..nr - 1 {
         for c in 0..nc - 1 {
             // loop (r,c)→(r,c+1)→(r+1,c+1)→(r+1,c)→(r,c)
@@ -78,9 +77,9 @@ pub fn is_unwrap_reliable(wrapped: &Array2<f64>) -> bool {
 /// unreachable pixels are returned as `f64::NAN`.
 #[must_use]
 pub fn masked_unwrap_2d(wrapped: &Array2<f64>, mask: &Array2<bool>) -> Array2<f64> {
-    let (nr, nc) = wrapped.dim();
-    let mut out = Array2::from_elem((nr, nc), f64::NAN);
-    if nr == 0 || nc == 0 || mask.dim() != (nr, nc) {
+    let [nr, nc] = wrapped.shape();
+    let mut out = Array2::from_elem([nr, nc], f64::NAN);
+    if nr == 0 || nc == 0 || mask.shape() != [nr, nc] {
         return out;
     }
     // find the first valid seed
@@ -126,13 +125,13 @@ pub fn masked_unwrap_2d(wrapped: &Array2<f64>, mask: &Array2<bool>) -> Array2<f6
 /// on a cut).
 #[must_use]
 pub fn goldstein_branch_cut_mask(wrapped: &Array2<f64>) -> Array2<bool> {
-    let (nr, nc) = wrapped.dim();
-    let mut mask = Array2::from_elem((nr, nc), true);
+    let [nr, nc] = wrapped.shape();
+    let mut mask = Array2::from_elem([nr, nc], true);
     if nr < 2 || nc < 2 {
         return mask;
     }
     let residues = phase_residues(wrapped);
-    for ((pr, pc), &q) in residues.indexed_iter() {
+    for ([pr, pc], &q) in residues.indexed_iter() {
         if q == 0 {
             continue;
         }
@@ -181,7 +180,7 @@ mod tests {
     #[test]
     fn smooth_field_has_no_residues() {
         let (nr, nc) = (16, 16);
-        let mut w = Array2::zeros((nr, nc));
+        let mut w = Array2::zeros([nr, nc]);
         for r in 0..nr {
             for c in 0..nc {
                 w[[r, c]] = wrap(0.3 * r as f64 + 0.45 * c as f64);
@@ -196,7 +195,7 @@ mod tests {
         // a discrete phase singularity φ = atan2(r−rc, c−cc) carries one ±1 residue
         let (nr, nc) = (16, 16);
         let (rc, cc) = (7.5, 7.5);
-        let mut w = Array2::zeros((nr, nc));
+        let mut w = Array2::zeros([nr, nc]);
         for r in 0..nr {
             for c in 0..nc {
                 w[[r, c]] = (r as f64 - rc).atan2(c as f64 - cc); // already in (−π, π]
@@ -216,8 +215,8 @@ mod tests {
     #[test]
     fn masked_unwrap_recovers_plane_and_rewrap_is_consistent() {
         let (nr, nc) = (12, 14);
-        let mut w = Array2::zeros((nr, nc));
-        let mut truth = Array2::zeros((nr, nc));
+        let mut w = Array2::zeros([nr, nc]);
+        let mut truth = Array2::zeros([nr, nc]);
         for r in 0..nr {
             for c in 0..nc {
                 let phi = 0.4 * r as f64 + 0.5 * c as f64;
@@ -226,7 +225,7 @@ mod tests {
             }
         }
         // exclude a small block (as if masking a residue region)
-        let mut mask = Array2::from_elem((nr, nc), true);
+        let mut mask = Array2::from_elem([nr, nc], true);
         mask[[5, 6]] = false;
         mask[[5, 7]] = false;
 
@@ -251,8 +250,8 @@ mod tests {
     #[test]
     fn goldstein_unwrap_residue_free_recovers_plane() {
         let (nr, nc) = (12, 14);
-        let mut w = Array2::zeros((nr, nc));
-        let mut truth = Array2::zeros((nr, nc));
+        let mut w = Array2::zeros([nr, nc]);
+        let mut truth = Array2::zeros([nr, nc]);
         for r in 0..nr {
             for c in 0..nc {
                 let phi = 0.4 * r as f64 + 0.5 * c as f64;
@@ -276,7 +275,7 @@ mod tests {
         let (nr, nc) = (24, 24);
         let (r1, c1) = (8.0, 8.0);
         let (r2, c2) = (16.0, 16.0);
-        let mut w = Array2::zeros((nr, nc));
+        let mut w = Array2::zeros([nr, nc]);
         for r in 0..nr {
             for c in 0..nc {
                 let p1 = (r as f64 - r1).atan2(c as f64 - c1);
@@ -323,9 +322,9 @@ mod tests {
 
     #[test]
     fn degenerate_inputs() {
-        assert_eq!(phase_residues(&Array2::<f64>::zeros((1, 5))).dim(), (0, 4));
-        let w = Array2::<f64>::zeros((3, 3));
-        let m = Array2::from_elem((3, 3), false);
+        assert_eq!(phase_residues(&Array2::<f64>::zeros([1, 5])).shape(), [0, 4]);
+        let w = Array2::<f64>::zeros([3, 3]);
+        let m = Array2::from_elem([3, 3], false);
         assert!(masked_unwrap_2d(&w, &m).iter().all(|v| v.is_nan()));
     }
 }

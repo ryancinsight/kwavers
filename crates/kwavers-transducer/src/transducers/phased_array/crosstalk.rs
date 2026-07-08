@@ -2,7 +2,7 @@
 //!
 //! Models acoustic and electrical coupling between array elements
 
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Cross-talk model for element coupling
 #[derive(Debug, Clone)]
@@ -30,7 +30,10 @@ impl CrosstalkModel {
 
     /// Build coupling matrix based on element proximity
     fn build_coupling_matrix(n: usize, coefficient: f64) -> Array2<f64> {
-        let mut matrix = Array2::eye(n);
+        let mut matrix = Array2::zeros([n, n]);
+        for i in 0..n {
+            matrix[[i, i]] = 1.0;
+        }
 
         // Nearest-neighbor coupling
         for i in 0..n {
@@ -56,7 +59,15 @@ impl CrosstalkModel {
     /// Apply cross-talk to element signals
     #[must_use]
     pub fn apply(&self, signals: &Array1<f64>) -> Array1<f64> {
-        self.coupling_matrix.dot(signals)
+        let mut output = Array1::zeros([self.num_elements]);
+        for i in 0..self.num_elements {
+            let mut acc = 0.0;
+            for j in 0..self.num_elements {
+                acc += self.coupling_matrix[[i, j]] * signals[j];
+            }
+            output[i] = acc;
+        }
+        output
     }
 
     /// Calculate isolation between elements in dB

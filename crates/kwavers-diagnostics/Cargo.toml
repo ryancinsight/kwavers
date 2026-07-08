@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core", features = ["registration"] }
 kwavers-optics = { path = "../kwavers-optics" }
 kwavers-math = { path = "../kwavers-math" }
@@ -25,7 +26,6 @@ leto = { workspace = true }
 kwavers-gpu = { path = "../kwavers-gpu", optional = true }
 kwavers-analysis = { path = "../kwavers-analysis" }
 ndarray = { version = "0.16", features = ["serde"] }
-num-complex = "0.4"
 moirai-parallel = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 anyhow = "1.0"

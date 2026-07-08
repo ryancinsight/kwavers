@@ -133,7 +133,7 @@ pub fn cmut_flex_apodization(curvatures: &[f64], cell: &CmutCell) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Build an `n×3` position array from rows.
     fn positions(rows: &[[f64; 3]]) -> Array2<f64> {

@@ -17,7 +17,7 @@
 //! - Ghiglia, D. C., & Pritt, M. D. (1998). *Two-Dimensional Phase Unwrapping*.
 
 use core::f64::consts::TAU;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Wrap a phase difference into the principal interval `(-π, π]`.
 #[inline]
@@ -52,8 +52,8 @@ pub fn unwrap_1d(wrapped: &[f64]) -> Vec<f64> {
 /// phase offset is preserved at the anchor sample).
 #[must_use]
 pub fn unwrap_2d(wrapped: &Array2<f64>) -> Array2<f64> {
-    let (nr, nc) = wrapped.dim();
-    let mut out = Array2::zeros((nr, nc));
+    let [nr, nc] = wrapped.shape();
+    let mut out = Array2::zeros([nr, nc]);
     if nr == 0 || nc == 0 {
         return out;
     }
@@ -80,7 +80,7 @@ pub fn unwrap_2d(wrapped: &Array2<f64>) -> Array2<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     fn wrap(x: f64) -> f64 {
         x - TAU * (x / TAU).round()
@@ -106,8 +106,8 @@ mod tests {
     fn unwrap_2d_recovers_plane() {
         // true phase = 0.4·r + 0.55·c (both steps < π), φ(0,0) = 0
         let (nr, nc) = (12, 16);
-        let mut wrapped = Array2::zeros((nr, nc));
-        let mut truth = Array2::zeros((nr, nc));
+        let mut wrapped = Array2::zeros([nr, nc]);
+        let mut truth = Array2::zeros([nr, nc]);
         for r in 0..nr {
             for c in 0..nc {
                 let phi = 0.4 * r as f64 + 0.55 * c as f64;
@@ -137,6 +137,6 @@ mod tests {
     #[test]
     fn empty_inputs_are_handled() {
         assert!(unwrap_1d(&[]).is_empty());
-        assert_eq!(unwrap_2d(&Array2::<f64>::zeros((0, 0))).dim(), (0, 0));
+        assert_eq!(unwrap_2d(&Array2::<f64>::zeros([0, 0])).shape(), [0, 0]);
     }
 }

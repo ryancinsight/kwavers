@@ -21,6 +21,7 @@
 //! discrete mass equals `A / dx²` up to round-off.
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
+use leto::Array3;
 use super::{DiscSourceProfile, ElementShape, KWaveArray};
 use kwavers_core::constants::numerical::TWO_PI;
 
@@ -30,7 +31,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
@@ -68,7 +69,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
@@ -151,7 +152,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_disc(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -178,7 +179,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_disc_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -196,7 +197,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_profiled_disc_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,

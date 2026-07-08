@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use super::super::KWaveArray;
 
@@ -11,7 +11,7 @@ impl KWaveArray {
     pub fn get_distributed_source_signal(&self, signal: &ndarray::Array1<f64>) -> Array2<f64> {
         let n_elements = self.elements.len();
         let n_times = signal.len();
-        let mut distributed = Array2::zeros((n_elements, n_times));
+        let mut distributed = Array2::zeros([n_elements, n_times]);
         for i in 0..n_elements {
             for t in 0..n_times {
                 distributed[[i, t]] = signal[t];
@@ -32,7 +32,7 @@ impl KWaveArray {
         per_element_signals: &Array2<f64>,
     ) -> Result<Array2<f64>, String> {
         let n_elements = self.elements.len();
-        let (rows, _) = per_element_signals.dim();
+        let rows = per_element_signals.shape()[0];
         if rows != n_elements {
             return Err(format!(
                 "per_element_signals has {rows} rows but array has {n_elements} elements"
@@ -57,7 +57,8 @@ impl KWaveArray {
         per_element_signals: &Array2<f64>,
     ) -> Result<(Array3<f64>, Array2<f64>), String> {
         let n_elements = self.elements.len();
-        let (rows, n_times) = per_element_signals.dim();
+        let shape = per_element_signals.shape();
+        let (rows, n_times) = (shape[0], shape[1]);
         if rows != n_elements {
             return Err(format!(
                 "per_element_signals has {rows} rows but array has {n_elements} elements"
@@ -84,7 +85,7 @@ impl KWaveArray {
             .map(|(idx, cell)| (cell, idx))
             .collect();
 
-        let mut per_cell_signal = Array2::<f64>::zeros((n_active, n_times));
+        let mut per_cell_signal = Array2::<f64>::zeros([n_active, n_times]);
         for (element_idx, element) in self.elements.iter().enumerate() {
             self.rasterize_element_weighted_cells(element, grid, |i, j, k, weight| {
                 if let Some(&row_idx) = active_index.get(&(i, j, k)) {
@@ -96,7 +97,7 @@ impl KWaveArray {
             });
         }
 
-        let mut mask_ones = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask_ones = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz]);
         for &(i, j, k) in &active_cells {
             mask_ones[[i, j, k]] = 1.0;
         }
@@ -128,7 +129,7 @@ impl KWaveArray {
     pub(in crate::kwave_array) fn active_cells_fortran_order(
         mask: &Array3<f64>,
     ) -> Vec<(usize, usize, usize)> {
-        let (nx, ny, nz) = mask.dim();
+        let [nx, ny, nz] = mask.shape();
         let mut cells = Vec::new();
         for k in 0..nz {
             for j in 0..ny {
