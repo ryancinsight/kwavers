@@ -4,6 +4,7 @@
 //! read-only ndarray views and the authoritative validation/beamforming contract
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
+use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
 use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
@@ -13,9 +14,9 @@ use kwavers_analysis::signal_processing::pam::{
     eigenspace_covariance_eigenvalues as compute_eigenspace_covariance_eigenvalues,
     DelayAndSumConfig, DelayAndSumPAM,
 };
+use kwavers_math::fft::Complex64 as KwComplex;
 use kwavers_math::linear_algebra::EigenDecomposition;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -34,7 +35,7 @@ pub fn register_pam(m: &Bound<'_, PyModule>) -> PyResult<()> {
 fn hermitian_from_parts(
     re: &PyReadonlyArray2<f64>,
     im: &PyReadonlyArray2<f64>,
-) -> PyResult<Array2<Complex64>> {
+) -> PyResult<Array2<KwComplex>> {
     let re = re.as_array();
     let im = im.as_array();
     let n = re.nrows();
@@ -43,17 +44,19 @@ fn hermitian_from_parts(
             "covariance real/imag parts must be the same square (N×N) shape",
         ));
     }
-    let mut r = Array2::<Complex64>::zeros((n, n));
+    let mut r = Array2::<KwComplex>::zeros((n, n));
     for i in 0..n {
         for j in 0..n {
-            r[[i, j]] = Complex64::new(re[[i, j]], im[[i, j]]);
+            r[[i, j]] = KwComplex::new(re[[i, j]], im[[i, j]]);
         }
     }
-    // Hermitian symmetrisation: H = ½(R + Rᴴ).
-    let mut h = Array2::<Complex64>::zeros((n, n));
+    let mut h = Array2::<KwComplex>::zeros((n, n));
     for i in 0..n {
         for j in 0..n {
-            h[[i, j]] = 0.5 * (r[[i, j]] + r[[j, i]].conj());
+            h[[i, j]] = KwComplex::new(
+                0.5 * (r[[i, j]].re + r[[j, i]].re),
+                0.5 * (r[[i, j]].im - r[[j, i]].im),
+            );
         }
     }
     Ok(h)
@@ -131,7 +134,7 @@ fn music_pseudospectrum(
     let steering = Array1::from_iter(
         sr.iter()
             .zip(si.iter())
-            .map(|(&a, &b)| Complex64::new(a, b)),
+            .map(|(&a, &b)| KwComplex::new(a, b)),
     );
     MUSIC::new(num_sources)
         .pseudospectrum(&h, &steering)
@@ -194,7 +197,7 @@ fn passive_acoustic_map_das<'py>(
         .beamform_view(passive_data.as_array(), grid_points.as_array())
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers PAM error: {err}")))?;
 
-    Ok(PyArray1::from_owned_array(py, intensity).into())
+    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(intensity)).into())
 }
 
 /// Active-imaging delay-and-sum reconstruction.

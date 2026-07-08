@@ -11,16 +11,16 @@
 //!   §10.4. Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::analytic_signal_1d;
+use kwavers_signal::analytic::hilbert_transform;
 use ndarray::Array1;
 
 /// Envelope of an RF line: the magnitude of its analytic (Hilbert) signal.
 ///
-/// Reuses the workspace analytic-signal SSOT (`kwavers_math::fft`), so the
+/// Reuses the Apollo-backed analytic-signal SSOT in `kwavers-signal`, so the
 /// carrier is removed exactly once, consistently with beamforming snapshot code.
 #[must_use]
 pub fn envelope(rf: &Array1<f64>) -> Array1<f64> {
-    analytic_signal_1d(rf).mapv(|z| z.norm())
+    hilbert_transform(rf).mapv(|z| z.norm())
 }
 
 /// Log-compress an envelope to a normalized display image in `[0, 1]`.

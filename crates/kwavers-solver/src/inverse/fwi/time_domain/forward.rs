@@ -25,6 +25,17 @@ use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
 use ndarray::{s, Array2, Array3, Array4};
 
+fn leto_view3(field: &leto::Array3<f64>) -> ndarray::ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("FWI solver pressure field must be contiguous"),
+    )
+    .expect("FWI solver pressure field shape must match contiguous storage")
+}
+
 /// A boxed forward solver paired with its grid dimensions and validated time step.
 type ForwardSolverBundle = (Box<dyn Solver>, (usize, usize, usize), f64);
 /// Self-adjoint acquisition parts: source voxels, source signal, receiver voxels
@@ -258,7 +269,7 @@ impl FwiProcessor {
             solver.step_forward()?;
             history
                 .slice_mut(s![t, .., .., ..])
-                .assign(solver.pressure_field());
+                .assign(&leto_view3(solver.pressure_field()));
         }
 
         let recorded = solver.recorded_sensor_pressure().ok_or_else(|| {

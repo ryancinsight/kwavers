@@ -1,5 +1,5 @@
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Configuration for Burton-Miller BEM formulation
 #[derive(Debug, Clone, Copy)]

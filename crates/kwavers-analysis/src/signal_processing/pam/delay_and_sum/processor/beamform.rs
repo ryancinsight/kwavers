@@ -1,9 +1,10 @@
 //! Beamforming: delay computation, apodization, and DAS accumulation.
 
-use ndarray::{Array1, Array2, ArrayView2};
+use leto::Array1;
+use ndarray::{Array2, ArrayView2};
 
+use apollo::fft_1d_array;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::fft_1d_array;
 
 use super::super::types::PamImagingMode;
 use super::DelayAndSumPAM;
@@ -71,7 +72,7 @@ impl DelayAndSumPAM {
         self.validate_beamform_inputs(passive_data, grid_points)?;
 
         let num_grid_points = grid_points.nrows();
-        let mut intensity_map = Array1::<f64>::zeros(num_grid_points);
+        let mut intensity_map = Array1::<f64>::zeros([num_grid_points]);
         let apodization_weights = self.compute_apodization_weights();
 
         for (grid_idx, grid_point) in grid_points.rows().into_iter().enumerate() {
@@ -380,7 +381,9 @@ impl DelayAndSumPAM {
             return None;
         }
 
-        let complex_data = fft_1d_array(&Array1::from_vec(signal.to_vec()));
+        let complex_data = fft_1d_array(
+            &leto::Array1::from_vec([signal.len()], signal.to_vec()).expect("fft_1d_array signal"),
+        );
         let half = n / 2;
         let mut max_mag = 0.0f64;
         let mut max_idx: Option<usize> = None;
@@ -402,7 +405,7 @@ impl DelayAndSumPAM {
     }
 
     pub(super) fn noise_threshold(&self, intensity_map: &Array1<f64>) -> f64 {
-        let mut sorted = intensity_map.to_vec();
+        let mut sorted: Vec<f64> = intensity_map.iter().copied().collect();
         sorted.sort_by(|a, b| a.total_cmp(b));
         let noise_floor = sorted[sorted.len() / 4]; // lower quartile
         noise_floor * self.config.detection_threshold

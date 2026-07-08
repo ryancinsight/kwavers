@@ -7,8 +7,41 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_medium::Medium;
 use kwavers_source::{Source, SourceField};
 use log::debug;
-use ndarray::{s, Array4, Zip};
+use ndarray::{s, Array4};
 use std::time::Instant;
+
+fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: ndarray::ArrayView3<'_, f64>) {
+    for (dst_value, src_value) in dst
+        .as_slice_mut()
+        .expect("leto hybrid field must be contiguous")
+        .iter_mut()
+        .zip(src.iter())
+    {
+        *dst_value = *src_value;
+    }
+}
+
+fn copy_leto_slice_into_ndarray(
+    dst: &mut ndarray::ArrayViewMut3<'_, f64>,
+    src: &leto::Array3<f64>,
+    region: &DomainRegion,
+) {
+    let ndarray_slice = s![
+        region.start.0..region.end.0,
+        region.start.1..region.end.1,
+        region.start.2..region.end.2
+    ];
+    let leto_slice = &[
+        (region.start.0, region.end.0, 1isize),
+        (region.start.1, region.end.1, 1isize),
+        (region.start.2, region.end.2, 1isize),
+    ];
+    let mut dst_slice = dst.slice_mut(ndarray_slice);
+    let src_slice = src.slice(leto_slice).expect("valid hybrid region slice");
+    for (dst_value, src_value) in dst_slice.iter_mut().zip(src_slice.iter()) {
+        *dst_value = *src_value;
+    }
+}
 
 impl HybridSolver {
     /// Update fields for one time step
@@ -36,46 +69,54 @@ impl HybridSolver {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        self.pstd_solver
-            .fields
-            .p
-            .assign(&fields.index_axis(ndarray::Axis(0), p_idx));
-        self.pstd_solver
-            .fields
-            .ux
-            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
-        self.pstd_solver
-            .fields
-            .uy
-            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
-        self.pstd_solver
-            .fields
-            .uz
-            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.p,
+            fields.index_axis(ndarray::Axis(0), p_idx),
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.ux,
+            fields.index_axis(ndarray::Axis(0), vx_idx),
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.uy,
+            fields.index_axis(ndarray::Axis(0), vy_idx),
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.uz,
+            fields.index_axis(ndarray::Axis(0), vz_idx),
+        );
 
-        self.fdtd_solver
-            .fields
-            .p
-            .assign(&fields.index_axis(ndarray::Axis(0), p_idx));
-        self.fdtd_solver
-            .fields
-            .ux
-            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
-        self.fdtd_solver
-            .fields
-            .uy
-            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
-        self.fdtd_solver
-            .fields
-            .uz
-            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.p,
+            fields.index_axis(ndarray::Axis(0), p_idx),
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.ux,
+            fields.index_axis(ndarray::Axis(0), vx_idx),
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.uy,
+            fields.index_axis(ndarray::Axis(0), vy_idx),
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.uz,
+            fields.index_axis(ndarray::Axis(0), vz_idx),
+        );
 
         let amp = source.amplitude(t);
         if amp.abs() > 1e-12 && source.source_type() == SourceField::Pressure {
             source.create_mask_into(&self.grid, &mut self.source_mask_scratch);
-            Zip::from(&mut self.fdtd_solver.fields.p)
-                .and(&self.source_mask_scratch)
-                .for_each(|p, &m| *p += m * amp);
+            for (p, m) in self
+                .fdtd_solver
+                .fields
+                .p
+                .as_slice_mut()
+                .expect("leto hybrid pressure field must be contiguous")
+                .iter_mut()
+                .zip(self.source_mask_scratch.iter())
+            {
+                *p += m * amp;
+            }
         }
 
         self.pstd_solver.step_forward()?;
@@ -86,55 +127,53 @@ impl HybridSolver {
             match region.domain_type {
                 DomainType::PSTD => {
                     let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
-                    let slice = s![
-                        region.start.0..region.end.0,
-                        region.start.1..region.end.1,
-                        region.start.2..region.end.2
-                    ];
-                    p_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.p.slice(slice));
+                    copy_leto_slice_into_ndarray(&mut p_view, &self.pstd_solver.fields.p, &region);
 
                     let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
-                    vx_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.ux.slice(slice));
+                    copy_leto_slice_into_ndarray(
+                        &mut vx_view,
+                        &self.pstd_solver.fields.ux,
+                        &region,
+                    );
 
                     let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
-                    vy_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.uy.slice(slice));
+                    copy_leto_slice_into_ndarray(
+                        &mut vy_view,
+                        &self.pstd_solver.fields.uy,
+                        &region,
+                    );
 
                     let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
-                    vz_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.uz.slice(slice));
+                    copy_leto_slice_into_ndarray(
+                        &mut vz_view,
+                        &self.pstd_solver.fields.uz,
+                        &region,
+                    );
                 }
                 DomainType::FDTD => {
                     let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
-                    let slice = s![
-                        region.start.0..region.end.0,
-                        region.start.1..region.end.1,
-                        region.start.2..region.end.2
-                    ];
-                    p_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.p.slice(slice));
+                    copy_leto_slice_into_ndarray(&mut p_view, &self.fdtd_solver.fields.p, &region);
 
                     let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
-                    vx_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.ux.slice(slice));
+                    copy_leto_slice_into_ndarray(
+                        &mut vx_view,
+                        &self.fdtd_solver.fields.ux,
+                        &region,
+                    );
 
                     let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
-                    vy_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.uy.slice(slice));
+                    copy_leto_slice_into_ndarray(
+                        &mut vy_view,
+                        &self.fdtd_solver.fields.uy,
+                        &region,
+                    );
 
                     let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
-                    vz_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.uz.slice(slice));
+                    copy_leto_slice_into_ndarray(
+                        &mut vz_view,
+                        &self.fdtd_solver.fields.uz,
+                        &region,
+                    );
                 }
                 DomainType::Hybrid => {
                     self.apply_hybrid_region_blended(fields, &region)?;

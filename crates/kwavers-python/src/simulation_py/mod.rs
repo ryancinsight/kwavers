@@ -5,6 +5,7 @@ pub(crate) mod helpers;
 mod run;
 mod solvers;
 mod tests;
+use crate::breast_fwi_bindings::complex_compat::{nd_to_leto1, nd_to_leto3};
 pub use gpu::GpuPstdSession;
 
 /// Elastic velocity source bundle: (mask, ux_signal, uy_signal, uz_signal, mode).
@@ -733,10 +734,10 @@ impl Simulation {
                 _ => ElasticPstdSourceMode::Additive,
             };
             ElasticPstdVelocitySource {
-                mask,
-                ux,
-                uy,
-                uz,
+                mask: nd_to_leto3(mask),
+                ux: ux.map(nd_to_leto1),
+                uy: uy.map(nd_to_leto1),
+                uz: uz.map(nd_to_leto1),
                 mode,
             }
         });

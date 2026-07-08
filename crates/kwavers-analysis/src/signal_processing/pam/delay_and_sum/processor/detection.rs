@@ -1,6 +1,7 @@
 //! Cavitation event detection, classification, and frequency estimation.
 
-use ndarray::{Array1, Array2};
+use leto::Array1;
+use ndarray::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

@@ -65,16 +65,17 @@ mod density_cartesian;
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
-use ndarray::Array3;
+use ndarray::Array3 as NdArray3;
 
 const PRESSURE_UPDATE_CHUNK: usize = 4096;
 
 fn accumulate_split_density(
-    div_u: &mut Array3<f64>,
-    rhox: &Array3<f64>,
-    rhoy: &Array3<f64>,
-    rhoz: &Array3<f64>,
+    div_u: &mut LetoArray3<f64>,
+    rhox: &LetoArray3<f64>,
+    rhoy: &LetoArray3<f64>,
+    rhoz: &LetoArray3<f64>,
 ) {
     assert_eq!(
         div_u.shape(),
@@ -93,10 +94,10 @@ fn accumulate_split_density(
     );
 
     if let (Some(div_values), Some(rx_values), Some(ry_values), Some(rz_values)) = (
-        div_u.as_slice_memory_order_mut(),
-        rhox.as_slice_memory_order(),
-        rhoy.as_slice_memory_order(),
-        rhoz.as_slice_memory_order(),
+        div_u.as_slice_mut(),
+        rhox.as_slice(),
+        rhoy.as_slice(),
+        rhoz.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(div_values, |index, rho_sum| {
             *rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
@@ -104,7 +105,7 @@ fn accumulate_split_density(
         return;
     }
 
-    let (nx, ny, nz) = div_u.dim();
+    let [nx, ny, nz] = div_u.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -115,11 +116,11 @@ fn accumulate_split_density(
 }
 
 fn apply_nonlinear_eos(
-    pressure: &mut Array3<f64>,
-    div_u: &Array3<f64>,
-    c0: &Array3<f64>,
-    bon: &Array3<f64>,
-    rho0: &Array3<f64>,
+    pressure: &mut LetoArray3<f64>,
+    div_u: &LetoArray3<f64>,
+    c0: &NdArray3<f64>,
+    bon: &NdArray3<f64>,
+    rho0: &NdArray3<f64>,
 ) {
     assert_eq!(
         pressure.shape(),
@@ -149,8 +150,8 @@ fn apply_nonlinear_eos(
         Some(bon_values),
         Some(rho0_values),
     ) = (
-        pressure.as_slice_memory_order_mut(),
-        div_u.as_slice_memory_order(),
+        pressure.as_slice_mut(),
+        div_u.as_slice(),
         c0.as_slice_memory_order(),
         bon.as_slice_memory_order(),
         rho0.as_slice_memory_order(),
@@ -164,7 +165,8 @@ fn apply_nonlinear_eos(
         return;
     }
 
-    let (nx, ny, nz) = pressure.dim();
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -178,12 +180,12 @@ fn apply_nonlinear_eos(
 }
 
 fn apply_linear_eos(
-    div_u: &mut Array3<f64>,
-    pressure: &mut Array3<f64>,
-    rhox: &Array3<f64>,
-    rhoy: &Array3<f64>,
-    rhoz: &Array3<f64>,
-    c0: &Array3<f64>,
+    div_u: &mut LetoArray3<f64>,
+    pressure: &mut LetoArray3<f64>,
+    rhox: &LetoArray3<f64>,
+    rhoy: &LetoArray3<f64>,
+    rhoz: &LetoArray3<f64>,
+    c0: &NdArray3<f64>,
 ) {
     assert_eq!(
         div_u.shape(),
@@ -219,11 +221,11 @@ fn apply_linear_eos(
         Some(rz_values),
         Some(c0_values),
     ) = (
-        div_u.as_slice_memory_order_mut(),
-        pressure.as_slice_memory_order_mut(),
-        rhox.as_slice_memory_order(),
-        rhoy.as_slice_memory_order(),
-        rhoz.as_slice_memory_order(),
+        div_u.as_slice_mut(),
+        pressure.as_slice_mut(),
+        rhox.as_slice(),
+        rhoy.as_slice(),
+        rhoz.as_slice(),
         c0.as_slice_memory_order(),
     ) {
         for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
@@ -244,7 +246,7 @@ fn apply_linear_eos(
         return;
     }
 
-    let (nx, ny, nz) = div_u.dim();
+    let [nx, ny, nz] = div_u.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -350,19 +352,19 @@ impl PSTDSolver {
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_acoustic_directional(
-                    self.rhox.view_mut(),
+                    Self::leto_view_mut3(&mut self.rhox),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
                 boundary.apply_acoustic_directional(
-                    self.rhoy.view_mut(),
+                    Self::leto_view_mut3(&mut self.rhoy),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
                 boundary.apply_acoustic_directional(
-                    self.rhoz.view_mut(),
+                    Self::leto_view_mut3(&mut self.rhoz),
                     self.grid.as_ref(),
                     self.time_step_index,
                     2,
@@ -373,19 +375,19 @@ impl PSTDSolver {
                 let grid = self.grid.as_ref();
                 let step = self.time_step_index;
 
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhox,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
                     |field| boundary.apply_acoustic_directional(field, grid, step, 0),
                 )?;
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhoy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
                     |field| boundary.apply_acoustic_directional(field, grid, step, 1),
                 )?;
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhoz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,

@@ -45,7 +45,7 @@
 //! - `test_green_symmetry`: G(r, r') = G(r', r) (reciprocity).
 
 use kwavers_core::constants::numerical::FOUR_PI;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// The 3D free-space Helmholtz Green's function and its gradient.
 ///

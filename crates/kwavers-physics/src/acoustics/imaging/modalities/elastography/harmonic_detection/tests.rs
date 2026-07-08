@@ -1,7 +1,7 @@
 //! Tests for harmonic detection in elastography
 
 use super::*;
-use num_complex::Complex64;
+use apollo::Complex64;
 
 #[test]
 fn test_harmonic_detection_config() {

@@ -8,7 +8,7 @@ use kwavers_math::fft::{fft_3d_array_into, ifft_3d_array_into};
 use kwavers_physics::acoustics::mechanics::elastic_wave::{
     fields::VelocityFields, spectral_fields::SpectralVelocityFields,
 };
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 /// PHASE 1 — Stress sub-field updates.
 ///
@@ -36,6 +36,7 @@ pub(super) fn update_stress_subfields(
     let op_y_neg = ops.dky_neg.as_slice().expect("dky_neg contiguous");
     let op_z_neg = ops.dkz_neg.as_slice().expect("dkz_neg contiguous");
     let kappa = &ops.kappa;
+    let [nx, ny, nz] = scratch_r.shape();
 
     // ── Derivatives of vx ────────────────────────────────────────────────
     fft_3d_array_into(&velocity.vx, &mut spec_in.vx);
@@ -43,45 +44,47 @@ pub(super) fn update_stress_subfields(
     // ∂_x vx → txx_x (λ+2μ), tyy_x (λ), tzz_x (λ)
     spectral_mul_x(&spec_in.vx, op_x_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.txx_x.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_lambda.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(i, _, _), txx_x, &g, &lam, &mu| {
-            let (ax, bx) = (ax_s[i], bx_s[i]);
-            *txx_x = ax * *txx_x + bx * (lam + 2.0 * mu) * g;
-        });
-    Zip::indexed(state.tyy_x.view_mut())
-        .and(state.tzz_x.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_lambda.view())
-        .for_each(|(i, _, _), tyy_x, tzz_x, &g, &lam| {
-            let (ax, bx) = (ax_s[i], bx_s[i]);
-            *tyy_x = ax * *tyy_x + bx * lam * g;
-            *tzz_x = ax * *tzz_x + bx * lam * g;
-        });
+    for i in 0..nx {
+        let (ax, bx) = (ax_s[i], bx_s[i]);
+        for j in 0..ny {
+            for k in 0..nz {
+                let g = scratch_r[[i, j, k]];
+                let lam = medium.lame_lambda[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.txx_x[[i, j, k]] = ax * state.txx_x[[i, j, k]] + bx * (lam + 2.0 * mu) * g;
+                state.tyy_x[[i, j, k]] = ax * state.tyy_x[[i, j, k]] + bx * lam * g;
+                state.tzz_x[[i, j, k]] = ax * state.tzz_x[[i, j, k]] + bx * lam * g;
+            }
+        }
+    }
 
     // ∂_y vx → txy_y (μ)
     spectral_mul_y(&spec_in.vx, op_y_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.txy_y.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(_, j, _), txy_y, &g, &mu| {
+    for i in 0..nx {
+        for j in 0..ny {
             let (ay, by) = (ay_s[j], by_s[j]);
-            *txy_y = ay * *txy_y + by * mu * g;
-        });
+            for k in 0..nz {
+                let g = scratch_r[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.txy_y[[i, j, k]] = ay * state.txy_y[[i, j, k]] + by * mu * g;
+            }
+        }
+    }
 
     // ∂_z vx → txz_z (μ)
     spectral_mul_z(&spec_in.vx, op_z_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.txz_z.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(_, _, k), txz_z, &g, &mu| {
-            let (az, bz) = (az_s[k], bz_s[k]);
-            *txz_z = az * *txz_z + bz * mu * g;
-        });
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let (az, bz) = (az_s[k], bz_s[k]);
+                let g = scratch_r[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.txz_z[[i, j, k]] = az * state.txz_z[[i, j, k]] + bz * mu * g;
+            }
+        }
+    }
 
     // ── Derivatives of vy ────────────────────────────────────────────────
     fft_3d_array_into(&velocity.vy, &mut spec_in.vy);
@@ -89,45 +92,47 @@ pub(super) fn update_stress_subfields(
     // ∂_x vy → txy_x (μ)
     spectral_mul_x(&spec_in.vy, op_x_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.txy_x.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(i, _, _), txy_x, &g, &mu| {
-            let (ax, bx) = (ax_s[i], bx_s[i]);
-            *txy_x = ax * *txy_x + bx * mu * g;
-        });
+    for i in 0..nx {
+        let (ax, bx) = (ax_s[i], bx_s[i]);
+        for j in 0..ny {
+            for k in 0..nz {
+                let g = scratch_r[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.txy_x[[i, j, k]] = ax * state.txy_x[[i, j, k]] + bx * mu * g;
+            }
+        }
+    }
 
     // ∂_y vy → txx_y (λ), tyy_y (λ+2μ), tzz_y (λ)
     spectral_mul_y(&spec_in.vy, op_y_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.tyy_y.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_lambda.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(_, j, _), tyy_y, &g, &lam, &mu| {
+    for i in 0..nx {
+        for j in 0..ny {
             let (ay, by) = (ay_s[j], by_s[j]);
-            *tyy_y = ay * *tyy_y + by * (lam + 2.0 * mu) * g;
-        });
-    Zip::indexed(state.txx_y.view_mut())
-        .and(state.tzz_y.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_lambda.view())
-        .for_each(|(_, j, _), txx_y, tzz_y, &g, &lam| {
-            let (ay, by) = (ay_s[j], by_s[j]);
-            *txx_y = ay * *txx_y + by * lam * g;
-            *tzz_y = ay * *tzz_y + by * lam * g;
-        });
+            for k in 0..nz {
+                let g = scratch_r[[i, j, k]];
+                let lam = medium.lame_lambda[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.tyy_y[[i, j, k]] = ay * state.tyy_y[[i, j, k]] + by * (lam + 2.0 * mu) * g;
+                state.txx_y[[i, j, k]] = ay * state.txx_y[[i, j, k]] + by * lam * g;
+                state.tzz_y[[i, j, k]] = ay * state.tzz_y[[i, j, k]] + by * lam * g;
+            }
+        }
+    }
 
     // ∂_z vy → tyz_z (μ)
     spectral_mul_z(&spec_in.vy, op_z_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.tyz_z.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(_, _, k), tyz_z, &g, &mu| {
-            let (az, bz) = (az_s[k], bz_s[k]);
-            *tyz_z = az * *tyz_z + bz * mu * g;
-        });
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let (az, bz) = (az_s[k], bz_s[k]);
+                let g = scratch_r[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.tyz_z[[i, j, k]] = az * state.tyz_z[[i, j, k]] + bz * mu * g;
+            }
+        }
+    }
 
     // ── Derivatives of vz ────────────────────────────────────────────────
     fft_3d_array_into(&velocity.vz, &mut spec_in.vz);
@@ -135,43 +140,45 @@ pub(super) fn update_stress_subfields(
     // ∂_x vz → txz_x (μ)
     spectral_mul_x(&spec_in.vz, op_x_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.txz_x.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(i, _, _), txz_x, &g, &mu| {
-            let (ax, bx) = (ax_s[i], bx_s[i]);
-            *txz_x = ax * *txz_x + bx * mu * g;
-        });
+    for i in 0..nx {
+        let (ax, bx) = (ax_s[i], bx_s[i]);
+        for j in 0..ny {
+            for k in 0..nz {
+                let g = scratch_r[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.txz_x[[i, j, k]] = ax * state.txz_x[[i, j, k]] + bx * mu * g;
+            }
+        }
+    }
 
     // ∂_y vz → tyz_y (μ)
     spectral_mul_y(&spec_in.vz, op_y_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.tyz_y.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(_, j, _), tyz_y, &g, &mu| {
+    for i in 0..nx {
+        for j in 0..ny {
             let (ay, by) = (ay_s[j], by_s[j]);
-            *tyz_y = ay * *tyz_y + by * mu * g;
-        });
+            for k in 0..nz {
+                let g = scratch_r[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.tyz_y[[i, j, k]] = ay * state.tyz_y[[i, j, k]] + by * mu * g;
+            }
+        }
+    }
 
     // ∂_z vz → txx_z (λ), tyy_z (λ), tzz_z (λ+2μ)
     spectral_mul_z(&spec_in.vz, op_z_neg, kappa, &mut spec_scratch.vx);
     ifft_3d_array_into(&mut spec_scratch.vx, scratch_r);
-    Zip::indexed(state.tzz_z.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_lambda.view())
-        .and(medium.lame_mu.view())
-        .for_each(|(_, _, k), tzz_z, &g, &lam, &mu| {
-            let (az, bz) = (az_s[k], bz_s[k]);
-            *tzz_z = az * *tzz_z + bz * (lam + 2.0 * mu) * g;
-        });
-    Zip::indexed(state.txx_z.view_mut())
-        .and(state.tyy_z.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_lambda.view())
-        .for_each(|(_, _, k), txx_z, tyy_z, &g, &lam| {
-            let (az, bz) = (az_s[k], bz_s[k]);
-            *txx_z = az * *txx_z + bz * lam * g;
-            *tyy_z = az * *tyy_z + bz * lam * g;
-        });
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let (az, bz) = (az_s[k], bz_s[k]);
+                let g = scratch_r[[i, j, k]];
+                let lam = medium.lame_lambda[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                state.tzz_z[[i, j, k]] = az * state.tzz_z[[i, j, k]] + bz * (lam + 2.0 * mu) * g;
+                state.txx_z[[i, j, k]] = az * state.txx_z[[i, j, k]] + bz * lam * g;
+                state.tyy_z[[i, j, k]] = az * state.tyy_z[[i, j, k]] + bz * lam * g;
+            }
+        }
+    }
 }

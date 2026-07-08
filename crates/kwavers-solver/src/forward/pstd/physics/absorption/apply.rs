@@ -43,6 +43,7 @@ use crate::pstd::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{s, Array3, ArrayView3};
 
@@ -57,10 +58,10 @@ fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
 }
 
 fn build_weighted_divergence(
-    output: &mut Array3<f64>,
-    div_x: &Array3<f64>,
-    div_y: &Array3<f64>,
-    div_z: &Array3<f64>,
+    output: &mut LetoArray3<f64>,
+    div_x: &LetoArray3<f64>,
+    div_y: &LetoArray3<f64>,
+    div_z: &LetoArray3<f64>,
     rho0: &Array3<f64>,
 ) {
     assert_eq!(
@@ -85,10 +86,10 @@ fn build_weighted_divergence(
     );
 
     if let (Some(output_values), Some(x_values), Some(y_values), Some(z_values), Some(rho_values)) = (
-        output.as_slice_memory_order_mut(),
-        div_x.as_slice_memory_order(),
-        div_y.as_slice_memory_order(),
-        div_z.as_slice_memory_order(),
+        output.as_slice_mut(),
+        div_x.as_slice(),
+        div_y.as_slice(),
+        div_z.as_slice(),
         rho0.as_slice_memory_order(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
@@ -97,7 +98,7 @@ fn build_weighted_divergence(
         return;
     }
 
-    let (nx, ny, nz) = output.dim();
+    let [nx, ny, nz] = output.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -108,15 +109,15 @@ fn build_weighted_divergence(
     }
 }
 
-fn multiply_spectral_operator(spectrum: &mut Array3<Complex64>, operator: ArrayView3<'_, f64>) {
+fn multiply_spectral_operator(spectrum: &mut LetoArray3<Complex64>, operator: ArrayView3<'_, f64>) {
     assert_eq!(
         spectrum.shape(),
         operator.shape(),
         "invariant: absorption spectral field shape matches spectral operator"
     );
 
-    let (_nx, ny, nz) = spectrum.dim();
-    if let Some(spectrum_values) = spectrum.as_slice_memory_order_mut() {
+    let [_nx, ny, nz] = spectrum.shape();
+    if let Some(spectrum_values) = spectrum.as_slice_mut() {
         enumerate_mut_with::<Adaptive, _, _>(spectrum_values, |index, spectrum| {
             let (i, j, k) = dense_indices(index, ny, nz);
             *spectrum *= operator[[i, j, k]];
@@ -124,7 +125,7 @@ fn multiply_spectral_operator(spectrum: &mut Array3<Complex64>, operator: ArrayV
         return;
     }
 
-    let (nx, ny, nz) = spectrum.dim();
+    let [nx, ny, nz] = spectrum.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -135,8 +136,8 @@ fn multiply_spectral_operator(spectrum: &mut Array3<Complex64>, operator: ArrayV
 }
 
 fn accumulate_stratum(
-    accumulator: &mut Array3<f64>,
-    values: &Array3<f64>,
+    accumulator: &mut LetoArray3<f64>,
+    values: &LetoArray3<f64>,
     bracket_lo: &Array3<u32>,
     weight_hi: &Array3<f64>,
     stratum: u32,
@@ -158,8 +159,8 @@ fn accumulate_stratum(
     );
 
     if let (Some(acc_values), Some(value_values), Some(lo_values), Some(weight_values)) = (
-        accumulator.as_slice_memory_order_mut(),
-        values.as_slice_memory_order(),
+        accumulator.as_slice_mut(),
+        values.as_slice(),
         bracket_lo.as_slice_memory_order(),
         weight_hi.as_slice_memory_order(),
     ) {
@@ -177,7 +178,7 @@ fn accumulate_stratum(
         return;
     }
 
-    let (nx, ny, nz) = accumulator.dim();
+    let [nx, ny, nz] = accumulator.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -196,12 +197,12 @@ fn accumulate_stratum(
 }
 
 fn apply_pressure_absorption(
-    pressure: &mut Array3<f64>,
+    pressure: &mut LetoArray3<f64>,
     c0: &Array3<f64>,
     tau: &Array3<f64>,
     eta: &Array3<f64>,
-    l1: &Array3<f64>,
-    l2: &Array3<f64>,
+    l1: &LetoArray3<f64>,
+    l2: &LetoArray3<f64>,
 ) {
     assert_eq!(
         pressure.shape(),
@@ -237,12 +238,12 @@ fn apply_pressure_absorption(
         Some(l1_values),
         Some(l2_values),
     ) = (
-        pressure.as_slice_memory_order_mut(),
+        pressure.as_slice_mut(),
         c0.as_slice_memory_order(),
         tau.as_slice_memory_order(),
         eta.as_slice_memory_order(),
-        l1.as_slice_memory_order(),
-        l2.as_slice_memory_order(),
+        l1.as_slice(),
+        l2.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
             let c = c0_values[index];
@@ -254,7 +255,8 @@ fn apply_pressure_absorption(
         return;
     }
 
-    let (nx, ny, nz) = pressure.dim();
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -302,7 +304,7 @@ impl PSTDSolver {
         };
 
         // R2C output is half-spectrum along z: shape (nx, ny, nz_c=nz/2+1).
-        let nz_c = self.grad_k.dim().2;
+        let nz_c = self.grad_k.shape()[2];
 
         if let Some(strata) = &abs.strata {
             // ── Stratified path: spatially-varying exponent y(x) (beyond k-Wave).

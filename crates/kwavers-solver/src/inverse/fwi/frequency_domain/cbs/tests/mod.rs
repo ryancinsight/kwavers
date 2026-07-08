@@ -13,8 +13,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::Array3;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 mod absorbing;
 mod grid_green;

@@ -8,7 +8,7 @@ use super::super::csr::CompressedSparseRowMatrix;
 use super::IterativeSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, ArrayView1};
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 impl IterativeSolver {
     /// BiCGSTAB for real non-symmetric sparse systems.
@@ -151,7 +151,8 @@ impl IterativeSolver {
             }
 
             let beta = (rho / rho_prev) * (alpha / omega);
-            p = &r + beta * (&p - omega * &v);
+            let omega_v = v.mapv(|value| value * omega);
+            p = &r + (&p - &omega_v).mapv(|value| value * beta);
 
             v = a.multiply_vector(p.view())?;
 
@@ -166,11 +167,12 @@ impl IterativeSolver {
                 rho / r0_v
             };
 
-            let s = &r - alpha * &v;
+            let alpha_v = v.mapv(|value| value * alpha);
+            let s = &r - &alpha_v;
 
             let s_norm = s.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
             if s_norm < self.config.tolerance {
-                x = x + alpha * p;
+                x = x + p.mapv(|value| value * alpha);
                 return Ok(x);
             }
 
@@ -189,8 +191,8 @@ impl IterativeSolver {
                 t_s_dot / t_norm_sqr
             };
 
-            x = x + alpha * &p + omega * &s;
-            r = s - omega * t;
+            x = x + p.mapv(|value| value * alpha) + s.mapv(|value| value * omega);
+            r = s - t.mapv(|value| value * omega);
 
             let residual_norm = r.iter().map(|c| c.norm_sqr()).sum::<f64>().sqrt();
             if residual_norm < self.config.tolerance {

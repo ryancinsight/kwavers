@@ -3,11 +3,10 @@
 //! Covers: circular-piston directivity (O'Neil 1949), linear array factor,
 //! grating-lobe prediction, and apodization windows.
 
+use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::fft_1d_array;
 use kwavers_math::signal::ApodizationType;
 use kwavers_math::special::bessel::j1;
-use ndarray::Array1;
 
 // ─── Directivity ──────────────────────────────────────────────────────────────
 
@@ -234,7 +233,9 @@ pub fn apodization_window_response(
     let weights = apodization_weights(n_elements, window_type);
     let mut padded = vec![0.0; nfft];
     padded[..n_elements].copy_from_slice(&weights);
-    let spectrum = fft_1d_array(&Array1::from_vec(padded));
+    let fft_input = leto::Array1::from_shape_vec([nfft], padded)
+        .expect("padded apodization length must match Leto FFT shape");
+    let spectrum = fft_1d_leto(fft_input.view());
     let shift = nfft / 2;
     let magnitudes: Vec<f64> = (0..nfft)
         .map(|idx| spectrum[(idx + shift) % nfft].norm())

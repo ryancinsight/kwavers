@@ -9,7 +9,7 @@ use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteer
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use ndarray::Array3;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum using complex snapshots and Hermitian covariance.
 ///

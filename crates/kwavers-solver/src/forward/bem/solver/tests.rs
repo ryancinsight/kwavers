@@ -2,7 +2,7 @@ use super::*;
 use crate::forward::bem::field::BemSolution;
 use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 fn create_test_mesh() -> TetrahedralMesh {
     let mut mesh = TetrahedralMesh::new();

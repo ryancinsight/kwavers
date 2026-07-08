@@ -1,8 +1,7 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
-use nalgebra::{Matrix3, Vector3};
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::sparse::solver::SparsePreconditioner;
@@ -38,7 +37,7 @@ impl BemFemCoupler {
         let f = wavenumber * c / (TWO_PI);
         self.bem_solver.config.frequency = f;
         self.bem_solver.config.wavenumber = wavenumber;
-        self.bem_solver.config.coupling_alpha = num_complex::Complex64::new(0.0, 1.0 / wavenumber);
+        self.bem_solver.config.coupling_alpha = kwavers_math::fft::Complex64::new(0.0, 1.0 / wavenumber);
         self.bem_solver.invalidate_matrix();
 
         let normals = compute_vertex_normals(&self.bem_solver.vertices, &self.bem_solver.triangles);
@@ -47,7 +46,7 @@ impl BemFemCoupler {
             &normals,
             [1.0, 0.0, 0.0],
             wavenumber,
-            num_complex::Complex64::new(1.0, 0.0),
+            kwavers_math::fft::Complex64::new(1.0, 0.0),
         );
 
         let p_surface = self.bem_solver.solve_rigid(p_inc, dp_inc_dn)?;
@@ -80,34 +79,37 @@ impl BemFemCoupler {
 
         // Reference-element shape-function gradients for linear tetrahedra.
         let grad_ref = [
-            Vector3::new(-1.0, -1.0, -1.0),
-            Vector3::new(1.0, 0.0, 0.0),
-            Vector3::new(0.0, 1.0, 0.0),
-            Vector3::new(0.0, 0.0, 1.0),
+            [-1.0, -1.0, -1.0],
+            [1.0, 0.0, 0.0],
+            [0.0, 1.0, 0.0],
+            [0.0, 0.0, 1.0],
         ];
 
         for element in &fem_mesh.elements {
             let n_indices = element.nodes;
-            let p0 = Vector3::from(fem_mesh.nodes[n_indices[0]].coordinates);
-            let p1 = Vector3::from(fem_mesh.nodes[n_indices[1]].coordinates);
-            let p2 = Vector3::from(fem_mesh.nodes[n_indices[2]].coordinates);
-            let p3 = Vector3::from(fem_mesh.nodes[n_indices[3]].coordinates);
+            let p0 = fem_mesh.nodes[n_indices[0]].coordinates;
+            let p1 = fem_mesh.nodes[n_indices[1]].coordinates;
+            let p2 = fem_mesh.nodes[n_indices[2]].coordinates;
+            let p3 = fem_mesh.nodes[n_indices[3]].coordinates;
 
-            let jacobian = Matrix3::from_columns(&[p1 - p0, p2 - p0, p3 - p0]);
+            let c0 = vec3_sub(p1, p0);
+            let c1 = vec3_sub(p2, p0);
+            let c2 = vec3_sub(p3, p0);
+            let jacobian = mat3_from_columns(c0, c1, c2);
 
-            if let Some(inv_j) = jacobian.try_inverse() {
-                let inv_j_t = inv_j.transpose();
-                let det_j = jacobian.determinant().abs();
+            if let Some(inv_j) = mat3_inv(&jacobian) {
+                let inv_j_t = mat3_transpose(&inv_j);
+                let det_j = mat3_det(&jacobian).abs();
                 let volume = det_j / 6.0;
 
-                let mut grads = [Vector3::zeros(); 4];
+                let mut grads = [[0.0; 3]; 4];
                 for k in 0..4 {
-                    grads[k] = inv_j_t * grad_ref[k];
+                    grads[k] = mat3_vec_mul(&inv_j_t, &grad_ref[k]);
                 }
 
                 for i in 0..4 {
                     for j in 0..4 {
-                        let k_val = grads[i].dot(&grads[j]) * volume;
+                        let k_val = vec3_dot(grads[i], grads[j]) * volume;
                         let delta = if i == j { 1.0 } else { 0.0 };
                         let m_val = (1.0 + delta) * volume / 20.0;
                         let val =
@@ -150,7 +152,7 @@ impl BemFemCoupler {
     ) -> KwaversResult<()> {
         let num_nodes = matrix.rows;
         let penalty = 1.0e14;
-        let mut rhs = Array1::<Complex64>::zeros(num_nodes);
+        let mut rhs = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
 
         for &node_idx in &self.interface.fem_interface_nodes {
             if node_idx < num_nodes {
@@ -176,4 +178,75 @@ impl BemFemCoupler {
 
         Ok(())
     }
+}
+
+type Mat3 = [[f64; 3]; 3];
+
+#[inline]
+fn vec3_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn vec3_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0].mul_add(b[0], a[1].mul_add(b[1], a[2] * b[2]))
+}
+
+#[inline]
+fn mat3_from_columns(c0: [f64; 3], c1: [f64; 3], c2: [f64; 3]) -> Mat3 {
+    [
+        [c0[0], c1[0], c2[0]],
+        [c0[1], c1[1], c2[1]],
+        [c0[2], c1[2], c2[2]],
+    ]
+}
+
+#[inline]
+fn mat3_det(m: &Mat3) -> f64 {
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+}
+
+#[inline]
+fn mat3_transpose(m: &Mat3) -> Mat3 {
+    [
+        [m[0][0], m[1][0], m[2][0]],
+        [m[0][1], m[1][1], m[2][1]],
+        [m[0][2], m[1][2], m[2][2]],
+    ]
+}
+
+#[inline]
+fn mat3_vec_mul(m: &Mat3, v: &[f64; 3]) -> [f64; 3] {
+    [
+        m[0][0].mul_add(v[0], m[0][1].mul_add(v[1], m[0][2] * v[2])),
+        m[1][0].mul_add(v[0], m[1][1].mul_add(v[1], m[1][2] * v[2])),
+        m[2][0].mul_add(v[0], m[2][1].mul_add(v[1], m[2][2] * v[2])),
+    ]
+}
+
+fn mat3_inv(m: &Mat3) -> Option<Mat3> {
+    let det = mat3_det(m);
+    if det.abs() < 1e-14 {
+        return None;
+    }
+    let inv_det = 1.0 / det;
+    Some([
+        [
+            (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv_det,
+            (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv_det,
+            (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv_det,
+        ],
+        [
+            (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv_det,
+            (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv_det,
+            (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv_det,
+        ],
+        [
+            (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv_det,
+            (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv_det,
+            (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv_det,
+        ],
+    ])
 }

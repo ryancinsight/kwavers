@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
+use kwavers_math::fft::Complex64;
 
 use super::operator::{HelmholtzForwardOperator, SingleScatterBornOperator};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;

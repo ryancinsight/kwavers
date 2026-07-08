@@ -40,10 +40,12 @@
 //!   §4.2.1, eq. (4.2.3).
 
 use super::KZKConfig;
+use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
+use leto::Array1 as LetoArray1;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3};
+use ndarray::Array3;
+use kwavers_math::fft::Complex64;
 
 /// Nonlinear operator for the KZK equation.
 ///
@@ -199,7 +201,7 @@ impl KzkNonlinearOperator {
             delta_values,
             slab_len,
             |i, delta_slab| {
-                let mut w = Array1::<Complex64>::zeros(nt);
+                let mut w = LetoArray1::<ApolloComplex64>::zeros([nt]);
                 let pressure_slab = &pressure_values[i * slab_len..(i + 1) * slab_len];
                 for j in 0..ny {
                     let row_start = j * nt;
@@ -208,7 +210,7 @@ impl KzkNonlinearOperator {
 
                     // Step 1: fill per-thread scratch with Re[p] as complex input.
                     for (w_t, p_t) in w.iter_mut().zip(pressure_row.iter()) {
-                        *w_t = Complex64::new(p_t.re, 0.0);
+                        *w_t = ApolloComplex64::new(p_t.re, 0.0);
                     }
 
                     // Step 2: forward FFT (no normalisation).
@@ -224,11 +226,11 @@ impl KzkNonlinearOperator {
                         let omega_k = freq_k * two_pi_over_n_dt;
                         let re = w[k].re;
                         let im = w[k].im;
-                        w[k] = Complex64::new(-im * omega_k, re * omega_k);
+                        w[k] = ApolloComplex64::new(-im * omega_k, re * omega_k);
                     }
                     // Zero Nyquist to guarantee real-valued derivative.
                     if nt.is_multiple_of(2) {
-                        w[nt / 2] = Complex64::new(0.0, 0.0);
+                        w[nt / 2] = ApolloComplex64::new(0.0, 0.0);
                     }
 
                     // Step 4: inverse FFT (includes 1/N normalisation).

@@ -2,7 +2,7 @@
 //!
 //! These types are shared between the runner dispatch and per-solver modules.
 
-use ndarray::Array3;
+use ndarray::Array3 as NdArray3;
 
 use crate::configs::{
     HelmholtzConfig, NonlinearConfig, PmlConfig, PoroelasticConfig, ThermalConfig,
@@ -16,13 +16,14 @@ use kwavers_solver::forward::fdtd::config::KSpaceCorrectionMode;
 use kwavers_solver::forward::pstd::config::CompatibilityMode;
 use kwavers_solver::forward::pstd::extensions::ElasticPstdVelocitySource;
 use kwavers_source::GridSource;
+use leto::Array3 as LetoArray3;
 
 // ============================================================================
 // Full-grid statistics
 // ============================================================================
 
 /// Full-grid pressure statistics bundle: (p_max, p_min, p_rms, p_final).
-pub type FullGridStats = Option<(Array3<f64>, Array3<f64>, Array3<f64>, Array3<f64>)>;
+pub type FullGridStats = Option<(LetoArray3<f64>, LetoArray3<f64>, LetoArray3<f64>, LetoArray3<f64>)>;
 
 /// Extract full-grid `(p_max, p_min, p_rms, p_final)` from a recorder.
 pub fn extract_full_grid_stats(recorder: &SensorRecorder) -> FullGridStats {
@@ -70,9 +71,9 @@ pub struct SimulationRunResult {
     /// Full-grid pressure-statistics field.
     pub full_grid_stats: FullGridStats,
     /// Final temperature field (nx, ny, nz) [K]. `None` for acoustic-only runs.
-    pub thermal_temperature: Option<Array3<f64>>,
+    pub thermal_temperature: Option<NdArray3<f64>>,
     /// CEM43 thermal dose field (nx, ny, nz) [min].
-    pub thermal_dose: Option<Array3<f64>>,
+    pub thermal_dose: Option<NdArray3<f64>>,
 }
 
 // ============================================================================
@@ -98,7 +99,7 @@ pub struct SimulationRunRequest<'a> {
     pub axisymmetric: bool,
 
     pub grid_source: GridSource,
-    pub sensor_mask: Option<Array3<bool>>,
+    pub sensor_mask: Option<NdArray3<bool>>,
     pub transducer_ordered_indices: Option<Vec<(usize, usize, usize)>>,
     pub record_modes: Vec<String>,
     pub record_start_index: usize,

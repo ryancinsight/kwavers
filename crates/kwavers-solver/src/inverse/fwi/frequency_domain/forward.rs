@@ -12,8 +12,8 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
     sound_speed_to_slowness, MultiRowRingArray,
 };
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
+use kwavers_math::fft::Complex64;
 
 /// Simulate complex receiver pressure for all cylindrical-wave transmits.
 ///
@@ -60,7 +60,8 @@ pub(super) fn predict_born_rows(
     config: &Config,
     transmissions: usize,
 ) -> KwaversResult<Array2<Complex64>> {
-    let (nx, ny, nz) = slowness_s_per_m.dim();
+    let shape = slowness_s_per_m.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     let cell_volume = config.spacing_m.powi(3);
     let omega = TWO_PI * frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
@@ -69,7 +70,7 @@ pub(super) fn predict_born_rows(
     let centers = voxel_centers((nx, ny, nz), config.spacing_m);
     let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
 
-    let mut output = Array2::zeros((transmissions, array.element_count()));
+    let mut output = Array2::zeros([transmissions, array.element_count()]);
     for transmit in 0..transmissions {
         let sources = array.cylindrical_source(transmit);
         let incident = incident_field(&sources, &centers, reference_wavenumber, min_distance);
@@ -105,14 +106,16 @@ pub(super) fn predict_cbs_rows(
     let omega = TWO_PI * frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
-    let grid = GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?;
+    let shape = slowness_s_per_m.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    let grid = GridSpec::new((nx, ny, nz), config.spacing_m)?;
     let potential = real_scattering_potential_for_operator(
         omega,
         slowness_s_per_m,
         reference_slowness,
         operator,
     )?;
-    let mut output = Array2::zeros((transmissions, array.element_count()));
+    let mut output = Array2::zeros([transmissions, array.element_count()]);
     for transmit in 0..transmissions {
         let source_density = source_density_for_operator(
             grid,
@@ -202,7 +205,7 @@ pub(super) fn validate_forward_inputs(
     config: &Config,
     transmissions: usize,
 ) -> KwaversResult<()> {
-    if slowness_s_per_m.is_empty() {
+    if slowness_s_per_m.shape().contains(&0) {
         return Err(KwaversError::InvalidInput(
             "FWI slowness volume must be nonempty".to_owned(),
         ));
@@ -219,9 +222,11 @@ pub(super) fn validate_forward_inputs(
         )));
     }
     validate_config(config)?;
-    config
-        .forward_operator
-        .validate_for_grid(GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?)?;
+    config.forward_operator.validate_for_grid({
+        let shape = slowness_s_per_m.shape();
+        let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+        GridSpec::new((nx, ny, nz), config.spacing_m)?
+    })?;
     for &slowness in slowness_s_per_m.iter() {
         if !slowness.is_finite() || slowness <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(

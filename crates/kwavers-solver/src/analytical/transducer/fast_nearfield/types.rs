@@ -1,7 +1,7 @@
 //! FNM configuration and supporting types.
 
-use kwavers_math::fft::Complex64;
 use ndarray::Array2;
+use kwavers_math::fft::Complex64;
 
 /// Configuration for Fast Nearfield Method
 #[derive(Debug, Clone)]

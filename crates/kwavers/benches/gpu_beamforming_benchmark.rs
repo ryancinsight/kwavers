@@ -60,9 +60,6 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 use ndarray::{Array1, Array2};
 
-#[cfg(feature = "pinn")]
-use kwavers_analysis::signal_processing::beamforming::gpu::{beamform_cpu, BurnDasBeamformer};
-
 /// Benchmark configuration for a specific problem size
 #[derive(Debug, Clone)]
 struct BenchmarkConfig {
@@ -175,6 +172,43 @@ impl BenchmarkConfig {
     }
 }
 
+fn beamform_cpu(
+    rf_data: &Array2<f32>,
+    element_positions: &Array2<f32>,
+    focal_grid: &Array2<f32>,
+    apodization: &Array1<f32>,
+    speed_of_sound: f32,
+    sample_rate: f32,
+) -> Array1<f32> {
+    let num_channels = rf_data.nrows();
+    let num_samples = rf_data.ncols();
+    let num_focal_points = focal_grid.nrows();
+    let mut output = Array1::<f32>::zeros(num_focal_points);
+
+    for fp_idx in 0..num_focal_points {
+        let focal_point = focal_grid.row(fp_idx);
+        let mut sum = 0.0;
+
+        for ch in 0..num_channels {
+            let elem_pos = element_positions.row(ch);
+            let dx = focal_point[0] - elem_pos[0];
+            let dy = focal_point[1] - elem_pos[1];
+            let dz = focal_point[2] - elem_pos[2];
+            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
+            let time_delay = distance / speed_of_sound;
+            let sample_idx = (time_delay * sample_rate) as usize;
+
+            if sample_idx < num_samples {
+                sum += apodization[ch] * rf_data[[ch, sample_idx]];
+            }
+        }
+
+        output[fp_idx] = sum;
+    }
+
+    output
+}
+
 /// Benchmark CPU beamforming (baseline)
 fn bench_cpu_beamforming(c: &mut Criterion) {
     let mut group = c.benchmark_group("beamforming_cpu");
@@ -199,36 +233,14 @@ fn bench_cpu_beamforming(c: &mut Criterion) {
             &config,
             |b, _cfg| {
                 b.iter(|| {
-                    // Simple DAS implementation for CPU baseline
-                    let mut output = Array1::<f32>::zeros(config.num_focal_points() as usize);
-
-                    for fp_idx in 0..config.num_focal_points() as usize {
-                        let focal_point = focal_grid.row(fp_idx);
-                        let mut sum = 0.0;
-
-                        for ch in 0..config.num_channels {
-                            let elem_pos = element_positions.row(ch);
-
-                            // Compute distance
-                            let dx = focal_point[0] - elem_pos[0];
-                            let dy = focal_point[1] - elem_pos[1];
-                            let dz = focal_point[2] - elem_pos[2];
-                            let distance = (dx * dx + dy * dy + dz * dz).sqrt();
-
-                            // Compute delay in samples
-                            let time_delay = distance / config.speed_of_sound;
-                            let sample_delay = time_delay * config.sample_rate;
-                            let sample_idx = sample_delay as usize;
-
-                            // Accumulate (nearest-neighbor interpolation)
-                            if sample_idx < config.num_samples {
-                                sum += apodization[ch] * rf_data[[ch, sample_idx]];
-                            }
-                        }
-
-                        output[fp_idx] = sum;
-                    }
-
+                    let output = beamform_cpu(
+                        &rf_data,
+                        &element_positions,
+                        &focal_grid,
+                        &apodization,
+                        config.speed_of_sound,
+                        config.sample_rate,
+                    );
                     black_box(output)
                 });
             },
@@ -238,7 +250,7 @@ fn bench_cpu_beamforming(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark GPU beamforming using Burn framework (WGPU backend)
+/// Benchmark GPU beamforming using Coeus autodiff stack (WGPU backend)
 #[cfg(feature = "pinn")]
 fn bench_gpu_beamforming_wgpu(c: &mut Criterion) {
     let mut group = c.benchmark_group("beamforming_gpu_wgpu");
@@ -280,10 +292,10 @@ fn bench_gpu_beamforming_wgpu(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark GPU beamforming using Burn framework (NdArray backend for comparison)
+/// Benchmark GPU beamforming using Coeus autodiff stack (NdArray backend for comparison)
 #[cfg(feature = "pinn")]
 fn bench_gpu_beamforming_ndarray(c: &mut Criterion) {
-    let mut group = c.benchmark_group("beamforming_burn_ndarray");
+    let mut group = c.benchmark_group("beamforming_pinn_cpu");
 
     let configs = vec![BenchmarkConfig::small(), BenchmarkConfig::medium()];
 
@@ -296,11 +308,11 @@ fn bench_gpu_beamforming_ndarray(c: &mut Criterion) {
         group.throughput(Throughput::Elements(config.num_focal_points()));
 
         group.bench_with_input(
-            BenchmarkId::new("burn_ndarray", config.name),
+            BenchmarkId::new("pinn_cpu", config.name),
             &config,
             |b, _cfg| {
                 b.iter(|| {
-                    // Use CPU convenience function which uses Burn NdArray backend
+                    // Use CPU convenience function which uses Coeus CPU backend
                     let result = beamform_cpu(
                         black_box(&rf_data),
                         black_box(&element_positions),

@@ -5,7 +5,7 @@
 
 use crate::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::inverse::pinn::ml::meta_learning::types::{PdeType, PhysicsTask};
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use crate::inverse::pinn::ml::WaveGeometry2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[derive(Debug)]
@@ -95,9 +95,9 @@ impl TaskSampler {
                             };
 
                             let geometry_complexity = match task.geometry.as_ref() {
-                                BurnWave2dGeometry::Rectangular { .. } => 1.0,
-                                BurnWave2dGeometry::Circular { .. } => 2.0,
-                                BurnWave2dGeometry::MultiRegion { .. } => 4.0,
+                                WaveGeometry2D::Rectangular { .. } => 1.0,
+                                WaveGeometry2D::Circular { .. } => 2.0,
+                                WaveGeometry2D::MultiRegion { .. } => 4.0,
                                 _ => 3.0, // Default for other geometries
                             };
 
@@ -160,9 +160,9 @@ impl TaskSampler {
                                 1.0
                             };
                             let geometry_diversity = match task.geometry.as_ref() {
-                                BurnWave2dGeometry::Rectangular { .. } => 0.5,
-                                BurnWave2dGeometry::Circular { .. } => 0.7,
-                                BurnWave2dGeometry::MultiRegion { .. } => 1.0,
+                                WaveGeometry2D::Rectangular { .. } => 0.5,
+                                WaveGeometry2D::Circular { .. } => 0.7,
+                                WaveGeometry2D::MultiRegion { .. } => 1.0,
                                 _ => 0.8,
                             };
                             let score = type_diversity * geometry_diversity;

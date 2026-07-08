@@ -1,6 +1,7 @@
 //! Internal helpers: operator parsing, boundary parsing, array conversion,
 //! observation stack construction, and error conversion for breast FWI bindings.
 
+use super::complex_compat::{nc_to_ec2, nd_to_leto2};
 use kwavers_solver::inverse::fwi::frequency_domain::{
     AbsorbingBoundary, Config, DenseConvergentBornOperator, FrequencyObservation,
     HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
@@ -135,7 +136,9 @@ pub(super) fn observations_from_stack(
         .map(|(index, &frequency_hz)| {
             FrequencyObservation::new(
                 frequency_hz,
-                observed_pressure.slice(s![index, .., ..]).to_owned(),
+                nd_to_leto2(nc_to_ec2(
+                    observed_pressure.slice(s![index, .., ..]).to_owned(),
+                )),
             )
         })
         .collect())

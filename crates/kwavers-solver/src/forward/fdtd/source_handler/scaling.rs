@@ -1,7 +1,22 @@
 use super::SourceHandler;
 use kwavers_grid::Grid;
 use kwavers_source::SourceMode;
-use ndarray::Array3;
+
+pub(crate) trait Array3ValueAccess {
+    fn at(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl Array3ValueAccess for leto::Array3<f64> {
+    fn at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
+
+impl Array3ValueAccess for ndarray::Array3<f64> {
+    fn at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
 
 impl SourceHandler {
     /// Precompute per-voxel source_kappa for velocity source injection.
@@ -14,9 +29,9 @@ impl SourceHandler {
     ///
     /// `source_kappa_fft`: the `(Nx,Ny,Nz)` k-space correction array in **standard FFT
     /// order** (`kappa_fft[0,0,0]` = 1.0 at DC). The ifftshift mapping is applied here.
-    pub fn set_velocity_source_kappa(
+    pub(crate) fn set_velocity_source_kappa(
         &mut self,
-        source_kappa_fft: &Array3<f64>,
+        source_kappa_fft: &impl Array3ValueAccess,
         grid_nx: usize,
         grid_ny: usize,
         grid_nz: usize,
@@ -28,7 +43,7 @@ impl SourceHandler {
                 let ki = (i + grid_nx / 2) % grid_nx;
                 let kj = (j + grid_ny / 2) % grid_ny;
                 let kk = (k + grid_nz / 2) % grid_nz;
-                source_kappa_fft[[ki, kj, kk]]
+                source_kappa_fft.at(ki, kj, kk)
             })
             .collect();
     }
@@ -60,7 +75,12 @@ impl SourceHandler {
     /// `grid.nα == 1` means there is no propagation along α), the per-axis
     /// scale is still computed and applied; the velocity field along that
     /// axis is simply zero everywhere so the multiplication is a no-op.
-    pub fn prepare_velocity_source_scaling(&mut self, grid: &Grid, c0: &Array3<f64>, dt: f64) {
+    pub(crate) fn prepare_velocity_source_scaling(
+        &mut self,
+        grid: &Grid,
+        c0: &impl Array3ValueAccess,
+        dt: f64,
+    ) {
         if self.u_indices.is_empty() {
             self.u_scale_x.clear();
             self.u_scale_y.clear();
@@ -77,7 +97,7 @@ impl SourceHandler {
         self.u_scale_z = Vec::with_capacity(n);
 
         for &(i, j, k, _weight) in &self.u_indices {
-            let c0_val = c0[[i, j, k]];
+            let c0_val = c0.at(i, j, k);
             let (sx, sy, sz) = match self.source.u_mode {
                 SourceMode::Dirichlet => (1.0_f64, 1.0_f64, 1.0_f64),
                 SourceMode::Additive | SourceMode::AdditiveNoCorrection => (
@@ -95,7 +115,12 @@ impl SourceHandler {
     /// Precompute k-Wave compatible pressure source scaling for mass (rho) and pressure updates.
     ///
     /// This mirrors `scale_source_terms` in k-Wave for additive/dirichlet modes on a uniform grid.
-    pub fn prepare_pressure_source_scaling(&mut self, grid: &Grid, c0: &Array3<f64>, dt: f64) {
+    pub(crate) fn prepare_pressure_source_scaling(
+        &mut self,
+        grid: &Grid,
+        c0: &impl Array3ValueAccess,
+        dt: f64,
+    ) {
         if self.p_indices.is_empty() {
             self.p_scale_rho.clear();
             self.p_scale_p.clear();
@@ -124,7 +149,7 @@ impl SourceHandler {
         self.p_scale_p = Vec::with_capacity(self.p_indices.len());
 
         for &(i, j, k, _weight) in &self.p_indices {
-            let c0_val = c0[[i, j, k]];
+            let c0_val = c0.at(i, j, k);
             let (scale_rho, scale_p) = match self.source.p_mode {
                 SourceMode::Dirichlet => {
                     let rho_scale = 1.0 / (n_dim * c0_val * c0_val);

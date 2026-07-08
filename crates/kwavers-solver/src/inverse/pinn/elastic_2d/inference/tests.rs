@@ -1,7 +1,6 @@
 use super::*;
 use crate::inverse::pinn::elastic_2d::Config;
 
-
 type TestBackend = coeus_core::MoiraiBackend;
 
 #[test]

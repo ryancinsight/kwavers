@@ -12,6 +12,17 @@ use kwavers_solver::interface::Solver;
 use kwavers_source::GridSource;
 use ndarray::{Array2, Array3, ArrayView3};
 
+fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("benchmark pressure field must be contiguous"),
+    )
+    .expect("benchmark pressure field shape must match contiguous storage")
+}
+
 /// Benchmark configuration
 #[derive(Debug, Clone)]
 struct BenchmarkConfig {
@@ -100,9 +111,11 @@ fn run_fdtd_benchmark(
 
     // Calculate metrics
     let final_field = solver.pressure_field();
-    let memory_usage = final_field.len() * std::mem::size_of::<f64>();
-    let final_energy = calculate_energy(final_field.view());
-    let stability_metric = calculate_stability(final_field.view());
+    let shape = final_field.shape();
+    let memory_usage = shape[0] * shape[1] * shape[2] * std::mem::size_of::<f64>();
+    let final_field_view = leto_view3(final_field);
+    let final_energy = calculate_energy(final_field_view);
+    let stability_metric = calculate_stability(final_field_view);
 
     BenchmarkResult {
         solver_name: "FDTD".to_string(),
@@ -139,9 +152,11 @@ fn run_pstd_benchmark(
 
     // Calculate metrics
     let final_field = solver.pressure_field();
-    let memory_usage = final_field.len() * std::mem::size_of::<f64>();
-    let final_energy = calculate_energy(final_field.view());
-    let stability_metric = calculate_stability(final_field.view());
+    let shape = final_field.shape();
+    let memory_usage = shape[0] * shape[1] * shape[2] * std::mem::size_of::<f64>();
+    let final_field_view = leto_view3(final_field);
+    let final_energy = calculate_energy(final_field_view);
+    let stability_metric = calculate_stability(final_field_view);
 
     BenchmarkResult {
         solver_name: "PSTD".to_string(),

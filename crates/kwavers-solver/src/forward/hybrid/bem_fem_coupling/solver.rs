@@ -1,7 +1,7 @@
 use super::{BemFemCoupler, BemFemCouplingConfig, BemFemInterface};
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// BEM-FEM Coupled Solver for Helmholtz problems
 #[derive(Debug)]

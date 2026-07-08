@@ -4,7 +4,8 @@ use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array2};
+use leto::Array1;
+use ndarray::Array2;
 
 #[test]
 fn test_pam_creation() {
@@ -328,7 +329,8 @@ fn test_event_detection() {
     };
     let pam = DelayAndSumPAM::new(sensors, config).unwrap();
 
-    let intensity_map = Array1::from_vec(vec![0.5, 0.8, 5.0, 1.0, 0.3]);
+    let intensity_map =
+        Array1::from_vec([5], vec![0.5, 0.8, 5.0, 1.0, 0.3]).expect("shape matches map length");
     let grid_points = Array2::from_shape_vec(
         (5, 3),
         vec![
@@ -367,7 +369,7 @@ fn test_event_detection_with_peak_frequency() {
         }
     }
 
-    let intensity_map = Array1::from_vec(vec![2.0]);
+    let intensity_map = Array1::from_vec([1], vec![2.0]).expect("shape matches map length");
     let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
 
     let events = pam

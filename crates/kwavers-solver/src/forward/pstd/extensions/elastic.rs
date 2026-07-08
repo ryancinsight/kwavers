@@ -48,12 +48,11 @@
 //! [`crate::forward`], that duplicate has been deleted; the spectral
 //! primitives — the genuinely useful piece — live here as a PSTD plugin.
 
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::mechanics::elastic_wave::{
     parameters::{StressUpdateParams, VelocityUpdateParams},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
-use ndarray::Zip;
-use num_complex::Complex;
 
 /// Inputs to a single spectral elastic stress update.
 ///
@@ -121,7 +120,7 @@ impl PstdElasticPlugin {
     ///   σ̃ᵧᵤ = dt · μ · (ikᵤ ṽᵧ + ikᵧ ṽᵤ)
     /// ```
     ///
-    /// Parallelised with `Zip::indexed` + `par_for_each`; no heap
+    /// Indexed over the spectral grid with no heap
     /// allocation per call. For `μ ≡ 0` the shear pass produces an
     /// all-zero output and LLVM eliminates it as dead code, recovering
     /// baseline PSTD performance — see the module-level theorem.
@@ -133,57 +132,63 @@ impl PstdElasticPlugin {
         params: &SpectralStressUpdateInputs<'_>,
         out: &mut SpectralStressFields,
     ) {
-        let c_dt = Complex::new(params.dt, 0.0);
+        let c_dt = Complex64::new(params.dt, 0.0);
 
         // ndarray 0.16 Zip supports at most 6 producers (index counts as 1).
         // Pass A — normal stresses: out = current + dt · (λ·∇·v + 2μ·∂vα/∂α).
         // kappa[i,j,k] = sinc(c_ref·dt·|k|/2) is the Tabei et al. (2002)
         // k-space correction that eliminates temporal dispersion; kappa = 1
         // everywhere recovers the uncorrected O(dt²) leapfrog scheme.
-        Zip::indexed(out.txx.view_mut())
-            .and(out.tyy.view_mut())
-            .and(out.tzz.view_mut())
-            .par_for_each(|(i, j, k), o_txx, o_tyy, o_tzz| {
-                let kap = params.kappa[[i, j, k]];
-                let dkx = params.dkx_op[[i, 0, 0]] * kap;
-                let dky = params.dky_op[[j, 0, 0]] * kap;
-                let dkz = params.dkz_op[[k, 0, 0]] * kap;
+        let [nx, ny, nz] = out.txx.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let kap = params.kappa[[i, j, k]];
+                    let dkx = params.dkx_op[[i, 0, 0]] * kap;
+                    let dky = params.dky_op[[j, 0, 0]] * kap;
+                    let dkz = params.dkz_op[[k, 0, 0]] * kap;
 
-                let vx = params.vx_fft[[i, j, k]];
-                let vy = params.vy_fft[[i, j, k]];
-                let vz = params.vz_fft[[i, j, k]];
+                    let vx = params.vx_fft[[i, j, k]];
+                    let vy = params.vy_fft[[i, j, k]];
+                    let vz = params.vz_fft[[i, j, k]];
 
-                let lambda = params.lame_lambda[[i, j, k]];
-                let mu = params.lame_mu[[i, j, k]];
-                let div_v = dkx * vx + dky * vy + dkz * vz;
+                    let lambda = params.lame_lambda[[i, j, k]];
+                    let mu = params.lame_mu[[i, j, k]];
+                    let div_v = dkx * vx + dky * vy + dkz * vz;
 
-                *o_txx =
-                    params.txx_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dkx * vx));
-                *o_tyy =
-                    params.tyy_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dky * vy));
-                *o_tzz =
-                    params.tzz_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dkz * vz));
-            });
+                    out.txx[[i, j, k]] =
+                        params.txx_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dkx * vx));
+                    out.tyy[[i, j, k]] =
+                        params.tyy_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dky * vy));
+                    out.tzz[[i, j, k]] =
+                        params.tzz_fft[[i, j, k]] + c_dt * (lambda * div_v + 2.0 * mu * (dkz * vz));
+                }
+            }
+        }
 
         // Pass B — shear stresses: out = current + dt · μ · (∂vα/∂β + ∂vβ/∂α).
-        Zip::indexed(out.txy.view_mut())
-            .and(out.txz.view_mut())
-            .and(out.tyz.view_mut())
-            .par_for_each(|(i, j, k), o_txy, o_txz, o_tyz| {
-                let kap = params.kappa[[i, j, k]];
-                let dkx = params.dkx_op[[i, 0, 0]] * kap;
-                let dky = params.dky_op[[j, 0, 0]] * kap;
-                let dkz = params.dkz_op[[k, 0, 0]] * kap;
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let kap = params.kappa[[i, j, k]];
+                    let dkx = params.dkx_op[[i, 0, 0]] * kap;
+                    let dky = params.dky_op[[j, 0, 0]] * kap;
+                    let dkz = params.dkz_op[[k, 0, 0]] * kap;
 
-                let vx = params.vx_fft[[i, j, k]];
-                let vy = params.vy_fft[[i, j, k]];
-                let vz = params.vz_fft[[i, j, k]];
-                let mu = params.lame_mu[[i, j, k]];
+                    let vx = params.vx_fft[[i, j, k]];
+                    let vy = params.vy_fft[[i, j, k]];
+                    let vz = params.vz_fft[[i, j, k]];
+                    let mu = params.lame_mu[[i, j, k]];
 
-                *o_txy = params.txy_fft[[i, j, k]] + c_dt * mu * (dky * vx + dkx * vy);
-                *o_txz = params.txz_fft[[i, j, k]] + c_dt * mu * (dkz * vx + dkx * vz);
-                *o_tyz = params.tyz_fft[[i, j, k]] + c_dt * mu * (dkz * vy + dky * vz);
-            });
+                    out.txy[[i, j, k]] =
+                        params.txy_fft[[i, j, k]] + c_dt * mu * (dky * vx + dkx * vy);
+                    out.txz[[i, j, k]] =
+                        params.txz_fft[[i, j, k]] + c_dt * mu * (dkz * vx + dkx * vz);
+                    out.tyz[[i, j, k]] =
+                        params.tyz_fft[[i, j, k]] + c_dt * mu * (dkz * vy + dky * vz);
+                }
+            }
+        }
     }
 
     /// Update the spectral velocity field in place.
@@ -210,40 +215,45 @@ impl PstdElasticPlugin {
         params: &SpectralVelocityUpdateInputs<'_>,
         out: &mut SpectralVelocityFields,
     ) {
-        Zip::indexed(out.vx.view_mut())
-            .and(out.vy.view_mut())
-            .and(out.vz.view_mut())
-            .par_for_each(|(i, j, k), o_vx, o_vy, o_vz| {
-                let rho = params.density[[i, j, k]];
-                if rho <= 0.0 {
-                    *o_vx = params.vx_fft[[i, j, k]];
-                    *o_vy = params.vy_fft[[i, j, k]];
-                    *o_vz = params.vz_fft[[i, j, k]];
-                    return;
+        let [nx, ny, nz] = out.vx.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let rho = params.density[[i, j, k]];
+                    if rho <= 0.0 {
+                        out.vx[[i, j, k]] = params.vx_fft[[i, j, k]];
+                        out.vy[[i, j, k]] = params.vy_fft[[i, j, k]];
+                        out.vz[[i, j, k]] = params.vz_fft[[i, j, k]];
+                        continue;
+                    }
+
+                    let kap = params.kappa[[i, j, k]];
+                    let dkx = params.dkx_op[[i, 0, 0]] * kap;
+                    let dky = params.dky_op[[j, 0, 0]] * kap;
+                    let dkz = params.dkz_op[[k, 0, 0]] * kap;
+                    let c_dt_rho = Complex64::new(params.dt / rho, 0.0);
+
+                    let dtxx_dx = dkx * params.txx_fft[[i, j, k]];
+                    let dtxy_dy = dky * params.txy_fft[[i, j, k]];
+                    let dtxz_dz = dkz * params.txz_fft[[i, j, k]];
+
+                    let dtxy_dx = dkx * params.txy_fft[[i, j, k]];
+                    let dtyy_dy = dky * params.tyy_fft[[i, j, k]];
+                    let dtyz_dz = dkz * params.tyz_fft[[i, j, k]];
+
+                    let dtxz_dx = dkx * params.txz_fft[[i, j, k]];
+                    let dtyz_dy = dky * params.tyz_fft[[i, j, k]];
+                    let dtzz_dz = dkz * params.tzz_fft[[i, j, k]];
+
+                    out.vx[[i, j, k]] =
+                        params.vx_fft[[i, j, k]] + c_dt_rho * (dtxx_dx + dtxy_dy + dtxz_dz);
+                    out.vy[[i, j, k]] =
+                        params.vy_fft[[i, j, k]] + c_dt_rho * (dtxy_dx + dtyy_dy + dtyz_dz);
+                    out.vz[[i, j, k]] =
+                        params.vz_fft[[i, j, k]] + c_dt_rho * (dtxz_dx + dtyz_dy + dtzz_dz);
                 }
-
-                let kap = params.kappa[[i, j, k]];
-                let dkx = params.dkx_op[[i, 0, 0]] * kap;
-                let dky = params.dky_op[[j, 0, 0]] * kap;
-                let dkz = params.dkz_op[[k, 0, 0]] * kap;
-                let c_dt_rho = Complex::new(params.dt / rho, 0.0);
-
-                let dtxx_dx = dkx * params.txx_fft[[i, j, k]];
-                let dtxy_dy = dky * params.txy_fft[[i, j, k]];
-                let dtxz_dz = dkz * params.txz_fft[[i, j, k]];
-
-                let dtxy_dx = dkx * params.txy_fft[[i, j, k]];
-                let dtyy_dy = dky * params.tyy_fft[[i, j, k]];
-                let dtyz_dz = dkz * params.tyz_fft[[i, j, k]];
-
-                let dtxz_dx = dkx * params.txz_fft[[i, j, k]];
-                let dtyz_dy = dky * params.tyz_fft[[i, j, k]];
-                let dtzz_dz = dkz * params.tzz_fft[[i, j, k]];
-
-                *o_vx = params.vx_fft[[i, j, k]] + c_dt_rho * (dtxx_dx + dtxy_dy + dtxz_dz);
-                *o_vy = params.vy_fft[[i, j, k]] + c_dt_rho * (dtxy_dx + dtyy_dy + dtyz_dz);
-                *o_vz = params.vz_fft[[i, j, k]] + c_dt_rho * (dtxz_dx + dtyz_dy + dtzz_dz);
-            });
+            }
+        }
     }
 }
 
@@ -251,10 +261,10 @@ impl PstdElasticPlugin {
 mod tests {
     use super::PstdElasticPlugin;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
+    use kwavers_math::fft::Complex64;
     use kwavers_physics::acoustics::mechanics::elastic_wave::parameters::StressUpdateParams;
     use kwavers_physics::acoustics::mechanics::elastic_wave::spectral_fields::SpectralStressFields;
-    use ndarray::Array3;
-    use num_complex::Complex;
+    use leto::Array3;
 
     /// When μ ≡ 0, the spectral stress kernel produces zero shear stress for any
     /// non-trivial velocity field — the executable counterpart of the
@@ -265,9 +275,12 @@ mod tests {
     fn pstd_elastic_plugin_reduces_to_acoustic_when_mu_is_zero() {
         let (nx, ny, nz) = (8usize, 8, 8);
         let make_v = || {
-            let mut v = Array3::<Complex<f64>>::zeros((nx, ny, nz));
-            for ((i, j, k), x) in v.indexed_iter_mut() {
-                *x = Complex::new((i + j + k) as f64 + 1.0, (i * j + 1) as f64);
+            let mut v = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+            for ([i, j, k], x) in v
+                .indexed_iter_mut()
+                .expect("velocity test fixture is indexable")
+            {
+                *x = Complex64::new((i + j + k) as f64 + 1.0, (i * j + 1) as f64);
             }
             v
         };
@@ -275,24 +288,24 @@ mod tests {
         let vy_fft = make_v();
         let vz_fft = make_v();
 
-        let mut dkx_op = Array3::<Complex<f64>>::zeros((nx, 1, 1));
-        let mut dky_op = Array3::<Complex<f64>>::zeros((ny, 1, 1));
-        let mut dkz_op = Array3::<Complex<f64>>::zeros((nz, 1, 1));
+        let mut dkx_op = Array3::<Complex64>::from_elem([nx, 1, 1], Complex64::default());
+        let mut dky_op = Array3::<Complex64>::from_elem([ny, 1, 1], Complex64::default());
+        let mut dkz_op = Array3::<Complex64>::from_elem([nz, 1, 1], Complex64::default());
         for i in 0..nx {
-            dkx_op[[i, 0, 0]] = Complex::new(0.0, (i + 1) as f64 * 0.1);
+            dkx_op[[i, 0, 0]] = Complex64::new(0.0, (i + 1) as f64 * 0.1);
         }
         for j in 0..ny {
-            dky_op[[j, 0, 0]] = Complex::new(0.0, (j + 1) as f64 * 0.1);
+            dky_op[[j, 0, 0]] = Complex64::new(0.0, (j + 1) as f64 * 0.1);
         }
         for k in 0..nz {
-            dkz_op[[k, 0, 0]] = Complex::new(0.0, (k + 1) as f64 * 0.1);
+            dkz_op[[k, 0, 0]] = Complex64::new(0.0, (k + 1) as f64 * 0.1);
         }
 
-        let lame_lambda = Array3::<f64>::from_elem((nx, ny, nz), 2.25e9);
-        let lame_mu = Array3::<f64>::zeros((nx, ny, nz));
-        let density = Array3::<f64>::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
+        let lame_lambda = Array3::<f64>::from_elem([nx, ny, nz], 2.25e9);
+        let lame_mu = Array3::<f64>::zeros([nx, ny, nz]);
+        let density = Array3::<f64>::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL);
         let stress_current = SpectralStressFields::new(nx, ny, nz);
-        let unit_kappa = Array3::<f64>::ones((nx, ny, nz));
+        let unit_kappa = Array3::<f64>::ones([nx, ny, nz]);
 
         let params = StressUpdateParams {
             vx_fft: &vx_fft,
@@ -318,7 +331,7 @@ mod tests {
         let plugin = PstdElasticPlugin::default();
         plugin.apply_stress_update_in_place(&params, &mut out);
 
-        let zero = Complex::new(0.0, 0.0);
+        let zero = Complex64::new(0.0, 0.0);
         for x in out.txy.iter().chain(out.txz.iter()).chain(out.tyz.iter()) {
             assert_eq!(*x, zero, "shear stress must be zero when μ = 0");
         }

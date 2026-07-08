@@ -6,6 +6,7 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_source::GridSource;
+use ndarray::Array3;
 
 /// FDTD solver backend adapter.
 ///
@@ -19,6 +20,10 @@ use kwavers_source::GridSource;
 pub struct FdtdBackend {
     /// Underlying FDTD solver.
     pub(super) solver: FdtdSolver,
+    pub(super) pressure: Array3<f64>,
+    pub(super) ux: Array3<f64>,
+    pub(super) uy: Array3<f64>,
+    pub(super) uz: Array3<f64>,
     /// Current simulation time (s).
     pub(super) current_time: f64,
     /// Cached grid dimensions (nx, ny, nz).
@@ -65,12 +70,19 @@ impl FdtdBackend {
 
         let source = GridSource::new_empty();
         let solver = FdtdSolver::new(config, grid, medium, source)?;
+        let shape = (grid.nx, grid.ny, grid.nz);
 
-        Ok(Self {
+        let mut backend = Self {
             solver,
+            pressure: Array3::zeros(shape),
+            ux: Array3::zeros(shape),
+            uy: Array3::zeros(shape),
+            uz: Array3::zeros(shape),
             current_time: 0.0,
             grid_dims: (grid.nx, grid.ny, grid.nz),
-        })
+        };
+        backend.sync_shadow_fields();
+        Ok(backend)
     }
 
     /// Compute a CFL-stable FDTD time step.
@@ -108,6 +120,7 @@ impl FdtdBackend {
                     if c > c_max {
                         c_max = c;
                     }
+
                 }
             }
         }
@@ -119,5 +132,20 @@ impl FdtdBackend {
         }
 
         Ok(c_max)
+    }
+
+    pub(super) fn sync_shadow_fields(&mut self) {
+        for (dst, src) in self.pressure.iter_mut().zip(self.solver.fields.p.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.ux.iter_mut().zip(self.solver.fields.ux.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.uy.iter_mut().zip(self.solver.fields.uy.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.uz.iter_mut().zip(self.solver.fields.uz.iter()) {
+            *dst = *src;
+        }
     }
 }

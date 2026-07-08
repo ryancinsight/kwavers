@@ -239,10 +239,8 @@ where
     ///
     /// Returns `None` for each parameter that is not being optimized.
     pub fn estimated_parameters(&self) -> (Option<f64>, Option<f64>, Option<f64>) {
-        let extract = |p: &Option<Var<f32, B>>| {
-            p.as_ref()
-                .map(|param| param.tensor.as_slice()[0] as f64)
-        };
+        let extract =
+            |p: &Option<Var<f32, B>>| p.as_ref().map(|param| param.tensor.as_slice()[0] as f64);
         (extract(&self.lambda), extract(&self.mu), extract(&self.rho))
     }
 

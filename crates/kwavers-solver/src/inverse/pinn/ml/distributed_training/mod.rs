@@ -3,7 +3,7 @@
 //! Provides distributed training coordination, gradient aggregation,
 //! checkpoint management, and fault tolerance for multi-GPU PINN training.
 
-use crate::inverse::pinn::ml::BurnTrainingMetrics2D;
+use crate::inverse::pinn::ml::TrainingMetrics2D;
 use serde::{Deserialize, Serialize};
 
 mod checkpoint;
@@ -25,7 +25,7 @@ pub struct TrainingCheckpoint {
     pub epoch: usize,
     pub parameters: Vec<f32>,
     pub optimizer_state: Vec<f32>,
-    pub metrics: BurnTrainingMetrics2D,
+    pub metrics: TrainingMetrics2D,
     pub timestamp: std::time::SystemTime,
 }
 
@@ -38,13 +38,13 @@ pub struct CheckpointManager {
 
 /// Training coordinator for multi-GPU PINN training
 pub struct TrainingCoordinator<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
-    model_replicas: Vec<crate::inverse::pinn::ml::BurnPINN2DWave<B>>,
+    model_replicas: Vec<crate::inverse::pinn::ml::PinnWave2D<B>>,
     checkpoint_manager: CheckpointManager,
     training_state: TrainingState,
     performance_stats: Vec<PerformanceStats>,
 }
 
-// Manual `Debug` impl: `BurnPINN2DWave<B>` requires the `CpuAddressableStorage`
+// Manual `Debug` impl: `PinnWave2D<B>` requires the `CpuAddressableStorage`
 // bound to implement `Debug`, which this struct's own bound does not carry.
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
     for TrainingCoordinator<B>
@@ -63,8 +63,8 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 #[derive(Debug, Clone)]
 pub struct TrainingState {
     pub current_epoch: usize,
-    pub global_metrics: BurnTrainingMetrics2D,
-    pub gpu_metrics: Vec<BurnTrainingMetrics2D>,
+    pub global_metrics: TrainingMetrics2D,
+    pub gpu_metrics: Vec<TrainingMetrics2D>,
     pub last_checkpoint: usize,
     pub start_time: std::time::Instant,
 }

@@ -291,11 +291,26 @@ fn run_dg_tensor_field_with_cpml(name: &'static str, nz: usize) -> Result<Solver
     })
 }
 
-fn update_peak(name: &'static str, peak: &mut Array2<f64>, pressure: &Array3<f64>) {
-    let z = physics::FOCUS_Z.min(pressure.shape()[2] - 1);
+trait PressureGrid3 {
+    fn nz(&self) -> usize;
+    fn at(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl PressureGrid3 for ndarray::Array3<f64> {
+    fn nz(&self) -> usize { self.shape()[2] }
+    fn at(&self, i: usize, j: usize, k: usize) -> f64 { self[[i, j, k]] }
+}
+
+impl PressureGrid3 for leto::Array3<f64> {
+    fn nz(&self) -> usize { self.shape()[2] }
+    fn at(&self, i: usize, j: usize, k: usize) -> f64 { self[[i, j, k]] }
+}
+
+fn update_peak<P: PressureGrid3>(name: &'static str, peak: &mut Array2<f64>, pressure: &P) {
+    let z = physics::FOCUS_Z.min(pressure.nz() - 1);
     for i in 0..physics::NX {
         for j in 0..physics::NY {
-            let value = pressure[[i, j, z]];
+            let value = pressure.at(i, j, z);
             assert!(
                 value.is_finite(),
                 "{name} pressure field contains non-finite values"

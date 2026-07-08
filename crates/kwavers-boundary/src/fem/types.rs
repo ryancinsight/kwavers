@@ -1,6 +1,6 @@
 //! Types for FEM boundary conditions.
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Boundary condition types for FEM/variational methods
 #[derive(Debug, Clone)]

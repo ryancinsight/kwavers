@@ -1,7 +1,7 @@
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 
 use super::{validate_real_positive_denominator, MinimumVariance};
 
@@ -30,7 +30,7 @@ impl MinimumVariance {
         let denom: Complex64 = steering
             .iter()
             .zip(y.iter())
-            .map(|(a, y_i)| a.conj() * y_i)
+            .map(|(a, y_i)| a.conj() * *y_i)
             .sum();
 
         let denom_re = validate_real_positive_denominator(denom, steering.len(), "MVDR weights")?;

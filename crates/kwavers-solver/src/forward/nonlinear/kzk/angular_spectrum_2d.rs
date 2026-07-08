@@ -1,4 +1,5 @@
-use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use leto::Array2 as LetoArray2;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array2, ArrayViewMut2};
 
@@ -11,7 +12,7 @@ pub struct AngularSpectrum2D {
     kx: Array2<f64>,
     ky: Array2<f64>,
     /// Reusable complex field/spectrum buffer for in-place angular-spectrum propagation.
-    scratch: Array2<Complex64>,
+    scratch: LetoArray2<Complex64>,
 }
 
 impl std::fmt::Debug for AngularSpectrum2D {
@@ -61,7 +62,7 @@ impl AngularSpectrum2D {
             }
         }
 
-        let scratch = Array2::zeros((nx, ny));
+        let scratch = LetoArray2::zeros([nx, ny]);
 
         Self {
             config: config.clone(),
@@ -84,7 +85,7 @@ impl AngularSpectrum2D {
 
         let scratch = self
             .scratch
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK angular-spectrum scratch is standard-layout");
         if let Some(field_values) = field.as_slice_memory_order() {
             enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
@@ -108,7 +109,7 @@ impl AngularSpectrum2D {
             .expect("invariant: KZK angular-spectrum ky is standard-layout");
         let scratch = self
             .scratch
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK angular-spectrum scratch is standard-layout");
         enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, value| {
             let kx = kx[idx];
@@ -129,7 +130,7 @@ impl AngularSpectrum2D {
 
         let scratch = self
             .scratch
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK angular-spectrum scratch is standard-layout");
         if let Some(field_values) = field.as_slice_memory_order_mut() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {

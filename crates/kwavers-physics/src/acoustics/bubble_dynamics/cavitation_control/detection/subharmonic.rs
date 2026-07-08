@@ -3,7 +3,7 @@
 use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod};
-use kwavers_math::fft::fft_1d_array;
+use apollo::fft_1d_leto;
 use ndarray::{Array1, ArrayView1};
 
 /// Subharmonic detector for stable cavitation
@@ -36,7 +36,9 @@ impl SubharmonicDetector {
     /// Compute FFT and return magnitude spectrum
     fn compute_spectrum(&mut self, signal: &ArrayView1<f64>) -> Array1<f64> {
         let n = signal.len();
-        let complex_signal = fft_1d_array(&signal.to_owned());
+        let fft_input = leto::Array1::from_shape_vec([n], signal.iter().copied().collect())
+            .expect("subharmonic signal length must match Leto FFT shape");
+        let complex_signal = fft_1d_leto(fft_input.view());
 
         // Convert to magnitude spectrum
         Array1::from_vec(

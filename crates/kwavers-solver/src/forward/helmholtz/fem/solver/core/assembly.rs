@@ -5,7 +5,7 @@ use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use kwavers_medium::Medium;
 use kwavers_mesh::MeshBoundaryType;
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {
     /// Assemble the global system matrix A = K − k²M and apply boundary conditions.
@@ -21,7 +21,7 @@ impl FemHelmholtzSolver {
             let num_nodes = self.mesh.nodes.len();
             let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut m_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
-            let mut rhs_global = Array1::<Complex64>::zeros(num_nodes);
+            let mut rhs_global = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
 
             self.boundary_manager.apply_all(
                 &mut k_global,

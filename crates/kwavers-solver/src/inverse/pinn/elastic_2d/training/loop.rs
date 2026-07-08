@@ -110,7 +110,10 @@ where
         let out_ic = model.forward(&training_data.initial.x, &training_data.initial.y, &zero_t);
         // velocity target: zero (quiescent start assumed when none provided)
         let zero_vel = Var::new(
-            coeus_tensor::Tensor::zeros_on(training_data.initial.displacement.tensor.shape(), &backend),
+            coeus_tensor::Tensor::zeros_on(
+                training_data.initial.displacement.tensor.shape(),
+                &backend,
+            ),
             false,
         );
         let ic_loss = loss_computer.initial_loss::<B>(
@@ -127,12 +130,8 @@ where
         });
 
         // ── Total weighted loss ───────────────────────────────────────────────
-        let total_loss = loss_computer.total_loss::<B>(
-            &pde_loss,
-            &bc_loss,
-            &ic_loss,
-            data_loss_opt.as_ref(),
-        );
+        let total_loss =
+            loss_computer.total_loss::<B>(&pde_loss, &bc_loss, &ic_loss, data_loss_opt.as_ref());
 
         // Extract scalar values before backward.
         let total_val = total_loss.tensor.as_slice()[0] as f64;
@@ -227,7 +226,8 @@ where
 
     // Create dummy training data (would be provided by user)
     let backend = B::default();
-    let zeros = |shape: Vec<usize>| Var::new(coeus_tensor::Tensor::zeros_on(shape, &backend), false);
+    let zeros =
+        |shape: Vec<usize>| Var::new(coeus_tensor::Tensor::zeros_on(shape, &backend), false);
 
     let collocation = super::super::loss::data::CollocationData {
         x: zeros(vec![100, 1]),

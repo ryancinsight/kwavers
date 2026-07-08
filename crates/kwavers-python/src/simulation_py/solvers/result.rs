@@ -4,6 +4,7 @@ use pyo3::prelude::*;
 
 use ndarray::Array1;
 
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use crate::simulation_result_py::{SimulationResult, SimulationRunResult};
 
 use super::super::Simulation;
@@ -38,10 +39,10 @@ impl Simulation {
         let (p_max_3d, p_min_3d, p_rms_3d, p_final_3d) =
             if let Some((mx, mn, rm, fn_)) = full_grid_stats {
                 (
-                    Some(PyArray3::from_owned_array(py, mx).into()),
-                    Some(PyArray3::from_owned_array(py, mn).into()),
-                    Some(PyArray3::from_owned_array(py, rm).into()),
-                    Some(PyArray3::from_owned_array(py, fn_).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(mx)).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(mn)).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(rm)).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(fn_)).into()),
                 )
             } else {
                 (None, None, None, None)

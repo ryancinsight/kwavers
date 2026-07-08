@@ -31,7 +31,7 @@ use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 
@@ -340,7 +340,7 @@ fn run_fdtd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
     let energy_conserved = calculate_energy_conservation(&final_field);
 
     // Estimate memory usage
-    let memory_usage = final_field.len() * std::mem::size_of::<f64>();
+    let memory_usage = final_field.size() * std::mem::size_of::<f64>();
 
     // Stability metric (simplified)
     let stability_metric = calculate_stability_metric(&final_field);
@@ -385,7 +385,7 @@ fn run_pstd_solver(problem: &TestProblem) -> KwaversResult<SolverResult> {
     let energy_conserved = calculate_energy_conservation(&final_field);
 
     // Estimate memory usage
-    let memory_usage = final_field.len() * std::mem::size_of::<f64>();
+    let memory_usage = final_field.size() * std::mem::size_of::<f64>();
 
     // Stability metric
     let stability_metric = calculate_stability_metric(&final_field);
@@ -430,11 +430,11 @@ fn compare_two_methods(
     result2: &SolverResult,
 ) -> KwaversResult<MethodComparison> {
     // Ensure fields have same dimensions
-    if result1.final_field.dim() != result2.final_field.dim() {
+    if result1.final_field.shape() != result2.final_field.shape() {
         return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
             "Field dimensions don't match: {:?} vs {:?}",
-            result1.final_field.dim(),
-            result2.final_field.dim()
+            result1.final_field.shape(),
+            result2.final_field.shape()
         )));
     }
 
@@ -447,21 +447,19 @@ fn compare_two_methods(
     let mut sum2_sq: f64 = 0.0;
     let mut sum_prod: f64 = 0.0;
 
-    Zip::from(&result1.final_field)
-        .and(&result2.final_field)
-        .for_each(|&v1, &v2| {
-            let diff = v1 - v2;
-            l2_sum += diff * diff;
-            max_diff = max_diff.max(diff.abs());
+    for (&v1, &v2) in result1.final_field.iter().zip(result2.final_field.iter()) {
+        let diff = v1 - v2;
+        l2_sum += diff * diff;
+        max_diff = max_diff.max(diff.abs());
 
-            sum1 += v1;
-            sum2 += v2;
-            sum1_sq += v1 * v1;
-            sum2_sq += v2 * v2;
-            sum_prod += v1 * v2;
-        });
+        sum1 += v1;
+        sum2 += v2;
+        sum1_sq += v1 * v1;
+        sum2_sq += v2 * v2;
+        sum_prod += v1 * v2;
+    }
 
-    let n = result1.final_field.len() as f64;
+    let n = result1.final_field.size() as f64;
     let l2_difference = (l2_sum / n).sqrt();
 
     // Relative difference (normalized by maximum absolute value)
@@ -537,15 +535,13 @@ fn validate_against_analytical(
         let mut l2_sum: f64 = 0.0;
         let mut max_error: f64 = 0.0;
 
-        Zip::from(&result.final_field)
-            .and(&analytical_field)
-            .for_each(|&numerical, &analytic| {
-                let error: f64 = numerical - analytic;
-                l2_sum += error * error;
-                max_error = max_error.max(error.abs());
-            });
+        for (&numerical, &analytic) in result.final_field.iter().zip(analytical_field.iter()) {
+            let error: f64 = numerical - analytic;
+            l2_sum += error * error;
+            max_error = max_error.max(error.abs());
+        }
 
-        let n = result.final_field.len() as f64;
+        let n = result.final_field.size() as f64;
         let l2_error = (l2_sum / n).sqrt();
 
         l2_errors.insert(method.clone(), l2_error);
@@ -573,7 +569,7 @@ fn generate_analytical_field(
     grid: &Grid,
     time: f64,
 ) -> KwaversResult<Array3<f64>> {
-    let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut field = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz]);
 
     match analytical {
         AnalyticalSolution::PlaneWave {
@@ -668,7 +664,8 @@ fn calculate_stability_metric(field: &Array3<f64>) -> f64 {
         let mut gradient_sum = 0.0;
         let mut value_sum = 0.0;
 
-        let (nx, ny, nz) = field.dim();
+        let s = field.shape();
+        let (nx, ny, nz) = (s[0], s[1], s[2]);
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
@@ -836,14 +833,16 @@ mod tests {
 
     #[test]
     fn test_energy_conservation_calculation() {
-        let field = Array3::from_elem((10, 10, 10), 1.0);
+        let mut field = Array3::<f64>::zeros([10, 10, 10]);
+        field.fill(1.0);
         let energy = calculate_energy_conservation(&field);
         assert!(energy >= 0.0, "Energy conservation should be non-negative");
     }
 
     #[test]
     fn test_stability_metric_calculation() {
-        let field = Array3::from_elem((10, 10, 10), 1.0);
+        let mut field = Array3::<f64>::zeros([10, 10, 10]);
+        field.fill(1.0);
         let stability = calculate_stability_metric(&field);
         assert!(
             (0.0..=1.0).contains(&stability),

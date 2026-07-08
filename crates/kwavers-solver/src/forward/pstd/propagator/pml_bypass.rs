@@ -2,9 +2,21 @@
 
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use ndarray::{s, Array3, ArrayViewMut3};
 
 impl PSTDSolver {
+    pub(crate) fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ArrayViewMut3<'_, f64> {
+        let shape = field.shape();
+        ArrayViewMut3::from_shape(
+            (shape[0], shape[1], shape[2]),
+            field
+                .as_slice_mut()
+                .expect("PSTD leto field must be contiguous for ndarray view"),
+        )
+        .expect("PSTD leto field shape must match contiguous storage")
+    }
+
     /// Resize the reusable Dirichlet-PML bypass scratch plane.
     ///
     /// # Contract
@@ -34,6 +46,7 @@ impl PSTDSolver {
     ///
     /// The restore step runs even when `apply` returns an error, preserving the
     /// bypass invariant for recoverable PML failures.
+    #[cfg(test)]
     pub(crate) fn apply_x_plane_pml_bypass(
         field: &mut Array3<f64>,
         rows: &[usize],
@@ -49,8 +62,34 @@ impl PSTDSolver {
         result
     }
 
+    pub(crate) fn apply_x_plane_pml_bypass_leto(
+        field: &mut LetoArray3<f64>,
+        rows: &[usize],
+        scratch: &mut Array3<f64>,
+        apply: impl FnOnce(ArrayViewMut3<'_, f64>) -> KwaversResult<()>,
+    ) -> KwaversResult<()> {
+        let mut field_view = Self::leto_view_mut3(field);
+        let field_view_ro = field_view.view();
+        Self::validate_x_plane_scratch_view(&field_view_ro, rows, scratch)?;
+        Self::save_x_planes_view(&field_view_ro, rows, scratch);
+
+        let result = apply(field_view.view_mut());
+
+        Self::restore_x_planes_view(&mut field_view, rows, scratch);
+        result
+    }
+
+    #[cfg(test)]
     fn validate_x_plane_scratch(
         field: &Array3<f64>,
+        rows: &[usize],
+        scratch: &Array3<f64>,
+    ) -> KwaversResult<()> {
+        Self::validate_x_plane_scratch_view(&field.view(), rows, scratch)
+    }
+
+    fn validate_x_plane_scratch_view(
+        field: &ndarray::ArrayView3<'_, f64>,
         rows: &[usize],
         scratch: &Array3<f64>,
     ) -> KwaversResult<()> {
@@ -73,7 +112,16 @@ impl PSTDSolver {
         Ok(())
     }
 
+    #[cfg(test)]
     fn save_x_planes(field: &Array3<f64>, rows: &[usize], scratch: &mut Array3<f64>) {
+        Self::save_x_planes_view(&field.view(), rows, scratch);
+    }
+
+    fn save_x_planes_view(
+        field: &ndarray::ArrayView3<'_, f64>,
+        rows: &[usize],
+        scratch: &mut Array3<f64>,
+    ) {
         for (idx, &row) in rows.iter().enumerate() {
             scratch
                 .slice_mut(s![idx, .., ..])
@@ -81,7 +129,17 @@ impl PSTDSolver {
         }
     }
 
+    #[cfg(test)]
     fn restore_x_planes(field: &mut Array3<f64>, rows: &[usize], scratch: &Array3<f64>) {
+        let mut view = field.view_mut();
+        Self::restore_x_planes_view(&mut view, rows, scratch);
+    }
+
+    fn restore_x_planes_view(
+        field: &mut ArrayViewMut3<'_, f64>,
+        rows: &[usize],
+        scratch: &Array3<f64>,
+    ) {
         for (idx, &row) in rows.iter().enumerate() {
             field
                 .slice_mut(s![row, .., ..])

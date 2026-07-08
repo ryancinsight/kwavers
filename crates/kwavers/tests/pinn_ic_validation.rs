@@ -1,4 +1,4 @@
-//! Initial Condition Loss Validation Tests for BurnPINN 3D Wave Equation
+//! Initial-condition loss validation tests for the Coeus 3D wave-equation PINN.
 //!
 //! This test suite validates the initial condition enforcement in the 3D PINN solver.
 //! Tests verify that IC loss (displacement and velocity) is computed correctly and that
@@ -28,8 +28,8 @@
 mod ic_loss_tests {
     use coeus_core::MoiraiBackend;
     use kwavers_core::error::KwaversResult;
-    use kwavers_solver::inverse::pinn::ml::burn_wave_equation_3d::{
-        BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave, Geometry3D,
+    use kwavers_solver::inverse::pinn::ml::wave_equation_3d::{
+        Geometry3D, LossWeights3D, PinnConfig3D, PinnWave3D,
     };
 
     type TestBackend = MoiraiBackend;
@@ -37,10 +37,10 @@ mod ic_loss_tests {
     /// Test that IC loss is computed and is non-zero for untrained network
     #[test]
     fn test_ic_displacement_loss_computation() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![20, 20],
             num_collocation_points: 50,
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 1.0,
                 bc_weight: 1.0,
@@ -52,7 +52,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data with IC at t=0
         let x_data = vec![0.3, 0.5, 0.7];
@@ -62,9 +62,7 @@ mod ic_loss_tests {
         let u_data = vec![1.0, 0.8, 0.6]; // Non-zero IC
 
         // Train for 1 epoch to compute losses
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 1,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 1)?;
 
         // IC loss should be non-zero for untrained network
         assert_eq!(metrics.ic_loss.len(), 1);
@@ -85,11 +83,11 @@ mod ic_loss_tests {
     /// Test IC displacement loss decreases during training
     #[test]
     fn test_ic_displacement_loss_decreases() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![30, 30],
             num_collocation_points: 100,
             learning_rate: 5e-4, // More conservative for stability
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 0.5,
                 bc_weight: 2.0,
@@ -101,7 +99,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data: Gaussian IC at t=0
         let n_ic = 25;
@@ -125,9 +123,7 @@ mod ic_loss_tests {
         }
 
         // Train for multiple epochs
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 100,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 100)?;
 
         // Verify IC loss decreases
         assert!(metrics.ic_loss.len() >= 2);
@@ -163,11 +159,11 @@ mod ic_loss_tests {
     /// Test IC velocity loss with provided velocity data
     #[test]
     fn test_ic_velocity_loss_computation() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![20, 20],
             num_collocation_points: 50,
             learning_rate: 1e-3,
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 1.0,
                 bc_weight: 2.0,
@@ -179,7 +175,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data with velocity IC
         let x_data = vec![0.3, 0.5, 0.7];
@@ -219,11 +215,11 @@ mod ic_loss_tests {
     /// Test combined displacement + velocity IC loss convergence
     #[test]
     fn test_ic_combined_loss_decreases() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![30, 30],
             num_collocation_points: 100,
             learning_rate: 5e-4,
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 0.5,
                 bc_weight: 2.0,
@@ -235,7 +231,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data: Gaussian pulse with initial velocity
         let n_ic = 20;
@@ -309,11 +305,11 @@ mod ic_loss_tests {
     /// Test IC loss with zero field (trivial case)
     #[test]
     fn test_ic_loss_zero_field() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![20, 20],
             num_collocation_points: 50,
             learning_rate: 1e-3,
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 1.0,
                 bc_weight: 2.0,
@@ -325,7 +321,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Zero IC everywhere
         let x_data = vec![0.3, 0.5, 0.7];
@@ -361,11 +357,11 @@ mod ic_loss_tests {
     /// Test IC loss with plane wave analytical solution
     #[test]
     fn test_ic_loss_plane_wave() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![30, 30],
             num_collocation_points: 100,
             learning_rate: 5e-4,
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 2.0,
                 pde_weight: 1.0,
                 bc_weight: 1.0,
@@ -378,7 +374,7 @@ mod ic_loss_tests {
         let c = 1500.0_f32;
         let wave_speed = move |_x: f32, _y: f32, _z: f32| c;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Plane wave: u = A sin(k·x - ωt)
         // At t=0: u₀ = A sin(kx), v₀ = -Aω cos(kx)
@@ -453,7 +449,7 @@ mod ic_loss_tests {
     /// Test IC metrics are recorded correctly
     #[test]
     fn test_ic_loss_metrics_recording() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![10],
             num_collocation_points: 30,
             ..Default::default()
@@ -462,7 +458,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         let x_data = vec![0.5];
         let y_data = vec![0.5];
@@ -510,7 +506,7 @@ mod ic_loss_tests {
     /// Test IC loss without velocity data (backward compatibility)
     #[test]
     fn test_ic_loss_backward_compatibility() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![15],
             num_collocation_points: 50,
             ..Default::default()
@@ -519,7 +515,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         let x_data = vec![0.5];
         let y_data = vec![0.5];
@@ -528,9 +524,7 @@ mod ic_loss_tests {
         let u_data = vec![0.5];
 
         // Train without velocity data (None)
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 5,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 5)?;
 
         // Should still compute IC loss (displacement only)
         assert_eq!(metrics.ic_loss.len(), 5);
@@ -541,7 +535,7 @@ mod ic_loss_tests {
     /// Test IC loss with multiple time steps (only t=0 should be used for IC)
     #[test]
     fn test_ic_loss_multiple_time_steps() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![15],
             num_collocation_points: 50,
             ..Default::default()
@@ -550,7 +544,7 @@ mod ic_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Mix of t=0 and t>0 data
         let x_data = vec![0.3, 0.5, 0.7, 0.5];
@@ -559,9 +553,7 @@ mod ic_loss_tests {
         let t_data = vec![0.0, 0.0, 0.0, 0.1]; // First three at t=0, last at t=0.1
         let u_data = vec![1.0, 0.8, 0.6, 0.5];
 
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 5,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 5)?;
 
         // IC loss should only use t=0 points
         assert!(metrics.ic_loss[0].is_finite());

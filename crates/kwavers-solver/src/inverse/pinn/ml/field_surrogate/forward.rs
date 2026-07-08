@@ -4,7 +4,7 @@
 //! field on its target grid, parameterised by `(f0, pnp)`. This module
 //! turns a [`super::ParamFieldPINNNetwork`] forward pass on a stream
 //! of voxel-coordinates into three `Array3<f64>` outputs without
-//! committing the planner to Burn's tensor API.
+//! committing the planner to the training backend tensor API.
 
 use coeus_autograd::Var;
 use ndarray::Array3;

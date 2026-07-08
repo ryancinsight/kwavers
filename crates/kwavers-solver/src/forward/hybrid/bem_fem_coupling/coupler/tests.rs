@@ -1,4 +1,4 @@
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use kwavers_mesh::MeshBoundaryType;

@@ -43,10 +43,12 @@ mod tests {
 
         let signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
 
-        use kwavers_math::fft::fft_1d_array;
-        use ndarray::Array1;
+        use apollo::fft_1d_leto;
+        use leto::Array1;
 
-        let spectrum = fft_1d_array(&Array1::from_vec(signal));
+        let signal =
+            Array1::from_shape_vec([config.nt], signal).expect("time signal length matches nt");
+        let spectrum = fft_1d_leto(signal.view());
 
         let df = 1.0 / (config.nt as f64 * config.dt);
         let fundamental_bin = (frequency / df) as usize;
@@ -99,8 +101,8 @@ mod tests {
     ///
     #[test]
     fn test_aanonsen_1984_harmonic_amplitudes() {
-        use kwavers_math::fft::fft_1d_array;
-        use ndarray::Array1;
+        use apollo::fft_1d_leto;
+        use leto::Array1;
 
         let rho0 = DENSITY_WATER; // 998.2 kg/m³ at 20°C (NIST); Aanonsen 1984 used 998.0
         let c0 = 1481.0_f64;
@@ -156,8 +158,9 @@ mod tests {
             solver.solve(n_steps).expect("KZK solve failed");
 
             let signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
-            let signal = Array1::from_vec(signal);
-            let spectrum = fft_1d_array(&signal);
+            let signal =
+                Array1::from_shape_vec([nt], signal).expect("time signal length matches nt");
+            let spectrum = fft_1d_leto(signal.view());
 
             let df = 1.0 / (nt as f64 * dt);
             let k1 = (frequency / df).round() as usize;

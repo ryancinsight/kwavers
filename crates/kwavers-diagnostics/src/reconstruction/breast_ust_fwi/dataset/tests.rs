@@ -33,7 +33,7 @@ fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
     assert_eq!(first.receivers, 4);
     assert_eq!(first.time_steps_per_frequency[0], 50);
     assert_eq!(first.frequency_bin_start_steps_per_frequency[0], 0);
-    assert_eq!(first.observations()[0].observed_pressure.dim(), (4, 4));
+    assert_eq!(first.observations()[0].observed_pressure.shape(), [4, 4]);
     let delta = first
         .observed_pressure
         .iter()

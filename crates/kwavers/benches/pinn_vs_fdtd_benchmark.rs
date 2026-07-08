@@ -1,7 +1,7 @@
 //! Performance benchmarks comparing PINN vs FDTD methods for 2D wave equations
 //!
 //! This benchmark suite compares the performance and accuracy of:
-//! - Physics-Informed Neural Networks (PINN) using Burn framework
+//! - Physics-Informed Neural Networks (PINN) using Coeus autodiff stack
 //! - Finite-Difference Time Domain (FDTD) method
 //!
 //! The benchmarks test different problem sizes and complexities to understand
@@ -15,8 +15,8 @@ use kwavers_source::GridSource;
 use ndarray::{Array1, Array2};
 
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnWave2dGeometry,
+use kwavers_solver::inverse::pinn::ml::wave_equation_2d::{
+    LossWeights2D, PinnConfig2D, PinnTrainer2D, WaveGeometry2D,
 };
 
 /// Benchmark configuration for different problem sizes
@@ -250,11 +250,11 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                 b.iter(|| {
                     type Backend = coeus_core::MoiraiBackend;
 
-                    let pinn_config = BurnPINN2DConfig {
+                    let pinn_config = PinnConfig2D {
                         hidden_layers: vec![50, 50, 50],
                         num_collocation_points: config.num_collocation,
                         learning_rate: 1e-3,
-                        loss_weights: BurnLossWeights2D {
+                        loss_weights: LossWeights2D {
                             data: 1.0,
                             pde: 1.0,
                             boundary: 10.0,
@@ -263,16 +263,15 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         ..Default::default()
                     };
 
-                    let geometry = BurnWave2dGeometry::rectangular(
+                    let geometry = WaveGeometry2D::rectangular(
                         0.0,
                         (config.grid_size.0 - 1) as f64 * config.dx,
                         0.0,
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let trainer =
-                        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config, geometry)
-                            .expect("PINN trainer creation failed");
+                    let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config, geometry)
+                        .expect("PINN trainer creation failed");
 
                     black_box(trainer)
                 });
@@ -286,11 +285,11 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                 b.iter(|| {
                     type Backend = coeus_core::MoiraiBackend;
 
-                    let pinn_config = BurnPINN2DConfig {
+                    let pinn_config = PinnConfig2D {
                         hidden_layers: vec![50, 50, 50],
                         num_collocation_points: config.num_collocation,
                         learning_rate: 1e-3,
-                        loss_weights: BurnLossWeights2D {
+                        loss_weights: LossWeights2D {
                             data: 1.0,
                             pde: 1.0,
                             boundary: 10.0,
@@ -299,15 +298,16 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         ..Default::default()
                     };
 
-                    let geometry = BurnWave2dGeometry::rectangular(
+                    let geometry = WaveGeometry2D::rectangular(
                         0.0,
                         (config.grid_size.0 - 1) as f64 * config.dx,
                         0.0,
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let mut trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry)
-                    .expect("PINN trainer creation failed");
+                    let mut trainer =
+                        PinnTrainer2D::<Backend>::new_trainer(pinn_config.clone(), geometry)
+                            .expect("PINN trainer creation failed");
 
                     // Generate training data
                     let (x_data, y_data, t_data, u_data) =
@@ -338,22 +338,21 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                 b.iter(|| {
                     type Backend = coeus_core::MoiraiBackend;
 
-                    let pinn_config = BurnPINN2DConfig {
+                    let pinn_config = PinnConfig2D {
                         hidden_layers: vec![50, 50, 50],
                         num_collocation_points: config.num_collocation,
                         ..Default::default()
                     };
 
-                    let geometry = BurnWave2dGeometry::rectangular(
+                    let geometry = WaveGeometry2D::rectangular(
                         0.0,
                         (config.grid_size.0 - 1) as f64 * config.dx,
                         0.0,
                         (config.grid_size.1 - 1) as f64 * config.dx,
                     );
 
-                    let trainer =
-                        BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config, geometry)
-                            .expect("PINN trainer creation failed");
+                    let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config, geometry)
+                        .expect("PINN trainer creation failed");
 
                     // Generate test points
                     let n_test = 1000;
@@ -425,14 +424,14 @@ fn memory_usage_benchmark(c: &mut Criterion) {
         b.iter(|| {
             type Backend = coeus_core::MoiraiBackend;
 
-            let pinn_config = BurnPINN2DConfig {
+            let pinn_config = PinnConfig2D {
                 hidden_layers: vec![100, 100, 100],
                 num_collocation_points: config.num_collocation,
                 ..Default::default()
             };
 
-            let geometry = BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
-            let trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config, geometry)
+            let geometry = WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+            let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config, geometry)
                 .expect("PINN trainer creation failed");
 
             black_box(trainer)
@@ -520,11 +519,11 @@ fn accuracy_benchmark(c: &mut Criterion) {
         b.iter(|| {
             type Backend = coeus_core::MoiraiBackend;
 
-            let pinn_config = BurnPINN2DConfig {
+            let pinn_config = PinnConfig2D {
                 hidden_layers: vec![50, 50, 50],
                 num_collocation_points: config.num_collocation,
                 learning_rate: 1e-3,
-                loss_weights: BurnLossWeights2D {
+                loss_weights: LossWeights2D {
                     data: 1.0,
                     pde: 1.0,
                     boundary: 10.0,
@@ -533,16 +532,15 @@ fn accuracy_benchmark(c: &mut Criterion) {
                 ..Default::default()
             };
 
-            let geometry = BurnWave2dGeometry::rectangular(
+            let geometry = WaveGeometry2D::rectangular(
                 0.0,
                 (config.grid_size.0 - 1) as f64 * config.dx,
                 0.0,
                 (config.grid_size.1 - 1) as f64 * config.dx,
             );
 
-            let mut trainer =
-                BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry)
-                    .expect("PINN trainer creation failed");
+            let mut trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config.clone(), geometry)
+                .expect("PINN trainer creation failed");
 
             // Generate training data
             let (x_data, y_data, t_data, u_data) = generate_training_data(&config, wave_speed, 200);

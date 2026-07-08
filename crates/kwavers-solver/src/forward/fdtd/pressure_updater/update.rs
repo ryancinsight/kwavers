@@ -1,9 +1,21 @@
 //! Pressure field update dispatch and CPU/GPU implementations.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use ndarray::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
+
+fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("FDTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("FDTD leto field shape must match contiguous storage")
+}
 
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.
@@ -63,11 +75,11 @@ impl FdtdSolver {
             );
         } else {
             self.central_operator
-                .apply_x_into(self.fields.ux.view(), &mut self.dvx_scratch)?;
+                .apply_x_into(leto_view3(&self.fields.ux), &mut self.dvx_scratch)?;
             self.central_operator
-                .apply_y_into(self.fields.uy.view(), &mut self.dvy_scratch)?;
+                .apply_y_into(leto_view3(&self.fields.uy), &mut self.dvy_scratch)?;
             self.central_operator
-                .apply_z_into(self.fields.uz.view(), &mut self.divergence_scratch)?;
+                .apply_z_into(leto_view3(&self.fields.uz), &mut self.divergence_scratch)?;
 
             if let Some(ref mut cpml) = self.cpml_boundary {
                 cpml.update_and_apply_v_gradient_correction(&mut self.dvx_scratch, 0);
@@ -97,7 +109,7 @@ impl FdtdSolver {
     /// Dense standard-layout arrays dispatch through Moirai; non-standard
     /// ndarray views keep sequential Zip semantics.
     pub(crate) fn update_pressure_simd(
-        pressure: &mut Array3<f64>,
+        pressure: &mut LetoArray3<f64>,
         divergence: ArrayView3<f64>,
         rho_c_squared: &Array3<f64>,
         dt: f64,
@@ -113,7 +125,7 @@ impl FdtdSolver {
         &self,
         accelerator: &dyn FdtdGpuAccelerator,
         dt: f64,
-    ) -> KwaversResult<Array3<f64>> {
+    ) -> KwaversResult<LetoArray3<f64>> {
         accelerator.propagate_acoustic_wave(
             &self.fields.p,
             &self.fields.ux,

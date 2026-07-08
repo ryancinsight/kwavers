@@ -1,10 +1,9 @@
 //! MUSIC (Multiple Signal Classification) algorithm.
 
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::EigenDecomposition;
 use ndarray::{s, Array1, Array2};
-use num_complex::Complex64;
-use num_traits::Zero;
 
 /// MUSIC (Multiple Signal Classification) Algorithm
 ///
@@ -74,7 +73,7 @@ impl MUSIC {
         }
 
         for &val in steering {
-            if !val.is_finite() {
+            if !val.re.is_finite() || !val.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
                     operation: "MUSIC::pseudospectrum".to_owned(),
                     inputs: "steering vector contains non-finite values".to_owned(),
@@ -94,7 +93,7 @@ impl MUSIC {
         for &idx in indices.iter().skip(noise_start) {
             let eigenvec = eigenvectors.slice(s![.., idx]);
 
-            let mut e_h_a = Complex64::zero();
+            let mut e_h_a = Complex64::default();
             for j in 0..n {
                 e_h_a += eigenvec[j].conj() * steering[j];
             }

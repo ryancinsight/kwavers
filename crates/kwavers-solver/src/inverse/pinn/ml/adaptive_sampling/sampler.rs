@@ -1,8 +1,7 @@
 use super::{AdaptiveCollocationSampler, AdaptiveRefinementConfig, SamplingStats};
 use kwavers_core::error::KwaversResult;
 
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
-    AdaptiveCollocationSampler<B>
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AdaptiveCollocationSampler<B>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -54,7 +53,7 @@ where
     ///
     pub fn resample(
         &mut self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
     ) -> KwaversResult<()> {
         let residuals = self.evaluate_residuals(model)?;
         self.update_priorities(&residuals)?;

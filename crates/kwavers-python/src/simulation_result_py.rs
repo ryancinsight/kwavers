@@ -10,6 +10,8 @@ use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
 
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
+
 // ── Re-exports from kwavers_simulation (keeps old solver files compiling) ──
 pub use kwavers_simulation::{extract_full_grid_stats, SimulationRunResult};
 
@@ -224,10 +226,10 @@ pub(crate) fn build_simulation_result(
     let (p_max_field, p_min_field, p_rms_field, p_final_field) =
         if let Some((ref pmax, ref pmin, ref prms, ref pfinal)) = result.full_grid_stats {
             (
-                Some(PyArray3::from_owned_array(py, pmax.clone()).unbind()),
-                Some(PyArray3::from_owned_array(py, pmin.clone()).unbind()),
-                Some(PyArray3::from_owned_array(py, prms.clone()).unbind()),
-                Some(PyArray3::from_owned_array(py, pfinal.clone()).unbind()),
+                Some(PyArray3::from_owned_array(py, leto3_to_nd3(pmax.clone())).unbind()),
+                Some(PyArray3::from_owned_array(py, leto3_to_nd3(pmin.clone())).unbind()),
+                Some(PyArray3::from_owned_array(py, leto3_to_nd3(prms.clone())).unbind()),
+                Some(PyArray3::from_owned_array(py, leto3_to_nd3(pfinal.clone())).unbind()),
             )
         } else {
             (None, None, None, None)

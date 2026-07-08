@@ -189,14 +189,14 @@ where
     pub fn initialize_model(
         &self,
         _domain: &dyn SimulationPhysicsDomain<B>,
-    ) -> KwaversResult<crate::inverse::pinn::ml::BurnPINN2DWave<B>> {
-        let config = crate::inverse::pinn::ml::BurnPINN2DConfig {
+    ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
+        let config = crate::inverse::pinn::ml::PinnConfig2D {
             hidden_layers: vec![64, 64, 64],
             learning_rate: 0.001,
             num_collocation_points: 1000,
             ..Default::default()
         };
-        let model = crate::inverse::pinn::ml::BurnPINN2DWave::new(config)?;
+        let model = crate::inverse::pinn::ml::PinnWave2D::new(config)?;
         Ok(model)
     }
 
@@ -208,7 +208,7 @@ where
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     fn train_model(
-        model: &mut crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &mut crate::inverse::pinn::ml::PinnWave2D<B>,
         domain: &dyn SimulationPhysicsDomain<B>,
         collocation_points: &[(f64, f64, f64)],
         physics_params: &PinnDomainPhysicsParameters,
@@ -244,7 +244,7 @@ where
         );
 
         let mut loss_history = Vec::new();
-        let optimizer = crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(
+        let optimizer = crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D::new(
             config.learning_rate as f32,
         );
 

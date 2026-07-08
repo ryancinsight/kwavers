@@ -62,8 +62,8 @@ use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, commander_prosperetti_phase_velocity,
 };
+use leto::{Array3, ArrayView3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, ArrayView3};
 use std::f64::consts::TAU;
 
 /// Reference void fraction used to evaluate the (β-independent) spectral *shape*
@@ -90,7 +90,7 @@ fn multiply_spectral_shape(
         return;
     }
 
-    let (nx, ny, nz) = spectrum.dim();
+    let [nx, ny, nz] = spectrum.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -102,7 +102,7 @@ fn multiply_spectral_shape(
 
 fn apply_residual_gas_loss(
     pressure: &mut Array3<f64>,
-    c0: &Array3<f64>,
+    c0: &ndarray::Array3<f64>,
     magnitude: &Array3<f64>,
     loss: &Array3<f64>,
     dt: f64,
@@ -124,10 +124,10 @@ fn apply_residual_gas_loss(
     );
 
     if let (Some(pressure_values), Some(c0_values), Some(magnitude_values), Some(loss_values)) = (
-        pressure.as_slice_memory_order_mut(),
+        pressure.as_slice_mut(),
         c0.as_slice_memory_order(),
-        magnitude.as_slice_memory_order(),
-        loss.as_slice_memory_order(),
+        magnitude.as_slice(),
+        loss.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
             *pressure -= dt * c0_values[index] * magnitude_values[index] * loss_values[index];
@@ -135,7 +135,8 @@ fn apply_residual_gas_loss(
         return;
     }
 
-    let (nx, ny, nz) = pressure.dim();
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -147,7 +148,7 @@ fn apply_residual_gas_loss(
 
 fn apply_residual_gas_dispersion(
     pressure: &mut Array3<f64>,
-    c0: &Array3<f64>,
+    c0: &ndarray::Array3<f64>,
     scale: &Array3<f64>,
     dispersion: &Array3<f64>,
 ) {
@@ -168,10 +169,10 @@ fn apply_residual_gas_dispersion(
     );
 
     if let (Some(pressure_values), Some(c0_values), Some(scale_values), Some(dispersion_values)) = (
-        pressure.as_slice_memory_order_mut(),
+        pressure.as_slice_mut(),
         c0.as_slice_memory_order(),
-        scale.as_slice_memory_order(),
-        dispersion.as_slice_memory_order(),
+        scale.as_slice(),
+        dispersion.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
             let c0 = c0_values[index];
@@ -180,7 +181,8 @@ fn apply_residual_gas_dispersion(
         return;
     }
 
-    let (nx, ny, nz) = pressure.dim();
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -293,22 +295,30 @@ impl ResidualGasAbsorption {
         rho_liquid: f64,
         props: &BubblyMediumProps,
     ) -> Option<Self> {
-        let magnitude = void_fraction.mapv(|beta| {
-            if beta > 0.0 {
-                commander_prosperetti_attenuation(
-                    props.frequency,
-                    beta,
-                    props.bubble_radius,
-                    c_liquid,
-                    rho_liquid,
-                    props.mu_liquid,
-                    props.p0,
-                    props.polytropic,
-                )
-            } else {
-                0.0
-            }
-        });
+        let vf_shape = void_fraction.shape();
+        let magnitude = Array3::from_shape_vec(
+            [vf_shape[0], vf_shape[1], vf_shape[2]],
+            void_fraction
+                .iter()
+                .map(|&beta| {
+                    if beta > 0.0 {
+                        commander_prosperetti_attenuation(
+                            props.frequency,
+                            beta,
+                            props.bubble_radius,
+                            c_liquid,
+                            rho_liquid,
+                            props.mu_liquid,
+                            props.p0,
+                            props.polytropic,
+                        )
+                    } else {
+                        0.0
+                    }
+                })
+                .collect(),
+        )
+        .expect("residual-gas magnitude length must match void-fraction shape");
         if !magnitude.iter().any(|&m| m > 0.0) {
             return None;
         }
@@ -320,7 +330,14 @@ impl ResidualGasAbsorption {
         });
 
         // Dispersion: ĥ(|k|) = (c_p(f)²−c₀²)/c₀² at β_ref; scale s(x)=β(x)/β_ref.
-        let disp_scale = void_fraction.mapv(|beta| beta.max(0.0) / SHAPE_REFERENCE_VOID_FRACTION);
+        let disp_scale = Array3::from_shape_vec(
+            [vf_shape[0], vf_shape[1], vf_shape[2]],
+            void_fraction
+                .iter()
+                .map(|&beta| beta.max(0.0) / SHAPE_REFERENCE_VOID_FRACTION)
+                .collect(),
+        )
+        .expect("residual-gas dispersion scale length must match void-fraction shape");
         let disp_shape_k = k_mag_half.mapv(|k| {
             let freq = c_liquid * k / TAU;
             cp_dispersion_stiffness(freq, c_liquid, rho_liquid, props)

@@ -93,9 +93,9 @@
 //!
 //! # Framework Integration
 //!
-//! ## Burn Backend Strategy
+//! ## Coeus Backend Strategy
 //!
-//! PINNs currently use the Burn deep learning framework for:
+//! PINNs currently use the Coeus autodiff stack for:
 //! - Automatic differentiation (compute ∂u/∂x, ∂²u/∂x², etc.)
 //! - Model serialization and deployment
 //!
@@ -107,17 +107,17 @@
 //! ## Tensor Interoperability
 //!
 //! The `kwavers_math::tensor` module provides conversion between ndarray (used by
-//! forward solvers) and Burn tensors (used by PINNs):
+//! forward solvers) and Coeus tensors (used by PINNs):
 //!
 //! ```rust,ignore
 //! // Forward solver output (ndarray)
 //! let pressure_field: ArrayD<f64> = acoustic_solver.pressure();
 //!
-//! // Convert to Burn tensor for PINN training
-//! let burn_tensor = Tensor::<B, 3>::from_data(pressure_field.into());
+//! // Convert to Coeus tensor for PINN training
+//! let training_tensor = Tensor::<B, 3>::from_data(pressure_field.into());
 //!
 //! // Train PINN to match forward solver (verification)
-//! pinn.train(burn_tensor, collocation_points);
+//! pinn.train(training_tensor, collocation_points);
 //! ```
 //!
 //! # Module Organization
@@ -175,7 +175,7 @@ pub use geometry::{
 };
 
 #[cfg(feature = "pinn")]
-pub use beamforming::{create_burn_beamforming_provider, BurnPinnBeamformingAdapter};
+pub use beamforming::{create_pinn_beamforming_provider, PinnBeamformingAdapter};
 
 // Modules planned but not yet implemented:
 // - elastic_3d: 3D elastic wave PINN solver

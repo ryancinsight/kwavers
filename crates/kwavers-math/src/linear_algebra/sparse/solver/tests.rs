@@ -3,7 +3,7 @@
 use super::{IterativeSolver, SolverConfig};
 use crate::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 #[test]
 fn test_bicgstab_complex_identity() {

@@ -3,7 +3,8 @@ use crate::inverse::pinn::ml::physics::PinnCouplingInterface;
 use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 
 /// Cavitation coupled physics domain.
-pub struct CavitationCoupledDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+pub struct CavitationCoupledDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+{
     pub config: CavitationCouplingConfig,
     pub coupling_type: CavitationCouplingType,
     pub bubble_model: KellerMiksisModel,

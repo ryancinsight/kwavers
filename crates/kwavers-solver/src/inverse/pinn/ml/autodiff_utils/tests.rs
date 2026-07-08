@@ -34,7 +34,10 @@ fn test_time_derivative_matches_analytic() -> kwavers_core::error::KwaversResult
 
         let u0 = coeus_autograd::add(&coeus_autograd::add(&coeus_autograd::mul(&t, &t), &x), &y);
         let u1 = coeus_autograd::sub(
-            &coeus_autograd::add(&coeus_autograd::scalar_mul(&t, 2.0), &coeus_autograd::scalar_mul(&x, 3.0)),
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(&t, 2.0),
+                &coeus_autograd::scalar_mul(&x, 3.0),
+            ),
             &y,
         );
 

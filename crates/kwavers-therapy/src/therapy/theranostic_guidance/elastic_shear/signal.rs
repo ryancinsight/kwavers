@@ -31,10 +31,10 @@ pub(super) fn velocity_source(
         }
     }));
     ElasticPstdVelocitySource {
-        mask,
+        mask: mask.into(),
         ux: None,
         uy: None,
-        uz: Some(signal),
+        uz: Some(signal.into()),
         mode: ElasticPstdSourceMode::Additive,
     }
 }

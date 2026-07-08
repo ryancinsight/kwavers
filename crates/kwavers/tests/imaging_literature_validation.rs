@@ -875,7 +875,7 @@ fn save_pa_reconstruction_figure(
             ShapeStyle::from(&BLUE).stroke_width(2),
         ))?
         .label("p₀_recon(r)  [PSTD delay-and-sum]")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
 
     chart
         .draw_series(std::iter::once(PathElement::new(
@@ -883,12 +883,12 @@ fn save_pa_reconstruction_figure(
             ShapeStyle::from(&RED).stroke_width(1),
         )))?
         .label("True source  r = 0")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED));
 
     chart
         .configure_series_labels()
         .background_style(WHITE.mix(0.85))
-        .border_style(&BLACK)
+        .border_style(BLACK)
         .draw()?;
 
     root.present()?;
@@ -960,7 +960,7 @@ fn save_ctr_vs_mi_figure(
             ShapeStyle::from(&BLUE).stroke_width(2),
         ))?
         .label("H₂ bubble")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
 
     // Tissue H₂.
     chart
@@ -972,7 +972,7 @@ fn save_ctr_vs_mi_figure(
             ShapeStyle::from(&RED).stroke_width(2),
         ))?
         .label("H₂ tissue")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], RED));
 
     // CTR.
     chart
@@ -984,7 +984,7 @@ fn save_ctr_vs_mi_figure(
             ShapeStyle::from(&GREEN).stroke_width(3),
         ))?
         .label("CTR (bubble − tissue)")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &GREEN));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], GREEN));
 
     // Test point markers.
     chart.draw_series(
@@ -997,7 +997,7 @@ fn save_ctr_vs_mi_figure(
     chart
         .configure_series_labels()
         .background_style(WHITE.mix(0.85))
-        .border_style(&BLACK)
+        .border_style(BLACK)
         .draw()?;
 
     root.present()?;
@@ -1078,7 +1078,7 @@ fn save_shear_wave_figure(
     chart
         .configure_series_labels()
         .background_style(WHITE.mix(0.85))
-        .border_style(&BLACK)
+        .border_style(BLACK)
         .draw()?;
 
     root.present()?;
@@ -1167,7 +1167,7 @@ fn save_absorption_ranges_figure(
     chart
         .configure_series_labels()
         .background_style(WHITE.mix(0.85))
-        .border_style(&BLACK)
+        .border_style(BLACK)
         .draw()?;
 
     root.present()?;

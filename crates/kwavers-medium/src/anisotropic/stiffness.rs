@@ -181,14 +181,15 @@ impl AnisotropicStiffnessTensor {
         true
     }
 
-    /// Calculate determinant of 2D array using nalgebra LU decomposition
+    /// Calculate determinant of 2D array using leto-ops LU decomposition
     ///
-    /// Uses nalgebra's robust LU decomposition with partial pivoting for numerical stability.
+    /// Uses partially pivoted LU decomposition for numerical stability.
     ///
     /// # References
     /// - Golub & Van Loan (2013): "Matrix Computations", Algorithm 3.4.1
     fn determinant_2d(matrix: &Array2<f64>) -> f64 {
-        use nalgebra::DMatrix;
+        use leto::application::fixed::FixedMatrix;
+        use leto_ops::application::linalg::lu_decompose;
 
         let n = matrix.shape()[0];
 
@@ -197,23 +198,25 @@ impl AnisotropicStiffnessTensor {
             return matrix[[0, 0]];
         } else if n == 2 {
             return matrix[[0, 0]].mul_add(matrix[[1, 1]], -(matrix[[0, 1]] * matrix[[1, 0]]));
+        } else if n == 3 {
+            // Delegate to stack-backed FixedMatrix<f64,3,3> analytic formula.
+            let m = FixedMatrix::from_rows([
+                [matrix[[0, 0]], matrix[[0, 1]], matrix[[0, 2]]],
+                [matrix[[1, 0]], matrix[[1, 1]], matrix[[1, 2]]],
+                [matrix[[2, 0]], matrix[[2, 1]], matrix[[2, 2]]],
+            ]);
+            return m.determinant();
         }
 
-        // For larger matrices (3x3 and above), use nalgebra's LU decomposition
-        // Convert ndarray to nalgebra DMatrix
-        let mut na_matrix = DMatrix::zeros(n, n);
-        for i in 0..n {
-            for j in 0..n {
-                na_matrix[(i, j)] = matrix[[i, j]];
-            }
-        }
-
-        // Compute LU decomposition with partial pivoting
-        // det(A) = det(P) * det(L) * det(U) = (-1)^p * ∏ u_ii
-        // where p is the number of permutations in P
-        match na_matrix.clone().lu().determinant() {
-            det if det.is_finite() => det,
-            _ => 0.0, // Handle NaN/Inf cases
+        // For larger matrices use leto-ops partial-pivot LU.
+        // Build a leto Array2 view from the ndarray data.
+        let flat: Vec<f64> = (0..n).flat_map(|i| (0..n).map(move |j| matrix[[i, j]])).collect();
+        let Ok(leto_mat) = leto::Array2::from_shape_vec([n, n], flat) else {
+            return 0.0;
+        };
+        match lu_decompose(&leto_mat.view()) {
+            Ok(lu) => lu.det(),
+            Err(_) => 0.0,
         }
     }
 
@@ -222,34 +225,29 @@ impl AnisotropicStiffnessTensor {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
-        use nalgebra::DMatrix;
+        use leto_ops::application::linalg::lu_decompose;
 
-        // Convert to nalgebra matrix
-        let mut matrix = DMatrix::zeros(6, 6);
+        // Build leto Array2 from the ndarray 6×6 stiffness matrix.
+        let flat: Vec<f64> = (0..6).flat_map(|i| (0..6).map(move |j| self.c[[i, j]])).collect();
+        let leto_mat = leto::Array2::from_shape_vec([6, 6], flat)
+            .expect("6×6 stiffness matrix has known valid shape");
+        let inv = lu_decompose(&leto_mat.view())
+            .and_then(|lu| lu.inv())
+            .map_err(|_| {
+                KwaversError::Validation(ValidationError::FieldValidation {
+                    field: "stiffness_matrix".to_owned(),
+                    value: "singular".to_owned(),
+                    constraint: "Stiffness matrix must be invertible".to_owned(),
+                })
+            })?;
+
+        let mut compliance = Array2::zeros((6, 6));
         for i in 0..6 {
             for j in 0..6 {
-                matrix[(i, j)] = self.c[[i, j]];
+                compliance[[i, j]] = *inv.get([i, j]).expect("6×6 indices in bounds");
             }
         }
-
-        // Compute inverse
-        match matrix.try_inverse() {
-            Some(inv) => {
-                // Convert back to ndarray
-                let mut compliance = Array2::zeros((6, 6));
-                for i in 0..6 {
-                    for j in 0..6 {
-                        compliance[[i, j]] = inv[(i, j)];
-                    }
-                }
-                Ok(compliance)
-            }
-            None => Err(KwaversError::Validation(ValidationError::FieldValidation {
-                field: "stiffness_matrix".to_owned(),
-                value: "singular".to_owned(),
-                constraint: "Stiffness matrix must be invertible".to_owned(),
-            })),
-        }
+        Ok(compliance)
     }
 
     /// Apply rotation to stiffness tensor

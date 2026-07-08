@@ -106,6 +106,10 @@ enum Command {
     LegacyMigrationAudit,
     /// Refresh the legacy migration allowlist baseline file.
     RefreshLegacyAllowlist,
+    /// Audit direct Burn migration surface during the Coeus cleanup.
+    BurnMigrationAudit,
+    /// Refresh the Burn migration allowlist baseline file.
+    RefreshBurnAllowlist,
 }
 
 fn main() -> Result<()> {
@@ -139,6 +143,10 @@ fn main() -> Result<()> {
         Command::RefreshLegacyAllowlist => {
             migration_audit::refresh_legacy_allowlist(&workspace_root())
         }
+        Command::BurnMigrationAudit => {
+            migration_audit::print_burn_migration_audit(&workspace_root())
+        }
+        Command::RefreshBurnAllowlist => migration_audit::refresh_burn_allowlist(&workspace_root()),
     }
 }
 

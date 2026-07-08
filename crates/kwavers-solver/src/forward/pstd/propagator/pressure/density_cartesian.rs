@@ -1,8 +1,9 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array1, Array3};
+use ndarray::{Array1, Array3 as NdArray3};
 
 // Implementation note on divergence caching:
 // `update_density_cartesian` writes ∂u_α/∂α directly into `div_ux`/`div_uy`/`div_uz`
@@ -16,6 +17,41 @@ enum SpectralAxis {
     X,
     Y,
     Z,
+}
+
+trait DenseRealField {
+    fn shape3(&self) -> [usize; 3];
+    fn as_dense_slice(&self) -> Option<&[f64]>;
+    fn value(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl DenseRealField for Array3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        self.shape()
+    }
+
+    fn as_dense_slice(&self) -> Option<&[f64]> {
+        self.as_slice()
+    }
+
+    fn value(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
+
+impl DenseRealField for NdArray3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        let (nx, ny, nz) = self.dim();
+        [nx, ny, nz]
+    }
+
+    fn as_dense_slice(&self) -> Option<&[f64]> {
+        self.as_slice_memory_order()
+    }
+
+    fn value(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
 }
 
 #[inline]
@@ -55,7 +91,7 @@ fn apply_shifted_kappa(
         "invariant: PSTD gradient spectrum shape matches kappa"
     );
 
-    let (_nx, ny, nz) = grad_k.dim();
+    let [_nx, ny, nz] = grad_k.shape();
     if let (Some(grad_values), Some(spectrum_values), Some(kappa_values), Some(shift_values)) = (
         grad_k.as_slice_memory_order_mut(),
         spectrum.as_slice_memory_order(),
@@ -70,7 +106,7 @@ fn apply_shifted_kappa(
         return;
     }
 
-    let (nx, ny, nz) = grad_k.dim();
+    let [nx, ny, nz] = grad_k.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -83,7 +119,7 @@ fn apply_shifted_kappa(
 
 fn compute_nonlinear_density_coefficient(
     coefficient: &mut Array3<f64>,
-    rho0: &Array3<f64>,
+    rho0: &NdArray3<f64>,
     rhox: &Array3<f64>,
     rhoy: &Array3<f64>,
     rhoz: &Array3<f64>,
@@ -116,11 +152,11 @@ fn compute_nonlinear_density_coefficient(
         Some(ry_values),
         Some(rz_values),
     ) = (
-        coefficient.as_slice_memory_order_mut(),
+        coefficient.as_slice_mut(),
         rho0.as_slice_memory_order(),
-        rhox.as_slice_memory_order(),
-        rhoy.as_slice_memory_order(),
-        rhoz.as_slice_memory_order(),
+        rhox.as_slice(),
+        rhoy.as_slice(),
+        rhoz.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(coef_values, |index, coefficient| {
             *coefficient = 2.0f64.mul_add(
@@ -131,7 +167,7 @@ fn compute_nonlinear_density_coefficient(
         return;
     }
 
-    let (nx, ny, nz) = coefficient.dim();
+    let [nx, ny, nz] = coefficient.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -147,7 +183,7 @@ fn compute_nonlinear_density_coefficient(
 fn update_density_fused(
     density: &mut Array3<f64>,
     divergence: &Array3<f64>,
-    coefficient: &Array3<f64>,
+    coefficient: &impl DenseRealField,
     pml: &[f64],
     axis: SpectralAxis,
     dt: f64,
@@ -159,15 +195,15 @@ fn update_density_fused(
     );
     assert_eq!(
         density.shape(),
-        coefficient.shape(),
+        coefficient.shape3(),
         "invariant: PSTD density shape matches update coefficient"
     );
 
-    let (_nx, ny, nz) = density.dim();
+    let [_nx, ny, nz] = density.shape();
     if let (Some(density_values), Some(div_values), Some(coef_values)) = (
-        density.as_slice_memory_order_mut(),
-        divergence.as_slice_memory_order(),
-        coefficient.as_slice_memory_order(),
+        density.as_slice_mut(),
+        divergence.as_slice(),
+        coefficient.as_dense_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
             let (i, j, k) = dense_indices(index, ny, nz);
@@ -177,14 +213,14 @@ fn update_density_fused(
         return;
     }
 
-    let (nx, ny, nz) = density.dim();
+    let [nx, ny, nz] = density.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
                 let p = pml[axis_index(axis, i, j, k)];
                 density[[i, j, k]] = p
                     * (p * density[[i, j, k]]
-                        - dt * coefficient[[i, j, k]] * divergence[[i, j, k]]);
+                        - dt * coefficient.value(i, j, k) * divergence[[i, j, k]]);
             }
         }
     }
@@ -193,7 +229,7 @@ fn update_density_fused(
 fn update_density_unfused(
     density: &mut Array3<f64>,
     divergence: &Array3<f64>,
-    coefficient: &Array3<f64>,
+    coefficient: &impl DenseRealField,
     dt: f64,
 ) {
     assert_eq!(
@@ -203,14 +239,14 @@ fn update_density_unfused(
     );
     assert_eq!(
         density.shape(),
-        coefficient.shape(),
+        coefficient.shape3(),
         "invariant: PSTD density shape matches update coefficient"
     );
 
     if let (Some(density_values), Some(div_values), Some(coef_values)) = (
-        density.as_slice_memory_order_mut(),
-        divergence.as_slice_memory_order(),
-        coefficient.as_slice_memory_order(),
+        density.as_slice_mut(),
+        divergence.as_slice(),
+        coefficient.as_dense_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
             *density -= dt * coef_values[index] * div_values[index];
@@ -218,11 +254,11 @@ fn update_density_unfused(
         return;
     }
 
-    let (nx, ny, nz) = density.dim();
+    let [nx, ny, nz] = density.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
-                density[[i, j, k]] -= dt * coefficient[[i, j, k]] * divergence[[i, j, k]];
+                density[[i, j, k]] -= dt * coefficient.value(i, j, k) * divergence[[i, j, k]];
             }
         }
     }

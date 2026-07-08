@@ -12,7 +12,7 @@ where
 {
     /// Create a new transfer learner
     pub fn new(
-        source_model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        source_model: crate::inverse::pinn::ml::PinnWave2D<B>,
         config: super::TransferLearningConfig,
     ) -> Self {
         Self {
@@ -29,9 +29,9 @@ where
     ///
     pub fn transfer_to_geometry(
         &mut self,
-        target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         target_conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
-    ) -> KwaversResult<(crate::inverse::pinn::ml::BurnPINN2DWave<B>, TransferMetrics)> {
+    ) -> KwaversResult<(crate::inverse::pinn::ml::PinnWave2D<B>, TransferMetrics)> {
         let start_time = std::time::Instant::now();
 
         let source_features = self.extract_source_features()?;
@@ -111,7 +111,7 @@ where
     pub(super) fn initialize_target_model(
         &self,
         _source_features: &SourceFeatures,
-    ) -> KwaversResult<crate::inverse::pinn::ml::BurnPINN2DWave<B>> {
+    ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
         Ok(self.source_model.clone())
     }
 
@@ -121,7 +121,7 @@ where
     ///
     pub(super) fn setup_domain_adapter(
         &mut self,
-        _target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        _target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> KwaversResult<()> {
         self.domain_adapter = Some(DomainAdapter {
             _layers: Vec::new(),
@@ -136,9 +136,9 @@ where
     ///
     pub(super) fn apply_domain_adaptation(
         &self,
-        model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        _target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
-    ) -> KwaversResult<crate::inverse::pinn::ml::BurnPINN2DWave<B>> {
+        model: crate::inverse::pinn::ml::PinnWave2D<B>,
+        _target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
+    ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
         Ok(model)
     }
 
@@ -148,10 +148,10 @@ where
     ///
     pub(super) fn fine_tune_model(
         &mut self,
-        mut model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        mut model: crate::inverse::pinn::ml::PinnWave2D<B>,
+        target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         target_conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
-    ) -> KwaversResult<(crate::inverse::pinn::ml::BurnPINN2DWave<B>, usize)> {
+    ) -> KwaversResult<(crate::inverse::pinn::ml::PinnWave2D<B>, usize)> {
         let mut best_accuracy = 0.0;
         let mut patience_counter = 0;
         let mut convergence_epochs = 0;
@@ -187,7 +187,7 @@ where
     ///
     pub(super) fn generate_training_data(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         _conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<TrainingData> {
         let collocation_points = self.generate_collocation_points(geometry);
@@ -203,7 +203,7 @@ where
     /// Generate collocation points within geometry
     pub(super) fn generate_collocation_points(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
         let num_points = 500;
@@ -227,7 +227,7 @@ where
     ///
     pub(super) fn fine_tune_step(
         &self,
-        model: &mut crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &mut crate::inverse::pinn::ml::PinnWave2D<B>,
         training_data: &TrainingData,
     ) -> KwaversResult<f32> {
         let backend = B::default();
@@ -269,7 +269,7 @@ where
         total_loss.backward();
 
         let optimizer =
-            crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
+            crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
         *model = optimizer.step(model.clone());
 
         let loss_value = total_loss.tensor.as_slice()[0];

@@ -1,8 +1,8 @@
 use super::MinimumVariance;
 use crate::signal_processing::beamforming::test_utilities;
 use approx::assert_relative_eq;
+use eunomia::Complex64;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 use std::f64::consts::PI;
 
 #[test]
@@ -18,7 +18,10 @@ fn mvdr_computes_finite_weights() {
 
     assert_eq!(weights.len(), n);
     for &w in &weights {
-        assert!(w.is_finite(), "weight should be finite");
+        assert!(
+            w.re.is_finite() && w.im.is_finite(),
+            "weight should be finite"
+        );
     }
 }
 

@@ -51,7 +51,7 @@
 //! - Atkinson K.E. (1997). *The Numerical Solution of Integral Equations of
 //!   the Second Kind*. Cambridge, §4.2 (Gauss quadrature accuracy).
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use super::geometry::{add, barycentric_coords, cross, norm_sq, scale, sub, triangle_area_normal};
 use super::green::green_helmholtz;

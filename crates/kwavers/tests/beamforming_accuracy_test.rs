@@ -3,8 +3,8 @@
 //! This module provides comprehensive validation of beamforming algorithms
 //! against analytical solutions and performance benchmarks.
 
+use kwavers_math::fft::Complex64;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 use std::f64::consts::PI;
 
 use kwavers_analysis::signal_processing::beamforming::adaptive::MinimumVariance;

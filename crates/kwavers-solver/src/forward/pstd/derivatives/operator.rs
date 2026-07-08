@@ -54,6 +54,7 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
+use leto::Array1 as LetoArray1;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
 use ndarray::{Array1, Array3, ArrayView3};
 
@@ -296,7 +297,7 @@ impl SpectralDerivativeOperator {
         let pencils = map_collect_index_with::<Adaptive, _, _>(pencil_count, |pencil_index| {
             let j = pencil_index / nz;
             let l = pencil_index % nz;
-            let mut line = Array1::<Complex64>::from_elem(nx, Complex64::default());
+            let mut line = LetoArray1::<Complex64>::from_elem([nx], Complex64::default());
             for i in 0..nx {
                 line[i] = Complex64::new(field[[i, j, l]], 0.0);
             }
@@ -337,7 +338,7 @@ impl SpectralDerivativeOperator {
                 derivative_values,
                 slab_len,
                 |i, slab| {
-                    let mut line = Array1::<Complex64>::from_elem(ny, Complex64::default());
+                    let mut line = LetoArray1::<Complex64>::from_elem([ny], Complex64::default());
                     for l in 0..nz {
                         for j in 0..ny {
                             line[j] = Complex64::new(field[[i, j, l]], 0.0);
@@ -355,7 +356,7 @@ impl SpectralDerivativeOperator {
             );
         } else {
             for i in 0..self.nx {
-                let mut line = Array1::<Complex64>::from_elem(ny, Complex64::default());
+                let mut line = LetoArray1::<Complex64>::from_elem([ny], Complex64::default());
                 for l in 0..nz {
                     for j in 0..ny {
                         line[j] = Complex64::new(field[[i, j, l]], 0.0);
@@ -394,7 +395,7 @@ impl SpectralDerivativeOperator {
                 derivative_values,
                 slab_len,
                 |i, slab| {
-                    let mut line = Array1::<Complex64>::from_elem(nz, Complex64::default());
+                    let mut line = LetoArray1::<Complex64>::from_elem([nz], Complex64::default());
                     for j in 0..ny {
                         for l in 0..nz {
                             line[l] = Complex64::new(field[[i, j, l]], 0.0);
@@ -413,7 +414,7 @@ impl SpectralDerivativeOperator {
             );
         } else {
             for i in 0..self.nx {
-                let mut line = Array1::<Complex64>::from_elem(nz, Complex64::default());
+                let mut line = LetoArray1::<Complex64>::from_elem([nz], Complex64::default());
                 for j in 0..ny {
                     for l in 0..nz {
                         line[l] = Complex64::new(field[[i, j, l]], 0.0);

@@ -21,7 +21,10 @@ impl std::fmt::Debug for AdaptiveRefinement {
                 "points",
                 &format!("{}x{}", self.points.shape()[0], self.points.shape()[1]),
             )
-            .field("residuals", &format!("{} values", self.residuals.shape()[0]))
+            .field(
+                "residuals",
+                &format!("{} values", self.residuals.shape()[0]),
+            )
             .field("threshold", &self.threshold)
             .finish()
     }

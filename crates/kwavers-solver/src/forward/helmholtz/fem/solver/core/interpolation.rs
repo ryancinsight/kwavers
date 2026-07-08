@@ -1,8 +1,7 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use nalgebra::{Matrix3, Vector3};
 use ndarray::{Array1, ArrayView2};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {
     /// Interpolate the nodal solution at arbitrary query points via barycentric coordinates.
@@ -61,21 +60,22 @@ impl FemHelmholtzSolver {
         p2: [f64; 3],
         p3: [f64; 3],
     ) -> KwaversResult<(f64, f64, f64, f64)> {
-        let a = Vector3::new(p0[0], p0[1], p0[2]);
-        let b = Vector3::new(p1[0], p1[1], p1[2]);
-        let c = Vector3::new(p2[0], p2[1], p2[2]);
-        let d = Vector3::new(p3[0], p3[1], p3[2]);
-        let p = Vector3::new(point[0], point[1], point[2]);
-
-        let m = Matrix3::from_columns(&[b - a, c - a, d - a]);
-        let inv = m.try_inverse().ok_or_else(|| {
+        let c0 = vec3_sub(p1, p0);
+        let c1 = vec3_sub(p2, p0);
+        let c2 = vec3_sub(p3, p0);
+        let m = [
+            [c0[0], c1[0], c2[0]],
+            [c0[1], c1[1], c2[1]],
+            [c0[2], c1[2], c2[2]],
+        ];
+        let inv = mat3_inv(&m).ok_or_else(|| {
             KwaversError::Numerical(NumericalError::SingularMatrix {
                 operation: "element_interpolation".to_owned(),
                 condition_number: 0.0,
             })
         })?;
 
-        let uvw = inv * (p - a);
+        let uvw = mat3_vec_mul(&inv, &vec3_sub(point, p0));
         let u = uvw[0];
         let v = uvw[1];
         let w = uvw[2];
@@ -83,4 +83,50 @@ impl FemHelmholtzSolver {
 
         Ok((u, v, w, t))
     }
+}
+
+#[inline]
+fn vec3_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn mat3_vec_mul(m: &[[f64; 3]; 3], v: &[f64; 3]) -> [f64; 3] {
+    [
+        m[0][0].mul_add(v[0], m[0][1].mul_add(v[1], m[0][2] * v[2])),
+        m[1][0].mul_add(v[0], m[1][1].mul_add(v[1], m[1][2] * v[2])),
+        m[2][0].mul_add(v[0], m[2][1].mul_add(v[1], m[2][2] * v[2])),
+    ]
+}
+
+#[inline]
+fn mat3_det(m: &[[f64; 3]; 3]) -> f64 {
+    m[0][0] * (m[1][1] * m[2][2] - m[1][2] * m[2][1])
+        - m[0][1] * (m[1][0] * m[2][2] - m[1][2] * m[2][0])
+        + m[0][2] * (m[1][0] * m[2][1] - m[1][1] * m[2][0])
+}
+
+fn mat3_inv(m: &[[f64; 3]; 3]) -> Option<[[f64; 3]; 3]> {
+    let det = mat3_det(m);
+    if det.abs() < 1e-14 {
+        return None;
+    }
+    let inv_det = 1.0 / det;
+    Some([
+        [
+            (m[1][1] * m[2][2] - m[1][2] * m[2][1]) * inv_det,
+            (m[0][2] * m[2][1] - m[0][1] * m[2][2]) * inv_det,
+            (m[0][1] * m[1][2] - m[0][2] * m[1][1]) * inv_det,
+        ],
+        [
+            (m[1][2] * m[2][0] - m[1][0] * m[2][2]) * inv_det,
+            (m[0][0] * m[2][2] - m[0][2] * m[2][0]) * inv_det,
+            (m[0][2] * m[1][0] - m[0][0] * m[1][2]) * inv_det,
+        ],
+        [
+            (m[1][0] * m[2][1] - m[1][1] * m[2][0]) * inv_det,
+            (m[0][1] * m[2][0] - m[0][0] * m[2][1]) * inv_det,
+            (m[0][0] * m[1][1] - m[0][1] * m[1][0]) * inv_det,
+        ],
+    ])
 }

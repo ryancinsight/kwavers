@@ -8,12 +8,14 @@
 //! - Taner et al. (1979): "Complex seismic trace analysis"
 
 use super::types::MisfitFunction;
+use apollo::{fft_1d_leto, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use kwavers_signal::analytic::{
     hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
 };
+use leto::Array1 as LetoArray1;
 use ndarray::Array2;
+use kwavers_math::fft::Complex64;
 
 impl MisfitFunction {
     /// Envelope misfit: 0.5 * ||E_syn − E_obs||² (cycle-skipping mitigation).
@@ -144,17 +146,24 @@ impl MisfitFunction {
 
         for i in 0..ntraces {
             let trace = signal.row(i);
-            let mut buffer = fft_1d_array(&trace.to_owned());
+            let trace_buffer = LetoArray1::from_shape_vec([nsamples], trace.to_vec())
+                .expect("seismic envelope trace length must match its Leto shape");
+            let mut buffer = fft_1d_leto(trace_buffer.view());
 
             // Double positive frequencies, zero negative frequencies
-            for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
-                *sample *= Complex64::new(2.0, 0.0);
+            let spectrum = buffer
+                .as_slice_mut()
+                .expect("Apollo 1-D FFT output must be contiguous");
+            for sample in spectrum.iter_mut().take(nsamples / 2).skip(1) {
+                *sample *= ApolloComplex64::new(2.0, 0.0);
             }
-            for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
-                *sample = Complex64::new(0.0, 0.0);
+            for sample in spectrum.iter_mut().skip(nsamples / 2 + 1) {
+                *sample = ApolloComplex64::new(0.0, 0.0);
             }
 
-            let analytic_signal = ifft_1d_complex(&buffer);
+            let complex_buffer = LetoArray1::from_shape_vec([nsamples], buffer.into_vec())
+                .expect("seismic envelope spectrum length must match its Leto shape");
+            let analytic_signal = ifft_1d_complex(&complex_buffer);
             for (j, sample) in analytic_signal.iter().enumerate() {
                 envelope[[i, j]] = sample.norm();
             }
@@ -178,16 +187,23 @@ impl MisfitFunction {
 
         for i in 0..ntraces {
             let trace = signal.row(i);
-            let mut buffer = fft_1d_array(&trace.to_owned());
+            let trace_buffer = LetoArray1::from_shape_vec([nsamples], trace.to_vec())
+                .expect("seismic phase trace length must match its Leto shape");
+            let mut buffer = fft_1d_leto(trace_buffer.view());
 
-            for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
-                *sample *= Complex64::new(2.0, 0.0);
+            let spectrum = buffer
+                .as_slice_mut()
+                .expect("Apollo 1-D FFT output must be contiguous");
+            for sample in spectrum.iter_mut().take(nsamples / 2).skip(1) {
+                *sample *= ApolloComplex64::new(2.0, 0.0);
             }
-            for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
-                *sample = Complex64::new(0.0, 0.0);
+            for sample in spectrum.iter_mut().skip(nsamples / 2 + 1) {
+                *sample = ApolloComplex64::new(0.0, 0.0);
             }
 
-            let analytic_signal = ifft_1d_complex(&buffer);
+            let complex_buffer = LetoArray1::from_shape_vec([nsamples], buffer.into_vec())
+                .expect("seismic phase spectrum length must match its Leto shape");
+            let analytic_signal = ifft_1d_complex(&complex_buffer);
             for (j, sample) in analytic_signal.iter().enumerate() {
                 let real = trace[j];
                 let imag = sample.im;

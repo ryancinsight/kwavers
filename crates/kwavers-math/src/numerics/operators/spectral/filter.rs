@@ -23,7 +23,7 @@
 
 use crate::fft::{fft_3d_array_into, ifft_3d_array_into, Complex64};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 use std::f64::consts::PI;
 
 /// Types of spectral filters
@@ -79,10 +79,11 @@ impl SpectralFilter {
     /// Returns [`KwaversError::InvalidInput`] for empty arrays or invalid cutoff
     /// values.
     pub fn apply(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        validate_filter_input(self.cutoff, field.dim())?;
+        let shape = field.shape();
+        validate_filter_input(self.cutoff, shape)?;
 
-        let mut output = Array3::zeros(field.dim());
-        let mut spectrum = Array3::zeros(field.dim());
+        let mut output = Array3::zeros(shape);
+        let mut spectrum = Array3::zeros(shape);
         self.apply_into(field, &mut spectrum, &mut output)?;
         Ok(output)
     }
@@ -106,7 +107,7 @@ impl SpectralFilter {
     /// # Errors
     ///
     /// Returns [`KwaversError::DimensionMismatch`] when either workspace does
-    /// not match `field.dim()`, and [`KwaversError::InvalidInput`] for invalid
+    /// not match `field.shape()`, and [`KwaversError::InvalidInput`] for invalid
     /// cutoff values.
     pub fn apply_into(
         &self,
@@ -114,10 +115,10 @@ impl SpectralFilter {
         spectrum: &mut Array3<Complex64>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
-        validate_filter_input(self.cutoff, field.dim())?;
-        validate_workspace("spectrum", spectrum.dim(), field.dim())?;
-        validate_workspace("output", output.dim(), field.dim())?;
+        let [nx, ny, nz] = field.shape();
+        validate_filter_input(self.cutoff, field.shape())?;
+        validate_workspace("spectrum", spectrum.shape(), field.shape())?;
+        validate_workspace("output", output.shape(), field.shape())?;
 
         output.assign(&field);
         fft_3d_array_into(output, spectrum);
@@ -160,8 +161,8 @@ impl SpectralFilter {
     }
 }
 
-fn validate_filter_input(cutoff: f64, shape: (usize, usize, usize)) -> KwaversResult<()> {
-    let (nx, ny, nz) = shape;
+fn validate_filter_input(cutoff: f64, shape: [usize; 3]) -> KwaversResult<()> {
+    let [nx, ny, nz] = shape;
     if nx == 0 || ny == 0 || nz == 0 {
         return Err(KwaversError::DimensionMismatch(
             "SpectralFilter requires all dimensions to be non-zero".to_owned(),
@@ -177,11 +178,7 @@ fn validate_filter_input(cutoff: f64, shape: (usize, usize, usize)) -> KwaversRe
     Ok(())
 }
 
-fn validate_workspace(
-    name: &str,
-    actual: (usize, usize, usize),
-    expected: (usize, usize, usize),
-) -> KwaversResult<()> {
+fn validate_workspace(name: &str, actual: [usize; 3], expected: [usize; 3]) -> KwaversResult<()> {
     if actual != expected {
         return Err(KwaversError::DimensionMismatch(format!(
             "SpectralFilter {name} workspace shape {actual:?} must match field shape {expected:?}"

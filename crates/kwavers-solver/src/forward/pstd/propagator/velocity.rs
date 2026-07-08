@@ -50,8 +50,9 @@ use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array1, Array2, Array3, ArrayView2, ArrayViewMut2};
+use ndarray::{s, Array1, Array2, Array3 as NdArray3, ArrayView2, ArrayViewMut2};
 
 #[derive(Clone, Copy)]
 enum VelocityAxis {
@@ -98,10 +99,32 @@ fn as_pml_index(axis: AsVelocityAxis, i: usize, k: usize) -> usize {
     }
 }
 
+fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("PSTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("PSTD leto field shape must match contiguous storage")
+}
+
+fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ndarray::ArrayViewMut3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayViewMut3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice_mut()
+            .expect("PSTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("PSTD leto field shape must match contiguous storage")
+}
+
 fn apply_shifted_kappa(
-    grad_k: &mut Array3<Complex64>,
-    spectrum: &Array3<Complex64>,
-    kappa: &Array3<f64>,
+    grad_k: &mut LetoArray3<Complex64>,
+    spectrum: &LetoArray3<Complex64>,
+    kappa: &LetoArray3<f64>,
     shift: &Array1<Complex64>,
     axis: VelocityAxis,
 ) {
@@ -116,7 +139,7 @@ fn apply_shifted_kappa(
         "invariant: PSTD velocity gradient spectrum shape matches kappa"
     );
 
-    let (_nx, ny, nz) = grad_k.dim();
+    let [_nx, ny, nz] = grad_k.shape();
     if let (Some(grad_values), Some(spectrum_values), Some(kappa_values), Some(shift_values)) = (
         grad_k.as_slice_memory_order_mut(),
         spectrum.as_slice_memory_order(),
@@ -131,7 +154,7 @@ fn apply_shifted_kappa(
         return;
     }
 
-    let (nx, ny, nz) = grad_k.dim();
+    let [nx, ny, nz] = grad_k.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -143,9 +166,9 @@ fn apply_shifted_kappa(
 }
 
 fn update_velocity_fused(
-    velocity: &mut Array3<f64>,
-    gradient: &Array3<f64>,
-    rho0: &Array3<f64>,
+    velocity: &mut LetoArray3<f64>,
+    gradient: &LetoArray3<f64>,
+    rho0: &NdArray3<f64>,
     pml: &[f64],
     axis: VelocityAxis,
     dt: f64,
@@ -155,16 +178,18 @@ fn update_velocity_fused(
         gradient.shape(),
         "invariant: PSTD velocity shape matches pressure gradient"
     );
+    let (rho_nx, rho_ny, rho_nz) = rho0.dim();
     assert_eq!(
         velocity.shape(),
-        rho0.shape(),
+        [rho_nx, rho_ny, rho_nz],
         "invariant: PSTD velocity shape matches rho0"
     );
 
-    let (_nx, ny, nz) = velocity.dim();
+    let shape = velocity.shape();
+    let (_nx, ny, nz) = (shape[0], shape[1], shape[2]);
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
-        velocity.as_slice_memory_order_mut(),
-        gradient.as_slice_memory_order(),
+        velocity.as_slice_mut(),
+        gradient.as_slice(),
         rho0.as_slice_memory_order(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
@@ -175,7 +200,7 @@ fn update_velocity_fused(
         return;
     }
 
-    let (nx, ny, nz) = velocity.dim();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -188,9 +213,9 @@ fn update_velocity_fused(
 }
 
 fn update_velocity_unfused(
-    velocity: &mut Array3<f64>,
-    gradient: &Array3<f64>,
-    rho0: &Array3<f64>,
+    velocity: &mut LetoArray3<f64>,
+    gradient: &LetoArray3<f64>,
+    rho0: &NdArray3<f64>,
     dt: f64,
 ) {
     assert_eq!(
@@ -198,15 +223,16 @@ fn update_velocity_unfused(
         gradient.shape(),
         "invariant: PSTD velocity shape matches pressure gradient"
     );
+    let (rho_nx, rho_ny, rho_nz) = rho0.dim();
     assert_eq!(
         velocity.shape(),
-        rho0.shape(),
+        [rho_nx, rho_ny, rho_nz],
         "invariant: PSTD velocity shape matches rho0"
     );
 
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
-        velocity.as_slice_memory_order_mut(),
-        gradient.as_slice_memory_order(),
+        velocity.as_slice_mut(),
+        gradient.as_slice(),
         rho0.as_slice_memory_order(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
@@ -215,7 +241,8 @@ fn update_velocity_unfused(
         return;
     }
 
-    let (nx, ny, nz) = velocity.dim();
+    let shape = velocity.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -539,7 +566,8 @@ impl PSTDSolver {
             KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
         })?;
 
-        ctx.compute_vel_grads(self.fields.p.slice(s![.., 0, ..]));
+        let pressure = leto_view3(&self.fields.p);
+        ctx.compute_vel_grads(pressure.slice(s![.., 0, ..]));
 
         if use_fused {
             // Fused: ux = pml_x[i] · (pml_x[i] · ux − (dt/ρ₀) · ∂p/∂x)
@@ -558,8 +586,9 @@ impl PSTDSolver {
                 .as_slice()
                 .ok_or_else(|| KwaversError::InternalError("pml_vel_z contiguous".into()))?;
 
+            let mut ux = leto_view_mut3(&mut self.fields.ux);
             update_axisymmetric_velocity_fused(
-                self.fields.ux.slice_mut(s![.., 0, ..]),
+                ux.slice_mut(s![.., 0, ..]),
                 &ctx.dpdx,
                 self.materials.rho0.slice(s![.., 0, ..]),
                 pml_vx,
@@ -567,8 +596,9 @@ impl PSTDSolver {
                 dt,
             );
 
+            let mut uz = leto_view_mut3(&mut self.fields.uz);
             update_axisymmetric_velocity_fused(
-                self.fields.uz.slice_mut(s![.., 0, ..]),
+                uz.slice_mut(s![.., 0, ..]),
                 &ctx.dpdr,
                 self.materials.rho0.slice(s![.., 0, ..]),
                 pml_vz,
@@ -576,15 +606,17 @@ impl PSTDSolver {
                 dt,
             );
         } else {
+            let mut ux = leto_view_mut3(&mut self.fields.ux);
             update_axisymmetric_velocity_unfused(
-                self.fields.ux.slice_mut(s![.., 0, ..]),
+                ux.slice_mut(s![.., 0, ..]),
                 &ctx.dpdx,
                 self.materials.rho0.slice(s![.., 0, ..]),
                 dt,
             );
 
+            let mut uz = leto_view_mut3(&mut self.fields.uz);
             update_axisymmetric_velocity_unfused(
-                self.fields.uz.slice_mut(s![.., 0, ..]),
+                uz.slice_mut(s![.., 0, ..]),
                 &ctx.dpdr,
                 self.materials.rho0.slice(s![.., 0, ..]),
                 dt,
@@ -620,19 +652,19 @@ impl PSTDSolver {
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_velocity_pml_directional(
-                    self.fields.ux.view_mut(),
+                    leto_view_mut3(&mut self.fields.ux),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    self.fields.uy.view_mut(),
+                    leto_view_mut3(&mut self.fields.uy),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    self.fields.uz.view_mut(),
+                    leto_view_mut3(&mut self.fields.uz),
                     self.grid.as_ref(),
                     self.time_step_index,
                     2,
@@ -643,19 +675,19 @@ impl PSTDSolver {
                 let grid = self.grid.as_ref();
                 let step = self.time_step_index;
 
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.fields.ux,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
                     |field| boundary.apply_velocity_pml_directional(field, grid, step, 0),
                 )?;
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.fields.uy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
                     |field| boundary.apply_velocity_pml_directional(field, grid, step, 1),
                 )?;
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.fields.uz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,

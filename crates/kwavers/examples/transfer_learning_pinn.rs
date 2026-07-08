@@ -11,14 +11,14 @@ use kwavers_solver::inverse::pinn::ml::transfer_learning::{
 };
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::{
-    BoundaryCondition2D, BurnPINN2DConfig, BurnPINN2DWave, BurnWave2dGeometry,
+    BoundaryCondition2D, PinnConfig2D, PinnWave2D, WaveGeometry2D,
 };
 
 #[cfg(feature = "pinn")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     type Backend = MoiraiBackend;
 
-    let source_model = BurnPINN2DWave::<Backend>::new(BurnPINN2DConfig::default())?;
+    let source_model = PinnWave2D::<Backend>::new(PinnConfig2D::default())?;
 
     let transfer_config = TransferLearningConfig {
         fine_tune_lr: 1e-4,
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let mut learner = TransferLearner::new(source_model, transfer_config);
 
-    let target_geometry = BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
+    let target_geometry = WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
     let target_conditions: Vec<BoundaryCondition2D> = Vec::new();
 
     let (_target_model, metrics) =

@@ -48,11 +48,20 @@ pub fn clip_gradients_by_norm(
 /// ```text
 /// gᵢ = clamp(gᵢ, -max_value, max_value)
 /// ```
-pub fn clip_gradients_by_value(grads: Vec<Option<Vec<f32>>>, max_value: f64) -> Vec<Option<Vec<f32>>> {
+pub fn clip_gradients_by_value(
+    grads: Vec<Option<Vec<f32>>>,
+    max_value: f64,
+) -> Vec<Option<Vec<f32>>> {
     let max_value = max_value as f32;
     grads
         .into_iter()
-        .map(|g| g.map(|v| v.into_iter().map(|x| x.clamp(-max_value, max_value)).collect()))
+        .map(|g| {
+            g.map(|v| {
+                v.into_iter()
+                    .map(|x| x.clamp(-max_value, max_value))
+                    .collect()
+            })
+        })
         .collect()
 }
 

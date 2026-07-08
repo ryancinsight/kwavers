@@ -3,7 +3,7 @@
 //! This module provides utilities for working with electromagnetic fields
 //! and computing energy-related quantities like the Poynting vector.
 
-use kwavers_field::PoyntingVector;
+use kwavers_field::{ArrayD, PoyntingVector, VecStorage};
 
 /// Electromagnetic field utilities for physics computations
 ///
@@ -27,8 +27,8 @@ impl EMFieldUtils {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn compute_poynting_vector(
-        electric: &ndarray::ArrayD<f64>,
-        magnetic: &ndarray::ArrayD<f64>,
+        electric: &ArrayD<f64, VecStorage<f64>>,
+        magnetic: &ArrayD<f64, VecStorage<f64>>,
         permittivity: f64,
         permeability: f64,
     ) -> Result<PoyntingVector, String> {
@@ -46,8 +46,8 @@ impl EMFieldUtils {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn validate_em_compatibility(
-        electric: &ndarray::ArrayD<f64>,
-        magnetic: &ndarray::ArrayD<f64>,
+        electric: &ArrayD<f64, VecStorage<f64>>,
+        magnetic: &ArrayD<f64, VecStorage<f64>>,
     ) -> Result<(), String> {
         let e_shape = electric.shape();
         let h_shape = magnetic.shape();
@@ -82,34 +82,33 @@ impl EMFieldUtils {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::ArrayD;
 
     #[test]
     fn test_em_field_compatibility() {
         // Valid 2D fields
-        let electric = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
-        let magnetic = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
+        let electric = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 2]).unwrap();
+        let magnetic = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 2]).unwrap();
 
         EMFieldUtils::validate_em_compatibility(&electric, &magnetic).unwrap();
 
         // Invalid: mismatched shapes
-        let electric_wrong = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 3]));
+        let electric_wrong = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 3]).unwrap();
         assert!(EMFieldUtils::validate_em_compatibility(&electric_wrong, &magnetic).is_err());
     }
 
     #[test]
     fn test_poynting_vector_computation() {
         // Simple 2D case: E = [1, 0], H = [0, 1] → S_z = 1*1 - 0*0 = 1
-        let mut electric = ArrayD::zeros(ndarray::IxDyn(&[1, 1, 2]));
-        let mut magnetic = ArrayD::zeros(ndarray::IxDyn(&[1, 1, 2]));
+        let mut electric = ArrayD::<f64, VecStorage<f64>>::zeros(&[1, 1, 2]).unwrap();
+        let mut magnetic = ArrayD::<f64, VecStorage<f64>>::zeros(&[1, 1, 2]).unwrap();
 
-        electric[[0, 0, 0]] = 1.0; // Ex = 1
-        magnetic[[0, 0, 1]] = 1.0; // Hy = 1
+        *electric.get_mut(&[0, 0, 0]).unwrap() = 1.0; // Ex = 1
+        *magnetic.get_mut(&[0, 0, 1]).unwrap() = 1.0; // Hy = 1
 
         let poynting =
             EMFieldUtils::compute_poynting_vector(&electric, &magnetic, 1.0, 1.0).unwrap();
 
-        // For 2D, S should be [0, 0, 1] with magnitude 1
-        assert_eq!(poynting.magnitude[[0, 0]], 1.0);
+        // For 2D, S_z = Ex*Hy - Ey*Hx = 1 → magnitude = 1
+        assert_eq!(*poynting.magnitude.get(&[0, 0]).unwrap(), 1.0);
     }
 }

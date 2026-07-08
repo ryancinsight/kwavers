@@ -15,8 +15,8 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
     complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
 };
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
+use kwavers_math::fft::Complex64;
 
 pub(super) fn objective_and_gradient(
     slowness_s_per_m: &Array3<f64>,
@@ -31,13 +31,14 @@ pub(super) fn objective_and_gradient(
     }
 
     let mut objective = 0.0;
-    let mut gradient = Array3::zeros(slowness_s_per_m.dim());
+    let shape = slowness_s_per_m.shape();
+    let mut gradient = Array3::zeros([shape[0], shape[1], shape[2]]);
     for observation in observations {
-        let rows = observation.observed_pressure.nrows();
-        if observation.observed_pressure.ncols() != array.element_count() {
+        let rows = observation.observed_pressure.shape()[0];
+        if observation.observed_pressure.shape()[1] != array.element_count() {
             return Err(KwaversError::DimensionMismatch(format!(
                 "receiver count mismatch: observed {}, geometry {}",
-                observation.observed_pressure.ncols(),
+                observation.observed_pressure.shape()[1],
                 array.element_count()
             )));
         }
@@ -105,7 +106,7 @@ fn accumulate_finite_window_frequency_gradient(
             c.spacing_m = config.spacing_m;
             c
         })?;
-    let rows = observation.observed_pressure.nrows();
+    let rows = observation.observed_pressure.shape()[0];
     super::finite_window::finite_window_pstd_born_gradient(
         &kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::slowness_to_sound_speed(slowness_s_per_m)?,
         array,
@@ -136,11 +137,12 @@ fn accumulate_dense_cbs_frequency_gradient(
             )
         })?;
 
-    let rows = observation.observed_pressure.nrows();
+    let rows = observation.observed_pressure.shape()[0];
     let omega = TWO_PI * observation.frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
-    let grid = GridSpec::new(slowness_s_per_m.dim(), config.spacing_m)?;
+    let shape = slowness_s_per_m.shape();
+    let grid = GridSpec::new((shape[0], shape[1], shape[2]), config.spacing_m)?;
     let potential = real_scattering_potential_for_operator(
         omega,
         slowness_s_per_m,
@@ -167,7 +169,13 @@ fn accumulate_dense_cbs_frequency_gradient(
             operator,
         )?;
         let predicted = sample_array_for_operator(grid, &forward_solution.field, array, operator)?;
-        let observed = observation.observed_pressure.row(transmit).to_vec();
+        let observed = observation
+            .observed_pressure
+            .index_axis::<1>(0, transmit)
+            .expect("transmit index in bounds")
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
         let source_scale = if config.estimate_source_scaling {
             complex_source_scale(&predicted, &observed)?
         } else {
@@ -222,7 +230,7 @@ fn accumulate_dense_cbs_slowness_gradient(
     slowness: &[f64],
     slowness_derivative_factor: f64,
 ) {
-    let (_, ny, nz) = gradient.dim();
+    let [_nx, ny, nz] = gradient.shape();
     for (linear_index, ((&forward_value, &adjoint_value), &slowness_value)) in forward_field
         .iter()
         .zip(green_adjoint.iter())
@@ -246,13 +254,14 @@ fn accumulate_frequency_gradient(
     objective: &mut f64,
     gradient: &mut Array3<f64>,
 ) -> KwaversResult<()> {
-    let rows = observation.observed_pressure.nrows();
+    let rows = observation.observed_pressure.shape()[0];
     let omega = TWO_PI * observation.frequency_hz;
     let reference_slowness = 1.0 / config.reference_sound_speed_m_s;
     let reference_wavenumber = omega * reference_slowness;
     let min_distance = 0.5 * config.spacing_m;
     let cell_volume = config.spacing_m.powi(3);
-    let centers = voxel_centers(slowness_s_per_m.dim(), config.spacing_m);
+    let shape = slowness_s_per_m.shape();
+    let centers = voxel_centers((shape[0], shape[1], shape[2]), config.spacing_m);
     let potential = real_scattering_potential(omega, slowness_s_per_m, reference_slowness)?;
     let slowness = slowness_s_per_m.iter().copied().collect::<Vec<_>>();
 
@@ -269,7 +278,13 @@ fn accumulate_frequency_gradient(
             min_distance,
             cell_volume,
         );
-        let observed = observation.observed_pressure.row(transmit).to_vec();
+        let observed = observation
+            .observed_pressure
+            .index_axis::<1>(0, transmit)
+            .expect("transmit index in bounds")
+            .iter()
+            .copied()
+            .collect::<Vec<_>>();
         let source_scale = if config.estimate_source_scaling {
             complex_source_scale(&predicted, &observed)?
         } else {
@@ -347,7 +362,7 @@ fn accumulate_row_adjoint(
     predicted: &[Complex64],
     observed: &[Complex64],
 ) {
-    let (_, ny, nz) = gradient.dim();
+    let [_nx, ny, nz] = gradient.shape();
     for (receiver_index, &receiver) in array.elements().iter().enumerate() {
         let residual = predicted[receiver_index] - observed[receiver_index];
         for ((linear_index, point), (&incident_value, &slowness_value)) in

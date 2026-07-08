@@ -13,6 +13,6 @@ mod sampled;
 #[cfg(test)]
 mod tests;
 
-pub use accumulator::VelocityComponentStats;
+pub use accumulator::{VelocityArray3Access, VelocityComponentStats};
 pub use interpolation::interpolate_staggered_to_collocated;
 pub use sampled::SampledVelocityStats;

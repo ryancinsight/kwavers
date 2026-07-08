@@ -1,15 +1,12 @@
 //! PSTD time-stepping kernel: `step_forward` and k-space variant.
 
 use super::super::orchestrator::PSTDSolver;
-use super::ops::{
-    add_gradient_source_term, add_masked_source_term, add_previous_pressure_and_source,
-    add_source_term, apply_wave_coefficient,
-};
+use super::ops::{add_gradient_source_term, add_masked_source_term};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_source::{SourceField, SourceInjectionMode};
-use ndarray::Array3;
+use leto::Array3;
 use tracing::{enabled, trace, warn, Level};
 
 impl PSTDSolver {
@@ -166,7 +163,7 @@ impl PSTDSolver {
             })
         })?;
 
-        let source_term = std::mem::replace(&mut self.dpx, Array3::zeros((0, 0, 0)));
+        let source_term = std::mem::replace(&mut self.dpx, Array3::zeros([0, 0, 0]));
         self.propagate_kspace(dt, &source_term, &mut ops)?;
         self.dpx = source_term;
         self.kspace_operators = Some(ops);
@@ -236,18 +233,34 @@ impl PSTDSolver {
                 .wave_coeff
                 .as_ref()
                 .expect("invariant: ensure_wave_coeff populated wave_coeff");
-            apply_wave_coefficient(&mut p_hat, coeff, if is_first { 0.5 } else { 1.0 });
+            let factor = if is_first { 0.5 } else { 1.0 };
+            for (value, &coef) in p_hat.iter_mut().zip(coeff.iter()) {
+                *value *= factor * coef;
+            }
         }
         let mut new_p = kspace_ops.inverse_fft_3d(&p_hat)?;
 
         if let Some(prev) = &p_prev_old {
-            add_previous_pressure_and_source(&mut new_p, prev, source_term);
+            for ((dst, &old), &source) in new_p.iter_mut().zip(prev.iter()).zip(source_term.iter())
+            {
+                *dst += source - old;
+            }
         } else {
-            add_source_term(&mut new_p, source_term);
+            for (dst, &source) in new_p.iter_mut().zip(source_term.iter()) {
+                *dst += source;
+            }
         }
 
         // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.
-        kspace_ops.p_prev = Some(std::mem::replace(&mut self.fields.p, new_p));
+        let shape = self.fields.p.shape();
+        let mut old_p = ndarray::Array3::zeros((shape[0], shape[1], shape[2]));
+        for (dst, src) in old_p.iter_mut().zip(self.fields.p.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.fields.p.iter_mut().zip(new_p.iter()) {
+            *dst = *src;
+        }
+        kspace_ops.p_prev = Some(old_p);
         Ok(())
     }
 }

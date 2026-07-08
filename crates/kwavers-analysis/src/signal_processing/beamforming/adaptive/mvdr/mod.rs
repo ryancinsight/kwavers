@@ -44,9 +44,9 @@
 //! - Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley. Chapter 6.
 //! - Li, J., Stoica, P., & Wang, Z. (2003). "On robust Capon beamforming." *IEEE TSP*, 51(7).
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::DEFAULT_DIAGONAL_LOADING;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use num_complex::Complex64;
 
 /// Minimum Variance Distortionless Response (MVDR / Capon) beamformer.
 ///

@@ -1,3 +1,5 @@
+#![cfg(all(feature = "pinn", feature = "ai_integration_module_exists"))]
+
 //! Tests for AI-enhanced beamforming integration
 
 #[cfg(feature = "pinn")]

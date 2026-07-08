@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
-use num_complex::Complex64;
 
 /// Validate covariance matrix structure: square, Hermitian, finite values.
 ///
@@ -21,7 +21,10 @@ pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResu
         )));
     }
 
-    if !covariance.iter().all(|&x| x.is_finite()) {
+    if !covariance
+        .iter()
+        .all(|&x| x.re.is_finite() && x.im.is_finite())
+    {
         return Err(KwaversError::InvalidInput(
             "Covariance matrix contains non-finite values (NaN or Inf)".into(),
         ));

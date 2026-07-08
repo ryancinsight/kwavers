@@ -3,9 +3,10 @@
 //! Prefer windowed snapshots via `SnapshotSelection` for MVDR/MUSIC pipelines.
 
 use super::config::BasebandSnapshotConfig;
+use apollo::{fft_1d_array, ifft_1d_complex};
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
 use ndarray::{Array2, Array3};
 
 /// Convert a real-valued time series into its analytic signal via Hilbert transform.
@@ -32,7 +33,10 @@ fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
         ));
     }
 
-    let mut spectrum = fft_1d_array(&ndarray::Array1::from_vec(signal.to_vec()));
+    let mut spectrum = fft_1d_array(
+        &leto::Array1::from_vec([n], signal.to_vec())
+            .expect("analytic_signal_hilbert: shape matches signal length"),
+    );
 
     // Apply analytic-signal (Hilbert/one-sided) multiplier.
     //
@@ -59,7 +63,7 @@ fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
         }
     }
 
-    Ok(ifft_1d_complex(&spectrum).to_vec())
+    Ok(ifft_1d_complex(&spectrum).into_vec())
 }
 
 /// Downconvert an analytic (complex) signal to complex baseband with center frequency `f0`.
@@ -153,7 +157,8 @@ pub fn extract_complex_baseband_snapshots(
 
     let n_snapshots = ((n_samples - 1) / step) + 1;
 
-    let mut snapshots = Array2::<Complex64>::zeros((n_sensors, n_snapshots));
+    let mut snapshots =
+        Array2::<Complex64>::from_elem((n_sensors, n_snapshots), Complex64::default());
 
     for s in 0..n_sensors {
         let mut x = Vec::with_capacity(n_samples);
@@ -184,7 +189,7 @@ mod tests {
         analytic_signal_hilbert, downconvert_to_baseband, extract_complex_baseband_snapshots,
     };
     use approx::assert_abs_diff_eq;
-    use kwavers_math::fft::Complex64;
+    use eunomia::Complex64;
     use ndarray::Array3;
 
     #[test]

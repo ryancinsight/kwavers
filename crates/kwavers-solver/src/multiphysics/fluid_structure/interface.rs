@@ -141,9 +141,7 @@ impl FsiInterface {
                     let phi_im = level_set(i - 1, j, k);
                     let phi_jm = level_set(i, j - 1, k);
                     let phi_km = level_set(i, j, k - 1);
-                    (phi_ijk * phi_im < 0.0)
-                        || (phi_ijk * phi_jm < 0.0)
-                        || (phi_ijk * phi_km < 0.0)
+                    (phi_ijk * phi_im < 0.0) || (phi_ijk * phi_jm < 0.0) || (phi_ijk * phi_km < 0.0)
                 } else {
                     false
                 };

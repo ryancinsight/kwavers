@@ -1,9 +1,11 @@
 //! FastNearfieldSolver implementation.
 
+use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
+use leto::Array2 as LetoArray2;
 use ndarray::{s, Array2, Array3, Axis};
+use kwavers_math::fft::Complex64;
 use std::collections::HashMap;
 
 use super::types::{AngularSpectrumFactors, FNMConfig};
@@ -125,7 +127,7 @@ impl FastNearfieldSolver {
 
         // Compute angular spectrum of Green's function
         // Based on McGough (2004) and Kelly & McGough (2006)
-        let mut green_spectrum = Array2::<Complex64>::zeros((n_kx, n_ky));
+        let mut green_spectrum = Array2::<Complex64>::from_elem((n_kx, n_ky), Complex64::default());
 
         for (i, &kx_val) in self.kx.iter().enumerate() {
             for (j, &ky_val) in self.ky.iter().enumerate() {
@@ -201,22 +203,36 @@ impl FastNearfieldSolver {
 
         // Zero-pad velocity to angular spectrum size
         let padded_velocity = self.zero_pad_velocity(velocity);
+        let (n_kx, n_ky) = self.config.angular_spectrum_size;
+        let padded_velocity = LetoArray2::from_shape_vec(
+            [n_kx, n_ky],
+            padded_velocity
+                .iter()
+                .map(|value| ApolloComplex64::new(value.re, value.im))
+                .collect(),
+        )
+        .expect("fast-nearfield padded velocity shape must match its Leto FFT shape");
 
         // Forward FFT (angular spectrum of velocity)
         let velocity_spectrum = fft_2d_complex(&padded_velocity);
 
         // Multiply by Green's function angular spectrum
         let mut pressure_spectrum = velocity_spectrum;
-        for ((i, j), val) in pressure_spectrum.indexed_iter_mut() {
-            *val *= factors.green_spectrum[[i, j]];
+        for i in 0..n_kx {
+            for j in 0..n_ky {
+                let factor = factors.green_spectrum[[i, j]];
+                pressure_spectrum[[i, j]] *= ApolloComplex64::new(factor.re, factor.im);
+            }
         }
 
         // Scaling factor from Rayleigh-Sommerfeld theory
         let k = transducer.wavenumber(self.c0);
-        let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (TWO_PI));
+        let scaling = ApolloComplex64::new(0.0, self.rho0 * self.c0 * k / (TWO_PI));
 
-        for val in &mut pressure_spectrum {
-            *val *= scaling;
+        for i in 0..n_kx {
+            for j in 0..n_ky {
+                pressure_spectrum[[i, j]] *= scaling;
+            }
         }
 
         // Inverse FFT to get spatial pressure field
@@ -224,13 +240,16 @@ impl FastNearfieldSolver {
         let pressure_field = ifft_2d_complex(&pressure_spectrum);
 
         // Extract the central region corresponding to the transducer aperture
-        let (n_kx, n_ky) = self.config.angular_spectrum_size;
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
 
-        let result = pressure_field
-            .slice(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y])
-            .to_owned();
+        let mut result = Array2::<Complex64>::from_elem((n_elem_x, n_elem_y), Complex64::default());
+        for i in 0..n_elem_x {
+            for j in 0..n_elem_y {
+                let value = pressure_field[[start_x + i, start_y + j]];
+                result[[i, j]] = Complex64::new(value.re, value.im);
+            }
+        }
 
         Ok(result)
     }
@@ -267,7 +286,7 @@ impl FastNearfieldSolver {
         let (n_elem_x, n_elem_y) = velocity.dim();
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
 
-        let mut padded = Array2::<Complex64>::zeros((n_kx, n_ky));
+        let mut padded = Array2::<Complex64>::from_elem((n_kx, n_ky), Complex64::default());
 
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;

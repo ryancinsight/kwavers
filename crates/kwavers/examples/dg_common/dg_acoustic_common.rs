@@ -59,6 +59,14 @@ pub struct EmbeddedGaussianSeries {
     pub common_pressure_lines: Vec<NamedLine>,
     pub common_error_lines: Vec<NamedLine>,
 }
+
+struct DgGaussianRun {
+    pressure: Array3<f64>,
+    mass_error: f64,
+    xi_nodes: Array1<f64>,
+    weights: Array1<f64>,
+}
+
 pub fn run_native_acoustic_diagnostic() -> KwaversResult<NativeAcousticDiagnostic> {
     let n_nodes = POLYNOMIAL_ORDER + 1;
     let (xi_nodes, weights) = gauss_lobatto_quadrature(n_nodes)?;
@@ -107,32 +115,32 @@ pub fn run_embedded_gaussian_solver_matrix() -> KwaversResult<EmbeddedGaussianMa
 }
 
 pub fn run_embedded_gaussian_series() -> KwaversResult<EmbeddedGaussianSeries> {
-    let (dg_pressure, dg_mass_error, xi_nodes, weights) = run_dg_gaussian()?;
+    let dg_run = run_dg_gaussian()?;
     let fdtd_line = run_fdtd_gaussian(KSpaceCorrectionMode::None)?;
     let kspace_line = run_fdtd_gaussian(KSpaceCorrectionMode::Spectral)?;
     let pstd_line = run_pstd_gaussian()?;
     let final_time = STEPS as f64 * DT;
     let exact_uniform = exact_uniform_gaussian_line(final_time);
-    let exact_dg = exact_dg_gaussian_pressure(&xi_nodes, final_time);
+    let exact_dg = exact_dg_gaussian_pressure(&dg_run.xi_nodes, final_time);
     let common_samples = sampling::common_gaussian_samples(
-        &dg_pressure,
-        &xi_nodes,
+        &dg_run.pressure,
+        &dg_run.xi_nodes,
         &fdtd_line,
         &kspace_line,
         &pstd_line,
     )?;
 
     let matrix = EmbeddedGaussianMatrix {
-        dg_exact_l2: relative_l2(&dg_pressure, &exact_dg, &weights),
+        dg_exact_l2: relative_l2(&dg_run.pressure, &exact_dg, &dg_run.weights),
         fdtd_exact_l2: relative_l2_line(&fdtd_line, &exact_uniform),
         kspace_exact_l2: relative_l2_line(&kspace_line, &exact_uniform),
         pstd_exact_l2: relative_l2_line(&pstd_line, &exact_uniform),
         fdtd_pstd_l2: relative_l2_line(&fdtd_line, &pstd_line),
         kspace_pstd_l2: relative_l2_line(&kspace_line, &pstd_line),
-        dg_pressure_mass_error: dg_mass_error,
+        dg_pressure_mass_error: dg_run.mass_error,
     };
 
-    let dg_exact = dg_line(&exact_dg, &xi_nodes);
+    let dg_exact = dg_line(&exact_dg, &dg_run.xi_nodes);
     let uniform_exact = uniform_line(&exact_uniform);
     let pressure_lines = vec![
         NamedLine {
@@ -141,7 +149,7 @@ pub fn run_embedded_gaussian_series() -> KwaversResult<EmbeddedGaussianSeries> {
         },
         NamedLine {
             name: "DG",
-            samples: dg_line(&dg_pressure, &xi_nodes),
+            samples: dg_line(&dg_run.pressure, &dg_run.xi_nodes),
         },
         NamedLine {
             name: "FDTD",
@@ -241,7 +249,7 @@ pub fn gaussian_embedded_source(grid: &Grid) -> GridSource {
     }
 }
 
-fn run_dg_gaussian() -> KwaversResult<(Array3<f64>, f64, Array1<f64>, Array1<f64>)> {
+fn run_dg_gaussian() -> KwaversResult<DgGaussianRun> {
     let n_nodes = POLYNOMIAL_ORDER + 1;
     let (xi_nodes, weights) = gauss_lobatto_quadrature(n_nodes)?;
     let mut pressure = Array3::zeros((ELEMENTS, n_nodes, 1));
@@ -271,7 +279,12 @@ fn run_dg_gaussian() -> KwaversResult<(Array3<f64>, f64, Array1<f64>, Array1<f64
         )?;
     }
     let mass_error = (weighted_mass(&pressure, &weights) - initial_mass).abs();
-    Ok((pressure, mass_error, xi_nodes, weights))
+    Ok(DgGaussianRun {
+        pressure,
+        mass_error,
+        xi_nodes,
+        weights,
+    })
 }
 
 fn run_fdtd_gaussian(kspace_correction: KSpaceCorrectionMode) -> KwaversResult<Array1<f64>> {

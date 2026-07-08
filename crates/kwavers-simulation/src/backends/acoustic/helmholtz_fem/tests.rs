@@ -4,10 +4,10 @@ use super::backend::FemHelmholtzBackend;
 use crate::backends::acoustic::FrequencyDomainAcousticBackend;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemPreconditionerType};
 use ndarray::arr2;
-use num_complex::Complex64;
 
 fn medium_for(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)

@@ -38,6 +38,7 @@
 //! - Field arrays are in C (row-major) order, matching ndarray's default layout.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use ndarray::{Array2, Array3};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
@@ -69,10 +70,10 @@ pub struct PSTDCheckpoint {
     pub total_steps: usize,
     /// Time step size (s).
     pub dt: f64,
-    pub p: Array3<f64>,
-    pub ux: Array3<f64>,
-    pub uy: Array3<f64>,
-    pub uz: Array3<f64>,
+    pub p: LetoArray3<f64>,
+    pub ux: LetoArray3<f64>,
+    pub uy: LetoArray3<f64>,
+    pub uz: LetoArray3<f64>,
     pub rhox: Array3<f64>,
     pub rhoy: Array3<f64>,
     pub rhoz: Array3<f64>,
@@ -137,10 +138,10 @@ impl PSTDCheckpoint {
         time_step_index: usize,
         total_steps: usize,
         dt: f64,
-        p: &Array3<f64>,
-        ux: &Array3<f64>,
-        uy: &Array3<f64>,
-        uz: &Array3<f64>,
+        p: &LetoArray3<f64>,
+        ux: &LetoArray3<f64>,
+        uy: &LetoArray3<f64>,
+        uz: &LetoArray3<f64>,
         rhox: &Array3<f64>,
         rhoy: &Array3<f64>,
         rhoz: &Array3<f64>,
@@ -176,11 +177,13 @@ impl PSTDCheckpoint {
             }
         }
 
-        for arr in [p, ux, uy, uz, rhox, rhoy, rhoz] {
-            for &v in arr {
-                w.write_all(&v.to_le_bytes())?;
-            }
-        }
+        write_f64_iter(&mut w, p.iter())?;
+        write_f64_iter(&mut w, ux.iter())?;
+        write_f64_iter(&mut w, uy.iter())?;
+        write_f64_iter(&mut w, uz.iter())?;
+        write_f64_iter(&mut w, rhox.iter())?;
+        write_f64_iter(&mut w, rhoy.iter())?;
+        write_f64_iter(&mut w, rhoz.iter())?;
 
         w.flush()?;
         Ok(())
@@ -235,10 +238,10 @@ impl PSTDCheckpoint {
         };
 
         let n = nx * ny * nz;
-        let p = read_array3(&mut r, n, nx, ny, nz)?;
-        let ux = read_array3(&mut r, n, nx, ny, nz)?;
-        let uy = read_array3(&mut r, n, nx, ny, nz)?;
-        let uz = read_array3(&mut r, n, nx, ny, nz)?;
+        let p = read_leto_array3(&mut r, n, nx, ny, nz)?;
+        let ux = read_leto_array3(&mut r, n, nx, ny, nz)?;
+        let uy = read_leto_array3(&mut r, n, nx, ny, nz)?;
+        let uz = read_leto_array3(&mut r, n, nx, ny, nz)?;
         let rhox = read_array3(&mut r, n, nx, ny, nz)?;
         let rhoy = read_array3(&mut r, n, nx, ny, nz)?;
         let rhoz = read_array3(&mut r, n, nx, ny, nz)?;
@@ -400,4 +403,28 @@ fn read_array3<T: WirePrimitive>(
         *v = read_le(r)?;
     }
     Array3::from_shape_vec((nx, ny, nz), flat).map_err(|e| KwaversError::Shape(e.to_string()))
+}
+
+fn write_f64_iter<'a>(
+    w: &mut impl Write,
+    values: impl IntoIterator<Item = &'a f64>,
+) -> KwaversResult<()> {
+    for value in values {
+        w.write_all(&value.to_le_bytes())?;
+    }
+    Ok(())
+}
+
+fn read_leto_array3(
+    r: &mut impl Read,
+    n: usize,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+) -> KwaversResult<LetoArray3<f64>> {
+    let mut flat = vec![0.0_f64; n];
+    for v in &mut flat {
+        *v = read_le(r)?;
+    }
+    LetoArray3::from_shape_vec([nx, ny, nz], flat).map_err(|e| KwaversError::Shape(e.to_string()))
 }

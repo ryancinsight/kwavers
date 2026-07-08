@@ -18,13 +18,13 @@ fn finite_window_born_is_linear_in_slowness_squared_contrast() {
     let double = contrast_volume(0.02);
 
     let base_data =
-        simulate_pstd_finite_window_born_observation(&base, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(&base.clone().into(), &array, 200_000.0, config, 4)
             .expect("base data");
     let small_data =
-        simulate_pstd_finite_window_born_observation(&small, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(&small.clone().into(), &array, 200_000.0, config, 4)
             .expect("small contrast");
     let double_data =
-        simulate_pstd_finite_window_born_observation(&double, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(&double.clone().into(), &array, 200_000.0, config, 4)
             .expect("double contrast");
 
     let mut max_reference: f64 = 0.0;
@@ -56,7 +56,7 @@ fn finite_window_born_rejects_off_grid_ring_geometry() {
     let model = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
 
     let error =
-        simulate_pstd_finite_window_born_observation(&model, &array, 200_000.0, test_config(), 4)
+        simulate_pstd_finite_window_born_observation(&model.clone().into(), &array, 200_000.0, test_config(), 4)
             .expect_err("off-grid geometry must fail");
 
     assert!(
@@ -77,19 +77,19 @@ fn second_order_correction_is_quadratic_in_contrast() {
 
     // First-order predictions at each contrast.
     let first_small =
-        simulate_pstd_finite_window_born_observation(&small, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(&small.clone().into(), &array, 200_000.0, config, 4)
             .expect("first-order small");
     let first_double =
-        simulate_pstd_finite_window_born_observation(&double, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(&double.clone().into(), &array, 200_000.0, config, 4)
             .expect("first-order double");
 
     // Second-order predictions at each contrast.
     let second_small = simulate_pstd_finite_window_born_second_order_observation(
-        &small, &array, 200_000.0, config, 4,
+        &small.clone().into(), &array, 200_000.0, config, 4,
     )
     .expect("second-order small");
     let second_double = simulate_pstd_finite_window_born_second_order_observation(
-        &double, &array, 200_000.0, config, 4,
+        &double.clone().into(), &array, 200_000.0, config, 4,
     )
     .expect("second-order double");
 
@@ -134,10 +134,16 @@ fn second_order_differs_from_first_order_on_heterogeneous() {
     let heterogeneous = contrast_volume(0.05);
 
     let first_homog =
-        simulate_pstd_finite_window_born_observation(&homogeneous, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(
+            &homogeneous.clone().into(),
+            &array,
+            200_000.0,
+            config,
+            4,
+        )
             .expect("first order homogeneous");
     let second_homog = simulate_pstd_finite_window_born_second_order_observation(
-        &homogeneous,
+        &homogeneous.clone().into(),
         &array,
         200_000.0,
         config,
@@ -145,10 +151,16 @@ fn second_order_differs_from_first_order_on_heterogeneous() {
     )
     .expect("second order homogeneous");
     let first_hetero =
-        simulate_pstd_finite_window_born_observation(&heterogeneous, &array, 200_000.0, config, 4)
+        simulate_pstd_finite_window_born_observation(
+            &heterogeneous.clone().into(),
+            &array,
+            200_000.0,
+            config,
+            4,
+        )
             .expect("first order heterogeneous");
     let second_hetero = simulate_pstd_finite_window_born_second_order_observation(
-        &heterogeneous,
+        &heterogeneous.clone().into(),
         &array,
         200_000.0,
         config,
@@ -216,7 +228,7 @@ fn second_order_does_not_worsen_pstd_match() {
     )
     .expect("PSTD data");
     let first_order = simulate_pstd_finite_window_born_observation(
-        &heterogeneous,
+        &heterogeneous.clone().into(),
         &array,
         frequency_hz,
         born_config,
@@ -224,7 +236,7 @@ fn second_order_does_not_worsen_pstd_match() {
     )
     .expect("first order");
     let second_order = simulate_pstd_finite_window_born_second_order_observation(
-        &heterogeneous,
+        &heterogeneous.clone().into(),
         &array,
         frequency_hz,
         born_config,
@@ -343,7 +355,7 @@ fn finite_window_first_variation_residual(
         generate_breast_ust_pstd_frequency_dataset(perturbed, array, &[frequency_hz], acquisition)
             .expect("perturbed PSTD data");
     let born_reference = simulate_pstd_finite_window_born_observation(
-        reference,
+        &reference.clone().into(),
         array,
         frequency_hz,
         born_config,
@@ -351,7 +363,7 @@ fn finite_window_first_variation_residual(
     )
     .expect("born reference");
     let born_perturbed = simulate_pstd_finite_window_born_observation(
-        perturbed,
+        &perturbed.clone().into(),
         array,
         frequency_hz,
         born_config,

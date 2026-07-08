@@ -6,7 +6,7 @@ use ndarray::Array1;
 /// Conformal prediction for uncertainty quantification.
 pub struct PinnConformalPredictor<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Base PINN model.
-    pub(super) model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+    pub(super) model: crate::inverse::pinn::ml::PinnWave2D<B>,
     /// Conformal scores from calibration.
     pub calibration_scores: Vec<f32>,
     /// Conformal alpha (significance level).
@@ -33,7 +33,7 @@ where
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     /// Create a new conformal predictor.
-    pub fn new(model: crate::inverse::pinn::ml::BurnPINN2DWave<B>, alpha: f64) -> Self {
+    pub fn new(model: crate::inverse::pinn::ml::PinnWave2D<B>, alpha: f64) -> Self {
         let alpha = alpha.clamp(f64::EPSILON, 1.0 - f64::EPSILON);
         Self {
             model,

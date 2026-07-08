@@ -10,6 +10,15 @@ use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
 
+fn leto_view3(field: &leto::Array3<f64>) -> ndarray::ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field.as_slice().expect("quick test pressure field must be contiguous"),
+    )
+    .expect("quick test pressure field shape must match contiguous storage")
+}
+
 /// Quick comparison test - runs in under 10 seconds
 #[test]
 fn comparative_quick_test() {
@@ -149,8 +158,9 @@ fn run_fdtd_quick(
 
     let execution_time = start.elapsed();
     let final_field = solver.pressure_field();
-    let energy = calculate_energy_quick(final_field.view());
-    let stability = calculate_stability_quick(final_field.view());
+    let final_field_view = leto_view3(final_field);
+    let energy = calculate_energy_quick(final_field_view);
+    let stability = calculate_stability_quick(final_field_view);
 
     QuickTestResult {
         execution_time,
@@ -177,8 +187,9 @@ fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) ->
 
     let execution_time = start.elapsed();
     let final_field = solver.pressure_field();
-    let energy = calculate_energy_quick(final_field.view());
-    let stability = calculate_stability_quick(final_field.view());
+    let final_field_view = leto_view3(final_field);
+    let energy = calculate_energy_quick(final_field_view);
+    let stability = calculate_stability_quick(final_field_view);
 
     QuickTestResult {
         execution_time,

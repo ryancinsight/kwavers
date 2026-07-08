@@ -36,7 +36,7 @@
 //! | Metric              | Target    | Rationale                          |
 //! |---------------------|-----------|-------------------------------------|
 //! | Adam overhead       | < 5%      | Moment buffer updates are O(n)      |
-//! | Checkpoint save     | < 500ms   | Binary serialization via Burn       |
+//! | Checkpoint save     | < 500ms   | Binary serialization via Coeus       |
 //! | Checkpoint load     | < 1s      | Model reconstruction + weight load  |
 //! | Memory overhead     | 3× model  | Params + first_moments + second_mom |
 //! | Convergence improve | 20-40%    | Fewer epochs to target loss         |

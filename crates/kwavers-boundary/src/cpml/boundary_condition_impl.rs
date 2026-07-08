@@ -50,7 +50,7 @@ impl BoundaryCondition for CPMLBoundary {
 
     fn apply_scalar_frequency(
         &mut self,
-        field: &mut Array3<num_complex::Complex<f64>>,
+        field: &mut Array3<kwavers_math::fft::Complex64>,
         grid: &dyn GridTopology,
         _time_step: usize,
         dt: f64,

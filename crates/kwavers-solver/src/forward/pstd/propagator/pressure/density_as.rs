@@ -1,5 +1,6 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{s, Array2, ArrayView2, ArrayViewMut2};
 
@@ -20,6 +21,28 @@ fn pml_index(axis: AsAxis, i: usize, k: usize) -> usize {
         AsAxis::X => i,
         AsAxis::R => k,
     }
+}
+
+fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("PSTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("PSTD leto field shape must match contiguous storage")
+}
+
+fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ndarray::ArrayViewMut3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayViewMut3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice_mut()
+            .expect("PSTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("PSTD leto field shape must match contiguous storage")
 }
 
 fn compute_axisymmetric_coefficient(
@@ -188,21 +211,22 @@ impl PSTDSolver {
             KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
         })?;
 
-        ctx.compute_density_divs(
-            self.fields.ux.slice(s![.., 0, ..]),
-            self.fields.uz.slice(s![.., 0, ..]),
-        );
+        let ux = leto_view3(&self.fields.ux);
+        let uz = leto_view3(&self.fields.uz);
+        ctx.compute_density_divs(ux.slice(s![.., 0, ..]), uz.slice(s![.., 0, ..]));
 
         // Populate the pre-allocated coefficient scratch (no heap allocation).
         // In fused mode, coef uses current (old) rhox/rhoz — consistent with
         // update_density_cartesian fused path.  In fallback mode, coef uses the
         // pre-PML'd rhox/rhoz (same as the previous non-fused AS implementation).
         if self.config.nonlinearity {
+            let rhox = leto_view3(&self.rhox);
+            let rhoz = leto_view3(&self.rhoz);
             compute_axisymmetric_coefficient(
                 &mut ctx.coef,
                 self.materials.rho0.slice(s![.., 0, ..]),
-                self.rhox.slice(s![.., 0, ..]),
-                self.rhoz.slice(s![.., 0, ..]),
+                rhox.slice(s![.., 0, ..]),
+                rhoz.slice(s![.., 0, ..]),
             );
         } else {
             ctx.coef.assign(&self.materials.rho0.slice(s![.., 0, ..]));
@@ -225,7 +249,7 @@ impl PSTDSolver {
             })?;
 
             update_axisymmetric_density_fused(
-                self.rhox.slice_mut(s![.., 0, ..]),
+                leto_view_mut3(&mut self.rhox).slice_mut(s![.., 0, ..]),
                 &ctx.duxdx,
                 &ctx.coef,
                 pml_dx,
@@ -234,7 +258,7 @@ impl PSTDSolver {
             );
 
             update_axisymmetric_density_fused(
-                self.rhoz.slice_mut(s![.., 0, ..]),
+                leto_view_mut3(&mut self.rhoz).slice_mut(s![.., 0, ..]),
                 &ctx.duzdr,
                 &ctx.coef,
                 pml_dz,
@@ -243,14 +267,14 @@ impl PSTDSolver {
             );
         } else {
             update_axisymmetric_density_unfused(
-                self.rhox.slice_mut(s![.., 0, ..]),
+                leto_view_mut3(&mut self.rhox).slice_mut(s![.., 0, ..]),
                 &ctx.duxdx,
                 &ctx.coef,
                 dt,
             );
 
             update_axisymmetric_density_unfused(
-                self.rhoz.slice_mut(s![.., 0, ..]),
+                leto_view_mut3(&mut self.rhoz).slice_mut(s![.., 0, ..]),
                 &ctx.duzdr,
                 &ctx.coef,
                 dt,
@@ -262,9 +286,13 @@ impl PSTDSolver {
         // Write divergences into div_ux/div_uz (the divergence cache).
         // apply_absorption_to_pressure fuses div_ux/div_uy/div_uz → dpx at Step 1 (Opt-7+12).
         // Writing to div_u* here (not dpx) ensures absorption receives the correct AS values.
-        self.div_ux.slice_mut(s![.., 0, ..]).assign(&ctx.duxdx);
+        leto_view_mut3(&mut self.div_ux)
+            .slice_mut(s![.., 0, ..])
+            .assign(&ctx.duxdx);
         self.div_uy.fill(0.0);
-        self.div_uz.slice_mut(s![.., 0, ..]).assign(&ctx.duzdr);
+        leto_view_mut3(&mut self.div_uz)
+            .slice_mut(s![.., 0, ..])
+            .assign(&ctx.duzdr);
         self.as_ctx = Some(ctx);
         Ok(())
     }

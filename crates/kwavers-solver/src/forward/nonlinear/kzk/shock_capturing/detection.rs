@@ -1,10 +1,11 @@
 //! Shock detection and harmonic analysis.
 
 use super::{ShockCapture, ShockDetectionResult};
+use apollo::fft_1d_leto;
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::fft_1d_array;
-use ndarray::{s, Array1, Array2};
+use leto::Array1 as LetoArray1;
+use ndarray::Array2;
 
 impl ShockCapture {
     /// Create new shock capture instance
@@ -141,7 +142,7 @@ impl ShockCapture {
             return Ok(Vec::new());
         }
 
-        let centre_line: Array1<f64> = pressure.slice(s![nx / 2, ..]).to_owned();
+        let centre_line = (0..nz).map(|z| pressure[[nx / 2, z]]).collect::<Vec<_>>();
 
         let k0_f = frequency * (nz as f64) * dz;
         if k0_f < 0.5 {
@@ -152,7 +153,9 @@ impl ShockCapture {
             return Ok(Vec::new());
         }
 
-        let spectrum = fft_1d_array(&centre_line);
+        let centre_line = LetoArray1::from_shape_vec([nz], centre_line)
+            .expect("shock-detection centre line length must match its Leto shape");
+        let spectrum = fft_1d_leto(centre_line.view());
         let n_inv = 1.0 / nz as f64;
 
         let a1 = spectrum[k0].norm() * n_inv;

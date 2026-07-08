@@ -5,9 +5,10 @@
 
 use super::spatial;
 use crate::reconstruction::ReconstructionFilterType;
+use apollo::{fft_1d_leto, ifft_1d_leto};
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::{fft_1d_array, ifft_1d_array};
 use kwavers_signal::{analytic, window_value, SignalWindowType};
+use leto::Array1 as LetoArray1;
 use ndarray::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
@@ -330,14 +331,22 @@ impl Filters {
         signal: Array1<f64>,
         filter: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let mut complex_signal = fft_1d_array(&signal);
+        let n = signal.len();
+        let leto_signal = LetoArray1::from_shape_vec([n], signal.to_vec())
+            .expect("photoacoustic filter signal length must match its Leto shape");
+        let mut complex_signal = fft_1d_leto(leto_signal.view());
 
         // Apply filter
-        for (i, val) in complex_signal.iter_mut().enumerate() {
+        let spectrum = complex_signal
+            .as_slice_mut()
+            .expect("Apollo 1-D FFT output must be contiguous");
+        for (i, val) in spectrum.iter_mut().enumerate() {
             *val *= filter[i];
         }
 
-        Ok(ifft_1d_array(&complex_signal))
+        Ok(Array1::from_vec(
+            ifft_1d_leto(complex_signal.view()).into_vec(),
+        ))
     }
 
     /// Apply reconstruction filter for regularization and denoising

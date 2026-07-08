@@ -10,8 +10,8 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
+use eunomia::Complex64;
 use std::f64::consts::TAU;
 
 /// Project point-source strengths onto cell-centered source density.
@@ -84,13 +84,14 @@ fn source_density_from_pstd_grid_kappa(
         reference_sound_speed_m_s,
         temporal_transfer,
     )?;
-    let mut mask = Array3::<Complex64>::zeros(grid.dimensions);
+    let (nx, ny, nz) = grid.dimensions;
+    let mut mask = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
     for &source in sources {
         let index = exact_grid_index(grid, source, "source")?;
-        mask[index] += Complex64::new(1.0 / grid.cell_volume_m3(), 0.0);
+        mask[[index.0, index.1, index.2]] += Complex64::new(1.0 / grid.cell_volume_m3(), 0.0);
     }
 
-    let mut spectrum = Array3::<Complex64>::zeros(grid.dimensions);
+    let mut spectrum = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
     fft_3d_complex_into(&mask, &mut spectrum);
     let (nx, ny, nz) = grid.dimensions;
     for ix in 0..nx {

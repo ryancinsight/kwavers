@@ -45,6 +45,7 @@ use crate::forward::nonlinear::conservation::{
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::Medium;
+use leto::Array3 as LetoArray3;
 use log::warn;
 use ndarray::{Array3, ArrayView3};
 use std::sync::{Arc, Mutex};
@@ -77,7 +78,7 @@ pub struct WesterveltWave {
     pub(super) pressure_buffers: [Array3<f64>; 3],
     pub(super) buffer_indices: [usize; 3], // [next, current, previous]
     /// Pre-allocated complex scratch for spectral Laplacian FFT.
-    pub(super) fft_scratch: Option<Array3<Complex64>>,
+    pub(super) fft_scratch: Option<LetoArray3<Complex64>>,
     /// Pre-allocated real scratch for spectral Laplacian IFFT.
     pub(super) laplacian_scratch: Option<Array3<f64>>,
     /// Pre-allocated nonlinear-term workspace.
@@ -100,7 +101,7 @@ impl WesterveltWave {
         let (k_squared, _kx, _ky, _kz) = initialize_kspace_grids(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
 
-        let fft_scratch = Some(Array3::<Complex64>::zeros(shape));
+        let fft_scratch = Some(LetoArray3::<Complex64>::from_elem([grid.nx, grid.ny, grid.nz], Complex64::default()));
         let laplacian_scratch = Some(Array3::<f64>::zeros(shape));
 
         Self {

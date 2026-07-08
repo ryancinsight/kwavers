@@ -42,7 +42,7 @@
 use super::das::{align_channels, sum_aligned};
 use super::delay_reference::DelayReference;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::analytic_signal_1d;
+use kwavers_signal::analytic::hilbert_transform;
 use ndarray::{Array1, Array2, Array3};
 use num_complex::Complex64;
 use std::f64::consts::PI;
@@ -125,7 +125,7 @@ fn instantaneous_phase_matrix(aligned: &Array2<f64>) -> Array2<f64> {
     let (n_elements, n_samples) = aligned.dim();
     let mut phase = Array2::<f64>::zeros((n_elements, n_samples));
     for (i, row) in aligned.outer_iter().enumerate() {
-        let analytic = analytic_signal_1d(&row.to_owned());
+        let analytic = hilbert_transform(&row.to_owned());
         for (j, z) in analytic.iter().enumerate() {
             phase[[i, j]] = z.arg();
         }

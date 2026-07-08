@@ -10,7 +10,21 @@ impl PSTDSolver {
         let Some(boundary) = &mut self.boundary else {
             return Ok(());
         };
-        boundary.apply_acoustic(self.fields.p.view_mut(), &self.grid, time_index)?;
+        let [nx, ny, nz] = self.fields.p.shape();
+        let mut pressure =
+            ndarray::Array3::from_shape_vec((nx, ny, nz), self.fields.p.iter().copied().collect())
+                .expect("leto pressure field shape must map to ndarray");
+        boundary.apply_acoustic(pressure.view_mut(), &self.grid, time_index)?;
+        for (dst_value, src_value) in self
+            .fields
+            .p
+            .as_slice_mut()
+            .expect("leto PSTD pressure field must be contiguous")
+            .iter_mut()
+            .zip(pressure.iter())
+        {
+            *dst_value = *src_value;
+        }
         Ok(())
     }
 }

@@ -3,6 +3,8 @@
 //! This module provides utilities for working with spatially-distributed
 //! electromagnetic material properties in physics simulations.
 
+use leto::{ArrayD, VecStorage};
+
 /// Material distribution utilities for electromagnetic physics
 ///
 /// This module provides helper functions for creating and working with
@@ -23,14 +25,17 @@ impl EMMaterialUtils {
         shape: &[usize],
         props: kwavers_medium::properties::ElectromagneticPropertyData,
     ) -> EMMaterialDistribution {
-        let grid_shape = ndarray::IxDyn(shape);
         EMMaterialDistribution {
-            permittivity: ndarray::ArrayD::from_elem(grid_shape.clone(), props.permittivity),
-            permeability: ndarray::ArrayD::from_elem(grid_shape.clone(), props.permeability),
-            conductivity: ndarray::ArrayD::from_elem(grid_shape.clone(), props.conductivity),
-            relaxation_time: props
-                .relaxation_time
-                .map(|tau| ndarray::ArrayD::from_elem(grid_shape, tau)),
+            permittivity: ArrayD::<f64, VecStorage<f64>>::from_elem(shape, props.permittivity)
+                .expect("valid shape for permittivity"),
+            permeability: ArrayD::<f64, VecStorage<f64>>::from_elem(shape, props.permeability)
+                .expect("valid shape for permeability"),
+            conductivity: ArrayD::<f64, VecStorage<f64>>::from_elem(shape, props.conductivity)
+                .expect("valid shape for conductivity"),
+            relaxation_time: props.relaxation_time.map(|tau| {
+                ArrayD::<f64, VecStorage<f64>>::from_elem(shape, tau)
+                    .expect("valid shape for relaxation_time")
+            }),
         }
     }
 }
@@ -43,13 +48,13 @@ impl EMMaterialUtils {
 #[derive(Debug, Clone)]
 pub struct EMMaterialDistribution {
     /// Relative permittivity ε_r (dimensionless)
-    pub permittivity: ndarray::ArrayD<f64>,
+    pub permittivity: ArrayD<f64, VecStorage<f64>>,
     /// Relative permeability μ_r (dimensionless)
-    pub permeability: ndarray::ArrayD<f64>,
+    pub permeability: ArrayD<f64, VecStorage<f64>>,
     /// Electrical conductivity σ (S/m)
-    pub conductivity: ndarray::ArrayD<f64>,
+    pub conductivity: ArrayD<f64, VecStorage<f64>>,
     /// Dielectric relaxation time τ (s)
-    pub relaxation_time: Option<ndarray::ArrayD<f64>>,
+    pub relaxation_time: Option<ArrayD<f64, VecStorage<f64>>>,
 }
 
 impl EMMaterialDistribution {
@@ -98,10 +103,14 @@ impl EMMaterialDistribution {
         }
 
         // Extract values at index
-        let permittivity = self.permittivity[index];
-        let permeability = self.permeability[index];
-        let conductivity = self.conductivity[index];
-        let relaxation_time = self.relaxation_time.as_ref().map(|arr| arr[index]);
+        let permittivity = *self.permittivity.get(index).map_err(|e| e.to_string())?;
+        let permeability = *self.permeability.get(index).map_err(|e| e.to_string())?;
+        let conductivity = *self.conductivity.get(index).map_err(|e| e.to_string())?;
+        let relaxation_time = self
+            .relaxation_time
+            .as_ref()
+            .map(|arr| arr.get(index).copied().map_err(|e| e.to_string()))
+            .transpose()?;
 
         // Construct canonical domain property with validation
         kwavers_medium::properties::ElectromagneticPropertyData::new(

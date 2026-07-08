@@ -8,8 +8,10 @@ use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::distributed_training::DistributedTrainingConfig;
 #[cfg(feature = "pinn")]
+use kwavers_solver::inverse::pinn::ml::universal_solver::UniversalSolverGeometry2D;
+#[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::{
-    BurnLossWeights2D, BurnPINN2DConfig, DecompositionStrategy, Geometry2D, LoadBalancingAlgorithm,
+    LoadBalancingAlgorithm, LossWeights2D, MultiGpuDecompositionStrategy, PinnConfig2D,
 };
 #[cfg(feature = "pinn")]
 use std::time::Instant;
@@ -36,12 +38,12 @@ fn main() -> KwaversResult<()> {
 
     // Show decomposition strategies
     println!("🏗️  Domain Decomposition Strategies:");
-    let _spatial = DecompositionStrategy::Spatial {
+    let _spatial = MultiGpuDecompositionStrategy::Spatial {
         dimensions: 2,
         overlap: 0.05,
     };
-    let _temporal = DecompositionStrategy::Temporal { steps_per_gpu: 100 };
-    let _hybrid = DecompositionStrategy::Hybrid {
+    let _temporal = MultiGpuDecompositionStrategy::Temporal { steps_per_gpu: 100 };
+    let _hybrid = MultiGpuDecompositionStrategy::Hybrid {
         spatial_dims: 2,
         temporal_steps: 50,
         overlap: 0.03,
@@ -86,17 +88,18 @@ fn main() -> KwaversResult<()> {
 
     // Create geometry
     println!("🏗️  Setting up Complex Geometry:");
-    let l_shape = Geometry2D::l_shaped(0.0, 1.0, 0.0, 1.0, 0.6, 0.6);
+    let l_shape = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0)
+        .with_rectangle_obstacle(0.6, 1.0, 0.6, 1.0);
     let _geometry = l_shape;
     println!("   ✅ L-shaped geometry created");
     println!();
 
     // Create PINN configuration
     println!("🧠 PINN Configuration:");
-    let pinn_config = BurnPINN2DConfig {
+    let pinn_config = PinnConfig2D {
         hidden_layers: vec![200, 200, 200, 200], // Larger network for GPU
         learning_rate: 5e-4,
-        loss_weights: BurnLossWeights2D {
+        loss_weights: LossWeights2D {
             data: 1.0,
             pde: 2.0,
             boundary: 20.0,

@@ -1,7 +1,7 @@
 use super::manager::FemBoundaryManager;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 #[test]
 fn test_fem_boundary_manager_creation() {

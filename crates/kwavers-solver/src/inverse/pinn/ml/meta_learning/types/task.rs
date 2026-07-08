@@ -31,7 +31,7 @@ pub struct PhysicsTask {
     /// Geometric domain specification
     ///
     /// Wrapped in Arc for efficient cloning across threads.
-    pub geometry: Arc<crate::inverse::pinn::ml::BurnWave2dGeometry>,
+    pub geometry: Arc<crate::inverse::pinn::ml::WaveGeometry2D>,
 
     /// Boundary conditions
     pub boundary_conditions: Vec<crate::inverse::pinn::ml::BoundaryCondition2D>,
@@ -49,7 +49,7 @@ impl PhysicsTask {
         id: String,
         pde_type: PdeType,
         physics_params: MetaLearningPhysicsParameters,
-        geometry: Arc<crate::inverse::pinn::ml::BurnWave2dGeometry>,
+        geometry: Arc<crate::inverse::pinn::ml::WaveGeometry2D>,
         boundary_conditions: Vec<crate::inverse::pinn::ml::BoundaryCondition2D>,
         training_data: Option<TaskData>,
         validation_data: TaskData,
@@ -70,9 +70,9 @@ impl PhysicsTask {
         let pde_complexity = self.pde_type.complexity();
 
         let geometry_complexity = match self.geometry.as_ref() {
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Rectangular { .. } => 0.2,
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Circular { .. } => 0.4,
-            crate::inverse::pinn::ml::BurnWave2dGeometry::MultiRegion { .. } => 1.0,
+            crate::inverse::pinn::ml::WaveGeometry2D::Rectangular { .. } => 0.2,
+            crate::inverse::pinn::ml::WaveGeometry2D::Circular { .. } => 0.4,
+            crate::inverse::pinn::ml::WaveGeometry2D::MultiRegion { .. } => 1.0,
             _ => 0.6,
         };
 

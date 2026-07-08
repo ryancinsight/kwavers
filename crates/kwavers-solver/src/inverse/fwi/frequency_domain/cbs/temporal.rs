@@ -6,7 +6,7 @@
 //! source/bin transfer to compare against time-domain acquisition data.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::TAU;
 
 /// Finite-window PSTD source/bin transfer configuration for one frequency.

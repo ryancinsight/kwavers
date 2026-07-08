@@ -2,6 +2,7 @@
 //! (`ali_2025_breast_fwi_frequency_sweep_hz`, `simulate_breast_fwi_frequency_observation`,
 //! `snap_breast_fwi_array_to_grid`, `invert_breast_fwi`).
 
+use super::complex_compat::{ec_to_nc2, leto2_to_nd2, nc_to_ec2, nd_to_leto2, nd_to_leto3};
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     reconstruct_breast_ust_sound_speed_volume, snap_multi_row_ring_array_to_grid,
 };
@@ -30,7 +31,10 @@ impl PyFrequencyObservation {
     #[new]
     pub fn new(frequency_hz: f64, observed_pressure: PyReadonlyArray2<Complex64>) -> Self {
         Self {
-            inner: FrequencyObservation::new(frequency_hz, observed_pressure.as_array().to_owned()),
+            inner: FrequencyObservation::new(
+                frequency_hz,
+                nd_to_leto2(nc_to_ec2(observed_pressure.as_array().to_owned())),
+            ),
         }
     }
 
@@ -41,7 +45,9 @@ impl PyFrequencyObservation {
 
     #[getter]
     pub fn observed_pressure<'py>(&self, py: Python<'py>) -> Py<PyArray2<Complex64>> {
-        self.inner.observed_pressure.clone().to_pyarray(py).into()
+        ec_to_nc2(leto2_to_nd2(self.inner.observed_pressure.clone()))
+            .to_pyarray(py)
+            .into()
     }
 }
 
@@ -60,13 +66,13 @@ pub fn simulate_breast_fwi_frequency_observation<'py>(
     frequency_hz: f64,
     config: &PyFrequencyDomainFwiConfig,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
-    let sound_speed = sound_speed_m_s.as_array().to_owned();
+    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
     let pressure = py
         .detach(|| {
             simulate_frequency_observation(&sound_speed, &array.inner, frequency_hz, &config.inner)
         })
         .map_err(kwavers_to_py)?;
-    Ok(pressure.to_pyarray(py).into())
+    Ok(ec_to_nc2(leto2_to_nd2(pressure)).to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -117,4 +123,3 @@ pub fn invert_breast_fwi<'py>(
     out.set_item("solver_model_family", result.solver_model_family)?;
     Ok(out)
 }
-

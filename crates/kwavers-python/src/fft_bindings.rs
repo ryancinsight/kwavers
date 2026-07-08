@@ -5,6 +5,10 @@
 //! and return complex128 arrays; the inverse transforms accept complex128 and
 //! return f64.
 
+use crate::breast_fwi_bindings::complex_compat::{
+    ec_to_nc1, ec_to_nc3, leto1_to_nd1, leto3_to_nd3, nc_to_ec1, nc_to_ec3, nd_to_leto1,
+    nd_to_leto3,
+};
 use kwavers_math::{
     fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array},
     signal::window::hann,
@@ -34,8 +38,8 @@ pub fn fft1<'py>(
             "fft1: input signal must be non-empty",
         ));
     }
-    let spectrum = py.detach(|| fft_1d_array(&arr));
-    Ok(spectrum.to_pyarray(py).into())
+    let spectrum = py.detach(|| fft_1d_array(&nd_to_leto1(arr)));
+    Ok(ec_to_nc1(leto1_to_nd1(spectrum)).to_pyarray(py).into())
 }
 
 /// Inverse 1-D DFT of a complex spectrum.
@@ -57,8 +61,8 @@ pub fn ifft1<'py>(
             "ifft1: input spectrum must be non-empty",
         ));
     }
-    let signal = py.detach(|| ifft_1d_array(&arr));
-    Ok(signal.to_pyarray(py).into())
+    let signal = py.detach(|| ifft_1d_array(&nd_to_leto1(nc_to_ec1(arr))));
+    Ok(leto1_to_nd1(signal).to_pyarray(py).into())
 }
 
 /// Forward 3-D DFT of a real-valued field.
@@ -81,8 +85,8 @@ pub fn fft3<'py>(
             "fft3: all dimensions must be non-zero",
         ));
     }
-    let spectrum = py.detach(|| fft_3d_array(&arr));
-    Ok(spectrum.to_pyarray(py).into())
+    let spectrum = py.detach(|| fft_3d_array(&nd_to_leto3(arr)));
+    Ok(ec_to_nc3(leto3_to_nd3(spectrum)).to_pyarray(py).into())
 }
 
 /// Inverse 3-D DFT of a complex spectrum.
@@ -105,8 +109,8 @@ pub fn ifft3<'py>(
             "ifft3: all dimensions must be non-zero",
         ));
     }
-    let field = py.detach(|| ifft_3d_array(&arr));
-    Ok(field.to_pyarray(py).into())
+    let field = py.detach(|| ifft_3d_array(&nd_to_leto3(nc_to_ec3(arr))));
+    Ok(leto3_to_nd3(field).to_pyarray(py).into())
 }
 
 /// Demeaned Hann-windowed one-sided power spectrum of a 1-D real profile.
@@ -146,7 +150,7 @@ pub fn demeaned_hann_power_spectrum_1d<'py>(
         windowed.push((sample - mean) * hann(idx as f64 / denominator));
     }
 
-    let spectrum = py.detach(|| fft_1d_array(&Array1::from_vec(windowed)));
+    let spectrum = py.detach(|| fft_1d_array(&nd_to_leto1(Array1::from_vec(windowed))));
     let one_sided = n / 2 + 1;
     let scale = 1.0 / (n as f64 * sample_spacing);
     let mut frequency = Vec::with_capacity(one_sided);
@@ -171,4 +175,3 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(demeaned_hann_power_spectrum_1d, m)?)?;
     Ok(())
 }
-

@@ -35,8 +35,10 @@ use coeus_core::MoiraiBackend;
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::elastic_2d::{
-    loss::ElasticBoundaryCondition, training::optimizer::PINNOptimizer,
-    training::scheduler::LRScheduler, training::{train_pinn, ElasticPinnLoopConfig},
+    loss::ElasticBoundaryCondition,
+    training::optimizer::PINNOptimizer,
+    training::scheduler::LRScheduler,
+    training::{train_pinn, ElasticPinnLoopConfig},
     BoundaryData, CollocationData, Config, ElasticPINN2D, InitialData, LossComputer, TrainingData,
 };
 
@@ -45,8 +47,13 @@ type Backend = MoiraiBackend;
 
 #[cfg(feature = "pinn")]
 fn uniform_var(backend: &Backend, n: usize, lo: f32, hi: f32) -> Var<f32, Backend> {
-    let data: Vec<f32> = (0..n).map(|_| lo + rand::random::<f32>() * (hi - lo)).collect();
-    Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend), false)
+    let data: Vec<f32> = (0..n)
+        .map(|_| lo + rand::random::<f32>() * (hi - lo))
+        .collect();
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend),
+        false,
+    )
 }
 
 #[cfg(feature = "pinn")]
@@ -59,12 +66,18 @@ fn normal_var(backend: &Backend, n: usize, mean: f32, std: f32) -> Var<f32, Back
             mean + std * (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos()
         })
         .collect();
-    Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend), false)
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend),
+        false,
+    )
 }
 
 #[cfg(feature = "pinn")]
 fn zeros_var(backend: &Backend, n: usize, cols: usize) -> Var<f32, Backend> {
-    Var::new(coeus_tensor::Tensor::zeros_on(vec![n, cols], backend), false)
+    Var::new(
+        coeus_tensor::Tensor::zeros_on(vec![n, cols], backend),
+        false,
+    )
 }
 
 // ============================================================================
@@ -233,8 +246,7 @@ fn bench_training_epoch(c: &mut Criterion) {
 
     group.bench_function("single_epoch", |b| {
         b.iter(|| {
-            let mut model =
-                ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
+            let mut model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
             let n_colloc = config.n_collocation_interior;
             let n_boundary = config.n_collocation_boundary;

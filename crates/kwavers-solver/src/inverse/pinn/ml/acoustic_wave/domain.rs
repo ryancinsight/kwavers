@@ -83,7 +83,7 @@ where
 
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: &Var<f32, B>,
         y: &Var<f32, B>,
         t: &Var<f32, B>,
@@ -134,10 +134,8 @@ where
             .copied()
             .unwrap_or(self.wave_speed);
         let c_squared = (c * c) as f32;
-        let mut residual = coeus_autograd::sub(
-            &p_tt,
-            &coeus_autograd::scalar_mul(&laplacian, c_squared),
-        );
+        let mut residual =
+            coeus_autograd::sub(&p_tt, &coeus_autograd::scalar_mul(&laplacian, c_squared));
 
         if let AcousticProblemType::Nonlinear = self.problem_type {
             if let Some(beta) = self.nonlinearity_coefficient {
@@ -164,15 +162,10 @@ where
                 // ∂²(p²)/∂t² = 2*(p_t² + p * p_tt)
                 let p_t_sq = coeus_autograd::mul(&p_t, &p_t);
                 let p_p_tt = coeus_autograd::mul(&p, &p_tt);
-                let p2_tt = coeus_autograd::scalar_mul(
-                    &coeus_autograd::add(&p_t_sq, &p_p_tt),
-                    2.0,
-                );
+                let p2_tt = coeus_autograd::scalar_mul(&coeus_autograd::add(&p_t_sq, &p_p_tt), 2.0);
 
-                residual = coeus_autograd::sub(
-                    &residual,
-                    &coeus_autograd::scalar_mul(&p2_tt, coeff),
-                );
+                residual =
+                    coeus_autograd::sub(&residual, &coeus_autograd::scalar_mul(&p2_tt, coeff));
             }
         }
 

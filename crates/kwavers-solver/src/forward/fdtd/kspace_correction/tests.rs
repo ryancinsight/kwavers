@@ -8,7 +8,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 
 fn test_grid() -> Grid {
     Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).unwrap()
@@ -65,7 +65,7 @@ fn test_kspace_fd_fallback_unchanged() {
     };
 
     let mut solver_fd = FdtdSolver::new(config_fd, &grid, &medium, GridSource::default()).unwrap();
-    let mut p_ref = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut p_ref = LetoArray3::zeros([grid.nx, grid.ny, grid.nz]);
     p_ref[[8, 8, 8]] = 1.0;
     solver_fd.fields.p.assign(&p_ref);
 
@@ -138,7 +138,7 @@ fn test_spectral_gradient_of_constant_is_zero() {
     let dt = 0.3 * dx / c_ref;
     let mut kops = KSpaceFdtdOperators::new(nx, nx, nx, dx, dx, dx, c_ref, dt);
 
-    let constant_field = Array3::from_elem((nx, nx, nx), 2.5_f64);
+    let constant_field = LetoArray3::from_elem([nx, nx, nx], 2.5_f64);
     kops.compute_grad_pos(&constant_field);
 
     let max_grad = kops.grad_x.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
@@ -160,7 +160,7 @@ fn test_spectral_divergence_of_zero_is_zero() {
     let dt = 0.3 * dx / c_ref;
     let mut kops = KSpaceFdtdOperators::new(nx, nx, nx, dx, dx, dx, c_ref, dt);
 
-    let zero = Array3::zeros((nx, nx, nx));
+    let zero = LetoArray3::zeros([nx, nx, nx]);
     kops.compute_divergence_neg(&zero, &zero, &zero);
 
     let max_div = kops
@@ -191,7 +191,7 @@ fn test_spectral_gradient_of_sine_is_cosine() {
 
     let lx = nx as f64 * dx;
     let k_fund = TWO_PI / lx;
-    let mut field = Array3::zeros((nx, nx, nx));
+    let mut field = LetoArray3::zeros([nx, nx, nx]);
     for i in 0..nx {
         let x = i as f64 * dx;
         let val = (k_fund * x).sin();

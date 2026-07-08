@@ -10,3 +10,6 @@ pub use operations::{FieldOperations, FieldStatistics};
 pub mod indices;
 pub mod mapping;
 pub mod wave;
+
+// Re-export leto array types used by field modules.
+pub use leto::{Array3, Array4, ArrayView3, ArrayViewMut3, ArrayD, VecStorage};

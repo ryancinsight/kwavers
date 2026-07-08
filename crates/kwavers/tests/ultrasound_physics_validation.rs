@@ -10,8 +10,13 @@ use kwavers_analysis::signal_processing::beamforming::utils::{
     SteeringVector, SteeringVectorMethod,
 };
 use kwavers_analysis::signal_processing::beamforming::MinimumVariance;
+use kwavers_math::fft::Complex64;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+
+/// Convert a `num_complex::Complex<f64>` steering vector to `eunomia::Complex64`.
+fn nc_to_ec(v: Array1<num_complex::Complex<f64>>) -> Array1<Complex64> {
+    v.map(|c| Complex64::new(c.re, c.im))
+}
 
 // ============================================================================
 // MVDR BEAMFORMING ALGORITHMS VALIDATION
@@ -35,14 +40,16 @@ fn validate_mvdr_beamforming_basic() {
         covariance[[i, i]] = Complex64::new(1.0, 0.0);
     }
 
-    let steering_vector = SteeringVector::compute(
-        &SteeringVectorMethod::PlaneWave,
-        [0.0, 0.0, 1.0],
-        1e6,
-        &sensor_positions,
-        1500.0,
-    )
-    .unwrap();
+    let steering_vector = nc_to_ec(
+        SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [0.0, 0.0, 1.0],
+            1e6,
+            &sensor_positions,
+            1500.0,
+        )
+        .unwrap(),
+    );
 
     let weights = mvdr
         .compute_weights(&covariance, &steering_vector)
@@ -51,7 +58,7 @@ fn validate_mvdr_beamforming_basic() {
     let gain: Complex64 = weights
         .iter()
         .zip(steering_vector.iter())
-        .map(|(w, a): (&Complex64, &Complex64)| w.conj() * *a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
     assert!(
         (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
@@ -244,7 +251,7 @@ fn validate_mvdr_numerical_stability() {
     let gain: Complex64 = weights_with_loading
         .iter()
         .zip(steering_vector.iter())
-        .map(|(w, a): (&Complex64, &Complex64)| w.conj() * *a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
     assert!(
         (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
@@ -328,14 +335,16 @@ fn validate_mvdr_performance() {
     for i in 0..num_sensors {
         covariance[[i, i]] = Complex64::new(1.0, 0.0);
     }
-    let steering_vector = SteeringVector::compute(
-        &SteeringVectorMethod::PlaneWave,
-        [0.0, 0.0, 1.0],
-        1e6,
-        &sensor_positions,
-        1500.0,
-    )
-    .unwrap();
+    let steering_vector = nc_to_ec(
+        SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [0.0, 0.0, 1.0],
+            1e6,
+            &sensor_positions,
+            1500.0,
+        )
+        .unwrap(),
+    );
 
     let start = std::time::Instant::now();
     for _ in 0..100 {

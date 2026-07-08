@@ -2,12 +2,12 @@ use super::post_process::CovariancePostProcess;
 use super::shrinkage::shrinkage_to_identity_real;
 use super::{CovarianceEstimator, SpatialSmoothingComplex};
 use approx::assert_abs_diff_eq;
+use eunomia::Complex64;
 use ndarray::Array2;
-use num_complex::Complex64;
 
 #[test]
 fn estimate_complex_is_hermitian_for_simple_data() {
-    let mut x = Array2::<Complex64>::zeros((2, 3));
+    let mut x = Array2::<Complex64>::from_elem((2, 3), Complex64::default());
     x[(0, 0)] = Complex64::new(1.0, 2.0);
     x[(1, 0)] = Complex64::new(-0.5, 0.25);
     x[(0, 1)] = Complex64::new(0.1, -0.2);
@@ -35,7 +35,7 @@ fn estimate_complex_is_hermitian_for_simple_data() {
 
 #[test]
 fn estimate_complex_rejects_empty() {
-    let x = Array2::<Complex64>::zeros((0, 0));
+    let x = Array2::<Complex64>::from_elem((0, 0), Complex64::default());
     let est = CovarianceEstimator::default();
     let err = est.estimate_complex(&x).expect_err("must reject empty");
     assert!(err.to_string().contains("estimate_complex"));
@@ -43,7 +43,7 @@ fn estimate_complex_rejects_empty() {
 
 #[test]
 fn forward_backward_averaging_complex_preserves_hermitian_structure() {
-    let mut r = Array2::<Complex64>::zeros((3, 3));
+    let mut r = Array2::<Complex64>::from_elem((3, 3), Complex64::default());
     r[(0, 0)] = Complex64::new(2.0, 0.0);
     r[(1, 1)] = Complex64::new(3.0, 0.0);
     r[(2, 2)] = Complex64::new(4.0, 0.0);
@@ -197,7 +197,7 @@ fn estimate_two_orthogonal_snapshots_gives_half_identity() {
 
 #[test]
 fn spatial_smoothing_complex_shapes_match() {
-    let mut r = Array2::<Complex64>::zeros((4, 4));
+    let mut r = Array2::<Complex64>::from_elem((4, 4), Complex64::default());
     for i in 0..4 {
         r[(i, i)] = Complex64::new(1.0 + i as f64, 0.0);
     }

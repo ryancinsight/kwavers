@@ -43,7 +43,11 @@ fn test_model_batch_forward() {
     let backend = TestBackend::default();
     let mk = |v: f32| {
         Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &vec![v; batch_size], &backend),
+            coeus_tensor::Tensor::from_slice_on(
+                vec![batch_size, 1],
+                &vec![v; batch_size],
+                &backend,
+            ),
             false,
         )
     };

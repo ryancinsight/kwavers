@@ -33,7 +33,9 @@ impl Default for PDECharacteristics {
 }
 
 /// Physics domain trait defining the interface for any physics domain
-pub trait SimulationPhysicsDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>: std::fmt::Debug {
+pub trait SimulationPhysicsDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>:
+    std::fmt::Debug
+{
     /// Get the physics domain name
     fn domain_name(&self) -> &'static str;
 
@@ -45,7 +47,7 @@ pub trait SimulationPhysicsDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::Cpu
     /// Compute PDE residual for this physics domain
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: &Var<f32, B>,
         y: &Var<f32, B>,
         t: &Var<f32, B>,
@@ -298,7 +300,9 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PhysicsDom
     }
 }
 
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Default for PhysicsDomainRegistry<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Default
+    for PhysicsDomainRegistry<B>
+{
     fn default() -> Self {
         Self::new()
     }

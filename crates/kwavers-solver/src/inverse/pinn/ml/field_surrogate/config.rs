@@ -18,7 +18,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 #[derive(Debug, Clone)]
 pub struct ParamFieldPINNConfig {
     /// Hidden layer dimensions; tanh activations between layers.
-    /// Default `[128, 128, 128]` matches `BurnPINN3DConfig` for the
+    /// Default `[128, 128, 128]` matches `PinnConfig3D` for the
     /// transient wave-equation PINN — adequate capacity for the
     /// smooth focal-envelope shapes produced by linear-water PSTD.
     pub hidden_layers: Vec<usize>,

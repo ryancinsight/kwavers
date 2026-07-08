@@ -132,6 +132,6 @@ mod tests {
                 (source_i + j + k) as i32 - (source_i * j + k) as i32
             })
         );
-        assert_eq!(out.slice(s![1..;2, .., ..]), Array3::zeros((2, 2, 2)));
+        assert_eq!(out.slice(s![1..;2, .., ..]), Array3::<i32>::zeros((2, 2, 2)));
     }
 }

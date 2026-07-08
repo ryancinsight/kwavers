@@ -8,22 +8,56 @@
 //! sequential ndarray semantics.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use moirai_parallel::{for_each_chunk_quad_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3, Zip};
+use leto::Array3 as LetoArray3;
+use ndarray::Array1;
 
-use super::STATISTICS_CHUNK_SIZE;
+#[doc(hidden)]
+pub trait PressureArray3Access {
+    fn shape3(&self) -> [usize; 3];
+    fn as_slice_opt(&self) -> Option<&[f64]>;
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a>;
+}
+
+impl PressureArray3Access for ndarray::Array3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        let (nx, ny, nz) = self.dim();
+        [nx, ny, nz]
+    }
+
+    fn as_slice_opt(&self) -> Option<&[f64]> {
+        self.as_slice()
+    }
+
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
+        Box::new(self.iter())
+    }
+}
+
+impl PressureArray3Access for LetoArray3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        self.shape()
+    }
+
+    fn as_slice_opt(&self) -> Option<&[f64]> {
+        self.as_slice()
+    }
+
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
+        Box::new(self.iter())
+    }
+}
 
 /// Spatial statistics for pressure field over time
 #[derive(Debug, Clone)]
 pub struct PressureFieldStatistics {
     /// Maximum pressure at each spatial point (p_max)
-    pub p_max: Array3<f64>,
+    pub p_max: LetoArray3<f64>,
     /// Minimum pressure at each spatial point (p_min)
-    pub p_min: Array3<f64>,
+    pub p_min: LetoArray3<f64>,
     /// Sum of squared pressures for RMS calculation (p_rms)
-    pub p_squared_sum: Array3<f64>,
+    pub p_squared_sum: LetoArray3<f64>,
     /// Final pressure field (p_final)
-    pub p_final: Array3<f64>,
+    pub p_final: LetoArray3<f64>,
     /// Number of time steps recorded
     pub time_step_count: usize,
     /// Shape of the grid
@@ -35,10 +69,10 @@ impl PressureFieldStatistics {
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            p_max: Array3::from_elem((nx, ny, nz), f64::NEG_INFINITY),
-            p_min: Array3::from_elem((nx, ny, nz), f64::INFINITY),
-            p_squared_sum: Array3::zeros((nx, ny, nz)),
-            p_final: Array3::zeros((nx, ny, nz)),
+            p_max: LetoArray3::from_elem([nx, ny, nz], f64::NEG_INFINITY),
+            p_min: LetoArray3::from_elem([nx, ny, nz], f64::INFINITY),
+            p_squared_sum: LetoArray3::zeros([nx, ny, nz]),
+            p_final: LetoArray3::zeros([nx, ny, nz]),
             time_step_count: 0,
             shape: (nx, ny, nz),
         }
@@ -52,10 +86,10 @@ impl PressureFieldStatistics {
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
-    pub fn update(&mut self, pressure: &Array3<f64>) {
+    pub fn update<P: PressureArray3Access>(&mut self, pressure: &P) {
         debug_assert_eq!(
-            pressure.dim(),
-            self.shape,
+            pressure.shape3(),
+            [self.shape.0, self.shape.1, self.shape.2],
             "pressure field shape mismatch in PressureFieldStatistics::update"
         );
 
@@ -64,37 +98,31 @@ impl PressureFieldStatistics {
             self.p_min.as_slice_mut(),
             self.p_squared_sum.as_slice_mut(),
             self.p_final.as_slice_mut(),
-            pressure.as_slice(),
+            pressure.as_slice_opt(),
         ) {
             (Some(p_max), Some(p_min), Some(p_squared_sum), Some(p_final), Some(pressure)) => {
-                for_each_chunk_quad_mut_enumerated_with::<Adaptive, _, _, _, _, _>(
-                    p_max,
-                    p_min,
-                    p_squared_sum,
-                    p_final,
-                    STATISTICS_CHUNK_SIZE,
-                    |chunk_index, p_max, p_min, p_squared_sum, p_final| {
-                        let base = chunk_index * STATISTICS_CHUNK_SIZE;
-                        for lane in 0..p_max.len() {
-                            let p = pressure[base + lane];
-                            if p > p_max[lane] {
-                                p_max[lane] = p;
-                            }
-                            if p < p_min[lane] {
-                                p_min[lane] = p;
-                            }
-                            p_squared_sum[lane] += p * p;
-                            p_final[lane] = p;
-                        }
-                    },
-                );
+                for lane in 0..p_max.len() {
+                    let p = pressure[lane];
+                    if p > p_max[lane] {
+                        p_max[lane] = p;
+                    }
+                    if p < p_min[lane] {
+                        p_min[lane] = p;
+                    }
+                    p_squared_sum[lane] += p * p;
+                    p_final[lane] = p;
+                }
             }
-            _ => Zip::from(&mut self.p_max)
-                .and(&mut self.p_min)
-                .and(&mut self.p_squared_sum)
-                .and(&mut self.p_final)
-                .and(pressure)
-                .for_each(|pmax, pmin, sq, pfin, &p| {
+            _ => {
+                for ((((pmax, pmin), sq), pfin), p) in self
+                    .p_max
+                    .iter_mut()
+                    .zip(self.p_min.iter_mut())
+                    .zip(self.p_squared_sum.iter_mut())
+                    .zip(self.p_final.iter_mut())
+                    .zip(pressure.iter_values())
+                {
+                    let p = *p;
                     if p > *pmax {
                         *pmax = p;
                     }
@@ -103,7 +131,8 @@ impl PressureFieldStatistics {
                     }
                     *sq += p * p;
                     *pfin = p;
-                }),
+                }
+            }
         }
 
         self.time_step_count += 1;
@@ -111,30 +140,32 @@ impl PressureFieldStatistics {
 
     /// Calculate RMS pressure field
     #[must_use]
-    pub fn p_rms(&self) -> Array3<f64> {
+    pub fn p_rms(&self) -> LetoArray3<f64> {
         if self.time_step_count == 0 {
-            return Array3::zeros(self.shape);
+            return LetoArray3::zeros([self.shape.0, self.shape.1, self.shape.2]);
         }
-
-        self.p_squared_sum
-            .mapv(|v| (v / self.time_step_count as f64).sqrt())
+        let mut out = LetoArray3::<f64>::zeros([self.shape.0, self.shape.1, self.shape.2]);
+        for (dst, &value) in out.iter_mut().zip(self.p_squared_sum.iter()) {
+            *dst = (value / self.time_step_count as f64).sqrt();
+        }
+        out
     }
 
     /// Get p_max as array
     #[must_use]
-    pub fn get_p_max(&self) -> &Array3<f64> {
+    pub fn get_p_max(&self) -> &LetoArray3<f64> {
         &self.p_max
     }
 
     /// Get p_min as array
     #[must_use]
-    pub fn get_p_min(&self) -> &Array3<f64> {
+    pub fn get_p_min(&self) -> &LetoArray3<f64> {
         &self.p_min
     }
 
     /// Get p_final as array
     #[must_use]
-    pub fn get_p_final(&self) -> &Array3<f64> {
+    pub fn get_p_final(&self) -> &LetoArray3<f64> {
         &self.p_final
     }
 
@@ -306,7 +337,7 @@ impl SampledStatistics {
 }
 
 fn fill_field_at_positions(
-    field: &Array3<f64>,
+    field: &LetoArray3<f64>,
     positions: &[(usize, usize, usize)],
     out: &mut Array1<f64>,
 ) -> KwaversResult<()> {
@@ -334,6 +365,7 @@ fn validate_sample_output_len(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ndarray::Array3;
 
     #[test]
     fn test_pressure_statistics_basic() {

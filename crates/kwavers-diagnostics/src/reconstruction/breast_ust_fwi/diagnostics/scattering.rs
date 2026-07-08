@@ -20,7 +20,7 @@ use super::residual::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Per-model finite-window scattering-increment residual.
 #[derive(Clone, Debug, PartialEq)]

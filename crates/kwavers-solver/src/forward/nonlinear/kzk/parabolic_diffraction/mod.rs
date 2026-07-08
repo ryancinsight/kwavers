@@ -53,7 +53,8 @@
 //!   diffractive field propagation." J. Acoust. Soc. Am. 90(1), 488–499.
 //!   DOI: 10.1121/1.401277
 
-use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use leto::Array2 as LetoArray2;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array2, ArrayViewMut2};
 
@@ -96,7 +97,7 @@ pub struct KzkParabolicDiffractionOperator {
     /// The real-field API stores the input as `re + 0i`, transforms the buffer
     /// in place, applies the diagonal diffraction propagator, transforms back,
     /// and writes the real part to the caller's field view.
-    scratch: Array2<Complex64>,
+    scratch: LetoArray2<Complex64>,
 }
 
 impl std::fmt::Debug for KzkParabolicDiffractionOperator {
@@ -153,7 +154,7 @@ impl KzkParabolicDiffractionOperator {
             }
         }
 
-        let scratch = Array2::zeros((nx, ny));
+        let scratch = LetoArray2::zeros([nx, ny]);
 
         Self {
             config: config.clone(),
@@ -181,7 +182,7 @@ impl KzkParabolicDiffractionOperator {
 
         let scratch = self
             .scratch
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK parabolic scratch is standard-layout");
         if let Some(field_values) = field.as_slice_memory_order() {
             enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
@@ -214,7 +215,7 @@ impl KzkParabolicDiffractionOperator {
             .expect("invariant: KZK parabolic ky2 is standard-layout");
         let scratch = self
             .scratch
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK parabolic scratch is standard-layout");
         enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, value| {
             let kt2 = kx2[idx] + ky2[idx];
@@ -226,7 +227,7 @@ impl KzkParabolicDiffractionOperator {
 
         let scratch = self
             .scratch
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK parabolic scratch is standard-layout");
         if let Some(field_values) = field.as_slice_memory_order_mut() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {
@@ -241,10 +242,20 @@ impl KzkParabolicDiffractionOperator {
 
     #[cfg(test)]
     fn fft_round_trip_into(&mut self, data: &Array2<Complex64>, recovered: &mut Array2<Complex64>) {
-        self.scratch.assign(data);
+        let shape = self.scratch.shape();
+        assert_eq!(shape, [data.nrows(), data.ncols()]);
+        for i in 0..data.nrows() {
+            for j in 0..data.ncols() {
+                self.scratch[[i, j]] = data[[i, j]];
+            }
+        }
         fft_2d_complex_inplace(&mut self.scratch);
         ifft_2d_complex_inplace(&mut self.scratch);
 
-        recovered.assign(&self.scratch);
+        for i in 0..recovered.nrows() {
+            for j in 0..recovered.ncols() {
+                recovered[[i, j]] = self.scratch[[i, j]];
+            }
+        }
     }
 }

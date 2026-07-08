@@ -2,8 +2,9 @@
 //! velocity-component injection, and `add_source_arc` injection-mode
 //! classification by mask geometry.
 
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array3, Zip};
+use ndarray::{s, Array3};
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
@@ -11,51 +12,55 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_source::{Source, SourceField, SourceInjectionMode};
 
-fn apply_boundary_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, amplitude: f64) {
+fn apply_boundary_pressure_mask(
+    pressure: &mut LetoArray3<f64>,
+    mask: &Array3<f64>,
+    amplitude: f64,
+) {
     assert_eq!(
         pressure.shape(),
         mask.shape(),
         "invariant: FDTD pressure source mask shape matches pressure field"
     );
 
-    if let (Some(pressure_values), Some(mask_values)) = (
-        pressure.as_slice_memory_order_mut(),
-        mask.as_slice_memory_order(),
-    ) {
+    if let (Some(pressure_values), Some(mask_values)) =
+        (pressure.as_slice_mut(), mask.as_slice_memory_order())
+    {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
             if mask_values[idx] > 0.0 {
                 *pressure_value = amplitude;
             }
         });
     } else {
-        Zip::from(pressure)
-            .and(mask)
-            .for_each(|pressure_value, &mask_value| {
-                if mask_value > 0.0 {
-                    *pressure_value = amplitude;
-                }
-            });
+        for (pressure_value, &mask_value) in pressure.iter_mut().zip(mask.iter()) {
+            if mask_value > 0.0 {
+                *pressure_value = amplitude;
+            }
+        }
     }
 }
 
-fn apply_additive_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, amplitude: f64) {
+fn apply_additive_pressure_mask(
+    pressure: &mut LetoArray3<f64>,
+    mask: &Array3<f64>,
+    amplitude: f64,
+) {
     assert_eq!(
         pressure.shape(),
         mask.shape(),
         "invariant: FDTD pressure source mask shape matches pressure field"
     );
 
-    if let (Some(pressure_values), Some(mask_values)) = (
-        pressure.as_slice_memory_order_mut(),
-        mask.as_slice_memory_order(),
-    ) {
+    if let (Some(pressure_values), Some(mask_values)) =
+        (pressure.as_slice_mut(), mask.as_slice_memory_order())
+    {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
             *pressure_value += mask_values[idx] * amplitude;
         });
     } else {
-        Zip::from(pressure)
-            .and(mask)
-            .for_each(|pressure_value, &mask_value| *pressure_value += mask_value * amplitude);
+        for (pressure_value, &mask_value) in pressure.iter_mut().zip(mask.iter()) {
+            *pressure_value += mask_value * amplitude;
+        }
     }
 }
 
@@ -144,19 +149,19 @@ impl GenericFdtdSolver<Array3<f64>> {
             match source.source_type() {
                 SourceField::Pressure => {}
                 SourceField::VelocityX => {
-                    Zip::from(&mut fields.ux)
-                        .and(mask)
-                        .for_each(|u, &m| *u += m * amp);
+                    for (u, &m) in fields.ux.iter_mut().zip(mask.iter()) {
+                        *u += m * amp;
+                    }
                 }
                 SourceField::VelocityY => {
-                    Zip::from(&mut fields.uy)
-                        .and(mask)
-                        .for_each(|u, &m| *u += m * amp);
+                    for (u, &m) in fields.uy.iter_mut().zip(mask.iter()) {
+                        *u += m * amp;
+                    }
                 }
                 SourceField::VelocityZ => {
-                    Zip::from(&mut fields.uz)
-                        .and(mask)
-                        .for_each(|u, &m| *u += m * amp);
+                    for (u, &m) in fields.uz.iter_mut().zip(mask.iter()) {
+                        *u += m * amp;
+                    }
                 }
             }
         }

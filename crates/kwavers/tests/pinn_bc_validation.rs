@@ -1,4 +1,4 @@
-//! Boundary Condition Loss Validation Tests for BurnPINN 3D Wave Equation
+//! Boundary-condition loss validation tests for the Coeus 3D wave-equation PINN.
 //!
 //! This test suite validates the boundary condition enforcement in the 3D PINN solver.
 //! Tests verify that BC loss is computed correctly and that training improves BC satisfaction.
@@ -25,8 +25,8 @@
 mod bc_loss_tests {
     use coeus_core::MoiraiBackend;
     use kwavers_core::error::KwaversResult;
-    use kwavers_solver::inverse::pinn::ml::burn_wave_equation_3d::{
-        BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave, Geometry3D,
+    use kwavers_solver::inverse::pinn::ml::wave_equation_3d::{
+        Geometry3D, LossWeights3D, PinnConfig3D, PinnWave3D,
     };
 
     type TestBackend = MoiraiBackend;
@@ -34,10 +34,10 @@ mod bc_loss_tests {
     /// Test that BC loss is computed and is non-zero for untrained network
     #[test]
     fn test_bc_loss_computation_nonzero() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![20, 20],
             num_collocation_points: 50,
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 1.0,
                 bc_weight: 1.0,
@@ -49,7 +49,7 @@ mod bc_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Generate minimal training data
         let x_data = vec![0.5];
@@ -59,9 +59,7 @@ mod bc_loss_tests {
         let u_data = vec![0.0];
 
         // Train for 1 epoch to compute losses
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 1,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 1)?;
 
         // BC loss should be non-zero for untrained network
         // (random initialization will not satisfy u=0 on boundaries)
@@ -83,11 +81,11 @@ mod bc_loss_tests {
     /// Test that BC loss decreases during training (Dirichlet BC: u=0)
     #[test]
     fn test_bc_loss_decreases_with_training() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![20, 20],
             num_collocation_points: 100,
             learning_rate: 1e-3, // Conservative learning rate for stability
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 1.0,
                 pde_weight: 0.5,
                 bc_weight: 5.0, // Emphasize BC enforcement
@@ -99,7 +97,7 @@ mod bc_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data: zero field everywhere (compatible with u=0 BC)
         let n_data = 20;
@@ -119,9 +117,7 @@ mod bc_loss_tests {
         }
 
         // Train for multiple epochs
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 50,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 50)?;
 
         // Verify BC loss decreases
         assert!(metrics.bc_loss.len() >= 2);
@@ -154,11 +150,11 @@ mod bc_loss_tests {
     /// Test BC loss with homogeneous Dirichlet boundary conditions
     #[test]
     fn test_dirichlet_bc_zero_boundary() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![30, 30],
             num_collocation_points: 200,
             learning_rate: 5e-4, // Conservative learning rate for stability
-            loss_weights: BurnLossWeights3D {
+            loss_weights: LossWeights3D {
                 data_weight: 2.0,
                 pde_weight: 1.0,
                 bc_weight: 10.0, // Strong BC enforcement
@@ -170,7 +166,7 @@ mod bc_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data: zero field (compatible with Dirichlet BC)
         let x_data = vec![0.5, 0.3, 0.7];
@@ -180,9 +176,7 @@ mod bc_loss_tests {
         let u_data = vec![0.0, 0.0, 0.0];
 
         // Train
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 100,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 100)?;
 
         // Check BC loss trajectory
         let initial_bc = metrics.bc_loss[0];
@@ -206,7 +200,7 @@ mod bc_loss_tests {
     /// Test that BC loss is sensitive to boundary violations
     #[test]
     fn test_bc_loss_sensitivity() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![10],
             num_collocation_points: 50,
             ..Default::default()
@@ -215,7 +209,7 @@ mod bc_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         // Training data with non-zero values (incompatible with u=0 BC)
         let x_data = vec![0.5];
@@ -225,9 +219,7 @@ mod bc_loss_tests {
         let u_data = vec![1.0]; // Non-zero interior value
 
         // Train for 1 epoch
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 1,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 1)?;
 
         // BC loss should be non-zero (network predicts non-zero at boundaries)
         let bc_loss = metrics.bc_loss[0];
@@ -239,27 +231,24 @@ mod bc_loss_tests {
     /// Test BC loss with different domain sizes
     #[test]
     fn test_bc_loss_different_domains() -> KwaversResult<()> {
-
         // Small domain
-        let config1 = BurnPINN3DConfig {
+        let config1 = PinnConfig3D {
             hidden_layers: vec![15],
             num_collocation_points: 50,
             ..Default::default()
         };
         let geometry1 = Geometry3D::rectangular(0.0, 0.5, 0.0, 0.5, 0.0, 0.5);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
-        let mut solver1 =
-            BurnPINN3DWave::<TestBackend>::new(config1, geometry1, wave_speed)?;
+        let mut solver1 = PinnWave3D::<TestBackend>::new(config1, geometry1, wave_speed)?;
 
         // Large domain
-        let config2 = BurnPINN3DConfig {
+        let config2 = PinnConfig3D {
             hidden_layers: vec![15],
             num_collocation_points: 50,
             ..Default::default()
         };
         let geometry2 = Geometry3D::rectangular(0.0, 2.0, 0.0, 2.0, 0.0, 2.0);
-        let mut solver2 =
-            BurnPINN3DWave::<TestBackend>::new(config2, geometry2, wave_speed)?;
+        let mut solver2 = PinnWave3D::<TestBackend>::new(config2, geometry2, wave_speed)?;
 
         let x_data = vec![0.25];
         let y_data = vec![0.25];
@@ -268,14 +257,10 @@ mod bc_loss_tests {
         let u_data = vec![0.0];
 
         let bc_loss1 = solver1
-            .train(
-                &x_data, &y_data, &z_data, &t_data, &u_data, None, 1,
-            )?
+            .train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 1)?
             .bc_loss[0];
         let bc_loss2 = solver2
-            .train(
-                &x_data, &y_data, &z_data, &t_data, &u_data, None, 1,
-            )?
+            .train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 1)?
             .bc_loss[0];
 
         // Both should have finite BC loss
@@ -287,7 +272,7 @@ mod bc_loss_tests {
     /// Test BC loss metrics are recorded correctly
     #[test]
     fn test_bc_loss_metrics_recording() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![10],
             num_collocation_points: 30,
             ..Default::default()
@@ -296,7 +281,7 @@ mod bc_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         let x_data = vec![0.5];
         let y_data = vec![0.5];
@@ -305,9 +290,7 @@ mod bc_loss_tests {
         let u_data = vec![0.0];
 
         let epochs = 10;
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, epochs,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, epochs)?;
 
         // Verify BC loss is recorded for each epoch
         assert_eq!(
@@ -337,7 +320,7 @@ mod bc_loss_tests {
     /// Test BC loss with minimal collocation points (edge case)
     #[test]
     fn test_bc_loss_minimal_collocation() -> KwaversResult<()> {
-        let config = BurnPINN3DConfig {
+        let config = PinnConfig3D {
             hidden_layers: vec![5],
             num_collocation_points: 10, // Minimal
             ..Default::default()
@@ -346,7 +329,7 @@ mod bc_loss_tests {
         let geometry = Geometry3D::rectangular(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
         let wave_speed = |_x: f32, _y: f32, _z: f32| 1500.0;
 
-        let mut solver = BurnPINN3DWave::<TestBackend>::new(config, geometry, wave_speed)?;
+        let mut solver = PinnWave3D::<TestBackend>::new(config, geometry, wave_speed)?;
 
         let x_data = vec![0.5];
         let y_data = vec![0.5];
@@ -354,9 +337,7 @@ mod bc_loss_tests {
         let t_data = vec![0.5];
         let u_data = vec![0.0];
 
-        let metrics = solver.train(
-            &x_data, &y_data, &z_data, &t_data, &u_data, None, 1,
-        )?;
+        let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 1)?;
 
         // Should still compute BC loss with minimal collocation points
         assert!(metrics.bc_loss[0].is_finite());

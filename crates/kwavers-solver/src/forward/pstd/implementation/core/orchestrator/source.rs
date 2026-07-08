@@ -2,6 +2,7 @@ use super::super::source_injection;
 use super::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_source::{Source, SourceField};
+use leto::Array3 as LetoArray3;
 use std::sync::Arc;
 
 impl PSTDSolver {
@@ -16,6 +17,7 @@ impl PSTDSolver {
         let grad_mask: Option<ndarray::Array3<f64>> = match source.source_type() {
             SourceField::VelocityX => {
                 if let Some(ops) = &self.kspace_operators {
+                    let mask = leto_mask(&mask);
                     Some(ops.spectral_grad_x(&mask)?)
                 } else {
                     None
@@ -23,6 +25,7 @@ impl PSTDSolver {
             }
             SourceField::VelocityY => {
                 if let Some(ops) = &self.kspace_operators {
+                    let mask = leto_mask(&mask);
                     Some(ops.spectral_grad_y(&mask)?)
                 } else {
                     None
@@ -30,6 +33,7 @@ impl PSTDSolver {
             }
             SourceField::VelocityZ => {
                 if let Some(ops) = &self.kspace_operators {
+                    let mask = leto_mask(&mask);
                     Some(ops.spectral_grad_z(&mask)?)
                 } else {
                     None
@@ -43,4 +47,10 @@ impl PSTDSolver {
         self.velocity_source_grad_masks.push(grad_mask);
         Ok(())
     }
+}
+
+fn leto_mask(mask: &ndarray::Array3<f64>) -> LetoArray3<f64> {
+    let (nx, ny, nz) = mask.dim();
+    LetoArray3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
+        .expect("PSTD source mask shape must match its Leto gradient shape")
 }

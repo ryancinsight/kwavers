@@ -1,10 +1,9 @@
 use super::types::ElectromagneticFdtdSolver;
-use kwavers_field::EMFields;
+use kwavers_field::{ArrayD, EMFields, VecStorage};
 use kwavers_grid::Grid;
 use kwavers_physics::electromagnetic::equations::{
     EMDimension, EMMaterialDistribution, ElectromagneticWaveEquation,
 };
-use ndarray::{Array4, ArrayD, IxDyn};
 
 fn seeded_solver() -> ElectromagneticFdtdSolver {
     let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
@@ -23,8 +22,8 @@ fn seeded_solver() -> ElectromagneticFdtdSolver {
 
 fn output_fields(shape: &[usize]) -> EMFields {
     EMFields::new(
-        ArrayD::from_elem(IxDyn(shape), -1.0),
-        ArrayD::from_elem(IxDyn(shape), -2.0),
+        ArrayD::<f64, VecStorage<f64>>::from_elem(shape, -1.0).unwrap(),
+        ArrayD::<f64, VecStorage<f64>>::from_elem(shape, -2.0).unwrap(),
     )
 }
 
@@ -61,29 +60,49 @@ fn test_maxwell_time_step() {
 fn boundary_conditions_reuse_shape_compatible_output_storage() {
     let mut solver = seeded_solver();
     let mut fields = EMFields::new(
-        Array4::from_elem((4, 4, 4, 3), -1.0).into_dyn(),
-        Array4::from_elem((4, 4, 4, 3), -2.0).into_dyn(),
+        ArrayD::<f64, VecStorage<f64>>::from_elem(&[4, 4, 4, 3], -1.0).unwrap(),
+        ArrayD::<f64, VecStorage<f64>>::from_elem(&[4, 4, 4, 3], -2.0).unwrap(),
     );
-    fields.displacement = Some(ArrayD::from_elem(IxDyn(&[4, 4, 4, 3]), 1.0));
-    fields.flux_density = Some(ArrayD::from_elem(IxDyn(&[4, 4, 4, 3]), 2.0));
+    fields.displacement =
+        Some(ArrayD::<f64, VecStorage<f64>>::from_elem(&[4, 4, 4, 3], 1.0).unwrap());
+    fields.flux_density =
+        Some(ArrayD::<f64, VecStorage<f64>>::from_elem(&[4, 4, 4, 3], 2.0).unwrap());
 
-    let electric_ptr = fields.electric.as_ptr();
-    let magnetic_ptr = fields.magnetic.as_ptr();
+    let electric_ptr = fields.electric.iter().next().map(|x| x as *const f64);
+    let magnetic_ptr = fields.magnetic.iter().next().map(|x| x as *const f64);
 
     solver.apply_em_boundary_conditions(&mut fields);
 
-    assert_eq!(fields.electric.as_ptr(), electric_ptr);
-    assert_eq!(fields.magnetic.as_ptr(), magnetic_ptr);
+    // Verify no reallocation occurred (pointer to first element is unchanged).
+    assert_eq!(
+        fields.electric.iter().next().map(|x| x as *const f64),
+        electric_ptr
+    );
+    assert_eq!(
+        fields.magnetic.iter().next().map(|x| x as *const f64),
+        magnetic_ptr
+    );
     assert!(fields.displacement.is_none());
     assert!(fields.flux_density.is_none());
-    assert_eq!(fields.electric[IxDyn(&[1, 1, 1, 0])], 4.0);
-    assert_eq!(fields.electric[IxDyn(&[1, 1, 1, 1])], 8.0);
-    assert_eq!(fields.electric[IxDyn(&[1, 1, 1, 2])], 12.0);
-    assert_eq!(fields.magnetic[IxDyn(&[1, 1, 1, 0])], 3.0);
-    assert_eq!(fields.magnetic[IxDyn(&[1, 1, 1, 1])], 5.0);
-    assert_eq!(fields.magnetic[IxDyn(&[1, 1, 1, 2])], 7.0);
-    assert_eq!(fields.electric, solver.em_fields().electric);
-    assert_eq!(fields.magnetic, solver.em_fields().magnetic);
+    assert_eq!(*fields.electric.get(&[1, 1, 1, 0]).unwrap(), 4.0);
+    assert_eq!(*fields.electric.get(&[1, 1, 1, 1]).unwrap(), 8.0);
+    assert_eq!(*fields.electric.get(&[1, 1, 1, 2]).unwrap(), 12.0);
+    assert_eq!(*fields.magnetic.get(&[1, 1, 1, 0]).unwrap(), 3.0);
+    assert_eq!(*fields.magnetic.get(&[1, 1, 1, 1]).unwrap(), 5.0);
+    assert_eq!(*fields.magnetic.get(&[1, 1, 1, 2]).unwrap(), 7.0);
+    // Check fields match the cache in the solver
+    let e_match = fields
+        .electric
+        .iter()
+        .zip(solver.em_fields().electric.iter())
+        .all(|(a, b)| a == b);
+    assert!(e_match, "electric fields must match solver cache");
+    let m_match = fields
+        .magnetic
+        .iter()
+        .zip(solver.em_fields().magnetic.iter())
+        .all(|(a, b)| a == b);
+    assert!(m_match, "magnetic fields must match solver cache");
 }
 
 #[test]
@@ -95,7 +114,7 @@ fn boundary_conditions_repair_mismatched_output_shape() {
 
     assert_eq!(fields.electric.shape(), &[4, 4, 4, 3]);
     assert_eq!(fields.magnetic.shape(), &[4, 4, 4, 3]);
-    assert_eq!(fields.electric[IxDyn(&[1, 1, 1, 2])], 12.0);
-    assert_eq!(fields.magnetic[IxDyn(&[1, 1, 1, 2])], 7.0);
+    assert_eq!(*fields.electric.get(&[1, 1, 1, 2]).unwrap(), 12.0);
+    assert_eq!(*fields.magnetic.get(&[1, 1, 1, 2]).unwrap(), 7.0);
     fields.validate_shapes().unwrap();
 }

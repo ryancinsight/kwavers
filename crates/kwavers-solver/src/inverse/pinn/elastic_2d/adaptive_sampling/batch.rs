@@ -43,7 +43,8 @@ pub fn extract_batch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Def
     indices: &[usize],
 ) -> KwaversResult<CollocationData<B>>
 where
-    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
     if indices.is_empty() {
         return Err(KwaversError::InvalidInput("Empty batch indices".into()));

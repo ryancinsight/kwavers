@@ -38,6 +38,7 @@ bitflags = "2.4"
 parking_lot = "0.12"
 tracing = { version = "0.1", features = ["attributes"] }
 apollo = { workspace = true }
+eunomia = { workspace = true }
 
 # coeus ML stack — required only when the `pinn` feature is enabled.
 coeus-core = { workspace = true, optional = true }

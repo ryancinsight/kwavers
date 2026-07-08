@@ -59,7 +59,6 @@
 //!   interference." *IEEE Trans. Acoust. Speech Signal Process.* 33(3), 527–536.
 
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use nalgebra::{DMatrix, DVector};
 use ndarray::{Array3, Array4};
 
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
@@ -197,7 +196,7 @@ pub fn mvdr_cpu(
             .collect();
 
         // Spatially-smoothed covariance accumulator (L×L, real symmetric).
-        let mut r_accum = DMatrix::<f64>::zeros(l, l);
+        let mut r_accum_flat = vec![0.0_f64; l * l];
 
         for qx in 0..n_sub_x {
             for qy in 0..n_sub_y {
@@ -218,47 +217,72 @@ pub fn mvdr_cpu(
 
                     // Build L×N delay-aligned data matrix X (averaged over frames).
                     // X[i][n] = (1/N_f) Σ_f x_i^f[n + τ_i]
-                    let mut x_mat = DMatrix::<f64>::zeros(l, samples);
+                    let mut x_mat = vec![0.0_f64; l * samples];
                     for (i, &ch) in sub_channels.iter().enumerate() {
                         let tau = delays_s[ch];
                         for n in 0..samples {
                             let sample_sum: f64 = (0..frames)
                                 .map(|f| rf_get(f, ch, tau + n as f32) as f64)
                                 .sum();
-                            x_mat[(i, n)] = sample_sum / frames.max(1) as f64;
+                            x_mat[i * samples + n] = sample_sum / frames.max(1) as f64;
                         }
                     }
 
-                    // R_q = X X^T / N
+                    // R_q = X X^T / N — accumulate into r_accum_flat.
                     let n_f64 = samples as f64;
-                    r_accum += &x_mat * x_mat.transpose() * (1.0 / n_f64);
+                    for row in 0..l {
+                        for col in 0..l {
+                            let mut dot = 0.0_f64;
+                            for k in 0..samples {
+                                dot += x_mat[row * samples + k] * x_mat[col * samples + k];
+                            }
+                            r_accum_flat[row * l + col] += dot / n_f64;
+                        }
+                    }
                 }
             }
         }
 
-        // Spatially-smoothed covariance.
-        let r_avg = r_accum / n_subarrays as f64;
+        // Spatially-smoothed covariance: divide by number of sub-arrays.
+        let inv_n = 1.0 / n_subarrays as f64;
+        for v in &mut r_accum_flat {
+            *v *= inv_n;
+        }
 
         // Diagonal loading: R_δ = R + δ · (tr(R)/L) · I
-        let trace = r_avg.trace();
+        let trace: f64 = (0..l).map(|i| r_accum_flat[i * l + i]).sum();
         let loading = diagonal_loading as f64 * trace / l as f64;
-        let r_loaded = r_avg + DMatrix::<f64>::identity(l, l) * loading;
+        for i in 0..l {
+            r_accum_flat[i * l + i] += loading;
+        }
 
-        // Solve R_δ u = 1 via Cholesky.
-        let ones = DVector::<f64>::from_element(l, 1.0_f64);
-        let u = match r_loaded.clone().cholesky() {
-            Some(chol) => chol.solve(&ones),
-            None => {
+        // Solve R_δ u = 1 via Cholesky (fall back to LU if not SPD).
+        let r_loaded = leto::Array2::from_shape_vec([l, l], r_accum_flat)
+            .expect("MVDR: covariance matrix shape");
+        let ones_flat: Vec<f64> = vec![1.0_f64; l];
+        let ones = leto::Array1::from_vec([l], ones_flat).expect("MVDR: ones vector");
+
+        let u = match leto_ops::application::linalg::cholesky_decompose(&r_loaded.view()) {
+            Ok(chol) => match chol.solve(&ones.view()) {
+                Ok(sol) => sol,
+                Err(_) => return 0.0,
+            },
+            Err(_) => {
                 // Fall back to LU if Cholesky fails (e.g. insufficient loading).
-                match r_loaded.lu().solve(&ones) {
-                    Some(sol) => sol,
-                    None => return 0.0, // Singular system output remains 0.
+                match leto_ops::application::linalg::lu_decompose(&r_loaded.view()) {
+                    Ok(lu) => match lu.solve(&ones.view()) {
+                        Ok(sol) => sol,
+                        Err(_) => return 0.0,
+                    },
+                    Err(_) => return 0.0,
                 }
             }
         };
 
         // MVDR output power P = 1 / (1^T u).
-        let denom = ones.dot(&u);
+        let denom: f64 = (0..l)
+            .map(|i| *ones.get([i]).unwrap() * *u.get([i]).unwrap())
+            .sum();
         if denom.abs() < f64::EPSILON {
             return 0.0;
         }
@@ -266,8 +290,6 @@ pub fn mvdr_cpu(
 
         // Beamformed signal: y[n] = P · u^T x[n] for the first frame, n=0
         // (full-frame average at each voxel for a compact scalar output).
-        // We use the mean delay-aligned signal across all sub-aperture elements.
-        // Sub-aperture 0 is canonical; multiply by the full-aperture MVDR gain.
         let sub0_channels: Vec<usize> = (0..lx)
             .flat_map(|dx_| {
                 (0..ly).flat_map(move |dy_| {
@@ -276,7 +298,7 @@ pub fn mvdr_cpu(
             })
             .collect();
 
-        let mut x_bar = DVector::<f64>::zeros(l);
+        let mut x_bar = vec![0.0_f64; l];
         for (i, &ch) in sub0_channels.iter().enumerate() {
             let tau = delays_s[ch];
             let mean_sample: f64 =
@@ -284,7 +306,10 @@ pub fn mvdr_cpu(
             x_bar[i] = mean_sample;
         }
 
-        (p * u.dot(&x_bar)).abs() as f32
+        let dot_u_xbar: f64 = (0..l)
+            .map(|i| *u.get([i]).unwrap() * x_bar[i])
+            .sum();
+        (p * dot_u_xbar).abs() as f32
     });
 
     Array3::from_shape_vec((vol_x, vol_y, vol_z), flat).map_err(|e| {

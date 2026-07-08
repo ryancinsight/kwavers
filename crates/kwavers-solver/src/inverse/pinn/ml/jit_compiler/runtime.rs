@@ -1,4 +1,4 @@
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use crate::inverse::pinn::ml::WaveGeometry2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::{
@@ -44,7 +44,7 @@ impl OptimizedRuntime {
     pub fn load_model(
         &mut self,
         model: &dyn std::any::Any,
-        geometry: &BurnWave2dGeometry,
+        geometry: &WaveGeometry2D,
         name: &str,
     ) -> KwaversResult<String> {
         let kernel = self.compiler.compile_pinn_model(model, geometry, name)?;

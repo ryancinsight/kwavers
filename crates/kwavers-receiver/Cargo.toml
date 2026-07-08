@@ -14,6 +14,7 @@ kwavers-grid = { path = "../kwavers-grid" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
 moirai-parallel = { workspace = true }
+leto = { workspace = true }
 ndarray = { version = "0.16", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"

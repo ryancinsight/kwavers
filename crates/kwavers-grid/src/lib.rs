@@ -218,19 +218,19 @@ impl Grid {
     /// Get kx array.
     #[inline]
     pub fn kx(&self) -> leto::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nx, self.dx)
+        KSpaceCalculator::generate_k_vector(self.nx, self.dx).into()
     }
 
     /// Get ky array.
     #[inline]
     pub fn ky(&self) -> leto::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.ny, self.dy)
+        KSpaceCalculator::generate_k_vector(self.ny, self.dy).into()
     }
 
     /// Get kz array.
     #[inline]
     pub fn kz(&self) -> leto::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nz, self.dz)
+        KSpaceCalculator::generate_k_vector(self.nz, self.dz).into()
     }
 
     /// Get kx array in leto format.

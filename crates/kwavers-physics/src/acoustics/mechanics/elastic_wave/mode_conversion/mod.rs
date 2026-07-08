@@ -15,7 +15,7 @@
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Mode conversion configuration
 #[derive(Debug, Clone)]
@@ -119,7 +119,7 @@ impl ElasticModeStiffnessTensor {
             .into());
         }
 
-        let mut c = Array2::zeros((6, 6));
+        let mut c = Array2::zeros([6, 6]);
 
         // Diagonal terms
         c[[0, 0]] = 2.0f64.mul_add(mu, lambda); // C11
@@ -156,7 +156,7 @@ impl ElasticModeStiffnessTensor {
         c44: f64,
         density: f64,
     ) -> KwaversResult<Self> {
-        let mut c = Array2::zeros((6, 6));
+        let mut c = Array2::zeros([6, 6]);
 
         // Hexagonal symmetry
         c[[0, 0]] = c11;

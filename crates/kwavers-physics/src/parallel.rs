@@ -2,7 +2,7 @@
 
 use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with,
-    for_each_chunk_quad_mut_enumerated_with, for_each_chunk_triple_mut_enumerated_with, Adaptive,
+    for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
 use ndarray::{ArrayView3, ArrayViewMut3, Zip};
 
@@ -252,91 +252,6 @@ pub(crate) fn for_each_indexed_three_mut<T, U, V, F>(
             .for_each(|index, first, second, third| {
                 f(linear_index(index, ny, nz), first, second, third);
             }),
-    }
-}
-
-/// Apply an indexed mutation over four mutable 3-D views and one immutable 3-D view.
-#[inline]
-pub(crate) fn for_each_indexed_four_mut_ref<T, U, V, W, X, F>(
-    mut first_out: ArrayViewMut3<'_, T>,
-    mut second_out: ArrayViewMut3<'_, U>,
-    mut third_out: ArrayViewMut3<'_, V>,
-    mut fourth_out: ArrayViewMut3<'_, W>,
-    input: ArrayView3<'_, X>,
-    f: F,
-) where
-    T: Send,
-    U: Send,
-    V: Send,
-    W: Send,
-    X: Sync,
-    F: Fn((usize, usize, usize), &mut T, &mut U, &mut V, &mut W, &X) + Send + Sync,
-{
-    assert_eq!(
-        first_out.dim(),
-        second_out.dim(),
-        "invariant: physics indexed quad output second shape mismatch"
-    );
-    assert_eq!(
-        first_out.dim(),
-        third_out.dim(),
-        "invariant: physics indexed quad output third shape mismatch"
-    );
-    assert_eq!(
-        first_out.dim(),
-        fourth_out.dim(),
-        "invariant: physics indexed quad output fourth shape mismatch"
-    );
-    assert_eq!(
-        first_out.dim(),
-        input.dim(),
-        "invariant: physics indexed quad input shape mismatch"
-    );
-
-    let (_nx, ny, nz) = first_out.dim();
-    match (
-        first_out.as_slice_memory_order_mut(),
-        second_out.as_slice_memory_order_mut(),
-        third_out.as_slice_memory_order_mut(),
-        fourth_out.as_slice_memory_order_mut(),
-        input.as_slice_memory_order(),
-    ) {
-        (Some(first_out), Some(second_out), Some(third_out), Some(fourth_out), Some(input)) => {
-            for_each_chunk_quad_mut_enumerated_with::<Adaptive, _, _, _, _, _>(
-                first_out,
-                second_out,
-                third_out,
-                fourth_out,
-                FIELD_CHUNK_SIZE,
-                |chunk_index, first_chunk, second_chunk, third_chunk, fourth_chunk| {
-                    let start = chunk_index * FIELD_CHUNK_SIZE;
-                    for (offset, (((first_value, second_value), third_value), fourth_value)) in
-                        first_chunk
-                            .iter_mut()
-                            .zip(second_chunk.iter_mut())
-                            .zip(third_chunk.iter_mut())
-                            .zip(fourth_chunk.iter_mut())
-                            .enumerate()
-                    {
-                        let idx = start + offset;
-                        f(
-                            grid_index(idx, ny, nz),
-                            first_value,
-                            second_value,
-                            third_value,
-                            fourth_value,
-                            &input[idx],
-                        );
-                    }
-                },
-            );
-        }
-        _ => Zip::indexed(first_out)
-            .and(second_out)
-            .and(third_out)
-            .and(fourth_out)
-            .and(input)
-            .for_each(f),
     }
 }
 

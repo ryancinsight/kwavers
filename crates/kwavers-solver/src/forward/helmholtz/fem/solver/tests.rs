@@ -6,7 +6,7 @@ use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_mesh::{MeshBoundaryType, TetrahedralMesh};
 use ndarray::{arr2, Array2};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
     let mut mesh = TetrahedralMesh::new();

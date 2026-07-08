@@ -16,7 +16,7 @@ use super::dynamic_tanh::DynamicTanh;
 /// Parameterised field-surrogate PINN network.
 ///
 /// Mirrors the structure of `PINN3DNetwork` from
-/// `burn_wave_equation_3d` but with five input dimensions and three
+/// `wave_equation_3d` but with five input dimensions and three
 /// output dimensions. The hidden stack uses **Dynamic Tanh (DyT)**
 /// activations (`γ · tanh(α · x) + β`, Zhu 2025) — `α`, `γ`, `β` are
 /// per-layer learnable scalars that let the network adjust tanh
@@ -133,12 +133,17 @@ where
     pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
         let mut offset = 0;
         let n = self.input_layer.parameters().len();
-        self.input_layer.load_parameters(&params[offset..offset + n]);
+        self.input_layer
+            .load_parameters(&params[offset..offset + n]);
         offset += n;
         let n = self.input_act.parameters().len();
         self.input_act.load_parameters(&params[offset..offset + n]);
         offset += n;
-        for (layer, act) in self.hidden_layers.iter_mut().zip(self.hidden_acts.iter_mut()) {
+        for (layer, act) in self
+            .hidden_layers
+            .iter_mut()
+            .zip(self.hidden_acts.iter_mut())
+        {
             let n = layer.parameters().len();
             layer.load_parameters(&params[offset..offset + n]);
             offset += n;

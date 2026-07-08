@@ -4,7 +4,7 @@ use crate::numerics::operators::spectral::filter::{SpectralFilter, SpectralFilte
 use crate::numerics::operators::spectral::trait_def::SpectralOperatorTrait;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_spectral_filter_sharp_cutoff() {
@@ -41,11 +41,11 @@ fn test_spectral_filter_smooth() {
 #[test]
 fn spectral_filter_preserves_constant_field() {
     let filter = SpectralFilter::new(0.5, SpectralFilterType::SharpCutoff);
-    let field = Array3::from_elem((8, 4, 2), 3.25);
+    let field = Array3::from_elem([8, 4, 2], 3.25);
 
     let filtered = filter.apply(field.view()).unwrap();
 
-    for value in filtered {
+    for &value in filtered.iter() {
         assert_abs_diff_eq!(value, 3.25, epsilon = 1e-12);
     }
 }
@@ -56,7 +56,7 @@ fn spectral_filter_removes_rejected_nyquist_mode_and_preserves_low_mode() {
     let dx = 0.1;
     let low_k = TWO_PI / (nx as f64 * dx);
     let filter = SpectralFilter::new(0.5, SpectralFilterType::SharpCutoff);
-    let mut field = Array3::zeros((nx, 1, 1));
+    let mut field = Array3::zeros([nx, 1, 1]);
 
     for i in 0..nx {
         let x = i as f64 * dx;
@@ -79,7 +79,7 @@ fn spectral_filter_apply_into_reuses_workspaces_and_matches_apply() {
     let ny = 4;
     let nz = 2;
     let filter = SpectralFilter::new(0.5, SpectralFilterType::SharpCutoff);
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
 
     for i in 0..nx {
         let low_mode = (TWO_PI * i as f64 / nx as f64).sin();
@@ -92,29 +92,31 @@ fn spectral_filter_apply_into_reuses_workspaces_and_matches_apply() {
     }
 
     let expected = filter.apply(field.view()).unwrap();
-    let mut spectrum = Array3::<Complex64>::zeros((nx, ny, nz));
-    let mut output = Array3::<f64>::zeros((nx, ny, nz));
-    let spectrum_ptr = spectrum.as_ptr();
-    let output_ptr = output.as_ptr();
+    let mut spectrum = Array3::<Complex64>::zeros([nx, ny, nz]);
+    let mut output = Array3::<f64>::zeros([nx, ny, nz]);
+    let spectrum_ptr = spectrum.as_slice().unwrap().as_ptr();
+    let output_ptr = output.as_slice().unwrap().as_ptr();
 
     filter
         .apply_into(field.view(), &mut spectrum, &mut output)
         .unwrap();
 
-    assert_eq!(spectrum.as_ptr(), spectrum_ptr);
-    assert_eq!(output.as_ptr(), output_ptr);
+    assert_eq!(spectrum.as_slice().unwrap().as_ptr(), spectrum_ptr);
+    assert_eq!(output.as_slice().unwrap().as_ptr(), output_ptr);
     for (actual, expected) in output.iter().zip(expected.iter()) {
         assert_abs_diff_eq!(*actual, *expected, epsilon = 1e-12);
     }
 
-    field.mapv_inplace(|value| 0.5 * value);
+    for value in field.as_slice_mut().unwrap() {
+        *value *= 0.5;
+    }
     let expected_second = filter.apply(field.view()).unwrap();
     filter
         .apply_into(field.view(), &mut spectrum, &mut output)
         .unwrap();
 
-    assert_eq!(spectrum.as_ptr(), spectrum_ptr);
-    assert_eq!(output.as_ptr(), output_ptr);
+    assert_eq!(spectrum.as_slice().unwrap().as_ptr(), spectrum_ptr);
+    assert_eq!(output.as_slice().unwrap().as_ptr(), output_ptr);
     for (actual, expected) in output.iter().zip(expected_second.iter()) {
         assert_abs_diff_eq!(*actual, *expected, epsilon = 1e-12);
     }
@@ -123,9 +125,9 @@ fn spectral_filter_apply_into_reuses_workspaces_and_matches_apply() {
 #[test]
 fn spectral_filter_apply_into_rejects_mismatched_workspaces() {
     let filter = SpectralFilter::new(0.5, SpectralFilterType::SharpCutoff);
-    let field = Array3::<f64>::zeros((4, 4, 4));
-    let mut spectrum = Array3::<Complex64>::zeros((4, 4, 3));
-    let mut output = Array3::<f64>::zeros((4, 4, 4));
+    let field = Array3::<f64>::zeros([4, 4, 4]);
+    let mut spectrum = Array3::<Complex64>::zeros([4, 4, 3]);
+    let mut output = Array3::<f64>::zeros([4, 4, 4]);
 
     let error = filter
         .apply_into(field.view(), &mut spectrum, &mut output)
@@ -133,8 +135,8 @@ fn spectral_filter_apply_into_rejects_mismatched_workspaces() {
 
     assert!(format!("{error}").contains("spectrum workspace shape"));
 
-    spectrum = Array3::<Complex64>::zeros((4, 4, 4));
-    output = Array3::<f64>::zeros((4, 3, 4));
+    spectrum = Array3::<Complex64>::zeros([4, 4, 4]);
+    output = Array3::<f64>::zeros([4, 3, 4]);
     let error = filter
         .apply_into(field.view(), &mut spectrum, &mut output)
         .unwrap_err();
@@ -146,14 +148,14 @@ fn spectral_filter_apply_into_rejects_mismatched_workspaces() {
 fn spectral_operator_antialias_filter_uses_real_filter() {
     let nx = 16;
     let op = PseudospectralDerivative::new(nx, 1, 1, 0.1, 0.1, 0.1).unwrap();
-    let mut field = Array3::zeros((nx, 1, 1));
+    let mut field = Array3::zeros([nx, 1, 1]);
     for i in 0..nx {
         field[[i, 0, 0]] = if i.is_multiple_of(2) { 1.0 } else { -1.0 };
     }
 
     let filtered = op.apply_antialias_filter(field.view()).unwrap();
 
-    for value in filtered {
+    for &value in filtered.iter() {
         assert_abs_diff_eq!(value, 0.0, epsilon = 1e-12);
     }
 }
@@ -161,7 +163,7 @@ fn spectral_operator_antialias_filter_uses_real_filter() {
 #[test]
 fn spectral_filter_rejects_invalid_cutoff_on_apply() {
     let filter = SpectralFilter::new(f64::NAN, SpectralFilterType::SharpCutoff);
-    let field = Array3::zeros((2, 2, 2));
+    let field = Array3::zeros([2, 2, 2]);
 
     let error = filter.apply(field.view()).unwrap_err();
 

@@ -1,6 +1,6 @@
 use super::decomposition::EigenDecomposition;
+use eunomia::Complex64 as Complex;
 use ndarray::Array2;
-use num_complex::Complex;
 
 #[test]
 fn test_real_symmetric_eigendecomposition() {
@@ -131,13 +131,13 @@ fn test_hermitian_eigendecomposition_diagonal() {
     }
 
     let lambda_diag = Array2::from_diag(&eigenvals.mapv(|x| Complex::new(x, 0.0)));
-    let vdag: Array2<Complex<f64>> = eigenvecs
+    let vdag: Array2<Complex> = eigenvecs
         .t()
         .mapv(|z| z.conj())
         .into_dimensionality()
         .unwrap();
     let v_lambda = eigenvecs.dot(&lambda_diag);
-    let reconstructed: Array2<Complex<f64>> = v_lambda.dot(&vdag);
+    let reconstructed: Array2<Complex> = v_lambda.dot(&vdag);
 
     for i in 0..3 {
         for j in 0..3 {
@@ -183,12 +183,12 @@ fn test_hermitian_eigendecomposition_2x2() {
         }
     }
 
-    let vdag: Array2<Complex<f64>> = eigenvecs
+    let vdag: Array2<Complex> = eigenvecs
         .t()
         .mapv(|z| z.conj())
         .into_dimensionality()
         .unwrap();
-    let vdag_v: Array2<Complex<f64>> = vdag.dot(&eigenvecs);
+    let vdag_v: Array2<Complex> = vdag.dot(&eigenvecs);
     for i in 0..2 {
         for j in 0..2 {
             let expected = if i == j { 1.0 } else { 0.0 };

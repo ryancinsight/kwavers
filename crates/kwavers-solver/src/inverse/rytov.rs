@@ -27,7 +27,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array2;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Minimum incident-field magnitude below which the Rytov phase (a logarithm /
 /// division by `u_inc`) is undefined.

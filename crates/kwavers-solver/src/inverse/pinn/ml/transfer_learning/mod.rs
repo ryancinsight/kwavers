@@ -59,7 +59,7 @@ pub struct TransferMetrics {
 /// Transfer learner for geometry adaptation
 pub struct TransferLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Source model trained on simple geometry
-    pub(super) source_model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+    pub(super) source_model: crate::inverse::pinn::ml::PinnWave2D<B>,
     /// Transfer learning configuration
     pub(super) config: TransferLearningConfig,
     /// Domain adapter network (optional)
@@ -68,7 +68,7 @@ pub struct TransferLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend
     pub(super) stats: TransferLearningStats,
 }
 
-// Manual `Debug` impl: `BurnPINN2DWave<B>` requires the `CpuAddressableStorage`
+// Manual `Debug` impl: `PinnWave2D<B>` requires the `CpuAddressableStorage`
 // bound to implement `Debug`, which this struct's own bound does not carry.
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
     for TransferLearner<B>

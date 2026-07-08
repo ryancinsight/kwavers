@@ -10,10 +10,10 @@
 //! Narrowband adaptive methods (MVDR/Capon, MUSIC, ESMV) are naturally expressed on **complex**
 //! snapshots `x_n ∈ ℂ^M` with a **Hermitian** covariance `R = E[x xᴴ]`.
 
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array2;
-use num_complex::Complex64;
 
 mod post_process;
 mod shrinkage;
@@ -125,7 +125,8 @@ impl CovarianceEstimator {
             ));
         }
 
-        let mut covariance = Array2::<Complex64>::zeros((num_sensors, num_sensors));
+        let mut covariance =
+            Array2::<Complex64>::from_elem((num_sensors, num_sensors), Complex64::default());
 
         for snapshot in 0..num_snapshots {
             let x = data.column(snapshot);
@@ -173,7 +174,7 @@ impl CovarianceEstimator {
         covariance: &Array2<Complex64>,
     ) -> Array2<Complex64> {
         let n = covariance.nrows();
-        let mut fb = Array2::<Complex64>::zeros((n, n));
+        let mut fb = Array2::<Complex64>::from_elem((n, n), Complex64::default());
 
         for i in 0..n {
             for j in 0..n {

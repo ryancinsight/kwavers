@@ -76,7 +76,7 @@ fn cumulative_attenuation_matches_per_step_multiplier_to_n() {
         1e-4,
     ));
 
-    let mut field = ndarray::Array3::<f64>::ones((nx, ny, nz));
+    let mut field = Array3::<f64>::from_elem([nx, ny, nz], 1.0);
     let n_passes = 50usize;
     for _ in 0..n_passes {
         pml.apply_to_field(&mut field);

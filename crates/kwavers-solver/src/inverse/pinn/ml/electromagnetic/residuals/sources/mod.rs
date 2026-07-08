@@ -49,7 +49,12 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
         .unwrap_or(0.0) as f32;
 
     let backend = B::default();
-    let zeros = || Var::new(coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend), false);
+    let zeros = || {
+        Var::new(
+            coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend),
+            false,
+        )
+    };
 
     if rho_0 == 0.0 {
         // Source-free bulk: ρ_free = 0 (physically correct for dielectrics)
@@ -113,7 +118,9 @@ pub fn compute_charge_density<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). Wiley. §6.7.
 /// - Pozar, D.M. (2011). *Microwave Engineering* (4th ed.). Wiley. §1.3.
 /// - Balanis, C.A. (2012). *Advanced Engineering Electromagnetics* (2nd ed.). §3.4.
-pub fn compute_current_density_z<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+pub fn compute_current_density_z<
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+>(
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     physics_params: &PinnDomainPhysicsParameters,
@@ -139,7 +146,12 @@ pub fn compute_current_density_z<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuB
         .unwrap_or(0.0) as f32;
 
     let backend = B::default();
-    let zeros = || Var::new(coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend), false);
+    let zeros = || {
+        Var::new(
+            coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend),
+            false,
+        )
+    };
 
     let j_impressed = if j0 != 0.0 {
         let x0 = physics_params.domain_params.get("current_x0").copied();

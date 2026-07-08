@@ -337,9 +337,9 @@ mod tests {
         // exact Fubini/Aanonsen-1984 harmonic amplitudes is the plane-wave KZK
         // `test_aanonsen_1984_harmonic_amplitudes`; this guards the Kuznetsov
         // nonlinear operator qualitatively at low cost.)
-        use kwavers_math::fft::fft_1d_array;
+        use apollo::fft_1d_leto;
         use kwavers_source::NullSource;
-        use ndarray::Array1;
+        use leto::Array1;
 
         let (nx, m) = (64usize, 4usize); // 4 spatial periods ⇒ fundamental bin 4, 2nd bin 8.
         let grid = Grid::new(nx, 16, 16, 1e-4, 1e-3, 1e-3).unwrap();
@@ -364,7 +364,8 @@ mod tests {
 
         // The pure tone has zero second-harmonic content at t = 0.
         let line0: Vec<f64> = (0..nx).map(|i| fields[[0, i, 8, 8]]).collect();
-        let spec0 = fft_1d_array(&Array1::from_vec(line0));
+        let line0 = Array1::from_shape_vec([nx], line0).expect("line shape matches grid length");
+        let spec0 = fft_1d_leto(line0.view());
         let init_2nd = spec0[2 * m].norm();
 
         // Propagate; track the peak second-harmonic spatial content (a standing
@@ -389,7 +390,8 @@ mod tests {
                 line.iter().all(|p| p.is_finite()),
                 "Kuznetsov field diverged"
             );
-            let spec = fft_1d_array(&Array1::from_vec(line));
+            let line = Array1::from_shape_vec([nx], line).expect("line shape matches grid length");
+            let spec = fft_1d_leto(line.view());
             max_p1 = max_p1.max(spec[m].norm());
             max_p2 = max_p2.max(spec[2 * m].norm());
         }

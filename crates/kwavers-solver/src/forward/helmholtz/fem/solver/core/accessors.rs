@@ -2,7 +2,7 @@ use super::FemHelmholtzSolver;
 use kwavers_boundary::FemBoundaryManager;
 use kwavers_mesh::TetrahedralMesh;
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {
     /// Borrow the assembled right-hand side vector.

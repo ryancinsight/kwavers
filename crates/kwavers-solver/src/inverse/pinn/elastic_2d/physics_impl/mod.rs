@@ -26,7 +26,7 @@
 //! # Design Rationale
 //!
 //! **Separation of Concerns**:
-//! - `ElasticPINN2D<B>`: Neural network architecture (Burn tensors, autodiff)
+//! - `ElasticPINN2D<B>`: Neural network architecture (Coeus tensors, autodiff)
 //! - `ElasticPINN2DSolver`: Physics specification (ndarray, domain traits)
 //!
 //! This separation allows:
@@ -35,10 +35,10 @@
 //! 3. Tensor conversions to be isolated in one place
 //!
 //! **Tensor Bridge**:
-//! The PINN operates on Burn tensors for autodiff, but physics traits expect ndarray.
+//! The PINN operates on Coeus tensors for autodiff, but physics traits expect ndarray.
 //! This module handles conversions between representations:
-//! - Forward: ndarray → Burn tensor (for inference through trained network)
-//! - Backward: Burn tensor → ndarray (for trait method returns)
+//! - Forward: ndarray → Coeus tensor (for inference through trained network)
+//! - Backward: Coeus tensor → ndarray (for trait method returns)
 //!
 //! # Usage
 //!

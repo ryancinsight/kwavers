@@ -16,7 +16,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     PstdSpectralConvergentBornOperator, PstdTemporalTransferConfig,
 };
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 use std::f64::consts::PI;
 use std::sync::Arc;
 
@@ -287,6 +287,7 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
 #[test]
 fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
     let model = Array3::from_elem((4, 4, 3), SOUND_SPEED_WATER_SIM);
+    let model_leto: leto::Array3<f64> = model.clone().into();
     let acquisition = BreastUstPstdDatasetConfig {
         spacing_m: 3.2e-3,
         time_step_s: 1.0e-7,
@@ -338,7 +339,7 @@ fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
         array.element_count(),
     ));
     for (frequency_index, &frequency_hz) in frequencies_hz.iter().enumerate() {
-        let rows = simulate_frequency_observation(&model, &array, frequency_hz, &fwi)
+        let rows = simulate_frequency_observation(&model_leto, &array, frequency_hz, &fwi)
             .expect("PSTD spectral CBS homogeneous prediction");
         for transmit in 0..array.circumferential_elements() {
             for receiver in 0..array.element_count() {

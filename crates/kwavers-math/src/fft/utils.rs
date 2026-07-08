@@ -5,9 +5,9 @@
 //! the Apollo plan cache and therefore preserve the single source of truth for
 //! transform execution while centralizing repeated spectral post-processing.
 
-use crate::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace};
+use crate::fft::{fft_1d_complex_slice_inplace, ifft_1d_complex_slice_inplace};
+use eunomia::Complex64;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 
 /// Check if a number is a "good" size for FFT (composite of small primes 2, 3, 5)
 #[must_use]
@@ -53,7 +53,7 @@ pub fn fft_shift_2d(spectrum: &mut Array2<Complex64>) {
     let (nx, ny) = spectrum.dim();
     let shift_x = nx.div_ceil(2);
     let shift_y = ny.div_ceil(2);
-    let mut shifted = Array2::zeros(spectrum.raw_dim());
+    let mut shifted = Array2::from_elem(spectrum.raw_dim(), Complex64::default());
     for i in 0..nx {
         let src_i = (i + shift_x) % nx;
         for j in 0..ny {
@@ -69,7 +69,7 @@ pub fn ifft_shift_2d(spectrum: &mut Array2<Complex64>) {
     let (nx, ny) = spectrum.dim();
     let shift_x = nx / 2;
     let shift_y = ny / 2;
-    let mut shifted = Array2::zeros(spectrum.raw_dim());
+    let mut shifted = Array2::from_elem(spectrum.raw_dim(), Complex64::default());
     for i in 0..nx {
         let src_i = (i + shift_x) % nx;
         for j in 0..ny {
@@ -109,7 +109,7 @@ where
     }
 
     let mut spectrum = signal.mapv(|value| Complex64::new(value, 0.0));
-    fft_1d_complex_inplace(&mut spectrum);
+    fft_1d_complex_slice_inplace(spectrum.as_slice_mut().expect("contiguous spectrum"));
 
     let df = sampling_frequency / n as f64;
     let nyquist = sampling_frequency / 2.0;
@@ -120,7 +120,7 @@ where
 
     // Apollo uses FFTW-compatible 1/N inverse normalisation;
     // no additional scaling is required.
-    ifft_1d_complex_inplace(&mut spectrum);
+    ifft_1d_complex_slice_inplace(spectrum.as_slice_mut().expect("contiguous spectrum"));
     Array1::from_shape_fn(n, |idx| spectrum[idx].re)
 }
 
@@ -141,11 +141,11 @@ where
 pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
     let n = signal.len();
     if n == 0 {
-        return Array1::zeros(0);
+        return Array1::from_elem(0, Complex64::default());
     }
 
     let mut spectrum = signal.mapv(|value| Complex64::new(value, 0.0));
-    fft_1d_complex_inplace(&mut spectrum);
+    fft_1d_complex_slice_inplace(spectrum.as_slice_mut().expect("contiguous spectrum"));
 
     if n > 1 {
         let half = n / 2;
@@ -168,7 +168,7 @@ pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
 
     // Apollo uses FFTW-compatible 1/N inverse normalisation;
     // no additional scaling is required.
-    ifft_1d_complex_inplace(&mut spectrum);
+    ifft_1d_complex_slice_inplace(spectrum.as_slice_mut().expect("contiguous spectrum"));
     spectrum
 }
 
@@ -176,7 +176,7 @@ pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
 mod tests {
     use super::{analytic_signal_1d, apply_spectral_response_1d, fft_shift_2d, ifft_shift_2d};
     use ndarray::{Array1, Array2};
-    use num_complex::Complex64;
+    use eunomia::Complex64;
 
     #[test]
     fn test_fft_shift_2d_matches_numpy_convention_for_odd_sizes() {

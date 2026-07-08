@@ -1,12 +1,12 @@
 use super::constants::EPS_FD_F32;
 use super::sources::{compute_charge_density, compute_current_density_z};
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
 
 /// Compute electrostatic residual: ∇·(ε∇φ) = -ρ
 pub fn electrostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
-    model: &BurnPINN2DWave<B>,
+    model: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     eps: f64,
@@ -18,7 +18,10 @@ where
 {
     let eps_fd = EPS_FD_F32;
     let backend = B::default();
-    let zero = Var::new(coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend), false);
+    let zero = Var::new(
+        coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend),
+        false,
+    );
 
     // Gauss's law: ∇·D = ρ_free, D = -ε∇φ
     let d_x_plus = scalar_mul(
@@ -62,7 +65,7 @@ where
 
 /// Compute magnetostatic residual: ∇×(ν∇×A) = μ₀J
 pub fn magnetostatic_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
-    model: &BurnPINN2DWave<B>,
+    model: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     mu: f64,
@@ -74,7 +77,10 @@ where
 {
     let eps_fd = EPS_FD_F32;
     let backend = B::default();
-    let zero = Var::new(coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend), false);
+    let zero = Var::new(
+        coeus_tensor::Tensor::zeros_on(x.tensor.shape(), &backend),
+        false,
+    );
 
     // ∇×H: ∂Hy/∂x
     let h_y_x_plus = scalar_mul(
@@ -122,7 +128,7 @@ where
 // sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
 pub fn quasi_static_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
-    model: &BurnPINN2DWave<B>,
+    model: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,

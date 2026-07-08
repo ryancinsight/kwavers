@@ -12,15 +12,15 @@ fn dense_cbs_adjoint_gradient_matches_finite_difference() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[2, 1, 0]] = 1510.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(
         180_000.0,
-        observed.slice(ndarray::s![0..2, ..]).to_owned(),
+        first_rows(&observed, 2),
     )];
-    let mut current_speed = Array3::from_elem((3, 3, 1), 1501.0);
+    let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)
@@ -58,15 +58,15 @@ fn spectral_cbs_adjoint_gradient_matches_finite_difference() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[2, 1, 0]] = 1510.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(
         180_000.0,
-        observed.slice(ndarray::s![0..2, ..]).to_owned(),
+        first_rows(&observed, 2),
     )];
-    let mut current_speed = Array3::from_elem((3, 3, 1), 1501.0);
+    let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)
@@ -106,15 +106,15 @@ fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[2, 1, 0]] = 1510.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(
         180_000.0,
-        observed.slice(ndarray::s![0..2, ..]).to_owned(),
+        first_rows(&observed, 2),
     )];
-    let mut current_speed = Array3::from_elem((3, 3, 1), 1501.0);
+    let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)
@@ -143,15 +143,15 @@ fn pstd_spectral_cbs_adjoint_gradient_matches_finite_difference() {
 fn adjoint_gradient_matches_finite_difference() {
     let array = test_array();
     let config = test_config();
-    let mut truth = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([2, 2, 2], SOUND_SPEED_WATER_SIM);
     truth[[1, 0, 1]] = 1520.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 220_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(
         220_000.0,
-        observed.slice(ndarray::s![0..3, ..]).to_owned(),
+        first_rows(&observed, 3),
     )];
-    let current_speed = Array3::from_elem((2, 2, 2), 1502.0);
+    let current_speed = Array3::from_elem([2, 2, 2], 1502.0);
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let (objective, gradient) =
         objective_and_gradient(&current_slowness, &observations, &array, &config)
@@ -199,15 +199,15 @@ fn pstd_finite_window_born_adjoint_gradient_matches_finite_difference() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[2, 1, 0]] = 1510.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 180_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(
         180_000.0,
-        observed.slice(ndarray::s![0..2, ..]).to_owned(),
+        first_rows(&observed, 2),
     )];
-    let mut current_speed = Array3::from_elem((3, 3, 1), 1501.0);
+    let mut current_speed = Array3::from_elem([3, 3, 1], 1501.0);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let (_, gradient) = objective_and_gradient(&current_slowness, &observations, &array, &config)

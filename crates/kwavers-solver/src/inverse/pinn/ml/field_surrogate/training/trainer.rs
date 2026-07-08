@@ -15,9 +15,7 @@ use kwavers_core::error::KwaversResult;
 /// regression. The legacy [`super::super::ParamFieldOptimizer`]
 /// (plain SGD) remains available for tests that need an
 /// allocation-free optimizer step.
-pub struct ParamFieldPINNTrainer<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
-> {
+pub struct ParamFieldPINNTrainer<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     pub network: ParamFieldPINNNetwork<B>,
     pub optimizer: Adam<f32, B>,
     pub config: FieldSurrogateTrainingConfig,
@@ -118,16 +116,17 @@ where
                     }
                 }
                 let Some(idx) = best_idx else { continue };
-                let pred_sel =
-                    coeus_autograd::slice(&pred, &[(idx, idx + 1), (1, 2)]);
+                let pred_sel = coeus_autograd::slice(&pred, &[(idx, idx + 1), (1, 2)]);
                 let target_best_idx = (0..n)
                     .filter(|&i| group_ids[i] as usize == g)
                     .max_by(|&a, &b| {
                         target_pmax_vals[a * 3 + 1].total_cmp(&target_pmax_vals[b * 3 + 1])
                     })
                     .unwrap_or(idx);
-                let target_sel =
-                    coeus_autograd::slice(&batch.targets, &[(target_best_idx, target_best_idx + 1), (1, 2)]);
+                let target_sel = coeus_autograd::slice(
+                    &batch.targets,
+                    &[(target_best_idx, target_best_idx + 1), (1, 2)],
+                );
                 let gap_g = coeus_autograd::sub(&pred_sel, &target_sel);
                 let gap_sq = coeus_autograd::mul(&gap_g, &gap_g);
                 prom_acc = Some(match prom_acc {
@@ -139,7 +138,8 @@ where
             match prom_acc {
                 Some(acc) => {
                     let prom = coeus_autograd::scalar_mul(&acc, 1.0 / denom);
-                    let prom_w = coeus_autograd::scalar_mul(&prom, self.config.peak_prominence_weight);
+                    let prom_w =
+                        coeus_autograd::scalar_mul(&prom, self.config.peak_prominence_weight);
                     total = coeus_autograd::add(&total, &prom_w);
                     prom.tensor.as_slice()[0] * self.config.peak_prominence_weight
                 }

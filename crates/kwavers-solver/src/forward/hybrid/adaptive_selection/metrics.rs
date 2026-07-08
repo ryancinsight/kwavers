@@ -3,6 +3,7 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
+use leto::Array3 as LetoArray3;
 use ndarray::ArrayView3;
 
 /// Spectral analysis metrics for method selection
@@ -67,8 +68,8 @@ impl SpectralMetrics {
         // Create a new processor (acceptable cost for adaptive selection)
         let fft = Fft3d::new(Shape3D { nx, ny, nz });
 
-        // We need an owned array for the FFT processor
-        let field_owned = field.to_owned();
+        let field_owned = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+            .expect("adaptive-selection field shape must match its Leto FFT shape");
         let spectrum = fft.forward(&field_owned);
 
         // 2. Compute Spectral Metrics

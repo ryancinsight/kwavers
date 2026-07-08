@@ -301,15 +301,15 @@ impl GaussQuadrature {
     pub fn add_element_contribution(
         &self,
         global_stiffness: &mut kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix<
-            num_complex::Complex64,
+            kwavers_math::fft::Complex64,
         >,
         global_mass: &mut kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix<
-            num_complex::Complex64,
+            kwavers_math::fft::Complex64,
         >,
-        global_rhs: &mut ndarray::Array1<num_complex::Complex64>,
-        elem_stiffness: &ndarray::Array2<num_complex::Complex64>,
-        elem_mass: &ndarray::Array2<num_complex::Complex64>,
-        elem_rhs: &ndarray::Array1<num_complex::Complex64>,
+        global_rhs: &mut ndarray::Array1<kwavers_math::fft::Complex64>,
+        elem_stiffness: &ndarray::Array2<kwavers_math::fft::Complex64>,
+        elem_mass: &ndarray::Array2<kwavers_math::fft::Complex64>,
+        elem_rhs: &ndarray::Array1<kwavers_math::fft::Complex64>,
         element: &Tetrahedron,
         _basis: &BasisFunction,
     ) -> KwaversResult<()> {

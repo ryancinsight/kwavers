@@ -1,7 +1,7 @@
 use crate::linear_algebra::tolerance;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use eunomia::Complex64;
 
 /// Eigenvalue decomposition operations
 #[derive(Debug)]
@@ -44,7 +44,7 @@ impl EigenDecomposition {
         // second hand-rolled real Jacobi. On a real input every rotation stays
         // real (the Givens phase is ±1), so the eigenvectors are real and the
         // imaginary part is exactly zero — extract the real part.
-        let complex = matrix.mapv(|x| Complex::new(x, 0.0));
+        let complex = matrix.mapv(|x| Complex64::new(x, 0.0));
         let (eigenvalues, eigenvectors_c) = Self::hermitian_eigendecomposition_complex(&complex)?;
         let eigenvectors = eigenvectors_c.mapv(|z| z.re);
         Ok((eigenvalues, eigenvectors))
@@ -72,8 +72,8 @@ impl EigenDecomposition {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn hermitian_eigendecomposition_complex(
-        matrix: &Array2<Complex<f64>>,
-    ) -> KwaversResult<(Array1<f64>, Array2<Complex<f64>>)> {
+        matrix: &Array2<Complex64>,
+    ) -> KwaversResult<(Array1<f64>, Array2<Complex64>)> {
         let n = matrix.nrows();
         if matrix.ncols() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
@@ -111,7 +111,7 @@ impl EigenDecomposition {
         }
 
         let mut h = matrix.clone();
-        let mut v = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
+        let mut v = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
 
         for _sweep in 0..tolerance::HERMITIAN_EIG_MAX_SWEEPS {
             let mut max_offdiag = 0.0;
@@ -150,33 +150,33 @@ impl EigenDecomposition {
             let phase = if h_pq.norm() > tolerance::HERMITIAN_EIG_TOL {
                 h_pq.conj() / h_pq.norm()
             } else {
-                Complex::new(1.0, 0.0)
+                Complex64::new(1.0, 0.0)
             };
 
-            let s_complex = Complex::new(s_mag, 0.0) * phase;
+            let s_complex = Complex64::new(s_mag, 0.0) * phase;
 
             // Apply H ← H U (right multiply)
             for i in 0..n {
                 let h_ip = h[[i, p]];
                 let h_iq = h[[i, q]];
-                h[[i, p]] = c * h_ip - s_complex.conj() * h_iq;
-                h[[i, q]] = s_complex * h_ip + c * h_iq;
+                h[[i, p]] = h_ip * c - s_complex.conj() * h_iq;
+                h[[i, q]] = s_complex * h_ip + h_iq * c;
             }
 
             // Apply H ← U† H (left multiply)
             for j in 0..n {
                 let h_pj = h[[p, j]];
                 let h_qj = h[[q, j]];
-                h[[p, j]] = c * h_pj - s_complex * h_qj;
-                h[[q, j]] = s_complex.conj() * h_pj + c * h_qj;
+                h[[p, j]] = h_pj * c - s_complex * h_qj;
+                h[[q, j]] = s_complex.conj() * h_pj + h_qj * c;
             }
 
             // Accumulate eigenvectors V ← V U
             for i in 0..n {
                 let v_ip = v[[i, p]];
                 let v_iq = v[[i, q]];
-                v[[i, p]] = c * v_ip - s_complex.conj() * v_iq;
-                v[[i, q]] = s_complex * v_ip + c * v_iq;
+                v[[i, p]] = v_ip * c - s_complex.conj() * v_iq;
+                v[[i, q]] = s_complex * v_ip + v_iq * c;
             }
         }
 

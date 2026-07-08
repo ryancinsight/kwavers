@@ -3,8 +3,8 @@
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, SPECTRAL_WINDOW_SIZE};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
+use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::fft_1d_array;
 use ndarray::{s, Array1, ArrayView1};
 
 /// Spectral detector for cavitation using FFT analysis
@@ -73,7 +73,12 @@ impl SpectralDetector {
             windowed = padded;
         }
 
-        let spectrum = fft_1d_array(&windowed);
+        let fft_input = leto::Array1::from_shape_vec(
+            [SPECTRAL_WINDOW_SIZE],
+            windowed.iter().copied().collect(),
+        )
+        .expect("windowed spectral record must match Leto FFT shape");
+        let spectrum = fft_1d_leto(fft_input.view());
 
         // Convert to power spectral density
         let psd: Array1<f64> = spectrum

@@ -1,8 +1,8 @@
 use super::MetaLearner;
-use crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D;
 use crate::inverse::pinn::ml::meta_learning::gradient::utils::add_gradients;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::PhysicsTask;
+use crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D;
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
@@ -61,7 +61,11 @@ where
                         .map(|(&p, &gr)| p - self.config.outer_lr as f32 * gr)
                         .collect();
                     Var::new(
-                        coeus_tensor::Tensor::from_slice_on(param.tensor.shape().to_vec(), &updated, &backend),
+                        coeus_tensor::Tensor::from_slice_on(
+                            param.tensor.shape().to_vec(),
+                            &updated,
+                            &backend,
+                        ),
                         param.grad.is_some(),
                     )
                 }
@@ -119,7 +123,7 @@ where
     ) -> KwaversResult<(
         f64,
         f64,
-        crate::inverse::pinn::ml::burn_wave_equation_2d::BurnPINN2DWave<B>,
+        crate::inverse::pinn::ml::wave_equation_2d::PinnWave2D<B>,
     )> {
         let mut task_model = self.base_model.clone();
         let task_data = self.generate_task_data(task)?;

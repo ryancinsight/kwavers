@@ -1,23 +1,7 @@
 //! Shared helpers for velocity statistics modules.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array3};
-
-/// Copy field values at sensor positions into caller-owned storage.
-/// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
-///
-pub(super) fn fill_field_at_positions(
-    field: &Array3<f64>,
-    positions: &[(usize, usize, usize)],
-    out: &mut Array1<f64>,
-) -> KwaversResult<()> {
-    validate_sample_output_len(positions, out)?;
-    for (row, &(i, j, k)) in positions.iter().enumerate() {
-        out[row] = field[[i, j, k]];
-    }
-    Ok(())
-}
+use ndarray::Array1;
 
 /// Verify that `out` has the same length as `positions`.
 /// # Errors

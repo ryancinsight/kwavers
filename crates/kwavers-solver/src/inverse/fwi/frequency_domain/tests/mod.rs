@@ -11,7 +11,8 @@ use super::{
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,
 };
-use ndarray::Array3;
+use leto::{Array2, Array3};
+use kwavers_math::fft::Complex64;
 
 mod forward;
 mod gradient_fd;
@@ -33,4 +34,14 @@ pub(super) fn test_config() -> Config {
 
 pub(super) fn test_array() -> MultiRowRingArray {
     MultiRowRingArray::new(6, 2, 0.08, 0.01).expect("ring array")
+}
+
+pub(super) fn first_rows(array: &Array2<Complex64>, rows: usize) -> Array2<Complex64> {
+    let [total_rows, cols] = array.shape();
+    assert!(rows <= total_rows);
+    let values = array
+        .as_slice()
+        .expect("frequency observation matrix must be contiguous")[..rows * cols]
+        .to_vec();
+    Array2::from_shape_vec([rows, cols], values).expect("row-prefix shape matches copied data")
 }

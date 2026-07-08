@@ -42,7 +42,7 @@ impl BoundaryCondition for SchwarzBoundary {
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut Array3<num_complex::Complex<f64>>,
+        _field: &mut Array3<kwavers_math::fft::Complex64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

@@ -8,7 +8,7 @@ use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use kwavers_mesh::Tetrahedron;
 use moirai_parallel::{map_collect_index_with, Adaptive};
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// FEM matrix assembly utilities
 #[derive(Debug)]
@@ -72,7 +72,7 @@ impl FemAssembly {
         // Pre-allocate matrices
         let (mut global_stiffness, mut global_mass) =
             self.preallocate_matrices(num_nodes, elements);
-        let mut global_rhs = Array1::<Complex64>::zeros(num_nodes);
+        let mut global_rhs = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
 
         self.validate_element_array_lengths(
             elements,

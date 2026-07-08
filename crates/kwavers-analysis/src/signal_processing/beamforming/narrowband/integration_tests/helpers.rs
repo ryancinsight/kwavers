@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use ndarray::Array3;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Parameters for deterministic plane-wave fixture generation.
@@ -80,7 +80,7 @@ pub(super) fn compute_sample_covariance(
 ) -> ndarray::Array2<Complex64> {
     let n_sensors = snapshots.nrows();
     let n_snapshots = snapshots.ncols();
-    let mut cov = ndarray::Array2::<Complex64>::zeros((n_sensors, n_sensors));
+    let mut cov = ndarray::Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
 
     for k in 0..n_snapshots {
         let snapshot = snapshots.column(k);

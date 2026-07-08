@@ -2,9 +2,9 @@
 
 use super::detector::HarmonicDetector;
 use super::types::PointHarmonics;
+use apollo::{fft_1d_leto, Complex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::{fft_1d_array, Complex64};
 
 impl HarmonicDetector {
     /// Analyze harmonics at a single spatial point
@@ -90,15 +90,20 @@ impl HarmonicDetector {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn compute_fft(&self, time_series: &[f64]) -> KwaversResult<Vec<Complex64>> {
-        let mut buffer = fft_1d_array(&ndarray::Array1::from_vec(time_series.to_vec()));
+        let fft_input = leto::Array1::from_shape_vec([time_series.len()], time_series.to_vec())
+            .expect("harmonic-detection series length must match Leto FFT shape");
+        let mut buffer = fft_1d_leto(fft_input.view());
 
         // Normalize
         let norm_factor = (time_series.len() as f64).sqrt();
-        for val in &mut buffer {
+        for val in buffer
+            .as_slice_mut()
+            .expect("harmonic-detection FFT output must be dense")
+        {
             *val /= norm_factor;
         }
 
-        Ok(buffer.to_vec())
+        Ok(buffer.into_vec())
     }
 
     /// Find fundamental frequency peak in spectrum

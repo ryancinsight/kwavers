@@ -1,7 +1,7 @@
 use super::constants::EPS_FD_F32;
 use super::sources::compute_charge_density;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
 
 // ─── TE-mode Maxwell residuals ─────────────────────────────────────────────────
@@ -30,12 +30,10 @@ use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
 /// # References
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). §6.2.
 /// - Pozar, D.M. (2011). *Microwave Engineering* (4th ed.). §1.3.
-pub fn te_mode_faraday_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model_ex: &BurnPINN2DWave<B>,
-    model_ey: &BurnPINN2DWave<B>,
-    model_hz: &BurnPINN2DWave<B>,
+pub fn te_mode_faraday_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model_ex: &PinnWave2D<B>,
+    model_ey: &PinnWave2D<B>,
+    model_hz: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,
@@ -81,11 +79,9 @@ where
 /// Setting = 0: εμω² = ky² (dispersion). ✓
 ///
 /// # References — see `te_mode_faraday_residual`.
-pub fn te_mode_ampere_x_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model_ex: &BurnPINN2DWave<B>,
-    model_hz: &BurnPINN2DWave<B>,
+pub fn te_mode_ampere_x_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model_ex: &PinnWave2D<B>,
+    model_hz: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,
@@ -128,11 +124,9 @@ where
 /// Note the **+∂Hz/∂x** sign: in 2D TE, (∇×H)_y = +∂Hz/∂x (no ∂Hx/∂z term).
 ///
 /// # References — see `te_mode_faraday_residual`.
-pub fn te_mode_ampere_y_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model_ey: &BurnPINN2DWave<B>,
-    model_hz: &BurnPINN2DWave<B>,
+pub fn te_mode_ampere_y_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model_ey: &PinnWave2D<B>,
+    model_hz: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,
@@ -180,8 +174,8 @@ where
 /// # References
 /// - Jackson, J.D. (1999). *Classical Electrodynamics* (3rd ed.). §6.1.
 pub fn te_mode_gauss_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
-    model_ex: &BurnPINN2DWave<B>,
-    model_ey: &BurnPINN2DWave<B>,
+    model_ex: &PinnWave2D<B>,
+    model_ey: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,

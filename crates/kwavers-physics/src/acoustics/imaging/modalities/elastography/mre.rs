@@ -67,13 +67,13 @@ pub fn extract_first_harmonic(
     let inv_kappa = 1.0 / encoding_sensitivity_rad_per_m;
     let scale = 2.0 / n;
 
-    let mut harmonic = Array3::<Complex64>::zeros((nx, ny, nz));
+    let mut harmonic = Array3::<Complex64>::from_elem((nx, ny, nz), Complex64::default());
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
                 let mut acc = Complex64::new(0.0, 0.0);
                 for (l, tw) in twiddles.iter().enumerate() {
-                    acc += tw * phase_stack[[i, j, k, l]];
+                    acc += *tw * phase_stack[[i, j, k, l]];
                 }
                 harmonic[[i, j, k]] = acc * scale * inv_kappa;
             }

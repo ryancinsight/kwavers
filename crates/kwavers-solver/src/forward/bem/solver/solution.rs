@@ -11,7 +11,7 @@ use kwavers_math::linear_algebra::sparse::{
 };
 use moirai_parallel::{map_collect_with, Adaptive};
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 impl BemSolver {
     /// Invalidate cached system matrices (called when wavenumber changes).

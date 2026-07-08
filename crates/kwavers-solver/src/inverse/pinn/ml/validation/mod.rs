@@ -17,8 +17,8 @@ mod tests;
 
 pub use metrics::{compute_correlation, compute_mean_relative_error, compute_validation_metrics};
 
-use crate::inverse::pinn::ml::burn_wave_equation_1d::BurnPINN1DWave;
 use crate::inverse::pinn::ml::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
+use crate::inverse::pinn::ml::wave_equation_1d::PinnWave1D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array1;
 
@@ -100,7 +100,7 @@ impl PinnValidationReport {
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
 pub fn validate_pinn_vs_fdtd<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
-    pinn: &BurnPINN1DWave<B>,
+    pinn: &PinnWave1D<B>,
     fdtd_config: FDTDConfig,
 ) -> KwaversResult<PinnValidationReport>
 where

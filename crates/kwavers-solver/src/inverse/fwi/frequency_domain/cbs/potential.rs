@@ -18,8 +18,8 @@
 
 use super::green::GreenOperatorKind;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
+use eunomia::Complex64;
 
 /// Compute the real Helmholtz scattering potential.
 ///
@@ -139,7 +139,7 @@ fn real_scattering_potential_from_factor(
             "CBS reference slowness must be positive and finite, got {reference_slowness_s_per_m}"
         )));
     }
-    if slowness_s_per_m.is_empty() {
+    if slowness_s_per_m.shape().contains(&0) {
         return Err(KwaversError::InvalidInput(
             "CBS scattering potential requires a nonempty slowness volume".to_owned(),
         ));

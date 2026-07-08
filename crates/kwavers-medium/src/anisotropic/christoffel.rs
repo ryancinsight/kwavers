@@ -127,34 +127,28 @@ impl ChristoffelEquation {
     /// [`phase_velocities`]: Self::phase_velocities
     /// [`polarization_vectors`]: Self::polarization_vectors
     fn sorted_eigen(&self, direction: &[f64; 3]) -> ([f64; 3], [[f64; 3]; 3]) {
-        use nalgebra::{Matrix3, SymmetricEigen};
+        use leto::application::fixed::FixedMatrix;
         let g = self.christoffel_matrix(direction);
-        let m = Matrix3::new(
-            g[[0, 0]],
-            g[[0, 1]],
-            g[[0, 2]],
-            g[[1, 0]],
-            g[[1, 1]],
-            g[[1, 2]],
-            g[[2, 0]],
-            g[[2, 1]],
-            g[[2, 2]],
-        );
-        let eig = SymmetricEigen::new(m);
+        let m = FixedMatrix::from_rows([
+            [g[[0, 0]], g[[0, 1]], g[[0, 2]]],
+            [g[[1, 0]], g[[1, 1]], g[[1, 2]]],
+            [g[[2, 0]], g[[2, 1]], g[[2, 2]]],
+        ]);
+        let (eigenvalues, eigenvectors) = m.symmetric_eigen();
         let mut order = [0usize, 1, 2];
         order.sort_by(|&a, &b| {
-            eig.eigenvalues[b]
-                .partial_cmp(&eig.eigenvalues[a])
+            eigenvalues[b]
+                .partial_cmp(&eigenvalues[a])
                 .unwrap_or(core::cmp::Ordering::Equal)
         });
         let mut vals = [0.0; 3];
         let mut vecs = [[0.0; 3]; 3];
         for (k, &o) in order.iter().enumerate() {
-            vals[k] = eig.eigenvalues[o];
+            vals[k] = eigenvalues[o];
             vecs[k] = [
-                eig.eigenvectors[(0, o)],
-                eig.eigenvectors[(1, o)],
-                eig.eigenvectors[(2, o)],
+                eigenvectors[(0, o)],
+                eigenvectors[(1, o)],
+                eigenvectors[(2, o)],
             ];
         }
         (vals, vecs)

@@ -13,8 +13,8 @@ fn unique_checkpoint_dir(test_name: &str) -> std::path::PathBuf {
 #[test]
 fn test_distributed_trainer_creation() {
     let config = DistributedTrainingConfig::default();
-    let base_config = crate::inverse::pinn::ml::BurnPINN2DConfig::default();
-    let geometry = crate::inverse::pinn::ml::BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
+    let base_config = crate::inverse::pinn::ml::PinnConfig2D::default();
+    let geometry = crate::inverse::pinn::ml::WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
 
     let result = DistributedPinnTrainer::<TestBackend>::new(config, base_config, geometry);
 
@@ -57,8 +57,8 @@ fn test_checkpoint_save_load_round_trip() {
         },
         ..Default::default()
     };
-    let base_config = crate::inverse::pinn::ml::BurnPINN2DConfig::default();
-    let geometry = crate::inverse::pinn::ml::BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
+    let base_config = crate::inverse::pinn::ml::PinnConfig2D::default();
+    let geometry = crate::inverse::pinn::ml::WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
 
     let mut trainer =
         DistributedPinnTrainer::<TestBackend>::new(config.clone(), base_config.clone(), geometry)
@@ -79,7 +79,7 @@ fn test_checkpoint_save_load_round_trip() {
         vec![7]
     );
 
-    let geometry = crate::inverse::pinn::ml::BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0);
+    let geometry = crate::inverse::pinn::ml::WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
     let mut restored = DistributedPinnTrainer::<TestBackend>::new(config, base_config, geometry)
         .expect("restore target trainer should construct");
     restored

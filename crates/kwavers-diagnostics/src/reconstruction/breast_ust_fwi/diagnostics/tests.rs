@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 #[test]
 fn residual_metrics_recover_row_source_scale() {

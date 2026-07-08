@@ -1,7 +1,7 @@
 use super::constants::EPS_FD_F32;
 use super::sources::compute_current_density_z;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::{add, scalar_add, scalar_mul, scalar_sub, sub, Var};
 
 #[cfg(test)]
@@ -23,11 +23,9 @@ mod tests;
 /// ∂Ez/∂y = 0 → R_Fx = μ·0 + 0 = 0. ✓
 ///
 /// # References — Jackson (1999) §6.2; Pozar (2011) §1.3.
-pub fn tm_mode_faraday_x_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model_ez: &BurnPINN2DWave<B>,
-    model_hx: &BurnPINN2DWave<B>,
+pub fn tm_mode_faraday_x_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model_ez: &PinnWave2D<B>,
+    model_hx: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,
@@ -66,11 +64,9 @@ where
 /// ∂Ez/∂x = Ak·cos(kx−ωt). R_Fy = 0 ✓
 ///
 /// # References — Jackson (1999) §6.2; Pozar (2011) §1.3.
-pub fn tm_mode_faraday_y_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model_ez: &BurnPINN2DWave<B>,
-    model_hy: &BurnPINN2DWave<B>,
+pub fn tm_mode_faraday_y_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model_ez: &PinnWave2D<B>,
+    model_hy: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,
@@ -119,12 +115,10 @@ where
 // Independent per-component models, field tensors, and parameters with no
 // cohesive sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
-pub fn tm_mode_ampere_z_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model_ez: &BurnPINN2DWave<B>,
-    model_hx: &BurnPINN2DWave<B>,
-    model_hy: &BurnPINN2DWave<B>,
+pub fn tm_mode_ampere_z_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model_ez: &PinnWave2D<B>,
+    model_hx: &PinnWave2D<B>,
+    model_hy: &PinnWave2D<B>,
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,

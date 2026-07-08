@@ -11,7 +11,8 @@ use kwavers_math::fft::{
     fft_3d_axis_complex_inplace, get_fft_for_grid, ifft_3d_axis_complex_inplace, Complex64, Fft3d,
 };
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
-use ndarray::{Array3, Axis, Zip};
+use leto::Array3 as LetoArray3;
+use ndarray::{Array3, Zip};
 use std::sync::Arc;
 
 /// One relaxation arm with its precomputed per-voxel exponential-integrator
@@ -69,7 +70,7 @@ pub struct ViscoacousticMemorySolver {
     kx: Vec<f64>,
     ky: Vec<f64>,
     kz: Vec<f64>,
-    cbuf: Array3<Complex64>,
+    cbuf: LetoArray3<Complex64>,
 
     // State.
     p: Array3<f64>,
@@ -294,7 +295,7 @@ impl ViscoacousticMemorySolver {
             kx: fft_wavenumbers(nx, dx),
             ky: fft_wavenumbers(ny, dy),
             kz: fft_wavenumbers(nz, dz),
-            cbuf: Array3::from_elem(shape, Complex64::new(0.0, 0.0)),
+            cbuf: LetoArray3::from_elem([nx, ny, nz], Complex64::new(0.0, 0.0)),
             p: Array3::zeros(shape),
             vx: Array3::zeros(shape),
             vy: Array3::zeros(shape),
@@ -593,19 +594,61 @@ impl ViscoacousticMemorySolver {
         k: &[f64],
         axis: usize,
         field: &Array3<f64>,
-        cbuf: &mut Array3<Complex64>,
+        cbuf: &mut LetoArray3<Complex64>,
         out: &mut Array3<f64>,
     ) {
-        Zip::from(&mut *cbuf)
-            .and(field)
-            .for_each(|c, &f| *c = Complex64::new(f, 0.0));
+        let [nx, ny, nz] = cbuf.shape();
+        assert_eq!(
+            field.dim(),
+            (nx, ny, nz),
+            "invariant: viscoacoustic FFT scratch shape matches input field"
+        );
+        assert_eq!(
+            out.dim(),
+            (nx, ny, nz),
+            "invariant: viscoacoustic derivative output shape matches input field"
+        );
+        if let (Some(dst), Some(src)) = (cbuf.as_slice_mut(), field.as_slice_memory_order()) {
+            for (dst, &src) in dst.iter_mut().zip(src) {
+                *dst = Complex64::new(src, 0.0);
+            }
+        } else {
+            for z in 0..nz {
+                for y in 0..ny {
+                    for x in 0..nx {
+                        cbuf[[x, y, z]] = Complex64::new(field[[x, y, z]], 0.0);
+                    }
+                }
+            }
+        }
         fft_3d_axis_complex_inplace(fft, cbuf, axis);
-        for (m, mut lane) in cbuf.axis_iter_mut(Axis(axis)).enumerate() {
-            let factor = Complex64::new(0.0, k[m]);
-            lane.mapv_inplace(|v| v * factor);
+        for z in 0..nz {
+            for y in 0..ny {
+                for x in 0..nx {
+                    let mode = match axis {
+                        0 => x,
+                        1 => y,
+                        2 => z,
+                        _ => unreachable!("invariant: derivative axis is 0, 1, or 2"),
+                    };
+                    cbuf[[x, y, z]] *= Complex64::new(0.0, k[mode]);
+                }
+            }
         }
         ifft_3d_axis_complex_inplace(fft, cbuf, axis);
-        Zip::from(&mut *out).and(&*cbuf).for_each(|o, c| *o = c.re);
+        if let (Some(dst), Some(src)) = (out.as_slice_memory_order_mut(), cbuf.as_slice()) {
+            for (dst, src) in dst.iter_mut().zip(src) {
+                *dst = src.re;
+            }
+        } else {
+            for z in 0..nz {
+                for y in 0..ny {
+                    for x in 0..nx {
+                        out[[x, y, z]] = cbuf[[x, y, z]].re;
+                    }
+                }
+            }
+        }
     }
 
     /// Advance the state by one time step `Δt`.

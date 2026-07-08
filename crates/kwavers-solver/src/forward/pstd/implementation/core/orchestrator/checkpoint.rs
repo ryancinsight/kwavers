@@ -1,6 +1,24 @@
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use ndarray::Array2;
+
+fn leto_to_ndarray(input: &LetoArray3<f64>) -> ndarray::Array3<f64> {
+    let [nx, ny, nz] = input.shape();
+    ndarray::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
+        .expect("Leto checkpoint field shape must match ndarray storage")
+}
+
+fn assign_ndarray_to_leto(dst: &mut LetoArray3<f64>, src: &ndarray::Array3<f64>) {
+    assert_eq!(
+        dst.shape(),
+        [src.shape()[0], src.shape()[1], src.shape()[2]],
+        "checkpoint restore shape mismatch"
+    );
+    for (dst_value, src_value) in dst.iter_mut().zip(src.iter()) {
+        *dst_value = *src_value;
+    }
+}
 
 impl PSTDSolver {
     /// Run `checkpoint_steps` steps then persist full solver state to `path`.
@@ -32,6 +50,9 @@ impl PSTDSolver {
         // Zero-clone: serialize directly from borrowed solver field references.
         // Avoids 6 × Array3<f64>::clone() — for a 256³ grid this saves ~768 MiB
         // of intermediate allocations per checkpoint.
+        let rhox = leto_to_ndarray(&self.rhox);
+        let rhoy = leto_to_ndarray(&self.rhoy);
+        let rhoz = leto_to_ndarray(&self.rhoz);
         PSTDCheckpoint::save_borrowed(
             path,
             self.grid.nx,
@@ -44,9 +65,9 @@ impl PSTDSolver {
             &self.fields.ux,
             &self.fields.uy,
             &self.fields.uz,
-            &self.rhox,
-            &self.rhoy,
-            &self.rhoz,
+            &rhox,
+            &rhoy,
+            &rhoz,
             sensor_data.as_ref(),
             sensor_next_step,
             sensor_expected_steps,
@@ -108,9 +129,9 @@ impl PSTDSolver {
         self.fields.ux.assign(&ckpt.ux);
         self.fields.uy.assign(&ckpt.uy);
         self.fields.uz.assign(&ckpt.uz);
-        self.rhox.assign(&ckpt.rhox);
-        self.rhoy.assign(&ckpt.rhoy);
-        self.rhoz.assign(&ckpt.rhoz);
+        assign_ndarray_to_leto(&mut self.rhox, &ckpt.rhox);
+        assign_ndarray_to_leto(&mut self.rhoy, &ckpt.rhoy);
+        assign_ndarray_to_leto(&mut self.rhoz, &ckpt.rhoz);
         self.time_step_index = ckpt.time_step_index;
 
         if let Some(sensor_data) = ckpt.sensor_data {

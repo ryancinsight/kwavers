@@ -1,8 +1,8 @@
 use super::ext::LinearAlgebraExt;
 use super::{EigenDecomposition, LinearAlgebra};
 use crate::linear_algebra::ext::norm_l2;
+use eunomia::Complex64 as Complex;
 use ndarray::{Array1, Array2};
-use num_complex::Complex;
 
 #[test]
 fn test_linear_algebra_re_exports() {

@@ -19,8 +19,9 @@
 //!   imaging." *IEEE TUFFC*, 60(9), 1853–1867.
 
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex};
+use leto::Array2 as LetoArray2;
 use ndarray::Array2;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 const TAU: f64 = std::f64::consts::TAU;
 
@@ -58,13 +59,13 @@ pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64
     for ((i, j), &val) in data.indexed_iter() {
         s0[[i, j]] = Complex64::new(val, 0.0);
     }
-    let s = fft_2d_complex(&s0);
+    let s = fft_2d_complex(&s0.into());
 
     let kx: Vec<f64> = (0..nx).map(|i| ang_bin(i, nx, dx)).collect();
     let omega_bin_scale = (nt as f64) * dt / TAU; // ω → continuous bin index
 
     // remap onto the image spectrum R(k_x, k_z)
-    let mut r = Array2::<Complex64>::zeros((nx, nt));
+    let mut r: LetoArray2<Complex64> = Array2::<Complex64>::zeros((nx, nt)).into();
     for i in 0..nx {
         let kx2 = kx[i] * kx[i];
         for l in 0..nt {
@@ -90,7 +91,15 @@ pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64
     }
 
     let img = ifft_2d_complex(&r);
-    img.mapv(|c| c.re)
+    let img = img.mapv(|c| c.re);
+    let [nx, nt] = img.shape();
+    Array2::from_shape_vec(
+        (nx, nt),
+        img.as_slice()
+            .expect("IFFT image must be densely stored")
+            .to_vec(),
+    )
+    .expect("IFFT image shape must match its flattened length")
 }
 
 #[cfg(test)]

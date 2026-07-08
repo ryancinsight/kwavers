@@ -75,13 +75,13 @@ fn test_validation_report_summary() {
 
 #[test]
 fn test_validate_pinn_vs_fdtd() {
-    use crate::inverse::pinn::ml::burn_wave_equation_1d::BurnPINN1DWave;
     use crate::inverse::pinn::ml::fdtd_reference::FDTDConfig;
-    use crate::inverse::pinn::ml::BurnPINNConfig;
+    use crate::inverse::pinn::ml::wave_equation_1d::PinnWave1D;
+    use crate::inverse::pinn::ml::PinnConfig;
     use coeus_core::MoiraiBackend;
 
     type Backend = MoiraiBackend;
-    let pinn = BurnPINN1DWave::<Backend>::new(BurnPINNConfig::default()).unwrap();
+    let pinn = PinnWave1D::<Backend>::new(PinnConfig::default()).unwrap();
 
     let fdtd_config = FDTDConfig {
         wave_speed: SOUND_SPEED_WATER_SIM,

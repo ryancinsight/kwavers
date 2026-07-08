@@ -69,10 +69,14 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
     let mse = |model: &ElasticPINN2D<B>| -> f32 {
         let pred = model.forward(&x, &y, &t);
         let diff = coeus_autograd::sub(&pred, &target);
-        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff)).tensor.as_slice()[0]
+        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
+            .tensor
+            .as_slice()[0]
     };
     let probe = |model: &ElasticPINN2D<B>| -> f32 {
-        coeus_autograd::sum(&model.forward(&x, &y, &t)).tensor.as_slice()[0]
+        coeus_autograd::sum(&model.forward(&x, &y, &t))
+            .tensor
+            .as_slice()[0]
     };
 
     for algorithm in ["sgd_momentum", "adam", "adamw"] {

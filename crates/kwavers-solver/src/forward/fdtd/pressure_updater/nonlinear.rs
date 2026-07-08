@@ -72,11 +72,14 @@ impl FdtdSolver {
             }
         } else if self.p_prev.is_some() {
             self.p_prev2 = self.p_prev.take();
-            self.p_prev = Some(Array3::zeros(self.fields.p.dim()));
+            let [nx, ny, nz] = self.fields.p.shape();
+            self.p_prev = Some(Array3::zeros((nx, ny, nz)));
         }
 
         if let Some(ref mut p_prev) = self.p_prev {
-            p_prev.assign(&self.fields.p);
+            for (dst, src) in p_prev.iter_mut().zip(self.fields.p.iter()) {
+                *dst = *src;
+            }
         }
     }
 }

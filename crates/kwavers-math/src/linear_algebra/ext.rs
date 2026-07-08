@@ -3,7 +3,7 @@ use crate::linear_algebra::{
 };
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use eunomia::Complex64;
 
 /// Compute L2 norm of a 3D array.
 #[must_use]
@@ -43,8 +43,8 @@ impl LinearAlgebraExt<f64> for Array2<f64> {
     }
 }
 
-impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
-    fn solve_into(&self, b: Array1<Complex<f64>>) -> KwaversResult<Array1<Complex<f64>>> {
+impl LinearAlgebraExt<Complex64> for Array2<Complex64> {
+    fn solve_into(&self, b: Array1<Complex64>) -> KwaversResult<Array1<Complex64>> {
         ComplexLinearAlgebra::solve_linear_system_complex(self, &b)
     }
 
@@ -52,11 +52,11 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
         ComplexLinearAlgebra::matrix_inverse_complex(self)
     }
 
-    fn eig(&self) -> KwaversResult<(Array1<Complex<f64>>, Self)> {
+    fn eig(&self) -> KwaversResult<(Array1<Complex64>, Self)> {
         let (eigenvalues, eigenvectors) =
             EigenDecomposition::hermitian_eigendecomposition_complex(self)?;
         Ok((
-            eigenvalues.mapv(|lambda| Complex::new(lambda, 0.0)),
+            eigenvalues.mapv(|lambda| Complex64::new(lambda, 0.0)),
             eigenvectors,
         ))
     }

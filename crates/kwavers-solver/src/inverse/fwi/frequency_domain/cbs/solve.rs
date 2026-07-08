@@ -55,8 +55,9 @@ use super::green::{
 use super::grid::GridSpec;
 use super::potential::{convergence_epsilon, pointwise_preconditioner, shifted_potential};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use nalgebra::{DMatrix, DVector};
-use num_complex::Complex64;
+use kwavers_math::linear_algebra::complex::ComplexLinearAlgebra;
+use ndarray::{Array1, Array2};
+use eunomia::Complex64;
 
 /// CBS fixed-point solver settings.
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -267,13 +268,11 @@ fn solve_adjoint_dense_free_space(
     config: CbsConfig,
 ) -> KwaversResult<CbsSolution> {
     let operator = dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted);
-    let adjoint_operator = operator.adjoint();
-    let rhs = DVector::from_column_slice(adjoint_rhs);
-    let solution = adjoint_operator.clone().lu().solve(&rhs).ok_or_else(|| {
-        KwaversError::InvalidInput("dense CBS adjoint operator is singular".to_owned())
-    })?;
-    let residual = &adjoint_operator * &solution - &rhs;
-    let relative_residual = residual.norm() / norm(adjoint_rhs).max(f64::EPSILON);
+    let adjoint_operator = hermitian_transpose(&operator);
+    let rhs = Array1::from_vec(adjoint_rhs.to_vec());
+    let solution = ComplexLinearAlgebra::solve_linear_system_complex(&adjoint_operator, &rhs)?;
+    let residual = dense_matvec_residual(&adjoint_operator, &solution, adjoint_rhs);
+    let relative_residual = norm(&residual) / norm(adjoint_rhs).max(f64::EPSILON);
     if !relative_residual.is_finite() || relative_residual > config.relative_tolerance {
         return Err(KwaversError::InvalidInput(format!(
             "dense CBS adjoint residual {} exceeds tolerance {}",
@@ -281,7 +280,10 @@ fn solve_adjoint_dense_free_space(
         )));
     }
     Ok(CbsSolution {
-        field: solution.iter().copied().collect(),
+        field: solution
+            .as_slice()
+            .expect("dense adjoint solution must remain contiguous")
+            .to_vec(),
         iterations: 1,
         relative_residual,
         epsilon,
@@ -459,17 +461,28 @@ fn dense_free_space_operator_matrix(
     reference_wavenumber: f64,
     epsilon: f64,
     shifted_potential: &[Complex64],
-) -> DMatrix<Complex64> {
+) -> Array2<Complex64> {
     let centers = grid.centers();
     let shifted_k = shifted_wavenumber(reference_wavenumber, epsilon);
     let min_distance = grid.min_distance_m();
     let cell_volume = grid.cell_volume_m3();
-    DMatrix::from_fn(grid.len(), grid.len(), |row, column| {
-        identity_entry(row, column)
-            + shifted_outgoing_green(centers[column].1, centers[row].1, shifted_k, min_distance)
-                * shifted_potential[column]
-                * cell_volume
-    })
+    let n = grid.len();
+    let mut values = Vec::with_capacity(n * n);
+    for row in 0..n {
+        for column in 0..n {
+            values.push(
+                identity_entry(row, column)
+                    + shifted_outgoing_green(
+                        centers[column].1,
+                        centers[row].1,
+                        shifted_k,
+                        min_distance,
+                    ) * shifted_potential[column]
+                        * cell_volume,
+            );
+        }
+    }
+    Array2::from_shape_vec((n, n), values).expect("dense CBS operator shape must match grid length")
 }
 
 #[inline]
@@ -487,4 +500,38 @@ fn norm(values: &[Complex64]) -> f64 {
         .map(|value| value.norm_sqr())
         .sum::<f64>()
         .sqrt()
+}
+
+fn hermitian_transpose(matrix: &Array2<Complex64>) -> Array2<Complex64> {
+    let rows = matrix.nrows();
+    let cols = matrix.ncols();
+    let mut values = Vec::with_capacity(rows * cols);
+    for row in 0..rows {
+        for col in 0..cols {
+            values.push(matrix[[col, row]].conj());
+        }
+    }
+    Array2::from_shape_vec((rows, cols), values)
+        .expect("hermitian transpose must preserve matrix shape")
+}
+
+fn dense_matvec_residual(
+    matrix: &Array2<Complex64>,
+    x: &Array1<Complex64>,
+    rhs: &[Complex64],
+) -> Vec<Complex64> {
+    let rows = matrix.nrows();
+    let cols = matrix.ncols();
+    debug_assert_eq!(cols, x.len());
+    debug_assert_eq!(rows, rhs.len());
+
+    let mut residual = vec![Complex64::new(0.0, 0.0); rows];
+    for row in 0..rows {
+        let mut sum = Complex64::new(0.0, 0.0);
+        for col in 0..cols {
+            sum += matrix[[row, col]] * x[col];
+        }
+        residual[row] = sum - rhs[row];
+    }
+    residual
 }

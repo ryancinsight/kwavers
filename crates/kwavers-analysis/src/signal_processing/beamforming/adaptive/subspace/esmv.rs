@@ -1,10 +1,9 @@
 //! Eigenspace Minimum Variance (ESMV) beamformer.
 
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::{ComplexLinearAlgebra, EigenDecomposition};
 use ndarray::{s, Array1, Array2};
-use num_complex::Complex64;
-use num_traits::Zero;
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
 ///
@@ -90,7 +89,7 @@ impl EigenspaceMV {
         }
 
         for &val in steering {
-            if !val.is_finite() {
+            if !val.re.is_finite() || !val.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
                     operation: "EigenspaceMV::compute_weights".to_owned(),
                     inputs: "steering vector contains non-finite values".to_owned(),
@@ -109,7 +108,7 @@ impl EigenspaceMV {
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
-        let mut p_s = Array2::<Complex64>::zeros((n, n));
+        let mut p_s = Array2::<Complex64>::from_elem((n, n), Complex64::default());
         for &idx in indices.iter().take(self.num_sources) {
             let eigenvec = eigenvectors.slice(s![.., idx]);
 
@@ -122,14 +121,14 @@ impl EigenspaceMV {
 
         let r_inv_a = ComplexLinearAlgebra::solve_linear_system_complex(&r_loaded, steering)?;
 
-        let mut ps_r_inv_a = Array1::<Complex64>::zeros(n);
+        let mut ps_r_inv_a = Array1::<Complex64>::from_elem(n, Complex64::default());
         for i in 0..n {
             for j in 0..n {
                 ps_r_inv_a[i] += p_s[(i, j)] * r_inv_a[j];
             }
         }
 
-        let mut a_h_r_inv_ps_a = Complex64::zero();
+        let mut a_h_r_inv_ps_a = Complex64::default();
         for i in 0..n {
             a_h_r_inv_ps_a += steering[i].conj() * ps_r_inv_a[i];
         }
@@ -144,7 +143,7 @@ impl EigenspaceMV {
         let weights = ps_r_inv_a.mapv(|x| x / a_h_r_inv_ps_a);
 
         for &w in &weights {
-            if !w.is_finite() {
+            if !w.re.is_finite() || !w.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
                     "EigenspaceMV::compute_weights: non-finite weight computed".to_owned(),
                 )));
@@ -197,7 +196,7 @@ impl EigenspaceMV {
             )));
         }
         for &val in steering {
-            if !val.is_finite() {
+            if !val.re.is_finite() || !val.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
                     operation: "EigenspaceMV::signal_subspace_response".to_owned(),
                     inputs: "steering vector contains non-finite values".to_owned(),
@@ -215,7 +214,7 @@ impl EigenspaceMV {
         let mut projection_power = 0.0_f64;
         for &idx in indices.iter().take(self.num_sources) {
             let eigenvec = eigenvectors.slice(s![.., idx]);
-            let mut e_h_a = Complex64::zero();
+            let mut e_h_a = Complex64::default();
             for j in 0..n {
                 e_h_a += eigenvec[j].conj() * steering[j];
             }

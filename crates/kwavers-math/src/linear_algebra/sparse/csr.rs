@@ -70,6 +70,12 @@ impl CsrScalar for num_complex::Complex64 {
     }
 }
 
+impl CsrScalar for eunomia::Complex64 {
+    fn magnitude(self) -> f64 {
+        self.norm()
+    }
+}
+
 impl<T> CompressedSparseRowMatrix<T> {
     /// Create CSR matrix with specified dimensions
     #[must_use]

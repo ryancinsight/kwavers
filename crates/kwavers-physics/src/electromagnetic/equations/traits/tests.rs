@@ -1,7 +1,7 @@
 use super::super::materials::EMMaterialDistribution;
 use super::maxwell::ElectromagneticWaveEquation;
 use crate::electromagnetic::equations::types::EMDimension;
-use kwavers_field::EMFields;
+use kwavers_field::{ArrayD, EMFields, VecStorage};
 
 // Mock implementation for testing traits
 struct MockEMSolver {
@@ -13,8 +13,8 @@ impl MockEMSolver {
     fn new() -> Self {
         let vacuum_props = kwavers_medium::properties::ElectromagneticPropertyData::vacuum();
         let materials = crate::electromagnetic::equations::materials::EMMaterialUtils::create_uniform_distribution(&[10, 10], vacuum_props);
-        let electric = ndarray::ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
-        let magnetic = ndarray::ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
+        let electric = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 2]).unwrap();
+        let magnetic = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 2]).unwrap();
         let fields = EMFields::new(electric, magnetic);
 
         Self { materials, fields }

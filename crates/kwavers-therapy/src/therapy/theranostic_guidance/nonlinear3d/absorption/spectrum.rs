@@ -43,11 +43,13 @@ pub(super) fn spectral_filter(n: usize, field: &[f64], weights: &Array3<f64>) ->
         .as_slice_mut()
         .expect("Array3<f64>::zeros is contiguous")
         .copy_from_slice(field);
-    let mut spectrum = Array3::<Complex64>::zeros((n, n, n));
+    let spatial = spatial.into();
+    let mut spectrum = Array3::<Complex64>::zeros((n, n, n)).into();
     fft_3d_array_into(&spatial, &mut spectrum);
     spectrum.iter_mut().zip(weights.iter()).for_each(|(z, &w)| {
         *z *= w;
     });
+    let mut spatial = Array3::<f64>::zeros((n, n, n)).into();
     ifft_3d_array_into(&mut spectrum, &mut spatial);
     spatial
         .as_slice()

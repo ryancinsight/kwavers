@@ -60,15 +60,15 @@ fn velocity_stats_allocate_only_requested_components() {
     let mut recorder = SensorRecorder::with_spec(Some(&mask), (3, 1, 1), 1, spec).unwrap();
 
     assert_eq!(
-        recorder.ux_stats.as_ref().map(|stats| stats.u_max.dim()),
-        Some((3, 1, 1))
+        recorder.ux_stats.as_ref().map(|stats| stats.u_max.shape()),
+        Some([3, 1, 1])
     );
     assert_eq!(
-        recorder.uy_stats.as_ref().map(|stats| stats.u_max.dim()),
+        recorder.uy_stats.as_ref().map(|stats| stats.u_max.shape()),
         None
     );
     assert_eq!(
-        recorder.uz_stats.as_ref().map(|stats| stats.u_max.dim()),
+        recorder.uz_stats.as_ref().map(|stats| stats.u_max.shape()),
         None
     );
 

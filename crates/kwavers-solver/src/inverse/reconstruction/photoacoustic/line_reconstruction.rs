@@ -35,12 +35,14 @@
 //! scaling factor is the same `2·2/c` compensation used by the reference
 //! implementation to account for the one-sided detector line.
 
+use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::utils::{fft_shift_2d, ifft_shift_2d};
-use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
+use leto::Array2 as LetoArray2;
 use moirai_parallel::{for_each_mut_with, Adaptive};
 use ndarray::{s, Array1, Array2, ArrayView1, ArrayView2, Axis};
+use kwavers_math::fft::Complex64;
 
 /// Order of the sensor data axes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -110,10 +112,12 @@ pub fn kspace_line_recon(
 
     let mut spectrum = mirrored.mapv(|v| Complex64::new(v, 0.0));
     ifft_shift_2d(&mut spectrum);
-    fft_2d_complex_inplace(&mut spectrum);
+    let mut leto_spectrum = to_apollo_array2(&spectrum, "spectrum");
+    fft_2d_complex_inplace(&mut leto_spectrum);
+    spectrum = from_apollo_array2(leto_spectrum, "FFT output");
     fft_shift_2d(&mut spectrum);
 
-    let mut scaled = Array2::<Complex64>::zeros((nt, ny));
+    let mut scaled = Array2::<Complex64>::from_elem((nt, ny), Complex64::default());
     for j in 0..ny {
         let ky = ky_axis[j];
         for i in 0..nt {
@@ -134,7 +138,7 @@ pub fn kspace_line_recon(
         }
     }
 
-    let mut interpolated = Array2::<Complex64>::zeros((nt, ny));
+    let mut interpolated = Array2::<Complex64>::from_elem((nt, ny), Complex64::default());
     for j in 0..ny {
         let column = scaled.index_axis(Axis(1), j);
         let ky = ky_axis[j];
@@ -145,7 +149,9 @@ pub fn kspace_line_recon(
     }
 
     ifft_shift_2d(&mut interpolated);
-    ifft_2d_complex_inplace(&mut interpolated);
+    let mut leto_interpolated = to_apollo_array2(&interpolated, "interpolated spectrum");
+    ifft_2d_complex_inplace(&mut leto_interpolated);
+    interpolated = from_apollo_array2(leto_interpolated, "inverse FFT output");
     fft_shift_2d(&mut interpolated);
 
     let trim_start = nt / 2;
@@ -189,6 +195,32 @@ fn mirror_time_axis(input: &Array2<f64>) -> Array2<f64> {
             input[[i - nt + 1, j]]
         }
     })
+}
+
+fn to_apollo_array2(input: &Array2<Complex64>, label: &str) -> LetoArray2<ApolloComplex64> {
+    LetoArray2::from_shape_vec(
+        [input.nrows(), input.ncols()],
+        input
+            .iter()
+            .map(|value| ApolloComplex64::new(value.re, value.im))
+            .collect(),
+    )
+    .unwrap_or_else(|_| panic!("line-reconstruction {label} shape must match its Leto FFT shape"))
+}
+
+fn from_apollo_array2(input: LetoArray2<ApolloComplex64>, label: &str) -> Array2<Complex64> {
+    let shape = input.shape();
+    let rows = shape[0];
+    let cols = shape[1];
+    Array2::from_shape_vec(
+        (rows, cols),
+        input
+            .into_vec()
+            .into_iter()
+            .map(|value| Complex64::new(value.re, value.im))
+            .collect(),
+    )
+    .unwrap_or_else(|_| panic!("line-reconstruction {label} shape must match its ndarray boundary"))
 }
 
 fn interpolate_on_axis(

@@ -1,8 +1,8 @@
 //! `FrequencyFilter` — FFT-based frequency-domain filter.
 
 use crate::Filter;
+use apollo::{fft_1d_array, ifft_1d_array, Complex64};
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::{fft_1d_array, ifft_1d_array, Complex64};
 
 /// Frequency-domain filter using ideal (brick-wall) FFT-based frequency responses.
 ///
@@ -128,7 +128,9 @@ impl FrequencyFilter {
             return Ok(Vec::new());
         }
 
-        let mut spectrum = fft_1d_array(&ndarray::Array1::from_vec(signal.to_vec()));
+        let input = leto::Array1::from_shape_vec([n], signal.to_vec())
+            .expect("frequency-filter input length must match Leto shape");
+        let mut spectrum = fft_1d_array(&input);
 
         let df = 1.0 / (n as f64 * dt);
         for (i, val) in spectrum.iter_mut().enumerate() {
@@ -143,7 +145,7 @@ impl FrequencyFilter {
             }
         }
 
-        Ok(ifft_1d_array(&spectrum).to_vec())
+        Ok(ifft_1d_array(&spectrum).into_vec())
     }
 }
 

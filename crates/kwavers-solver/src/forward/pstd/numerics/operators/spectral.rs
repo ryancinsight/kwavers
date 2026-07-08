@@ -11,7 +11,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::KSpaceCalculator;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::forward::pstd::config::PSTDConfig;
 use crate::forward::pstd::numerics::spectral_correction::{
@@ -65,7 +65,12 @@ pub fn initialize_spectral_operators(
         cfl_number: config.spectral_correction.cfl_number,
         max_correction: config.spectral_correction.max_correction,
     };
-    let kappa = compute_spectral_correction(grid, &correction_config, config.dt, c_ref);
+    let kappa_nd = compute_spectral_correction(grid, &correction_config, config.dt, c_ref);
+    let kappa = Array3::from_shape_vec(
+        [grid.nx, grid.ny, grid.nz],
+        kappa_nd.iter().copied().collect(),
+    )
+    .expect("spectral correction length must match grid shape");
 
     Ok((k_ops, kappa, k_max, c_ref))
 }

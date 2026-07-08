@@ -1,7 +1,7 @@
 use super::MetaLearner;
-use crate::inverse::pinn::ml::burn_wave_equation_2d::{BurnLossWeights2D, BurnPINN2DWave};
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLoss;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
+use crate::inverse::pinn::ml::wave_equation_2d::{LossWeights2D, PinnWave2D};
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
@@ -20,7 +20,7 @@ where
     ///
     pub(super) fn compute_gradients_and_loss(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
         data: &TaskData,
         task: &PhysicsTask,
     ) -> KwaversResult<(MetaLoss, Vec<Option<Vec<f32>>>)> {
@@ -51,7 +51,7 @@ where
             &t_ic,
             &u_ic,
             task.physics_params.wave_speed,
-            BurnLossWeights2D::default(),
+            LossWeights2D::default(),
         );
 
         total_loss.backward();
@@ -88,9 +88,18 @@ where
         let t: Vec<f32> = data.iter().map(|p| p.2 as f32).collect();
 
         (
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend), false),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend),
+                false,
+            ),
         )
     }
 
@@ -112,10 +121,22 @@ where
         let u: Vec<f32> = data.iter().map(|p| p.3 as f32).collect();
 
         (
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend), false),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend),
+                false,
+            ),
         )
     }
 
@@ -137,10 +158,22 @@ where
         let u: Vec<f32> = data.iter().map(|p| p.3 as f32).collect();
 
         (
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend), false),
-            Var::new(coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend), false),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &x, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &y, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &t, backend),
+                false,
+            ),
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &u, backend),
+                false,
+            ),
         )
     }
 }

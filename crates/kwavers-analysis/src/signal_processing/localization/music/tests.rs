@@ -1,8 +1,8 @@
 use crate::signal_processing::localization::model_order::ModelOrderCriterion;
 use crate::signal_processing::localization::{AcousticLocalizationConfig, LocalizationProcessor};
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use ndarray::Array2;
-use num_complex::Complex;
 
 use super::{MUSICConfig, MUSICProcessor};
 
@@ -49,7 +49,7 @@ fn test_covariance_estimation() {
     let config = MUSICConfig::default();
     let processor = MUSICProcessor::new(&config).unwrap();
 
-    let snapshots = Array2::from_shape_fn((2, 10), |(i, j)| Complex::new((i + j) as f64, 0.0));
+    let snapshots = Array2::from_shape_fn((2, 10), |(i, j)| Complex64::new((i + j) as f64, 0.0));
 
     let cov = processor.estimate_covariance(&snapshots).unwrap();
 
@@ -94,7 +94,7 @@ fn test_music_run_single_source() {
 
     let num_sensors = config.config.sensor_positions.len();
     let snapshots = Array2::from_shape_fn((num_sensors, 50), |(i, j)| {
-        Complex::new((i + j) as f64 / 10.0, (i * j) as f64 / 20.0)
+        Complex64::new((i + j) as f64 / 10.0, (i * j) as f64 / 20.0)
     });
 
     let music_result = processor.run(&snapshots).unwrap();
@@ -116,9 +116,9 @@ fn test_music_automatic_source_detection() {
     let num_sensors = 4;
     let snapshots = Array2::from_shape_fn((num_sensors, 100), |(i, j)| {
         if i < 2 {
-            Complex::new(10.0 * (i + j) as f64, 0.0)
+            Complex64::new(10.0 * (i + j) as f64, 0.0)
         } else {
-            Complex::new((i + j) as f64 / 10.0, 0.0)
+            Complex64::new((i + j) as f64 / 10.0, 0.0)
         }
     });
 

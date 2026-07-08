@@ -1,5 +1,6 @@
 use super::*;
 use kwavers_core::constants::numerical::TWO_PI;
+use leto::Array3;
 use std::f64::consts::PI;
 
 #[test]
@@ -87,11 +88,11 @@ fn pstd_temporal_source_transfer_matches_modal_bin_response() {
         AbsorbingBoundary::disabled(),
     );
 
-    let mut expected = Array3::<Complex64>::zeros(grid.dimensions);
-    expected[[0, 0, 0]] = Complex64::new(1.0, 0.0);
-    let mut spectrum = Array3::<Complex64>::zeros(grid.dimensions);
-    fft_3d_complex_into(&expected, &mut spectrum);
     let (nx, ny, nz) = grid.dimensions;
+    let mut expected = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+    expected[[0, 0, 0]] = Complex64::new(1.0, 0.0);
+    let mut spectrum = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+    fft_3d_complex_into(&expected, &mut spectrum);
     for ix in 0..nx {
         let kx = angular_mode_for_test(ix, nx, grid.spacing_m);
         for iy in 0..ny {

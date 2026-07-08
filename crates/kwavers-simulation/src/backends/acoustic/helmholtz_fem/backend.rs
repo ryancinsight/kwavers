@@ -2,9 +2,9 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::Medium;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemHelmholtzSolver};
-use num_complex::Complex64;
 
 /// Frequency-domain acoustic backend backed by P1 tetrahedral FEM.
 #[derive(Debug)]

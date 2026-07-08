@@ -16,7 +16,7 @@ use kwavers_source::{GridSource, SourceMode};
 #[cfg(feature = "gpu")]
 use leto::Array3 as LetoArray3;
 use ndarray::{s, Array2, Array3};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 mod signal;
 mod validation;
@@ -93,7 +93,10 @@ impl BreastUstPstdDataset {
             .map(|(index, &frequency_hz)| {
                 FrequencyObservation::new(
                     frequency_hz,
-                    self.observed_pressure.slice(s![index, .., ..]).to_owned(),
+                    self.observed_pressure
+                        .slice(s![index, .., ..])
+                        .to_owned()
+                        .into(),
                 )
             })
             .collect()

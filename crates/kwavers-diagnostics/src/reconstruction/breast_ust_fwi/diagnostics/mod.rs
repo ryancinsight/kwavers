@@ -46,7 +46,7 @@ use super::BreastUstPstdDatasetConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Combined diagnostic report for one predicted/observed observation cube pair.
 #[derive(Clone, Debug, PartialEq)]

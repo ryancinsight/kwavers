@@ -163,8 +163,9 @@ fn compute_spectral_gradient_y_analytical_for_single_mode_sinusoid() {
 #[test]
 fn dealiasing_filter_preserves_dc_and_zeroes_aliased_bins() {
     use kwavers_math::fft::Complex64 as Complex;
+    use leto::Array3 as LetoArray3;
     let n = 12usize; // cx = cy = cz = 4
-    let mut field_k = Array3::<Complex>::zeros((n, n, n));
+    let mut field_k = LetoArray3::<Complex>::zeros([n, n, n]);
     // DC bin: preserved (index 0 ≤ 4)
     field_k[[0, 0, 0]] = Complex::new(1.0, 0.0);
     // Mode (1,0,0): index 1 ≤ 4 → preserved

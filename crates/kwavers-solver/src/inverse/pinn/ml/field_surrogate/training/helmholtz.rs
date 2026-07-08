@@ -86,10 +86,8 @@ where
     let lap_sum = coeus_autograd::sub(&sum_neighbors, &six_center);
 
     // Per-sample (k·eps_m)². Tensor of shape [n].
-    let k_eps = coeus_autograd::scalar_mul(
-        &batch.f0_phys_hz,
-        2.0 * std::f32::consts::PI * eps_m / c0,
-    );
+    let k_eps =
+        coeus_autograd::scalar_mul(&batch.f0_phys_hz, 2.0 * std::f32::consts::PI * eps_m / c0);
     let k_eps_sq = coeus_autograd::mul(&k_eps, &k_eps);
 
     // Dimensionless residual: lap_sum / (k·eps_m)² + p̂.

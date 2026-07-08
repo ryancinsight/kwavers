@@ -1,8 +1,8 @@
 use super::types::{SnapshotMethod, SnapshotSelection, StftBinConfig};
+use apollo::fft_1d_array;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::fft_1d_array;
 use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Extract complex snapshots according to a selection policy.
 ///
@@ -80,8 +80,8 @@ pub fn extract_stft_bin_snapshots(
 
     let window = cfg.window.build(n);
 
-    let mut out = Array2::<Complex64>::zeros((n_sensors, n_frames));
-    let mut frame = ndarray::Array1::<f64>::zeros(n);
+    let mut out = Array2::<Complex64>::from_elem((n_sensors, n_frames), Complex64::default());
+    let mut frame = leto::Array1::<f64>::zeros([n]);
 
     for s in 0..n_sensors {
         for frame_idx in 0..n_frames {
@@ -106,7 +106,8 @@ pub fn extract_stft_bin_snapshots(
             }
 
             let spectrum = fft_1d_array(&frame);
-            out[(s, frame_idx)] = spectrum[bin];
+            let coeff = spectrum[bin];
+            out[(s, frame_idx)] = Complex64::new(coeff.re, coeff.im);
         }
     }
 

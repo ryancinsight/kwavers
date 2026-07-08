@@ -16,7 +16,7 @@
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
 use anyhow::Context as _;
-use burn::backend::NdArray as NdArrayBackend;
+use coeus_core::MoiraiBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
@@ -24,9 +24,10 @@ use kwavers_solver::inverse::seismic::parameters::{FwiParameters, Regularization
 use kwavers_source::{GridSource, SourceMode};
 use moirai_parallel::{map_collect_index_with, Adaptive};
 use ndarray::{Array2, Array3, Zip};
-use ritk_io::{
-    load_dicom_series, read_nifti, read_png_series, scan_dicom_directory, DicomSeriesInfo,
-};
+use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
+use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
+use ritk_io::ImageReader;
+use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter};
@@ -270,8 +271,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 ///
 /// Returns `hu[x, y, z]` — [cols, rows, depth].
 fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     // ── PNG series ────────────────────────────────────────────────────────
     if path.is_dir() {
@@ -288,12 +288,11 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 
         if has_png {
             println!("  PNG series      : {}", path.display());
-            let img = read_png_series::<Backend, _>(path, &device)
+            let img = ImageReader::read(&NativePngSeriesReader::new(backend), path)
                 .map_err(|e| anyhow::anyhow!("PNG series load failed: {e:#}"))?;
             let [depth, rows, cols] = img.shape();
-            let tensor_data = img.data().clone().into_data();
-            let values = tensor_data
-                .as_slice::<f32>()
+            let values = img
+                .data_slice()
                 .map_err(|e| anyhow::anyhow!("PNG tensor data is not f32: {e:?}"))?;
             anyhow::ensure!(
                 values.len() == depth * rows * cols,
@@ -334,7 +333,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             selected.series_description,
             selected.file_paths.len()
         );
-        load_dicom_series::<Backend>(&selected, &device).map_err(|e| {
+        load_native_dicom_series(&selected, &backend).map_err(|e| {
             anyhow::anyhow!(
                 "DICOM load failed for series '{}': {e:#}",
                 selected.series_instance_uid()
@@ -349,15 +348,14 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             );
         }
         println!("  NIfTI file      : {}", path.display());
-        read_nifti::<Backend, _>(path, &device)
+        ImageReader::read(&NativeNiftiReader::new(backend), path)
             .with_context(|| format!("NIfTI read failed for '{}'", path.display()))?
     };
 
     let [depth, rows, cols] = image.shape();
     let spacing = image.spacing().into_vector().to_array();
-    let tensor_data = image.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
+    let values = image
+        .data_slice()
         .map_err(|e| anyhow::anyhow!("tensor data is not f32: {e:?}"))?;
     anyhow::ensure!(
         values.len() == depth * rows * cols,
@@ -593,8 +591,7 @@ fn build_brain_velocity_3d(
     skull_phantom: &SkullPhantom,
     mni_dir: &Path,
 ) -> anyhow::Result<Array3<f64>> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     let load = |name: &str| -> anyhow::Result<Array3<f64>> {
         let path = mni_dir.join(name);
@@ -604,12 +601,11 @@ fn build_brain_velocity_3d(
             path.display(),
             "https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/mni_icbm152_nlin_sym_09c_nifti.zip"
         );
-        let img = ritk_io::read_nifti::<Backend, _>(&path, &device)
+        let img = ImageReader::read(&NativeNiftiReader::new(backend), &path)
             .with_context(|| format!("NIfTI load failed: '{}'", path.display()))?;
         let [depth, rows, cols] = img.shape();
-        let td = img.data().clone().into_data();
-        let vals = td
-            .as_slice::<f32>()
+        let vals = img
+            .data_slice()
             .map_err(|e| anyhow::anyhow!("NIfTI data not f32: {e:?}"))?;
         let mut vol = Array3::<f64>::zeros((cols, rows, depth));
         for z in 0..depth {
@@ -688,18 +684,16 @@ fn build_brain_velocity_3d(
 /// Transposes [Z,Y,X] tensor to [X,Y,Z] and normalises by the 99th percentile
 /// of non-zero voxels.  Returns (vol_normalized, spacing_mm).
 fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     println!("  T1 NIfTI file   : {}", path.display());
-    let img = read_nifti::<Backend, _>(path, &device)
+    let img = ImageReader::read(&NativeNiftiReader::new(backend), path)
         .with_context(|| format!("T1 NIfTI read failed for '{}'", path.display()))?;
 
     let [depth, rows, cols] = img.shape();
     let spacing = img.spacing().into_vector().to_array();
-    let tensor_data = img.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
+    let values = img
+        .data_slice()
         .map_err(|e| anyhow::anyhow!("T1 tensor data is not f32: {e:?}"))?;
     anyhow::ensure!(
         values.len() == depth * rows * cols,
@@ -1225,10 +1219,10 @@ fn write_png(path: &Path, rgb: &[u8], width: usize, height: usize) -> io::Result
     enc.set_depth(png::BitDepth::Eight);
     let mut writer = enc
         .write_header()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     writer
         .write_image_data(rgb)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     Ok(())
 }
 

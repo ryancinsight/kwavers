@@ -1,5 +1,5 @@
 use ndarray::Array2;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use super::config::BurtonMillerConfig;
 use kwavers_core::error::KwaversResult;

@@ -28,6 +28,7 @@ use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDgTensorWork
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver, NumericalSolver};
 use kwavers_solver::interface::{Solver, SolverStatistics};
 use kwavers_source::Source;
+use leto::Array3 as LetoArray3;
 use ndarray::Array3;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -45,6 +46,10 @@ pub struct DgSimulationSolver {
     ux: Array3<f64>,
     uy: Array3<f64>,
     uz: Array3<f64>,
+    pressure_leto: LetoArray3<f64>,
+    ux_leto: LetoArray3<f64>,
+    uy_leto: LetoArray3<f64>,
+    uz_leto: LetoArray3<f64>,
     current_step: usize,
     computation_time: Duration,
 }
@@ -119,6 +124,10 @@ impl DgSimulationSolver {
             ux: Array3::zeros(shape),
             uy: Array3::zeros(shape),
             uz: Array3::zeros(shape),
+            pressure_leto: LetoArray3::zeros([shape.0, shape.1, shape.2]),
+            ux_leto: LetoArray3::zeros([shape.0, shape.1, shape.2]),
+            uy_leto: LetoArray3::zeros([shape.0, shape.1, shape.2]),
+            uz_leto: LetoArray3::zeros([shape.0, shape.1, shape.2]),
             current_step: 0,
             computation_time: Duration::ZERO,
         })
@@ -127,6 +136,21 @@ impl DgSimulationSolver {
     #[cfg(test)]
     fn pressure_field_mut(&mut self) -> &mut Array3<f64> {
         &mut self.pressure
+    }
+
+    fn sync_leto_fields(&mut self) {
+        for (dst, src) in self.pressure_leto.iter_mut().zip(self.pressure.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.ux_leto.iter_mut().zip(self.ux.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.uy_leto.iter_mut().zip(self.uy.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.uz_leto.iter_mut().zip(self.uz.iter()) {
+            *dst = *src;
+        }
     }
 }
 
@@ -184,16 +208,17 @@ impl Solver for DgSimulationSolver {
             )?;
             self.current_step += 1;
         }
+        self.sync_leto_fields();
         self.computation_time += start.elapsed();
         Ok(())
     }
 
-    fn pressure_field(&self) -> &Array3<f64> {
-        &self.pressure
+    fn pressure_field(&self) -> &LetoArray3<f64> {
+        &self.pressure_leto
     }
 
-    fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
-        (&self.ux, &self.uy, &self.uz)
+    fn velocity_fields(&self) -> (&LetoArray3<f64>, &LetoArray3<f64>, &LetoArray3<f64>) {
+        (&self.ux_leto, &self.uy_leto, &self.uz_leto)
     }
 
     fn statistics(&self) -> SolverStatistics {

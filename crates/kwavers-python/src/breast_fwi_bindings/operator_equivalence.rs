@@ -1,5 +1,6 @@
 //! PyO3 wrapper for Ali 2025 forward-operator equivalence diagnostics.
 
+use super::complex_compat::nc_to_ec3;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     forward_operator_equivalence_diagnostics_with_receiver_policy as breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy,
     scattering_increment_diagnostics as breast_ust_scattering_increment_diagnostics,
@@ -37,15 +38,14 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
     frequency_bin_start_steps_per_frequency: Vec<usize>,
     receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let observed = observed_pressure.as_array().to_owned();
+    let observed = nc_to_ec3(observed_pressure.as_array().to_owned());
     let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
         .map_err(kwavers_to_value_py)?;
-    let mut owned_predictions =
-        Vec::<(String, Array3<Complex64>)>::with_capacity(predictions_by_model.len());
+    let mut owned_predictions = Vec::<(String, Array3<_>)>::with_capacity(predictions_by_model.len());
     for (model, pressure) in predictions_by_model.iter() {
         let model = model.extract::<String>()?;
         let pressure = pressure.extract::<PyReadonlyArray3<'_, Complex64>>()?;
-        owned_predictions.push((model, pressure.as_array().to_owned()));
+        owned_predictions.push((model, nc_to_ec3(pressure.as_array().to_owned())));
     }
 
     let diagnostics = py
@@ -86,16 +86,15 @@ pub fn breast_fwi_scattering_increment_diagnostics<'py>(
     observed_pressure: PyReadonlyArray3<'py, Complex64>,
     receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let baseline = homogeneous_baseline.as_array().to_owned();
-    let observed = observed_pressure.as_array().to_owned();
+    let baseline = nc_to_ec3(homogeneous_baseline.as_array().to_owned());
+    let observed = nc_to_ec3(observed_pressure.as_array().to_owned());
     let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
         .map_err(kwavers_to_value_py)?;
-    let mut owned_predictions =
-        Vec::<(String, Array3<Complex64>)>::with_capacity(predictions_by_model.len());
+    let mut owned_predictions = Vec::<(String, Array3<_>)>::with_capacity(predictions_by_model.len());
     for (model, pressure) in predictions_by_model.iter() {
         let model = model.extract::<String>()?;
         let pressure = pressure.extract::<PyReadonlyArray3<'_, Complex64>>()?;
-        owned_predictions.push((model, pressure.as_array().to_owned()));
+        owned_predictions.push((model, nc_to_ec3(pressure.as_array().to_owned())));
     }
 
     let diagnostics = py

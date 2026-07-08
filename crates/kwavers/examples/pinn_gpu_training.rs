@@ -12,7 +12,7 @@
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::BurnWave2dGeometry;
+use kwavers_solver::inverse::pinn::ml::WaveGeometry2D;
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
@@ -34,7 +34,7 @@ fn main() -> KwaversResult<()> {
     println!("   - Parametric curve for smooth features");
 
     // Create L-shaped base geometry
-    let l_shape = BurnWave2dGeometry::l_shaped(0.0, 1.0, 0.0, 1.0, 0.6, 0.6);
+    let l_shape = WaveGeometry2D::l_shaped(0.0, 1.0, 0.0, 1.0, 0.6, 0.6);
 
     // Create polygonal cutout
     // For demonstration, use just the L-shaped geometry

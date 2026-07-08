@@ -23,8 +23,8 @@
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnWave2dGeometry,
+use kwavers_solver::inverse::pinn::ml::wave_equation_2d::{
+    LossWeights2D, PinnConfig2D, PinnTrainer2D, WaveGeometry2D,
 };
 #[cfg(feature = "pinn")]
 use ndarray::{Array1, Array2};
@@ -159,10 +159,10 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create PINN configuration
-    let pinn_config = BurnPINN2DConfig {
+    let pinn_config = PinnConfig2D {
         hidden_layers: vec![100, 100, 100, 100],
         learning_rate: 1e-3,
-        loss_weights: BurnLossWeights2D {
+        loss_weights: LossWeights2D {
             data: 1.0,
             pde: 1.0,
             boundary: 10.0,
@@ -185,7 +185,7 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create geometry (unit square)
-    let geometry = BurnWave2dGeometry::rectangular(0.0, domain_size, 0.0, domain_size);
+    let geometry = WaveGeometry2D::rectangular(0.0, domain_size, 0.0, domain_size);
     println!(
         "📐 Geometry: Unit square [0,{}] x [0,{}]",
         domain_size, domain_size
@@ -193,7 +193,7 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create PINN trainer
-    let trainer = BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry)?;
+    let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config.clone(), geometry)?;
     println!("✅ PINN Trainer: Created successfully");
     println!();
 

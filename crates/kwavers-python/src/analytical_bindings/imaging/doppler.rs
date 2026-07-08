@@ -4,6 +4,7 @@ use kwavers_analysis::signal_processing::doppler::{
     continuous_wave_vector_flow_fixture as core_continuous_wave_vector_flow_fixture, VectorVelocity,
 };
 use kwavers_physics::analytical::imaging::{self, ContrastAgentDopplerConfig};
+use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
 use ndarray::Array2;
 use numpy::{ToPyArray, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
@@ -145,14 +146,18 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
         .iter()
         .flat_map(|direction| direction.iter().copied())
         .collect();
+    let cw_velocity_m_s = leto1_to_nd1(fixture.cw_velocity_m_s);
+    let cw_power = leto1_to_nd1(fixture.cw_power);
+    let beam_angles_rad = ndarray::Array1::from_vec(fixture.beam_angles_rad);
+    let projected_velocity_m_s = ndarray::Array1::from_vec(fixture.projected_velocity_m_s);
     let out = PyDict::new(py);
-    out.set_item("cw_velocity_m_s", fixture.cw_velocity_m_s.to_pyarray(py))?;
-    out.set_item("cw_power", fixture.cw_power.to_pyarray(py))?;
+    out.set_item("cw_velocity_m_s", cw_velocity_m_s.to_pyarray(py))?;
+    out.set_item("cw_power", cw_power.to_pyarray(py))?;
     out.set_item(
         "pulsed_wave_nyquist_velocity_m_s",
         fixture.pulsed_wave_nyquist_velocity_m_s,
     )?;
-    out.set_item("beam_angles_rad", fixture.beam_angles_rad.to_pyarray(py))?;
+    out.set_item("beam_angles_rad", beam_angles_rad.to_pyarray(py))?;
     out.set_item(
         "beam_directions",
         Array2::from_shape_vec((fixture.beam_directions.len(), 2), beam_direction_flat)
@@ -161,7 +166,7 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
     )?;
     out.set_item(
         "projected_velocity_m_s",
-        fixture.projected_velocity_m_s.to_pyarray(py),
+        projected_velocity_m_s.to_pyarray(py),
     )?;
     out.set_item(
         "true_velocity_m_s",
@@ -178,4 +183,3 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
     out.set_item("vector_error_m_s", fixture.vector_error_m_s)?;
     Ok(out)
 }
-

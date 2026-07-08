@@ -61,8 +61,8 @@ fn main() -> KwaversResult<()> {
 mod tests {
     use super::*;
     use crate::dg_acoustic_common::{
-        embedded_grid, gaussian_embedded_source, run_embedded_gaussian_solver_matrix,
-        EMBEDDED_NY, EMBEDDED_NZ,
+        embedded_grid, gaussian_embedded_source, run_embedded_gaussian_solver_matrix, EMBEDDED_NY,
+        EMBEDDED_NZ,
     };
     use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
     use std::f64::consts::PI;

@@ -12,7 +12,7 @@ use super::split_field_pml::SplitFieldState;
 use super::types::{ElasticPstdSourceMode, ElasticPstdVelocitySource};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::mechanics::elastic_wave::fields::VelocityFields;
-use ndarray::{Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 // ─── Validation ──────────────────────────────────────────────────────────────
 
@@ -23,19 +23,21 @@ pub(super) fn validate_source(
     shape: (usize, usize, usize),
     n_steps: usize,
 ) -> KwaversResult<()> {
-    if src.mask.dim() != shape {
+    let expected_shape = [shape.0, shape.1, shape.2];
+    if src.mask.shape() != expected_shape {
         return Err(KwaversError::InvalidInput(format!(
             "ElasticPstdVelocitySource.mask shape {:?} must equal grid {:?}",
-            src.mask.dim(),
+            src.mask.shape(),
             shape
         )));
     }
     for (axis, sig) in [("ux", &src.ux), ("uy", &src.uy), ("uz", &src.uz)] {
         if let Some(s) = sig {
-            if s.len() != n_steps {
+            let len = s.shape()[0];
+            if len != n_steps {
                 return Err(KwaversError::InvalidInput(format!(
                     "{axis} signal length {} must equal n_steps {n_steps}",
-                    s.len()
+                    len
                 )));
             }
         }
@@ -122,17 +124,25 @@ pub(super) fn record_sensors(
 /// Collect the (i,j,k) coordinates of all `true` entries in the source mask.
 #[inline]
 fn masked_indices(src: &ElasticPstdVelocitySource) -> Vec<(usize, usize, usize)> {
-    src.mask
-        .indexed_iter()
-        .filter_map(|(idx, &b)| b.then_some(idx))
-        .collect()
+    let [nx, ny, nz] = src.mask.shape();
+    let mut indices = Vec::new();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                if src.mask[[i, j, k]] {
+                    indices.push((i, j, k));
+                }
+            }
+        }
+    }
+    indices
 }
 
 /// Inject signal value at `step` into `field` at all `active` positions.
 #[inline]
 fn inject_into(
     field: &mut Array3<f64>,
-    sig: &Option<ndarray::Array1<f64>>,
+    sig: &Option<Array1<f64>>,
     active: &[(usize, usize, usize)],
     mode: ElasticPstdSourceMode,
     step: usize,

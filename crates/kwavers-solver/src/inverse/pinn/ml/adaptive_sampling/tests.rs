@@ -13,7 +13,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
     }
     fn pde_residual(
         &self,
-        _model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        _model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: &Var<f32, B>,
         _y: &Var<f32, B>,
         _t: &Var<f32, B>,

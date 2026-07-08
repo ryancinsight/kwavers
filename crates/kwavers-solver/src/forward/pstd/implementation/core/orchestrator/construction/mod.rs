@@ -20,20 +20,32 @@ use kwavers_medium::MaterialFields;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use ndarray::{s, Array3};
+use ndarray::s;
 use std::sync::Arc;
 
 const DENSE_CONSTRUCTION_CHUNK: usize = 4096;
 
+fn leto_to_ndarray(input: &Array3<f64>) -> ndarray::Array3<f64> {
+    let [nx, ny, nz] = input.shape();
+    ndarray::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
+        .expect("Leto PSTD field shape must match ndarray boundary shape")
+}
+
 fn apply_kappa_cosine_transform(k_mag: &mut Array3<f64>, scale: f64) {
-    if let Some(values) = k_mag.as_slice_memory_order_mut() {
+    if let Some(values) = k_mag.as_slice_mut() {
         enumerate_mut_with::<Adaptive, _, _>(values, |_index, value| {
             *value = (scale * *value).cos();
         });
     } else {
-        for value in k_mag.iter_mut() {
-            *value = (scale * *value).cos();
+        let [nx, ny, nz] = k_mag.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    k_mag[[i, j, k]] = (scale * k_mag[[i, j, k]]).cos();
+                }
+            }
         }
     }
 }
@@ -64,10 +76,10 @@ fn split_initial_density_components(
     );
 
     if let (Some(rx_values), Some(ry_values), Some(rz_values), Some(rho_values)) = (
-        rhox.as_slice_memory_order_mut(),
-        rhoy.as_slice_memory_order_mut(),
-        rhoz.as_slice_memory_order_mut(),
-        total_density.as_slice_memory_order(),
+        rhox.as_slice_mut(),
+        rhoy.as_slice_mut(),
+        rhoz.as_slice_mut(),
+        total_density.as_slice(),
     ) {
         for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
             rx_values,
@@ -85,7 +97,7 @@ fn split_initial_density_components(
             },
         );
     } else {
-        let (nx, ny, nz) = rhox.dim();
+        let [nx, ny, nz] = rhox.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -97,6 +109,19 @@ fn split_initial_density_components(
             }
         }
     }
+}
+
+fn truncate_z_half(input: &Array3<f64>, nz_c: usize) -> Array3<f64> {
+    let [nx, ny, _nz] = input.shape();
+    let mut out = Array3::<f64>::zeros([nx, ny, nz_c]);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz_c {
+                out[[i, j, k]] = input[[i, j, k]];
+            }
+        }
+    }
+    out
 }
 
 impl PSTDSolver {
@@ -138,8 +163,15 @@ impl PSTDSolver {
         // Populated once here; zero per-step allocation; `None` for non-CPML boundaries.
         let pml_exp = boundary.as_ref().and_then(|b| b.pml_exp_factors_owned());
 
-        let mut absorption =
-            initialize_absorption_operators(&config, &grid, medium, &k_mag, k_max, c_ref)?;
+        let k_mag_absorption = leto_to_ndarray(&k_mag);
+        let mut absorption = initialize_absorption_operators(
+            &config,
+            &grid,
+            medium,
+            &k_mag_absorption,
+            k_max,
+            c_ref,
+        )?;
         // Truncate spectral nabla operators to the r2c half-spectrum (z-axis: nz_c = nz/2+1).
         // nabla1 = |k|^(y-2) and nabla2 = |k|^(y-1) are symmetric under kz sign flip,
         // so the first nz_c z-values are the complete independent set for real-input fields.
@@ -150,7 +182,7 @@ impl PSTDSolver {
         // Capture the raw |k| half-spectrum (r2c z-axis: nz_c = nz/2+1) BEFORE the
         // kappa cosine transform overwrites k_mag. Needed to build the broadband
         // residual-gas absorption spectral shape ĝ(c·|k|) on demand.
-        let k_mag_half = k_mag.slice(s![.., .., ..nz_c]).to_owned();
+        let k_mag_half = truncate_z_half(&k_mag, nz_c);
         apply_kappa_cosine_transform(&mut k_mag, 0.5 * c_ref * config.dt);
         // source_kappa still has shape (nx, ny, nz) here — set_velocity_source_kappa
         // needs the full array to perform ifftshift indexing (kk = (k+nz/2)%nz).
@@ -167,7 +199,7 @@ impl PSTDSolver {
         // The filter is real-valued and symmetric (depends on |k|), so values at
         // kz ∈ [0, nz/2] (indices [0, nz_c)) are the complete independent set.
         if let Some(ref mut f) = k_ops.filter {
-            *f = f.slice(s![.., .., ..nz_c]).to_owned();
+            *f = truncate_z_half(f, nz_c);
         }
         let field_arrays = crate::forward::pstd::data::initialize_field_arrays(&grid, medium)?;
 
@@ -184,21 +216,24 @@ impl PSTDSolver {
         let ddz_k_shift_neg = ddz_full_neg.slice(s![..nz_c]).to_owned();
 
         let shape = (grid.nx, grid.ny, grid.nz);
+        let shape3 = [grid.nx, grid.ny, grid.nz];
         // `bon` is populated only when nonlinearity is active; `None` otherwise.
         // Saves N×8 bytes for the common linear case.
         let (rho0, c0, bon) = if medium.is_homogeneous() {
             let bon = config
                 .nonlinearity
-                .then(|| Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)));
+                .then(|| ndarray::Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)));
             (
-                Array3::from_elem(shape, medium.density(0, 0, 0)),
-                Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
+                ndarray::Array3::from_elem(shape, medium.density(0, 0, 0)),
+                ndarray::Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
                 bon,
             )
         } else {
-            let mut rho0 = Array3::zeros(shape);
-            let mut c0 = Array3::zeros(shape);
-            let mut bon = config.nonlinearity.then(|| Array3::<f64>::zeros(shape));
+            let mut rho0 = ndarray::Array3::zeros(shape);
+            let mut c0 = ndarray::Array3::zeros(shape);
+            let mut bon = config
+                .nonlinearity
+                .then(|| ndarray::Array3::<f64>::zeros(shape));
 
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
@@ -230,8 +265,8 @@ impl PSTDSolver {
         // on the half-spectrum only: nz_c = nz/2+1 rather than nz.
         // Saves: nx·ny·(nz/2-1)·8 bytes per array
         //   (≈1 MB/array at 64³, 8 MB at 128³, 66 MB at 256³).
-        let kappa = kappa.slice(s![.., .., ..nz_c]).to_owned();
-        let source_kappa = source_kappa.slice(s![.., .., ..nz_c]).to_owned();
+        let kappa = truncate_z_half(&kappa, nz_c);
+        let source_kappa = truncate_z_half(&source_kappa, nz_c);
 
         let config_dt = config.dt;
 
@@ -269,15 +304,15 @@ impl PSTDSolver {
                 uy: field_arrays.uy,
                 uz: field_arrays.uz,
             },
-            rhox: Array3::zeros(shape),
-            rhoy: Array3::zeros(shape),
-            rhoz: Array3::zeros(shape),
+            rhox: Array3::zeros(shape3),
+            rhoy: Array3::zeros(shape3),
+            rhoz: Array3::zeros(shape3),
             p_k: field_arrays.p_k,
             // Half-spectrum k-space buffers: r2c z-axis reduces nz → nz_c = nz/2+1.
             // ux_k is the shared velocity k-space scratch; uy_k and uz_k are eliminated
             // (Opt-8) — all three axes are processed sequentially, one buffer suffices.
-            ux_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
-            grad_k: Array3::zeros((grid.nx, grid.ny, nz_c)),
+            ux_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
+            grad_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
             materials: MaterialFields { rho0, c0 },
             bon,
             absorption,
@@ -290,18 +325,18 @@ impl PSTDSolver {
             ddx_k_shift_neg,
             ddy_k_shift_neg,
             ddz_k_shift_neg,
-            dpx: Array3::zeros(shape),
-            dpy: Array3::zeros(shape),
+            dpx: Array3::zeros(shape3),
+            dpy: Array3::zeros(shape3),
             // dpz eliminated (Opt-12): dpx is reused for all three velocity gradient axes
             // and for the absorption L1 accumulator — axes are sequential, no overlap.
-            div_u: Array3::zeros(shape),
-            div_ux: Array3::zeros(shape),
-            div_uy: Array3::zeros(shape),
-            div_uz: Array3::zeros(shape),
+            div_u: Array3::zeros(shape3),
+            div_ux: Array3::zeros(shape3),
+            div_uy: Array3::zeros(shape3),
+            div_uz: Array3::zeros(shape3),
             as_ctx: None,
             alpha_np_m: None, // allocated on demand by populate_alpha_np_m_at_frequency / set_alpha_np_m
             dirichlet_pml_bypass_x: Vec::new(),
-            pml_bypass_plane_scratch: Array3::zeros((0, grid.ny, grid.nz)),
+            pml_bypass_plane_scratch: ndarray::Array3::zeros((0, grid.ny, grid.nz)),
         };
 
         if solver.config.kspace_method == KSpaceMethod::FullKSpace {

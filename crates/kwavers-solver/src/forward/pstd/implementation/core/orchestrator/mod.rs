@@ -13,6 +13,7 @@ use kwavers_math::fft::{Complex64, Fft3d};
 use kwavers_medium::MaterialFields;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::{Source, SourceInjectionMode};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array1, Array2, Array3, ArrayView2};
 use std::env;
@@ -26,10 +27,10 @@ mod stepping;
 pub mod thermal;
 
 fn fill_rho_sum_dense(
-    dest: &mut Array3<f64>,
-    rhox: &Array3<f64>,
-    rhoy: &Array3<f64>,
-    rhoz: &Array3<f64>,
+    dest: &mut LetoArray3<f64>,
+    rhox: &LetoArray3<f64>,
+    rhoy: &LetoArray3<f64>,
+    rhoz: &LetoArray3<f64>,
 ) {
     assert_eq!(
         dest.shape(),
@@ -48,16 +49,16 @@ fn fill_rho_sum_dense(
     );
 
     if let (Some(dest_values), Some(rx_values), Some(ry_values), Some(rz_values)) = (
-        dest.as_slice_memory_order_mut(),
-        rhox.as_slice_memory_order(),
-        rhoy.as_slice_memory_order(),
-        rhoz.as_slice_memory_order(),
+        dest.as_slice_mut(),
+        rhox.as_slice(),
+        rhoy.as_slice(),
+        rhoz.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(dest_values, |index, rho_sum| {
             *rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
         });
     } else {
-        let (nx, ny, nz) = dest.dim();
+        let [nx, ny, nz] = dest.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -90,14 +91,14 @@ pub struct PSTDSolver {
     /// construction to save `nx·ny·(nz/2-1)·8` bytes vs. the full (nx,ny,nz)
     /// layout. All usage sites (velocity.rs, density_cartesian.rs) operate
     /// on the r2c half-spectrum, so the upper half was always unused.
-    pub(crate) kappa: Array3<f64>,
+    pub(crate) kappa: LetoArray3<f64>,
     /// Source k-space correction cos(c_ref·|k|·dt/2) in r2c half-spectrum order.
     ///
     /// Shape: `(nx, ny, nz_c)` — pre-truncated after `set_velocity_source_kappa()`
     /// extracts per-source-point values from the full array. Saves
     /// `nx·ny·(nz/2-1)·8` bytes vs. the full layout.
-    pub(crate) source_kappa: Array3<f64>,
-    pub(crate) filter: Option<Array3<f64>>,
+    pub(crate) source_kappa: LetoArray3<f64>,
+    pub(crate) filter: Option<LetoArray3<f64>>,
     pub(crate) c_ref: f64,
     /// Precomputed additive mass-source scale: 2·Δt / (N·c₀·Δx_min).
     pub(crate) mass_source_scale: f64,
@@ -117,10 +118,10 @@ pub struct PSTDSolver {
     /// construction so per-step cost is O(N) multiplications (no `exp` calls).
     pub(crate) pml_exp: Option<PmlExpFactors>,
     pub fields: WaveFields,
-    pub rhox: Array3<f64>,
-    pub rhoy: Array3<f64>,
-    pub rhoz: Array3<f64>,
-    pub(crate) p_k: Array3<Complex64>,
+    pub rhox: LetoArray3<f64>,
+    pub rhoy: LetoArray3<f64>,
+    pub rhoz: LetoArray3<f64>,
+    pub(crate) p_k: LetoArray3<Complex64>,
     /// Shared velocity k-space scratch — reused for all three spatial axes sequentially.
     ///
     /// Used as: (a) FFT output for u_x / u_y / u_z in the density update; (b) IFFT
@@ -128,9 +129,9 @@ pub struct PSTDSolver {
     /// filter passes.  Because all axes are processed sequentially (never concurrently),
     /// a single buffer is sufficient — eliminating the former `uy_k` and `uz_k` fields
     /// (Opt-8: saves 2 × N_complex × 16 B of solver memory).
-    pub(crate) ux_k: Array3<Complex64>,
+    pub(crate) ux_k: LetoArray3<Complex64>,
     /// Single k-space gradient scratch, reused for all three spatial axes sequentially.
-    pub(crate) grad_k: Array3<Complex64>,
+    pub(crate) grad_k: LetoArray3<Complex64>,
     pub(crate) materials: MaterialFields,
     /// Nonlinearity parameter B/(2A) per voxel.
     ///
@@ -143,7 +144,7 @@ pub struct PSTDSolver {
     /// Raw spectral wavenumber magnitude `|k|` in r2c half-spectrum order
     /// `(nx, ny, nz_c)`, captured before the kappa cosine transform. Used to
     /// build the broadband residual-gas absorption operator's spectral shape.
-    pub(crate) k_mag_half: Array3<f64>,
+    pub(crate) k_mag_half: LetoArray3<f64>,
     /// Broadband residual-gas (bubble-cloud) absorption operator — `None` until
     /// installed via `set_residual_gas_absorption`. Applies the true frequency-
     /// dependent Commander–Prosperetti attenuation spectrum each step.
@@ -168,23 +169,23 @@ pub struct PSTDSolver {
     ///
     /// `dpz` was eliminated (Opt-12) because its role (velocity z-gradient scratch and
     /// absorption Step 1 accumulator) is covered by `dpx` without temporal overlap.
-    pub(crate) dpx: Array3<f64>,
+    pub(crate) dpx: LetoArray3<f64>,
     /// L2 scratch: holds `IFFT(|k|^(y−1)·FFT(ρ_total))` during absorption Step 4.
     ///
     /// Also used as velocity y-axis gradient IFFT buffer (fallback and fused paths).
     /// Must be a separate allocation from `dpx` because absorption Step 5 reads
     /// `dpx` (L1) and `dpy` (L2) simultaneously.
-    pub(crate) dpy: Array3<f64>,
-    pub(crate) div_u: Array3<f64>,
+    pub(crate) dpy: LetoArray3<f64>,
+    pub(crate) div_u: LetoArray3<f64>,
     /// Cached kappa-corrected velocity divergences written by `update_density_cartesian`
     /// and read by `apply_absorption_to_pressure`.  `apply_pressure_sources` zeroes `dpx`
     /// between those two calls; caching avoids 3 forward + 3 inverse FFT recomputations
     /// per step on absorbing simulations.  `div_uy` and `div_uz` are zero when the
     /// corresponding axis is singleton (ny=1 or nz=1).  Not checkpointed — recomputed
     /// from velocity fields on the first step after restore.
-    pub(crate) div_ux: Array3<f64>,
-    pub(crate) div_uy: Array3<f64>,
-    pub(crate) div_uz: Array3<f64>,
+    pub(crate) div_ux: LetoArray3<f64>,
+    pub(crate) div_uy: LetoArray3<f64>,
+    pub(crate) div_uz: LetoArray3<f64>,
     /// Axisymmetric WSWA-FFT context — `Some` when `config.geometry == CylindricalAS`.
     pub(crate) as_ctx: Option<AsContext>,
     /// Per-cell acoustic absorption coefficient α(ω_c) [Np/m] at the simulation center frequency.
@@ -216,7 +217,7 @@ pub struct PSTDSolver {
 
 impl PSTDSolver {
     /// Compute total density (rhox + rhoy + rhoz) into the provided buffer
-    pub fn fill_rho_sum(&self, dest: &mut Array3<f64>) {
+    pub fn fill_rho_sum(&self, dest: &mut LetoArray3<f64>) {
         fill_rho_sum_dense(dest, &self.rhox, &self.rhoy, &self.rhoz);
     }
 
@@ -262,7 +263,7 @@ impl PSTDSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn pressure_field(&self) -> &Array3<f64> {
+    pub fn pressure_field(&self) -> &leto::Array3<f64> {
         &self.fields.p
     }
     /// Velocity fields.
@@ -270,7 +271,7 @@ impl PSTDSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
+    pub fn velocity_fields(&self) -> (&leto::Array3<f64>, &leto::Array3<f64>, &leto::Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }
     /// Run orchestrated.

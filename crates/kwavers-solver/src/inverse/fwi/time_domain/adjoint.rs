@@ -16,6 +16,17 @@ use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
 use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
+fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("FWI solver pressure field must be contiguous"),
+    )
+    .expect("FWI solver pressure field shape must match contiguous storage")
+}
+
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
 /// `g_c(x) ← -(2 / (ρ(x) · c(x)³)) · g_correlation(x)` in place.
 ///
@@ -399,7 +410,7 @@ impl FwiProcessor {
             accumulate_signed_correlation(
                 &mut gradient_m,
                 p_tt.view(),
-                solver.pressure_field().view(),
+                leto_view3(solver.pressure_field()),
                 -dt,
             )?;
         }

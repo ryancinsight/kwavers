@@ -2,7 +2,7 @@
 //!
 //! Wraps `coeus_optim`'s native `SGD` (with optional built-in momentum),
 //! `Adam`, and `AdamW` optimizers. Weight decay for `SGD`/`SGDMomentum`/
-//! `Adam` (coupled L2, matching burn's `WeightDecayConfig` semantics) is
+//! `Adam` uses coupled L2 weight decay; `AdamW` uses decoupled weight decay.
 //! applied manually by adding `weight_decay * param` to each parameter's
 //! gradient before the optimizer step, since `coeus_optim::{SGD, Adam}`
 //! have no built-in weight-decay parameter (unlike `AdamW`, which is

@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use crate::inverse::pinn::ml::quantization::{
@@ -37,7 +37,7 @@ impl MlQuantizer {
     ///
     pub fn quantize_model<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
     ) -> KwaversResult<QuantizedModel>
     where
         B::DeviceBuffer<f32>:

@@ -14,9 +14,19 @@
 //! - Marple (1999): "Computing the discrete-time analytic signal via FFT", *IEEE Transactions
 //!   on Signal Processing*
 
+use apollo::{fft_1d_array, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
+use kwavers_math::fft::Complex64;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+
+fn leto_signal(signal: &Array1<f64>) -> leto::Array1<f64> {
+    leto::Array1::from_shape_vec([signal.len()], signal.iter().copied().collect())
+        .expect("analytic signal input length must match Leto shape")
+}
+
+fn ndarray_complex_signal(signal: leto::Array1<ApolloComplex64>) -> Array1<Complex64> {
+    Array1::from_vec(signal.into_vec())
+}
 
 /// Compute the Hilbert transform of a real signal using FFT
 ///
@@ -55,7 +65,7 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
     }
 
     // Convert to complex and compute FFT using central cache
-    let mut complex_signal = kwavers_math::fft::fft_1d_array(signal);
+    let mut complex_signal = fft_1d_array(&leto_signal(signal));
 
     // Apply Hilbert transform in frequency domain
     // Per Marple (1999): H[x] = -i * sign(ω) * X(ω)
@@ -68,11 +78,11 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
             *complex_val *= 2.0;
         } else {
             // Negative frequencies: zero out
-            *complex_val = Complex64::new(0.0, 0.0);
+            *complex_val = ApolloComplex64::new(0.0, 0.0);
         }
     }
 
-    kwavers_math::fft::ifft_1d_complex(&complex_signal)
+    ndarray_complex_signal(ifft_1d_complex(&complex_signal))
 }
 
 /// Compute instantaneous envelope from analytic signal

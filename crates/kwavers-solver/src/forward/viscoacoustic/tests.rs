@@ -4,7 +4,7 @@
 
 use super::ViscoacousticMemorySolver;
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 
 const RHO: f64 = 1000.0;

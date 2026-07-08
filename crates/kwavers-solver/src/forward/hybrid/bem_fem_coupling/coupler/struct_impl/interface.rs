@@ -1,8 +1,7 @@
 //! FEM/BEM interface data transfer — extraction and relaxed application.
 
-use num_complex::{Complex64, ComplexFloat};
-
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 
 use super::BemFemCoupler;
@@ -104,7 +103,7 @@ impl BemFemCoupler {
                     let current_value = fem_field[fem_node_idx];
                     let new_value = self.config.relaxation_factor * bem_value
                         + (1.0 - self.config.relaxation_factor) * current_value;
-                    let residual = (new_value - current_value).abs();
+                    let residual = (new_value - current_value).norm();
                     max_residual = max_residual.max(residual);
                     fem_field[fem_node_idx] = new_value;
                 }

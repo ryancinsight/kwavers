@@ -24,7 +24,7 @@ where
 
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: &Var<f32, B>,
         y: &Var<f32, B>,
         t: &Var<f32, B>,

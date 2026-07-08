@@ -3,6 +3,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
+use leto::Array3;
 use std::sync::Arc;
 
 impl crate::interface::Solver for HybridSolver {
@@ -37,17 +38,11 @@ impl crate::interface::Solver for HybridSolver {
         HybridSolver::step_forward(self)
     }
 
-    fn pressure_field(&self) -> &ndarray::Array3<f64> {
+    fn pressure_field(&self) -> &Array3<f64> {
         &self.fields.p
     }
 
-    fn velocity_fields(
-        &self,
-    ) -> (
-        &ndarray::Array3<f64>,
-        &ndarray::Array3<f64>,
-        &ndarray::Array3<f64>,
-    ) {
+    fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }
 

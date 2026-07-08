@@ -4,7 +4,28 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
+use leto::Array3 as LetoArray3;
 use ndarray::{Array3, Zip};
+
+fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ndarray::ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("FDTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("FDTD leto field shape must match contiguous storage")
+}
+
+fn leto_to_ndarray3(field: &LetoArray3<f64>) -> Array3<f64> {
+    let shape = field.shape();
+    let mut copied = Array3::zeros((shape[0], shape[1], shape[2]));
+    for (dst, src) in copied.iter_mut().zip(field.iter()) {
+        *dst = *src;
+    }
+    copied
+}
 
 /// Westervelt correction must produce non-zero perturbation after two history steps.
 ///
@@ -37,7 +58,7 @@ fn test_westervelt_correction_nonzero_after_history() {
     let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
 
     solver.fields.p.fill(1e6_f64);
-    solver.p_prev = Some(solver.fields.p.clone());
+    solver.p_prev = Some(leto_to_ndarray3(&solver.fields.p));
     solver.p_prev2 = Some(Array3::zeros((n, n, n)));
 
     let p_before = solver.fields.p[[1, 1, 1]];
@@ -107,15 +128,15 @@ fn test_fdtd_pressure_numerical_identity() {
     let mut dvz_s = Array3::<f64>::zeros((n, n, n));
     solver
         .central_operator
-        .apply_x_into(solver.fields.ux.view(), &mut dvx_s)
+        .apply_x_into(leto_view3(&solver.fields.ux), &mut dvx_s)
         .unwrap();
     solver
         .central_operator
-        .apply_y_into(solver.fields.uy.view(), &mut dvy_s)
+        .apply_y_into(leto_view3(&solver.fields.uy), &mut dvy_s)
         .unwrap();
     solver
         .central_operator
-        .apply_z_into(solver.fields.uz.view(), &mut dvz_s)
+        .apply_z_into(leto_view3(&solver.fields.uz), &mut dvz_s)
         .unwrap();
 
     // Verify analytical reference: interior divergence = 3.0 exactly (linear field, O2 stencil).
@@ -186,15 +207,15 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     let dvx = solver
         .staggered_operator
-        .apply_backward_x(solver.fields.ux.view())
+        .apply_backward_x(leto_view3(&solver.fields.ux))
         .unwrap();
     let dvy = solver
         .staggered_operator
-        .apply_backward_y(solver.fields.uy.view())
+        .apply_backward_y(leto_view3(&solver.fields.uy))
         .unwrap();
     let dvz = solver
         .staggered_operator
-        .apply_backward_z(solver.fields.uz.view())
+        .apply_backward_z(leto_view3(&solver.fields.uz))
         .unwrap();
 
     let mut expected = dvz.clone();

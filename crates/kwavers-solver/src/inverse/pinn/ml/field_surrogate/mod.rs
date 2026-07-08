@@ -1,7 +1,7 @@
 //! Parameterised field-surrogate PINN — `(x, y, z, f0, pnp) → (p_min,
 //! p_max, p_rms)`.
 //!
-//! Extends the existing `burn_wave_equation_3d` infrastructure with a
+//! Extends the existing `wave_equation_3d` infrastructure with a
 //! **static** field-surrogate network whose output is the per-voxel
 //! time-integrated pressure-statistics tuple, parameterised by the
 //! source frequency and target peak rarefactional pressure. Where the

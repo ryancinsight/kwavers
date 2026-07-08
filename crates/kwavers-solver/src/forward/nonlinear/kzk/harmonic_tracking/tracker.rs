@@ -4,7 +4,7 @@ use super::types::{HarmonicAnalysis, HarmonicConfig};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Harmonic tracker for nonlinear propagation.
 #[derive(Debug)]
@@ -92,11 +92,12 @@ impl HarmonicTracker {
         &self,
         pressure: &Array2<f64>,
     ) -> KwaversResult<Vec<HarmonicAnalysis>> {
-        let (_nx, nz) = pressure.dim();
         let mut analyses = Vec::new();
 
-        for z in 0..nz {
-            let line = pressure.column(z).to_owned();
+        for column in pressure.columns().map_err(|err| {
+            KwaversError::InvalidInput(format!("invalid harmonic pressure field: {err}"))
+        })? {
+            let line = column.to_contiguous();
             if let Ok(analysis) = self.analyze_harmonics(&line) {
                 analyses.push(analysis);
             }

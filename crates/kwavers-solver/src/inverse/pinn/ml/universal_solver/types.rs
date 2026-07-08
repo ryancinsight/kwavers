@@ -156,7 +156,7 @@ pub struct UniversalSolverMemoryStats {
 
 /// Physics solution containing trained model and metadata
 pub struct PhysicsSolution<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
-    pub model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+    pub model: crate::inverse::pinn::ml::PinnWave2D<B>,
     pub config: UniversalTrainingConfig,
     pub stats: UniversalSolverStats,
     pub domain_info: UniversalSolverDomainInfo,

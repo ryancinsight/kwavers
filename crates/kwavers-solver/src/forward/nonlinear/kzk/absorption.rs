@@ -53,11 +53,13 @@
 //! - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
 use super::KZKConfig;
+use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
-use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
+use leto::Array1 as LetoArray1;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3};
+use ndarray::Array3;
+use kwavers_math::fft::Complex64;
 
 /// Power-law absorption operator for the KZK equation.
 ///
@@ -242,10 +244,10 @@ impl KzkAbsorptionOperator {
             pressure_values,
             slab_len,
             |_i, slab| {
-                let mut waveform = Array1::<Complex64>::zeros(nt);
+                let mut waveform = LetoArray1::<ApolloComplex64>::zeros([nt]);
                 for row in slab.chunks_exact_mut(nt) {
                     for (w, &p) in waveform.iter_mut().zip(row.iter()) {
-                        *w = p;
+                        *w = ApolloComplex64::new(p.re, p.im);
                     }
 
                     fft_1d_complex_inplace(&mut waveform);
@@ -257,7 +259,7 @@ impl KzkAbsorptionOperator {
                     ifft_1d_complex_inplace(&mut waveform);
 
                     for (p, &w) in row.iter_mut().zip(waveform.iter()) {
-                        *p = w;
+                        *p = Complex64::new(w.re, w.im);
                     }
                 }
             },

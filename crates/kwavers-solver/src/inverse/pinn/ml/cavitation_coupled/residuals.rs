@@ -75,10 +75,8 @@ where
 
         let p_internal = p_gas + p_vapor;
         // p_external = ambient_pressure + pressure_forcing + p_surface + p_viscous
-        let p_external = coeus_autograd::scalar_add(
-            &pressure_forcing,
-            ambient_pressure + p_surface + p_viscous,
-        );
+        let p_external =
+            coeus_autograd::scalar_add(&pressure_forcing, ambient_pressure + p_surface + p_viscous);
 
         // Pressure-driven acceleration term: (P_int − P_ext) / (ρ_l · R)
         // = -(p_external - p_internal) / (rho_l * r_eq)

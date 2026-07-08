@@ -81,7 +81,10 @@ where
     let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
 
     let output = forward_fn(&Var::new(input.clone(), false));
-    let u = coeus_autograd::slice(&output, &[(0, batch), (output_component, output_component + 1)]);
+    let u = coeus_autograd::slice(
+        &output,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
     let output_plus = forward_fn(&Var::new(input_plus, false));
     let u_plus = coeus_autograd::slice(
@@ -208,7 +211,10 @@ where
         coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &v, &backend)
     };
     let component_of = |output: &Var<f32, B>| {
-        coeus_autograd::slice(output, &[(0, batch), (output_component, output_component + 1)])
+        coeus_autograd::slice(
+            output,
+            &[(0, batch), (output_component, output_component + 1)],
+        )
     };
 
     let u_pp = component_of(&forward_fn(&Var::new(perturb(eps, eps), false)));
@@ -219,5 +225,8 @@ where
     let sum_diag = coeus_autograd::add(&u_pp, &u_mm);
     let sum_anti = coeus_autograd::add(&u_pm, &u_mp);
     let numerator = coeus_autograd::sub(&sum_diag, &sum_anti);
-    Ok(coeus_autograd::scalar_mul(&numerator, 1.0 / (4.0 * eps * eps)))
+    Ok(coeus_autograd::scalar_mul(
+        &numerator,
+        1.0 / (4.0 * eps * eps),
+    ))
 }

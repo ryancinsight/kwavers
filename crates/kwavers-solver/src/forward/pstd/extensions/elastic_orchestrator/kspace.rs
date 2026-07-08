@@ -39,8 +39,8 @@
 use super::types::ElasticPstdMedium;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::shift_operators::generate_kappa as canonical_generate_kappa;
-use ndarray::{Array3, Zip};
-use num_complex::Complex;
+use leto::Array3;
+use kwavers_math::fft::Complex64;
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
 ///
@@ -84,7 +84,7 @@ pub(super) fn max_p_wave_speed(medium: &ElasticPstdMedium) -> f64 {
 /// where `dk = 2π / (n · dx)`. The DC mode (`i = 0`) has `k = 0`.
 /// For `n ≤ 1` the array is all zeros (only the DC mode exists).
 pub(super) fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
-    let mut k = Array3::<f64>::zeros((n, 1, 1));
+    let mut k = Array3::<f64>::zeros([n, 1, 1]);
     if n <= 1 {
         return k;
     }
@@ -105,7 +105,7 @@ pub(super) fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
 /// `k[1] = dk = 2π / (n·dx)`. Hence `|D[1]| = dk` and
 /// `dx = 2π / (n·|D[1]|)`. Returns `1.0` for degenerate axes (`n < 2` or
 /// `|D[1]| = 0`).
-pub(super) fn grid_spacing_from_wavenumber(d_op: &Array3<Complex<f64>>, n: usize) -> f64 {
+pub(super) fn grid_spacing_from_wavenumber(d_op: &Array3<Complex64>, n: usize) -> f64 {
     if n < 2 {
         return 1.0;
     }
@@ -140,7 +140,7 @@ pub(super) fn build_kappa(
     dy: f64,
     dz: f64,
 ) -> Array3<f64> {
-    canonical_generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt)
+    canonical_generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt).into()
 }
 
 // ─── Spectral derivative helpers ─────────────────────────────────────────────
@@ -159,17 +159,19 @@ pub(super) fn build_kappa(
 /// (pos-shift) derivative operators; the caller chooses the correct slice.
 #[inline]
 pub(super) fn spectral_mul_x(
-    input: &Array3<Complex<f64>>,
-    op_x: &[Complex<f64>],
+    input: &Array3<Complex64>,
+    op_x: &[Complex64],
     kappa: &Array3<f64>,
-    output: &mut Array3<Complex<f64>>,
+    output: &mut Array3<Complex64>,
 ) {
-    Zip::indexed(output.view_mut())
-        .and(input.view())
-        .and(kappa.view())
-        .for_each(|(i, _, _), out, inp, kap| {
-            *out = *inp * op_x[i] * kap;
-        });
+    let [nx, ny, nz] = output.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                output[[i, j, k]] = input[[i, j, k]] * op_x[i] * kappa[[i, j, k]];
+            }
+        }
+    }
 }
 
 /// Compute `output[i,j,k] = input[i,j,k] · op_y[j] · kappa[i,j,k]`.
@@ -178,17 +180,19 @@ pub(super) fn spectral_mul_x(
 /// array indexed by the y-axis position `j`.
 #[inline]
 pub(super) fn spectral_mul_y(
-    input: &Array3<Complex<f64>>,
-    op_y: &[Complex<f64>],
+    input: &Array3<Complex64>,
+    op_y: &[Complex64],
     kappa: &Array3<f64>,
-    output: &mut Array3<Complex<f64>>,
+    output: &mut Array3<Complex64>,
 ) {
-    Zip::indexed(output.view_mut())
-        .and(input.view())
-        .and(kappa.view())
-        .for_each(|(_, j, _), out, inp, kap| {
-            *out = *inp * op_y[j] * kap;
-        });
+    let [nx, ny, nz] = output.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                output[[i, j, k]] = input[[i, j, k]] * op_y[j] * kappa[[i, j, k]];
+            }
+        }
+    }
 }
 
 /// Compute `output[i,j,k] = input[i,j,k] · op_z[k] · kappa[i,j,k]`.
@@ -197,17 +201,19 @@ pub(super) fn spectral_mul_y(
 /// array indexed by the z-axis position `k`.
 #[inline]
 pub(super) fn spectral_mul_z(
-    input: &Array3<Complex<f64>>,
-    op_z: &[Complex<f64>],
+    input: &Array3<Complex64>,
+    op_z: &[Complex64],
     kappa: &Array3<f64>,
-    output: &mut Array3<Complex<f64>>,
+    output: &mut Array3<Complex64>,
 ) {
-    Zip::indexed(output.view_mut())
-        .and(input.view())
-        .and(kappa.view())
-        .for_each(|(_, _, k), out, inp, kap| {
-            *out = *inp * op_z[k] * kap;
-        });
+    let [nx, ny, nz] = output.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                output[[i, j, k]] = input[[i, j, k]] * op_z[k] * kappa[[i, j, k]];
+            }
+        }
+    }
 }
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
@@ -220,7 +226,7 @@ mod tests {
     };
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_grid::Grid;
-    use ndarray::{Array1, Array3};
+    use leto::{Array1, Array3};
     use std::f64::consts::PI;
 
     /// DC mode kappa (|k|=0) must be exactly 1.0: `sinc(0) = 1` by L'Hôpital.
@@ -236,9 +242,9 @@ mod tests {
         let dt = 0.3 * dx / cp;
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp),
-            lame_mu: Array3::zeros((nx, nx, nx)),
-            density: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL),
+            lame_lambda: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL * cp * cp),
+            lame_mu: Array3::zeros([nx, nx, nx]),
+            density: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL),
         };
         let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         assert_eq!(
@@ -263,16 +269,22 @@ mod tests {
         let dt = 0.5 * dx / cp;
         let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp),
-            lame_mu: Array3::zeros((nx, nx, nx)),
-            density: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL),
+            lame_lambda: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL * cp * cp),
+            lame_mu: Array3::zeros([nx, nx, nx]),
+            density: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL),
         };
         let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
-        for ((i, j, k), &kap) in orch.kappa.indexed_iter() {
-            assert!(
-                kap > 0.0 && kap <= 1.0,
-                "kappa[{i},{j},{k}] = {kap:.6} not in (0, 1]"
-            );
+        let [sx, sy, sz] = orch.kappa.shape();
+        for i in 0..sx {
+            for j in 0..sy {
+                for k in 0..sz {
+                    let kap = orch.kappa[[i, j, k]];
+                    assert!(
+                        kap > 0.0 && kap <= 1.0,
+                        "kappa[{i},{j},{k}] = {kap:.6} not in (0, 1]"
+                    );
+                }
+            }
         }
     }
 
@@ -290,9 +302,9 @@ mod tests {
         let dt = cfl * dx / cp;
         let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, 1, 1), DENSITY_WATER_NOMINAL * cp * cp),
-            lame_mu: Array3::zeros((nx, 1, 1)),
-            density: Array3::from_elem((nx, 1, 1), DENSITY_WATER_NOMINAL),
+            lame_lambda: Array3::from_elem([nx, 1, 1], DENSITY_WATER_NOMINAL * cp * cp),
+            lame_mu: Array3::zeros([nx, 1, 1]),
+            density: Array3::from_elem([nx, 1, 1], DENSITY_WATER_NOMINAL),
         };
         let orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         // At i = nx/2 = 2: kx = (2−4)·2π/(4·dx) → |kx| = π/dx (Nyquist)
@@ -330,18 +342,18 @@ mod tests {
         let grid = Grid::new(nx, 1, 1, dx, dx, dx).unwrap();
         let lam = DENSITY_WATER_NOMINAL * cp * cp;
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, 1, 1), lam),
-            lame_mu: Array3::zeros((nx, 1, 1)),
-            density: Array3::from_elem((nx, 1, 1), DENSITY_WATER_NOMINAL),
+            lame_lambda: Array3::from_elem([nx, 1, 1], lam),
+            lame_mu: Array3::zeros([nx, 1, 1]),
+            density: Array3::from_elem([nx, 1, 1], DENSITY_WATER_NOMINAL),
         };
         let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
         let k0 = PI / (4.0 * dx); // quarter-Nyquist
         let amp = 1e-6_f64;
-        let mut src_signal = Array1::<f64>::zeros(n_steps);
+        let mut src_signal = Array1::<f64>::zeros([n_steps]);
         for (t, v) in src_signal.iter_mut().enumerate() {
             *v = amp * (cp * k0 * t as f64 * dt).sin();
         }
-        let mut mask = Array3::<bool>::from_elem((nx, 1, 1), false);
+        let mut mask = Array3::<bool>::from_elem([nx, 1, 1], false);
         mask[[nx / 2, 0, 0]] = true;
         let source = ElasticPstdVelocitySource {
             mask,
@@ -350,7 +362,7 @@ mod tests {
             uz: None,
             mode: ElasticPstdSourceMode::Additive,
         };
-        let mut sensor_mask = Array3::<bool>::from_elem((nx, 1, 1), false);
+        let mut sensor_mask = Array3::<bool>::from_elem([nx, 1, 1], false);
         sensor_mask[[nx / 2 + 4, 0, 0]] = true;
         let data = orch
             .propagate(n_steps, Some(&source), Some(&sensor_mask))

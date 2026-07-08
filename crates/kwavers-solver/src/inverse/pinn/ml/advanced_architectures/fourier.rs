@@ -32,7 +32,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> FourierFea
             .collect();
 
         let frequencies = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![input_dim, num_features], &freq_data, &backend),
+            coeus_tensor::Tensor::from_slice_on(
+                vec![input_dim, num_features],
+                &freq_data,
+                &backend,
+            ),
             true,
         );
 

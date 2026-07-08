@@ -5,13 +5,36 @@
 //! - `update_velocity_staggered`
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
 
 use super::solver::FdtdSolver;
 
+fn leto_view3(field: &LetoArray3<f64>) -> ArrayView3<'_, f64> {
+    let shape = field.shape();
+    ArrayView3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice()
+            .expect("FDTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("FDTD leto field shape must match contiguous storage")
+}
+
+fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ArrayViewMut3<'_, f64> {
+    let shape = field.shape();
+    ArrayViewMut3::from_shape(
+        (shape[0], shape[1], shape[2]),
+        field
+            .as_slice_mut()
+            .expect("FDTD leto field must be contiguous for ndarray view"),
+    )
+    .expect("FDTD leto field shape must match contiguous storage")
+}
+
 fn update_velocity_from_gradient(
-    velocity: &mut Array3<f64>,
+    velocity: &mut LetoArray3<f64>,
     gradient: &Array3<f64>,
     density: &Array3<f64>,
     dt: f64,
@@ -28,7 +51,7 @@ fn update_velocity_from_gradient(
     );
 
     if let (Some(velocity_values), Some(gradient_values), Some(density_values)) = (
-        velocity.as_slice_memory_order_mut(),
+        velocity.as_slice_mut(),
         gradient.as_slice_memory_order(),
         density.as_slice_memory_order(),
     ) {
@@ -39,13 +62,13 @@ fn update_velocity_from_gradient(
             }
         });
     } else {
-        Zip::from(velocity).and(gradient).and(density).for_each(
-            |velocity_value, &gradient_value, &rho| {
-                if rho > 1e-9 {
-                    *velocity_value -= dt / rho * gradient_value;
-                }
-            },
-        );
+        for ((velocity_value, &gradient_value), &rho) in
+            velocity.iter_mut().zip(gradient.iter()).zip(density.iter())
+        {
+            if rho > 1e-9 {
+                *velocity_value -= dt / rho * gradient_value;
+            }
+        }
     }
 }
 
@@ -155,7 +178,6 @@ impl FdtdSolver {
     ///   despite the caller having confirmed its presence.
     ///
     fn update_velocity_kspace(&mut self, dt: f64) -> KwaversResult<()> {
-        // Compute spectral gradients of pressure (fills kops.grad_x/y/z)
         {
             let kops = self.kspace_ops.as_mut().ok_or_else(|| {
                 KwaversError::InternalError("kspace_ops unexpectedly None".into())
@@ -163,10 +185,10 @@ impl FdtdSolver {
             kops.compute_grad_pos(&self.fields.p);
         }
 
-        // v -= (dt / rho0) * grad_p
-        // Borrows: kspace_ops (kops.grad_*) and fields.u*/materials.rho0 are disjoint fields.
+        let shape = self.fields.p.shape();
+        let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+
         {
-            let (nx, _ny, _nz) = self.fields.p.dim();
             let kops = self.kspace_ops.as_ref().ok_or_else(|| {
                 KwaversError::InternalError("kspace_ops unexpectedly None".into())
             })?;
@@ -177,35 +199,32 @@ impl FdtdSolver {
                 &self.materials.rho0,
                 dt,
             );
-            // Zero edge layer (Dirichlet at domain boundary, matching staggered path)
-            self.fields
-                .ux
-                .slice_mut(ndarray::s![nx - 1, .., ..])
-                .fill(0.0);
+            {
+                let mut ux = leto_view_mut3(&mut self.fields.ux);
+                ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
+            }
 
-            let (_nx, ny, _nz) = self.fields.p.dim();
             update_velocity_from_gradient(
                 &mut self.fields.uy,
                 &kops.grad_y,
                 &self.materials.rho0,
                 dt,
             );
-            self.fields
-                .uy
-                .slice_mut(ndarray::s![.., ny - 1, ..])
-                .fill(0.0);
+            {
+                let mut uy = leto_view_mut3(&mut self.fields.uy);
+                uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
+            }
 
-            let (_nx, _ny, nz) = self.fields.p.dim();
             update_velocity_from_gradient(
                 &mut self.fields.uz,
                 &kops.grad_z,
                 &self.materials.rho0,
                 dt,
             );
-            self.fields
-                .uz
-                .slice_mut(ndarray::s![.., .., nz - 1])
-                .fill(0.0);
+            {
+                let mut uz = leto_view_mut3(&mut self.fields.uz);
+                uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
+            }
         }
 
         Ok(())
@@ -234,23 +253,12 @@ impl FdtdSolver {
             return self.update_velocity_staggered(dt);
         }
 
-        // Collocated (non-staggered) update.
-        //
-        // ## Zero-allocation optimization
-        //
-        // `dvx_scratch`, `dvy_scratch`, and `divergence_scratch` are pre-allocated at
-        // construction (shape `(nx, ny, nz)` — same as pressure) and are unused at
-        // velocity-update time: they are next written by `update_pressure_cpu` in the
-        // same step, so reusing them here eliminates three `Array3<f64>` heap allocations
-        // per time step with no data-hazard risk.
-        //
-        // For a 128³ grid this saves 3 × 128³ × 8 = 48 MiB of allocations per step.
         self.central_operator
-            .apply_x_into(self.fields.p.view(), &mut self.dvx_scratch)?;
+            .apply_x_into(leto_view3(&self.fields.p), &mut self.dvx_scratch)?;
         self.central_operator
-            .apply_y_into(self.fields.p.view(), &mut self.dvy_scratch)?;
+            .apply_y_into(leto_view3(&self.fields.p), &mut self.dvy_scratch)?;
         self.central_operator
-            .apply_z_into(self.fields.p.view(), &mut self.divergence_scratch)?;
+            .apply_z_into(leto_view3(&self.fields.p), &mut self.divergence_scratch)?;
 
         if let Some(ref mut cpml) = self.cpml_boundary {
             cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);
@@ -258,7 +266,6 @@ impl FdtdSolver {
             cpml.update_and_apply_p_gradient_correction(&mut self.divergence_scratch, 2);
         }
 
-        // v^{n+1/2} = v^{n-1/2} − dt/ρ₀ · grad(p^n)
         update_velocity_from_gradient(
             &mut self.fields.ux,
             &self.dvx_scratch,
@@ -302,39 +309,35 @@ impl FdtdSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn update_velocity_staggered(&mut self, dt: f64) -> KwaversResult<()> {
-        let (nx, ny, nz) = self.fields.p.dim();
-        // Extract grid spacings as Copy values — avoids re-borrowing self inside closures.
+        let shape = self.fields.p.shape();
+        let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
         let dx = self.staggered_operator.dx;
         let dy = self.staggered_operator.dy;
         let dz = self.staggered_operator.dz;
+        let pressure = leto_view3(&self.fields.p);
 
-        // Phase 1: fill staggered gradient scratch buffers.
-        // Vectorizable Zip slice-pair: dst[i] = (p[i+1] - p[i]) / Δ
-        // No heap allocation — scratch was pre-allocated at solver construction.
         if nx > 1 {
             if let Some(ref mut dp_dx) = self.dp_dx_scratch {
-                let hi = self.fields.p.slice(s![1.., .., ..]);
-                let lo = self.fields.p.slice(s![..nx - 1, .., ..]);
+                let hi = pressure.slice(s![1.., .., ..]);
+                let lo = pressure.slice(s![..nx - 1, .., ..]);
                 compute_forward_gradient(dp_dx.view_mut(), hi, lo, dx);
             }
         }
         if ny > 1 {
             if let Some(ref mut dp_dy) = self.dp_dy_scratch {
-                let hi = self.fields.p.slice(s![.., 1.., ..]);
-                let lo = self.fields.p.slice(s![.., ..ny - 1, ..]);
+                let hi = pressure.slice(s![.., 1.., ..]);
+                let lo = pressure.slice(s![.., ..ny - 1, ..]);
                 compute_forward_gradient(dp_dy.view_mut(), hi, lo, dy);
             }
         }
         if nz > 1 {
             if let Some(ref mut dp_dz) = self.dp_dz_scratch {
-                let hi = self.fields.p.slice(s![.., .., 1..]);
-                let lo = self.fields.p.slice(s![.., .., ..nz - 1]);
+                let hi = pressure.slice(s![.., .., 1..]);
+                let lo = pressure.slice(s![.., .., ..nz - 1]);
                 compute_forward_gradient(dp_dz.view_mut(), hi, lo, dz);
             }
         }
 
-        // Phase 2: CPML gradient corrections (convolutional memory update, Roden & Gedney 2000).
-        // Borrows: self.cpml_boundary (mutable) and self.dp_*_scratch (mutable) — disjoint fields.
         if let Some(ref mut cpml) = self.cpml_boundary {
             if let Some(ref mut dp_dx) = self.dp_dx_scratch {
                 cpml.update_and_apply_p_gradient_correction(dp_dx, 0);
@@ -347,47 +350,46 @@ impl FdtdSolver {
             }
         }
 
-        // Phase 3: apply gradient to velocity components.
-        // Density averaged at staggered half-cell interface: ρ_avg = (ρ[i] + ρ[i+1]) / 2.
-        // Borrows: self.dp_*_scratch (immutable), self.materials.rho0 (immutable),
-        //          self.fields.u* (mutable) — all disjoint fields.
         if let Some(ref dp_dx) = self.dp_dx_scratch {
             let rho_left = self.materials.rho0.slice(s![..nx - 1, .., ..]);
             let rho_right = self.materials.rho0.slice(s![1..nx, .., ..]);
+            let mut ux = leto_view_mut3(&mut self.fields.ux);
             update_staggered_velocity(
-                self.fields.ux.slice_mut(s![..nx - 1, .., ..]),
+                ux.slice_mut(s![..nx - 1, .., ..]),
                 rho_left,
                 rho_right,
                 dp_dx.view(),
                 dt,
             );
-            self.fields.ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
+            ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
         }
 
         if let Some(ref dp_dy) = self.dp_dy_scratch {
             let rho_front = self.materials.rho0.slice(s![.., ..ny - 1, ..]);
             let rho_back = self.materials.rho0.slice(s![.., 1..ny, ..]);
+            let mut uy = leto_view_mut3(&mut self.fields.uy);
             update_staggered_velocity(
-                self.fields.uy.slice_mut(s![.., ..ny - 1, ..]),
+                uy.slice_mut(s![.., ..ny - 1, ..]),
                 rho_front,
                 rho_back,
                 dp_dy.view(),
                 dt,
             );
-            self.fields.uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
+            uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
         }
 
         if let Some(ref dp_dz) = self.dp_dz_scratch {
             let rho_near = self.materials.rho0.slice(s![.., .., ..nz - 1]);
             let rho_far = self.materials.rho0.slice(s![.., .., 1..nz]);
+            let mut uz = leto_view_mut3(&mut self.fields.uz);
             update_staggered_velocity(
-                self.fields.uz.slice_mut(s![.., .., ..nz - 1]),
+                uz.slice_mut(s![.., .., ..nz - 1]),
                 rho_near,
                 rho_far,
                 dp_dz.view(),
                 dt,
             );
-            self.fields.uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
+            uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
         }
 
         Ok(())

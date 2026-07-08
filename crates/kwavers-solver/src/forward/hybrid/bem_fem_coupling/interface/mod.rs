@@ -1,6 +1,5 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use nalgebra::Vector3;
 use std::collections::HashMap;
 
 #[cfg(test)]
@@ -152,7 +151,7 @@ impl BemFemInterface {
         fem_mesh: &TetrahedralMesh,
     ) -> Vec<(f64, f64, f64)> {
         let mut normals = Vec::new();
-        let mut accumulated_normals: HashMap<usize, Vector3<f64>> = HashMap::new();
+        let mut accumulated_normals: HashMap<usize, [f64; 3]> = HashMap::new();
 
         // Accumulate weighted normals from boundary faces
         for (face_nodes, &(elem_idx, _)) in &fem_mesh.boundary_faces {
@@ -171,14 +170,14 @@ impl BemFemInterface {
                     fem_mesh.nodes.get(n2_idx),
                     fem_mesh.nodes.get(n3_idx),
                 ) {
-                    let v1 = Vector3::from(n1.coordinates);
-                    let v2 = Vector3::from(n2.coordinates);
-                    let v3 = Vector3::from(n3.coordinates);
+                    let v1 = n1.coordinates;
+                    let v2 = n2.coordinates;
+                    let v3 = n3.coordinates;
 
                     // Compute face normal (unnormalized to weight by area)
-                    let edge1 = v2 - v1;
-                    let edge2 = v3 - v1;
-                    let mut face_normal = edge1.cross(&edge2);
+                    let edge1 = vec3_sub(v2, v1);
+                    let edge2 = vec3_sub(v3, v1);
+                    let mut face_normal = vec3_cross(edge1, edge2);
 
                     // Identify the 4th node (opposite node)
                     // element.nodes has 4 indices. face_nodes has 3.
@@ -191,13 +190,13 @@ impl BemFemInterface {
 
                     if let Some(opp_idx) = opp_node_idx {
                         if let Some(opp_node) = fem_mesh.nodes.get(opp_idx) {
-                            let v_opp = Vector3::from(opp_node.coordinates);
+                            let v_opp = opp_node.coordinates;
                             // Vector from a face vertex to opposite node
-                            let to_interior = v_opp - v1;
+                            let to_interior = vec3_sub(v_opp, v1);
 
                             // If normal points towards interior (dot > 0), flip it
-                            if face_normal.dot(&to_interior) > 0.0 {
-                                face_normal = -face_normal;
+                            if vec3_dot(face_normal, to_interior) > 0.0 {
+                                face_normal = vec3_scale(face_normal, -1.0);
                             }
                         }
                     }
@@ -206,7 +205,7 @@ impl BemFemInterface {
                     for &idx in face_nodes {
                         accumulated_normals
                             .entry(idx)
-                            .and_modify(|n| *n += face_normal)
+                            .and_modify(|n| *n = vec3_add(*n, face_normal))
                             .or_insert(face_normal);
                     }
                 }
@@ -215,10 +214,10 @@ impl BemFemInterface {
 
         for &node_idx in fem_nodes {
             if let Some(normal) = accumulated_normals.get(&node_idx) {
-                let norm = normal.norm();
+                let norm = vec3_norm(*normal);
                 if norm > 1e-12 {
-                    let n = normal / norm;
-                    normals.push((n.x, n.y, n.z));
+                    let n = vec3_scale(*normal, 1.0 / norm);
+                    normals.push((n[0], n[1], n[2]));
                 } else {
                     normals.push((0.0, 0.0, 1.0)); // Fallback for degenerate geometry
                 }
@@ -231,4 +230,38 @@ impl BemFemInterface {
 
         normals
     }
+}
+
+#[inline]
+fn vec3_sub(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn vec3_add(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+
+#[inline]
+fn vec3_scale(v: [f64; 3], s: f64) -> [f64; 3] {
+    [v[0] * s, v[1] * s, v[2] * s]
+}
+
+#[inline]
+fn vec3_dot(a: [f64; 3], b: [f64; 3]) -> f64 {
+    a[0].mul_add(b[0], a[1].mul_add(b[1], a[2] * b[2]))
+}
+
+#[inline]
+fn vec3_cross(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [
+        a[1].mul_add(b[2], -(a[2] * b[1])),
+        a[2].mul_add(b[0], -(a[0] * b[2])),
+        a[0].mul_add(b[1], -(a[1] * b[0])),
+    ]
+}
+
+#[inline]
+fn vec3_norm(v: [f64; 3]) -> f64 {
+    vec3_dot(v, v).sqrt()
 }

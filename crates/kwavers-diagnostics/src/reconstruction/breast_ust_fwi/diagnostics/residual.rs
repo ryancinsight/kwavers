@@ -1,6 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::{s, Array3, ArrayView1};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BreastUstReceiverChannelPolicy {

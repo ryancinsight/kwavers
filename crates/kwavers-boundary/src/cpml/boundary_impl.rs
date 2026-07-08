@@ -40,7 +40,7 @@ impl Boundary for CPMLBoundary {
 
     fn apply_acoustic_freq(
         &mut self,
-        field: &mut Array3<num_complex::Complex<f64>>,
+        field: &mut Array3<kwavers_math::fft::Complex64>,
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {

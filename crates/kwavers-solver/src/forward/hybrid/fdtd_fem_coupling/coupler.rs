@@ -6,7 +6,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// FDTD-FEM Schwarz Coupler
 #[derive(Debug)]

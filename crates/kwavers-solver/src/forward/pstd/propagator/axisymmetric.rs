@@ -2,24 +2,55 @@
 //!
 //! All per-time-step intermediate arrays are pre-allocated in AsContext::new
 //! and reused on every step, eliminating heap allocation on the hot path.
-//! The 2-D FFT plan is obtained from FFT_CACHE_2D (cost paid once per shape).
+//! Apollo owns the 2-D FFT plan cache for the real and complex transforms.
 //!
 //! References:
 //!   k-Wave MATLAB source kspaceFirstOrderAS.m, WSWA-FFT case.
 //!   Treeby et al. (2012). k-Wave axisymmetric documentation.
 
+use apollo::{fft_2d_array_into, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{
-    ifft_2d_complex_inplace, Complex64, Fft2d, Fft2dInOutExt, Shape2D, FFT_CACHE_2D,
-};
+use leto::Array2 as LetoArray2;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{s, Array1, Array2, ArrayView2};
-use std::sync::Arc;
+use kwavers_math::fft::Complex64;
 
 #[inline]
 fn dense_indices(index: usize, ncols: usize) -> (usize, usize) {
     (index / ncols, index % ncols)
+}
+
+fn fft_forward_into_nd(field: &Array2<f64>, out: &mut Array2<Complex64>) {
+    let field_leto = LetoArray2::from_shape_vec(
+        [field.nrows(), field.ncols()],
+        field.iter().copied().collect(),
+    )
+    .expect("axisymmetric real field length must match shape");
+    let mut out_leto = to_apollo_array2(out);
+    fft_2d_array_into(&field_leto, &mut out_leto);
+    for (dst, src) in out.iter_mut().zip(out_leto.iter()) {
+        *dst = Complex64::new(src.re, src.im);
+    }
+}
+
+fn ifft_2d_complex_inplace_nd(data: &mut Array2<Complex64>) {
+    let mut leto_data = to_apollo_array2(data);
+    ifft_2d_complex_inplace(&mut leto_data);
+    for (dst, src) in data.iter_mut().zip(leto_data.iter()) {
+        *dst = Complex64::new(src.re, src.im);
+    }
+}
+
+fn to_apollo_array2(input: &Array2<Complex64>) -> LetoArray2<ApolloComplex64> {
+    LetoArray2::from_shape_vec(
+        [input.nrows(), input.ncols()],
+        input
+            .iter()
+            .map(|value| ApolloComplex64::new(value.re, value.im))
+            .collect(),
+    )
+    .expect("axisymmetric complex field length must match shape")
 }
 
 fn multiply_by_real(field: &mut Array2<Complex64>, factors: &Array2<f64>) {
@@ -251,8 +282,6 @@ pub struct AsContext {
     /// i * kx * exp(-i*kx*dx/2), shape (nx,)
     pub ddx_k_shift_neg: Array1<Complex64>,
 
-    fft_plan: Arc<Fft2d>,
-
     // Pre-allocated real expansion buffers, shape (nx, nr_exp).
     p_exp: Array2<f64>,
     ux_exp: Array2<f64>,
@@ -351,10 +380,9 @@ impl AsContext {
             }
         });
 
-        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny: nr_exp });
         let ze = || Array2::<f64>::zeros((nx, nr_exp));
         let zn = || Array2::<f64>::zeros((nx, nr));
-        let zc = || Array2::<Complex64>::zeros((nx, nr_exp));
+        let zc = || Array2::<Complex64>::from_elem((nx, nr_exp), Complex64::default());
 
         Ok(Self {
             nx,
@@ -367,7 +395,6 @@ impl AsContext {
             kappa_2d,
             ddx_k_shift_pos,
             ddx_k_shift_neg,
-            fft_plan,
             p_exp: ze(),
             ux_exp: ze(),
             uz_exp: ze(),
@@ -402,21 +429,19 @@ impl AsContext {
     /// 1/N normalisation, so IFFT(FFT(x)) = x without additional scaling.
     pub fn compute_vel_grads(&mut self, p: ArrayView2<'_, f64>) {
         let nr = self.nr;
-        let plan = Arc::clone(&self.fft_plan);
-
         self.p_2d.assign(&p);
         Self::ws_expand(&self.p_2d, &mut self.p_exp, nr);
-        plan.forward_into(&self.p_exp, &mut self.ak);
+        fft_forward_into_nd(&self.p_exp, &mut self.ak);
         multiply_by_real(&mut self.ak, &self.kappa_2d);
 
         // grad_x
         fill_row_operator(&mut self.g, &self.ak, &self.ddx_k_shift_pos);
-        ifft_2d_complex_inplace(&mut self.g);
+        ifft_2d_complex_inplace_nd(&mut self.g);
         copy_real_window(&mut self.dpdx, &self.g, nr);
 
         // grad_r
         fill_column_operator(&mut self.g, &self.ak, &self.ddy_k_shift_pos);
-        ifft_2d_complex_inplace(&mut self.g);
+        ifft_2d_complex_inplace_nd(&mut self.g);
         copy_real_window(&mut self.dpdr, &self.g, nr);
     }
 
@@ -434,8 +459,6 @@ impl AsContext {
     /// 1/N normalisation, so IFFT(FFT(x)) = x without additional scaling.
     pub fn compute_density_divs(&mut self, ux: ArrayView2<'_, f64>, uz: ArrayView2<'_, f64>) {
         let nr = self.nr;
-        let plan = Arc::clone(&self.fft_plan);
-
         self.ux_2d.assign(&ux);
         self.uz_2d.assign(&uz);
 
@@ -444,17 +467,17 @@ impl AsContext {
 
         // div_x
         Self::ws_expand(&self.ux_2d, &mut self.ux_exp, nr);
-        plan.forward_into(&self.ux_exp, &mut self.ak);
+        fft_forward_into_nd(&self.ux_exp, &mut self.ak);
         multiply_by_real(&mut self.ak, &self.kappa_2d);
         fill_row_operator(&mut self.g, &self.ak, &self.ddx_k_shift_neg);
-        ifft_2d_complex_inplace(&mut self.g);
+        ifft_2d_complex_inplace_nd(&mut self.g);
         copy_real_window(&mut self.duxdx, &self.g, nr);
 
         // div_r_cylindrical
         Self::hahs_expand(&self.uz_2d, &mut self.uz_exp, nr);
         Self::hsha_expand(&self.uz_on_r, &mut self.uz_on_r_exp, nr);
-        plan.forward_into(&self.uz_exp, &mut self.ak);
-        plan.forward_into(&self.uz_on_r_exp, &mut self.g);
+        fft_forward_into_nd(&self.uz_exp, &mut self.ak);
+        fft_forward_into_nd(&self.uz_on_r_exp, &mut self.g);
         apply_radial_divergence_operator(
             &mut self.ak,
             &self.g,
@@ -462,7 +485,7 @@ impl AsContext {
             &self.y_shift_neg,
             &self.kappa_2d,
         );
-        ifft_2d_complex_inplace(&mut self.ak);
+        ifft_2d_complex_inplace_nd(&mut self.ak);
         copy_real_window(&mut self.duzdr, &self.ak, nr);
     }
 
@@ -552,5 +575,47 @@ impl AsContext {
     #[inline]
     pub fn expand_hsha(&self, a: &Array2<f64>, out: &mut Array2<f64>) {
         Self::hsha_expand(a, out, self.nr);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn context(nx: usize, nr: usize) -> AsContext {
+        let zero_operator = Array1::from_elem(nx, Complex64::new(0.0, 0.0));
+        AsContext::new(
+            nx,
+            nr,
+            1.0e-3,
+            1.0e-3,
+            1_500.0,
+            1.0e-7,
+            zero_operator.clone(),
+            zero_operator,
+        )
+        .expect("valid axisymmetric context")
+    }
+
+    #[test]
+    fn axisymmetric_apollo_fft_path_preserves_zero_gradients() {
+        let mut ctx = context(4, 3);
+        let pressure = Array2::<f64>::zeros((ctx.nx, ctx.nr));
+
+        ctx.compute_vel_grads(pressure.view());
+
+        assert_eq!(ctx.dpdx, Array2::<f64>::zeros((ctx.nx, ctx.nr)));
+        assert_eq!(ctx.dpdr, Array2::<f64>::zeros((ctx.nx, ctx.nr)));
+    }
+
+    #[test]
+    fn axisymmetric_apollo_fft_path_preserves_zero_divergences() {
+        let mut ctx = context(4, 3);
+        let velocity = Array2::<f64>::zeros((ctx.nx, ctx.nr));
+
+        ctx.compute_density_divs(velocity.view(), velocity.view());
+
+        assert_eq!(ctx.duxdx, Array2::<f64>::zeros((ctx.nx, ctx.nr)));
+        assert_eq!(ctx.duzdr, Array2::<f64>::zeros((ctx.nx, ctx.nr)));
     }
 }

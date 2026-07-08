@@ -5,10 +5,10 @@
 //!
 //! Reference: LeVeque, "Finite Volume Methods for Hyperbolic Problems", 2002
 
+use eunomia::{FloatElement, NumericElement};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use ndarray::{Array3, Zip};
-use eunomia::{FloatElement, NumericElement};
 
 /// Parameters for acoustic energy calculation
 struct EnergyParams<T> {

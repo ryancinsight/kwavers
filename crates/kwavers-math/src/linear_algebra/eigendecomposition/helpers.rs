@@ -1,6 +1,6 @@
 use super::EigenSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{Array1, Array2};
+use ndarray::{Array1, Array2};
 use num_complex::Complex;
 
 /// `(Q, R)` factor pair from a complex QR decomposition.
@@ -125,13 +125,13 @@ impl EigenSolver {
         eigenvalues: Array1<f64>,
         eigenvectors: Array2<Complex<f64>>,
     ) -> (Array1<f64>, Array2<Complex<f64>>, Vec<usize>) {
-        let n = eigenvalues.size();
+        let n = eigenvalues.len();
         let mut indices: Vec<usize> = (0..n).collect();
 
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
-        let mut sorted_eigenvalues = Array1::zeros([n]);
-        let mut sorted_eigenvectors = Array2::zeros([n, n]);
+        let mut sorted_eigenvalues = Array1::zeros(n);
+        let mut sorted_eigenvectors = Array2::zeros((n, n));
 
         for (new_idx, &old_idx) in indices.iter().enumerate() {
             sorted_eigenvalues[new_idx] = eigenvalues[old_idx];

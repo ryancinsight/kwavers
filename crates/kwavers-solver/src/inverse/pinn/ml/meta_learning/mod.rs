@@ -133,7 +133,7 @@
 //!     id: "acoustic_wave_rect_1".to_string(),
 //!     pde_type: PdeType::Wave,
 //!     physics_params: params,
-//!     geometry: Arc::new(BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0)),
+//!     geometry: Arc::new(WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0)),
 //!     boundary_conditions: vec![],
 //!     training_data: None,
 //!     validation_data: TaskData {

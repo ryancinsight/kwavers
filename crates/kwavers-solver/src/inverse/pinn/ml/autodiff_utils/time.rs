@@ -37,7 +37,10 @@ where
     let batch = input.shape()[0];
     let input_grad = Var::new(input.clone(), true);
     let output = forward_fn(&input_grad);
-    let component = coeus_autograd::slice(&output, &[(0, batch), (output_component, output_component + 1)]);
+    let component = coeus_autograd::slice(
+        &output,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
     coeus_autograd::sum(&component).backward();
     let dt_grad = input_grad
         .grad()
@@ -99,7 +102,10 @@ where
     let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
 
     let output = forward_fn(&Var::new(input.clone(), false));
-    let u_t = coeus_autograd::slice(&output, &[(0, batch), (output_component, output_component + 1)]);
+    let u_t = coeus_autograd::slice(
+        &output,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
     let output_plus = forward_fn(&Var::new(input_plus, false));
     let u_t_plus = coeus_autograd::slice(

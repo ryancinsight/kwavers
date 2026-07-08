@@ -243,9 +243,10 @@ fn resample_dg_to_uniform(pressure: &Array3<f64>, xi_nodes: &Array1<f64>) -> Res
     Ok(output)
 }
 
-fn center_line(field: &Array3<f64>) -> Array1<f64> {
-    let (_, ny, nz) = field.dim();
-    Array1::from_shape_fn(field.dim().0, |i| field[(i, ny / 2, nz / 2)])
+fn center_line(field: &leto::Array3<f64>) -> Array1<f64> {
+    let shape = field.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    Array1::from_shape_fn(nx, |i| field[[i, ny / 2, nz / 2]])
 }
 
 fn exact_uniform_line(final_time: f64) -> Array1<f64> {

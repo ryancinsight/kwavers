@@ -55,7 +55,7 @@
 //! `σ_α · dt ≥ 0` since the multiplier `exp(−σ_α·dt) ∈ (0, 1]`. No
 //! additional CFL constraint is introduced.
 
-use ndarray::{Array1, Array3, Zip};
+use leto::{Array1, Array3};
 
 /// Per-axis exponential damping coefficients precomputed for the
 /// orchestrator's grid. All arrays are real-valued and shaped `(N_α,)`
@@ -155,9 +155,14 @@ impl ElasticPml {
         let dx_s = self.damping_x.as_slice().expect("damping_x contiguous");
         let dy_s = self.damping_y.as_slice().expect("damping_y contiguous");
         let dz_s = self.damping_z.as_slice().expect("damping_z contiguous");
-        Zip::indexed(field).par_for_each(|(i, j, k), f| {
-            *f *= dx_s[i] * dy_s[j] * dz_s[k];
-        });
+        let [nx, ny, nz] = field.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    field[[i, j, k]] *= dx_s[i] * dy_s[j] * dz_s[k];
+                }
+            }
+        }
     }
 
     /// Borrow the per-axis damping coefficients (for tests / diagnostics).
@@ -182,7 +187,7 @@ pub(super) fn build_axis_damping(
     r0: f64,
     p: f64,
 ) -> Array1<f64> {
-    let mut damping = Array1::<f64>::ones(n);
+    let mut damping = Array1::<f64>::ones([n]);
     if thickness == 0 || n < 2 * thickness + 1 {
         return damping;
     }
@@ -233,8 +238,8 @@ pub(super) fn build_axis_alpha_beta(
     r0: f64,
     p: f64,
 ) -> (Array1<f64>, Array1<f64>) {
-    let mut alpha = Array1::<f64>::ones(n);
-    let mut beta = Array1::<f64>::from_elem(n, dt);
+    let mut alpha = Array1::<f64>::ones([n]);
+    let mut beta = Array1::<f64>::from_elem([n], dt);
     if thickness == 0 || n < 2 * thickness + 1 {
         return (alpha, beta);
     }

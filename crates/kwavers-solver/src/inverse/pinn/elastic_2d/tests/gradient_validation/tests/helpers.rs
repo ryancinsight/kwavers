@@ -156,7 +156,8 @@ pub(super) fn autodiff_second_derivative_xx(
     component: usize,
 ) -> KwaversResult<f64> {
     let backend = B::default();
-    let input = coeus_tensor::Tensor::from_slice_on(vec![1, 3], &[t as f32, x as f32, y as f32], &backend);
+    let input =
+        coeus_tensor::Tensor::from_slice_on(vec![1, 3], &[t as f32, x as f32, y as f32], &backend);
     let forward = |combined: &Var<f32, B>| -> Var<f32, B> {
         let n = combined.tensor.shape()[0];
         let t = coeus_autograd::slice(combined, &[(0, n), (0, 1)]);

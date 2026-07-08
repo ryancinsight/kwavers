@@ -1,7 +1,7 @@
 //! BEM solver dispatch.
 
+use kwavers_math::fft::Complex64;
 use ndarray::{Array1, Array3};
-use num_complex::Complex64;
 use std::f64::consts::TAU;
 
 use crate::dispatch::shared::trim_initial_recorder_sample;

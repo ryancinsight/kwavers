@@ -1,4 +1,4 @@
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use crate::inverse::pinn::ml::WaveGeometry2D;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 use kwavers_core::error::KwaversResult;
 use std::sync::Arc;
@@ -30,7 +30,7 @@ impl JitCompiler {
     pub fn compile_pinn_model(
         &mut self,
         model: &dyn std::any::Any,
-        geometry: &BurnWave2dGeometry,
+        geometry: &WaveGeometry2D,
         kernel_name: &str,
     ) -> KwaversResult<CompiledKernel> {
         if let Some(cached_kernel) = self.kernel_cache.get(kernel_name) {
@@ -84,7 +84,7 @@ impl JitCompiler {
     fn generate_execution_plan(
         &self,
         model_info: &ModelInfo,
-        geometry: &BurnWave2dGeometry,
+        geometry: &WaveGeometry2D,
     ) -> KwaversResult<ExecutionPlan> {
         let mut operations = Vec::new();
 

@@ -1,5 +1,5 @@
 use super::super::{DistributedPinnTrainer, TrainingState};
-use crate::inverse::pinn::ml::{BurnTrainingMetrics2D, BurnTrainingMetrics2D as Metrics};
+use crate::inverse::pinn::ml::{TrainingMetrics2D, TrainingMetrics2D as Metrics};
 use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
@@ -15,10 +15,10 @@ where
     /// Each replica receives the full point set (data-parallel replication).
     /// For each replica:
     /// 1. Convert (x, y, t) point arrays to leaf `Var`s on the replica backend.
-    /// 2. Call `BurnPINN2DWave::compute_physics_loss` (5-tuple output).
+    /// 2. Call `PinnWave2D::compute_physics_loss` (5-tuple output).
     /// 3. Backward pass → per-parameter gradients (accumulated in-place).
     /// 4. `SimpleOptimizer2D::step` updates replica parameters.
-    /// 5. Return per-replica `BurnTrainingMetrics2D` and serialised gradients.
+    /// 5. Return per-replica `TrainingMetrics2D` and serialised gradients.
     ///
     /// True multi-GPU collective gradient aggregation (NCCL/MPI) is not yet
     /// available; `aggregate_gradients_and_update` averages loss scalars from
@@ -36,9 +36,9 @@ where
         boundary_points: &[(f64, f64, f64)],
         initial_points: &[(f64, f64, f64)],
         target_values: &[f64],
-    ) -> KwaversResult<Vec<(BurnTrainingMetrics2D, Vec<f32>)>> {
-        use crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D;
-        use crate::inverse::pinn::ml::BurnLossWeights2D;
+    ) -> KwaversResult<Vec<(TrainingMetrics2D, Vec<f32>)>> {
+        use crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D;
+        use crate::inverse::pinn::ml::LossWeights2D;
 
         // Build Var helper: &[(f64,f64,f64)] → three [N,1] leaf Vars.
         fn to_xyz_vars<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
@@ -69,7 +69,7 @@ where
         let n_bc = boundary_points.len().max(1);
         let n_ic = initial_points.len().max(1);
 
-        let mut results: Vec<(BurnTrainingMetrics2D, Vec<f32>)> = Vec::new();
+        let mut results: Vec<(TrainingMetrics2D, Vec<f32>)> = Vec::new();
 
         let n_replicas = self.coordinator.model_replicas.len();
         for replica_idx in 0..n_replicas {
@@ -87,10 +87,16 @@ where
                 false,
             );
 
-            let u_bc = Var::new(coeus_tensor::Tensor::zeros_on(vec![n_bc, 1], &backend), false);
-            let u_ic = Var::new(coeus_tensor::Tensor::zeros_on(vec![n_ic, 1], &backend), false);
+            let u_bc = Var::new(
+                coeus_tensor::Tensor::zeros_on(vec![n_bc, 1], &backend),
+                false,
+            );
+            let u_ic = Var::new(
+                coeus_tensor::Tensor::zeros_on(vec![n_ic, 1], &backend),
+                false,
+            );
 
-            let loss_weights = BurnLossWeights2D::default();
+            let loss_weights = LossWeights2D::default();
             let wave_speed = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
             for p in self.coordinator.model_replicas[replica_idx].parameters() {
@@ -127,8 +133,8 @@ where
             if total_val.is_finite() {
                 total_loss.backward();
                 let optimizer = SimpleOptimizer2D::new(1e-3_f32);
-                self.coordinator.model_replicas[replica_idx] = optimizer
-                    .step(self.coordinator.model_replicas[replica_idx].clone());
+                self.coordinator.model_replicas[replica_idx] =
+                    optimizer.step(self.coordinator.model_replicas[replica_idx].clone());
             }
 
             results.push((
@@ -150,7 +156,7 @@ where
 
     pub(super) fn aggregate_gradients_and_update(
         &mut self,
-        gpu_results: &[(BurnTrainingMetrics2D, Vec<f32>)],
+        gpu_results: &[(TrainingMetrics2D, Vec<f32>)],
     ) -> KwaversResult<()> {
         let n_gpus = gpu_results.len();
 

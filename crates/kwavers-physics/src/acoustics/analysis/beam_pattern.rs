@@ -105,7 +105,7 @@ pub fn calculate_beam_pattern(
                         // Add contribution
                         let p = pressure_field[[ix, iy, iz]];
                         pressure_complex +=
-                            p * kwavers_math::fft::Complex64::from_polar(1.0, -phase);
+                            kwavers_math::fft::Complex64::from_polar(p, -phase);
                     }
                 }
             }

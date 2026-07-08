@@ -48,7 +48,11 @@ fn benchmark_split_coordinates(c: &mut Criterion) {
 fn split_coordinates_slow(
     points: &Tensor<f32, Backend>,
     backend: &Backend,
-) -> (Tensor<f32, Backend>, Tensor<f32, Backend>, Tensor<f32, Backend>) {
+) -> (
+    Tensor<f32, Backend>,
+    Tensor<f32, Backend>,
+    Tensor<f32, Backend>,
+) {
     let values = points.to_contiguous();
     let values = values.as_slice();
     let total_points = points.shape()[0];
@@ -74,7 +78,11 @@ fn split_coordinates_slow(
 #[cfg(feature = "pinn")]
 fn split_coordinates_fast(
     points: &Tensor<f32, Backend>,
-) -> (Tensor<f32, Backend>, Tensor<f32, Backend>, Tensor<f32, Backend>) {
+) -> (
+    Tensor<f32, Backend>,
+    Tensor<f32, Backend>,
+    Tensor<f32, Backend>,
+) {
     let total_points = points.shape()[0];
     let x = points
         .slice(&[(0, total_points), (0, 1)])

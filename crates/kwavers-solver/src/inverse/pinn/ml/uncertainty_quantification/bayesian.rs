@@ -11,7 +11,7 @@ use super::conformal::PinnConformalPredictor;
 /// Bayesian PINN with uncertainty quantification.
 pub struct PinnBayesianPINN<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Ensemble of models for uncertainty estimation.
-    pub(super) ensemble: Vec<crate::inverse::pinn::ml::BurnPINN2DWave<B>>,
+    pub(super) ensemble: Vec<crate::inverse::pinn::ml::PinnWave2D<B>>,
     /// Uncertainty configuration.
     pub(super) config: PinnUncertaintyConfig,
     /// Calibration data for conformal prediction.
@@ -44,7 +44,7 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(
-        base_model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        base_model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         config: PinnUncertaintyConfig,
     ) -> KwaversResult<Self> {
         let mut ensemble = Vec::new();
@@ -101,7 +101,7 @@ where
     ) -> KwaversResult<PinnPredictionWithUncertainty> {
         if self.config.mc_samples > 0 {
             return Err(KwaversError::InvalidInput(
-                "MC dropout is not supported by the current Burn PINN architectures".into(),
+                "MC dropout is not supported by the current current PINN architectures".into(),
             ));
         }
         self.ensemble_prediction(input)
@@ -214,7 +214,7 @@ where
     ///
     fn model_prediction(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         input: &[f32],
     ) -> KwaversResult<Vec<f32>> {
         if input.len() != 3 {

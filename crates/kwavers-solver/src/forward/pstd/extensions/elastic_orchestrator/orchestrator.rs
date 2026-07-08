@@ -32,7 +32,7 @@ use kwavers_physics::acoustics::mechanics::elastic_wave::{
     fields::{StressFields, VelocityFields},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Top-level orchestrator state.
 ///
@@ -67,7 +67,7 @@ pub struct ElasticPstdOrchestrator {
     split_pml_state: Option<Box<SplitFieldState>>,
     /// Scratch real-space buffer reused across split-field-step derivative
     /// IFFTs. One allocation at construction; zero allocations per step.
-    scratch_r: ndarray::Array3<f64>,
+    scratch_r: Array3<f64>,
     pub(super) velocity: VelocityFields,
     /// Real-space stress state for the standard (non-split-field) leapfrog
     /// path. Persisted between steps; updated with real-space Lamé coefficients
@@ -97,12 +97,13 @@ impl ElasticPstdOrchestrator {
     pub fn new(grid: &Grid, medium: ElasticPstdMedium, dt: f64) -> KwaversResult<Self> {
         let (nx, ny, nz) = grid.dimensions();
         let shape = (nx, ny, nz);
+        let shape_array = [nx, ny, nz];
 
         let validate = |name: &str, arr: &Array3<f64>| -> KwaversResult<()> {
-            if arr.dim() != shape {
+            if arr.shape() != shape_array {
                 return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                     "ElasticPstdMedium.{name} shape {:?} must equal grid {:?}",
-                    arr.dim(),
+                    arr.shape(),
                     shape
                 )));
             }
@@ -138,7 +139,7 @@ impl ElasticPstdOrchestrator {
             pml: None,
             split_pml: None,
             split_pml_state: None,
-            scratch_r: ndarray::Array3::<f64>::zeros(shape),
+            scratch_r: Array3::<f64>::zeros(shape_array),
             velocity: VelocityFields::new(nx, ny, nz),
             stress: StressFields::new(nx, ny, nz),
             spectral_stress: SpectralStressFields::new(nx, ny, nz),
@@ -170,15 +171,24 @@ impl ElasticPstdOrchestrator {
 
         let sensor_indices: Vec<(usize, usize, usize)> = sensor_mask
             .map(|m| {
-                m.indexed_iter()
-                    .filter_map(|(idx, &b)| b.then_some(idx))
-                    .collect()
+                let [nx, ny, nz] = m.shape();
+                let mut indices = Vec::new();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            if m[[i, j, k]] {
+                                indices.push((i, j, k));
+                            }
+                        }
+                    }
+                }
+                indices
             })
             .unwrap_or_default();
         let n_sensors = sensor_indices.len();
-        let mut sensor_vx = (n_sensors > 0).then(|| Array2::<f64>::zeros((n_sensors, n_steps)));
-        let mut sensor_vy = (n_sensors > 0).then(|| Array2::<f64>::zeros((n_sensors, n_steps)));
-        let mut sensor_vz = (n_sensors > 0).then(|| Array2::<f64>::zeros((n_sensors, n_steps)));
+        let mut sensor_vx = (n_sensors > 0).then(|| Array2::<f64>::zeros([n_sensors, n_steps]));
+        let mut sensor_vy = (n_sensors > 0).then(|| Array2::<f64>::zeros([n_sensors, n_steps]));
+        let mut sensor_vz = (n_sensors > 0).then(|| Array2::<f64>::zeros([n_sensors, n_steps]));
 
         for step in 0..n_steps {
             if let Some(src) = source {
@@ -314,9 +324,17 @@ impl ElasticPstdOrchestrator {
     #[must_use]
     pub fn pressure_field(&self) -> Array3<f64> {
         let mut p = self.stress.txx.clone();
-        p += &self.stress.tyy;
-        p += &self.stress.tzz;
-        p.mapv_inplace(|v| -v / 3.0);
+        let [nx, ny, nz] = p.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    p[[i, j, k]] = -(self.stress.txx[[i, j, k]]
+                        + self.stress.tyy[[i, j, k]]
+                        + self.stress.tzz[[i, j, k]])
+                        / 3.0;
+                }
+            }
+        }
         p
     }
 
@@ -461,7 +479,7 @@ impl ElasticPstdOrchestrator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn small_grid() -> Grid {
         Grid::new(16, 16, 1, 1e-3, 1e-3, 1e-3).expect("grid")
@@ -472,6 +490,7 @@ mod tests {
         let rho = 1000.0;
         let mu = rho * 80.0 * 80.0;
         let lambda = rho * 1500.0f64.mul_add(1500.0, -(2.0 * 80.0 * 80.0));
+        let shape = [shape.0, shape.1, shape.2];
         ElasticPstdMedium {
             lame_lambda: Array3::from_elem(shape, lambda),
             lame_mu: Array3::from_elem(shape, mu),

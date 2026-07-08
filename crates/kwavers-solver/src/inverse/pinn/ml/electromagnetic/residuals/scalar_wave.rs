@@ -1,15 +1,13 @@
 use super::constants::EPS_FD_F32;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use coeus_autograd::Var;
 
 // Independent field tensors and physical parameters with no cohesive
 // sub-grouping; bundling would not clarify the call site.
 #[allow(clippy::too_many_arguments)]
-pub fn wave_propagation_residual<
-    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
->(
-    model: &BurnPINN2DWave<B>, // Changed from outputs to model
+pub fn wave_propagation_residual<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    model: &PinnWave2D<B>, // Changed from outputs to model
     x: &Var<f32, B>,
     y: &Var<f32, B>,
     t: &Var<f32, B>,
@@ -64,12 +62,18 @@ where
     let ez_xp = model.forward(&scalar_add(x, h), y, t);
     let ez_xm = model.forward(&scalar_sub(x, h), y, t);
     let ez_0 = model.forward(x, y, t);
-    let d2ez_dx2 = scalar_mul(&add(&sub(&ez_xp, &scalar_mul(&ez_0, 2.0)), &ez_xm), 1.0 / (h * h));
+    let d2ez_dx2 = scalar_mul(
+        &add(&sub(&ez_xp, &scalar_mul(&ez_0, 2.0)), &ez_xm),
+        1.0 / (h * h),
+    );
 
     // --- ∂²Ez/∂y² = (Ez(y+h) − 2·Ez(y) + Ez(y−h)) / h² ---
     let ez_yp = model.forward(x, &scalar_add(y, h), t);
     let ez_ym = model.forward(x, &scalar_sub(y, h), t);
-    let d2ez_dy2 = scalar_mul(&add(&sub(&ez_yp, &scalar_mul(&ez_0, 2.0)), &ez_ym), 1.0 / (h * h));
+    let d2ez_dy2 = scalar_mul(
+        &add(&sub(&ez_yp, &scalar_mul(&ez_0, 2.0)), &ez_ym),
+        1.0 / (h * h),
+    );
 
     // --- ∂²Ez/∂t² = (Ez(t+h) − 2·Ez(t) + Ez(t−h)) / h² ---
     let ez_tp = model.forward(x, y, &scalar_add(t, h));

@@ -72,7 +72,7 @@ where
     /// - ∇×B − μ₀ ε₀ ∂E/∂t − μ₀ J = 0  (Ampère's law)
     pub(super) fn electromagnetic_residual_with_sources(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: &Var<f32, B>,
         y: &Var<f32, B>,
         t: &Var<f32, B>,

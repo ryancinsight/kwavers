@@ -5,7 +5,7 @@ use super::BemBoundaryManager;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use ndarray::Array1;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 #[derive(Clone, Copy)]
 enum NodeBc {
@@ -39,7 +39,7 @@ impl BemBoundaryManager {
         let mut a_values = Vec::new();
         let mut a_col_indices = Vec::new();
         let mut a_row_pointers = vec![0; n + 1];
-        let mut b = Array1::zeros(n);
+        let mut b = Array1::from_elem(n, Complex64::default());
         let mut a_nnz = 0;
 
         for i in 0..n {
@@ -119,8 +119,8 @@ impl BemBoundaryManager {
     ) -> (Array1<Complex64>, Array1<Complex64>) {
         let n = x.len();
         let bc_map = self.build_bc_map(n);
-        let mut pressure = Array1::zeros(n);
-        let mut velocity = Array1::zeros(n);
+        let mut pressure = Array1::from_elem(n, Complex64::default());
+        let mut velocity = Array1::from_elem(n, Complex64::default());
 
         for i in 0..n {
             match bc_map[i] {
@@ -134,7 +134,7 @@ impl BemBoundaryManager {
                 }
                 NodeBc::Robin(alpha, g_known) => {
                     pressure[i] = x[i];
-                    velocity[i] = g_known - alpha * x[i];
+                    velocity[i] = g_known - x[i] * alpha;
                 }
                 NodeBc::Radiation => {
                     pressure[i] = x[i];

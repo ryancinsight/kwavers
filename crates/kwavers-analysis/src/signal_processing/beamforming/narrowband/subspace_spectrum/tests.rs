@@ -18,7 +18,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, TWO_PI};
 use kwavers_math::linear_algebra::EigenDecomposition;
 use ndarray::{Array1, Array2, Array3};
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Uniform linear array of `n` elements with pitch `d` along x, centred on origin.
 fn linear_array(n: usize, d: f64) -> Vec<[f64; 3]> {
@@ -47,7 +47,7 @@ fn eigenvalue_split_matches_theorem_22_2() {
     // Two orthonormal complex signal vectors via columns of a small DFT-like basis.
     let mut e: Vec<Array1<Complex64>> = Vec::new();
     for col in 0..k {
-        let mut v = Array1::<Complex64>::zeros(n);
+        let mut v = Array1::<Complex64>::from_elem(n, Complex64::default());
         for (row, value) in v.iter_mut().enumerate() {
             let phase = TWO_PI * (col as f64 + 1.0) * (row as f64) / (n as f64);
             *value = Complex64::new(0.0, phase).exp() / (n as f64).sqrt();
@@ -63,7 +63,7 @@ fn eigenvalue_split_matches_theorem_22_2() {
     assert!(cross.norm() < 1e-12, "signal vectors must be orthonormal");
 
     // R = σ_n² I + σ_s² Σ_k e_k e_kᴴ.
-    let mut r = Array2::<Complex64>::zeros((n, n));
+    let mut r = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
         r[(i, i)] += Complex64::new(sigma_n2, 0.0);
     }
@@ -107,7 +107,7 @@ fn build_source_covariance(
     sigma_n2: f64,
 ) -> Array2<Complex64> {
     let n = positions.len();
-    let mut r = Array2::<Complex64>::zeros((n, n));
+    let mut r = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
         r[(i, i)] += Complex64::new(sigma_n2, 0.0);
     }

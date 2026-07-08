@@ -4,7 +4,7 @@ use super::residual::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, Debug)]

@@ -192,8 +192,9 @@ impl PSTDSolver {
     /// Pass the returned array to `ThermalDiffusionSolver::update()` as `external_source`.
     #[must_use]
     pub fn compute_acoustic_heat_source(&self) -> Array3<f64> {
+        let [nx, ny, nz] = self.fields.p.shape();
         match self.alpha_np_m.as_ref() {
-            None => Array3::zeros(self.fields.p.dim()),
+            None => Array3::zeros((nx, ny, nz)),
             Some(alpha) => acoustic_heat_source(
                 &self.fields.p,
                 &self.fields.ux,

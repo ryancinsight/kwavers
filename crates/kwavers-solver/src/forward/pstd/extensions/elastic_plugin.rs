@@ -116,9 +116,9 @@ impl Plugin for MechanicalStressPlugin {
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         let elastic_medium = ElasticPstdMedium {
-            lame_lambda: medium.lame_lambda_array(),
-            lame_mu: medium.lame_mu_array(),
-            density: medium.density_array().to_owned(),
+            lame_lambda: medium.lame_lambda_array().into(),
+            lame_mu: medium.lame_mu_array().into(),
+            density: medium.density_array().to_owned().into(),
         };
         self.orchestrator = Some(ElasticPstdOrchestrator::new(grid, elastic_medium, self.dt)?);
         self.state = PluginState::Initialized;
@@ -145,9 +145,15 @@ impl Plugin for MechanicalStressPlugin {
 
         // Provide the isotropic pressure p = -⅓ tr(σ) to the unified cube.
         let pressure = orchestrator.pressure_field();
-        fields
-            .index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())
-            .assign(&pressure);
+        let mut pressure_plane = fields.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index());
+        let [nx, ny, nz] = pressure.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    pressure_plane[[i, j, k]] = pressure[[i, j, k]];
+                }
+            }
+        }
 
         Ok(())
     }

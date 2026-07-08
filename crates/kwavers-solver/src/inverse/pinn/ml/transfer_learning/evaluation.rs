@@ -12,8 +12,8 @@ where
     ///
     pub(super) fn evaluate_accuracy(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<f32> {
         let test_points = self.generate_test_points(geometry, 1000)?;
@@ -48,7 +48,7 @@ where
     ///
     pub(super) fn generate_test_points(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         num_points: usize,
     ) -> KwaversResult<Vec<TestPoint>> {
         let mut points = Vec::with_capacity(num_points);
@@ -72,7 +72,7 @@ where
     ///
     pub(super) fn compute_pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: f64,
         y: f64,
         t: f64,
@@ -116,9 +116,9 @@ where
     ///
     pub(super) fn evaluate_boundary_condition(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         condition: &crate::inverse::pinn::ml::BoundaryCondition2D,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> KwaversResult<f64> {
         use crate::inverse::pinn::ml::BoundaryCondition2D;
 

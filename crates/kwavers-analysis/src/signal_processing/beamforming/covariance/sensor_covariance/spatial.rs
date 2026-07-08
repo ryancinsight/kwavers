@@ -1,7 +1,7 @@
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::{s, Array2};
-use num_complex::Complex64;
 
 /// Spatial smoothing for coherent source decorrelation (real-valued)
 #[derive(Debug, Clone)]
@@ -81,7 +81,10 @@ impl SpatialSmoothingComplex {
         }
 
         let num_subarrays = n - self.subarray_size + 1;
-        let mut smoothed = Array2::<Complex64>::zeros((self.subarray_size, self.subarray_size));
+        let mut smoothed = Array2::<Complex64>::from_elem(
+            (self.subarray_size, self.subarray_size),
+            Complex64::default(),
+        );
 
         for start_idx in 0..num_subarrays {
             let end_idx = start_idx + self.subarray_size;

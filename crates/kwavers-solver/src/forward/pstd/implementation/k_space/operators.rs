@@ -3,7 +3,7 @@
 use super::grid::PSTDKSGrid;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
-use leto::Array1;
+use leto::{Array1, Array3 as LetoArray3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
 
@@ -93,6 +93,24 @@ fn apply_spectral_axis_multiplier(
     }
 }
 
+fn leto_complex_field(field: &Array3<Complex64>) -> LetoArray3<Complex64> {
+    let (nx, ny, nz) = field.dim();
+    LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("PSTD complex field length must match Leto field shape")
+}
+
+fn ndarray_real_field(field: LetoArray3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec((nx, ny, nz), field.into_vec())
+        .expect("Leto real field length must match PSTD field shape")
+}
+
+fn ndarray_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec((nx, ny, nz), field.into_vec())
+        .expect("Leto complex field length must match PSTD field shape")
+}
+
 /// k-Space operators for PSTD spectral computations
 #[derive(Debug, Clone)]
 pub struct PSTDKSOperators {
@@ -143,7 +161,7 @@ impl PSTDKSOperators {
     ///
     pub fn apply_helmholtz(
         &self,
-        field: &Array3<f64>,
+        field: &LetoArray3<f64>,
         wavenumber: f64,
     ) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
@@ -157,17 +175,17 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn forward_fft_3d(&self, input: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
+    pub fn forward_fft_3d(&self, input: &LetoArray3<f64>) -> KwaversResult<Array3<Complex64>> {
         let output = self.fft_processor.forward(input);
-        Ok(output)
+        Ok(ndarray_complex_field(output))
     }
     /// Inverse fft 3d.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn inverse_fft_3d(&self, input: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
-        let output = self.fft_processor.inverse(input);
-        Ok(output)
+        let output = self.fft_processor.inverse(&leto_complex_field(input));
+        Ok(ndarray_real_field(output))
     }
 
     // ── Spectral gradient operators ──────────────────────────────────────────
@@ -179,7 +197,7 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn spectral_grad_x(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn spectral_grad_x(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
         apply_spectral_axis_multiplier(&mut k_field, &self.k_grid.kx, SpectralAxis::X);
         self.inverse_fft_3d(&k_field)
@@ -189,7 +207,7 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn spectral_grad_y(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn spectral_grad_y(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
         apply_spectral_axis_multiplier(&mut k_field, &self.k_grid.ky, SpectralAxis::Y);
         self.inverse_fft_3d(&k_field)
@@ -199,7 +217,7 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn spectral_grad_z(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn spectral_grad_z(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
         apply_spectral_axis_multiplier(&mut k_field, &self.k_grid.kz, SpectralAxis::Z);
         self.inverse_fft_3d(&k_field)

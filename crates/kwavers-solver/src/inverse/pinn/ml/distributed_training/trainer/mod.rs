@@ -6,9 +6,7 @@ use super::{
     CheckpointManager, DistributedPinnTrainer, DistributedTrainingConfig, PerformanceStats,
     TrainingCoordinator, TrainingState,
 };
-use crate::inverse::pinn::ml::{
-    BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BurnWave2dGeometry,
-};
+use crate::inverse::pinn::ml::{PinnConfig2D, PinnWave2D, TrainingMetrics2D, WaveGeometry2D};
 use kwavers_core::error::KwaversResult;
 use log::info;
 
@@ -23,8 +21,8 @@ where
     ///
     pub fn new(
         config: DistributedTrainingConfig,
-        base_config: BurnPINN2DConfig,
-        _geometry: BurnWave2dGeometry,
+        base_config: PinnConfig2D,
+        _geometry: WaveGeometry2D,
     ) -> KwaversResult<Self> {
         let decomposition = crate::inverse::pinn::ml::MultiGpuDecompositionStrategy::Spatial {
             dimensions: 2,
@@ -47,7 +45,7 @@ where
         let mut model_replicas = Vec::new();
 
         for _gpu_id in 0..config.num_gpus {
-            let model = BurnPINN2DWave::new(base_config.clone())?;
+            let model = PinnWave2D::new(base_config.clone())?;
             model_replicas.push(model);
         }
 
@@ -56,7 +54,7 @@ where
             checkpoint_manager: CheckpointManager::from_config(&config),
             training_state: TrainingState {
                 current_epoch: 0,
-                global_metrics: BurnTrainingMetrics2D {
+                global_metrics: TrainingMetrics2D {
                     total_loss: vec![],
                     data_loss: vec![],
                     pde_loss: vec![],
@@ -66,7 +64,7 @@ where
                     epochs_completed: 0,
                 },
                 gpu_metrics: vec![
-                    BurnTrainingMetrics2D {
+                    TrainingMetrics2D {
                         total_loss: vec![],
                         data_loss: vec![],
                         pde_loss: vec![],

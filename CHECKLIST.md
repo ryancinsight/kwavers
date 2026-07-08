@@ -9,6 +9,169 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] kwavers-analysis narrowband Apollo FFT routing: route
+      narrowband legacy analytic-baseband and windowed STFT snapshot extraction
+      through Apollo 1-D FFT APIs over Leto buffers instead of importing FFT
+      execution or complex types from `kwavers_math::fft`. Completion
+      condition: `kwavers-analysis/src/signal_processing` no longer imports
+      `kwavers_math::fft`; the covariance-facing ndarray boundary remains
+      `num_complex` with explicit Apollo scratch conversion. Verification:
+      direct `rustfmt --check` passed for touched snapshot files; `rustup run
+      nightly cargo check -p kwavers-analysis` passed; `rustup run nightly
+      cargo nextest run -p kwavers-analysis narrowband snapshots stft baseband`
+      passed 30/30; scoped `rg` found no `kwavers_math::fft` imports in
+      `kwavers-analysis/src/signal_processing`.
+- [x] [patch] kwavers-analysis Doppler Apollo 1-D FFT routing: route
+      continuous-wave, pulsed-wave, and Welch spectral Doppler FFT execution
+      through Apollo's 1-D real/complex FFT APIs over Leto buffers instead of
+      importing FFT execution and shift utilities from `kwavers_math::fft`.
+      Completion condition: migrated Doppler files no longer import
+      `kwavers_math::fft`. Verification: direct `rustfmt --check` passed for
+      touched Doppler files; `rustup run nightly cargo check -p
+      kwavers-analysis` passed; `rustup run nightly cargo nextest run -p
+      kwavers-analysis doppler continuous_wave pulsed_wave spectral` passed
+      49/49; scoped `rg` found no `kwavers_math::fft` import in migrated
+      Doppler files.
+- [x] [patch] kwavers-analysis PAM Apollo 1-D FFT routing: route PAM
+      processor spectrum computation and delay-and-sum peak frequency
+      estimation through Apollo's 1-D real FFT over Leto buffers instead of
+      `kwavers_math::fft`. Completion condition: migrated PAM files no longer
+      import `kwavers_math::fft`; `kwavers-analysis` declares its direct Apollo
+      dependency for native FFT execution. Verification: direct `rustfmt
+      --check` passed for touched PAM files; `rustup run nightly cargo check
+      -p kwavers-analysis` passed; `rustup run nightly cargo nextest run -p
+      kwavers-analysis pam delay_and_sum` passed 18/18; scoped `rg` found no
+      `kwavers_math::fft` import in the migrated PAM files.
+- [x] [patch] kwavers-analysis analytic-signal Apollo routing: route B-mode
+      envelope detection and time-domain phase-coherence analytic-signal
+      construction through `kwavers-signal`'s Apollo-backed Hilbert transform
+      instead of `kwavers_math::fft::analytic_signal_1d`. Completion
+      condition: migrated B-mode/coherence files no longer import
+      `kwavers_math::fft` or call `analytic_signal_1d`. Verification: direct
+      `rustfmt --check` passed for touched files; `rustup run nightly cargo
+      check -p kwavers-analysis` passed; `rustup run nightly cargo nextest run
+      -p kwavers-analysis b_mode coherence` passed 51/51; scoped `rg` found no
+      `kwavers_math::fft` or `analytic_signal_1d` in the migrated files.
+- [x] [patch] kwavers-signal Apollo 1-D FFT migration: route analytic-signal
+      Hilbert transforms and frequency-domain filtering through Apollo APIs
+      over Leto buffers instead of `kwavers_math::fft`. Completion condition:
+      the touched `kwavers-signal` analytic/filter files no longer import
+      `kwavers_math::fft`; `kwavers-math` remains only for non-FFT window
+      coefficients. Verification: `rustup run nightly cargo fmt --package
+      kwavers-signal --check` passed; `rustup run nightly cargo check -p
+      kwavers-signal` passed; `rustup run nightly cargo nextest run -p
+      kwavers-signal analytic frequency_filter` passed 13/13; scoped `rg`
+      found no `kwavers_math::fft` imports in the touched signal files.
+- [x] [patch] kwavers-solver PSTD axisymmetric Apollo 2-D FFT migration:
+      route `forward::pstd::propagator::axisymmetric` real forward and complex
+      inverse 2-D FFT execution through Apollo APIs over Leto buffers instead
+      of the `kwavers_math::fft` plan/cache facade. Completion condition:
+      axisymmetric propagation no longer imports `kwavers_math::fft`; the
+      current `num_complex` ndarray buffers remain only at the PSTD storage
+      boundary. Verification: `rustup run nightly cargo fmt --package
+      kwavers-solver --check` passed; `rustup run nightly cargo check -p
+      kwavers-solver` passed; `rustup run nightly cargo nextest run -p
+      kwavers-solver axisymmetric_apollo` passed 2/2; scoped `rg` found no
+      `kwavers_math::fft` import in the axisymmetric module.
+- [x] [patch] kwavers-solver line-reconstruction Apollo 2-D FFT migration:
+      route `inverse::reconstruction::photoacoustic::line_reconstruction` 2-D
+      FFT execution through Apollo's complex FFT APIs over Leto buffers instead
+      of the `kwavers_math::fft` facade. Completion condition:
+      line-reconstruction FFT execution no longer imports from
+      `kwavers_math::fft`; `num_complex` remains only at the current
+      ndarray-backed interpolation/scaling boundary. Verification: `rustup run
+      nightly cargo fmt --package kwavers-solver --check` passed; `rustup run
+      nightly cargo check -p kwavers-solver` passed; `rustup run nightly cargo
+      nextest run -p kwavers-solver line_reconstruction` passed 4/4; scoped
+      `rg` showed only Apollo FFT execution calls in the line-reconstruction
+      module.
+- [x] [patch] kwavers-solver fast-nearfield Apollo 2-D FFT migration: route
+      `analytical::transducer::fast_nearfield` field computation through
+      Apollo's 2-D complex FFT APIs over Leto buffers instead of the
+      `kwavers_math::fft` facade. Completion condition: fast-nearfield FFT
+      execution no longer imports from `kwavers_math::fft`; `num_complex`
+      remains only at the current ndarray-backed public/storage boundary.
+      Verification: `rustup run nightly cargo fmt --package kwavers-solver
+      --check` passed; `rustup run nightly cargo check -p kwavers-solver`
+      passed; `rustup run nightly cargo nextest run -p kwavers-solver
+      fast_nearfield` passed 6/6; scoped `rg` showed only Apollo FFT execution
+      calls in the fast-nearfield module.
+- [x] [patch] kwavers-solver HAS Apollo 2-D FFT migration: route
+      `forward::nonlinear::hybrid_angular_spectrum::diffraction` through
+      Apollo's 2-D complex FFT APIs over Leto buffers instead of the
+      `kwavers_math::fft` facade. Completion condition: HAS diffraction no
+      longer imports FFT execution from `kwavers_math::fft`. Verification:
+      `rustup run nightly cargo fmt --package kwavers-solver --check` passed;
+      `rustup run nightly cargo check -p kwavers-solver` passed; `rustup run
+      nightly cargo nextest run -p kwavers-solver hybrid_angular_spectrum`
+      passed 18/18; scoped `rg` showed only Apollo FFT calls in the HAS cone.
+- [x] [patch] kwavers-solver KZK Apollo 2-D FFT migration: route
+      angular-spectrum, real parabolic, and complex parabolic 2-D diffraction
+      scratch paths through direct Apollo FFT APIs over Leto buffers.
+      Completion condition: touched KZK 2-D diffraction files no longer import
+      `kwavers_math::fft`. Verification: `rustup run nightly cargo fmt
+      --package kwavers-solver --check` passed; `rustup run nightly cargo check
+      -p kwavers-solver` passed; `rustup run nightly cargo nextest run -p
+      kwavers-solver kzk` passed 49/49; scoped `rg` found no
+      `kwavers_math::fft` imports in the touched files.
+- [x] [patch] kwavers-solver KZK Apollo 1-D FFT migration: route temporal
+      complex 1-D FFT scratch paths in KZK absorption, nonlinear spectral
+      differentiation, and finite-difference diffraction through direct Apollo
+      APIs over Leto buffers. Completion condition: touched KZK files no longer
+      import 1-D FFT execution from `kwavers_math::fft`. Verification: `rustup
+      run nightly cargo fmt --package kwavers-solver --check` passed; `rustup
+      run nightly cargo check -p kwavers-solver` passed; `rustup run nightly
+      cargo nextest run -p kwavers-solver kzk` passed 49/49; scoped `rg`
+      showed only Apollo 1-D FFT calls in the touched files.
+- [x] [patch] kwavers warning/example cleanup and Apollo complex boundary:
+      clean `kwavers` all-target warnings in property/comparative tests and
+      the GPU beamforming benchmark, consolidate the benchmark CPU path through
+      its existing helper, address clippy findings in touched examples/tests,
+      and make inverse-reconstruction Apollo 1-D FFT results cross the
+      remaining `num_complex` facade boundary explicitly. Completion
+      condition: `kwavers` all-target check and clippy are warning-clean for
+      this slice, focused nextest coverage passes, and Burn audit stays clean.
+      Verification: `rustup run nightly cargo check -p kwavers --examples`
+      passed; `rustup run nightly cargo check -p kwavers --all-targets`
+      passed; `rustup run nightly cargo clippy -p kwavers --all-targets
+      --no-deps -- -D warnings` passed; `rustup run nightly cargo nextest run
+      -p kwavers-solver photoacoustic --status-level fail --no-fail-fast`
+      passed 10/10; `rustup run nightly cargo nextest run -p kwavers --test
+      property_based_tests --test comparative_solver_tests --test
+      nonlinear_physics_tests --test test_pstd_kwave_comparison --test
+      imaging_literature_validation --status-level fail --no-fail-fast`
+      passed 46/46; `rustup run nightly cargo run -p xtask --
+      burn-migration-audit` passed with 0 Burn manifest deps and 5 approved
+      non-solver source residuals. Residual: package-wide `rustup run nightly
+      cargo fmt -p kwavers --check` remains blocked by pre-existing formatting
+      drift outside this slice in
+      `examples/focused_water_tank_common/simulation.rs`,
+      `examples/pstd_fdtd_comparison.rs`, `src/theranostic/monitor/fd.rs`,
+      `tests/pstd_finite_window_born.rs`, and
+      `tests/quick_comparative_test.rs`; touched files were formatted with
+      file-scoped `rustfmt`.
+- [x] [patch] kwavers-solver inverse Apollo 1-D FFT migration: route
+      inverse-reconstruction photoacoustic filtering/Fourier and seismic
+      envelope-phase Hilbert 1-D FFT call sites through Apollo's Leto-native
+      real FFT APIs and direct Apollo complex inverse API. Completion condition:
+      no `fft_1d_array`/`ifft_1d_array` calls remain under
+      `crates/kwavers-solver/src`. Verification: `rustup run nightly cargo fmt
+      --package kwavers-solver --check` passed; `rustup run nightly cargo check
+      -p kwavers-solver` passed; `rustup run nightly cargo nextest run -p
+      kwavers-solver photoacoustic` passed 10/10; `rustup run nightly cargo
+      nextest run -p kwavers-solver envelope misfit phase` passed 34/34; scoped
+      `rg` found no solver 1-D legacy FFT calls.
+- [x] [patch] Burn-to-Coeus migration guard: port the RITK
+      `burn-migration-audit` allowlist pattern into kwavers as a focused xtask
+      gate plus CI job. Completion condition: `xtask/burn_surface.allowlist`
+      is the approved direct-Burn surface baseline, new Burn deps/tokens fail
+      `cargo run -p xtask -- burn-migration-audit`, and Coeus tensor code is
+      not treated as a Burn holdout. Verification: `rustup run nightly cargo
+      fmt -p xtask --check` passed; `rustup run nightly cargo nextest run -p
+      xtask burn_audit --status-level fail --no-fail-fast` passed 2/2; and
+      `rustup run nightly cargo run -p xtask -- burn-migration-audit` passed
+      with 0 Burn manifest deps, 5 approved non-solver source residuals, and
+      no solver PINN entries in the allowlist.
 - [x] [patch] kwavers-math numeric SSOT Phase-1A pilot: port the generic `NumericOps<T>` trait from `num_traits::{Float, NumCast, Zero}` to `eunomia::RealField` + `NumericElement::ZERO`. Add `eunomia = { workspace = true }` to `crates/kwavers-math/Cargo.toml` while retaining `num-traits` for the csr.rs blocker; prune `Clone + Zero` supertraits to `Copy + PartialOrd`; rewrite the six bodies (`dot_product`, `normalize`, `add_arrays`, `scale_array`, `l2_norm`, `max_abs`, `safe_divide`) to use `T::ZERO`; the `max_abs` fold uses `if val > acc { val } else { acc }` instead of `acc.max(val)` because eunomia's super-trait chain does not propagate `max`. Completion condition: `cargo build -p kwavers-math` succeeds, `numeric_ops.rs` drops from the kwavers xtask `legacy-migration-audit` source-legacy list, and downstream `NumericOps` callers can swap `num_traits::Float` for `eunomia::RealField`. Verification: `cargo build -p kwavers-math` exits 0, `cargo run -p xtask -- legacy-migration-audit` shows `numeric_ops.rs` absent from source-legacy per-file. Residual: csr.rs Phase-1B requires an Atlas extension (queued below) for `num_complex::Complex64` ↔ `eunomia::NumericElement`.
 - [x] [patch] kwavers-solver RTM inherent Moirai traversal slice: route
       `inverse::reconstruction::seismic::rtm::inherent` wavefield,
@@ -24,30 +187,32 @@
       found no `Zip|par_for_each|rayon` hits under
       `crates/kwavers-solver/src/inverse/reconstruction/seismic/rtm/inherent`.
       Residual: broader solver/physics direct ndarray/Rayon holdouts remain at
-      55 `.par_for_each` sites outside this RTM inherent slice (exact paths in
+      49 `.par_for_each` sites outside this RTM inherent slice (exact paths in
       gap_audit.md), and package fmt is blocked by pre-existing formatting
-      drift in `forward/fdtd/electromagnetic/tests.rs`. Package clippy is
-      blocked by pre-existing `kwavers-math` dead-code diagnostics in the
-      concurrent eigendecomposition Leto-vs-ndarray migration diff outside this
-      slice.
+      drift in `forward/fdtd/electromagnetic/tests.rs`. Package clippy now
+      passes for `rustup run nightly cargo clippy -p kwavers-solver --lib
+      --no-deps -- -D warnings` after the Atlas provider graph refresh.
 - [x] [patch] kwavers-physics sonogenetics Moirai traversal slice: route
       `acoustics::therapy::sonogenetics` gating and ARF accumulation/finalize
-      loops through the crate-local Moirai-backed `parallel` traversal SSOT
-      instead of direct ndarray/Rayon `Zip::par_for_each`. Add the missing
-      `zip_mut_ref` and `zip_two_mut_four_refs` arities to
+      loops plus heterogeneous skull-mask property assignment through the
+      crate-local Moirai-backed `parallel` traversal SSOT instead of direct
+      ndarray/Rayon `Zip::par_for_each` or duplicate one-input helper calls.
+      Add the missing `zip_mut_ref` and `zip_two_mut_four_refs` arities to
       `crates/kwavers-physics/src/parallel.rs` so one-input updates and ARF's
       fused intensity/body-force output pass share the traversal SSOT.
       Completion condition: the sonogenetics cone has no direct
       `Zip|par_for_each|rayon` tokens, `kwavers-physics` compiles, and focused
       sonogenetics tests pass. Verification: `rustup run nightly cargo check -p
-      kwavers-physics --lib` passed; `rustup run nightly cargo nextest run -p
-      kwavers-physics sonogenetics --status-level fail` passed 53/53 with 1660
-      skipped; scoped `rg` found no direct provider tokens under
-      `crates/kwavers-physics/src/acoustics/therapy/sonogenetics`. Residual:
-      broader solver/physics direct `.par_for_each` holdouts are now 49 sites;
-      package clippy is blocked before this package by pre-existing
-      `kwavers-math` dead-code diagnostics in the concurrent eigendecomposition
-      Leto-vs-ndarray migration diff.
+      kwavers-solver --lib` passed; `rustup run nightly cargo clippy -p
+      kwavers-solver --lib --no-deps -- -D warnings` passed; `rustup run
+      nightly cargo nextest run -p kwavers-physics sonogenetics --status-level
+      fail --no-fail-fast` passed 53/53 with 1660 skipped; `rustup run nightly
+      cargo nextest run -p kwavers-physics skull --status-level fail
+      --no-fail-fast` passed 51/51 with 1662 skipped; scoped `rg` found no
+      direct provider tokens under
+      `crates/kwavers-physics/src/acoustics/therapy/sonogenetics` or the touched
+      skull mask file. Residual: broader solver/physics direct `.par_for_each`
+      holdouts are now 49 sites.
 - [x] [patch] kwavers-physics acoustic heat-source Moirai traversal slice:
       route `acoustics::conservation::heat::acoustic_heat_source` through the
       crate-local Moirai-backed `parallel` traversal SSOT instead of direct

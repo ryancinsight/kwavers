@@ -1,7 +1,7 @@
 //! Test covariance matrix generators.
 
+use eunomia::Complex64;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 
 /// Create a well-conditioned Hermitian covariance matrix for testing.
 ///

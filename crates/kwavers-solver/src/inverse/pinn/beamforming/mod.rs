@@ -12,9 +12,9 @@
 //! PinnBeamformingProvider (interface in analysis)
 //!     ↑ implemented by
 //! Solver Layer (Layer 4) - this module
-//!     BurnPinnBeamformingAdapter (concrete implementation)
+//!     PinnBeamformingAdapter (concrete implementation)
 //!     ↓ uses
-//! Burn PINN Models (BurnPINN1DWave, BurnPINNConfig)
+//! PINN models (PinnWave1D, PinnConfig)
 //! ```
 //!
 //! This design respects Clean Architecture's dependency rule:
@@ -24,12 +24,12 @@
 //!
 //! ## Available Implementations
 //!
-//! - **Burn Backend** (`burn_adapter`): Rust-native differentiable programming
+//! - **PINN backend** (`pinn_adapter`): Rust-native differentiable programming
 //!   with CPU execution today and provider-generic GPU execution pending the
 //!   Coeus + Hephaestus migration
 
 #[cfg(feature = "pinn")]
-pub mod burn_adapter;
+pub mod pinn_adapter;
 
 #[cfg(feature = "pinn")]
-pub use burn_adapter::{create_burn_beamforming_provider, BurnPinnBeamformingAdapter};
+pub use pinn_adapter::{create_pinn_beamforming_provider, PinnBeamformingAdapter};

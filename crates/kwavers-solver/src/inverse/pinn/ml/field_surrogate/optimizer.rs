@@ -1,6 +1,6 @@
 //! SGD optimizer for [`super::ParamFieldPINNNetwork`].
 //!
-//! Mirrors `burn_wave_equation_3d::SimpleOptimizer3D`. Plain SGD with
+//! Mirrors `wave_equation_3d::SimpleOptimizer3D`. Plain SGD with
 //! no momentum or weight decay — adequate for the smooth
 //! focal-envelope shapes the field surrogate is fitting; the
 //! production trainer ([`super::training::ParamFieldPINNTrainer`])

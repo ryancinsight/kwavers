@@ -7,18 +7,18 @@ mod data_gen;
 mod tensors;
 mod training;
 
-use crate::inverse::pinn::ml::burn_wave_equation_2d::{BurnPINN2DConfig, BurnPINN2DWave};
 use crate::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::inverse::pinn::ml::meta_learning::metrics::MetaLearningStats;
 use crate::inverse::pinn::ml::meta_learning::optimizer::MetaOptimizer;
 use crate::inverse::pinn::ml::meta_learning::sampling::{
     MetaLearningSamplingStrategy, TaskSampler,
 };
+use crate::inverse::pinn::ml::wave_equation_2d::{PinnConfig2D, PinnWave2D};
 use kwavers_core::error::KwaversResult;
 
 pub struct MetaLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Base model acting as meta-parameters
-    pub(super) base_model: BurnPINN2DWave<B>,
+    pub(super) base_model: PinnWave2D<B>,
     /// Meta-optimizer state
     pub(super) _meta_optimizer: MetaOptimizer,
     /// Configuration
@@ -29,7 +29,7 @@ pub struct MetaLearner<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + D
     pub(super) stats: MetaLearningStats,
 }
 
-// Manual `Debug` impl: `BurnPINN2DWave<B>` requires the `CpuAddressableStorage`
+// Manual `Debug` impl: `PinnWave2D<B>` requires the `CpuAddressableStorage`
 // bound to implement `Debug`, which this struct's own bound does not carry.
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
     for MetaLearner<B>
@@ -53,11 +53,11 @@ where
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(config: MetaLearningConfig) -> KwaversResult<Self> {
-        let pinn_config = BurnPINN2DConfig {
+        let pinn_config = PinnConfig2D {
             hidden_layers: vec![config.hidden_dim; config.num_layers],
             ..Default::default()
         };
-        let base_model = BurnPINN2DWave::new(pinn_config)?;
+        let base_model = PinnWave2D::new(pinn_config)?;
 
         let total_params = base_model.parameters().len();
         let meta_optimizer = MetaOptimizer::new(config.outer_lr, total_params);

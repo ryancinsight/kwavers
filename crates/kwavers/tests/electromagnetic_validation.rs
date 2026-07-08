@@ -96,8 +96,14 @@ fn validate_electrostatic_poisson_equation() {
 
     // Test that charge density computation doesn't panic
     let backend = TestBackend::default();
-    let x = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
-    let y = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
+    let x = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend),
+        false,
+    );
+    let y = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend),
+        false,
+    );
 
     let physics_params = PhysicsParameters {
         material_properties: HashMap::new(),
@@ -147,8 +153,14 @@ fn validate_magnetostatic_vector_potential() {
 
     // Test current density computation
     let backend = TestBackend::default();
-    let x = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
-    let y = Var::new(coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend), false);
+    let x = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend),
+        false,
+    );
+    let y = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![4, 1], &[0.25_f32, 0.5, 0.75, 1.0], &backend),
+        false,
+    );
 
     let physics_params = PhysicsParameters {
         material_properties: HashMap::new(),

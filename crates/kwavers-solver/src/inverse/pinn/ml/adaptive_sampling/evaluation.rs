@@ -3,8 +3,7 @@ use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
-impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
-    AdaptiveCollocationSampler<B>
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AdaptiveCollocationSampler<B>
 where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
@@ -15,7 +14,7 @@ where
     ///
     pub(super) fn evaluate_residuals(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
     ) -> KwaversResult<Vec<f32>> {
         let physics_params = crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters {
             material_properties: HashMap::new(),
@@ -40,7 +39,12 @@ where
 
         let residuals = self.domain.pde_residual(model, &x, &y, &t, &physics_params);
 
-        let residual_magnitude: Vec<f32> = residuals.tensor.as_slice().iter().map(|r| r.abs()).collect();
+        let residual_magnitude: Vec<f32> = residuals
+            .tensor
+            .as_slice()
+            .iter()
+            .map(|r| r.abs())
+            .collect();
 
         Ok(residual_magnitude)
     }

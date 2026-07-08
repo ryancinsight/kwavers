@@ -3,16 +3,17 @@
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
 use ndarray::{Array1, Array3};
 
 const DENSE_IVP_CHUNK: usize = 4096;
 
 struct DensitySeedFields<'a> {
-    rhox: &'a mut Array3<f64>,
-    rhoy: &'a mut Array3<f64>,
-    rhoz: &'a mut Array3<f64>,
-    pressure: &'a Array3<f64>,
+    rhox: &'a mut LetoArray3<f64>,
+    rhoy: &'a mut LetoArray3<f64>,
+    rhoz: &'a mut LetoArray3<f64>,
+    pressure: &'a LetoArray3<f64>,
     c0: &'a Array3<f64>,
 }
 
@@ -86,51 +87,42 @@ fn seed_density_components_from_pressure(fields: DensitySeedFields<'_>, config: 
         "invariant: PSTD IVP density shape matches sound-speed shape"
     );
 
-    let used_dense_path = if rhox.is_standard_layout()
-        && rhoy.is_standard_layout()
-        && rhoz.is_standard_layout()
-        && pressure.is_standard_layout()
-        && c0.is_standard_layout()
-    {
-        match (
-            rhox.as_slice_memory_order_mut(),
-            rhoy.as_slice_memory_order_mut(),
-            rhoz.as_slice_memory_order_mut(),
-            pressure.as_slice_memory_order(),
-            c0.as_slice_memory_order(),
-        ) {
-            (Some(rx_values), Some(ry_values), Some(rz_values), Some(p_values), Some(c_values)) => {
-                for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
-                    rx_values,
-                    ry_values,
-                    rz_values,
-                    DENSE_IVP_CHUNK,
-                    |chunk_index, rx_chunk, ry_chunk, rz_chunk| {
-                        let start = chunk_index * DENSE_IVP_CHUNK;
-                        for (offset, rx) in rx_chunk.iter_mut().enumerate() {
-                            let index = start + offset;
-                            let c = c_values[index];
-                            let share = if c > 1e-6 {
-                                p_values[index] / (c * c) / config.divisor
-                            } else {
-                                0.0
-                            };
-                            *rx = share;
-                            ry_chunk[offset] = if config.has_y { share } else { 0.0 };
-                            rz_chunk[offset] = if config.has_z { share } else { 0.0 };
-                        }
-                    },
-                );
-                true
-            }
-            _ => false,
+    let used_dense_path = match (
+        rhox.as_slice_mut(),
+        rhoy.as_slice_mut(),
+        rhoz.as_slice_mut(),
+        pressure.as_slice(),
+        c0.as_slice(),
+    ) {
+        (Some(rx_values), Some(ry_values), Some(rz_values), Some(p_values), Some(c_values)) => {
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                rx_values,
+                ry_values,
+                rz_values,
+                DENSE_IVP_CHUNK,
+                |chunk_index, rx_chunk, ry_chunk, rz_chunk| {
+                    let start = chunk_index * DENSE_IVP_CHUNK;
+                    for (offset, rx) in rx_chunk.iter_mut().enumerate() {
+                        let index = start + offset;
+                        let c = c_values[index];
+                        let share = if c > 1e-6 {
+                            p_values[index] / (c * c) / config.divisor
+                        } else {
+                            0.0
+                        };
+                        *rx = share;
+                        ry_chunk[offset] = if config.has_y { share } else { 0.0 };
+                        rz_chunk[offset] = if config.has_z { share } else { 0.0 };
+                    }
+                },
+            );
+            true
         }
-    } else {
-        false
+        _ => false,
     };
 
     if !used_dense_path {
-        let (nx, ny, nz) = rhox.dim();
+        let [nx, ny, nz] = rhox.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -150,9 +142,9 @@ fn seed_density_components_from_pressure(fields: DensitySeedFields<'_>, config: 
 }
 
 fn write_spectral_gradient_axis(
-    grad_k: &mut Array3<Complex64>,
-    source_kappa: &Array3<f64>,
-    p_k: &Array3<Complex64>,
+    grad_k: &mut LetoArray3<Complex64>,
+    source_kappa: &LetoArray3<f64>,
+    p_k: &LetoArray3<Complex64>,
     shift: &Array1<Complex64>,
     axis: GradientAxis,
 ) {
@@ -167,7 +159,7 @@ fn write_spectral_gradient_axis(
         "invariant: PSTD IVP gradient shape matches pressure spectrum shape"
     );
 
-    let (nx, ny, nz) = grad_k.dim();
+    let [nx, ny, nz] = grad_k.shape();
     let expected_len = match axis {
         GradientAxis::X => nx,
         GradientAxis::Y => ny,
@@ -179,29 +171,21 @@ fn write_spectral_gradient_axis(
         "invariant: PSTD IVP shift length matches selected gradient axis"
     );
 
-    let used_dense_path = if grad_k.is_standard_layout()
-        && source_kappa.is_standard_layout()
-        && p_k.is_standard_layout()
-    {
-        match (
-            grad_k.as_slice_memory_order_mut(),
-            source_kappa.as_slice_memory_order(),
-            p_k.as_slice_memory_order(),
-        ) {
-            (Some(grad_values), Some(kappa_values), Some(p_values)) => {
-                enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
-                    let (i, j, k) = dense_indices(index, ny, nz);
-                    let shift_factor = shift[axis.factor_index(i, j, k)];
-                    *grad = shift_factor
-                        * sinc_from_source_kappa(kappa_values[index])
-                        * p_values[index];
-                });
-                true
-            }
-            _ => false,
+    let used_dense_path = match (
+        grad_k.as_slice_mut(),
+        source_kappa.as_slice(),
+        p_k.as_slice(),
+    ) {
+        (Some(grad_values), Some(kappa_values), Some(p_values)) => {
+            enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
+                let (i, j, k) = dense_indices(index, ny, nz);
+                let shift_factor = shift[axis.factor_index(i, j, k)];
+                *grad =
+                    shift_factor * sinc_from_source_kappa(kappa_values[index]) * p_values[index];
+            });
+            true
         }
-    } else {
-        false
+        _ => false,
     };
 
     if !used_dense_path {
@@ -218,32 +202,25 @@ fn write_spectral_gradient_axis(
     }
 }
 
-fn scale_velocity_by_density(velocity: &mut Array3<f64>, rho0: &Array3<f64>, half_dt: f64) {
+fn scale_velocity_by_density(velocity: &mut LetoArray3<f64>, rho0: &Array3<f64>, half_dt: f64) {
     assert_eq!(
         velocity.shape(),
         rho0.shape(),
         "invariant: PSTD IVP velocity shape matches density shape"
     );
 
-    let used_dense_path = if velocity.is_standard_layout() && rho0.is_standard_layout() {
-        match (
-            velocity.as_slice_memory_order_mut(),
-            rho0.as_slice_memory_order(),
-        ) {
-            (Some(velocity_values), Some(rho_values)) => {
-                enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
-                    *velocity *= half_dt / rho_values[index];
-                });
-                true
-            }
-            _ => false,
+    let used_dense_path = match (velocity.as_slice_mut(), rho0.as_slice_memory_order()) {
+        (Some(velocity_values), Some(rho_values)) => {
+            enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
+                *velocity *= half_dt / rho_values[index];
+            });
+            true
         }
-    } else {
-        false
+        _ => false,
     };
 
     if !used_dense_path {
-        let (nx, ny, nz) = velocity.dim();
+        let [nx, ny, nz] = velocity.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {

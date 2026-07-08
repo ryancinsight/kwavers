@@ -53,7 +53,7 @@
 //!   against analytic result.
 //! - `test_duffy_nonsingular_cancellation`: Duffy and non-Duffy agree away from singularity.
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use super::green::green_helmholtz;
 use kwavers_core::constants::numerical::TWO_PI;

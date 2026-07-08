@@ -17,7 +17,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Minnaert resonance frequency [Hz] of an air bubble of radius `r` in a liquid
@@ -64,7 +64,7 @@ fn spectral_shape_is_resonant_not_power_law() {
 
 /// Fill `p[i,j,k] = cos(2π·m·i/nx)` — a single x-axis wavenumber mode.
 fn fill_mode(p: &mut Array3<f64>, m: usize) {
-    let (nx, ny, nz) = p.dim();
+    let [nx, ny, nz] = p.shape();
     for i in 0..nx {
         let v = (2.0 * PI * m as f64 * i as f64 / nx as f64).cos();
         for j in 0..ny {
@@ -101,7 +101,7 @@ fn solver_applies_true_cp_spectrum_per_wavenumber() {
     let r = 2.0e-6;
     let props = BubblyMediumProps::air_water(r, 0.3e6);
     let beta = 1.0e-3;
-    let void = Array3::from_elem((nx, 4, 4), beta);
+    let void = Array3::from_elem([nx, 4, 4], beta);
     assert!(
         solver.set_residual_gas_absorption(void.view(), c, rho, &props),
         "operator installs when gas is present"
@@ -192,7 +192,7 @@ fn solver_applies_cp_dispersion_per_wavenumber() {
     let props = BubblyMediumProps::air_water(r, 0.3e6);
     let beta = 1.0e-3;
     let beta_ref = 1.0e-4; // SHAPE_REFERENCE_VOID_FRACTION
-    let void = Array3::from_elem((nx, 4, 4), beta);
+    let void = Array3::from_elem([nx, 4, 4], beta);
     assert!(solver.set_residual_gas_absorption(void.view(), c, rho, &props));
 
     let freq_of = |m: usize| c * m as f64 / (nx as f64 * dx);
@@ -264,7 +264,7 @@ fn no_gas_is_noop_and_clear_works() {
     );
 
     // Zero void fraction → build returns None (nothing installed).
-    let zero = Array3::zeros((16, 4, 4));
+    let zero = Array3::zeros([16, 4, 4]);
     let props = BubblyMediumProps::air_water(2e-6, 0.3e6);
     assert!(!solver.set_residual_gas_absorption(
         zero.view(),
@@ -274,7 +274,7 @@ fn no_gas_is_noop_and_clear_works() {
     ));
 
     // Install then clear.
-    let void = Array3::from_elem((16, 4, 4), 1e-3);
+    let void = Array3::from_elem([16, 4, 4], 1e-3);
     assert!(solver.set_residual_gas_absorption(
         void.view(),
         SOUND_SPEED_WATER_SIM,

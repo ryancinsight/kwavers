@@ -97,7 +97,7 @@
 //!     MinimumVariance, AdaptiveTimeDomainBeamformer
 //! };
 //! use ndarray::{Array1, Array2};
-//! use num_complex::Complex64;
+//! use eunomia::Complex64;
 //!
 //! // Create 8-element linear array covariance matrix
 //! let n = 8;
@@ -175,9 +175,9 @@
 //! - `lcmv`: Linearly Constrained Minimum Variance beamformer with multiple constraints
 //! - `gsc`: Generalized Sidelobe Canceller for adaptive interference suppression
 
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
 use ndarray::{Array1, Array2};
-use num_complex::Complex64;
 
 // Algorithm implementations
 pub mod music;
@@ -301,7 +301,7 @@ mod tests {
 
         assert_eq!(weights.len(), n);
         for &w in &weights {
-            assert!(w.is_finite());
+            assert!(w.re.is_finite() && w.im.is_finite());
         }
     }
 
@@ -320,7 +320,7 @@ mod tests {
         let gain: Complex64 = weights
             .iter()
             .zip(steering.iter())
-            .map(|(w, a)| w.conj() * a)
+            .map(|(w, a)| w.conj() * *a)
             .sum();
 
         assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);
@@ -357,7 +357,7 @@ mod tests {
         let gain: Complex64 = weights
             .iter()
             .zip(steering.iter())
-            .map(|(w, a)| w.conj() * a)
+            .map(|(w, a)| w.conj() * *a)
             .sum();
 
         assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);

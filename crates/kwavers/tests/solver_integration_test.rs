@@ -50,7 +50,9 @@ fn test_kspace_solver_init_and_step() {
         }
     }
 
-    solver.fields.p.assign(&source);
+    for (dst, src) in solver.fields.p.iter_mut().zip(source.iter()) {
+        *dst = *src;
+    }
 
     // 6. Run a few steps
     solver.run(10).expect("Failed to run solver");

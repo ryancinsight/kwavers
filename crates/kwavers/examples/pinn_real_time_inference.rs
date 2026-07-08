@@ -7,8 +7,8 @@
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::{
-    BurnLossWeights2D, BurnPINN2DConfig, EdgeRuntime, Geometry2D, JitCompiler, OptimizationLevel,
-    QuantizationScheme, Quantizer,
+    EdgeRuntime, JitCompiler, LossWeights2D, MlQuantizer, OptimizationLevel, PinnConfig2D,
+    QuantizationScheme, WaveGeometry2D,
 };
 #[cfg(feature = "pinn")]
 use std::time::Instant;
@@ -28,10 +28,10 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create a sample PINN model configuration
-    let pinn_config = BurnPINN2DConfig {
+    let pinn_config = PinnConfig2D {
         hidden_layers: vec![100, 100, 100], // Smaller network for real-time
         learning_rate: 1e-3,
-        loss_weights: BurnLossWeights2D {
+        loss_weights: LossWeights2D {
             data: 1.0,
             pde: 1.0,
             boundary: 5.0,
@@ -54,7 +54,7 @@ fn main() -> KwaversResult<()> {
     println!();
 
     // Create geometry for wave equation
-    let _geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+    let _geometry = WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
     println!("🏗️  Geometry: Rectangular domain [0,1] × [0,1]");
     println!();
 
@@ -131,7 +131,7 @@ fn demonstrate_quantization() -> KwaversResult<()> {
     ];
 
     for (name, scheme) in schemes {
-        let _quantizer = Quantizer::new(scheme);
+        let _quantizer = MlQuantizer::new(scheme);
         println!("   ✅ {}: Configured", name);
     }
 

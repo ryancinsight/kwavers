@@ -135,7 +135,9 @@ plotters = { version = "0.3", default-features = false, features = [
     "ttf",
 ] }
 
-burn = { version = "0.19", default-features = false, features = ["std", "ndarray", "autodiff"] }
+coeus-core = { workspace = true }
+coeus-autograd = { workspace = true }
+coeus-tensor = { workspace = true }
 tempfile = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
@@ -163,7 +165,7 @@ async-runtime = ["kwavers-solver/async-runtime"]        # Retained feature gate;
 structured-logging = ["dep:tracing-subscriber"]  # Tracing infrastructure
 zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 142-143 - Physics-Informed Neural Networks
-pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn", "kwavers-diagnostics/pinn"]                            # Physics-informed neural networks (burn is now mandatory via ritk-io transitive dep)
+pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn", "kwavers-diagnostics/pinn"]                            # Physics-informed neural networks
 experimental_neural = ["pinn"]        # Gate experimental neural beamforming atop PINN deps
 # Adaptive Beamforming Refactor - Sprint ADR-001
 legacy_algorithms = []               # Legacy beamforming algorithms (deprecated)

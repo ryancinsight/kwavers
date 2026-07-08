@@ -4,7 +4,7 @@ use super::continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig};
 use super::vector_flow::{VectorFlowEstimator, VectorVelocity};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Continuous-wave spectrum and vector-flow recovery fixture.
 #[derive(Debug, Clone)]

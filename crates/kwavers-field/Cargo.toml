@@ -11,6 +11,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 kwavers-core = { path = "../kwavers-core" }
 kwavers-grid = { path = "../kwavers-grid" }
 ndarray = { version = "0.16", features = ["serde"] }
+leto = { workspace = true }
 num-complex = "0.4"
 
 [dev-dependencies]

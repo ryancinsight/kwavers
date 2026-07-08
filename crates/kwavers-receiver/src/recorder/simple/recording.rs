@@ -1,9 +1,25 @@
 //! Time-step recording for SensorRecorder.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
 
 use super::SensorRecorder;
+
+#[doc(hidden)]
+pub trait PressureSamples3 {
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl PressureSamples3 for ndarray::Array3<f64> {
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
+
+impl PressureSamples3 for leto::Array3<f64> {
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
 
 impl SensorRecorder {
     /// Record one pressure time step at all sensor positions.
@@ -17,7 +33,10 @@ impl SensorRecorder {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn record_step(&mut self, pressure_field: &Array3<f64>) -> KwaversResult<()> {
+    pub fn record_step<P>(&mut self, pressure_field: &P) -> KwaversResult<()>
+    where
+        P: PressureSamples3 + crate::recorder::pressure_statistics::PressureArray3Access,
+    {
         if let Some(ref mut stats) = self.stats {
             stats.update(pressure_field);
         }
@@ -33,7 +52,7 @@ impl SensorRecorder {
 
         if let Some(ref mut pressure) = self.pressure {
             for (row, &(i, j, k)) in self.sensor_indices.iter().enumerate() {
-                pressure[[row, self.next_step]] = pressure_field[[i, j, k]];
+                pressure[[row, self.next_step]] = pressure_field.value_at(i, j, k);
             }
         }
 

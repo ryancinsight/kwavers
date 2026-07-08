@@ -1,6 +1,6 @@
 //! Per-layer and per-tensor quantization operations for [`MlQuantizer`].
 
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use crate::inverse::pinn::ml::quantization::{
@@ -15,7 +15,7 @@ impl MlQuantizer {
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     >(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
     ) -> KwaversResult<Vec<LayerInfo>> {
         let mut layers = Vec::new();
 
@@ -54,7 +54,7 @@ impl MlQuantizer {
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     >(
         &self,
-        _model: &BurnPINN2DWave<B>,
+        _model: &PinnWave2D<B>,
     ) -> KwaversResult<Vec<Vec<f32>>> {
         let mut calibration_data = Vec::new();
 
@@ -73,7 +73,7 @@ impl MlQuantizer {
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     >(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
     ) -> KwaversResult<Vec<QuantizedTensor>>
     where
         B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
@@ -219,7 +219,7 @@ impl MlQuantizer {
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
     >(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
         quantized_weights: &[QuantizedTensor],
     ) -> KwaversResult<QuantizationValidationResult>
     where

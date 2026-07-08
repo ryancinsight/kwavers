@@ -9,24 +9,25 @@ use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 use std::sync::Arc;
 
 /// Spectral solver using FFT-based methods
 pub struct RegionPSTDSolver {
     order: usize,
     grid: Arc<Grid>,
-    k2: Array3<f64>,
-    filter: Array3<f64>,
+    k2: LetoArray3<f64>,
+    filter: LetoArray3<f64>,
     wave_speed: f64,
     prev_field: Array3<f64>,
     has_prev_field: bool,
     fft: Fft3d,
-    field_hat: Array3<Complex64>,
-    lap_hat: Array3<Complex64>,
-    scratch_hat: Array3<Complex64>,
+    field_hat: LetoArray3<Complex64>,
+    lap_hat: LetoArray3<Complex64>,
+    scratch_hat: LetoArray3<Complex64>,
     laplacian: Array3<f64>,
 }
 
@@ -52,10 +53,10 @@ fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
 }
 
 fn fill_laplacian_symbol(
-    k2: &mut Array3<f64>,
-    kx: &Array3<f64>,
-    ky: &Array3<f64>,
-    kz: &Array3<f64>,
+    k2: &mut LetoArray3<f64>,
+    kx: &LetoArray3<f64>,
+    ky: &LetoArray3<f64>,
+    kz: &LetoArray3<f64>,
 ) {
     assert_eq!(
         k2.shape(),
@@ -74,10 +75,10 @@ fn fill_laplacian_symbol(
     );
 
     if let (Some(k2_values), Some(kx_values), Some(ky_values), Some(kz_values)) = (
-        k2.as_slice_memory_order_mut(),
-        kx.as_slice_memory_order(),
-        ky.as_slice_memory_order(),
-        kz.as_slice_memory_order(),
+        k2.as_slice_mut(),
+        kx.as_slice(),
+        ky.as_slice(),
+        kz.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(k2_values, |index, value| {
             let kx = kx_values[index];
@@ -88,7 +89,7 @@ fn fill_laplacian_symbol(
         return;
     }
 
-    let (nx, ny, nz) = k2.dim();
+    let [nx, ny, nz] = k2.shape();
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -102,11 +103,12 @@ fn fill_laplacian_symbol(
 }
 
 fn apply_laplacian_symbol(
-    lap_hat: &mut Array3<Complex64>,
-    field_hat: &Array3<Complex64>,
-    k2: &Array3<f64>,
-    filter: &Array3<f64>,
+    lap_hat: &mut LetoArray3<Complex64>,
+    field_hat: &LetoArray3<Complex64>,
+    k2: &LetoArray3<f64>,
+    filter: &LetoArray3<f64>,
 ) {
+    let [nx, ny, nz] = lap_hat.shape();
     assert_eq!(
         lap_hat.shape(),
         field_hat.shape(),
@@ -124,10 +126,10 @@ fn apply_laplacian_symbol(
     );
 
     if let (Some(lap_values), Some(field_values), Some(k2_values), Some(filter_values)) = (
-        lap_hat.as_slice_memory_order_mut(),
-        field_hat.as_slice_memory_order(),
-        k2.as_slice_memory_order(),
-        filter.as_slice_memory_order(),
+        lap_hat.as_slice_mut(),
+        field_hat.as_slice(),
+        k2.as_slice(),
+        filter.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(lap_values, |index, output| {
             *output =
@@ -136,7 +138,6 @@ fn apply_laplacian_symbol(
         return;
     }
 
-    let (nx, ny, nz) = lap_hat.dim();
     for index in 0..nx * ny * nz {
         let (i, j, k) = dense_indices(index, ny, nz);
         lap_hat[[i, j, k]] =
@@ -155,15 +156,15 @@ impl RegionPSTDSolver {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
         let (kx, ky, kz) = compute_wavenumbers(&grid);
 
-        let mut k2 = Array3::zeros((nx, ny, nz));
+        let mut k2 = LetoArray3::zeros([nx, ny, nz]);
         fill_laplacian_symbol(&mut k2, &kx, &ky, &kz);
 
         let filter = compute_anti_aliasing_filter(&grid, 2.0 / 3.0, order.max(1) as u32);
 
         let complex_zeros = Complex64::new(0.0, 0.0);
-        let field_hat = Array3::from_elem((nx, ny, nz), complex_zeros);
-        let lap_hat = Array3::from_elem((nx, ny, nz), complex_zeros);
-        let scratch_hat = Array3::from_elem((nx, ny, nz), complex_zeros);
+        let field_hat = LetoArray3::from_elem([nx, ny, nz], complex_zeros);
+        let lap_hat = LetoArray3::from_elem([nx, ny, nz], complex_zeros);
+        let scratch_hat = LetoArray3::from_elem([nx, ny, nz], complex_zeros);
         let laplacian = Array3::zeros((nx, ny, nz));
         let prev_field = Array3::zeros((nx, ny, nz));
 
@@ -242,10 +243,23 @@ impl RegionPSTDSolver {
 
         self.wave_speed = c;
 
-        self.fft.forward_into(field, &mut self.field_hat);
+        let field_leto = LetoArray3::from_shape_vec(
+            [field.dim().0, field.dim().1, field.dim().2],
+            field.iter().copied().collect(),
+        )
+        .expect("DG spectral field shape must match its Leto FFT shape");
+        self.fft.forward_into(&field_leto, &mut self.field_hat);
         apply_laplacian_symbol(&mut self.lap_hat, &self.field_hat, &self.k2, &self.filter);
+        let mut laplacian = LetoArray3::<f64>::zeros([field.dim().0, field.dim().1, field.dim().2]);
         self.fft
-            .inverse_into(&self.lap_hat, &mut self.laplacian, &mut self.scratch_hat);
+            .inverse_into(&self.lap_hat, &mut laplacian, &mut self.scratch_hat);
+        for i in 0..field.dim().0 {
+            for j in 0..field.dim().1 {
+                for k in 0..field.dim().2 {
+                    self.laplacian[[i, j, k]] = laplacian[[i, j, k]];
+                }
+            }
+        }
 
         let coeff = (c * dt) * (c * dt);
 

@@ -3,11 +3,11 @@
 //! This module defines the field containers used in elastic wave propagation,
 //! following SOLID principles with clear separation of concerns.
 
-use ndarray::Array3;
-use num_complex::Complex;
+use kwavers_math::fft::Complex64;
+use leto::Array3;
 
 /// Type alias for complex 3D arrays to reduce type complexity
-pub type Complex3D = Array3<Complex<f64>>;
+pub type Complex3D = Array3<Complex64>;
 
 /// Stress field components in 3D elastic media
 /// Follows SOLID principles with single responsibility
@@ -36,12 +36,12 @@ impl StressFields {
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            txx: Array3::zeros((nx, ny, nz)),
-            tyy: Array3::zeros((nx, ny, nz)),
-            tzz: Array3::zeros((nx, ny, nz)),
-            txy: Array3::zeros((nx, ny, nz)),
-            txz: Array3::zeros((nx, ny, nz)),
-            tyz: Array3::zeros((nx, ny, nz)),
+            txx: Array3::<f64>::zeros([nx, ny, nz]),
+            tyy: Array3::<f64>::zeros([nx, ny, nz]),
+            tzz: Array3::<f64>::zeros([nx, ny, nz]),
+            txy: Array3::<f64>::zeros([nx, ny, nz]),
+            txz: Array3::<f64>::zeros([nx, ny, nz]),
+            tyz: Array3::<f64>::zeros([nx, ny, nz]),
         }
     }
 
@@ -61,9 +61,9 @@ impl VelocityFields {
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            vx: Array3::zeros((nx, ny, nz)),
-            vy: Array3::zeros((nx, ny, nz)),
-            vz: Array3::zeros((nx, ny, nz)),
+            vx: Array3::<f64>::zeros([nx, ny, nz]),
+            vy: Array3::<f64>::zeros([nx, ny, nz]),
+            vz: Array3::<f64>::zeros([nx, ny, nz]),
         }
     }
 

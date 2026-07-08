@@ -273,7 +273,7 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
         let r = state.radius;
         let rdot = state.wall_velocity;
 
-        let mut s1 = state.clone();
+        let mut s1 = state;
         let rddot1 = match model.calculate_acceleration(&mut s1, p_acoustic_amplitude, 0.0, t) {
             Ok(a) => a,
             Err(_) => {
@@ -281,7 +281,7 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
             }
         };
 
-        let mut s2 = state.clone();
+        let mut s2 = state;
         s2.radius = r + 0.5 * dt * rdot;
         s2.wall_velocity = rdot + 0.5 * dt * rddot1;
         if s2.radius <= 0.0 {
@@ -295,7 +295,7 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
                 }
             };
 
-        let mut s3 = state.clone();
+        let mut s3 = state;
         s3.radius = r + 0.5 * dt * s2.wall_velocity;
         s3.wall_velocity = rdot + 0.5 * dt * rddot2;
         if s3.radius <= 0.0 {
@@ -309,7 +309,7 @@ fn test_keller_miksis_collapse_time_vs_rayleigh() {
                 }
             };
 
-        let mut s4 = state.clone();
+        let mut s4 = state;
         s4.radius = r + dt * s3.wall_velocity;
         s4.wall_velocity = rdot + dt * rddot3;
         if s4.radius <= 0.0 {

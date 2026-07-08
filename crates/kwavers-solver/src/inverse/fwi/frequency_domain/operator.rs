@@ -24,8 +24,8 @@
 
 use std::fmt::Debug;
 
-use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
+use kwavers_math::fft::Complex64;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;

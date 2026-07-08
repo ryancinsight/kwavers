@@ -7,7 +7,7 @@ use crate::reconstruction::breast_ust_fwi::BreastUstPstdDatasetConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use ndarray::{s, Array3};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 pub(super) fn diagnostics_for_prediction(
     predicted: &Array3<Complex64>,

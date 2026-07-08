@@ -3,7 +3,7 @@
 //! Provides vertex normal computation and incident wave field generation
 //! for boundary element computations.
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Solution of BEM system.
 #[derive(Debug, Clone)]

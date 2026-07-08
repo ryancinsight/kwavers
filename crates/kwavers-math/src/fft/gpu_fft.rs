@@ -56,7 +56,7 @@ pub use apollo::{FftBackend, GpuFft3d, GpuFft3dBuffers, WgpuBackend};
 mod tests {
     use super::{FftBackend, WgpuBackend};
     use crate::fft::{fft_3d_array, Shape3D};
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn try_plan(shape: Shape3D) -> Option<apollo::GpuFft3d> {
         let backend = match WgpuBackend::try_default() {
@@ -80,23 +80,17 @@ mod tests {
         )
     }
 
-    fn leto_field(field: &Array3<f64>) -> leto::Array3<f64> {
-        let (nx, ny, nz) = field.dim();
-        leto::Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
-            .expect("test field must map to Leto storage with identical shape")
-    }
-
     #[test]
     fn apollo_wgpu_fft_matches_cpu_spectrum_for_power_of_two_shape() {
         let shape = Shape3D::new(2, 4, 2).unwrap();
         let Some(plan) = try_plan(shape) else {
             return;
         };
-        let field = Array3::from_shape_fn((shape.nx, shape.ny, shape.nz), |(i, j, k)| {
+        let field = Array3::from_shape_fn([shape.nx, shape.ny, shape.nz], |[i, j, k]| {
             (i as f64 + 1.0) - 0.25 * (j as f64) + 0.125 * (k as f64)
         });
 
-        let gpu = plan.forward(&leto_field(&field));
+        let gpu = plan.forward(&field);
         let cpu = fft_3d_array(&field);
 
         assert_eq!(gpu.len(), 2 * shape.volume());
@@ -122,18 +116,18 @@ mod tests {
         let Some(plan) = try_plan(shape) else {
             return;
         };
-        let field = Array3::from_shape_fn((shape.nx, shape.ny, shape.nz), |(i, j, k)| {
+        let field = Array3::from_shape_fn([shape.nx, shape.ny, shape.nz], |[i, j, k]| {
             ((i * 7 + j * 3 + k) as f64).sin()
         });
         let mut spectrum = vec![0.0_f32; 2 * shape.volume()];
         let mut buffers = apollo::GpuFft3dBuffers::new(&plan);
-        let mut out = leto::Array3::<f64>::from_shape_vec(
+        let mut out = Array3::<f64>::from_shape_vec(
             [shape.nx, shape.ny, shape.nz],
             vec![0.0; shape.volume()],
         )
         .expect("zeroed Leto output must match the plan shape");
 
-        plan.forward_into_with_buffers(&leto_field(&field), &mut spectrum, &mut buffers);
+        plan.forward_into_with_buffers(&field, &mut spectrum, &mut buffers);
         plan.inverse_with_buffers(&spectrum, &mut out, &mut buffers);
 
         for (idx, (actual, expected)) in out

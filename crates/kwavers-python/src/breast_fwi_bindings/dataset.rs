@@ -1,5 +1,6 @@
 //! PyO3 wrapper for PSTD breast-FWI dataset generation.
 
+use super::complex_compat::ec_to_nc3;
 use super::helpers::kwavers_to_py;
 use super::PyMultiRowRingArray;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
@@ -113,7 +114,7 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     )?;
     out.set_item(
         "observed_pressure",
-        dataset.observed_pressure.to_pyarray(py),
+        ec_to_nc3(dataset.observed_pressure).to_pyarray(py),
     )?;
     out.set_item("transmissions", dataset.transmissions)?;
     out.set_item("receivers", dataset.receivers)?;
@@ -125,4 +126,3 @@ pub fn generate_breast_fwi_pstd_dataset<'py>(
     out.set_item("model_family", dataset.model_family)?;
     Ok(out)
 }
-

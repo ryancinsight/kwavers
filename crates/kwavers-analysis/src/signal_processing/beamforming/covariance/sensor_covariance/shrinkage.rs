@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::utils::iterators::apply_inplace;
 use ndarray::Array2;
-use num_complex::Complex64;
 
 pub(super) fn shrinkage_to_identity_real(covariance: &Array2<f64>, alpha: f64) -> Array2<f64> {
     let m = covariance.nrows().max(1);

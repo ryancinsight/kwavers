@@ -2,8 +2,8 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     scattering_increment_diagnostics, BreastUstForwardOperatorPrediction,
     BreastUstReceiverChannelPolicy,
 };
+use kwavers_math::fft::Complex64;
 use ndarray::Array3;
-use num_complex::Complex64;
 
 #[test]
 fn scattering_increment_public_api_identifies_exact_model() {

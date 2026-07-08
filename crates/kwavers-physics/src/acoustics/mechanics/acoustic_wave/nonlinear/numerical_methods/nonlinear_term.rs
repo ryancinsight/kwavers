@@ -3,10 +3,11 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 use kwavers_medium::Medium;
+use leto::Array3 as LetoArray3;
 use ndarray::Array3;
 
 use super::super::wave_model::NonlinearWave;
-use crate::parallel::for_each_indexed_four_mut_ref;
+use super::array_boundary::{leto_real_field, ndarray_real_field};
 
 impl NonlinearWave {
     /// Computes the nonlinear source term for the Westervelt acoustic wave equation.
@@ -44,7 +45,7 @@ impl NonlinearWave {
         let (nx, ny, nz) = pressure.dim();
 
         // Single FFT of pressure — shared by gradient and Laplacian computations.
-        let mut pressure_k = fft_3d_array(pressure);
+        let mut pressure_k = fft_3d_array(&leto_real_field(pressure));
 
         // 2/3-rule dealiasing: zero bins with absolute frequency index > n/3 along
         // each axis. Physical-space products of the resulting bandlimited fields
@@ -58,35 +59,33 @@ impl NonlinearWave {
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
 
-        let mut grad_x_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
-        let mut grad_y_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
-        let mut grad_z_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
-        let mut laplacian_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
+        let mut grad_x_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut grad_y_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut grad_z_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut laplacian_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
 
         // Spectral differentiation in one indexed pass over the filtered spectrum.
-        for_each_indexed_four_mut_ref(
-            grad_x_k.view_mut(),
-            grad_y_k.view_mut(),
-            grad_z_k.view_mut(),
-            laplacian_k.view_mut(),
-            pressure_k.view(),
-            |(i, j, k), gx, gy, gz, lap, &pk| {
-                let kxi = kx_s[i];
-                let kyj = ky_s[j];
-                let kzk = kz_s[k];
-                let k2 = kxi.mul_add(kxi, kyj.mul_add(kyj, kzk * kzk));
-                *gx = pk * Complex::new(0.0, kxi);
-                *gy = pk * Complex::new(0.0, kyj);
-                *gz = pk * Complex::new(0.0, kzk);
-                *lap = pk * (-k2);
-            },
-        );
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let pk = pressure_k[[i, j, k]];
+                    let kxi = kx_s[i];
+                    let kyj = ky_s[j];
+                    let kzk = kz_s[k];
+                    let k2 = kxi.mul_add(kxi, kyj.mul_add(kyj, kzk * kzk));
+                    grad_x_k[[i, j, k]] = pk * Complex::new(0.0, kxi);
+                    grad_y_k[[i, j, k]] = pk * Complex::new(0.0, kyj);
+                    grad_z_k[[i, j, k]] = pk * Complex::new(0.0, kzk);
+                    laplacian_k[[i, j, k]] = pk * (-k2);
+                }
+            }
+        }
 
-        let p_filt = ifft_3d_array(&pressure_k);
-        let grad_x = ifft_3d_array(&grad_x_k);
-        let grad_y = ifft_3d_array(&grad_y_k);
-        let grad_z = ifft_3d_array(&grad_z_k);
-        let laplacian = ifft_3d_array(&laplacian_k);
+        let p_filt = ndarray_real_field(ifft_3d_array(&pressure_k));
+        let grad_x = ndarray_real_field(ifft_3d_array(&grad_x_k));
+        let grad_y = ndarray_real_field(ifft_3d_array(&grad_y_k));
+        let grad_z = ndarray_real_field(ifft_3d_array(&grad_z_k));
+        let laplacian = ndarray_real_field(ifft_3d_array(&laplacian_k));
 
         let mut nonlinear_term = Array3::zeros((nx, ny, nz));
         for i in 0..nx {
