@@ -7,6 +7,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
+use moirai_parallel::ParallelSliceMut;
 use ndarray::{Array3, Array4, Zip};
 use tracing::{error, info, warn};
 
@@ -42,12 +43,23 @@ impl AcousticWaveModel for KuznetsovWave {
             self.compute_rhs(source, medium, t, dt);
             let rhs = &self.workspace.k1;
 
-            Zip::from(&mut pressure_field)
-                .and(&self.pressure_current)
-                .and(rhs)
-                .par_for_each(|p_next, &p_curr, &accel| {
+            {
+                let new_slice = pressure_field
+                    .as_slice_mut()
+                    .expect("pressure_field is contiguous (Array3 subview of C-contiguous Array4)");
+                let curr_slice = self
+                    .pressure_current
+                    .as_slice()
+                    .expect("pressure_current is contiguous");
+                let rhs_slice = rhs
+                    .as_slice()
+                    .expect("rhs is contiguous");
+                new_slice.par_mut().enumerate(|idx, p_next: &mut f64| {
+                    let p_curr = curr_slice[idx];
+                    let accel = rhs_slice[idx];
                     *p_next = (0.5 * dt * dt).mul_add(accel, p_curr);
                 });
+            }
 
             self.workspace.update_time_history(&self.pressure_current);
             self.first_step = false;
@@ -55,13 +67,28 @@ impl AcousticWaveModel for KuznetsovWave {
             self.compute_rhs(source, medium, t, dt);
             let rhs = &self.workspace.k1;
 
-            Zip::from(&mut pressure_field)
-                .and(&self.pressure_current)
-                .and(&self.pressure_prev)
-                .and(rhs)
-                .par_for_each(|p_next, &p_curr, &p_prev, &accel| {
+            {
+                let new_slice = pressure_field
+                    .as_slice_mut()
+                    .expect("pressure_field is contiguous (Array3 subview of C-contiguous Array4)");
+                let curr_slice = self
+                    .pressure_current
+                    .as_slice()
+                    .expect("pressure_current is contiguous");
+                let prev_slice = self
+                    .pressure_prev
+                    .as_slice()
+                    .expect("pressure_prev is contiguous");
+                let rhs_slice = rhs
+                    .as_slice()
+                    .expect("rhs is contiguous");
+                new_slice.par_mut().enumerate(|idx, p_next: &mut f64| {
+                    let p_curr = curr_slice[idx];
+                    let p_prev = prev_slice[idx];
+                    let accel = rhs_slice[idx];
                     *p_next = (dt * dt).mul_add(accel, 2.0f64.mul_add(p_curr, -p_prev));
                 });
+            }
 
             self.pressure_prev.assign(&self.pressure_current);
             self.pressure_current.assign(&pressure_field);
