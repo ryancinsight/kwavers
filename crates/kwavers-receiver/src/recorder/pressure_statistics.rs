@@ -10,6 +10,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
 use leto::Array1;
+use ndarray::Array3 as NdArray3;
 
 #[doc(hidden)]
 pub trait PressureArray3Access {
@@ -25,6 +26,21 @@ impl PressureArray3Access for leto::Array3<f64> {
 
     fn as_slice_opt(&self) -> Option<&[f64]> {
         self.as_slice()
+    }
+
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
+        Box::new(self.iter())
+    }
+}
+
+impl PressureArray3Access for NdArray3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        let dim = self.dim();
+        [dim.0, dim.1, dim.2]
+    }
+
+    fn as_slice_opt(&self) -> Option<&[f64]> {
+        self.as_slice_memory_order()
     }
 
     fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {

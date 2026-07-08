@@ -30,6 +30,37 @@ pub use update::CPMLUpdater;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use ndarray::Array3 as NdArray3;
+
+#[doc(hidden)]
+pub trait CpmlGradientField {
+    fn with_leto_mut<R, F>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut leto::Array3<f64>) -> R;
+}
+
+impl CpmlGradientField for leto::Array3<f64> {
+    fn with_leto_mut<R, F>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut leto::Array3<f64>) -> R,
+    {
+        f(self)
+    }
+}
+
+impl CpmlGradientField for NdArray3<f64> {
+    fn with_leto_mut<R, F>(&mut self, f: F) -> R
+    where
+        F: FnOnce(&mut leto::Array3<f64>) -> R,
+    {
+        let mut gradient: leto::Array3<f64> = self.clone().into();
+        let result = f(&mut gradient);
+        *self = gradient
+            .try_into()
+            .expect("CPML ndarray compatibility requires C-contiguous Leto arrays");
+        result
+    }
+}
 
 /// Main CPML boundary struct that coordinates all components
 #[derive(Debug)]
@@ -94,27 +125,32 @@ impl CPMLBoundary {
     }
 
     /// Updates CPML memory and applies the correction to a pressure gradient field (for velocity update).
-    pub fn update_and_apply_p_gradient_correction(
-        &mut self,
-        gradient: &mut leto::Array3<f64>,
-        component: usize,
-    ) {
-        self.updater
-            .update_p_memory(&mut self.memory, gradient, component, &self.profiles);
-        self.updater
-            .apply_p_correction(gradient, &self.memory, component, &self.profiles);
+    pub fn update_and_apply_p_gradient_correction<G>(&mut self, gradient: &mut G, component: usize)
+    where
+        G: CpmlGradientField,
+    {
+        gradient.with_leto_mut(|gradient| {
+            self.updater
+                .update_p_memory(&mut self.memory, gradient, component, &self.profiles);
+            self.updater
+                .apply_p_correction(gradient, &self.memory, component, &self.profiles);
+        });
     }
 
     /// Updates CPML memory and applies the correction to a velocity gradient field (for pressure update).
-    pub fn update_and_apply_v_gradient_correction(
+    pub fn update_and_apply_v_gradient_correction<G>(
         &mut self,
-        v_gradient: &mut leto::Array3<f64>,
+        v_gradient: &mut G,
         component: usize,
-    ) {
-        self.updater
-            .update_v_memory(&mut self.memory, v_gradient, component, &self.profiles);
-        self.updater
-            .apply_v_correction(v_gradient, &self.memory, component, &self.profiles);
+    ) where
+        G: CpmlGradientField,
+    {
+        v_gradient.with_leto_mut(|v_gradient| {
+            self.updater
+                .update_v_memory(&mut self.memory, v_gradient, component, &self.profiles);
+            self.updater
+                .apply_v_correction(v_gradient, &self.memory, component, &self.profiles);
+        });
     }
 
     /// Get configuration

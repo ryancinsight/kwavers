@@ -164,8 +164,8 @@ impl FwiProcessor {
 
         let density = self.resolved_density(grid)?;
         let medium = HeterogeneousFactory::from_arrays(
-            model.clone(),
-            density,
+            model.clone().into(),
+            density.into(),
             None,
             None, // alpha_power: default 1.0
             None,
@@ -229,8 +229,8 @@ impl FwiProcessor {
 
         let density = self.resolved_density(grid)?;
         let medium = HeterogeneousFactory::from_arrays(
-            model.clone(),
-            density,
+            model.clone().into(),
+            density.into(),
             None,
             None, // alpha_power: default 1.0
             None,

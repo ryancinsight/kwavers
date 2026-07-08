@@ -177,7 +177,7 @@ impl crate::plugin::Plugin for FdtdPlugin {
         .expect("leto pressure field shape must map to ndarray");
         context
             .boundary
-            .apply_acoustic(pressure.view_mut(), grid, solver.time_step_index)?;
+            .apply_acoustic(pressure.view_mut().into(), grid, solver.time_step_index)?;
         for (dst_value, src_value) in solver
             .fields
             .p

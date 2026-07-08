@@ -212,11 +212,19 @@ pub(crate) fn build_simulation_result(
 
     // Sampled statistics
     let (p_max, p_min, p_rms, p_final) = if let Some(ref stats) = result.stats {
+        let p_max_nd: ndarray::Array1<f64> =
+            stats.p_max.clone().try_into().expect("sample p_max must convert");
+        let p_min_nd: ndarray::Array1<f64> =
+            stats.p_min.clone().try_into().expect("sample p_min must convert");
+        let p_rms_nd: ndarray::Array1<f64> =
+            stats.p_rms.clone().try_into().expect("sample p_rms must convert");
+        let p_final_nd: ndarray::Array1<f64> =
+            stats.p_final.clone().try_into().expect("sample p_final must convert");
         (
-            Some(PyArray1::from_owned_array(py, stats.p_max.clone()).unbind()),
-            Some(PyArray1::from_owned_array(py, stats.p_min.clone()).unbind()),
-            Some(PyArray1::from_owned_array(py, stats.p_rms.clone()).unbind()),
-            Some(PyArray1::from_owned_array(py, stats.p_final.clone()).unbind()),
+            Some(PyArray1::from_owned_array(py, p_max_nd).unbind()),
+            Some(PyArray1::from_owned_array(py, p_min_nd).unbind()),
+            Some(PyArray1::from_owned_array(py, p_rms_nd).unbind()),
+            Some(PyArray1::from_owned_array(py, p_final_nd).unbind()),
         )
     } else {
         (None, None, None, None)
@@ -276,16 +284,34 @@ pub(crate) fn build_simulation_result(
     // Velocity statistics
     let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
         if let Some(ref vstats) = result.velocity_stats {
+            let ux_max_nd: ndarray::Array1<f64> =
+                vstats.ux_max.clone().try_into().expect("ux_max must convert");
+            let ux_min_nd: ndarray::Array1<f64> =
+                vstats.ux_min.clone().try_into().expect("ux_min must convert");
+            let ux_rms_nd: ndarray::Array1<f64> =
+                vstats.ux_rms.clone().try_into().expect("ux_rms must convert");
+            let uy_max_nd: ndarray::Array1<f64> =
+                vstats.uy_max.clone().try_into().expect("uy_max must convert");
+            let uy_min_nd: ndarray::Array1<f64> =
+                vstats.uy_min.clone().try_into().expect("uy_min must convert");
+            let uy_rms_nd: ndarray::Array1<f64> =
+                vstats.uy_rms.clone().try_into().expect("uy_rms must convert");
+            let uz_max_nd: ndarray::Array1<f64> =
+                vstats.uz_max.clone().try_into().expect("uz_max must convert");
+            let uz_min_nd: ndarray::Array1<f64> =
+                vstats.uz_min.clone().try_into().expect("uz_min must convert");
+            let uz_rms_nd: ndarray::Array1<f64> =
+                vstats.uz_rms.clone().try_into().expect("uz_rms must convert");
             (
-                Some(PyArray1::from_owned_array(py, vstats.ux_max.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.ux_min.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.ux_rms.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.uy_max.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.uy_min.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.uy_rms.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.uz_max.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.uz_min.clone()).unbind()),
-                Some(PyArray1::from_owned_array(py, vstats.uz_rms.clone()).unbind()),
+                Some(PyArray1::from_owned_array(py, ux_max_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, ux_min_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, ux_rms_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, uy_max_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, uy_min_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, uy_rms_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, uz_max_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, uz_min_nd).unbind()),
+                Some(PyArray1::from_owned_array(py, uz_rms_nd).unbind()),
             )
         } else {
             (None, None, None, None, None, None, None, None, None)

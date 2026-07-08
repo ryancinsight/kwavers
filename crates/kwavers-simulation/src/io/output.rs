@@ -24,6 +24,10 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
 
     match recorder.pressure_data() {
         Some(data) => {
+            let data: ndarray::Array2<f64> = data
+                .clone()
+                .try_into()
+                .expect("pressure recorder data must convert to ndarray");
             let max_steps = recorder.recorded_steps.len().min(data.ncols());
             for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
                 write!(file, "{}", time.time_vector()[t].min(time_val))?;
@@ -56,6 +60,10 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
 
     match recorder.light_data() {
         Some(data) => {
+            let data: ndarray::Array2<f64> = data
+                .clone()
+                .try_into()
+                .expect("light recorder data must convert to ndarray");
             let max_steps = recorder.recorded_steps.len().min(data.ncols());
             for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
                 write!(file, "{}", time.time_vector()[t].min(time_val))?;
@@ -83,6 +91,10 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
     writeln!(file, "Metric,Value")?;
 
     if let Some((step, fields)) = recorder.fields_snapshots.last() {
+        let fields: ndarray::Array4<f64> = fields
+            .clone()
+            .try_into()
+            .expect("field snapshots must convert to ndarray");
         let pressure: ndarray::ArrayView3<f64> =
             fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
         let light: ndarray::ArrayView3<f64> = fields.index_axis(Axis(0), LIGHT_IDX);

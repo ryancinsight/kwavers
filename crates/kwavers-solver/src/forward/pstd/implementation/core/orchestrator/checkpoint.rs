@@ -44,7 +44,7 @@ impl PSTDSolver {
             .sensor_recorder
             .checkpoint_state_view()
             .map_or((None, 0, 0), |(view, ns, es)| {
-                (Some(view.to_owned()), ns, es)
+                (Some(view.to_contiguous()), ns, es)
             });
 
         // Zero-clone: serialize directly from borrowed solver field references.
@@ -53,6 +53,11 @@ impl PSTDSolver {
         let rhox = leto_to_ndarray(&self.rhox);
         let rhoy = leto_to_ndarray(&self.rhoy);
         let rhoz = leto_to_ndarray(&self.rhoz);
+        let sensor_data_nd = sensor_data
+            .as_ref()
+            .map(|data| ndarray::Array2::try_from(data.clone()))
+            .transpose()
+            .map_err(|e| KwaversError::InternalError(format!("checkpoint sensor conversion failed: {e}")))?;
         PSTDCheckpoint::save_borrowed(
             path,
             self.grid.nx,
@@ -68,7 +73,7 @@ impl PSTDSolver {
             &rhox,
             &rhoy,
             &rhoz,
-            sensor_data.as_ref(),
+            sensor_data_nd.as_ref(),
             sensor_next_step,
             sensor_expected_steps,
         )
@@ -136,7 +141,7 @@ impl PSTDSolver {
 
         if let Some(sensor_data) = ckpt.sensor_data {
             self.sensor_recorder
-                .restore_from_checkpoint(sensor_data, ckpt.sensor_next_step)?;
+                .restore_from_checkpoint(sensor_data.into(), ckpt.sensor_next_step)?;
         }
 
         let _ = std::fs::remove_file(path);
@@ -144,6 +149,9 @@ impl PSTDSolver {
         for _ in 0..remaining_steps {
             self.step_forward()?;
         }
-        Ok(self.sensor_recorder.extract_pressure_data())
+        Ok(self
+            .sensor_recorder
+            .extract_pressure_data()
+            .and_then(|data| data.try_into().ok()))
     }
 }

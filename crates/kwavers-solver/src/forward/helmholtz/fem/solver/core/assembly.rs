@@ -22,13 +22,17 @@ impl FemHelmholtzSolver {
             let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut m_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut rhs_global = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
+            let mut rhs_boundary = rhs_global.clone().into();
 
             self.boundary_manager.apply_all(
                 &mut k_global,
                 &mut m_global,
-                &mut rhs_global,
+                &mut rhs_boundary,
                 self.config.wavenumber,
             )?;
+            rhs_global = rhs_boundary.try_into().map_err(|e| {
+                KwaversError::InternalError(format!("FEM RHS conversion failed: {e}"))
+            })?;
 
             self.system_matrix = k_global;
             self.rhs = rhs_global;
@@ -61,13 +65,17 @@ impl FemHelmholtzSolver {
 
         self.system_matrix = k_global;
         self.rhs = rhs_global;
+        let mut rhs_boundary = self.rhs.clone().into();
 
         self.boundary_manager.apply_all(
             &mut self.system_matrix,
             &mut m_global,
-            &mut self.rhs,
+            &mut rhs_boundary,
             self.config.wavenumber,
         )?;
+        self.rhs = rhs_boundary.try_into().map_err(|e| {
+            KwaversError::InternalError(format!("FEM RHS conversion failed: {e}"))
+        })?;
 
         Ok(())
     }

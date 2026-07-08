@@ -65,23 +65,27 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                     .rows()
                     .into_iter()
                     .map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))),
-            ),
+            )
+            .into(),
             p_min: ndarray::Array1::from_iter(
                 sensor_data
                     .rows()
                     .into_iter()
                     .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b))),
-            ),
+            )
+            .into(),
             p_rms: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| {
                 let sq: f64 = row.iter().map(|v| v * v).sum();
                 (sq / n_cols as f64).sqrt()
-            })),
+            }))
+            .into(),
             p_final: ndarray::Array1::from_iter(
                 sensor_data
                     .rows()
                     .into_iter()
                     .map(|row| row[n_cols.saturating_sub(1)]),
-            ),
+            )
+            .into(),
         })
     } else {
         None

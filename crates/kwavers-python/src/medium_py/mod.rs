@@ -67,8 +67,8 @@ impl Medium {
 
         let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
         let mut het = HeterogeneousMedium::new_acoustic_only(nx, ny, nz, true);
-        het.sound_speed = c_arr;
-        het.density = rho_arr;
+        het.sound_speed = c_arr.into();
+        het.density = rho_arr.into();
 
         if let Some(abs) = absorption {
             let abs_arr = abs.as_array().to_owned();
@@ -77,13 +77,12 @@ impl Medium {
                     "absorption shape must match sound_speed shape",
                 ));
             }
-            het.absorption = abs_arr;
+            het.absorption = abs_arr.into();
         }
 
         if let Some(py_ap) = alpha_power {
-            use ndarray::Array3 as A3;
             if let Ok(scalar) = py_ap.extract::<f64>() {
-                het.alpha_power = A3::from_elem((nx, ny, nz), scalar);
+                het.alpha_power = ndarray::Array3::from_elem((nx, ny, nz), scalar).into();
             } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
                 let ap_arr = arr.as_array().to_owned();
                 if ap_arr.shape() != [nx, ny, nz] {
@@ -91,7 +90,7 @@ impl Medium {
                         "alpha_power shape must match sound_speed shape",
                     ));
                 }
-                het.alpha_power = ap_arr;
+                het.alpha_power = ap_arr.into();
             } else {
                 return Err(PyValueError::new_err(
                     "alpha_power must be a float or a 3D ndarray matching sound_speed shape",
@@ -106,7 +105,7 @@ impl Medium {
                     "nonlinearity shape must match sound_speed shape",
                 ));
             }
-            het.nonlinearity = nl_arr;
+            het.nonlinearity = nl_arr.into();
         }
 
         Ok(Medium {
@@ -189,11 +188,16 @@ impl Medium {
         density: PyReadonlyArray3<f64>,
         reference_frequency: f64,
     ) -> PyResult<Self> {
-        let cp = c_compression.as_array();
-        let cs = c_shear.as_array();
-        let rho = density.as_array();
+        let cp: leto::Array3<f64> = c_compression.as_array().to_owned().into();
+        let cs: leto::Array3<f64> = c_shear.as_array().to_owned().into();
+        let rho: leto::Array3<f64> = density.as_array().to_owned().into();
 
-        let medium = HeterogeneousFactory::from_elastic_arrays(cp, cs, rho, reference_frequency)
+        let medium = HeterogeneousFactory::from_elastic_arrays(
+            cp.view(),
+            cs.view(),
+            rho.view(),
+            reference_frequency,
+        )
             .map_err(PyValueError::new_err)?;
 
         Ok(Medium {

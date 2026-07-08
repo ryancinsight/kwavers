@@ -319,36 +319,43 @@ pub(crate) fn extract_result(
     let full_data = solver
         .sensor_recorder
         .recorded_pressure_view()
+        .and_then(|d| d.try_into().ok())
         .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
     let sensor_data = trim_initial_recorder_view(full_data, time_steps, record_start_index);
 
     let ux_data = solver
         .sensor_recorder
         .recorded_ux_view()
+        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let uy_data = solver
         .sensor_recorder
         .recorded_uy_view()
+        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let uz_data = solver
         .sensor_recorder
         .recorded_uz_view()
+        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let ix_data = solver
         .sensor_recorder
         .recorded_ix_view()
+        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let iy_data = solver
         .sensor_recorder
         .recorded_iy_view()
+        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let iz_data = solver
         .sensor_recorder
         .recorded_iz_view()
+        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
-    let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
-    let i_avg_z = solver.sensor_recorder.extract_i_avg_z();
+    let i_avg_x = solver.sensor_recorder.extract_i_avg_x().and_then(|d| d.try_into().ok());
+    let i_avg_y = solver.sensor_recorder.extract_i_avg_y().and_then(|d| d.try_into().ok());
+    let i_avg_z = solver.sensor_recorder.extract_i_avg_z().and_then(|d| d.try_into().ok());
     let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
     let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 

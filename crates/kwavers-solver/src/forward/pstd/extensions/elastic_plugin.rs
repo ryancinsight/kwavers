@@ -118,7 +118,7 @@ impl Plugin for MechanicalStressPlugin {
         let elastic_medium = ElasticPstdMedium {
             lame_lambda: medium.lame_lambda_array().into(),
             lame_mu: medium.lame_mu_array().into(),
-            density: medium.density_array().to_owned().into(),
+            density: medium.density_array().to_contiguous(),
         };
         self.orchestrator = Some(ElasticPstdOrchestrator::new(grid, elastic_medium, self.dt)?);
         self.state = PluginState::Initialized;

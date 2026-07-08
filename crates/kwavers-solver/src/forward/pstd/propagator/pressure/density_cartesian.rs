@@ -1,7 +1,7 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
-use leto::Array3;
+use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use ndarray::{Array1, Array3 as NdArray3};
 
@@ -25,7 +25,7 @@ trait DenseRealField {
     fn value(&self, i: usize, j: usize, k: usize) -> f64;
 }
 
-impl DenseRealField for Array3<f64> {
+impl DenseRealField for LetoArray3<f64> {
     fn shape3(&self) -> [usize; 3] {
         self.shape()
     }
@@ -74,9 +74,9 @@ fn axis_index(axis: SpectralAxis, i: usize, j: usize, k: usize) -> usize {
 }
 
 fn apply_shifted_kappa(
-    grad_k: &mut Array3<Complex64>,
-    spectrum: &Array3<Complex64>,
-    kappa: &Array3<f64>,
+    grad_k: &mut LetoArray3<Complex64>,
+    spectrum: &LetoArray3<Complex64>,
+    kappa: &LetoArray3<f64>,
     shift: &Array1<Complex64>,
     axis: SpectralAxis,
 ) {
@@ -118,11 +118,11 @@ fn apply_shifted_kappa(
 }
 
 fn compute_nonlinear_density_coefficient(
-    coefficient: &mut Array3<f64>,
-    rho0: &NdArray3<f64>,
-    rhox: &Array3<f64>,
-    rhoy: &Array3<f64>,
-    rhoz: &Array3<f64>,
+    coefficient: &mut LetoArray3<f64>,
+    rho0: &LetoArray3<f64>,
+    rhox: &LetoArray3<f64>,
+    rhoy: &LetoArray3<f64>,
+    rhoz: &LetoArray3<f64>,
 ) {
     assert_eq!(
         coefficient.shape(),
@@ -153,7 +153,7 @@ fn compute_nonlinear_density_coefficient(
         Some(rz_values),
     ) = (
         coefficient.as_slice_mut(),
-        rho0.as_slice_memory_order(),
+        rho0.as_slice(),
         rhox.as_slice(),
         rhoy.as_slice(),
         rhoz.as_slice(),
@@ -181,8 +181,8 @@ fn compute_nonlinear_density_coefficient(
 }
 
 fn update_density_fused(
-    density: &mut Array3<f64>,
-    divergence: &Array3<f64>,
+    density: &mut LetoArray3<f64>,
+    divergence: &LetoArray3<f64>,
     coefficient: &impl DenseRealField,
     pml: &[f64],
     axis: SpectralAxis,
@@ -227,8 +227,8 @@ fn update_density_fused(
 }
 
 fn update_density_unfused(
-    density: &mut Array3<f64>,
-    divergence: &Array3<f64>,
+    density: &mut LetoArray3<f64>,
+    divergence: &LetoArray3<f64>,
     coefficient: &impl DenseRealField,
     dt: f64,
 ) {

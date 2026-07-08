@@ -1,7 +1,7 @@
 //! Sensor data extraction methods for `ElasticWaveSolver`.
 
 use super::super::definition::ElasticWaveSolver;
-use ndarray::{Array2, ArrayView2};
+use leto::{Array2, ArrayView2};
 
 /// Per-component recorded sensor traces `(x, y, z)`, each `Some` when the
 /// corresponding component buffer was allocated; shape `(n_sensors, steps)`.

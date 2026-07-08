@@ -36,7 +36,9 @@ impl crate::interface::Solver for PSTDSolver {
     }
 
     fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
-        self.sensor_recorder.extract_pressure_data()
+        self.sensor_recorder
+            .extract_pressure_data()
+            .and_then(|data| data.try_into().ok())
     }
 
     fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {

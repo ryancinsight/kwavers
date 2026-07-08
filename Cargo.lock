@@ -4592,6 +4592,7 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
+ "ndarray",
  "serde",
 ]
 
@@ -4878,6 +4879,7 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
+ "ndarray",
  "serde",
  "serde_json",
 ]
@@ -5005,6 +5007,7 @@ dependencies = [
  "kwavers-solver",
  "kwavers-source",
  "kwavers-transducer",
+ "leto",
  "log",
  "moirai-parallel",
  "ndarray",

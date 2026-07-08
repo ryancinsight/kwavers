@@ -5,11 +5,10 @@ use crate::signal_processing::beamforming::narrowband::{
     subspace_spatial_spectrum_point, SubspaceMethod, SubspaceSpectrumConfig,
 };
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::apply_inplace;
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_transducer::passive_acoustic_mapping::geometry::PamArrayGeometry;
-use ndarray::{Array3, Axis};
+use ndarray::Array3;
 
 #[derive(Debug)]
 pub struct PassiveAcousticMapper {
@@ -52,16 +51,21 @@ impl PassiveAcousticMapper {
         let delays = self
             .beamformer
             .compute_delays(config.beamforming.focal_point);
+        let sensor_data_leto: leto::Array3<f64> = sensor_data.clone().into();
 
         let beamformed = match config.beamforming.method {
             PamBeamformingMethod::DelayAndSum => {
                 let weights = vec![1.0; self.beamformer.num_sensors()];
                 self.beamformer
-                    .delay_and_sum_with(sensor_data, sample_rate, &delays, &weights)?
+                    .delay_and_sum_with(&sensor_data_leto, sample_rate, &delays, &weights)?
+                    .try_into()
+                    .expect("delay-and-sum output must convert to ndarray")
             }
             PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } => self
                 .beamformer
-                .mvdr_unsteered_weights_time_series(sensor_data, diagonal_loading)?,
+                .mvdr_unsteered_weights_time_series(&sensor_data_leto, diagonal_loading)?
+                .try_into()
+                .expect("MVDR output must convert to ndarray"),
             // Subspace localizers (Theorem 22.2) produce a per-focal-point
             // localization power, not a beamformed time series, so they bypass the
             // time-series cavitation-spectrum processor and return the map directly.
@@ -86,22 +90,22 @@ impl PassiveAcousticMapper {
             PamBeamformingMethod::TimeExposureAcoustics => {
                 let weights = vec![1.0; self.beamformer.num_sensors()];
                 let das = self.beamformer.delay_and_sum_with(
-                    sensor_data,
+                    &sensor_data_leto,
                     sample_rate,
                     &delays,
                     &weights,
                 )?;
-
-                let mut squared = das;
-                apply_inplace(&mut squared, |x| x * x);
-
-                let integrated = squared.sum_axis(Axis(2));
-                let (nx, ny) = (integrated.shape()[0], integrated.shape()[1]);
+                let [nx, ny, nt] = das.shape();
 
                 let mut tea = Array3::<f64>::zeros((nx, ny, 1));
                 for ix in 0..nx {
                     for iy in 0..ny {
-                        tea[[ix, iy, 0]] = integrated[[ix, iy]];
+                        let mut integrated = 0.0;
+                        for it in 0..nt {
+                            let v = das[[ix, iy, it]];
+                            integrated += v * v;
+                        }
+                        tea[[ix, iy, 0]] = integrated;
                     }
                 }
 

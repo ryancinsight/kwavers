@@ -17,7 +17,7 @@ use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::StaggeredGridOperator;
-use kwavers_medium::{MaterialFields, Medium};
+use kwavers_medium::{material_fields::GenericMaterialFields, Medium};
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::grid_source::GridSource;
@@ -134,7 +134,10 @@ impl GenericFdtdSolver<Array3<f64>> {
         // Initialize fields
         let shape = (grid.nx, grid.ny, grid.nz);
         let mut fields = WaveFields::new(shape);
-        let mut materials = MaterialFields::new(shape);
+        let mut materials = GenericMaterialFields {
+            rho0: Array3::zeros(shape),
+            c0: Array3::zeros(shape),
+        };
 
         // Pre-compute material properties
         for k in 0..grid.nz {
@@ -184,7 +187,11 @@ impl GenericFdtdSolver<Array3<f64>> {
             && !source_handler.has_initial_velocity()
             && matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral)
         {
-            let rho0_ref = materials.rho0.mean().unwrap_or(DENSITY_WATER_NOMINAL);
+            let rho0_ref = if materials.rho0.is_empty() {
+                DENSITY_WATER_NOMINAL
+            } else {
+                materials.rho0.iter().copied().sum::<f64>() / materials.rho0.len() as f64
+            };
             let Some(kspace_ops) = kspace_ops.as_mut() else {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "kspace_correction".to_owned(),

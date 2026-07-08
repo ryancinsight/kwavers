@@ -195,15 +195,20 @@ impl PSTDSolver {
         let [nx, ny, nz] = self.fields.p.shape();
         match self.alpha_np_m.as_ref() {
             None => Array3::zeros((nx, ny, nz)),
-            Some(alpha) => acoustic_heat_source(
-                &self.fields.p,
-                &self.fields.ux,
-                &self.fields.uy,
-                &self.fields.uz,
-                &self.materials.rho0,
-                &self.materials.c0,
-                alpha,
-            ),
+            Some(alpha) => {
+                let alpha_leto = alpha.clone().into();
+                acoustic_heat_source(
+                    &self.fields.p,
+                    &self.fields.ux,
+                    &self.fields.uy,
+                    &self.fields.uz,
+                    &self.materials.rho0,
+                    &self.materials.c0,
+                    &alpha_leto,
+                )
+                .try_into()
+                .expect("thermal heat source must convert to ndarray")
+            }
         }
     }
 
@@ -265,6 +270,9 @@ impl PSTDSolver {
             }
         }
 
-        Ok(self.sensor_recorder.extract_pressure_data())
+        Ok(self
+            .sensor_recorder
+            .extract_pressure_data()
+            .and_then(|data| data.try_into().ok()))
     }
 }

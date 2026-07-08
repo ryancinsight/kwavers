@@ -68,16 +68,20 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         Some(SampledStatistics {
             p_max: ndarray::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
-            ),
+            )
+            .into(),
             p_min: ndarray::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
-            ),
+            )
+            .into(),
             p_rms: ndarray::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
-            ),
+            )
+            .into(),
             p_final: ndarray::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
-            ),
+            )
+            .into(),
         })
     } else {
         None

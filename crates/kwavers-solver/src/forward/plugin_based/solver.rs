@@ -215,7 +215,8 @@ impl PluginBasedSolver {
             if step % 10 == 0 {
                 if let Some(ref mut recorder) = self.recorder {
                     if let Some(data) = self.field_registry.data() {
-                        recorder.record(data, step)?;
+                        let fields = data.clone().into();
+                        recorder.record(&fields, step)?;
                     }
                 }
             }
@@ -282,7 +283,7 @@ impl PluginBasedSolver {
             .get_field_mut(UnifiedFieldType::Pressure)
         {
             self.boundary
-                .apply_acoustic(pressure, &self.grid, self.current_step)?;
+                .apply_acoustic(pressure.into(), &self.grid, self.current_step)?;
         }
 
         self.current_step += 1;

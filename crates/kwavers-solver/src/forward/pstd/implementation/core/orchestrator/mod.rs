@@ -228,19 +228,25 @@ impl PSTDSolver {
 
     #[must_use]
     pub fn extract_pressure_data(&self) -> Option<Array2<f64>> {
-        self.sensor_recorder.extract_pressure_data()
+        self.sensor_recorder
+            .extract_pressure_data()
+            .and_then(|data| data.try_into().ok())
     }
 
     /// Borrow the full allocated sensor pressure buffer without cloning.
     #[must_use]
     pub fn pressure_data_view(&self) -> Option<ArrayView2<'_, f64>> {
-        self.sensor_recorder.pressure_data_view()
+        self.sensor_recorder
+            .pressure_data_view()
+            .and_then(|view| view.try_into().ok())
     }
 
     /// Borrow only recorded sensor pressure samples without cloning.
     #[must_use]
     pub fn recorded_pressure_view(&self) -> Option<ArrayView2<'_, f64>> {
-        self.sensor_recorder.recorded_pressure_view()
+        self.sensor_recorder
+            .recorded_pressure_view()
+            .and_then(|view| view.try_into().ok())
     }
 
     #[must_use]
@@ -290,7 +296,10 @@ impl PSTDSolver {
         for _ in 0..steps {
             self.step_forward()?;
         }
-        Ok(self.sensor_recorder.extract_pressure_data())
+        Ok(self
+            .sensor_recorder
+            .extract_pressure_data()
+            .and_then(|data| data.try_into().ok()))
     }
 }
 

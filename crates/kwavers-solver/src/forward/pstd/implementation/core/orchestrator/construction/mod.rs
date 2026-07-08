@@ -313,7 +313,10 @@ impl PSTDSolver {
             // (Opt-8) — all three axes are processed sequentially, one buffer suffices.
             ux_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
             grad_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
-            materials: MaterialFields { rho0, c0 },
+            materials: MaterialFields {
+                rho0: rho0.into(),
+                c0: c0.into(),
+            },
             bon,
             absorption,
             k_mag_half,

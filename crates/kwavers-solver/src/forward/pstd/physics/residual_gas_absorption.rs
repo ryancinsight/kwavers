@@ -102,7 +102,7 @@ fn multiply_spectral_shape(
 
 fn apply_residual_gas_loss(
     pressure: &mut Array3<f64>,
-    c0: &ndarray::Array3<f64>,
+    c0: &Array3<f64>,
     magnitude: &Array3<f64>,
     loss: &Array3<f64>,
     dt: f64,
@@ -125,7 +125,7 @@ fn apply_residual_gas_loss(
 
     if let (Some(pressure_values), Some(c0_values), Some(magnitude_values), Some(loss_values)) = (
         pressure.as_slice_mut(),
-        c0.as_slice_memory_order(),
+        c0.as_slice(),
         magnitude.as_slice(),
         loss.as_slice(),
     ) {
@@ -148,7 +148,7 @@ fn apply_residual_gas_loss(
 
 fn apply_residual_gas_dispersion(
     pressure: &mut Array3<f64>,
-    c0: &ndarray::Array3<f64>,
+    c0: &Array3<f64>,
     scale: &Array3<f64>,
     dispersion: &Array3<f64>,
 ) {
@@ -170,7 +170,7 @@ fn apply_residual_gas_dispersion(
 
     if let (Some(pressure_values), Some(c0_values), Some(scale_values), Some(dispersion_values)) = (
         pressure.as_slice_mut(),
-        c0.as_slice_memory_order(),
+        c0.as_slice(),
         scale.as_slice(),
         dispersion.as_slice(),
     ) {

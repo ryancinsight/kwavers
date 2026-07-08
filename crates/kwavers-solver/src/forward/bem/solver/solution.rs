@@ -5,7 +5,7 @@ use crate::forward::bem::{
     integrals::{compute_nearfield_integrals, compute_nonsingular_integrals},
 };
 use kwavers_boundary::BemBoundaryManager;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::sparse::{
     solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };
@@ -148,17 +148,27 @@ impl BemSolver {
             .assemble_bem_system(h_matrix, g_matrix, wavenumber)?;
 
         if let Some(sources) = source_terms {
-            b_vector += sources;
+            for (dst, src) in b_vector.iter_mut().zip(sources.iter()) {
+                *dst += *src;
+            }
         }
 
-        let x = self.solve_bem_system(&a_matrix, &b_vector)?;
+        let b_vector_nd: Array1<Complex64> = b_vector
+            .try_into()
+            .map_err(|e| KwaversError::InternalError(format!("BEM RHS conversion failed: {e}")))?;
+        let x = self.solve_bem_system(&a_matrix, &b_vector_nd)?;
+        let x_leto = x.clone().into();
 
         let (boundary_pressure, boundary_velocity) =
-            self.boundary_manager.reconstruct_solution(&x, wavenumber);
+            self.boundary_manager.reconstruct_solution(&x_leto, wavenumber);
 
         Ok(BemSolution {
-            boundary_pressure,
-            boundary_velocity,
+            boundary_pressure: boundary_pressure.try_into().map_err(|e| {
+                KwaversError::InternalError(format!("BEM pressure conversion failed: {e}"))
+            })?,
+            boundary_velocity: boundary_velocity.try_into().map_err(|e| {
+                KwaversError::InternalError(format!("BEM velocity conversion failed: {e}"))
+            })?,
             wavenumber,
         })
     }

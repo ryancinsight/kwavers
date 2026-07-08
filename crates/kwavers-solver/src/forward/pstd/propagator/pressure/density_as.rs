@@ -213,6 +213,7 @@ impl PSTDSolver {
 
         let ux = leto_view3(&self.fields.ux);
         let uz = leto_view3(&self.fields.uz);
+        let rho0 = leto_view3(&self.materials.rho0);
         ctx.compute_density_divs(ux.slice(s![.., 0, ..]), uz.slice(s![.., 0, ..]));
 
         // Populate the pre-allocated coefficient scratch (no heap allocation).
@@ -224,12 +225,12 @@ impl PSTDSolver {
             let rhoz = leto_view3(&self.rhoz);
             compute_axisymmetric_coefficient(
                 &mut ctx.coef,
-                self.materials.rho0.slice(s![.., 0, ..]),
+                rho0.slice(s![.., 0, ..]),
                 rhox.slice(s![.., 0, ..]),
                 rhoz.slice(s![.., 0, ..]),
             );
         } else {
-            ctx.coef.assign(&self.materials.rho0.slice(s![.., 0, ..]));
+            ctx.coef.assign(&rho0.slice(s![.., 0, ..]));
         }
 
         if use_fused {

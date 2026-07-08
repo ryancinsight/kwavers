@@ -223,8 +223,8 @@ fn run_pstd_transmit(
     )?;
     let density = Array3::from_elem((nx, ny, nz), config.density_kg_m3);
     let medium = HeterogeneousFactory::from_arrays(
-        sound_speed_m_s.clone(),
-        density,
+        sound_speed_m_s.clone().into(),
+        density.into(),
         None,
         None,
         None,

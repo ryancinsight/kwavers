@@ -62,7 +62,7 @@ fn build_weighted_divergence(
     div_x: &LetoArray3<f64>,
     div_y: &LetoArray3<f64>,
     div_z: &LetoArray3<f64>,
-    rho0: &Array3<f64>,
+    rho0: &LetoArray3<f64>,
 ) {
     assert_eq!(
         output.shape(),
@@ -90,7 +90,7 @@ fn build_weighted_divergence(
         div_x.as_slice(),
         div_y.as_slice(),
         div_z.as_slice(),
-        rho0.as_slice_memory_order(),
+        rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
             *output = rho_values[index] * (x_values[index] + y_values[index] + z_values[index]);
@@ -198,7 +198,7 @@ fn accumulate_stratum(
 
 fn apply_pressure_absorption(
     pressure: &mut LetoArray3<f64>,
-    c0: &Array3<f64>,
+    c0: &LetoArray3<f64>,
     tau: &Array3<f64>,
     eta: &Array3<f64>,
     l1: &LetoArray3<f64>,
@@ -239,7 +239,7 @@ fn apply_pressure_absorption(
         Some(l2_values),
     ) = (
         pressure.as_slice_mut(),
-        c0.as_slice_memory_order(),
+        c0.as_slice(),
         tau.as_slice_memory_order(),
         eta.as_slice_memory_order(),
         l1.as_slice(),

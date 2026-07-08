@@ -50,8 +50,14 @@ impl DomainAnalyzer {
         // Check density variations relative to mean
         {
             let density = medium.density_array();
-            let mean = density.mean().unwrap_or(1.0);
-            for ((i, j, k), val) in density.indexed_iter() {
+            let count = density.shape().iter().product::<usize>();
+            let mean = if count == 0 {
+                1.0
+            } else {
+                density.iter().copied().sum::<f64>() / count as f64
+            };
+            for (index, val) in density.indexed_iter() {
+                let [i, j, k] = index;
                 let variation = (val - mean).abs() / mean;
                 homogeneity[[i, j, k]] = 1.0 - variation.min(1.0);
             }

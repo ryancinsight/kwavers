@@ -48,18 +48,14 @@ impl Simulation {
                 (None, None, None, None)
             };
 
-        let p_max = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
-        let p_min = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
-        let p_rms = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
-        let p_final = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
+        let to_py_array1 = |arr: &leto::Array1<f64>| {
+            let nd: ndarray::Array1<f64> = arr.clone().try_into().expect("sample stats must convert");
+            PyArray1::from_owned_array(py, nd).into()
+        };
+        let p_max = stats.as_ref().map(|s| to_py_array1(&s.p_max));
+        let p_min = stats.as_ref().map(|s| to_py_array1(&s.p_min));
+        let p_rms = stats.as_ref().map(|s| to_py_array1(&s.p_rms));
+        let p_final = stats.as_ref().map(|s| to_py_array1(&s.p_final));
 
         let ux = ux_data.map(|d| PyArray2::from_owned_array(py, d).into());
         let uy = uy_data.map(|d| PyArray2::from_owned_array(py, d).into());
@@ -74,15 +70,15 @@ impl Simulation {
         let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
             if let Some(vs) = velocity_stats {
                 (
-                    Some(PyArray1::from_owned_array(py, vs.ux_max).into()),
-                    Some(PyArray1::from_owned_array(py, vs.ux_min).into()),
-                    Some(PyArray1::from_owned_array(py, vs.ux_rms).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uy_max).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uy_min).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uy_rms).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uz_max).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uz_min).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uz_rms).into()),
+                    Some(to_py_array1(&vs.ux_max)),
+                    Some(to_py_array1(&vs.ux_min)),
+                    Some(to_py_array1(&vs.ux_rms)),
+                    Some(to_py_array1(&vs.uy_max)),
+                    Some(to_py_array1(&vs.uy_min)),
+                    Some(to_py_array1(&vs.uy_rms)),
+                    Some(to_py_array1(&vs.uz_max)),
+                    Some(to_py_array1(&vs.uz_min)),
+                    Some(to_py_array1(&vs.uz_rms)),
                 )
             } else {
                 (None, None, None, None, None, None, None, None, None)

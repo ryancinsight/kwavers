@@ -5,7 +5,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3};
+use ndarray::Array1;
 
 const DENSE_IVP_CHUNK: usize = 4096;
 
@@ -14,7 +14,7 @@ struct DensitySeedFields<'a> {
     rhoy: &'a mut LetoArray3<f64>,
     rhoz: &'a mut LetoArray3<f64>,
     pressure: &'a LetoArray3<f64>,
-    c0: &'a Array3<f64>,
+    c0: &'a LetoArray3<f64>,
 }
 
 struct DensitySeedConfig {
@@ -202,14 +202,14 @@ fn write_spectral_gradient_axis(
     }
 }
 
-fn scale_velocity_by_density(velocity: &mut LetoArray3<f64>, rho0: &Array3<f64>, half_dt: f64) {
+fn scale_velocity_by_density(velocity: &mut LetoArray3<f64>, rho0: &LetoArray3<f64>, half_dt: f64) {
     assert_eq!(
         velocity.shape(),
         rho0.shape(),
         "invariant: PSTD IVP velocity shape matches density shape"
     );
 
-    let used_dense_path = match (velocity.as_slice_mut(), rho0.as_slice_memory_order()) {
+    let used_dense_path = match (velocity.as_slice_mut(), rho0.as_slice()) {
         (Some(velocity_values), Some(rho_values)) => {
             enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
                 *velocity *= half_dt / rho_values[index];

@@ -172,7 +172,16 @@ impl TherapyIntegrationOrchestrator {
         let impedance = {
             let rho = self.medium.density_array();
             let c = self.medium.sound_speed_array();
-            &rho * &c
+            let shape = rho.shape();
+            let mut impedance = Array3::zeros((shape[0], shape[1], shape[2]));
+            for k in 0..shape[2] {
+                for j in 0..shape[1] {
+                    for i in 0..shape[0] {
+                        impedance[[i, j, k]] = rho[[i, j, k]] * c[[i, j, k]];
+                    }
+                }
+            }
+            impedance
         };
 
         // Record intensity for thermal-dose accumulation tracking; return value not used

@@ -12,6 +12,12 @@ fn ndarray_from_leto3(arr: &leto::Array3<f64>) -> ndarray::Array3<f64> {
         .expect("elastic initial field shape must match contiguous ndarray storage")
 }
 
+fn ndarray_from_leto2(arr: leto::Array2<f64>) -> ndarray::Array2<f64> {
+    let [rows, cols] = arr.shape();
+    ndarray::Array2::from_shape_vec((rows, cols), arr.into_vec())
+        .expect("elastic sensor data shape must match contiguous ndarray storage")
+}
+
 /// Run an elastic-wave simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let (nx, ny, nz) = req.grid.dimensions();
@@ -47,9 +53,12 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let duration = req.dt * (req.time_steps as f64);
     let _final_field = solver.propagate(&initial_field, duration, None)?;
 
-    let recorded_p = solver.extract_recorded_data();
+    let recorded_p = solver.extract_recorded_data().map(ndarray_from_leto2);
     let sensor_data = recorded_p.unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
     let (ux_data, uy_data, uz_data) = solver.extract_recorded_velocity_components();
+    let ux_data = ux_data.map(ndarray_from_leto2);
+    let uy_data = uy_data.map(ndarray_from_leto2);
+    let uz_data = uz_data.map(ndarray_from_leto2);
 
     Ok(SimulationRunResult {
         sensor_data,

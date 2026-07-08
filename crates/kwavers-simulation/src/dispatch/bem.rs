@@ -131,10 +131,10 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let sensor_data = trim_initial_recorder_sample(sensor_data, 1, req.record_start_index);
     let stats = if !sensor_indices.is_empty() {
         Some(SampledStatistics {
-            p_max: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_min: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_rms: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_final: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
+            p_max: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()).into(),
+            p_min: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()).into(),
+            p_rms: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()).into(),
+            p_final: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()).into(),
         })
     } else {
         None

@@ -54,7 +54,9 @@ impl Solver for GenericFdtdSolver<NdArray3<f64>> {
     }
 
     fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
-        self.sensor_recorder.extract_pressure_data()
+        self.sensor_recorder
+            .extract_pressure_data()
+            .and_then(|data| data.try_into().ok())
     }
 
     fn velocity_fields(&self) -> (&LetoArray3<f64>, &LetoArray3<f64>, &LetoArray3<f64>) {

@@ -4,13 +4,11 @@ use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdMedium, ElasticPstdOrchestrator};
 
-/// Convert an ndarray Array3<f64> to a leto Array3<f64>.
-fn to_leto3(arr: ndarray::Array3<f64>) -> leto::Array3<f64> {
-    let shape = arr.dim();
-    // Convert ndarray to flat vec - use iter() for safe contiguous extraction
+/// Convert a leto view to an owned leto Array3<f64>.
+fn to_leto3(arr: leto::ArrayView3<'_, f64>) -> leto::Array3<f64> {
+    let shape = arr.shape();
     let flat: Vec<f64> = arr.iter().copied().collect();
-    leto::Array3::from_shape_vec([shape.0, shape.1, shape.2], flat)
-        .expect("elastic_pstd: ndarray→leto shape mismatch")
+    leto::Array3::from_shape_vec(shape, flat).expect("elastic_pstd: leto view → owned shape mismatch")
 }
 
 /// Convert a leto Array3<bool> to a sensor-mask Array3<bool>.
@@ -30,9 +28,9 @@ fn leto_to_ndarray2(arr: leto::Array2<f64>) -> ndarray::Array2<f64> {
 
 /// Run an elastic pseudo-spectral time-domain simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
-    let lame_lambda = to_leto3(req.medium.lame_lambda_array());
-    let lame_mu = to_leto3(req.medium.lame_mu_array());
-    let density = to_leto3(req.medium.density_array().to_owned());
+    let lame_lambda = req.medium.lame_lambda_array();
+    let lame_mu = req.medium.lame_mu_array();
+    let density = req.medium.density_array().to_contiguous();
 
     // Maximum P-wave speed c_p = sqrt((λ+2μ)/ρ), used to size the PML σ_max.
     let c_max = lame_lambda
