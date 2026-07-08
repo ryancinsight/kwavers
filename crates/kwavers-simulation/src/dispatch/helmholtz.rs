@@ -36,7 +36,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     if let Some(ref p0) = req.grid_source.p0 {
         let nx = req.grid.nx;
         let ny = req.grid.ny;
-        for ((i, j, k), &val) in p0.indexed_iter() {
+        for ([i, j, k], &val) in p0.indexed_iter() {
             if val.abs() > 0.0 {
                 let node_idx = i + nx * (j + ny * k);
                 solver.add_nodal_load(node_idx, Complex64::new(val, 0.0))?;

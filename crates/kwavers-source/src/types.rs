@@ -290,7 +290,7 @@ mod tests {
         let grid = Grid::new(3, 2, 2, 1.0, 1.0, 1.0).unwrap();
         let source = DefaultMaskSource::new(
             Array3::from_shape_vec(
-                (grid.nx, grid.ny, grid.nz),
+                [grid.nx, grid.ny, grid.nz],
                 vec![
                     0.0, 1.0, 2.0, 3.0, 5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 89.0, 144.0,
                 ],

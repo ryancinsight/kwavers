@@ -321,8 +321,8 @@ pub(crate) fn time_reversal_reconstruction_impl(
     reversed_signal.invert_axis(Axis(1));
 
     let grid_source = GridSource {
-        p_mask: Some(p_mask),
-        p_signal: Some(reversed_signal),
+        p_mask: Some(p_mask.into()),
+        p_signal: Some(reversed_signal.into()),
         p_mode: SourceMode::Dirichlet,
         ..GridSource::new_empty()
     };

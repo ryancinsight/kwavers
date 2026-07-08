@@ -24,7 +24,7 @@ fn leto_signal(signal: &Array1<f64>) -> leto::Array1<f64> {
         .expect("analytic signal input length must match Leto shape")
 }
 
-fn ndarray_complex_signal(signal: leto::Array1<ApolloComplex64>) -> Array1<Complex64> {
+fn analytic_signal(signal: leto::Array1<ApolloComplex64>) -> Array1<Complex64> {
     let len = signal.len();
     Array1::from_vec([len], signal.into_vec()).expect("analytic signal shape must match")
 }
@@ -83,7 +83,7 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
         }
     }
 
-    ndarray_complex_signal(ifft_1d_complex(&complex_signal))
+    analytic_signal(ifft_1d_complex(&complex_signal))
 }
 
 /// Compute instantaneous envelope from analytic signal
@@ -202,7 +202,7 @@ pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
     let mut result = Array2::from_elem([nrows, ncols], Complex64::new(0.0, 0.0));
 
     for i in 0..nrows {
-        let row = Array1::from_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+        let row = Array1::from_shape_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
             .expect("row shape must match");
         let analytic = hilbert_transform(&row);
         for (j, &val) in analytic.iter().enumerate() {
@@ -220,7 +220,7 @@ pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
     let mut result = Array2::zeros([nrows, ncols]);
 
     for i in 0..nrows {
-        let row = Array1::from_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+        let row = Array1::from_shape_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
             .expect("row shape must match");
         let envelope = instantaneous_envelope(&row);
         for (j, &val) in envelope.iter().enumerate() {
@@ -238,7 +238,7 @@ pub fn instantaneous_phase_2d(data: &Array2<f64>) -> Array2<f64> {
     let mut result = Array2::zeros([nrows, ncols]);
 
     for i in 0..nrows {
-        let row = Array1::from_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+        let row = Array1::from_shape_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
             .expect("row shape must match");
         let phase = instantaneous_phase(&row);
         for (j, &val) in phase.iter().enumerate() {

@@ -2,7 +2,7 @@ use super::{collect_pressure_indices_fortran, SourceHandler};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{Source, SourceField};
-use ndarray::Array2;
+use leto::{Array2, Array3};
 
 impl SourceHandler {
     /// Add source.
@@ -18,7 +18,7 @@ impl SourceHandler {
         dt: f64,
     ) -> KwaversResult<()> {
         let mask = source.create_mask(grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         if mask.shape() != shape {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
@@ -51,7 +51,7 @@ impl SourceHandler {
                     ));
                 }
 
-                let mut signal = Array2::zeros((1, nt));
+                let mut signal = Array2::zeros([1, nt]);
                 for step in 0..nt {
                     let t = step as f64 * dt;
                     signal[[0, step]] = source.amplitude(t);
@@ -74,7 +74,7 @@ impl SourceHandler {
                 }
 
                 let mut indices = Vec::new();
-                for ((i, j, k), &val) in mask.indexed_iter() {
+                for ([i, j, k], &val) in mask.indexed_iter() {
                     if val != 0.0 {
                         indices.push((i, j, k, val));
                     }
@@ -87,7 +87,7 @@ impl SourceHandler {
                     ));
                 }
 
-                let mut signal = ndarray::Array3::zeros((3, 1, nt));
+                let mut signal = Array3::zeros([3, 1, nt]);
                 let comp = match source.source_type() {
                     SourceField::VelocityX => 0,
                     SourceField::VelocityY => 1,

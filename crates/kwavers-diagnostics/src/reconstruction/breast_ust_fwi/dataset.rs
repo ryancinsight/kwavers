@@ -237,8 +237,8 @@ fn run_pstd_transmit(
         p_mask[[i, j, k]] += 1.0;
     }
     let source = GridSource {
-        p_mask: Some(p_mask),
-        p_signal: Some(tone_signal(frequency_hz, steps, config)),
+        p_mask: Some(p_mask.into()),
+        p_signal: Some(tone_signal(frequency_hz, steps, config).into()),
         p_mode: SourceMode::Additive,
         ..GridSource::new_empty()
     };

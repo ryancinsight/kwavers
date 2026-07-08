@@ -113,7 +113,10 @@ impl Filters {
 
         for sensor_idx in 0..n_sensors {
             let signal = data.column(sensor_idx);
-            let analytic_signal = analytic::hilbert_transform(&signal.to_owned());
+            let analytic_signal = analytic::hilbert_transform(
+                &LetoArray1::from_vec([n_samples], signal.iter().copied().collect())
+                    .expect("photoacoustic signal length must match its Leto shape"),
+            );
 
             for (i, val) in analytic_signal.iter().enumerate() {
                 envelope[[i, sensor_idx]] = val.norm();

@@ -36,6 +36,12 @@ fn leto_view3(field: &leto::Array3<f64>) -> ndarray::ArrayView3<'_, f64> {
     .expect("FWI solver pressure field shape must match contiguous storage")
 }
 
+fn ndarray_from_leto2(field: &leto::Array2<f64>) -> Array2<f64> {
+    let [nrows, ncols] = field.shape();
+    Array2::from_shape_vec((nrows, ncols), field.iter().copied().collect())
+        .expect("FWI source signal shape must match contiguous ndarray storage")
+}
+
 /// A boxed forward solver paired with its grid dimensions and validated time step.
 type ForwardSolverBundle = (Box<dyn Solver>, (usize, usize, usize), f64);
 /// Self-adjoint acquisition parts: source voxels, source signal, receiver voxels
@@ -350,7 +356,7 @@ impl FwiProcessor {
                 message: "self-adjoint FWI requires a pressure source signal".to_owned(),
             })
         })?;
-        let (nx, ny, nz) = source_mask.dim();
+        let [nx, ny, nz] = source_mask.shape();
         let mut source_voxels = Vec::new();
         for k in 0..nz {
             for j in 0..ny {
@@ -362,7 +368,7 @@ impl FwiProcessor {
             }
         }
         let receiver_voxels = FwiGeometry::collect_fortran_indices(&geometry.sensor_mask);
-        Ok((source_voxels, signal.clone(), receiver_voxels))
+        Ok((source_voxels, ndarray_from_leto2(signal), receiver_voxels))
     }
 
     /// Forward self-adjoint model returning `(synthetic, history)`.

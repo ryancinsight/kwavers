@@ -108,7 +108,7 @@ fn build_sources(gs: &kwavers_source::GridSource, grid: &Grid) -> Vec<Box<dyn So
 
     let signal: Arc<dyn Signal> = Arc::new(NullSignal::new());
     let mut sources: Vec<Box<dyn Source>> = Vec::new();
-    for ((i, j, k), &val) in p0.indexed_iter() {
+    for ([i, j, k], &val) in p0.indexed_iter() {
         if val.abs() > 1e-15 {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             sources.push(Box::new(PointSource::new((x, y, z), Arc::clone(&signal))));

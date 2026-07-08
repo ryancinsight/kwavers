@@ -63,7 +63,7 @@ impl HybridSolver {
             validation_results: HybridValidationResults::default(),
             time_step: 0,
             fields: WaveFields::new(shape),
-            source_mask_scratch: ndarray::Array3::zeros(shape),
+            source_mask_scratch: leto::Array3::zeros([grid.nx, grid.ny, grid.nz]),
         })
     }
 }

@@ -20,7 +20,11 @@ use ndarray::Array1;
 /// carrier is removed exactly once, consistently with beamforming snapshot code.
 #[must_use]
 pub fn envelope(rf: &Array1<f64>) -> Array1<f64> {
-    hilbert_transform(rf).mapv(|z| z.norm())
+    let analytic = hilbert_transform(
+        &leto::Array1::from_vec([rf.len()], rf.iter().copied().collect())
+            .expect("RF line length must match its Leto shape"),
+    );
+    Array1::from_vec(analytic.iter().map(|z| z.norm()).collect())
 }
 
 /// Log-compress an envelope to a normalized display image in `[0, 1]`.

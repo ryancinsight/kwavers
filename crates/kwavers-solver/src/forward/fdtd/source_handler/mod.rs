@@ -1,7 +1,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::Array3;
+use leto::Array3;
 
 mod inject;
 mod registration;
@@ -12,7 +12,7 @@ mod scaling;
 pub(super) fn collect_pressure_indices_fortran(
     mask: &Array3<f64>,
 ) -> Vec<(usize, usize, usize, f64)> {
-    let (nx, ny, nz) = mask.shape();
+    let [nx, ny, nz] = mask.shape();
     let mut indices = Vec::new();
     for k in 0..nz {
         for j in 0..ny {
@@ -69,7 +69,7 @@ impl SourceHandler {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn new(source: GridSource, grid: &Grid) -> KwaversResult<Self> {
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
 
         if source.p_signal.is_some() && source.p_mask.is_none() {
             return Err(KwaversError::Validation(
@@ -106,7 +106,7 @@ impl SourceHandler {
             p_indices = collect_pressure_indices_fortran(mask);
 
             if !p_indices.is_empty() {
-                let (nx, ny, nz) = shape;
+                let [nx, ny, nz] = shape;
 
                 let mut x_set = std::collections::HashSet::new();
                 let mut y_set = std::collections::HashSet::new();
@@ -156,7 +156,7 @@ impl SourceHandler {
                     },
                 ));
             }
-            for ((i, j, k), &val) in mask.indexed_iter() {
+            for ([i, j, k], &val) in mask.indexed_iter() {
                 if val != 0.0 {
                     u_indices.push((i, j, k, val));
                 }

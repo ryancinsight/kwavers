@@ -5,6 +5,12 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use ndarray::{Array2, Array3};
 
+fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec((nx, ny, nz), field.iter().copied().collect())
+        .expect("FWI source mask shape must match contiguous ndarray storage")
+}
+
 impl FwiProcessor {
     /// Compute the per-shot objective and physics gradient for one shot gather.
     ///
@@ -31,9 +37,10 @@ impl FwiProcessor {
 
         if self.parameters.source_mute_radius > 0 {
             if let Some(p_mask) = geometry.source.p_mask.as_ref() {
+                let p_mask = ndarray_from_leto3(p_mask);
                 mute_gradient_near_sources(
                     &mut gradient,
-                    p_mask,
+                    &p_mask,
                     self.parameters.source_mute_radius,
                 );
             }

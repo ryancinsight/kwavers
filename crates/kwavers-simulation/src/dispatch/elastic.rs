@@ -6,17 +6,23 @@ use kwavers_solver::forward::elastic::swe::{
     ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
 };
 
+fn ndarray_from_leto3(arr: &leto::Array3<f64>) -> ndarray::Array3<f64> {
+    let [nx, ny, nz] = arr.shape();
+    ndarray::Array3::from_shape_vec((nx, ny, nz), arr.iter().copied().collect())
+        .expect("elastic initial field shape must match contiguous ndarray storage")
+}
+
 /// Run an elastic-wave simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let (nx, ny, nz) = req.grid.dimensions();
     let u0_opt = match &req.grid_source.p0 {
         Some(u0) => {
-            if u0.dim() != (nx, ny, nz) {
+            if u0.shape() != [nx, ny, nz] {
                 return Err(KwaversError::InvalidInput(
                     "Elastic initial displacement shape mismatch".into(),
                 ));
             }
-            Some(u0.clone())
+            Some(ndarray_from_leto3(u0))
         }
         None => None,
     };

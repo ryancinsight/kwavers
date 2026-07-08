@@ -10,6 +10,12 @@ use kwavers_core::error::KwaversResult;
 use kwavers_receiver::recorder::pressure_statistics::SampledStatistics;
 use kwavers_solver::forward::pstd::dg::{HybridSpectralDGConfig, HybridSpectralDGSolver};
 
+fn ndarray_from_leto3(arr: &leto::Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = arr.shape();
+    Array3::from_shape_vec((nx, ny, nz), arr.iter().copied().collect())
+        .expect("DG initial field shape must match contiguous ndarray storage")
+}
+
 /// Run a discontinuous Galerkin (hybrid spectral) simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let sensor_mask = req
@@ -24,7 +30,8 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let mut field = req
         .grid_source
         .p0
-        .clone()
+        .as_ref()
+        .map(ndarray_from_leto3)
         .unwrap_or_else(|| Array3::zeros((req.grid.nx, req.grid.ny, req.grid.nz)));
     let mut output = Array3::<f64>::zeros((req.grid.nx, req.grid.ny, req.grid.nz));
 

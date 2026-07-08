@@ -10,9 +10,7 @@
 use super::types::MisfitFunction;
 use apollo::{fft_1d_leto, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::error::KwaversResult;
-use kwavers_signal::analytic::{
-    hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
-};
+use kwavers_signal::analytic::hilbert_transform;
 use leto::Array1 as LetoArray1;
 use ndarray::Array2;
 use kwavers_math::fft::Complex64;
@@ -63,12 +61,15 @@ impl MisfitFunction {
         let (ntraces, nsamples) = synthetic.dim();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
-        let env_obs = instantaneous_envelope_2d(observed);
-        let env_syn = instantaneous_envelope_2d(synthetic);
+        let env_obs = self.compute_envelope(observed)?;
+        let env_syn = self.compute_envelope(synthetic)?;
 
         for i in 0..ntraces {
             let syn_trace = synthetic.row(i).to_owned();
-            let analytic = hilbert_transform(&syn_trace);
+            let analytic = hilbert_transform(
+                &LetoArray1::from_vec([nsamples], syn_trace.iter().copied().collect())
+                    .expect("envelope trace length must match its Leto shape"),
+            );
 
             for j in 0..nsamples {
                 let env_diff = env_syn[[i, j]] - env_obs[[i, j]];
@@ -101,12 +102,15 @@ impl MisfitFunction {
         let (ntraces, nsamples) = synthetic.dim();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
-        let phase_obs = instantaneous_phase_2d(observed);
-        let phase_syn = instantaneous_phase_2d(synthetic);
+        let phase_obs = self.compute_instantaneous_phase(observed)?;
+        let phase_syn = self.compute_instantaneous_phase(synthetic)?;
 
         for i in 0..ntraces {
             let syn_trace = synthetic.row(i).to_owned();
-            let analytic = hilbert_transform(&syn_trace);
+            let analytic = hilbert_transform(
+                &LetoArray1::from_vec([nsamples], syn_trace.iter().copied().collect())
+                    .expect("phase trace length must match its Leto shape"),
+            );
 
             // Time derivative of analytic signal (central differences)
             let mut dz_dt = vec![Complex64::new(0.0, 0.0); nsamples];

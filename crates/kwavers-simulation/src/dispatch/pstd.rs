@@ -19,6 +19,29 @@ use kwavers_solver::geometry::SolverGeometry;
 use kwavers_solver::interface::solver::Solver as SolverTrait;
 use kwavers_source::{GridSource, Source as KwaversSource};
 
+fn embed_leto3(
+    arr: &leto::Array3<f64>,
+    pnx: usize,
+    pny: usize,
+    pnz: usize,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+    px: usize,
+    py: usize,
+    pz: usize,
+) -> leto::Array3<f64> {
+    let mut out = leto::Array3::<f64>::zeros([pnx, pny, pnz]);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                out[[i + px, j + py, k + pz]] = arr[[i, j, k]];
+            }
+        }
+    }
+    out
+}
+
 // ── PSTD (acoustic-only) ──────────────────────────────────────────────────────
 
 /// Run a PSTD (acoustic-only) simulation.
@@ -163,13 +186,6 @@ pub(crate) fn prepare_solver(
             let pz_embed = if pad_z_two_sided { p } else { 0 };
             let p = px_embed;
 
-            let embed = |arr: Array3<f64>| -> Array3<f64> {
-                let mut out = Array3::<f64>::zeros((pnx, pny, pnz));
-                out.slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
-                    .assign(&arr);
-                out
-            };
-
             let mut padded_mask = Array3::<bool>::from_elem((pnx, pny, pnz), false);
             padded_mask
                 .slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
@@ -181,15 +197,26 @@ pub(crate) fn prepare_solver(
                         .grid_source
                         .p0
                         .as_ref()
-                        .map(|a| a.mapv(|v| v))
-                        .map(&embed),
+                        .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
                     u0: req.grid_source.u0.as_ref().map(|(ux, uy, uz)| {
-                        (embed(ux.clone()), embed(uy.clone()), embed(uz.clone()))
+                        (
+                            embed_leto3(ux, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                            embed_leto3(uy, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                            embed_leto3(uz, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                        )
                     }),
-                    p_mask: req.grid_source.p_mask.as_ref().map(|a| embed(a.clone())),
+                    p_mask: req
+                        .grid_source
+                        .p_mask
+                        .as_ref()
+                        .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
                     p_signal: req.grid_source.p_signal.clone(),
                     p_mode: req.grid_source.p_mode,
-                    u_mask: req.grid_source.u_mask.as_ref().map(|a| embed(a.clone())),
+                    u_mask: req
+                        .grid_source
+                        .u_mask
+                        .as_ref()
+                        .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
                     u_signal: req.grid_source.u_signal.clone(),
                     u_mode: req.grid_source.u_mode,
                 };

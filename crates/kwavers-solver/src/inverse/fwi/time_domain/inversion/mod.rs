@@ -9,6 +9,12 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use ndarray::{Array3, Zip};
 
+fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec((nx, ny, nz), field.iter().copied().collect())
+        .expect("FWI source mask shape must match contiguous ndarray storage")
+}
+
 impl FwiProcessor {
     /// Perform Full Waveform Inversion (single-source).
     ///
@@ -198,6 +204,8 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>)> {
+        let source_mask = geometry.source.p_mask.as_ref().map(ndarray_from_leto3);
+
         // Exact self-adjoint engine, lossless: reconstruct the forward field
         // backward instead of storing the O(nt·N) history.
         if matches!(self.engine, FwiEngine::SecondOrderSelfAdjoint) && self.sa_damping.is_none() {
@@ -214,7 +222,7 @@ impl FwiProcessor {
                     p_last: &p_last,
                     p_second_last: &p_second_last,
                 },
-                geometry.source.p_mask.as_ref(),
+                source_mask.as_ref(),
             )?;
             return Ok((objective, gradient));
         }
@@ -231,7 +239,7 @@ impl FwiProcessor {
                     current_model,
                     grid,
                     &forward_history,
-                    geometry.source.p_mask.as_ref(),
+                    source_mask.as_ref(),
                 )?
             }
             FwiEngine::SecondOrderSelfAdjoint => self.adjoint_gradient_self_adjoint(
@@ -240,7 +248,7 @@ impl FwiProcessor {
                 geometry,
                 grid,
                 &forward_history,
-                geometry.source.p_mask.as_ref(),
+                source_mask.as_ref(),
             )?,
         };
         Ok((objective, gradient))

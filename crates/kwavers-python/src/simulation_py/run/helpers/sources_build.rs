@@ -62,7 +62,7 @@ impl Simulation {
                 let p_mode = parse_source_mode(&src.source_mode);
                 grid_source = GridSource {
                     p_mask: Some(float_mask),
-                    p_signal: Some(signal.clone()),
+                    p_signal: Some(signal.clone().into()),
                     p_mode,
                     ..GridSource::new_empty()
                 };
@@ -98,8 +98,9 @@ impl Simulation {
                         arr.num_elements()
                     )));
                 }
+                let signal_leto = signal.clone().into();
                 let (mask, per_cell_signal) = arr
-                    .build_per_element_source(&self.grid.inner, signal)
+                    .build_per_element_source(&self.grid.inner, &signal_leto)
                     .map_err(PyValueError::new_err)?;
                 let num_active = mask.iter().filter(|&&v| v != 0.0).count();
                 if num_active == 0 {
@@ -154,8 +155,8 @@ impl Simulation {
                 }
                 let p_mode = parse_source_mode(&src.source_mode);
                 grid_source = GridSource {
-                    p_mask: Some(mask.clone()),
-                    p_signal: Some(signal.clone()),
+                    p_mask: Some(mask.clone().into()),
+                    p_signal: Some(signal.clone().into()),
                     p_mode,
                     ..GridSource::new_empty()
                 };
@@ -164,7 +165,7 @@ impl Simulation {
 
             if src.source_type == "p0" {
                 if let Some(ref p0) = src.initial_pressure {
-                    grid_source.p0 = Some(p0.clone());
+                    grid_source.p0 = Some(p0.clone().into());
                 }
                 continue;
             }
@@ -179,8 +180,8 @@ impl Simulation {
                     .as_ref()
                     .ok_or_else(|| PyValueError::new_err("Velocity signal missing"))?;
                 let u_mode = parse_source_mode(&src.source_mode);
-                grid_source.u_mask = Some(mask.clone());
-                grid_source.u_signal = Some(u_sig.clone());
+                grid_source.u_mask = Some(mask.clone().into());
+                grid_source.u_signal = Some(u_sig.clone().into());
                 grid_source.u_mode = u_mode;
                 continue;
             }

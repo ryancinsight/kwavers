@@ -95,6 +95,7 @@ impl FwiGeometry {
     ///
     pub(super) fn validate(&self, grid: &Grid, nt: usize) -> KwaversResult<()> {
         let expected_shape = grid.dimensions();
+        let expected_shape_arr = [grid.nx, grid.ny, grid.nz];
         if self.sensor_mask.dim() != expected_shape {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
@@ -114,13 +115,13 @@ impl FwiGeometry {
                 },
             ));
         };
-        if source_mask.dim() != expected_shape {
+        if source_mask.shape() != expected_shape_arr {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Source mask shape mismatch: expected {:?}, got {:?}",
-                        expected_shape,
-                        source_mask.dim()
+                        expected_shape_arr,
+                        source_mask.shape()
                     ),
                 },
             ));

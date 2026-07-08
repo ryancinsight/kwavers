@@ -51,6 +51,7 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::GridSource;
+use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use ndarray::{Array2, Array3, Zip};
 
 /// Generate the `n × n` Sylvester–Hadamard code matrix (`n` a power of two).
@@ -134,7 +135,7 @@ pub fn encode_shots(
         if require_mask(&geometry.source)? != reference_mask {
             return Err(mismatch(index, "source mask"));
         }
-        if require_signal(&geometry.source)?.dim() != reference_signal.dim() {
+        if require_signal(&geometry.source)?.shape() != reference_signal.shape() {
             return Err(mismatch(index, "source-signal shape"));
         }
         if data.dim() != reference_data.dim() {
@@ -142,13 +143,16 @@ pub fn encode_shots(
         }
     }
 
-    let mut encoded_signal = Array2::zeros(reference_signal.dim());
+    let [signal_rows, signal_cols] = reference_signal.shape();
+    let mut encoded_signal = LetoArray2::zeros([signal_rows, signal_cols]);
     let mut encoded_data = Array2::zeros(reference_data.dim());
     for (code, (geometry, data)) in codes.iter().zip(shots.iter()) {
         let signal = require_signal(&geometry.source)?;
-        Zip::from(&mut encoded_signal)
-            .and(signal)
-            .for_each(|out, &s| *out += code * s);
+        for row in 0..signal_rows {
+            for col in 0..signal_cols {
+                encoded_signal[[row, col]] += code * signal[[row, col]];
+            }
+        }
         Zip::from(&mut encoded_data)
             .and(data)
             .for_each(|out, &d| *out += code * d);
@@ -171,7 +175,7 @@ pub fn encode_shots(
     ))
 }
 
-fn require_signal(source: &GridSource) -> KwaversResult<&Array2<f64>> {
+fn require_signal(source: &GridSource) -> KwaversResult<&LetoArray2<f64>> {
     source.p_signal.as_ref().ok_or_else(|| {
         KwaversError::Validation(ValidationError::ConstraintViolation {
             message: "encode_shots requires every shot to carry a pressure source signal"
@@ -180,7 +184,7 @@ fn require_signal(source: &GridSource) -> KwaversResult<&Array2<f64>> {
     })
 }
 
-fn require_mask(source: &GridSource) -> KwaversResult<&Array3<f64>> {
+fn require_mask(source: &GridSource) -> KwaversResult<&LetoArray3<f64>> {
     source.p_mask.as_ref().ok_or_else(|| {
         KwaversError::Validation(ValidationError::ConstraintViolation {
             message: "encode_shots requires every shot to carry a pressure source mask".to_owned(),

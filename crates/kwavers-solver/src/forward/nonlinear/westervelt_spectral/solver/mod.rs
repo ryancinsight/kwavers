@@ -86,7 +86,7 @@ pub struct WesterveltWave {
     /// Pre-allocated viscoelastic damping workspace.
     pub(super) damping_scratch: Array3<f64>,
     /// Pre-allocated source-mask workspace.
-    pub(super) source_mask_scratch: Array3<f64>,
+    pub(super) source_mask_scratch: LetoArray3<f64>,
     pub(super) metrics: Arc<Mutex<WesterveltStepMetrics>>,
     pub(super) conservation_tracker: Option<ConservationTracker>,
     pub(super) current_step: usize,
@@ -118,7 +118,7 @@ impl WesterveltWave {
             laplacian_scratch,
             nonlinear_scratch: Array3::zeros(shape),
             damping_scratch: Array3::zeros(shape),
-            source_mask_scratch: Array3::zeros(shape),
+            source_mask_scratch: LetoArray3::zeros([grid.nx, grid.ny, grid.nz]),
             metrics: Arc::new(Mutex::new(WesterveltStepMetrics::new())),
             conservation_tracker: None,
             current_step: 0,

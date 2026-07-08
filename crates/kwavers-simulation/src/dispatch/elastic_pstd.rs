@@ -75,8 +75,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     // Initial-value problem: seed the initial stress from an initial
     // displacement field (e.g. an SH plane-wave packet) when provided.
     if let (Some(axis), Some(u0)) = (req.elastic_ivp_axis, req.grid_source.p0.as_ref()) {
-        let u0_leto = to_leto3(u0.clone());
-        orch.seed_initial_displacement(&u0_leto, axis);
+        orch.seed_initial_displacement(u0, axis);
     }
 
     // Convert sensor mask from ndarray to leto for the orchestrator.

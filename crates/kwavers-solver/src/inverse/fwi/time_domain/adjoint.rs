@@ -14,6 +14,7 @@ use crate::inverse::reconstruction::seismic::{
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
+use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
 fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
@@ -251,7 +252,7 @@ impl FwiProcessor {
         }
 
         let reversed_residual = reverse_time_axis(residual);
-        let mut p_signal = Array2::zeros((expected_rows, self.parameters.nt));
+        let mut p_signal = LetoArray2::zeros([expected_rows, self.parameters.nt]);
         for source_row in 0..expected_rows {
             let sensor_row = geometry.receiver_row_to_sensor_row[source_row];
             for t in 0..self.parameters.nt {
@@ -259,9 +260,18 @@ impl FwiProcessor {
             }
         }
 
-        let p_mask = geometry
-            .sensor_mask
-            .mapv(|active| if active { 1.0 } else { 0.0 });
+        let p_mask = {
+            let (nx, ny, nz) = geometry.sensor_mask.dim();
+            LetoArray3::from_shape_vec(
+                [nx, ny, nz],
+                geometry
+                    .sensor_mask
+                    .iter()
+                    .map(|&active| if active { 1.0 } else { 0.0 })
+                    .collect(),
+            )
+            .expect("adjoint source mask shape must match its Leto storage")
+        };
 
         Ok(GridSource {
             p0: None,

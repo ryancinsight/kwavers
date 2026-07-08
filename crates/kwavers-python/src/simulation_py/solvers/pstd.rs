@@ -82,10 +82,15 @@ impl Simulation {
                 let pz_embed = if pad_z_two_sided { p } else { 0 };
                 let p = px_embed;
 
-                let embed = |arr: ndarray::Array3<f64>| -> ndarray::Array3<f64> {
-                    let mut out = ndarray::Array3::<f64>::zeros((pnx, pny, pnz));
-                    out.slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
-                        .assign(&arr);
+                let embed = |arr: leto::Array3<f64>| -> leto::Array3<f64> {
+                    let mut out = leto::Array3::<f64>::zeros([pnx, pny, pnz]);
+                    for i in 0..nx {
+                        for j in 0..ny {
+                            for k in 0..nz {
+                                out[[i + p, j + py, k + pz_embed]] = arr[[i, j, k]];
+                            }
+                        }
+                    }
                     out
                 };
 

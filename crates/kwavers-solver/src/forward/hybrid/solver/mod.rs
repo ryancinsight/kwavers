@@ -9,7 +9,7 @@ use crate::forward::hybrid::metrics::{HybridMetrics, HybridValidationResults};
 use crate::forward::pstd::PSTDSolver;
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 mod construction;
 mod interface_impl;

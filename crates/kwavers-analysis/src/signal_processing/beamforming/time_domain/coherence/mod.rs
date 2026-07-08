@@ -125,7 +125,10 @@ fn instantaneous_phase_matrix(aligned: &Array2<f64>) -> Array2<f64> {
     let (n_elements, n_samples) = aligned.dim();
     let mut phase = Array2::<f64>::zeros((n_elements, n_samples));
     for (i, row) in aligned.outer_iter().enumerate() {
-        let analytic = hilbert_transform(&row.to_owned());
+        let analytic = hilbert_transform(
+            &leto::Array1::from_vec([n_samples], row.iter().copied().collect())
+                .expect("coherence row length must match its Leto shape"),
+        );
         for (j, z) in analytic.iter().enumerate() {
             phase[[i, j]] = z.arg();
         }
