@@ -1,3 +1,4 @@
+use moirai_parallel::ParallelSliceMut;
 use ndarray::{Array1, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -117,22 +118,32 @@ impl FluidStructureSolver {
 
             if iteration > 0 {
                 let omega = self.relaxation;
-                ndarray::Zip::from(&mut self.p_fluid_ghost)
-                    .and(&self.p_fluid_ghost_prev)
-                    .par_for_each(|new_val, &prev| {
-                        *new_val = omega * *new_val + (1.0 - omega) * prev
+                {
+                    let new_slice = self.p_fluid_ghost.as_slice_mut()
+                        .expect("p_fluid_ghost is contiguous (default Array3 layout)");
+                    let prev_slice = self.p_fluid_ghost_prev.as_slice()
+                        .expect("p_fluid_ghost_prev is contiguous (default Array3 layout)");
+                    new_slice.par_mut().enumerate(|idx, new_val: &mut f64| {
+                        let prev = prev_slice[idx];
+                        *new_val = omega * *new_val + (1.0 - omega) * prev;
                     });
+                }
                 for (tsg, tgp) in self
                     .t_solid_ghost
                     .iter_mut()
                     .zip(self.t_solid_ghost_prev.iter())
                     .take(3)
                 {
-                    ndarray::Zip::from(tsg)
-                        .and(tgp)
-                        .par_for_each(|new_val, &prev| {
-                            *new_val = omega * *new_val + (1.0 - omega) * prev
+                    {
+                        let new_slice = tsg.as_slice_mut()
+                            .expect("t_solid_ghost component is contiguous (1D view)");
+                        let prev_slice = tgp.as_slice()
+                            .expect("t_solid_ghost_prev component is contiguous (1D view)");
+                        new_slice.par_mut().enumerate(|idx, new_val: &mut f64| {
+                            let prev = prev_slice[idx];
+                            *new_val = omega * *new_val + (1.0 - omega) * prev;
                         });
+                    }
                 }
             }
 
