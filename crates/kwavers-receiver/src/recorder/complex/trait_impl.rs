@@ -4,7 +4,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use kwavers_grid::Grid;
 use log::info;
-use ndarray::{Array4, Axis};
+use leto::Array4;
 
 use super::super::traits::RecorderTrait;
 use super::recorder::Recorder;
@@ -53,8 +53,11 @@ impl RecorderTrait for Recorder {
         self.recorded_steps.push(time);
 
         if self.record_pressure {
-            let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX);
-            let sensor_data = self.sensor.sample(&pressure_field.to_owned());
+            let pressure_field = fields
+                .index_axis::<3>(0, PRESSURE_IDX)
+                .map_err(|e| KwaversError::InternalError(format!("pressure axis slice failed: {e}")))?
+                .to_contiguous();
+            let sensor_data = self.sensor.sample(&pressure_field);
             let sensor_data: Vec<f64> = sensor_data
                 .into_iter()
                 .enumerate()
@@ -72,8 +75,11 @@ impl RecorderTrait for Recorder {
         }
 
         if self.record_light {
-            let light_field = fields.index_axis(Axis(0), LIGHT_IDX);
-            let sensor_data = self.sensor.sample(&light_field.to_owned());
+            let light_field = fields
+                .index_axis::<3>(0, LIGHT_IDX)
+                .map_err(|e| KwaversError::InternalError(format!("light axis slice failed: {e}")))?
+                .to_contiguous();
+            let sensor_data = self.sensor.sample(&light_field);
             let sensor_data: Vec<f64> = sensor_data
                 .into_iter()
                 .enumerate()
@@ -91,8 +97,11 @@ impl RecorderTrait for Recorder {
         }
 
         if self.record_temperature {
-            let temp_field = fields.index_axis(Axis(0), TEMPERATURE_IDX);
-            let sensor_data = self.sensor.sample(&temp_field.to_owned());
+            let temp_field = fields
+                .index_axis::<3>(0, TEMPERATURE_IDX)
+                .map_err(|e| KwaversError::InternalError(format!("temperature axis slice failed: {e}")))?
+                .to_contiguous();
+            let sensor_data = self.sensor.sample(&temp_field);
             let sensor_data: Vec<f64> = sensor_data
                 .into_iter()
                 .enumerate()

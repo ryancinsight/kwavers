@@ -26,7 +26,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
             }));
         }
 
-        for &c in &self.sound_speed_2d {
+        for &c in self.sound_speed_2d.iter() {
             if c <= 0.0 || !c.is_finite() {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "projected sound_speed".to_owned(),
@@ -36,7 +36,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
             }
         }
 
-        for &rho in &self.density_2d {
+        for &rho in self.density_2d.iter() {
             if rho <= 0.0 || !rho.is_finite() {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "projected density".to_owned(),
@@ -46,7 +46,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
             }
         }
 
-        for &alpha in &self.absorption_2d {
+        for &alpha in self.absorption_2d.iter() {
             if alpha < 0.0 || !alpha.is_finite() {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "projected absorption".to_owned(),

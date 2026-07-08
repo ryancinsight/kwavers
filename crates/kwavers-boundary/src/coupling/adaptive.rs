@@ -6,7 +6,7 @@
 use crate::traits::BoundaryCondition;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::ArrayViewMut3;
+use leto::ArrayViewMut3;
 
 use super::types::BoundaryDirections;
 
@@ -174,7 +174,8 @@ impl BoundaryCondition for AdaptiveBoundary {
         // Apply adaptive absorption based on current field energy
 
         // Compute field energy in boundary region
-        let field_energy = field.iter().map(|&x| x * x).sum::<f64>() / field.len() as f64;
+        let field_energy =
+            field.as_view().iter().map(|&x| x * x).sum::<f64>() / field.size() as f64;
 
         // Adapt absorption coefficient
         self.adapt_to_energy(field_energy, _dt);
@@ -189,7 +190,7 @@ impl BoundaryCondition for AdaptiveBoundary {
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut ndarray::Array3<kwavers_math::fft::Complex64>,
+        _field: &mut leto::Array3<kwavers_math::fft::Complex64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

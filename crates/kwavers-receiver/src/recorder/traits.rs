@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array4;
+use leto::Array4;
 
 /// Trait for data recording (Dependency Inversion Principle)
 pub trait RecorderTrait: Send + Sync {

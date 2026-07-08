@@ -15,7 +15,7 @@
 
 use super::super::SensorRecorder;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, ArrayView2};
+use leto::{Array1, Array2, ArrayView2};
 
 impl SensorRecorder {
     // ── ix / iy / iz time series ──────────────────────────────────────────────
@@ -29,11 +29,9 @@ impl SensorRecorder {
     /// Borrow x-intensity time-series data without cloning.
     #[must_use]
     pub fn recorded_ix_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.ix_data
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let data = self.ix_data.as_ref()?;
+        data.slice(&[(0, data.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 
     /// Acoustic y-intensity time series: `Iy = p * uy`.
@@ -45,11 +43,9 @@ impl SensorRecorder {
     /// Borrow y-intensity time-series data without cloning.
     #[must_use]
     pub fn recorded_iy_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.iy_data
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let data = self.iy_data.as_ref()?;
+        data.slice(&[(0, data.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 
     /// Acoustic z-intensity time series: `Iz = p * uz`.
@@ -61,11 +57,9 @@ impl SensorRecorder {
     /// Borrow z-intensity time-series data without cloning.
     #[must_use]
     pub fn recorded_iz_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.iz_data
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let data = self.iz_data.as_ref()?;
+        data.slice(&[(0, data.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 
     // ── time-averaged intensity ───────────────────────────────────────────────
@@ -132,7 +126,7 @@ impl SensorRecorder {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn average_intensity(&self, sum: &Array1<f64>) -> Array1<f64> {
-        let mut out = Array1::zeros(sum.len());
+        let mut out = Array1::zeros([sum.len()]);
         let _ = self.fill_average_intensity(sum, &mut out);
         out
     }

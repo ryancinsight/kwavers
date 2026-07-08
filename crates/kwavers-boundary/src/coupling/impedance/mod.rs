@@ -7,7 +7,7 @@ use crate::traits::BoundaryCondition;
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::ArrayViewMut3;
+use leto::ArrayViewMut3;
 
 use super::types::{BoundaryDirections, FrequencyProfile};
 
@@ -272,7 +272,7 @@ impl BoundaryCondition for ImpedanceBoundary {
 
     fn apply_scalar_frequency(
         &mut self,
-        field: &mut ndarray::Array3<kwavers_math::fft::Complex64>,
+        field: &mut leto::Array3<kwavers_math::fft::Complex64>,
         grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

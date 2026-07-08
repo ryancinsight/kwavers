@@ -9,7 +9,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use ndarray::Array1;
+use leto::Array1;
 
 #[doc(hidden)]
 pub trait PressureArray3Access {
@@ -18,22 +18,7 @@ pub trait PressureArray3Access {
     fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a>;
 }
 
-impl PressureArray3Access for ndarray::Array3<f64> {
-    fn shape3(&self) -> [usize; 3] {
-        let (nx, ny, nz) = self.dim();
-        [nx, ny, nz]
-    }
-
-    fn as_slice_opt(&self) -> Option<&[f64]> {
-        self.as_slice()
-    }
-
-    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
-        Box::new(self.iter())
-    }
-}
-
-impl PressureArray3Access for LetoArray3<f64> {
+impl PressureArray3Access for leto::Array3<f64> {
     fn shape3(&self) -> [usize; 3] {
         self.shape()
     }
@@ -198,7 +183,7 @@ impl PressureFieldStatistics {
     ///
     #[must_use]
     pub fn sample_p_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_p_max(positions, &mut out);
         out
     }
@@ -221,7 +206,7 @@ impl PressureFieldStatistics {
     ///
     #[must_use]
     pub fn sample_p_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_p_min(positions, &mut out);
         out
     }
@@ -247,7 +232,7 @@ impl PressureFieldStatistics {
     ///
     #[must_use]
     pub fn sample_p_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_p_rms(positions, &mut out);
         out
     }
@@ -281,7 +266,7 @@ impl PressureFieldStatistics {
     ///
     #[must_use]
     pub fn sample_p_final(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_p_final(positions, &mut out);
         out
     }
@@ -365,7 +350,7 @@ fn validate_sample_output_len(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_pressure_statistics_basic() {
@@ -373,7 +358,7 @@ mod tests {
 
         // Simulate 3 time steps
         for t in 0..3 {
-            let pressure = Array3::from_elem((4, 4, 4), (t as f64 + 1.0) * 1000.0);
+            let pressure = Array3::from_elem([4, 4, 4], (t as f64 + 1.0) * 1000.0);
             stats.update(&pressure);
         }
 
@@ -391,7 +376,7 @@ mod tests {
     fn test_sample_at_positions() {
         let mut stats = PressureFieldStatistics::new(10, 10, 10);
 
-        let pressure = Array3::from_elem((10, 10, 10), 5000.0);
+        let pressure = Array3::from_elem([10, 10, 10], 5000.0);
         stats.update(&pressure);
 
         let positions = vec![(0, 0, 0), (5, 5, 5), (9, 9, 9)];

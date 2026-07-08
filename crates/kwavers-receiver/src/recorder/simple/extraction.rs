@@ -2,7 +2,7 @@
 
 use crate::recorder::pressure_statistics::{PressureFieldStatistics, SampledStatistics};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, ArrayView2};
+use leto::{Array1, Array2, ArrayView2};
 
 use super::SensorRecorder;
 
@@ -45,11 +45,10 @@ impl SensorRecorder {
     /// Borrow only the recorded pressure prefix `(n_sensors, next_step)`.
     #[must_use]
     pub fn recorded_pressure_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.pressure
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let pressure = self.pressure.as_ref()?;
+        pressure
+            .slice(&[(0, pressure.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 
     // ── Pressure statistics ──────────────────────────────────────────────────

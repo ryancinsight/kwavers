@@ -29,7 +29,7 @@ use ndarray::ArrayView2;
 /// Returns an empty vector if `positions` is empty or `c ≤ 0`.
 #[must_use]
 pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> Vec<f64> {
-    let n = positions.nrows();
+    let n = positions.shape()[0];
     if n == 0 || c <= 0.0 {
         return Vec::new();
     }
@@ -54,7 +54,7 @@ pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> 
 /// `c ≤ 0`, or `dir` is the zero vector.
 #[must_use]
 pub fn steering_delays(positions: &ArrayView2<f64>, dir: [f64; 3], c: f64) -> Vec<f64> {
-    let n = positions.nrows();
+    let n = positions.shape()[0];
     let norm = dir[2]
         .mul_add(dir[2], dir[0].mul_add(dir[0], dir[1] * dir[1]))
         .sqrt();
@@ -82,7 +82,7 @@ pub fn steering_delays(positions: &ArrayView2<f64>, dir: [f64; 3], c: f64) -> Ve
 /// Used to drive the CMUT flex-derating apodization below.
 #[must_use]
 pub fn per_element_curvature(positions: &ArrayView2<f64>) -> Vec<f64> {
-    let n = positions.nrows();
+    let n = positions.shape()[0];
     if n < 3 {
         return vec![0.0; n];
     }
@@ -137,7 +137,7 @@ mod tests {
 
     /// Build an `n×3` position array from rows.
     fn positions(rows: &[[f64; 3]]) -> Array2<f64> {
-        let mut a = Array2::zeros((rows.len(), 3));
+        let mut a = Array2::zeros([rows.len(), 3]);
         for (i, r) in rows.iter().enumerate() {
             a[[i, 0]] = r[0];
             a[[i, 1]] = r[1];

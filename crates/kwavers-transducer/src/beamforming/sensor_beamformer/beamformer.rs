@@ -6,7 +6,7 @@ use kwavers_grid::Grid;
 use kwavers_receiver::array::SensorArray;
 use kwavers_receiver::grid_sampling::GridSensorSet;
 use kwavers_signal::window as signal_window;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use num_complex::Complex;
 
 /// Sensor-specific beamforming interface tied to hardware array geometry.
@@ -89,8 +89,7 @@ impl SensorBeamformer {
         }
 
         let origin = image_grid.origin;
-        let mut delays = Array2::zeros((self.sensor_positions.len(), image_grid.size()));
-
+        let mut delays = Array2::zeros([self.sensor_positions.len(), image_grid.size()]);
         let x_coords: Vec<f64> = image_grid
             .coordinates(kwavers_grid::GridDimension::X)
             .collect();
@@ -145,7 +144,7 @@ impl SensorBeamformer {
         delays: &Array2<f64>,
         window_type: BeamformerWindowType,
     ) -> KwaversResult<Array2<f64>> {
-        let n_sensors = delays.nrows();
+        let n_sensors = delays.shape()[0];
 
         let signal_window_type = match window_type {
             BeamformerWindowType::Hanning => signal_window::SignalWindowType::Hann,
@@ -202,7 +201,7 @@ impl SensorBeamformer {
 
         let n_sensors = self.sensor_positions.len();
         let n_angles = angles.len();
-        let mut steering_matrix = Array2::zeros((n_sensors, n_angles));
+        let mut steering_matrix = Array2::zeros([n_sensors, n_angles]);
 
         for (idx, &(theta, phi)) in angles.iter().enumerate() {
             let sin_theta = theta.sin();

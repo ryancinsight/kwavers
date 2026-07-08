@@ -6,7 +6,7 @@
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
 use crate::heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl ElasticProperties for HeterogeneousMedium {
     /// Lamé's first parameter λ at continuous coordinates (Pa)

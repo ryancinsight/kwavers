@@ -1,7 +1,7 @@
 //! Shared finite-difference normal-gradient helper used by both the Neumann
 //! and Robin transmission branches.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::SchwarzBoundary;
 
@@ -36,7 +36,7 @@ impl SchwarzBoundary {
         j: usize,
         k: usize,
     ) -> f64 {
-        let (nx, _ny, _nz) = field.dim();
+        let [nx, _ny, _nz] = field.shape();
 
         if i > 0 && i < nx - 1 {
             (field[[i + 1, j, k]] - field[[i - 1, j, k]]) / 2.0

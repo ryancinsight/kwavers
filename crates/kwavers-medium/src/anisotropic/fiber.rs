@@ -4,7 +4,7 @@
 //! - Blemker et al. (2005). "A 3D model of muscle reveals the causes of nonuniform strains"
 
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Fiber orientation in 3D space
@@ -65,7 +65,7 @@ pub struct MuscleFiberModel {
 impl MuscleFiberModel {
     /// Create uniform fiber model
     pub fn uniform(grid: &Grid, orientation: FiberOrientation, pennation_angle: f64) -> Self {
-        let fiber_field = Array3::from_elem((grid.nx, grid.ny, grid.nz), orientation);
+        let fiber_field = Array3::from_elem([grid.nx, grid.ny, grid.nz], orientation);
 
         Self {
             fiber_field,
@@ -76,7 +76,7 @@ impl MuscleFiberModel {
 
     /// Create helical fiber arrangement (e.g., cardiac muscle)
     pub fn helical(grid: &Grid, pitch: f64, radius: f64) -> Self {
-        let mut fiber_field = Array3::default((grid.nx, grid.ny, grid.nz));
+        let mut fiber_field = Array3::from_elem([grid.nx, grid.ny, grid.nz], FiberOrientation::default());
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {

@@ -61,7 +61,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array1;
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 use std::any::Any;
 use std::fmt::Debug;
 

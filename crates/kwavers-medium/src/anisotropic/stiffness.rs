@@ -5,7 +5,7 @@
 use super::types::AnisotropyType;
 use kwavers_core::constants::{LAME_TO_STIFFNESS_FACTOR, SYMMETRY_TOLERANCE};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Full elastic stiffness tensor (6x6 in Voigt notation)
 #[derive(Debug, Clone)]
@@ -20,7 +20,7 @@ impl AnisotropicStiffnessTensor {
     /// Create isotropic stiffness tensor from Lamé parameters
     #[must_use]
     pub fn isotropic(lambda: f64, mu: f64) -> Self {
-        let mut c = Array2::zeros((6, 6));
+        let mut c = Array2::zeros([6, 6]);
 
         // Diagonal terms
         c[[0, 0]] = LAME_TO_STIFFNESS_FACTOR.mul_add(mu, lambda); // C11
@@ -67,7 +67,7 @@ impl AnisotropicStiffnessTensor {
         // C66 = (C11 - C12) / 2 for transverse isotropy
         let c66 = (c11 - c12) / 2.0;
 
-        let mut c = Array2::zeros((6, 6));
+        let mut c = Array2::zeros([6, 6]);
 
         // Fill symmetric matrix
         c[[0, 0]] = c11;
@@ -95,7 +95,7 @@ impl AnisotropicStiffnessTensor {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn orthotropic(components: [[f64; 6]; 6]) -> KwaversResult<Self> {
-        let mut c = Array2::zeros((6, 6));
+        let mut c = Array2::zeros([6, 6]);
 
         // Copy components ensuring symmetry
         for i in 0..6 {
@@ -172,8 +172,13 @@ impl AnisotropicStiffnessTensor {
     pub fn is_positive_definite(&self) -> bool {
         // Use Sylvester's criterion: all leading principal minors must be positive
         for k in 1..=6 {
-            let submatrix = self.c.slice(ndarray::s![0..k, 0..k]);
-            let det = Self::determinant_2d(&submatrix.to_owned());
+            let mut submatrix = Array2::zeros([k, k]);
+            for i in 0..k {
+                for j in 0..k {
+                    submatrix[[i, j]] = self.c[[i, j]];
+                }
+            }
+            let det = Self::determinant_2d(&submatrix);
             if det <= 0.0 {
                 return false;
             }
@@ -209,8 +214,10 @@ impl AnisotropicStiffnessTensor {
         }
 
         // For larger matrices use leto-ops partial-pivot LU.
-        // Build a leto Array2 view from the ndarray data.
-        let flat: Vec<f64> = (0..n).flat_map(|i| (0..n).map(move |j| matrix[[i, j]])).collect();
+        // Build a leto Array2 from the dense matrix data.
+        let flat: Vec<f64> = (0..n)
+            .flat_map(|i| (0..n).map(move |j| matrix[[i, j]]))
+            .collect();
         let Ok(leto_mat) = leto::Array2::from_shape_vec([n, n], flat) else {
             return 0.0;
         };
@@ -227,8 +234,10 @@ impl AnisotropicStiffnessTensor {
     pub fn compliance_matrix(&self) -> KwaversResult<Array2<f64>> {
         use leto_ops::application::linalg::lu_decompose;
 
-        // Build leto Array2 from the ndarray 6×6 stiffness matrix.
-        let flat: Vec<f64> = (0..6).flat_map(|i| (0..6).map(move |j| self.c[[i, j]])).collect();
+        // Build a leto Array2 from the 6×6 stiffness matrix.
+        let flat: Vec<f64> = (0..6)
+            .flat_map(|i| (0..6).map(move |j| self.c[[i, j]]))
+            .collect();
         let leto_mat = leto::Array2::from_shape_vec([6, 6], flat)
             .expect("6×6 stiffness matrix has known valid shape");
         let inv = lu_decompose(&leto_mat.view())
@@ -241,7 +250,7 @@ impl AnisotropicStiffnessTensor {
                 })
             })?;
 
-        let mut compliance = Array2::zeros((6, 6));
+        let mut compliance = Array2::zeros([6, 6]);
         for i in 0..6 {
             for j in 0..6 {
                 compliance[[i, j]] = *inv.get([i, j]).expect("6×6 indices in bounds");

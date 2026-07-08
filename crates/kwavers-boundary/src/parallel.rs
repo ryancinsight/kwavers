@@ -1,7 +1,6 @@
 //! Provider-owned parallel traversal helpers for boundary arrays.
 
-use moirai_parallel::{enumerate_mut_with, for_each_mut_with, Adaptive};
-use ndarray::{ArrayView3, ArrayViewMut3, Zip};
+use leto::{ArrayView3, ArrayViewMut3};
 
 /// Apply an indexed mutation over a 3-D view.
 #[inline]
@@ -10,18 +9,16 @@ where
     T: Send,
     F: Fn((usize, usize, usize), &mut T) + Send + Sync,
 {
-    let (_nx, ny, nz) = values.dim();
-    if let Some(slice) = values.as_slice_mut() {
-        let f_ref = &f;
-        enumerate_mut_with::<Adaptive, _, _>(slice, |idx, value| {
-            let plane = ny * nz;
-            let i = idx / plane;
-            let rem = idx % plane;
-            f_ref((i, rem / nz, rem % nz), value);
-        });
-    } else {
-        let f_ref = &f;
-        Zip::indexed(values).for_each(f_ref);
+    let [nx, ny, nz] = values.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let value = values
+                    .get_mut([i, j, k])
+                    .expect("invariant: valid 3-D boundary traversal index");
+                f((i, j, k), value);
+            }
+        }
     }
 }
 
@@ -32,30 +29,26 @@ pub(crate) fn for_each_indexed_pair_mut<T, U, F>(
     input: ArrayView3<'_, U>,
     f: F,
 ) where
-    T: Send,
-    U: Sync,
     F: Fn((usize, usize, usize), &mut T, &U) + Send + Sync,
 {
     debug_assert_eq!(
-        values.dim(),
-        input.dim(),
+        values.shape(),
+        input.shape(),
         "invariant: boundary paired traversal shape mismatch"
     );
 
-    let (_nx, ny, nz) = values.dim();
-    match (values.as_slice_mut(), input.as_slice()) {
-        (Some(values), Some(input)) => {
-            let f_ref = &f;
-            enumerate_mut_with::<Adaptive, _, _>(values, |idx, value| {
-                let plane = ny * nz;
-                let i = idx / plane;
-                let rem = idx % plane;
-                f_ref((i, rem / nz, rem % nz), value, &input[idx]);
-            });
-        }
-        _ => {
-            let f_ref = &f;
-            Zip::indexed(values).and(input).for_each(f_ref);
+    let [nx, ny, nz] = values.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let rhs = input
+                    .get([i, j, k])
+                    .expect("invariant: valid paired boundary traversal input index");
+                let lhs = values
+                    .get_mut([i, j, k])
+                    .expect("invariant: valid paired boundary traversal output index");
+                f((i, j, k), lhs, rhs);
+            }
         }
     }
 }
@@ -64,12 +57,17 @@ pub(crate) fn for_each_indexed_pair_mut<T, U, F>(
 #[inline]
 pub(crate) fn for_each_mut<T, F>(mut values: ArrayViewMut3<'_, T>, f: F)
 where
-    T: Send,
     F: Fn(&mut T) + Send + Sync,
 {
-    if let Some(slice) = values.as_slice_mut() {
-        for_each_mut_with::<Adaptive, _, _>(slice, f);
-    } else {
-        values.iter_mut().for_each(f);
+    let [nx, ny, nz] = values.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let value = values
+                    .get_mut([i, j, k])
+                    .expect("invariant: valid unindexed boundary traversal index");
+                f(value);
+            }
+        }
     }
 }

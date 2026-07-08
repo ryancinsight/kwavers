@@ -25,7 +25,7 @@ pub use gradient::GradientFieldUpdater;
 use crate::traits::{BoundaryCondition, BoundaryFieldType};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Field updater that applies boundary conditions during solver steps.
 ///

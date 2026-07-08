@@ -17,7 +17,7 @@ use kwavers_core::constants::tissue_acoustics::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::Complex64;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Frequency-dependent tissue properties
 #[derive(Debug, Clone)]

@@ -5,7 +5,7 @@
 
 use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_grid::Grid;
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 /// Interface point information
 #[derive(Debug, Clone)]

@@ -9,7 +9,7 @@ use crate::{
 };
 use kwavers_core::constants::tissue_thermal::THERMAL_EXPANSION_SOFT_TISSUE;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl ThermalProperties for HeterogeneousMedium {
     /// Thermal conductivity at continuous coordinates (W/(m·K))

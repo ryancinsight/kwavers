@@ -13,7 +13,7 @@
 //! - Pinton et al. (2009), IEEE Trans. UFFC, 56(3), 474-488.
 //! - Treeby & Cox (2010): "Modeling power law absorption and dispersion"
 
-use ndarray::Array3;
+use leto::Array3;
 
 mod computation;
 mod construction;

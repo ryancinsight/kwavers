@@ -2,7 +2,7 @@ use super::*;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 fn create_test_grid() -> Grid {
     Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap()

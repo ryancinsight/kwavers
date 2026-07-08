@@ -2,7 +2,7 @@
 
 use super::StorageBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
@@ -39,7 +39,7 @@ impl StorageBackend for FileStorage {
         let mut file = File::create(&filename).map_err(KwaversError::Io)?;
 
         // Write binary data
-        for value in field {
+        for value in field.iter() {
             let bytes = value.to_le_bytes();
             file.write_all(&bytes).map_err(KwaversError::Io)?;
         }

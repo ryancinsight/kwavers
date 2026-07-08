@@ -34,17 +34,11 @@ use super::super::SensorRecorder;
 use crate::recorder::fields::SensorRecordField;
 use crate::recorder::velocity_statistics::VelocityArray3Access;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 #[doc(hidden)]
 pub trait VelocitySamples3 {
     fn value_at(&self, i: usize, j: usize, k: usize) -> f64;
-}
-
-impl VelocitySamples3 for ndarray::Array3<f64> {
-    fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
-        self[[i, j, k]]
-    }
 }
 
 impl VelocitySamples3 for leto::Array3<f64> {

@@ -17,7 +17,7 @@
 use crate::recorder::fields::SensorRecordSpec;
 use crate::recorder::pressure_statistics::PressureFieldStatistics;
 use crate::recorder::velocity_statistics::VelocityComponentStats;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 mod checkpoint;
 mod construction;

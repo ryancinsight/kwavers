@@ -19,7 +19,7 @@ use kwavers_core::constants::tissue_acoustics::{
 use kwavers_core::constants::BLOOD_VISCOSITY_37C;
 use kwavers_core::constants::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::HomogeneousMedium;
 
@@ -28,7 +28,7 @@ impl HomogeneousMedium {
     pub fn tissue(grid: &Grid) -> Self {
         use kwavers_core::constants::SOUND_SPEED_TISSUE;
         let mut medium = Self::new(DENSITY_TISSUE, SOUND_SPEED_TISSUE, 0.75, 15.0, grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
@@ -45,7 +45,7 @@ impl HomogeneousMedium {
     /// Create a water medium with standard properties at 20°C
     pub fn water(grid: &Grid) -> Self {
         let mut medium = Self::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.01, 0.1, grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, ROOM_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
@@ -62,7 +62,7 @@ impl HomogeneousMedium {
     /// Create a blood medium with standard properties at 37°C
     pub fn blood(grid: &Grid) -> Self {
         let mut medium = Self::new(DENSITY_BLOOD, SOUND_SPEED_BLOOD, 0.15, 0.5, grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
@@ -101,26 +101,26 @@ impl HomogeneousMedium {
             optical_absorption: 0.0,
             optical_scattering: 0.0,
             reference_frequency: REFERENCE_FREQUENCY_HZ,
-            temperature: Array3::from_elem((grid.nx, grid.ny, grid.nz), ROOM_TEMPERATURE_K),
-            bubble_radius: Array3::zeros((grid.nx, grid.ny, grid.nz)),
-            bubble_velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
-            density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), DENSITY_AIR),
-            sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), SOUND_SPEED_AIR),
+            temperature: Array3::from_elem([grid.nx, grid.ny, grid.nz], ROOM_TEMPERATURE_K),
+            bubble_radius: Array3::zeros([grid.nx, grid.ny, grid.nz]),
+            bubble_velocity: Array3::zeros([grid.nx, grid.ny, grid.nz]),
+            density_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], DENSITY_AIR),
+            sound_speed_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], SOUND_SPEED_AIR),
             absorption_cache: Array3::from_elem(
-                (grid.nx, grid.ny, grid.nz),
+                [grid.nx, grid.ny, grid.nz],
                 AIR_ABSORPTION_ALPHA_0 * 1.0_f64.powi(2),
             ),
-            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), B_OVER_A_AIR),
+            nonlinearity_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], B_OVER_A_AIR),
             lame_lambda: DENSITY_AIR * SOUND_SPEED_AIR * SOUND_SPEED_AIR,
             lame_mu: 0.0,
-            grid_shape: (grid.nx, grid.ny, grid.nz),
+            grid_shape: [grid.nx, grid.ny, grid.nz],
         }
     }
 
     /// Create from minimal parameters
     pub fn from_minimal(density: f64, sound_speed: f64, grid: &Grid) -> Self {
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, ROOM_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
@@ -142,7 +142,7 @@ impl HomogeneousMedium {
         let sound_speed = SOUND_SPEED_TISSUE;
 
         let mut medium = Self::new(density, sound_speed, 0.01, 0.1, grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
@@ -236,7 +236,7 @@ impl HomogeneousMedium {
         // Build a baseline acoustic-only homogeneous medium at c_p, then
         // overwrite Lamé parameters with the elastic-derived values.
         let mut medium = Self::new(density, c_compression, 0.0, 0.0, grid);
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         medium.grid_shape = shape;
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);

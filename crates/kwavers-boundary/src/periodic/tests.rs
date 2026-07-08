@@ -1,5 +1,5 @@
 use approx::assert_abs_diff_eq;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::traits::BoundaryFieldType;
 use crate::BoundaryCondition;

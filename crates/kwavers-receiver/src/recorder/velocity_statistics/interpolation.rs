@@ -39,7 +39,7 @@
 //! - k-Wave MATLAB Toolbox, `kspaceFirstOrder3D.m`, `u_non_staggered` computation.
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314.
 
-use ndarray::{s, Array3};
+use leto::Array3;
 
 /// Interpolate a staggered velocity component to pressure-grid positions.
 ///
@@ -61,7 +61,7 @@ use ndarray::{s, Array3};
 pub fn interpolate_staggered_to_collocated(u: &Array3<f64>, axis: usize) -> Array3<f64> {
     debug_assert!(axis < 3, "axis must be 0, 1, or 2; got {axis}");
 
-    let (nx, ny, nz) = u.dim();
+    let [nx, ny, nz] = u.shape();
 
     // Step 1: u_ns = u / 2.  This initialises every element including the
     // boundary row (i=0 / j=0 / k=0), which is u[0]/2 — matching the ghost-
@@ -70,34 +70,33 @@ pub fn interpolate_staggered_to_collocated(u: &Array3<f64>, axis: usize) -> Arra
 
     match axis {
         0 if nx > 1 => {
-            // u_ns[1.., .., ..] += u[0..nx-1, .., ..] * 0.5
-            // Slice views are disjoint in memory (different row indices),
-            // so ndarray's in-place add is safe and alias-free.
-            let shifted = u.slice(s![..nx - 1, .., ..]);
-            let mut target = u_ns.slice_mut(s![1.., .., ..]);
-            target.zip_mut_with(&shifted, |ns, &prev| {
-                *ns += prev * 0.5;
-            });
+            for i in 1..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        u_ns[[i, j, k]] += u[[i - 1, j, k]] * 0.5;
+                    }
+                }
+            }
         }
         1 if ny > 1 => {
-            let shifted = u.slice(s![.., ..ny - 1, ..]);
-            let mut target = u_ns.slice_mut(s![.., 1.., ..]);
-            target.zip_mut_with(&shifted, |ns, &prev| {
-                *ns += prev * 0.5;
-            });
+            for i in 0..nx {
+                for j in 1..ny {
+                    for k in 0..nz {
+                        u_ns[[i, j, k]] += u[[i, j - 1, k]] * 0.5;
+                    }
+                }
+            }
         }
         _ if nz > 1 => {
-            // axis == 2 or any out-of-range value (guarded by debug_assert above).
-            let shifted = u.slice(s![.., .., ..nz - 1]);
-            let mut target = u_ns.slice_mut(s![.., .., 1..]);
-            target.zip_mut_with(&shifted, |ns, &prev| {
-                *ns += prev * 0.5;
-            });
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 1..nz {
+                        u_ns[[i, j, k]] += u[[i, j, k - 1]] * 0.5;
+                    }
+                }
+            }
         }
-        _ => {
-            // Singleton axis (n == 1): only one cell, no shift needed.
-            // u_ns already holds u[0] / 2, which is correct for a 1-cell domain.
-        }
+        _ => {}
     }
 
     u_ns
@@ -106,7 +105,7 @@ pub fn interpolate_staggered_to_collocated(u: &Array3<f64>, axis: usize) -> Arra
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     // ── Theorem: uniform field, axis-0 interpolation ─────────────────────────
     //
@@ -115,7 +114,7 @@ mod tests {
     //   u_ns[i≥1]  = v         (average of two equal values)
     #[test]
     fn test_uniform_field_axis0() {
-        let u = Array3::from_elem((4, 1, 1), 2.0_f64);
+        let u = Array3::from_elem([4, 1, 1], 2.0_f64);
         let u_ns = interpolate_staggered_to_collocated(&u, 0);
 
         assert!((u_ns[[0, 0, 0]] - 1.0).abs() < f64::EPSILON * 4.0);
@@ -126,7 +125,7 @@ mod tests {
     // ── Theorem: uniform field, axis-1 interpolation ─────────────────────────
     #[test]
     fn test_uniform_field_axis1() {
-        let u = Array3::from_elem((1, 4, 1), 3.0_f64);
+        let u = Array3::from_elem([1, 4, 1], 3.0_f64);
         let u_ns = interpolate_staggered_to_collocated(&u, 1);
 
         assert!((u_ns[[0, 0, 0]] - 1.5).abs() < f64::EPSILON * 4.0);
@@ -140,7 +139,7 @@ mod tests {
     //   u_ns[i] = (i-1 + i)/2 = i - 0.5  for i ≥ 1
     #[test]
     fn test_linearly_varying_axis0() {
-        let mut u = Array3::zeros((5, 1, 1));
+        let mut u = Array3::zeros([5, 1, 1]);
         for i in 0..5usize {
             u[[i, 0, 0]] = i as f64;
         }
@@ -160,7 +159,7 @@ mod tests {
     // ── Theorem: linearly varying field, axis-2 ──────────────────────────────
     #[test]
     fn test_linearly_varying_axis2() {
-        let mut u = Array3::zeros((1, 1, 5));
+        let mut u = Array3::zeros([1, 1, 5]);
         for k in 0..5usize {
             u[[0, 0, k]] = k as f64;
         }
@@ -182,7 +181,7 @@ mod tests {
     // For a 1×1×1 grid, the interpolation reduces to u[0]/2.
     #[test]
     fn test_singleton_axis0() {
-        let u = Array3::from_elem((1, 1, 1), 6.0_f64);
+        let u = Array3::from_elem([1, 1, 1], 6.0_f64);
         let u_ns = interpolate_staggered_to_collocated(&u, 0);
         assert!((u_ns[[0, 0, 0]] - 3.0).abs() < f64::EPSILON * 4.0);
     }
@@ -194,7 +193,7 @@ mod tests {
     #[test]
     fn test_3d_consistency() {
         let v = 4.0_f64;
-        let u = Array3::from_elem((8, 8, 8), v);
+        let u = Array3::from_elem([8, 8, 8], v);
 
         for axis in 0..3usize {
             let u_ns = interpolate_staggered_to_collocated(&u, axis);

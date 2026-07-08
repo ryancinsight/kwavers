@@ -2,7 +2,7 @@
 
 use super::super::SchwarzBoundary;
 use crate::coupling::types::{BoundaryDirections, BoundaryTransmissionCondition};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_schwarz_robin_condition() {

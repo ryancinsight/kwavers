@@ -3,7 +3,7 @@
 use super::HeterogeneousTissueMedium;
 use crate::thermal::{ThermalField, ThermalProperties};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl ThermalProperties for HeterogeneousTissueMedium {
     fn specific_heat(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

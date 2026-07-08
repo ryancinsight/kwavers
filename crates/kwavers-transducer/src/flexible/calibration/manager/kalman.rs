@@ -78,7 +78,7 @@ impl CalibrationManager {
                     "Kalman filter not initialized".to_owned(),
                 ))?;
 
-        let num_elements = measurements.nrows();
+        let num_elements = measurements.shape()[0];
         let state_dim = kalman.state.shape()[0];
         let meas_dim = num_elements * 3;
 
@@ -228,7 +228,7 @@ impl CalibrationManager {
         let old_cov = kalman.covariance.clone();
         kalman.covariance = mat_mul(&i_kh, &old_cov);
 
-        let mut filtered = NdArray2::zeros((num_elements, 3));
+        let mut filtered = NdArray2::zeros([num_elements, 3]);
         for i in 0..num_elements {
             for j in 0..3 {
                 filtered[[i, j]] = *kalman.state.get([i * 6 + j]).unwrap();

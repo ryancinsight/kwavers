@@ -4,7 +4,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 use std::fmt::Debug;
 
 use super::types::{BoundaryDirections, BoundaryFieldType};

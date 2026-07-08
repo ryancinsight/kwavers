@@ -26,7 +26,7 @@
 use super::memory::CPMLMemory;
 use super::profiles::CPMLProfiles;
 
-use ndarray::Array3;
+use leto::Array3;
 
 mod axis;
 

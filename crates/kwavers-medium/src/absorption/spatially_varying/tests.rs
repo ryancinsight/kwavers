@@ -2,7 +2,7 @@ use super::*;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_uniform_absorption() -> KwaversResult<()> {
@@ -62,7 +62,7 @@ fn test_compute_absorption_field() -> KwaversResult<()> {
 fn test_temperature_dependence() -> KwaversResult<()> {
     let absorption = SpatiallyVaryingAbsorption::uniform(5, 5, 5, 1.0, 1.0)?;
 
-    let mut temp_field = Array3::from_elem((5, 5, 5), BODY_TEMPERATURE_K);
+    let mut temp_field = Array3::from_elem([5, 5, 5], BODY_TEMPERATURE_K);
     temp_field[[2, 2, 2]] = 320.15;
 
     let absorption = absorption.with_temperature_dependence(temp_field, 0.01)?;
@@ -83,10 +83,10 @@ fn test_validation() -> KwaversResult<()> {
     let good = SpatiallyVaryingAbsorption::uniform(3, 3, 3, 0.5, 1.2)?;
     good.validate().unwrap();
 
-    let mut bad_alpha = Array3::from_elem((3, 3, 3), 0.5);
+    let mut bad_alpha = Array3::from_elem([3, 3, 3], 0.5);
     bad_alpha[[1, 1, 1]] = -0.1;
     let bad =
-        SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem((3, 3, 3), 1.0), MHZ_TO_HZ);
+        SpatiallyVaryingAbsorption::new(bad_alpha, Array3::from_elem([3, 3, 3], 1.0), MHZ_TO_HZ);
     assert!(bad.is_err());
 
     Ok(())

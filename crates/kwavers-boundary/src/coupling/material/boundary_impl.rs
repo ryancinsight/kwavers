@@ -3,7 +3,7 @@ use crate::coupling::types::BoundaryDirections;
 use crate::traits::BoundaryCondition;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::ArrayViewMut3;
+use leto::ArrayViewMut3;
 
 impl BoundaryCondition for MaterialInterface {
     fn name(&self) -> &str {
@@ -123,7 +123,7 @@ impl BoundaryCondition for MaterialInterface {
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut ndarray::Array3<kwavers_math::fft::Complex64>,
+        _field: &mut leto::Array3<kwavers_math::fft::Complex64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

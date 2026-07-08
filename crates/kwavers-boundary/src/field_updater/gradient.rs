@@ -14,7 +14,7 @@
 //! ```
 
 use kwavers_grid::GridTopology;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Gradient-based field updater for FDTD solvers.
 ///
@@ -35,9 +35,9 @@ impl GradientFieldUpdater {
     pub fn new(grid: &dyn GridTopology) -> Self {
         let dims = grid.dimensions();
         Self {
-            grad_x: Array3::zeros((dims[0], dims[1], dims[2])),
-            grad_y: Array3::zeros((dims[0], dims[1], dims[2])),
-            grad_z: Array3::zeros((dims[0], dims[1], dims[2])),
+            grad_x: Array3::zeros([dims[0], dims[1], dims[2]]),
+            grad_y: Array3::zeros([dims[0], dims[1], dims[2]]),
+            grad_z: Array3::zeros([dims[0], dims[1], dims[2]]),
         }
     }
 
@@ -152,7 +152,7 @@ impl GradientFieldUpdater {
         let (nx, ny, nz) = (dims[0], dims[1], dims[2]);
         let (dx, dy, dz) = (spacing[0], spacing[1], spacing[2]);
 
-        let mut div = Array3::zeros((nx, ny, nz));
+        let mut div = Array3::zeros([nx, ny, nz]);
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {

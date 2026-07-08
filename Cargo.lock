@@ -4592,7 +4592,6 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
- "ndarray",
  "serde",
 ]
 
@@ -4728,7 +4727,6 @@ dependencies = [
  "kwavers-medium",
  "leto",
  "log",
- "ndarray",
  "ritk-image",
  "ritk-io",
  "ritk-registration",
@@ -4767,7 +4765,6 @@ dependencies = [
  "leto-ops",
  "log",
  "moirai-parallel",
- "ndarray",
  "num-complex",
  "proptest",
  "serde",
@@ -4881,7 +4878,6 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
- "ndarray",
  "serde",
  "serde_json",
 ]

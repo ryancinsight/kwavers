@@ -9,7 +9,7 @@ use crate::{
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::error::{KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 mod acoustic;
 mod bubble;
@@ -63,7 +63,7 @@ impl HeterogeneousTissueMedium {
     /// - Panics if `Default tissue properties not found`.
     ///
     pub fn new(grid: Grid, default_tissue: AbsorptionTissueType) -> Self {
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         let tissue_map = Array3::from_elem(shape, default_tissue);
 
         // Initialize arrays with default tissue properties
@@ -121,7 +121,7 @@ impl HeterogeneousTissueMedium {
 
     /// Update cached property arrays from tissue map
     pub(super) fn update_properties(&mut self) {
-        for ((i, j, k), tissue_type) in self.tissue_map.indexed_iter() {
+        for ([i, j, k], tissue_type) in self.tissue_map.indexed_iter() {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 self.density[[i, j, k]] = props.density.max(MIN_PHYSICAL_DENSITY);
                 self.sound_speed[[i, j, k]] = props.sound_speed.max(MIN_PHYSICAL_SOUND_SPEED);

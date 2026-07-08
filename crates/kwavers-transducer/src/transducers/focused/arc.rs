@@ -132,7 +132,7 @@ impl ArcSource {
         spacing: [f64; 2],
         time: f64,
     ) -> Array2<f64> {
-        let mut source = Array2::zeros((nx, ny));
+        let mut source = Array2::zeros([nx, ny]);
         let omega = TWO_PI * self.config.frequency;
 
         // Focus is at the center of curvature

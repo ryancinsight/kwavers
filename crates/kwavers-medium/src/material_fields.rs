@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Container for common initialization material properties
 #[derive(Debug, Clone)]
@@ -16,8 +16,8 @@ impl MaterialFields {
     #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
-            rho0: Array3::zeros(shape),
-            c0: Array3::zeros(shape),
+            rho0: Array3::zeros(shape.into()),
+            c0: Array3::zeros(shape.into()),
         }
     }
 }

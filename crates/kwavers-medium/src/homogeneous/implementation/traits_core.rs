@@ -1,4 +1,4 @@
-use ndarray::{ArrayView3, ArrayViewMut3};
+use leto::{ArrayView3, ArrayViewMut3};
 
 use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};

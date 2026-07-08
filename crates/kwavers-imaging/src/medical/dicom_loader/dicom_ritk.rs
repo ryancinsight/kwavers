@@ -27,7 +27,7 @@
 use std::path::Path;
 
 use coeus_core::SequentialBackend;
-use ndarray::Array3;
+use leto::Array3;
 use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 
 use crate::medical::ritk_bridge::native_image_to_volume;

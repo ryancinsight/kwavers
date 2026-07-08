@@ -5,7 +5,7 @@
 
 use super::stiffness::AnisotropicStiffnessTensor;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Christoffel equation solver for anisotropic wave propagation
 #[derive(Debug)]
@@ -26,7 +26,7 @@ impl ChristoffelEquation {
     /// Compute Christoffel matrix for given propagation direction
     #[must_use]
     pub fn christoffel_matrix(&self, direction: &[f64; 3]) -> Array2<f64> {
-        let mut gamma = Array2::zeros((3, 3));
+        let mut gamma = Array2::zeros([3, 3]);
         let c = &self.stiffness.c;
         let n = direction;
 

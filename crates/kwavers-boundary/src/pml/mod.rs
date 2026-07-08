@@ -1,5 +1,5 @@
 use kwavers_core::error::{ConfigError, KwaversResult};
-use ndarray::ArrayViewMut3;
+use leto::ArrayViewMut3;
 use serde::{Deserialize, Serialize};
 
 mod boundary_impl;

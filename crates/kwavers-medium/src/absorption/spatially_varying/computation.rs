@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex;
 
 use crate::parallel::{zip_mut_ref, zip_mut_three_refs, zip_mut_two_refs};
@@ -27,8 +27,8 @@ impl SpatiallyVaryingAbsorption {
 
     #[must_use]
     pub fn compute_absorption_field(&self, frequency: f64) -> Array3<f64> {
-        let (nx, ny, nz) = self.alpha_0_field.dim();
-        let mut alpha_field = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = self.alpha_0_field.shape();
+        let mut alpha_field = Array3::zeros([nx, ny, nz]);
 
         let freq_ratio = frequency / self.f_ref;
 
@@ -62,7 +62,7 @@ impl SpatiallyVaryingAbsorption {
         frequency: f64,
         dx: f64,
     ) -> KwaversResult<()> {
-        if field.dim() != self.alpha_0_field.dim() {
+        if field.shape() != self.alpha_0_field.shape() {
             return Err(KwaversError::InvalidInput(
                 "Field dimension mismatch".to_owned(),
             ));
@@ -117,14 +117,14 @@ impl SpatiallyVaryingAbsorption {
             return Ok(c0_field.clone());
         }
 
-        if c0_field.dim() != self.alpha_0_field.dim() {
+        if c0_field.shape() != self.alpha_0_field.shape() {
             return Err(KwaversError::InvalidInput(
                 "Sound speed field dimension mismatch".to_owned(),
             ));
         }
 
-        let (nx, ny, nz) = c0_field.dim();
-        let mut c_field = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = c0_field.shape();
+        let mut c_field = Array3::zeros([nx, ny, nz]);
 
         let omega = TWO_PI * frequency;
 

@@ -1,7 +1,7 @@
 use super::manager::BemBoundaryManager;
-use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
 use kwavers_math::fft::Complex64;
+use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use leto::Array1;
 
 #[test]
 fn test_bem_boundary_manager_creation() {
@@ -17,7 +17,7 @@ fn test_dirichlet_boundary_condition() {
 
     let mut h_matrix = CompressedSparseRowMatrix::create(3, 3);
     let mut g_matrix = CompressedSparseRowMatrix::create(3, 3);
-    let mut boundary_values = Array1::zeros(3);
+    let mut boundary_values = Array1::zeros([3]);
 
     manager
         .apply_all(&mut h_matrix, &mut g_matrix, &mut boundary_values, 1.0)
@@ -34,7 +34,7 @@ fn test_neumann_boundary_condition() {
 
     let mut h_matrix = CompressedSparseRowMatrix::create(3, 3);
     let mut g_matrix = CompressedSparseRowMatrix::create(3, 3);
-    let mut boundary_values = Array1::zeros(3);
+    let mut boundary_values = Array1::zeros([3]);
 
     manager
         .apply_all(&mut h_matrix, &mut g_matrix, &mut boundary_values, 1.0)
@@ -74,7 +74,7 @@ fn test_radiation_boundary_condition() {
 
     let mut h_matrix = CompressedSparseRowMatrix::create(3, 3);
     let mut g_matrix = CompressedSparseRowMatrix::create(3, 3);
-    let mut boundary_values = Array1::zeros(3);
+    let mut boundary_values = Array1::zeros([3]);
 
     h_matrix.set_diagonal(0, Complex64::new(1.0, 0.0));
 

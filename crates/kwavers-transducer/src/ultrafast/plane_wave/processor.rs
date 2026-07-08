@@ -2,7 +2,7 @@
 
 use super::config::UltrafastPlaneWaveConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 /// Plane wave imaging processor.
@@ -127,7 +127,7 @@ impl UltrafastPlaneWave {
     ) -> KwaversResult<Array2<f64>> {
         let n_elements = self.config.element_positions.len();
         let n_pixels = x_pixels.len() * y_pixels.len();
-        let mut delays = Array2::zeros((n_elements, n_pixels));
+        let mut delays = Array2::zeros([n_elements, n_pixels]);
 
         let c = self.config.sound_speed;
         let sin_theta = tilt_angle.sin();

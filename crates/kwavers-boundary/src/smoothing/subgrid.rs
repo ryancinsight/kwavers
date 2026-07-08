@@ -14,7 +14,7 @@
 //! `1/Z_smooth = f/Z_inside + (1-f)/Z_outside`
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::for_each_indexed_pair_mut;
 
@@ -71,7 +71,7 @@ impl SubgridAveraging {
         property: &Array3<f64>,
         geometry: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = property.dim();
+        let [nx, ny, nz] = property.shape();
         let mut smoothed = property.clone();
 
         let half_kernel = self.config.kernel_size / 2;
@@ -143,7 +143,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-    use ndarray::{s, Array3};
+    use leto::Array3;
 
     #[test]
     fn test_subgrid_averaging_no_boundary() {
@@ -151,8 +151,8 @@ mod tests {
         let smoother = SubgridAveraging::new(config);
 
         // Uniform property, all inside (geometry = 1.0)
-        let property = Array3::from_elem((10, 10, 10), SOUND_SPEED_TISSUE);
-        let geometry = Array3::from_elem((10, 10, 10), 1.0);
+        let property = Array3::from_elem([10, 10, 10], SOUND_SPEED_TISSUE);
+        let geometry = Array3::from_elem([10, 10, 10], 1.0);
 
         let smoothed = smoother.apply(&property, &geometry).unwrap();
         // Should be unchanged (no boundary cells)
@@ -169,11 +169,23 @@ mod tests {
         let smoother = SubgridAveraging::new(config);
 
         // Create a simple boundary scenario
-        let mut property = Array3::from_elem((10, 10, 10), SOUND_SPEED_TISSUE);
-        property.slice_mut(s![5.., .., ..]).fill(3000.0); // Different property outside
+        let mut property = Array3::from_elem([10, 10, 10], SOUND_SPEED_TISSUE);
+        for i in 5..10 {
+            for j in 0..10 {
+                for k in 0..10 {
+                    property[[i, j, k]] = 3000.0;
+                }
+            }
+        }
 
-        let mut geometry = Array3::from_elem((10, 10, 10), 1.0);
-        geometry.slice_mut(s![5.., .., ..]).fill(0.0); // Outside domain
+        let mut geometry = Array3::from_elem([10, 10, 10], 1.0);
+        for i in 5..10 {
+            for j in 0..10 {
+                for k in 0..10 {
+                    geometry[[i, j, k]] = 0.0;
+                }
+            }
+        }
         geometry[[5, 5, 5]] = 0.5; // Boundary cell (50% volume fraction)
 
         let smoothed = smoother.apply(&property, &geometry).unwrap();
@@ -194,11 +206,23 @@ mod tests {
         };
         let smoother = SubgridAveraging::new(config);
 
-        let mut property = Array3::from_elem((10, 10, 10), 1000.0);
-        property.slice_mut(s![5.., .., ..]).fill(2000.0);
+        let mut property = Array3::from_elem([10, 10, 10], 1000.0);
+        for i in 5..10 {
+            for j in 0..10 {
+                for k in 0..10 {
+                    property[[i, j, k]] = 2000.0;
+                }
+            }
+        }
 
-        let mut geometry = Array3::from_elem((10, 10, 10), 1.0);
-        geometry.slice_mut(s![5.., .., ..]).fill(0.0);
+        let mut geometry = Array3::from_elem([10, 10, 10], 1.0);
+        for i in 5..10 {
+            for j in 0..10 {
+                for k in 0..10 {
+                    geometry[[i, j, k]] = 0.0;
+                }
+            }
+        }
         geometry[[5, 5, 5]] = 0.5;
 
         // Harmonic average should be closer to lower value

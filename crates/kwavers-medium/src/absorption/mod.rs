@@ -48,7 +48,7 @@ pub use tissue::{
 };
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::for_each_mut;
 

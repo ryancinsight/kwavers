@@ -1,7 +1,36 @@
 //! Rotation matrices and transformations for anisotropic materials
 
 use kwavers_core::constants::BOND_TRANSFORM_FACTOR;
-use ndarray::Array2;
+use leto::Array2;
+
+fn transpose(matrix: &Array2<f64>) -> Array2<f64> {
+    let [rows, cols] = matrix.shape();
+    let mut transposed = Array2::zeros([cols, rows]);
+    for i in 0..rows {
+        for j in 0..cols {
+            transposed[[j, i]] = matrix[[i, j]];
+        }
+    }
+    transposed
+}
+
+fn matmul(lhs: &Array2<f64>, rhs: &Array2<f64>) -> Array2<f64> {
+    let [rows, inner] = lhs.shape();
+    let [rhs_inner, cols] = rhs.shape();
+    debug_assert_eq!(inner, rhs_inner);
+
+    let mut out = Array2::zeros([rows, cols]);
+    for i in 0..rows {
+        for j in 0..cols {
+            let mut sum = 0.0;
+            for k in 0..inner {
+                sum += lhs[[i, k]] * rhs[[k, j]];
+            }
+            out[[i, j]] = sum;
+        }
+    }
+    out
+}
 
 /// 3D rotation matrix for coordinate transformations
 #[derive(Debug, Clone)]
@@ -22,7 +51,7 @@ impl RotationMatrix {
         let (st, ct) = theta.sin_cos();
         let (ss, cs) = psi.sin_cos();
 
-        let mut r = Array2::zeros((3, 3));
+        let mut r = Array2::zeros([3, 3]);
 
         // Row 0: [cp·ct,  cp·st·ss − sp·cs,  cp·st·cs + sp·ss]
         r[[0, 0]] = cp * ct;
@@ -103,13 +132,13 @@ impl RotationMatrix {
         let bond = self.bond_matrix();
 
         // C' = M * C * M^T
-        let temp = bond.dot(c);
-        temp.dot(&bond.t())
+        let temp = matmul(&bond, c);
+        matmul(&temp, &transpose(&bond))
     }
 
     /// Create Bond transformation matrix for Voigt notation
     fn bond_matrix(&self) -> Array2<f64> {
-        let mut m = Array2::zeros((6, 6));
+        let mut m = Array2::zeros([6, 6]);
         let r = &self.r;
 
         // Upper-left 3x3 block
@@ -171,7 +200,7 @@ impl RotationMatrix {
     #[must_use]
     pub fn is_valid(&self) -> bool {
         // Check orthogonality: R * R^T = I
-        let identity = self.r.dot(&self.r.t());
+        let identity = matmul(&self.r, &transpose(&self.r));
         let mut is_orthogonal = true;
 
         for i in 0..3 {
@@ -283,7 +312,7 @@ mod tests {
     fn bond_transform_preserves_isotropic_stiffness() {
         let lambda = 5.0e9_f64;
         let mu = 3.0e9_f64;
-        let mut c = Array2::zeros((6, 6));
+        let mut c = Array2::zeros([6, 6]);
         for i in 0..3 {
             for j in 0..3 {
                 c[[i, j]] = if i == j { lambda + 2.0 * mu } else { lambda };

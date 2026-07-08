@@ -44,7 +44,7 @@
 
 use super::config::CPMLConfig;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// CPML memory variables for field updates
 ///
@@ -72,13 +72,13 @@ impl CPMLMemory {
         let tz = config.per_dimension.z;
 
         Self {
-            psi_p_x: Array3::zeros((2 * tx, grid.ny, grid.nz)),
-            psi_p_y: Array3::zeros((grid.nx, 2 * ty, grid.nz)),
-            psi_p_z: Array3::zeros((grid.nx, grid.ny, 2 * tz)),
+            psi_p_x: Array3::zeros([2 * tx, grid.ny, grid.nz]),
+            psi_p_y: Array3::zeros([grid.nx, 2 * ty, grid.nz]),
+            psi_p_z: Array3::zeros([grid.nx, grid.ny, 2 * tz]),
 
-            psi_v_x: Array3::zeros((2 * tx, grid.ny, grid.nz)),
-            psi_v_y: Array3::zeros((grid.nx, 2 * ty, grid.nz)),
-            psi_v_z: Array3::zeros((grid.nx, grid.ny, 2 * tz)),
+            psi_v_x: Array3::zeros([2 * tx, grid.ny, grid.nz]),
+            psi_v_y: Array3::zeros([grid.nx, 2 * ty, grid.nz]),
+            psi_v_z: Array3::zeros([grid.nx, grid.ny, 2 * tz]),
         }
     }
 

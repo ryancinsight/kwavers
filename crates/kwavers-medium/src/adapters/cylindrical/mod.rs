@@ -58,7 +58,7 @@ mod validation;
 #[cfg(test)]
 mod tests;
 
-use ndarray::Array2;
+use leto::Array2;
 use std::fmt;
 
 use crate::Medium;

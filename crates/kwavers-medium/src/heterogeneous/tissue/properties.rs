@@ -3,7 +3,7 @@
 use crate::absorption::{AbsorptionTissueType, TISSUE_PROPERTIES};
 use crate::parallel::zip_mut_ref;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Cache for tissue properties to avoid repeated lookups
@@ -57,8 +57,8 @@ impl TissuePropertyCache {
         output: &mut Array3<f64>,
     ) {
         assert_eq!(
-            output.dim(),
-            tissue_map.dim(),
+            output.shape(),
+            tissue_map.shape(),
             "invariant: tissue density output shape must match tissue map"
         );
 
@@ -82,8 +82,8 @@ impl TissuePropertyCache {
         output: &mut Array3<f64>,
     ) {
         assert_eq!(
-            output.dim(),
-            tissue_map.dim(),
+            output.shape(),
+            tissue_map.shape(),
             "invariant: tissue sound-speed output shape must match tissue map"
         );
 
@@ -117,7 +117,7 @@ mod tests {
             ],
         )
         .expect("invariant: tissue map fixture shape matches data length");
-        let mut output = Array3::zeros((2, 1, 2));
+        let mut output = Array3::zeros([2, 1, 2]);
         let mut cache = TissuePropertyCache::new();
 
         cache.populate_density_array(&tissue_map, &mut output);
@@ -142,7 +142,7 @@ mod tests {
             ],
         )
         .expect("invariant: tissue map fixture shape matches data length");
-        let mut output = Array3::zeros((2, 1, 2));
+        let mut output = Array3::zeros([2, 1, 2]);
         let mut cache = TissuePropertyCache::new();
 
         cache.populate_sound_speed_array(&tissue_map, &mut output);
@@ -158,8 +158,8 @@ mod tests {
     #[test]
     #[should_panic(expected = "tissue density output shape")]
     fn populate_density_array_rejects_shape_mismatch() {
-        let tissue_map = Array3::from_elem((2, 1, 1), AbsorptionTissueType::Water);
-        let mut output = Array3::zeros((1, 1, 1));
+        let tissue_map = Array3::from_elem([2, 1, 1], AbsorptionTissueType::Water);
+        let mut output = Array3::zeros([1, 1, 1]);
         let mut cache = TissuePropertyCache::new();
 
         cache.populate_density_array(&tissue_map, &mut output);

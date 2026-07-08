@@ -4,8 +4,8 @@ use super::types::CTMetadata;
 use crate::medical::{MedicalImageLoader, MedicalImageMetadata};
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
+use leto::Array3;
 use log::warn;
-use ndarray::Array3;
 
 /// CT Image Loader — loads NIFTI format CT scans.
 ///
@@ -157,7 +157,7 @@ impl CTImageLoader {
         let mut min_hu = f64::INFINITY;
         let mut max_hu = f64::NEG_INFINITY;
 
-        for &val in hounsfield {
+        for &val in hounsfield.iter() {
             if val < min_hu {
                 min_hu = val;
             }

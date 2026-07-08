@@ -32,7 +32,7 @@
 
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
-use ndarray::Array1;
+use leto::Array1;
 
 use super::helpers::validate_sample_output_len;
 
@@ -43,22 +43,7 @@ pub trait VelocityArray3Access {
     fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a>;
 }
 
-impl VelocityArray3Access for ndarray::Array3<f64> {
-    fn shape3(&self) -> [usize; 3] {
-        let (nx, ny, nz) = self.dim();
-        [nx, ny, nz]
-    }
-
-    fn as_slice_opt(&self) -> Option<&[f64]> {
-        self.as_slice()
-    }
-
-    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
-        Box::new(self.iter())
-    }
-}
-
-impl VelocityArray3Access for LetoArray3<f64> {
+impl VelocityArray3Access for leto::Array3<f64> {
     fn shape3(&self) -> [usize; 3] {
         self.shape()
     }
@@ -183,7 +168,7 @@ impl VelocityComponentStats {
     ///
     #[must_use]
     pub fn sample_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_max(positions, &mut out);
         out
     }
@@ -210,7 +195,7 @@ impl VelocityComponentStats {
     ///
     #[must_use]
     pub fn sample_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_min(positions, &mut out);
         out
     }
@@ -237,7 +222,7 @@ impl VelocityComponentStats {
     ///
     #[must_use]
     pub fn sample_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_rms(positions, &mut out);
         out
     }

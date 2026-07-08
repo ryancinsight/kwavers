@@ -96,7 +96,7 @@ impl CPMLBoundary {
     /// Updates CPML memory and applies the correction to a pressure gradient field (for velocity update).
     pub fn update_and_apply_p_gradient_correction(
         &mut self,
-        gradient: &mut ndarray::Array3<f64>,
+        gradient: &mut leto::Array3<f64>,
         component: usize,
     ) {
         self.updater
@@ -108,7 +108,7 @@ impl CPMLBoundary {
     /// Updates CPML memory and applies the correction to a velocity gradient field (for pressure update).
     pub fn update_and_apply_v_gradient_correction(
         &mut self,
-        v_gradient: &mut ndarray::Array3<f64>,
+        v_gradient: &mut leto::Array3<f64>,
         component: usize,
     ) {
         self.updater

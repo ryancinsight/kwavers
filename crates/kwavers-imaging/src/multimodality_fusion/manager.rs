@@ -118,7 +118,7 @@ impl MultimodalityFusionManager {
             })?;
 
         let matrix =
-            ndarray::Array2::from_shape_vec((4, 4), transform_result.transform.as_array().to_vec())
+            leto::Array2::from_shape_vec([4, 4], transform_result.transform.as_array().to_vec())
                 .map_err(|e| {
                     KwaversError::InvalidInput(format!("RITK Transform generation failed: {:?}", e))
                 })?;

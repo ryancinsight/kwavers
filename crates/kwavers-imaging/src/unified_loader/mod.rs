@@ -29,7 +29,7 @@ use crate::medical::{
     create_loader, CTImageLoader, DicomImageLoader, MedicalImageLoader, MedicalImageMetadata,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::path::Path;
 
 /// Unified medical image loader supporting multiple formats.

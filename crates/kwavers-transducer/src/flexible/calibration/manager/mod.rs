@@ -85,7 +85,7 @@ impl CalibrationManager {
             ));
         }
 
-        let mut a_matrix = NdArray2::zeros((n - 1, 3));
+        let mut a_matrix = NdArray2::zeros([n - 1, 3]);
         let mut b_vector = Array1::zeros(n - 1);
 
         let ref_pos = &reflectors[0];
@@ -135,7 +135,7 @@ impl CalibrationManager {
         timestamp: f64,
     ) -> KwaversResult<NdArray2<f64>> {
         let dt = timestamp - self.last_calibration_time;
-        let num_elements = tracking_data.nrows();
+        let num_elements = tracking_data.shape()[0];
 
         if self.kalman_state.is_none() {
             self.initialize_kalman_filter(num_elements, measurement_noise)?;
@@ -172,7 +172,7 @@ impl CalibrationManager {
 }
 
 fn solve_linear_system(a: &NdArray2<f64>, b: &Array1<f64>) -> Option<[f64; 3]> {
-    if a.nrows() != 3 || a.ncols() != 3 || b.len() != 3 {
+    if a.shape()[0] != 3 || a.shape()[1] != 3 || b.len() != 3 {
         return None;
     }
 

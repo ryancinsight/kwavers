@@ -9,12 +9,6 @@ pub trait PressureSamples3 {
     fn value_at(&self, i: usize, j: usize, k: usize) -> f64;
 }
 
-impl PressureSamples3 for ndarray::Array3<f64> {
-    fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
-        self[[i, j, k]]
-    }
-}
-
 impl PressureSamples3 for leto::Array3<f64> {
     fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self[[i, j, k]]

@@ -4,7 +4,7 @@
 //! maintaining second-order accuracy.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Immersed interface method configuration
 #[derive(Debug, Clone)]
@@ -73,7 +73,7 @@ impl ImmersedInterfaceMethod {
         property: &Array3<f64>,
         geometry: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = property.dim();
+        let [nx, ny, nz] = property.shape();
         let mut smoothed = property.clone();
 
         // Interface thickness in grid cells
@@ -126,7 +126,7 @@ impl ImmersedInterfaceMethod {
         k: usize,
         _thickness: f64,
     ) -> f64 {
-        let (nx, ny, nz) = property.dim();
+        let [nx, ny, nz] = property.shape();
 
         // Collect values from both sides of interface
         let mut inside_sum = 0.0;

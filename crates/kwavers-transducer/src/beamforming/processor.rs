@@ -4,7 +4,8 @@
 use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array3};
+use ndarray::Array2;
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -137,7 +138,7 @@ impl BeamformingProcessor {
         // For some localization objectives you may want earliest-arrival alignment or a fixed sensor reference.
         let max_delay = delays.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
-        let mut output = Array3::zeros((1, 1, n_samples));
+        let mut output = Array3::zeros([1, 1, n_samples]);
         for (elem_idx, &delay) in delays.iter().enumerate() {
             let relative_delay = max_delay - delay;
             let delay_samples = (relative_delay * sample_rate).round().max(0.0) as usize;

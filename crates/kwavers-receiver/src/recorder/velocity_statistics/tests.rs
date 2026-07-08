@@ -1,7 +1,7 @@
 //! Unit tests for VelocityComponentStats.
 
 use super::accumulator::VelocityComponentStats;
-use ndarray::Array3;
+use leto::Array3;
 
 // ── Theorem: max/min track signed extreme values ──────────────────────────────
 //
@@ -12,8 +12,8 @@ use ndarray::Array3;
 fn test_max_min_track_signed_extremes() {
     let mut stats = VelocityComponentStats::new(4, 4, 1);
 
-    stats.update(&Array3::from_elem((4, 4, 1), 1.0_f64));
-    stats.update(&Array3::from_elem((4, 4, 1), -2.0_f64));
+    stats.update(&Array3::from_elem([4, 4, 1], 1.0_f64));
+    stats.update(&Array3::from_elem([4, 4, 1], -2.0_f64));
 
     assert_eq!(stats.global_max(), 1.0);
     assert_eq!(stats.global_min(), -2.0);
@@ -28,8 +28,8 @@ fn test_max_min_track_signed_extremes() {
 fn test_rms_two_steps() {
     let mut stats = VelocityComponentStats::new(2, 2, 1);
 
-    stats.update(&Array3::from_elem((2, 2, 1), 3.0_f64));
-    stats.update(&Array3::from_elem((2, 2, 1), 4.0_f64));
+    stats.update(&Array3::from_elem([2, 2, 1], 3.0_f64));
+    stats.update(&Array3::from_elem([2, 2, 1], 4.0_f64));
 
     let rms = stats.u_rms();
     let expected = ((9.0_f64 + 16.0) / 2.0).sqrt();
@@ -45,7 +45,7 @@ fn test_rms_two_steps() {
 fn test_sample_max_at_positions() {
     let mut stats = VelocityComponentStats::new(4, 4, 1);
 
-    let mut u = Array3::zeros((4, 4, 1));
+    let mut u = Array3::zeros([4, 4, 1]);
     u[[2, 2, 0]] = 5.0;
     stats.update(&u);
 
@@ -60,7 +60,7 @@ fn test_sample_max_at_positions() {
 #[test]
 fn test_reset_restores_initial_state() {
     let mut stats = VelocityComponentStats::new(2, 2, 1);
-    stats.update(&Array3::from_elem((2, 2, 1), 3.0_f64));
+    stats.update(&Array3::from_elem([2, 2, 1], 3.0_f64));
     assert_eq!(stats.time_step_count, 1);
 
     stats.reset();
@@ -81,16 +81,16 @@ fn test_u_rms_before_any_update_is_zero() {
 // ── Theorem: fill_rms matches sample_rms ─────────────────────────────────────
 #[test]
 fn test_fill_rms_matches_sample_rms() {
-    use ndarray::Array1;
+    use leto::Array1;
 
     let mut stats = VelocityComponentStats::new(4, 4, 1);
-    stats.update(&Array3::from_elem((4, 4, 1), 2.0_f64));
-    stats.update(&Array3::from_elem((4, 4, 1), 4.0_f64));
+    stats.update(&Array3::from_elem([4, 4, 1], 2.0_f64));
+    stats.update(&Array3::from_elem([4, 4, 1], 4.0_f64));
 
     let positions = vec![(0, 0, 0), (3, 3, 0)];
 
     let via_sample = stats.sample_rms(&positions);
-    let mut via_fill = Array1::zeros(positions.len());
+    let mut via_fill = Array1::zeros([positions.len(]));
     stats.fill_rms(&positions, &mut via_fill).unwrap();
 
     for i in 0..positions.len() {

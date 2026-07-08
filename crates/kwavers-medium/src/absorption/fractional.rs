@@ -1,7 +1,7 @@
 //! Fractional Laplacian absorption model
 
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex;
 
 use crate::parallel::zip_mut_ref;

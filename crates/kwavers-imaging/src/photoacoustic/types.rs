@@ -3,8 +3,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use kwavers_core::constants::{GRUNEISEN_WATER_20C, SOUND_SPEED_WATER_SIM};
 use kwavers_medium::properties::OpticalPropertyData;
-use leto::Array3;
-use ndarray::Array2;
+use leto::{Array2, Array3};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WavelengthBand {

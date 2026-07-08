@@ -1,7 +1,7 @@
 use super::manager::FemBoundaryManager;
-use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
 use kwavers_math::fft::Complex64;
+use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+use leto::Array1;
 
 #[test]
 fn test_fem_boundary_manager_creation() {
@@ -23,7 +23,7 @@ fn test_dirichlet_boundary_condition() {
     stiffness.add_value(0, 1, Complex64::new(-1.0, 0.0));
     mass.add_value(0, 0, Complex64::new(2.0, 0.0));
     mass.add_value(0, 1, Complex64::new(0.25, 0.0));
-    let mut rhs = Array1::zeros(3);
+    let mut rhs = Array1::zeros([3]);
 
     manager
         .apply_all(&mut stiffness, &mut mass, &mut rhs, 1.0)
@@ -94,7 +94,7 @@ fn test_radiation_boundary_condition() {
 
     let mut stiffness = CompressedSparseRowMatrix::create(3, 3);
     let mut mass = CompressedSparseRowMatrix::create(3, 3);
-    let mut rhs = Array1::zeros(3);
+    let mut rhs = Array1::zeros([3]);
 
     stiffness.set_diagonal(0, Complex64::new(1.0, 0.0));
 
@@ -114,14 +114,14 @@ fn test_rejects_out_of_bounds_boundary_node_before_csr_access() {
 
     let mut stiffness = CompressedSparseRowMatrix::create(3, 3);
     let mut mass = CompressedSparseRowMatrix::create(3, 3);
-    let mut rhs = Array1::zeros(3);
+    let mut rhs = Array1::zeros([3]);
 
     let error = manager
         .apply_all(&mut stiffness, &mut mass, &mut rhs, 1.0)
         .unwrap_err();
 
     assert!(error.to_string().contains("node index 3"));
-    assert_eq!(rhs, Array1::zeros(3));
+    assert_eq!(rhs, Array1::zeros([3]));
 }
 
 #[test]
@@ -131,7 +131,7 @@ fn test_rejects_inconsistent_system_dimensions() {
 
     let mut stiffness = CompressedSparseRowMatrix::create(3, 3);
     let mut mass = CompressedSparseRowMatrix::create(2, 2);
-    let mut rhs = Array1::zeros(3);
+    let mut rhs = Array1::zeros([3]);
 
     let error = manager
         .apply_all(&mut stiffness, &mut mass, &mut rhs, 1.0)
@@ -147,7 +147,7 @@ fn test_rejects_nonfinite_robin_and_radiation_parameters() {
 
     let mut stiffness = CompressedSparseRowMatrix::create(2, 2);
     let mut mass = CompressedSparseRowMatrix::create(2, 2);
-    let mut rhs = Array1::zeros(2);
+    let mut rhs = Array1::zeros([2]);
 
     let robin_error = manager
         .apply_all(&mut stiffness, &mut mass, &mut rhs, 1.0)

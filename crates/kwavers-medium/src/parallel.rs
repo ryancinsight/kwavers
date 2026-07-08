@@ -1,14 +1,12 @@
 //! Atlas parallel-provider adapters for medium field traversal.
 
+use leto::Array3;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with, Adaptive};
-use ndarray::{Array3, ArrayBase, DataMut, Dimension, Zip};
 
 pub(crate) const FIELD_CHUNK_SIZE: usize = 4096;
 
-pub(crate) fn for_each_mut<T, S, D, F>(array: &mut ArrayBase<S, D>, f: F)
+pub(crate) fn for_each_mut<T, F>(array: &mut Array3<T>, f: F)
 where
-    S: DataMut<Elem = T>,
-    D: Dimension,
     T: Send,
     F: Fn(&mut T) + Send + Sync,
 {
@@ -18,7 +16,14 @@ where
             chunk.iter_mut().for_each(f_ref);
         });
     } else {
-        array.iter_mut().for_each(f);
+        let [nx, ny, nz] = array.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    f(&mut array[[i, j, k]]);
+                }
+            }
+        }
     }
 }
 
@@ -28,7 +33,7 @@ where
     U: Sync,
     F: Fn(&mut T, &U) + Send + Sync,
 {
-    debug_assert_eq!(out.dim(), input.dim());
+    debug_assert_eq!(out.shape(), input.shape());
     match (out.as_slice_mut(), input.as_slice()) {
         (Some(out), Some(input)) => {
             let f_ref = &f;
@@ -43,7 +48,16 @@ where
                 },
             );
         }
-        _ => Zip::from(out).and(input).for_each(f),
+        _ => {
+            let [nx, ny, nz] = out.shape();
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        f(&mut out[[i, j, k]], &input[[i, j, k]]);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -58,8 +72,8 @@ pub(crate) fn zip_mut_two_refs<T, U, V, F>(
     V: Sync,
     F: Fn(&mut T, &U, &V) + Send + Sync,
 {
-    debug_assert_eq!(out.dim(), first.dim());
-    debug_assert_eq!(out.dim(), second.dim());
+    debug_assert_eq!(out.shape(), first.shape());
+    debug_assert_eq!(out.shape(), second.shape());
     match (out.as_slice_mut(), first.as_slice(), second.as_slice()) {
         (Some(out), Some(first), Some(second)) => {
             let f_ref = &f;
@@ -74,7 +88,16 @@ pub(crate) fn zip_mut_two_refs<T, U, V, F>(
                 },
             );
         }
-        _ => Zip::from(out).and(first).and(second).for_each(f),
+        _ => {
+            let [nx, ny, nz] = out.shape();
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        f(&mut out[[i, j, k]], &first[[i, j, k]], &second[[i, j, k]]);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -91,9 +114,9 @@ pub(crate) fn zip_mut_three_refs<T, U, V, W, F>(
     W: Sync,
     F: Fn(&mut T, &U, &V, &W) + Send + Sync,
 {
-    debug_assert_eq!(out.dim(), first.dim());
-    debug_assert_eq!(out.dim(), second.dim());
-    debug_assert_eq!(out.dim(), third.dim());
+    debug_assert_eq!(out.shape(), first.shape());
+    debug_assert_eq!(out.shape(), second.shape());
+    debug_assert_eq!(out.shape(), third.shape());
     match (
         out.as_slice_mut(),
         first.as_slice(),
@@ -118,6 +141,20 @@ pub(crate) fn zip_mut_three_refs<T, U, V, W, F>(
                 },
             );
         }
-        _ => Zip::from(out).and(first).and(second).and(third).for_each(f),
+        _ => {
+            let [nx, ny, nz] = out.shape();
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        f(
+                            &mut out[[i, j, k]],
+                            &first[[i, j, k]],
+                            &second[[i, j, k]],
+                            &third[[i, j, k]],
+                        );
+                    }
+                }
+            }
+        }
     }
 }

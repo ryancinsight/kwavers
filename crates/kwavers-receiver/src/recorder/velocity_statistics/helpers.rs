@@ -1,7 +1,7 @@
 //! Shared helpers for velocity statistics modules.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Verify that `out` has the same length as `positions`.
 /// # Errors

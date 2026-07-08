@@ -9,7 +9,7 @@ use kwavers_core::constants::tissue_acoustics::{
 };
 use kwavers_grid::GridTopologyExt;
 use kwavers_medium::properties::AcousticPropertyData;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_material_interface_coefficients() {

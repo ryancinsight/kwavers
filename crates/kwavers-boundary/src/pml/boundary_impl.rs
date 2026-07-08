@@ -2,8 +2,8 @@ use super::DomainPMLBoundary;
 use crate::Boundary;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
+use leto::{Array3, ArrayViewMut3};
 use log::trace;
-use ndarray::{Array3, ArrayViewMut3};
 
 impl Boundary for DomainPMLBoundary {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {

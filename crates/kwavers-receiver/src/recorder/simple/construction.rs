@@ -8,7 +8,7 @@ use crate::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use crate::recorder::pressure_statistics::PressureFieldStatistics;
 use crate::recorder::velocity_statistics::VelocityComponentStats;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 use super::SensorRecorder;
 
@@ -45,7 +45,7 @@ impl SensorRecorder {
         let pressure = if sensor_indices.is_empty() {
             None
         } else {
-            Some(Array2::zeros((sensor_indices.len(), expected_steps)))
+            Some(Array2::zeros([sensor_indices.len(), expected_steps]))
         };
 
         let needs_stats = modes.iter().any(|m| {
@@ -108,7 +108,7 @@ impl SensorRecorder {
         let n = sensor_indices.len();
 
         let pressure = if spec.records_pressure() && n > 0 {
-            Some(Array2::zeros((n, expected_steps)))
+            Some(Array2::zeros([n, expected_steps]))
         } else {
             None
         };
@@ -121,7 +121,7 @@ impl SensorRecorder {
 
         let alloc_ts = |needs: bool| -> Option<Array2<f64>> {
             if needs && n > 0 {
-                Some(Array2::zeros((n, expected_steps)))
+                Some(Array2::zeros([n, expected_steps]))
             } else {
                 None
             }
@@ -147,17 +147,17 @@ impl SensorRecorder {
             iy_data: alloc_ts(spec.contains(SensorRecordField::IntensityY)),
             iz_data: alloc_ts(spec.contains(SensorRecordField::IntensityZ)),
             ix_sum: if spec.records_intensity_x() {
-                Some(Array1::zeros(n))
+                Some(Array1::zeros([n]))
             } else {
                 None
             },
             iy_sum: if spec.records_intensity_y() {
-                Some(Array1::zeros(n))
+                Some(Array1::zeros([n]))
             } else {
                 None
             },
             iz_sum: if spec.records_intensity_z() {
-                Some(Array1::zeros(n))
+                Some(Array1::zeros([n]))
             } else {
                 None
             },
@@ -179,7 +179,7 @@ impl SensorRecorder {
         let pressure = if indices.is_empty() {
             None
         } else {
-            Some(Array2::zeros((indices.len(), expected_steps)))
+            Some(Array2::zeros([indices.len(), expected_steps]))
         };
         Ok(Self {
             sensor_indices: indices,
@@ -219,9 +219,10 @@ impl SensorRecorder {
         let Some(mask) = sensor_mask else {
             return Ok(Vec::new());
         };
-        let mask_dim = mask.dim();
-        if mask_dim != shape {
-            if mask_dim == (1, 1, 1) && !mask[[0, 0, 0]] {
+        let mask_dim = mask.shape();
+        let expected_shape = [shape.0, shape.1, shape.2];
+        if mask_dim != expected_shape {
+            if mask_dim == [1, 1, 1] && !mask[[0, 0, 0]] {
                 return Ok(Vec::new());
             }
             return Err(KwaversError::Validation(

@@ -12,7 +12,6 @@ num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
-ndarray = { version = "0.16", features = ["serde"] }
 leto = { workspace = true }
 leto-ops = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

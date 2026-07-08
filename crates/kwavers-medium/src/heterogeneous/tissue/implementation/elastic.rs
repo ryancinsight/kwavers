@@ -4,7 +4,7 @@ use super::HeterogeneousTissueMedium;
 use crate::absorption::TISSUE_PROPERTIES;
 use crate::elastic::{ElasticArrayAccess, ElasticProperties};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl ElasticProperties for HeterogeneousTissueMedium {
     fn lame_lambda(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {
@@ -20,8 +20,8 @@ impl ElasticProperties for HeterogeneousTissueMedium {
 
 impl ElasticArrayAccess for HeterogeneousTissueMedium {
     fn lame_lambda_array(&self) -> Array3<f64> {
-        let mut arr = Array3::zeros(self.tissue_map.dim());
-        for ((i, j, k), tissue_type) in self.tissue_map.indexed_iter() {
+        let mut arr = Array3::zeros(self.tissue_map.shape());
+        for ([i, j, k], tissue_type) in self.tissue_map.indexed_iter() {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 arr[[i, j, k]] = props.lame_lambda;
             }
@@ -30,8 +30,8 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
     }
 
     fn lame_mu_array(&self) -> Array3<f64> {
-        let mut arr = Array3::zeros(self.tissue_map.dim());
-        for ((i, j, k), tissue_type) in self.tissue_map.indexed_iter() {
+        let mut arr = Array3::zeros(self.tissue_map.shape());
+        for ([i, j, k], tissue_type) in self.tissue_map.indexed_iter() {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 arr[[i, j, k]] = props.lame_mu;
             }
@@ -42,8 +42,8 @@ impl ElasticArrayAccess for HeterogeneousTissueMedium {
     fn shear_sound_speed_array(&self) -> Array3<f64> {
         // Mathematical specification: c_s = sqrt(μ / ρ)
         // Compute shear wave speed from tissue properties at each grid point
-        let mut arr = Array3::zeros(self.tissue_map.dim());
-        for ((i, j, k), tissue_type) in self.tissue_map.indexed_iter() {
+        let mut arr = Array3::zeros(self.tissue_map.shape());
+        for ([i, j, k], tissue_type) in self.tissue_map.indexed_iter() {
             if let Some(props) = TISSUE_PROPERTIES.get(tissue_type) {
                 // Get density from tissue properties
                 let density = props.density;

@@ -19,7 +19,7 @@
 
 use super::config::DivergingWaveConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 /// Diverging wave processor for synthetic transmit aperture imaging
 #[derive(Debug, Clone)]
@@ -242,7 +242,7 @@ impl DivergingWave {
         }
         let nx = x_pixels.len();
         let nz = z_pixels.len();
-        let mut delays = Array2::zeros((n, nx * nz));
+        let mut delays = Array2::zeros([n, nx * nz]);
 
         let f = self.config.virtual_source_depth;
         let c = self.config.sound_speed;

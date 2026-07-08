@@ -4,7 +4,7 @@
 //! time-series buffers, matching k-Wave's `'ux'`, `'uy'`, `'uz'` record fields.
 
 use super::super::SensorRecorder;
-use ndarray::{Array2, ArrayView2};
+use leto::{Array2, ArrayView2};
 
 impl SensorRecorder {
     // ── ux ───────────────────────────────────────────────────────────────────
@@ -24,11 +24,9 @@ impl SensorRecorder {
     /// Borrow the populated ux time-series prefix without cloning.
     #[must_use]
     pub fn recorded_ux_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.ux_data
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let data = self.ux_data.as_ref()?;
+        data.slice(&[(0, data.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 
     // ── uy ───────────────────────────────────────────────────────────────────
@@ -48,11 +46,9 @@ impl SensorRecorder {
     /// Borrow the populated uy time-series prefix without cloning.
     #[must_use]
     pub fn recorded_uy_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.uy_data
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let data = self.uy_data.as_ref()?;
+        data.slice(&[(0, data.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 
     // ── uz ───────────────────────────────────────────────────────────────────
@@ -72,10 +68,8 @@ impl SensorRecorder {
     /// Borrow the populated uz time-series prefix without cloning.
     #[must_use]
     pub fn recorded_uz_view(&self) -> Option<ArrayView2<'_, f64>> {
-        Some(
-            self.uz_data
-                .as_ref()?
-                .slice(ndarray::s![.., ..self.next_step]),
-        )
+        let data = self.uz_data.as_ref()?;
+        data.slice(&[(0, data.shape()[0], 1), (0, self.next_step, 1)])
+            .ok()
     }
 }

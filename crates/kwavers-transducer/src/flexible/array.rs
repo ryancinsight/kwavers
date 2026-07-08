@@ -107,8 +107,8 @@ impl FlexibleTransducerArray {
 
     /// Calculate element normals from positions
     fn calculate_normals(&self, positions: &ndarray::Array2<f64>) -> ndarray::Array2<f64> {
-        let n = positions.nrows();
-        let mut normals = ndarray::Array2::zeros((n, 3));
+        let n = positions.shape()[0];
+        let mut normals = ndarray::Array2::zeros([n, 3]);
 
         for i in 0..n {
             // Simple normal calculation based on neighboring elements

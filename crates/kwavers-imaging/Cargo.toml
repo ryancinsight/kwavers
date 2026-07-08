@@ -13,7 +13,6 @@ kwavers-grid = { path = "../kwavers-grid" }
 kwavers-medium = { path = "../kwavers-medium" }
 coeus-core = { workspace = true }
 leto = { workspace = true }
-ndarray = { version = "0.16", features = ["serde"] }
 log = "0.4"
 ritk-image = { workspace = true }
 ritk-io = { workspace = true }

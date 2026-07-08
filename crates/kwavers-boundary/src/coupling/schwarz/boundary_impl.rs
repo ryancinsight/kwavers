@@ -5,7 +5,7 @@
 //! no-op because Schwarz coupling needs an inter-subdomain communication
 //! infrastructure that lives outside the boundary trait surface.
 
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 
 use super::SchwarzBoundary;
 use crate::coupling::types::BoundaryDirections;

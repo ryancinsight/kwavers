@@ -10,7 +10,7 @@ use kwavers_core::constants::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Medium with uniform properties throughout the spatial domain
 #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ pub struct HomogeneousMedium {
     pub(super) nonlinearity_cache: Array3<f64>,
     pub(super) lame_lambda: f64,
     pub(super) lame_mu: f64,
-    pub(super) grid_shape: (usize, usize, usize),
+    pub(super) grid_shape: [usize; 3],
 }
 
 impl HomogeneousMedium {
@@ -70,19 +70,19 @@ impl HomogeneousMedium {
             optical_absorption: mu_a,
             optical_scattering: mu_s_prime,
             reference_frequency: REFERENCE_FREQUENCY_HZ,
-            temperature: Array3::zeros((1, 1, 1)),
-            bubble_radius: Array3::zeros((1, 1, 1)),
-            bubble_velocity: Array3::zeros((1, 1, 1)),
-            density_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), density),
-            sound_speed_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), sound_speed),
+            temperature: Array3::zeros([1, 1, 1]),
+            bubble_radius: Array3::zeros([1, 1, 1]),
+            bubble_velocity: Array3::zeros([1, 1, 1]),
+            density_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], density),
+            sound_speed_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], sound_speed),
             absorption_cache: Array3::from_elem(
-                (grid.nx, grid.ny, grid.nz),
+                [grid.nx, grid.ny, grid.nz],
                 WATER_ABSORPTION_ALPHA_0 * 1.0_f64.powf(WATER_ABSORPTION_POWER),
             ),
-            nonlinearity_cache: Array3::from_elem((grid.nx, grid.ny, grid.nz), B_OVER_A_WATER),
+            nonlinearity_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], B_OVER_A_WATER),
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0,
-            grid_shape: (grid.nx, grid.ny, grid.nz),
+            grid_shape: [grid.nx, grid.ny, grid.nz],
         }
     }
     /// Set acoustic properties.

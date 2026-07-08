@@ -4,7 +4,7 @@ use super::CPMLBoundary;
 use crate::traits::{AbsorbingBoundary, BoundaryCondition, BoundaryDirections};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 
 // Implement new BoundaryCondition trait system
 impl BoundaryCondition for CPMLBoundary {

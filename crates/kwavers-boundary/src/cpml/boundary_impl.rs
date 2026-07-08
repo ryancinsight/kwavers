@@ -4,7 +4,7 @@ use super::CPMLBoundary;
 use crate::{Boundary, PmlExpFactors};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 
 impl Boundary for CPMLBoundary {
     fn as_any_mut(&mut self) -> &mut dyn std::any::Any {

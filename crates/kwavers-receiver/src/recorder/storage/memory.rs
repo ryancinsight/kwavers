@@ -2,7 +2,7 @@
 
 use super::StorageBackend;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Memory storage backend

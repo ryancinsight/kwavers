@@ -1,4 +1,4 @@
-use ndarray::{s, Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 
 use crate::traits::{BoundaryCondition, BoundaryDirections, BoundaryFieldType, PeriodicBoundary};
 use kwavers_core::error::KwaversResult;
@@ -39,18 +39,17 @@ impl PeriodicBoundaryCondition {
 
         let nx = field.shape()[0];
         let phase = self.config.bloch_phase[0];
-
-        if phase.abs() < 1e-12 {
-            let left = field.slice(s![1, .., ..]).to_owned();
-            let right = field.slice(s![nx - 2, .., ..]).to_owned();
-            field.slice_mut(s![0, .., ..]).assign(&right);
-            field.slice_mut(s![nx - 1, .., ..]).assign(&left);
+        let scale = if phase.abs() < 1e-12 {
+            1.0
         } else {
-            let cos_phase = phase.cos();
-            let left = field.slice(s![1, .., ..]).mapv(|v| v * cos_phase);
-            let right = field.slice(s![nx - 2, .., ..]).mapv(|v| v * cos_phase);
-            field.slice_mut(s![0, .., ..]).assign(&right);
-            field.slice_mut(s![nx - 1, .., ..]).assign(&left);
+            phase.cos()
+        };
+
+        for j in 0..field.shape()[1] {
+            for k in 0..field.shape()[2] {
+                field[[0, j, k]] = field[[nx - 2, j, k]] * scale;
+                field[[nx - 1, j, k]] = field[[1, j, k]] * scale;
+            }
         }
     }
 
@@ -61,18 +60,17 @@ impl PeriodicBoundaryCondition {
 
         let ny = field.shape()[1];
         let phase = self.config.bloch_phase[1];
-
-        if phase.abs() < 1e-12 {
-            let left = field.slice(s![.., 1, ..]).to_owned();
-            let right = field.slice(s![.., ny - 2, ..]).to_owned();
-            field.slice_mut(s![.., 0, ..]).assign(&right);
-            field.slice_mut(s![.., ny - 1, ..]).assign(&left);
+        let scale = if phase.abs() < 1e-12 {
+            1.0
         } else {
-            let cos_phase = phase.cos();
-            let left = field.slice(s![.., 1, ..]).mapv(|v| v * cos_phase);
-            let right = field.slice(s![.., ny - 2, ..]).mapv(|v| v * cos_phase);
-            field.slice_mut(s![.., 0, ..]).assign(&right);
-            field.slice_mut(s![.., ny - 1, ..]).assign(&left);
+            phase.cos()
+        };
+
+        for i in 0..field.shape()[0] {
+            for k in 0..field.shape()[2] {
+                field[[i, 0, k]] = field[[i, ny - 2, k]] * scale;
+                field[[i, ny - 1, k]] = field[[i, 1, k]] * scale;
+            }
         }
     }
 
@@ -83,18 +81,17 @@ impl PeriodicBoundaryCondition {
 
         let nz = field.shape()[2];
         let phase = self.config.bloch_phase[2];
-
-        if phase.abs() < 1e-12 {
-            let left = field.slice(s![.., .., 1]).to_owned();
-            let right = field.slice(s![.., .., nz - 2]).to_owned();
-            field.slice_mut(s![.., .., 0]).assign(&right);
-            field.slice_mut(s![.., .., nz - 1]).assign(&left);
+        let scale = if phase.abs() < 1e-12 {
+            1.0
         } else {
-            let cos_phase = phase.cos();
-            let left = field.slice(s![.., .., 1]).mapv(|v| v * cos_phase);
-            let right = field.slice(s![.., .., nz - 2]).mapv(|v| v * cos_phase);
-            field.slice_mut(s![.., .., 0]).assign(&right);
-            field.slice_mut(s![.., .., nz - 1]).assign(&left);
+            phase.cos()
+        };
+
+        for i in 0..field.shape()[0] {
+            for j in 0..field.shape()[1] {
+                field[[i, j, 0]] = field[[i, j, nz - 2]] * scale;
+                field[[i, j, nz - 1]] = field[[i, j, 1]] * scale;
+            }
         }
     }
 
@@ -129,9 +126,9 @@ impl BoundaryCondition for PeriodicBoundaryCondition {
         _time_step: usize,
         _dt: f64,
     ) -> KwaversResult<()> {
-        self.wrap_x(field.view_mut());
-        self.wrap_y(field.view_mut());
-        self.wrap_z(field.view_mut());
+        self.wrap_x(field.reborrow());
+        self.wrap_y(field.reborrow());
+        self.wrap_z(field);
         Ok(())
     }
 

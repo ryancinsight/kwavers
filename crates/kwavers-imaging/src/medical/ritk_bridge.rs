@@ -9,7 +9,7 @@
 
 use coeus_core::SequentialBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use ritk_image::native::Image as NativeImage;
 use ritk_spatial::{Direction, Point, Spacing};
 
@@ -75,7 +75,7 @@ fn image_components_to_volume(
 
     // Repack ritk-io's `[depth, rows, cols]` (z, y, x) layout into kwavers'
     // `(x, y, z)` indexing while tracking the intensity range.
-    let mut voxels = Array3::<f64>::zeros((cols, rows, depth));
+    let mut voxels = Array3::<f64>::zeros([cols, rows, depth]);
     let mut min_val = f64::INFINITY;
     let mut max_val = f64::NEG_INFINITY;
     for z in 0..depth {

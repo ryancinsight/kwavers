@@ -83,4 +83,4 @@ impl DomainTissueRegion {
 }
 
 /// 3D tissue type map
-pub type TissueMap = ndarray::Array3<AbsorptionTissueType>;
+pub type TissueMap = leto::Array3<AbsorptionTissueType>;

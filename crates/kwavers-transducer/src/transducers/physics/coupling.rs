@@ -4,7 +4,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Element coupling characteristics
 ///
@@ -28,7 +28,7 @@ impl ElementCoupling {
 
         let mut acoustic_coupling = Array2::eye(num_elements);
         let mut electrical_coupling = Array2::eye(num_elements);
-        let mut mutual_impedance = Array2::zeros((num_elements, num_elements));
+        let mut mutual_impedance = Array2::zeros([num_elements, num_elements]);
 
         for i in 0..num_elements {
             for j in 0..num_elements {
@@ -59,7 +59,7 @@ impl ElementCoupling {
     /// Calculate effective element pattern with coupling
     #[must_use]
     pub fn effective_pattern(&self, element_idx: usize, excitation: &Array1<f64>) -> Array1<f64> {
-        let num_elements = self.acoustic_coupling.nrows();
+        let num_elements = self.acoustic_coupling.shape()[0];
         let mut pattern = Array1::zeros(excitation.len());
 
         for i in 0..num_elements {
@@ -73,7 +73,7 @@ impl ElementCoupling {
     #[must_use]
     pub fn crosstalk_level(&self) -> f64 {
         let mut max_crosstalk = 0.0_f64;
-        let n = self.acoustic_coupling.nrows();
+        let n = self.acoustic_coupling.shape()[0];
 
         for i in 0..n {
             for j in 0..n {
