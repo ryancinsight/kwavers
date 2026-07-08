@@ -3,12 +3,11 @@
 //! This module provides the main `FlexibleTransducerArray` struct that
 //! integrates configuration, geometry, and calibration components.
 
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
-use leto::Array3;
-use ndarray::ArrayView2;
+use leto::{Array3, ArrayView2};
 use std::sync::Arc;
 
 use super::calibration::CalibrationManager;
@@ -58,6 +57,8 @@ impl FlexibleTransducerArray {
         measurement_data: ArrayView2<f64>,
         timestamp: f64,
     ) -> KwaversResult<()> {
+        let measurement_data = ndarray::Array2::try_from(measurement_data.to_contiguous())
+            .map_err(|err| KwaversError::Shape(err.to_string()))?;
         // Process calibration based on configured method
         let new_positions = match &self.config.calibration_method {
             CalibrationMethod::SelfCalibration {
@@ -70,7 +71,7 @@ impl FlexibleTransducerArray {
                 // Reference: Mercier et al. (2012) IEEE Trans. Ultrason. Ferroelectr. Freq. Control
                 const TRACKING_NOISE_LEVEL: f64 = 1e-3; // 1mm position uncertainty
                 self.calibration_processor.process_external_tracking(
-                    &measurement_data.to_owned(),
+                    &measurement_data,
                     TRACKING_NOISE_LEVEL,
                     timestamp,
                 )?
@@ -81,7 +82,7 @@ impl FlexibleTransducerArray {
             } => {
                 // In real implementation, would interface with tracking system
                 self.calibration_processor.process_external_tracking(
-                    &measurement_data.to_owned(),
+                    &measurement_data,
                     *measurement_noise,
                     timestamp,
                 )?
@@ -94,7 +95,8 @@ impl FlexibleTransducerArray {
 
         // Update geometry state
         let normals = self.calculate_normals(&new_positions);
-        self.geometry_state.update_positions(new_positions, normals);
+        self.geometry_state
+            .update_positions(new_positions.into(), normals.into());
         self.geometry_state.timestamp = timestamp;
 
         // Update deformation state
@@ -295,11 +297,20 @@ impl Source for FlexibleTransducerArray {
         mask.fill(0.0);
 
         // Add mask for each element position
-        for position in self.geometry_state.element_positions.rows() {
+        for element_idx in 0..self.geometry_state.element_positions.shape()[0] {
             // Find nearest grid point
-            let i = ((position[0] + grid.nx as f64 * grid.dx / 2.0) / grid.dx).round() as usize;
-            let j = ((position[1] + grid.ny as f64 * grid.dy / 2.0) / grid.dy).round() as usize;
-            let k = ((position[2] + grid.nz as f64 * grid.dz / 2.0) / grid.dz).round() as usize;
+            let i = ((self.geometry_state.element_positions[[element_idx, 0]]
+                + grid.nx as f64 * grid.dx / 2.0)
+                / grid.dx)
+                .round() as usize;
+            let j = ((self.geometry_state.element_positions[[element_idx, 1]]
+                + grid.ny as f64 * grid.dy / 2.0)
+                / grid.dy)
+                .round() as usize;
+            let k = ((self.geometry_state.element_positions[[element_idx, 2]]
+                + grid.nz as f64 * grid.dz / 2.0)
+                / grid.dz)
+                .round() as usize;
 
             // Check bounds and set mask
             if i < grid.nx && j < grid.ny && k < grid.nz {
@@ -313,11 +324,14 @@ impl Source for FlexibleTransducerArray {
     }
 
     fn positions(&self) -> Vec<(f64, f64, f64)> {
-        self.geometry_state
-            .element_positions
-            .rows()
-            .into_iter()
-            .map(|row| (row[0], row[1], row[2]))
+        (0..self.geometry_state.element_positions.shape()[0])
+            .map(|idx| {
+                (
+                    self.geometry_state.element_positions[[idx, 0]],
+                    self.geometry_state.element_positions[[idx, 1]],
+                    self.geometry_state.element_positions[[idx, 2]],
+                )
+            })
             .collect()
     }
 

@@ -68,7 +68,8 @@ impl TranscranialSimulation {
     pub fn load_ct_geometry(&mut self, ct_path: &str) -> KwaversResult<()> {
         use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
         let mut loader = CTImageLoader::new();
-        let ct_data = loader.load(ct_path)?;
+        let ct_data = ndarray::Array3::try_from(loader.load(ct_path)?)
+            .map_err(|err| KwaversError::Shape(err.to_string()))?;
 
         self.skull_mask = Some(HeterogeneousSkull::generate_mask_from_ct(&ct_data));
         self.heterogeneous = Some(HeterogeneousSkull::from_ct(&ct_data, &self.skull_props)?);

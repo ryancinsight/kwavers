@@ -76,7 +76,17 @@ impl NonlinearWave {
         let kz = grid.compute_kz();
 
         let c_array = medium.sound_speed_array();
-        let c = c_array.mean().unwrap_or(self.max_sound_speed);
+        let mut c_sum = 0.0;
+        let mut c_count = 0usize;
+        for &value in c_array.iter() {
+            c_sum += value;
+            c_count += 1;
+        }
+        let c = if c_count > 0 {
+            c_sum / c_count as f64
+        } else {
+            self.max_sound_speed
+        };
         let mut result_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
         let dt = self.dt;
 

@@ -16,7 +16,7 @@
 //! - Khuri-Yakub & Oralkan (2011), CMUT flex-derating (`CmutCell::flex_gap_derating`).
 
 use super::super::mems::CmutCell;
-use ndarray::ArrayView2;
+use leto::ArrayView2;
 
 /// Conformal **delay-and-sum focusing** delays \[s] for a (possibly deformed)
 /// array focusing at `focus` \[m].

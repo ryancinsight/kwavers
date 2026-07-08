@@ -60,7 +60,7 @@ impl ElementCoupling {
     #[must_use]
     pub fn effective_pattern(&self, element_idx: usize, excitation: &Array1<f64>) -> Array1<f64> {
         let num_elements = self.acoustic_coupling.shape()[0];
-        let mut pattern = Array1::zeros(excitation.len());
+        let mut pattern = Array1::zeros([excitation.len()]);
 
         for i in 0..num_elements {
             pattern[i] = excitation[i] * self.acoustic_coupling[[element_idx, i]];

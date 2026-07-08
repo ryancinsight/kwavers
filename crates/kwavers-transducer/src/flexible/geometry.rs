@@ -44,7 +44,7 @@ impl GeometryState {
         Self {
             element_positions: positions,
             element_normals: normals,
-            position_confidence: Array1::ones(num_elements),
+            position_confidence: Array1::ones([num_elements]),
             timestamp: 0.0,
             deformation: DeformationState::default(),
         }
@@ -68,13 +68,25 @@ impl GeometryState {
         let n_elements = self.element_positions.shape()[0];
 
         for i in 1..n_elements - 1 {
-            let p1 = self.element_positions.row(i - 1);
-            let p2 = self.element_positions.row(i);
-            let p3 = self.element_positions.row(i + 1);
+            let p1 = [
+                self.element_positions[[i - 1, 0]],
+                self.element_positions[[i - 1, 1]],
+                self.element_positions[[i - 1, 2]],
+            ];
+            let p2 = [
+                self.element_positions[[i, 0]],
+                self.element_positions[[i, 1]],
+                self.element_positions[[i, 2]],
+            ];
+            let p3 = [
+                self.element_positions[[i + 1, 0]],
+                self.element_positions[[i + 1, 1]],
+                self.element_positions[[i + 1, 2]],
+            ];
 
             // Calculate vectors
-            let v1 = &p2 - &p1;
-            let v2 = &p3 - &p2;
+            let v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+            let v2 = [p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]];
 
             // Calculate angle between vectors
             let dot_product: f64 = v1.iter().zip(v2.iter()).map(|(a, b)| a * b).sum();
@@ -95,7 +107,12 @@ impl GeometryState {
     #[must_use]
     pub fn centroid(&self) -> [f64; 3] {
         let n = self.element_positions.shape()[0] as f64;
-        let sum = self.element_positions.sum_axis(ndarray::Axis(0));
+        let mut sum = [0.0; 3];
+        for i in 0..self.element_positions.shape()[0] {
+            sum[0] += self.element_positions[[i, 0]];
+            sum[1] += self.element_positions[[i, 1]];
+            sum[2] += self.element_positions[[i, 2]];
+        }
         [sum[0] / n, sum[1] / n, sum[2] / n]
     }
 }

@@ -4,7 +4,7 @@
 use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
-use leto::{Array1, Array3};
+use leto::Array3;
 use ndarray::Array2;
 
 /// Beamforming processor for array algorithms
@@ -213,7 +213,7 @@ impl BeamformingProcessor {
         let inv_cov = self.matrix_inverse(&covariance)?;
 
         // Uniform steering normalized to unity gain
-        let a = Array1::from_vec(vec![1.0 / (n_elements as f64).sqrt(); n_elements]);
+        let a = ndarray::Array1::from_vec(vec![1.0 / (n_elements as f64).sqrt(); n_elements]);
         let inv_cov_a = inv_cov.dot(&a);
         let denominator = a.dot(&inv_cov_a);
 
@@ -229,10 +229,11 @@ impl BeamformingProcessor {
             );
         }
 
-        let weights = inv_cov_a.mapv(|x| x / denominator);
+        let weights_arr = inv_cov_a.mapv(|x| x / denominator);
+        let weights: Vec<f64> = weights_arr.to_vec();
 
         // Apply weights across time
-        let mut output = Array3::<f64>::zeros((1, 1, n_samples));
+        let mut output = Array3::<f64>::zeros([1, 1, n_samples]);
         for t in 0..n_samples {
             let mut beamformed_value = 0.0;
             for i in 0..n_elements {

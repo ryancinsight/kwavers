@@ -89,12 +89,12 @@ impl<'a> CtMediumBuilder<'a> {
         // exactly the fields the solver's acoustic traits read: `absorption` is
         // the α₀ prefactor (alpha_coefficient), `alpha_power` the exponent y, and
         // `nonlinearity`/`b_a` the B/A parameter.
-        medium.density = self.ct.mapv(|hu| model.density(hu));
-        medium.sound_speed = self.ct.mapv(|hu| model.sound_speed(hu));
-        medium.absorption = self.ct.mapv(|hu| model.absorption(hu));
+        medium.density = self.ct.mapv(|hu| model.density(hu)).into();
+        medium.sound_speed = self.ct.mapv(|hu| model.sound_speed(hu)).into();
+        medium.absorption = self.ct.mapv(|hu| model.absorption(hu)).into();
         medium.alpha0 = medium.absorption.clone();
-        medium.alpha_power = self.ct.mapv(|hu| model.power_law_exponent(hu));
-        medium.nonlinearity = self.ct.mapv(|hu| model.nonlinearity(hu));
+        medium.alpha_power = self.ct.mapv(|hu| model.power_law_exponent(hu)).into();
+        medium.nonlinearity = self.ct.mapv(|hu| model.nonlinearity(hu)).into();
         medium.b_a = medium.nonlinearity.clone();
 
         medium.validate(self.grid)?;

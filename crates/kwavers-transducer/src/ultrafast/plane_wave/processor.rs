@@ -65,7 +65,7 @@ impl UltrafastPlaneWave {
             .iter()
             .map(|&x| -x * sin_theta / c)
             .collect();
-        Ok(Array1::from_vec(delays))
+        Array1::from_vec([delays.len()], delays).map_err(|err| KwaversError::Shape(err.to_string()))
     }
 
     /// Compute reception delays: `τ_rx(x_elem, y, θ) = ((x_elem−x)·sin(θ) + y·cos(θ)) / c`.
@@ -85,7 +85,7 @@ impl UltrafastPlaneWave {
             .iter()
             .map(|&x_elem| (x_elem - x).mul_add(sin_theta, y * cos_theta) / c)
             .collect();
-        Ok(Array1::from_vec(delays))
+        Array1::from_vec([delays.len()], delays).map_err(|err| KwaversError::Shape(err.to_string()))
     }
 
     /// Compute total beamforming delays: `τ = (2·x_elem·sin(θ) + y·cos(θ)) / c`.
@@ -110,7 +110,7 @@ impl UltrafastPlaneWave {
             .iter()
             .map(|&x_elem| (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c)
             .collect();
-        Ok(Array1::from_vec(delays))
+        Array1::from_vec([delays.len()], delays).map_err(|err| KwaversError::Shape(err.to_string()))
     }
 
     /// Compute delay surface for an image grid.
@@ -134,8 +134,8 @@ impl UltrafastPlaneWave {
         let cos_theta = tilt_angle.cos();
 
         let mut pixel_idx = 0;
-        for &y in y_pixels {
-            for _x in x_pixels {
+        for &y in y_pixels.iter() {
+            for _ in x_pixels.iter() {
                 for (elem_idx, &x_elem) in self.config.element_positions.iter().enumerate() {
                     delays[[elem_idx, pixel_idx]] =
                         (2.0 * x_elem).mul_add(sin_theta, y * cos_theta) / c;
@@ -172,7 +172,7 @@ impl UltrafastPlaneWave {
             })
             .collect();
 
-        Ok(Array1::from_vec(weights))
+        Array1::from_vec([weights.len()], weights).map_err(|err| KwaversError::Shape(err.to_string()))
     }
 
     /// Number of compounding angles.
