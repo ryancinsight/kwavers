@@ -21,7 +21,9 @@ impl KSpaceCalculator {
     /// Generate k-space wavenumbers for one dimension
     #[must_use]
     pub fn generate_k_vector(n: usize, dx: f64) -> Array1<f64> {
-        Array1::from_vec(apollo::fftfreq(n, dx)).mapv(|cycles_per_unit| TWO_PI * cycles_per_unit)
+        let _freqs = apollo::fftfreq(n, dx);
+        let _n = _freqs.len();
+        Array1::from_vec([_n], _freqs).expect("k-space length").mapv(|cycles_per_unit| TWO_PI * cycles_per_unit)
     }
 
     /// Generate k-space wavenumbers for one dimension in leto format.
@@ -53,7 +55,7 @@ impl KSpaceCalculator {
         let ky = Self::generate_k_vector(ny, dy);
         let kz = Self::generate_k_vector(nz, dz);
 
-        let mut k_squared = Array3::zeros((nx, ny, nz));
+        let mut k_squared = Array3::zeros([nx, ny, nz]);
 
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
