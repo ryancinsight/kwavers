@@ -24,7 +24,9 @@ use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
 use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 
 /// Fill `scratch.{sxx,…,syz,div_x,div_y,div_z}` with the elastic stress
 /// tensor divergence ∇·σ, reusing the caller's pre-allocated workspace.
@@ -66,12 +68,69 @@ pub fn stress_divergence_into(
     //
     // Theorem (race-freedom): each output element σ[i,j,k] is written exactly
     // once; ux/uy/uz/λ/μ are read-only views captured by the closure.
-    // ndarray 0.16 Zip::indexed supports ≤ 5 arrays (6 tuple elements total
-    // including the index).  Three outputs fit within the limit.
-    Zip::indexed(scratch.sxx.view_mut())
-        .and(scratch.syy.view_mut())
-        .and(scratch.szz.view_mut())
-        .par_for_each(|(i, j, k), o_sxx, o_syy, o_szz| {
+    //
+    // Migration (Batch #1 slice 7): the original used `Zip::indexed.on 3 view_muts`
+    // for joint `(i,j,k)`-parallel iteration.  After the assert-message
+    // harmonization chore, the verbose `is_standard_layout()` precondition is
+    // required on EVERY operand (8 here: scratch.{sxx,syy,szz} + ux/uy/uz + λ/μ).
+    //
+    // Note: the phase-1 helper `kwavers_safety::with_zip_standard_layout` does
+    // NOT generalize here because its signature is `1 mut + N immuts`, while
+    // this site has `3 mut + 0 Zip-chain immuts` (with closure-captured
+    // immutable outer-scope operands not represented in the Zip chain).
+    // Helper adoption for 3-mut sites is deferred to a future
+    // `with_zip_standard_layout_3mut` generalization.
+    //
+    // Strategy: keep `Zip::indexed` on `sxx.view_mut()` (still requires the
+    // 3D `(i,j,k)` index for the FD stencils + Array3[[i,j,k]] lookups of the
+    // captured `ux`/`uy`/`uz`/`lambda`/`mu` operands).  Pre-extract the flat
+    // slices for `syy` and `szz`, then write them directly via
+    // `syy_slice[idx]`/`szz_slice[idx]` inside the closure.  This preserves
+    // the joint per-iteration writes (all three outputs updated atomically
+    // per `(i,j,k)`) without requiring Zip::indexed's three-way .and() chain.
+    assert!(
+        scratch.sxx.is_standard_layout(),
+        "scratch.sxx must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        scratch.syy.is_standard_layout(),
+        "scratch.syy must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        scratch.szz.is_standard_layout(),
+        "scratch.szz must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        ux.is_standard_layout(),
+        "ux must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        uy.is_standard_layout(),
+        "uy must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        uz.is_standard_layout(),
+        "uz must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        lambda.is_standard_layout(),
+        "lambda must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        mu.is_standard_layout(),
+        "mu must be C-contiguous (default Array3 layout) for the migration"
+    );
+    {
+        let syy_slice = scratch
+            .syy
+            .as_slice_mut()
+            .expect("syy: standard-layout asserted just above; layout matched");
+        let szz_slice = scratch
+            .szz
+            .as_slice_mut()
+            .expect("szz: standard-layout asserted just above; layout matched");
+        Zip::indexed(scratch.sxx.view_mut()).par_for_each(|(i, j, k), o_sxx| {
+            let idx = i * (ny * nz) + j * nz + k;
             let exx = fd1_x(ux, i, j, k, nx, dx);
             let eyy = fd1_y(uy, i, j, k, ny, dy);
             let ezz = fd1_z(uz, i, j, k, nz, dz);
@@ -79,23 +138,65 @@ pub fn stress_divergence_into(
             let mv = mu[[i, j, k]];
             let la2mu = 2.0f64.mul_add(mv, la);
             *o_sxx = la2mu.mul_add(exx, la * (eyy + ezz));
-            *o_syy = la2mu.mul_add(eyy, la * (exx + ezz));
-            *o_szz = la2mu.mul_add(ezz, la * (exx + eyy));
+            syy_slice[idx] = la2mu.mul_add(eyy, la * (exx + ezz));
+            szz_slice[idx] = la2mu.mul_add(ezz, la * (exx + eyy));
         });
+    }
 
     // --- Pass 1b: off-diagonal stress components {σxy, σxz, σyz} ---
-    Zip::indexed(scratch.sxy.view_mut())
-        .and(scratch.sxz.view_mut())
-        .and(scratch.syz.view_mut())
-        .par_for_each(|(i, j, k), o_sxy, o_sxz, o_syz| {
+    //
+    // Migration (Batch #1 slice 7): same 3-mut-0-immut Zip::indexed
+    // adaptation pattern as Pass 1a.  7 verbose asserts (3 mut on
+    // scratch.{sxy,sxz,syz} + 4 captured immuts ux/uy/uz/mu; note `lambda`
+    // is unused in this pass).
+    assert!(
+        scratch.sxy.is_standard_layout(),
+        "scratch.sxy must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        scratch.sxz.is_standard_layout(),
+        "scratch.sxz must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        scratch.syz.is_standard_layout(),
+        "scratch.syz must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        ux.is_standard_layout(),
+        "ux must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        uy.is_standard_layout(),
+        "uy must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        uz.is_standard_layout(),
+        "uz must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        mu.is_standard_layout(),
+        "mu must be C-contiguous (default Array3 layout) for the migration"
+    );
+    {
+        let sxz_slice = scratch
+            .sxz
+            .as_slice_mut()
+            .expect("sxz: standard-layout asserted just above; layout matched");
+        let syz_slice = scratch
+            .syz
+            .as_slice_mut()
+            .expect("syz: standard-layout asserted just above; layout matched");
+        Zip::indexed(scratch.sxy.view_mut()).par_for_each(|(i, j, k), o_sxy| {
+            let idx = i * (ny * nz) + j * nz + k;
             let exy_2 = fd1_y(ux, i, j, k, ny, dy) + fd1_x(uy, i, j, k, nx, dx);
             let exz_2 = fd1_z(ux, i, j, k, nz, dz) + fd1_x(uz, i, j, k, nx, dx);
             let eyz_2 = fd1_z(uy, i, j, k, nz, dz) + fd1_y(uz, i, j, k, ny, dy);
             let mv = mu[[i, j, k]];
             *o_sxy = mv * exy_2;
-            *o_sxz = mv * exz_2;
-            *o_syz = mv * eyz_2;
+            sxz_slice[idx] = mv * exz_2;
+            syz_slice[idx] = mv * eyz_2;
         });
+    }
 
     // --- Pass 2: ∇·σ (parallelised over i-j-k) ---
     //
@@ -113,20 +214,67 @@ pub fn stress_divergence_into(
     let sxz_v = scratch.sxz.view();
     let syz_v = scratch.syz.view();
 
-    Zip::indexed(scratch.div_x.view_mut())
-        .and(scratch.div_y.view_mut())
-        .and(scratch.div_z.view_mut())
-        .par_for_each(|(i, j, k), o_dx, o_dy, o_dz| {
+    // Migration (Batch #1 slice 7): same 3-mut Zip::indexed adaptation.  9
+    // verbose asserts (3 mut on scratch.{div_x,div_y,div_z} + 6 captured immut
+    // views sxx_v..syz_v).
+    assert!(
+        scratch.div_x.is_standard_layout(),
+        "scratch.div_x must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        scratch.div_y.is_standard_layout(),
+        "scratch.div_y must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        scratch.div_z.is_standard_layout(),
+        "scratch.div_z must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        sxx_v.is_standard_layout(),
+        "sxx_v must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        syy_v.is_standard_layout(),
+        "syy_v must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        szz_v.is_standard_layout(),
+        "szz_v must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        sxy_v.is_standard_layout(),
+        "sxy_v must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        sxz_v.is_standard_layout(),
+        "sxz_v must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        syz_v.is_standard_layout(),
+        "syz_v must be C-contiguous (default Array3 layout) for the migration"
+    );
+    {
+        let div_y_slice = scratch
+            .div_y
+            .as_slice_mut()
+            .expect("div_y: standard-layout asserted just above; layout matched");
+        let div_z_slice = scratch
+            .div_z
+            .as_slice_mut()
+            .expect("div_z: standard-layout asserted just above; layout matched");
+        Zip::indexed(scratch.div_x.view_mut()).par_for_each(|(i, j, k), o_dx| {
+            let idx = i * (ny * nz) + j * nz + k;
             *o_dx = fd1_x(sxx_v, i, j, k, nx, dx)
                 + fd1_y(sxy_v, i, j, k, ny, dy)
                 + fd1_z(sxz_v, i, j, k, nz, dz);
-            *o_dy = fd1_x(sxy_v, i, j, k, nx, dx)
+            div_y_slice[idx] = fd1_x(sxy_v, i, j, k, nx, dx)
                 + fd1_y(syy_v, i, j, k, ny, dy)
                 + fd1_z(syz_v, i, j, k, nz, dz);
-            *o_dz = fd1_x(sxz_v, i, j, k, nx, dx)
+            div_z_slice[idx] = fd1_x(sxz_v, i, j, k, nx, dx)
                 + fd1_y(syz_v, i, j, k, ny, dy)
                 + fd1_z(szz_v, i, j, k, nz, dz);
         });
+    }
 }
 
 /// Compute the elastic stress tensor divergence ∇·σ, returning owned arrays.

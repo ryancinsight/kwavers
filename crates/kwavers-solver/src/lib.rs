@@ -17,6 +17,13 @@ pub mod plugin;
 pub mod utilities;
 pub mod workspace;
 
+// Safety: single source of truth for the Zip-migration layout preconditions
+// (assert standard-layout + assert `as_slice{_mut,}` unwrap). Consolidates the
+// 30 inline assert sites across the 6 migrated files (struct_impl.rs +
+// diffusion.rs + model_impl.rs (fixup) + nonlinear.rs + operator_splitting/mod.rs
+// + rhs.rs) into a single DRY helper.
+pub mod safety;
+
 // Re-export ScratchArena trait for ergonomic use across solver crates
 pub use workspace::ScratchArena;
 
