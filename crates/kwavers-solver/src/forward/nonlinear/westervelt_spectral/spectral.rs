@@ -52,19 +52,74 @@ pub fn initialize_kspace_grids(
     let mut kz = Array3::<f64>::zeros((nx, ny, nz));
     let mut k_squared = Array3::<f64>::zeros((nx, ny, nz));
 
-    Zip::indexed(&mut kx)
-        .and(&mut ky)
-        .and(&mut kz)
-        .and(&mut k_squared)
-        .par_for_each(|(i, j, k), kx_v, ky_v, kz_v, k2| {
+    // Slice 9: MIGRATED the deferred heterogeneous Zip::indexed 4-mut
+    // chain to verbose is_standard_layout + flat-slice + Zip::indexed
+    // on first view_mut pattern. 7 layout/length precondition asserts
+    // total — 4 verbose is_standard_layout on {kx, ky, kz, k_squared}
+    // (mut outs) + 3 debug_assert_eq! on {kx_axis, ky_axis, kz_axis}.len()
+    // (closure-captured Vec<f64> immuts; Vec<T> is unconditionally
+    // C-contiguous, so length is the only precondition).
+    //
+    // Strategy: extend divergence.rs (slice 7) 3-mut strategy to 4 muts.
+    // Keep Zip::indexed on kx.view_mut() so the (i,j,k) index is direct
+    // (kx_axis[i] / ky_axis[j] / kz_axis[k] closure-captured Vec reads
+    // require i/j/k). Pre-extract flat as_slice_mut() buffers for
+    // {ky, kz, k_squared}, then write each parallel-iteration output via
+    // op_slice[idx]. Per-iteration cost is 2 muls + 2 adds for idx —
+    // ~10 cycles (vs ~100 cycles for a div/mod-based idx-to-(i,j,k)
+    // decomposition in a drop-everything flat-slice pattern). Race-
+    // freedom: each parallel task writes to 4 distinct output elements
+    // (kx_v[i,j,k] via the Zip iterator + 3 disjoint slice[idx] writes)
+    // all addressed by the same (i,j,k) tuple.
+    //
+    // WHY NOT HELPER: kwavers_safety::with_zip_standard_layout is the
+    // canonical SSOT for future Batch #2 work, but was not adopted here
+    // because: (a) the verbose-form assert pattern is the established
+    // Batch #1 SSOT across slices 1-8 (helper adoption in 0 of 9
+    // migrated sites so far); (b) the slice 9 4-mut extension
+    // deliberately matches divergence.rs slice 7 3-mut verbatim for
+    // source-level consistency; (c) broader helper-validation across
+    // heterogeneous patterns is deferred to Batch #2.
+    assert!(
+        kx.is_standard_layout(),
+        "kx must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        ky.is_standard_layout(),
+        "ky must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        kz.is_standard_layout(),
+        "kz must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        k_squared.is_standard_layout(),
+        "k_squared must be C-contiguous (default Array3 layout) for the migration"
+    );
+    debug_assert_eq!(kx_axis.len(), nx, "kx_axis length must equal nx");
+    debug_assert_eq!(ky_axis.len(), ny, "ky_axis length must equal ny");
+    debug_assert_eq!(kz_axis.len(), nz, "kz_axis length must equal nz");
+    {
+        let ky_slice = ky
+            .as_slice_mut()
+            .expect("ky: standard-layout asserted just above; layout matched");
+        let kz_slice = kz
+            .as_slice_mut()
+            .expect("kz: standard-layout asserted just above; layout matched");
+        let k2_slice = k_squared
+            .as_slice_mut()
+            .expect("k_squared: standard-layout asserted just above; layout matched");
+        Zip::indexed(kx.view_mut()).par_for_each(|(i, j, k), o_kx| {
             let kx_val = kx_axis[i];
             let ky_val = ky_axis[j];
             let kz_val = kz_axis[k];
-            *kx_v = kx_val;
-            *ky_v = ky_val;
-            *kz_v = kz_val;
-            *k2 = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+            let idx = i * (ny * nz) + j * nz + k;
+            *o_kx = kx_val;
+            ky_slice[idx] = ky_val;
+            kz_slice[idx] = kz_val;
+            k2_slice[idx] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
         });
+    }
 
     (k_squared, kx, ky, kz)
 }
