@@ -70,7 +70,7 @@ fn test_artificial_viscosity_generation() {
     let q_av = capture
         .artificial_viscosity(&pressure, 0.001, 0.001, 1000.0, SOUND_SPEED_TISSUE)
         .unwrap();
-    assert_eq!(q_av.dim(), (64, 64));
+    assert_eq!(q_av.shape(), [64, 64]);
 }
 
 #[test]

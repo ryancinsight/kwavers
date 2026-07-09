@@ -49,7 +49,7 @@ impl CattaneoVernotte {
     /// Create a solver with the given hyperbolic parameters, zero-initialising the
     /// heat-flux and divergence fields to the grid shape.
     pub fn new(params: HyperbolicParameters, grid: &Grid) -> Self {
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         Self {
             params,
             heat_flux_x: Array3::zeros(shape),
@@ -91,7 +91,7 @@ impl CattaneoVernotte {
     /// result to avoid one full-volume allocation per step.
     #[must_use]
     pub fn heat_flux_divergence(&self, grid: &Grid) -> Array3<f64> {
-        let mut div = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut div = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         Self::fill_heat_flux_divergence(
             &self.heat_flux_x,
             &self.heat_flux_y,
@@ -288,7 +288,7 @@ mod tests {
         );
         let workspace_ptr = solver.divergence.as_ptr();
         let mut temperature =
-            Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, _, _)| (i * i) as f64);
+            Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |[i, _, _]| (i * i) as f64);
         let center_before = temperature[[2, 0, 0]];
         let dt = 0.1;
         let relax = dt / solver.params.relaxation_time;

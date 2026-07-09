@@ -1,7 +1,7 @@
 use super::{SlscBeamformer, SlscConfig};
 use kwavers_core::error::KwaversResult;
 use leto::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Multi-lag SLSC for enhanced imaging
 #[derive(Debug, Clone)]
@@ -48,3 +48,4 @@ impl MultiLagSlsc {
         Ok(combined)
     }
 }
+

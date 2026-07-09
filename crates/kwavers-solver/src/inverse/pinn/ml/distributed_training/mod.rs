@@ -51,7 +51,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TrainingCoordinator")
-            .field("num_replicas", &self.model_replicas.len())
+            .field("num_replicas", &(self.model_replicas.shape()[0] * self.model_replicas.shape()[1] * self.model_replicas.shape()[2]))
             .field("checkpoint_manager", &self.checkpoint_manager)
             .field("training_state", &self.training_state)
             .field("performance_stats", &self.performance_stats)

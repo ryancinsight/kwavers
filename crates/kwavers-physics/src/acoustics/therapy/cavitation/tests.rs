@@ -115,7 +115,7 @@ fn test_threshold_detection_spatial_heterogeneity() {
 fn test_spectral_detection_zero_pressure_no_cavitation() {
     let mut det = TherapyCavitationDetector::new(3.26 * MHZ_TO_HZ, 0.0);
     det.method = CavitationDetectionMethod::Spectral;
-    let p = Array3::zeros((4, 4, 4));
+    let p = Array3::zeros([4, 4, 4]);
     let cav = det.detect(&p);
     assert!(
         cav.iter().all(|&c| !c),

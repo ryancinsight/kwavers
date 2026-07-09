@@ -60,7 +60,7 @@ impl std::fmt::Debug for PluginBasedSolver {
         f.debug_struct("PluginBasedSolver")
             .field("grid", &self.grid)
             .field("time", &self.time)
-            .field("sources_count", &self.sources.len())
+            .field("sources_count", &(self.sources.shape()[0] * self.sources.shape()[1] * self.sources.shape()[2]))
             .field("field_registry", &self.field_registry)
             .field("plugin_manager", &self.plugin_manager)
             .field("performance", &self.performance)
@@ -180,7 +180,9 @@ impl PluginBasedSolver {
             };
 
             if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
-                field.scaled_add(init_amp, mask);
+                for (d, s) in field.iter_mut().zip(mask.iter()) {
+            *d += init_amp * *s;
+        };
             }
         }
 
@@ -249,7 +251,9 @@ impl PluginBasedSolver {
 
             if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
                 let amplitude = source.amplitude(t);
-                field.scaled_add(amplitude, mask);
+                for (d, s) in field.iter_mut().zip(mask.iter()) {
+            *d += amplitude * *s;
+        };
             }
         }
 

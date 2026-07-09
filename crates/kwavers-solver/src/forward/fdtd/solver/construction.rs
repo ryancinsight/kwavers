@@ -39,16 +39,16 @@ fn fill_rho_c_squared(output: &mut Array3<f64>, rho0: &Array3<f64>, c0: &Array3<
     );
 
     if let (Some(output_values), Some(rho_values), Some(c_values)) = (
-        output.as_slice_memory_order_mut(),
-        rho0.as_slice_memory_order(),
-        c0.as_slice_memory_order(),
+        output.as_slice_mut(),
+        rho0.as_slice(),
+        c0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
             let c = c_values[index];
             *value = rho_values[index] * c * c;
         });
     } else {
-        let (nx, ny, nz) = output.dim();
+        let [nx, ny, nz] = output.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -83,16 +83,16 @@ fn fill_nonlinear_coeff(
     );
 
     if let (Some(output_values), Some(beta_values), Some(rho_values), Some(c2_values)) = (
-        output.as_slice_memory_order_mut(),
-        beta.as_slice_memory_order(),
-        rho0.as_slice_memory_order(),
-        c2.as_slice_memory_order(),
+        output.as_slice_mut(),
+        beta.as_slice(),
+        rho0.as_slice(),
+        c2.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
             *value = beta_values[index] / (rho_values[index] * c2_values[index]);
         });
     } else {
-        let (nx, ny, nz) = output.dim();
+        let [nx, ny, nz] = output.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -163,7 +163,7 @@ impl GenericFdtdSolver<Array3<f64>> {
         // c_ref = mean sound speed over all grid cells (same convention as PSTD).
         let mut kspace_ops = if config.kspace_correction == KSpaceCorrectionMode::Spectral {
             let c_sum: f64 = materials.c0.iter().sum();
-            let c_ref = c_sum / materials.c0.len() as f64;
+            let c_ref = c_sum / (materials.c0.shape()[0] * materials.c0.shape()[1] * materials.c0.shape()[2]) as f64;
             Some(KSpaceFdtdOperators::new(
                 grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, c_ref, config.dt,
             ))
@@ -190,7 +190,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             let rho0_ref = if materials.rho0.is_empty() {
                 DENSITY_WATER_NOMINAL
             } else {
-                materials.rho0.iter().copied().sum::<f64>() / materials.rho0.len() as f64
+                materials.rho0.iter().copied().sum::<f64>() / (materials.rho0.shape()[0] * materials.rho0.shape()[1] * materials.rho0.shape()[2]) as f64
             };
             let Some(kspace_ops) = kspace_ops.as_mut() else {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {

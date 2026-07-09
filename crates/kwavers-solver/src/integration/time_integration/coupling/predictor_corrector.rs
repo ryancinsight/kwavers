@@ -88,9 +88,9 @@ impl TimeCoupling for PredictorCorrectorStrategy {
 
                         // Evolve field with physics component
                         // This is a generic implementation that works with any field
-                        for i in 0..evolved_field.len_of(0) {
-                            for j in 0..evolved_field.len_of(1) {
-                                for k in 0..evolved_field.len_of(2) {
+                        for i in 0..evolved_field.shape()[0] {
+                            for j in 0..evolved_field.shape()[1] {
+                                for k in 0..evolved_field.shape()[2] {
                                     let val = evolved_field[[i, j, k]];
 
                                     // Simple time evolution with corrector damping

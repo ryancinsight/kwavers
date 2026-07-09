@@ -6,7 +6,7 @@ fn bli_weights_collapse_to_single_on_grid_voxel() {
     let point = grid.center_at(1, 1, 1);
     let weights = bli_weights(grid, point, BliConfig::default()).unwrap();
 
-    assert_eq!(weights.len(), 1);
+    assert_eq!((weights.shape()[0] * weights.shape()[1] * weights.shape()[2]), 1);
     assert_eq!(weights[0].linear_index, grid.linear_index(1, 1, 1));
     assert_eq!(weights[0].weight, 1.0);
 }

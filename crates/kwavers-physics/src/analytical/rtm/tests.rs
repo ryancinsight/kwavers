@@ -1,6 +1,6 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 use super::*;
 
@@ -157,3 +157,4 @@ fn aperture_weighted_fusion_zero_weights_uniform_fallback() {
     assert!((fused[0] - 1.0).abs() < 1e-12, "fused={:?}", fused);
     assert!((fused[1] - 2.0).abs() < 1e-12, "fused={:?}", fused);
 }
+

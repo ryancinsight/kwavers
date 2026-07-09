@@ -251,7 +251,7 @@ mod tests {
             .migrate(&source_field, &receiver_field, &grid)
             .unwrap();
 
-        assert_eq!(image.dim(), (10, 10, 10));
+        assert_eq!(image.shape(), [10, 10, 10]);
         // I(x) = 1·1 = 1 everywhere.
         assert!(
             image.iter().all(|&v| (v - 1.0).abs() < f64::EPSILON),

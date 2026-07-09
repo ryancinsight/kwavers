@@ -53,7 +53,7 @@ impl DiffusionSolver {
     ) -> Result<Self> {
         let (nx, ny, nz) = grid.dimensions();
 
-        if optical_properties.dim() != (nx, ny, nz) {
+        if optical_properties.shape() != [nx, ny, nz] {
             anyhow::bail!(
                 "Optical property map dimensions {:?} do not match grid dimensions ({}, {}, {})",
                 optical_properties.shape(),

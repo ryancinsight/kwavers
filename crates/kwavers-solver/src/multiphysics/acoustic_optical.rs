@@ -120,7 +120,7 @@ mod tests {
         // λ₀=633nm, L=1mm, Λ=300µm, n=1.33 → Q≈0.01 (thin grating); a weak
         // 0.1 MPa wave gives ν≈0.1 (Δn=1e-5), so most light stays undeviated.
         let orders = s.diffraction_orders(1.0e5, 1e-3, 633e-9, 1.33, 300e-6, 0.0, max, 2000);
-        assert_eq!(orders.len(), 2 * max as usize + 1);
+        assert_eq!((orders.shape()[0] * orders.shape()[1] * orders.shape()[2]), 2 * max as usize + 1);
         let total: f64 = orders.iter().sum();
         assert!((total - 1.0).abs() < 1e-5, "energy = {total}");
         // Symmetric about the zeroth order (normal incidence, thin grating).

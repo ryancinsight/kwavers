@@ -33,7 +33,7 @@ impl ShockCapture {
         c0: f64,
         frequency: f64,
     ) -> KwaversResult<ShockDetectionResult> {
-        let (nx, nz) = pressure.dim();
+        let [nx, nz] = pressure.shape();
         if nx < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
                 "Pressure field too small for shock detection".to_owned(),
@@ -137,7 +137,7 @@ impl ShockCapture {
             return Ok(Vec::new());
         }
 
-        let (nx, nz) = pressure.dim();
+        let [nx, nz] = pressure.shape();
         if nz < 4 {
             return Ok(Vec::new());
         }

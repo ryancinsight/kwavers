@@ -59,7 +59,7 @@ fn test_data_type_quantization() {
     let result = runtime.software_quantize(&input, &kernel);
 
     let quantized = result.unwrap();
-    assert_eq!(quantized.len(), 4);
+    assert_eq!((quantized.shape()[0] * quantized.shape()[1] * quantized.shape()[2]), 4);
 
     for &val in &quantized {
         assert!((-127.0f32..=127.0f32).contains(&val));

@@ -5,7 +5,7 @@
 
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use leto::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 fn linspace(start: f64, end: f64, num_points: usize) -> Array1<f64> {
     if num_points == 0 {
@@ -258,3 +258,4 @@ impl FrequencyResponse {
         -10.0 * transmission.log10()
     }
 }
+

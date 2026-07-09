@@ -58,7 +58,7 @@ fn adams_bashforth2_is_exact_for_constant_derivative_after_startup() -> KwaversR
     for _ in 0..3 {
         stepper.step(
             &mut field,
-            |u| Ok(Array3::from_elem(u.dim(), derivative)),
+            |u| Ok(Array3::from_elem(u.shape(), derivative)),
             dt,
             &grid,
         )?;
@@ -88,7 +88,7 @@ fn adams_bashforth3_is_exact_for_constant_derivative_after_startup() -> KwaversR
     for _ in 0..4 {
         stepper.step(
             &mut field,
-            |u| Ok(Array3::from_elem(u.dim(), derivative)),
+            |u| Ok(Array3::from_elem(u.shape(), derivative)),
             dt,
             &grid,
         )?;
@@ -181,7 +181,7 @@ fn time_scale_separator_matches_quadratic_closed_form() -> KwaversResult<()> {
     let expected_diffusive = 1.0 / grad_max;
     let expected_acoustic = 1.0 / laplacian_max.sqrt();
 
-    assert_eq!(scales.len(), 2);
+    assert_eq!((scales.shape()[0] * scales.shape()[1] * scales.shape()[2]), 2);
     assert!(
         (scales[0] - expected_diffusive).abs() < 1e-15,
         "diffusive scale {}, expected {}",

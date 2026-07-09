@@ -11,7 +11,7 @@ fn test_network_construction_with_default_config() {
     let cfg = ParamFieldPINNConfig::default();
     let net = ParamFieldPINNNetwork::<B>::new(&cfg).expect("construct");
     // Default has 3 hidden layers → 2 intermediate Linear layers.
-    assert_eq!(net.hidden_layer_count(), cfg.hidden_layers.len() - 1);
+    assert_eq!(net.hidden_layer_count(), (cfg.hidden_layers.shape()[0] * cfg.hidden_layers.shape()[1] * cfg.hidden_layers.shape()[2]) - 1);
 }
 
 #[test]

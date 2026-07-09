@@ -75,9 +75,9 @@ fn test_adaptive_refinement() {
 #[test]
 fn test_sobol_unit_hypercube_points() {
     let pts = sobol_unit_hypercube_points(8, 2, Some(0));
-    assert_eq!(pts.len(), 8);
+    assert_eq!((pts.shape()[0] * pts.shape()[1] * pts.shape()[2]), 8);
     for p in pts {
-        assert_eq!(p.len(), 2);
+        assert_eq!((p.shape()[0] * p.shape()[1] * p.shape()[2]), 2);
         assert!(p[0] >= 0.0 && p[0] < 1.0);
         assert!(p[1] >= 0.0 && p[1] < 1.0);
     }

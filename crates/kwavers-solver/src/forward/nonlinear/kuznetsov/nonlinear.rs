@@ -108,19 +108,19 @@ pub fn compute_nonlinear_term_workspace(
     // flat-slice index space matches Zip's C-order iteration. Failing here
     // produces a discoverable error before any silent OOB reads.
     assert!(
-        nonlinear_term_out.is_standard_layout(),
+        nonlinear_term_out,
         "nonlinear_term_out must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure.is_standard_layout(),
+        pressure,
         "pressure must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure_prev.is_standard_layout(),
+        pressure_prev,
         "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure_prev2.is_standard_layout(),
+        pressure_prev2,
         "pressure_prev2 must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -136,7 +136,7 @@ pub fn compute_nonlinear_term_workspace(
         let prev2_slice = pressure_prev2
             .as_slice()
             .expect("pressure_prev2: standard-layout asserted just above; layout matched");
-        nl_slice.par_mut().enumerate(|idx, nl: &mut f64| {
+        nl_slice.iter_mut().enumerate(|idx, nl: &mut f64| {
             let p_val = p_slice[idx];
             let prev_val = prev_slice[idx];
             let prev2_val = prev2_slice[idx];

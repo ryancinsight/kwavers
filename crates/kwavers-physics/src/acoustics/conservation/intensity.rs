@@ -13,9 +13,9 @@ pub fn acoustic_intensity(
     velocity_y: &Array3<f64>,
     velocity_z: &Array3<f64>,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let mut ix = Array3::zeros(pressure.dim());
-    let mut iy = Array3::zeros(pressure.dim());
-    let mut iz = Array3::zeros(pressure.dim());
+    let mut ix = Array3::zeros(pressure.shape());
+    let mut iy = Array3::zeros(pressure.shape());
+    let mut iz = Array3::zeros(pressure.shape());
 
     zip_mut_two_refs(
         ix.view_mut(),
@@ -55,7 +55,7 @@ pub fn acoustic_power_through_z_plane(
 ) -> f64 {
     let da = grid.dx * grid.dy;
     let mut power = 0.0_f64;
-    let (nx, ny, _) = pressure.dim();
+    let [nx, ny, _] = pressure.shape();
     for i in 0..nx {
         for j in 0..ny {
             power += pressure[[i, j, k_plane]] * velocity_z[[i, j, k_plane]] * da;
@@ -81,8 +81,8 @@ mod tests {
     fn acoustic_intensity_matches_pv_product() {
         let p = uniform(3.0);
         let vx = uniform(2.0);
-        let vy = Array3::zeros((4, 4, 4));
-        let vz = Array3::zeros((4, 4, 4));
+        let vy = Array3::zeros([4, 4, 4]);
+        let vz = Array3::zeros([4, 4, 4]);
 
         let (ix, iy, iz) = acoustic_intensity(&p, &vx, &vy, &vz);
 

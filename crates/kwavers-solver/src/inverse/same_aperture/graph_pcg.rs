@@ -43,7 +43,7 @@ pub fn solve_tikhonov_h1<O: LinearOperator>(
     active: &ActiveGrid,
     settings: PcgSettings,
 ) -> PcgResult {
-    debug_assert_eq!(target.len(), operator.cols());
+    debug_assert_eq!((target.shape()[0] * target.shape()[1] * target.shape()[2]), operator.cols());
     let mut data = vec![0.0; operator.rows()];
     operator.matvec(target, &mut data);
     let (model, objective_history) = solve_regularized_system(operator, &data, active, settings);
@@ -60,13 +60,13 @@ fn solve_regularized_system<O: LinearOperator>(
     active: &ActiveGrid,
     settings: PcgSettings,
 ) -> (Vec<f32>, Vec<f64>) {
-    debug_assert_eq!(data.len(), operator.rows());
+    debug_assert_eq!((data.shape()[0] * data.shape()[1] * data.shape()[2]), operator.rows());
     let cols = operator.cols();
     let rows = operator.rows();
 
     // Pre-allocate all workspace vectors once. None of these are re-allocated
     // inside the iteration loop.
-    let mut measured = data.to_vec();
+    let mut measured = data.iter().cloned().collect::<Vec<_>>();
     add_deterministic_noise(&mut measured, settings.noise_fraction);
     let mut rhs = vec![0.0_f32; cols];
     operator.t_matvec(&measured, &mut rhs);
@@ -183,7 +183,7 @@ fn normal_apply<O: LinearOperator>(
 ///
 /// Unrolled 4-wide for FMA-compatible compiler vectorization.
 fn apply_preconditioner(r: &[f32], diag: &[f32], z: &mut [f32]) {
-    let n = z.len();
+    let n = (z.shape()[0] * z.shape()[1] * z.shape()[2]);
     let end4 = (n / 4) * 4;
     for i in (0..end4).step_by(4) {
         z[i] = r[i] / diag[i];
@@ -227,7 +227,7 @@ fn add_deterministic_noise(data: &mut [f32], fraction: f64) {
     if fraction <= 0.0 || data.is_empty() {
         return;
     }
-    let rms = (data.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / data.len() as f64).sqrt();
+    let rms = (data.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / (data.shape()[0] * data.shape()[1] * data.shape()[2]) as f64).sqrt();
     let sigma = (fraction * rms) as f32;
     for (idx, value) in data.iter_mut().enumerate() {
         *value += sigma * splitmix_unit(idx);

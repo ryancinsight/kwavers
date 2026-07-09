@@ -3,10 +3,7 @@
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use leto::{
-    Array1,
-    ArrayView3,
-};
+use leto::{Array1, ArrayView3};
 
 /// Find focus location using maximum pressure
 /// # Errors
@@ -114,7 +111,7 @@ pub fn calculate_beam_width(
         ));
     }
 
-    let mut widths = Array1::zeros(n_slices);
+    let mut widths = Array1::zeros([n_slices]);
     let threshold_ratio = 10.0_f64.powf(threshold_db / 20.0);
 
     for slice in 0..n_slices {
@@ -189,7 +186,7 @@ mod tests {
     #[test]
     fn find_focus_locates_pressure_spike() {
         let grid = small_grid();
-        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        let mut field = Array3::<f64>::zeros([8, 8, 8]);
         field[[4, 3, 2]] = 1000.0;
 
         let loc = find_focus(field.view(), &grid).unwrap();
@@ -203,7 +200,7 @@ mod tests {
     #[test]
     fn find_focus_returns_origin_for_zero_field() {
         let grid = small_grid();
-        let field = Array3::<f64>::zeros((8, 8, 8));
+        let field = Array3::<f64>::zeros([8, 8, 8]);
         let loc = find_focus(field.view(), &grid).unwrap();
         assert_eq!(loc, [0.0, 0.0, 0.0]);
     }
@@ -211,7 +208,7 @@ mod tests {
     #[test]
     fn find_focus_rejects_shape_mismatch() {
         let grid = small_grid();
-        let field = Array3::<f64>::zeros((7, 8, 8));
+        let field = Array3::<f64>::zeros([7, 8, 8]);
 
         let err = find_focus(field.view(), &grid).unwrap_err();
         let message = err.to_string();
@@ -220,14 +217,14 @@ mod tests {
             message.contains("Dimension mismatch"),
             "unexpected error: {message}"
         );
-        assert!(message.contains("(8, 8, 8)"), "expected shape: {message}");
-        assert!(message.contains("(7, 8, 8)"), "actual shape: {message}");
+        assert!(message.contains("[8, 8, 8]"), "expected shape: {message}");
+        assert!(message.contains("[7, 8, 8]"), "actual shape: {message}");
     }
 
     #[test]
     fn find_focus_rejects_nonfinite_pressure() {
         let grid = small_grid();
-        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        let mut field = Array3::<f64>::zeros([8, 8, 8]);
         field[[6, 5, 4]] = f64::NAN;
 
         let err = find_focus(field.view(), &grid).unwrap_err();
@@ -246,7 +243,7 @@ mod tests {
     #[test]
     fn find_focal_plane_locates_energy_slice_along_z() {
         let grid = small_grid();
-        let mut field = Array3::<f64>::zeros((8, 8, 8));
+        let mut field = Array3::<f64>::zeros([8, 8, 8]);
         for ix in 0..8 {
             for iy in 0..8 {
                 field[[ix, iy, 5]] = 10.0;
@@ -261,7 +258,7 @@ mod tests {
     #[test]
     fn find_focal_plane_errors_for_invalid_axis() {
         let grid = small_grid();
-        let field = Array3::<f64>::zeros((8, 8, 8));
+        let field = Array3::<f64>::zeros([8, 8, 8]);
 
         let err = find_focal_plane(field.view(), &grid, 3).unwrap_err();
         let message = err.to_string();
@@ -278,7 +275,7 @@ mod tests {
     #[test]
     fn calculate_beam_width_errors_for_invalid_axis() {
         let grid = small_grid();
-        let field = Array3::<f64>::zeros((8, 8, 8));
+        let field = Array3::<f64>::zeros([8, 8, 8]);
 
         let err = calculate_beam_width(field.view(), &grid, 5, -6.0).unwrap_err();
         let message = err.to_string();
@@ -293,9 +290,9 @@ mod tests {
     #[test]
     fn calculate_beam_width_zero_for_zero_field() {
         let grid = small_grid();
-        let field = Array3::<f64>::zeros((8, 8, 8));
+        let field = Array3::<f64>::zeros([8, 8, 8]);
         let widths = calculate_beam_width(field.view(), &grid, 2, -6.0).unwrap();
-        assert_eq!(widths.len(), grid.nz);
+        assert_eq!(widths.size(), grid.nz);
         assert!(
             widths.iter().all(|&w| w == 0.0),
             "zero field must yield zero beam widths"
@@ -305,7 +302,7 @@ mod tests {
     #[test]
     fn calculate_beam_width_rejects_nonfinite_threshold() {
         let grid = small_grid();
-        let field = Array3::<f64>::zeros((8, 8, 8));
+        let field = Array3::<f64>::zeros([8, 8, 8]);
 
         let err = calculate_beam_width(field.view(), &grid, 2, f64::NAN).unwrap_err();
         let message = err.to_string();

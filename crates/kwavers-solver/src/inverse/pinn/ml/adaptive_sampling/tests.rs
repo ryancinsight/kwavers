@@ -51,8 +51,8 @@ fn test_adaptive_sampler_creation() {
 
     let sampler = sampler.unwrap();
     assert_eq!(sampler.total_points, 100);
-    assert_eq!(sampler.active_points.len(), 300);
-    assert_eq!(sampler.priorities.len(), 100);
+    assert_eq!((sampler.active_points.shape()[0] * sampler.active_points.shape()[1] * sampler.active_points.shape()[2]), 300);
+    assert_eq!((sampler.priorities.shape()[0] * sampler.priorities.shape()[1] * sampler.priorities.shape()[2]), 100);
 }
 
 #[test]

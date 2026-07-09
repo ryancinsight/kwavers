@@ -265,7 +265,7 @@ impl DGSolver {
         coeffs: &Array3<f64>,
         wave_speed: f64,
     ) -> KwaversResult<Array3<f64>> {
-        let mut rhs = Array3::zeros(coeffs.raw_dim());
+        let mut rhs = Array3::zeros(coeffs.shape());
         compute_rhs_from_coeffs_into(
             RhsOperator {
                 n_nodes: self.n_nodes,

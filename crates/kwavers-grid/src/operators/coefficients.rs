@@ -33,34 +33,34 @@ impl FDCoefficients {
     /// Never panics - all coefficients are mathematically exact rational numbers
     /// that convert precisely to any IEEE 754 floating-point type.
     #[must_use]
-    pub fn first_derivative<T: Float>(order: FdAccuracyOrder) -> Vec<T> {
+    pub fn first_derivative<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
         // SAFETY: All coefficients are exact rational numbers that convert
         // precisely to f32/f64 without loss of precision or overflow.
         // Mathematical proof: All values are in range [-1, 1] with denominators
         // that are powers of small primes, ensuring exact IEEE 754 representation.
         match order {
             FdAccuracyOrder::Second => {
-                vec![T::from(0.5).expect("0.5 converts exactly to IEEE 754")]
+                vec![T::from_f64(0.5 as f64)]
             }
             FdAccuracyOrder::Fourth => {
                 vec![
-                    T::from(-1.0 / 12.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(2.0 / 3.0).expect("Exact fraction converts to IEEE 754"),
+                    T::from_f64(-1.0 / 12.0 as f64),
+                    T::from_f64(2.0 / 3.0 as f64),
                 ]
             }
             FdAccuracyOrder::Sixth => {
                 vec![
-                    T::from(1.0 / 60.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(-3.0 / 20.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(3.0 / 4.0).expect("Exact fraction converts to IEEE 754"),
+                    T::from_f64(1.0 / 60.0 as f64),
+                    T::from_f64(-3.0 / 20.0 as f64),
+                    T::from_f64(3.0 / 4.0 as f64),
                 ]
             }
             FdAccuracyOrder::Eighth => {
                 vec![
-                    T::from(-1.0 / 280.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(4.0 / 105.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(-1.0 / 5.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(4.0 / 5.0).expect("Exact fraction converts to IEEE 754"),
+                    T::from_f64(-1.0 / 280.0 as f64),
+                    T::from_f64(4.0 / 105.0 as f64),
+                    T::from_f64(-1.0 / 5.0 as f64),
+                    T::from_f64(4.0 / 5.0 as f64),
                 ]
             }
         }
@@ -74,28 +74,28 @@ impl FDCoefficients {
     /// # Panics
     /// Never panics - all coefficients are exact IEEE 754 representations.
     #[must_use]
-    pub fn second_derivative_pairs<T: Float>(order: FdAccuracyOrder) -> Vec<T> {
+    pub fn second_derivative_pairs<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
         match order {
-            FdAccuracyOrder::Second => vec![T::from(1.0).expect("1.0 is exact in IEEE 754")],
+            FdAccuracyOrder::Second => vec![T::from_f64(1.0 as f64)],
             FdAccuracyOrder::Fourth => {
                 vec![
-                    T::from(-1.0 / 12.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(4.0 / 3.0).expect("Exact fraction converts to IEEE 754"),
+                    T::from_f64(-1.0 / 12.0 as f64),
+                    T::from_f64(4.0 / 3.0 as f64),
                 ]
             }
             FdAccuracyOrder::Sixth => {
                 vec![
-                    T::from(1.0 / 90.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(-3.0 / 20.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(3.0 / 2.0).expect("Exact fraction converts to IEEE 754"),
+                    T::from_f64(1.0 / 90.0 as f64),
+                    T::from_f64(-3.0 / 20.0 as f64),
+                    T::from_f64(3.0 / 2.0 as f64),
                 ]
             }
             FdAccuracyOrder::Eighth => {
                 vec![
-                    T::from(-1.0 / 560.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(8.0 / 315.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(-1.0 / 5.0).expect("Exact fraction converts to IEEE 754"),
-                    T::from(8.0 / 5.0).expect("Exact fraction converts to IEEE 754"),
+                    T::from_f64(-1.0 / 560.0 as f64),
+                    T::from_f64(8.0 / 315.0 as f64),
+                    T::from_f64(-1.0 / 5.0 as f64),
+                    T::from_f64(8.0 / 5.0 as f64),
                 ]
             }
         }
@@ -106,17 +106,17 @@ impl FDCoefficients {
     /// # Panics
     /// Never panics - all coefficients are exact IEEE 754 representations.
     #[must_use]
-    pub fn second_derivative_center<T: Float>(order: FdAccuracyOrder) -> T {
+    pub fn second_derivative_center<T: FloatElement>(order: FdAccuracyOrder) -> T {
         match order {
-            FdAccuracyOrder::Second => T::from(-2.0).expect("-2.0 is exact in IEEE 754"),
+            FdAccuracyOrder::Second => T::from_f64(-2.0 as f64),
             FdAccuracyOrder::Fourth => {
-                T::from(-5.0 / 2.0).expect("Exact fraction converts to IEEE 754")
+                T::from_f64(-5.0 / 2.0 as f64)
             }
             FdAccuracyOrder::Sixth => {
-                T::from(-49.0 / 18.0).expect("Exact fraction converts to IEEE 754")
+                T::from_f64(-49.0 / 18.0 as f64)
             }
             FdAccuracyOrder::Eighth => {
-                T::from(-205.0 / 72.0).expect("Exact fraction converts to IEEE 754")
+                T::from_f64(-205.0 / 72.0 as f64)
             }
         }
     }

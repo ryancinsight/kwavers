@@ -14,7 +14,7 @@
 //!
 //! - Jones, R. C. (1941). "A new calculus for the treatment of optical systems"
 
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Jones vector representing the polarization state of light
 #[derive(Debug, Clone, Copy)]
@@ -77,3 +77,4 @@ impl JonesVector {
         }
     }
 }
+

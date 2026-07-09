@@ -48,7 +48,7 @@ use leto::{
     Array2,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Amplitude coherence factor from pre-accumulated aperture sums
@@ -409,3 +409,4 @@ pub fn delay_and_sum_coherence(
 
 #[cfg(test)]
 mod tests;
+

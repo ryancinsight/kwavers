@@ -77,7 +77,7 @@ where
         data: &[(f64, f64, f64)],
         backend: &B,
     ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>) {
-        let n = data.len().max(1);
+        let n = (data.shape()[0] * data.shape()[1] * data.shape()[2]).max(1);
         if data.is_empty() {
             let dummy = || Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend), false);
             return (dummy(), dummy(), dummy());
@@ -109,7 +109,7 @@ where
         data: &[(f64, f64, f64, f64)],
         backend: &B,
     ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
-        let n = data.len().max(1);
+        let n = (data.shape()[0] * data.shape()[1] * data.shape()[2]).max(1);
         if data.is_empty() {
             let dummy = || Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend), false);
             return (dummy(), dummy(), dummy(), dummy());
@@ -146,7 +146,7 @@ where
         data: &[(f64, f64, f64, f64, f64)],
         backend: &B,
     ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>, Var<f32, B>) {
-        let n = data.len().max(1);
+        let n = (data.shape()[0] * data.shape()[1] * data.shape()[2]).max(1);
         if data.is_empty() {
             let dummy = || Var::new(coeus_tensor::Tensor::zeros_on(vec![1, 1], backend), false);
             return (dummy(), dummy(), dummy(), dummy());

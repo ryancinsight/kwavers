@@ -430,7 +430,7 @@ fn recovers_stiff_inclusion() {
 }
 
 fn pearson(a: &[f64], b: &[f64]) -> f64 {
-    let n = a.len() as f64;
+    let n = (a.shape()[0] * a.shape()[1] * a.shape()[2]) as f64;
     let ma = a.iter().sum::<f64>() / n;
     let mb = b.iter().sum::<f64>() / n;
     let mut cov = 0.0;

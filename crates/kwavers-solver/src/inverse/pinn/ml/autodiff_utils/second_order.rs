@@ -71,8 +71,8 @@ where
     let backend = B::default();
 
     let raw = input.as_slice();
-    let mut plus = raw.to_vec();
-    let mut minus = raw.to_vec();
+    let mut plus = raw.iter().cloned().collect::<Vec<_>>();
+    let mut minus = raw.iter().cloned().collect::<Vec<_>>();
     for row in 0..batch {
         plus[row * 3 + spatial_dim] += eps;
         minus[row * 3 + spatial_dim] -= eps;
@@ -203,7 +203,7 @@ where
     let raw = input.as_slice();
 
     let perturb = |dx: f32, dy: f32| {
-        let mut v = raw.to_vec();
+        let mut v = raw.iter().cloned().collect::<Vec<_>>();
         for row in 0..batch {
             v[row * 3 + 1] += dx;
             v[row * 3 + 2] += dy;

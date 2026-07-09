@@ -54,7 +54,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PINN3DNetwork")
-            .field("hidden_layer_count", &self.hidden_layers.len())
+            .field("hidden_layer_count", &(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]))
             .finish_non_exhaustive()
     }
 }
@@ -101,7 +101,7 @@ where
     }
 
     pub fn hidden_layer_count(&self) -> usize {
-        self.hidden_layers.len()
+        (self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2])
     }
 
     /// Flatten all layer parameters (weights and biases) in forward order.
@@ -239,7 +239,7 @@ where
 
         let backend = B::default();
         let c_squared_var = Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![c_squared.len(), 1], &c_squared, &backend),
+            coeus_tensor::Tensor::from_slice_on(vec![(c_squared.shape()[0] * c_squared.shape()[1] * c_squared.shape()[2]), 1], &c_squared, &backend),
             false,
         );
 

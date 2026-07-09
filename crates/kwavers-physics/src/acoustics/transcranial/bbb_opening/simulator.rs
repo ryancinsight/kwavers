@@ -26,7 +26,7 @@ impl BBBOpening {
         microbubble_concentration: Array3<f64>,
         parameters: BBBParameters,
     ) -> Self {
-        let dims = acoustic_pressure.dim();
+        let dims = acoustic_pressure.shape();
         let permeability = PermeabilityEnhancement {
             permeability_factor: Array3::zeros(dims),
             opening_duration: Array3::zeros(dims),
@@ -55,7 +55,7 @@ impl BBBOpening {
         info!("  MI target: {:.2}", self.parameters.target_mi);
         info!("  Duration: {:.1} s", self.parameters.duration);
 
-        let (nx, ny, nz) = self.acoustic_pressure.dim();
+        let [nx, ny, nz] = self.acoustic_pressure.shape();
         let models = PermeabilityModels::new(&self.parameters);
 
         for k in 0..nz {

@@ -199,7 +199,7 @@ impl KzkSolverPlugin {
             }
         };
 
-        if let Some(values) = field.as_slice_memory_order_mut() {
+        if let Some(values) = field.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(values, |_idx, p| {
                 *p = update_pressure(*p);
             });

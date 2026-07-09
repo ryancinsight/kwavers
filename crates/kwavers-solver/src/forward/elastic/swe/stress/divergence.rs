@@ -55,7 +55,7 @@ pub fn stress_divergence_into(
     field: &ElasticWaveField,
     scratch: &mut ElasticStepScratch,
 ) {
-    let (nx, ny, nz) = field.ux.dim();
+    let (nx, ny, nz) = field.ux.shape();
     let dx = grid.dx;
     let dy = grid.dy;
     let dz = grid.dz;
@@ -89,35 +89,35 @@ pub fn stress_divergence_into(
     // the joint per-iteration writes (all three outputs updated atomically
     // per `(i,j,k)`) without requiring Zip::indexed's three-way .and() chain.
     assert!(
-        scratch.sxx.is_c_contiguous(),
+        scratch.sxx,
         "scratch.sxx must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.syy.is_c_contiguous(),
+        scratch.syy,
         "scratch.syy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.szz.is_c_contiguous(),
+        scratch.szz,
         "scratch.szz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        ux.is_c_contiguous(),
+        ux,
         "ux must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uy.is_c_contiguous(),
+        uy,
         "uy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uz.is_c_contiguous(),
+        uz,
         "uz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        lambda.is_c_contiguous(),
+        lambda,
         "lambda must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        mu.is_c_contiguous(),
+        mu,
         "mu must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -150,31 +150,31 @@ pub fn stress_divergence_into(
     // scratch.{sxy,sxz,syz} + 4 captured immuts ux/uy/uz/mu; note `lambda`
     // is unused in this pass).
     assert!(
-        scratch.sxy.is_c_contiguous(),
+        scratch.sxy,
         "scratch.sxy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.sxz.is_c_contiguous(),
+        scratch.sxz,
         "scratch.sxz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.syz.is_c_contiguous(),
+        scratch.syz,
         "scratch.syz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        ux.is_c_contiguous(),
+        ux,
         "ux must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uy.is_c_contiguous(),
+        uy,
         "uy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uz.is_c_contiguous(),
+        uz,
         "uz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        mu.is_c_contiguous(),
+        mu,
         "mu must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -218,39 +218,39 @@ pub fn stress_divergence_into(
     // verbose asserts (3 mut on scratch.{div_x,div_y,div_z} + 6 captured immut
     // views sxx_v..syz_v).
     assert!(
-        scratch.div_x.is_c_contiguous(),
+        scratch.div_x,
         "scratch.div_x must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.div_y.is_c_contiguous(),
+        scratch.div_y,
         "scratch.div_y must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.div_z.is_c_contiguous(),
+        scratch.div_z,
         "scratch.div_z must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        sxx_v.is_c_contiguous(),
+        sxx_v,
         "sxx_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        syy_v.is_c_contiguous(),
+        syy_v,
         "syy_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        szz_v.is_c_contiguous(),
+        szz_v,
         "szz_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        sxy_v.is_c_contiguous(),
+        sxy_v,
         "sxy_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        sxz_v.is_c_contiguous(),
+        sxz_v,
         "sxz_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        syz_v.is_c_contiguous(),
+        syz_v,
         "syz_v must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -294,7 +294,7 @@ pub fn stress_divergence(
     mu: &Array3<f64>,
     field: &ElasticWaveField,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let (nx, ny, nz) = field.ux.dim();
+    let (nx, ny, nz) = field.ux.shape();
     let mut scratch = ElasticStepScratch::new(nx, ny, nz);
     stress_divergence_into(grid, lambda, mu, field, &mut scratch);
     (scratch.div_x, scratch.div_y, scratch.div_z)

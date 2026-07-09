@@ -39,7 +39,7 @@ fn test_end_to_end_cpu_training() {
 
     // Verify metrics
     assert_eq!(metrics.epochs_completed, 10);
-    assert_eq!(metrics.total_loss.len(), 10);
+    assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 10);
     assert!(metrics.training_time_secs > 0.0);
 
     // All losses should be finite
@@ -67,12 +67,12 @@ fn test_config_presets() {
 
     // GPU config
     let config = PinnConfig::for_gpu();
-    assert!(config.hidden_layers.len() >= 4);
+    assert!((config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) >= 4);
     assert!(config.num_collocation_points >= 10000);
 
     // Prototyping config
     let config = PinnConfig::for_prototyping();
-    assert!(config.hidden_layers.len() == 3);
+    assert!((config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) == 3);
     assert!(config.num_collocation_points <= 1000);
 }
 
@@ -155,7 +155,7 @@ fn test_multi_epoch_convergence() {
 
     // Loss should generally decrease (or at least not increase dramatically)
     let first_loss = metrics.total_loss[0];
-    let last_loss = metrics.total_loss[metrics.total_loss.len() - 1];
+    let last_loss = metrics.total_loss[(metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]) - 1];
 
     // Both should be finite
     assert!(first_loss.is_finite());

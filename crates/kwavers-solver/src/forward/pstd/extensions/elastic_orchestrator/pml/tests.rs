@@ -50,7 +50,7 @@ fn damping_is_monotonic_and_in_unit_interval() {
         assert!(*v > 0.0 && *v <= 1.0, "damping = {v} must be in (0, 1]");
     }
     assert!(dx[0] < dx[8], "damping must increase outward (left side)");
-    let n = dx.len();
+    let n = (dx.shape()[0] * dx.shape()[1] * dx.shape()[2]);
     assert!(
         dx[n - 1] < dx[n - 9],
         "damping must increase outward (right side)"

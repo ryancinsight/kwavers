@@ -4,8 +4,7 @@
 use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
-use leto::Array3;
-use leto::Array2;
+use leto::{Array1, Array2, Array3};
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -202,7 +201,9 @@ impl BeamformingProcessor {
                 }
             }
         }
-        covariance /= n_samples as f64;
+        for val in covariance.iter_mut() {
+            *val /= n_samples as f64;
+        }
 
         // Diagonal loading: R' = R + δI
         for i in 0..n_elements {
@@ -213,9 +214,27 @@ impl BeamformingProcessor {
         let inv_cov = self.matrix_inverse(&covariance)?;
 
         // Uniform steering normalized to unity gain
-        let a = leto::Array1::from_vec(vec![1.0 / (n_elements as f64).sqrt(); n_elements]);
-        let inv_cov_a = inv_cov.dot(&a);
-        let denominator = a.dot(&inv_cov_a);
+        let a = Array1::from_vec(
+            [n_elements],
+            vec![1.0 / (n_elements as f64).sqrt(); n_elements],
+        )
+        .unwrap();
+        let inv_cov_a = {
+            let mut result = Array1::zeros([n_elements]);
+            for i in 0..n_elements {
+                let mut sum = 0.0;
+                for j in 0..n_elements {
+                    sum += inv_cov[[i, j]] * a[j];
+                }
+                result[i] = sum;
+            }
+            result
+        };
+        let denominator = a
+            .iter()
+            .zip(inv_cov_a.iter())
+            .map(|(x, y)| x * y)
+            .sum::<f64>();
 
         if denominator.abs() < 1e-12 {
             // Fallback on numerical issues
@@ -230,7 +249,7 @@ impl BeamformingProcessor {
         }
 
         let weights_arr = inv_cov_a.mapv(|x| x / denominator);
-        let weights: Vec<f64> = weights_arr.to_vec();
+        let weights: Vec<f64> = weights_arr.into_vec();
 
         // Apply weights across time
         let mut output = Array3::<f64>::zeros([1, 1, n_samples]);

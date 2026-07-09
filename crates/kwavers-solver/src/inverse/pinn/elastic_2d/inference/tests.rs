@@ -21,7 +21,7 @@ fn test_single_point_prediction() {
     let result = predictor.predict_point(0.5, 0.5, 0.1);
 
     let displacement = result.unwrap();
-    assert_eq!(displacement.len(), 2);
+    assert_eq!((displacement.shape()[0] * displacement.shape()[1] * displacement.shape()[2]), 2);
 }
 
 #[test]
@@ -34,7 +34,7 @@ fn test_batch_prediction() {
     let result = predictor.predict_batch(&points);
 
     let displacements = result.unwrap();
-    assert_eq!(displacements.dim(), (3, 2));
+    assert_eq!(displacements.shape(), [3, 2]);
 }
 
 #[test]
@@ -61,7 +61,7 @@ fn test_field_evaluation() {
     let result = predictor.evaluate_field(&x_grid, &y_grid, t);
 
     let field = result.unwrap();
-    assert_eq!(field.dim(), (5, 5, 2));
+    assert_eq!(field.shape(), [5, 5, 2]);
 }
 
 #[test]
@@ -74,7 +74,7 @@ fn test_time_series() {
     let result = predictor.time_series(0.5, 0.5, &times);
 
     let time_series = result.unwrap();
-    assert_eq!(time_series.dim(), (10, 2));
+    assert_eq!(time_series.shape(), [10, 2]);
 }
 
 #[test]
@@ -90,7 +90,7 @@ fn test_magnitude_field() {
     let result = predictor.magnitude_field(&x_grid, &y_grid, t);
 
     let magnitude = result.unwrap();
-    assert_eq!(magnitude.dim(), (5, 5));
+    assert_eq!(magnitude.shape(), [5, 5]);
 
     // All magnitudes should be non-negative
     for val in magnitude.iter() {

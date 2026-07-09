@@ -31,8 +31,8 @@ fn graph_laplacian_matches_edge_energy_identity() {
 #[test]
 fn row_matrix_products_match_manual_linear_algebra() {
     let mut matrix = RowMatrix::zeros(2, 3);
-    matrix.row_mut(0).copy_from_slice(&[1.0, 2.0, 0.0]);
-    matrix.row_mut(1).copy_from_slice(&[0.0, -1.0, 3.0]);
+    matrix.index_axis_mut(0, 0).unwrap().copy_from_slice(&[1.0, 2.0, 0.0]);
+    matrix.index_axis_mut(0, 1).unwrap().copy_from_slice(&[0.0, -1.0, 3.0]);
     let mut y = [0.0_f32; 2];
     matrix.matvec(&[2.0, 3.0, 5.0], &mut y);
     assert_eq!(y, [8.0, 12.0]);
@@ -84,7 +84,7 @@ fn finite_frequency_rows_are_normalized_and_input_sensitive() {
             .sqrt();
         assert!((norm - 1.0).abs() <= 1.0e-5, "row {row} norm={norm}");
     }
-    assert_ne!(matrix.row(0), matrix.row(1));
+    assert_ne!(matrix.index_axis(0, 0).unwrap(), matrix.index_axis(0, 1).unwrap());
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn phase_speed_changes_pitch_catch_phase_without_changing_row_normalization() {
     let max_difference = acoustic
         .row(0)
         .iter()
-        .zip(shear.row(0).iter())
+        .zip(shear.index_axis(0, 0).unwrap().iter())
         .map(|(a, s)| (a - s).abs())
         .fold(0.0_f32, f32::max);
 
@@ -174,7 +174,7 @@ fn matrix_free_operator_matches_materialized_rows() {
     };
     let matrix = build_fundamental_matrix(medium, &therapy, &active, settings);
     let operator = fundamental_operator(medium, &therapy, &active, settings);
-    let x = (0..active.len())
+    let x = (0..(active.shape()[0] * active.shape()[1] * active.shape()[2]))
         .map(|idx| 0.25 + 0.03125 * idx as f32)
         .collect::<Vec<_>>();
     let y = (0..matrix.rows())
@@ -233,7 +233,7 @@ fn encoded_operator_matches_materialized_source_encoding() {
     let operator = fundamental_operator(medium, &therapy, &active, settings);
     let encoded = EncodedOperator::deterministic_signs(operator, 3);
     let encoded_matrix = encoded.materialize();
-    let x = (0..active.len())
+    let x = (0..(active.shape()[0] * active.shape()[1] * active.shape()[2]))
         .map(|idx| -0.25 + 0.041_666_668 * idx as f32)
         .collect::<Vec<_>>();
     let y = (0..encoded.rows())
@@ -273,8 +273,8 @@ fn pcg_solves_regularized_identity_normal_equations() {
     let mask = Array2::from_elem((1, 2), true);
     let active = active_grid(&mask, 1.0);
     let mut matrix = RowMatrix::zeros(2, 2);
-    matrix.row_mut(0).copy_from_slice(&[1.0, 0.0]);
-    matrix.row_mut(1).copy_from_slice(&[0.0, 1.0]);
+    matrix.index_axis_mut(0, 0).unwrap().copy_from_slice(&[1.0, 0.0]);
+    matrix.index_axis_mut(0, 1).unwrap().copy_from_slice(&[0.0, 1.0]);
     let result = solve_tikhonov_h1(
         &matrix,
         &[1.0, -2.0],
@@ -289,12 +289,12 @@ fn pcg_solves_regularized_identity_normal_equations() {
 
     assert!((result.model[0] - 0.5).abs() <= 1.0e-6);
     assert!((result.model[1] + 1.0).abs() <= 1.0e-6);
-    assert!(result.objective_history.len() >= 2);
+    assert!((result.objective_history.shape()[0] * result.objective_history.shape()[1] * result.objective_history.shape()[2]) >= 2);
     assert!(result.objective_history[1] <= result.objective_history[0]);
 }
 
 fn assert_vec_close(actual: &[f32], expected: &[f32], tolerance: f32) {
-    assert_eq!(actual.len(), expected.len());
+    assert_eq!((actual.shape()[0] * actual.shape()[1] * actual.shape()[2]), (expected.shape()[0] * expected.shape()[1] * expected.shape()[2]));
     for (idx, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
         assert!(
             (*a - *e).abs() <= tolerance,

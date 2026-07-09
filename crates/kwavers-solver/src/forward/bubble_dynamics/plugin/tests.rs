@@ -30,9 +30,9 @@ fn water(grid: &Grid) -> HomogeneousMedium {
 fn field_array(grid: &Grid) -> Array4<f64> {
     let n_fields = 6;
     let mut f = Array4::zeros((n_fields, grid.nx, grid.ny, grid.nz));
-    f.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())
+    f.index_axis_mut(0, UnifiedFieldType::Pressure.index())
         .fill(50_000.0);
-    f.index_axis_mut(Axis(0), UnifiedFieldType::BubbleRadius.index())
+    f.index_axis_mut(0, UnifiedFieldType::BubbleRadius.index())
         .fill(5e-6);
     f
 }
@@ -203,10 +203,10 @@ fn nucleation_false_seeds_exactly_one_bubble() {
 
     if let Some(BubbleEngine::KmOrRp { field, .. }) = &plugin.engine {
         assert_eq!(
-            field.bubbles.len(),
+            (field.bubbles.shape()[0] * field.bubbles.shape()[1] * field.bubbles.shape()[2]),
             1,
             "nucleation=false must seed exactly 1 bubble; got {}",
-            field.bubbles.len()
+            (field.bubbles.shape()[0] * field.bubbles.shape()[1] * field.bubbles.shape()[2])
         );
     } else {
         panic!("expected KmOrRp engine");
@@ -227,9 +227,9 @@ fn nucleation_true_seeds_multiple_bubbles() {
 
     if let Some(BubbleEngine::KmOrRp { field, .. }) = &plugin.engine {
         assert!(
-            field.bubbles.len() > 1,
+            (field.bubbles.shape()[0] * field.bubbles.shape()[1] * field.bubbles.shape()[2]) > 1,
             "nucleation=true must seed more than 1 bubble; got {}",
-            field.bubbles.len()
+            (field.bubbles.shape()[0] * field.bubbles.shape()[1] * field.bubbles.shape()[2])
         );
     } else {
         panic!("expected KmOrRp engine");

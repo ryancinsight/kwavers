@@ -322,12 +322,12 @@ impl FwiProcessor {
         let (nx, ny, nz) = grid.dimensions();
         match self.density_model.as_ref() {
             Some(density) => {
-                if density.dim() != (nx, ny, nz) {
+                if density.shape() != [nx, ny, nz] {
                     return Err(KwaversError::Validation(
                         ValidationError::ConstraintViolation {
                             message: format!(
                                 "FWI density model shape {:?} does not match grid {:?}",
-                                density.dim(),
+                                density.shape(),
                                 (nx, ny, nz)
                             ),
                         },

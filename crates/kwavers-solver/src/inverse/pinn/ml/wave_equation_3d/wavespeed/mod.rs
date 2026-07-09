@@ -77,12 +77,12 @@ where
                     reason: format!("Grid size overflows usize: {dims:?}"),
                 })
             })?;
-        if slice.len() != expected_len {
+        if (slice.shape()[0] * slice.shape()[1] * slice.shape()[2]) != expected_len {
             return Err(KwaversError::System(SystemError::InvalidConfiguration {
                 parameter: "wave_speed_grid".to_string(),
                 reason: format!(
                     "Wave speed grid data length mismatch: expected {expected_len}, got {}",
-                    slice.len()
+                    (slice.shape()[0] * slice.shape()[1] * slice.shape()[2])
                 ),
             }));
         }
@@ -100,7 +100,7 @@ where
             }));
         }
 
-        let data_cpu = Arc::new(slice.to_vec());
+        let data_cpu = Arc::new(slice.iter().cloned().collect::<Vec<_>>());
 
         Ok(Self {
             grid,

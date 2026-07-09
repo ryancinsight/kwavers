@@ -15,8 +15,8 @@ fn test_harmonic_detection_config() {
 fn test_harmonic_displacement_field_creation() {
     let field = HarmonicDisplacementField::new(10, 10, 10, 3, 100);
 
-    assert_eq!(field.fundamental_magnitude.dim(), (10, 10, 10));
-    assert_eq!(field.fundamental_phase.dim(), (10, 10, 10));
+    assert_eq!(field.fundamental_magnitude.shape(),  [10, 10, 10]);
+    assert_eq!(field.fundamental_phase.shape(),  [10, 10, 10]);
     assert_eq!(field.harmonic_magnitudes.len(), 3);
     assert_eq!(field.harmonic_phases.len(), 3);
     assert_eq!(field.harmonic_snrs.len(), 3);
@@ -32,7 +32,7 @@ fn test_harmonic_ratio_computation() {
     field.harmonic_magnitudes[0].fill(0.1); // Second harmonic
 
     let ratio = field.harmonic_ratio(2);
-    assert_eq!(ratio.dim(), (5, 5, 5));
+    assert_eq!(ratio.shape(),  [5, 5, 5]);
 
     // Check ratio value
     for &val in ratio.iter() {

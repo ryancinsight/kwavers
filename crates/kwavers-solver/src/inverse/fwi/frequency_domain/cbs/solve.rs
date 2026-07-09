@@ -272,7 +272,8 @@ fn solve_adjoint_dense_free_space(
 ) -> KwaversResult<CbsSolution> {
     let operator = dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted);
     let adjoint_operator = hermitian_transpose(&operator);
-    let rhs = Array1::from_vec(adjoint_rhs.to_vec());
+    let rhs = Array1::from_vec([adjoint_rhs.len()], adjoint_rhs.iter().cloned().collect::<Vec<_>>())
+        .expect("dense adjoint rhs shape must match");
     let solution = ComplexLinearAlgebra::solve_linear_system_complex(&adjoint_operator, &rhs)?;
     let residual = dense_matvec_residual(&adjoint_operator, &solution, adjoint_rhs);
     let relative_residual = norm(&residual) / norm(adjoint_rhs).max(f64::EPSILON);
@@ -506,8 +507,8 @@ fn norm(values: &[Complex64]) -> f64 {
 }
 
 fn hermitian_transpose(matrix: &Array2<Complex64>) -> Array2<Complex64> {
-    let rows = matrix.nrows();
-    let cols = matrix.ncols();
+    let rows = matrix.shape()[0];
+    let cols = matrix.shape()[1];
     let mut values = Vec::with_capacity(rows * cols);
     for row in 0..rows {
         for col in 0..cols {
@@ -523,9 +524,9 @@ fn dense_matvec_residual(
     x: &Array1<Complex64>,
     rhs: &[Complex64],
 ) -> Vec<Complex64> {
-    let rows = matrix.nrows();
-    let cols = matrix.ncols();
-    debug_assert_eq!(cols, x.len());
+    let rows = matrix.shape()[0];
+    let cols = matrix.shape()[1];
+    debug_assert_eq!(cols, x.shape()[0]);
     debug_assert_eq!(rows, rhs.len());
 
     let mut residual = vec![Complex64::new(0.0, 0.0); rows];

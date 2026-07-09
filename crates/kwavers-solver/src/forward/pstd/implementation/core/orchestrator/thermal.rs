@@ -58,14 +58,14 @@ fn copy_scaled_absorption_field(dst: &mut Array3<f64>, alpha_si: &Array3<f64>, f
     );
 
     if let (Some(dst_values), Some(alpha_values)) = (
-        dst.as_slice_memory_order_mut(),
-        alpha_si.as_slice_memory_order(),
+        dst.as_slice_mut(),
+        alpha_si.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
             *value = alpha_values[index] * factor;
         });
     } else {
-        let (nx, ny, nz) = dst.dim();
+        let [nx, ny, nz] = dst.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -152,7 +152,7 @@ impl PSTDSolver {
                 if let Some(ref kernel) = self.absorption {
                     let omega_sq = omega_c * omega_c;
                     let alpha_si = &kernel.alpha_si;
-                    let shape = alpha_si.dim();
+                    let shape = alpha_si.shape();
                     let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
                     copy_scaled_absorption_field(buf, alpha_si, omega_sq);
                 }
@@ -161,7 +161,7 @@ impl PSTDSolver {
                 if let Some(ref kernel) = self.absorption {
                     let omega_y = omega_c.powf(y);
                     let alpha_si = &kernel.alpha_si;
-                    let shape = alpha_si.dim();
+                    let shape = alpha_si.shape();
                     let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
                     copy_scaled_absorption_field(buf, alpha_si, omega_y);
                 }

@@ -13,7 +13,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Coded excitation configuration
@@ -86,7 +86,7 @@ impl CodedExcitationProcessor {
     ) -> Array1<f64> {
         let n_signal = received_signal.len();
         let n_code = code.len();
-        let mut compressed = Array1::<f64>::zeros(n_signal - n_code + 1);
+        let mut compressed = Array1::<f64>::zeros([n_signal - n_code + 1]);
 
         let matched_filter = code.iter().rev().map(|&c| c.conj()).collect::<Array1<_>>();
 
@@ -105,7 +105,7 @@ impl CodedExcitationProcessor {
 
     /// Generate linear frequency modulated chirp
     fn generate_chirp(&self, start_freq: f64, end_freq: f64, length: usize) -> Array1<Complex64> {
-        let mut chirp = Array1::<Complex64>::zeros(length);
+        let mut chirp = Array1::<Complex64>::zeros([length]);
         let t_step = 1.0 / self.config.sampling_frequency;
         let k = (end_freq - start_freq) / (length as f64 * t_step);
 
@@ -139,7 +139,7 @@ impl CodedExcitationProcessor {
 
     /// Generate Golay complementary pair
     fn generate_golay(&self, length: usize) -> Array1<Complex64> {
-        let mut golay = Array1::<Complex64>::zeros(length);
+        let mut golay = Array1::<Complex64>::zeros([length]);
 
         for i in 0..length {
             let phase = if i % 2 == 0 { 0.0 } else { PI };
@@ -159,3 +159,4 @@ impl CodedExcitationProcessor {
         }
     }
 }
+

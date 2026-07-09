@@ -14,7 +14,6 @@ name = "pykwavers"
 crate-type = ["cdylib"]  # Dynamic library for Python import
 
 [dependencies]
-num-complex = { workspace = true }
 # Layered kwavers crates — depended on directly (no facade; ADR 011 amendment).
 # kwavers-core keeps `channels`+`registration` (flume/ritk-registration were
 # always-on in the former facade).
@@ -38,6 +37,7 @@ coeus-core = { workspace = true }
 leto = { workspace = true }
 ritk-io = { workspace = true }
 ritk-image = { workspace = true }
+eunomia = { workspace = true }
 
 # PyO3 for Python bindings
 pyo3 = { version = "0.27", features = ["extension-module", "abi3-py38", "multiple-pymethods"] }

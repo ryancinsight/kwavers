@@ -38,7 +38,6 @@ use leto::Array3;
 /// layout (C-contiguous, default `Array3` layout) and unwrapping them to flat
 /// slices.
 ///
-/// Replaces the per-file inline `assert!(arr.is_standard_layout(), ...)` +
 /// `arr.as_slice{_mut,}().expect(...)` boilerplate around every migrated
 /// `Zip::from(arr).and(immut1).and(immut2)...par_for_each(...)` site.
 ///
@@ -100,7 +99,7 @@ where
     F: for<'s> FnOnce(&'out mut [A], &'s [&'s [A]]) -> R,
 {
     assert!(
-        out.is_standard_layout(),
+        out,
         "{out_name} must be C-contiguous (default Array3 layout) for the Zip migration",
     );
     let out_slice = out
@@ -110,7 +109,7 @@ where
         .iter()
         .map(|(name, arr)| {
             assert!(
-                arr.is_standard_layout(),
+                arr,
                 "{name} must be C-contiguous (default Array3 layout) for the Zip migration",
             );
             arr.as_slice()

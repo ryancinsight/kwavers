@@ -14,7 +14,7 @@ fn polynomial_absorbing_boundary_has_unit_interior_and_edge_decay() {
 #[test]
 fn spectral_absorbing_boundary_damps_edge_source_response() {
     let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
-    let mut source = vec![Complex64::new(0.0, 0.0); grid.len()];
+    let mut source = vec![Complex64::new(0.0, 0.0); (grid.shape()[0] * grid.shape()[1] * grid.shape()[2])];
     source[grid.linear_index(0, 2, 2)] = Complex64::new(1.0, 0.0);
     let periodic = apply_shifted_green_spectral(grid, 11.0, 0.25, &source);
     let absorbed = apply_shifted_green_spectral_with_boundary(
@@ -37,10 +37,10 @@ fn spectral_absorbing_boundary_damps_edge_source_response() {
 fn spectral_absorbing_green_adjoint_satisfies_inner_product_identity() {
     let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
     let boundary = AbsorbingBoundary::polynomial(1, 1.5, 2).unwrap();
-    let x = (0..grid.len())
+    let x = (0..(grid.shape()[0] * grid.shape()[1] * grid.shape()[2]))
         .map(|index| Complex64::new(index as f64 * 0.125, -0.03125 * index as f64))
         .collect::<Vec<_>>();
-    let y = (0..grid.len())
+    let y = (0..(grid.shape()[0] * grid.shape()[1] * grid.shape()[2]))
         .map(|index| Complex64::new(0.25 - index as f64 * 0.0625, 0.125 * index as f64))
         .collect::<Vec<_>>();
     let gx = apply_shifted_green_spectral_with_boundary(grid, 11.0, 0.25, &x, boundary);

@@ -40,12 +40,12 @@ impl ROSConcentrations {
             ROSSpecies::Peroxynitrite,
             ROSSpecies::NitricOxide,
         ] {
-            fields.insert(species, Array3::zeros(shape));
+            fields.insert(species, Array3::zeros([shape.0, shape.1, shape.2]));
         }
 
         Self {
             fields,
-            total_ros: Array3::zeros(shape),
+            total_ros: Array3::zeros([shape.0, shape.1, shape.2]),
             shape,
         }
     }
@@ -89,7 +89,7 @@ impl ROSConcentrations {
                 ROSSpecies::NitrogenDioxide => 0.3, // Moderate stress
             };
 
-            total_stress += weight * conc.sum();
+            total_stress += weight * conc.iter().copied().sum::<f64>();
         }
 
         total_stress / self.fields.values().next().map_or(1.0, |f| f.len() as f64)

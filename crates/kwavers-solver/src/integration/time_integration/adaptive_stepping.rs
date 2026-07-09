@@ -16,8 +16,8 @@ where
     F: FnMut(f64, f64) -> f64,
 {
     assert_eq!(
-        field_low.dim(),
-        field_high.dim(),
+        field_low.shape(),
+        field_high.shape(),
         "invariant: error-estimator field shapes must match"
     );
 

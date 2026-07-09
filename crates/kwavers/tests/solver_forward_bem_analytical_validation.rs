@@ -40,7 +40,7 @@ pub struct MieScatteringSolution {
     /// Number of Mie coefficients to compute
     pub num_terms: usize,
     /// Mie coefficients a_n
-    mie_coefficients: Vec<num_complex::Complex64>,
+    mie_coefficients: Vec<eunomia::Complex64>,
     /// Wavenumber k = 2πf/c
     wavenumber: f64,
 }
@@ -100,7 +100,7 @@ impl MieScatteringSolution {
 
     /// Evaluate scattered pressure field at point (r, θ)
     /// where θ is angle from incident wave direction
-    pub fn scattered_pressure(&self, r: f64, theta: f64) -> Result<num_complex::Complex64, String> {
+    pub fn scattered_pressure(&self, r: f64, theta: f64) -> Result<eunomia::Complex64, String> {
         if r < self.radius {
             return Err("Evaluation point inside sphere".to_string());
         }
@@ -112,7 +112,7 @@ impl MieScatteringSolution {
         let _ka = self.wavenumber * self.radius;
         let kr = self.wavenumber * r;
 
-        let mut p_scattered = num_complex::Complex64::new(0.0, 0.0);
+        let mut p_scattered = eunomia::Complex64::new(0.0, 0.0);
 
         // Sum Mie series: p_s = Σ (2n+1)/(n(n+1)) · a_n · ξ_n(kr) · P_n(cos θ)
         for (n_idx, &a_n) in self.mie_coefficients.iter().enumerate() {
@@ -132,11 +132,11 @@ impl MieScatteringSolution {
         }
 
         // Normalize: divide by incident amplitude (k² is absorbed in normalization)
-        Ok(p_scattered / (num_complex::Complex64::i() * self.wavenumber))
+        Ok(p_scattered / (eunomia::Complex64::i() * self.wavenumber))
     }
 
     /// Evaluate total pressure field (incident + scattered)
-    pub fn total_pressure(&self, x: f64, y: f64, z: f64) -> Result<num_complex::Complex64, String> {
+    pub fn total_pressure(&self, x: f64, y: f64, z: f64) -> Result<eunomia::Complex64, String> {
         // Assume incident plane wave propagating in +z direction: p_i = exp(i·k·z)
         let r = (x * x + y * y + z * z).sqrt();
         let theta = if z.abs() < 1e-10 {
@@ -145,7 +145,7 @@ impl MieScatteringSolution {
             (z / r).acos()
         };
 
-        let p_incident = num_complex::Complex64::new(0.0, self.wavenumber * z).exp();
+        let p_incident = eunomia::Complex64::new(0.0, self.wavenumber * z).exp();
         let p_scattered = self.scattered_pressure(r, theta)?;
 
         Ok(p_incident + p_scattered)
@@ -154,7 +154,7 @@ impl MieScatteringSolution {
     // ==================== Helper Functions ====================
 
     /// Riccati-Bessel function ψ_n(z) = √(πz/2)·J_{n+1/2}(z)
-    fn riccati_bessel_j(n: usize, z: f64) -> num_complex::Complex64 {
+    fn riccati_bessel_j(n: usize, z: f64) -> eunomia::Complex64 {
         let nu = n as f64 + 0.5;
         let sqrt_factor = (PI * z / 2.0).sqrt();
         let bessel_j = Self::bessel_j_half_integer(nu, z);
@@ -162,7 +162,7 @@ impl MieScatteringSolution {
     }
 
     /// Derivative of Riccati-Bessel: ψ'_n(z)
-    fn riccati_bessel_j_derivative(n: usize, z: f64) -> num_complex::Complex64 {
+    fn riccati_bessel_j_derivative(n: usize, z: f64) -> eunomia::Complex64 {
         let delta = 1e-8;
         let psi_plus = Self::riccati_bessel_j(n, z + delta);
         let psi_minus = Self::riccati_bessel_j(n, z - delta);
@@ -170,7 +170,7 @@ impl MieScatteringSolution {
     }
 
     /// Riccati-Hankel function ξ_n(z) = √(πz/2)·H_{n+1/2}^{(1)}(z)
-    fn riccati_hankel_h1(n: usize, z: f64) -> num_complex::Complex64 {
+    fn riccati_hankel_h1(n: usize, z: f64) -> eunomia::Complex64 {
         let nu = n as f64 + 0.5;
         let sqrt_factor = (PI * z / 2.0).sqrt();
         let hankel_h1 = Self::hankel_h1_half_integer(nu, z);
@@ -178,7 +178,7 @@ impl MieScatteringSolution {
     }
 
     /// Derivative of Riccati-Hankel: ξ'_n(z)
-    fn riccati_hankel_h1_derivative(n: usize, z: f64) -> num_complex::Complex64 {
+    fn riccati_hankel_h1_derivative(n: usize, z: f64) -> eunomia::Complex64 {
         let delta = 1e-8;
         let xi_plus = Self::riccati_hankel_h1(n, z + delta);
         let xi_minus = Self::riccati_hankel_h1(n, z - delta);
@@ -187,26 +187,26 @@ impl MieScatteringSolution {
 
     /// Bessel function of the first kind for half-integer order
     /// J_{n+1/2}(z) ≈ √(2/πz) · sin(z - (n+1)π/2)
-    fn bessel_j_half_integer(nu: f64, z: f64) -> num_complex::Complex64 {
+    fn bessel_j_half_integer(nu: f64, z: f64) -> eunomia::Complex64 {
         // For real argument, use exact formula
         if z > 0.0 {
             let sqrt_term = (2.0 / (PI * z)).sqrt();
             let phase = z - (nu + 0.5) * PI / 2.0;
-            num_complex::Complex64::new(sqrt_term * phase.sin(), 0.0)
+            eunomia::Complex64::new(sqrt_term * phase.sin(), 0.0)
         } else {
-            num_complex::Complex64::new(0.0, 0.0)
+            eunomia::Complex64::new(0.0, 0.0)
         }
     }
 
     /// Hankel function of the first kind for half-integer order
     /// H_{n+1/2}^{(1)}(z) ≈ √(2/πz) · exp(i(z - (n+1)π/2))
-    fn hankel_h1_half_integer(nu: f64, z: f64) -> num_complex::Complex64 {
+    fn hankel_h1_half_integer(nu: f64, z: f64) -> eunomia::Complex64 {
         if z > 0.0 {
             let sqrt_term = (2.0 / (PI * z)).sqrt();
             let phase = z - (nu + 0.5) * PI / 2.0;
-            sqrt_term * num_complex::Complex64::new(0.0, phase).exp()
+            sqrt_term * eunomia::Complex64::new(0.0, phase).exp()
         } else {
-            num_complex::Complex64::new(0.0, 0.0)
+            eunomia::Complex64::new(0.0, 0.0)
         }
     }
 
@@ -402,3 +402,4 @@ mod tests {
         );
     }
 }
+

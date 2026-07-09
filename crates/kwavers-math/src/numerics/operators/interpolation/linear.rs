@@ -44,8 +44,8 @@ impl Interpolator for LinearInterpolator {
         data: ArrayView1<f64>,
         target_points: ArrayView1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n = data.len();
-        let mut result = Array1::zeros(target_points.len());
+        let n = data.shape()[0];
+        let mut result = Array1::zeros([target_points.shape()[0]]);
 
         for (idx, &x) in target_points.iter().enumerate() {
             let i_float = x / self.dx;

@@ -75,8 +75,8 @@ pub fn hadamard_codes(n: usize) -> KwaversResult<Vec<Vec<f64>>> {
     }
     // Sylvester construction: H_1 = [1]; H_{2m} = [[H_m, H_m], [H_m, -H_m]].
     let mut h = vec![vec![1.0_f64]];
-    while h.len() < n {
-        let m = h.len();
+    while (h.shape()[0] * h.shape()[1] * h.shape()[2]) < n {
+        let m = (h.shape()[0] * h.shape()[1] * h.shape()[2]);
         let mut next = vec![vec![0.0_f64; 2 * m]; 2 * m];
         for i in 0..m {
             for j in 0..m {
@@ -115,13 +115,13 @@ pub fn encode_shots(
             },
         ));
     }
-    if codes.len() != shots.len() {
+    if (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]) != (shots.shape()[0] * shots.shape()[1] * shots.shape()[2]) {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "encode_shots code count {} must equal shot count {}",
-                    codes.len(),
-                    shots.len()
+                    (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]),
+                    (shots.shape()[0] * shots.shape()[1] * shots.shape()[2])
                 ),
             },
         ));
@@ -141,14 +141,14 @@ pub fn encode_shots(
         if require_signal(&geometry.source)?.shape() != reference_signal.shape() {
             return Err(mismatch(index, "source-signal shape"));
         }
-        if data.dim() != reference_data.dim() {
+        if data.shape() != reference_data.shape() {
             return Err(mismatch(index, "data shape"));
         }
     }
 
     let [signal_rows, signal_cols] = reference_signal.shape();
     let mut encoded_signal = LetoArray2::zeros([signal_rows, signal_cols]);
-    let mut encoded_data = Array2::zeros(reference_data.dim());
+    let mut encoded_data = Array2::zeros(reference_data.shape());
     for (code, (geometry, data)) in codes.iter().zip(shots.iter()) {
         let signal = require_signal(&geometry.source)?;
         for row in 0..signal_rows {
@@ -237,13 +237,13 @@ impl FwiProcessor {
             ));
         }
         for codes in code_schedule {
-            if codes.len() != shots.len() {
+            if (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]) != (shots.shape()[0] * shots.shape()[1] * shots.shape()[2]) {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "invert_encoded code vector length {} must equal shot count {}",
-                            codes.len(),
-                            shots.len()
+                            (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]),
+                            (shots.shape()[0] * shots.shape()[1] * shots.shape()[2])
                         ),
                     },
                 ));
@@ -286,9 +286,9 @@ mod tests {
     fn hadamard_codes_are_orthogonal() {
         for &n in &[1usize, 2, 4, 8] {
             let codes = hadamard_codes(n).expect("power of two");
-            assert_eq!(codes.len(), n);
+            assert_eq!((codes.shape()[0] * codes.shape()[1] * codes.shape()[2]), n);
             for (i, row) in codes.iter().enumerate() {
-                assert_eq!(row.len(), n);
+                assert_eq!((row.shape()[0] * row.shape()[1] * row.shape()[2]), n);
                 assert!(row.iter().all(|&v| v == 1.0 || v == -1.0));
                 // Column-orthogonality: Σ_k c_ki c_kj = n δ_ij.
                 for j in 0..n {
@@ -399,14 +399,14 @@ mod tests {
         }
 
         // Encoded: average over the 2×2 Hadamard set.
-        let codes = hadamard_codes(shots.len()).expect("hadamard");
+        let codes = hadamard_codes((shots.shape()[0] * shots.shape()[1] * shots.shape()[2])).expect("hadamard");
         let mut encoded_avg = Array3::<f64>::zeros(dims);
         for code in &codes {
             let (geometry, encoded_data) = encode_shots(&shots, code).expect("encode");
             let g = raw_gradient(&processor, &model, &geometry, &encoded_data, &grid);
             encoded_avg += &g;
         }
-        encoded_avg.mapv_inplace(|v| v / codes.len() as f64);
+        encoded_avg.mapv_inplace(|v| v / (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]) as f64);
 
         let max_ref = reference.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));
         assert!(max_ref > 1e-18, "reference gradient must be non-trivial");

@@ -133,13 +133,13 @@ impl Recorder {
             time: time.clone(),
             cavitation_events: Vec::new(),
             cavitation_threshold: config.cavitation_threshold,
-            cavitation_map: Array3::zeros(grid_shape.into()),
+            cavitation_map: Array3::zeros(grid_shape),
             sl_detector,
             sl_events: Vec::new(),
-            sl_intensity_map: Array3::zeros(grid_shape.into()),
+            sl_intensity_map: Array3::zeros(grid_shape),
             thermal_events: Vec::new(),
-            max_temperature_map: Array3::zeros(grid_shape.into()),
-            thermal_dose_map: Array3::zeros(grid_shape.into()),
+            max_temperature_map: Array3::zeros(grid_shape),
+            thermal_dose_map: Array3::zeros(grid_shape),
             statistics: RecorderStatistics::new(),
         }
     }

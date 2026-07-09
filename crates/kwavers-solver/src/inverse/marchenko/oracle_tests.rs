@@ -50,7 +50,7 @@ fn wavelet(nt: usize) -> Array2<f64> {
 /// Record the surface trace for a source at `src_cell`, receiver at `recv_cell`,
 /// through the layered velocity `c`, with a transparent/absorbing sponge.
 fn engine_trace(c: &[f64], src_cell: usize, recv_cell: usize, nt: usize) -> Vec<f64> {
-    let nx = c.len();
+    let nx = (c.shape()[0] * c.shape()[1] * c.shape()[2]);
     let grid = Grid::new(nx, 1, 1, DX, DX, DX).expect("grid");
     let mut model = Array3::zeros((nx, 1, 1));
     for (i, &ci) in c.iter().enumerate() {
@@ -166,12 +166,12 @@ fn redatum_matches_engine_green_function() {
     // res arrays have length 2*nt-1, centre = nt-1; map true (causal, length nt)
     // onto that axis at indices centre..centre+nt.
     let center = res.center;
-    let mut g_true_axis = vec![0.0; res.green_minus.len()];
+    let mut g_true_axis = vec![0.0; (res.green_minus.shape()[0] * res.green_minus.shape()[1] * res.green_minus.shape()[2])];
     for t in 0..nt {
         g_true_axis[center + t] = g_true[t];
     }
     let lo = center + t_d.saturating_sub(WAVELET_LEN);
-    let hi = (center + nt).min(res.green_minus.len());
+    let hi = (center + nt).min((res.green_minus.shape()[0] * res.green_minus.shape()[1] * res.green_minus.shape()[2]));
 
     let corr_march = cosine(&res.green_minus, &g_true_axis, lo, hi);
     let corr_naive = cosine(&naive.green_minus, &g_true_axis, lo, hi);

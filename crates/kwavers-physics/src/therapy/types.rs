@@ -30,7 +30,7 @@ impl DomainTreatmentMetrics {
 
     #[must_use]
     pub fn calculate_cavitation_dose(cavitation_field: &Array3<f64>, dt: f64) -> f64 {
-        cavitation_field.sum() * dt
+        cavitation_field.iter().copied().sum::<f64>() * dt
     }
 
     pub fn update_peak_temperature(&mut self, temperature: &Array3<f64>) {

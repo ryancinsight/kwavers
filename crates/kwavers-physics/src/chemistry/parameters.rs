@@ -59,9 +59,9 @@ impl<'a> ChemicalUpdateParams<'a> {
 
         // Validate array dimensions match grid
         let grid_shape = (grid.nx, grid.ny, grid.nz);
-        let pressure_shape = pressure.dim();
+        let pressure_shape = pressure.shape();
 
-        if pressure_shape != grid_shape {
+        if pressure_shape != [grid_shape.0, grid_shape.1, grid_shape.2] {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                 "Pressure array shape {pressure_shape:?} doesn't match grid {grid_shape:?}"
             )));

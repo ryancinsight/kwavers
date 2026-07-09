@@ -1,12 +1,9 @@
 //! Atlas parallel-provider adapters for physics field traversal.
 
+use leto::{ArrayView3, ArrayViewMut3};
 use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with,
     for_each_chunk_triple_mut_enumerated_with, Adaptive,
-};
-use leto::{
-    ArrayView3,
-    ArrayViewMut3,
 };
 
 const FIELD_CHUNK_SIZE: usize = 1024;
@@ -31,14 +28,16 @@ where
     T: Send,
     F: Fn((usize, usize, usize), &mut T) + Send + Sync,
 {
-    let (_nx, ny, nz) = values.dim();
-    if let Some(slice) = values.as_slice_memory_order_mut() {
+    let [_nx, ny, nz] = values.shape();
+    if let Some(slice) = values.as_mut_slice_memory_order() {
         let f_ref = &f;
         enumerate_mut_with::<Adaptive, _, _>(slice, |idx, value| {
             f_ref(grid_index(idx, ny, nz), value);
         });
-    } else {
-        Zip::indexed(values).for_each(f);
+    } else if let Ok(iter) = values.indexed_iter_mut() {
+        for (idx, value) in iter {
+            f((idx[0], idx[1], idx[2]), value);
+        }
     }
 }
 
@@ -54,14 +53,14 @@ pub(crate) fn for_each_indexed_pair_mut<T, U, F>(
     F: Fn((usize, usize, usize), &mut T, &U) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        input.dim(),
+        values.shape(),
+        input.shape(),
         "invariant: physics paired traversal shape mismatch"
     );
 
-    let (_nx, ny, nz) = values.dim();
+    let [_nx, ny, nz] = values.shape();
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         input.as_slice_memory_order(),
     ) {
         (Some(values), Some(input)) => {
@@ -70,7 +69,17 @@ pub(crate) fn for_each_indexed_pair_mut<T, U, F>(
                 f_ref(grid_index(idx, ny, nz), value, &input[idx]);
             });
         }
-        _ => Zip::indexed(values).and(input).for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    f(
+                        (idx[0], idx[1], idx[2]),
+                        value,
+                        &input[[idx[0], idx[1], idx[2]]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -90,24 +99,24 @@ pub(crate) fn for_each_indexed_mut_three_refs<T, U, V, W, F>(
     F: Fn((usize, usize, usize), &mut T, &U, &V, &W) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        first.dim(),
+        values.shape(),
+        first.shape(),
         "invariant: physics indexed zip first shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        second.dim(),
+        values.shape(),
+        second.shape(),
         "invariant: physics indexed zip second shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        third.dim(),
+        values.shape(),
+        third.shape(),
         "invariant: physics indexed zip third shape mismatch"
     );
 
-    let (_nx, ny, nz) = values.dim();
+    let [_nx, ny, nz] = values.shape();
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
         third.as_slice_memory_order(),
@@ -124,11 +133,20 @@ pub(crate) fn for_each_indexed_mut_three_refs<T, U, V, W, F>(
                 );
             });
         }
-        _ => Zip::indexed(values)
-            .and(first)
-            .and(second)
-            .and(third)
-            .for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let [i, j, k] = idx;
+                    f(
+                        (i, j, k),
+                        value,
+                        &first[[i, j, k]],
+                        &second[[i, j, k]],
+                        &third[[i, j, k]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -150,29 +168,29 @@ pub(crate) fn for_each_indexed_mut_four_refs<T, U, V, W, X, F>(
     F: Fn((usize, usize, usize), &mut T, &U, &V, &W, &X) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        first.dim(),
+        values.shape(),
+        first.shape(),
         "invariant: physics indexed zip first shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        second.dim(),
+        values.shape(),
+        second.shape(),
         "invariant: physics indexed zip second shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        third.dim(),
+        values.shape(),
+        third.shape(),
         "invariant: physics indexed zip third shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        fourth.dim(),
+        values.shape(),
+        fourth.shape(),
         "invariant: physics indexed zip fourth shape mismatch"
     );
 
-    let (_nx, ny, nz) = values.dim();
+    let [_nx, ny, nz] = values.shape();
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
         third.as_slice_memory_order(),
@@ -191,12 +209,21 @@ pub(crate) fn for_each_indexed_mut_four_refs<T, U, V, W, X, F>(
                 );
             });
         }
-        _ => Zip::indexed(values)
-            .and(first)
-            .and(second)
-            .and(third)
-            .and(fourth)
-            .for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let [i, j, k] = idx;
+                    f(
+                        (i, j, k),
+                        value,
+                        &first[[i, j, k]],
+                        &second[[i, j, k]],
+                        &third[[i, j, k]],
+                        &fourth[[i, j, k]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -214,21 +241,21 @@ pub(crate) fn for_each_indexed_three_mut<T, U, V, F>(
     F: Fn(usize, &mut T, &mut U, &mut V) + Send + Sync,
 {
     assert_eq!(
-        first.dim(),
-        second.dim(),
+        first.shape(),
+        second.shape(),
         "invariant: physics indexed triple output second shape mismatch"
     );
     assert_eq!(
-        first.dim(),
-        third.dim(),
+        first.shape(),
+        third.shape(),
         "invariant: physics indexed triple output third shape mismatch"
     );
 
-    let (_nx, ny, nz) = first.dim();
+    let [_nx, ny, nz] = first.shape();
     match (
-        first.as_slice_memory_order_mut(),
-        second.as_slice_memory_order_mut(),
-        third.as_slice_memory_order_mut(),
+        first.as_mut_slice_memory_order(),
+        second.as_mut_slice_memory_order(),
+        third.as_mut_slice_memory_order(),
     ) {
         (Some(first), Some(second), Some(third)) => {
             for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
@@ -249,12 +276,19 @@ pub(crate) fn for_each_indexed_three_mut<T, U, V, F>(
                 },
             );
         }
-        _ => Zip::indexed(first)
-            .and(second)
-            .and(third)
-            .for_each(|index, first, second, third| {
-                f(linear_index(index, ny, nz), first, second, third);
-            }),
+        _ => {
+            if let Ok(iter) = first.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let flat = linear_index((idx[0], idx[1], idx[2]), ny, nz);
+                    f(
+                        flat,
+                        value,
+                        &mut second[[idx[0], idx[1], idx[2]]],
+                        &mut third[[idx[0], idx[1], idx[2]]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -267,13 +301,13 @@ where
     F: Fn(&mut T, &U) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        input.dim(),
+        values.shape(),
+        input.shape(),
         "invariant: physics zip input shape mismatch"
     );
 
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         input.as_slice_memory_order(),
     ) {
         (Some(values), Some(input)) => {
@@ -281,7 +315,13 @@ where
                 f(value, &input[idx]);
             });
         }
-        _ => Zip::from(values).and(input).for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    f(value, &input[[idx[0], idx[1], idx[2]]]);
+                }
+            }
+        }
     }
 }
 
@@ -299,18 +339,18 @@ pub(crate) fn zip_mut_two_refs<T, U, V, F>(
     F: Fn(&mut T, &U, &V) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        first.dim(),
+        values.shape(),
+        first.shape(),
         "invariant: physics zip first shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        second.dim(),
+        values.shape(),
+        second.shape(),
         "invariant: physics zip second shape mismatch"
     );
 
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
     ) {
@@ -319,7 +359,17 @@ pub(crate) fn zip_mut_two_refs<T, U, V, F>(
                 f(value, &first[idx], &second[idx]);
             });
         }
-        _ => Zip::from(values).and(first).and(second).for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    f(
+                        value,
+                        &first[[idx[0], idx[1], idx[2]]],
+                        &second[[idx[0], idx[1], idx[2]]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -339,24 +389,24 @@ pub(crate) fn zip_two_mut_two_refs<T, U, V, W, F>(
     F: Fn(&mut T, &mut U, &V, &W) + Send + Sync,
 {
     assert_eq!(
-        first_out.dim(),
-        second_out.dim(),
+        first_out.shape(),
+        second_out.shape(),
         "invariant: physics zip output shape mismatch"
     );
     assert_eq!(
-        first_out.dim(),
-        first.dim(),
+        first_out.shape(),
+        first.shape(),
         "invariant: physics zip first input shape mismatch"
     );
     assert_eq!(
-        first_out.dim(),
-        second.dim(),
+        first_out.shape(),
+        second.shape(),
         "invariant: physics zip second input shape mismatch"
     );
 
     match (
-        first_out.as_slice_memory_order_mut(),
-        second_out.as_slice_memory_order_mut(),
+        first_out.as_mut_slice_memory_order(),
+        second_out.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
     ) {
@@ -378,11 +428,19 @@ pub(crate) fn zip_two_mut_two_refs<T, U, V, W, F>(
                 },
             );
         }
-        _ => Zip::from(first_out)
-            .and(second_out)
-            .and(first)
-            .and(second)
-            .for_each(f),
+        _ => {
+            if let Ok(iter) = first_out.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let [i, j, k] = idx;
+                    f(
+                        value,
+                        &mut second_out[[i, j, k]],
+                        &first[[i, j, k]],
+                        &second[[i, j, k]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -406,34 +464,34 @@ pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, F>(
     F: Fn(&mut T, &mut U, &V, &W, &X, &Y) + Send + Sync,
 {
     assert_eq!(
-        first_out.dim(),
-        second_out.dim(),
+        first_out.shape(),
+        second_out.shape(),
         "invariant: physics zip output shape mismatch"
     );
     assert_eq!(
-        first_out.dim(),
-        first.dim(),
+        first_out.shape(),
+        first.shape(),
         "invariant: physics zip first input shape mismatch"
     );
     assert_eq!(
-        first_out.dim(),
-        second.dim(),
+        first_out.shape(),
+        second.shape(),
         "invariant: physics zip second input shape mismatch"
     );
     assert_eq!(
-        first_out.dim(),
-        third.dim(),
+        first_out.shape(),
+        third.shape(),
         "invariant: physics zip third input shape mismatch"
     );
     assert_eq!(
-        first_out.dim(),
-        fourth.dim(),
+        first_out.shape(),
+        fourth.shape(),
         "invariant: physics zip fourth input shape mismatch"
     );
 
     match (
-        first_out.as_slice_memory_order_mut(),
-        second_out.as_slice_memory_order_mut(),
+        first_out.as_mut_slice_memory_order(),
+        second_out.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
         third.as_slice_memory_order(),
@@ -471,13 +529,21 @@ pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, F>(
                 },
             );
         }
-        _ => Zip::from(first_out)
-            .and(second_out)
-            .and(first)
-            .and(second)
-            .and(third)
-            .and(fourth)
-            .for_each(f),
+        _ => {
+            if let Ok(iter) = first_out.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let [i, j, k] = idx;
+                    f(
+                        value,
+                        &mut second_out[[i, j, k]],
+                        &first[[i, j, k]],
+                        &second[[i, j, k]],
+                        &third[[i, j, k]],
+                        &fourth[[i, j, k]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -497,23 +563,23 @@ pub(crate) fn zip_mut_three_refs<T, U, V, W, F>(
     F: Fn(&mut T, &U, &V, &W) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        first.dim(),
+        values.shape(),
+        first.shape(),
         "invariant: physics zip first shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        second.dim(),
+        values.shape(),
+        second.shape(),
         "invariant: physics zip second shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        third.dim(),
+        values.shape(),
+        third.shape(),
         "invariant: physics zip third shape mismatch"
     );
 
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
         third.as_slice_memory_order(),
@@ -523,11 +589,19 @@ pub(crate) fn zip_mut_three_refs<T, U, V, W, F>(
                 f(value, &first[idx], &second[idx], &third[idx]);
             });
         }
-        _ => Zip::from(values)
-            .and(first)
-            .and(second)
-            .and(third)
-            .for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let [i, j, k] = idx;
+                    f(
+                        value,
+                        &first[[i, j, k]],
+                        &second[[i, j, k]],
+                        &third[[i, j, k]],
+                    );
+                }
+            }
+        }
     }
 }
 
@@ -549,28 +623,28 @@ pub(crate) fn zip_mut_four_refs<T, U, V, W, X, F>(
     F: Fn(&mut T, &U, &V, &W, &X) + Send + Sync,
 {
     assert_eq!(
-        values.dim(),
-        first.dim(),
+        values.shape(),
+        first.shape(),
         "invariant: physics zip first shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        second.dim(),
+        values.shape(),
+        second.shape(),
         "invariant: physics zip second shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        third.dim(),
+        values.shape(),
+        third.shape(),
         "invariant: physics zip third shape mismatch"
     );
     assert_eq!(
-        values.dim(),
-        fourth.dim(),
+        values.shape(),
+        fourth.shape(),
         "invariant: physics zip fourth shape mismatch"
     );
 
     match (
-        values.as_slice_memory_order_mut(),
+        values.as_mut_slice_memory_order(),
         first.as_slice_memory_order(),
         second.as_slice_memory_order(),
         third.as_slice_memory_order(),
@@ -581,11 +655,19 @@ pub(crate) fn zip_mut_four_refs<T, U, V, W, X, F>(
                 f(value, &first[idx], &second[idx], &third[idx], &fourth[idx]);
             });
         }
-        _ => Zip::from(values)
-            .and(first)
-            .and(second)
-            .and(third)
-            .and(fourth)
-            .for_each(f),
+        _ => {
+            if let Ok(iter) = values.indexed_iter_mut() {
+                for (idx, value) in iter {
+                    let [i, j, k] = idx;
+                    f(
+                        value,
+                        &first[[i, j, k]],
+                        &second[[i, j, k]],
+                        &third[[i, j, k]],
+                        &fourth[[i, j, k]],
+                    );
+                }
+            }
+        }
     }
 }

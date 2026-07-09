@@ -5,7 +5,7 @@ use leto::{
     Array1,
     Array2,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 use kwavers_core::error::KwaversResult;
 
@@ -128,3 +128,4 @@ pub trait FrequencyDomainBeamformer: Beamformer<Input = Complex64, Output = Comp
     /// - Insufficient snapshots (M < N) for full-rank estimation
     fn compute_covariance(&self, data: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>>;
 }
+

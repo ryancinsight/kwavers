@@ -283,7 +283,7 @@ fn cpml_attenuates_right_propagating_plane_wave_below_periodic_baseline() {
 }
 
 fn inner_region_l2(state: &Array3<f64>, inner_start: usize, inner_end: usize) -> f64 {
-    let (n_elem, nodes_per, _) = state.dim();
+    let [n_elem, nodes_per, _] = state.shape();
     let mut sum = 0.0;
     for elem in 0..n_elem {
         for node in 0..nodes_per {

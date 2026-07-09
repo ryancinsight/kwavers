@@ -43,8 +43,8 @@ fn least_squares_slope(values: &[f64], dz: f64) -> f64 {
 /// available samples (still ≥ 2), so every depth receives an estimate.
 #[must_use]
 pub fn least_squares_strain(displacement: &Array3<f64>, dz: f64, window: usize) -> Array3<f64> {
-    let (nx, ny, nz) = displacement.dim();
-    let mut strain = Array3::zeros((nx, ny, nz));
+    let [nx, ny, nz] = displacement.shape();
+    let mut strain = Array3::zeros([nx, ny, nz]);
     let half = window / 2;
     for i in 0..nx {
         for j in 0..ny {

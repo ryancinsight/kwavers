@@ -111,7 +111,7 @@ impl KZKSolver {
     /// ensuring accurate phase accumulation over many axial steps.
     pub(super) fn apply_diffraction(&mut self, step_size: f64) {
         for t in 0..self.config.nt {
-            let mut slice = self.pressure.index_axis_mut(Axis(2), t);
+            let mut slice = self.pressure.index_axis_mut(2, t);
             self.complex_diffraction
                 .apply_complex(&mut slice, step_size);
         }

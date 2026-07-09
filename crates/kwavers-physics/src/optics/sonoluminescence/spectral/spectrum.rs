@@ -1,9 +1,6 @@
 //! Emission spectrum data models
 
-use leto::{
-    /* s -- no leto equivalent */,
-    Array1,
-};
+use leto::Array1;
 
 /// Emission spectrum data
 #[derive(Debug, Clone)]
@@ -41,11 +38,14 @@ impl EmissionSpectrum {
     /// Calculate total integrated intensity
     #[must_use]
     pub fn total_intensity(&self) -> f64 {
-        // Vectorized trapezoidal integration
-        let dlambda = &self.wavelengths.slice(s![1..]) - &self.wavelengths.slice(s![..-1]);
-        let avg_intensity =
-            0.5 * (&self.intensities.slice(s![1..]) + &self.intensities.slice(s![..-1]));
-        (avg_intensity * dlambda).sum()
+        let n = self.wavelengths.len();
+        let mut total = 0.0;
+        for i in 1..n {
+            let dlambda = self.wavelengths[i] - self.wavelengths[i - 1];
+            let avg_intensity = 0.5 * (self.intensities[i] + self.intensities[i - 1]);
+            total += avg_intensity * dlambda;
+        }
+        total
     }
 
     /// Find peak wavelength

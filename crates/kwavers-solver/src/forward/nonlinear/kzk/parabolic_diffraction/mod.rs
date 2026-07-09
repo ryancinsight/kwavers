@@ -109,11 +109,11 @@ impl std::fmt::Debug for KzkParabolicDiffractionOperator {
             .field("config", &self.config)
             .field(
                 "kx2",
-                &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()),
+                &format!("Array2<f64> {}x{}", self.kx2.shape()[0], self.kx2.shape()[1]),
             )
             .field(
                 "ky2",
-                &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()),
+                &format!("Array2<f64> {}x{}", self.ky2.shape()[0], self.ky2.shape()[1]),
             )
             .finish()
     }
@@ -187,7 +187,7 @@ impl KzkParabolicDiffractionOperator {
             .scratch
             .as_slice_mut()
             .expect("invariant: KZK parabolic scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_memory_order() {
+        if let Some(field_values) = field.as_slice() {
             enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
                 *s = Complex64::new(field_values[idx], 0.0);
             });
@@ -210,11 +210,11 @@ impl KzkParabolicDiffractionOperator {
         // Refs: Lee & Hamilton (1995) eq. (4); Aanonsen et al. (1984) §3.
         let kx2 = self
             .kx2
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK parabolic kx2 is standard-layout");
         let ky2 = self
             .ky2
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK parabolic ky2 is standard-layout");
         let scratch = self
             .scratch
@@ -232,7 +232,7 @@ impl KzkParabolicDiffractionOperator {
             .scratch
             .as_slice()
             .expect("invariant: KZK parabolic scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_memory_order_mut() {
+        if let Some(field_values) = field.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {
                 *out = scratch[idx].re;
             });
@@ -246,17 +246,17 @@ impl KzkParabolicDiffractionOperator {
     #[cfg(test)]
     fn fft_round_trip_into(&mut self, data: &Array2<Complex64>, recovered: &mut Array2<Complex64>) {
         let shape = self.scratch.shape();
-        assert_eq!(shape, [data.nrows(), data.ncols()]);
-        for i in 0..data.nrows() {
-            for j in 0..data.ncols() {
+        assert_eq!(shape, [data.shape()[0], data.shape()[1]]);
+        for i in 0..data.shape()[0] {
+            for j in 0..data.shape()[1] {
                 self.scratch[[i, j]] = data[[i, j]];
             }
         }
         fft_2d_complex_inplace(&mut self.scratch);
         ifft_2d_complex_inplace(&mut self.scratch);
 
-        for i in 0..recovered.nrows() {
-            for j in 0..recovered.ncols() {
+        for i in 0..recovered.shape()[0] {
+            for j in 0..recovered.shape()[1] {
                 recovered[[i, j]] = self.scratch[[i, j]];
             }
         }

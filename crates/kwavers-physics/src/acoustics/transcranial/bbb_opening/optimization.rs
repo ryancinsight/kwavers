@@ -11,9 +11,9 @@ impl BBBOpening {
         let mut max_pressure: f64 = 0.0;
 
         for &(i, j, k) in target_region {
-            if i < self.acoustic_pressure.dim().0
-                && j < self.acoustic_pressure.dim().1
-                && k < self.acoustic_pressure.dim().2
+            if i < self.acoustic_pressure.shape()[0]
+                && j < self.acoustic_pressure.shape()[1]
+                && k < self.acoustic_pressure.shape()[2]
             {
                 max_pressure = max_pressure.max(self.acoustic_pressure[[i, j, k]]);
             }

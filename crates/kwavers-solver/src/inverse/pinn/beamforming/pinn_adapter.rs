@@ -99,14 +99,14 @@ where
         let mut params = input_size * config.hidden_layers[0] + config.hidden_layers[0];
 
         // Hidden layers
-        for i in 0..config.hidden_layers.len().saturating_sub(1) {
+        for i in 0..(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]).saturating_sub(1) {
             params +=
                 config.hidden_layers[i] * config.hidden_layers[i + 1] + config.hidden_layers[i + 1];
             // weights + biases
         }
 
         // Last hidden to output
-        params += config.hidden_layers[config.hidden_layers.len() - 1] * output_size + output_size;
+        params += config.hidden_layers[(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) - 1] * output_size + output_size;
 
         params
     }
@@ -152,7 +152,7 @@ where
 
         self.ensure_model_initialized()?;
 
-        let (n_channels, n_samples, n_frames) = rf_data.dim();
+        let [n_channels, n_samples, n_frames] = rf_data.shape();
         if n_channels == 0 || n_samples == 0 {
             return Err(KwaversError::InvalidInput(
                 "RF data must have non-zero channel and sample dimensions".into(),
@@ -234,7 +234,7 @@ where
         let mut u_vals: Vec<f64> = Vec::new();
 
         for (_, target) in training_data {
-            let (n_ch, n_sa, n_fr) = target.dim();
+            let [n_ch, n_sa, n_fr] = target.shape();
             let x_scale = 1.0 / (n_ch.saturating_sub(1).max(1)) as f64;
             let t_scale = 1.0 / (n_sa.saturating_sub(1).max(1)) as f64;
             for fi in 0..n_fr {
@@ -248,7 +248,7 @@ where
             }
         }
 
-        let n = x_vals.len();
+        let n = (x_vals.shape()[0] * x_vals.shape()[1] * x_vals.shape()[2]);
         let x_data = Array1::from_vec(x_vals);
         let t_data = Array1::from_vec(t_vals);
         let u_data = Array2::from_shape_vec((n, 1), u_vals)

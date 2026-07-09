@@ -5,12 +5,8 @@
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::{constants::SOUND_SPEED_WATER, error::KwaversResult};
 use kwavers_grid::Grid;
+use leto::{Array2, Array3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array2,
-    Array3,
-};
 use std::f64::consts::PI;
 
 use super::validation::{
@@ -199,7 +195,11 @@ impl ArcSource {
 
         // Copy 2D pattern to all z-slices
         for iz in 0..grid.nz {
-            source_3d.slice_mut(s![.., .., iz]).assign(&source_2d);
+            for ix in 0..grid.nx {
+                for iy in 0..grid.ny {
+                    source_3d[[ix, iy, iz]] = source_2d[[ix, iy]];
+                }
+            }
         }
 
         source_3d

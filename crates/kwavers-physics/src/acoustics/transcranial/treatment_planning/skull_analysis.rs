@@ -32,12 +32,12 @@ impl TreatmentPlanner {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn analyze_skull_properties(&self) -> KwaversResult<TranscranialSkullProperties> {
-        let (nx, ny, nz) = self.skull_ct.dim();
+        let [nx, ny, nz] = self.skull_ct.shape();
 
         // Convert Hounsfield units to acoustic properties
-        let mut speed_map = Array3::zeros((nx, ny, nz));
-        let mut density_map = Array3::zeros((nx, ny, nz));
-        let mut attenuation_map = Array3::zeros((nx, ny, nz));
+        let mut speed_map = Array3::zeros([nx, ny, nz]);
+        let mut density_map = Array3::zeros([nx, ny, nz]);
+        let mut attenuation_map = Array3::zeros([nx, ny, nz]);
 
         for k in 0..nz {
             for j in 0..ny {

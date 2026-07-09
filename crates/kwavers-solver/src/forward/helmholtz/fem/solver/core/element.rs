@@ -27,9 +27,9 @@ impl FemHelmholtzSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_element_matrices(&self) -> KwaversResult<ElementMatrices> {
-        let mut element_stiffness = Vec::with_capacity(self.mesh.elements.len());
-        let mut element_mass = Vec::with_capacity(self.mesh.elements.len());
-        let mut element_rhs = Vec::with_capacity(self.mesh.elements.len());
+        let mut element_stiffness = Vec::with_capacity((self.mesh.elements.shape()[0] * self.mesh.elements.shape()[1] * self.mesh.elements.shape()[2]));
+        let mut element_mass = Vec::with_capacity((self.mesh.elements.shape()[0] * self.mesh.elements.shape()[1] * self.mesh.elements.shape()[2]));
+        let mut element_rhs = Vec::with_capacity((self.mesh.elements.shape()[0] * self.mesh.elements.shape()[1] * self.mesh.elements.shape()[2]));
 
         for element in &self.mesh.elements {
             let p0 = self.mesh.nodes[element.nodes[0]].coordinates;

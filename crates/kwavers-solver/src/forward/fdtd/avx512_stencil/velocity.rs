@@ -36,7 +36,7 @@ impl FdtdAvx512StencilProcessor {
         p: &Array3<f64>,
         dim: usize,
     ) -> KwaversResult<()> {
-        if p.dim() != (self.nx, self.ny, self.nz) {
+        if p.shape() != (self.nx, self.ny, self.nz) {
             return Err(KwaversError::InvalidInput(
                 "Pressure field dimensions mismatch".to_owned(),
             ));
@@ -69,7 +69,7 @@ impl FdtdAvx512StencilProcessor {
     /// # Safety
     ///
     /// Preconditions (all verified by `update_velocity_avx512` before calling):
-    /// 1. `u.dim() == p.dim() == (self.nx, self.ny, self.nz)`.
+    /// 1. `u.shape() == p.shape() == (self.nx, self.ny, self.nz)`.
     /// 2. `dim ∈ {0, 1, 2}`.
     /// 3. AVX-512F is available.
     /// 4. Both arrays are standard-layout (C-order, contiguous).

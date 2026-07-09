@@ -19,8 +19,8 @@ impl VectorOperations {
     /// L2 norm (square root of sum of squares)
     #[must_use]
     pub fn norm_l2(array: &Array3<f64>) -> f64 {
-        let mut sum_sq = 0.0;
-        for &val in array {
+        let mut sum_sq: f64 = 0.0;
+        for &val in array.iter() {
             sum_sq += val * val;
         }
         sum_sq.sqrt()

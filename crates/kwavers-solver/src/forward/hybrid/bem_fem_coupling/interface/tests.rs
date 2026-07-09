@@ -19,7 +19,7 @@ fn test_bem_fem_interface_creation() {
 
     // Interface creation should succeed even with simplified geometry
     let interface = interface.unwrap();
-    assert_eq!(interface.fem_interface_nodes.len(), 3);
+    assert_eq!((interface.fem_interface_nodes.shape()[0] * interface.fem_interface_nodes.shape()[1] * interface.fem_interface_nodes.shape()[2]), 3);
     // Verify node 3 is NOT in interface
     assert!(!interface.fem_interface_nodes.contains(&3));
 }
@@ -40,7 +40,7 @@ fn test_bem_fem_interface_geometric_match() {
     // Both n0 (index match) and n1 (geometric match) should be in interface
     assert!(interface.fem_interface_nodes.contains(&n0));
     assert!(interface.fem_interface_nodes.contains(&n1));
-    assert_eq!(interface.fem_interface_nodes.len(), 2);
+    assert_eq!((interface.fem_interface_nodes.shape()[0] * interface.fem_interface_nodes.shape()[1] * interface.fem_interface_nodes.shape()[2]), 2);
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn test_compute_interface_normals_calculation() {
 
     let normals = BemFemInterface::compute_interface_normals(&nodes, &fem_mesh);
 
-    assert_eq!(normals.len(), 4);
+    assert_eq!((normals.shape()[0] * normals.shape()[1] * normals.shape()[2]), 4);
 
     // Check n0 (origin).
     // Shared by z=0, y=0, x=0 faces.

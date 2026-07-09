@@ -27,8 +27,8 @@ impl MisfitFunction {
         let ntraces = observed.shape()[0];
 
         for i in 0..ntraces {
-            let obs_trace = observed.row(i).to_owned();
-            let syn_trace = synthetic.row(i).to_owned();
+            let obs_trace = observed.index_axis(0, i).unwrap().to_owned();
+            let syn_trace = synthetic.index_axis(0, i).unwrap().to_owned();
 
             // Shift to non-negative and normalize to probability distributions
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
@@ -47,7 +47,7 @@ impl MisfitFunction {
             let obs_prob = obs_shifted.mapv(|x| x / obs_sum);
             let syn_prob = syn_shifted.mapv(|x| x / syn_sum);
 
-            let n = obs_prob.len();
+            let n = (obs_prob.shape()[0] * obs_prob.shape()[1] * obs_prob.shape()[2]);
             let (obs_cdf, syn_cdf) = cumulative_distributions(&obs_prob, &syn_prob, n);
 
             // 1-Wasserstein = L1 distance between CDFs
@@ -71,12 +71,12 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let (ntraces, nsamples) = observed.dim();
+        let [ntraces, nsamples] = observed.shape();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let obs_trace = observed.row(i).to_owned();
-            let syn_trace = synthetic.row(i).to_owned();
+            let obs_trace = observed.index_axis(0, i).unwrap().to_owned();
+            let syn_trace = synthetic.index_axis(0, i).unwrap().to_owned();
 
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
             let syn_min = syn_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));

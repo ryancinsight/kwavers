@@ -30,7 +30,7 @@ impl PstdSemSolver {
     ) -> KwaversResult<Self> {
         let coupler = PstdSemCoupler::new(config.clone(), &pstd_grid, &sem_mesh)?;
         let pstd_field = Array3::zeros((pstd_grid.nx, pstd_grid.ny, pstd_grid.nz));
-        let sem_field = vec![0.0; sem_mesh.nodes.len()];
+        let sem_field = vec![0.0; (sem_mesh.nodes.shape()[0] * sem_mesh.nodes.shape()[1] * sem_mesh.nodes.shape()[2])];
 
         Ok(Self {
             config,

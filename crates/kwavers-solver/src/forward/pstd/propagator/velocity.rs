@@ -119,9 +119,9 @@ fn apply_shifted_kappa(
 
     let [_nx, ny, nz] = grad_k.shape();
     if let (Some(grad_values), Some(spectrum_values), Some(kappa_values), Some(shift_values)) = (
-        grad_k.as_slice_memory_order_mut(),
-        spectrum.as_slice_memory_order(),
-        kappa.as_slice_memory_order(),
+        grad_k.as_slice_mut(),
+        spectrum.as_slice(),
+        kappa.as_slice(),
         shift.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {
@@ -156,7 +156,7 @@ fn update_velocity_fused(
         gradient.shape(),
         "invariant: PSTD velocity shape matches pressure gradient"
     );
-    let (rho_nx, rho_ny, rho_nz) = rho0.dim();
+    let [rho_nx, rho_ny, rho_nz] = rho0.shape();
     assert_eq!(
         velocity.shape(),
         [rho_nx, rho_ny, rho_nz],
@@ -168,7 +168,7 @@ fn update_velocity_fused(
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
         velocity.as_slice_mut(),
         gradient.as_slice(),
-        rho0.as_slice_memory_order(),
+        rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
             let (i, j, k) = dense_indices(index, ny, nz);
@@ -201,7 +201,7 @@ fn update_velocity_unfused(
         gradient.shape(),
         "invariant: PSTD velocity shape matches pressure gradient"
     );
-    let (rho_nx, rho_ny, rho_nz) = rho0.dim();
+    let [rho_nx, rho_ny, rho_nz] = rho0.shape();
     assert_eq!(
         velocity.shape(),
         [rho_nx, rho_ny, rho_nz],
@@ -211,7 +211,7 @@ fn update_velocity_unfused(
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
         velocity.as_slice_mut(),
         gradient.as_slice(),
-        rho0.as_slice_memory_order(),
+        rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
             *velocity -= (dt / rho_values[index]) * gradient_values[index];
@@ -249,11 +249,11 @@ fn update_axisymmetric_velocity_fused(
         "invariant: AS velocity shape matches rho0"
     );
 
-    let (_nx, nr) = velocity.dim();
+    let [_nx, nr] = velocity.shape();
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
-        velocity.as_slice_memory_order_mut(),
-        gradient.as_slice_memory_order(),
-        rho0.as_slice_memory_order(),
+        velocity.as_slice_mut(),
+        gradient.as_slice(),
+        rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
             let (i, k) = dense_indices_2(index, nr);
@@ -263,7 +263,7 @@ fn update_axisymmetric_velocity_fused(
         return;
     }
 
-    let (nx, nr) = velocity.dim();
+    let [nx, nr] = velocity.shape();
     for k in 0..nr {
         for i in 0..nx {
             let p = pml[as_pml_index(axis, i, k)];
@@ -290,9 +290,9 @@ fn update_axisymmetric_velocity_unfused(
     );
 
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
-        velocity.as_slice_memory_order_mut(),
-        gradient.as_slice_memory_order(),
-        rho0.as_slice_memory_order(),
+        velocity.as_slice_mut(),
+        gradient.as_slice(),
+        rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(velocity_values, |index, velocity| {
             *velocity -= (dt / rho_values[index]) * gradient_values[index];
@@ -300,7 +300,7 @@ fn update_axisymmetric_velocity_unfused(
         return;
     }
 
-    let (nx, nr) = velocity.dim();
+    let [nx, nr] = velocity.shape();
     for k in 0..nr {
         for i in 0..nx {
             velocity[[i, k]] -= (dt / rho0[[i, k]]) * gradient[[i, k]];
@@ -364,7 +364,7 @@ impl PSTDSolver {
         let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
 
         if use_fused {
-            let rho0 = .view(&self.materials.rho0);
+            let rho0 = self.materials.rho0.view();
             // ── Fused path: no separate pre/post PML passes ───────────────────────
             // SAFETY of disjoint borrows: `pml_exp` is a separate field from
             // `fields`, `dpx`, `materials` — Rust's field-granular borrow rules allow
@@ -465,7 +465,7 @@ impl PSTDSolver {
             );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-            update_velocity_unfused(&mut self.fields.ux, &self.dpx, .view(&self.materials.rho0), dt);
+            update_velocity_unfused(&mut self.fields.ux, &self.dpx, self.materials.rho0.view(), dt);
 
             // Y-direction
             if has_y {
@@ -482,7 +482,7 @@ impl PSTDSolver {
                 update_velocity_unfused(
                     &mut self.fields.uy,
                     &self.dpx,
-                    .view(&self.materials.rho0),
+                    self.materials.rho0.view(),
                     dt,
                 );
             }
@@ -502,7 +502,7 @@ impl PSTDSolver {
                 update_velocity_unfused(
                     &mut self.fields.uz,
                     &self.dpx,
-                    .view(&self.materials.rho0),
+                    self.materials.rho0.view(),
                     dt,
                 );
             }
@@ -555,8 +555,8 @@ impl PSTDSolver {
             KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
         })?;
 
-        let pressure = .view(&self.fields.p);
-        let rho0 = .view(&self.materials.rho0);
+        let pressure = self.fields.p.view();
+        let rho0 = self.materials.rho0.view();
         ctx.compute_vel_grads(pressure.slice(s![.., 0, ..]));
 
         if use_fused {
@@ -576,7 +576,7 @@ impl PSTDSolver {
                 .as_slice()
                 .ok_or_else(|| KwaversError::InternalError("pml_vel_z contiguous".into()))?;
 
-            let mut ux = .view_mut(&mut self.fields.ux);
+            let mut ux = self.fields.ux.view_mut();
             update_axisymmetric_velocity_fused(
                 ux.slice_mut(s![.., 0, ..]),
                 &ctx.dpdx,
@@ -586,7 +586,7 @@ impl PSTDSolver {
                 dt,
             );
 
-            let mut uz = .view_mut(&mut self.fields.uz);
+            let mut uz = self.fields.uz.view_mut();
             update_axisymmetric_velocity_fused(
                 uz.slice_mut(s![.., 0, ..]),
                 &ctx.dpdr,
@@ -596,7 +596,7 @@ impl PSTDSolver {
                 dt,
             );
         } else {
-            let mut ux = .view_mut(&mut self.fields.ux);
+            let mut ux = self.fields.ux.view_mut();
             update_axisymmetric_velocity_unfused(
                 ux.slice_mut(s![.., 0, ..]),
                 &ctx.dpdx,
@@ -604,7 +604,7 @@ impl PSTDSolver {
                 dt,
             );
 
-            let mut uz = .view_mut(&mut self.fields.uz);
+            let mut uz = self.fields.uz.view_mut();
             update_axisymmetric_velocity_unfused(
                 uz.slice_mut(s![.., 0, ..]),
                 &ctx.dpdr,
@@ -642,19 +642,19 @@ impl PSTDSolver {
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_velocity_pml_directional(
-                    .view_mut(&mut self.fields.ux).into(),
+                    Self::leto_view_mut3(&mut self.fields.ux).into(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    .view_mut(&mut self.fields.uy).into(),
+                    Self::leto_view_mut3(&mut self.fields.uy).into(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    .view_mut(&mut self.fields.uz).into(),
+                    Self::leto_view_mut3(&mut self.fields.uz).into(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     2,

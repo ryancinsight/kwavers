@@ -138,7 +138,7 @@ impl PhotoacousticReconstructor {
         sound_speed: f64,
         sampling_frequency: f64,
     ) -> KwaversResult<Vec<f64>> {
-        let (n_samples, n_sensors) = sensor_data.dim();
+        let [n_samples, n_sensors] = sensor_data.shape();
         let dt = 1.0 / sampling_frequency;
 
         // Apply preprocessing if configured
@@ -239,7 +239,7 @@ impl PhotoacousticReconstructor {
             self.config.grid_size,
             self.config.sound_speed,
             self.config.sampling_frequency,
-            sensor_data.nrows(),
+            sensor_data.shape()[0],
         );
 
         time_reversal.reconstruct(sensor_data, sensor_positions, grid)

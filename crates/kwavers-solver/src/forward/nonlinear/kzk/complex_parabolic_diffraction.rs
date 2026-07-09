@@ -138,7 +138,7 @@ impl ParabolicDiffractionOperator {
             .scratch
             .as_slice_mut()
             .expect("invariant: complex KZK diffraction scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_memory_order() {
+        if let Some(field_values) = field.as_slice() {
             enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
                 let value = field_values[idx];
                 *s = ApolloComplex64::new(value.re, value.im);
@@ -172,11 +172,11 @@ impl ParabolicDiffractionOperator {
         {
             let kx2 = self
                 .kx2
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: complex KZK diffraction kx2 is standard-layout");
             let ky2 = self
                 .ky2
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: complex KZK diffraction ky2 is standard-layout");
             let scratch = self
                 .scratch
@@ -198,7 +198,7 @@ impl ParabolicDiffractionOperator {
             .scratch
             .as_slice()
             .expect("invariant: complex KZK diffraction scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_memory_order_mut() {
+        if let Some(field_values) = field.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, value| {
                 let scratch_value = scratch[idx];
                 *value = Complex64::new(scratch_value.re, scratch_value.im);

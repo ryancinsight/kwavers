@@ -106,7 +106,7 @@ impl PhotoacousticTimeReversal {
         sensor_positions: &[[f64; 3]],
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (n_time, _n_sensors) = sensor_data.dim();
+        let [n_time, _n_sensors] = sensor_data.shape();
         let [nx, ny, nz] = self.grid_size;
         let fft = get_fft_for_grid(nx, ny, nz);
 
@@ -174,7 +174,7 @@ impl PhotoacousticTimeReversal {
         for s in 0..n_time {
             // Reversed sensor time index.
             let sensor_t = n_time - 1 - s;
-            let sensor_row = sensor_data.row(sensor_t);
+            let sensor_row = sensor_data.index_axis(0, sensor_t).unwrap();
 
             // Hard Dirichlet source: replace field values at sensor locations.
             // (Treeby et al. 2010, §2.3; k-Wave `source.p_mode = 'dirichlet'`.)
@@ -247,7 +247,7 @@ impl PhotoacousticTimeReversal {
         let mut p_next_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
         if let (Some(next_values), Some(propagator_values), Some(p_values), Some(prev_values)) = (
             p_next_hat.as_slice_mut(),
-            propagator.as_slice_memory_order(),
+            propagator.as_slice(),
             p_hat.as_slice(),
             p_prev_hat.as_slice(),
         ) {

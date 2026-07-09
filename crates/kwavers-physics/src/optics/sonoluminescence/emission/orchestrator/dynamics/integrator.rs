@@ -58,7 +58,7 @@ impl IntegratedSonoluminescence {
     /// itself is NOT stored. Pass it to `simulate_step()` instead.
     #[must_use]
     pub fn new(
-        grid_shape: (usize, usize, usize),
+        grid_shape: [usize; 3],
         bubble_params: BubbleParameters,
         emission_params: EmissionParameters,
     ) -> Self {
@@ -108,7 +108,7 @@ impl IntegratedSonoluminescence {
     ) -> KwaversResult<()> {
         let omega = TWO_PI * bubble_params.driving_frequency;
 
-        let (nx, ny, nz) = self.temperature_field.dim();
+        let [nx, ny, nz] = self.temperature_field.shape();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {

@@ -8,11 +8,7 @@ use crate::forward::hybrid::domain_decomposition::DomainRegion;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 /// Main coupling interface between PSTD and FDTD domains
 #[derive(Debug)]
@@ -85,7 +81,7 @@ impl CouplingInterface {
         regions: &[DomainRegion],
         _grid: &Grid,
     ) -> KwaversResult<()> {
-        if regions.len() < 2 {
+        if (regions.shape()[0] * regions.shape()[1] * regions.shape()[2]) < 2 {
             return Ok(());
         }
 
@@ -138,7 +134,7 @@ impl CouplingInterface {
         fields: &Array4<f64>,
         region: &DomainRegion,
     ) -> KwaversResult<Array3<f64>> {
-        let (n_fields, nx, ny, nz) = fields.dim();
+        let (n_fields, nx, ny, nz) = fields.shape();
         let p_idx = UnifiedFieldType::Pressure.index();
         if p_idx >= n_fields {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -165,6 +161,8 @@ impl CouplingInterface {
                 if sx < nx {
                     interface_data
                         .slice_mut(s![0, .., ..])
+                        .unwrap()
+                        .unwrap()
                         .assign(&pressure.slice(s![sx, sy..ey, sz..ez]));
                 }
             }
@@ -172,6 +170,8 @@ impl CouplingInterface {
                 if sy < ny {
                     interface_data
                         .slice_mut(s![.., 0, ..])
+                        .unwrap()
+                        .unwrap()
                         .assign(&pressure.slice(s![sx..ex, sy, sz..ez]));
                 }
             }
@@ -179,6 +179,8 @@ impl CouplingInterface {
                 if sz < nz {
                     interface_data
                         .slice_mut(s![.., .., 0])
+                        .unwrap()
+                        .unwrap()
                         .assign(&pressure.slice(s![sx..ex, sy..ey, sz]));
                 }
             }
@@ -200,7 +202,7 @@ impl CouplingInterface {
         data: &Array3<f64>,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
-        let (n_fields, nx, ny, nz) = fields.dim();
+        let (n_fields, nx, ny, nz) = fields.shape();
         let p_idx = UnifiedFieldType::Pressure.index();
         if p_idx >= n_fields {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -222,6 +224,8 @@ impl CouplingInterface {
                 if sx < nx && sx < ex {
                     pressure
                         .slice_mut(s![sx, sy..ey, sz..ez])
+                        .unwrap()
+                        .unwrap()
                         .assign(&data.slice(s![0, .., ..]));
                 }
             }
@@ -229,6 +233,8 @@ impl CouplingInterface {
                 if sy < ny && sy < ey {
                     pressure
                         .slice_mut(s![sx..ex, sy, sz..ez])
+                        .unwrap()
+                        .unwrap()
                         .assign(&data.slice(s![.., 0, ..]));
                 }
             }
@@ -236,6 +242,8 @@ impl CouplingInterface {
                 if sz < nz && sz < ez {
                     pressure
                         .slice_mut(s![sx..ex, sy..ey, sz])
+                        .unwrap()
+                        .unwrap()
                         .assign(&data.slice(s![.., .., 0]));
                 }
             }
@@ -266,14 +274,14 @@ impl CouplingInterface {
     /// - Returns [`KwaversError::Config`] if the active plane is empty or the
     ///   normal direction is invalid.
     fn extract_active_plane(&self, data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
         match self.geometry.normal_direction {
-            0 if nx > 0 => Ok(data.slice(s![0..1, .., ..]).to_owned()),
-            1 if ny > 0 => Ok(data.slice(s![.., 0..1, ..]).to_owned()),
-            2 if nz > 0 => Ok(data.slice(s![.., .., 0..1]).to_owned()),
+            0 if nx > 0 => Ok(data.slice(s![0..1, .., ..]).unwrap().to_owned()),
+            1 if ny > 0 => Ok(data.slice(s![.., 0..1, ..]).unwrap().to_owned()),
+            2 if nz > 0 => Ok(data.slice(s![.., .., 0..1]).unwrap().to_owned()),
             0..=2 => Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "interface_plane".to_owned(),
-                value: format!("{:?}", data.dim()),
+                value: format!("{:?}", data.shape()),
                 constraint: "active interface axis must be nonempty".to_owned(),
             })),
             _ => Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -372,7 +380,7 @@ mod tests {
         let region = DomainRegion::new((1, 0, 0), (4, 3, 2), DomainType::PSTD, 1.0);
         let data = interface.extract_interface_data(&fields, &region).unwrap();
 
-        assert_eq!(data.dim(), (3, 3, 2));
+        assert_eq!(data.shape(), [3, 3, 2]);
         assert_eq!(data[[0, 2, 1]], fields[[p_idx, 1, 2, 1]]);
         assert_eq!(data[[1, 2, 1]], 0.0);
         assert_eq!(fields[[t_idx, 1, 2, 1]], -10_000.0);
@@ -384,7 +392,7 @@ mod tests {
         let p_idx = UnifiedFieldType::Pressure.index();
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
-        fields.index_axis_mut(0, t_idx).fill(25.0);
+        fields.index_axis_mut(0, t_idx).unwrap().fill(25.0);
         let mut data = Array3::<f64>::zeros((2, 3, 2));
         for j in 0..3 {
             for k in 0..2 {
@@ -414,9 +422,7 @@ mod tests {
         let p_idx = UnifiedFieldType::Pressure.index();
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
-        fields
-            .index_axis_mut(0, t_idx)
-            .fill(BODY_TEMPERATURE_C);
+        fields.index_axis_mut(0, t_idx).fill(BODY_TEMPERATURE_C);
 
         let mut value = 1.0;
         for j in 0..3 {

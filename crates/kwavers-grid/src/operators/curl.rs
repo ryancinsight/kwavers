@@ -22,7 +22,7 @@ pub fn curl<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let shape = vx.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -58,20 +58,20 @@ where
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
 
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
 
     // Compute curl in interior points
     for i in stencil_radius..nx - stencil_radius {
         for j in stencil_radius..ny - stencil_radius {
             for k in stencil_radius..nz - stencil_radius {
-                let mut dvz_dy = T::zero();
-                let mut dvy_dz = T::zero();
-                let mut dvx_dz = T::zero();
-                let mut dvz_dx = T::zero();
-                let mut dvy_dx = T::zero();
-                let mut dvx_dy = T::zero();
+                let mut dvz_dy = T::from_f64(0.0);
+                let mut dvy_dz = T::from_f64(0.0);
+                let mut dvx_dz = T::from_f64(0.0);
+                let mut dvz_dx = T::from_f64(0.0);
+                let mut dvy_dx = T::from_f64(0.0);
+                let mut dvx_dy = T::from_f64(0.0);
 
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
@@ -114,7 +114,7 @@ pub fn curl_leto<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let vx_view = vx.view();
     let vy_view = vy.view();

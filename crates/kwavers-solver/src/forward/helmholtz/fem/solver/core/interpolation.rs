@@ -17,10 +17,10 @@ impl FemHelmholtzSolver {
         &self,
         query_points: ArrayView2<f64>,
     ) -> KwaversResult<Array1<Complex64>> {
-        let num_points = query_points.nrows();
+        let num_points = query_points.shape()[0];
         let mut results = Array1::zeros(num_points);
 
-        for (i, row) in query_points.outer_iter().enumerate() {
+        for (i, row) in query_points.axis_iter(0).enumerate() {
             let point = [row[0], row[1], row[2]];
             let elements = self.mesh.locate_point(point);
 

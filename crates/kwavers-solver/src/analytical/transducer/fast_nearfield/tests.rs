@@ -75,7 +75,7 @@ fn test_field_computation() {
     let velocity = Array2::<Complex64>::from_elem((16, 16), Complex64::new(1.0, 0.0));
 
     let pressure_field = solver.compute_field(&velocity, 25e-3).unwrap();
-    assert_eq!(pressure_field.dim(), (16, 16));
+    assert_eq!(pressure_field.shape(), [16, 16]);
 
     // Check that result is not zero (basic sanity check)
     let sum: Complex64 = pressure_field.iter().sum();

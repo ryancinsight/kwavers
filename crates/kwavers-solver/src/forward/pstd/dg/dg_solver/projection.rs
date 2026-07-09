@@ -11,7 +11,7 @@ use leto::Array3;
 
 impl DGSolver {
     pub(super) fn ensure_rk_workspace(&mut self, dim: (usize, usize, usize)) {
-        if self.rk_original.dim() != dim {
+        if self.rk_original.shape() != dim {
             self.rk_original = Array3::zeros(dim);
             self.rk_stage = Array3::zeros(dim);
             self.rk_rhs = Array3::zeros(dim);
@@ -23,10 +23,10 @@ impl DGSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn project_to_dg(&mut self, field: &Array3<f64>) -> KwaversResult<()> {
-        if field.dim() != (self.grid.nx, self.grid.ny, self.grid.nz) {
+        if field.shape() != (self.grid.nx, self.grid.ny, self.grid.nz) {
             return Err(KwaversError::InvalidInput(format!(
                 "project_to_dg field shape {:?} does not match grid ({}, {}, {})",
-                field.dim(),
+                field.shape(),
                 self.grid.nx,
                 self.grid.ny,
                 self.grid.nz
@@ -38,7 +38,7 @@ impl DGSolver {
         if self
             .modal_coefficients
             .as_ref()
-            .is_none_or(|coeffs| coeffs.dim() != dim)
+            .is_none_or(|coeffs| coeffs.shape() != dim)
         {
             self.modal_coefficients = Some(Array3::zeros(dim));
         }
@@ -70,18 +70,18 @@ impl DGSolver {
 
         match self.coefficient_layout {
             CoefficientLayout::TensorProduct(topology) => {
-                if coeffs.dim() != (topology.n_elements, topology.nodes_per_element, 1) {
+                if coeffs.shape() != (topology.n_elements, topology.nodes_per_element, 1) {
                     return Err(KwaversError::InvalidInput(format!(
                         "project_to_grid tensor coefficient shape {:?} does not match topology ({}, {}, 1)",
-                        coeffs.dim(),
+                        coeffs.shape(),
                         topology.n_elements,
                         topology.nodes_per_element
                     )));
                 }
-                if field.dim() != (self.grid.nx, self.grid.ny, self.grid.nz) {
+                if field.shape() != (self.grid.nx, self.grid.ny, self.grid.nz) {
                     return Err(KwaversError::InvalidInput(format!(
                         "project_to_grid field shape {:?} does not match grid ({}, {}, {})",
-                        field.dim(),
+                        field.shape(),
                         self.grid.nx,
                         self.grid.ny,
                         self.grid.nz

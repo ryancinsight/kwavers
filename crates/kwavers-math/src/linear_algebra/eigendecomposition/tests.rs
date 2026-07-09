@@ -1,33 +1,33 @@
 use super::*;
 use leto::Array2;
-use num_complex::Complex;
+use eunomia::Complex64;
 
-fn create_hermitian_2x2() -> Array2<Complex<f64>> {
+fn create_hermitian_2x2() -> Array2<Complex64> {
     Array2::from_shape_vec(
         (2, 2),
         vec![
-            Complex::new(2.0, 0.0),
-            Complex::new(1.0, 1.0),
-            Complex::new(1.0, -1.0),
-            Complex::new(3.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(1.0, 1.0),
+            Complex64::new(1.0, -1.0),
+            Complex64::new(3.0, 0.0),
         ],
     )
     .unwrap()
 }
 
-fn create_hermitian_3x3() -> Array2<Complex<f64>> {
+fn create_hermitian_3x3() -> Array2<Complex64> {
     Array2::from_shape_vec(
         (3, 3),
         vec![
-            Complex::new(2.0, 0.0),
-            Complex::new(1.0, 1.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(1.0, -1.0),
-            Complex::new(3.0, 0.0),
-            Complex::new(1.0, -1.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(1.0, 1.0),
-            Complex::new(4.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(1.0, 1.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, -1.0),
+            Complex64::new(3.0, 0.0),
+            Complex64::new(1.0, -1.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 1.0),
+            Complex64::new(4.0, 0.0),
         ],
     )
     .unwrap()
@@ -125,10 +125,10 @@ fn test_non_hermitian_matrix_rejected() {
     let matrix = Array2::from_shape_vec(
         (2, 2),
         vec![
-            Complex::new(1.0, 0.0),
-            Complex::new(1.0, 0.0),
-            Complex::new(0.0, 1.0),
-            Complex::new(2.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 1.0),
+            Complex64::new(2.0, 0.0),
         ],
     )
     .unwrap();
@@ -144,12 +144,12 @@ fn test_dimension_mismatch_rejected() {
     let matrix = Array2::from_shape_vec(
         (2, 3),
         vec![
-            Complex::new(1.0, 0.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(1.0, 0.0),
-            Complex::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
         ],
     )
     .unwrap();

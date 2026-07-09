@@ -6,11 +6,8 @@ use kwavers_boundary::Boundary;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_medium::Medium;
 use kwavers_source::{Source, SourceField};
+use leto::Array4;
 use log::debug;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array4,
-};
 use std::time::Instant;
 
 fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
@@ -40,7 +37,10 @@ fn copy_leto_slice_into_ndarray(
         (region.start.2, region.end.2, 1isize),
     ];
     let mut dst_slice = dst.slice_mut(ndarray_slice);
-    let src_slice = src.slice(leto_slice).expect("valid hybrid region slice");
+    let src_slice = src
+        .slice(leto_slice)
+        .unwrap()
+        .expect("valid hybrid region slice");
     for (dst_value, src_value) in dst_slice.iter_mut().zip(src_slice.iter()) {
         *dst_value = *src_value;
     }
@@ -72,10 +72,7 @@ impl HybridSolver {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        copy_ndarray_view_into_leto(
-            &mut self.pstd_solver.fields.p,
-            fields.index_axis(0, p_idx),
-        );
+        copy_ndarray_view_into_leto(&mut self.pstd_solver.fields.p, fields.index_axis(0, p_idx));
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.ux,
             fields.index_axis(0, vx_idx),
@@ -89,10 +86,7 @@ impl HybridSolver {
             fields.index_axis(0, vz_idx),
         );
 
-        copy_ndarray_view_into_leto(
-            &mut self.fdtd_solver.fields.p,
-            fields.index_axis(0, p_idx),
-        );
+        copy_ndarray_view_into_leto(&mut self.fdtd_solver.fields.p, fields.index_axis(0, p_idx));
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.ux,
             fields.index_axis(0, vx_idx),
@@ -125,7 +119,9 @@ impl HybridSolver {
         self.pstd_solver.step_forward()?;
         self.fdtd_solver.step_forward()?;
 
-        for region_index in 0..self.regions.len() {
+        for region_index in
+            0..(self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2])
+        {
             let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
@@ -286,11 +282,13 @@ impl HybridSolver {
             self.config.decomposition_strategy.clone(),
         )?;
 
-        if new_regions.len() != self.regions.len() {
+        if (new_regions.shape()[0] * new_regions.shape()[1] * new_regions.shape()[2])
+            != (self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2])
+        {
             use log::info;
             info!(
                 "Domain decomposition updated: {} regions",
-                new_regions.len()
+                (new_regions.shape()[0] * new_regions.shape()[1] * new_regions.shape()[2])
             );
             self.regions = new_regions;
         }

@@ -144,7 +144,7 @@ where
 pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
     let n = signal.len();
     if n == 0 {
-        return Array1::from_elem(0, Complex64::default());
+        return Array1::from_elem([0], Complex64::default());
     }
 
     let mut spectrum = signal.mapv(|value| Complex64::new(value, 0.0));

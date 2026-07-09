@@ -18,7 +18,7 @@ impl BemSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn assemble_system(&mut self) -> KwaversResult<()> {
-        let n = self.vertices.len();
+        let n = (self.vertices.shape()[0] * self.vertices.shape()[1] * self.vertices.shape()[2]);
         if n == 0 {
             return Ok(());
         }

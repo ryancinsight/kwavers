@@ -347,7 +347,7 @@ fn create_image_grid(width: usize, height: usize, max_depth: f64) -> Array3<f64>
 
 /// Generate noisy received signal for coded excitation testing
 fn generate_noisy_received_signal(
-    code: &Array1<num_complex::Complex64>,
+    code: &Array1<eunomia::Complex64>,
     noise_level: f64,
 ) -> Array1<f64> {
     use rand::prelude::*;
@@ -453,3 +453,4 @@ fn analyze_pulse_compression(original: &Array1<f64>, compressed: &Array1<f64>) -
         main_lobe_width,
     }
 }
+

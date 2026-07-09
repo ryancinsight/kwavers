@@ -177,7 +177,7 @@ impl KuznetsovSpectralOperator {
 
 fn copy_leto_real_to_ndarray(source: &LetoArray3<f64>, out: &mut Array3<f64>) {
     let [nx, ny, nz] = source.shape();
-    debug_assert_eq!(out.dim(), (nx, ny, nz));
+    debug_assert_eq!(out.shape(), [nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {

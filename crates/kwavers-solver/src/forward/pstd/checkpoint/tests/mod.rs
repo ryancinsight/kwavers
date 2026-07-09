@@ -100,12 +100,12 @@ fn test_checkpoint_bit_exact_continuation() {
     );
 
     assert_eq!(
-        ref_data.dim(),
-        resumed_data.dim(),
+        ref_data.shape(),
+        resumed_data.shape(),
         "Sensor data shape mismatch"
     );
-    for col in 0..ref_data.ncols() {
-        for row in 0..ref_data.nrows() {
+    for col in 0..ref_data.shape()[1] {
+        for row in 0..ref_data.shape()[0] {
             let r = ref_data[[row, col]];
             let c = resumed_data[[row, col]];
             assert_eq!(

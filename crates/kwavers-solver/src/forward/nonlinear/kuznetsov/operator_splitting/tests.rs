@@ -97,7 +97,7 @@ fn test_harmonic_generation() -> Result<(), kwavers_core::error::KwaversError> {
     let second_harmonic_idx = second_harmonic_idx.min(nx / 2 - 1);
 
     let fundamental_amp = spectrum[fundamental_idx].norm();
-    let second_harmonic_amp = if second_harmonic_idx < spectrum.len() {
+    let second_harmonic_amp = if second_harmonic_idx < (spectrum.shape()[0] * spectrum.shape()[1] * spectrum.shape()[2]) {
         spectrum[second_harmonic_idx].norm()
     } else {
         0.0

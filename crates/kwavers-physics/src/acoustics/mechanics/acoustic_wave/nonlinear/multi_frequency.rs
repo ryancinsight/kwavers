@@ -2,8 +2,6 @@
 //!
 //! This module provides configuration and utilities for multi-frequency acoustic simulations.
 
-use leto::Array1;
-
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 /// Configuration for multi-frequency acoustic simulations.
@@ -99,7 +97,14 @@ impl MultiFrequencyConfig {
     /// A `MultiFrequencyConfig` for broadband simulation
     #[must_use]
     pub fn broadband(min_freq: f64, max_freq: f64, num_points: usize) -> Self {
-        let frequencies: Vec<f64> = Array1::linspace(min_freq, max_freq, num_points).to_vec();
+        let step = if num_points > 1 {
+            (max_freq - min_freq) / (num_points - 1) as f64
+        } else {
+            0.0
+        };
+        let frequencies: Vec<f64> = (0..num_points)
+            .map(|i| min_freq + i as f64 * step)
+            .collect();
 
         Self {
             frequencies,

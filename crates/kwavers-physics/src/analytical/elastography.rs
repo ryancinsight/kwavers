@@ -5,7 +5,7 @@
 //! 2-D MRE displacement field.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
@@ -507,3 +507,4 @@ mod tests {
         assert!(thermal_strain_rf_fixture(1, 24, -1.0e-3, 6.0, 0.0, 1).is_err());
     }
 }
+

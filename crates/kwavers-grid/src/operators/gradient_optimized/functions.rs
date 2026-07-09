@@ -23,7 +23,7 @@ pub fn gradient_optimized<T>(
     cache: Option<&GradientCache<T>>,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let shape = field.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -56,16 +56,16 @@ where
         )
     } else {
         (
-            T::one() / T::from(grid.dx).unwrap(),
-            T::one() / T::from(grid.dy).unwrap(),
-            T::one() / T::from(grid.dz).unwrap(),
+            T::from_f64(1.0) / T::from_f64(grid.dx as f64),
+            T::from_f64(1.0) / T::from_f64(grid.dy as f64),
+            T::from_f64(1.0) / T::from_f64(grid.dz as f64),
         )
     };
 
     for i in stencil_radius..nx - stencil_radius {
         for j in 0..ny {
             for k in 0..nz {
-                let mut grad_val = T::zero();
+                let mut grad_val = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
                     grad_val =
@@ -79,7 +79,7 @@ where
     for i in 0..nx {
         for j in stencil_radius..ny - stencil_radius {
             for k in 0..nz {
-                let mut grad_val = T::zero();
+                let mut grad_val = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
                     grad_val =
@@ -93,7 +93,7 @@ where
     for i in 0..nx {
         for j in 0..ny {
             for k in stencil_radius..nz - stencil_radius {
-                let mut grad_val = T::zero();
+                let mut grad_val = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
                     grad_val =
@@ -117,7 +117,7 @@ pub fn gradient_with_boundaries<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     gradient_with_strategy(field, grid, order, BoundaryStrategy::ZeroPadding)
 }
@@ -135,7 +135,7 @@ pub(super) fn gradient_with_strategy<T>(
     boundary_strategy: BoundaryStrategy,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let shape = field.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -155,9 +155,9 @@ where
 
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let _stencil_radius = coeffs.len();
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
 
     let map_index = |idx: isize, len: usize| -> Option<usize> {
         if (0..(len as isize)).contains(&idx) {
@@ -201,13 +201,13 @@ where
 
     let get = |ii: isize, jj: isize, kk: isize| -> T {
         let Some(iu) = map_index(ii, nx) else {
-            return T::zero();
+            return T::from_f64(0.0);
         };
         let Some(ju) = map_index(jj, ny) else {
-            return T::zero();
+            return T::from_f64(0.0);
         };
         let Some(ku) = map_index(kk, nz) else {
-            return T::zero();
+            return T::from_f64(0.0);
         };
         field[[iu, ju, ku]]
     };
@@ -217,21 +217,21 @@ where
             for k in 0..nz {
                 let (ii, jj, kk) = (i as isize, j as isize, k as isize);
 
-                let mut gx = T::zero();
+                let mut gx = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
                     gx = gx + *coeff * (get(ii + offset, jj, kk) - get(ii - offset, jj, kk));
                 }
                 grad_x[[i, j, k]] = gx * dx_inv;
 
-                let mut gy = T::zero();
+                let mut gy = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
                     gy = gy + *coeff * (get(ii, jj + offset, kk) - get(ii, jj - offset, kk));
                 }
                 grad_y[[i, j, k]] = gy * dy_inv;
 
-                let mut gz = T::zero();
+                let mut gz = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
                     gz = gz + *coeff * (get(ii, jj, kk + offset) - get(ii, jj, kk - offset));
@@ -255,7 +255,7 @@ pub fn gradient_optimized_leto<T>(
     cache: Option<&GradientCache<T>>,
 ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let field_view = field.view();
     gradient_optimized(&field_view, grid, order, cache)
@@ -271,7 +271,7 @@ pub fn gradient_with_boundaries_leto<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let field_view = field.view();
     gradient_with_boundaries(&field_view, grid, order)

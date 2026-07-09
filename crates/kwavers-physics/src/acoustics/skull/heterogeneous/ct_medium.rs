@@ -74,10 +74,10 @@ impl<'a> CtMediumBuilder<'a> {
         use kwavers_medium::CoreMedium;
 
         let dims = self.grid.dimensions();
-        if self.ct.dim() != dims {
+        if self.ct.shape() != [dims.0, dims.1, dims.2] {
             return Err(KwaversError::InvalidInput(format!(
                 "CT volume shape {:?} does not match grid {:?}",
-                self.ct.dim(),
+                self.ct.shape(),
                 dims
             )));
         }

@@ -26,9 +26,9 @@ impl HeterogeneousSkull {
         let water_c = WaterProperties::sound_speed(ROOM_TEMPERATURE_C);
         let water_rho = WaterProperties::density(ROOM_TEMPERATURE_C);
 
-        let mut sound_speed = Array3::from_elem(mask.dim(), water_c);
-        let mut density = Array3::from_elem(mask.dim(), water_rho);
-        let mut attenuation = Array3::from_elem(mask.dim(), ALPHA_WATER);
+        let mut sound_speed = Array3::from_elem(mask.shape(), water_c);
+        let mut density = Array3::from_elem(mask.shape(), water_rho);
+        let mut attenuation = Array3::from_elem(mask.shape(), ALPHA_WATER);
 
         zip_mut_ref(sound_speed.view_mut(), mask.view(), |c, &m| {
             if m > 0.5 {

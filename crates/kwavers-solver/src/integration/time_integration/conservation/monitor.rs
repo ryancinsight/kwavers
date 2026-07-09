@@ -148,25 +148,25 @@ impl ConservationMonitor {
         medium: &dyn Medium,
     ) -> f64 {
         assert_eq!(
-            pressure.dim(),
-            velocity_x.dim(),
+            pressure.shape(),
+            velocity_x.shape(),
             "invariant: pressure and x-velocity shapes must match"
         );
         assert_eq!(
-            pressure.dim(),
-            velocity_y.dim(),
+            pressure.shape(),
+            velocity_y.shape(),
             "invariant: pressure and y-velocity shapes must match"
         );
         assert_eq!(
-            pressure.dim(),
-            velocity_z.dim(),
+            pressure.shape(),
+            velocity_z.shape(),
             "invariant: pressure and z-velocity shapes must match"
         );
 
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
         let mut total_energy = 0.0;
 
-        for_each_cell(pressure.dim(), |i, j, k| {
+        for_each_cell(pressure.shape(), |i, j, k| {
             let x = i as f64 * self.grid.dx;
             let y = j as f64 * self.grid.dy;
             let z = k as f64 * self.grid.dz;
@@ -223,21 +223,21 @@ impl ConservationMonitor {
             // Complete acoustic energy computation with safe access
             if let (Some(vx), Some(vy), Some(vz)) = (velocity_x, velocity_y, velocity_z) {
                 assert_eq!(
-                    pressure.dim(),
-                    vx.dim(),
+                    pressure.shape(),
+                    vx.shape(),
                     "invariant: pressure and x-velocity shapes must match"
                 );
                 assert_eq!(
-                    pressure.dim(),
-                    vy.dim(),
+                    pressure.shape(),
+                    vy.shape(),
                     "invariant: pressure and y-velocity shapes must match"
                 );
                 assert_eq!(
-                    pressure.dim(),
-                    vz.dim(),
+                    pressure.shape(),
+                    vz.shape(),
                     "invariant: pressure and z-velocity shapes must match"
                 );
-                for_each_cell(pressure.dim(), |i, j, k| {
+                for_each_cell(pressure.shape(), |i, j, k| {
                     let x = i as f64 * self.grid.dx;
                     let y = j as f64 * self.grid.dy;
                     let z = k as f64 * self.grid.dz;
@@ -262,7 +262,7 @@ impl ConservationMonitor {
             }
         } else {
             // Potential energy only
-            for_each_cell(pressure.dim(), |i, j, k| {
+            for_each_cell(pressure.shape(), |i, j, k| {
                 let x = i as f64 * self.grid.dx;
                 let y = j as f64 * self.grid.dy;
                 let z = k as f64 * self.grid.dz;

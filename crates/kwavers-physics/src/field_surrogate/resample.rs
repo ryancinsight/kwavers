@@ -47,12 +47,12 @@ pub fn resample_trilinear(kernel: &FocalKernel, target_dx_m: f64) -> FocalKernel
         return kernel.clone();
     }
     let zoom = kernel.dx_m / target_dx_m;
-    let (nxi, nyi, nzi) = kernel.field.dim();
+    let [nxi, nyi, nzi] = kernel.field.shape();
     let nxo = ((nxi as f64) * zoom).round().max(1.0) as usize;
     let nyo = ((nyi as f64) * zoom).round().max(1.0) as usize;
     let nzo = ((nzi as f64) * zoom).round().max(1.0) as usize;
 
-    let mut out = Array3::<f64>::zeros((nxo, nyo, nzo));
+    let mut out = Array3::<f64>::zeros([nxo, nyo, nzo]);
     let inv_zoom = 1.0 / zoom;
     let inp = &kernel.field;
 

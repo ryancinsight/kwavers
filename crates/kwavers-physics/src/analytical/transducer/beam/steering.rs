@@ -1,6 +1,6 @@
 use kwavers_math::special::bessel::j1;
 use moirai_parallel::{map_collect_with, Adaptive};
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 // ─── Steering envelope (grating-lobe limited) ──────────────────────────────────
 
@@ -235,3 +235,4 @@ pub fn safe_steering_halfangle(steer_theta: &[f64], glr: &[f64], threshold: f64)
     }
     steer_theta[hi].abs().min(steer_theta[lo].abs())
 }
+

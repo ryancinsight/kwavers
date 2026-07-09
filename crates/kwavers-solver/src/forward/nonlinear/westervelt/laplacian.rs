@@ -51,11 +51,11 @@ impl WesterveltFdtd {
         let dz2_inv = 1.0 / (grid.dz * grid.dz);
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt pressure is standard-layout");
         let laplacian = self
             .laplacian
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: Westervelt laplacian is standard-layout");
         let index = |i: usize, j: usize, k: usize| (i * ny + j) * nz + k;
 

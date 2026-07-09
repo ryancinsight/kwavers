@@ -53,7 +53,7 @@ pub fn solve_gmres(
     max_iter: usize,
     restart: usize,
 ) -> KwaversResult<Array1<f64>> {
-    let n = rhs.len();
+    let n = (rhs.shape()[0] * rhs.shape()[1] * rhs.shape()[2]);
     debug_assert_eq!(
         a.shape(),
         &[n, n],
@@ -116,7 +116,7 @@ pub fn solve_gmres(
         let mut j_end = m;
         for j in 0..m {
             // w = M⁻¹ · A · v[:,j]
-            let v_j: Array1<f64> = v.column(j).to_owned();
+            let v_j: Array1<f64> = v.index_axis(1, j).unwrap().to_owned();
             let av_j = a.dot(&v_j);
             let mut w = Array1::<f64>::zeros(n);
             for i in 0..n {
@@ -125,7 +125,7 @@ pub fn solve_gmres(
 
             // Modified Gram-Schmidt
             for i in 0..=j {
-                let v_i = v.column(i);
+                let v_i = v.index_axis(1, i).unwrap();
                 let hij: f64 = v_i.iter().zip(w.iter()).map(|(&a, &b)| a * b).sum();
                 h[[i, j]] = hij;
                 for k in 0..n {
@@ -186,7 +186,7 @@ pub fn solve_gmres(
 
         // Update solution: x += V[:,0..j_end] · y
         for k in 0..j_end {
-            let v_k = v.column(k).to_owned();
+            let v_k = v.index_axis(1, k).unwrap().to_owned();
             for i in 0..n {
                 x[i] += y[k] * v_k[i];
             }
@@ -195,7 +195,7 @@ pub fn solve_gmres(
         // Final convergence check
         let r_final: Array1<f64> = rhs - &a.dot(&x);
         let r_norm: f64 = r_final.dot(&r_final).sqrt();
-        let b_norm: f64 = rhs.dot(rhs).sqrt().max(1e-300);
+        let b_norm: f64 = leto_ops::Dot::dot(rhs, rhs).sqrt().max(1e-300);
         if r_norm / b_norm < tol {
             return Ok(x);
         }
@@ -203,7 +203,7 @@ pub fn solve_gmres(
 
     // Non-convergence
     let r_final: Array1<f64> = rhs - &a.dot(&x);
-    let final_res = r_final.dot(&r_final).sqrt() / rhs.dot(rhs).sqrt().max(1e-300);
+    let final_res = r_final.dot(&r_final).sqrt() / leto_ops::Dot::dot(rhs, rhs).sqrt().max(1e-300);
     Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
         method: "GMRES".to_owned(),
         iterations: max_iter * restart,

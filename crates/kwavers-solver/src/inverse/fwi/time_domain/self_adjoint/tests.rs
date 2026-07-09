@@ -298,7 +298,7 @@ fn self_adjoint_sponge_absorbs_outgoing_waves() {
         let (_, history) =
             forward(model.view(), density.view(), &grid, &cfg, &acq, damp).expect("fwd");
         history
-            .index_axis(Axis(0), cfg.nt - 1)
+            .index_axis(0, cfg.nt - 1)
             .mapv(|p| p * p)
             .sum()
     };
@@ -390,12 +390,12 @@ fn reconstructed_gradient_matches_stored_history() {
     );
     assert_eq!(
         p_last,
-        history.index_axis(Axis(0), cfg.nt - 1).to_owned(),
+        history.index_axis(0, cfg.nt - 1).unwrap().to_owned(),
         "p_last must equal history[N-1]"
     );
     assert_eq!(
         p_second_last,
-        history.index_axis(Axis(0), cfg.nt - 2).to_owned(),
+        history.index_axis(0, cfg.nt - 2).unwrap().to_owned(),
         "p_second_last must equal history[N-2]"
     );
 

@@ -12,10 +12,7 @@ use kwavers_core::constants::SOUND_SPEED_WATER;
 /// Default quantization levels for phase control
 const DEFAULT_QUANTIZATION_LEVELS: u32 = 256;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Phase shifter for beam control
 #[derive(Debug)]
@@ -32,8 +29,8 @@ impl PhaseShifter {
     #[must_use]
     pub fn new(element_positions: Array2<f64>, operating_frequency: f64) -> Self {
         let wavelength = calculate_wavelength(operating_frequency, SOUND_SPEED_WATER);
-        let num_elements = element_positions.nrows();
-        let phase_offsets = Array1::zeros(num_elements);
+        let num_elements = element_positions.shape()[0];
+        let phase_offsets = Array1::zeros([num_elements]);
 
         Self {
             strategy: ShiftingStrategy::Linear,
@@ -123,10 +120,10 @@ impl PhaseShifter {
             let focal_distance = Self::focal_distance(focal_point)?;
 
             for (i, phase) in self.phase_offsets.iter_mut().enumerate() {
-                let position = self.element_positions.row(i);
-                let dx = focal_point[0] - position[0];
-                let dy = focal_point[1] - position[1];
-                let dz = focal_point[2] - position[2];
+                let position = self.element_positions.index_axis(0, i).unwrap();
+                let dx = focal_point[0] - position[[0]];
+                let dy = focal_point[1] - position[[1]];
+                let dz = focal_point[2] - position[[2]];
                 let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                 *phase += (-k * (distance - focal_distance)) / num_points_f64;
@@ -134,7 +131,7 @@ impl PhaseShifter {
         }
 
         if self.quantization_enabled {
-            for phase in &mut self.phase_offsets {
+            for phase in self.phase_offsets.iter_mut() {
                 *phase = quantize_phase(*phase, DEFAULT_QUANTIZATION_LEVELS);
             }
         }
@@ -170,10 +167,10 @@ impl PhaseShifter {
         self.phase_offsets.fill(0.0);
 
         for (i, phase) in self.phase_offsets.iter_mut().enumerate() {
-            let position = self.element_positions.row(i);
+            let position = self.element_positions.index_axis(0, i).unwrap();
             *phase = Self::apply_phase_quantization(
                 quantization_enabled,
-                -k * position[0] * angle_rad.sin(),
+                -k * position[[0]] * angle_rad.sin(),
             );
         }
 
@@ -195,10 +192,10 @@ impl PhaseShifter {
         self.phase_offsets.fill(0.0);
 
         for (i, phase) in self.phase_offsets.iter_mut().enumerate() {
-            let position = self.element_positions.row(i);
-            let dx = focal_point[0] - position[0];
-            let dy = focal_point[1] - position[1];
-            let dz = focal_point[2] - position[2];
+            let position = self.element_positions.index_axis(0, i).unwrap();
+            let dx = focal_point[0] - position[[0]];
+            let dy = focal_point[1] - position[[1]];
+            let dz = focal_point[2] - position[[2]];
             let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             *phase = Self::apply_phase_quantization(
@@ -286,10 +283,10 @@ impl PhaseShifter {
                 )
             }
             ShiftingStrategy::Custom => {
-                if target.len() != self.element_positions.nrows() {
+                if target.len() != self.element_positions.shape()[0] {
                     return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
                         "Custom phase pattern requires {} phases, got {}",
-                        self.element_positions.nrows(),
+                        self.element_positions.shape()[0],
                         target.len()
                     )));
                 }

@@ -8,7 +8,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_solver::analytical::transducer::{FNMConfig, FastNearfieldSolver};
 use kwavers_transducer::RectangularTransducer;
 use leto::Array2;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Simplified Rayleigh-Sommerfeld implementation for comparison
@@ -214,3 +214,4 @@ criterion_group!(
     benchmark_fnm_memory_scaling
 );
 criterion_main!(benches);
+

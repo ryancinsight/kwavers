@@ -3,7 +3,7 @@
 };
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Compute L2 norm of a 3D array.
 #[must_use]
@@ -55,9 +55,11 @@ impl LinearAlgebraExt<Complex64> for Array2<Complex64> {
     fn eig(&self) -> KwaversResult<(Array1<Complex64>, Self)> {
         let (eigenvalues, eigenvectors) =
             EigenDecomposition::hermitian_eigendecomposition_complex(self)?;
-        Ok((
-            eigenvalues.mapv(|lambda| Complex64::new(lambda, 0.0)),
-            eigenvectors,
-        ))
+        let n = eigenvalues.shape()[0];
+        let mut eig_complex = Array1::zeros([n]);
+        for i in 0..n {
+            eig_complex[i] = Complex64::new(eigenvalues[i], 0.0);
+        }
+        Ok((eig_complex, eigenvectors))
     }
 }

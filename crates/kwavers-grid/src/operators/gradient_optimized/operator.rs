@@ -119,7 +119,7 @@ impl GradientOperator {
         cache: Option<&GradientCache<T>>,
     ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
     where
-        T: Float + Clone + Send + Sync + Default,
+        T: FloatElement + Clone + Send + Sync + Default,
     {
         let _chunk_size = self.chunk_size.max(1);
         if self.parallel {
@@ -145,7 +145,7 @@ impl GradientOperator {
         cache: Option<&GradientCache<T>>,
     ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
     where
-        T: Float + Clone + Send + Sync + Default,
+        T: FloatElement + Clone + Send + Sync + Default,
     {
         let field_view = field.view();
         self.compute(&field_view, grid, order, cache)

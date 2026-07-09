@@ -9,7 +9,6 @@ use crate::recorder::pressure_statistics::PressureFieldStatistics;
 use crate::recorder::velocity_statistics::VelocityComponentStats;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array1, Array2, Array3 as LetoArray3};
-use leto::Array3 as NdArray3;
 
 use super::SensorRecorder;
 
@@ -22,17 +21,6 @@ pub trait SensorMask3 {
 impl SensorMask3 for LetoArray3<bool> {
     fn shape3(&self) -> [usize; 3] {
         self.shape()
-    }
-
-    fn value_at(&self, i: usize, j: usize, k: usize) -> bool {
-        self[[i, j, k]]
-    }
-}
-
-impl SensorMask3 for NdArray3<bool> {
-    fn shape3(&self) -> [usize; 3] {
-        let dim = self.shape();
-        [dim.0, dim.1, dim.2]
     }
 
     fn value_at(&self, i: usize, j: usize, k: usize) -> bool {

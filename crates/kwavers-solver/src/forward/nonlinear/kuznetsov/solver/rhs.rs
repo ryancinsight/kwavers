@@ -188,43 +188,43 @@ impl KuznetsovWave {
             // the user's named 8 workspace-cache + pressure_prev[1..3]
             // operands, so all 9 immuts are asserted for completeness.
             assert!(
-                rhs.is_standard_layout(),
+                rhs,
                 "rhs must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                pressure.is_standard_layout(),
+                pressure,
                 "pressure must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                cache_density.is_standard_layout(),
+                cache_density,
                 "cache_density must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                cache_c0.is_standard_layout(),
+                cache_c0,
                 "cache_c0 must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                cache_nl.is_standard_layout(),
+                cache_nl,
                 "cache_nl must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                cache_src.is_standard_layout(),
+                cache_src,
                 "cache_src must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                laplacian.is_standard_layout(),
+                laplacian,
                 "laplacian must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                pressure_prev.is_standard_layout(),
+                pressure_prev,
                 "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                pressure_prev2.is_standard_layout(),
+                pressure_prev2,
                 "pressure_prev2 must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                pressure_prev3.is_standard_layout(),
+                pressure_prev3,
                 "pressure_prev3 must be C-contiguous (default Array3 layout) for the migration"
             );
 
@@ -259,7 +259,7 @@ impl KuznetsovWave {
                 .as_slice()
                 .expect("pressure_prev3: standard-layout asserted just above; layout matched");
 
-            r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+            r_slice.iter_mut().enumerate(|idx, r: &mut f64| {
                 // idx-to-(i,j,k) stride-arithmetic decomposition is documented
                 // at the site-level comment above; the closure body reads via
                 // flat slice[idx] (no view-based boundary checks needed).
@@ -302,11 +302,11 @@ impl KuznetsovWave {
             let c0_squared = uniform_sound_speed * uniform_sound_speed;
             // Slice 6 site 2: linear term (homogeneous) -- 1 mut + 1 immut layout
             assert!(
-                rhs.is_standard_layout(),
+                rhs,
                 "rhs must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                self.workspace.laplacian.is_standard_layout(),
+                self.workspace.laplacian,
                 "laplacian must be C-contiguous (default Array3 layout) for the migration"
             );
             {
@@ -316,7 +316,7 @@ impl KuznetsovWave {
                 let lap_slice = self.workspace.laplacian
                     .as_slice()
                     .expect("laplacian: standard-layout asserted just above; layout matched");
-                r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                r_slice.iter_mut().enumerate(|idx, r: &mut f64| {
                     let lap = lap_slice[idx];
                     *r = c0_squared * lap;
                 });
@@ -337,11 +337,11 @@ impl KuznetsovWave {
             }
             // Slice 6 site 3: source accumulation (homogeneous) -- 1 mut + 1 immut layout
             assert!(
-                rhs.is_standard_layout(),
+                rhs,
                 "rhs must be C-contiguous (default Array3 layout) for the migration"
             );
             assert!(
-                self.workspace.cache_source.is_standard_layout(),
+                self.workspace.cache_source,
                 "cache_source must be C-contiguous (default Array3 layout) for the migration"
             );
             {
@@ -351,7 +351,7 @@ impl KuznetsovWave {
                 let src_slice = self.workspace.cache_source
                     .as_slice()
                     .expect("cache_source: standard-layout asserted just above; layout matched");
-                r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                r_slice.iter_mut().enumerate(|idx, r: &mut f64| {
                     let s = src_slice[idx];
                     *r += s;
                 });
@@ -360,11 +360,11 @@ impl KuznetsovWave {
             if include_nonlinearity {
                 // Slice 6 site 4: nonlinearity add (homogeneous) -- 1 mut + 1 immut
                 assert!(
-                    rhs.is_standard_layout(),
+                    rhs,
                     "rhs must be C-contiguous (default Array3 layout) for the migration"
                 );
                 assert!(
-                    self.workspace.nonlinear_term.is_standard_layout(),
+                    self.workspace.nonlinear_term,
                     "nonlinear_term must be C-contiguous (default Array3 layout) for the migration"
                 );
                 {
@@ -374,7 +374,7 @@ impl KuznetsovWave {
                     let nl_slice = self.workspace.nonlinear_term
                         .as_slice()
                         .expect("nonlinear_term: standard-layout asserted just above; layout matched");
-                    r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                    r_slice.iter_mut().enumerate(|idx, r: &mut f64| {
                         let nl = nl_slice[idx];
                         *r += nl;
                     });
@@ -384,11 +384,11 @@ impl KuznetsovWave {
             if include_diffusion {
                 // Slice 6 site 5: diffusion add (homogeneous) -- 1 mut + 1 immut
                 assert!(
-                    rhs.is_standard_layout(),
+                    rhs,
                     "rhs must be C-contiguous (default Array3 layout) for the migration"
                 );
                 assert!(
-                    self.workspace.diffusive_term.is_standard_layout(),
+                    self.workspace.diffusive_term,
                     "diffusive_term must be C-contiguous (default Array3 layout) for the migration"
                 );
                 {
@@ -398,7 +398,7 @@ impl KuznetsovWave {
                     let diff_slice = self.workspace.diffusive_term
                         .as_slice()
                         .expect("diffusive_term: standard-layout asserted just above; layout matched");
-                    r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                    r_slice.iter_mut().enumerate(|idx, r: &mut f64| {
                         let diff = diff_slice[idx];
                         *r += diff;
                     });

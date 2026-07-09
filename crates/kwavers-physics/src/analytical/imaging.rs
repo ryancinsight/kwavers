@@ -1235,7 +1235,7 @@ pub fn ivus_bmode_image(
     )?;
     let mut envelope = vec![0.0; rf.len()];
     for col in 0..n_theta {
-        let line = Array1::from_shape_fn(n_r, |row| rf[row * n_theta + col]);
+        let line = Array1::from_shape_fn([n_r], |[row]| rf[row * n_theta + col]);
         let analytic = kwavers_math::fft::analytic_signal_1d(&line);
         for (row, sample) in analytic.iter().enumerate() {
             envelope[row * n_theta + col] = sample.norm().max(1.0e-9);

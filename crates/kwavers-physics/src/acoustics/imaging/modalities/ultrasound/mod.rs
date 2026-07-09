@@ -6,7 +6,7 @@ use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
 use leto::Array2;
-use num_complex::Complex;
+use eunomia::Complex;
 
 pub mod advanced;
 pub mod frequency_domain_fwi;
@@ -18,12 +18,12 @@ pub use kwavers_imaging::ultrasound::{UltrasoundConfig, UltrasoundMode};
 /// Compute B-mode image from RF data
 #[must_use]
 pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> Array2<f64> {
-    let (n_samples, n_lines) = rf_data.dim();
-    let mut image = Array2::zeros((n_samples, n_lines));
+    let [n_samples, n_lines] = rf_data.shape();
+    let mut image = Array2::zeros([n_samples, n_lines]);
 
     for line_idx in 0..n_lines {
-        let rf_line = rf_data.column(line_idx);
-        let envelope = compute_envelope(&rf_line.to_owned());
+        let rf_line = rf_data.index_axis(1, line_idx).expect("valid axis index");
+        let envelope = compute_envelope(&rf_line.to_contiguous());
         let compensated = if config.tgc_enabled {
             apply_tgc(&envelope, config.frequency)
         } else {
@@ -50,7 +50,7 @@ pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> 
 /// - **Spatial compounding**: Multi-angle coherent compounding for artifact reduction.
 fn compute_envelope(signal: &leto::Array1<f64>) -> leto::Array1<f64> {
     let n = signal.len();
-    let mut envelope = leto::Array1::zeros(n);
+    let mut envelope = leto::Array1::zeros([n]);
     for i in 0..n {
         let real = signal[i];
         let imag = if i > 0 && i < n - 1 {
@@ -91,8 +91,8 @@ fn apply_tgc_with_sampling(
 
 #[must_use]
 pub fn compute_doppler_shift(iq_data: &Array2<Complex<f64>>, prf: f64) -> Array2<f64> {
-    let (n_samples, n_pulses) = iq_data.dim();
-    let mut doppler = Array2::zeros((n_samples, n_pulses - 1));
+    let [n_samples, n_pulses] = iq_data.shape();
+    let mut doppler = Array2::zeros([n_samples, n_pulses - 1]);
     for i in 0..n_samples {
         for j in 0..n_pulses - 1 {
             let phase_diff = (iq_data[[i, j + 1]] / iq_data[[i, j]]).arg();
@@ -104,8 +104,8 @@ pub fn compute_doppler_shift(iq_data: &Array2<Complex<f64>>, prf: f64) -> Array2
 
 #[must_use]
 pub fn compute_strain(displacement: &Array2<f64>, spatial_resolution: f64) -> Array2<f64> {
-    let (n_depth, n_lines) = displacement.dim();
-    let mut strain = Array2::zeros((n_depth - 1, n_lines));
+    let [n_depth, n_lines] = displacement.shape();
+    let mut strain = Array2::zeros([n_depth - 1, n_lines]);
     for line in 0..n_lines {
         for depth in 0..n_depth - 1 {
             let gradient = (displacement[[depth + 1, line]] - displacement[[depth, line]])
@@ -115,3 +115,4 @@ pub fn compute_strain(displacement: &Array2<f64>, spatial_resolution: f64) -> Ar
     }
     strain
 }
+

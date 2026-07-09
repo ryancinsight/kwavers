@@ -58,11 +58,11 @@ impl FwiGeometry {
 
     #[must_use]
     pub(super) fn receiver_count(&self) -> usize {
-        self.receiver_row_to_sensor_row.len()
+        (self.receiver_row_to_sensor_row.shape()[0] * self.receiver_row_to_sensor_row.shape()[1] * self.receiver_row_to_sensor_row.shape()[2])
     }
 
     pub(super) fn collect_fortran_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
-        let (nx, ny, nz) = mask.dim();
+        let [nx, ny, nz] = mask.shape();
         let mut indices = Vec::new();
         for k in 0..nz {
             for j in 0..ny {
@@ -96,13 +96,13 @@ impl FwiGeometry {
     pub(super) fn validate(&self, grid: &Grid, nt: usize) -> KwaversResult<()> {
         let expected_shape = grid.dimensions();
         let expected_shape_arr = [grid.nx, grid.ny, grid.nz];
-        if self.sensor_mask.dim() != expected_shape {
+        if self.sensor_mask.shape() != expected_shape {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Receiver mask shape mismatch: expected {:?}, got {:?}",
                         expected_shape,
-                        self.sensor_mask.dim()
+                        self.sensor_mask.shape()
                     ),
                 },
             ));

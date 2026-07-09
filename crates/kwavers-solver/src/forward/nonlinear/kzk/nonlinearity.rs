@@ -191,11 +191,11 @@ impl KzkNonlinearOperator {
         // Per-thread scratch `w` replaces the shared `self.w_scratch`;
         // one Array1 allocation of `nt × 16 bytes` per scheduled slab, not per (i,j).
         let pressure_values = pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK nonlinear pressure is standard-layout");
         let delta_values = self
             .delta
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK nonlinear delta is standard-layout");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             delta_values,
@@ -252,11 +252,11 @@ impl KzkNonlinearOperator {
         // and does not participate in nonlinear self-coupling.
         // Parallelise the application pass over i-slabs as well.
         let pressure_values = pressure
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK nonlinear pressure is standard-layout");
         let delta_values = self
             .delta
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK nonlinear delta is standard-layout");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             pressure_values,

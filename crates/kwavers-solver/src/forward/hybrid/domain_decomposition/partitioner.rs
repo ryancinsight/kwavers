@@ -85,9 +85,9 @@ impl DomainPartitioner {
         for i in start.0..end.0 {
             for j in start.1..end.1 {
                 for k in start.2..end.2 {
-                    if i < metrics.homogeneity.dim().0
-                        && j < metrics.homogeneity.dim().1
-                        && k < metrics.homogeneity.dim().2
+                    if i < metrics.homogeneity.shape()[0]
+                        && j < metrics.homogeneity.shape()[1]
+                        && k < metrics.homogeneity.shape()[2]
                     {
                         sum += metrics.spectral_content[[i, j, k]].mul_add(
                             0.2,

@@ -46,7 +46,7 @@ impl AcousticWaveModel for WesterveltWave {
         // (zero initial velocity, the standard IVP start). Without this the
         // previous buffer is zero on step 0, injecting a spurious velocity kick.
         if self.current_step == 0 {
-            let initial_pressure = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
+            let initial_pressure = fields.index_axis(0, UnifiedFieldType::Pressure.index());
             self.initialize_buffers(initial_pressure);
         }
 
@@ -54,7 +54,7 @@ impl AcousticWaveModel for WesterveltWave {
             log::debug!("WesterveltWave: Potential instability at t={}", t);
         }
 
-        let pressure_field = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure_field = fields.index_axis(0, UnifiedFieldType::Pressure.index());
         self.pressure_buffers[self.buffer_indices[1]].assign(&pressure_field);
 
         let (next_idx, curr_idx, prev_idx) = (
@@ -207,7 +207,7 @@ impl AcousticWaveModel for WesterveltWave {
         });
 
         fields
-            .index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())
+            .index_axis_mut(0, UnifiedFieldType::Pressure.index())
             .assign(pressure_next);
         {
             let mut metrics = self.metrics.lock().unwrap();

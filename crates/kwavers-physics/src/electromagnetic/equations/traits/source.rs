@@ -22,7 +22,7 @@ pub trait PhysicsEMSource: Send + Sync {
         &self,
         frequency: f64,
         position: &[f64],
-    ) -> num_complex::Complex<f64>;
+    ) -> eunomia::Complex64;
 
     /// Check if source is active at given time
     fn is_active(&self, time: f64) -> bool;
@@ -30,3 +30,4 @@ pub trait PhysicsEMSource: Send + Sync {
     /// Get source directivity pattern (radiation pattern)
     fn directivity(&self, direction: &[f64]) -> f64;
 }
+

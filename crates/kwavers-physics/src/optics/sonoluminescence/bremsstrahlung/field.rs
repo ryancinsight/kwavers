@@ -12,7 +12,7 @@ pub fn calculate_bremsstrahlung_emission(
     ion_density_field: &Array3<f64>,
     model: &BremsstrahlungModel,
 ) -> Array3<f64> {
-    let mut emission_field = Array3::zeros(temperature_field.dim());
+    let mut emission_field = Array3::zeros(temperature_field.shape());
 
     crate::parallel::zip_mut_three_refs(
         emission_field.view_mut(),

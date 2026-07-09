@@ -21,13 +21,13 @@ impl ElasticWaveSolver {
         push_times: &[f64],
         _sources: &[VolumetricSource],
     ) -> KwaversResult<(Vec<ElasticWaveField>, WaveFrontTracker)> {
-        if body_forces.len() != push_times.len() {
+        if (body_forces.shape()[0] * body_forces.shape()[1] * body_forces.shape()[2]) != (push_times.shape()[0] * push_times.shape()[1] * push_times.shape()[2]) {
             return Err(NumericalError::InvalidOperation(
                 "body_forces and push_times must have the same length".to_owned(),
             )
             .into());
         }
-        let mut shifted_forces = Vec::with_capacity(body_forces.len());
+        let mut shifted_forces = Vec::with_capacity((body_forces.shape()[0] * body_forces.shape()[1] * body_forces.shape()[2]));
         for (bf, &t0) in body_forces.iter().zip(push_times.iter()) {
             let mut bf_shifted = bf.clone();
             let ElasticBodyForceConfig::GaussianImpulse { t0_s, .. } = &mut bf_shifted;
@@ -101,13 +101,15 @@ impl ElasticWaveSolver {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
         for disp in initial_displacements {
-            if disp.dim() != (nx, ny, nz) {
+            if disp.shape() != [nx, ny, nz] {
                 return Err(NumericalError::InvalidOperation(
                     "Initial displacement shape does not match grid".to_owned(),
                 )
                 .into());
             }
-            initial_field.uz.zip_mut_with(disp, |a, &b| *a += b);
+            for (a, b) in initial_field.uz.iter_mut().zip(disp.iter()) {
+            *a += b;
+        };
         }
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
@@ -154,7 +156,7 @@ impl ElasticWaveSolver {
         if needs_final {
             history.push(current_field.clone());
         }
-        if !push_times.is_empty() && push_times.len() != sources.len() {
+        if !push_times.is_empty() && (push_times.shape()[0] * push_times.shape()[1] * push_times.shape()[2]) != (sources.shape()[0] * sources.shape()[1] * sources.shape()[2]) {
             return Err(NumericalError::InvalidOperation(
                 "push_times and sources must have the same length when provided".to_owned(),
             )
@@ -178,7 +180,7 @@ impl ElasticWaveSolver {
         &self,
         tracker: &WaveFrontTracker,
     ) -> VolumetricQualityMetrics {
-        let total = tracker.arrival_times.len();
+        let total = (tracker.arrival_times.shape()[0] * tracker.arrival_times.shape()[1] * tracker.arrival_times.shape()[2]);
         let mut valid = 0usize;
         let mut quality_sum = 0.0;
         for (&t, &q) in tracker
@@ -215,7 +217,7 @@ impl ElasticWaveSolver {
         let mut amplitudes = Array3::<f64>::zeros((nx, ny, nz));
         let mut tracking_quality = Array3::<f64>::zeros((nx, ny, nz));
 
-        if history.len() < 2 {
+        if (history.shape()[0] * history.shape()[1] * history.shape()[2]) < 2 {
             return WaveFrontTracker {
                 arrival_times,
                 amplitudes,
@@ -284,8 +286,8 @@ impl ElasticWaveSolver {
                             }
                         }
                         ArrivalDetection::MatchedFilter { template, min_corr } => {
-                            let l = template.len();
-                            if l == 0 || l > series.len() {
+                            let l = (template.shape()[0] * template.shape()[1] * template.shape()[2]);
+                            if l == 0 || l > (series.shape()[0] * series.shape()[1] * series.shape()[2]) {
                                 continue;
                             }
                             let template_norm = template.iter().map(|x| x * x).sum::<f64>().sqrt();
@@ -296,7 +298,7 @@ impl ElasticWaveSolver {
                             let mut best_corr = 0.0_f64;
                             let mut best_quality = 0.0_f64;
                             let mut best_amp = 0.0_f64;
-                            for start in 0..=(series.len() - l) {
+                            for start in 0..=((series.shape()[0] * series.shape()[1] * series.shape()[2]) - l) {
                                 let mut dot = 0.0_f64;
                                 let mut sig_energy = 0.0_f64;
                                 let mut amp = 0.0_f64;
@@ -322,7 +324,7 @@ impl ElasticWaveSolver {
                             }
                             if let Some(start) = best_idx {
                                 let center = start + (l / 2);
-                                let idx = center.min(history.len() - 1);
+                                let idx = center.min((history.shape()[0] * history.shape()[1] * history.shape()[2]) - 1);
                                 arrival_times[[i, j, k]] = history[idx].time;
                                 amplitudes[[i, j, k]] = best_amp;
                                 tracking_quality[[i, j, k]] = best_quality;

@@ -105,7 +105,7 @@ impl HybridValidationSuite {
         }
 
         // Check if errors decrease monotonically
-        for i in 1..errors.len() {
+        for i in 1..(errors.shape()[0] * errors.shape()[1] * errors.shape()[2]) {
             if errors[i] >= errors[i - 1] {
                 return Ok(false);
             }

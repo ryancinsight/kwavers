@@ -1,4 +1,4 @@
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 fn main() {
@@ -73,3 +73,4 @@ fn main() {
         println!("tau={:.3}: max rel err = {:.3e}", tau, max_rel_err);
     }
 }
+

@@ -51,9 +51,9 @@ fn fill_spectral_correction(
     kappa: &mut Array3<f64>,
     compute: impl Fn(usize, usize, usize) -> f64 + Copy + Send + Sync,
 ) {
-    let (_nx, ny, nz) = kappa.dim();
-    if kappa.is_standard_layout() {
-        if let Some(values) = kappa.as_slice_memory_order_mut() {
+    let [_nx, ny, nz] = kappa.shape();
+    {
+        if let Some(values) = kappa.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(values, |index, value| {
                 let (i, j, k) = dense_indices(index, ny, nz);
                 *value = compute(i, j, k);
@@ -62,7 +62,7 @@ fn fill_spectral_correction(
         }
     }
 
-    let (nx, ny, nz) = kappa.dim();
+    let [nx, ny, nz] = kappa.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -363,7 +363,7 @@ pub(super) fn compute_wavenumber_component(index: usize, n: usize, dx: f64) -> f
 ///
 /// Each element of `field_k` is multiplied by the corresponding scalar in
 /// `kappa`; no two Moirai tasks share a memory location.
-pub fn apply_correction(field_k: &mut Array3<num_complex::Complex<f64>>, kappa: &Array3<f64>) {
+pub fn apply_correction(field_k: &mut Array3<eunomia::Complex<f64>>, kappa: &Array3<f64>) {
     assert_eq!(
         field_k.shape(),
         kappa.shape(),
@@ -372,10 +372,10 @@ pub fn apply_correction(field_k: &mut Array3<num_complex::Complex<f64>>, kappa: 
         kappa.shape()
     );
 
-    if field_k.is_standard_layout() && kappa.is_standard_layout() {
+    if field_k && kappa {
         if let (Some(field_values), Some(kappa_values)) = (
-            field_k.as_slice_memory_order_mut(),
-            kappa.as_slice_memory_order(),
+            field_k.as_slice_mut(),
+            kappa.as_slice(),
         ) {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
                 *value *= kappa_values[index];
@@ -384,7 +384,7 @@ pub fn apply_correction(field_k: &mut Array3<num_complex::Complex<f64>>, kappa: 
         }
     }
 
-    let (nx, ny, nz) = field_k.dim();
+    let [nx, ny, nz] = field_k.shape();
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {

@@ -10,7 +10,7 @@ pub fn generate_spherical_skull(
     thickness: f64,
     radius: f64,
 ) -> KwaversResult<Array3<f64>> {
-    let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
     let cx = grid.nx as f64 / 2.0;
     let cy = grid.ny as f64 / 2.0;
@@ -53,7 +53,7 @@ pub fn generate_ellipsoidal_skull(
         ));
     }
 
-    let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+    let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
     let cx = grid.nx as f64 / 2.0;
     let cy = grid.ny as f64 / 2.0;

@@ -18,7 +18,7 @@ fn make_test_skull(
 ) -> HeterogeneousSkull {
     let mut sound_speed = Array3::from_elem((nx, ny, nz), C_WATER_DEFAULT);
     let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER);
-    let attenuation = Array3::zeros((nx, ny, nz));
+    let attenuation = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             for k in bone_start..bone_end.min(nz) {

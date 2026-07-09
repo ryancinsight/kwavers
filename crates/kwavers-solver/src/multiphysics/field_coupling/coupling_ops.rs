@@ -32,7 +32,7 @@ impl MultiphysicsFieldCoupler {
         dt: f64,
     ) -> KwaversResult<()> {
         validate_coupled_field_set(fields)?;
-        let mut previous_fields = fields.to_vec();
+        let mut previous_fields = fields.iter().cloned().collect::<Vec<_>>();
 
         for iteration in 0..self.max_iterations {
             self.apply_weak_coupling(fields, dt)?;
@@ -200,9 +200,9 @@ impl MultiphysicsFieldCoupler {
 }
 
 fn validate_coupled_field_set(fields: &[Array3<f64>]) -> KwaversResult<()> {
-    validate_field_index::<PRESSURE_IDX>(fields.len())?;
-    validate_field_index::<TEMPERATURE_IDX>(fields.len())?;
-    validate_field_index::<LIGHT_IDX>(fields.len())?;
+    validate_field_index::<PRESSURE_IDX>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
+    validate_field_index::<TEMPERATURE_IDX>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
+    validate_field_index::<LIGHT_IDX>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
     validate_coupled_shapes::<PRESSURE_IDX, TEMPERATURE_IDX>(
         &fields[PRESSURE_IDX],
         &fields[TEMPERATURE_IDX],
@@ -229,8 +229,8 @@ fn copy_fields_into(target: &mut [Array3<f64>], source: &[Array3<f64>]) {
 fn read_write_fields<const READ: usize, const WRITE: usize>(
     fields: &mut [Array3<f64>],
 ) -> KwaversResult<(&Array3<f64>, &mut Array3<f64>)> {
-    validate_field_index::<READ>(fields.len())?;
-    validate_field_index::<WRITE>(fields.len())?;
+    validate_field_index::<READ>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
+    validate_field_index::<WRITE>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
     if READ == WRITE {
         return Err(KwaversError::InvalidInput(format!(
             "MultiphysicsFieldCoupler requires distinct read/write indices, got {READ}"
@@ -262,11 +262,11 @@ fn validate_coupled_shapes<const READ: usize, const WRITE: usize>(
     read: &Array3<f64>,
     write: &Array3<f64>,
 ) -> KwaversResult<()> {
-    if read.dim() != write.dim() {
+    if read.shape() != write.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "MultiphysicsFieldCoupler edge {READ}->{WRITE} requires matching shapes, got read {:?} and write {:?}",
-            read.dim(),
-            write.dim()
+            read.shape(),
+            write.shape()
         )));
     }
     Ok(())

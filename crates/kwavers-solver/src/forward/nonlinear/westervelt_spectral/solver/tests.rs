@@ -232,7 +232,7 @@ fn lossy_westervelt_stays_finite_and_bounded() {
     let mut solver = WesterveltWave::new(&grid);
     solver.set_nonlinearity_scaling(0.0); // linear; damping_scaling stays 1.0 → LOSSY
     let mut fields = Array4::<f64>::zeros((1, n, n, n));
-    fields.index_axis_mut(0, 0).assign(&ic);
+    fields.index_axis_mut(0, 0).unwrap().assign(&ic);
     let prev = Array3::<f64>::zeros((n, n, n));
     let source = NullSource::new();
 

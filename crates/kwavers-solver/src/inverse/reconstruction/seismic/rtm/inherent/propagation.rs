@@ -17,11 +17,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 use super::super::super::constants::RTM_STORAGE_DECIMATION;
 use super::super::super::wavelet::SeismicRickerWavelet;
@@ -56,8 +52,7 @@ impl ReverseTimeMigration {
 
             if t % RTM_STORAGE_DECIMATION == 0 {
                 stored
-                    .slice_mut(s![t / RTM_STORAGE_DECIMATION, .., .., ..])
-                    .assign(&pressure);
+                    .slice_mut(s![t / RTM_STORAGE_DECIMATION, .., .., ..]).unwrap().unwrap().assign(&pressure);
             }
 
             std::mem::swap(&mut pressure, &mut pressure_prev);
@@ -95,7 +90,7 @@ impl ReverseTimeMigration {
 
             self.update_wavefield(&mut pressure, &pressure_prev, grid)?;
 
-            backward.slice_mut(s![t, .., .., ..]).assign(&pressure);
+            backward.slice_mut(s![t, .., .., ..]).unwrap().unwrap().assign(&pressure);
 
             std::mem::swap(&mut pressure, &mut pressure_prev);
         }
@@ -121,8 +116,7 @@ impl ReverseTimeMigration {
             let t_rem = t % RTM_STORAGE_DECIMATION;
 
             if t_rem == 0 {
-                full.slice_mut(s![t, .., .., ..])
-                    .assign(&decimated.slice(s![t_dec, .., .., ..]));
+                full.slice_mut(s![t, .., .., ..]).unwrap().unwrap().assign(&decimated.slice(s![t_dec, .., .., ..]));
             } else if t_dec + 1 < decimated.shape()[0] {
                 let weight = t_rem as f64 / RTM_STORAGE_DECIMATION as f64;
                 let snap1 = decimated.slice(s![t_dec, .., .., ..]);

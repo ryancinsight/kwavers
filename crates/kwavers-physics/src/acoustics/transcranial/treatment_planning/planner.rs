@@ -6,8 +6,8 @@ use super::types::{
 };
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use log::info;
 use leto::Array3;
+use log::info;
 
 /// Treatment planner for tFUS procedures
 #[derive(Debug)]

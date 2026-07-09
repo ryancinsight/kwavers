@@ -4,7 +4,24 @@ use leto::{
     Array1,
     Array2,
 };
-use num_complex::Complex;
+use eunomia::Complex64;
+
+fn matmul_complex(lhs: &Array2<Complex64>, rhs: &Array2<Complex64>) -> Array2<Complex64> {
+    let [rows, inner] = lhs.shape();
+    let [rhs_inner, cols] = rhs.shape();
+    debug_assert_eq!(inner, rhs_inner);
+    let mut out = Array2::from_elem([rows, cols], Complex64::new(0.0, 0.0));
+    for i in 0..rows {
+        for j in 0..cols {
+            let mut sum = Complex64::new(0.0, 0.0);
+            for k in 0..inner {
+                sum += lhs[[i, k]] * rhs[[k, j]];
+            }
+            out[[i, j]] = sum;
+        }
+    }
+    out
+}
 
 impl EigenSolver {
     /// Compute eigendecomposition of complex Hermitian matrix using QR algorithm
@@ -25,8 +42,8 @@ impl EigenSolver {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn qr_algorithm(
-        matrix: &Array2<Complex<f64>>,
+pub fn qr_algorithm(
+        matrix: &Array2<Complex64>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
         let n = matrix.shape()[0];
@@ -46,7 +63,7 @@ impl EigenSolver {
         }
 
         let mut h = matrix.clone();
-        let mut q = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
+    let mut q = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
         let mut eigenvalues = Array1::zeros([n]);
         let mut iterations = 0;
 
@@ -60,17 +77,17 @@ impl EigenSolver {
             };
 
             for i in 0..n {
-                h[[i, i]] -= Complex::new(shift, 0.0);
+                h[[i, i]] -= Complex64::new(shift, 0.0);
             }
 
             let (q_iter, r) = Self::qr_decomposition(&h, n)?;
-            h = r.dot(&q_iter);
+            h = matmul_complex(&r, &q_iter);
 
             for i in 0..n {
-                h[[i, i]] += Complex::new(shift, 0.0);
+                h[[i, i]] += Complex64::new(shift, 0.0);
             }
 
-            q = q.dot(&q_iter);
+            q = matmul_complex(&q, &q_iter);
 
             let off_diag_norm = Self::compute_off_diagonal_norm(&h, n);
             if off_diag_norm < config.tolerance {
@@ -132,8 +149,8 @@ impl EigenSolver {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn jacobi_hermitian(
-        matrix: &Array2<Complex<f64>>,
+pub fn jacobi_hermitian(
+        matrix: &Array2<Complex64>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
         let n = matrix.shape()[0];
@@ -149,7 +166,7 @@ impl EigenSolver {
         Self::verify_hermitian(matrix)?;
 
         let mut h = matrix.clone();
-        let mut v = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
+        let mut v = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
         let mut eigenvalues = Array1::zeros([n]);
         let mut iterations = 0;
 
@@ -193,10 +210,10 @@ impl EigenSolver {
                         let h_qq_new =
                             (2.0 * s * c).mul_add(h_pq.re, (s * s).mul_add(h_pp, c * c * h_qq));
 
-                        h[[p, p]] = Complex::new(h_pp_new, 0.0);
-                        h[[q, q]] = Complex::new(h_qq_new, 0.0);
-                        h[[p, q]] = Complex::new(0.0, 0.0);
-                        h[[q, p]] = Complex::new(0.0, 0.0);
+                        h[[p, p]] = Complex64::new(h_pp_new, 0.0);
+                        h[[q, q]] = Complex64::new(h_qq_new, 0.0);
+                        h[[p, q]] = Complex64::new(0.0, 0.0);
+                        h[[q, p]] = Complex64::new(0.0, 0.0);
 
                         for i in 0..n {
                             let v_ip = v[[i, p]];

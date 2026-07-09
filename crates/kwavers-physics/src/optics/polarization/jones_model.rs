@@ -12,7 +12,7 @@ use leto::{
     Array3,
     Array4,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Physically accurate polarization model using Jones calculus
 #[derive(Debug)]
@@ -116,3 +116,4 @@ impl PolarizationModel for JonesPolarizationModel {
         }
     }
 }
+

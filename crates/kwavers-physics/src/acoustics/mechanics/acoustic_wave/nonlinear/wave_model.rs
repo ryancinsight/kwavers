@@ -146,7 +146,7 @@ impl NonlinearWave {
         let ky = grid.compute_ky();
         let kz = grid.compute_kz();
 
-        let mut k_squared = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+        let mut k_squared = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz]);
 
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
@@ -248,7 +248,7 @@ mod tests {
         let mut w = NonlinearWave::new(&grid, 1e-7);
         w.precompute_k_squared(&grid);
         let k2 = w.k_squared.as_ref().unwrap();
-        assert_eq!(k2.dim(), (8, 8, 8));
+        assert_eq!(k2.shape(), [8, 8, 8]);
         assert_eq!(k2[[0, 0, 0]], 0.0, "DC bin k²[0,0,0] must be zero");
         for &v in k2.iter() {
             assert!(v >= 0.0, "k² must be non-negative everywhere (got {v})");

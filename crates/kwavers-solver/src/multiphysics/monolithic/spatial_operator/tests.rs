@@ -14,7 +14,7 @@ fn laplacian_3d<S>(
 where
     S: Data<Elem = f64>,
 {
-    let mut lap = Array3::zeros(field.dim());
+    let mut lap = Array3::zeros(field.shape());
     laplacian_3d_into(field, grid_dims, dx, dy, dz, &mut lap);
     lap
 }
@@ -88,7 +88,7 @@ fn test_laplacian_view_matches_owned_input() {
     let lap_view = laplacian_3d(&block, (n, n, n), dx, dx, dx);
     let lap_owned = laplacian_3d(&owned, (n, n, n), dx, dx, dx);
 
-    assert_eq!(lap_view.dim(), (n, n, n));
+    assert_eq!(lap_view.shape(), [n, n, n]);
     assert_eq!(lap_view, lap_owned);
     assert!((lap_view[[3, 3, 3]] - 12.0).abs() < 1e-12);
 }

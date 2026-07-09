@@ -17,7 +17,7 @@ use leto::{
     Array1,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use numpy::{ToPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -178,3 +178,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(demeaned_hann_power_spectrum_1d, m)?)?;
     Ok(())
 }
+

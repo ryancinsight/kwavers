@@ -20,7 +20,7 @@ use kwavers_analysis::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, ColorFlowConfig, ColorFlowImaging,
 };
 use leto::Array3;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -230,3 +230,4 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+

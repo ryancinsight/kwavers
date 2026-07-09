@@ -18,6 +18,20 @@ pub struct EigenvalueSolver {
 }
 
 impl EigenvalueSolver {
+    fn dot(a: &Array1<f64>, b: &Array1<f64>) -> f64 {
+        a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+    }
+
+    fn norm_l2(v: &Array1<f64>) -> f64 {
+        Self::dot(v, v).sqrt()
+    }
+
+    fn divide_in_place(v: &mut Array1<f64>, scalar: f64) {
+        for value in v.iter_mut() {
+            *value /= scalar;
+        }
+    }
+
     /// Create eigenvalue solver
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -47,7 +61,7 @@ impl EigenvalueSolver {
         }
 
         let n = matrix.rows;
-        let mut v = Array1::from_elem(n, 1.0 / (n as f64).sqrt());
+        let mut v = Array1::from_elem([n], 1.0 / (n as f64).sqrt());
         let mut eigenvalue = 0.0;
 
         for iteration in 0..self.max_iterations {
@@ -57,21 +71,22 @@ impl EigenvalueSolver {
             v = matrix.multiply_vector(v.view())?;
 
             // Normalize
-            let norm = v.dot(&v).sqrt();
+            let norm = Self::norm_l2(&v);
             if norm < 1e-14 {
                 return Err(KwaversError::Numerical(NumericalError::Instability {
                     operation: "power_iteration".to_owned(),
                     condition: norm,
                 }));
             }
-            v /= norm;
+            Self::divide_in_place(&mut v, norm);
 
             // Rayleigh quotient
             let av = matrix.multiply_vector(v.view())?;
-            eigenvalue = v.dot(&av);
+            eigenvalue = Self::dot(&v, &av);
 
             // Check convergence
-            let diff = (&v - &v_prev).dot(&(&v - &v_prev)).sqrt();
+            let diff_vec = &v - &v_prev;
+            let diff = Self::norm_l2(&diff_vec);
             if diff < self.tolerance {
                 return Ok((eigenvalue, v));
             }
@@ -118,15 +133,11 @@ impl EigenvalueSolver {
         }
 
         // Initial guess - random vector
-        let mut v = Array1::from(
-            (0..n)
-                .map(|_| rand::random::<f64>() - 0.5)
-                .collect::<Vec<_>>(),
-        );
+        let mut v: Array1<f64> = (0..n).map(|_| rand::random::<f64>() - 0.5).collect();
 
         // Normalize
-        let norm = v.dot(&v).sqrt();
-        v /= norm;
+        let norm = Self::norm_l2(&v);
+        Self::divide_in_place(&mut v, norm);
 
         let mut eigenvalue = 0.0;
 
@@ -165,8 +176,8 @@ impl EigenvalueSolver {
 
             // Rayleigh quotient: λ = v^T * A * w / (v^T * w)
             let av = self.matrix_vector_multiply(matrix, &w)?;
-            let numerator = v.dot(&av);
-            let denominator = v.dot(&w);
+            let numerator = Self::dot(&v, &av);
+            let denominator = Self::dot(&v, &w);
 
             if denominator.abs() < 1e-14 {
                 return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
@@ -181,9 +192,9 @@ impl EigenvalueSolver {
             // Check convergence
             if (lambda - eigenvalue).abs() < self.tolerance {
                 // Normalize eigenvector
-                let norm = w.dot(&w).sqrt();
+                let norm = Self::norm_l2(&w);
                 if norm > 1e-14 {
-                    w /= norm;
+                    Self::divide_in_place(&mut w, norm);
                 }
                 return Ok((lambda, w));
             }
@@ -191,9 +202,9 @@ impl EigenvalueSolver {
             eigenvalue = lambda;
 
             // Normalize for next iteration
-            let norm = w.dot(&w).sqrt();
+            let norm = Self::norm_l2(&w);
             if norm > 1e-14 {
-                v = w / norm;
+                v = &w / norm;
             } else {
                 return Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
                     method: "inverse_power_iteration".to_owned(),
@@ -219,7 +230,7 @@ impl EigenvalueSolver {
         matrix: &CompressedSparseRowMatrix,
         x: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let mut result = Array1::zeros(matrix.rows);
+        let mut result = Array1::zeros([matrix.rows]);
 
         for i in 0..matrix.rows {
             for j in matrix.row_pointers[i]..matrix.row_pointers[i + 1] {

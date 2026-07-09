@@ -50,10 +50,10 @@ pub(crate) struct SelfAdjointConfig {
 
 /// Acquisition geometry: source voxels + per-source signal, receiver voxels.
 ///
-/// `source_signal` is `(n_rows, nt)` with `n_rows == source_voxels.len()` for a
+/// `source_signal` is `(n_rows, nt)` with `n_rows == (source_voxels.shape()[0] * source_voxels.shape()[1] * source_voxels.shape()[2])` for a
 /// per-voxel signal, or `n_rows == 1` to broadcast one signal to every source
 /// voxel. Receiver traces are returned/consumed in `receiver_voxels` order.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub(crate) struct Acquisition<'a> {
     pub source_voxels: &'a [(usize, usize, usize)],
     pub source_signal: ArrayView2<'a, f64>,
@@ -90,6 +90,15 @@ impl Spacing {
     }
 }
 
+fn dims3(dims: (usize, usize, usize)) -> [usize; 3] {
+    [dims.0, dims.1, dims.2]
+}
+
+fn array3_from_view(view: ArrayView3<'_, f64>) -> Array3<f64> {
+    Array3::from_vec(view.shape(), view.iter().copied().collect())
+        .expect("self-adjoint view shape must match data length")
+}
+
 fn validate(
     model_c: ArrayView3<'_, f64>,
     density: ArrayView3<'_, f64>,
@@ -98,13 +107,14 @@ fn validate(
     acq: &Acquisition<'_>,
 ) -> KwaversResult<()> {
     let dims = grid.dimensions();
-    if model_c.dim() != dims || density.dim() != dims {
+    let dims_shape = dims3(dims);
+    if model_c.shape() != dims_shape || density.shape() != dims_shape {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint engine: model {:?} / density {:?} must match grid {:?}",
-                    model_c.dim(),
-                    density.dim(),
+                    model_c.shape(),
+                    density.shape(),
                     dims
                 ),
             },
@@ -127,24 +137,25 @@ fn validate(
             },
         ));
     }
-    let rows = acq.source_signal.nrows();
-    if rows != 1 && rows != acq.source_voxels.len() {
+    let rows = acq.source_signal.shape()[0];
+    let source_count = acq.source_voxels.len();
+    if rows != 1 && rows != source_count {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint engine: source_signal rows {} must be 1 or n_sources {}",
                     rows,
-                    acq.source_voxels.len()
+                    source_count
                 ),
             },
         ));
     }
-    if acq.source_signal.ncols() < cfg.nt {
+    if acq.source_signal.shape()[1] < cfg.nt {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint engine: source_signal has {} samples, need nt = {}",
-                    acq.source_signal.ncols(),
+                    acq.source_signal.shape()[1],
                     cfg.nt
                 ),
             },
@@ -165,7 +176,7 @@ fn apply_helmholtz(
     sp: &Spacing,
     out: &mut Array3<f64>,
 ) {
-    let (nx, ny, nz) = p.dim();
+    let [nx, ny, nz] = p.shape();
     // Flat contiguous traversal: the inputs are always full standard-layout
     // (C-order) arrays here, so the strided neighbour offsets are computed once
     // (`stride_i = ny·nz`, `stride_j = nz`, `stride_k = 1`) and the linear index
@@ -241,11 +252,17 @@ fn apply_helmholtz(
 
 /// `W⁻¹ = ρc²` (the inverse of the energy weight `W = 1/(ρc²)`).
 fn w_inverse(model_c: ArrayView3<'_, f64>, density: ArrayView3<'_, f64>) -> Array3<f64> {
-    let mut wm1 = Array3::zeros(model_c.dim());
-    Zip::from(&mut wm1)
-        .and(model_c)
-        .and(density)
-        .for_each(|w, &c, &rho| *w = rho * c * c);
+    let shape = model_c.shape();
+    let mut wm1 = Array3::zeros(shape);
+    for i in 0..shape[0] {
+        for j in 0..shape[1] {
+            for k in 0..shape[2] {
+                let c = model_c[[i, j, k]];
+                let rho = density[[i, j, k]];
+                wm1[[i, j, k]] = rho * c * c;
+            }
+        }
+    }
     wm1
 }
 
@@ -270,24 +287,26 @@ struct Coeffs {
 
 fn coeffs(wm1: &Array3<f64>, damping: Option<ArrayView3<'_, f64>>, dt: f64) -> Coeffs {
     let dt2 = dt * dt;
-    let b = damping.map_or_else(|| Array3::zeros(wm1.dim()), |d| d.to_owned());
-    let mut inv_a_plus = Array3::zeros(wm1.dim());
-    let mut c_curr = Array3::zeros(wm1.dim());
-    let mut c_prev = Array3::zeros(wm1.dim());
-    Zip::from(&mut inv_a_plus)
-        .and(&mut c_curr)
-        .and(&mut c_prev)
-        .and(wm1)
-        .and(&b)
-        .for_each(|iap, cc, cp, &w_inv, &b_val| {
-            let w = 1.0 / w_inv; // W = 1/(ρc²).
-            let a_plus = w / dt2 + b_val / (2.0 * dt);
-            let a_minus = w / dt2 - b_val / (2.0 * dt);
-            let m_diag = 2.0 * w / dt2;
-            *iap = 1.0 / a_plus;
-            *cc = m_diag / a_plus;
-            *cp = a_minus / a_plus;
-        });
+    let b = damping.map_or_else(|| Array3::zeros(wm1.shape()), array3_from_view);
+    let mut inv_a_plus = Array3::zeros(wm1.shape());
+    let mut c_curr = Array3::zeros(wm1.shape());
+    let mut c_prev = Array3::zeros(wm1.shape());
+    let [nx, ny, nz] = wm1.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let w_inv = wm1[[i, j, k]];
+                let b_val = b[[i, j, k]];
+                let w = 1.0 / w_inv; // W = 1/(ρc²).
+                let a_plus = w / dt2 + b_val / (2.0 * dt);
+                let a_minus = w / dt2 - b_val / (2.0 * dt);
+                let m_diag = 2.0 * w / dt2;
+                inv_a_plus[[i, j, k]] = 1.0 / a_plus;
+                c_curr[[i, j, k]] = m_diag / a_plus;
+                c_prev[[i, j, k]] = a_minus / a_plus;
+            }
+        }
+    }
     Coeffs {
         inv_a_plus,
         c_curr,
@@ -354,10 +373,14 @@ pub(crate) fn build_edge_sponge(grid: &Grid, thickness: usize, b_max: f64) -> Ar
         }
     };
     let mut b = Array3::zeros((nx, ny, nz));
-    Zip::indexed(&mut b).for_each(|(i, j, k), val| {
-        let p = profile(i, nx).max(profile(j, ny)).max(profile(k, nz));
-        *val = b_max * p;
-    });
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let p = profile(i, nx).max(profile(j, ny)).max(profile(k, nz));
+                b[[i, j, k]] = b_max * p;
+            }
+        }
+    }
     b
 }
 
@@ -378,10 +401,10 @@ pub(crate) fn forward(
     validate(model_c, density, grid, cfg, acq)?;
     let (nx, ny, nz) = grid.dimensions();
     let sp = Spacing::new(grid);
-    let inv_rho = density.mapv(|r| 1.0 / r);
+    let inv_rho = array3_from_view(density).mapv(|r| 1.0 / r);
     let wm1 = w_inverse(model_c, density);
     let co = coeffs(&wm1, damping, cfg.dt);
-    let scalar_src = acq.source_signal.nrows() == 1;
+    let scalar_src = acq.source_signal.shape()[0] == 1;
 
     let mut history = Array4::<f64>::zeros((cfg.nt, nx, ny, nz));
     let mut p_prev = Array3::<f64>::zeros((nx, ny, nz)); // p^{n-1}
@@ -401,7 +424,7 @@ pub(crate) fn forward(
             };
             p_next[[i, j, k]] += co.inv_a_plus[[i, j, k]] * s;
         }
-        history.index_axis_mut(Axis(0), n + 1).assign(&p_next);
+        history.index_axis_mut(0, n + 1).unwrap().assign(&p_next);
         // Rotate buffers (p_prev, p_curr, p_next) ← (p_curr, p_next, old p_prev):
         // two pointer swaps, no allocation; old p_prev becomes next step's scratch.
         std::mem::swap(&mut p_prev, &mut p_curr);
@@ -429,10 +452,10 @@ pub(crate) fn forward_sensor_only(
     validate(model_c, density, grid, cfg, acq)?;
     let (nx, ny, nz) = grid.dimensions();
     let sp = Spacing::new(grid);
-    let inv_rho = density.mapv(|r| 1.0 / r);
+    let inv_rho = array3_from_view(density).mapv(|r| 1.0 / r);
     let wm1 = w_inverse(model_c, density);
     let co = coeffs(&wm1, damping, cfg.dt);
-    let scalar_src = acq.source_signal.nrows() == 1;
+    let scalar_src = acq.source_signal.shape()[0] == 1;
 
     let mut p_prev = Array3::<f64>::zeros((nx, ny, nz));
     let mut p_curr = Array3::<f64>::zeros((nx, ny, nz));
@@ -480,10 +503,10 @@ pub(crate) fn forward_tail(
     validate(model_c, density, grid, cfg, acq)?;
     let (nx, ny, nz) = grid.dimensions();
     let sp = Spacing::new(grid);
-    let inv_rho = density.mapv(|r| 1.0 / r);
+    let inv_rho = array3_from_view(density).mapv(|r| 1.0 / r);
     let wm1 = w_inverse(model_c, density);
     let co = coeffs(&wm1, None, cfg.dt);
-    let scalar_src = acq.source_signal.nrows() == 1;
+    let scalar_src = acq.source_signal.shape()[0] == 1;
 
     let mut p_prev = Array3::<f64>::zeros((nx, ny, nz));
     let mut p_curr = Array3::<f64>::zeros((nx, ny, nz));
@@ -533,24 +556,24 @@ pub(crate) fn gradient(
     damping: Option<ArrayView3<'_, f64>>,
 ) -> KwaversResult<Array3<f64>> {
     let dims = grid.dimensions();
-    if residual.dim() != (acq.receiver_voxels.len(), cfg.nt) {
+    if residual.shape() != [acq.receiver_voxels.len(), cfg.nt] {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint gradient: residual {:?} must be (n_receivers {}, nt {})",
-                    residual.dim(),
+                    residual.shape(),
                     acq.receiver_voxels.len(),
                     cfg.nt
                 ),
             },
         ));
     }
-    if history.dim() != (cfg.nt, dims.0, dims.1, dims.2) {
+    if history.shape() != [cfg.nt, dims.0, dims.1, dims.2] {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint gradient: history {:?} must be (nt {}, {:?})",
-                    history.dim(),
+                    history.shape(),
                     cfg.nt,
                     dims
                 ),
@@ -559,7 +582,7 @@ pub(crate) fn gradient(
     }
 
     let sp = Spacing::new(grid);
-    let inv_rho = density.mapv(|r| 1.0 / r);
+    let inv_rho = array3_from_view(density).mapv(|r| 1.0 / r);
     let wm1 = w_inverse(model_c, density);
     let co = coeffs(&wm1, damping, cfg.dt);
     let dt = cfg.dt;
@@ -567,12 +590,15 @@ pub(crate) fn gradient(
     // coeff = (∂W/∂c)/dt² = −2/(ρc³ dt²): the damped multipliers carry the dt²
     // scaling absorbed here, so the result equals the lossless gradient when b=0.
     let mut coeff = Array3::<f64>::zeros(dims);
-    Zip::from(&mut coeff)
-        .and(model_c)
-        .and(density)
-        .for_each(|cf, &c, &rho| {
-            *cf = -2.0 / (rho * c * c * c * dt2);
-        });
+    for i in 0..dims.0 {
+        for j in 0..dims.1 {
+            for k in 0..dims.2 {
+                let c = model_c[[i, j, k]];
+                let rho = density[[i, j, k]];
+                coeff[[i, j, k]] = -2.0 / (rho * c * c * c * dt2);
+            }
+        }
+    }
 
     let mut xi_next = Array3::<f64>::zeros(dims); // ξ^{m+1}
     let mut xi_curr = Array3::<f64>::zeros(dims); // ξ^{m}   (ξ^{N-1} = 0)
@@ -591,21 +617,18 @@ pub(crate) fn gradient(
         }
 
         // Gradient term for n = m-1: g += coeff · ξ^n · (p^{m} − 2p^{m-1} + p^{m-2}).
-        let p_m = history.index_axis(Axis(0), m);
-        let p_m1 = history.index_axis(Axis(0), m - 1);
-        Zip::indexed(&mut gradient)
-            .and(&coeff)
-            .and(&xi_prev)
-            .and(&p_m)
-            .and(&p_m1)
-            .for_each(|(i, j, k), g, &cf, &xi, &pm, &pm1| {
-                let pm2 = if m >= 2 {
-                    history[[m - 2, i, j, k]]
-                } else {
-                    0.0
-                };
-                *g += cf * xi * (pm - 2.0 * pm1 + pm2);
-            });
+        let p_m = history.index_axis(0, m).unwrap();
+        let p_m1 = history.index_axis(0, m - 1).unwrap();
+        for i in 0..dims.0 {
+            for j in 0..dims.1 {
+                for k in 0..dims.2 {
+                    let pm2 = if m >= 2 { history[[m - 2, i, j, k]] } else { 0.0 };
+                    gradient[[i, j, k]] += coeff[[i, j, k]]
+                        * xi_prev[[i, j, k]]
+                        * (p_m[[i, j, k]] - 2.0 * p_m1[[i, j, k]] + pm2);
+                }
+            }
+        }
 
         // Rotate (xi_next, xi_curr, xi_prev) ← (xi_curr, xi_prev, old xi_next):
         // old xi_next becomes next step's scratch; no per-step allocation.
@@ -614,11 +637,15 @@ pub(crate) fn gradient(
     }
 
     if let Some(mute) = source_mute {
-        Zip::from(&mut gradient).and(mute).for_each(|g, &m| {
-            if m > 0.5 {
-                *g = 0.0;
+        for i in 0..dims.0 {
+            for j in 0..dims.1 {
+                for k in 0..dims.2 {
+                    if mute[[i, j, k]] > 0.5 {
+                        gradient[[i, j, k]] = 0.0;
+                    }
+                }
             }
-        });
+        }
     }
 
     Ok(gradient)
@@ -657,19 +684,20 @@ pub(crate) fn gradient_reconstructed(
     source_mute: Option<ArrayView3<'_, f64>>,
 ) -> KwaversResult<Array3<f64>> {
     let dims = grid.dimensions();
-    if residual.dim() != (acq.receiver_voxels.len(), cfg.nt) {
+    if residual.shape() != [acq.receiver_voxels.len(), cfg.nt] {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint reconstructed gradient: residual {:?} must be (n_receivers {}, nt {})",
-                    residual.dim(),
+                    residual.shape(),
                     acq.receiver_voxels.len(),
                     cfg.nt
                 ),
             },
         ));
     }
-    if p_last.dim() != dims || p_second_last.dim() != dims {
+    let dims_shape = dims3(dims);
+    if p_last.shape() != dims_shape || p_second_last.shape() != dims_shape {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
@@ -680,19 +708,22 @@ pub(crate) fn gradient_reconstructed(
     }
 
     let sp = Spacing::new(grid);
-    let inv_rho = density.mapv(|r| 1.0 / r);
+    let inv_rho = array3_from_view(density).mapv(|r| 1.0 / r);
     let wm1 = w_inverse(model_c, density);
     let co = coeffs(&wm1, None, cfg.dt); // lossless
     let dt = cfg.dt;
     let dt2 = dt * dt;
-    let scalar_src = acq.source_signal.nrows() == 1;
+    let scalar_src = acq.source_signal.shape()[0] == 1;
     let mut coeff = Array3::<f64>::zeros(dims);
-    Zip::from(&mut coeff)
-        .and(model_c)
-        .and(density)
-        .for_each(|cf, &c, &rho| {
-            *cf = -2.0 / (rho * c * c * c * dt2);
-        });
+    for i in 0..dims.0 {
+        for j in 0..dims.1 {
+            for k in 0..dims.2 {
+                let c = model_c[[i, j, k]];
+                let rho = density[[i, j, k]];
+                coeff[[i, j, k]] = -2.0 / (rho * c * c * c * dt2);
+            }
+        }
+    }
 
     let mut xi_next = Array3::<f64>::zeros(dims); // ξ^{m+1}
     let mut xi_curr = Array3::<f64>::zeros(dims); // ξ^{m}
@@ -702,8 +733,8 @@ pub(crate) fn gradient_reconstructed(
     let mut gradient = Array3::<f64>::zeros(dims);
 
     // Forward window during the backward sweep: pf_m = p^m, pf_m1 = p^{m-1}.
-    let mut pf_m = p_last.to_owned(); // p^{N-1}
-    let mut pf_m1 = p_second_last.to_owned(); // p^{N-2}
+    let mut pf_m = array3_from_view(p_last); // p^{N-1}
+    let mut pf_m1 = array3_from_view(p_second_last); // p^{N-2}
     let mut pf_m2 = Array3::<f64>::zeros(dims); // reused scratch (overwritten, or zeroed at m=1)
 
     for m in (1..cfg.nt).rev() {
@@ -735,15 +766,15 @@ pub(crate) fn gradient_reconstructed(
         }
 
         // Imaging condition for n = m-1: g += coeff · ξ^{m-1} · (p^m − 2p^{m-1} + p^{m-2}).
-        Zip::from(&mut gradient)
-            .and(&coeff)
-            .and(&xi_prev)
-            .and(&pf_m)
-            .and(&pf_m1)
-            .and(&pf_m2)
-            .for_each(|g, &cf, &xi, &pm, &pm1, &pm2| {
-                *g += cf * xi * (pm - 2.0 * pm1 + pm2);
-            });
+        for i in 0..dims.0 {
+            for j in 0..dims.1 {
+                for k in 0..dims.2 {
+                    gradient[[i, j, k]] += coeff[[i, j, k]]
+                        * xi_prev[[i, j, k]]
+                        * (pf_m[[i, j, k]] - 2.0 * pf_m1[[i, j, k]] + pf_m2[[i, j, k]]);
+                }
+            }
+        }
 
         // Slide both windows for the next (m-1) iteration via pointer swaps
         // (old head buffer becomes the next step's reused scratch; no allocation).
@@ -754,11 +785,15 @@ pub(crate) fn gradient_reconstructed(
     }
 
     if let Some(mute) = source_mute {
-        Zip::from(&mut gradient).and(mute).for_each(|g, &m| {
-            if m > 0.5 {
-                *g = 0.0;
+        for i in 0..dims.0 {
+            for j in 0..dims.1 {
+                for k in 0..dims.2 {
+                    if mute[[i, j, k]] > 0.5 {
+                        gradient[[i, j, k]] = 0.0;
+                    }
+                }
             }
-        });
+        }
     }
 
     Ok(gradient)

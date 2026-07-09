@@ -113,35 +113,31 @@ impl FlexibleTransducerArray {
         let mut normals = leto::Array2::zeros([n, 3]);
 
         for i in 0..n {
-            // Simple normal calculation based on neighboring elements
-            let (v1, v2) = if i == 0 {
-                // First element
-                let p0 = positions.row(0);
-                let p1 = positions.row(1.min(n - 1));
-                let v = &p1 - &p0;
-                (v.clone(), v)
-            } else if i == n - 1 {
-                // Last element
-                let p0 = positions.row(n - 2);
-                let p1 = positions.row(n - 1);
-                let v = &p1 - &p0;
-                (v.clone(), v)
-            } else {
-                // Middle elements
-                let p0 = positions.row(i - 1);
-                let p1 = positions.row(i);
-                let p2 = positions.row(i + 1);
-                (&p1 - &p0, &p2 - &p1)
+            let get_pos = |r: usize| -> [f64; 3] {
+                [positions[[r, 0]], positions[[r, 1]], positions[[r, 2]]]
             };
-
-            // Cross product to get normal (assuming array lies roughly in x-y plane)
+            let sub = |a: [f64; 3], b: [f64; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+            let (v1, v2) = if i == 0 {
+                let p0 = get_pos(0);
+                let p1 = get_pos(1.min(n - 1));
+                let v = sub(p1, p0);
+                (v, v)
+            } else if i == n - 1 {
+                let p0 = get_pos(n - 2);
+                let p1 = get_pos(n - 1);
+                let v = sub(p1, p0);
+                (v, v)
+            } else {
+                let p0 = get_pos(i - 1);
+                let p1 = get_pos(i);
+                let p2 = get_pos(i + 1);
+                (sub(p1, p0), sub(p2, p1))
+            };
             let normal = [
                 v1[1].mul_add(v2[2], -(v1[2] * v2[1])),
                 v1[2].mul_add(v2[0], -(v1[0] * v2[2])),
                 v1[0].mul_add(v2[1], -(v1[1] * v2[0])),
             ];
-
-            // Normalize
             let mag = normal[2]
                 .mul_add(normal[2], normal[1].mul_add(normal[1], normal[0].powi(2)))
                 .sqrt();
@@ -150,7 +146,6 @@ impl FlexibleTransducerArray {
                 normals[[i, 1]] = normal[1] / mag;
                 normals[[i, 2]] = normal[2] / mag;
             } else {
-                // Default to z-direction if undefined
                 normals[[i, 2]] = 1.0;
             }
         }

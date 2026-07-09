@@ -29,9 +29,9 @@ fn test_infer_grid_shape_and_finiteness() {
         batch_size: 64,
     };
     let (p_min, p_max, p_rms) = infer_grid(&net, &params).unwrap();
-    assert_eq!(p_min.dim(), (8, 6, 6));
-    assert_eq!(p_max.dim(), (8, 6, 6));
-    assert_eq!(p_rms.dim(), (8, 6, 6));
+    assert_eq!(p_min.shape(), [8, 6, 6]);
+    assert_eq!(p_max.shape(), [8, 6, 6]);
+    assert_eq!(p_rms.shape(), [8, 6, 6]);
     for v in p_min.iter().chain(p_max.iter()).chain(p_rms.iter()) {
         assert!(
             v.is_finite(),

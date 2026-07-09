@@ -3,6 +3,7 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
+num-complex = "0.4"
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -40,7 +41,6 @@ bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 ndarray = { version = "0.16" }
-num-complex = { version = "0.4", features = ["bytemuck"] }
 gaia = { git = "https://github.com/ryancinsight/gaia", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"

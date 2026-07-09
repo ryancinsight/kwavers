@@ -55,11 +55,11 @@ impl Filters {
         bandpass: [f64; 2],
         sampling_frequency: f64,
     ) -> KwaversResult<Array2<f64>> {
-        let (n_samples, n_sensors) = data.dim();
+        let [n_samples, n_sensors] = data.shape();
         let mut filtered = Array2::zeros((n_samples, n_sensors));
 
         for sensor_idx in 0..n_sensors {
-            let sensor_signal = data.column(sensor_idx);
+            let sensor_signal = data.index_axis(1, sensor_idx).unwrap();
             let filtered_signal = self.bandpass_filter_1d(
                 sensor_signal.to_owned(),
                 bandpass[0],
@@ -86,7 +86,7 @@ impl Filters {
         high_freq: f64,
         sampling_freq: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let n = signal.len();
+        let n = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
         if n == 0 {
             return Ok(signal);
         }
@@ -112,11 +112,11 @@ impl Filters {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_envelope_detection(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_samples, n_sensors) = data.dim();
+        let [n_samples, n_sensors] = data.shape();
         let mut envelope = Array2::zeros((n_samples, n_sensors));
 
         for sensor_idx in 0..n_sensors {
-            let signal = data.column(sensor_idx);
+            let signal = data.index_axis(1, sensor_idx).unwrap();
             let analytic_signal = analytic::hilbert_transform(
                 &LetoArray1::from_vec([n_samples], signal.iter().copied().collect())
                     .expect("photoacoustic signal length must match its Leto shape"),
@@ -154,7 +154,7 @@ impl Filters {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn apply_ram_lak_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
-        let (n_samples, _) = data.dim();
+        let [n_samples, _] = data.shape();
         let filter = self.create_ram_lak_filter(n_samples);
 
         for mut col in data.columns_mut() {
@@ -170,7 +170,7 @@ impl Filters {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn apply_shepp_logan_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
-        let (n_samples, _) = data.dim();
+        let [n_samples, _] = data.shape();
         let filter = self.create_shepp_logan_filter(n_samples);
 
         for mut col in data.columns_mut() {
@@ -186,7 +186,7 @@ impl Filters {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn apply_cosine_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
-        let (n_samples, _) = data.dim();
+        let [n_samples, _] = data.shape();
         let filter = self.create_cosine_filter(n_samples);
 
         for mut col in data.columns_mut() {
@@ -251,7 +251,7 @@ impl Filters {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn apply_hamming_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
-        let (n_samples, _) = data.dim();
+        let [n_samples, _] = data.shape();
         let filter = self.create_hamming_filter(n_samples);
 
         for mut col in data.columns_mut() {
@@ -270,7 +270,7 @@ impl Filters {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn apply_hann_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
-        let (n_samples, _) = data.dim();
+        let [n_samples, _] = data.shape();
         let filter = self.create_hann_filter(n_samples);
 
         for mut col in data.columns_mut() {
@@ -338,8 +338,8 @@ impl Filters {
         signal: Array1<f64>,
         filter: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n = signal.len();
-        let leto_signal = LetoArray1::from_shape_vec([n], signal.to_vec())
+        let n = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
+        let leto_signal = LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
             .expect("photoacoustic filter signal length must match its Leto shape");
         let mut complex_signal = fft_1d_leto(leto_signal.view());
 

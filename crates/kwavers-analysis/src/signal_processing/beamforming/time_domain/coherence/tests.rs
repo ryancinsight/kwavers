@@ -13,7 +13,7 @@ use leto::{
     Array2,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Build a single-sample aligned aperture column `(n_elements, 1)`.
@@ -539,3 +539,4 @@ fn pcf_iq_rejects_empty_aperture_and_bad_sensitivity() {
     assert!(phase_coherence_from_iq_aperture(&ok, -1.0).is_err());
     assert!(phase_coherence_from_iq_aperture(&ok, f64::NAN).is_err());
 }
+

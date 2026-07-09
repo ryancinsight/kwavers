@@ -65,7 +65,7 @@ impl StreamingModel {
     #[must_use]
     pub fn new(grid: &Grid) -> Self {
         Self {
-            velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+            velocity: Array3::zeros([grid.nx, grid.ny, grid.nz]),
         }
     }
 

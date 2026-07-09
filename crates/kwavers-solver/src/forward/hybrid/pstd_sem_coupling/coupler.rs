@@ -68,7 +68,7 @@ impl PstdSemCoupler {
     }
 
     fn extract_pstd_interface(&self, pstd_field: &Array3<f64>) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity(self.interface.pstd_interface_points.len());
+        let mut interface_values = Vec::with_capacity((self.interface.pstd_interface_points.shape()[0] * self.interface.pstd_interface_points.shape()[1] * self.interface.pstd_interface_points.shape()[2]));
         for &(i, j, k) in &self.interface.pstd_interface_points {
             interface_values.push(pstd_field[[i, j, k]]);
         }
@@ -76,13 +76,13 @@ impl PstdSemCoupler {
     }
 
     fn extract_sem_interface(&self, sem_field: &[f64]) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity(self.interface.sem_interface_nodes.len());
+        let mut interface_values = Vec::with_capacity((self.interface.sem_interface_nodes.shape()[0] * self.interface.sem_interface_nodes.shape()[1] * self.interface.sem_interface_nodes.shape()[2]));
         for &node_idx in &self.interface.sem_interface_nodes {
             let value = sem_field.get(node_idx).ok_or_else(|| {
                 KwaversError::InvalidInput(format!(
                     "SEM interface node index {} is out of bounds (sem_field len {})",
                     node_idx,
-                    sem_field.len()
+                    (sem_field.shape()[0] * sem_field.shape()[1] * sem_field.shape()[2])
                 ))
             })?;
             interface_values.push(*value);
@@ -91,8 +91,8 @@ impl PstdSemCoupler {
     }
 
     fn apply_modal_transform(&self, pstd_values: &[f64]) -> KwaversResult<Vec<f64>> {
-        let mut transformed = vec![0.0; self.interface.modal_transform.ncols()];
-        for i in 0..self.interface.modal_transform.nrows() {
+        let mut transformed = vec![0.0; self.interface.modal_transform.shape()[1]];
+        for i in 0..self.interface.modal_transform.shape()[0] {
             let pstd_value = match pstd_values.get(i) {
                 Some(v) => *v,
                 None => continue,
@@ -127,13 +127,13 @@ impl PstdSemCoupler {
                 KwaversError::InvalidInput(format!(
                     "SEM interface node index {} is out of bounds (sem_field len {})",
                     sem_node,
-                    sem_field.len()
+                    (sem_field.shape()[0] * sem_field.shape()[1] * sem_field.shape()[2])
                 ))
             })?;
 
             for (j, &(pi, pj, pk)) in self.interface.pstd_interface_points.iter().enumerate() {
-                if i < self.interface.projection_matrix.nrows()
-                    && j < self.interface.projection_matrix.ncols()
+                if i < self.interface.projection_matrix.shape()[0]
+                    && j < self.interface.projection_matrix.shape()[1]
                 {
                     let weight = self.interface.projection_matrix[[i, j]];
                     pstd_field[[pi, pj, pk]] += weight * sem_value;
@@ -173,7 +173,7 @@ impl PstdSemCoupler {
     ///
     #[must_use]
     pub fn has_converged(&self, tolerance: f64) -> bool {
-        if self.convergence_history.len() < 2 {
+        if (self.convergence_history.shape()[0] * self.convergence_history.shape()[1] * self.convergence_history.shape()[2]) < 2 {
             return false;
         }
         let last_residual = *self.convergence_history.last().unwrap();

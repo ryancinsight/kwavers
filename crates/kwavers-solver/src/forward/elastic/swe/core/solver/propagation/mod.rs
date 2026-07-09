@@ -183,7 +183,7 @@ impl ElasticWaveSolver {
         initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        if initial_displacement.dim() != (nx, ny, nz) {
+        if initial_displacement.shape() != [nx, ny, nz] {
             return Err(NumericalError::InvalidOperation(
                 "Initial displacement shape does not match grid".to_owned(),
             )

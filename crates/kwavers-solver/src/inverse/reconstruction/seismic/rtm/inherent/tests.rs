@@ -5,12 +5,7 @@
 
 #[cfg(test)]
 mod tests {
-    use leto::{
-    /* s -- no leto equivalent */,
-    Array2,
-    Array3,
-    Array4,
-};
+    use leto::{Array2, Array3, Array4};
 
     use crate::inverse::reconstruction::seismic::config::{
         RtmImagingCondition, SeismicImagingConfig,
@@ -40,7 +35,7 @@ mod tests {
         // zero in the interior (the second difference of a linear function).
         let ramp = Array3::from_shape_fn((4, 4, 4), |(i, _, _)| i as f64);
         let lap = rtm.compute_laplacian(&ramp).expect("3-D laplacian");
-        assert_eq!(lap.dim(), (4, 4, 4));
+        assert_eq!(lap.shape(), [4, 4, 4]);
         assert!(
             lap[[1, 1, 1]].abs() < 1e-12,
             "interior Laplacian of a linear ramp must be 0, got {}",
@@ -84,7 +79,7 @@ mod tests {
         let mut rtm = rtm_with_condition(RtmImagingCondition::SourceNormalized);
         let mut source = Array4::zeros((3, 3, 3, 3));
         for t in 0..3_usize {
-            source.slice_mut(s![t, .., .., ..]).fill(t as f64);
+            source.slice_mut(s![t, .., .., ..]).unwrap().fill(t as f64);
         }
         let receiver = Array4::from_elem((3, 3, 3, 3), 3.0);
 

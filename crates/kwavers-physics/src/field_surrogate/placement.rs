@@ -25,11 +25,11 @@ pub fn place_kernel_at_focus(
     target_focus_idx: (usize, usize, usize),
 ) -> Array3<f64> {
     let (tnx, tny, tnz) = target_shape;
-    let (knx, kny, knz) = kernel.field.dim();
+    let [knx, kny, knz] = kernel.field.shape();
     let (fkx, fky, fkz) = kernel.focus_idx;
     let (ftx, fty, ftz) = target_focus_idx;
 
-    let mut out = Array3::<f64>::zeros((tnx, tny, tnz));
+    let mut out = Array3::<f64>::zeros([tnx, tny, tnz]);
 
     // Kernel-coordinate range that maps into the target grid. We use
     // signed arithmetic to handle the case where the kernel extends
@@ -62,9 +62,22 @@ pub fn place_kernel_at_focus(
     let dst_y1 = dst_y0 + (src_y1 - src_y0) as usize;
     let dst_z1 = dst_z0 + (src_z1 - src_z0) as usize;
 
-    let src_view = kernel.fieldslice(&[(Some(src_x0 as usize as isize) as usize, Some(src_x1 as usize as isize) as usize, 1), (Some(src_y0 as usize as isize) as usize, Some(src_y1 as usize as isize) as usize, 1), (Some(src_z0 as usize as isize) as usize, Some(src_z1 as usize as isize) as usize, 1)]);
-    outslice_mut(&[(Some(dst_x0 as isize) as usize, Some(dst_x1 as isize) as usize, 1), (Some(dst_y0 as isize) as usize, Some(dst_y1 as isize) as usize, 1), (Some(dst_z0 as isize) as usize, Some(dst_z1 as isize) as usize, 1)])
-        .assign(&src_view);
+    let src_view = kernel
+        .field
+        .slice(&[
+            (src_x0 as usize, src_x1 as usize, 1),
+            (src_y0 as usize, src_y1 as usize, 1),
+            (src_z0 as usize, src_z1 as usize, 1),
+        ])
+        .expect("kernel slice is in bounds");
+    let mut dst_view = out
+        .slice_mut(&[
+            (dst_x0, dst_x1, 1),
+            (dst_y0, dst_y1, 1),
+            (dst_z0, dst_z1, 1),
+        ])
+        .expect("target slice is in bounds");
+    dst_view.assign(&src_view);
 
     out
 }

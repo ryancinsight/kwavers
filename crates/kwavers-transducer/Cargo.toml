@@ -8,9 +8,9 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
+eunomia = { workspace = true }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-field = { path = "../kwavers-field" }

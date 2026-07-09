@@ -10,7 +10,7 @@ use leto::{
     Array2,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum value `P_Capon(p)` for a candidate point.
 ///
@@ -119,3 +119,4 @@ pub fn capon_spatial_spectrum_point(
 
     Ok(1.0 / denom_re)
 }
+

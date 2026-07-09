@@ -46,7 +46,7 @@ impl WorkspacePool {
     /// Current number of idle workspaces in the pool.
     pub fn size(&self) -> usize {
         let pool = self.workspaces.lock();
-        pool.len()
+        (pool.shape()[0] * pool.shape()[1] * pool.shape()[2])
     }
 }
 

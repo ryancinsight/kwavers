@@ -30,7 +30,7 @@ fn test_boltzmann_deep_closed() {
     let GatingModel::Boltzmann(ref bp) = params else {
         panic!("expected Boltzmann");
     };
-    let tension = Array3::zeros((2, 2, 2));
+    let tension = Array3::zeros([2, 2, 2]);
     let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
     for &v in &p_open {
         assert!(
@@ -95,7 +95,7 @@ fn test_boltzmann_zero_temperature_is_error() {
     let GatingModel::Boltzmann(ref bp) = params else {
         panic!("expected Boltzmann");
     };
-    let tension = Array3::zeros((2, 2, 2));
+    let tension = Array3::zeros([2, 2, 2]);
     assert!(boltzmann_p_open(&tension, bp, 0.0).is_err());
     assert!(boltzmann_p_open(&tension, bp, -1.0).is_err());
 }
@@ -129,7 +129,7 @@ fn test_pressure_threshold_zero_steepness_is_error() {
         single_channel_conductance_s: 60.0e-12,
         reversal_potential_v: 0.0,
     };
-    let p_rad = Array3::zeros((2, 2, 2));
+    let p_rad = Array3::zeros([2, 2, 2]);
     assert!(pressure_threshold_p_open(&p_rad, &pp).is_err());
     pp.steepness_pa = -1.0;
     assert!(pressure_threshold_p_open(&p_rad, &pp).is_err());
@@ -152,7 +152,7 @@ fn test_ion_current_analytical() {
 ///
 #[test]
 fn test_ion_current_zero_when_closed() {
-    let p_open = Array3::zeros((2, 2, 2));
+    let p_open = Array3::zeros([2, 2, 2]);
     let current = ion_current(&p_open, 3.0e-9, 1000.0, -60.0e-3, 0.0);
     for &v in &current {
         assert_eq!(v, 0.0);

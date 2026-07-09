@@ -27,7 +27,7 @@ impl ThermalAcousticCoupling {
         Self {
             source: AcousticHeatingSource::new(absorption_coefficient, intensity),
             coefficients,
-            acoustic_heat: Array3::zeros((1, 1, 1)),
+            acoustic_heat: Array3::zeros([1, 1, 1]),
         }
     }
 
@@ -52,9 +52,9 @@ impl ThermalAcousticCoupling {
         dt: f64,
     ) -> KwaversResult<()> {
         let (nx, ny, nz) = (
-            self.acoustic_heat.dim().0,
-            self.acoustic_heat.dim().1,
-            self.acoustic_heat.dim().2,
+            self.acoustic_heat.shape()[0],
+            self.acoustic_heat.shape()[1],
+            self.acoustic_heat.shape()[2],
         );
 
         for i in 0..nx {

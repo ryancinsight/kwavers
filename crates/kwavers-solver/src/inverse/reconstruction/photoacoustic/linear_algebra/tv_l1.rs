@@ -28,20 +28,20 @@ impl PhotoacousticLinearSolver {
         lambda: f64,
         shape: [usize; 3],
     ) -> KwaversResult<Array1<f64>> {
-        let (m, n) = a.dim();
+        let [m, n] = a.shape();
 
-        if b.len() != m {
+        if (b.shape()[0] * b.shape()[1] * b.shape()[2]) != m {
             return Err(kwavers_core::error::NumericalError::MatrixDimension {
                 operation: "Total Variation regularized least squares".to_owned(),
                 expected: format!("RHS vector length {} to match matrix rows {}", m, m),
-                actual: format!("RHS vector length {}", b.len()),
+                actual: format!("RHS vector length {}", (b.shape()[0] * b.shape()[1] * b.shape()[2])),
             }
             .into());
         }
 
         let mut x = Array1::zeros(n);
-        let at = a.t();
-        let ata = at.dot(a);
+        let at = a.transpose([1, 0]).unwrap();
+        let ata = leto_ops::Dot::dot(at, a);
         let atb = at.dot(&b);
 
         let lipschitz = self.power_method(&ata)?;
@@ -69,7 +69,7 @@ impl PhotoacousticLinearSolver {
     /// Always returns `Ok`; signature is `KwaversResult` for consistency with
     /// callers that propagate the error chain.
     fn power_method(&self, a: &Array2<f64>) -> KwaversResult<f64> {
-        let n = a.nrows();
+        let n = a.shape()[0];
         let mut v = Array1::<f64>::ones(n);
         v /= v.dot(&v).sqrt();
 
@@ -108,7 +108,7 @@ impl PhotoacousticLinearSolver {
                     let idx_y = i * ny * nz + (j + 1) * nz + k;
                     let idx_z = i * ny * nz + j * nz + (k + 1);
 
-                    if idx_x < x.len() && idx_y < x.len() && idx_z < x.len() {
+                    if idx_x < (x.shape()[0] * x.shape()[1] * x.shape()[2]) && idx_y < (x.shape()[0] * x.shape()[1] * x.shape()[2]) && idx_z < (x.shape()[0] * x.shape()[1] * x.shape()[2]) {
                         let grad_x = x[idx_x] - x[idx];
                         let grad_y = x[idx_y] - x[idx];
                         let grad_z = x[idx_z] - x[idx];

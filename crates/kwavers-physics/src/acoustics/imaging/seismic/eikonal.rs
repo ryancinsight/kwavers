@@ -87,7 +87,7 @@ impl EikonalSolver {
     /// Returns [`KwaversError::InvalidInput`] when the speed field shape does not
     /// match the grid or contains a non-positive speed.
     pub fn from_sound_speed(grid: &Grid, sound_speed: &Array3<f64>) -> KwaversResult<Self> {
-        if sound_speed.dim() != (grid.nx, grid.ny, grid.nz) {
+        if sound_speed.shape() != [grid.nx, grid.ny, grid.nz] {
             return Err(KwaversError::InvalidInput(
                 "sound speed shape does not match grid".to_owned(),
             ));
@@ -119,13 +119,13 @@ impl EikonalSolver {
     /// Returns [`KwaversError::InvalidInput`] when the source index is outside
     /// the grid.
     pub fn solve(&self, source: (usize, usize, usize)) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = self.slowness.dim();
+        let [nx, ny, nz] = self.slowness.shape();
         if source.0 >= nx || source.1 >= ny || source.2 >= nz {
             return Err(KwaversError::InvalidInput(
                 "eikonal source index out of bounds".to_owned(),
             ));
         }
-        let mut t = Array3::from_elem((nx, ny, nz), FAR);
+        let mut t = Array3::from_elem([nx, ny, nz], FAR);
         t[[source.0, source.1, source.2]] = 0.0;
         // First-order source initialization: seed the immediate neighbourhood
         // with the analytic local-slowness traveltime `s·|Δx|`. This removes the
@@ -175,7 +175,7 @@ impl EikonalSolver {
 
     /// One directional Gauss–Seidel sweep over the grid.
     fn sweep(&self, t: &mut Array3<f64>, forward_x: bool, forward_y: bool, forward_z: bool) {
-        let (nx, ny, nz) = self.slowness.dim();
+        let [nx, ny, nz] = self.slowness.shape();
         let xi: Vec<usize> = order(nx, forward_x);
         let yi: Vec<usize> = order(ny, forward_y);
         let zi: Vec<usize> = order(nz, forward_z);

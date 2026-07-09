@@ -56,14 +56,14 @@ impl PluginManager {
         };
 
         for &idx in &self.execution_order {
-            if idx >= self.plugins.len() {
+            if idx >= (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2]) {
                 return Err(KwaversError::Physics(PhysicsError::InvalidState {
                     field: "plugin_index".to_owned(),
                     value: idx.to_string(),
                     reason: format!(
                         "Index {} out of bounds for {} plugins",
                         idx,
-                        self.plugins.len()
+                        (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2])
                     ),
                 }));
             }
@@ -98,14 +98,14 @@ impl PluginManager {
         };
 
         for &idx in &self.execution_order {
-            if idx >= self.plugins.len() {
+            if idx >= (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2]) {
                 return Err(KwaversError::Physics(PhysicsError::InvalidState {
                     field: "plugin_index".to_owned(),
                     value: idx.to_string(),
                     reason: format!(
                         "Index {} out of bounds for {} plugins",
                         idx,
-                        self.plugins.len()
+                        (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2])
                     ),
                 }));
             }

@@ -1,9 +1,9 @@
 //! SolverWorkspace: pre-allocated FFT and real-valued scratch buffers.
 
 use super::ScratchArena;
+use eunomia::Complex;
 use kwavers_grid::Grid;
 use leto::Array3;
-use num_complex::Complex;
 
 /// Pre-allocated workspace for solver operations.
 #[derive(Debug)]

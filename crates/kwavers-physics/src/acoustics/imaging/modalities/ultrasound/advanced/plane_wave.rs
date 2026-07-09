@@ -14,11 +14,8 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::{
-    Array2,
-    Array3,
-};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
+use eunomia::Complex64;
 
 /// Plane wave imaging configuration
 #[derive(Debug, Clone)]
@@ -66,10 +63,10 @@ impl PlaneWaveReconstruction {
     /// Reconstruct PWI image from RF data
     #[must_use]
     pub fn reconstruct(&self, rf_data: &Array2<f64>, image_grid: &Array3<f64>) -> Array2<f64> {
-        let (n_samples, n_elements) = rf_data.dim();
-        let (_, height, width) = image_grid.dim();
+        let [n_samples, n_elements] = rf_data.shape();
+        let [_, height, width] = image_grid.shape();
 
-        let mut image = Array2::<f64>::zeros((height, width));
+        let mut image = Array2::<f64>::zeros([height, width]);
 
         for i in 0..height {
             for j in 0..width {
@@ -107,3 +104,4 @@ impl PlaneWaveReconstruction {
         distance / self.config.sound_speed
     }
 }
+

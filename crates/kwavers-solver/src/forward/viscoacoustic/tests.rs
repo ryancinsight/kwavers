@@ -180,7 +180,7 @@ fn lossless_3d_no_secular_energy_drift() {
         })
         .collect();
     let half = total / 2;
-    let mean = |s: &[f64]| s.iter().sum::<f64>() / s.len() as f64;
+    let mean = |s: &[f64]| s.iter().sum::<f64>() / (s.shape()[0] * s.shape()[1] * s.shape()[2]) as f64;
     let (first, second) = (mean(&energies[..half]), mean(&energies[half..]));
     assert!(
         (second - first).abs() / first < 2e-3,

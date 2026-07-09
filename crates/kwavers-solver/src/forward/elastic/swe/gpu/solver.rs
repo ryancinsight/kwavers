@@ -230,7 +230,7 @@ impl GPUElasticWaveSolver3D {
         let start_time = std::time::Instant::now();
 
         let volume_size = grid.nx * grid.ny * grid.nz;
-        let total_memory = volume_size * std::mem::size_of::<f64>() * (arrival_times.len() + 2);
+        let total_memory = volume_size * std::mem::size_of::<f64>() * ((arrival_times.shape()[0] * arrival_times.shape()[1] * arrival_times.shape()[2]) + 2);
 
         if !self.device.can_handle_volume(grid) {
             return Err(KwaversError::ResourceLimitExceeded {
@@ -239,7 +239,7 @@ impl GPUElasticWaveSolver3D {
         }
 
         let mut memory_blocks = Vec::new();
-        for _ in 0..(arrival_times.len() + 2) {
+        for _ in 0..((arrival_times.shape()[0] * arrival_times.shape()[1] * arrival_times.shape()[2]) + 2) {
             memory_blocks.push(
                 self.memory_pool
                     .allocate(volume_size * std::mem::size_of::<f64>())?,
@@ -257,7 +257,7 @@ impl GPUElasticWaveSolver3D {
             "multidirectional_inversion",
             grid_size,
             block_size,
-            volume_size * arrival_times.len(),
+            volume_size * (arrival_times.shape()[0] * arrival_times.shape()[1] * arrival_times.shape()[2]),
         );
 
         let total_time = start_time.elapsed().as_secs_f64() + kernel_time;
@@ -274,7 +274,7 @@ impl GPUElasticWaveSolver3D {
             execution_time: total_time,
             kernel_time,
             memory_used: total_memory,
-            directions_processed: wave_directions.len(),
+            directions_processed: (wave_directions.shape()[0] * wave_directions.shape()[1] * wave_directions.shape()[2]),
             convergence_iterations: 50,
             residual_error: 0.001,
         })
@@ -297,6 +297,6 @@ impl GPUElasticWaveSolver3D {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn optimize_memory_layout(&self, data: &mut Array3<f64>) {
-        data.as_slice_memory_order().unwrap();
+        data.as_slice().unwrap();
     }
 }

@@ -1,9 +1,7 @@
 use super::*;
+use eunomia::Complex;
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-};
-use num_complex::Complex;
+use leto::Array3;
 
 #[test]
 fn test_workspace_creation() {

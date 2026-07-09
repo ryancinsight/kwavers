@@ -27,7 +27,7 @@ where
 
 fn var_col<B: coeus_ops::BackendOps<f32> + Default>(vals: &[f32], backend: &B) -> Var<f32, B> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![vals.len(), 1], vals, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(vals.shape()[0] * vals.shape()[1] * vals.shape()[2]), 1], vals, backend),
         false,
     )
 }
@@ -105,9 +105,9 @@ where
     {
         use std::time::Instant;
 
-        if x_data.len() != y_data.len()
-            || x_data.len() != t_data.len()
-            || x_data.len() != u_data.nrows()
+        if (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]) != (y_data.shape()[0] * y_data.shape()[1] * y_data.shape()[2])
+            || (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]) != (t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2])
+            || (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]) != u_data.shape()[0]
         {
             return Err(KwaversError::InvalidInput(
                 "Data dimensions must match".into(),

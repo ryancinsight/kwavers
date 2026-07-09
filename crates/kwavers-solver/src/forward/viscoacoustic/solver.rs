@@ -109,7 +109,7 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("nz", &self.nz)
             .field("dt", &self.dt)
             .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
-            .field("arms", &self.arms.len())
+            .field("arms", &(self.arms.shape()[0] * self.arms.shape()[1] * self.arms.shape()[2]))
             .finish()
     }
 }
@@ -291,7 +291,7 @@ impl ViscoacousticMemorySolver {
             m_u,
             m_inf,
             max_unrelaxed_speed,
-            sigma: vec![Array3::zeros(shape); arms.len()],
+            sigma: vec![Array3::zeros(shape); (arms.shape()[0] * arms.shape()[1] * arms.shape()[2])],
             arms,
             fft: get_fft_for_grid(nx, ny, nz),
             kx: fft_wavenumbers(nx, dx),
@@ -530,7 +530,7 @@ impl ViscoacousticMemorySolver {
     }
 
     /// Register a **soft (additive) pressure source** at `index` with a per-step
-    /// time `signal`: `p[index] += signal[step]` while `step < signal.len()`.
+    /// time `signal`: `p[index] += signal[step]` while `step < (signal.shape()[0] * signal.shape()[1] * signal.shape()[2])`.
     /// # Errors
     /// - `index` out of grid bounds.
     pub fn add_pressure_source(
@@ -551,7 +551,7 @@ impl ViscoacousticMemorySolver {
         self.check_index(index)?;
         self.pressure_sensors.push(index);
         self.sensor_record.push(Vec::new());
-        Ok(self.pressure_sensors.len() - 1)
+        Ok((self.pressure_sensors.shape()[0] * self.pressure_sensors.shape()[1] * self.pressure_sensors.shape()[2]) - 1)
     }
 
     /// Recorded pressure time trace for sensor `id`.
@@ -601,16 +601,16 @@ impl ViscoacousticMemorySolver {
     ) {
         let [nx, ny, nz] = cbuf.shape();
         assert_eq!(
-            field.dim(),
+            field.shape(),
             (nx, ny, nz),
             "invariant: viscoacoustic FFT scratch shape matches input field"
         );
         assert_eq!(
-            out.dim(),
+            out.shape(),
             (nx, ny, nz),
             "invariant: viscoacoustic derivative output shape matches input field"
         );
-        if let (Some(dst), Some(src)) = (cbuf.as_slice_mut(), field.as_slice_memory_order()) {
+        if let (Some(dst), Some(src)) = (cbuf.as_slice_mut(), field.as_slice()) {
             for (dst, &src) in dst.iter_mut().zip(src) {
                 *dst = Complex64::new(src, 0.0);
             }
@@ -638,7 +638,7 @@ impl ViscoacousticMemorySolver {
             }
         }
         ifft_3d_axis_complex_inplace(fft, cbuf, axis);
-        if let (Some(dst), Some(src)) = (out.as_slice_memory_order_mut(), cbuf.as_slice()) {
+        if let (Some(dst), Some(src)) = (out.as_slice_mut(), cbuf.as_slice()) {
             for (dst, src) in dst.iter_mut().zip(src) {
                 *dst = src.re;
             }

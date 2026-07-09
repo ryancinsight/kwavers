@@ -79,7 +79,7 @@ pub struct EmpiricalBioDamageModel<T: std::fmt::Debug + Clone> {
     pub necrosis_rate: T,
 }
 
-impl<T: eunomia::FloatElement + std::fmt::Debug + Clone> BioDamageModel
+impl<T: eunomia::FloatElement + std::fmt::Debug + Clone + std::ops::Neg<Output = T>> BioDamageModel
     for EmpiricalBioDamageModel<T>
 {
     type Scalar = T;
@@ -91,9 +91,9 @@ impl<T: eunomia::FloatElement + std::fmt::Debug + Clone> BioDamageModel
         _material: &AcousticMaterialProperties,
     ) -> Self::Scalar {
         if collapse_energy <= self.lysis_threshold {
-            T::zero()
+            T::ZERO
         } else {
-            let one = T::one();
+            let one = T::ONE;
             let exponent = -(collapse_energy - self.lysis_threshold) / self.lysis_tau;
             one - exponent.exp()
         }
@@ -106,15 +106,15 @@ impl<T: eunomia::FloatElement + std::fmt::Debug + Clone> BioDamageModel
         cavitation_dose: Self::Scalar,
         dt: Self::Scalar,
     ) -> Self::Scalar {
-        let one = T::one();
+        let one = T::ONE;
         let delta = self.necrosis_rate * (one - current_necrosis) * cavitation_dose * dt;
         let next_val = current_necrosis + delta;
 
         // Manual clamp to avoid missing primitive bounds depending on trait presence
         if next_val > one {
             one
-        } else if next_val < T::zero() {
-            T::zero()
+        } else if next_val < T::ZERO {
+            T::ZERO
         } else {
             next_val
         }

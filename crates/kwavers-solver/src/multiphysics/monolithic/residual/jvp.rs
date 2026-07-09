@@ -29,12 +29,14 @@ impl MonolithicCoupler {
         let mut u_plus = self
             .jvp_state_scratch
             .take()
-            .filter(|scratch| scratch.dim() == u.dim())
-            .unwrap_or_else(|| Array3::zeros(u.dim()));
+            .filter(|scratch| scratch.shape() == u.shape())
+            .unwrap_or_else(|| Array3::zeros(u.shape()));
         u_plus.assign(u);
-        u_plus.zip_mut_with(v, |candidate, &direction| {
+        for (candidate, direction) in u_plus.iter_mut().zip(v.iter()) {
+            {
             *candidate += eps * direction;
-        });
+        };
+        };
 
         let mut f_u_plus = match self.compute_residual(&u_plus, u_prev, dt, dims, field_order) {
             Ok(residual) => residual,
@@ -46,9 +48,9 @@ impl MonolithicCoupler {
         self.jvp_state_scratch = Some(u_plus);
 
         let inv_eps = 1.0 / eps;
-        f_u_plus.zip_mut_with(&f_u, |jv, &base| {
+        for (jv, base) in f_u_plus.iter_mut().zip(f_u.iter()) {
             *jv = (*jv - base) * inv_eps;
-        });
+        }
         Ok(f_u_plus)
     }
 }

@@ -45,7 +45,7 @@ where
             pts: &[(f64, f64, f64)],
             backend: &B,
         ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>) {
-            let n = pts.len().max(1);
+            let n = (pts.shape()[0] * pts.shape()[1] * pts.shape()[2]).max(1);
             let xv: Vec<f32> = pts.iter().map(|p| p.0 as f32).collect();
             let yv: Vec<f32> = pts.iter().map(|p| p.1 as f32).collect();
             let tv: Vec<f32> = pts.iter().map(|p| p.2 as f32).collect();
@@ -65,13 +65,13 @@ where
             (mk(xv), mk(yv), mk(tv))
         }
 
-        let n_colloc = collocation_points.len().max(1);
-        let n_bc = boundary_points.len().max(1);
-        let n_ic = initial_points.len().max(1);
+        let n_colloc = (collocation_points.shape()[0] * collocation_points.shape()[1] * collocation_points.shape()[2]).max(1);
+        let n_bc = (boundary_points.shape()[0] * boundary_points.shape()[1] * boundary_points.shape()[2]).max(1);
+        let n_ic = (initial_points.shape()[0] * initial_points.shape()[1] * initial_points.shape()[2]).max(1);
 
         let mut results: Vec<(TrainingMetrics2D, Vec<f32>)> = Vec::new();
 
-        let n_replicas = self.coordinator.model_replicas.len();
+        let n_replicas = (self.coordinator.model_replicas.shape()[0] * self.coordinator.model_replicas.shape()[1] * self.coordinator.model_replicas.shape()[2]);
         for replica_idx in 0..n_replicas {
             let backend = B::default();
 
@@ -158,7 +158,7 @@ where
         &mut self,
         gpu_results: &[(TrainingMetrics2D, Vec<f32>)],
     ) -> KwaversResult<()> {
-        let n_gpus = gpu_results.len();
+        let n_gpus = (gpu_results.shape()[0] * gpu_results.shape()[1] * gpu_results.shape()[2]);
 
         let mut total_loss = 0.0_f64;
         let mut data_loss = 0.0_f64;

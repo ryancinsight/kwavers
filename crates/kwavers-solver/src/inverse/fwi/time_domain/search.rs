@@ -17,11 +17,11 @@ fn write_trial_model(
     gradient: &Array3<f64>,
     gradient_scale: f64,
 ) {
-    debug_assert_eq!(test_model.dim(), model.dim());
-    debug_assert_eq!(test_model.dim(), gradient.dim());
-    let (_, ny, nz) = model.dim();
+    debug_assert_eq!(test_model.shape(), model.shape());
+    debug_assert_eq!(test_model.shape(), gradient.shape());
+    let [_, ny, nz] = model.shape();
     let values = test_model
-        .as_slice_memory_order_mut()
+        .as_slice_mut()
         .expect("invariant: Array3::zeros trial model has contiguous storage");
     for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
         values,
@@ -105,7 +105,7 @@ impl FwiProcessor {
 
         let current_objective = self.compute_objective(model, observed_data, geometry, grid)?;
 
-        let mut test_model = Array3::<f64>::zeros(model.dim());
+        let mut test_model = Array3::<f64>::zeros(model.shape());
 
         for _ in 0..max_iter {
             let s = step_size;
@@ -145,7 +145,7 @@ impl FwiProcessor {
         let max_halvings = 5;
         let current_obj = self.compute_joint_objective(model, shots, grid)?;
 
-        let mut test_model = Array3::<f64>::zeros(model.dim());
+        let mut test_model = Array3::<f64>::zeros(model.shape());
 
         let mut step = self.parameters.step_size;
         for _ in 0..max_halvings {

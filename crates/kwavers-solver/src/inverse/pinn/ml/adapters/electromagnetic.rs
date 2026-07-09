@@ -279,7 +279,7 @@ mod tests {
         let sources = vec![source1, source2];
         let pinn_sources = adapt_em_sources(&sources, 0.0).expect("Should adapt all sources");
 
-        assert_eq!(pinn_sources.len(), 2);
+        assert_eq!((pinn_sources.shape()[0] * pinn_sources.shape()[1] * pinn_sources.shape()[2]), 2);
         assert!((pinn_sources[0].frequency - 1e9).abs() < 1e-6);
         assert!((pinn_sources[1].frequency - 2e9).abs() < 1e-6);
     }

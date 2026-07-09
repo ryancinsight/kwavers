@@ -48,7 +48,7 @@ impl FemHelmholtzSolver {
     /// Construct solver from configuration and mesh.
     #[must_use]
     pub fn new(config: FemHelmholtzConfig, mesh: TetrahedralMesh) -> Self {
-        let num_dofs = mesh.nodes.len();
+        let num_dofs = (mesh.nodes.shape()[0] * mesh.nodes.shape()[1] * mesh.nodes.shape()[2]);
         Self {
             config,
             mesh,

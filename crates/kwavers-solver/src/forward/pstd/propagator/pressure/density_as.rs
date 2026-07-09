@@ -46,10 +46,10 @@ fn compute_axisymmetric_coefficient(
     );
 
     if let (Some(coef_values), Some(rho0_values), Some(rx_values), Some(rz_values)) = (
-        coefficient.as_slice_memory_order_mut(),
-        rho0.as_slice_memory_order(),
-        rhox.as_slice_memory_order(),
-        rhoz.as_slice_memory_order(),
+        coefficient.as_slice_mut(),
+        rho0.as_slice(),
+        rhox.as_slice(),
+        rhoz.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(coef_values, |index, coefficient| {
             *coefficient = 2.0f64.mul_add(rx_values[index] + rz_values[index], rho0_values[index]);
@@ -57,7 +57,7 @@ fn compute_axisymmetric_coefficient(
         return;
     }
 
-    let (nx, nr) = coefficient.dim();
+    let [nx, nr] = coefficient.shape();
     for k in 0..nr {
         for i in 0..nx {
             coefficient[[i, k]] = 2.0f64.mul_add(rhox[[i, k]] + rhoz[[i, k]], rho0[[i, k]]);
@@ -84,11 +84,11 @@ fn update_axisymmetric_density_fused(
         "invariant: AS density shape matches update coefficient"
     );
 
-    let (_nx, nr) = density.dim();
+    let [_nx, nr] = density.shape();
     if let (Some(density_values), Some(div_values), Some(coef_values)) = (
-        density.as_slice_memory_order_mut(),
-        divergence.as_slice_memory_order(),
-        coefficient.as_slice_memory_order(),
+        density.as_slice_mut(),
+        divergence.as_slice(),
+        coefficient.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
             let (i, k) = dense_indices(index, nr);
@@ -98,7 +98,7 @@ fn update_axisymmetric_density_fused(
         return;
     }
 
-    let (nx, nr) = density.dim();
+    let [nx, nr] = density.shape();
     for k in 0..nr {
         for i in 0..nx {
             let p = pml[pml_index(axis, i, k)];
@@ -126,9 +126,9 @@ fn update_axisymmetric_density_unfused(
     );
 
     if let (Some(density_values), Some(div_values), Some(coef_values)) = (
-        density.as_slice_memory_order_mut(),
-        divergence.as_slice_memory_order(),
-        coefficient.as_slice_memory_order(),
+        density.as_slice_mut(),
+        divergence.as_slice(),
+        coefficient.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
             *density -= dt * coef_values[index] * div_values[index];
@@ -136,7 +136,7 @@ fn update_axisymmetric_density_unfused(
         return;
     }
 
-    let (nx, nr) = density.dim();
+    let [nx, nr] = density.shape();
     for k in 0..nr {
         for i in 0..nx {
             density[[i, k]] -= dt * coefficient[[i, k]] * divergence[[i, k]];
@@ -266,12 +266,10 @@ impl PSTDSolver {
         // apply_absorption_to_pressure fuses div_ux/div_uy/div_uz → dpx at Step 1 (Opt-7+12).
         // Writing to div_u* here (not dpx) ensures absorption receives the correct AS values.
         leto_view_mut3(&mut self.div_ux)
-            .slice_mut(s![.., 0, ..])
-            .assign(&ctx.duxdx);
+            .slice_mut(s![.., 0, ..]).unwrap().unwrap().assign(&ctx.duxdx);
         self.div_uy.fill(0.0);
         leto_view_mut3(&mut self.div_uz)
-            .slice_mut(s![.., 0, ..])
-            .assign(&ctx.duzdr);
+            .slice_mut(s![.., 0, ..]).unwrap().unwrap().assign(&ctx.duzdr);
         self.as_ctx = Some(ctx);
         Ok(())
     }

@@ -45,7 +45,7 @@ pub fn integrate_field(field: &Array3<f64>, dx: f64, dy: f64, dz: f64) -> f64 {
 /// Calculate RMS (root mean square) of field
 #[must_use]
 pub fn field_rms(field: &Array3<f64>) -> f64 {
-    let n = field.len() as f64;
+    let n = (field.shape()[0] * field.shape()[1] * field.shape()[2]) as f64;
     let sum_squares = field.iter().map(|&x| x * x).sum::<f64>();
     (sum_squares / n).sqrt()
 }

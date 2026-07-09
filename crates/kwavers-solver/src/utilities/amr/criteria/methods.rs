@@ -19,8 +19,8 @@ impl ErrorEstimator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub(super) fn gradient_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -47,8 +47,8 @@ impl ErrorEstimator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn curvature_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         // Compute Laplacian (curvature measure)
         for i in 1..nx - 1 {
@@ -87,8 +87,8 @@ impl ErrorEstimator {
         let coarse = interpolator.restrict(field);
         let prolonged = interpolator.prolongate(&coarse);
 
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         // 2nd order spatial discretization: scaling = 1 / (2^2 - 1) = 1/3
         let order: f64 = 2.0;
@@ -127,8 +127,8 @@ impl ErrorEstimator {
         let wavelet = WaveletTransform::new(WaveletBasis::Daubechies(4), 2);
         let coeffs = wavelet.forward(field)?;
 
-        let (nx, ny, nz) = coeffs.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = coeffs.shape();
+        let mut error = Array3::zeros(field.shape());
 
         for i in 0..nx {
             for j in 0..ny {
@@ -172,8 +172,8 @@ impl ErrorEstimator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub(super) fn physics_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         let grad = self.gradient_error(field)?;
         let curv = self.curvature_error(field)?;
@@ -232,17 +232,17 @@ impl ErrorEstimator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn smooth_field(&self, field: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return Ok(());
         }
 
-        let mut prev_plane = field.index_axis(Axis(0), 0).to_owned();
-        let mut curr_plane = field.index_axis(Axis(0), 1).to_owned();
+        let mut prev_plane = field.index_axis(0, 0).unwrap().to_owned();
+        let mut curr_plane = field.index_axis(0, 1).unwrap().to_owned();
         let mut next_plane = Array2::<f64>::zeros((ny, nz));
 
         for i in 1..nx - 1 {
-            next_plane.assign(&field.index_axis(Axis(0), i + 1));
+            next_plane.assign(&field.index_axis(0, i + 1));
 
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {

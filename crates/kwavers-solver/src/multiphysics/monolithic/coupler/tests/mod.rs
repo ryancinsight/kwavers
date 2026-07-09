@@ -27,7 +27,7 @@ fn test_monolithic_coupler_creation() {
     let coupler = MonolithicCoupler::new(newton_config, gmres_config);
 
     assert!(coupler.convergence_history().is_empty());
-    assert_eq!(coupler.physics_components.len(), 0);
+    assert_eq!((coupler.physics_components.shape()[0] * coupler.physics_components.shape()[1] * coupler.physics_components.shape()[2]), 0);
 }
 
 /// Repeated shape-compatible solves reuse the previous-state snapshot buffer.

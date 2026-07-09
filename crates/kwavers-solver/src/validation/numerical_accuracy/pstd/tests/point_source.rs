@@ -84,16 +84,16 @@ fn test_point_source_phase_accuracy() {
     let _phase_tolerance = PI / 2.0;
     println!(
         "Point source: collected {} phase samples",
-        phase_samples.len()
+        (phase_samples.shape()[0] * phase_samples.shape()[1] * phase_samples.shape()[2])
     );
     assert!(
-        phase_samples.len() >= 4,
+        (phase_samples.shape()[0] * phase_samples.shape()[1] * phase_samples.shape()[2]) >= 4,
         "Need at least 4 phase samples for validation"
     );
 
     // Verify wave propagated (non-zero pressure at measurement points)
     let avg_pressure: f64 =
-        phase_samples.iter().map(|(_, p)| p.abs()).sum::<f64>() / phase_samples.len() as f64;
+        phase_samples.iter().map(|(_, p)| p.abs()).sum::<f64>() / (phase_samples.shape()[0] * phase_samples.shape()[1] * phase_samples.shape()[2]) as f64;
     println!(
         "Average pressure at measurement radius: {:.2e}",
         avg_pressure

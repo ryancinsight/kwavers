@@ -113,7 +113,7 @@ impl AmplitudeCorrector {
         let phase_factor = reference_speed / actual_speed;
 
         // Apply phase correction via time stretching/compression
-        let n_original = signal.len();
+        let n_original = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
         let n_resampled = (n_original as f64 * phase_factor) as usize;
 
         let mut resampled_signal = vec![0.0; n_resampled];

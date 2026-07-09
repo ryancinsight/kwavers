@@ -28,11 +28,11 @@ impl DiscontinuityDetector {
         grid: &Grid,
         output: &mut Array3<bool>,
     ) -> KwaversResult<()> {
-        if field.dim() != (grid.nx, grid.ny, grid.nz) || output.dim() != field.dim() {
+        if field.shape() != (grid.nx, grid.ny, grid.nz) || output.shape() != field.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "DiscontinuityDetector dimension mismatch: field={:?}, output={:?}, grid=({}, {}, {})",
-                field.dim(),
-                output.dim(),
+                field.shape(),
+                output.shape(),
                 grid.nx,
                 grid.ny,
                 grid.nz
@@ -65,7 +65,7 @@ impl DiscontinuityDetector {
 
 impl super::traits::DiscontinuityDetection for DiscontinuityDetector {
     fn detect(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<bool>> {
-        let mut mask = Array3::from_elem(field.dim(), false);
+        let mut mask = Array3::from_elem(field.shape(), false);
         self.detect_into(field, grid, &mut mask)?;
         Ok(mask)
     }

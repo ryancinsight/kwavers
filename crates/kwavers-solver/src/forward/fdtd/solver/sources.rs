@@ -3,11 +3,8 @@
 //! classification by mask geometry.
 
 use leto::Array3 as LetoArray3;
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-};
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
@@ -32,9 +29,7 @@ fn apply_boundary_pressure_mask(
         "invariant: FDTD pressure source mask shape matches pressure field"
     );
 
-    if let (Some(pressure_values), Some(mask_values)) =
-        (pressure.as_slice_mut(), mask.as_slice_memory_order())
-    {
+    if let (Some(pressure_values), Some(mask_values)) = (pressure.as_slice_mut(), mask.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
             if mask_values[idx] > 0.0 {
                 *pressure_value = amplitude;
@@ -60,9 +55,7 @@ fn apply_additive_pressure_mask(
         "invariant: FDTD pressure source mask shape matches pressure field"
     );
 
-    if let (Some(pressure_values), Some(mask_values)) =
-        (pressure.as_slice_mut(), mask.as_slice_memory_order())
-    {
+    if let (Some(pressure_values), Some(mask_values)) = (pressure.as_slice_mut(), mask.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
             *pressure_value += mask_values[idx] * amplitude;
         });

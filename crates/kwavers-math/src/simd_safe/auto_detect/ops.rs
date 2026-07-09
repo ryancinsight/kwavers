@@ -40,7 +40,9 @@ pub(in crate::simd_safe::auto_detect) fn scale_array(array: &mut Array3<f64>, sc
         return;
     }
 
-    array.mapv_inplace(|x| x * scalar);
+    for value in array.iter_mut() {
+        *value *= scalar;
+    }
 }
 
 pub(in crate::simd_safe::auto_detect) fn fma_arrays(

@@ -7,7 +7,7 @@ use leto::{
     Array2,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Short-Lag Spatial Coherence beamformer
 #[derive(Debug, Clone)]
@@ -276,3 +276,4 @@ pub(super) fn compute_lag_coherence(signals: &[Complex64], lag: usize) -> f64 {
         0.0
     }
 }
+

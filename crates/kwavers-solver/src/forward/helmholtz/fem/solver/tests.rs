@@ -90,7 +90,7 @@ fn test_interpolate_solution_basic() {
         .interpolate_solution(query_points.view())
         .expect("Interpolation failed");
 
-    assert_eq!(result.len(), 3);
+    assert_eq!((result.shape()[0] * result.shape()[1] * result.shape()[2]), 3);
     assert_relative_eq!(result[0].re, 1.5, epsilon = 1e-10);
     assert_relative_eq!(result[0].im, 0.0, epsilon = 1e-10);
     assert_relative_eq!(result[1].re, 1.0, epsilon = 1e-10);
@@ -304,7 +304,7 @@ fn fem_p1_interpolation_error_converges_as_h_squared() {
                 }
             }
         }
-        let npts = test_pts.len();
+        let npts = (test_pts.shape()[0] * test_pts.shape()[1] * test_pts.shape()[2]);
         let mut raw = vec![0.0f64; npts * 3];
         for (idx, pt) in test_pts.iter().enumerate() {
             raw[idx * 3] = pt[0];

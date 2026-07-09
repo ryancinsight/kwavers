@@ -44,7 +44,7 @@ impl NumericalSolver for DGSolver {
         dt: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.solve_into(field, dt, mask, &mut result)?;
         Ok(result)
     }
@@ -109,7 +109,7 @@ impl DGOperations for DGSolver {
         }
 
         let v_inv = &*self.vandermonde_inv;
-        let mut coefficients = Array3::<f64>::zeros(field.raw_dim());
+        let mut coefficients = Array3::<f64>::zeros(field.shape());
 
         for e in 0..n_elements {
             for v in 0..n_vars {
@@ -151,7 +151,7 @@ impl DGOperations for DGSolver {
         }
 
         let v = &*self.vandermonde;
-        let mut field = Array3::<f64>::zeros(coefficients.raw_dim());
+        let mut field = Array3::<f64>::zeros(coefficients.shape());
 
         for e in 0..n_elements {
             for var in 0..n_vars {
@@ -181,12 +181,12 @@ impl DGSolver {
         mask: &Array3<bool>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        if field.dim() != mask.dim() || field.dim() != output.dim() {
+        if field.shape() != mask.shape() || field.shape() != output.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "DG solve_into dimension mismatch: field={:?}, mask={:?}, output={:?}",
-                field.dim(),
-                mask.dim(),
-                output.dim()
+                field.shape(),
+                mask.shape(),
+                output.shape()
             )));
         }
 
@@ -238,7 +238,7 @@ impl DGSolver {
     ///
     pub fn set_element_data(&mut self, element_id: usize, data: &[f64]) -> KwaversResult<()> {
         if let Some(ref mut coeffs) = self.modal_coefficients {
-            if element_id < coeffs.shape()[0] && data.len() == self.n_nodes {
+            if element_id < coeffs.shape()[0] && (data.shape()[0] * data.shape()[1] * data.shape()[2]) == self.n_nodes {
                 for (i, &value) in data.iter().enumerate() {
                     coeffs[(element_id, i, 0)] = value;
                 }

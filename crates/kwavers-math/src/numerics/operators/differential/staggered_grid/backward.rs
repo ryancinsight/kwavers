@@ -38,12 +38,12 @@ impl StaggeredGridOperator {
         }
         debug_assert_eq!(
             dst.shape(),
-            (nx, ny, nz),
+            [nx, ny, nz],
             "apply_backward_x_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
             dst.shape()
         );
         let dx = self.dx;
-        if field.is_standard_layout() {
+        if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
                 if traversal::try_fill_standard_layout(dst, |i, j, k| {
                     let center = traversal::row_major_index(i, j, k, ny, nz);
@@ -97,12 +97,12 @@ impl StaggeredGridOperator {
         }
         debug_assert_eq!(
             dst.shape(),
-            (nx, ny, nz),
+            [nx, ny, nz],
             "apply_backward_y_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
             dst.shape()
         );
         let dy = self.dy;
-        if field.is_standard_layout() {
+        if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
                 if traversal::try_fill_standard_layout(dst, |i, j, k| {
                     let center = traversal::row_major_index(i, j, k, ny, nz);
@@ -156,12 +156,12 @@ impl StaggeredGridOperator {
         }
         debug_assert_eq!(
             dst.shape(),
-            (nx, ny, nz),
+            [nx, ny, nz],
             "apply_backward_z_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
             dst.shape()
         );
         let dz = self.dz;
-        if field.is_standard_layout() {
+        if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
                 if traversal::try_fill_standard_layout(dst, |i, j, k| {
                     let center = traversal::row_major_index(i, j, k, ny, nz);

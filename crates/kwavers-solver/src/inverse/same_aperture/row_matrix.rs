@@ -31,19 +31,19 @@ impl RowMatrix {
     }
 
     fn matvec_impl(&self, x: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(x.len(), self.cols);
-        debug_assert_eq!(out.len(), self.rows);
+        debug_assert_eq!((x.shape()[0] * x.shape()[1] * x.shape()[2]), self.cols);
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.rows);
         for (row, out_value) in out.iter_mut().enumerate().take(self.rows) {
-            *out_value = dot(self.row(row), x);
+            *out_value = dot(self.index_axis(0, row).unwrap(), x);
         }
     }
 
     fn t_matvec_impl(&self, y: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(y.len(), self.rows);
-        debug_assert_eq!(out.len(), self.cols);
+        debug_assert_eq!((y.shape()[0] * y.shape()[1] * y.shape()[2]), self.rows);
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols);
         out.fill(0.0);
         for (row, y_value) in y.iter().copied().enumerate().take(self.rows) {
-            for (dst, value) in out.iter_mut().zip(self.row(row).iter()) {
+            for (dst, value) in out.iter_mut().zip(self.index_axis(0, row).unwrap().iter()) {
                 *dst += y_value * *value;
             }
         }
@@ -52,7 +52,7 @@ impl RowMatrix {
     fn normal_diag_impl(&self) -> Vec<f32> {
         let mut diag = vec![0.0; self.cols];
         for row in 0..self.rows {
-            for (dst, value) in diag.iter_mut().zip(self.row(row).iter()) {
+            for (dst, value) in diag.iter_mut().zip(self.index_axis(0, row).unwrap().iter()) {
                 *dst += *value * *value;
             }
         }
@@ -91,8 +91,8 @@ impl LinearOperator for RowMatrix {
     }
 
     fn row_values(&self, row: usize, out: &mut [f32]) {
-        debug_assert_eq!(out.len(), self.cols);
-        out.copy_from_slice(self.row(row));
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols);
+        out.copy_from_slice(self.index_axis(0, row).unwrap());
     }
 
     fn normal_diag(&self) -> Vec<f32> {
@@ -100,6 +100,6 @@ impl LinearOperator for RowMatrix {
     }
 
     fn storage_values(&self) -> usize {
-        self.data.len()
+        (self.data.shape()[0] * self.data.shape()[1] * self.data.shape()[2])
     }
 }

@@ -6,7 +6,7 @@
 
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
@@ -317,3 +317,4 @@ mod tests {
         assert!((dt[0]).abs() < 1e-15);
     }
 }
+

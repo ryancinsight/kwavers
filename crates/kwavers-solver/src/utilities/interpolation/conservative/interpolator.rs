@@ -177,7 +177,7 @@ impl UtilConservativeInterpolator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn nnz(&self) -> usize {
-        self.transfer_matrix.iter().map(|row| row.len()).sum()
+        self.transfer_matrix.iter().map(|row| (row.shape()[0] * row.shape()[1] * row.shape()[2])).sum()
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────

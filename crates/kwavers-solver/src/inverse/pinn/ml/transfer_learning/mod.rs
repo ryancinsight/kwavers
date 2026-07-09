@@ -94,7 +94,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DomainAdapter")
-            .field("num_layers", &self._layers.len())
+            .field("num_layers", &(self._layers.shape()[0] * self._layers.shape()[1] * self._layers.shape()[2]))
             .field("strength", &self._strength)
             .finish()
     }

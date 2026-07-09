@@ -42,7 +42,7 @@ impl NonlinearWave {
         medium: &dyn Medium,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
 
         // Single FFT of pressure — shared by gradient and Laplacian computations.
         let mut pressure_k = fft_3d_array(&leto_real_field(pressure));
@@ -87,7 +87,7 @@ impl NonlinearWave {
         let grad_z = ndarray_real_field(ifft_3d_array(&grad_z_k));
         let laplacian = ndarray_real_field(ifft_3d_array(&laplacian_k));
 
-        let mut nonlinear_term = Array3::zeros((nx, ny, nz));
+        let mut nonlinear_term = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -171,7 +171,7 @@ mod tests {
 
         // cos(π·i) alternates ±1: DFT energy concentrated at index N/2 = 6
         let p_nyquist =
-            Array3::from_shape_fn((n, n, n), |(i, _j, _k)| 1e5_f64 * (PI * i as f64).cos());
+            Array3::from_shape_fn([n, n, n], |(i, _j, _k)| 1e5_f64 * (PI * i as f64).cos());
 
         let term = w
             .compute_nonlinear_term(&p_nyquist, &medium, &grid)

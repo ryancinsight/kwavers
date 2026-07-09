@@ -1,7 +1,7 @@
 use super::{beamformer::compute_lag_coherence, SlscBeamformer, SlscConfig};
 use kwavers_core::error::KwaversResult;
 use leto::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Adaptive SLSC with automatic parameter selection
 #[derive(Debug, Clone)]
@@ -73,3 +73,4 @@ impl Default for AdaptiveSlsc {
         Self::new()
     }
 }
+

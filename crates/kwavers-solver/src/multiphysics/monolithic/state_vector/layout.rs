@@ -1,8 +1,5 @@
 use kwavers_field::UnifiedFieldType;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-};
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Return field keys in deterministic stacked-state order.
@@ -28,8 +25,8 @@ pub(in crate::multiphysics::monolithic) fn flatten_fields(
     }
 
     let first = &fields[&field_order[0]];
-    let (nx, ny, nz) = first.dim();
-    let n_fields = field_order.len();
+    let [nx, ny, nz] = first.shape();
+    let n_fields = (field_order.shape()[0] * field_order.shape()[1] * field_order.shape()[2]);
 
     let mut stacked = Array3::zeros((n_fields * nx, ny, nz));
     for (i, ft) in field_order.iter().enumerate() {
@@ -54,8 +51,8 @@ pub(in crate::multiphysics::monolithic) fn unflatten_fields(
         return;
     }
 
-    let total_rows = u.dim().0;
-    let nx = total_rows / field_order.len();
+    let total_rows = u.shape()[0];
+    let nx = total_rows / (field_order.shape()[0] * field_order.shape()[1] * field_order.shape()[2]);
 
     for (i, ft) in field_order.iter().enumerate() {
         if let Some(field) = fields.get_mut(ft) {

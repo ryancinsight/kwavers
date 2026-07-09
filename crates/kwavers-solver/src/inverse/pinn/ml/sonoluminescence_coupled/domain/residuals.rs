@@ -31,7 +31,7 @@ where
         let batch_size = x.tensor.shape()[0];
         let mut source_terms = Vec::with_capacity(batch_size);
 
-        let emission_dims = self.emission_calculator.emission_field.dim();
+        let emission_dims = self.emission_calculator.emission_field.shape();
         let (nx, ny, nz) = (emission_dims.0, emission_dims.1, emission_dims.2);
 
         let x_coords = x.tensor.as_slice();

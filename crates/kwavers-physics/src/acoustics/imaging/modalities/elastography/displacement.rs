@@ -36,17 +36,17 @@ impl DisplacementField {
     #[must_use]
     pub fn zeros(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            ux: Array3::zeros((nx, ny, nz)),
-            uy: Array3::zeros((nx, ny, nz)),
-            uz: Array3::zeros((nx, ny, nz)),
+            ux: Array3::zeros([nx, ny, nz]),
+            uy: Array3::zeros([nx, ny, nz]),
+            uz: Array3::zeros([nx, ny, nz]),
         }
     }
 
     /// Calculate displacement magnitude at each point
     #[must_use]
     pub fn magnitude(&self) -> Array3<f64> {
-        let (nx, ny, nz) = self.ux.dim();
-        let mut mag = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = self.ux.shape();
+        let mut mag = Array3::zeros([nx, ny, nz]);
 
         for k in 0..nz {
             for j in 0..ny {
@@ -98,7 +98,7 @@ impl DisplacementEstimator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn estimate(&self, initial_displacement: &Array3<f64>) -> KwaversResult<DisplacementField> {
-        let (nx, ny, nz) = initial_displacement.dim();
+        let [nx, ny, nz] = initial_displacement.shape();
 
         // Simulate ultrafast imaging sequence (typical: 10,000 fps)
         // Track displacement evolution over time
@@ -107,8 +107,8 @@ impl DisplacementEstimator {
         let shear_wave_speed = 3.0; // m/s (typical for soft tissue)
 
         // Initialize displacement fields
-        let ux = Array3::zeros((nx, ny, nz));
-        let uy = Array3::zeros((nx, ny, nz));
+        let ux = Array3::zeros([nx, ny, nz]);
+        let uy = Array3::zeros([nx, ny, nz]);
         let mut uz = initial_displacement.clone();
 
         // Simulate shear wave propagation
@@ -157,9 +157,9 @@ mod tests {
     #[test]
     fn test_displacement_field_creation() {
         let field = DisplacementField::zeros(10, 10, 10);
-        assert_eq!(field.ux.dim(), (10, 10, 10));
-        assert_eq!(field.uy.dim(), (10, 10, 10));
-        assert_eq!(field.uz.dim(), (10, 10, 10));
+        assert_eq!(field.ux.shape(), [10, 10, 10]);
+        assert_eq!(field.uy.shape(), [10, 10, 10]);
+        assert_eq!(field.uz.shape(), [10, 10, 10]);
     }
 
     #[test]
@@ -177,10 +177,10 @@ mod tests {
         let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).unwrap();
         let estimator = DisplacementEstimator::new(&grid);
 
-        let initial = Array3::from_elem((20, 20, 20), 1.0e-6);
+        let initial = Array3::from_elem([20, 20, 20], 1.0e-6);
         let result = estimator.estimate(&initial);
 
         let field = result.unwrap();
-        assert_eq!(field.uz.dim(), (20, 20, 20));
+        assert_eq!(field.uz.shape(), [20, 20, 20]);
     }
 }

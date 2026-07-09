@@ -21,7 +21,7 @@ impl HybridSolver {
         self.pstd_solver.step_forward()?;
         self.fdtd_solver.step_forward()?;
 
-        for region_index in 0..self.regions.len() {
+        for region_index in 0..(self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2]) {
             let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {

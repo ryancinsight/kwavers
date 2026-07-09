@@ -14,14 +14,14 @@ pub(super) fn pitch_catch_rows(
 ) -> Vec<PitchCatchRow> {
     let nonlinear_path_weight = harmonic > 1.0;
     let mut rows = Vec::with_capacity(
-        settings.frequencies_hz.len() * settings.receiver_offsets.len() * therapy_elements.len(),
+        (settings.frequencies_hz.shape()[0] * settings.frequencies_hz.shape()[1] * settings.frequencies_hz.shape()[2]) * (settings.receiver_offsets.shape()[0] * settings.receiver_offsets.shape()[1] * settings.receiver_offsets.shape()[2]) * (therapy_elements.shape()[0] * therapy_elements.shape()[1] * therapy_elements.shape()[2]),
     );
     for &frequency_hz in settings.frequencies_hz {
         let k = std::f64::consts::TAU * frequency_hz * harmonic / settings.phase_speed_m_s;
         let frequency_mhz = frequency_hz * 1.0e-6 * harmonic;
         for (source_idx, &source) in therapy_elements.iter().enumerate() {
             for &offset in settings.receiver_offsets {
-                let receiver_idx = (source_idx + offset).rem_euclid(therapy_elements.len().max(1));
+                let receiver_idx = (source_idx + offset).rem_euclid((therapy_elements.shape()[0] * therapy_elements.shape()[1] * therapy_elements.shape()[2]).max(1));
                 rows.push(PitchCatchRow {
                     source,
                     receiver: therapy_elements[receiver_idx],
@@ -40,8 +40,8 @@ pub(super) fn passive_rows(
     imaging_receivers: &[PlanarPoint],
     frequencies_hz: &[f64],
 ) -> Vec<PassiveRow> {
-    let receiver_count = therapy_elements.len() + imaging_receivers.len();
-    let mut rows = Vec::with_capacity(2 * receiver_count * frequencies_hz.len());
+    let receiver_count = (therapy_elements.shape()[0] * therapy_elements.shape()[1] * therapy_elements.shape()[2]) + (imaging_receivers.shape()[0] * imaging_receivers.shape()[1] * imaging_receivers.shape()[2]);
+    let mut rows = Vec::with_capacity(2 * receiver_count * (frequencies_hz.shape()[0] * frequencies_hz.shape()[1] * frequencies_hz.shape()[2]));
     for &frequency_hz in frequencies_hz {
         let k = std::f64::consts::TAU * (0.5 * frequency_hz) / C_REF_M_S;
         let frequency_mhz = 0.5 * frequency_hz * 1.0e-6;
@@ -86,7 +86,7 @@ fn pitch_catch_row_norm(
     medium: SameApertureMedium<'_>,
 ) -> f32 {
     let mut norm_sq = 0.0_f32;
-    for col in 0..active.len() {
+    for col in 0..(active.shape()[0] * active.shape()[1] * active.shape()[2]) {
         let (point, alpha) = column_lookup(active, medium, col);
         let value = spec.unscaled_value(point, alpha, medium.spacing_m);
         norm_sq += value * value;
@@ -97,7 +97,7 @@ fn pitch_catch_row_norm(
 #[inline]
 fn passive_row_norm(spec: &PassiveRow, active: &ActiveGrid, medium: SameApertureMedium<'_>) -> f32 {
     let mut norm_sq = 0.0_f32;
-    for col in 0..active.len() {
+    for col in 0..(active.shape()[0] * active.shape()[1] * active.shape()[2]) {
         let (point, alpha) = column_lookup(active, medium, col);
         let value = spec.unscaled_value(point, alpha, medium.spacing_m);
         norm_sq += value * value;

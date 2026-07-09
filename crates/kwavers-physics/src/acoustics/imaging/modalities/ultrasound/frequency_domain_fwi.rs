@@ -19,9 +19,9 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::{ElementPosition, TransducerGeometry};
 use leto::Array3;
-use kwavers_math::fft::Complex64;
 
 /// Paper model identifier for audit trails.
 pub const FREQUENCY_DOMAIN_FWI_MODEL: &str = "ali_2025_multi_row_ring_frequency_domain_ust_fwi";

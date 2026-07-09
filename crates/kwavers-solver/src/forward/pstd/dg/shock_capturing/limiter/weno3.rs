@@ -24,7 +24,7 @@ impl WENOLimiter {
         shock_indicator: &Array3<f64>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = src.dim();
+        let [nx, ny, nz] = src.shape();
         for i in 2..nx - 2 {
             for j in 2..ny - 2 {
                 for k in 2..nz - 2 {

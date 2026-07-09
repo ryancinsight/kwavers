@@ -4,7 +4,7 @@ use leto::{
     Array2,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 #[test]
 fn test_slsc_default_config() {
@@ -398,3 +398,4 @@ fn adaptive_slsc_output_bounded_in_zero_one() {
         );
     }
 }
+

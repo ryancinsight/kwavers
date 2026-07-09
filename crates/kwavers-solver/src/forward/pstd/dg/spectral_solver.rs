@@ -224,19 +224,19 @@ impl RegionPSTDSolver {
                 reason: "wave speed must be positive".to_owned(),
             }));
         }
-        if field.dim() != mask.dim() {
+        if field.shape() != mask.shape() {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", field.dim()),
-                    actual: format!("{:?}", mask.dim()),
+                    expected: format!("{:?}", field.shape()),
+                    actual: format!("{:?}", mask.shape()),
                 },
             ));
         }
-        if field.dim() != output.dim() {
+        if field.shape() != output.shape() {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", field.dim()),
-                    actual: format!("{:?}", output.dim()),
+                    expected: format!("{:?}", field.shape()),
+                    actual: format!("{:?}", output.shape()),
                 },
             ));
         }
@@ -244,18 +244,18 @@ impl RegionPSTDSolver {
         self.wave_speed = c;
 
         let field_leto = LetoArray3::from_shape_vec(
-            [field.dim().0, field.dim().1, field.dim().2],
+            [field.shape()[0], field.shape()[1], field.shape()[2]],
             field.iter().copied().collect(),
         )
         .expect("DG spectral field shape must match its Leto FFT shape");
         self.fft.forward_into(&field_leto, &mut self.field_hat);
         apply_laplacian_symbol(&mut self.lap_hat, &self.field_hat, &self.k2, &self.filter);
-        let mut laplacian = LetoArray3::<f64>::zeros([field.dim().0, field.dim().1, field.dim().2]);
+        let mut laplacian = LetoArray3::<f64>::zeros([field.shape()[0], field.shape()[1], field.shape()[2]]);
         self.fft
             .inverse_into(&self.lap_hat, &mut laplacian, &mut self.scratch_hat);
-        for i in 0..field.dim().0 {
-            for j in 0..field.dim().1 {
-                for k in 0..field.dim().2 {
+        for i in 0..field.shape()[0] {
+            for j in 0..field.shape()[1] {
+                for k in 0..field.shape()[2] {
                     self.laplacian[[i, j, k]] = laplacian[[i, j, k]];
                 }
             }
@@ -310,7 +310,7 @@ impl RegionPSTDSolver {
         c: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        let mut next = Array3::zeros(field.dim());
+        let mut next = Array3::zeros(field.shape());
         self.spectral_wave_step_into(field, dt, c, mask, &mut next)?;
         Ok(next)
     }

@@ -72,23 +72,23 @@ impl WesterveltFdtd {
 
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt pressure is standard-layout");
         let pressure_prev = self
             .pressure_prev
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt previous pressure is standard-layout");
         let laplacian = self
             .laplacian
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt laplacian is standard-layout");
         let nonlinear_term = self
             .nonlinear_term
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt nonlinear term is standard-layout");
         let pressure_next = self
             .pressure_next
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: Westervelt next pressure is standard-layout");
         let enable_absorption = self.config.enable_absorption;
         let artificial_viscosity = self.config.artificial_viscosity;

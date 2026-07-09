@@ -51,11 +51,11 @@ impl ConservationDiagnostics for WesterveltFdtd {
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt pressure is standard-layout");
 
         reduce_index_with::<Adaptive, _, _, _>(
-            pressure.len(),
+            (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]),
             0.0,
             |idx| pressure[idx] * pressure[idx] * factor * dv,
             |a, b| a + b,
@@ -116,11 +116,11 @@ impl ConservationDiagnostics for WesterveltFdtd {
         let c0_sq = c0 * c0;
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: Westervelt pressure is standard-layout");
 
         reduce_index_with::<Adaptive, _, _, _>(
-            pressure.len(),
+            (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]),
             0.0,
             |idx| rho0 * (1.0 + pressure[idx] / (rho0 * c0_sq)) * dv,
             |a, b| a + b,

@@ -20,7 +20,7 @@ pub fn gradient<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let shape = field.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -43,11 +43,11 @@ where
     let stencil_radius = coeffs.len();
 
     // X-direction gradient
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
     for i in stencil_radius..nx - stencil_radius {
         for j in 0..ny {
             for k in 0..nz {
-                let mut grad_val = T::zero();
+                let mut grad_val = T::from_f64(0.0);
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
                     grad_val =
@@ -59,11 +59,11 @@ where
     }
 
     // Y-direction gradient
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
     for i in 0..nx {
         for j in stencil_radius..ny - stencil_radius {
             for k in 0..nz {
-                let mut grad_val = T::zero();
+                let mut grad_val = T::from_f64(0.0);
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
                     grad_val =
@@ -75,11 +75,11 @@ where
     }
 
     // Z-direction gradient
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
     for i in 0..nx {
         for j in 0..ny {
             for k in stencil_radius..nz - stencil_radius {
-                let mut grad_val = T::zero();
+                let mut grad_val = T::from_f64(0.0);
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
                     grad_val =
@@ -106,7 +106,7 @@ pub fn gradient_leto<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let field_view = field.view();
     gradient(&field_view, grid, order)

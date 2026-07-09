@@ -97,8 +97,12 @@ impl MixedDomainPropagationPlugin {
     #[must_use]
     pub fn analyze_field(&self, field: &Array3<f64>) -> DomainSelection {
         // Calculate field statistics for domain selection
-        let mean = field.mean().unwrap_or(0.0);
-        let variance = field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / field.len() as f64;
+        let mean = {
+            let arr = &field;
+            let sum: f64 = arr.iter().sum();
+            sum / arr.shape().iter().product::<usize>() as f64
+        }.unwrap_or(0.0);
+        let variance = field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (field.shape()[0] * field.shape()[1] * field.shape()[2]) as f64;
 
         // Estimate nonlinearity strength from field variance
         let nonlinearity_metric = variance.sqrt() / (mean.abs() + 1e-10);
@@ -121,7 +125,7 @@ impl MixedDomainPropagationPlugin {
         &mut self,
         field: &Array3<f64>,
     ) -> KwaversResult<LetoArray3<Complex64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
 
         let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())

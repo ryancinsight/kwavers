@@ -8,7 +8,7 @@ use leto::{
     Array3,
     ArrayView3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Wall filter types
 #[derive(Debug, Clone, Copy)]
@@ -260,3 +260,4 @@ fn project_out(signal: &[Complex64], basis: &[Vec<f64>], projector: &[Vec<f64>])
 
 #[cfg(test)]
 mod tests;
+

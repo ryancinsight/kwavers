@@ -92,7 +92,7 @@ pub fn compute_radiation_pressure(
     intensity: &Array3<f64>,
     sound_speed: &Array3<f64>,
 ) -> Array3<f64> {
-    let mut out = Array3::<f64>::zeros(intensity.dim());
+    let mut out = Array3::<f64>::zeros(intensity.shape());
     zip_mut_two_refs(
         out.view_mut(),
         intensity.view(),
@@ -132,7 +132,7 @@ pub fn compute_membrane_tension(
         "CellMembraneParams must have positive radius and thickness"
     );
     let r = params.radius_m;
-    let mut out = Array3::<f64>::zeros(intensity.dim());
+    let mut out = Array3::<f64>::zeros(intensity.shape());
     zip_mut_two_refs(
         out.view_mut(),
         intensity.view(),

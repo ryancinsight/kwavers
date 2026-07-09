@@ -141,7 +141,7 @@ impl CherenkovModel {
     ) -> Array1<f64> {
         let ft = self.frank_tamm_factor(velocity);
         if ft == 0.0 {
-            return Array1::zeros(wavelengths.len());
+            return Array1::zeros([wavelengths.len()]);
         }
         let scale = self.coherence_factor * charge.abs() * ft;
         wavelengths.mapv(|lambda| {

@@ -70,7 +70,7 @@ impl FwiProcessor {
             ));
         }
 
-        let dim = initial_model.dim();
+        let dim = initial_model.shape();
         let mut model = initial_model.clone();
         self.apply_model_constraints(&mut model);
 

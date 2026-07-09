@@ -65,7 +65,7 @@ impl PennesBioheat {
         medium: &dyn Medium,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let mut source = Array3::zeros(temperature.raw_dim());
+        let mut source = Array3::zeros(temperature.shape());
 
         crate::parallel::for_each_indexed_pair_mut(
             source.view_mut(),

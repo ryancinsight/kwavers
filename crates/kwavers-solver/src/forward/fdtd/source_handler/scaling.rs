@@ -12,12 +12,6 @@ impl Array3ValueAccess for leto::Array3<f64> {
     }
 }
 
-impl Array3ValueAccess for leto::Array3<f64> {
-    fn at(&self, i: usize, j: usize, k: usize) -> f64 {
-        self[[i, j, k]]
-    }
-}
-
 impl SourceHandler {
     /// Precompute per-voxel source_kappa for velocity source injection.
     ///
@@ -91,7 +85,7 @@ impl SourceHandler {
         let dx = grid.dx;
         let dy = grid.dy;
         let dz = grid.dz;
-        let n = self.u_indices.len();
+        let n = (self.u_indices.shape()[0] * self.u_indices.shape()[1] * self.u_indices.shape()[2]);
         self.u_scale_x = Vec::with_capacity(n);
         self.u_scale_y = Vec::with_capacity(n);
         self.u_scale_z = Vec::with_capacity(n);
@@ -145,8 +139,8 @@ impl SourceHandler {
 
         let dx = grid.dx;
 
-        self.p_scale_rho = Vec::with_capacity(self.p_indices.len());
-        self.p_scale_p = Vec::with_capacity(self.p_indices.len());
+        self.p_scale_rho = Vec::with_capacity((self.p_indices.shape()[0] * self.p_indices.shape()[1] * self.p_indices.shape()[2]));
+        self.p_scale_p = Vec::with_capacity((self.p_indices.shape()[0] * self.p_indices.shape()[1] * self.p_indices.shape()[2]));
 
         for &(i, j, k, _weight) in &self.p_indices {
             let c0_val = c0.at(i, j, k);

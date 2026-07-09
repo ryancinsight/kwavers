@@ -161,9 +161,9 @@ pub fn add_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) 
     assert_eq!(dims, b.shape());
     assert_eq!(dims, out.shape());
 
-    for i in 0..dims.0 {
-        for j in 0..dims.1 {
-            for k in 0..dims.2 {
+    for i in 0..dims[0] {
+        for j in 0..dims[1] {
+            for k in 0..dims[2] {
                 out[[i, j, k]] = a[[i, j, k]] + b[[i, j, k]];
             }
         }
@@ -179,9 +179,9 @@ pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
     let dims = field.shape();
     assert_eq!(dims, out.shape());
 
-    for i in 0..dims.0 {
-        for j in 0..dims.1 {
-            for k in 0..dims.2 {
+    for i in 0..dims[0] {
+        for j in 0..dims[1] {
+            for k in 0..dims[2] {
                 out[[i, j, k]] = field[[i, j, k]] * scalar;
             }
         }
@@ -191,10 +191,10 @@ pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>)
 #[cfg(not(target_arch = "aarch64"))]
 #[must_use]
 pub fn norm_neon(field: &Array3<f64>) -> f64 {
-    let mut sum = 0.0;
+    let mut sum: f64 = 0.0;
     let mut compensation = 0.0;
 
-    for &value in field {
+    for &value in field.iter() {
         let squared = value * value;
         let y = squared - compensation;
         let t = sum + y;

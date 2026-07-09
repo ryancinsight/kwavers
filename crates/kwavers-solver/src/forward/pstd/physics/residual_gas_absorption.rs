@@ -81,8 +81,8 @@ fn multiply_spectral_shape(
     );
 
     if let (Some(spectrum_values), Some(shape_values)) = (
-        spectrum.as_slice_memory_order_mut(),
-        shape.as_slice_memory_order(),
+        spectrum.as_slice_mut(),
+        shape.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(spectrum_values, |index, spectrum| {
             *spectrum *= shape_values[index];

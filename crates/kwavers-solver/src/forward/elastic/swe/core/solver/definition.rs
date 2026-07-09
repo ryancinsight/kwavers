@@ -108,10 +108,10 @@ impl ElasticWaveSolver {
     /// # Errors
     /// Returns [`KwaversError::Validation`] when `new_mu` does not match the grid shape.
     pub fn set_mu(&mut self, new_mu: &Array3<f64>) -> KwaversResult<()> {
-        if new_mu.dim() != self.mu.dim() {
+        if new_mu.shape() != self.mu.shape() {
             return Err(kwavers_core::error::ValidationError::DimensionMismatch {
-                expected: format!("{:?}", self.mu.dim()),
-                actual: format!("{:?}", new_mu.dim()),
+                expected: format!("{:?}", self.mu.shape()),
+                actual: format!("{:?}", new_mu.shape()),
             }
             .into());
         }

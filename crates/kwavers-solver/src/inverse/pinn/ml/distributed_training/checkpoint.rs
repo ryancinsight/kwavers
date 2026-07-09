@@ -65,7 +65,7 @@ impl CheckpointManager {
     ///
     pub fn cleanup_old_checkpoints(&self) -> KwaversResult<()> {
         let checkpoints = self.list_checkpoints()?;
-        let to_remove = checkpoints.len().saturating_sub(self.max_checkpoints);
+        let to_remove = (checkpoints.shape()[0] * checkpoints.shape()[1] * checkpoints.shape()[2]).saturating_sub(self.max_checkpoints);
 
         for &epoch in checkpoints.iter().take(to_remove) {
             let path = self.checkpoint_dir.join(checkpoint_filename(epoch));

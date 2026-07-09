@@ -112,11 +112,11 @@ where
         let z_vec: Vec<f32> = if let Some(z_var) = z {
             z_var.tensor.as_slice().to_vec()
         } else {
-            vec![0.0; pressure_slice.len()]
+            vec![0.0; (pressure_slice.shape()[0] * pressure_slice.shape()[1] * pressure_slice.shape()[2])]
         };
 
         let mut sites = Vec::new();
-        for i in 0..pressure_slice.len() {
+        for i in 0..(pressure_slice.shape()[0] * pressure_slice.shape()[1] * pressure_slice.shape()[2]) {
             let p = pressure_slice[i] as f64;
             if p < 0.0 && p.abs() > p_blake.abs() {
                 sites.push((x_slice[i] as f64, y_slice[i] as f64, z_vec[i] as f64));

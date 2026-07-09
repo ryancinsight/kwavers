@@ -56,7 +56,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ElasticPINN2D")
-            .field("hidden_layers", &self.hidden_layers.len())
+            .field("hidden_layers", &(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]))
             .field("lambda", &self.lambda.is_some())
             .field("mu", &self.mu.is_some())
             .field("rho", &self.rho.is_some())
@@ -83,8 +83,8 @@ where
         let first_hidden = config.hidden_layers[0];
         let input_layer = Linear::new(3, first_hidden, true);
 
-        let mut hidden_layers = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
-        for i in 0..config.hidden_layers.len().saturating_sub(1) {
+        let mut hidden_layers = Vec::with_capacity((config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]).saturating_sub(1));
+        for i in 0..(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]).saturating_sub(1) {
             hidden_layers.push(Linear::new(
                 config.hidden_layers[i],
                 config.hidden_layers[i + 1],
@@ -154,7 +154,7 @@ where
     /// Write optimizer-updated parameter values back into this network's layers.
     ///
     /// # Panics
-    /// - Panics if `params.len()` does not match `self.parameters().len()`.
+    /// - Panics if `(params.shape()[0] * params.shape()[1] * params.shape()[2])` does not match `self.parameters().len()`.
     pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
         let mut offset = 0;
         let n_in = self.input_layer.parameters().len();
@@ -184,7 +184,7 @@ where
         }
         assert_eq!(
             offset,
-            params.len(),
+            (params.shape()[0] * params.shape()[1] * params.shape()[2]),
             "load_parameters: parameter count mismatch"
         );
     }

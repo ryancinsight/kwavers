@@ -85,11 +85,11 @@ impl RefinementManager {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
-        let mut markers = Array3::zeros(error.dim());
+        let mut markers = Array3::zeros(error.shape());
 
         match (
-            markers.as_slice_memory_order_mut(),
-            error.as_slice_memory_order(),
+            markers.as_slice_mut(),
+            error.as_slice(),
         ) {
             (Some(marker_slice), Some(error_slice)) => {
                 enumerate_mut_with::<Adaptive, _, _>(marker_slice, |idx, marker| {
@@ -117,7 +117,7 @@ impl RefinementManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn add_buffer_zones(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
-        let (nx, ny, nz) = markers.dim();
+        let [nx, ny, nz] = markers.shape();
         let mut buffer = markers.clone();
 
         for i in 0..nx {
@@ -173,7 +173,7 @@ impl RefinementManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn enforce_nesting(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
-        let (nx, ny, nz) = markers.dim();
+        let [nx, ny, nz] = markers.shape();
 
         // Optimized single-pass implementation:
         // We iterate over the inner grid once.

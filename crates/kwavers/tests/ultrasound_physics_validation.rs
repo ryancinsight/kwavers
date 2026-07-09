@@ -16,8 +16,8 @@ use leto::{
     Array2,
 };
 
-/// Convert a `num_complex::Complex<f64>` steering vector to `eunomia::Complex64`.
-fn nc_to_ec(v: Array1<num_complex::Complex<f64>>) -> Array1<Complex64> {
+/// Convert a `eunomia::Complex64` steering vector to `eunomia::Complex64`.
+fn nc_to_ec(v: Array1<eunomia::Complex64>) -> Array1<Complex64> {
     v.map(|c| Complex64::new(c.re, c.im))
 }
 
@@ -756,7 +756,7 @@ fn validate_mie_scattering_theory() {
     // Test Mie parameters creation
     let params = MieParameters::new(
         100e-9,                                 // 100 nm radius particle
-        num_complex::Complex64::new(1.5, 0.01), // Glass-like refractive index
+        eunomia::Complex64::new(1.5, 0.01), // Glass-like refractive index
         1.0,                                    // Air medium
         500e-9,                                 // 500 nm wavelength
     );
@@ -772,7 +772,7 @@ fn validate_mie_scattering_theory() {
     );
 
     // Test Rayleigh scattering framework (basic validation)
-    let rayleigh = RayleighScattering::new(500e-9, 50e-9, num_complex::Complex64::new(1.33, 0.0));
+    let rayleigh = RayleighScattering::new(500e-9, 50e-9, eunomia::Complex64::new(1.33, 0.0));
 
     // Basic framework validation
     assert!(
@@ -792,7 +792,7 @@ fn validate_mie_scattering_theory() {
     // Mie parameters can be created for various particle sizes
     let _small_params = MieParameters::new(
         10e-9,                                  // Very small particle
-        num_complex::Complex64::new(1.33, 0.0), // Water
+        eunomia::Complex64::new(1.33, 0.0), // Water
         1.0,                                    // Air
         500e-9,
     );
@@ -1249,3 +1249,4 @@ fn validate_temporal_synchronization_multi_modal() {
     assert!(quality.sync_success_rate >= 0.0);
     assert!(quality.sync_success_rate <= 1.0);
 }
+

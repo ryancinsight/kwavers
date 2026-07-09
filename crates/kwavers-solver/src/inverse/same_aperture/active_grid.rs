@@ -18,7 +18,7 @@ pub struct ActiveGrid {
 impl ActiveGrid {
     #[must_use]
     pub fn len(&self) -> usize {
-        self.indices.len()
+        (self.indices.shape()[0] * self.indices.shape()[1] * self.indices.shape()[2])
     }
 
     #[must_use]
@@ -41,8 +41,8 @@ impl ActiveGrid {
     /// counted twice in the directed sum, so the edge contribution is
     /// `x_i^2 + x_j^2 - 2x_i x_j = (x_i - x_j)^2`.
     pub fn graph_laplacian_into(&self, values: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(values.len(), self.indices.len());
-        debug_assert_eq!(out.len(), self.indices.len());
+        debug_assert_eq!((values.shape()[0] * values.shape()[1] * values.shape()[2]), (self.indices.shape()[0] * self.indices.shape()[1] * self.indices.shape()[2]));
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), (self.indices.shape()[0] * self.indices.shape()[1] * self.indices.shape()[2]));
         for (row, neighbors) in self.neighbor_indices.iter().enumerate() {
             let center = values[row];
             let mut degree = 0.0;
@@ -58,7 +58,7 @@ impl ActiveGrid {
 
 #[must_use]
 pub fn active_grid(mask: &Array2<bool>, spacing_m: f64) -> ActiveGrid {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     let cx = (nx - 1) as f64 * 0.5;
     let cy = (ny - 1) as f64 * 0.5;
     let mut indices = Vec::new();
@@ -66,7 +66,7 @@ pub fn active_grid(mask: &Array2<bool>, spacing_m: f64) -> ActiveGrid {
     let mut active_lookup = vec![None; nx * ny];
     for ((ix, iy), active) in mask.indexed_iter() {
         if *active {
-            active_lookup[linear_index(ix, iy, ny)] = Some(indices.len());
+            active_lookup[linear_index(ix, iy, ny)] = Some((indices.shape()[0] * indices.shape()[1] * indices.shape()[2]));
             indices.push((ix, iy));
             points_m.push(PlanarPoint {
                 x_m: (ix as f64 - cx) * spacing_m,

@@ -69,7 +69,7 @@ pub(super) fn bilinear_with_gradient(
     geom: &PlaneGeometry,
     background: f64,
 ) -> (f64, f64, f64) {
-    let (nx, ny, _) = template.dim();
+    let [nx, ny, _] = template.shape();
     if fi < 0.0 || fj < 0.0 || fi > (nx - 1) as f64 || fj > (ny - 1) as f64 {
         return (background, 0.0, 0.0);
     }
@@ -103,7 +103,7 @@ pub(super) fn transform_template(
     geom: &PlaneGeometry,
     background: f64,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = template.dim();
+    let [nx, ny, nz] = template.shape();
     let (s, c) = phi.theta_rad.sin_cos();
     let mut out = Array3::from_elem((nx, ny, nz), background);
     for k in 0..nz {
@@ -149,7 +149,7 @@ pub(super) fn transform_with_jacobian(
     geom: &PlaneGeometry,
     background: f64,
 ) -> TransformWithJacobian {
-    let (nx, ny, nz) = template.dim();
+    let [nx, ny, nz] = template.shape();
     let (s, c) = phi.theta_rad.sin_cos();
     let mut model = Array3::from_elem((nx, ny, nz), background);
     let mut d_theta = Array3::zeros((nx, ny, nz));

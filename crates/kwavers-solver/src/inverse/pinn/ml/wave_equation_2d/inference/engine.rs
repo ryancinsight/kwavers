@@ -115,7 +115,7 @@ where
         y: &[f32],
         t: &[f32],
     ) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
-        let batch_size = x.len();
+        let batch_size = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
         let mut predictions = vec![0.0; batch_size];
         let uncertainties = vec![0.02; batch_size];
 
@@ -129,7 +129,7 @@ where
 
     #[cfg(not(feature = "simd"))]
     fn forward_quantized_single(&mut self, input: &[f32]) -> KwaversResult<f32> {
-        let num_layers = self.quantized_network.weights.len();
+        let num_layers = (self.quantized_network.weights.shape()[0] * self.quantized_network.weights.shape()[1] * self.quantized_network.weights.shape()[2]);
 
         for layer_idx in 0..num_layers {
             let weights = &self.quantized_network.weights[layer_idx];

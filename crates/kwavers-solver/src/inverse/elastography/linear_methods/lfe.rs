@@ -58,7 +58,7 @@ pub(super) fn local_frequency_estimation_inversion(
     frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
     let u = &displacement.uz;
-    let (nx, ny, nz) = u.dim();
+    let [nx, ny, nz] = u.shape();
 
     // 1. Gradient-energy and signal-energy fields.
     //    Central differences on the interior; edges keep the zero initialiser

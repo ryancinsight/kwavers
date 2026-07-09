@@ -100,8 +100,8 @@ fn pwls_is_robust_to_bad_channels_vs_unweighted_l2() {
     let (clean, _hist) = base
         .forward_model(&truth, &geometry, &grid)
         .expect("observed forward");
-    let (n_rx, nt) = clean.dim();
-    let rms = (clean.iter().map(|v| v * v).sum::<f64>() / clean.len() as f64).sqrt();
+    let [n_rx, nt] = clean.shape();
+    let rms = (clean.iter().map(|v| v * v).sum::<f64>() / (clean.shape()[0] * clean.shape()[1] * clean.shape()[2]) as f64).sqrt();
 
     // A minority (every 4th receiver) is 10× noisier (variance 100×). Same
     // realisation feeds both inversions.

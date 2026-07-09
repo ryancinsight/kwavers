@@ -14,7 +14,7 @@ use leto::{
     Array2,
     Array3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use std::sync::Arc;
@@ -175,3 +175,4 @@ pub(super) fn make_config(
         forward_operator,
     }
 }
+

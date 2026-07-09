@@ -81,24 +81,24 @@ pub fn initialize_kspace_grids(
     // source-level consistency; (c) broader helper-validation across
     // heterogeneous patterns is deferred to Batch #2.
     assert!(
-        kx.is_standard_layout(),
+        kx,
         "kx must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        ky.is_standard_layout(),
+        ky,
         "ky must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        kz.is_standard_layout(),
+        kz,
         "kz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        k_squared.is_standard_layout(),
+        k_squared,
         "k_squared must be C-contiguous (default Array3 layout) for the migration"
     );
-    debug_assert_eq!(kx_axis.len(), nx, "kx_axis length must equal nx");
-    debug_assert_eq!(ky_axis.len(), ny, "ky_axis length must equal ny");
-    debug_assert_eq!(kz_axis.len(), nz, "kz_axis length must equal nz");
+    debug_assert_eq!((kx_axis.shape()[0] * kx_axis.shape()[1] * kx_axis.shape()[2]), nx, "kx_axis length must equal nx");
+    debug_assert_eq!((ky_axis.shape()[0] * ky_axis.shape()[1] * ky_axis.shape()[2]), ny, "ky_axis length must equal ny");
+    debug_assert_eq!((kz_axis.shape()[0] * kz_axis.shape()[1] * kz_axis.shape()[2]), nz, "kz_axis length must equal nz");
     {
         let ky_slice = ky
             .as_slice_mut()
@@ -138,7 +138,7 @@ pub fn initialize_kspace_grids(
 /// [`compute_laplacian_spectral_into`] which reuses caller-supplied scratch.
 #[must_use]
 pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) -> Array3<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
         .expect("Westervelt field shape must match its Leto FFT shape");
     // Transform to k-space
@@ -176,9 +176,9 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
 /// `out` carries the valid real Laplacian. `fft_scratch` is safe to reuse.
 ///
 /// # Preconditions
-/// - `fft_scratch.dim() == field.dim()`
-/// - `out.dim() == field.dim()`
-/// - `k_squared.dim() == field.dim()`
+/// - `fft_scratch.shape() == field.shape()`
+/// - `out.shape() == field.shape()`
+/// - `k_squared.shape() == field.shape()`
 /// # Panics
 /// - Panics if an internal precondition is violated.
 ///
@@ -188,14 +188,14 @@ pub fn compute_laplacian_spectral_into(
     fft_scratch: &mut LetoArray3<Complex64>,
     out: &mut Array3<f64>,
 ) {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     debug_assert_eq!(
         fft_scratch.shape(),
         [nx, ny, nz],
         "fft_scratch shape mismatch"
     );
-    debug_assert_eq!(out.dim(), field.dim(), "laplacian output shape mismatch");
-    debug_assert_eq!(k_squared.dim(), field.dim(), "k_squared shape mismatch");
+    debug_assert_eq!(out.shape(), field.shape(), "laplacian output shape mismatch");
+    debug_assert_eq!(k_squared.shape(), field.shape(), "k_squared shape mismatch");
 
     // Step 1: real→complex DFT into scratch (no allocation)
     let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())

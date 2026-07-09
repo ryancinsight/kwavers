@@ -9,7 +9,7 @@ use std::sync::{Arc, RwLock};
 #[derive(Debug)]
 pub struct GradientCache<T>
 where
-    T: Float + Clone + Send + Sync,
+    T: FloatElement + Clone + Send + Sync,
 {
     /// Cached coefficients for different spatial orders
     pub(super) coefficients_cache: RwLock<Vec<Vec<T>>>,
@@ -23,7 +23,7 @@ where
 
 impl<T> GradientCache<T>
 where
-    T: Float + Clone + Send + Sync,
+    T: FloatElement + Clone + Send + Sync,
 {
     /// Create a new gradient cache
     /// # Panics
@@ -33,9 +33,9 @@ where
         Self {
             coefficients_cache: RwLock::new(Vec::new()),
             spacing_inverses: (
-                T::one() / T::from(grid.dx).unwrap(),
-                T::one() / T::from(grid.dy).unwrap(),
-                T::one() / T::from(grid.dz).unwrap(),
+                T::from_f64(1.0) / T::from_f64(grid.dx as f64),
+                T::from_f64(1.0) / T::from_f64(grid.dy as f64),
+                T::from_f64(1.0) / T::from_f64(grid.dz as f64),
             ),
             cache_hits: Arc::new(RwLock::new(0)),
             cache_misses: Arc::new(RwLock::new(0)),

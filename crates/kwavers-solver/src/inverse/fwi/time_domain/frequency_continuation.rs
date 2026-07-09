@@ -62,8 +62,8 @@ const BUTTERWORTH_ORDER: i32 = 4;
 #[must_use]
 pub(super) fn lowpass_band_limit(data: &Array2<f64>, dt: f64, corner_hz: f64) -> Array2<f64> {
     let fs = 1.0 / dt;
-    let mut filtered = Array2::zeros(data.raw_dim());
-    for (row, mut out) in data.outer_iter().zip(filtered.outer_iter_mut()) {
+    let mut filtered = Array2::zeros(data.shape());
+    for (row, mut out) in data.axis_iter(0).zip(filtered.axis_iter_mut(0)) {
         let trace: Array1<f64> = row.to_owned();
         let response = apply_spectral_response_1d(&trace, fs, |_, freq, nyquist| {
             let f_eff = freq.min(2.0 * nyquist - freq).max(0.0);
@@ -153,7 +153,7 @@ impl FwiProcessor {
             log::info!(
                 "FWI multiscale stage {} / {}: low-pass corner = {:.3} Hz",
                 stage + 1,
-                corner_hz_ascending.len(),
+                (corner_hz_ascending.shape()[0] * corner_hz_ascending.shape()[1] * corner_hz_ascending.shape()[2]),
                 corner
             );
             model = stage_processor.invert(observed_data, &model, geometry, grid)?;
@@ -229,7 +229,7 @@ mod tests {
         }
         let filtered = lowpass_band_limit(&bump, DT, 0.05);
         // Peak stays at the centre sample.
-        let (peak_idx, _) = filtered.row(0).iter().enumerate().fold(
+        let (peak_idx, _) = filtered.index_axis(0, 0).unwrap().iter().enumerate().fold(
             (0usize, f64::NEG_INFINITY),
             |(bi, bv), (i, &v)| {
                 if v > bv {

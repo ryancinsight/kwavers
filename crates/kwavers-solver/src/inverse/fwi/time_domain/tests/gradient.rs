@@ -441,7 +441,7 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
     let (synth_const, history_const) = baseline
         .forward_model(&model, &geometry, &grid)
         .expect("baseline forward");
-    let observed = Array2::zeros(synth_const.dim()); // arbitrary "data" so residual is non-zero
+    let observed = Array2::zeros(synth_const.shape()); // arbitrary "data" so residual is non-zero
     let residual = baseline
         .compute_adjoint_source(&observed, &synth_const)
         .expect("residual");

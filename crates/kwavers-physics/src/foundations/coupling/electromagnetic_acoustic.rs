@@ -65,7 +65,7 @@
 //!   Rev. Sci. Instrum. 77(4), 041101. DOI: 10.1063/1.2195024
 
 use super::MultiPhysicsCoupling;
-use ArrayD;
+use leto::Array3;
 
 /// Electromagnetic-acoustic coupling for photoacoustic effects
 pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
@@ -86,10 +86,10 @@ pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
     /// Compute initial acoustic pressure from optical fluence: p₀ = Γ μ_a Φ
     fn fluence_to_pressure(
         &self,
-        fluence: &ArrayD<f64>,
+        fluence: &Array3<f64>,
         position: &[f64],
         wavelength: f64,
-    ) -> ArrayD<f64> {
+    ) -> Array3<f64> {
         let gamma = self.gruneisen_parameter(position);
         let mu_a = self.optical_absorption_coefficient(position, wavelength);
         fluence.mapv(|phi| gamma * mu_a * phi)
@@ -98,9 +98,9 @@ pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {
     /// Compute optical fluence from electromagnetic energy density
     fn em_energy_to_fluence(
         &self,
-        energy_density: &ArrayD<f64>,
+        energy_density: &Array3<f64>,
         pulse_duration: f64,
-    ) -> ArrayD<f64> {
+    ) -> Array3<f64> {
         energy_density.mapv(|u| u * pulse_duration)
     }
 

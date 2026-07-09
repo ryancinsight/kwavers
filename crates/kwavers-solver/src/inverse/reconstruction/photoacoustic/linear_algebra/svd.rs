@@ -29,11 +29,11 @@ impl PhotoacousticLinearSolver {
         let s_max = s.iter().copied().fold(0.0, f64::max);
         let threshold = truncation * s_max;
 
-        let mut x = Array1::zeros(vt.nrows());
+        let mut x = Array1::zeros(vt.shape()[0]);
         for (i, &s_val) in s.iter().enumerate() {
             if s_val > threshold {
-                let ui = u.column(i);
-                let vi = vt.row(i);
+                let ui = u.index_axis(1, i).unwrap();
+                let vi = vt.index_axis(0, i).unwrap();
                 x += &(vi.to_owned() * (ui.dot(&b) / s_val));
             }
         }
@@ -53,10 +53,10 @@ impl PhotoacousticLinearSolver {
         &self,
         a: &Array2<f64>,
     ) -> KwaversResult<(Array2<f64>, Vec<f64>, Array2<f64>)> {
-        let (m, n) = a.dim();
+        let [m, n] = a.shape();
         let k = m.min(n);
 
-        let ata = a.t().dot(a);
+        let ata = a.transpose([1, 0]).unwrap().dot(a);
 
         let mut v = Array2::eye(n);
         let mut s = vec![0.0; k];
@@ -80,7 +80,7 @@ impl PhotoacousticLinearSolver {
         let mut u = Array2::zeros((m, k));
         for i in 0..k {
             if s[i] > 1e-10 {
-                let vi = v.column(i);
+                let vi = v.index_axis(1, i).unwrap();
                 let ui = a.dot(&vi) / s[i];
                 for j in 0..m {
                     u[[j, i]] = ui[j];
@@ -88,6 +88,6 @@ impl PhotoacousticLinearSolver {
             }
         }
 
-        Ok((u, s, v.t().to_owned()))
+        Ok((u, s, v.transpose([1, 0]).unwrap().to_owned()))
     }
 }

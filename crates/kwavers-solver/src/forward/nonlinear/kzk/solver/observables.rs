@@ -48,11 +48,11 @@ impl KZKSolver {
         let nt = self.config.nt;
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK pressure is standard-layout");
         let mut intensity = Array2::zeros((self.config.nx, self.config.ny));
         let intensity_slice = intensity
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK intensity output is standard-layout");
         enumerate_mut_with::<Adaptive, _, _>(intensity_slice, |idx, out| {
             let i = idx / ny;
@@ -82,11 +82,11 @@ impl KZKSolver {
         let nt = self.config.nt;
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK pressure is standard-layout");
         let mut peak = Array2::zeros((self.config.nx, self.config.ny));
         let peak_slice = peak
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK peak-pressure output is standard-layout");
         enumerate_mut_with::<Adaptive, _, _>(peak_slice, |idx, out| {
             let i = idx / ny;

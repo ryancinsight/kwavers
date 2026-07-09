@@ -134,7 +134,7 @@ impl NonlinearElasticWaveSolver {
         //   amplitude_factor = β^(n-2) / n  [Chen 2013, Eq. 12]
         //
         // Theorem (race-freedom, Loop 3): see module doc.
-        for harmonic_idx in 1..field.u_harmonics.len() {
+        for harmonic_idx in 1..(field.u_harmonics.shape()[0] * field.u_harmonics.shape()[1] * field.u_harmonics.shape()[2]) {
             let harmonic_order = harmonic_idx + 3;
             let amplitude_factor = beta.powi(harmonic_order as i32 - 1) / harmonic_order as f64;
 

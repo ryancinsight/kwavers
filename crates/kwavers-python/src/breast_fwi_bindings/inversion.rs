@@ -11,7 +11,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
 use leto::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -123,3 +123,4 @@ pub fn invert_breast_fwi<'py>(
     out.set_item("solver_model_family", result.solver_model_family)?;
     Ok(out)
 }
+

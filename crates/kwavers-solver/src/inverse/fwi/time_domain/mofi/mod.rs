@@ -113,7 +113,7 @@ pub struct MofiResult {
 /// let template = Array3::from_elem((32, 32, 1), 1500.0);
 /// let phi = RigidTransform { theta_rad: 6_f64.to_radians(), delta_x_m: 2e-3, delta_y_m: -1e-3 };
 /// let misaligned = mofi_transform(&template, &phi, &grid, 1500.0);
-/// assert_eq!(misaligned.dim(), template.dim());
+/// assert_eq!(misaligned.shape(), template.shape());
 /// ```
 #[must_use]
 pub fn transform(
@@ -351,7 +351,7 @@ pub fn coarse_pose_search(
     // preserves grid order, so reducing with a strict `<` reproduces the serial
     // first-minimum tie-break exactly.
     let mut candidates: Vec<RigidTransform> =
-        Vec::with_capacity(thetas.len() * deltas.len() * deltas.len());
+        Vec::with_capacity((thetas.shape()[0] * thetas.shape()[1] * thetas.shape()[2]) * (deltas.shape()[0] * deltas.shape()[1] * deltas.shape()[2]) * (deltas.shape()[0] * deltas.shape()[1] * deltas.shape()[2]));
     for &theta in &thetas {
         for &dx in &deltas {
             for &dy in &deltas {
@@ -683,12 +683,12 @@ pub fn align_from(
                 .to_owned(),
         ));
     }
-    if template.dim() != grid.dimensions() {
+    if template.shape() != grid.dimensions() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "MOFI template shape {:?} must match grid {:?}",
-                    template.dim(),
+                    template.shape(),
                     grid.dimensions()
                 ),
             },

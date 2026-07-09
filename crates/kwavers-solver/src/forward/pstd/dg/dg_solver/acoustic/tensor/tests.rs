@@ -57,7 +57,7 @@ fn constant_2d_acoustic_state_has_zero_rhs() {
             _ => 0.0,
         },
     );
-    let mut rhs = Array3::zeros(state.dim());
+    let mut rhs = Array3::zeros(state.shape());
 
     solver
         .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs)
@@ -75,7 +75,7 @@ fn tensor_2d_acoustic_rhs_preserves_component_masses() {
         solver.acoustic_tensor_state_shape().unwrap(),
         |(e, n, v)| (0.3 * e as f64 + 0.7 * n as f64 + 0.2 * v as f64).sin(),
     );
-    let mut rhs = Array3::zeros(state.dim());
+    let mut rhs = Array3::zeros(state.shape());
 
     solver
         .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs)
@@ -101,7 +101,7 @@ fn tensor_3d_acoustic_rhs_preserves_component_masses() {
         solver.acoustic_tensor_state_shape().unwrap(),
         |(e, n, v)| (0.2 * e as f64 + 0.5 * n as f64 + 0.11 * v as f64).cos(),
     );
-    let mut rhs = Array3::zeros(state.dim());
+    let mut rhs = Array3::zeros(state.shape());
 
     solver
         .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs)
@@ -170,8 +170,8 @@ fn tensor_absorbing_boundary_replaces_periodic_exterior_face_state() {
             }
         },
     );
-    let mut rhs_periodic = Array3::zeros(state.dim());
-    let mut rhs_absorbing = Array3::zeros(state.dim());
+    let mut rhs_periodic = Array3::zeros(state.shape());
+    let mut rhs_absorbing = Array3::zeros(state.shape());
 
     periodic
         .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs_periodic)
@@ -227,8 +227,8 @@ fn tensor_axis_boundary_policy_preserves_periodic_invariant_axis() {
             }
         },
     );
-    let mut rhs_periodic_z = Array3::zeros(state.dim());
-    let mut rhs_absorbing_z = Array3::zeros(state.dim());
+    let mut rhs_periodic_z = Array3::zeros(state.shape());
+    let mut rhs_absorbing_z = Array3::zeros(state.shape());
 
     periodic_z
         .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs_periodic_z)
@@ -254,7 +254,7 @@ fn tensor_axis_boundary_policy_preserves_periodic_invariant_axis() {
 fn tensor_acoustic_step_preserves_constant_state() {
     let solver = make_solver(4, 4, 4);
     let mut state = Array3::from_elem(solver.acoustic_tensor_state_shape().unwrap(), 0.125_f64);
-    let mut workspace = AcousticDgTensorWorkspace::new(state.dim());
+    let mut workspace = AcousticDgTensorWorkspace::new(state.shape());
 
     solver
         .step_acoustic_tensor_ssp_rk3(&mut state, 1.25, 0.01, &mut workspace)
@@ -307,7 +307,7 @@ fn tensor_weak_cell_source_weights_conserve_reference_cell_measure() {
         .acoustic_tensor_cell_source_weights([5, 6, 0])
         .unwrap();
 
-    assert_eq!(sources.len(), topology.nodes_per_element);
+    assert_eq!((sources.shape()[0] * sources.shape()[1] * sources.shape()[2]), topology.nodes_per_element);
     let reference_measure = sources.iter().fold(0.0, |sum, source| {
         sum + topology.node_weight(source.node, &solver.weights) * source.weight
     });
@@ -322,7 +322,7 @@ fn tensor_weak_cell_source_weights_conserve_reference_cell_measure() {
 fn tensor_ssp_rk3_source_callback_uses_stage_times() {
     let solver = make_solver(4, 4, 1);
     let mut state = Array3::zeros(solver.acoustic_tensor_state_shape().unwrap());
-    let mut workspace = AcousticDgTensorWorkspace::new(state.dim());
+    let mut workspace = AcousticDgTensorWorkspace::new(state.shape());
     let t0 = 2.0;
     let dt = 0.1;
 

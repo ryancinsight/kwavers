@@ -18,7 +18,7 @@ fn gaussian_field(
     cz: f64,
     sigma: f64,
 ) -> Array3<f64> {
-    let mut f = Array3::zeros((nx, ny, nz));
+    let mut f = Array3::zeros([nx, ny, nz]);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -40,7 +40,7 @@ fn test_trilinear_at_grid_node() {
 
 #[test]
 fn test_trilinear_midpoint_is_average() {
-    let mut field = Array3::zeros((4, 4, 4));
+    let mut field = Array3::zeros([4, 4, 4]);
     field[[0, 0, 0]] = 2.0;
     field[[1, 0, 0]] = 4.0;
     let result = trilinear_index_space(&field, 0.5, 0.0, 0.0);

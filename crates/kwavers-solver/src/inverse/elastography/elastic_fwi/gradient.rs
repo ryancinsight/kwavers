@@ -81,7 +81,7 @@ impl ElasticFwi {
         if r == 0 {
             return;
         }
-        let (nx, ny, nz) = grad.dim();
+        let [nx, ny, nz] = grad.shape();
         let r2 = (r * r) as i64;
         let centers = self
             .config
@@ -169,8 +169,8 @@ fn k_mu_kernel(
     dt: f64,
     (dx, dy, dz): (f64, f64, f64),
 ) -> (Array3<f64>, Array3<f64>) {
-    let n = fwd.len();
-    let dim = fwd[0].ux.dim();
+    let n = (fwd.shape()[0] * fwd.shape()[1] * fwd.shape()[2]);
+    let dim = fwd[0].ux.shape();
     let (nx, ny, nz) = dim;
     let mut grad = Array3::<f64>::zeros(dim);
     let mut illum = Array3::<f64>::zeros(dim);

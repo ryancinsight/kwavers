@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+eunomia = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 moirai-parallel = { workspace = true }

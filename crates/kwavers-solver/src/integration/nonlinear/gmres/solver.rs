@@ -82,7 +82,7 @@ impl GMRESSolver {
         self.residual_history.push(rho);
 
         for _restart_iter in 0..self.config.max_iterations {
-            let mut V = vec![Array3::zeros(x0.dim()); m + 1];
+            let mut V = vec![Array3::zeros(x0.shape()); m + 1];
             let mut H: Vec<Vec<f64>> = vec![vec![0.0; m]; m + 1];
             let mut gamma: Vec<f64> = vec![0.0; m + 1];
             let mut cs: Vec<f64> = vec![0.0; m];

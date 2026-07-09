@@ -22,10 +22,7 @@
 //! Each pass uses same-shape strided views over the interior stencil.
 
 use kwavers_core::error::{KwaversResult, ValidationError};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-};
+use leto::Array3;
 
 use super::super::types::ReverseTimeMigration;
 use super::parallel::for_each_view_mut;
@@ -60,7 +57,7 @@ impl ReverseTimeMigration {
     /// - [`ValidationError::DimensionMismatch`] when the grid lacks a 3-D interior
     ///   (see [`Self::ensure_3d_interior`]).
     pub(super) fn compute_laplacian(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         Self::ensure_3d_interior((nx, ny, nz))?;
         let mut laplacian = Array3::<f64>::zeros((nx, ny, nz));
         let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];

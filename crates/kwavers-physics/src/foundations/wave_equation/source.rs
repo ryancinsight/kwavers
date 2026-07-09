@@ -1,13 +1,13 @@
 //! Source term definitions
 
-use ArrayD;
+use leto::Array3;
 
 /// Source term trait
 ///
 /// Defines time-varying source distributions f(x,t)
 pub trait SourceTerm: Send + Sync {
     /// Evaluate source at given time [appropriate units]
-    fn evaluate(&self, time: f64) -> ArrayD<f64>;
+    fn evaluate(&self, time: f64) -> Array3<f64>;
 
     /// Get temporal support [t_start, t_end]
     fn time_window(&self) -> (f64, f64);

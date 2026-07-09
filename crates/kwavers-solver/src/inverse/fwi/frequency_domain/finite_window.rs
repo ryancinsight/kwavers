@@ -194,7 +194,7 @@ fn simulate_transmit(
         Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
     let mut scatter_source_hat =
         Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let mut receivers = vec![Complex64::new(0.0, 0.0); (receiver_indices.shape()[0] * receiver_indices.shape()[1] * receiver_indices.shape()[2])];
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
 
@@ -379,7 +379,7 @@ pub fn finite_window_pstd_born_gradient(
 /// every time step, needed by the adjoint backward pass.
 ///
 /// Returns `(d_model, accel_history)` where `d_model` is the complex receiver
-/// vector (length = `receiver_indices.len()`) and `accel_history` is a
+/// vector (length = `(receiver_indices.shape()[0] * receiver_indices.shape()[1] * receiver_indices.shape()[2])`) and `accel_history` is a
 /// `Vec<Array3<Complex64>>` of length `bin_config.total_steps`.
 fn simulate_transmit_with_accel(
     grid: GridSpec,
@@ -413,7 +413,7 @@ fn simulate_transmit_with_accel(
         Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
     let mut scatter_source_hat =
         Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let mut receivers = vec![Complex64::new(0.0, 0.0); (receiver_indices.shape()[0] * receiver_indices.shape()[1] * receiver_indices.shape()[2])];
     let mut accel_history: Vec<Array3<Complex64>> = Vec::with_capacity(bin_config.total_steps);
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
@@ -721,7 +721,7 @@ fn simulate_transmit_second_order(
     let mut scat2_source_hat =
         Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
 
-    let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
+    let mut receivers = vec![Complex64::new(0.0, 0.0); (receiver_indices.shape()[0] * receiver_indices.shape()[1] * receiver_indices.shape()[2])];
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
 

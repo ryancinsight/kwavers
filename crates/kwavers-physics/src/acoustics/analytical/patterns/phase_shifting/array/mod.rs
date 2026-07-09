@@ -4,10 +4,7 @@
 //! beam steering, dynamic focusing, and array management.
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 use crate::phase_modulation::phase_shifting::beam::BeamSteering;
 use crate::phase_modulation::phase_shifting::core::{calculate_wavelength, wrap_phase};
@@ -46,7 +43,7 @@ impl PhaseArray {
     /// Configure linear array
     #[must_use]
     pub fn configure_linear(num_elements: usize, spacing: f64, frequency: f64) -> Self {
-        let mut positions = Array2::zeros((num_elements, 3));
+        let mut positions = Array2::zeros([num_elements, 3]);
         for i in 0..num_elements {
             positions[[i, 0]] =
                 (i as f64).mul_add(spacing, -((num_elements - 1) as f64 * spacing / 2.0));
@@ -58,7 +55,7 @@ impl PhaseArray {
     #[must_use]
     pub fn configure_rectangular(nx: usize, ny: usize, dx: f64, dy: f64, frequency: f64) -> Self {
         let num_elements = nx * ny;
-        let mut positions = Array2::zeros((num_elements, 3));
+        let mut positions = Array2::zeros([num_elements, 3]);
 
         let mut idx = 0;
         for j in 0..ny {
@@ -81,7 +78,7 @@ impl PhaseArray {
         frequency: f64,
     ) -> Self {
         let num_elements = num_rings * elements_per_ring;
-        let mut positions = Array2::zeros((num_elements, 3));
+        let mut positions = Array2::zeros([num_elements, 3]);
 
         let mut idx = 0;
         for ring in 0..num_rings {
@@ -128,8 +125,8 @@ impl PhaseArray {
         let focusing_phases = self.dynamic_focusing.get_phase_distribution();
 
         // Combine steering and focusing phases
-        let mut combined = Array1::zeros(steering_phases.len());
-        for i in 0..combined.len() {
+        let mut combined = Array1::zeros([steering_phases.size()]);
+        for i in 0..combined.size() {
             combined[i] = wrap_phase(steering_phases[i] + focusing_phases[i]);
         }
 
@@ -148,11 +145,11 @@ impl PhaseArray {
         let mut sum_real = 0.0;
         let mut sum_imag = 0.0;
 
-        for i in 0..self.element_positions.nrows() {
-            let pos = self.element_positions.row(i);
-            let dx = x - pos[0];
-            let dy = y - pos[1];
-            let dz = z - pos[2];
+        for i in 0..self.element_positions.shape()[0] {
+            let pos = self.element_positions.index_axis(0, i).unwrap();
+            let dx = x - pos[[0]];
+            let dy = y - pos[[1]];
+            let dz = z - pos[[2]];
             let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             if distance > 0.0 {
@@ -181,14 +178,15 @@ impl PhaseArray {
 
         // Find minimum element spacing
         let mut min_spacing = f64::INFINITY;
-        for i in 0..self.element_positions.nrows() - 1 {
-            for j in i + 1..self.element_positions.nrows() {
-                let pos1 = self.element_positions.row(i);
-                let pos2 = self.element_positions.row(j);
-                let spacing = (pos2[2] - pos1[2])
+        for i in 0..self.element_positions.shape()[0] - 1 {
+            for j in i + 1..self.element_positions.shape()[0] {
+                let pos1 = self.element_positions.index_axis(0, i).unwrap();
+                let pos2 = self.element_positions.index_axis(0, j).unwrap();
+                let spacing = (pos2[[2]] - pos1[[2]])
                     .mul_add(
-                        pos2[2] - pos1[2],
-                        (pos2[1] - pos1[1]).mul_add(pos2[1] - pos1[1], (pos2[0] - pos1[0]).powi(2)),
+                        pos2[[2]] - pos1[[2]],
+                        (pos2[[1]] - pos1[[1]])
+                            .mul_add(pos2[[1]] - pos1[[1]], (pos2[[0]] - pos1[[0]]).powi(2)),
                     )
                     .sqrt();
                 if spacing < min_spacing {
@@ -200,11 +198,11 @@ impl PhaseArray {
         // Calculate array aperture
         let mut max_extent: [f64; 3] = [0.0, 0.0, 0.0];
         let mut min_extent: [f64; 3] = [f64::INFINITY, f64::INFINITY, f64::INFINITY];
-        for i in 0..self.element_positions.nrows() {
-            let pos = self.element_positions.row(i);
+        for i in 0..self.element_positions.shape()[0] {
+            let pos = self.element_positions.index_axis(0, i).unwrap();
             for dim in 0..3 {
-                max_extent[dim] = max_extent[dim].max(pos[dim]);
-                min_extent[dim] = min_extent[dim].min(pos[dim]);
+                max_extent[dim] = max_extent[dim].max(pos[[dim]]);
+                min_extent[dim] = min_extent[dim].min(pos[[dim]]);
             }
         }
 
@@ -223,7 +221,7 @@ impl PhaseArray {
             aperture_size,
             directivity: aperture_size / wavelength,
             grating_lobe_free: min_spacing < wavelength / 2.0,
-            num_elements: self.element_positions.nrows(),
+            num_elements: self.element_positions.shape()[0],
         }
     }
 }
@@ -260,7 +258,7 @@ mod tests {
         let arr = PhaseArray::configure_linear(n, spacing, freq);
 
         assert_eq!(
-            arr.element_positions.nrows(),
+            arr.element_positions.shape()[0],
             n,
             "linear array must have {n} elements"
         );
@@ -284,7 +282,7 @@ mod tests {
     fn configure_rectangular_produces_correct_element_count() {
         let arr = PhaseArray::configure_rectangular(4, 3, 500e-6, 500e-6, MHZ_TO_HZ);
         assert_eq!(
-            arr.element_positions.nrows(),
+            arr.element_positions.shape()[0],
             12,
             "4×3 array must have 12 elements"
         );
@@ -295,7 +293,7 @@ mod tests {
     fn configure_circular_produces_correct_element_count() {
         let arr = PhaseArray::configure_circular(3, 8, 1e-3, MHZ_TO_HZ);
         assert_eq!(
-            arr.element_positions.nrows(),
+            arr.element_positions.shape()[0],
             24,
             "3 rings × 8 elements = 24"
         );

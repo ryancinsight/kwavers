@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
-use num_complex::Complex;
+use eunomia::Complex;
 
 use crate::parallel::zip_mut_ref;
 
@@ -135,3 +135,4 @@ impl AbsorptionDispersionCorrection {
         TWO_PI * frequency / c_phase
     }
 }
+

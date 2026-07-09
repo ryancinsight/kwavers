@@ -213,7 +213,7 @@ impl MultiRateTimeIntegrator {
                 let avg = if history.is_empty() {
                     0.0
                 } else {
-                    history.iter().sum::<f64>() / history.len() as f64
+                    history.iter().sum::<f64>() / (history.shape()[0] * history.shape()[1] * history.shape()[2]) as f64
                 };
                 (name.clone(), avg)
             })

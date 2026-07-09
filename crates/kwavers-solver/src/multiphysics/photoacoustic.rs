@@ -107,7 +107,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         let inv_4pi_d = 1.0 / (FOUR_PI * d_coeff);
 
         let shape = evaluation_points.shape();
-        let ndim = shape.len();
+        let ndim = (shape.shape()[0] * shape.shape()[1] * shape.shape()[2]);
 
         // Interpret the first 3 (or fewer) dimensions as spatial (nx, ny, nz)
         let nx = if ndim >= 1 { shape[0] } else { 1 };
@@ -125,12 +125,12 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         } else {
             (nx as f64 * dx) / 2.0
         };
-        let sy = if source_position.len() > 1 {
+        let sy = if (source_position.shape()[0] * source_position.shape()[1] * source_position.shape()[2]) > 1 {
             source_position[1]
         } else {
             (ny as f64 * dy) / 2.0
         };
-        let sz = if source_position.len() > 2 {
+        let sz = if (source_position.shape()[0] * source_position.shape()[1] * source_position.shape()[2]) > 2 {
             source_position[2]
         } else {
             (nz as f64 * dz) / 2.0
@@ -165,7 +165,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
             }
         }
 
-        let result = ArrayD::from_shape_vec(evaluation_points.raw_dim(), data).map_err(|e| {
+        let result = ArrayD::from_shape_vec(evaluation_points.shape(), data).map_err(|e| {
             kwavers_core::error::KwaversError::DimensionMismatch(format!(
                 "Fluence shape mismatch: expected {:?}, got flat vec of length {}: {}",
                 evaluation_points.shape(),

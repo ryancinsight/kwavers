@@ -37,11 +37,11 @@ impl BroadbandDetector {
 
     /// Calculate signal energy
     fn calculate_energy(&self, signal: &ArrayView1<f64>) -> Option<f64> {
-        if signal.is_empty() || !signal.iter().all(|value| value.is_finite()) {
+        if signal.size() == 0 || !signal.iter().all(|value| value.is_finite()) {
             return None;
         }
 
-        let energy = signal.iter().map(|&x| x * x).sum::<f64>() / signal.len() as f64;
+        let energy = signal.iter().map(|&x| x * x).sum::<f64>() / signal.size() as f64;
         energy.is_finite().then_some(energy)
     }
 
@@ -143,20 +143,25 @@ mod tests {
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::traits::CavitationDetector;
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::types::CavitationDetectionState;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    
+    use leto::Array1;
+
+    fn vec_to_array1(data: Vec<f64>) -> Array1<f64> {
+        let n = data.len();
+        Array1::from_vec([n], data).unwrap()
+    }
 
     #[test]
     fn broadband_detector_rejects_empty_and_nonfinite_signals() {
         let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
 
-        let empty = arr1(&[]);
+        let empty = Array1::<f64>::zeros([0]);
         let empty_metrics = detector.detect(&empty.view());
         assert_eq!(empty_metrics.state, CavitationDetectionState::None);
         assert_eq!(empty_metrics.broadband_level, 0.0);
         assert_eq!(empty_metrics.confidence, 0.0);
         assert!(detector.baseline_energy.is_none());
 
-        let nonfinite = arr1(&[0.0, f64::NAN, 1.0]);
+        let nonfinite = vec_to_array1(vec![0.0, f64::NAN, 1.0]);
         detector.update_baseline(&nonfinite.view());
         assert!(detector.baseline_energy.is_none());
 
@@ -170,16 +175,16 @@ mod tests {
     #[test]
     fn broadband_detector_recovers_after_invalid_signal() {
         let mut detector = BroadbandDetector::new(MHZ_TO_HZ);
-        let invalid = arr1(&[f64::INFINITY]);
+        let invalid = vec_to_array1(vec![f64::INFINITY]);
         assert_eq!(detector.detect(&invalid.view()).confidence, 0.0);
         assert!(detector.baseline_energy.is_none());
 
-        let baseline = arr1(&[1.0, -1.0, 1.0, -1.0]);
+        let baseline = vec_to_array1(vec![1.0, -1.0, 1.0, -1.0]);
         let first_valid = detector.detect(&baseline.view());
         assert_eq!(first_valid.confidence, 0.0);
         assert_eq!(detector.baseline_energy, Some(1.0));
 
-        let elevated = arr1(&[10.0, -10.0, 10.0, -10.0]);
+        let elevated = vec_to_array1(vec![10.0, -10.0, 10.0, -10.0]);
         let elevated_metrics = detector.detect(&elevated.view());
         assert!(elevated_metrics.broadband_level > 0.0);
         assert!(elevated_metrics.confidence > 0.0);

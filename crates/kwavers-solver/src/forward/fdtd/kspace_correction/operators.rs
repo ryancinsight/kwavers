@@ -60,8 +60,8 @@ fn apply_shifted_spectral_gradient(
     if let (Some(output_values), Some(field_values), Some(kappa_values), Some(shift_values)) = (
         output.as_slice_mut(),
         field_k.as_slice(),
-        kappa.as_slice_memory_order(),
-        shift.as_slice_memory_order(),
+        kappa.as_slice(),
+        shift.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |linear_index, value| {
             let shift_index = axis.index(linear_index, ny, nz);
@@ -94,13 +94,13 @@ fn add_assign_ndarray(dst: &mut Array3<f64>, src: &Array3<f64>) {
         "invariant: FDTD accumulation field shapes must match"
     );
     if let (Some(dst_values), Some(src_values)) =
-        (dst.as_slice_memory_order_mut(), src.as_slice_memory_order())
+        (dst.as_slice_mut(), src.as_slice())
     {
         enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
             *value += src_values[index];
         });
     } else {
-        let (nx, ny, nz) = dst.dim();
+        let [nx, ny, nz] = dst.shape();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {

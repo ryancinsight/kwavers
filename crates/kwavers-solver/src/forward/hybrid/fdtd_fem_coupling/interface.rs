@@ -93,7 +93,7 @@ impl FdtdFemInterface {
         fdtd_grid: &Grid,
         fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<Vec<f64>> {
-        let mut weights = Vec::with_capacity(fdtd_indices.len());
+        let mut weights = Vec::with_capacity((fdtd_indices.shape()[0] * fdtd_indices.shape()[1] * fdtd_indices.shape()[2]));
 
         for (&fdtd_idx, &fem_idx) in fdtd_indices.iter().zip(fem_indices.iter()) {
             let (fdtd_x, fdtd_y, fdtd_z) =

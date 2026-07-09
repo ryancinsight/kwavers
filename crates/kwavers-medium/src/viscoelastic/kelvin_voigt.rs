@@ -1,7 +1,7 @@
 //! Kelvin–Voigt viscoelastic model (spring ∥ dashpot).
 
 use super::{recover_complex_modulus, DispersionSample};
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// A homogeneous Kelvin–Voigt viscoelastic solid for the shear channel.
 ///
@@ -188,7 +188,7 @@ mod tests {
         // Degenerate inputs → 0.
         assert_eq!(
             recover_complex_modulus(0.0, 2.0, 0.0, 1000.0),
-            num_complex::Complex64::new(0.0, 0.0)
+            eunomia::Complex64::new(0.0, 0.0)
         );
     }
 
@@ -277,3 +277,4 @@ mod tests {
         assert!(m.quality_factor(w).is_infinite());
     }
 }
+

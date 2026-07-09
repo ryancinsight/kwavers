@@ -71,10 +71,10 @@ where
         // Verify field has correct shape and finite values
         let shape = field.shape();
 
-        if shape.len() != 3 {
+        if (shape.shape()[0] * shape.shape()[1] * shape.shape()[2]) != 3 {
             return Err(format!(
                 "Expected 3D field [nx, ny, 2], got {}D",
-                shape.len()
+                (shape.shape()[0] * shape.shape()[1] * shape.shape()[2])
             ));
         }
 

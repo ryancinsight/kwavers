@@ -103,6 +103,6 @@ fn correlation_adjoint_is_orthogonal_to_synthetic() {
     let obs = Array2::from_shape_fn((1, 40), |(_, j)| (j as f64 * 0.25).sin());
     let syn = Array2::from_shape_fn((1, 40), |(_, j)| (j as f64 * 0.25 + 0.4).sin());
     let adj = m.compute_adjoint_source(&obs, &syn).unwrap();
-    let dot: f64 = adj.row(0).dot(&syn.row(0));
+    let dot: f64 = adj.index_axis(0, 0).unwrap().dot(&syn.index_axis(0, 0).unwrap());
     assert!(dot.abs() < 1e-9, "adjoint·syn = {dot} must vanish");
 }

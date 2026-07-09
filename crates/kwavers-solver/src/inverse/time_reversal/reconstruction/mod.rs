@@ -130,8 +130,8 @@ impl TimeReversalReconstructor {
         let mut reversed_signals = HashMap::new();
         for (sensor_idx, &(i, j, k)) in sensor_indices.iter().enumerate() {
             // Get signal for this sensor
-            let signal_row = pressure_data.row(sensor_idx);
-            let mut signal = signal_row.to_vec();
+            let signal_row = pressure_data.index_axis(0, sensor_idx).unwrap();
+            let mut signal = signal_row.iter().cloned().collect::<Vec<_>>();
 
             // Reverse the signal in time
             signal.reverse();
@@ -180,7 +180,7 @@ impl TimeReversalReconstructor {
             reversed_signals.insert(sensor_idx, signal);
         }
 
-        debug!("Prepared {} reversed signals", reversed_signals.len());
+        debug!("Prepared {} reversed signals", (reversed_signals.shape()[0] * reversed_signals.shape()[1] * reversed_signals.shape()[2]));
         Ok(reversed_signals)
     }
 

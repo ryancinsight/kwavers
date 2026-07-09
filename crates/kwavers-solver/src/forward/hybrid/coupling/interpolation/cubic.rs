@@ -56,7 +56,7 @@ impl InterpolationManager {
             )
         };
 
-        for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {
+        for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take((result.shape()[0] * result.shape()[1] * result.shape()[2])) {
             let fi = ((tx - min_x) / dx).max(1.0).min((shape[0] - 3) as f64);
             let fj = ((ty - min_y) / dy).max(1.0).min((shape[1] - 3) as f64);
             let fk = ((tz - min_z) / dz).max(1.0).min((shape[2] - 3) as f64);
@@ -128,8 +128,8 @@ impl InterpolationManager {
         let shape = source_field.shape();
 
         // For simplicity, if coords don't match source shape, fall back to cubic
-        if source_coords.len() != shape[0] * shape[1] * shape[2]
-            || target_coords.len() != shape[0] * shape[1] * shape[2]
+        if (source_coords.shape()[0] * source_coords.shape()[1] * source_coords.shape()[2]) != shape[0] * shape[1] * shape[2]
+            || (target_coords.shape()[0] * target_coords.shape()[1] * target_coords.shape()[2]) != shape[0] * shape[1] * shape[2]
         {
             return self.cubic_spline_interpolation(source_field, source_coords, target_coords);
         }

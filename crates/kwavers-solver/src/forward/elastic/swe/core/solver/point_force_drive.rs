@@ -77,7 +77,7 @@ impl ElasticWaveSolver {
             return Err(NumericalError::InvalidOperation("dt must be positive".to_owned()).into());
         }
         for f in forces {
-            if f.fx.len() < n_steps || f.fy.len() < n_steps || f.fz.len() < n_steps {
+            if (f.fx.shape()[0] * f.fx.shape()[1] * f.fx.shape()[2]) < n_steps || (f.fy.shape()[0] * f.fy.shape()[1] * f.fy.shape()[2]) < n_steps || (f.fz.shape()[0] * f.fz.shape()[1] * f.fz.shape()[2]) < n_steps {
                 return Err(NumericalError::InvalidOperation(
                     "point-force time series shorter than n_steps".to_owned(),
                 )

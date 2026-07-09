@@ -22,7 +22,7 @@ impl DGSolver {
         pressure: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let topology = validate_tensor_state(self, state, 1.0)?;
-        validate_grid_shape(self, "pressure", pressure.dim())?;
+        validate_grid_shape(self, "pressure", pressure.shape())?;
         let maps = axis_maps(self, topology);
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
@@ -49,10 +49,10 @@ impl DGSolver {
     ) -> KwaversResult<()> {
         let topology = validate_tensor_state(self, state, 1.0)?;
         for (name, dim) in [
-            ("pressure", pressure.dim()),
-            ("ux", ux.dim()),
-            ("uy", uy.dim()),
-            ("uz", uz.dim()),
+            ("pressure", pressure.shape()),
+            ("ux", ux.shape()),
+            ("uy", uy.shape()),
+            ("uz", uz.shape()),
         ] {
             validate_grid_shape(self, name, dim)?;
         }

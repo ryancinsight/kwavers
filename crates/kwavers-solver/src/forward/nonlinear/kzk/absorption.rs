@@ -238,7 +238,7 @@ impl KzkAbsorptionOperator {
         let ny = self.config.ny;
         let slab_len = ny * nt;
         let pressure_values = pressure
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK absorption pressure is standard-layout");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             pressure_values,

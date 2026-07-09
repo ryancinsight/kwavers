@@ -6,10 +6,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array2,
-    ArrayView3,
-};
+use leto::{Array2, ArrayView3};
 use std::f64::consts::PI;
 
 /// Beam pattern analysis configuration
@@ -74,7 +71,7 @@ pub fn calculate_beam_pattern(
     let n_theta = ((TWO_PI) / config.angular_resolution) as usize;
     let n_phi = (PI / config.angular_resolution) as usize;
 
-    let mut pattern = Array2::zeros((n_theta, n_phi));
+    let mut pattern = Array2::zeros([n_theta, n_phi]);
 
     // Calculate far-field distance
     let _far_field_distance =
@@ -107,8 +104,7 @@ pub fn calculate_beam_pattern(
 
                         // Add contribution
                         let p = pressure_field[[ix, iy, iz]];
-                        pressure_complex +=
-                            kwavers_math::fft::Complex64::from_polar(p, -phase);
+                        pressure_complex += kwavers_math::fft::Complex64::from_polar(p, -phase);
                     }
                 }
             }
@@ -120,7 +116,9 @@ pub fn calculate_beam_pattern(
     // Normalize to maximum
     let max_val = pattern.iter().fold(0.0f64, |a: f64, &b| a.max(b.abs()));
     if max_val > 0.0 {
-        pattern /= max_val;
+        for v in pattern.iter_mut() {
+            *v /= max_val;
+        }
     }
 
     Ok(pattern)
@@ -136,7 +134,7 @@ pub fn calculate_directivity(beam_pattern: &Array2<f64>) -> f64 {
     let mut power_sum = 0.0f64;
     let mut sample_count = 0usize;
 
-    for &sample in beam_pattern {
+    for &sample in beam_pattern.iter() {
         if !sample.is_finite() {
             return 0.0;
         }
@@ -204,10 +202,7 @@ fn calculate_far_field_distance(grid: &Grid, wavelength: f64, method: &FarFieldM
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use leto::{
-    Array2,
-    Array3,
-};
+    use leto::{Array2, Array3};
 
     // ── BeamPatternConfig::default ────────────────────────────────────────────
 
@@ -235,7 +230,7 @@ mod tests {
     /// Uniform pattern (all ones) → max=1, mean=1 → DI = 10·log10(1/1) = 0 dB.
     #[test]
     fn calculate_directivity_zero_db_for_uniform_pattern() {
-        let pattern = Array2::<f64>::ones((10, 10));
+        let pattern = Array2::<f64>::ones([10, 10]);
         let di = calculate_directivity(&pattern);
         assert!(
             di.abs() < 1e-10,
@@ -246,7 +241,7 @@ mod tests {
     /// Zero pattern (all zeros) → mean=0 → DI = 0.0 (guarded branch).
     #[test]
     fn calculate_directivity_zero_for_zero_pattern() {
-        let pattern = Array2::<f64>::zeros((10, 10));
+        let pattern = Array2::<f64>::zeros([10, 10]);
         let di = calculate_directivity(&pattern);
         assert_eq!(di, 0.0, "zero pattern must return DI=0 (got {di})");
     }
@@ -255,7 +250,7 @@ mod tests {
     /// before averaging. Signed amplitudes must not cancel the denominator.
     #[test]
     fn calculate_directivity_uses_intensity_average() {
-        let pattern = Array2::from_shape_vec((1, 2), vec![1.0, -0.5]).unwrap();
+        let pattern = Array2::from_shape_vec([1, 2], vec![1.0, -0.5]).unwrap();
         let di = calculate_directivity(&pattern);
         let expected = 10.0_f64 * (1.0_f64 / 0.625_f64).log10();
 
@@ -269,7 +264,7 @@ mod tests {
     /// infallible scalar API.
     #[test]
     fn calculate_directivity_rejects_nonfinite_samples() {
-        let pattern = Array2::from_shape_vec((1, 2), vec![1.0, f64::NAN]).unwrap();
+        let pattern = Array2::from_shape_vec([1, 2], vec![1.0, f64::NAN]).unwrap();
         let di = calculate_directivity(&pattern);
 
         assert_eq!(di, 0.0, "nonfinite pattern must return zero DI");
@@ -283,7 +278,7 @@ mod tests {
     #[test]
     fn calculate_beam_pattern_normalised_and_correct_shape() {
         let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
-        let mut field = Array3::<f64>::zeros((4, 4, 4));
+        let mut field = Array3::<f64>::zeros([4, 4, 4]);
         field[[2, 2, 2]] = 1000.0;
 
         let cfg = BeamPatternConfig {
@@ -298,8 +293,8 @@ mod tests {
         let n_theta = ((2.0 * PI) / (PI / 6.0)) as usize;
         let n_phi = (PI / (PI / 6.0)) as usize;
         assert_eq!(
-            pattern.dim(),
-            (n_theta, n_phi),
+            pattern.shape(),
+            [n_theta, n_phi],
             "pattern shape must match angular sampling"
         );
         assert!(
@@ -316,7 +311,7 @@ mod tests {
     #[test]
     fn calculate_beam_pattern_rejects_invalid_config_domain() {
         let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
-        let field = Array3::<f64>::zeros((4, 4, 4));
+        let field = Array3::<f64>::zeros([4, 4, 4]);
         let cfg = BeamPatternConfig {
             frequency: 0.0,
             sound_speed: SOUND_SPEED_WATER_SIM,
@@ -337,7 +332,7 @@ mod tests {
     #[test]
     fn calculate_beam_pattern_rejects_shape_mismatch() {
         let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
-        let field = Array3::<f64>::zeros((3, 4, 4));
+        let field = Array3::<f64>::zeros([3, 4, 4]);
         let cfg = BeamPatternConfig {
             angular_resolution: PI / 6.0,
             ..BeamPatternConfig::default()
@@ -350,14 +345,14 @@ mod tests {
             message.contains("Dimension mismatch"),
             "unexpected error: {message}"
         );
-        assert!(message.contains("(4, 4, 4)"), "expected shape: {message}");
-        assert!(message.contains("(3, 4, 4)"), "actual shape: {message}");
+        assert!(message.contains("[4, 4, 4]"), "expected shape: {message}");
+        assert!(message.contains("[3, 4, 4]"), "actual shape: {message}");
     }
 
     #[test]
     fn calculate_beam_pattern_rejects_nonfinite_pressure() {
         let grid = Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap();
-        let mut field = Array3::<f64>::zeros((4, 4, 4));
+        let mut field = Array3::<f64>::zeros([4, 4, 4]);
         field[[1, 2, 3]] = f64::INFINITY;
         let cfg = BeamPatternConfig {
             angular_resolution: PI / 6.0,

@@ -91,7 +91,7 @@ impl DgCpmlMemoryWorkspace {
     /// freshly-zeroed memory state in that case (cold restart).
     pub fn ensure_dim(&mut self, n_elements: usize, nodes_per_element: usize) {
         let dim = (n_elements, nodes_per_element, DG_CPML_MEMORY_VARS);
-        if self.state.dim() != dim {
+        if self.state.shape() != dim {
             *self = Self::new(n_elements, nodes_per_element);
         }
     }
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn new_workspace_is_cold_zero_state() {
         let ws = DgCpmlMemoryWorkspace::new(4, 9);
-        assert_eq!(ws.state.dim(), (4, 9, DG_CPML_MEMORY_VARS));
+        assert_eq!(ws.state.shape(), (4, 9, DG_CPML_MEMORY_VARS));
         assert!(ws.state.iter().all(|v| *v == 0.0));
         assert!(ws.original.iter().all(|v| *v == 0.0));
         assert!(ws.stage.iter().all(|v| *v == 0.0));
@@ -138,7 +138,7 @@ mod tests {
         let mut ws = DgCpmlMemoryWorkspace::new(4, 9);
         ws.state[(0, 0, 0)] = 1.5;
         ws.ensure_dim(8, 27);
-        assert_eq!(ws.state.dim(), (8, 27, DG_CPML_MEMORY_VARS));
+        assert_eq!(ws.state.shape(), (8, 27, DG_CPML_MEMORY_VARS));
         assert!(ws.state.iter().all(|v| *v == 0.0));
     }
 

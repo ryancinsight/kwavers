@@ -1,7 +1,7 @@
 use super::{SlscBeamformer, SlscConfig};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array2;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Batch processing for multiple frames
 /// # Errors
@@ -50,3 +50,4 @@ pub fn process_slsc_batch(
 
     Ok(output)
 }
+

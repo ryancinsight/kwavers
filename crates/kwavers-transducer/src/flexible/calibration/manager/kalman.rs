@@ -2,8 +2,8 @@
 
 use super::CalibrationManager;
 use kwavers_core::error::KwaversResult;
-use leto::{Array1, Array2};
 use leto::Array2 as NdArray2;
+use leto::{Array1, Array2};
 
 use super::super::types::KalmanState;
 
@@ -165,8 +165,8 @@ impl CalibrationManager {
                 f_flat[(base + j) * state_dim + (base + j + 3)] = dt;
             }
         }
-        let f_matrix = Array2::from_shape_vec([state_dim, state_dim], f_flat)
-            .expect("square F matrix");
+        let f_matrix =
+            Array2::from_shape_vec([state_dim, state_dim], f_flat).expect("square F matrix");
 
         // Measurement matrix H: observe positions only
         let mut h_flat = vec![0.0_f64; meas_dim * state_dim];
@@ -175,8 +175,8 @@ impl CalibrationManager {
                 h_flat[(i * 3 + j) * state_dim + (i * 6 + j)] = 1.0;
             }
         }
-        let h_matrix = Array2::from_shape_vec([meas_dim, state_dim], h_flat)
-            .expect("H matrix shape");
+        let h_matrix =
+            Array2::from_shape_vec([meas_dim, state_dim], h_flat).expect("H matrix shape");
 
         // Predict
         kalman.state = mat_matvec(&f_matrix, &kalman.state);
@@ -184,7 +184,13 @@ impl CalibrationManager {
         let fpc = mat_mul(&f_matrix, &kalman.covariance);
         let dt4 = dt * dt * dt * dt;
         let q_scaled: Vec<f64> = (0..state_dim * state_dim)
-            .map(|idx| *kalman.process_noise.get([idx / state_dim, idx % state_dim]).unwrap() * dt4)
+            .map(|idx| {
+                *kalman
+                    .process_noise
+                    .get([idx / state_dim, idx % state_dim])
+                    .unwrap()
+                    * dt4
+            })
             .collect();
         let q_s = Array2::from_shape_vec([state_dim, state_dim], q_scaled).unwrap();
         kalman.covariance = mat_add(&mat_mul(&fpc, &ft), &q_s);

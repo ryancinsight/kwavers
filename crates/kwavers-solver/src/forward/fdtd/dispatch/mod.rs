@@ -236,7 +236,7 @@ impl FdtdStencilDispatcher {
             ));
         }
 
-        if p_curr.dim() != (self.nx, self.ny, self.nz) {
+        if p_curr.shape() != (self.nx, self.ny, self.nz) {
             return Err(KwaversError::InvalidInput(
                 "Field dimensions do not match processor configuration".to_owned(),
             ));
@@ -336,7 +336,7 @@ impl FdtdStencilDispatcher {
         // Return the filled scratch buffer without copying data.
         // `replace` puts a fresh zeros array into `self.p_scratch` and gives
         // us ownership of the filled array — zero-copy transfer of results.
-        let dim = self.p_scratch.dim();
+        let dim = self.p_scratch.shape();
         let result = std::mem::replace(&mut self.p_scratch, Array3::zeros(dim));
         Ok(result)
     }

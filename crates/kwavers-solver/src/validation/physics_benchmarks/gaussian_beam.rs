@@ -103,7 +103,7 @@ impl GaussianBeamParameters {
 /// Measure beam radius from intensity profile using 1/e² criterion
 #[must_use]
 pub fn measure_beam_radius(intensity: &Array2<f64>, dx: f64) -> f64 {
-    let (nx, ny) = intensity.dim();
+    let [nx, ny] = intensity.shape();
     let cx = nx / 2;
     let cy = ny / 2;
 

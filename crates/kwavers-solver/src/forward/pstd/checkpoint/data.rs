@@ -170,7 +170,7 @@ impl PSTDCheckpoint {
             }
             Some(data) => {
                 w.write_all(&[1u8])?;
-                let (n_sensors, n_recorded) = data.dim();
+                let [n_sensors, n_recorded] = data.shape();
                 w.write_all(&(n_sensors as u64).to_le_bytes())?;
                 w.write_all(&(n_recorded as u64).to_le_bytes())?;
                 w.write_all(&(sensor_expected_steps as u64).to_le_bytes())?;

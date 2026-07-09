@@ -76,7 +76,7 @@ impl PhysicsTask {
             _ => 0.6,
         };
 
-        let bc_complexity = (self.boundary_conditions.len() as f64).min(10.0) / 10.0;
+        let bc_complexity = ((self.boundary_conditions.shape()[0] * self.boundary_conditions.shape()[1] * self.boundary_conditions.shape()[2]) as f64).min(10.0) / 10.0;
 
         0.5 * pde_complexity + 0.3 * geometry_complexity + 0.2 * bc_complexity
     }
@@ -131,7 +131,7 @@ impl TaskData {
 
     /// Get total number of data points
     pub fn total_points(&self) -> usize {
-        self.collocation_points.len() + self.boundary_data.len() + self.initial_data.len()
+        (self.collocation_points.shape()[0] * self.collocation_points.shape()[1] * self.collocation_points.shape()[2]) + (self.boundary_data.shape()[0] * self.boundary_data.shape()[1] * self.boundary_data.shape()[2]) + (self.initial_data.shape()[0] * self.initial_data.shape()[1] * self.initial_data.shape()[2])
     }
 
     /// Check if task data is empty
@@ -142,9 +142,9 @@ impl TaskData {
     /// Get statistics about point distribution
     pub fn statistics(&self) -> TaskDataStatistics {
         TaskDataStatistics {
-            num_collocation: self.collocation_points.len(),
-            num_boundary: self.boundary_data.len(),
-            num_initial: self.initial_data.len(),
+            num_collocation: (self.collocation_points.shape()[0] * self.collocation_points.shape()[1] * self.collocation_points.shape()[2]),
+            num_boundary: (self.boundary_data.shape()[0] * self.boundary_data.shape()[1] * self.boundary_data.shape()[2]),
+            num_initial: (self.initial_data.shape()[0] * self.initial_data.shape()[1] * self.initial_data.shape()[2]),
             total: self.total_points(),
         }
     }

@@ -62,13 +62,13 @@ impl ArtificialViscosity {
         shock_indicator: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (_, nx, ny, nz) = velocity.dim();
+        let (_, nx, ny, nz) = velocity.shape();
         let mut viscosity = Array3::zeros((nx, ny, nz));
 
         // Extract velocity components
-        let vx = velocity.index_axis(Axis(0), 0);
-        let vy = velocity.index_axis(Axis(0), 1);
-        let vz = velocity.index_axis(Axis(0), 2);
+        let vx = velocity.index_axis(0, 0);
+        let vy = velocity.index_axis(0, 1);
+        let vz = velocity.index_axis(0, 2);
 
         let dx = grid.dx.min(grid.dy).min(grid.dz);
 
@@ -121,12 +121,12 @@ impl ArtificialViscosity {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        let (_, nx, ny, nz) = momentum.dim();
+        let (_, nx, ny, nz) = momentum.shape();
 
         // Apply viscous stress tensor
         for component in 0..3 {
-            let mut momentum_component = momentum.index_axis_mut(Axis(0), component);
-            let velocity_component = velocity.index_axis(Axis(0), component);
+            let mut momentum_component = momentum.index_axis_mut(0, component);
+            let velocity_component = velocity.index_axis(0, component);
 
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {

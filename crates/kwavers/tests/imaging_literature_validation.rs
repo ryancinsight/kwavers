@@ -454,7 +454,7 @@ mod arfi_tests {
         let omega = 2.0 * PI * 100.0; // 100 Hz shear wave
 
         // Kelvin-Voigt shear modulus
-        let mu_complex = num_complex::Complex64::new(mu, omega * eta);
+        let mu_complex = eunomia::Complex64::new(mu, omega * eta);
         let mu_magnitude = mu_complex.norm();
 
         println!("Kelvin-Voigt modulus: {:.2} Pa", mu_magnitude);
@@ -1580,3 +1580,4 @@ mod elastography_shear_modulus_tests {
         }
     }
 }
+

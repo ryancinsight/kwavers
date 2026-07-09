@@ -69,40 +69,40 @@ impl DGSolver {
         memory_rhs: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let topology = super::validate_tensor_state(self, state, density)?;
-        let expected_field = state.dim();
+        let expected_field = state.shape();
         let expected_memory = (expected_field.0, expected_field.1, DG_CPML_MEMORY_VARS);
-        if rhs.dim() != expected_field {
+        if rhs.shape() != expected_field {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML field RHS shape {:?} does not match state {:?}",
-                rhs.dim(),
+                rhs.shape(),
                 expected_field
             )));
         }
-        if memory_state.dim() != expected_memory {
+        if memory_state.shape() != expected_memory {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML memory state shape {:?} does not match expected {:?}",
-                memory_state.dim(),
+                memory_state.shape(),
                 expected_memory
             )));
         }
-        if memory_rhs.dim() != expected_memory {
+        if memory_rhs.shape() != expected_memory {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML memory RHS shape {:?} does not match expected {:?}",
-                memory_rhs.dim(),
+                memory_rhs.shape(),
                 expected_memory
             )));
         }
         for (axis, profile) in profiles.axes.iter().enumerate() {
             let expected = topology.element_counts[axis] * self.n_nodes;
-            if profile.sigma.len() != expected
-                || profile.kappa.len() != expected
-                || profile.alpha.len() != expected
+            if (profile.sigma.shape()[0] * profile.sigma.shape()[1] * profile.sigma.shape()[2]) != expected
+                || (profile.kappa.shape()[0] * profile.kappa.shape()[1] * profile.kappa.shape()[2]) != expected
+                || (profile.alpha.shape()[0] * profile.alpha.shape()[1] * profile.alpha.shape()[2]) != expected
             {
                 return Err(KwaversError::InvalidInput(format!(
                     "DG CPML profile axis {axis} length mismatch: σ={}, κ={}, α={}, expected {}",
-                    profile.sigma.len(),
-                    profile.kappa.len(),
-                    profile.alpha.len(),
+                    (profile.sigma.shape()[0] * profile.sigma.shape()[1] * profile.sigma.shape()[2]),
+                    (profile.kappa.shape()[0] * profile.kappa.shape()[1] * profile.kappa.shape()[2]),
+                    (profile.alpha.shape()[0] * profile.alpha.shape()[1] * profile.alpha.shape()[2]),
                     expected
                 )));
             }
@@ -123,9 +123,9 @@ impl DGSolver {
         // 8 bytes). The CPML branch trades this extra working memory for a
         // clean per-axis separation that the standard RHS does not need.
         let mut surface_rhs_per_axis: [Array3<f64>; 3] = [
-            Array3::zeros(state.dim()),
-            Array3::zeros(state.dim()),
-            Array3::zeros(state.dim()),
+            Array3::zeros(state.shape()),
+            Array3::zeros(state.shape()),
+            Array3::zeros(state.shape()),
         ];
         for (axis, rhs_axis) in surface_rhs_per_axis.iter_mut().enumerate() {
             if !topology.active_axes[axis] {
@@ -287,8 +287,8 @@ impl DGSolver {
         F: FnMut(f64, &mut Array3<f64>),
     {
         super::validate_tensor_state(self, state, density)?;
-        workspace.ensure_dim(state.dim());
-        memory.ensure_dim(state.dim().0, state.dim().1);
+        workspace.ensure_dim(state.shape());
+        memory.ensure_dim(state.shape()[0], state.shape()[1]);
         workspace.original.assign(state);
         memory.original.assign(&memory.state);
 

@@ -6,7 +6,6 @@ use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_mut_enumerated_with,
     for_each_chunk_pair_mut_enumerated_with, for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
-use leto::Array3 as NdArray3;
 
 const DENSE_SOURCE_CHUNK: usize = 4096;
 
@@ -14,21 +13,6 @@ pub(super) trait DenseFieldMut {
     fn shape3(&self) -> [usize; 3];
     fn with_slice_mut<R>(&mut self, f: impl FnOnce(Option<&mut [f64]>) -> R) -> R;
     fn iter_mut_values<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut f64> + 'a>;
-}
-
-impl DenseFieldMut for NdArray3<f64> {
-    fn shape3(&self) -> [usize; 3] {
-        let (nx, ny, nz) = self.dim();
-        [nx, ny, nz]
-    }
-
-    fn with_slice_mut<R>(&mut self, f: impl FnOnce(Option<&mut [f64]>) -> R) -> R {
-        f(self.as_slice_memory_order_mut())
-    }
-
-    fn iter_mut_values<'a>(&'a mut self) -> Box<dyn Iterator<Item = &'a mut f64> + 'a> {
-        Box::new(self.iter_mut())
-    }
 }
 
 impl DenseFieldMut for LetoArray3<f64> {
@@ -66,7 +50,7 @@ pub(super) fn scale_real_field<T: DenseFieldMut>(field: &mut T, factor: f64) {
 
 pub(super) fn add_masked_source_term<T: DenseFieldMut>(
     dst: &mut T,
-    mask: &NdArray3<f64>,
+    mask: &LetoArray3<f64>,
     scale: f64,
 ) {
     assert_eq!(
@@ -76,7 +60,7 @@ pub(super) fn add_masked_source_term<T: DenseFieldMut>(
     );
 
     let used_dense_path = dst.with_slice_mut(|dst_values| {
-        if let (Some(dst_values), Some(mask_values)) = (dst_values, mask.as_slice_memory_order()) {
+        if let (Some(dst_values), Some(mask_values)) = (dst_values, mask.as_slice()) {
             enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
                 let mask_value = mask_values[index];
                 if mask_value.abs() > 1e-12 {
@@ -100,7 +84,7 @@ pub(super) fn add_masked_source_term<T: DenseFieldMut>(
 
 pub(super) fn add_gradient_source_term(
     dst: &mut LetoArray3<f64>,
-    grad_mask: &NdArray3<f64>,
+    grad_mask: &LetoArray3<f64>,
     scale: f64,
 ) {
     assert_eq!(
@@ -109,9 +93,7 @@ pub(super) fn add_gradient_source_term(
         "invariant: PSTD source accumulator shape matches velocity gradient mask shape"
     );
 
-    if let (Some(dst_values), Some(mask_values)) =
-        (dst.as_slice_mut(), grad_mask.as_slice_memory_order())
-    {
+    if let (Some(dst_values), Some(mask_values)) = (dst.as_slice_mut(), grad_mask.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
             *value += mask_values[index] * scale;
         });

@@ -146,11 +146,11 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.shape(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(dst.shape(), [nx, ny, nz], "dst shape must match field shape");
         let inv2dx = 0.5 / self.dx;
         let inv_dx = 1.0 / self.dx;
 
-        if field.is_standard_layout() {
+        if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
                 if traversal::try_fill_standard_layout(dst, |i, j, k| {
                     let center = traversal::row_major_index(i, j, k, ny, nz);
@@ -214,11 +214,11 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.shape(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(dst.shape(), [nx, ny, nz], "dst shape must match field shape");
         let inv2dy = 0.5 / self.dy;
         let inv_dy = 1.0 / self.dy;
 
-        if field.is_standard_layout() {
+        if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
                 if traversal::try_fill_standard_layout(dst, |i, j, k| {
                     let center = traversal::row_major_index(i, j, k, ny, nz);
@@ -283,11 +283,11 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.shape(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(dst.shape(), [nx, ny, nz], "dst shape must match field shape");
         let inv2dz = 0.5 / self.dz;
         let inv_dz = 1.0 / self.dz;
 
-        if field.is_standard_layout() {
+        if field.is_c_contiguous() {
             if let Some(field_values) = field.as_slice() {
                 if traversal::try_fill_standard_layout(dst, |i, j, k| {
                     let center = traversal::row_major_index(i, j, k, ny, nz);

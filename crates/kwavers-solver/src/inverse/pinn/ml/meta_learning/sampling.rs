@@ -72,7 +72,7 @@ impl TaskSampler {
         for _ in 0..batch_size {
             let task = match self.sampling_strategy {
                 MetaLearningSamplingStrategy::Random => {
-                    let idx = rand::random::<usize>() % self.task_pool.len();
+                    let idx = rand::random::<usize>() % (self.task_pool.shape()[0] * self.task_pool.shape()[1] * self.task_pool.shape()[2]);
                     self.task_pool[idx].clone()
                 }
                 MetaLearningSamplingStrategy::Curriculum => {
@@ -101,7 +101,7 @@ impl TaskSampler {
                                 _ => 3.0, // Default for other geometries
                             };
 
-                            let boundary_complexity = task.boundary_conditions.len() as f64;
+                            let boundary_complexity = (task.boundary_conditions.shape()[0] * task.boundary_conditions.shape()[1] * task.boundary_conditions.shape()[2]) as f64;
 
                             complexity_score * geometry_complexity * boundary_complexity
                         })
@@ -122,18 +122,18 @@ impl TaskSampler {
 
                     if candidates.is_empty() {
                         // Fallback to any task if no candidates found
-                        let idx = self.current_index % self.task_pool.len();
+                        let idx = self.current_index % (self.task_pool.shape()[0] * self.task_pool.shape()[1] * self.task_pool.shape()[2]);
                         self.task_pool[idx].clone()
                     } else {
                         // Sample from candidates, preferring higher difficulty within range
-                        let selected_idx = candidates[rand::random::<usize>() % candidates.len()];
+                        let selected_idx = candidates[rand::random::<usize>() % (candidates.shape()[0] * candidates.shape()[1] * candidates.shape()[2])];
                         self.current_index += 1;
                         self.task_pool[selected_idx].clone()
                     }
                 }
                 MetaLearningSamplingStrategy::Balanced => {
                     // Sample from different physics families
-                    let idx = rand::random::<usize>() % self.task_pool.len();
+                    let idx = rand::random::<usize>() % (self.task_pool.shape()[0] * self.task_pool.shape()[1] * self.task_pool.shape()[2]);
                     self.task_pool[idx].clone()
                 }
                 MetaLearningSamplingStrategy::Diversity => {
@@ -185,7 +185,7 @@ impl TaskSampler {
 
                     // Fallback
                     selected_task.unwrap_or_else(|| {
-                        self.task_pool[rand::random::<usize>() % self.task_pool.len()].clone()
+                        self.task_pool[rand::random::<usize>() % (self.task_pool.shape()[0] * self.task_pool.shape()[1] * self.task_pool.shape()[2])].clone()
                     })
                 }
             };
@@ -205,6 +205,6 @@ mod tests {
     fn test_task_sampler_creation() {
         let config = MetaLearningConfig::default();
         let sampler = TaskSampler::new(MetaLearningSamplingStrategy::Random, config);
-        assert_eq!(sampler.task_pool.len(), 0);
+        assert_eq!((sampler.task_pool.shape()[0] * sampler.task_pool.shape()[1] * sampler.task_pool.shape()[2]), 0);
     }
 }

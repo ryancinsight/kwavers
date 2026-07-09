@@ -12,10 +12,7 @@
 //! scattering-based inversion", SEG Technical Program Expanded Abstracts.
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array4,
-};
+use leto::Array4;
 
 use super::super::types::ReverseTimeMigration;
 use super::parallel::for_each_view_mut;

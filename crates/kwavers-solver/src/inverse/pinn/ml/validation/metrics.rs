@@ -12,13 +12,13 @@ pub fn compute_validation_metrics(
     reference: &Array2<f64>,
     prediction: &Array2<f64>,
 ) -> KwaversResult<PinnValidationMetrics> {
-    if reference.dim() != prediction.dim() {
+    if reference.shape() != prediction.shape() {
         return Err(KwaversError::InvalidInput(
             "Reference and prediction must have same dimensions".to_owned(),
         ));
     }
 
-    let (nx, nt) = reference.dim();
+    let [nx, nt] = reference.shape();
     let mut sum_abs_error = 0.0_f64;
     let mut sum_squared_error = 0.0_f64;
     let mut max_error = 0.0_f64;
@@ -61,7 +61,7 @@ pub fn compute_correlation(
     reference: &Array2<f64>,
     prediction: &Array2<f64>,
 ) -> KwaversResult<f64> {
-    let n = reference.len() as f64;
+    let n = (reference.shape()[0] * reference.shape()[1] * reference.shape()[2]) as f64;
     let mean_ref: f64 = reference.iter().sum::<f64>() / n;
     let mean_pred: f64 = prediction.iter().sum::<f64>() / n;
 

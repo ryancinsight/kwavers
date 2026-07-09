@@ -25,10 +25,10 @@ impl Iterator for BatchIterator {
     type Item = Vec<usize>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.position >= self.indices.len() {
+        if self.position >= (self.indices.shape()[0] * self.indices.shape()[1] * self.indices.shape()[2]) {
             return None;
         }
-        let end = (self.position + self.batch_size).min(self.indices.len());
+        let end = (self.position + self.batch_size).min((self.indices.shape()[0] * self.indices.shape()[1] * self.indices.shape()[2]));
         let batch = self.indices[self.position..end].to_vec();
         self.position = end;
         Some(batch)
@@ -52,14 +52,14 @@ where
     let backend = B::default();
     let idx_values: Vec<f32> = indices.iter().map(|&i| i as f32).collect();
     let idx_var = Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![idx_values.len()], &idx_values, &backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(idx_values.shape()[0] * idx_values.shape()[1] * idx_values.shape()[2])], &idx_values, &backend),
         false,
     );
 
     let x = coeus_autograd::index_select(&data.x, 0, &idx_var);
     let y = coeus_autograd::index_select(&data.y, 0, &idx_var);
     let t = coeus_autograd::index_select(&data.t, 0, &idx_var);
-    let n = indices.len();
+    let n = (indices.shape()[0] * indices.shape()[1] * indices.shape()[2]);
     let source_x = Var::new(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend), false);
     let source_y = Var::new(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend), false);
     Ok(CollocationData {

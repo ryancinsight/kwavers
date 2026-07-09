@@ -62,7 +62,7 @@ impl AcousticDg1DWorkspace {
     }
 
     fn ensure_dim(&mut self, dim: (usize, usize, usize)) {
-        if self.p_original.dim() != dim {
+        if self.p_original.shape() != dim {
             *self = Self::new(dim);
         }
     }
@@ -87,7 +87,7 @@ impl DGSolver {
         workspace: &mut AcousticDg1DWorkspace,
     ) -> KwaversResult<()> {
         validate_acoustic_inputs(self.n_nodes, pressure, velocity, density)?;
-        workspace.ensure_dim(pressure.dim());
+        workspace.ensure_dim(pressure.shape());
         workspace.p_original.assign(pressure);
         workspace.u_original.assign(velocity);
 
@@ -168,12 +168,12 @@ impl DGSolver {
         velocity_rhs: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         validate_acoustic_inputs(self.n_nodes, pressure, velocity, density)?;
-        if pressure_rhs.dim() != pressure.dim() || velocity_rhs.dim() != pressure.dim() {
+        if pressure_rhs.shape() != pressure.shape() || velocity_rhs.shape() != pressure.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "acoustic RHS output dimension mismatch: pressure={:?}, p_rhs={:?}, u_rhs={:?}",
-                pressure.dim(),
-                pressure_rhs.dim(),
-                velocity_rhs.dim()
+                pressure.shape(),
+                pressure_rhs.shape(),
+                velocity_rhs.shape()
             )));
         }
 
@@ -272,17 +272,17 @@ fn validate_acoustic_inputs(
             "acoustic DG density must be finite and positive, got {density}"
         )));
     }
-    if pressure.dim() != velocity.dim() {
+    if pressure.shape() != velocity.shape() {
         return Err(KwaversError::InvalidInput(format!(
             "acoustic DG pressure/velocity dimension mismatch: {:?} vs {:?}",
-            pressure.dim(),
-            velocity.dim()
+            pressure.shape(),
+            velocity.shape()
         )));
     }
     if pressure.shape()[1] != n_nodes || pressure.shape()[2] != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "acoustic DG expects line coefficients (n_elements, {n_nodes}, 1), got {:?}",
-            pressure.dim()
+            pressure.shape()
         )));
     }
     Ok(())
@@ -390,8 +390,8 @@ mod tests {
 
     fn weighted_sum(values: &Array3<f64>, weights: &leto::Array1<f64>) -> f64 {
         let mut sum = 0.0;
-        for elem in 0..values.dim().0 {
-            for node in 0..values.dim().1 {
+        for elem in 0..values.shape()[0] {
+            for node in 0..values.shape()[1] {
                 sum += weights[node] * values[(elem, node, 0)];
             }
         }

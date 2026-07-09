@@ -213,7 +213,7 @@ where
         }
 
         let backend = B::default();
-        let n = bc_points_x.len();
+        let n = (bc_points_x.shape()[0] * bc_points_x.shape()[1] * bc_points_x.shape()[2]);
         let mk = |v: &[f32]| {
             Var::new(
                 coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend),
@@ -261,11 +261,11 @@ mod tests {
 
         let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 3)?;
 
-        assert_eq!(metrics.total_loss.len(), 3);
-        assert_eq!(metrics.data_loss.len(), 3);
-        assert_eq!(metrics.pde_loss.len(), 3);
-        assert_eq!(metrics.bc_loss.len(), 3);
-        assert_eq!(metrics.ic_loss.len(), 3);
+        assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 3);
+        assert_eq!((metrics.data_loss.shape()[0] * metrics.data_loss.shape()[1] * metrics.data_loss.shape()[2]), 3);
+        assert_eq!((metrics.pde_loss.shape()[0] * metrics.pde_loss.shape()[1] * metrics.pde_loss.shape()[2]), 3);
+        assert_eq!((metrics.bc_loss.shape()[0] * metrics.bc_loss.shape()[1] * metrics.bc_loss.shape()[2]), 3);
+        assert_eq!((metrics.ic_loss.shape()[0] * metrics.ic_loss.shape()[1] * metrics.ic_loss.shape()[2]), 3);
 
         assert!(metrics.total_loss.iter().all(|&l| l.is_finite()));
         assert!(metrics.data_loss.iter().all(|&l| l.is_finite()));

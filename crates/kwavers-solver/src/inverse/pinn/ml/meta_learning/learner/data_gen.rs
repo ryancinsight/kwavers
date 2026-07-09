@@ -46,14 +46,14 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
         geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
-        let condition_count = conditions.len().max(1);
+        let condition_count = (conditions.shape()[0] * conditions.shape()[1] * conditions.shape()[2]).max(1);
         let (x_min, x_max, y_min, _y_max) = geometry.bounding_box();
         let span_x = (x_max - x_min).abs();
         let base_count = 200;
         let mut data = Vec::new();
 
         let push_point = |points: &mut Vec<(f64, f64, f64, f64)>, x: f64, y: f64, t: f64| {
-            let idx = points.len() % condition_count;
+            let idx = (points.shape()[0] * points.shape()[1] * points.shape()[2]) % condition_count;
             let bc = conditions
                 .get(idx)
                 .copied()
@@ -148,10 +148,10 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
             }
             crate::inverse::pinn::ml::WaveGeometry2D::Polygonal { vertices, holes } => {
                 let sample_edges = |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
-                    if poly.len() < 2 {
+                    if (poly.shape()[0] * poly.shape()[1] * poly.shape()[2]) < 2 {
                         return;
                     }
-                    let n_edges = poly.len();
+                    let n_edges = (poly.shape()[0] * poly.shape()[1] * poly.shape()[2]);
                     let n = (base_count / n_edges.max(1)).max(10);
                     for i in 0..n_edges {
                         let (x0, y0) = poly[i];

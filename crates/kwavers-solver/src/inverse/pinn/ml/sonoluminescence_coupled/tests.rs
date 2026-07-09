@@ -23,7 +23,7 @@ fn test_spectral_coupling_interfaces() {
         SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::SpectralCoupling);
 
     let interfaces = domain.coupling_interfaces();
-    assert!(interfaces.len() >= 2);
+    assert!((interfaces.shape()[0] * interfaces.shape()[1] * interfaces.shape()[2]) >= 2);
 
     let has_em_sl = interfaces
         .iter()

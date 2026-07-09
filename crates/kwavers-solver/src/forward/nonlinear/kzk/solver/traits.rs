@@ -59,11 +59,11 @@ impl KZKSolverTrait for KZKSolver {
         let nt = self.config.nt;
         let pressure = self
             .pressure
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK pressure is standard-layout");
         let mut rms = Array2::zeros((self.config.nx, self.config.ny));
         let rms_slice = rms
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: KZK RMS output is standard-layout");
         enumerate_mut_with::<Adaptive, _, _>(rms_slice, |idx, r| {
             let i = idx / ny;

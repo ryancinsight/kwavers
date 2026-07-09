@@ -16,6 +16,10 @@ use leto::{
 };
 use eunomia::Complex64;
 
+pub(super) fn dot_real(a: &Array1<f64>, b: &Array1<f64>) -> f64 {
+    a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()
+}
+
 /// Solver configuration.
 #[derive(Debug, Clone)]
 pub struct SolverConfig {
@@ -83,27 +87,34 @@ impl IterativeSolver {
         }
 
         let n = a.rows;
-        let mut x = x0.map_or_else(|| Array1::zeros([n]), |v| v.to_owned());
+        let mut x = if let Some(v) = x0 {
+            Array1::from_shape_vec([n], v.iter().copied().collect())
+                .expect("initial guess length must match solver dimension")
+        } else {
+            Array1::zeros([n])
+        };
 
-        let mut r = b.to_owned() - a.multiply_vector(x.view())?;
+        let b_owned = Array1::from_shape_vec([n], b.iter().copied().collect())
+            .expect("rhs length must match solver dimension");
+        let mut r = &b_owned - &a.multiply_vector(x.view())?;
         let mut p = r.clone();
-        let mut rsold = r.dot(&r);
+        let mut rsold = dot_real(&r, &r);
 
         for iteration in 0..self.config.max_iterations {
             let ap = a.multiply_vector(p.view())?;
-            let alpha = rsold / p.dot(&ap);
+            let alpha = rsold / dot_real(&p, &ap);
 
-            x = x + alpha * &p;
-            r = r - alpha * &ap;
+            x = &x + &(&p * alpha);
+            r = &r - &(&ap * alpha);
 
-            let rsnew = r.dot(&r);
+            let rsnew = dot_real(&r, &r);
 
             if rsnew.sqrt() < self.config.tolerance {
                 return Ok(x);
             }
 
             let beta = rsnew / rsold;
-            p = &r + beta * p;
+            p = &r + &(&p * beta);
             rsold = rsnew;
 
             if iteration % 50 == 0 {

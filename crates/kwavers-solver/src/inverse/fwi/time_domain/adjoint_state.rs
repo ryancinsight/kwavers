@@ -2,30 +2,25 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array2,
-    Array3,
-    ArrayView3,
-};
+use leto::{Array2, Array3, ArrayView3};
 
 fn validate_pair_shapes(
     observed: &Array2<f64>,
     synthetic: &Array2<f64>,
 ) -> KwaversResult<(usize, usize)> {
-    if observed.dim() != synthetic.dim() {
+    if observed.shape() != synthetic.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "Observed and synthetic data shape mismatch: observed {:?}, synthetic {:?}",
-                    observed.dim(),
-                    synthetic.dim()
+                    observed.shape(),
+                    synthetic.shape()
                 ),
             },
         ));
     }
 
-    Ok(observed.dim())
+    Ok(observed.shape())
 }
 
 /// Compute the discrete L2 residual.
@@ -76,7 +71,7 @@ pub fn l2_objective(
 ///
 #[must_use]
 pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
-    data.slice(s![.., ..;-1]).to_owned()
+    data.slice(s![.., ..;-1]).unwrap().to_owned()
 }
 
 /// Accumulate a signed zero-lag correlation into a gradient volume.
@@ -95,29 +90,29 @@ pub fn accumulate_signed_correlation(
     adjoint: ArrayView3<'_, f64>,
     scale: f64,
 ) -> KwaversResult<()> {
-    if gradient.dim() != forward.dim() || forward.dim() != adjoint.dim() {
+    if gradient.shape() != forward.shape() || forward.shape() != adjoint.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "Signed correlation shape mismatch: gradient {:?}, forward {:?}, adjoint {:?}",
-                    gradient.dim(),
-                    forward.dim(),
-                    adjoint.dim()
+                    gradient.shape(),
+                    forward.shape(),
+                    adjoint.shape()
                 ),
             },
         ));
     }
 
-    if gradient.is_standard_layout() && forward.is_standard_layout() && adjoint.is_standard_layout()
+    if gradient && forward && adjoint
     {
         let forward = forward
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout forward view exposes memory-order slice");
         let adjoint = adjoint
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout adjoint view exposes memory-order slice");
         let gradient = gradient
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout gradient exposes memory-order slice");
         let chunk_size = super::FWI_FIELD_CHUNK;
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(

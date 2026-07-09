@@ -54,14 +54,14 @@ pub(super) fn apply_velocity_gradient_scaling(
     model: ArrayView3<'_, f64>,
     density: ArrayView3<'_, f64>,
 ) -> KwaversResult<()> {
-    if gradient.dim() != model.dim() || gradient.dim() != density.dim() {
+    if gradient.shape() != model.shape() || gradient.shape() != density.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "FWI gradient scaling shape mismatch: gradient {:?}, model {:?}, density {:?}",
-                    gradient.dim(),
-                    model.dim(),
-                    density.dim()
+                    gradient.shape(),
+                    model.shape(),
+                    density.shape()
                 ),
             },
         ));
@@ -234,24 +234,24 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
     ) -> KwaversResult<GridSource> {
         let expected_rows = geometry.receiver_count();
-        if residual.nrows() != expected_rows {
+        if residual.shape()[0] != expected_rows {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Residual receiver count mismatch: expected {}, got {}",
                         expected_rows,
-                        residual.nrows()
+                        residual.shape()[0]
                     ),
                 },
             ));
         }
-        if residual.ncols() != self.parameters.nt {
+        if residual.shape()[1] != self.parameters.nt {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Residual time length mismatch: expected {}, got {}",
                         self.parameters.nt,
-                        residual.ncols()
+                        residual.shape()[1]
                     ),
                 },
             ));
@@ -267,7 +267,7 @@ impl FwiProcessor {
         }
 
         let p_mask = {
-            let (nx, ny, nz) = geometry.sensor_mask.dim();
+            let (nx, ny, nz) = geometry.sensor_mask.shape();
             LetoArray3::from_shape_vec(
                 [nx, ny, nz],
                 geometry
@@ -358,13 +358,13 @@ impl FwiProcessor {
     ) -> KwaversResult<Array3<f64>> {
         use crate::config::SolverType;
 
-        if forward_history.len_of(Axis(0)) != self.parameters.nt {
+        if forward_history.shape()[0] != self.parameters.nt {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Forward history length mismatch: expected {}, got {}",
                         self.parameters.nt,
-                        forward_history.len_of(Axis(0))
+                        forward_history.shape()[0]
                     ),
                 },
             ));

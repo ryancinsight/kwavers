@@ -170,11 +170,11 @@ impl HybridSpectralDGSolver {
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let shape = (self.grid.nx, self.grid.ny, self.grid.nz);
-        if field.dim() != shape || output.dim() != shape {
+        if field.shape() != shape || output.shape() != shape {
             return Err(KwaversError::InvalidInput(format!(
                 "HybridSpectralDGSolver dimension mismatch: field={:?}, output={:?}, grid={shape:?}",
-                field.dim(),
-                output.dim()
+                field.shape(),
+                output.shape()
             )));
         }
 
@@ -217,7 +217,7 @@ impl HybridSpectralDGSolver {
         dt: f64,
         c: f64,
     ) -> KwaversResult<Array3<f64>> {
-        let mut output = Array3::zeros(field.dim());
+        let mut output = Array3::zeros(field.shape());
         self.solve_step_into(field, dt, c, &mut output)?;
         Ok(output)
     }
@@ -230,14 +230,14 @@ impl NumericalSolver for HybridSpectralDGSolver {
         dt: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        if field.dim() != mask.dim() {
+        if field.shape() != mask.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "HybridSpectralDGSolver mask shape {:?} does not match field {:?}",
-                mask.dim(),
-                field.dim()
+                mask.shape(),
+                field.shape()
             )));
         }
-        let mut output = Array3::zeros(field.dim());
+        let mut output = Array3::zeros(field.shape());
         self.solve_step_into(field, dt, self.dg_solver.config().sound_speed, &mut output)?;
         for ((out, &active), &input) in output.iter_mut().zip(mask.iter()).zip(field.iter()) {
             if !active {

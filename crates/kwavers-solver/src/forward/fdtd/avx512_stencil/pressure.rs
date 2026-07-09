@@ -51,7 +51,7 @@ impl FdtdAvx512StencilProcessor {
                 "All fields must have identical dimensions".to_owned(),
             ));
         }
-        let shape = p_curr.dim();
+        let shape = p_curr.shape();
         if shape != (self.nx, self.ny, self.nz) {
             return Err(KwaversError::InvalidInput(
                 "Field dimensions do not match processor configuration".to_owned(),
@@ -82,7 +82,7 @@ impl FdtdAvx512StencilProcessor {
     /// # Safety
     ///
     /// Preconditions (all verified by `update_pressure_avx512` before calling):
-    /// 1. `p_curr.dim() == p_prev.dim() == u_div.dim() == p_new.dim() == (self.nx, self.ny, self.nz)`
+    /// 1. `p_curr.shape() == p_prev.shape() == u_div.shape() == p_new.shape() == (self.nx, self.ny, self.nz)`
     /// 2. `(self.nx, self.ny, self.nz) >= (4, 4, 4)` (enforced by constructor).
     /// 3. AVX-512F is available (checked at construction time on x86_64).
     /// 4. All arrays are standard-layout (C-order, row-major, contiguous allocation).

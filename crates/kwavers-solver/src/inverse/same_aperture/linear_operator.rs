@@ -42,8 +42,8 @@ pub trait LinearOperator {
 /// Numerical result is equivalent to sequential summation within floating-point
 /// rounding: the difference is a permutation of the same summands.
 pub(crate) fn dot(a: &[f32], b: &[f32]) -> f32 {
-    debug_assert_eq!(a.len(), b.len());
-    let n = a.len();
+    debug_assert_eq!((a.shape()[0] * a.shape()[1] * a.shape()[2]), (b.shape()[0] * b.shape()[1] * b.shape()[2]));
+    let n = (a.shape()[0] * a.shape()[1] * a.shape()[2]);
     let end8 = (n / 8) * 8;
     let mut acc0 = 0.0_f32;
     let mut acc1 = 0.0_f32;
@@ -76,8 +76,8 @@ pub(crate) fn dot(a: &[f32], b: &[f32]) -> f32 {
 /// enabling the compiler to emit `vfmadd231ps` (AVX2) with no false data
 /// dependencies between the 8 stores.
 pub(crate) fn axpy(alpha: f32, x: &[f32], y: &mut [f32]) {
-    debug_assert_eq!(x.len(), y.len());
-    let n = y.len();
+    debug_assert_eq!((x.shape()[0] * x.shape()[1] * x.shape()[2]), (y.shape()[0] * y.shape()[1] * y.shape()[2]));
+    let n = (y.shape()[0] * y.shape()[1] * y.shape()[2]);
     let end8 = (n / 8) * 8;
     for (yc, xc) in y[..end8].chunks_exact_mut(8).zip(x[..end8].chunks_exact(8)) {
         yc[0] += alpha * xc[0];

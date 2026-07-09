@@ -162,7 +162,7 @@ fn apply_spectral_multiplier(
         absorbing_weights(grid, absorbing_boundary).expect("validated absorbing boundary");
     let (nx, ny, nz) = grid.dimensions;
     let mut real_space =
-        Array3::from_shape_vec([nx, ny, nz], values.to_vec()).expect("validated CBS shape");
+        Array3::from_shape_vec([nx, ny, nz], values.iter().cloned().collect::<Vec<_>>()).expect("validated CBS shape");
     for (value, &weight) in real_space.iter_mut().zip(weights.iter()) {
         *value *= weight;
     }

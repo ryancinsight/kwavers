@@ -84,7 +84,7 @@ pub fn build_vandermonde(
     poly_order: usize,
     basis_type: BasisType,
 ) -> KwaversResult<Array2<f64>> {
-    let n_nodes = nodes.len();
+    let n_nodes = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
     let n_modes = poly_order + 1;
 
     if n_nodes != n_modes {

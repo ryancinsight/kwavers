@@ -140,7 +140,7 @@ impl MultiRateController {
         // Compute work if single-rate was used (everyone at fastest rate)
         // This would be: total_steps * max_subcycles_per_component * n_components
         let max_subcycles = self.subcycle_counts.values().max().copied().unwrap_or(1);
-        let single_rate_work = self.total_steps * max_subcycles * self.subcycle_counts.len();
+        let single_rate_work = self.total_steps * max_subcycles * (self.subcycle_counts.shape()[0] * self.subcycle_counts.shape()[1] * self.subcycle_counts.shape()[2]);
 
         single_rate_work as f64 / actual_work.max(1) as f64
     }

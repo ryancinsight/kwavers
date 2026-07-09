@@ -60,13 +60,13 @@ fn test_energy_computation() {
 
     let dv = grid.dx * grid.dy * grid.dz;
     let expected_energy = 1000.0 * 1e5 / 0.1 * dv;
-    assert_relative_roundoff_eq(energy, expected_energy, pressure.len());
+    assert_relative_roundoff_eq(energy, expected_energy, (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]));
 
     // Compute acoustic energy
     let acoustic_energy = monitor.compute_acoustic_energy(&pressure, &medium);
     let expected_acoustic_energy =
         1000.0 * 1e10 / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM.powi(2)) * dv;
-    assert_relative_roundoff_eq(acoustic_energy, expected_acoustic_energy, pressure.len());
+    assert_relative_roundoff_eq(acoustic_energy, expected_acoustic_energy, (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]));
 }
 
 #[test]

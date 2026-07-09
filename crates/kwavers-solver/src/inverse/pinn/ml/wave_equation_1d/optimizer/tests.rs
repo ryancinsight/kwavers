@@ -10,7 +10,7 @@ type TestBackend = MoiraiBackend;
 
 fn var2(vals: &[f32], backend: &TestBackend) -> Var<f32, TestBackend> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![vals.len(), 1], vals, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(vals.shape()[0] * vals.shape()[1] * vals.shape()[2]), 1], vals, backend),
         false,
     )
 }
@@ -120,7 +120,7 @@ fn test_optimizer_multiple_steps() {
         assert!(loss.is_finite());
     }
 
-    assert!(losses.len() == 5);
+    assert!((losses.shape()[0] * losses.shape()[1] * losses.shape()[2]) == 5);
 }
 
 #[test]

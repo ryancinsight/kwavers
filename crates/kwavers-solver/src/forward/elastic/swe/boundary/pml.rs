@@ -157,7 +157,7 @@ impl ElasticSwePMLBoundary {
     /// Parallelised elementwise: each cell independently maps σ > 0 → 1.0.
     #[must_use]
     pub fn get_mask(&self) -> Array3<f64> {
-        let (nx, ny, nz) = self.sigma.dim();
+        let (nx, ny, nz) = self.sigma.shape();
         let mut mask = Array3::<f64>::zeros((nx, ny, nz));
         for_each_indexed_pair_mut(mask.view_mut(), self.sigma.view(), |_idx, m, &s| {
             if s > 0.0 {
@@ -170,7 +170,7 @@ impl ElasticSwePMLBoundary {
     /// Fraction of domain occupied by the PML region.
     #[must_use]
     pub fn volume_fraction(&self) -> f64 {
-        let total_points = self.sigma.len();
+        let total_points = (self.sigma.shape()[0] * self.sigma.shape()[1] * self.sigma.shape()[2]);
         let pml_points = self.sigma.iter().filter(|&&s| s > 0.0).count();
         pml_points as f64 / total_points as f64
     }
@@ -254,18 +254,18 @@ fn apply_velocity_damping(
     dt: f64,
 ) {
     assert_eq!(
-        vx.dim(),
-        sigma.dim(),
+        vx.shape(),
+        sigma.shape(),
         "invariant: PML vx/sigma shape mismatch"
     );
-    assert_eq!(vx.dim(), vy.dim(), "invariant: PML vx/vy shape mismatch");
-    assert_eq!(vx.dim(), vz.dim(), "invariant: PML vx/vz shape mismatch");
+    assert_eq!(vx.shape(), vy.shape(), "invariant: PML vx/vy shape mismatch");
+    assert_eq!(vx.shape(), vz.shape(), "invariant: PML vx/vz shape mismatch");
 
     match (
-        vx.as_slice_memory_order_mut(),
-        vy.as_slice_memory_order_mut(),
-        vz.as_slice_memory_order_mut(),
-        sigma.as_slice_memory_order(),
+        vx.as_slice_mut(),
+        vy.as_slice_mut(),
+        vz.as_slice_mut(),
+        sigma.as_slice(),
     ) {
         (Some(vx), Some(vy), Some(vz), Some(sigma)) => {
             for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
@@ -275,7 +275,7 @@ fn apply_velocity_damping(
                 PML_CHUNK,
                 |chunk_index, vx_chunk, vy_chunk, vz_chunk| {
                     let start = chunk_index * PML_CHUNK;
-                    for offset in 0..vx_chunk.len() {
+                    for offset in 0..(vx_chunk.shape()[0] * vx_chunk.shape()[1] * vx_chunk.shape()[2]) {
                         let sigma_value = sigma[start + offset];
                         if sigma_value > 0.0 {
                             let damping = (-sigma_value * dt).exp();

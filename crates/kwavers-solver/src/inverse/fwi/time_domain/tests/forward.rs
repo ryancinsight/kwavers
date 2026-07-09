@@ -76,7 +76,7 @@ fn test_generate_synthetic_data_matches_canonical_forward_model() {
         .expect("canonical forward model must succeed");
 
     assert_eq!(public_data, canonical_data);
-    assert_eq!(public_data.dim(), (1, 3));
+    assert_eq!(public_data.shape(), [1, 3]);
 }
 
 #[test]

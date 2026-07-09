@@ -44,7 +44,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PinnWave2D")
-            .field("hidden_layers", &self.hidden_layers.len())
+            .field("hidden_layers", &(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]))
             .field("wave_speed_fn", &self.wave_speed_fn)
             .finish_non_exhaustive()
     }
@@ -71,7 +71,7 @@ where
         let input_layer = Linear::new(input_size, first_hidden_size, true);
 
         let mut hidden_layers = Vec::new();
-        for i in 0..config.hidden_layers.len() - 1 {
+        for i in 0..(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) - 1 {
             let in_size = config.hidden_layers[i];
             let out_size = config.hidden_layers[i + 1];
             hidden_layers.push(Linear::new(in_size, out_size, true));
@@ -134,7 +134,7 @@ where
     /// Write optimizer-updated parameter values back into this network's layers.
     ///
     /// # Panics
-    /// - Panics if `params.len()` does not match `self.parameters().len()`.
+    /// - Panics if `(params.shape()[0] * params.shape()[1] * params.shape()[2])` does not match `self.parameters().len()`.
     pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
         let mut offset = 0;
         let n_in = self.input_layer.parameters().len();
@@ -151,7 +151,7 @@ where
             .load_parameters(&params[offset..offset + n_out]);
         assert_eq!(
             offset + n_out,
-            params.len(),
+            (params.shape()[0] * params.shape()[1] * params.shape()[2]),
             "load_parameters: parameter count mismatch"
         );
     }
@@ -163,7 +163,7 @@ where
     pub fn num_parameters(&self) -> usize {
         let input_params = self.config.hidden_layers[0] * 3;
         let mut hidden_params = 0;
-        for i in 0..self.config.hidden_layers.len() - 1 {
+        for i in 0..(self.config.hidden_layers.shape()[0] * self.config.hidden_layers.shape()[1] * self.config.hidden_layers.shape()[2]) - 1 {
             hidden_params += self.config.hidden_layers[i] * self.config.hidden_layers[i + 1];
         }
         let output_params = *self.config.hidden_layers.last().unwrap();
@@ -181,13 +181,13 @@ where
         y: &Array1<f64>,
         t: &Array1<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        if x.len() != y.len() || x.len() != t.len() {
+        if (x.shape()[0] * x.shape()[1] * x.shape()[2]) != (y.shape()[0] * y.shape()[1] * y.shape()[2]) || (x.shape()[0] * x.shape()[1] * x.shape()[2]) != (t.shape()[0] * t.shape()[1] * t.shape()[2]) {
             return Err(KwaversError::InvalidInput(
                 "x, y, and t must have same length".into(),
             ));
         }
 
-        let n = x.len();
+        let n = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
         let backend = B::default();
 
         let x_vec: Vec<f32> = x.iter().map(|&v| v as f32).collect();
@@ -266,7 +266,7 @@ where
 
         let x_slice = x.tensor.as_slice();
         let y_slice = y.tensor.as_slice();
-        let batch_size = x_slice.len();
+        let batch_size = (x_slice.shape()[0] * x_slice.shape()[1] * x_slice.shape()[2]);
         let c_values: Vec<f32> = (0..batch_size)
             .map(|i| self.get_wave_speed_with_default(x_slice[i], y_slice[i], wave_speed as f32))
             .collect();

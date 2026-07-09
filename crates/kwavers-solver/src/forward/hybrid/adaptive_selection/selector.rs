@@ -115,7 +115,7 @@ impl AdaptiveMethodSelector {
         position: (usize, usize, usize),
     ) -> Array3<f64> {
         let (i, j, k) = position;
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         const REGION_SIZE: usize = 3;
 
         // Extract 3x3x3 region centered at position

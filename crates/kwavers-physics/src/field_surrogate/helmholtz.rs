@@ -57,8 +57,8 @@ pub fn helmholtz_residual_field(p: &Array3<f64>, dx_m: f64, f0: f64, c0: f64) ->
     debug_assert!(dx_m > 0.0);
     debug_assert!(f0 > 0.0);
     debug_assert!(c0 > 0.0);
-    let (nx, ny, nz) = p.dim();
-    let mut r = Array3::<f64>::zeros((nx, ny, nz));
+    let [nx, ny, nz] = p.shape();
+    let mut r = Array3::<f64>::zeros([nx, ny, nz]);
     if nx < 3 || ny < 3 || nz < 3 {
         return r;
     }
@@ -112,7 +112,7 @@ pub fn helmholtz_residual_stats(
     f0: f64,
     c0: f64,
 ) -> HelmholtzResidualStats {
-    let (nx, ny, nz) = residual.dim();
+    let [nx, ny, nz] = residual.shape();
     let mut max_abs = 0.0_f64;
     let mut sum_sq = 0.0_f64;
     let mut count = 0usize;

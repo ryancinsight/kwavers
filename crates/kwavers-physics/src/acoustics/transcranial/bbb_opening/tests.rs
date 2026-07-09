@@ -9,7 +9,7 @@ fn test_bbb_opening_creation() {
     let params = BBBParameters::default();
 
     let bbb = BBBOpening::new(pressure, bubbles, params);
-    assert_eq!(bbb.acoustic_pressure.dim(), (8, 8, 8));
+    assert_eq!(bbb.acoustic_pressure.shape(),  [8, 8, 8]);
 }
 
 #[test]

@@ -8,7 +8,8 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-num-complex = { workspace = true }
+ndarray = { workspace = true }
+ndarray-npy = "0.9"
 kwavers-core = { path = "../kwavers-core", features = ["registration"] }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
@@ -29,6 +30,7 @@ rand_chacha = "0.3"
 anyhow = "1.0"
 uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
 ritk-registration = { workspace = true }
+eunomia = { workspace = true }
 
 [dev-dependencies]
 approx = "0.5"

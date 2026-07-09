@@ -87,7 +87,7 @@ fn test_find_push_locations_single_peak() {
 
     let locations = find_push_locations(&displacement, &grid);
 
-    assert_eq!(locations.len(), 1);
+    assert_eq!((locations.shape()[0] * locations.shape()[1] * locations.shape()[2]), 1);
     assert!((locations[0][0] - 10.0 * grid.dx).abs() < 1e-9);
     assert!((locations[0][1] - 10.0 * grid.dy).abs() < 1e-9);
     assert!((locations[0][2] - 10.0 * grid.dz).abs() < 1e-9);

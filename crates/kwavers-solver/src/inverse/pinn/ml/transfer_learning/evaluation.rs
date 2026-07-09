@@ -34,8 +34,8 @@ where
             total_boundary_error += boundary_error * boundary_error;
         }
 
-        let pde_accuracy = 1.0 / (1.0 + total_residual.sqrt() / test_points.len() as f64);
-        let boundary_accuracy = 1.0 / (1.0 + total_boundary_error.sqrt() / conditions.len() as f64);
+        let pde_accuracy = 1.0 / (1.0 + total_residual.sqrt() / (test_points.shape()[0] * test_points.shape()[1] * test_points.shape()[2]) as f64);
+        let boundary_accuracy = 1.0 / (1.0 + total_boundary_error.sqrt() / (conditions.shape()[0] * conditions.shape()[1] * conditions.shape()[2]) as f64);
 
         let overall_accuracy = 0.7 * pde_accuracy + 0.3 * boundary_accuracy;
 

@@ -4,9 +4,8 @@
 //! and vectors, including system solving, matrix inversion, and basic decompositions.
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use leto_ops::{qr_decompose, svd_rank_revealing};
-use std::fmt::Display;
 
 /// Basic linear algebra operations for real-valued matrices
 #[derive(Debug)]
@@ -26,11 +25,16 @@ impl LinearAlgebra {
     /// Returns NumericalError if the matrix is singular or ill-conditioned
     pub fn solve_linear_system(a: &Array2<f64>, b: &Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = a.shape()[0];
-        if a.shape()[1] != n || b.len() != n {
+        if a.shape()[1] != n || b.shape()[0] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "solve_linear_system".to_owned(),
                 expected: format!("{}×{} matrix and {} vector", n, n, n),
-                actual: format!("{}×{} matrix and {} vector", a.shape()[0], a.shape()[1], b.len()),
+                actual: format!(
+                    "{}×{} matrix and {} vector",
+                    a.shape()[0],
+                    a.shape()[1],
+                    b.shape()[0],
+                ),
             }));
         }
 
@@ -81,7 +85,7 @@ impl LinearAlgebra {
         }
 
         // Back substitution
-        let mut x = Array1::zeros(n);
+        let mut x = Array1::zeros([n]);
         for i in (0..n).rev() {
             let mut sum = 0.0;
             for j in (i + 1)..n {
@@ -113,15 +117,17 @@ impl LinearAlgebra {
             }));
         }
 
-        // Create identity matrix
-        let identity = Array2::eye(n);
         let mut result = Array2::zeros([n, n]);
 
         // Solve for each column of the identity matrix
         for i in 0..n {
-            let b = identity.column(i).to_owned();
+            let mut b_data = vec![0.0; n];
+            b_data[i] = 1.0;
+            let b = Array1::from_vec([n], b_data).unwrap();
             let x = Self::solve_linear_system(matrix, &b)?;
-            result.column_mut(i).assign(&x);
+            for j in 0..n {
+                result[[j, i]] = x[j];
+            }
         }
 
         Ok(result)
@@ -142,10 +148,18 @@ impl LinearAlgebra {
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
         let ml: leto::Array2<f64> = matrix.clone().into();
         let qr = qr_decompose(&ml.view()).map_err(leto_linalg_error("QR decomposition"))?;
-        let q: Array2<f64> = qr.q().to_owned().try_into()
-            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "QR-Q".into(), reason: "layout".into() }))?;
-        let r: Array2<f64> = qr.r().to_owned().try_into()
-            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "QR-R".into(), reason: "layout".into() }))?;
+        let q: Array2<f64> = qr.q().to_owned().try_into().map_err(|_| {
+            KwaversError::Numerical(NumericalError::SolverFailed {
+                method: "QR-Q".into(),
+                reason: "layout".into(),
+            })
+        })?;
+        let r: Array2<f64> = qr.r().to_owned().try_into().map_err(|_| {
+            KwaversError::Numerical(NumericalError::SolverFailed {
+                method: "QR-R".into(),
+                reason: "layout".into(),
+            })
+        })?;
         Ok((q, r))
     }
 
@@ -161,13 +175,11 @@ impl LinearAlgebra {
     /// - Returns [`Err`] if Leto rejects the input shape or values.
     ///
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
-        let ml: leto::Array2<f64> = matrix.clone().into();
-        let svd = svd_rank_revealing(&ml.view()).map_err(leto_linalg_error("SVD"))?;
-        let u: Array2<f64> = svd.left_singular_vectors.to_owned().try_into()
-            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "SVD-U".into(), reason: "layout".into() }))?;
-        let s = Array1::from_vec(svd.singular_values);
-        let v: Array2<f64> = svd.right_singular_vectors.to_owned().try_into()
-            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "SVD-V".into(), reason: "layout".into() }))?;
+        let svd = svd_rank_revealing(&matrix.view()).map_err(leto_linalg_error("SVD"))?;
+        let u = svd.left_singular_vectors.to_owned();
+        let singular_vals = svd.singular_values;
+        let s = Array1::from_vec([singular_vals.len()], singular_vals).unwrap();
+        let v = svd.right_singular_vectors.to_owned();
         Ok((u, s, v))
     }
 }

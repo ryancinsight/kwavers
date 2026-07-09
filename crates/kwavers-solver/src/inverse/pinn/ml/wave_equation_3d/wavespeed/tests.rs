@@ -9,7 +9,7 @@ fn grid_of(
     backend: &TestBackend,
 ) -> coeus_tensor::Tensor<f32, TestBackend> {
     let n = dims[0] * dims[1] * dims[2];
-    coeus_tensor::Tensor::from_slice_on(dims.to_vec(), &vec![value; n], backend)
+    coeus_tensor::Tensor::from_slice_on(dims.iter().cloned().collect::<Vec<_>>(), &vec![value; n], backend)
 }
 
 #[test]

@@ -19,6 +19,38 @@ fn norm_l2(v: &Array1<f64>) -> f64 {
     v.iter().map(|x| x * x).sum::<f64>().sqrt()
 }
 
+fn divide_in_place(v: &mut Array1<f64>, scalar: f64) {
+    for value in v.iter_mut() {
+        *value /= scalar;
+    }
+}
+
+fn mat_vec_mul(matrix: &Array2<f64>, vector: &Array1<f64>) -> Array1<f64> {
+    let [rows, cols] = matrix.shape();
+    let mut result = Array1::zeros([rows]);
+    for i in 0..rows {
+        let mut sum = 0.0;
+        for j in 0..cols {
+            sum += matrix[[i, j]] * vector[j];
+        }
+        result[i] = sum;
+    }
+    result
+}
+
+fn mat_t_vec_mul(matrix: &Array2<f64>, vector: &Array1<f64>) -> Array1<f64> {
+    let [rows, cols] = matrix.shape();
+    let mut result = Array1::zeros([cols]);
+    for j in 0..cols {
+        let mut sum = 0.0;
+        for i in 0..rows {
+            sum += matrix[[i, j]] * vector[i];
+        }
+        result[j] = sum;
+    }
+    result
+}
+
 /// LSQR Solver for least-squares problems
 #[derive(Debug)]
 pub struct LsqrSolver {
@@ -57,8 +89,8 @@ impl LsqrSolver {
             };
         }
 
-        u /= beta;
-        let mut v = a_matrix.transpose([1, 0]).unwrap().dot(&u);
+        divide_in_place(&mut u, beta);
+        let mut v = mat_t_vec_mul(a_matrix, &u);
         let mut alpha = norm_l2(&v);
 
         if alpha < 1e-12 {
@@ -73,7 +105,7 @@ impl LsqrSolver {
             };
         }
 
-        v /= alpha;
+        divide_in_place(&mut v, alpha);
 
         // QR factorisation state (Paige & Saunders 1982, Table 1)
         let mut w = v.clone();
@@ -90,16 +122,16 @@ impl LsqrSolver {
 
         for _iteration in 1..=self.config.max_iterations {
             // Bidiagonalisation step
-            let mut u_new = a_matrix.dot(&v) - alpha * &u;
+            let mut u_new = &mat_vec_mul(a_matrix, &v) - &(&u * alpha);
             let beta_new = norm_l2(&u_new);
             if beta_new > 1e-12 {
-                u_new /= beta_new;
+                divide_in_place(&mut u_new, beta_new);
             }
 
-            let mut v_new = a_matrix.transpose([1, 0]).unwrap().dot(&u_new) - beta_new * &v;
+            let mut v_new = &mat_t_vec_mul(a_matrix, &u_new) - &(&v * beta_new);
             let alpha_new = norm_l2(&v_new);
             if alpha_new > 1e-12 {
-                v_new /= alpha_new;
+                divide_in_place(&mut v_new, alpha_new);
             }
 
             // Givens rotation (Paige & Saunders 1982, Table 1, step 3)
@@ -120,8 +152,8 @@ impl LsqrSolver {
             phi_bar *= s;
 
             // Solution and search-direction update
-            x = x + (phi / rho) * &w;
-            w = v_new.clone() - (theta_next / rho) * &w;
+            x = &x + &(&w * (phi / rho));
+            w = &v_new - &(&w * (theta_next / rho));
 
             rho_bar = rho_bar_next;
             rho_values.push(rho.abs());

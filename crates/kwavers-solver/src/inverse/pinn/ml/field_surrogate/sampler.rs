@@ -263,7 +263,7 @@ impl KernelCubeSampler {
                 }
             }
         }
-        let n = inputs.len() / 5;
+        let n = (inputs.shape()[0] * inputs.shape()[1] * inputs.shape()[2]) / 5;
 
         Ok(Self {
             inputs,
@@ -320,7 +320,7 @@ impl KernelCubeSampler {
                 idx.min(self.n - 1)
             }
             SamplingMode::ImportanceByMagnitude { .. } => {
-                debug_assert_eq!(self.cumulative_weights.len(), self.n);
+                debug_assert_eq!((self.cumulative_weights.shape()[0] * self.cumulative_weights.shape()[1] * self.cumulative_weights.shape()[2]), self.n);
                 let total = *self.cumulative_weights.last().unwrap_or(&0.0);
                 let target = u * total;
                 let result = self

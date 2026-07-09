@@ -15,7 +15,7 @@
 //! - Born, M., & Wolf, E. (1999). Principles of Optics
 
 use super::jones_vector::JonesVector;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Jones matrix representing an optical element
 #[derive(Debug, Clone, Copy)]
@@ -138,3 +138,4 @@ impl JonesMatrix {
         )
     }
 }
+

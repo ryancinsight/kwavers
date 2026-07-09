@@ -134,11 +134,11 @@ pub fn compute_strain_energy_derivative_wrt_i1(
                     strain_energy_derivative_i1_total += mui * lambda_sum / 3.0;
                     // Approximate average contribution
                 }
-                strain_energy_derivative_i1_total / mu.len() as f64
+                strain_energy_derivative_i1_total / (mu.shape()[0] * mu.shape()[1] * mu.shape()[2]) as f64
             } else {
                 // Fallback to average modulus if no deformation gradient provided
                 // This maintains backward compatibility but is mathematically incorrect
-                mu.iter().sum::<f64>() / mu.len() as f64
+                mu.iter().sum::<f64>() / (mu.shape()[0] * mu.shape()[1] * mu.shape()[2]) as f64
             }
         }
     }

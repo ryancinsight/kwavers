@@ -1,8 +1,8 @@
 //! Acoustic energy conservation checks.
 
 use kwavers_grid::Grid;
-use moirai_parallel::{reduce_index_with, Sequential};
 use leto::Array3;
+use moirai_parallel::{reduce_index_with, Sequential};
 
 /// Compute total acoustic energy and relative error against `initial_energy`.
 #[allow(clippy::too_many_arguments)]
@@ -17,29 +17,29 @@ pub fn validate_energy_conservation(
     initial_energy: f64,
     grid: &Grid,
 ) -> f64 {
-    let shape = pressure.dim();
+    let shape = pressure.shape();
     assert_eq!(
-        velocity_x.dim(),
+        velocity_x.shape(),
         shape,
         "invariant: acoustic energy velocity_x shape mismatch"
     );
     assert_eq!(
-        velocity_y.dim(),
+        velocity_y.shape(),
         shape,
         "invariant: acoustic energy velocity_y shape mismatch"
     );
     assert_eq!(
-        velocity_z.dim(),
+        velocity_z.shape(),
         shape,
         "invariant: acoustic energy velocity_z shape mismatch"
     );
     assert_eq!(
-        density.dim(),
+        density.shape(),
         shape,
         "invariant: acoustic energy density shape mismatch"
     );
     assert_eq!(
-        sound_speed.dim(),
+        sound_speed.shape(),
         shape,
         "invariant: acoustic energy sound_speed shape mismatch"
     );
@@ -77,11 +77,11 @@ pub fn validate_energy_conservation(
         ),
         _ => pressure
             .iter()
-            .zip(velocity_x)
-            .zip(velocity_y)
-            .zip(velocity_z)
-            .zip(density)
-            .zip(sound_speed)
+            .zip(velocity_x.iter())
+            .zip(velocity_y.iter())
+            .zip(velocity_z.iter())
+            .zip(density.iter())
+            .zip(sound_speed.iter())
             .fold(0.0_f64, |acc, (((((p, vx), vy), vz), rho), c)| {
                 acc + acoustic_cell_energy(*p, [*vx, *vy, *vz], *rho, *c, dv)
             }),
@@ -123,7 +123,7 @@ mod tests {
     }
 
     fn make_fields(p: f64, v: f64, rho: f64, c: f64) -> AcousticFields {
-        let s = (4, 4, 4);
+        let s: [usize; 3] = [4, 4, 4];
         let pressure = Array3::from_elem(s, p);
         let velocity_x = Array3::from_elem(s, v);
         let velocity_y = Array3::zeros(s);

@@ -120,7 +120,7 @@ impl PowerLawModel {
     /// Apply power law absorption in frequency domain
     pub fn apply_frequency_domain(
         &self,
-        spectrum: &mut leto::Array3<num_complex::Complex<f64>>,
+        spectrum: &mut leto::Array3<eunomia::Complex64>,
         frequencies: &[f64],
         distance: f64,
     ) {
@@ -150,7 +150,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use leto::Array3;
-    use num_complex::Complex;
+    use eunomia::Complex;
 
     #[test]
     fn apply_frequency_domain_scales_frequency_planes() {
@@ -187,3 +187,4 @@ mod tests {
         model.apply_frequency_domain(&mut spectrum, &[MHZ_TO_HZ], 1.0);
     }
 }
+

@@ -60,19 +60,19 @@ impl<B: BackendOps<f32> + Default> WaveSpeedFn<B> {
                 reason: format!("Grid size overflows usize: [{nx}, {ny}]"),
             })
         })?;
-        if slice.len() != expected_len {
+        if (slice.shape()[0] * slice.shape()[1] * slice.shape()[2]) != expected_len {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::InvalidConfiguration {
                     parameter: "wave_speed_grid".to_string(),
                     reason: format!(
                         "Wave speed grid data length mismatch: expected {expected_len}, got {}",
-                        slice.len()
+                        (slice.shape()[0] * slice.shape()[1] * slice.shape()[2])
                     ),
                 },
             ));
         }
 
-        let data_cpu = Arc::new(slice.to_vec());
+        let data_cpu = Arc::new(slice.iter().cloned().collect::<Vec<_>>());
         let func = Arc::new(move |x: f32, y: f32| -> f32 {
             let x = x.clamp(0.0, 1.0);
             let y = y.clamp(0.0, 1.0);

@@ -203,7 +203,7 @@ impl Octree {
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     /// - Lohner (1987): "Adaptive remeshing for transient problems"
     fn check_refinement_marker(node: &OctreeNode, markers: &Array3<i8>) -> bool {
-        let (mx, my, mz) = markers.dim();
+        let [mx, my, mz] = markers.shape();
         let bounds = &node.bounds;
 
         // Extract bounds components
@@ -250,7 +250,7 @@ impl Octree {
     /// References:
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     fn check_coarsening(node: &OctreeNode, markers: &Array3<i8>) -> bool {
-        let (mx, my, mz) = markers.dim();
+        let [mx, my, mz] = markers.shape();
         let bounds = &node.bounds;
 
         // Extract bounds components

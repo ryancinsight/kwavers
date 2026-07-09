@@ -59,7 +59,7 @@ impl WENOLimiter {
         shock_indicator: &Array3<f64>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        debug_assert_eq!(field.dim(), output.dim(), "output shape must match field");
+        debug_assert_eq!(field.shape(), output.shape(), "output shape must match field");
         output.assign(field); // initialize: unshocked cells keep original values
         match self.order {
             3 => self.weno3_limit_into(field, shock_indicator, output)?,

@@ -56,8 +56,8 @@ impl MisfitFunction {
         let mut misfit = 0.0;
 
         for i in 0..observed.shape()[0] {
-            let obs_trace = observed.row(i);
-            let syn_trace = synthetic.row(i);
+            let obs_trace = observed.index_axis(0, i).unwrap();
+            let syn_trace = synthetic.index_axis(0, i).unwrap();
 
             let obs_norm = obs_trace.mapv(|x| x * x).sum().sqrt();
             let syn_norm = syn_trace.mapv(|x| x * x).sum().sqrt();
@@ -92,11 +92,11 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let mut adjoint = Array2::zeros(synthetic.dim());
+        let mut adjoint = Array2::zeros(synthetic.shape());
 
         for i in 0..observed.shape()[0] {
-            let obs_trace = observed.row(i);
-            let syn_trace = synthetic.row(i);
+            let obs_trace = observed.index_axis(0, i).unwrap();
+            let syn_trace = synthetic.index_axis(0, i).unwrap();
 
             let obs_norm = obs_trace.mapv(|x| x * x).sum().sqrt();
             let syn_norm = syn_trace.mapv(|x| x * x).sum().sqrt();

@@ -18,7 +18,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstSourceExcitationDiagnostics, BreastUstSourceExcitationFrequencyDiagnostics,
     BreastUstSourceScalingPolicy, BreastUstTable1Parity,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -485,3 +485,4 @@ fn table1_parity_to_dict<'py>(
 fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }
+

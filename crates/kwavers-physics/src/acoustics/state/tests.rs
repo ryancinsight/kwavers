@@ -30,7 +30,7 @@ fn test_field_updates() {
     let grid = Grid::new(5, 5, 5, 0.1, 0.1, 0.1).unwrap();
     let mut state = PhysicsState::new(grid);
 
-    let mut test_data = Array3::zeros((5, 5, 5));
+    let mut test_data = Array3::zeros([5, 5, 5]);
     test_data[[2, 2, 2]] = 100.0;
 
     state

@@ -1,13 +1,13 @@
 //! `SensorBeamformer` — geometry-aware delay, apodization, and steering for sensor arrays.
 
 use super::types::{BeamformerWindowType, SensorProcessingParams};
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_receiver::array::SensorArray;
 use kwavers_receiver::grid_sampling::GridSensorSet;
 use kwavers_signal::window as signal_window;
 use leto::Array2;
-use num_complex::Complex;
+use eunomia::Complex;
 
 /// Sensor-specific beamforming interface tied to hardware array geometry.
 #[derive(Debug, Clone)]
@@ -282,3 +282,4 @@ impl SensorBeamformer {
         max_x - min_x
     }
 }
+

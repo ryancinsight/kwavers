@@ -92,7 +92,7 @@ impl SubcyclingStrategy {
         field_initial: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // Stage 1: k1 = f(t_n, y_n)
         let k1 = Self::compute_derivative(field, field_initial)?;
@@ -157,7 +157,7 @@ impl SubcyclingStrategy {
         field: &Array3<f64>,
         _field_initial: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut derivative = Array3::zeros((nx, ny, nz));
 
         // Compute Laplacian as proxy for diffusion term

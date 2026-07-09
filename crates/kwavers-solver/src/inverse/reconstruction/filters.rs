@@ -31,11 +31,11 @@ pub fn apply_reconstruction_filter(
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    let n = data.dim().1;
-    let mut filtered = Array2::zeros(data.dim());
+    let n = data.shape()[1];
+    let mut filtered = Array2::zeros(data.shape());
 
-    for sensor_idx in 0..data.dim().0 {
-        let trace = data.row(sensor_idx).to_owned();
+    for sensor_idx in 0..data.shape()[0] {
+        let trace = data.index_axis(0, sensor_idx).unwrap().to_owned();
         let filtered_trace = kwavers_math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
@@ -47,7 +47,7 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
                 }
             },
         );
-        filtered.row_mut(sensor_idx).assign(&filtered_trace);
+        filtered.index_axis_mut(0, sensor_idx).unwrap().assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -69,11 +69,11 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    let n = data.dim().1;
-    let mut filtered = Array2::zeros(data.dim());
+    let n = data.shape()[1];
+    let mut filtered = Array2::zeros(data.shape());
 
-    for sensor_idx in 0..data.dim().0 {
-        let trace = data.row(sensor_idx).to_owned();
+    for sensor_idx in 0..data.shape()[0] {
+        let trace = data.index_axis(0, sensor_idx).unwrap().to_owned();
         let filtered_trace = kwavers_math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
@@ -88,7 +88,7 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
                 (2.0 / PI) * (PI * abs_freq / (2.0 * nyquist)).sin()
             },
         );
-        filtered.row_mut(sensor_idx).assign(&filtered_trace);
+        filtered.index_axis_mut(0, sensor_idx).unwrap().assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -108,11 +108,11 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    let n = data.dim().1;
-    let mut filtered = Array2::zeros(data.dim());
+    let n = data.shape()[1];
+    let mut filtered = Array2::zeros(data.shape());
 
-    for sensor_idx in 0..data.dim().0 {
-        let trace = data.row(sensor_idx).to_owned();
+    for sensor_idx in 0..data.shape()[0] {
+        let trace = data.index_axis(0, sensor_idx).unwrap().to_owned();
         let filtered_trace = kwavers_math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
@@ -127,7 +127,7 @@ fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<
                 ram_lak * (PI * ram_lak / 2.0).cos()
             },
         );
-        filtered.row_mut(sensor_idx).assign(&filtered_trace);
+        filtered.index_axis_mut(0, sensor_idx).unwrap().assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -138,10 +138,10 @@ fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_hamming_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    let n = data.dim().1;
+    let n = data.shape()[1];
     let mut filtered = data.clone();
 
-    for sensor_idx in 0..data.dim().0 {
+    for sensor_idx in 0..data.shape()[0] {
         for i in 0..n {
             let window = 0.46f64.mul_add(-(TWO_PI * i as f64 / (n - 1) as f64).cos(), 0.54);
             filtered[[sensor_idx, i]] *= window;
@@ -156,10 +156,10 @@ fn apply_hamming_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResul
 /// - Returns [`Err`] if an internal constraint is violated.
 ///
 fn apply_hann_filter(data: &Array2<f64>, _sampling_freq: f64) -> KwaversResult<Array2<f64>> {
-    let n = data.dim().1;
+    let n = data.shape()[1];
     let mut filtered = data.clone();
 
-    for sensor_idx in 0..data.dim().0 {
+    for sensor_idx in 0..data.shape()[0] {
         for i in 0..n {
             let window = 0.5 * (1.0 - (TWO_PI * i as f64 / (n - 1) as f64).cos());
             filtered[[sensor_idx, i]] *= window;

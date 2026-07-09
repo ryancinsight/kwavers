@@ -89,7 +89,7 @@ fn test_gmres_residual_decrease() {
     let _info = solver.solve(matvec, &b, &mut x0).unwrap();
 
     let history = solver.residual_history();
-    for i in 1..history.len() {
+    for i in 1..(history.shape()[0] * history.shape()[1] * history.shape()[2]) {
         assert!(
             history[i] <= history[i - 1] * (1.0 + 1e-10),
             "Residual increased: {} -> {}",

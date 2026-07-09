@@ -126,10 +126,10 @@ impl MlQuantizer {
     ) -> KwaversResult<QuantizedTensor> {
         match &self.scheme {
             QuantizationScheme::None => Ok(QuantizedTensor {
-                data: QuantizedData::F32(data.to_vec()),
+                data: QuantizedData::F32(data.iter().cloned().collect::<Vec<_>>()),
                 scale: 1.0,
                 zero_point: 0,
-                shape: shape.to_vec(),
+                shape: shape.iter().cloned().collect::<Vec<_>>(),
             }),
             QuantizationScheme::Dynamic8Bit | QuantizationScheme::Static8Bit { .. } => {
                 let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
@@ -142,7 +142,7 @@ impl MlQuantizer {
                     data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: shape.to_vec(),
+                    shape: shape.iter().cloned().collect::<Vec<_>>(),
                 })
             }
             QuantizationScheme::MixedPrecision { weight_bits, .. } => {
@@ -162,7 +162,7 @@ impl MlQuantizer {
                     data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: shape.to_vec(),
+                    shape: shape.iter().cloned().collect::<Vec<_>>(),
                 })
             }
             QuantizationScheme::Adaptive {
@@ -190,19 +190,19 @@ impl MlQuantizer {
                             (orig - dequant).powi(2)
                         })
                         .sum();
-                    let rmse = (error / data.len() as f32).sqrt();
+                    let rmse = (error / (data.shape()[0] * data.shape()[1] * data.shape()[2]) as f32).sqrt();
                     let sum_abs = data.iter().map(|x| x.abs()).sum::<f32>();
                     let relative_error = if sum_abs == 0.0 {
                         0.0
                     } else {
-                        rmse / (sum_abs / data.len() as f32)
+                        rmse / (sum_abs / (data.shape()[0] * data.shape()[1] * data.shape()[2]) as f32)
                     };
                     if relative_error <= *accuracy_threshold || current_bits <= 4 {
                         return Ok(QuantizedTensor {
                             data: QuantizedData::I8(test_quantized),
                             scale: test_scale,
                             zero_point: 0,
-                            shape: shape.to_vec(),
+                            shape: shape.iter().cloned().collect::<Vec<_>>(),
                         });
                     }
                     current_bits -= 1;
@@ -228,14 +228,14 @@ impl MlQuantizer {
     {
         let original_params = model.parameters();
 
-        if original_params.len() != quantized_weights.len() {
+        if (original_params.shape()[0] * original_params.shape()[1] * original_params.shape()[2]) != (quantized_weights.shape()[0] * quantized_weights.shape()[1] * quantized_weights.shape()[2]) {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::InvalidConfiguration {
                     parameter: "quantized_weights".to_string(),
                     reason: format!(
                         "Parameter count mismatch: original={}, quantized={}",
-                        original_params.len(),
-                        quantized_weights.len()
+                        (original_params.shape()[0] * original_params.shape()[1] * original_params.shape()[2]),
+                        (quantized_weights.shape()[0] * quantized_weights.shape()[1] * quantized_weights.shape()[2])
                     ),
                 },
             ));
@@ -250,11 +250,11 @@ impl MlQuantizer {
             let orig_floats = orig.tensor.as_slice();
 
             let dequant_floats = quant.dequantize();
-            original_bytes += orig_floats.len() * 4;
+            original_bytes += (orig_floats.shape()[0] * orig_floats.shape()[1] * orig_floats.shape()[2]) * 4;
 
             match &quant.data {
-                QuantizedData::F32(v) => quantized_bytes += v.len() * 4,
-                QuantizedData::I8(v) => quantized_bytes += v.len(),
+                QuantizedData::F32(v) => quantized_bytes += (v.shape()[0] * v.shape()[1] * v.shape()[2]) * 4,
+                QuantizedData::I8(v) => quantized_bytes += (v.shape()[0] * v.shape()[1] * v.shape()[2]),
             }
 
             for (o, q) in orig_floats.iter().zip(&dequant_floats) {

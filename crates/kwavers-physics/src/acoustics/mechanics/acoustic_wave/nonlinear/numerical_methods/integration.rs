@@ -1,8 +1,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use log::debug;
 use leto::Array3;
+use log::debug;
 use std::time::Instant;
 
 use super::super::wave_model::NonlinearWave;
@@ -62,15 +62,20 @@ impl NonlinearWave {
         let linear_term = self.apply_k_space_correction(pressure, medium, grid)?;
         self.fft_time += start_fft.elapsed().as_secs_f64();
 
-        // Add source term
-        let start_source = Instant::now();
-        let source_contribution = source * self.dt.powi(2);
-        self.source_time += start_source.elapsed().as_secs_f64();
+        let [nx, ny, nz] = source.shape();
+        let mut updated_pressure = Array3::from_elem([nx, ny, nz], 0.0);
 
         // Combine terms
         let start_combination = Instant::now();
-        let mut updated_pressure =
-            linear_term + nonlinear_term * self.nonlinearity_scaling + source_contribution;
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let nl = nonlinear_term[[i, j, k]] * self.nonlinearity_scaling;
+                    let src = source[[i, j, k]] * self.dt.powi(2);
+                    updated_pressure[[i, j, k]] = linear_term[[i, j, k]] + nl + src;
+                }
+            }
+        }
 
         // Apply stability constraints if needed
         if self.clamp_gradients {
@@ -152,10 +157,10 @@ mod tests {
             .update_wave_inner(&pressure, &source, &medium, &grid, 0)
             .unwrap();
         assert_eq!(
-            result.dim(),
-            (4, 4, 4),
+            result.shape(),
+            [4, 4, 4],
             "output shape must match grid (4,4,4), got {:?}",
-            result.dim()
+            result.shape()
         );
     }
 }

@@ -1,4 +1,4 @@
-use num_complex::Complex;
+use eunomia::Complex;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Mie Acoustic Scattering — Compressible Fluid Sphere

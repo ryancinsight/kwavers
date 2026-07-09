@@ -66,7 +66,7 @@ pub fn compute_mass_matrix(
 ) -> KwaversResult<Array2<f64>> {
     // With GLL quadrature, M is diagonal with entries equal to weights.
 
-    let n = weights.len();
+    let n = (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]);
     let mut m = Array2::zeros((n, n));
 
     for i in 0..n {
@@ -95,7 +95,7 @@ pub fn compute_stiffness_matrix(
     // Then S = M * D.
     // Since M is diagonal (weights), S_ij = w_i * D_ij.
 
-    let n = nodes.len();
+    let n = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
     let mut s = Array2::zeros((n, n));
 
     for i in 0..n {
@@ -116,8 +116,8 @@ pub fn compute_diff_matrix(
     nodes: &Array1<f64>,
     basis_type: BasisType,
 ) -> KwaversResult<Array2<f64>> {
-    let n = nodes.len();
-    let n_modes = vandermonde.ncols();
+    let n = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
+    let n_modes = vandermonde.shape()[1];
     let mut vr = Array2::zeros((n, n_modes));
 
     match basis_type {
@@ -196,8 +196,8 @@ pub fn compute_lift_matrix(
 /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
 ///
 pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-    let n = a.nrows();
-    if a.ncols() != n {
+    let n = a.shape()[0];
+    if a.shape()[1] != n {
         return Err(KwaversError::DimensionMismatch(
             "Matrix must be square for inversion".to_owned(),
         ));

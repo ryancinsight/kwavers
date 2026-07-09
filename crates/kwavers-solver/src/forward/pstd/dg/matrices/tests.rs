@@ -39,7 +39,7 @@ fn differentiation_matrix_exactly_differentiates_linear_polynomial() {
     let vandermonde = build_vandermonde(&nodes, 2, BasisType::Legendre).unwrap();
     let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Legendre).unwrap();
 
-    let constant_values = Array1::ones(nodes.len());
+    let constant_values = Array1::ones((nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]));
     let constant_derivative = diff.dot(&constant_values);
     assert!(constant_derivative
         .iter()

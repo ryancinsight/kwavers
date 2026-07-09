@@ -10,11 +10,7 @@
 //! receive), so beamforming the RF reconstructs the reflectivity map with a realistic
 //! point-spread function and speckle — a genuine receive-data → image pipeline.
 
-use leto::{
-    Array2,
-    ArrayView1,
-    ArrayView2,
-};
+use leto::{Array2, ArrayView1, ArrayView2};
 use std::f64::consts::{LN_2, PI};
 
 /// Synthesize per-element channel RF (shape `(n_elem, n_samples)`) from point
@@ -36,8 +32,8 @@ pub fn simulate_receive_rf(
     frac_bw: f64,
     n_samples: usize,
 ) -> Array2<f64> {
-    let n_elem = elem_pos.nrows();
-    let mut rf = Array2::<f64>::zeros((n_elem, n_samples));
+    let n_elem = elem_pos.shape()[0];
+    let mut rf = Array2::<f64>::zeros([n_elem, n_samples]);
     if n_samples == 0 || n_elem == 0 || !(c > 0.0 && fs > 0.0 && f0 > 0.0) {
         return rf;
     }
@@ -47,16 +43,17 @@ pub fn simulate_receive_rf(
     let two_sig2 = 2.0 * sigma_t * sigma_t;
     let w0 = 2.0 * PI * f0;
     let dmin = c / fs; // spreading floor (one sample)
-    for (i, scat) in scat_pos.outer_iter().enumerate() {
-        let a = scat_amp[i];
+    let n_scat = scat_pos.shape()[0];
+    for i in 0..n_scat {
+        let a = scat_amp[[i]];
         if a == 0.0 || !a.is_finite() {
             continue;
         }
-        let (sx, sy, sz) = (scat[0], scat[1], scat[2]);
-        for (s, el) in elem_pos.outer_iter().enumerate() {
-            let dx = sx - el[0];
-            let dy = sy - el[1];
-            let dz = sz - el[2];
+        let (sx, sy, sz) = (scat_pos[[i, 0]], scat_pos[[i, 1]], scat_pos[[i, 2]]);
+        for s in 0..n_elem {
+            let dx = sx - elem_pos[[s, 0]];
+            let dy = sy - elem_pos[[s, 1]];
+            let dz = sz - elem_pos[[s, 2]];
             let d = (dx * dx + dy * dy + dz * dz).sqrt();
             let tof = d / c;
             let amp = a / d.max(dmin); // 1/r spreading
@@ -68,7 +65,7 @@ pub fn simulate_receive_rf(
             while n <= hi {
                 let tau = n as f64 / fs - tof;
                 let env = (-(tau * tau) / two_sig2).exp();
-                rf[(s, n as usize)] += amp * env * (w0 * tau).cos();
+                rf[[s, n as usize]] += amp * env * (w0 * tau).cos();
                 n += 1;
             }
         }
@@ -110,10 +107,7 @@ pub fn delta_bmode_db(envelope: &[f64], baseline: &[f64], epsilon: f64) -> Vec<f
 #[cfg(test)]
 mod tests {
     use super::*;
-    use leto::{
-    /* array -- no leto equivalent */,
-    Array1,
-};
+    use leto::Array1;
 
     #[test]
     fn echo_peaks_at_one_way_time_of_flight() {
@@ -128,7 +122,7 @@ mod tests {
         let rf = simulate_receive_rf(scat.view(), amp.view(), elem.view(), c, fs, f0, 0.6, 2048);
         // Peak sample index ≈ (d/c)·fs.
         let expected = (0.02 / c * fs).round() as usize;
-        let row = rf.row(0);
+        let row = rf.index_axis(0, 0);
         let peak = (0..row.len())
             .max_by(|&a, &b| row[a].abs().total_cmp(&row[b].abs()))
             .unwrap();
@@ -182,7 +176,7 @@ mod tests {
             2048,
         );
         let pk = |r: &Array2<f64>| {
-            let row = r.row(0);
+            let row = r.index_axis(0, 0);
             (0..row.len())
                 .max_by(|&a, &b| row[a].abs().total_cmp(&row[b].abs()))
                 .unwrap()

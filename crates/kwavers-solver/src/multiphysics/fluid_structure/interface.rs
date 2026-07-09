@@ -128,7 +128,7 @@ impl FsiInterface {
         let nx = shape[0];
         let ny = shape[1];
         let nz = shape[2];
-        debug_assert_eq!(nx * ny * nz, self.interface_mask.len());
+        debug_assert_eq!(nx * ny * nz, (self.interface_mask.shape()[0] * self.interface_mask.shape()[1] * self.interface_mask.shape()[2]));
 
         if let Some(interface_mask) = self.interface_mask.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(interface_mask, |index, mask| {

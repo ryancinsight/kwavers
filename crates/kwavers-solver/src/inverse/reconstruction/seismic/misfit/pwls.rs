@@ -59,7 +59,7 @@ const VARIANCE_FLOOR_FRACTION: f64 = 1.0e-3;
 /// 1, where `σ_r²` is the sample variance of the leading `noise_window` samples.
 #[must_use]
 pub fn trace_weights(observed: &Array2<f64>, weighting: DataWeighting) -> Array2<f64> {
-    let (n_tr, nt) = observed.dim();
+    let [n_tr, nt] = observed.shape();
     let noise_window = match weighting {
         DataWeighting::Uniform => return Array2::ones((n_tr, nt)),
         DataWeighting::InverseNoiseVariance { noise_window } => noise_window.clamp(1, nt.max(1)),
@@ -90,7 +90,7 @@ pub fn trace_weights(observed: &Array2<f64>, weighting: DataWeighting) -> Array2
         1.0
     } else {
         positive.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        VARIANCE_FLOOR_FRACTION * positive[positive.len() / 2]
+        VARIANCE_FLOOR_FRACTION * positive[(positive.shape()[0] * positive.shape()[1] * positive.shape()[2]) / 2]
     };
 
     let inv: Vec<f64> = var.iter().map(|v| 1.0 / v.max(floor)).collect();
@@ -112,14 +112,14 @@ fn validate_triple(
     synthetic: &Array2<f64>,
     weights: &Array2<f64>,
 ) -> KwaversResult<()> {
-    if observed.dim() != synthetic.dim() || observed.dim() != weights.dim() {
+    if observed.shape() != synthetic.shape() || observed.shape() != weights.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "PWLS shape mismatch: observed {:?}, synthetic {:?}, weights {:?}",
-                    observed.dim(),
-                    synthetic.dim(),
-                    weights.dim()
+                    observed.shape(),
+                    synthetic.shape(),
+                    weights.shape()
                 ),
             },
         ));
@@ -214,7 +214,7 @@ mod tests {
             (w0 / w1 - 100.0).abs() / 100.0 < 0.05,
             "weight ratio tracks 1/σ²"
         );
-        let mean_w = w.column(0).mean().unwrap();
+        let mean_w = w.index_axis(1, 0).unwrap().mean().unwrap();
         assert!(
             (mean_w - 1.0).abs() < 1e-9,
             "weights mean-normalised to 1; got {mean_w}"

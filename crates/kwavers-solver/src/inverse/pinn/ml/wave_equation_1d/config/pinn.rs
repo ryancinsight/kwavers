@@ -86,11 +86,11 @@ impl PinnConfig {
         let mut total = 0;
         let first = self.hidden_layers[0];
         total += 2 * first + first;
-        for i in 0..self.hidden_layers.len() - 1 {
+        for i in 0..(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]) - 1 {
             let (in_size, out_size) = (self.hidden_layers[i], self.hidden_layers[i + 1]);
             total += in_size * out_size + out_size;
         }
-        let last = self.hidden_layers[self.hidden_layers.len() - 1];
+        let last = self.hidden_layers[(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]) - 1];
         total += last + 1;
         total
     }

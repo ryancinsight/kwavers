@@ -6,12 +6,7 @@
 
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-    Array4,
-    ArrayView3,
-    ArrayViewMut3,
-};
+use leto::{Array3, Array4, ArrayView3, ArrayViewMut3};
 
 pub use kwavers_field::indices as field_indices;
 
@@ -32,7 +27,7 @@ impl PhysicsState {
     ///
     pub fn new(grid: Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
-        let fields = Array4::<f64>::zeros((field_indices::TOTAL_FIELDS, nx, ny, nz));
+        let fields = Array4::<f64>::zeros([field_indices::TOTAL_FIELDS, nx, ny, nz]);
 
         Self { fields, grid }
     }
@@ -46,7 +41,7 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        Ok(self.fields.index_axis(Axis(0), field_index))
+        Ok(self.fields.index_axis(0, field_index).unwrap())
     }
 
     /// Get a mutable view of a specific field (zero-copy)
@@ -58,7 +53,7 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        Ok(self.fields.index_axis_mut(Axis(0), field_index))
+        Ok(self.fields.index_axis_mut(0, field_index).unwrap())
     }
 
     /// Apply a closure to a field for reading (zero-copy)
@@ -73,7 +68,7 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        Ok(f(self.fields.index_axis(Axis(0), field_index)))
+        Ok(f(self.fields.index_axis(0, field_index).unwrap()))
     }
 
     /// Apply a closure to a field for mutation (zero-copy)
@@ -88,7 +83,7 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        Ok(f(self.fields.index_axis_mut(Axis(0), field_index)))
+        Ok(f(self.fields.index_axis_mut(0, field_index).unwrap()))
     }
 
     /// Get a cloned copy of a field (allocates memory)
@@ -97,7 +92,7 @@ impl PhysicsState {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn clone_field(&self, field_index: usize) -> KwaversResult<Array3<f64>> {
-        self.with_field(field_index, |field| field.to_owned())
+        self.with_field(field_index, |field| field.to_contiguous())
     }
 
     /// Update a specific field with new data
@@ -109,7 +104,7 @@ impl PhysicsState {
             return Err(PhysicsError::InvalidFieldIndex(field_index).into());
         }
 
-        let mut field = self.fields.index_axis_mut(Axis(0), field_index);
+        let mut field = self.fields.index_axis_mut(0, field_index).unwrap();
         if data.shape() != field.shape() {
             return Err(PhysicsError::DimensionMismatch.into());
         }
@@ -168,7 +163,7 @@ impl PhysicsState {
         F: Fn(usize, usize, usize) -> f64,
     {
         self.with_field_mut(field_index, |mut field| {
-            let (nx, ny, nz) = (field.shape()[0], field.shape()[1], field.shape()[2]);
+            let [nx, ny, nz] = field.shape();
             for i in 0..nx {
                 for j in 0..ny {
                     for k in 0..nz {

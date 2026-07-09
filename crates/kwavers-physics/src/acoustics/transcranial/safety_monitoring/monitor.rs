@@ -29,13 +29,14 @@ impl TranscranialSafetyMonitor {
     /// Create new safety monitor
     #[must_use]
     pub fn new(grid_dims: (usize, usize, usize), perfusion_rate: f64, frequency: f64) -> Self {
-        let temperature = Array3::from_elem(grid_dims, BODY_TEMPERATURE_C);
-        let pressure = Array3::zeros(grid_dims);
+        let shape = [grid_dims.0, grid_dims.1, grid_dims.2];
+        let temperature = Array3::from_elem(shape, BODY_TEMPERATURE_C);
+        let pressure = Array3::zeros(shape);
         let thermal_dose = TranscranialSafetyDose {
-            current_dose: Array3::zeros(grid_dims),
-            dose_rate: Array3::zeros(grid_dims),
-            time_to_target: Array3::from_elem(grid_dims, f64::INFINITY),
-            max_safe_time: Array3::zeros(grid_dims),
+            current_dose: Array3::zeros(shape),
+            dose_rate: Array3::zeros(shape),
+            time_to_target: Array3::from_elem(shape, f64::INFINITY),
+            max_safe_time: Array3::zeros(shape),
         };
         let mechanical_index = MechanicalIndex {
             current_mi: 0.0,

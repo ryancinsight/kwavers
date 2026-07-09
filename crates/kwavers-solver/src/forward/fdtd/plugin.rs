@@ -107,11 +107,11 @@ impl crate::plugin::Plugin for FdtdPlugin {
         context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
         // Ensure fields have correct dimensions
-        if fields.dim().0 <= UnifiedFieldType::VelocityZ.index() {
+        if fields.shape()[0] <= UnifiedFieldType::VelocityZ.index() {
             return Err(kwavers_core::error::KwaversError::Physics(
                 kwavers_core::error::PhysicsError::InvalidFieldDimensions {
                     expected: "pressure + 3 velocity components".to_owned(),
-                    actual: format!("{} components", fields.dim().0),
+                    actual: format!("{} components", fields.shape()[0]),
                 },
             ));
         }
@@ -177,7 +177,7 @@ impl crate::plugin::Plugin for FdtdPlugin {
         .expect("leto pressure field shape must map to ndarray");
         context
             .boundary
-            .apply_acoustic(pressure.view_mut().into(), grid, solver.time_step_index)?;
+            .apply_acoustic(pressure.view_mut().unwrap().into(), grid, solver.time_step_index)?;
         for (dst_value, src_value) in solver
             .fields
             .p

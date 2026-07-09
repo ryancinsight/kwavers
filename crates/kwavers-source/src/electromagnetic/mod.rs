@@ -6,7 +6,7 @@
 use super::types::{SourceEMWaveType, SourcePolarization};
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex;
+use eunomia::Complex;
 
 /// Basic electromagnetic source trait
 ///
@@ -289,3 +289,4 @@ mod tests {
         assert!(backward_dir < forward_dir);
     }
 }
+

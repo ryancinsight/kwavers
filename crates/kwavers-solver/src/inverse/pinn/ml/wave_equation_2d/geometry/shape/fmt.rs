@@ -39,8 +39,8 @@ impl std::fmt::Debug for WaveGeometry2D {
             WaveGeometry2D::Polygonal { vertices, holes } => write!(
                 f,
                 "Polygonal {{ vertices: {}, holes: {} }}",
-                vertices.len(),
-                holes.len()
+                (vertices.shape()[0] * vertices.shape()[1] * vertices.shape()[2]),
+                (holes.shape()[0] * holes.shape()[1] * holes.shape()[2])
             ),
             WaveGeometry2D::ParametricCurve {
                 t_min,
@@ -67,8 +67,8 @@ impl std::fmt::Debug for WaveGeometry2D {
             } => write!(
                 f,
                 "MultiRegion {{ regions: {}, interfaces: {} }}",
-                regions.len(),
-                interfaces.len()
+                (regions.shape()[0] * regions.shape()[1] * regions.shape()[2]),
+                (interfaces.shape()[0] * interfaces.shape()[1] * interfaces.shape()[2])
             ),
         }
     }

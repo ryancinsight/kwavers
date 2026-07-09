@@ -120,7 +120,7 @@ fn ncc_recovers_known_subsample_shift() {
     let reference = synthetic_rf(nz, 0x1234_5678, 5.0);
     let true_shift = 1.6_f64; // samples; post[k] = ref[k − shift]
     let tracked: Array1<f64> =
-        Array1::from_shape_fn(nz, |k| interp(reference.view(), k as f64 - true_shift));
+        Array1::from_shape_fn([nz], |k| interp(reference.view(), k as f64 - true_shift));
 
     let params = TrackingParams {
         window_half: 10,
@@ -146,7 +146,7 @@ fn least_squares_strain_recovers_exact_slope() {
     let (nx, ny, nz) = (1, 1, 64);
     let dz = 1e-4;
     let slope = 0.01;
-    let disp = Array3::from_shape_fn((nx, ny, nz), |(_, _, k)| slope * (k as f64 * dz));
+    let disp = Array3::from_shape_fn([nx, ny, nz], |(_, _, k)| slope * (k as f64 * dz));
     let strain = least_squares_strain(&disp, dz, 7);
     // Interior points must recover the slope to machine precision.
     for k in 5..nz - 5 {
@@ -175,8 +175,8 @@ fn reconstructs_uniform_temperature_change() {
     let k_t = cfg.combined_coefficient();
 
     // Build pre/post volumes: post[k] = ref[k − d(k)], d(k) = u(z)/dz = k_T·ΔT·k.
-    let mut reference = Array3::zeros((nx, ny, nz));
-    let mut tracked = Array3::zeros((nx, ny, nz));
+    let mut reference = Array3::zeros([nx, ny, nz]);
+    let mut tracked = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             let seed = 0xABCD_0000u64 ^ ((i as u64) << 16) ^ (j as u64);
@@ -242,8 +242,8 @@ fn dimension_mismatch_is_rejected() {
         40e6,
     )
     .unwrap();
-    let a = Array3::zeros((2, 2, 32));
-    let b = Array3::zeros((2, 2, 16));
+    let a = Array3::zeros([2, 2, 32]);
+    let b = Array3::zeros([2, 2, 16]);
     assert!(imager.reconstruct_temperature(&a, &b).is_err());
 }
 
@@ -262,7 +262,7 @@ fn no_heating_gives_zero_displacement_and_temperature() {
     // maximum is at lag 0, so the integer displacement is exactly zero
     // everywhere; only bounded sub-sample residual remains.
     let (nx, ny, nz) = (2, 2, 256);
-    let mut rf = Array3::zeros((nx, ny, nz));
+    let mut rf = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             let line = synthetic_rf(nz, 0x55AA_0000u64 ^ ((i as u64) << 8) ^ j as u64, 5.0);

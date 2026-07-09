@@ -25,7 +25,7 @@
 
 use core::f64::consts::PI;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// A bulk piezoelectric thickness-mode resonator.
 #[derive(Debug, Clone, Copy)]
@@ -464,3 +464,4 @@ mod tests {
         );
     }
 }
+

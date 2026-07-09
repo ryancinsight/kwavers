@@ -91,13 +91,13 @@ where
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     pub fn predict(&self, x: &[f32], y: &[f32], z: &[f32], t: &[f32]) -> KwaversResult<Vec<f32>> {
-        let n = x.len();
+        let n = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
         if n == 0 {
             return Err(KwaversError::InvalidInput(
                 "Prediction inputs must be non-empty".into(),
             ));
         }
-        if y.len() != n || z.len() != n || t.len() != n {
+        if (y.shape()[0] * y.shape()[1] * y.shape()[2]) != n || (z.shape()[0] * z.shape()[1] * z.shape()[2]) != n || (t.shape()[0] * t.shape()[1] * t.shape()[2]) != n {
             return Err(KwaversError::InvalidInput(
                 "x, y, z, and t must have equal length".into(),
             ));
@@ -130,11 +130,11 @@ where
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     pub(crate) fn extract_scalar(v: &Var<f32, B>) -> KwaversResult<f32> {
         let slice = v.tensor.as_slice();
-        if slice.len() != 1 {
+        if (slice.shape()[0] * slice.shape()[1] * slice.shape()[2]) != 1 {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
                     expected: "len=1".to_string(),
-                    actual: format!("len={}", slice.len()),
+                    actual: format!("len={}", (slice.shape()[0] * slice.shape()[1] * slice.shape()[2])),
                 },
             ));
         }
@@ -168,15 +168,15 @@ where
             ));
         }
         let slice = v.tensor.as_slice();
-        if slice.len() != *n {
+        if (slice.shape()[0] * slice.shape()[1] * slice.shape()[2]) != *n {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
                     expected: format!("len={n}"),
-                    actual: format!("len={}", slice.len()),
+                    actual: format!("len={}", (slice.shape()[0] * slice.shape()[1] * slice.shape()[2])),
                 },
             ));
         }
-        Ok(slice.to_vec())
+        Ok(slice.iter().cloned().collect::<Vec<_>>())
     }
 }
 
@@ -241,7 +241,7 @@ mod tests {
         let t_test = vec![0.1, 0.2];
 
         let predictions = solver.predict(&x_test, &y_test, &z_test, &t_test)?;
-        assert_eq!(predictions.len(), 2);
+        assert_eq!((predictions.shape()[0] * predictions.shape()[1] * predictions.shape()[2]), 2);
         assert!(predictions.iter().all(|&p| p.is_finite()));
         Ok(())
     }

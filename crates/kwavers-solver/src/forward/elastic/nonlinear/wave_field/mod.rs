@@ -123,7 +123,7 @@ impl NonlinearElasticWaveField {
     /// Total number of harmonics including fundamental (1 + 1 + n_higher)
     #[must_use]
     pub fn num_harmonics(&self) -> usize {
-        2 + self.u_harmonics.len() // fundamental + second + higher
+        2 + (self.u_harmonics.shape()[0] * self.u_harmonics.shape()[1] * self.u_harmonics.shape()[2]) // fundamental + second + higher
     }
 
     /// Get the displacement at a specific harmonic

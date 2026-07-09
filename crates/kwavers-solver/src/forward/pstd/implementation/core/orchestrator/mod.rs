@@ -214,7 +214,7 @@ pub struct PSTDSolver {
     pub(crate) dirichlet_pml_bypass_x: Vec<usize>,
     /// Reusable yz-plane scratch for preserving Dirichlet-PML bypass rows.
     ///
-    /// Shape is `(dirichlet_pml_bypass_x.len(), ny, nz)`. Velocity and density
+    /// Shape is `((dirichlet_pml_bypass_x.shape()[0] * dirichlet_pml_bypass_x.shape()[1] * dirichlet_pml_bypass_x.shape()[2]), ny, nz)`. Velocity and density
     /// components reuse the same buffer sequentially, eliminating per-step
     /// `Array2` allocations in the bypass path.
     pub(crate) pml_bypass_plane_scratch: Array3<f64>,

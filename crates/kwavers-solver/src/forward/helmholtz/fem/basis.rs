@@ -314,13 +314,13 @@ impl GaussQuadrature {
         _basis: &BasisFunction,
     ) -> KwaversResult<()> {
         // Add element contributions to global matrices
-        for i in 0..elem_stiffness.nrows() {
+        for i in 0..elem_stiffness.shape()[0] {
             let global_i = element.nodes[i];
 
             // Right-hand side
             global_rhs[global_i] += elem_rhs[i];
 
-            for j in 0..elem_stiffness.ncols() {
+            for j in 0..elem_stiffness.shape()[1] {
                 let global_j = element.nodes[j];
 
                 // Stiffness matrix

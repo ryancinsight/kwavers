@@ -45,7 +45,7 @@ use tracing::debug;
 /// * `mask` — Source spatial mask (active voxels have |mask| > 1e-12).
 #[must_use]
 pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
-    let shape = mask.dim();
+    let shape = mask.shape();
     let mut num_active: usize = 0;
     let mut first_i: Option<usize> = None;
     let mut first_j: Option<usize> = None;

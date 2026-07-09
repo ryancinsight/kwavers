@@ -90,7 +90,7 @@ impl AngularSpectrum2D {
             .scratch
             .as_slice_mut()
             .expect("invariant: KZK angular-spectrum scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_memory_order() {
+        if let Some(field_values) = field.as_slice() {
             enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
                 *s = Complex64::new(field_values[idx], 0.0);
             });
@@ -104,11 +104,11 @@ impl AngularSpectrum2D {
 
         let kx = self
             .kx
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK angular-spectrum kx is standard-layout");
         let ky = self
             .ky
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: KZK angular-spectrum ky is standard-layout");
         let scratch = self
             .scratch
@@ -135,7 +135,7 @@ impl AngularSpectrum2D {
             .scratch
             .as_slice()
             .expect("invariant: KZK angular-spectrum scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_memory_order_mut() {
+        if let Some(field_values) = field.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {
                 *out = scratch[idx].re;
             });

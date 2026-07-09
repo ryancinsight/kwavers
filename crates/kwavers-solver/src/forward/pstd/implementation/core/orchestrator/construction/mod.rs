@@ -176,8 +176,8 @@ impl PSTDSolver {
         // nabla1 = |k|^(y-2) and nabla2 = |k|^(y-1) are symmetric under kz sign flip,
         // so the first nz_c z-values are the complete independent set for real-input fields.
         if let Some(ref mut abs) = absorption {
-            abs.nabla1 = abs.nabla1.slice(s![.., .., ..nz_c]).to_owned();
-            abs.nabla2 = abs.nabla2.slice(s![.., .., ..nz_c]).to_owned();
+            abs.nabla1 = abs.nabla1.slice(s![.., .., ..nz_c]).unwrap().to_owned();
+            abs.nabla2 = abs.nabla2.slice(s![.., .., ..nz_c]).unwrap().to_owned();
         }
         // Capture the raw |k| half-spectrum (r2c z-axis: nz_c = nz/2+1) BEFORE the
         // kappa cosine transform overwrites k_mag. Needed to build the broadband
@@ -212,8 +212,8 @@ impl PSTDSolver {
         // generate_shift_1d produces i·k·exp(±i·k·ds/2) for k in rfftfreq order
         // (indices [0, nz_c) cover non-negative kz exactly), so prefix truncation is exact.
         let (ddz_full_pos, ddz_full_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
-        let ddz_k_shift_pos = ddz_full_pos.slice(s![..nz_c]).to_owned();
-        let ddz_k_shift_neg = ddz_full_neg.slice(s![..nz_c]).to_owned();
+        let ddz_k_shift_pos = ddz_full_pos.slice(s![..nz_c]).unwrap().to_owned();
+        let ddz_k_shift_neg = ddz_full_neg.slice(s![..nz_c]).unwrap().to_owned();
 
         let shape = (grid.nx, grid.ny, grid.nz);
         let shape3 = [grid.nx, grid.ny, grid.nz];

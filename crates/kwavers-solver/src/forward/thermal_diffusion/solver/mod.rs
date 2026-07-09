@@ -265,7 +265,7 @@ impl ThermalDiffusionSolver {
         external_source: Option<ArrayView3<'_, f64>>,
     ) -> KwaversResult<()> {
         if self.temperature_prev.is_none() {
-            self.temperature_prev = Some(Array3::zeros(self.temperature.raw_dim()));
+            self.temperature_prev = Some(Array3::zeros(self.temperature.shape()));
         }
         if let Some(ref mut prev) = self.temperature_prev {
             prev.assign(&self.temperature);
@@ -309,12 +309,12 @@ impl ThermalDiffusionSolver {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        let shape = self.temperature.dim();
+        let shape = self.temperature.shape();
         if let Some(source) = external_source.as_ref() {
-            if source.dim() != shape {
+            if source.shape() != shape {
                 return Err(KwaversError::DimensionMismatch(format!(
                     "thermal diffusion source shape {:?} does not match temperature shape {:?}",
-                    source.dim(),
+                    source.shape(),
                     shape
                 )));
             }

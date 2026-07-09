@@ -148,6 +148,6 @@ pub trait KZKSolverTrait {
         // Default: return zeros as a sentinel value.
         // Implementations with 3D pressure access should override this.
         let rms = self.current_field();
-        leto::Array2::zeros(rms.raw_dim())
+        leto::Array2::zeros(rms.shape())
     }
 }

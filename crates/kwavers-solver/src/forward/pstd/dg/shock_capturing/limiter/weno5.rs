@@ -14,7 +14,7 @@ impl WENOLimiter {
         field: &mut Array3<f64>,
         shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // Process each direction
         for direction in 0..3 {

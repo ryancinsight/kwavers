@@ -5,11 +5,8 @@ use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array1,
-    ArrayView1,
-};
+use leto::application::reduction::{mean_all, std_all, sum_all};
+use leto::{Array1, ArrayView1};
 
 /// Spectral detector for cavitation using FFT analysis
 pub struct SpectralDetector {
@@ -51,29 +48,33 @@ impl SpectralDetector {
 
     /// Create Hann window for spectral analysis
     fn create_hann_window(size: usize) -> Array1<f64> {
-        Array1::from_shape_fn(size, |i| {
+        Array1::from_shape_fn([size], |[i]| {
             0.5 * (1.0 - (TWO_PI * i as f64 / (size - 1) as f64).cos())
         })
     }
 
     /// Compute power spectral density
     fn compute_psd(&mut self, signal: &ArrayView1<f64>) -> Array1<f64> {
-        let n = signal.len().min(SPECTRAL_WINDOW_SIZE);
+        let n = signal.size().min(SPECTRAL_WINDOW_SIZE);
 
         // Apply window
         let mut windowed = leto::Array1::from_vec(
+            [n],
             signal
                 .iter()
                 .take(n)
                 .zip(self.window.iter().take(n))
                 .map(|(&s, &w)| s * w)
                 .collect(),
-        );
+        )
+        .expect("windowed length matches n");
 
         // Pad if necessary
-        if windowed.len() < SPECTRAL_WINDOW_SIZE {
-            let mut padded = leto::Array1::<f64>::zeros(SPECTRAL_WINDOW_SIZE);
-            padded.slice_mut(s![..windowed.len()]).assign(&windowed);
+        if windowed.size() < SPECTRAL_WINDOW_SIZE {
+            let mut padded = leto::Array1::<f64>::zeros([SPECTRAL_WINDOW_SIZE]);
+            for (i, val) in windowed.iter().enumerate() {
+                padded[[i]] = *val;
+            }
             windowed = padded;
         }
 
@@ -89,7 +90,7 @@ impl SpectralDetector {
             .iter()
             .take(SPECTRAL_WINDOW_SIZE / 2)
             .map(|c| c.norm_sqr() / (SPECTRAL_WINDOW_SIZE as f64 * self.sample_rate))
-            .collect();
+            .collect::<Array1<f64>>();
 
         psd
     }
@@ -99,30 +100,29 @@ impl SpectralDetector {
         let freq_resolution = self.sample_rate / SPECTRAL_WINDOW_SIZE as f64;
         let fundamental_bin = (self.fundamental_freq / freq_resolution) as usize;
 
-        if fundamental_bin >= psd.len() {
+        if fundamental_bin >= psd.size() {
             return 0.0;
         }
 
         // Get power around fundamental (with tolerance for frequency shift)
-        let fundamental_power = if fundamental_bin > 0 && fundamental_bin < psd.len() - 1 {
+        let fundamental_power = if fundamental_bin > 0 && fundamental_bin < psd.size() - 1 {
             let start = fundamental_bin.saturating_sub(1);
-            let end = (fundamental_bin + 1).min(psd.len() - 1);
-            psd.slice(s![start..=end])
-                .iter()
-                .fold(0.0_f64, |a, &b| a.max(b))
+            let end = (fundamental_bin + 1).min(psd.size() - 1);
+            (start..=end)
+                .map(|i| psd[[i]])
+                .fold(0.0_f64, |a, b| a.max(b))
         } else {
             psd[fundamental_bin]
         };
 
         // Check f0/2 with tolerance
         let subharmonic_bin = fundamental_bin / 2;
-        if subharmonic_bin > 0 && subharmonic_bin < psd.len() - 1 {
+        if subharmonic_bin > 0 && subharmonic_bin < psd.size() - 1 {
             let start = subharmonic_bin.saturating_sub(1);
-            let end = (subharmonic_bin + 1).min(psd.len() - 1);
-            let subharmonic_power = psd
-                .slice(s![start..=end])
-                .iter()
-                .fold(0.0_f64, |a, &b| a.max(b));
+            let end = (subharmonic_bin + 1).min(psd.size() - 1);
+            let subharmonic_power = (start..=end)
+                .map(|i| psd[[i]])
+                .fold(0.0_f64, |a, b| a.max(b));
 
             if subharmonic_power > MIN_SPECTRAL_POWER {
                 return (subharmonic_power / fundamental_power.max(MIN_SPECTRAL_POWER)).min(1.0);
@@ -137,7 +137,7 @@ impl SpectralDetector {
         let freq_resolution = self.sample_rate / SPECTRAL_WINDOW_SIZE as f64;
         let fundamental_bin = (self.fundamental_freq / freq_resolution) as usize;
 
-        if fundamental_bin >= psd.len() {
+        if fundamental_bin >= psd.size() {
             return 0.0;
         }
 
@@ -147,7 +147,7 @@ impl SpectralDetector {
         // Check 3f0/2, 5f0/2, 7f0/2
         for n in &[3, 5, 7] {
             let ultra_bin = (n * fundamental_bin) / 2;
-            if ultra_bin < psd.len() {
+            if ultra_bin < psd.size() {
                 ultraharmonic_sum += psd[ultra_bin];
             }
         }
@@ -159,8 +159,8 @@ impl SpectralDetector {
     fn detect_broadband(&self, psd: &Array1<f64>) -> f64 {
         if let Some(baseline) = &self.baseline_spectrum {
             // Compare with baseline
-            let current_energy: f64 = psd.sum();
-            let baseline_energy: f64 = baseline.sum();
+            let current_energy: f64 = sum_all(&psd).unwrap_or(0.0);
+            let baseline_energy: f64 = sum_all(baseline).unwrap_or(0.0);
 
             if baseline_energy > MIN_SPECTRAL_POWER {
                 let db_increase = 10.0 * (current_energy / baseline_energy).log10();
@@ -171,8 +171,8 @@ impl SpectralDetector {
         }
 
         // Fallback: check for elevated noise floor
-        let mean_power = psd.mean().unwrap_or(0.0);
-        let std_power = psd.std(0.0);
+        let mean_power = mean_all(&psd).unwrap_or(0.0);
+        let std_power = std_all(&psd, 0.0).unwrap_or(0.0);
 
         if mean_power > MIN_SPECTRAL_POWER {
             (std_power / mean_power).min(1.0)
@@ -186,7 +186,7 @@ impl SpectralDetector {
         let freq_resolution = self.sample_rate / SPECTRAL_WINDOW_SIZE as f64;
         let fundamental_bin = (self.fundamental_freq / freq_resolution) as usize;
 
-        if fundamental_bin >= psd.len() {
+        if fundamental_bin >= psd.size() {
             return 0.0;
         }
 
@@ -196,7 +196,7 @@ impl SpectralDetector {
         // Check harmonics up to 5th
         for n in 2..=5 {
             let harmonic_bin = n * fundamental_bin;
-            if harmonic_bin < psd.len() {
+            if harmonic_bin < psd.size() {
                 harmonic_sum += psd[harmonic_bin];
             }
         }
@@ -235,9 +235,9 @@ impl CavitationDetector for SpectralDetector {
         let harmonic_distortion = self.detect_harmonics(&psd);
 
         // Calculate confidence based on signal quality
-        let total_power: f64 = psd.sum();
+        let total_power: f64 = sum_all(&psd).unwrap_or(0.0);
         let confidence = if total_power > MIN_SPECTRAL_POWER {
-            (1.0 - (-total_power.log10()).exp()).min(1.0)
+            f64::min(1.0 - (-total_power.log10()).exp(), 1.0)
         } else {
             0.0
         };

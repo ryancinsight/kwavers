@@ -4,10 +4,7 @@ use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod};
 use apollo::fft_1d_leto;
-use leto::{
-    Array1,
-    ArrayView1,
-};
+use leto::{Array1, ArrayView1};
 
 /// Subharmonic detector for stable cavitation
 pub struct SubharmonicDetector {
@@ -38,29 +35,31 @@ impl SubharmonicDetector {
 
     /// Compute FFT and return magnitude spectrum
     fn compute_spectrum(&mut self, signal: &ArrayView1<f64>) -> Array1<f64> {
-        let n = signal.len();
+        let n = signal.size();
         let fft_input = leto::Array1::from_shape_vec([n], signal.iter().copied().collect())
             .expect("subharmonic signal length must match Leto FFT shape");
         let complex_signal = fft_1d_leto(fft_input.view());
 
         // Convert to magnitude spectrum
         Array1::from_vec(
+            [n / 2],
             complex_signal
                 .iter()
                 .take(n / 2)
                 .map(|c| c.norm() / n as f64)
                 .collect(),
         )
+        .expect("spectrum length matches n/2")
     }
 
     /// Detect subharmonic components
     fn detect_subharmonic_components(&mut self, signal: &ArrayView1<f64>) -> (f64, f64) {
         let spectrum = self.compute_spectrum(signal);
-        let freq_resolution = self.sample_rate / signal.len() as f64;
+        let freq_resolution = self.sample_rate / signal.size() as f64;
 
         // Find fundamental frequency bin
         let fundamental_bin = (self.fundamental_freq / freq_resolution) as usize;
-        if fundamental_bin >= spectrum.len() {
+        if fundamental_bin >= spectrum.size() {
             return (0.0, 0.0);
         }
 
@@ -69,7 +68,7 @@ impl SubharmonicDetector {
 
         // Check for f0/2 subharmonic
         let sub_bin = fundamental_bin / 2;
-        let subharmonic_level = if sub_bin < spectrum.len() && fundamental_amp > MIN_SPECTRAL_POWER
+        let subharmonic_level = if sub_bin < spectrum.size() && fundamental_amp > MIN_SPECTRAL_POWER
         {
             spectrum[sub_bin] / fundamental_amp
         } else {
@@ -78,7 +77,7 @@ impl SubharmonicDetector {
 
         // Check for f0/3 subharmonic (indicates stronger cavitation)
         let sub3_bin = fundamental_bin / 3;
-        let sub3_level = if sub3_bin < spectrum.len() && fundamental_amp > MIN_SPECTRAL_POWER {
+        let sub3_level = if sub3_bin < spectrum.size() && fundamental_amp > MIN_SPECTRAL_POWER {
             spectrum[sub3_bin] / fundamental_amp
         } else {
             0.0

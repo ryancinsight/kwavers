@@ -50,7 +50,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParamFieldPINNNetwork")
-            .field("hidden_layer_count", &self.hidden_layers.len())
+            .field("hidden_layer_count", &(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]))
             .finish_non_exhaustive()
     }
 }
@@ -74,8 +74,8 @@ where
         let input_layer = Linear::new(INPUT_DIM, first_hidden, true);
         let input_act = DynamicTanh::new();
 
-        let mut hidden_layers = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
-        let mut hidden_acts = Vec::with_capacity(config.hidden_layers.len().saturating_sub(1));
+        let mut hidden_layers = Vec::with_capacity((config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]).saturating_sub(1));
+        let mut hidden_acts = Vec::with_capacity((config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]).saturating_sub(1));
         for window in config.hidden_layers.windows(2) {
             let &[in_features, out_features] = window else {
                 continue;
@@ -103,7 +103,7 @@ where
     /// activation order (input act first, then hidden acts).
     #[must_use]
     pub fn dyt_scalars(&self) -> Vec<(f32, f32, f32)> {
-        let mut out = Vec::with_capacity(1 + self.hidden_acts.len());
+        let mut out = Vec::with_capacity(1 + (self.hidden_acts.shape()[0] * self.hidden_acts.shape()[1] * self.hidden_acts.shape()[2]));
         out.push(self.input_act.scalars());
         for act in &self.hidden_acts {
             out.push(act.scalars());
@@ -114,7 +114,7 @@ where
     /// Number of intermediate hidden layers (excluding input + output).
     #[must_use]
     pub fn hidden_layer_count(&self) -> usize {
-        self.hidden_layers.len()
+        (self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2])
     }
 
     /// Flatten all layer + activation parameters in forward order.

@@ -166,7 +166,7 @@ fn write_spectral_gradient_axis(
         GradientAxis::Z => nz,
     };
     assert_eq!(
-        shift.len(),
+        (shift.shape()[0] * shift.shape()[1] * shift.shape()[2]),
         expected_len,
         "invariant: PSTD IVP shift length matches selected gradient axis"
     );

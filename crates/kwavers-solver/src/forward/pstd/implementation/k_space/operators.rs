@@ -32,15 +32,15 @@ fn apply_helmholtz_multiplier(field: &mut Array3<Complex64>, k_mag: &Array3<f64>
     );
 
     if let (Some(field_values), Some(k_values)) = (
-        field.as_slice_memory_order_mut(),
-        k_mag.as_slice_memory_order(),
+        field.as_slice_mut(),
+        k_mag.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
             let k = k_values[index];
             *value *= k.mul_add(-k, k0_sq);
         });
     } else {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
@@ -57,7 +57,7 @@ fn apply_spectral_axis_multiplier(
     axis_values: &Array1<f64>,
     axis: SpectralAxis,
 ) {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let expected_axis_len = match axis {
         SpectralAxis::X => nx,
         SpectralAxis::Y => ny,
@@ -70,8 +70,8 @@ fn apply_spectral_axis_multiplier(
     );
 
     if let (Some(field_values), Some(axis_slice)) = (
-        field.as_slice_memory_order_mut(),
-        axis_values.as_slice_memory_order(),
+        field.as_slice_mut(),
+        axis_values.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(field_values, |linear_index, value| {
             let axis_index = axis.index(linear_index, ny, nz);
@@ -94,7 +94,7 @@ fn apply_spectral_axis_multiplier(
 }
 
 fn leto_complex_field(field: &Array3<Complex64>) -> LetoArray3<Complex64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
         .expect("PSTD complex field length must match Leto field shape")
 }

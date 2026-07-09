@@ -275,8 +275,8 @@ fn fourier_periodic_nodes_generates_equispaced_nodes_and_uniform_weights() {
     let n = 8_usize;
     let (nodes, weights) = fourier_periodic_nodes(n).expect("fourier_periodic_nodes failed");
 
-    assert_eq!(nodes.len(), n);
-    assert_eq!(weights.len(), n);
+    assert_eq!((nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]), n);
+    assert_eq!((weights.shape()[0] * weights.shape()[1] * weights.shape()[2]), n);
 
     let expected_weight = 2.0 / n as f64;
     for j in 0..n {

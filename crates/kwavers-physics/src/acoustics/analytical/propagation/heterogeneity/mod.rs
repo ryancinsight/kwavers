@@ -13,7 +13,7 @@ pub struct HeterogeneityModel {
 impl HeterogeneityModel {
     pub fn new(grid: &Grid, base_speed: f64, variance: f64) -> Self {
         let mut rng = rand::rngs::ThreadRng::default();
-        let sound_speed_var = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |_| {
+        let sound_speed_var = Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |_| {
             base_speed * (1.0 + rng.gen_range(-variance..=variance))
         });
         Self {
@@ -42,7 +42,7 @@ impl HeterogeneityModel {
         }
 
         let mut rng = rand::rngs::ThreadRng::default();
-        self.sound_speed_var = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |_| {
+        self.sound_speed_var = Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |_| {
             self.base_speed * (1.0 + rng.gen_range(-self.variance..=self.variance))
         });
     }
@@ -71,7 +71,7 @@ mod tests {
     fn new_produces_correct_shape() {
         let grid = small_grid();
         let model = HeterogeneityModel::new(&grid, SOUND_SPEED_WATER_SIM, 0.05);
-        assert_eq!(model.sound_speed_var.dim(), (4, 4, 4));
+        assert_eq!(model.sound_speed_var.shape(), [4, 4, 4]);
     }
 
     /// All values are within base_speed ± variance * base_speed.

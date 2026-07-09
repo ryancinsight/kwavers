@@ -30,7 +30,6 @@ pub use update::CPMLUpdater;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::Array3 as NdArray3;
 
 #[doc(hidden)]
 pub trait CpmlGradientField {
@@ -45,20 +44,6 @@ impl CpmlGradientField for leto::Array3<f64> {
         F: FnOnce(&mut leto::Array3<f64>) -> R,
     {
         f(self)
-    }
-}
-
-impl CpmlGradientField for NdArray3<f64> {
-    fn with_leto_mut<R, F>(&mut self, f: F) -> R
-    where
-        F: FnOnce(&mut leto::Array3<f64>) -> R,
-    {
-        let mut gradient: leto::Array3<f64> = self.clone().into();
-        let result = f(&mut gradient);
-        *self = gradient
-            .try_into()
-            .expect("CPML ndarray compatibility requires C-contiguous Leto arrays");
-        result
     }
 }
 

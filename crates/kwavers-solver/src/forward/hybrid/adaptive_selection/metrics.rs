@@ -32,7 +32,7 @@ impl SpectralMetrics {
 
     fn compute_smoothness(field: ArrayView3<f64>, grid: &Grid) -> f64 {
         // Compute gradient magnitude as measure of smoothness
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut total_gradient = 0.0;
         let mut count = 0;
 
@@ -62,7 +62,7 @@ impl SpectralMetrics {
         use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
         use std::f64::consts::PI;
 
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // 1. Perform FFT
         // Create a new processor (acceptable cost for adaptive selection)
@@ -179,8 +179,16 @@ impl MaterialMetrics {
 
     fn compute_homogeneity(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
         // Compute coefficient of variation as measure of homogeneity
-        let density_cv = density.std(0.0) / density.mean().unwrap_or(1.0);
-        let speed_cv = sound_speed.std(0.0) / sound_speed.mean().unwrap_or(1.0);
+        let density_cv = density.std(0.0) / {
+            let arr = &density;
+            let sum: f64 = arr.iter().sum();
+            sum / arr.shape().iter().product::<usize>() as f64
+        }.unwrap_or(1.0);
+        let speed_cv = sound_speed.std(0.0) / {
+            let arr = &sound_speed;
+            let sum: f64 = arr.iter().sum();
+            sum / arr.shape().iter().product::<usize>() as f64
+        }.unwrap_or(1.0);
 
         1.0 - (density_cv + speed_cv) / 2.0
     }
@@ -191,7 +199,7 @@ impl MaterialMetrics {
     ) -> f64 {
         // Check for material discontinuities near position
         let (i, j, k) = position;
-        let (nx, ny, nz) = density.dim();
+        let [nx, ny, nz] = density.shape();
 
         // Check neighbors for large changes
         let mut max_change = 0.0;
@@ -222,7 +230,11 @@ impl MaterialMetrics {
     fn compute_impedance_contrast(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
         // Compute acoustic impedance variation
         let impedance = &density * &sound_speed;
-        impedance.std(0.0) / impedance.mean().unwrap_or(1.0)
+        impedance.std(0.0) / {
+            let arr = &impedance;
+            let sum: f64 = arr.iter().sum();
+            sum / arr.shape().iter().product::<usize>() as f64
+        }.unwrap_or(1.0)
     }
 }
 

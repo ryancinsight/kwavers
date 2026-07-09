@@ -55,7 +55,7 @@ impl BemFemInterface {
 
         Ok(Self {
             fem_interface_nodes,
-            bem_interface_elements: bem_boundary.to_vec(),
+            bem_interface_elements: bem_boundary.iter().cloned().collect::<Vec<_>>(),
             node_element_mapping,
             quadrature_points,
             quadrature_weights,
@@ -138,7 +138,7 @@ impl BemFemInterface {
                     node.coordinates[1],
                     node.coordinates[2],
                 ));
-                weights.push(1.0 / fem_nodes.len() as f64); // Equal weights
+                weights.push(1.0 / (fem_nodes.shape()[0] * fem_nodes.shape()[1] * fem_nodes.shape()[2]) as f64); // Equal weights
             }
         }
 

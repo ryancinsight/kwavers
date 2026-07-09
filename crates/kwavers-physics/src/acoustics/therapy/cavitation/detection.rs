@@ -10,7 +10,7 @@ impl TherapyCavitationDetector {
     /// `true` indicates cavitation is predicted at that voxel.
     #[must_use]
     pub fn detect(&self, pressure: &Array3<f64>) -> Array3<bool> {
-        let mut cavitation = Array3::from_elem(pressure.dim(), false);
+        let mut cavitation = Array3::from_elem(pressure.shape(), false);
         match self.method {
             CavitationDetectionMethod::PressureThreshold => {
                 self.detect_by_threshold(pressure, &mut cavitation);
@@ -62,8 +62,8 @@ impl TherapyCavitationDetector {
 
 fn mark_cavitation(pressure: &Array3<f64>, cavitation: &mut Array3<bool>, threshold: f64) {
     assert_eq!(
-        pressure.dim(),
-        cavitation.dim(),
+        pressure.shape(),
+        cavitation.shape(),
         "invariant: cavitation detection pressure and output shapes must match"
     );
 

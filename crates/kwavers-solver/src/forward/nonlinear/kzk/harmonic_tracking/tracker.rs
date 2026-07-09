@@ -113,7 +113,7 @@ impl HarmonicTracker {
         pressure: &Array1<f64>,
         mut analysis: HarmonicAnalysis,
     ) -> KwaversResult<HarmonicAnalysis> {
-        let n = pressure.len() as f64;
+        let n = (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]) as f64;
 
         let mean = pressure.iter().sum::<f64>() / n;
         let variance = pressure.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n;
@@ -144,7 +144,7 @@ impl HarmonicTracker {
         pressure: &Array1<f64>,
         mut analysis: HarmonicAnalysis,
     ) -> KwaversResult<HarmonicAnalysis> {
-        let _n = pressure.len() as f64;
+        let _n = (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]) as f64;
         let dt = 1.0 / self.config.sampling_rate;
 
         let mut frequencies = Vec::new();
@@ -198,7 +198,7 @@ impl HarmonicTracker {
             sin_acc += p * phase.sin();
         }
 
-        let amplitude = cos_acc.hypot(sin_acc) / pressure.len() as f64;
+        let amplitude = cos_acc.hypot(sin_acc) / (pressure.shape()[0] * pressure.shape()[1] * pressure.shape()[2]) as f64;
         Ok(amplitude)
     }
 

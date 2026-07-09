@@ -44,7 +44,7 @@ impl InterpolationManager {
         let dz = (max_z - min_z) / (shape[2] as f64 - 1.0);
 
         // For simplicity, assume uniform grid spacing and map target coords to source indices
-        for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {
+        for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take((result.shape()[0] * result.shape()[1] * result.shape()[2])) {
             // Find fractional indices in source grid
             let fi = ((tx - min_x) / dx).max(0.0).min((shape[0] - 2) as f64);
             let fj = ((ty - min_y) / dy).max(0.0).min((shape[1] - 2) as f64);

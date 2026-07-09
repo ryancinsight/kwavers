@@ -336,7 +336,7 @@ impl SpectralDerivativeOperator {
         let nz = self.nz;
         let ikd = &self.ikd_y;
 
-        if let Some(derivative_values) = derivative.as_slice_memory_order_mut() {
+        if let Some(derivative_values) = derivative.as_slice_mut() {
             let slab_len = ny * nz;
             for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
                 derivative_values,
@@ -393,7 +393,7 @@ impl SpectralDerivativeOperator {
         let nz = self.nz;
         let ikd = &self.ikd_z;
 
-        if let Some(derivative_values) = derivative.as_slice_memory_order_mut() {
+        if let Some(derivative_values) = derivative.as_slice_mut() {
             let slab_len = ny * nz;
             for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
                 derivative_values,

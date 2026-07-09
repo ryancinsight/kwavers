@@ -1,12 +1,9 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use leto::Array1;
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array1,
-    Array3 as NdArray3,
-};
 
 // Implementation note on divergence caching:
 // `update_density_cartesian` writes ∂u_α/∂α directly into `div_ux`/`div_uy`/`div_uz`
@@ -35,21 +32,6 @@ impl DenseRealField for LetoArray3<f64> {
 
     fn as_dense_slice(&self) -> Option<&[f64]> {
         self.as_slice()
-    }
-
-    fn value(&self, i: usize, j: usize, k: usize) -> f64 {
-        self[[i, j, k]]
-    }
-}
-
-impl DenseRealField for NdArray3<f64> {
-    fn shape3(&self) -> [usize; 3] {
-        let (nx, ny, nz) = self.dim();
-        [nx, ny, nz]
-    }
-
-    fn as_dense_slice(&self) -> Option<&[f64]> {
-        self.as_slice_memory_order()
     }
 
     fn value(&self, i: usize, j: usize, k: usize) -> f64 {
@@ -96,9 +78,9 @@ fn apply_shifted_kappa(
 
     let [_nx, ny, nz] = grad_k.shape();
     if let (Some(grad_values), Some(spectrum_values), Some(kappa_values), Some(shift_values)) = (
-        grad_k.as_slice_memory_order_mut(),
-        spectrum.as_slice_memory_order(),
-        kappa.as_slice_memory_order(),
+        grad_k.as_slice_mut(),
+        spectrum.as_slice(),
+        kappa.as_slice(),
         shift.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(grad_values, |index, grad| {

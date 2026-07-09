@@ -11,15 +11,10 @@
 use apollo::{fft_2d_array_into, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::Array2 as LetoArray2;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array1,
-    Array2,
-    ArrayView2,
-};
 use kwavers_math::fft::Complex64;
+use leto::Array2 as LetoArray2;
+use leto::{Array1, Array2, ArrayView2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 #[inline]
 fn dense_indices(index: usize, ncols: usize) -> (usize, usize) {
@@ -28,7 +23,7 @@ fn dense_indices(index: usize, ncols: usize) -> (usize, usize) {
 
 fn fft_forward_into_nd(field: &Array2<f64>, out: &mut Array2<Complex64>) {
     let field_leto = LetoArray2::from_shape_vec(
-        [field.nrows(), field.ncols()],
+        [field.shape()[0], field.shape()[1]],
         field.iter().copied().collect(),
     )
     .expect("axisymmetric real field length must match shape");
@@ -49,7 +44,7 @@ fn ifft_2d_complex_inplace_nd(data: &mut Array2<Complex64>) {
 
 fn to_apollo_array2(input: &Array2<Complex64>) -> LetoArray2<ApolloComplex64> {
     LetoArray2::from_shape_vec(
-        [input.nrows(), input.ncols()],
+        [input.shape()[0], input.shape()[1]],
         input
             .iter()
             .map(|value| ApolloComplex64::new(value.re, value.im))
@@ -65,17 +60,14 @@ fn multiply_by_real(field: &mut Array2<Complex64>, factors: &Array2<f64>) {
         "invariant: AS spectral field shape matches real multiplier"
     );
 
-    if let (Some(field_values), Some(factor_values)) = (
-        field.as_slice_memory_order_mut(),
-        factors.as_slice_memory_order(),
-    ) {
+    if let (Some(field_values), Some(factor_values)) = (field.as_slice_mut(), factors.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
             *value *= factor_values[index];
         });
         return;
     }
 
-    let (nx, nr) = field.dim();
+    let [nx, nr] = field.shape();
     for k in 0..nr {
         for i in 0..nx {
             field[[i, k]] *= factors[[i, k]];
@@ -94,10 +86,10 @@ fn fill_row_operator(
         "invariant: AS spectral operator output shape matches input"
     );
 
-    let (_nx, nr) = output.dim();
+    let [_nx, nr] = output.shape();
     if let (Some(output_values), Some(input_values), Some(operator_values)) = (
-        output.as_slice_memory_order_mut(),
-        input.as_slice_memory_order(),
+        output.as_slice_mut(),
+        input.as_slice(),
         operators.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
@@ -107,7 +99,7 @@ fn fill_row_operator(
         return;
     }
 
-    let (nx, nr) = output.dim();
+    let [nx, nr] = output.shape();
     for k in 0..nr {
         for i in 0..nx {
             output[[i, k]] = operators[i] * input[[i, k]];
@@ -126,10 +118,10 @@ fn fill_column_operator(
         "invariant: AS spectral operator output shape matches input"
     );
 
-    let (_nx, nr) = output.dim();
+    let [_nx, nr] = output.shape();
     if let (Some(output_values), Some(input_values), Some(operator_values)) = (
-        output.as_slice_memory_order_mut(),
-        input.as_slice_memory_order(),
+        output.as_slice_mut(),
+        input.as_slice(),
         operators.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
@@ -139,7 +131,7 @@ fn fill_column_operator(
         return;
     }
 
-    let (nx, nr) = output.dim();
+    let [nx, nr] = output.shape();
     for k in 0..nr {
         for i in 0..nx {
             output[[i, k]] = operators[k] * input[[i, k]];
@@ -149,21 +141,21 @@ fn fill_column_operator(
 
 fn copy_real_window(output: &mut Array2<f64>, input: &Array2<Complex64>, cols: usize) {
     assert_eq!(
-        output.nrows(),
-        input.nrows(),
+        output.shape()[0],
+        input.shape()[0],
         "invariant: AS real output row count matches spectral input"
     );
     assert_eq!(
-        output.ncols(),
+        output.shape()[1],
         cols,
         "invariant: AS real output column count matches selected spectral window"
     );
     assert!(
-        cols <= input.ncols(),
+        cols <= input.shape()[1],
         "invariant: AS real output window is inside spectral input"
     );
 
-    if let Some(output_values) = output.as_slice_memory_order_mut() {
+    if let Some(output_values) = output.as_slice_mut() {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
             let (i, k) = dense_indices(index, cols);
             *output = input[[i, k]].re;
@@ -171,7 +163,7 @@ fn copy_real_window(output: &mut Array2<f64>, input: &Array2<Complex64>, cols: u
         return;
     }
 
-    let nx = output.nrows();
+    let nx = output.shape()[0];
     for k in 0..cols {
         for i in 0..nx {
             output[[i, k]] = input[[i, k]].re;
@@ -190,10 +182,10 @@ fn divide_by_radial_position(
         "invariant: AS radial velocity quotient shape matches velocity"
     );
 
-    let (_nx, nr) = output.dim();
+    let [_nx, nr] = output.shape();
     if let (Some(output_values), Some(velocity_values), Some(radial_values)) = (
-        output.as_slice_memory_order_mut(),
-        velocity.as_slice_memory_order(),
+        output.as_slice_mut(),
+        velocity.as_slice(),
         radial_positions.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, output| {
@@ -203,7 +195,7 @@ fn divide_by_radial_position(
         return;
     }
 
-    let (nx, nr) = output.dim();
+    let [nx, nr] = output.shape();
     for k in 0..nr {
         for i in 0..nx {
             output[[i, k]] = velocity[[i, k]] / radial_positions[k];
@@ -229,7 +221,7 @@ fn apply_radial_divergence_operator(
         "invariant: AS radial spectrum shape matches kappa"
     );
 
-    let (_nx, nr) = radial_spectrum.dim();
+    let [_nx, nr] = radial_spectrum.shape();
     if let (
         Some(radial_values),
         Some(quotient_values),
@@ -237,9 +229,9 @@ fn apply_radial_divergence_operator(
         Some(derivative_values),
         Some(shift_values),
     ) = (
-        radial_spectrum.as_slice_memory_order_mut(),
-        quotient_spectrum.as_slice_memory_order(),
-        kappa.as_slice_memory_order(),
+        radial_spectrum.as_slice_mut(),
+        quotient_spectrum.as_slice(),
+        kappa.as_slice(),
         derivative_operator.as_slice(),
         shift_operator.as_slice(),
     ) {
@@ -252,7 +244,7 @@ fn apply_radial_divergence_operator(
         return;
     }
 
-    let (nx, nr) = radial_spectrum.dim();
+    let [nx, nr] = radial_spectrum.shape();
     for k in 0..nr {
         let derivative = derivative_operator[k];
         let shift = shift_operator[k];
@@ -499,23 +491,23 @@ impl AsContext {
     /// WS (whole-sample symmetric) expansion: a (nx,nr) into out (nx,4*nr).
     pub fn ws_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
-        out.slice_mut(s![.., 0..nr]).assign(a);
+        out.slice_mut(s![.., 0..nr]).unwrap().unwrap().assign(a);
         for k in 0..nr - 1 {
             let src = nr - 1 - k;
             let dst = nr + 1 + k;
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, dst]] = -a[[i, src]];
             }
         }
         for k in 0..nr {
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, 2 * nr + k]] = -a[[i, k]];
             }
         }
         for k in 0..nr - 1 {
             let src = nr - 1 - k;
             let dst = 3 * nr + 1 + k;
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, dst]] = a[[i, src]];
             }
         }
@@ -524,21 +516,21 @@ impl AsContext {
     /// HAHS expansion (radial velocity): a (nx,nr) into out (nx,4*nr).
     pub fn hahs_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
-        out.slice_mut(s![.., 0..nr]).assign(a);
+        out.slice_mut(s![.., 0..nr]).unwrap().unwrap().assign(a);
         for k in 0..nr {
             let src = nr - 1 - k;
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, nr + k]] = a[[i, src]];
             }
         }
         for k in 0..nr {
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, 2 * nr + k]] = -a[[i, k]];
             }
         }
         for k in 0..nr {
             let src = nr - 1 - k;
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, 3 * nr + k]] = -a[[i, src]];
             }
         }
@@ -547,21 +539,21 @@ impl AsContext {
     /// HSHA expansion (ur/r term): a (nx,nr) into out (nx,4*nr).
     pub fn hsha_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
-        out.slice_mut(s![.., 0..nr]).assign(a);
+        out.slice_mut(s![.., 0..nr]).unwrap().unwrap().assign(a);
         for k in 0..nr {
             let src = nr - 1 - k;
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, nr + k]] = -a[[i, src]];
             }
         }
         for k in 0..nr {
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, 2 * nr + k]] = -a[[i, k]];
             }
         }
         for k in 0..nr {
             let src = nr - 1 - k;
-            for i in 0..out.nrows() {
+            for i in 0..out.shape()[0] {
                 out[[i, 3 * nr + k]] = a[[i, src]];
             }
         }

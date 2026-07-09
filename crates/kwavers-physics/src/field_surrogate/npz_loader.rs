@@ -29,10 +29,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::Array3;
 use ndarray_npy::NpzReader;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -52,10 +49,13 @@ fn read_field<R: std::io::Read + std::io::Seek>(
     npz: &mut NpzReader<R>,
     path: &Path,
 ) -> KwaversResult<Array3<f64>> {
-    let arr: Array3<f64> = npz
+    let arr: ndarray::Array3<f64> = npz
         .by_name("p_min")
         .map_err(|e| map_read_err("p_min", path, e))?;
-    Ok(arr)
+    let shape = [arr.shape()[0], arr.shape()[1], arr.shape()[2]];
+    let data = arr.into_raw_vec_and_offset().0;
+    Array3::from_vec(shape, data)
+        .map_err(|e| map_read_err("p_min", path, e))
 }
 
 fn read_scalar<R: std::io::Read + std::io::Seek>(
@@ -63,7 +63,9 @@ fn read_scalar<R: std::io::Read + std::io::Seek>(
     name: &str,
     path: &Path,
 ) -> KwaversResult<f64> {
-    let arr: Array1<f64> = npz.by_name(name).map_err(|e| map_read_err(name, path, e))?;
+    let arr: ndarray::Array1<f64> = npz
+        .by_name(name)
+        .map_err(|e| map_read_err(name, path, e))?;
     if arr.len() != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "FocalKernel npz `{}`: expected scalar `{name}`, got shape {:?}",
@@ -81,13 +83,20 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
     // Python's `np.array((i, j, k), dtype=np.int64)` round-trips as
     // either i64 or i32 depending on the writer; try i64 first, then
     // fall back to i32 for older fixtures.
-    let arr: Vec<i64> = match npz.by_name::<Vec<i64>, usize>("focus_idx") {
-        Ok(a) => a.iter().copied().collect(),
+    let arr: Vec<i64> = match npz.by_name("focus_idx") {
+        Ok(a) => {
+            let a: ndarray::Array1<i64> = a;
+            a.into_raw_vec_and_offset().0
+        }
         Err(_) => {
-            let a: Array1<i32> = npz
+            let a: ndarray::Array1<i32> = npz
                 .by_name("focus_idx")
                 .map_err(|e| map_read_err("focus_idx", path, e))?;
-            a.iter().map(|&v| i64::from(v)).collect()
+            a.into_raw_vec_and_offset()
+                .0
+                .into_iter()
+                .map(|v| i64::from(v))
+                .collect()
         }
     };
     if arr.len() != 3 {
@@ -159,7 +168,7 @@ pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResu
             path.display()
         )));
     }
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     if focus_idx.0 >= nx || focus_idx.1 >= ny || focus_idx.2 >= nz {
         return Err(KwaversError::InvalidInput(format!(
             "FocalKernel npz `{}`: focus_idx {:?} out of bounds for shape ({nx}, {ny}, {nz})",
@@ -177,7 +186,9 @@ pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResu
             )));
         }
         let scale = target / pnp_realised;
-        field.mapv_inplace(|p| p * scale);
+        for p in field.iter_mut() {
+            *p *= scale;
+        }
         source_pa *= scale;
         pnp_realised = target;
     }
@@ -231,8 +242,8 @@ pub fn discover_focal_kernels(dir: &Path) -> KwaversResult<Vec<FocalKernel>> {
 mod tests {
     use super::*;
 
+    use ndarray::array;
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-    use array;
     use ndarray_npy::NpzWriter;
     use std::io::Cursor;
 
@@ -240,7 +251,7 @@ mod tests {
         // Build a tiny 4×3×3 kernel with the focal voxel at (2, 1, 1)
         // carrying p_min = -10 MPa. Off-focus voxels carry small
         // values so the round-trip can verify shape preservation.
-        let mut p_min = leto::Array3::<f64>::from_elem((4, 3, 3), -1.0e3);
+        let mut p_min = leto::Array3::<f64>::from_elem([4, 3, 3], -1.0e3);
         p_min[[2, 1, 1]] = -1.0e7;
 
         let mut buf = Cursor::new(Vec::<u8>::new());
@@ -273,7 +284,7 @@ mod tests {
         let bytes = write_fixture_npz();
         let path = write_to_tempfile(&bytes, "kernel_roundtrip.npz");
         let kernel = load_focal_kernel(&path, None).expect("load");
-        assert_eq!(kernel.shape(), (4, 3, 3));
+        assert_eq!(kernel.shape(), [4, 3, 3]);
         // The loader negates p_min, so the focal magnitude must be +1e7.
         assert!((kernel.focal_pressure() - 10.0 * MPA_TO_PA).abs() < 1e-3);
         assert!((kernel.dx_m - 5.0e-4).abs() < 1e-12);
@@ -305,7 +316,7 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = leto::Array3::<f64>::zeros((2, 2, 2));
+            let p_min = leto::Array3::<f64>::zeros([2, 2, 2]);
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![5.0e-4_f64]).unwrap();
             w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
@@ -328,7 +339,7 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = leto::Array3::<f64>::zeros((2, 2, 2));
+            let p_min = leto::Array3::<f64>::zeros([2, 2, 2]);
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![1.0e-3_f64]).unwrap();
             w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();

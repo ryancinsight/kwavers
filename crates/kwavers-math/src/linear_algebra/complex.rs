@@ -1,6 +1,6 @@
-﻿use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use leto::{Array1, Array2};
 
 /// Complex linear algebra operations for beamforming
 #[derive(Debug)]
@@ -88,13 +88,11 @@ impl ComplexLinearAlgebra {
             x[i] = (b_data[i] - sum) / a_data[i * n + i];
         }
 
-        Ok(Array1::from_vec(x))
+        Ok(Array1::from_vec([n], x).unwrap())
     }
 
     /// Compute inverse of a complex matrix via column-wise solves.
-    pub fn matrix_inverse_complex(
-        matrix: &Array2<Complex64>,
-    ) -> KwaversResult<Array2<Complex64>> {
+    pub fn matrix_inverse_complex(matrix: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let n = matrix.shape()[0];
         if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
@@ -110,7 +108,7 @@ impl ComplexLinearAlgebra {
         for col in 0..n {
             let mut e = vec![Complex64::new(0.0, 0.0); n];
             e[col] = Complex64::new(1.0, 0.0);
-            let e_array = Array1::from_vec(e);
+            let e_array = Array1::from_vec([n], e).unwrap();
             let x = Self::solve_linear_system_complex(matrix, &e_array)?;
             let xs = x
                 .as_slice()
@@ -120,11 +118,12 @@ impl ComplexLinearAlgebra {
             }
         }
 
-        Array2::from_vec([n, n], result)
-            .map_err(|e| KwaversError::Numerical(NumericalError::SolverFailed {
+        Array2::from_vec([n, n], result).map_err(|e| {
+            KwaversError::Numerical(NumericalError::SolverFailed {
                 method: "matrix_inverse_complex".to_owned(),
                 reason: e.to_string(),
-            }))
+            })
+        })
     }
 }
 
@@ -156,9 +155,7 @@ mod tests {
         let x_sl = x
             .as_slice()
             .expect("test solution vector must be contiguous");
-        let b_sl = b
-            .as_slice()
-            .expect("test rhs vector must be contiguous");
+        let b_sl = b.as_slice().expect("test rhs vector must be contiguous");
         for i in 0..2 {
             let mut sum = Complex64::new(0.0, 0.0);
             for j in 0..2 {

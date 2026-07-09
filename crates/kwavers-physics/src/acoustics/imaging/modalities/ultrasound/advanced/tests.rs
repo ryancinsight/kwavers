@@ -96,8 +96,8 @@ fn test_plane_wave_compounding() {
 
     let compounded = compounding.compound(&images);
 
-    assert_eq!(compounded.nrows(), height);
-    assert_eq!(compounded.ncols(), width);
+    assert_eq!(compounded.shape()[0], height);
+    assert_eq!(compounded.shape()[1], width);
 
     assert!((compounded[[50, 50]] - 2.0).abs() < 1e-6);
 }

@@ -18,7 +18,7 @@ impl FemHelmholtzSolver {
     ///
     pub fn assemble_system<M: Medium + ?Sized>(&mut self, _medium: &M) -> KwaversResult<()> {
         if self.mesh.elements.is_empty() {
-            let num_nodes = self.mesh.nodes.len();
+            let num_nodes = (self.mesh.nodes.shape()[0] * self.mesh.nodes.shape()[1] * self.mesh.nodes.shape()[2]);
             let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut m_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut rhs_global = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
@@ -52,7 +52,7 @@ impl FemHelmholtzSolver {
 
         let k_sq = Complex64::from(self.config.wavenumber.powi(2));
 
-        if k_global.values.len() != m_global.values.len() {
+        if (k_global.values.shape()[0] * k_global.values.shape()[1] * k_global.values.shape()[2]) != (m_global.values.shape()[0] * m_global.values.shape()[1] * m_global.values.shape()[2]) {
             return Err(KwaversError::Numerical(NumericalError::Instability {
                 operation: "matrix_combination".to_owned(),
                 condition: 0.0,
@@ -135,16 +135,16 @@ impl FemHelmholtzSolver {
             return Ok(0);
         }
 
-        let count = nodes.len();
+        let count = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
         self.boundary_manager.add_dirichlet(nodes);
         Ok(count)
     }
 
     pub(super) fn validate_node_index(&self, node_idx: usize) -> KwaversResult<()> {
-        if node_idx >= self.rhs.len() {
+        if node_idx >= (self.rhs.shape()[0] * self.rhs.shape()[1] * self.rhs.shape()[2]) {
             return Err(KwaversError::InvalidInput(format!(
                 "FEM node index {node_idx} is outside system dimension {}",
-                self.rhs.len()
+                (self.rhs.shape()[0] * self.rhs.shape()[1] * self.rhs.shape()[2])
             )));
         }
         Ok(())

@@ -18,7 +18,7 @@ fn test_refinement_manager() {
     let error = Array3::ones((8, 8, 8));
 
     let markers = manager.mark_cells(&error, 0.5).unwrap();
-    assert_eq!(markers.dim(), (8, 8, 8));
+    assert_eq!(markers.shape(), [8, 8, 8]);
 }
 
 #[test]
@@ -27,10 +27,10 @@ fn test_interpolation() {
     let coarse = Array3::ones((4, 4, 4));
 
     let fine = interpolator.prolongate(&coarse);
-    assert_eq!(fine.dim(), (8, 8, 8));
+    assert_eq!(fine.shape(), [8, 8, 8]);
 
     let restricted = interpolator.restrict(&fine);
-    assert_eq!(restricted.dim(), (4, 4, 4));
+    assert_eq!(restricted.shape(), [4, 4, 4]);
 }
 
 #[test]
@@ -39,7 +39,7 @@ fn test_error_estimation() {
     let field = Array3::zeros((8, 8, 8));
 
     let error = estimator.estimate_error(&field).unwrap();
-    assert_eq!(error.dim(), field.dim());
+    assert_eq!(error.shape(), field.shape());
 }
 
 #[test]
@@ -48,8 +48,8 @@ fn test_wavelet_transform() {
     let data = Array3::ones((8, 8, 8));
 
     let coeffs = wavelet.forward(&data).unwrap();
-    assert_eq!(coeffs.dim(), data.dim());
+    assert_eq!(coeffs.shape(), data.shape());
 
     let reconstructed = wavelet.inverse(&coeffs).unwrap();
-    assert_eq!(reconstructed.dim(), data.dim());
+    assert_eq!(reconstructed.shape(), data.shape());
 }

@@ -78,13 +78,13 @@ where
     {
         use std::time::Instant;
 
-        if x_data.len() != t_data.len() || x_data.len() != u_data.nrows() {
+        if (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]) != (t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2]) || (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]) != u_data.shape()[0] {
             return Err(KwaversError::InvalidInput(
-                "Data dimensions must match: x_data.len() == t_data.len() == u_data.nrows()".into(),
+                "Data dimensions must match: (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]) == (t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2]) == u_data.shape()[0]".into(),
             ));
         }
 
-        if u_data.ncols() != 1 {
+        if u_data.shape()[1] != 1 {
             return Err(KwaversError::InvalidInput(
                 "u_data must have shape [N, 1]".into(),
             ));
@@ -94,7 +94,7 @@ where
         let mut metrics = TrainingMetrics::new();
         let backend = B::default();
 
-        let n_data = x_data.len();
+        let n_data = (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]);
         let x_data_vec: Vec<f32> = x_data.iter().map(|&v| v as f32).collect();
         let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
         let u_data_vec: Vec<f32> = u_data.iter().map(|&v| v as f32).collect();

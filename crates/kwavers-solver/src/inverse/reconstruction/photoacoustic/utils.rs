@@ -57,7 +57,7 @@ impl Utils {
         sound_speed: f64,
         sampling_frequency: f64,
     ) -> KwaversResult<Array2<f64>> {
-        let n_sensors = sensor_positions.len();
+        let n_sensors = (sensor_positions.shape()[0] * sensor_positions.shape()[1] * sensor_positions.shape()[2]);
         let n_voxels = grid_size[0] * grid_size[1] * grid_size[2];
         let n_time_samples = (sampling_frequency * 0.001) as usize; // 1ms of data
 

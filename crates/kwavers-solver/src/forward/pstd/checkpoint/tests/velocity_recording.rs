@@ -118,8 +118,8 @@ fn test_checkpoint_velocity_recording_survives_resume() {
 
     // GridDimension invariant.
     assert_eq!(
-        ref_ux.dim(),
-        resumed_ux.dim(),
+        ref_ux.shape(),
+        resumed_ux.shape(),
         "ux shape mismatch after checkpoint resume"
     );
 

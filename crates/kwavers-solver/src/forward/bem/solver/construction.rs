@@ -17,7 +17,7 @@ impl BemSolver {
         vertices: Vec<[f64; 3]>,
         triangles: Vec<[usize; 3]>,
     ) -> KwaversResult<Self> {
-        let n = vertices.len();
+        let n = (vertices.shape()[0] * vertices.shape()[1] * vertices.shape()[2]);
         for tri in &triangles {
             for &idx in tri {
                 if idx >= n {
@@ -75,7 +75,7 @@ impl BemSolver {
                 }
             }
 
-            if face_nodes.len() != 3 {
+            if (face_nodes.shape()[0] * face_nodes.shape()[1] * face_nodes.shape()[2]) != 3 {
                 continue;
             }
 
@@ -105,7 +105,7 @@ impl BemSolver {
                 if let Some(&local_idx) = global_to_local_node.get(&global_idx) {
                     local_face[i] = local_idx;
                 } else {
-                    let new_idx = nodes.len();
+                    let new_idx = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
                     nodes.push(mesh.nodes[global_idx].coordinates);
                     global_to_local_node.insert(global_idx, new_idx);
                     local_face[i] = new_idx;

@@ -161,7 +161,9 @@ impl KernelCube {
         let mut placed = place_kernel_at_focus(&resampled, target_shape, target_focus_idx);
         let peak = placed.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if peak > 0.0 {
-            placed.mapv_inplace(|v| v / peak);
+            for v in placed.iter_mut() {
+                *v /= peak;
+            }
         }
         placed
     }
@@ -199,7 +201,9 @@ impl KernelCube {
         });
         let peak = blend.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         if peak > 0.0 {
-            blend.mapv_inplace(|v| v / peak);
+            for v in blend.iter_mut() {
+                *v /= peak;
+            }
         }
         blend
     }

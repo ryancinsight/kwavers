@@ -45,7 +45,7 @@ fn test_train_basic() {
     let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 10);
     let metrics = result.unwrap();
     assert_eq!(metrics.epochs_completed, 10);
-    assert_eq!(metrics.total_loss.len(), 10);
+    assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 10);
     assert!(metrics.training_time_secs > 0.0);
 }
 
@@ -94,10 +94,10 @@ fn test_train_metrics_recording() {
     let metrics = trainer
         .train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 5)
         .unwrap();
-    assert_eq!(metrics.total_loss.len(), 5);
-    assert_eq!(metrics.data_loss.len(), 5);
-    assert_eq!(metrics.pde_loss.len(), 5);
-    assert_eq!(metrics.bc_loss.len(), 5);
+    assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 5);
+    assert_eq!((metrics.data_loss.shape()[0] * metrics.data_loss.shape()[1] * metrics.data_loss.shape()[2]), 5);
+    assert_eq!((metrics.pde_loss.shape()[0] * metrics.pde_loss.shape()[1] * metrics.pde_loss.shape()[2]), 5);
+    assert_eq!((metrics.bc_loss.shape()[0] * metrics.bc_loss.shape()[1] * metrics.bc_loss.shape()[2]), 5);
     for &loss in &metrics.total_loss {
         assert!(loss.is_finite());
     }

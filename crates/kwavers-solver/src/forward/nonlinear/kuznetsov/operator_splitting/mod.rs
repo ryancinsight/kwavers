@@ -151,7 +151,7 @@ impl OperatorSplittingSolver {
         let u = pressure.mapv(|p| beta * p / norm_factor);
 
         // Compute flux F = u²/2 and its derivative using upwind scheme
-        let mut flux_gradient = Array3::zeros(pressure.dim());
+        let mut flux_gradient = Array3::zeros(pressure.shape());
 
         for k in 0..self.nz {
             for j in 0..self.ny {
@@ -192,11 +192,11 @@ impl OperatorSplittingSolver {
         // flat-slice index space matches Zip's C-order iteration. Failing here
         // produces a discoverable error before any silent OOB reads.
         assert!(
-            pressure.is_standard_layout(),
+            pressure,
             "pressure must be C-contiguous (default Array3 layout) for the migration"
         );
         assert!(
-            flux_gradient.is_standard_layout(),
+            flux_gradient,
             "flux_gradient must be C-contiguous (default Array3 layout) for the migration"
         );
         {
@@ -206,7 +206,7 @@ impl OperatorSplittingSolver {
             let grad_slice = flux_gradient
                 .as_slice()
                 .expect("flux_gradient: standard-layout asserted just above; layout matched");
-            p_slice.par_mut().enumerate(|idx, p: &mut f64| {
+            p_slice.iter_mut().enumerate(|idx, p: &mut f64| {
                 let grad = grad_slice[idx];
                 *p -= scale * grad;
             });

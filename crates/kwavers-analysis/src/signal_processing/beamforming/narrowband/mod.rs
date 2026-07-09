@@ -98,7 +98,7 @@
 //! ```rust,ignore
 //! use kwavers_analysis::signal_processing::beamforming::narrowband;
 //! use leto::Array2;
-//! use num_complex::Complex64;
+//! use eunomia::Complex64;
 //!
 //! // Time-domain sensor data (N_sensors × N_samples)
 //! let rf_data: Array2<f64> = get_sensor_data();
@@ -322,3 +322,4 @@ mod tests {
         assert!(p > 0.0);
     }
 }
+

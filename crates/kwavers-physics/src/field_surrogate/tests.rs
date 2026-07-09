@@ -40,7 +40,7 @@ fn synthetic_gaussian_kernel(
 fn test_focal_pressure_matches_pnp() {
     let k = synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     assert!((k.focal_pressure() - 30.0 * MPA_TO_PA).abs() < 1e-9);
-    assert_eq!(k.shape(), (40, 30, 30));
+    assert_eq!(k.shape(),  [40, 30, 30]);
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn test_resample_identity_when_dx_unchanged() {
 fn test_resample_changes_shape_proportionally() {
     let k = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let r = resample_trilinear(&k, 1.0e-3); // 2× downsample
-    assert_eq!(r.shape(), (20, 10, 10));
+    assert_eq!(r.shape(),  [20, 10, 10]);
     assert!((r.dx_m - 1.0e-3).abs() < 1e-12);
 }
 
@@ -89,7 +89,7 @@ fn test_place_kernel_at_focus_aligns_voxel() {
     let target_shape = (60, 40, 40);
     let target_focus = (45, 20, 20);
     let placed = place_kernel_at_focus(&k, target_shape, target_focus);
-    assert_eq!(placed.dim(), target_shape);
+    assert_eq!(placed.shape(), target_shape);
     let placed_at_focus = placed[target_focus];
     let kernel_focal = k.field[k.focus_idx];
     assert!(

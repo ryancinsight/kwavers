@@ -33,7 +33,7 @@ pub(super) fn for_each_view_mut<F>(mut view: ArrayViewMut3<'_, f64>, f: F)
 where
     F: Fn((usize, usize, usize), &mut f64) + Send + Sync,
 {
-    let (nx, ny, nz) = view.dim();
+    let [nx, ny, nz] = view.shape();
     let len = nx
         .checked_mul(ny)
         .and_then(|plane| plane.checked_mul(nz))

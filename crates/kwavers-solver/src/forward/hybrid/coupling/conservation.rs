@@ -30,11 +30,11 @@ impl HybridCouplingConservationEnforcer {
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        if interpolated.dim() != target.dim() {
+        if interpolated.shape() != target.shape() {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", target.dim()),
-                    actual: format!("{:?}", interpolated.dim()),
+                    expected: format!("{:?}", target.shape()),
+                    actual: format!("{:?}", interpolated.shape()),
                 },
             ));
         }
@@ -65,7 +65,7 @@ impl HybridCouplingConservationEnforcer {
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
     ) {
-        let n = target.len() as f64;
+        let n = (target.shape()[0] * target.shape()[1] * target.shape()[2]) as f64;
         let source_sum: f64 = interpolated.iter().sum();
         let source_mean = source_sum / n;
         let target_sum: f64 = target.iter().sum();
@@ -88,9 +88,9 @@ impl HybridCouplingConservationEnforcer {
         let variable_energy = (target_energy - constant_energy).max(0.0);
         let scale = (variable_energy / centered_energy).sqrt();
 
-        fields.zip_mut_with(interpolated, |field_value, &source_value| {
+        for (field_value, source_value) in fields.iter_mut().zip(interpolated.iter()) {
             *field_value = target_mean + scale * (source_value - source_mean);
-        });
+        }
     }
 
     /// Get conservation metrics

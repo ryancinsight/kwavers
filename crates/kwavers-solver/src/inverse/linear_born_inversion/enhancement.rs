@@ -28,7 +28,7 @@ pub fn high_pass_enhance_slice(
     if gain == 0.0 {
         return reconstruction.clone();
     }
-    let (nx, ny) = reconstruction.dim();
+    let [nx, ny] = reconstruction.shape();
     let mut enhanced = reconstruction.clone();
     for ix in 0..nx {
         for iy in 0..ny {
@@ -80,7 +80,7 @@ pub fn high_pass_enhance_volume(
     if gain == 0.0 {
         return reconstruction.clone();
     }
-    let (nx, ny, nz) = reconstruction.dim();
+    let [nx, ny, nz] = reconstruction.shape();
     let mut enhanced = reconstruction.clone();
     for ix in 0..nx {
         for iy in 0..ny {

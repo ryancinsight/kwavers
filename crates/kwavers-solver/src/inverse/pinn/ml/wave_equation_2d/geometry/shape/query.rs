@@ -37,7 +37,7 @@ impl WaveGeometry2D {
             }
             WaveGeometry2D::Polygonal { vertices, holes } => {
                 let mut inside = false;
-                let n = vertices.len();
+                let n = (vertices.shape()[0] * vertices.shape()[1] * vertices.shape()[2]);
                 let mut j = n - 1;
                 for i in 0..n {
                     let vi = vertices[i];
@@ -52,7 +52,7 @@ impl WaveGeometry2D {
                 if inside {
                     for hole in holes {
                         let mut hole_inside = false;
-                        let m = hole.len();
+                        let m = (hole.shape()[0] * hole.shape()[1] * hole.shape()[2]);
                         let mut k = m - 1;
                         for i in 0..m {
                             let vi = hole[i];
@@ -167,7 +167,7 @@ impl WaveGeometry2D {
         let mut x_points = Vec::with_capacity(n_points);
         let mut y_points = Vec::with_capacity(n_points);
 
-        while x_points.len() < n_points {
+        while (x_points.shape()[0] * x_points.shape()[1] * x_points.shape()[2]) < n_points {
             let x = x_min + (x_max - x_min) * rand::random::<f64>();
             let y = y_min + (y_max - y_min) * rand::random::<f64>();
             if self.contains(x, y) {

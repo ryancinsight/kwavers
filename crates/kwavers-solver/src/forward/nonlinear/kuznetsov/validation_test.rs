@@ -47,7 +47,7 @@ mod tests {
 
         // Initialize pressure field
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(0, 0).to_owned();
+        let prev_pressure = fields.index_axis(0, 0).unwrap().to_owned();
 
         // Propagate for fewer time steps for fast validation
         let n_steps = 20;
@@ -86,7 +86,7 @@ mod tests {
         let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, 32, 32, 32));
-        let prev = fields.index_axis(0, 0).to_owned();
+        let prev = fields.index_axis(0, 0).unwrap().to_owned();
 
         // This should not produce a warning for homogeneous media
         solver
@@ -295,7 +295,7 @@ mod tests {
         let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(0, 0).to_owned();
+        let prev_pressure = fields.index_axis(0, 0).unwrap().to_owned();
 
         // Propagate to allow nonlinear effects to develop
         let n_steps = 1000;
@@ -360,7 +360,7 @@ mod tests {
         for ((_, i, _, _), p) in fields.indexed_iter_mut() {
             *p = amplitude * (TWO_PI * m as f64 * i as f64 / nx as f64).sin();
         }
-        let prev = fields.index_axis(0, 0).to_owned();
+        let prev = fields.index_axis(0, 0).unwrap().to_owned();
 
         // The pure tone has zero second-harmonic content at t = 0.
         let line0: Vec<f64> = (0..nx).map(|i| fields[[0, i, 8, 8]]).collect();

@@ -15,7 +15,7 @@ fn test_uniform_sampling() {
     let mut sampler = AdaptiveSampler::new(SamplingStrategy::Uniform, 50, 0);
     let residuals = vec![1.0; 100];
     let indices = sampler.resample(&residuals).unwrap();
-    assert_eq!(indices.len(), 50);
+    assert_eq!((indices.shape()[0] * indices.shape()[1] * indices.shape()[2]), 50);
     assert!(indices.iter().all(|&i| i < 100));
 }
 
@@ -35,7 +35,7 @@ fn test_residual_weighted_sampling() {
         *r = 100.0;
     }
     let indices = sampler.resample(&residuals).unwrap();
-    assert_eq!(indices.len(), 50);
+    assert_eq!((indices.shape()[0] * indices.shape()[1] * indices.shape()[2]), 50);
     assert!(indices.iter().all(|&i| i < 100));
     let high_residual_count = indices.iter().filter(|&&i| i < 10).count();
     assert!(high_residual_count > 0);
@@ -45,14 +45,14 @@ fn test_residual_weighted_sampling() {
 fn test_batch_iterator() {
     let mut sampler = AdaptiveSampler::new(SamplingStrategy::Uniform, 100, 32);
     let batches: Vec<Vec<usize>> = sampler.iter_batches().collect();
-    assert_eq!(batches.len(), 4);
+    assert_eq!((batches.shape()[0] * batches.shape()[1] * batches.shape()[2]), 4);
     assert_eq!(batches[0].len(), 32);
     assert_eq!(batches[1].len(), 32);
     assert_eq!(batches[2].len(), 32);
     assert_eq!(batches[3].len(), 4);
     let all_indices: std::collections::HashSet<usize> =
         batches.iter().flat_map(|b| b.iter().copied()).collect();
-    assert_eq!(all_indices.len(), 100);
+    assert_eq!((all_indices.shape()[0] * all_indices.shape()[1] * all_indices.shape()[2]), 100);
 }
 
 #[test]
@@ -70,7 +70,7 @@ fn test_importance_threshold() {
         *r = 2.0;
     }
     let indices = sampler.resample(&residuals).unwrap();
-    assert_eq!(indices.len(), 20);
+    assert_eq!((indices.shape()[0] * indices.shape()[1] * indices.shape()[2]), 20);
     assert!(indices.iter().all(|&i| i < 40));
 }
 
@@ -89,7 +89,7 @@ fn test_hybrid_sampling() {
         *r = 10.0;
     }
     let indices = sampler.resample(&residuals).unwrap();
-    assert_eq!(indices.len(), 100);
+    assert_eq!((indices.shape()[0] * indices.shape()[1] * indices.shape()[2]), 100);
     let high_residual_count = indices.iter().filter(|&&i| i < 20).count();
     assert!(high_residual_count > 10);
     assert!(indices.iter().any(|&i| i >= 100));

@@ -185,7 +185,7 @@ impl ElasticPstdOrchestrator {
                 indices
             })
             .unwrap_or_default();
-        let n_sensors = sensor_indices.len();
+        let n_sensors = (sensor_indices.shape()[0] * sensor_indices.shape()[1] * sensor_indices.shape()[2]);
         let mut sensor_vx = (n_sensors > 0).then(|| Array2::<f64>::zeros([n_sensors, n_steps]));
         let mut sensor_vy = (n_sensors > 0).then(|| Array2::<f64>::zeros([n_sensors, n_steps]));
         let mut sensor_vz = (n_sensors > 0).then(|| Array2::<f64>::zeros([n_sensors, n_steps]));

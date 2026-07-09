@@ -4,11 +4,7 @@ use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
 use super::distribution::PhaseDistribution;
 use super::scheme::RandomizationScheme;
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::{
-    Array1,
-    Array2,
-    ArrayView1,
-};
+use leto::{Array1, Array2, ArrayView1};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
@@ -34,7 +30,7 @@ impl PhaseRandomizer {
     ) -> Self {
         let rng = ChaCha8Rng::seed_from_u64(DEFAULT_SEED);
         let phase_states = Self::generate_phase_states(&distribution);
-        let current_phases = Array1::zeros(num_elements);
+        let current_phases = Array1::zeros([num_elements]);
 
         Self {
             scheme,
@@ -118,7 +114,7 @@ impl PhaseRandomizer {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_to_field(&self, field: &mut Array2<f64>) {
-        let (n_elements, n_time) = field.dim();
+        let [n_elements, n_time] = field.shape();
         assert_eq!(n_elements, self.current_phases.len());
 
         for i in 0..n_elements {
@@ -224,7 +220,6 @@ mod tests {
     /// After apply_to_field with zero phases, field is unchanged.
     #[test]
     fn apply_to_field_with_zero_phases_leaves_field_unchanged() {
-        
         let r = PhaseRandomizer::new(
             RandomizationScheme::Temporal { period: 1e-3 },
             PhaseDistribution::Uniform,

@@ -3,15 +3,12 @@
 //! This module contains implementations of various traits for the `NonlinearWave` struct.
 
 use crate::traits::AcousticWaveModel;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
+use leto::{Array3, Array4};
 use log::info;
-use leto::{
-    Array3,
-    Array4,
-};
 
 use super::wave_model::NonlinearWave;
 
@@ -30,20 +27,23 @@ impl AcousticWaveModel for NonlinearWave {
         use kwavers_field::indices::PRESSURE_IDX;
 
         // Get a view of the current pressure field (avoid cloning)
-        let pressure_view = fields.index_axis(Axis(0), PRESSURE_IDX);
+        let pressure_view = fields
+            .index_axis(0, PRESSURE_IDX)
+            .expect("valid pressure axis index");
 
         // Create source term array
         let source_mask = source.create_mask(grid);
         let amplitude = source.amplitude(t);
-        let mut source_term = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut source_term = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         for (dst, &src) in source_term.iter_mut().zip(source_mask.iter()) {
             *dst = src * amplitude;
         }
 
         // Update using the nonlinear wave equation
         // Note: We pass a reference to avoid cloning, and the inner method is renamed
+        let pressure_owned = pressure_view.to_contiguous();
         let updated_pressure = self.update_wave_inner(
-            &pressure_view.to_owned(),
+            &pressure_owned,
             &source_term,
             medium,
             grid,
@@ -52,7 +52,8 @@ impl AcousticWaveModel for NonlinearWave {
 
         // Update the pressure field in the 4D array
         fields
-            .index_axis_mut(Axis(0), PRESSURE_IDX)
+            .index_axis_mut(0, PRESSURE_IDX)
+            .map_err(|e| KwaversError::from(e.to_string()))?
             .assign(&updated_pressure);
 
         Ok(())

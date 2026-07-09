@@ -34,7 +34,7 @@
 
 use core::f64::consts::{PI, TAU};
 use kwavers_math::special::bessel::jn;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Acousto-optic diffraction regime selected by the Klein–Cook parameter `Q`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -245,7 +245,7 @@ pub fn solve_coupled_orders(
     };
 
     let axpy = |a: &[Complex64], s: f64, b: &[Complex64]| -> Vec<Complex64> {
-        a.iter().zip(b).map(|(x, y)| x + y * s).collect()
+        a.iter().zip(b).map(|(x, y)| x + *y * s).collect()
     };
 
     for _ in 0..steps {
@@ -258,7 +258,7 @@ pub fn solve_coupled_orders(
         }
     }
 
-    e.iter().map(num_complex::Complex::norm_sqr).collect()
+    e.iter().map(|value| value.norm_sqr()).collect()
 }
 
 #[cfg(test)]
@@ -429,3 +429,4 @@ mod tests {
         assert!(bragg_angle_rad(633e-9, 1.0, 100e-9).is_none());
     }
 }
+

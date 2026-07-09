@@ -45,7 +45,7 @@ pub fn normal_equation_diagonal_rows(
     regularization: f64,
 ) -> Vec<f64> {
     let mut diagonal = fold_reduce_with::<Adaptive, _, _, _, _>(
-        rows.len(),
+        (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
         || vec![0.0f64; ncols],
         |mut partial, row_index| {
             let row = rows[row_index];
@@ -93,7 +93,7 @@ where
     F: Fn(usize) -> f64 + Sync,
 {
     let mut data = vec![0.0; nrows];
-    data.par_mut().enumerate(|row, value| {
+    data.iter_mut().enumerate(|row, value| {
         let base = row * ncols;
         let mut acc = 0.0;
         for col in 0..ncols {
@@ -127,7 +127,7 @@ pub fn objective_rows(
     regularization: f64,
 ) -> f64 {
     let misfit = reduce_index_with::<Adaptive, _, _, _>(
-        rows.len(),
+        (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
         0.0,
         |row_index| {
             let row = rows[row_index];
@@ -147,7 +147,7 @@ pub fn objective_rows(
 
 fn adjoint_rows(matrix: &[f64], data: &[f64], rows: &[usize], ncols: usize) -> Vec<f64> {
     fold_reduce_with::<Adaptive, _, _, _, _>(
-        rows.len(),
+        (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
         || vec![0.0f64; ncols],
         |mut partial, row_index| {
             let row = rows[row_index];
@@ -175,7 +175,7 @@ fn adjoint_residual_rows(
     ncols: usize,
 ) -> Vec<f64> {
     fold_reduce_with::<Adaptive, _, _, _, _>(
-        rows.len(),
+        (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
         || vec![0.0f64; ncols],
         |mut partial, row_index| {
             let row = rows[row_index];

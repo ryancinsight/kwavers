@@ -42,8 +42,8 @@ impl MonolithicCoupler {
         let mut trial_state = self
             .line_search_state_scratch
             .take()
-            .filter(|scratch| scratch.dim() == u.dim())
-            .unwrap_or_else(|| Array3::zeros(u.dim()));
+            .filter(|scratch| scratch.shape() == u.shape())
+            .unwrap_or_else(|| Array3::zeros(u.shape()));
 
         const BACKTRACK_TRIALS: usize = 5;
         let mut last_alpha = max_alpha;
@@ -51,9 +51,11 @@ impl MonolithicCoupler {
             let alpha = max_alpha * 2.0_f64.powi(-(k as i32));
             last_alpha = alpha;
             trial_state.assign(u);
-            trial_state.zip_mut_with(du, |candidate, &delta| {
+            for (candidate, delta) in trial_state.iter_mut().zip(du.iter()) {
+            {
                 *candidate += alpha * delta;
-            });
+            };
+        };
             let f_new = match self.compute_residual(&trial_state, u_prev, dt, dims, field_order) {
                 Ok(residual) => residual,
                 Err(error) => {

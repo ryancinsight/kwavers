@@ -40,7 +40,7 @@ pub struct SonoluminescenceEmission {
 impl SonoluminescenceEmission {
     /// Create new emission calculator
     #[must_use]
-    pub fn new(grid_shape: (usize, usize, usize), params: EmissionParameters) -> Self {
+    pub fn new(grid_shape: [usize; 3], params: EmissionParameters) -> Self {
         let analyzer = SpectralAnalyzer::new(SpectralRange::default());
         let spectral_field = Some(SpectralField::new(grid_shape, analyzer.range.wavelengths()));
 
@@ -76,12 +76,17 @@ impl SonoluminescenceEmission {
         if self.params.use_blackbody {
             let bb_emission =
                 calculate_blackbody_emission(temperature_field, radius_field, &self.blackbody);
-            self.emission_field = &self.emission_field + &bb_emission;
+            for (dst, src) in self.emission_field.iter_mut().zip(bb_emission.iter()) {
+                *dst += *src;
+            }
         }
 
         // Bremsstrahlung contribution
         if self.params.use_bremsstrahlung {
-            let electron_density_field = charge_density_field.mapv(|rho| rho / ELEMENTARY_CHARGE);
+            let mut electron_density_field = charge_density_field.clone();
+            for v in electron_density_field.iter_mut() {
+                *v /= ELEMENTARY_CHARGE;
+            }
             let ion_density_field = electron_density_field.clone();
 
             let br_emission = calculate_bremsstrahlung_emission(
@@ -90,7 +95,9 @@ impl SonoluminescenceEmission {
                 &ion_density_field,
                 &self.bremsstrahlung,
             );
-            self.emission_field = &self.emission_field + &br_emission;
+            for (dst, src) in self.emission_field.iter_mut().zip(br_emission.iter()) {
+                *dst += *src;
+            }
         }
 
         // Cherenkov contribution
@@ -102,11 +109,13 @@ impl SonoluminescenceEmission {
                 compression_field,
                 &self.cherenkov,
             );
-            self.emission_field = &self.emission_field + &ch_emission;
+            for (dst, src) in self.emission_field.iter_mut().zip(ch_emission.iter()) {
+                *dst += *src;
+            }
         }
 
         // Apply minimum temperature cutoff
-        for ((i, j, k), emission) in self.emission_field.indexed_iter_mut() {
+        for ([i, j, k], emission) in self.emission_field.indexed_iter_mut().unwrap() {
             if temperature_field[[i, j, k]] < self.params.min_temperature {
                 *emission = 0.0;
             } else {
@@ -127,7 +136,7 @@ impl SonoluminescenceEmission {
         compression: f64,
     ) -> EmissionSpectrum {
         let wavelengths = self.analyzer.range.wavelengths();
-        let mut intensities = leto::Array1::zeros(wavelengths.len());
+        let mut intensities = leto::Array1::zeros([wavelengths.len()]);
 
         if temperature < self.params.min_temperature || radius <= 0.0 {
             return EmissionSpectrum::new(wavelengths, intensities, 0.0);
@@ -136,7 +145,9 @@ impl SonoluminescenceEmission {
         // Blackbody contribution
         if self.params.use_blackbody {
             let bb_spectrum = self.blackbody.emission_spectrum(temperature, &wavelengths);
-            intensities = intensities + bb_spectrum;
+            for (dst, src) in intensities.iter_mut().zip(bb_spectrum.iter()) {
+                *dst += *src;
+            }
         }
 
         // Bremsstrahlung contribution
@@ -158,7 +169,9 @@ impl SonoluminescenceEmission {
                 2.0 * radius,
                 &wavelengths,
             );
-            intensities = intensities + br_spectrum;
+            for (dst, src) in intensities.iter_mut().zip(br_spectrum.iter()) {
+                *dst += *src;
+            }
         }
 
         // Cherenkov contribution
@@ -172,11 +185,15 @@ impl SonoluminescenceEmission {
                     local_model.emission_spectrum(velocity, charge_per_particle, &wavelengths);
                 let path_length = 2.0 * radius;
                 let scale_factor = charge_density * path_length;
-                intensities = intensities + (ch_spectrum * scale_factor);
+                for (dst, src) in intensities.iter_mut().zip(ch_spectrum.iter()) {
+                    *dst += src * scale_factor;
+                }
             }
         }
 
-        intensities *= self.params.opacity_factor;
+        for v in intensities.iter_mut() {
+            *v *= self.params.opacity_factor;
+        }
         EmissionSpectrum::new(wavelengths, intensities, 0.0)
     }
 
@@ -192,13 +209,13 @@ impl SonoluminescenceEmission {
         compression_field: &Array3<f64>,
         time: f64,
     ) {
-        let shape = temperature_field.dim();
+        let shape = temperature_field.shape();
         let wavelengths = self.analyzer.range.wavelengths();
         let mut spectral_field = SpectralField::new(shape, wavelengths);
 
-        for i in 0..shape.0 {
-            for j in 0..shape.1 {
-                for k in 0..shape.2 {
+        for i in 0..shape[0] {
+            for j in 0..shape[1] {
+                for k in 0..shape[2] {
                     let mut spectrum = self.calculate_spectrum_at_point(
                         temperature_field[[i, j, k]],
                         pressure_field[[i, j, k]],

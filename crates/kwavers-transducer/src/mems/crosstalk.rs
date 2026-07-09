@@ -42,7 +42,7 @@
 //! - Kinsler, Frey, Coppens & Sanders, *Fundamentals of Acoustics* (4th ed.), §7.
 
 use leto::Array2;
-use num_complex::Complex;
+use eunomia::Complex;
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 /// Mutual radiation impedance `Z_ij = jωρ A_i A_j /(2π d) · e^{-jkd}` [kg/s]
@@ -231,3 +231,4 @@ mod tests {
         assert_eq!(z.shape(), (0, 0));
     }
 }
+

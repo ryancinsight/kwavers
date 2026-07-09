@@ -1,10 +1,5 @@
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array1,
-    Array3,
-    Array4,
-};
+use leto::{Array1, Array3, Array4};
 
 use crate::parallel::for_each_indexed_three_mut;
 
@@ -65,16 +60,17 @@ pub struct SpectralField {
 impl SpectralField {
     /// Create new spectral field
     #[must_use]
-    pub fn new(grid_shape: (usize, usize, usize), wavelengths: Array1<f64>) -> Self {
-        let n_wavelengths = wavelengths.len();
-        let shape_4d = (grid_shape.0, grid_shape.1, grid_shape.2, n_wavelengths);
+    pub fn new(grid_shape: [usize; 3], wavelengths: Array1<f64>) -> Self {
+        let n_wavelengths = wavelengths.size();
+        let s = grid_shape;
+        let shape_4d = [s[0], s[1], s[2], n_wavelengths];
 
         Self {
             wavelengths,
             intensities: Array4::zeros(shape_4d),
-            peak_wavelength: Array3::zeros(grid_shape),
-            total_intensity: Array3::zeros(grid_shape),
-            color_temperature: Array3::zeros(grid_shape),
+            peak_wavelength: Array3::zeros(s),
+            total_intensity: Array3::zeros(s),
+            color_temperature: Array3::zeros(s),
         }
     }
 
@@ -91,29 +87,29 @@ impl SpectralField {
             color_temperature,
         } = self;
 
-        let output_shape = total_intensity.dim();
+        let output_shape = total_intensity.shape();
         assert_eq!(
-            peak_wavelength.dim(),
+            peak_wavelength.shape(),
             output_shape,
             "invariant: spectral peak output shape mismatch"
         );
         assert_eq!(
-            color_temperature.dim(),
+            color_temperature.shape(),
             output_shape,
             "invariant: spectral color output shape mismatch"
         );
         assert_eq!(
-            intensities.dim(),
-            (
-                output_shape.0,
-                output_shape.1,
-                output_shape.2,
+            intensities.shape(),
+            [
+                output_shape[0],
+                output_shape[1],
+                output_shape[2],
                 wavelengths.len()
-            ),
+            ],
             "invariant: spectral intensity lane shape mismatch"
         );
 
-        let (_nx, ny, nz) = output_shape;
+        let [_nx, ny, nz] = output_shape;
         let n_wavelengths = wavelengths.len();
         let contiguous_intensities = intensities.as_slice_memory_order();
 
@@ -133,7 +129,7 @@ impl SpectralField {
                     let k = rem % nz;
                     spectral_cell_quantities(
                         wavelengths,
-                        intensities.slice(s![i, j, k, ..]).iter().copied(),
+                        (0..n_wavelengths).map(|l| intensities[[i, j, k, l]]),
                     )
                 };
                 *total = quantities.total;
@@ -151,7 +147,9 @@ impl SpectralField {
         j: usize,
         k: usize,
     ) -> crate::optics::sonoluminescence::spectral::EmissionSpectrum {
-        let intensities = self.intensities.slice(s![i, j, k, ..]).to_owned();
+        let n_wavelengths = self.wavelengths.len();
+        let intensities =
+            Array1::from_shape_fn([n_wavelengths], |[l]| self.intensities[[i, j, k, l]]);
         crate::optics::sonoluminescence::spectral::EmissionSpectrum::new(
             self.wavelengths.clone(),
             intensities,
@@ -207,8 +205,8 @@ mod tests {
 
     #[test]
     fn spectral_field_derived_quantities_match_cell_spectra() {
-        let wavelengths = Array1::from_vec(vec![400.0e-9, 500.0e-9, 600.0e-9]);
-        let mut field = SpectralField::new((2, 1, 1), wavelengths.clone());
+        let wavelengths = Array1::from_vec([3], vec![400.0e-9, 500.0e-9, 600.0e-9]);
+        let mut field = SpectralField::new([2, 1, 1], wavelengths.clone());
         field.intensities[[0, 0, 0, 0]] = 3.0;
         field.intensities[[0, 0, 0, 1]] = 3.0;
         field.intensities[[0, 0, 0, 2]] = 1.0;

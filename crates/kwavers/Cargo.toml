@@ -12,7 +12,6 @@ categories = ["science", "simulation", "medical"]
 # This is a workspace member - see root Cargo.toml for workspace configuration
 
 [dependencies]
-num-complex = { workspace = true }
 # `kwavers` is the thin top-level app/integration crate (ADR 011 amendment): it
 # hosts the binary + cross-cutting tests/examples/benches and re-exports NOTHING.
 # It depends on the layer crates directly so those targets can use them.

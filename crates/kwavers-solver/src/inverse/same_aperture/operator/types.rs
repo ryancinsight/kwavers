@@ -119,8 +119,8 @@ impl<'a> FiniteFrequencyOperator<'a> {
 
     #[must_use]
     pub fn materialize(&self) -> RowMatrix {
-        let mut matrix = RowMatrix::zeros(self.rows, self.active.len());
-        let cols = self.active.len();
+        let mut matrix = RowMatrix::zeros(self.rows, (self.active.shape()[0] * self.active.shape()[1] * self.active.shape()[2]));
+        let cols = (self.active.shape()[0] * self.active.shape()[1] * self.active.shape()[2]);
         match &self.kind {
             OperatorKind::PitchCatch(specs) => {
                 for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
@@ -169,8 +169,8 @@ impl<'a> FiniteFrequencyOperator<'a> {
 
     fn new(medium: SameApertureMedium<'a>, active: &'a ActiveGrid, kind: OperatorKind) -> Self {
         let rows = match &kind {
-            OperatorKind::PitchCatch(specs) => specs.len(),
-            OperatorKind::Passive(specs) => specs.len(),
+            OperatorKind::PitchCatch(specs) => (specs.shape()[0] * specs.shape()[1] * specs.shape()[2]),
+            OperatorKind::Passive(specs) => (specs.shape()[0] * specs.shape()[1] * specs.shape()[2]),
         };
         let row_norms = compute_row_norms(&kind, active, medium);
         let inv_row_norms = row_norms.iter().map(|n| 1.0 / *n).collect();

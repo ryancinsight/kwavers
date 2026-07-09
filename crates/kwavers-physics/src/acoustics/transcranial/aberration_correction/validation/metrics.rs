@@ -27,7 +27,7 @@ impl TranscranialAberrationCorrection {
         field: &Array3<f64>,
         target_point: &[f64; 3],
     ) -> f64 {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let xi = (target_point[0] / self.grid.dx).clamp(0.0, nx.saturating_sub(2) as f64);
         let yj = (target_point[1] / self.grid.dy).clamp(0.0, ny.saturating_sub(2) as f64);
         let zk = (target_point[2] / self.grid.dz).clamp(0.0, nz.saturating_sub(2) as f64);
@@ -52,7 +52,7 @@ impl TranscranialAberrationCorrection {
         field: &Array3<f64>,
         _target_point: &[f64; 3],
     ) -> f64 {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         let i_peak = field.iter().copied().fold(0.0_f64, f64::max);
         if i_peak <= 0.0 {
@@ -107,7 +107,7 @@ impl TranscranialAberrationCorrection {
         field: &Array3<f64>,
         _target_point: &[f64; 3],
     ) -> f64 {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         let i_peak = field.iter().copied().fold(0.0_f64, f64::max);
         if i_peak <= 0.0 {
@@ -171,7 +171,7 @@ impl MainLobeBounds {
 }
 
 fn peak_voxel(field: &Array3<f64>, i_peak: f64) -> (usize, usize, usize) {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
 
     for k in 0..nz {
         for j in 0..ny {

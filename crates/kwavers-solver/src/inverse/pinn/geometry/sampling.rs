@@ -92,7 +92,7 @@ impl CollocationSampler {
         };
 
         let bbox = self.domain.bounding_box();
-        let dim = bbox.len() / 2;
+        let dim = (bbox.shape()[0] * bbox.shape()[1] * bbox.shape()[2]) / 2;
 
         let mut points = Array2::zeros([n_points, dim]);
 
@@ -124,7 +124,7 @@ impl CollocationSampler {
             }
         }
 
-        let n_valid = valid_points.len().min(n_points);
+        let n_valid = (valid_points.shape()[0] * valid_points.shape()[1] * valid_points.shape()[2]).min(n_points);
         let mut result = Array2::zeros([n_valid, dim]);
         for (i, point) in valid_points.iter().take(n_valid).enumerate() {
             for (j, &coord) in point.iter().enumerate() {
@@ -141,7 +141,7 @@ impl CollocationSampler {
         }
 
         let bbox = self.domain.bounding_box();
-        let dim = bbox.len() / 2;
+        let dim = (bbox.shape()[0] * bbox.shape()[1] * bbox.shape()[2]) / 2;
 
         let unit_points = sobol_unit_hypercube_points(n_points, dim, self.seed);
         let mut points = Array2::zeros([n_points, dim]);
@@ -191,7 +191,7 @@ pub(super) fn sobol_unit_hypercube_points(
         }
     }
 
-    debug_assert_eq!(result.len(), n_points);
+    debug_assert_eq!((result.shape()[0] * result.shape()[1] * result.shape()[2]), n_points);
     result
 }
 
@@ -217,7 +217,7 @@ fn sobol_direction_numbers(dim: usize) -> Vec<[u32; 32]> {
 
 fn sobol_direction_numbers_from_params(s: usize, a: u32, m: &[u32]) -> [u32; 32] {
     const MAX_BITS: usize = 32;
-    assert_eq!(m.len(), s);
+    assert_eq!((m.shape()[0] * m.shape()[1] * m.shape()[2]), s);
     assert!((1..MAX_BITS).contains(&s));
 
     let mut v = [0u32; MAX_BITS];

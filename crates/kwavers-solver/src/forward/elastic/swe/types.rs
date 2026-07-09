@@ -1,8 +1,5 @@
 use crate::workspace::inplace_ops::apply_inplace;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 pub use kwavers_physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
 
@@ -146,12 +143,12 @@ impl ElasticWaveField {
     #[must_use]
     pub fn displacement_magnitude(&self) -> Array3<f64> {
         let mut out = self.ux.clone();
-        out.zip_mut_with(&self.uy, |o, &y| {
+        for (o, y) in out.iter_mut().zip(self.uy.iter()) {
             *o = (*o).mul_add(*o, y * y);
-        });
-        out.zip_mut_with(&self.uz, |o, &z| {
+        }
+        for (o, z) in out.iter_mut().zip(self.uz.iter()) {
             *o += z * z;
-        });
+        }
         apply_inplace(&mut out, f64::sqrt);
         out
     }

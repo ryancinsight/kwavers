@@ -31,9 +31,9 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
     );
 
     if let (Some(target_values), Some(x_values), Some(y_values)) = (
-        target.as_slice_memory_order_mut(),
-        x.as_slice_memory_order(),
-        y.as_slice_memory_order(),
+        target.as_slice_mut(),
+        x.as_slice(),
+        y.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(target_values, |idx, target_value| {
             *target_value += x_values[idx] + y_values[idx];
@@ -65,8 +65,8 @@ pub(super) fn apply_pressure_update(
 
     if let (Some(pressure_values), Some(divergence_values), Some(rho_values)) = (
         pressure.as_slice_mut(),
-        divergence.as_slice_memory_order(),
-        rho_c_squared.as_slice_memory_order(),
+        divergence.as_slice(),
+        rho_c_squared.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
             *pressure_value -= dt * rho_values[idx] * divergence_values[idx];
@@ -90,7 +90,7 @@ pub(super) fn add_nonlinear_pressure_delta(pressure: &mut LetoArray3<f64>, delta
     );
 
     if let (Some(pressure_values), Some(delta_values)) =
-        (pressure.as_slice_mut(), delta.as_slice_memory_order())
+        (pressure.as_slice_mut(), delta.as_slice())
     {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
             *pressure_value += delta_values[idx];

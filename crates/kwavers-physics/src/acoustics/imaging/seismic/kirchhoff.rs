@@ -87,16 +87,16 @@ impl KirchhoffMigrator {
             .first()
             .or_else(|| receiver_tt.first())
             .ok_or_else(|| KwaversError::InvalidInput("no traveltime tables provided".to_owned()))?
-            .dim();
+            .shape();
         for tt in source_tt.iter().chain(receiver_tt.iter()) {
-            if tt.dim() != dim {
+            if tt.shape() != dim {
                 return Err(KwaversError::InvalidInput(
                     "traveltime tables have mismatched shapes".to_owned(),
                 ));
             }
         }
-        let (nx, ny, nz) = dim;
-        let mut image = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = dim;
+        let mut image = Array3::zeros([nx, ny, nz]);
         for tr in traces {
             let st = source_tt.get(tr.source).ok_or_else(|| {
                 KwaversError::InvalidInput("trace references missing source table".to_owned())

@@ -35,7 +35,7 @@ impl SimdExecutor {
         y: &[f32],
         t: &[f32],
     ) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
-        let batch_size = x.len();
+        let batch_size = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
         let mut predictions = vec![0.0; batch_size];
         let uncertainties = vec![0.01; batch_size];
 
@@ -67,7 +67,7 @@ impl SimdExecutor {
         y: &[f32],
         t: &[f32],
     ) -> KwaversResult<Vec<f32>> {
-        let batch_size = x.len();
+        let batch_size = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
         let mut output = vec![0.0; batch_size];
 
         let mut input = Vec::with_capacity(batch_size * 3);
@@ -79,7 +79,7 @@ impl SimdExecutor {
 
         let mut current_input = &input;
 
-        for layer_idx in 0..network.weights.len() {
+        for layer_idx in 0..(network.weights.shape()[0] * network.weights.shape()[1] * network.weights.shape()[2]) {
             let weights = &network.weights[layer_idx];
             let biases = &network.biases[layer_idx];
             let weight_scale = network.weight_scales[layer_idx];

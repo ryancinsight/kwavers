@@ -17,22 +17,22 @@ fn pressure_second_derivative_views_into(
     p2: ArrayView3<'_, f64>,
     inv_dt_sq: f64,
 ) {
-    if dst.is_standard_layout()
-        && p0.is_standard_layout()
-        && p1.is_standard_layout()
-        && p2.is_standard_layout()
+    if dst
+        && p0
+        && p1
+        && p2
     {
         let p0 = p0
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout p0 view exposes memory-order slice");
         let p1 = p1
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout p1 view exposes memory-order slice");
         let p2 = p2
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout p2 view exposes memory-order slice");
         let dst_slice = dst
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout destination exposes memory-order slice");
         let chunk_size = super::FWI_FIELD_CHUNK;
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
@@ -66,10 +66,7 @@ impl FwiProcessor {
         use kwavers_core::constants::SOUND_SPEED_WATER;
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s
         let max_velocity = SOUND_SPEED_WATER * 4.0; // 6000 m/s
-        if model.is_standard_layout() {
-            let values = model
-                .as_slice_memory_order_mut()
-                .expect("invariant: standard-layout model exposes memory-order slice");
+        if let Some(values) = model.as_slice_mut() {
             for_each_chunk_mut_with::<Adaptive, _, _>(values, super::FWI_FIELD_CHUNK, |chunk| {
                 for value in chunk {
                     *value = value.clamp(min_velocity, max_velocity);
@@ -92,13 +89,13 @@ impl FwiProcessor {
         model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        if model.dim() != grid.dimensions() {
+        if model.shape() != grid.dimensions() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Model shape mismatch: expected {:?}, got {:?}",
                         grid.dimensions(),
-                        model.dim()
+                        model.shape()
                     ),
                 },
             ));
@@ -193,49 +190,49 @@ impl FwiProcessor {
         dt: f64,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        if idx >= forward_history.len_of(Axis(0)) {
+        if idx >= forward_history.shape()[0] {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Forward history index out of bounds: idx {} >= {}",
                         idx,
-                        forward_history.len_of(Axis(0))
+                        forward_history.shape()[0]
                     ),
                 },
             ));
         }
 
-        let nt = forward_history.len_of(Axis(0));
+        let nt = forward_history.shape()[0];
         let inv_dt_sq = 1.0 / (dt * dt);
-        let current = forward_history.index_axis(Axis(0), idx);
-        if dst.dim() != current.dim() {
+        let current = forward_history.index_axis(0, idx);
+        if dst.shape() != current.shape() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Second-derivative destination shape mismatch: dst {:?}, source {:?}",
-                        dst.dim(),
-                        current.dim()
+                        dst.shape(),
+                        current.shape()
                     ),
                 },
             ));
         }
 
         if idx == 0 {
-            let next = forward_history.index_axis(Axis(0), 1);
-            let next2 = forward_history.index_axis(Axis(0), 2);
+            let next = forward_history.index_axis(0, 1);
+            let next2 = forward_history.index_axis(0, 2);
             pressure_second_derivative_views_into(dst, current, next, next2, inv_dt_sq);
             return Ok(());
         }
 
         if idx + 1 == nt {
-            let prev = forward_history.index_axis(Axis(0), nt - 2);
-            let prev2 = forward_history.index_axis(Axis(0), nt - 3);
+            let prev = forward_history.index_axis(0, nt - 2);
+            let prev2 = forward_history.index_axis(0, nt - 3);
             pressure_second_derivative_views_into(dst, prev2, prev, current, inv_dt_sq);
             return Ok(());
         }
 
-        let prev = forward_history.index_axis(Axis(0), idx - 1);
-        let next = forward_history.index_axis(Axis(0), idx + 1);
+        let prev = forward_history.index_axis(0, idx - 1);
+        let next = forward_history.index_axis(0, idx + 1);
         pressure_second_derivative_views_into(dst, prev, current, next, inv_dt_sq);
         Ok(())
     }

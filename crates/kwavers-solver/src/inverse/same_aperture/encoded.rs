@@ -129,11 +129,11 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
     }
 
     fn matvec(&self, x: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(x.len(), self.cols());
-        debug_assert_eq!(out.len(), self.rows());
+        debug_assert_eq!((x.shape()[0] * x.shape()[1] * x.shape()[2]), self.cols());
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.rows());
         let mut inner_out = vec![0.0_f32; self.inner.rows()];
         self.inner.matvec(x, &mut inner_out);
-        out.par_mut().enumerate(|encoded, dst| {
+        out.iter_mut().enumerate(|encoded, dst| {
             let mut sum = 0.0_f32;
             for idx in self.spec.group_range(encoded) {
                 let entry = self.spec.entries[idx];
@@ -144,8 +144,8 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
     }
 
     fn t_matvec(&self, y: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(y.len(), self.rows());
-        debug_assert_eq!(out.len(), self.cols());
+        debug_assert_eq!((y.shape()[0] * y.shape()[1] * y.shape()[2]), self.rows());
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols());
         let mut lifted = vec![0.0_f32; self.inner.rows()];
         for (encoded, value) in y.iter().copied().enumerate() {
             for idx in self.spec.group_range(encoded) {
@@ -158,7 +158,7 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
 
     fn row_values(&self, row: usize, out: &mut [f32]) {
         debug_assert!(row < self.rows());
-        debug_assert_eq!(out.len(), self.cols());
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols());
         let mut scratch = vec![0.0_f32; self.cols()];
         self.row_values_with_scratch(row, out, &mut scratch);
     }
@@ -198,15 +198,15 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
     }
 
     fn storage_values(&self) -> usize {
-        self.inner.storage_values() + self.spec.entries.len() * 2 + 3
+        self.inner.storage_values() + (self.spec.entries.shape()[0] * self.spec.entries.shape()[1] * self.spec.entries.shape()[2]) * 2 + 3
     }
 }
 
 impl<O: LinearOperator + Sync> EncodedOperator<O> {
     fn row_values_with_scratch(&self, row: usize, out: &mut [f32], scratch: &mut [f32]) {
         debug_assert!(row < self.rows());
-        debug_assert_eq!(out.len(), self.cols());
-        debug_assert_eq!(scratch.len(), self.cols());
+        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols());
+        debug_assert_eq!((scratch.shape()[0] * scratch.shape()[1] * scratch.shape()[2]), self.cols());
         out.fill(0.0);
         for idx in self.spec.group_range(row) {
             let entry = self.spec.entries[idx];
@@ -223,7 +223,7 @@ pub fn encode_measurements<O: LinearOperator + Sync>(
     operator: &EncodedOperator<O>,
     data: &[f32],
 ) -> Vec<f32> {
-    debug_assert_eq!(data.len(), operator.encoding_spec().original_rows());
+    debug_assert_eq!((data.shape()[0] * data.shape()[1] * data.shape()[2]), operator.encoding_spec().original_rows());
     let mut encoded = vec![0.0_f32; operator.rows()];
     for (row, dst) in encoded.iter_mut().enumerate() {
         *dst = operator

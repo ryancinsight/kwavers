@@ -91,23 +91,23 @@ pub fn compute_diffusive_term_workspace(
     // flat-slice index space matches Zip's C-order iteration. Failing here
     // produces a discoverable error before any silent OOB reads.
     assert!(
-        diffusive_term_out.is_standard_layout(),
+        diffusive_term_out,
         "diffusive_term_out must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure.is_standard_layout(),
+        pressure,
         "pressure must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure_prev.is_standard_layout(),
+        pressure_prev,
         "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure_prev2.is_standard_layout(),
+        pressure_prev2,
         "pressure_prev2 must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        pressure_prev3.is_standard_layout(),
+        pressure_prev3,
         "pressure_prev3 must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -126,7 +126,7 @@ pub fn compute_diffusive_term_workspace(
         let prev3_slice = pressure_prev3
             .as_slice()
             .expect("pressure_prev3: standard-layout asserted just above; layout matched");
-        diff_slice.par_mut().enumerate(|idx, diff: &mut f64| {
+        diff_slice.iter_mut().enumerate(|idx, diff: &mut f64| {
             let p_val = p_slice[idx];
             let prev_val = prev_slice[idx];
             let prev2_val = prev2_slice[idx];

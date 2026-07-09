@@ -52,10 +52,10 @@ pub fn calculate_cherenkov_emission(
     compression_field: &Array3<f64>,
     model: &CherenkovModel,
 ) -> Array3<f64> {
-    let shape = velocity_field.raw_dim();
-    assert_eq!(shape, charge_density_field.raw_dim());
-    assert_eq!(shape, temperature_field.raw_dim());
-    assert_eq!(shape, compression_field.raw_dim());
+    let shape = velocity_field.shape();
+    assert_eq!(shape, charge_density_field.shape());
+    assert_eq!(shape, temperature_field.shape());
+    assert_eq!(shape, compression_field.shape());
 
     let mut emission = Array3::zeros(shape);
     let n_base = model.refractive_index_base;

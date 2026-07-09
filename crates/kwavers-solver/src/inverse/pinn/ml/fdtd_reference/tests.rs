@@ -55,7 +55,7 @@ fn test_fdtd_solve() {
     };
     let mut solver = FDTD1DWaveSolver::new(config).unwrap();
     let solution = solver.solve().unwrap();
-    assert_eq!(solution.dim(), (50, 50));
+    assert_eq!(solution.shape(), [50, 50]);
 
     for &val in solution.iter() {
         assert!(val.is_finite());

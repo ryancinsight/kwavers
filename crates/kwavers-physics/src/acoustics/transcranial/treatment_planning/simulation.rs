@@ -12,7 +12,7 @@ use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SO
 use kwavers_core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
-use num_complex::Complex;
+use eunomia::Complex;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 // SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics
@@ -62,7 +62,7 @@ impl TreatmentPlanner {
         validate_transducer_setup(setup)?;
 
         let (nx, ny, nz) = self.brain_grid.dimensions();
-        let mut acoustic_field = Array3::zeros((nx, ny, nz));
+        let mut acoustic_field = Array3::zeros([nx, ny, nz]);
 
         // Wavenumber [rad/m]: k = 2π f / c_brain
         let k_wave = TWO_PI * setup.frequency / SOUND_SPEED_BRAIN;
@@ -114,8 +114,8 @@ impl TreatmentPlanner {
         &self,
         acoustic_field: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = acoustic_field.dim();
-        let mut temperature_field = Array3::zeros((nx, ny, nz));
+        let [nx, ny, nz] = acoustic_field.shape();
+        let mut temperature_field = Array3::zeros([nx, ny, nz]);
 
         for k in 0..nz {
             for j in 0..ny {
@@ -240,7 +240,7 @@ fn steady_state_temperature_from_intensity(intensity: f64) -> Option<f64> {
 fn max_nonnegative_finite_intensity(acoustic_field: &Array3<f64>) -> Option<f64> {
     let mut max_intensity = 0.0_f64;
 
-    for &intensity in acoustic_field {
+    for &intensity in acoustic_field.iter() {
         if !intensity.is_finite() || intensity < 0.0 {
             return None;
         }
@@ -349,7 +349,7 @@ mod tests {
 
     #[test]
     fn treatment_time_matches_peak_intensity_contract() {
-        let field = Array3::from_shape_vec((2, 1, 1), vec![5.0, 10.0]).expect("shape matches");
+        let field = Array3::from_shape_vec([2, 1, 1], vec![5.0, 10.0]).expect("shape matches");
         let time = estimate_treatment_time_from_intensity_field(&field);
         let expected = THERMAL_DOSE_THRESHOLD / (ABSORPTION_RATE_PER_INTENSITY * 10.0);
 
@@ -358,12 +358,13 @@ mod tests {
 
     #[test]
     fn treatment_time_is_infinite_without_valid_heating() {
-        let zero = Array3::zeros((1, 1, 1));
-        let invalid = Array3::from_elem((1, 1, 1), f64::NAN);
-        let negative = Array3::from_elem((1, 1, 1), -1.0);
+        let zero = Array3::zeros([1, 1, 1]);
+        let invalid = Array3::from_elem([1, 1, 1], f64::NAN);
+        let negative = Array3::from_elem([1, 1, 1], -1.0);
 
         assert!(estimate_treatment_time_from_intensity_field(&zero).is_infinite());
         assert!(estimate_treatment_time_from_intensity_field(&invalid).is_infinite());
         assert!(estimate_treatment_time_from_intensity_field(&negative).is_infinite());
     }
 }
+

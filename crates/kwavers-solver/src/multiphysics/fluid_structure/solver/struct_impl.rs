@@ -123,7 +123,7 @@ impl FluidStructureSolver {
                 let omega = self.relaxation;
                 {
                     assert!(
-                        self.p_fluid_ghost.is_standard_layout(),
+                        self.p_fluid_ghost,
                         "p_fluid_ghost must be standard-layout (C-contiguous) for flat-slice migration; \
                          if this fires, the array was constructed from a non-contiguous source \
                          (e.g. transposed view / slice_axis / slice_move) and the migration's \
@@ -134,13 +134,13 @@ impl FluidStructureSolver {
                     let new_slice = self.p_fluid_ghost.as_slice_mut()
                         .expect("p_fluid_ghost is contiguous (default Array3 layout)");
                     assert!(
-                        self.p_fluid_ghost_prev.is_standard_layout(),
+                        self.p_fluid_ghost_prev,
                         "p_fluid_ghost_prev must be standard-layout (C-contiguous) for flat-slice migration; \
                          see the p_fluid_ghost assert above for rationale."
                     );
                     let prev_slice = self.p_fluid_ghost_prev.as_slice()
                         .expect("p_fluid_ghost_prev is contiguous (default Array3 layout)");
-                    new_slice.par_mut().enumerate(|idx, new_val: &mut f64| {
+                    new_slice.iter_mut().enumerate(|idx, new_val: &mut f64| {
                         let prev = prev_slice[idx];
                         *new_val = omega * *new_val + (1.0 - omega) * prev;
                     });
@@ -153,7 +153,7 @@ impl FluidStructureSolver {
                 {
                     {
                         assert!(
-                            tsg.is_standard_layout(),
+                            tsg,
                             "t_solid_ghost component (1D sub-view of Array3) must be standard-layout; \
                              1D views are trivially standard-layout so this assert is a documentation \
                              invariant (it cannot fire for a 1D ArrayViewMut<f64, Ix1>). The assert is \
@@ -163,13 +163,13 @@ impl FluidStructureSolver {
                         let new_slice = tsg.as_slice_mut()
                             .expect("t_solid_ghost component is contiguous (1D view)");
                         assert!(
-                            tgp.is_standard_layout(),
+                            tgp,
                             "t_solid_ghost_prev component (1D sub-view of Array3) must be standard-layout; \
                              see the tsg assert above for rationale."
                         );
                         let prev_slice = tgp.as_slice()
                             .expect("t_solid_ghost_prev component is contiguous (1D view)");
-                        new_slice.par_mut().enumerate(|idx, new_val: &mut f64| {
+                        new_slice.iter_mut().enumerate(|idx, new_val: &mut f64| {
                             let prev = prev_slice[idx];
                             *new_val = omega * *new_val + (1.0 - omega) * prev;
                         });

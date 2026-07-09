@@ -7,7 +7,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use numpy::{ToPyArray, PyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
@@ -125,3 +125,4 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     )?)?;
     Ok(())
 }
+

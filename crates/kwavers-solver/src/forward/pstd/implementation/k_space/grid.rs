@@ -49,7 +49,7 @@ impl PSTDKSGrid {
     /// Get grid dimensions (nx, ny, nz)
     #[must_use]
     pub fn dimensions(&self) -> (usize, usize, usize) {
-        let shape = self.k_mag.dim();
+        let shape = self.k_mag.shape();
         (shape.0, shape.1, shape.2)
     }
 }

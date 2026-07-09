@@ -21,9 +21,9 @@ pub(super) fn update_euler(
     );
 
     if let (Some(stage_values), Some(original_values), Some(rhs_values)) = (
-        stage.as_slice_memory_order_mut(),
-        original.as_slice_memory_order(),
-        rhs.as_slice_memory_order(),
+        stage.as_slice_mut(),
+        original.as_slice(),
+        rhs.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(stage_values, |index, value| {
             *value = original_values[index] + dt * rhs_values[index];
@@ -54,9 +54,9 @@ pub(super) fn update_ssp_second(
     );
 
     if let (Some(stage_values), Some(original_values), Some(rhs_values)) = (
-        stage.as_slice_memory_order_mut(),
-        original.as_slice_memory_order(),
-        rhs.as_slice_memory_order(),
+        stage.as_slice_mut(),
+        original.as_slice(),
+        rhs.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(stage_values, |index, value| {
             let stage_first = *value;
@@ -95,10 +95,10 @@ pub(super) fn update_ssp_final(
     );
 
     if let (Some(target_values), Some(original_values), Some(stage_values), Some(rhs_values)) = (
-        target.as_slice_memory_order_mut(),
-        original.as_slice_memory_order(),
-        stage.as_slice_memory_order(),
-        rhs.as_slice_memory_order(),
+        target.as_slice_mut(),
+        original.as_slice(),
+        stage.as_slice(),
+        rhs.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(target_values, |index, value| {
             *value = (1.0 / 3.0) * original_values[index]
@@ -125,8 +125,8 @@ pub(super) fn update_forward_euler(target: &mut Array3<f64>, rhs: &Array3<f64>, 
     );
 
     if let (Some(target_values), Some(rhs_values)) = (
-        target.as_slice_memory_order_mut(),
-        rhs.as_slice_memory_order(),
+        target.as_slice_mut(),
+        rhs.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(target_values, |index, value| {
             *value += dt * rhs_values[index];

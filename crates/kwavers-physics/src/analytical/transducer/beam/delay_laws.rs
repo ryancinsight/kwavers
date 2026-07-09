@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 // ─── Delay laws ───────────────────────────────────────────────────────────────
 
@@ -285,3 +285,4 @@ pub fn multi_focus_delay_laws_2d(
     }
     out
 }
+

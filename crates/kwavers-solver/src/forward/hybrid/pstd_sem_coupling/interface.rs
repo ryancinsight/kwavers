@@ -92,8 +92,8 @@ impl SpectralCouplingInterface {
         sem_mesh: &TetrahedralMesh,
         config: &PstdSemCouplingConfig,
     ) -> KwaversResult<Array2<f64>> {
-        let n_pstd = pstd_points.len();
-        let n_sem = sem_nodes.len();
+        let n_pstd = (pstd_points.shape()[0] * pstd_points.shape()[1] * pstd_points.shape()[2]);
+        let n_sem = (sem_nodes.shape()[0] * sem_nodes.shape()[1] * sem_nodes.shape()[2]);
         let mut transform = Array2::<f64>::zeros((n_pstd, n_sem));
 
         for (i, &(pi, pj, pk)) in pstd_points.iter().enumerate() {
@@ -116,8 +116,8 @@ impl SpectralCouplingInterface {
         sem_mesh: &TetrahedralMesh,
         config: &PstdSemCouplingConfig,
     ) -> KwaversResult<Array2<f64>> {
-        let n_pstd = pstd_points.len();
-        let n_sem = sem_nodes.len();
+        let n_pstd = (pstd_points.shape()[0] * pstd_points.shape()[1] * pstd_points.shape()[2]);
+        let n_sem = (sem_nodes.shape()[0] * sem_nodes.shape()[1] * sem_nodes.shape()[2]);
         let mut projection = Array2::<f64>::zeros((n_sem, n_pstd));
 
         for (i, &sem_node_idx) in sem_nodes.iter().enumerate() {
@@ -149,7 +149,7 @@ impl SpectralCouplingInterface {
         let mut total_weight = 0.0;
 
         for &node_idx in sem_nodes {
-            if node_idx >= sem_mesh.nodes.len() {
+            if node_idx >= (sem_mesh.nodes.shape()[0] * sem_mesh.nodes.shape()[1] * sem_mesh.nodes.shape()[2]) {
                 continue;
             }
             let node = &sem_mesh.nodes[node_idx];

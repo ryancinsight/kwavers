@@ -76,7 +76,7 @@ where
         self.stats.avg_priority = if self.priorities.is_empty() {
             0.0
         } else {
-            (sum / self.priorities.len() as f32) as f64
+            (sum / (self.priorities.shape()[0] * self.priorities.shape()[1] * self.priorities.shape()[2]) as f32) as f64
         };
         self.stats.max_priority = max as f64;
 
@@ -96,7 +96,7 @@ where
             bins[bin_idx] += 1.0;
         }
 
-        let total = self.priorities.len() as f32;
+        let total = (self.priorities.shape()[0] * self.priorities.shape()[1] * self.priorities.shape()[2]) as f32;
         for &count in &bins {
             if count > 0.0 {
                 let p = count / total;

@@ -1,10 +1,7 @@
 //! Phase correction extraction for planar array elements.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 use super::model::AberrationCorrection;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -37,7 +34,7 @@ impl AberrationCorrection<'_> {
         let nz = self.grid.nz;
         let k_water = TWO_PI * frequency / self.c_water;
         let dz = self.grid.dz;
-        let mut corrections = Array1::zeros(element_x_m.len());
+        let mut corrections = Array1::zeros([element_x_m.len()]);
 
         for (elem_idx, (&xm, &ym)) in element_x_m.iter().zip(element_y_m.iter()).enumerate() {
             let i = ((xm / self.grid.dx).round() as isize).clamp(0, nx as isize - 1) as usize;
@@ -75,7 +72,7 @@ impl AberrationCorrection<'_> {
         let nx = self.grid.nx;
         let ny = self.grid.ny;
         let nz = self.grid.nz;
-        let mut corr = Array1::zeros(element_x_m.len().min(element_y_m.len()));
+        let mut corr = Array1::zeros([element_x_m.len().min(element_y_m.len())]);
         for (idx, (&xm, &ym)) in element_x_m.iter().zip(element_y_m.iter()).enumerate() {
             let i = ((xm / self.grid.dx).round() as isize).clamp(0, nx as isize - 1) as usize;
             let j = ((ym / self.grid.dy).round() as isize).clamp(0, ny as isize - 1) as usize;

@@ -4,11 +4,7 @@ use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use leto::Array2 as LetoArray2;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use kwavers_math::fft::Complex64;
 use std::collections::HashMap;
 
@@ -195,11 +191,11 @@ impl FastNearfieldSolver {
 
         // Check velocity array dimensions match transducer elements
         let (n_elem_x, n_elem_y) = transducer.elements;
-        if velocity.nrows() != n_elem_x || velocity.ncols() != n_elem_y {
+        if velocity.shape()[0] != n_elem_x || velocity.shape()[1] != n_elem_y {
             return Err(format!(
                 "Velocity array dimensions ({}, {}) don't match transducer elements ({}, {})",
-                velocity.nrows(),
-                velocity.ncols(),
+                velocity.shape()[0],
+                velocity.shape()[1],
                 n_elem_x,
                 n_elem_y
             ));
@@ -275,11 +271,11 @@ impl FastNearfieldSolver {
         }
 
         // Stack into 3D array (z, x, y)
-        let shape = (z_values.len(), results[0].nrows(), results[0].ncols());
+        let shape = ((z_values.shape()[0] * z_values.shape()[1] * z_values.shape()[2]), results[0].nrows(), results[0].ncols());
         let mut stacked = Array3::<Complex64>::zeros(shape);
 
         for (i, field) in results.into_iter().enumerate() {
-            stacked.index_axis_mut(Axis(0), i).assign(&field);
+            stacked.index_axis_mut(0, i).unwrap().assign(&field);
         }
 
         Ok(stacked)
@@ -287,7 +283,7 @@ impl FastNearfieldSolver {
 
     /// Zero-pad velocity distribution to angular spectrum size
     fn zero_pad_velocity(&self, velocity: &Array2<Complex64>) -> Array2<Complex64> {
-        let (n_elem_x, n_elem_y) = velocity.dim();
+        let [n_elem_x, n_elem_y] = velocity.shape();
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
 
         let mut padded = Array2::<Complex64>::from_elem((n_kx, n_ky), Complex64::default());
@@ -296,8 +292,7 @@ impl FastNearfieldSolver {
         let start_y = (n_ky - n_elem_y) / 2;
 
         padded
-            .slice_mut(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y])
-            .assign(velocity);
+            .slice_mut(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y]).unwrap().unwrap().assign(velocity);
 
         padded
     }
@@ -323,14 +318,14 @@ impl FastNearfieldSolver {
 
         // Cache memory
         for factors in self.cached_factors.values() {
-            total += factors.green_spectrum.len() * std::mem::size_of::<Complex64>();
-            total += factors.kx.len() * std::mem::size_of::<f64>();
-            total += factors.ky.len() * std::mem::size_of::<f64>();
+            total += (factors.green_spectrum.shape()[0] * factors.green_spectrum.shape()[1] * factors.green_spectrum.shape()[2]) * std::mem::size_of::<Complex64>();
+            total += (factors.kx.shape()[0] * factors.kx.shape()[1] * factors.kx.shape()[2]) * std::mem::size_of::<f64>();
+            total += (factors.ky.shape()[0] * factors.ky.shape()[1] * factors.ky.shape()[2]) * std::mem::size_of::<f64>();
         }
 
         // Base memory for precomputed vectors
-        total += self.kx.len() * std::mem::size_of::<f64>();
-        total += self.ky.len() * std::mem::size_of::<f64>();
+        total += (self.kx.shape()[0] * self.kx.shape()[1] * self.kx.shape()[2]) * std::mem::size_of::<f64>();
+        total += (self.ky.shape()[0] * self.ky.shape()[1] * self.ky.shape()[2]) * std::mem::size_of::<f64>();
 
         total
     }

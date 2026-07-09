@@ -10,7 +10,7 @@ use leto::{
     Array2,
     ArrayView3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Color flow imaging configuration
 #[derive(Debug, Clone)]
@@ -133,7 +133,7 @@ mod tests {
     Array2,
     Array3,
 };
-    use num_complex::Complex64;
+    use eunomia::Complex64;
 
     // Helper: config with HighPass wall filter and no spatial averaging.
     // Uses default AutocorrelationConfig (ensemble_size=10, f₀=5 MHz, PRF=4 kHz).
@@ -278,3 +278,4 @@ mod tests {
         );
     }
 }
+

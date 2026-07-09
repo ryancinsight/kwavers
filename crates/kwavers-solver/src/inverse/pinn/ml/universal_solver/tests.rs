@@ -22,7 +22,7 @@ fn test_geometry_creation() {
 fn test_geometry_with_obstacle() {
     let geometry = UniversalSolverGeometry2D::rectangle(0.0, 2.0, 0.0, 1.0)
         .with_circle_obstacle((0.5, 0.5), 0.1);
-    assert_eq!(geometry.features.len(), 1);
+    assert_eq!((geometry.features.shape()[0] * geometry.features.shape()[1] * geometry.features.shape()[2]), 1);
     match &geometry.features[0] {
         GeometricFeature::Circle { center, radius } => {
             assert_eq!(*center, (0.5, 0.5));

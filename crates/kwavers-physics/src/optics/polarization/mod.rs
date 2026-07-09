@@ -37,7 +37,7 @@ use leto::{
     Array3,
     Array4,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 use std::fmt::Debug;
 
 // Re-exports for backward compatibility
@@ -56,3 +56,4 @@ pub trait PolarizationModel: Debug + Send + Sync {
         medium: &dyn Medium,
     );
 }
+

@@ -192,7 +192,7 @@ mod tests {
         };
 
         assert_eq!(metadata.method, "k-space PSTD");
-        assert_eq!(metadata.references.len(), 1);
+        assert_eq!((metadata.references.shape()[0] * metadata.references.shape()[1] * metadata.references.shape()[2]), 1);
     }
 
     #[test]

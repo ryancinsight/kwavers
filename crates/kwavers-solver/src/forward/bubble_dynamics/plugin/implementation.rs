@@ -220,7 +220,7 @@ impl Plugin for BubbleDynamicsPlugin {
         }
 
         // Extract current pressure as an owned Array3.
-        let current_pressure = fields.index_axis(Axis(0), pressure_idx).to_owned();
+        let current_pressure = fields.index_axis(0, pressure_idx).unwrap().to_owned();
 
         match self.engine.as_mut() {
             None => {} // initialize() not yet called; skip silently.

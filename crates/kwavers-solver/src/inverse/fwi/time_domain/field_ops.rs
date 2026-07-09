@@ -13,20 +13,20 @@ pub(in crate::inverse::fwi::time_domain) fn write_negative_product(
     lhs: &Array3<f64>,
     rhs: &Array3<f64>,
 ) {
-    if dst.dim() == lhs.dim()
-        && dst.dim() == rhs.dim()
-        && dst.is_standard_layout()
-        && lhs.is_standard_layout()
-        && rhs.is_standard_layout()
+    if dst.shape() == lhs.shape()
+        && dst.shape() == rhs.shape()
+        && dst
+        && lhs
+        && rhs
     {
         let lhs = lhs
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout lhs exposes memory-order slice");
         let rhs = rhs
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout rhs exposes memory-order slice");
         let dst = dst
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout destination exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             dst,
@@ -49,12 +49,12 @@ pub(in crate::inverse::fwi::time_domain) fn add_assign_field(
     dst: &mut Array3<f64>,
     src: &Array3<f64>,
 ) {
-    if dst.dim() == src.dim() && dst.is_standard_layout() && src.is_standard_layout() {
+    if dst.shape() == src.shape() && dst && src {
         let src = src
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout source exposes memory-order slice");
         let dst = dst
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout destination exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             dst,
@@ -78,12 +78,12 @@ pub(in crate::inverse::fwi::time_domain) fn add_scaled_field(
     src: &Array3<f64>,
     scale: f64,
 ) {
-    if dst.dim() == src.dim() && dst.is_standard_layout() && src.is_standard_layout() {
+    if dst.shape() == src.shape() && dst && src {
         let src = src
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout source exposes memory-order slice");
         let dst = dst
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout destination exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             dst,
@@ -106,10 +106,7 @@ pub(in crate::inverse::fwi::time_domain) fn divide_field_in_place(
     field: &mut Array3<f64>,
     denominator: f64,
 ) {
-    if field.is_standard_layout() {
-        let values = field
-            .as_slice_memory_order_mut()
-            .expect("invariant: standard-layout field exposes memory-order slice");
+    if let Some(values) = field.as_slice_mut() {
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             values,
             FWI_FIELD_CHUNK,
@@ -129,12 +126,12 @@ pub(in crate::inverse::fwi::time_domain) fn subtract_scaled_field(
     gradient: &Array3<f64>,
     scale: f64,
 ) {
-    if dst.dim() == gradient.dim() && dst.is_standard_layout() && gradient.is_standard_layout() {
+    if dst.shape() == gradient.shape() && dst && gradient {
         let gradient = gradient
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout gradient exposes memory-order slice");
         let dst = dst
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout destination exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             dst,
@@ -157,15 +154,15 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_field(
     field: &mut Array3<f64>,
     frozen_mask: &Array3<bool>,
 ) {
-    if field.dim() == frozen_mask.dim()
-        && field.is_standard_layout()
-        && frozen_mask.is_standard_layout()
+    if field.shape() == frozen_mask.shape()
+        && field
+        && frozen_mask
     {
         let frozen_mask = frozen_mask
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout mask exposes memory-order slice");
         let field = field
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout field exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             field,
@@ -193,12 +190,12 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_by_threshold(
     mask: &Array3<f64>,
     threshold: f64,
 ) {
-    if field.dim() == mask.dim() && field.is_standard_layout() && mask.is_standard_layout() {
+    if field.shape() == mask.shape() && field && mask {
         let mask = mask
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout mask exposes memory-order slice");
         let field = field
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout field exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             field,
@@ -226,20 +223,20 @@ pub(in crate::inverse::fwi::time_domain) fn scale_velocity_gradient(
     model: ArrayView3<'_, f64>,
     density: ArrayView3<'_, f64>,
 ) {
-    if gradient.dim() == model.dim()
-        && gradient.dim() == density.dim()
-        && gradient.is_standard_layout()
-        && model.is_standard_layout()
-        && density.is_standard_layout()
+    if gradient.shape() == model.shape()
+        && gradient.shape() == density.shape()
+        && gradient
+        && model
+        && density
     {
         let model = model
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout model exposes memory-order slice");
         let density = density
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout density exposes memory-order slice");
         let gradient = gradient
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout gradient exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             gradient,
@@ -268,20 +265,20 @@ pub(in crate::inverse::fwi::time_domain) fn apply_frozen_reference_or_clamp(
     c_min: f64,
     c_max: f64,
 ) {
-    if model.is_standard_layout()
-        && model.dim() == frozen_mask.dim()
-        && model.dim() == reference_model.dim()
-        && frozen_mask.is_standard_layout()
-        && reference_model.is_standard_layout()
+    if model
+        && model.shape() == frozen_mask.shape()
+        && model.shape() == reference_model.shape()
+        && frozen_mask
+        && reference_model
     {
         let frozen_mask = frozen_mask
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout mask exposes memory-order slice");
         let reference_model = reference_model
-            .as_slice_memory_order()
+            .as_slice()
             .expect("invariant: standard-layout reference exposes memory-order slice");
         let model = model
-            .as_slice_memory_order_mut()
+            .as_slice_mut()
             .expect("invariant: standard-layout model exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             model,

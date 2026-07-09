@@ -28,7 +28,20 @@ impl SpectralRange {
     /// Generate wavelength array
     #[must_use]
     pub fn wavelengths(&self) -> Array1<f64> {
-        Array1::linspace(self.lambda_min, self.lambda_max, self.n_points)
+        let n = self.n_points;
+        if n == 0 {
+            return Array1::zeros([0]);
+        }
+        let step = if n > 1 {
+            (self.lambda_max - self.lambda_min) / (n - 1) as f64
+        } else {
+            0.0
+        };
+        let mut arr = Array1::zeros([n]);
+        for i in 0..n {
+            arr[[i]] = self.lambda_min + i as f64 * step;
+        }
+        arr
     }
 
     /// Generate frequency array

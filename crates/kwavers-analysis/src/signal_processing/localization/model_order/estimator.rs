@@ -181,8 +181,9 @@ impl ModelOrderEstimator {
     pub fn estimate_from_decomposition(
         &self,
         eigenvalues: &[f64],
-        _eigenvectors: &leto::Array2<num_complex::Complex<f64>>,
+        _eigenvectors: &leto::Array2<eunomia::Complex64>,
     ) -> KwaversResult<ModelOrderResult> {
         self.estimate(eigenvalues)
     }
 }
+

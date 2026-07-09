@@ -11,7 +11,7 @@ impl WaveletTransform {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn haar_forward(&self, data: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
 
         // Apply 1D Haar transform in each direction
         for level in 0..self.levels {
@@ -43,7 +43,7 @@ impl WaveletTransform {
 
     /// 1D Haar forward transform
     pub(super) fn haar_1d_forward(&self, data: &[f64], result: &mut [f64]) {
-        let n = data.len();
+        let n = (data.shape()[0] * data.shape()[1] * data.shape()[2]);
 
         // Compute averages and differences
         for i in 0..n / 2 {

@@ -49,7 +49,7 @@ where
         }
 
         let backend = B::default();
-        let n = x_points.len();
+        let n = (x_points.shape()[0] * x_points.shape()[1] * x_points.shape()[2]);
         let mk = |v: &[f32]| {
             Var::new(
                 coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend),

@@ -26,7 +26,7 @@ use leto::{
     Array2,
     ArrayView3,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Configuration for autocorrelation velocity estimation
 #[derive(Debug, Clone)]
@@ -138,7 +138,7 @@ impl AutocorrelationEstimator {
     /// ```ignore
     /// use kwavers_analysis::signal_processing::doppler::{AutocorrelationEstimator, AutocorrelationConfig};
     /// use leto::Array3;
-    /// use num_complex::Complex64;
+    /// use eunomia::Complex64;
     ///
     /// let config = AutocorrelationConfig::vascular();
     /// let estimator = AutocorrelationEstimator::new(config);
@@ -393,3 +393,4 @@ mod tests {
         assert_eq!(filtered[[2, 3]], 0.0);
     }
 }
+

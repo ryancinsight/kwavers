@@ -26,7 +26,7 @@ impl FdtdSolver {
 
         if self.config.geometry == SolverGeometry::CylindricalAS {
             let dz = self.grid.dz;
-            let (nx, _ny, nz) = self.divergence_scratch.dim();
+            let (nx, _ny, nz) = self.divergence_scratch.shape();
             let uz_view = self.fields.uz.view();
             for i in 0..nx {
                 self.divergence_scratch[[i, 0, 0]] += uz_view[[i, 0, 0]] / (0.5 * dz);
@@ -35,9 +35,9 @@ impl FdtdSolver {
                 let r_center = k as f64 * dz;
                 // Borrow disjoint slices from `fields.uz` and `divergence_scratch` without
                 // intermediate Vec allocation; split_at avoids overlapping borrows.
-                let uz_k = uz_view.slice(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)]).unwrap();
-                let uz_km1 = uz_view.slice(&[(0, nx, 1), (0, 1, 1), (k - 1, k, 1)]).unwrap();
-                let mut dvz_k = self.divergence_scratch.slice_mut(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)]).unwrap();
+                let uz_k = uz_view.slice(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)]).unwrap().unwrap();
+                let uz_km1 = uz_view.slice(&[(0, nx, 1), (0, 1, 1), (k - 1, k, 1)]).unwrap().unwrap();
+                let mut dvz_k = self.divergence_scratch.slice_mut(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)]).unwrap().unwrap();
                 Zip::from(&mut dvz_k)
                     .and(&uz_k)
                     .and(&uz_km1)

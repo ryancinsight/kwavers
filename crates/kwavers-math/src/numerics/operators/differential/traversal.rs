@@ -9,7 +9,7 @@ pub(super) fn try_fill_standard_layout<F>(dst: &mut Array3<f64>, value_at: F) ->
 where
     F: Fn(usize, usize, usize) -> f64 + Send + Sync + Copy,
 {
-    if !dst.is_standard_layout() {
+    if dst.as_slice_memory_order_mut().is_none() {
         return false;
     }
 

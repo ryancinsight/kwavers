@@ -263,7 +263,7 @@ impl ScratchArena for KuznetsovWorkspace {
         // cache_density, cache_sound_speed, cache_nonlinearity,
         //   cache_source                                          (4)
         //                                         total = 18 Array3<f64>
-        18 * self.pressure_prev.len() * std::mem::size_of::<f64>()
+        18 * (self.pressure_prev.shape()[0] * self.pressure_prev.shape()[1] * self.pressure_prev.shape()[2]) * std::mem::size_of::<f64>()
     }
 
     fn clear(&mut self) {

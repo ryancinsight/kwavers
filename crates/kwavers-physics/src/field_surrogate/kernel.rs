@@ -53,7 +53,7 @@ impl FocalKernel {
     ) -> Self {
         debug_assert!(dx_m > 0.0, "FocalKernel::new requires dx_m > 0");
         debug_assert!(f0 > 0.0, "FocalKernel::new requires f0 > 0");
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         debug_assert!(
             focus_idx.0 < nx && focus_idx.1 < ny && focus_idx.2 < nz,
             "FocalKernel::new focus_idx out of bounds"
@@ -70,10 +70,10 @@ impl FocalKernel {
         }
     }
 
-    /// Shape `(nx, ny, nz)` of the field array.
+    /// Shape `[nx, ny, nz]` of the field array.
     #[must_use]
-    pub fn shape(&self) -> (usize, usize, usize) {
-        self.field.dim()
+    pub fn shape(&self) -> [usize; 3] {
+        self.field.shape()
     }
 
     /// Peak rarefactional pressure at the focal voxel (Pa, positive).
@@ -81,14 +81,16 @@ impl FocalKernel {
     /// values only.
     #[must_use]
     pub fn focal_pressure(&self) -> f64 {
-        self.field[self.focus_idx]
+        self.field[[self.focus_idx.0, self.focus_idx.1, self.focus_idx.2]]
     }
 
     /// Linearly rescale the field by a multiplicative factor. Used to
     /// derive a kernel at a different target `pnp` without rerunning
     /// the wave solver — exact in the linear-water regime (B/A = 0).
     pub fn scale_in_place(&mut self, factor: f64) {
-        self.field.mapv_inplace(|p| p * factor);
+        for p in self.field.iter_mut() {
+            *p *= factor;
+        }
         self.pnp_realised *= factor;
         self.source_pa *= factor;
     }

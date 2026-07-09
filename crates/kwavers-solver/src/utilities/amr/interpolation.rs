@@ -57,7 +57,7 @@ impl AmrConservativeInterpolator {
         octree: &Octree,
         field: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // Create output field with same dimensions initially
         // Will be refined where octree indicates refinement
@@ -131,7 +131,7 @@ impl AmrConservativeInterpolator {
                     };
 
                     // Write refined values back to output (if dimensions match)
-                    let (ref_nx, ref_ny, ref_nz) = refined_region.dim();
+                    let [ref_nx, ref_ny, ref_nz] = refined_region.shape();
                     let write_i_max = (i_min + ref_nx).min(nx);
                     let write_j_max = (j_min + ref_ny).min(ny);
                     let write_k_max = (k_min + ref_nz).min(nz);
@@ -161,7 +161,7 @@ impl AmrConservativeInterpolator {
     /// Prolongation: coarse to fine
     #[must_use]
     pub fn prolongate(&self, coarse: &Array3<f64>) -> Array3<f64> {
-        let (nx, ny, nz) = coarse.dim();
+        let [nx, ny, nz] = coarse.shape();
         let mut fine = Array3::zeros((nx * 2, ny * 2, nz * 2));
 
         match self.scheme {
@@ -178,7 +178,7 @@ impl AmrConservativeInterpolator {
     /// Restriction: fine to coarse
     #[must_use]
     pub fn restrict(&self, fine: &Array3<f64>) -> Array3<f64> {
-        let (nx, ny, nz) = fine.dim();
+        let [nx, ny, nz] = fine.shape();
         let mut coarse = Array3::zeros((nx / 2, ny / 2, nz / 2));
 
         match self.scheme {
@@ -194,7 +194,7 @@ impl AmrConservativeInterpolator {
 
     /// Linear prolongation (injection with linear interpolation)
     fn linear_prolongation(&self, coarse: &Array3<f64>, fine: &mut Array3<f64>) {
-        let (nx, ny, nz) = coarse.dim();
+        let [nx, ny, nz] = coarse.shape();
 
         for i in 0..nx {
             for j in 0..ny {
@@ -234,7 +234,7 @@ impl AmrConservativeInterpolator {
 
     /// Conservative prolongation (preserves integral)
     fn conservative_prolongation(&self, coarse: &Array3<f64>, fine: &mut Array3<f64>) {
-        let (nx, ny, nz) = coarse.dim();
+        let [nx, ny, nz] = coarse.shape();
 
         // Each coarse cell is divided into 8 fine cells
         // The value is distributed equally to preserve the integral
@@ -251,7 +251,7 @@ impl AmrConservativeInterpolator {
                                 let fj = 2 * j + dj;
                                 let fk = 2 * k + dk;
 
-                                if fi < fine.dim().0 && fj < fine.dim().1 && fk < fine.dim().2 {
+                                if fi < fine.shape()[0] && fj < fine.shape()[1] && fk < fine.shape()[2] {
                                     fine[[fi, fj, fk]] = val;
                                 }
                             }
@@ -277,7 +277,7 @@ impl AmrConservativeInterpolator {
 
     /// Linear restriction (averaging)
     fn linear_restriction(&self, fine: &Array3<f64>, coarse: &mut Array3<f64>) {
-        let (nx, ny, nz) = coarse.dim();
+        let [nx, ny, nz] = coarse.shape();
 
         for i in 0..nx {
             for j in 0..ny {
@@ -293,7 +293,7 @@ impl AmrConservativeInterpolator {
                                 let fj = 2 * j + dj;
                                 let fk = 2 * k + dk;
 
-                                if fi < fine.dim().0 && fj < fine.dim().1 && fk < fine.dim().2 {
+                                if fi < fine.shape()[0] && fj < fine.shape()[1] && fk < fine.shape()[2] {
                                     sum += fine[[fi, fj, fk]];
                                     count += 1;
                                 }

@@ -78,8 +78,8 @@ pub(crate) fn edge_preserving_projection(
     if config.edge_preserving_iterations == 0 || config.edge_preserving_step == 0.0 {
         return None;
     }
-    let n = model.len();
-    let mut buf_a = model.to_vec();
+    let n = (model.shape()[0] * model.shape()[1] * model.shape()[2]);
+    let mut buf_a = model.iter().cloned().collect::<Vec<_>>();
     let mut buf_b = vec![0.0f64; n];
     for _ in 0..config.edge_preserving_iterations {
         for (col, voxel) in active.iter().enumerate() {

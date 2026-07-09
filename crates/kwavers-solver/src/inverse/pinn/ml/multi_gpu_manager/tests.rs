@@ -64,7 +64,7 @@ fn test_spatial_decomposition() {
     ];
 
     let total_points = 1000;
-    let points_per_gpu = total_points / devices.len();
+    let points_per_gpu = total_points / (devices.shape()[0] * devices.shape()[1] * devices.shape()[2]);
     assert_eq!(points_per_gpu, 500);
 }
 

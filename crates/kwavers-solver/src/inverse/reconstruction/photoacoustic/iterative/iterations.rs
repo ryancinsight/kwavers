@@ -21,9 +21,9 @@ impl IterativeMethods {
         x: &Array1<f64>,
         y: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let ax = a.dot(x);
+        let ax = leto_ops::Dot::dot(a, x);
         let residual = y - &ax;
-        let update = a.t().dot(&residual);
+        let update = a.transpose([1, 0]).unwrap().dot(&residual);
         Ok(x + self.relaxation_factor * &update)
     }
 
@@ -40,14 +40,14 @@ impl IterativeMethods {
         y: &Array1<f64>,
     ) -> KwaversResult<()> {
         for (i, row) in a.rows().into_iter().enumerate() {
-            let ax_i = row.dot(x);
+            let ax_i = leto_ops::Dot::dot(row, x);
             let residual = y[i] - ax_i;
             let row_norm_sq = row.dot(&row);
 
             if row_norm_sq > 0.0 {
                 let update_factor = self.relaxation_factor * residual / row_norm_sq;
                 if let (Some(x_values), Some(row_values)) =
-                    (x.as_slice_memory_order_mut(), row.as_slice_memory_order())
+                    (x.as_slice_mut(), row.as_slice())
                 {
                     enumerate_mut_with::<Adaptive, _, _>(x_values, |idx, x_value| {
                         *x_value += update_factor * row_values[idx];
@@ -76,7 +76,7 @@ impl IterativeMethods {
         y: &Array1<f64>,
         subsets: usize,
     ) -> KwaversResult<()> {
-        let (n_measurements, n_voxels) = a.dim();
+        let [n_measurements, n_voxels] = a.shape();
 
         apply_inplace(x, |v| v.max(1e-10));
 
@@ -90,16 +90,16 @@ impl IterativeMethods {
             let y_subset = yslice(&[(Some(start_idx as isize) as usize, Some(end_idx as isize) as usize, 1)]);
 
             let sensitivity = a_subset.sum_axis(0);
-            let forward_proj = a_subset.dot(x);
+            let forward_proj = leto_ops::Dot::dot(a_subset, x);
 
             let mut ratio = Array1::zeros(end_idx - start_idx);
-            for i in 0..ratio.len() {
+            for i in 0..(ratio.shape()[0] * ratio.shape()[1] * ratio.shape()[2]) {
                 if forward_proj[i] > 1e-10 {
                     ratio[i] = y_subset[i] / forward_proj[i];
                 }
             }
 
-            let correction = a_subset.t().dot(&ratio);
+            let correction = a_subset.transpose([1, 0]).unwrap().dot(&ratio);
 
             for i in 0..n_voxels {
                 if sensitivity[i] > 1e-10 {
@@ -123,7 +123,7 @@ impl IterativeMethods {
             return Ok(());
         }
 
-        let n = x.len();
+        let n = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
         let grid_size_est = (n as f64).cbrt() as usize;
 
         let mut grad_reg = Array1::zeros(n);

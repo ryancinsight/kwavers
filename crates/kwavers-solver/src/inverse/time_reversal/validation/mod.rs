@@ -20,7 +20,7 @@ impl InputValidator {
         sensor_indices: &[(usize, usize, usize)],
         grid: &Grid,
     ) -> KwaversResult<()> {
-        let num_sensors = sensor_indices.len();
+        let num_sensors = (sensor_indices.shape()[0] * sensor_indices.shape()[1] * sensor_indices.shape()[2]);
         if num_sensors == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "sensor_indices".to_owned(),
@@ -29,14 +29,14 @@ impl InputValidator {
             }));
         }
 
-        if pressure_data.nrows() != num_sensors {
+        if pressure_data.shape()[0] != num_sensors {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "pressure_data".to_owned(),
-                value: format!("rows={}", pressure_data.nrows()),
+                value: format!("rows={}", pressure_data.shape()[0]),
                 constraint: format!("must match number of sensors ({num_sensors})"),
             }));
         }
-        if pressure_data.ncols() == 0 {
+        if pressure_data.shape()[1] == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "pressure_data".to_owned(),
                 value: "0 time steps".to_owned(),
@@ -80,10 +80,10 @@ impl InputValidator {
 
         // Check all signals have the same length
         for (i, signal) in signals.iter().enumerate() {
-            if signal.len() != first_length {
+            if (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]) != first_length {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
                     field: format!("signal[{i}]"),
-                    value: format!("length={}", signal.len()),
+                    value: format!("length={}", (signal.shape()[0] * signal.shape()[1] * signal.shape()[2])),
                     constraint: format!("must match first signal length={first_length}"),
                 }));
             }

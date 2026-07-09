@@ -75,7 +75,7 @@ impl FdtdFemCoupler {
 
         let mut dirichlet_bcs = Vec::new();
         for &fem_idx in &self.interface.fem_indices {
-            if fem_idx < fem_field.len() {
+            if fem_idx < (fem_field.shape()[0] * fem_field.shape()[1] * fem_field.shape()[2]) {
                 let value = Complex64::new(fem_field[fem_idx], 0.0);
                 dirichlet_bcs.push((fem_idx, value));
             }
@@ -90,7 +90,7 @@ impl FdtdFemCoupler {
 
         let solution = self.fem_solver.solution();
         for (i, val) in solution.iter().enumerate() {
-            if i < fem_field.len() {
+            if i < (fem_field.shape()[0] * fem_field.shape()[1] * fem_field.shape()[2]) {
                 fem_field[i] = val.re;
             }
         }
@@ -103,7 +103,7 @@ impl FdtdFemCoupler {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn extract_fdtd_interface(&self, fdtd_field: &Array3<f64>) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity(self.interface.fdtd_indices.len());
+        let mut interface_values = Vec::with_capacity((self.interface.fdtd_indices.shape()[0] * self.interface.fdtd_indices.shape()[1] * self.interface.fdtd_indices.shape()[2]));
         for &(i, j, k) in &self.interface.fdtd_indices {
             interface_values.push(fdtd_field[[i, j, k]]);
         }
@@ -121,7 +121,7 @@ impl FdtdFemCoupler {
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<()> {
         for (&fem_idx, &fdtd_value) in self.interface.fem_indices.iter().zip(fdtd_values.iter()) {
-            if fem_idx < fem_field.len() {
+            if fem_idx < (fem_field.shape()[0] * fem_field.shape()[1] * fem_field.shape()[2]) {
                 let current_value = fem_field[fem_idx];
                 fem_field[fem_idx] = self.config.relaxation_factor.mul_add(
                     fdtd_value,
@@ -137,13 +137,13 @@ impl FdtdFemCoupler {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn extract_fem_interface(&self, fem_field: &[f64]) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity(self.interface.fem_indices.len());
+        let mut interface_values = Vec::with_capacity((self.interface.fem_indices.shape()[0] * self.interface.fem_indices.shape()[1] * self.interface.fem_indices.shape()[2]));
         for &fem_idx in &self.interface.fem_indices {
             let value = fem_field.get(fem_idx).ok_or_else(|| {
                 kwavers_core::error::KwaversError::InvalidInput(format!(
                     "FEM interface node index {} is out of bounds (fem_field len {})",
                     fem_idx,
-                    fem_field.len()
+                    (fem_field.shape()[0] * fem_field.shape()[1] * fem_field.shape()[2])
                 ))
             })?;
             interface_values.push(*value);
@@ -214,7 +214,7 @@ impl FdtdFemCoupler {
     ///
     #[must_use]
     pub fn check_convergence(&self) -> bool {
-        if self.convergence_history.len() < 2 {
+        if (self.convergence_history.shape()[0] * self.convergence_history.shape()[1] * self.convergence_history.shape()[2]) < 2 {
             return false;
         }
         let recent_residual = *self.convergence_history.last().unwrap();

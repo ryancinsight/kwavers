@@ -48,7 +48,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         for (i, &priority) in priorities_data.iter().enumerate().take(self.total_points) {
             if !high_priority_indices.contains(&i) && !low_priority_indices.contains(&i) {
                 let base_idx = i * 3;
-                if base_idx + 2 < points_data.len() {
+                if base_idx + 2 < (points_data.shape()[0] * points_data.shape()[1] * points_data.shape()[2]) {
                     new_points.push(points_data[base_idx]);
                     new_points.push(points_data[base_idx + 1]);
                     new_points.push(points_data[base_idx + 2]);
@@ -60,7 +60,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         let mut refined_points = Vec::new();
         for &idx in &high_priority_indices {
             let base_idx = idx * 3;
-            if base_idx + 2 < points_data.len() {
+            if base_idx + 2 < (points_data.shape()[0] * points_data.shape()[1] * points_data.shape()[2]) {
                 let parent_x = points_data[base_idx];
                 let parent_y = points_data[base_idx + 1];
                 let parent_t = points_data[base_idx + 2];
@@ -80,9 +80,9 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         }
 
         new_points.extend_from_slice(&refined_points);
-        new_priorities.extend(vec![1.0; refined_points.len() / 3]);
+        new_priorities.extend(vec![1.0; (refined_points.shape()[0] * refined_points.shape()[1] * refined_points.shape()[2]) / 3]);
 
-        let new_total = new_points.len() / 3;
+        let new_total = (new_points.shape()[0] * new_points.shape()[1] * new_points.shape()[2]) / 3;
         if new_total > self.total_points {
             new_points.truncate(self.total_points * 3);
             new_priorities.truncate(self.total_points);
@@ -107,7 +107,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         self.active_points = new_points;
         self.priorities = new_priorities;
 
-        self.stats.points_refined = refined_points.len() / 3;
+        self.stats.points_refined = (refined_points.shape()[0] * refined_points.shape()[1] * refined_points.shape()[2]) / 3;
         self.stats.points_coarsened = coarsening_count;
 
         Ok(())
@@ -121,11 +121,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         let points_vec: Vec<f32> = self.active_points.clone();
         let priorities_vec: Vec<f32> = self.priorities.clone();
 
-        if points_vec.len() < 3 || points_vec.len() / 3 != priorities_vec.len() {
+        if (points_vec.shape()[0] * points_vec.shape()[1] * points_vec.shape()[2]) < 3 || (points_vec.shape()[0] * points_vec.shape()[1] * points_vec.shape()[2]) / 3 != (priorities_vec.shape()[0] * priorities_vec.shape()[1] * priorities_vec.shape()[2]) {
             return self.create_fallback_regions();
         }
 
-        let num_points = points_vec.len() / 3;
+        let num_points = (points_vec.shape()[0] * points_vec.shape()[1] * points_vec.shape()[2]) / 3;
 
         let mut grid_cells: GridCellAccumulator = std::collections::HashMap::new();
 
@@ -154,14 +154,14 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         let mut regions = Vec::new();
 
         for ((_gx, _gy, _gt), (xs, ys, ts, prios)) in grid_cells.iter() {
-            if xs.len() < MIN_POINTS_PER_REGION {
+            if (xs.shape()[0] * xs.shape()[1] * xs.shape()[2]) < MIN_POINTS_PER_REGION {
                 continue;
             }
 
-            let mean_x: f32 = xs.iter().sum::<f32>() / xs.len() as f32;
-            let mean_y: f32 = ys.iter().sum::<f32>() / ys.len() as f32;
-            let mean_t: f32 = ts.iter().sum::<f32>() / ts.len() as f32;
-            let mean_priority: f32 = prios.iter().sum::<f32>() / prios.len() as f32;
+            let mean_x: f32 = xs.iter().sum::<f32>() / (xs.shape()[0] * xs.shape()[1] * xs.shape()[2]) as f32;
+            let mean_y: f32 = ys.iter().sum::<f32>() / (ys.shape()[0] * ys.shape()[1] * ys.shape()[2]) as f32;
+            let mean_t: f32 = ts.iter().sum::<f32>() / (ts.shape()[0] * ts.shape()[1] * ts.shape()[2]) as f32;
+            let mean_priority: f32 = prios.iter().sum::<f32>() / (prios.shape()[0] * prios.shape()[1] * prios.shape()[2]) as f32;
 
             let cell_size = 1.0 / GRID_SIZE as f32;
 
@@ -179,9 +179,9 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         regions.sort_by(|a, b| b.residual_magnitude.total_cmp(&a.residual_magnitude));
 
         if !regions.is_empty() {
-            let keep_count = ((regions.len() as f32 * TOP_REGION_FRACTION).ceil() as usize)
+            let keep_count = (((regions.shape()[0] * regions.shape()[1] * regions.shape()[2]) as f32 * TOP_REGION_FRACTION).ceil() as usize)
                 .max(2)
-                .min(regions.len());
+                .min((regions.shape()[0] * regions.shape()[1] * regions.shape()[2]));
             regions.truncate(keep_count);
         }
 

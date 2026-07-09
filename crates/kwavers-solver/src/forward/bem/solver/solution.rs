@@ -56,7 +56,7 @@ impl BemSolver {
         p_inc: Vec<Complex64>,
         dp_inc_dn: Vec<Complex64>,
     ) -> KwaversResult<Vec<Complex64>> {
-        let n = self.vertices.len();
+        let n = (self.vertices.shape()[0] * self.vertices.shape()[1] * self.vertices.shape()[2]);
         if n == 0 {
             return Ok(Vec::new());
         }
@@ -74,7 +74,7 @@ impl BemSolver {
             let (row_start, row_end) = (window[0], window[1]);
             for ptr in row_start..row_end {
                 let j = g_mat.col_indices[ptr];
-                if j < dp_inc_dn.len() {
+                if j < (dp_inc_dn.shape()[0] * dp_inc_dn.shape()[1] * dp_inc_dn.shape()[2]) {
                     *rhs_elem += g_mat.values[ptr] * dp_inc_dn[j];
                 }
             }

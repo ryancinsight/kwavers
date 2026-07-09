@@ -127,12 +127,16 @@ impl BubbleIMEXIntegrator {
                 let (dt_dt, dn_vapor_dt) =
                     self.calculate_thermal_mass_transfer_rates(&state_current)?;
 
-                let residual = Array1::from_vec(vec![
-                    0.0,
-                    0.0,
-                    dt.mul_add(-dt_dt, y_final[2] - y_explicit[2]),
-                    dt.mul_add(-dn_vapor_dt, y_final[3] - y_explicit[3]),
-                ]);
+                let residual = Array1::from_vec(
+                    [4],
+                    vec![
+                        0.0,
+                        0.0,
+                        dt.mul_add(-dt_dt, y_final[2] - y_explicit[2]),
+                        dt.mul_add(-dn_vapor_dt, y_final[3] - y_explicit[3]),
+                    ],
+                )
+                .expect("residual vector has 4 elements");
 
                 let residual_norm = residual.iter().map(|x| x.abs()).fold(0.0, f64::max);
                 if residual_norm < self.config.atol {
@@ -170,7 +174,7 @@ impl BubbleIMEXIntegrator {
         y: &Array1<f64>,
         dt: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let mut jac = Array1::ones(4);
+        let mut jac = Array1::ones([4usize]);
         let r = y[0];
         let t_bubble = y[2];
         let params = self.solver.params();
@@ -204,7 +208,7 @@ impl BubbleIMEXIntegrator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(crate) fn state_to_vector(&self, state: &BubbleState) -> Array1<f64> {
-        let mut y = Array1::zeros(4);
+        let mut y = Array1::zeros([4usize]);
         y[0] = state.radius;
         y[1] = state.wall_velocity;
         y[2] = state.temperature;

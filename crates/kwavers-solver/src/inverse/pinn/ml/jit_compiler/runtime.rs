@@ -130,7 +130,7 @@ impl OptimizedRuntime {
 
     pub fn get_performance_stats(&self) -> InferenceStats {
         InferenceStats {
-            active_kernels: self.active_kernels.len(),
+            active_kernels: (self.active_kernels.shape()[0] * self.active_kernels.shape()[1] * self.active_kernels.shape()[2]),
             memory_usage: self.memory_pool.get_total_allocated(),
             compiler_stats: self.compiler.get_stats().clone(),
             avg_latency_us: 250.0,

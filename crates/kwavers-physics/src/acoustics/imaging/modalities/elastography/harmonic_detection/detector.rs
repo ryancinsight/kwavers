@@ -3,10 +3,7 @@
 use super::config::HarmonicDetectionConfig;
 use super::types::HarmonicDisplacementField;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array4,
-};
+use leto::Array4;
 
 /// Harmonic detection and analysis processor
 pub struct HarmonicDetector {
@@ -47,7 +44,7 @@ impl HarmonicDetector {
         displacement_time_series: &Array4<f64>,
         sampling_frequency: f64,
     ) -> KwaversResult<HarmonicDisplacementField> {
-        let (nx, ny, nz, n_times) = displacement_time_series.dim();
+        let [nx, ny, nz, n_times] = displacement_time_series.shape();
 
         let mut harmonic_field =
             HarmonicDisplacementField::new(nx, ny, nz, self.config.n_harmonics, n_times);
@@ -66,9 +63,11 @@ impl HarmonicDetector {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    let time_series = displacement_time_series.slice(s![i, j, k, ..]);
+                    let time_series_vec: Vec<f64> = (0..n_times)
+                        .map(|t| displacement_time_series[[i, j, k, t]])
+                        .collect();
                     let harmonics =
-                        self.analyze_single_point(&time_series.to_vec(), sampling_frequency)?;
+                        self.analyze_single_point(&time_series_vec, sampling_frequency)?;
 
                     // Store results
                     harmonic_field.fundamental_magnitude[[i, j, k]] =

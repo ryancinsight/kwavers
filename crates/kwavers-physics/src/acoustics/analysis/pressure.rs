@@ -2,10 +2,7 @@
 
 use kwavers_core::constants::medical::{FDA_DERATING_FACTOR, IEC_REFERENCE_ACOUSTIC_POWER_W};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 #[inline]
 fn positive_finite(value: f64) -> bool {
@@ -59,10 +56,15 @@ pub fn calculate_intensity(
     sound_speed: f64,
 ) -> Array3<f64> {
     let Some(impedance) = acoustic_impedance(density, sound_speed) else {
-        return Array3::zeros(pressure_field.dim());
+        return Array3::zeros(pressure_field.shape());
     };
 
-    pressure_field.mapv(|pressure| harmonic_peak_intensity(pressure, impedance))
+    let shape = pressure_field.shape();
+    let mut result = Array3::zeros(shape);
+    for (r, &p) in result.iter_mut().zip(pressure_field.iter()) {
+        *r = harmonic_peak_intensity(p, impedance);
+    }
+    result
 }
 
 /// Calculate Mechanical Index (MI)
@@ -168,7 +170,7 @@ mod tests {
     /// I = p²/(2ρc). At p=1, ρ=1000, c=1500: I = 1/(2×1500000) = 3.333e-7 W/m².
     #[test]
     fn calculate_intensity_matches_acoustic_intensity_formula() {
-        let field = Array3::<f64>::from_elem((2, 2, 2), 1.0_f64);
+        let field = Array3::<f64>::from_elem([2, 2, 2], 1.0_f64);
         let intensity =
             calculate_intensity(field.view(), DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM);
         let expected = 1.0 / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM);
@@ -180,7 +182,7 @@ mod tests {
     /// Zero pressure → zero intensity.
     #[test]
     fn calculate_intensity_zero_for_zero_pressure() {
-        let field = Array3::<f64>::zeros((2, 2, 2));
+        let field = Array3::<f64>::zeros([2, 2, 2]);
         let intensity =
             calculate_intensity(field.view(), DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM);
         for &v in intensity.iter() {
@@ -193,7 +195,7 @@ mod tests {
     #[test]
     fn calculate_intensity_rejects_invalid_impedance_and_nonfinite_pressure() {
         let field =
-            Array3::<f64>::from_shape_vec((2, 1, 1), vec![f64::NAN, 2.0]).expect("shape matches");
+            Array3::<f64>::from_shape_vec([2, 1, 1], vec![f64::NAN, 2.0]).expect("shape matches");
 
         let invalid_impedance =
             calculate_intensity(field.view(), -DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM);
@@ -294,7 +296,7 @@ mod tests {
     /// ISPTA = max(p²/(2ρc)) × duty_cycle. Uniform field with p=2: I_max=4/(2ρc).
     #[test]
     fn ispta_equals_peak_intensity_times_duty_cycle() {
-        let field = Array3::<f64>::from_elem((2, 2, 2), 2.0_f64);
+        let field = Array3::<f64>::from_elem([2, 2, 2], 2.0_f64);
         let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
         let duty = 0.1_f64;
@@ -310,7 +312,7 @@ mod tests {
     /// [0, 1]; invalid impedance also makes intensity undefined.
     #[test]
     fn ispta_rejects_invalid_duty_cycle_and_impedance() {
-        let field = Array3::<f64>::from_elem((2, 2, 2), 2.0_f64);
+        let field = Array3::<f64>::from_elem([2, 2, 2], 2.0_f64);
         assert_eq!(
             calculate_ispta(&field, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, -0.1),
             0.0
@@ -338,7 +340,7 @@ mod tests {
     #[test]
     fn ispta_ignores_nonfinite_pressure_samples() {
         let field =
-            Array3::<f64>::from_shape_vec((2, 1, 1), vec![f64::INFINITY, 2.0]).expect("shape");
+            Array3::<f64>::from_shape_vec([2, 1, 1], vec![f64::INFINITY, 2.0]).expect("shape");
         let duty = 0.25;
         let ispta = calculate_ispta(&field, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, duty);
         let expected =
@@ -351,7 +353,7 @@ mod tests {
     /// ISPPA = max(p²/(2ρc)). Spike at p=3: ISPPA = 9/(2ρc).
     #[test]
     fn isppa_equals_peak_intensity() {
-        let mut field = Array3::<f64>::zeros((4, 4, 4));
+        let mut field = Array3::<f64>::zeros([4, 4, 4]);
         field[[2, 2, 2]] = 3.0;
         let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
@@ -367,7 +369,7 @@ mod tests {
     /// dominate a finite spatial peak.
     #[test]
     fn isppa_rejects_invalid_impedance_and_ignores_nonfinite_pressure() {
-        let field = Array3::<f64>::from_shape_vec((2, 1, 1), vec![f64::NAN, 3.0]).expect("shape");
+        let field = Array3::<f64>::from_shape_vec([2, 1, 1], vec![f64::NAN, 3.0]).expect("shape");
         assert_eq!(
             calculate_isppa(&field, -DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM),
             0.0

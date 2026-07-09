@@ -9,7 +9,7 @@ use leto::{
     Array3,
     Array4,
 };
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Legacy linear polarization model (deprecated — use JonesPolarizationModel)
 #[derive(Debug)]
@@ -43,3 +43,4 @@ impl PolarizationModel for LinearPolarization {
         });
     }
 }
+

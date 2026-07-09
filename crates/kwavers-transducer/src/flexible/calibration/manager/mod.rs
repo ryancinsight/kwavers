@@ -2,11 +2,8 @@
 
 use super::types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot, KalmanState};
 use kwavers_core::error::KwaversResult;
-use leto::{Array2 as LetoArray2, Array3};
-use leto::{
-    Array1,
-    Array2 as NdArray2,
-};
+use leto::{Array1, Array2, Array3};
+use leto_ops::MatrixProduct;
 
 mod acoustic;
 mod kalman;
@@ -57,7 +54,7 @@ impl CalibrationManager {
         known_reflectors: &[[f64; 3]],
         frequency: f64,
         sound_speed: f64,
-    ) -> KwaversResult<LetoArray2<f64>> {
+    ) -> KwaversResult<Array2<f64>> {
         let wavelength = sound_speed / frequency;
         let [_nx, _ny, _nz] = pressure_field.shape();
 
@@ -88,8 +85,8 @@ impl CalibrationManager {
             ));
         }
 
-        let mut a_matrix = NdArray2::zeros([n - 1, 3]);
-        let mut b_vector = Array1::zeros(n - 1);
+        let mut a_matrix = Array2::zeros([n - 1, 3]);
+        let mut b_vector = Array1::zeros([n - 1]);
 
         let ref_pos = &reflectors[0];
         let ref_dist = measurements[0];
@@ -111,9 +108,20 @@ impl CalibrationManager {
             );
         }
 
-        let a_t = a_matrix.t().to_owned();
-        let at_a = a_t.dot(&a_matrix);
-        let at_b = a_t.dot(&b_vector);
+        let a_t = a_matrix.transpose([1, 0]).unwrap().to_owned();
+        let at_a = a_t.matmul(&a_matrix).unwrap();
+        let at_b = {
+            let m = a_t.shape()[0];
+            let mut result = Array1::zeros([m]);
+            for i in 0..m {
+                let mut sum = 0.0;
+                for j in 0..a_t.shape()[1] {
+                    sum += a_t[[i, j]] * b_vector[j];
+                }
+                result[i] = sum;
+            }
+            result
+        };
 
         let solution = solve_linear_system(&at_a, &at_b).ok_or(
             kwavers_core::error::KwaversError::Numerical(
@@ -133,10 +141,10 @@ impl CalibrationManager {
     ///
     pub fn process_external_tracking(
         &mut self,
-        tracking_data: &NdArray2<f64>,
+        tracking_data: &Array2<f64>,
         measurement_noise: f64,
         timestamp: f64,
-    ) -> KwaversResult<NdArray2<f64>> {
+    ) -> KwaversResult<Array2<f64>> {
         let dt = timestamp - self.last_calibration_time;
         let num_elements = tracking_data.shape()[0];
 
@@ -149,7 +157,14 @@ impl CalibrationManager {
         self.data.geometry_history.push(GeometrySnapshot {
             timestamp,
             positions: filtered_positions.clone(),
-            confidence: Array1::ones(num_elements) * (1.0 / (1.0 + measurement_noise)),
+            confidence: {
+                let scale = 1.0 / (1.0 + measurement_noise);
+                let mut arr = Array1::ones([num_elements]);
+                for x in arr.iter_mut() {
+                    *x *= scale;
+                }
+                arr
+            },
         });
 
         self.last_calibration_time = timestamp;
@@ -161,7 +176,10 @@ impl CalibrationManager {
     #[must_use]
     pub fn get_confidence(&self) -> f64 {
         if let Some(last_snapshot) = self.data.geometry_history.last() {
-            last_snapshot.confidence.mean().unwrap_or(0.0)
+            {
+                let c = &last_snapshot.confidence;
+                c.iter().sum::<f64>() / c.shape()[0] as f64
+            }
         } else {
             0.0
         }
@@ -174,8 +192,8 @@ impl CalibrationManager {
     }
 }
 
-fn solve_linear_system(a: &NdArray2<f64>, b: &Array1<f64>) -> Option<[f64; 3]> {
-    if a.shape()[0] != 3 || a.shape()[1] != 3 || b.len() != 3 {
+fn solve_linear_system(a: &Array2<f64>, b: &Array1<f64>) -> Option<[f64; 3]> {
+    if a.shape()[0] != 3 || a.shape()[1] != 3 || b.shape()[0] != 3 {
         return None;
     }
 

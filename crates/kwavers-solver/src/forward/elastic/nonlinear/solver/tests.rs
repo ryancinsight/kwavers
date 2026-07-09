@@ -152,9 +152,9 @@ fn wave_propagation_history_is_monotone_in_time() {
     let history = solver.propagate_waves(&initial).unwrap();
 
     assert!(
-        history.len() >= 2,
+        (history.shape()[0] * history.shape()[1] * history.shape()[2]) >= 2,
         "history must contain at least initial + final frame; got {}",
-        history.len()
+        (history.shape()[0] * history.shape()[1] * history.shape()[2])
     );
 
     assert_eq!(
@@ -163,7 +163,7 @@ fn wave_propagation_history_is_monotone_in_time() {
         history[0].time
     );
 
-    for i in 1..history.len() {
+    for i in 1..(history.shape()[0] * history.shape()[1] * history.shape()[2]) {
         assert!(
             history[i].time > history[i - 1].time,
             "history time not strictly monotone at index {}: {:.6e} ≤ {:.6e}",

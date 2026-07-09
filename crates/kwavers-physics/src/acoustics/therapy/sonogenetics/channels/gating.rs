@@ -38,7 +38,7 @@ pub fn boltzmann_p_open(
     let kbt = K_B * temperature_k;
     let a = params.gating_area_m2;
     let t_half = params.half_tension_n_per_m;
-    let mut out = Array3::<f64>::zeros(membrane_tension.dim());
+    let mut out = Array3::<f64>::zeros(membrane_tension.shape());
     zip_mut_ref(
         out.view_mut(),
         membrane_tension.view(),
@@ -72,7 +72,7 @@ pub fn pressure_threshold_p_open(
     }
     let p_half = params.half_pressure_pa;
     let s = params.steepness_pa;
-    let mut out = Array3::<f64>::zeros(radiation_pressure.dim());
+    let mut out = Array3::<f64>::zeros(radiation_pressure.shape());
     zip_mut_ref(
         out.view_mut(),
         radiation_pressure.view(),

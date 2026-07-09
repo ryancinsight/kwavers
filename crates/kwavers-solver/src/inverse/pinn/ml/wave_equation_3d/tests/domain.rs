@@ -36,7 +36,7 @@ fn test_end_to_end_rectangular_domain() -> KwaversResult<()> {
     let t_test = vec![0.15, 0.25];
 
     let u_pred = solver.predict(&x_test, &y_test, &z_test, &t_test)?;
-    assert_eq!(u_pred.len(), 2);
+    assert_eq!((u_pred.shape()[0] * u_pred.shape()[1] * u_pred.shape()[2]), 2);
     assert!(u_pred.iter().all(|&p| p.is_finite()));
     Ok(())
 }

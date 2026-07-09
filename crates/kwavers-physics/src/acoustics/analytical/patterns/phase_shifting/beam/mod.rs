@@ -6,10 +6,7 @@
 //! - Wooh & Shi (1999): "A simulation study of the beam steering characteristics for linear phased arrays"
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 use crate::acoustics::analytical::patterns::phase_shifting::core::{
     calculate_wavelength, wrap_phase, MAX_STEERING_ANGLE,
@@ -39,12 +36,12 @@ impl BeamSteering {
     ///
     #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
-        let num_elements = element_positions.nrows();
+        let num_elements = element_positions.shape()[0];
         Self {
             element_positions,
             frequency,
             steering_angles: (0.0, 0.0),
-            phase_distribution: Array1::zeros(num_elements),
+            phase_distribution: Array1::zeros([num_elements]),
             grating_lobe_threshold: 0.1,
         }
     }
@@ -84,8 +81,8 @@ impl BeamSteering {
         let ky = k * el_rad.sin();
 
         for (i, phase) in self.phase_distribution.iter_mut().enumerate() {
-            let pos = self.element_positions.row(i);
-            *phase = -(kx * pos[0] + ky * pos[1]);
+            let pos = self.element_positions.index_axis(0, i).unwrap();
+            *phase = -(kx * pos[[0]] + ky * pos[[1]]);
             *phase = wrap_phase(*phase);
         }
 
@@ -99,10 +96,10 @@ impl BeamSteering {
 
         // Find element spacing
         let mut min_spacing = f64::INFINITY;
-        for i in 0..self.element_positions.nrows() - 1 {
-            let pos1 = self.element_positions.row(i);
-            let pos2 = self.element_positions.row(i + 1);
-            let spacing = (pos2[0] - pos1[0]).hypot(pos2[1] - pos1[1]);
+        for i in 0..self.element_positions.shape()[0] - 1 {
+            let pos1 = self.element_positions.index_axis(0, i).unwrap();
+            let pos2 = self.element_positions.index_axis(0, i + 1).unwrap();
+            let spacing = (pos2[[0]] - pos1[[0]]).hypot(pos2[[1]] - pos1[[1]]);
             if spacing > 0.0 && spacing < min_spacing {
                 min_spacing = spacing;
             }
@@ -143,14 +140,14 @@ impl BeamSteering {
         let mut sum_real = 0.0;
         let mut sum_imag = 0.0;
 
-        for i in 0..self.element_positions.nrows() {
-            let pos = self.element_positions.row(i);
-            let phase = self.phase_distribution[i] + kx * pos[0] + ky * pos[1];
+        for i in 0..self.element_positions.shape()[0] {
+            let pos = self.element_positions.index_axis(0, i).unwrap();
+            let phase = self.phase_distribution[i] + kx * pos[[0]] + ky * pos[[1]];
             sum_real += phase.cos();
             sum_imag += phase.sin();
         }
 
-        sum_real.hypot(sum_imag) / self.element_positions.nrows() as f64
+        sum_real.hypot(sum_imag) / self.element_positions.shape()[0] as f64
     }
 }
 
@@ -159,11 +156,12 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    
+
     use std::f64::consts::PI;
 
     fn linear_array() -> Array2<f64> {
-        arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])
+        let data = vec![-0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0];
+        Array2::from_shape_vec([3, 3], data).expect("valid 3x3 array")
     }
 
     #[test]

@@ -20,7 +20,7 @@ fn test_bem_solver_creation() {
     let mesh = create_test_mesh();
     let solver = BemSolver::from_mesh(config, &mesh).unwrap();
 
-    assert_eq!(solver.vertices.len(), 4);
+    assert_eq!((solver.vertices.shape()[0] * solver.vertices.shape()[1] * solver.vertices.shape()[2]), 4);
     assert!(solver.boundary_manager_ref().is_empty());
     assert!(solver.h_matrix.is_none());
     assert!(solver.g_matrix.is_none());
@@ -65,8 +65,8 @@ fn test_bem_boundary_conditions() {
     solver.assemble_system().unwrap();
     let solution = solver.solve(1.0, None).unwrap();
 
-    assert_eq!(solution.boundary_pressure.len(), 4);
-    assert_eq!(solution.boundary_velocity.len(), 4);
+    assert_eq!((solution.boundary_pressure.shape()[0] * solution.boundary_pressure.shape()[1] * solution.boundary_pressure.shape()[2]), 4);
+    assert_eq!((solution.boundary_velocity.shape()[0] * solution.boundary_velocity.shape()[1] * solution.boundary_velocity.shape()[2]), 4);
     assert_eq!(solution.wavenumber, 1.0);
 }
 
@@ -76,7 +76,7 @@ fn test_compute_scattered_field() {
     let mesh = create_test_mesh();
     let solver = BemSolver::from_mesh(config, &mesh).unwrap();
 
-    let n = solver.vertices.len();
+    let n = (solver.vertices.shape()[0] * solver.vertices.shape()[1] * solver.vertices.shape()[2]);
     let boundary_pressure = Array1::from_elem(n, Complex64::new(1.0, 0.0));
     let boundary_velocity = Array1::from_elem(n, Complex64::new(0.0, 0.0));
 
@@ -89,6 +89,6 @@ fn test_compute_scattered_field() {
     let points = Array1::from_vec(vec![[2.0, 2.0, 2.0]]);
     let field = solver.compute_scattered_field(&points, &solution).unwrap();
 
-    assert_eq!(field.len(), 1);
+    assert_eq!((field.shape()[0] * field.shape()[1] * field.shape()[2]), 1);
     assert!(field[0].norm() > 1e-10, "Field should be non-zero");
 }

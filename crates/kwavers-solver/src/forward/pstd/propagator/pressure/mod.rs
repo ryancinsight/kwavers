@@ -153,7 +153,7 @@ fn apply_nonlinear_eos(
         pressure.as_slice_mut(),
         div_u.as_slice(),
         c0.as_slice(),
-        bon.as_slice_memory_order(),
+        bon.as_slice(),
         rho0.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {

@@ -154,7 +154,7 @@ pub fn calculate_blackbody_emission(
     bubble_radius_field: &Array3<f64>,
     model: &BlackbodyModel,
 ) -> Array3<f64> {
-    let mut emission_field = Array3::zeros(temperature_field.dim());
+    let mut emission_field = Array3::zeros(temperature_field.shape());
 
     crate::parallel::zip_mut_two_refs(
         emission_field.view_mut(),

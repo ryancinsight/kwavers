@@ -28,7 +28,7 @@ impl WaveletTransform {
         let g = Self::wavelet_highpass_from_lowpass(&h);
 
         // Apply 1D transform along each dimension
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
 
         // Transform along x-axis
         for j in 0..ny {
@@ -79,7 +79,7 @@ impl WaveletTransform {
         let h = Self::daubechies_coefficients(order);
         let g = Self::wavelet_highpass_from_lowpass(&h);
 
-        let (nx, ny, nz) = coeffs.dim();
+        let [nx, ny, nz] = coeffs.shape();
 
         // Inverse transform along z-axis (reverse order from forward)
         for i in 0..nx {
@@ -144,7 +144,7 @@ impl WaveletTransform {
 
     /// Generate highpass filter from lowpass using quadrature mirror relationship.
     pub(super) fn wavelet_highpass_from_lowpass(h: &[f64]) -> Vec<f64> {
-        let n = h.len();
+        let n = (h.shape()[0] * h.shape()[1] * h.shape()[2]);
         let mut g = vec![0.0; n];
         for i in 0..n {
             g[i] = if i % 2 == 0 {

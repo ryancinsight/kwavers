@@ -81,7 +81,7 @@ impl FemAssembly {
             element_rhs,
         )?;
 
-        let contributions = map_collect_index_with::<Adaptive, _, _>(elements.len(), |idx| {
+        let contributions = map_collect_index_with::<Adaptive, _, _>((elements.shape()[0] * elements.shape()[1] * elements.shape()[2]), |idx| {
             self.assemble_single_element(
                 &elements[idx],
                 &element_stiffness[idx],
@@ -112,11 +112,11 @@ impl FemAssembly {
         element_mass: &[leto::Array2<Complex64>],
         element_rhs: &[Array1<Complex64>],
     ) -> KwaversResult<()> {
-        let expected = elements.len();
+        let expected = (elements.shape()[0] * elements.shape()[1] * elements.shape()[2]);
         let actual = (
-            element_stiffness.len(),
-            element_mass.len(),
-            element_rhs.len(),
+            (element_stiffness.shape()[0] * element_stiffness.shape()[1] * element_stiffness.shape()[2]),
+            (element_mass.shape()[0] * element_mass.shape()[1] * element_mass.shape()[2]),
+            (element_rhs.shape()[0] * element_rhs.shape()[1] * element_rhs.shape()[2]),
         );
         if actual != (expected, expected, expected) {
             return Err(KwaversError::InvalidInput(format!(
@@ -165,13 +165,13 @@ impl FemAssembly {
             node_indices,
         } = contribution;
 
-        for i in 0..node_indices.len() {
+        for i in 0..(node_indices.shape()[0] * node_indices.shape()[1] * node_indices.shape()[2]) {
             let global_i = node_indices[i];
 
             // Add to RHS
             global_rhs[global_i] += rhs[i];
 
-            for j in 0..node_indices.len() {
+            for j in 0..(node_indices.shape()[0] * node_indices.shape()[1] * node_indices.shape()[2]) {
                 let global_j = node_indices[j];
 
                 // Add to stiffness matrix

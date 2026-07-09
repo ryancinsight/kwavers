@@ -15,7 +15,7 @@ kwavers-grid = { path = "../kwavers-grid" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-medium = { path = "../kwavers-medium" }
 moirai-parallel = { workspace = true }
-num-complex = "0.4"
+eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 
 [dev-dependencies]

@@ -26,9 +26,9 @@ impl<'a> VolumeOperator<'a> {
         config: &LinearBornInversionConfig,
     ) -> Self {
         let elements = geometry.elements();
-        let element_count = elements.len();
+        let element_count = (elements.shape()[0] * elements.shape()[1] * elements.shape()[2]);
         let row_contexts = build_row_contexts(receiver_indices, element_count, config);
-        let n_active = active.len();
+        let n_active = (active.shape()[0] * active.shape()[1] * active.shape()[2]);
 
         // Pre-fill distance tables in parallel over elements.
         // Each element's n_active distances form one contiguous chunk.
@@ -79,8 +79,8 @@ fn build_row_context(
     config: &LinearBornInversionConfig,
 ) -> RowContext {
     let harmonic_count = config.harmonic_count();
-    let offset_count = config.receiver_offsets.len();
-    let frequency_count = config.frequencies_hz.len();
+    let offset_count = (config.receiver_offsets.shape()[0] * config.receiver_offsets.shape()[1] * config.receiver_offsets.shape()[2]);
+    let frequency_count = (config.frequencies_hz.shape()[0] * config.frequencies_hz.shape()[1] * config.frequencies_hz.shape()[2]);
     let source_idx = row / (offset_count * frequency_count * harmonic_count);
     let offset_idx = (row / (frequency_count * harmonic_count)) % offset_count;
     let frequency_idx = (row / harmonic_count) % frequency_count;

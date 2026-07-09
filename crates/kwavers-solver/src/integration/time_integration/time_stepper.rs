@@ -13,8 +13,8 @@ use std::collections::VecDeque;
 
 fn add_scaled_inplace(target: &mut Array3<f64>, rhs: &Array3<f64>, scale: f64) {
     assert_eq!(
-        target.dim(),
-        rhs.dim(),
+        target.shape(),
+        rhs.shape(),
         "invariant: add_scaled_inplace shape mismatch"
     );
     match (target.as_slice_mut(), rhs.as_slice()) {
@@ -38,10 +38,10 @@ fn combine_rk4_inplace(
     k4: &Array3<f64>,
     dt: f64,
 ) {
-    assert_eq!(field.dim(), k1.dim(), "invariant: RK4 k1 shape mismatch");
-    assert_eq!(field.dim(), k2.dim(), "invariant: RK4 k2 shape mismatch");
-    assert_eq!(field.dim(), k3.dim(), "invariant: RK4 k3 shape mismatch");
-    assert_eq!(field.dim(), k4.dim(), "invariant: RK4 k4 shape mismatch");
+    assert_eq!(field.shape(), k1.shape(), "invariant: RK4 k1 shape mismatch");
+    assert_eq!(field.shape(), k2.shape(), "invariant: RK4 k2 shape mismatch");
+    assert_eq!(field.shape(), k3.shape(), "invariant: RK4 k3 shape mismatch");
+    assert_eq!(field.shape(), k4.shape(), "invariant: RK4 k4 shape mismatch");
     match (
         field.as_slice_mut(),
         k1.as_slice(),
@@ -74,10 +74,10 @@ fn adams_bashforth2_inplace(
     f_nm1: &Array3<f64>,
     dt: f64,
 ) {
-    assert_eq!(field.dim(), f_n.dim(), "invariant: AB2 f_n shape mismatch");
+    assert_eq!(field.shape(), f_n.shape(), "invariant: AB2 f_n shape mismatch");
     assert_eq!(
-        field.dim(),
-        f_nm1.dim(),
+        field.shape(),
+        f_nm1.shape(),
         "invariant: AB2 f_nm1 shape mismatch"
     );
     match (field.as_slice_mut(), f_n.as_slice(), f_nm1.as_slice()) {
@@ -101,15 +101,15 @@ fn adams_bashforth3_inplace(
     f_nm2: &Array3<f64>,
     dt: f64,
 ) {
-    assert_eq!(field.dim(), f_n.dim(), "invariant: AB3 f_n shape mismatch");
+    assert_eq!(field.shape(), f_n.shape(), "invariant: AB3 f_n shape mismatch");
     assert_eq!(
-        field.dim(),
-        f_nm1.dim(),
+        field.shape(),
+        f_nm1.shape(),
         "invariant: AB3 f_nm1 shape mismatch"
     );
     assert_eq!(
-        field.dim(),
-        f_nm2.dim(),
+        field.shape(),
+        f_nm2.shape(),
         "invariant: AB3 f_nm2 shape mismatch"
     );
     match (
@@ -208,7 +208,7 @@ impl TimeStepper for RungeKutta4 {
     where
         F: Fn(&Array3<f64>) -> KwaversResult<Array3<f64>>,
     {
-        let shape = field.dim();
+        let shape = field.shape();
 
         // Initialize storage if needed (lazy initialization)
         if self.k1.is_none() {
@@ -394,7 +394,7 @@ impl TimeStepper for AdamsBashforth {
 
             // Store RHS in history
             self.rhs_history.push_back(rhs);
-            if self.rhs_history.len() > self.config.order {
+            if (self.rhs_history.shape()[0] * self.rhs_history.shape()[1] * self.rhs_history.shape()[2]) > self.config.order {
                 self.rhs_history.pop_front();
             }
 
@@ -410,17 +410,17 @@ impl TimeStepper for AdamsBashforth {
                 // AB2: y_{n+1} = y_n + dt * (3/2 * f_n - 1/2 * f_{n-1})
                 if !self.rhs_history.is_empty() {
                     let f_n = &current_rhs;
-                    let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
+                    let f_nm1 = &self.rhs_history[(self.rhs_history.shape()[0] * self.rhs_history.shape()[1] * self.rhs_history.shape()[2]) - 1];
 
                     adams_bashforth2_inplace(field, f_n, f_nm1, dt);
                 }
             }
             3 => {
                 // AB3: y_{n+1} = y_n + dt * (23/12 * f_n - 16/12 * f_{n-1} + 5/12 * f_{n-2})
-                if self.rhs_history.len() >= 2 {
+                if (self.rhs_history.shape()[0] * self.rhs_history.shape()[1] * self.rhs_history.shape()[2]) >= 2 {
                     let f_n = &current_rhs;
-                    let f_nm1 = &self.rhs_history[self.rhs_history.len() - 1];
-                    let f_nm2 = &self.rhs_history[self.rhs_history.len() - 2];
+                    let f_nm1 = &self.rhs_history[(self.rhs_history.shape()[0] * self.rhs_history.shape()[1] * self.rhs_history.shape()[2]) - 1];
+                    let f_nm2 = &self.rhs_history[(self.rhs_history.shape()[0] * self.rhs_history.shape()[1] * self.rhs_history.shape()[2]) - 2];
 
                     adams_bashforth3_inplace(field, f_n, f_nm1, f_nm2, dt);
                 }
@@ -438,7 +438,7 @@ impl TimeStepper for AdamsBashforth {
 
         // Update history
         self.rhs_history.push_back(current_rhs);
-        if self.rhs_history.len() > self.config.order {
+        if (self.rhs_history.shape()[0] * self.rhs_history.shape()[1] * self.rhs_history.shape()[2]) > self.config.order {
             self.rhs_history.pop_front();
         }
 

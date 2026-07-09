@@ -6,7 +6,7 @@ use leto::Array3;
 use std::sync::Arc;
 
 fn weighted_mass_rate(solver: &DGSolver, rhs: &Array3<f64>) -> f64 {
-    let (n_elements, n_nodes, n_vars) = rhs.dim();
+    let [n_elements, n_nodes, n_vars] = rhs.shape();
     let mut rate = 0.0;
     match solver.coefficient_layout {
         CoefficientLayout::TensorProduct(topology) if n_nodes == topology.nodes_per_element => {
@@ -90,7 +90,7 @@ fn dg_tensor_rhs_preserves_periodic_global_mass() {
         )
         .unwrap();
     let rate = weighted_mass_rate(&solver, &rhs);
-    let tolerance = f64::EPSILON * rhs.len() as f64 * rhs.iter().map(|v| v.abs()).sum::<f64>();
+    let tolerance = f64::EPSILON * (rhs.shape()[0] * rhs.shape()[1] * rhs.shape()[2]) as f64 * rhs.iter().map(|v| v.abs()).sum::<f64>();
 
     assert!(
         rate.abs() <= tolerance,

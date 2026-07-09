@@ -43,11 +43,11 @@ impl LiteratureValidator {
             .map(|&t| treeby_2010::analytical_pressure(t, amplitude))
             .collect();
 
-        if computed_waveform.len() != expected.len() {
+        if (computed_waveform.shape()[0] * computed_waveform.shape()[1] * computed_waveform.shape()[2]) != (expected.shape()[0] * expected.shape()[1] * expected.shape()[2]) {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: expected.len().to_string(),
-                    actual: computed_waveform.len().to_string(),
+                    expected: (expected.shape()[0] * expected.shape()[1] * expected.shape()[2]).to_string(),
+                    actual: (computed_waveform.shape()[0] * computed_waveform.shape()[1] * computed_waveform.shape()[2]).to_string(),
                 },
             ));
         }
@@ -169,7 +169,7 @@ impl LiteratureValidator {
     ) -> LiteratureValidationResult {
         let mut result = LiteratureValidationResult::new("ConvergenceAnalysis");
 
-        if dx_values.len() < 2 || errors.len() < 2 {
+        if (dx_values.shape()[0] * dx_values.shape()[1] * dx_values.shape()[2]) < 2 || (errors.shape()[0] * errors.shape()[1] * errors.shape()[2]) < 2 {
             result.notes = "Need at least 2 points for convergence analysis".to_string();
             return result;
         }
@@ -203,7 +203,7 @@ impl LiteratureValidator {
 
     /// Compute relative L2 error between computed and reference.
     pub(super) fn relative_l2_error(computed: &[f64], reference: &[f64]) -> f64 {
-        if computed.len() != reference.len() || computed.is_empty() {
+        if (computed.shape()[0] * computed.shape()[1] * computed.shape()[2]) != (reference.shape()[0] * reference.shape()[1] * reference.shape()[2]) || computed.is_empty() {
             return f64::NAN;
         }
 
@@ -225,11 +225,11 @@ impl LiteratureValidator {
 
     /// Simple linear regression (slope, intercept).
     pub(super) fn linear_regression(x: &[f64], y: &[f64]) -> (f64, f64) {
-        if x.len() != y.len() || x.len() < 2 {
+        if (x.shape()[0] * x.shape()[1] * x.shape()[2]) != (y.shape()[0] * y.shape()[1] * y.shape()[2]) || (x.shape()[0] * x.shape()[1] * x.shape()[2]) < 2 {
             return (f64::NAN, f64::NAN);
         }
 
-        let n = x.len() as f64;
+        let n = (x.shape()[0] * x.shape()[1] * x.shape()[2]) as f64;
         let sum_x: f64 = x.iter().sum();
         let sum_y: f64 = y.iter().sum();
         let sum_xy: f64 = x.iter().zip(y.iter()).map(|(xi, yi)| xi * yi).sum();

@@ -46,7 +46,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResNetPINN1D")
-            .field("num_blocks", &self.residual_blocks.len())
+            .field("num_blocks", &(self.residual_blocks.shape()[0] * self.residual_blocks.shape()[1] * self.residual_blocks.shape()[2]))
             .finish_non_exhaustive()
     }
 }
@@ -162,7 +162,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ResNetPINN2D")
-            .field("num_blocks", &self.residual_blocks.len())
+            .field("num_blocks", &(self.residual_blocks.shape()[0] * self.residual_blocks.shape()[1] * self.residual_blocks.shape()[2]))
             .finish_non_exhaustive()
     }
 }

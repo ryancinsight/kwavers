@@ -44,12 +44,8 @@ use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-    ArrayView3,
-};
 
 #[inline]
 fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {
@@ -165,8 +161,8 @@ fn accumulate_stratum(
     if let (Some(acc_values), Some(value_values), Some(lo_values), Some(weight_values)) = (
         accumulator.as_slice_mut(),
         values.as_slice(),
-        bracket_lo.as_slice_memory_order(),
-        weight_hi.as_slice_memory_order(),
+        bracket_lo.as_slice(),
+        weight_hi.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(acc_values, |index, accumulator| {
             let lower = lo_values[index];
@@ -244,8 +240,8 @@ fn apply_pressure_absorption(
     ) = (
         pressure.as_slice_mut(),
         c0.as_slice(),
-        tau.as_slice_memory_order(),
-        eta.as_slice_memory_order(),
+        tau.as_slice(),
+        eta.as_slice(),
         l1.as_slice(),
         l2.as_slice(),
     ) {
@@ -316,7 +312,9 @@ impl PSTDSolver {
             // the per-voxel bracket weights, reproducing each tissue's own power
             // law. One forward FFT is re-formed per stratum (no extra buffers);
             // strata exist only for genuinely heterogeneous-y media.
-            let m_count = strata.exponents.len();
+            let m_count = (strata.exponents.shape()[0]
+                * strata.exponents.shape()[1]
+                * strata.exponents.shape()[2]);
 
             // L1 = Σ_m w_m(x) · IFFT( |k|^(y_m−2) · FFT(ρ₀·∇·u) ) → dpx.
             self.dpx.fill(0.0);

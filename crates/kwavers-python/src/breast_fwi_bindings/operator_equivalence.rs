@@ -9,7 +9,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstScatteringIncrementDiagnostics, BreastUstScatteringIncrementModelDiagnostics,
 };
 use leto::Array3;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -302,3 +302,4 @@ fn scattering_increment_model_to_dict<'py>(
 fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }
+

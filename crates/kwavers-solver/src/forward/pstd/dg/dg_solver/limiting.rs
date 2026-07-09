@@ -20,25 +20,25 @@ pub(super) fn apply_shock_capture_to_coeffs(
     if !shock_capture_enabled(config) {
         return Ok(());
     }
-    if coeffs.dim() != scratch.dim() {
+    if coeffs.shape() != scratch.shape() {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
-                expected: format!("{:?}", coeffs.dim()),
-                actual: format!("{:?}", scratch.dim()),
+                expected: format!("{:?}", coeffs.shape()),
+                actual: format!("{:?}", scratch.shape()),
             },
         ));
     }
 
     scratch.assign(coeffs);
-    let (n_elements, n_nodes, n_vars) = coeffs.dim();
+    let [n_elements, n_nodes, n_vars] = coeffs.shape();
     if n_elements == 0 || n_nodes == 0 || n_vars == 0 {
         return Ok(());
     }
-    if xi_nodes.len() != n_nodes || weights.len() != n_nodes {
+    if (xi_nodes.shape()[0] * xi_nodes.shape()[1] * xi_nodes.shape()[2]) != n_nodes || (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]) != n_nodes {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
                 expected: format!("{} DG nodes", n_nodes),
-                actual: format!("xi={}, weights={}", xi_nodes.len(), weights.len()),
+                actual: format!("xi={}, weights={}", (xi_nodes.shape()[0] * xi_nodes.shape()[1] * xi_nodes.shape()[2]), (weights.shape()[0] * weights.shape()[1] * weights.shape()[2])),
             },
         ));
     }
@@ -90,36 +90,36 @@ pub(super) fn apply_shock_capture_to_tensor_coeffs(
     if !shock_capture_enabled(config) {
         return Ok(());
     }
-    if coeffs.dim() != scratch.dim() {
+    if coeffs.shape() != scratch.shape() {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
-                expected: format!("{:?}", coeffs.dim()),
-                actual: format!("{:?}", scratch.dim()),
+                expected: format!("{:?}", coeffs.shape()),
+                actual: format!("{:?}", scratch.shape()),
             },
         ));
     }
-    if coeffs.dim().0 != topology.n_elements || coeffs.dim().1 != topology.nodes_per_element {
+    if coeffs.shape()[0] != topology.n_elements || coeffs.shape()[1] != topology.nodes_per_element {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
                 expected: format!(
                     "({}, {}, n_vars)",
                     topology.n_elements, topology.nodes_per_element
                 ),
-                actual: format!("{:?}", coeffs.dim()),
+                actual: format!("{:?}", coeffs.shape()),
             },
         ));
     }
-    if weights.len() != topology.n_nodes {
+    if (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]) != topology.n_nodes {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
                 expected: format!("{} one-dimensional DG weights", topology.n_nodes),
-                actual: format!("{}", weights.len()),
+                actual: format!("{}", (weights.shape()[0] * weights.shape()[1] * weights.shape()[2])),
             },
         ));
     }
 
     scratch.assign(coeffs);
-    let (_, _, n_vars) = coeffs.dim();
+    let [_, _, n_vars] = coeffs.shape();
     let threshold = shock_threshold(config);
     for var in 0..n_vars {
         for elem in 0..topology.n_elements {

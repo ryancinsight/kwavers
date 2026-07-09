@@ -37,11 +37,11 @@ impl MonolithicCoupler {
 
         let expected = grid.dimensions();
         for (&field_type, field) in fields {
-            if field.dim() != expected {
+            if field.shape() != expected {
                 return Err(KwaversError::Validation(
                     ValidationError::DimensionMismatch {
                         expected: format!("{expected:?}"),
-                        actual: format!("{} {:?}", field_type.name(), field.dim()),
+                        actual: format!("{} {:?}", field_type.name(), field.shape()),
                     },
                 ));
             }

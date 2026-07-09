@@ -67,25 +67,25 @@ use super::WesterveltFdtd;
 impl WesterveltFdtd {
     /// Calculate the nonlinear term ∂²(p²)/∂t²
     pub(super) fn calculate_nonlinear_term_into(&mut self, dt: f64, grid: &Grid) {
-        debug_assert_eq!(self.nonlinear_term.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(self.nonlinear_term.shape(), (grid.nx, grid.ny, grid.nz));
         if let Some(ref p_prev2) = self.pressure_prev2 {
             // Full second-order time derivative of p²
             // ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²
 
             let pressure = self
                 .pressure
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: Westervelt pressure is standard-layout");
             let pressure_prev = self
                 .pressure_prev
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: Westervelt previous pressure is standard-layout");
             let pressure_prev2 = p_prev2
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: Westervelt second previous pressure is standard-layout");
             let nonlinear_term = self
                 .nonlinear_term
-                .as_slice_memory_order_mut()
+                .as_slice_mut()
                 .expect("invariant: Westervelt nonlinear term is standard-layout");
 
             enumerate_mut_with::<Adaptive, _, _>(nonlinear_term, |idx, nl| {
@@ -100,15 +100,15 @@ impl WesterveltFdtd {
             // First time step: forward difference initialization (LeVeque 2007 §2.14)
             let pressure = self
                 .pressure
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: Westervelt pressure is standard-layout");
             let pressure_prev = self
                 .pressure_prev
-                .as_slice_memory_order()
+                .as_slice()
                 .expect("invariant: Westervelt previous pressure is standard-layout");
             let nonlinear_term = self
                 .nonlinear_term
-                .as_slice_memory_order_mut()
+                .as_slice_mut()
                 .expect("invariant: Westervelt nonlinear term is standard-layout");
 
             enumerate_mut_with::<Adaptive, _, _>(nonlinear_term, |idx, nl| {

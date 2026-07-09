@@ -4,7 +4,7 @@ use super::*;
 use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 #[test]
 fn test_jones_vector_construction() {
@@ -143,3 +143,4 @@ fn test_matrix_multiplication() {
     assert_relative_eq!(combined.m11.re, rot90.m11.re, epsilon = 1e-10);
     assert_relative_eq!(combined.m12.re, rot90.m12.re, epsilon = 1e-10);
 }
+

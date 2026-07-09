@@ -52,10 +52,10 @@ fn fill_k_norm(
     );
 
     if let (Some(output_values), Some(kx_values), Some(ky_values), Some(kz_values)) = (
-        output.as_slice_memory_order_mut(),
-        kx.as_slice_memory_order(),
-        ky.as_slice_memory_order(),
-        kz.as_slice_memory_order(),
+        output.as_slice_mut(),
+        kx.as_slice(),
+        ky.as_slice(),
+        kz.as_slice(),
     ) {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
             let squared = kz_values[index].mul_add(

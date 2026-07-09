@@ -99,12 +99,12 @@ impl TrainingMetrics {
     ///
     /// Relative change = |L[n] - L[n-1]| / |L[n-1]|
     pub fn is_converged(&self, tolerance: f64) -> bool {
-        if self.total_loss.len() < 2 {
+        if (self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) < 2 {
             return false;
         }
 
-        let current = self.total_loss[self.total_loss.len() - 1];
-        let previous = self.total_loss[self.total_loss.len() - 2];
+        let current = self.total_loss[(self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) - 1];
+        let previous = self.total_loss[(self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) - 2];
 
         if previous.abs() < 1e-15 {
             return current.abs() < tolerance;
@@ -116,11 +116,11 @@ impl TrainingMetrics {
 
     /// Compute average loss over last N epochs
     pub fn average_loss_last_n(&self, n: usize) -> Option<f64> {
-        if self.total_loss.len() < n {
+        if (self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) < n {
             return None;
         }
 
-        let start = self.total_loss.len() - n;
+        let start = (self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) - n;
         let sum: f64 = self.total_loss[start..].iter().sum();
         Some(sum / n as f64)
     }
@@ -151,12 +151,12 @@ impl TrainingMetrics {
     ///
     /// Reduction = (1 - L_final / L_initial) × 100%
     pub fn loss_reduction_percent(&self) -> Option<f64> {
-        if self.total_loss.len() < 2 {
+        if (self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) < 2 {
             return None;
         }
 
         let initial = self.total_loss[0];
-        let final_loss = self.total_loss[self.total_loss.len() - 1];
+        let final_loss = self.total_loss[(self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) - 1];
 
         if initial.abs() < 1e-15 {
             return None;

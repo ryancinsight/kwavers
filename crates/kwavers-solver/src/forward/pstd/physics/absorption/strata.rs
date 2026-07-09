@@ -33,10 +33,7 @@
 
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-};
+use leto::Array3;
 
 /// Maximum number of exponent strata. Caps the per-step inverse-FFT count and
 /// the symbol memory; a CT body model spans y ∈ [1.0, 1.1], so an 8-point
@@ -74,7 +71,7 @@ fn assign_stratum_brackets(
         "invariant: stratum bracket shape matches exponent field"
     );
 
-    let m_count = exponents.len();
+    let m_count = (exponents.shape()[0] * exponents.shape()[1] * exponents.shape()[2]);
     let assign = |y: f64| -> (u32, f64) {
         // Largest m with exponents[m] <= y, clamped so m+1 is in range.
         let m = match exponents.binary_search_by(|e| e.partial_cmp(&y).expect("finite exponent")) {
@@ -91,11 +88,11 @@ fn assign_stratum_brackets(
     };
 
     if let (Some(lo_values), Some(weight_values), Some(y_values)) = (
-        bracket_lo.as_slice_memory_order_mut(),
-        weight_hi.as_slice_memory_order_mut(),
-        y_field.as_slice_memory_order(),
+        bracket_lo.as_slice_mut(),
+        weight_hi.as_slice_mut(),
+        y_field.as_slice(),
     ) {
-        let assignments = map_collect_index_with::<Adaptive, _, _>(y_values.len(), |index| {
+        let assignments = map_collect_index_with::<Adaptive, _, _>((y_values.shape()[0] * y_values.shape()[1] * y_values.shape()[2]), |index| {
             assign(y_values[index])
         });
         for (index, (lo, weight)) in assignments.into_iter().enumerate() {
@@ -105,7 +102,7 @@ fn assign_stratum_brackets(
         return;
     }
 
-    let (nx, ny, nz) = bracket_lo.dim();
+    let [nx, ny, nz] = bracket_lo.shape();
     for index in 0..(nx * ny * nz) {
         let (i, j, k) = dense_indices(index, ny, nz);
         let (lo, weight) = assign(y_field[[i, j, k]]);
@@ -158,7 +155,7 @@ pub(crate) fn build_exponent_strata(
     }
 
     // Few distinct exponents → represent them exactly; many → MAX_STRATA linspace.
-    let exponents: Vec<f64> = if distinct.len() <= MAX_STRATA {
+    let exponents: Vec<f64> = if (distinct.shape()[0] * distinct.shape()[1] * distinct.shape()[2]) <= MAX_STRATA {
         distinct
     } else {
         (0..MAX_STRATA)
@@ -166,7 +163,7 @@ pub(crate) fn build_exponent_strata(
             .collect()
     };
     // Half-spectrum symbols |k|^(y_m − 2) and |k|^(y_m − 1); DC bin → 0.
-    let nz_c = k_mag.dim().2 / 2 + 1;
+    let nz_c = k_mag.shape()[2] / 2 + 1;
     let k_half = k_mag.slice(s![.., .., ..nz_c]);
     let symbol = |power: f64| -> Array3<f64> {
         k_half.mapv(|k| {
@@ -181,8 +178,8 @@ pub(crate) fn build_exponent_strata(
     let nabla2: Vec<Array3<f64>> = exponents.iter().map(|&y| symbol(y - 1.0)).collect();
 
     // Per-voxel bracket [m, m+1] and blend weight t, reconstructing y exactly.
-    let mut bracket_lo = Array3::<u32>::zeros(y_field.dim());
-    let mut weight_hi = Array3::<f64>::zeros(y_field.dim());
+    let mut bracket_lo = Array3::<u32>::zeros(y_field.shape());
+    let mut weight_hi = Array3::<f64>::zeros(y_field.shape());
     assign_stratum_brackets(&mut bracket_lo, &mut weight_hi, y_field, &exponents);
 
     Some(ExponentStrata {
@@ -224,7 +221,7 @@ mod tests {
         let k = Array3::from_shape_fn((4, 4, 4), |(i, j, l)| (1 + i + j + l) as f64);
         let s = build_exponent_strata(&y, &k).expect("non-uniform → strata");
 
-        assert_eq!(s.exponents.len(), 2);
+        assert_eq!((s.exponents.shape()[0] * s.exponents.shape()[1] * s.exponents.shape()[2]), 2);
         assert!((s.exponents[0] - ya).abs() < 1e-12);
         assert!((s.exponents[1] - yb).abs() < 1e-12);
 
@@ -241,7 +238,7 @@ mod tests {
 
         // Symbols carry the Treeby & Cox powers |k|^(y−2), |k|^(y−1).
         let kv = k[[1, 1, 1]];
-        let nz_c = k.dim().2 / 2 + 1;
+        let nz_c = k.shape()[2] / 2 + 1;
         assert!(1 < nz_c);
         assert!((s.nabla1[0][[1, 1, 1]] - kv.powf(ya - 2.0)).abs() < 1e-12 * kv.powf(ya - 2.0));
         assert!((s.nabla2[1][[1, 1, 1]] - kv.powf(yb - 1.0)).abs() < 1e-12 * kv.powf(yb - 1.0));
@@ -257,7 +254,7 @@ mod tests {
         });
         let k = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| (i + 1) as f64);
         let s = build_exponent_strata(&y, &k).expect("non-uniform");
-        assert!(s.exponents.len() <= MAX_STRATA && s.exponents.len() >= 2);
+        assert!((s.exponents.shape()[0] * s.exponents.shape()[1] * s.exponents.shape()[2]) <= MAX_STRATA && (s.exponents.shape()[0] * s.exponents.shape()[1] * s.exponents.shape()[2]) >= 2);
         assert!((s.exponents[0] - 1.0).abs() < 1e-9);
         assert!((s.exponents.last().unwrap() - 1.1).abs() < 1e-9);
         for ((idx, &lo), &t) in s.bracket_lo.indexed_iter().zip(s.weight_hi.iter()) {

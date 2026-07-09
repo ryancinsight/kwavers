@@ -62,7 +62,7 @@ impl EdgeRuntime {
         self.allocator.allocate_block(input_size, 16)?;
         self.allocator.allocate_block(output_size, 16)?;
 
-        let mut current_input = input.to_vec();
+        let mut current_input = input.iter().cloned().collect::<Vec<_>>();
 
         for kernel in self.kernel_cache.values() {
             let quantized_input = if self.hardware_caps.has_fpu {

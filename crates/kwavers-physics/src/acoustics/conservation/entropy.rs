@@ -32,7 +32,7 @@ pub fn entropy_production_rate(
     let dv = grid.dx * grid.dy * grid.dz;
     let t0_inv = 1.0 / temperature;
     let mut total = 0.0_f64;
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
 
     for i in 0..nx {
         for j in 0..ny {

@@ -60,7 +60,7 @@ impl SkullAttenuation {
         // Compute total attenuation coefficient
         let alpha_total = self.total_coefficient(frequency);
 
-        let mut attenuation = Array3::ones(skull_mask.dim());
+        let mut attenuation = Array3::ones(skull_mask.shape());
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {

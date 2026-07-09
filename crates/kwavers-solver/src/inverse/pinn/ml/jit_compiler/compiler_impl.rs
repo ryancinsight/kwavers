@@ -127,7 +127,7 @@ impl JitCompiler {
             OptimizationLevel::Maximum => 0.5,
         };
 
-        plan.operations.len() as f64 * base_time_per_op
+        (plan.operations.shape()[0] * plan.operations.shape()[1] * plan.operations.shape()[2]) as f64 * base_time_per_op
     }
 
     fn estimate_memory_usage(&self, _plan: &ExecutionPlan) -> usize {
@@ -149,7 +149,7 @@ impl JitCompiler {
     }
 
     fn enforce_cache_limit(&mut self) {
-        while self.kernel_cache.len() > self.cache_size_limit {
+        while (self.kernel_cache.shape()[0] * self.kernel_cache.shape()[1] * self.kernel_cache.shape()[2]) > self.cache_size_limit {
             if let Some(oldest_key) = self.kernel_cache.keys().next().cloned() {
                 if let Some(removed_kernel) = self.kernel_cache.remove(&oldest_key) {
                     self.stats.memory_usage = self

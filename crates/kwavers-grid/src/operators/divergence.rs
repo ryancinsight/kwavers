@@ -22,7 +22,7 @@ pub fn divergence<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<Array3<T>>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let shape = vx.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -55,17 +55,17 @@ where
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
 
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
 
     // Compute divergence in interior points
     for i in stencil_radius..nx - stencil_radius {
         for j in stencil_radius..ny - stencil_radius {
             for k in stencil_radius..nz - stencil_radius {
-                let mut div_x = T::zero();
-                let mut div_y = T::zero();
-                let mut div_z = T::zero();
+                let mut div_x = T::from_f64(0.0);
+                let mut div_y = T::from_f64(0.0);
+                let mut div_z = T::from_f64(0.0);
 
                 // ∂vx/∂x
                 for (n, &coeff) in coeffs.iter().enumerate() {
@@ -108,7 +108,7 @@ pub fn divergence_leto<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<LetoArray3<T>>
 where
-    T: Float + Clone + Send + Sync + Default,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let vx_view = vx.view();
     let vy_view = vy.view();

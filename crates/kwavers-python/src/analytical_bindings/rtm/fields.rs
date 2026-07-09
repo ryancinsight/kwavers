@@ -2,7 +2,7 @@
 
 use super::arrays::complex_field_arrays;
 use kwavers_physics::analytical::rtm as rtm_mod;
-use num_complex::Complex64;
+use eunomia::Complex64;
 use numpy::{PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
@@ -103,3 +103,4 @@ pub fn backprop_green_function_2d(
         rtm_mod::backprop_green_function_2d(x_s, z_s, x_f, z_f, freq_hz, c);
     complex_field_arrays(py, x_s.len(), z_s.len(), real_flat, imag_flat)
 }
+

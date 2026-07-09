@@ -38,10 +38,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-};
+use leto::Array3;
 
 use super::super::super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
 use super::super::types::ReverseTimeMigration;
@@ -62,7 +59,7 @@ impl ReverseTimeMigration {
         grid: &Grid,
     ) -> KwaversResult<()> {
         let dt = self.config.dt;
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
         let dx2 = grid.dx * grid.dx;
         let dy2 = grid.dy * grid.dy;
         let dz2 = grid.dz * grid.dz;

@@ -1,7 +1,7 @@
 //! Acoustic specific trait extensions
 
 use super::core::WaveEquation;
-use ArrayD;
+use leto::Array3;
 
 /// Acoustic wave equation trait (scalar pressure field)
 ///
@@ -17,16 +17,16 @@ use ArrayD;
 /// - f(x,t) is acoustic source [Pa/s²]
 pub trait AcousticWaveEquation: WaveEquation {
     /// Get sound speed field c(x) (m/s)
-    fn sound_speed(&self) -> ArrayD<f64>;
+    fn sound_speed(&self) -> Array3<f64>;
 
     /// Get density field ρ(x) [kg/m³]
-    fn density(&self) -> ArrayD<f64>;
+    fn density(&self) -> Array3<f64>;
 
     /// Get absorption coefficient α(x) [Np/m]
-    fn absorption(&self) -> ArrayD<f64>;
+    fn absorption(&self) -> Array3<f64>;
 
     /// Compute acoustic energy
     ///
     /// E = ∫ (½ρ|∂p/∂t|² + ½|∇p|²/(ρc²)) dV
-    fn acoustic_energy(&self, pressure: &ArrayD<f64>, velocity: &ArrayD<f64>) -> f64;
+    fn acoustic_energy(&self, pressure: &Array3<f64>, velocity: &Array3<f64>) -> f64;
 }

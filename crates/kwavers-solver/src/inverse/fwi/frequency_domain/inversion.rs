@@ -81,7 +81,7 @@ pub fn invert(
     Ok(InversionResult {
         sound_speed_m_s: slowness_to_sound_speed(&slowness)?,
         objective_history: history,
-        frequencies_used: observations.len(),
+        frequencies_used: (observations.shape()[0] * observations.shape()[1] * observations.shape()[2]),
         transmissions_used: observations
             .first()
             .map(|obs| obs.observed_pressure.shape()[0])

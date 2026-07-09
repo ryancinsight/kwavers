@@ -3,11 +3,7 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-    ArrayViewMut3,
-};
+use leto::{Array3, ArrayViewMut3};
 
 impl PSTDSolver {
     pub(crate) fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ArrayViewMut3<'_, f64> {
@@ -29,11 +25,11 @@ impl PSTDSolver {
     /// components when components are processed sequentially.
     pub(crate) fn resize_pml_bypass_scratch(&mut self) {
         let shape = (
-            self.dirichlet_pml_bypass_x.len(),
+            (self.dirichlet_pml_bypass_x.shape()[0] * self.dirichlet_pml_bypass_x.shape()[1] * self.dirichlet_pml_bypass_x.shape()[2]),
             self.grid.ny,
             self.grid.nz,
         );
-        if self.pml_bypass_plane_scratch.dim() != shape {
+        if self.pml_bypass_plane_scratch.shape() != shape {
             self.pml_bypass_plane_scratch = Array3::zeros(shape);
         }
     }
@@ -97,13 +93,13 @@ impl PSTDSolver {
         rows: &[usize],
         scratch: &Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
-        let expected = (rows.len(), ny, nz);
-        if scratch.dim() != expected {
+        let [nx, ny, nz] = field.shape();
+        let expected = ((rows.shape()[0] * rows.shape()[1] * rows.shape()[2]), ny, nz);
+        if scratch.shape() != expected {
             return Err(KwaversError::InvalidInput(format!(
                 "PML bypass scratch shape mismatch: expected {:?}, got {:?}",
                 expected,
-                scratch.dim()
+                scratch.shape()
             )));
         }
 
@@ -128,8 +124,7 @@ impl PSTDSolver {
     ) {
         for (idx, &row) in rows.iter().enumerate() {
             scratch
-                .slice_mut(s![idx, .., ..])
-                .assign(&field.slice(s![row, .., ..]));
+                .slice_mut(s![idx, .., ..]).unwrap().unwrap().assign(&field.slice(s![row, .., ..]));
         }
     }
 
@@ -146,8 +141,7 @@ impl PSTDSolver {
     ) {
         for (idx, &row) in rows.iter().enumerate() {
             field
-                .slice_mut(s![row, .., ..])
-                .assign(&scratch.slice(s![idx, .., ..]));
+                .slice_mut(s![row, .., ..]).unwrap().unwrap().assign(&scratch.slice(s![idx, .., ..]));
         }
     }
 }
@@ -161,7 +155,7 @@ mod tests {
         let mut field = Array3::from_shape_fn((4, 2, 3), |(i, j, k)| (100 * i + 10 * j + k) as f64);
         let original = field.clone();
         let rows = [0, 3];
-        let mut scratch = Array3::zeros((rows.len(), 2, 3));
+        let mut scratch = Array3::zeros(((rows.shape()[0] * rows.shape()[1] * rows.shape()[2]), 2, 3));
 
         PSTDSolver::apply_x_plane_pml_bypass(&mut field, &rows, &mut scratch, |mut view| {
             view.fill(-1.0);
@@ -184,7 +178,7 @@ mod tests {
         let mut field = Array3::from_shape_fn((3, 2, 2), |(i, j, k)| (100 * i + 10 * j + k) as f64);
         let original = field.clone();
         let rows = [1];
-        let mut scratch = Array3::zeros((rows.len(), 2, 2));
+        let mut scratch = Array3::zeros(((rows.shape()[0] * rows.shape()[1] * rows.shape()[2]), 2, 2));
 
         let result =
             PSTDSolver::apply_x_plane_pml_bypass(&mut field, &rows, &mut scratch, |mut view| {

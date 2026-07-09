@@ -14,8 +14,8 @@ impl ReactionKinetics {
     pub fn new(grid: &Grid) -> Self {
         debug!("Initializing ReactionKinetics");
         Self {
-            hydroxyl_concentration: Array3::zeros((grid.nx, grid.ny, grid.nz)),
-            hydrogen_peroxide: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+            hydroxyl_concentration: Array3::zeros([grid.nx, grid.ny, grid.nz]),
+            hydrogen_peroxide: Array3::zeros([grid.nx, grid.ny, grid.nz]),
         }
     }
 

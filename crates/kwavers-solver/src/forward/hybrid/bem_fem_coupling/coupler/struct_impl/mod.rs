@@ -45,7 +45,7 @@ impl BemFemCoupler {
         let ly = (bb.max[1] - bb.min[1]).max(1e-12);
         let lz = (bb.max[2] - bb.min[2]).max(1e-12);
         let l_max = lx.max(ly).max(lz);
-        let n_e = fem_mesh.elements.len().max(1) as f64;
+        let n_e = (fem_mesh.elements.shape()[0] * fem_mesh.elements.shape()[1] * fem_mesh.elements.shape()[2]).max(1) as f64;
         let n1d = n_e.cbrt();
         let dx = lx / (n1d * lx / l_max).max(1.0);
         let dy = ly / (n1d * ly / l_max).max(1.0);
@@ -58,7 +58,7 @@ impl BemFemCoupler {
             .boundary_faces
             .keys()
             .filter_map(|face| {
-                if face.len() == 3 {
+                if (face.shape()[0] * face.shape()[1] * face.shape()[2]) == 3 {
                     Some([face[0], face[1], face[2]])
                 } else {
                     None

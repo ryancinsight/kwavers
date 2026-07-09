@@ -30,11 +30,7 @@
 //! migration", *The Leading Edge* **28**(4), 446–452.
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 use super::super::super::config::RtmImagingCondition;
 use super::super::super::constants::RTM_AMPLITUDE_THRESHOLD;
@@ -74,8 +70,8 @@ impl ReverseTimeMigration {
 
             // ── Normalized ────────────────────────────────────────────────
             RtmImagingCondition::Normalized => {
-                let mut src_energy = Array3::<f64>::zeros(self.image.dim());
-                let mut rcv_energy = Array3::<f64>::zeros(self.image.dim());
+                let mut src_energy = Array3::<f64>::zeros(self.image.shape());
+                let mut rcv_energy = Array3::<f64>::zeros(self.image.shape());
 
                 for t in 0..n_time_steps {
                     let src = source_wavefield.slice(s![t, .., .., ..]);
@@ -109,7 +105,7 @@ impl ReverseTimeMigration {
             // ── Laplacian ─────────────────────────────────────────────────
             RtmImagingCondition::Laplacian => {
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice(s![t, .., .., ..]).to_owned();
+                    let src = source_wavefield.slice(s![t, .., .., ..]).unwrap().to_owned();
                     let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
 
                     let src_lap = self.compute_laplacian(&src)?;
@@ -123,7 +119,7 @@ impl ReverseTimeMigration {
 
             // ── EnergyNormalized ──────────────────────────────────────────
             RtmImagingCondition::EnergyNormalized => {
-                let mut src_energy = Array3::<f64>::zeros(self.image.dim());
+                let mut src_energy = Array3::<f64>::zeros(self.image.shape());
 
                 for t in 0..n_time_steps {
                     let src = source_wavefield.slice(s![t, .., .., ..]);
@@ -163,7 +159,7 @@ impl ReverseTimeMigration {
                         0.5 * (&source_wavefield.slice(s![t + 1, .., .., ..])
                             - &source_wavefield.slice(s![t - 1, .., .., ..]))
                     } else {
-                        Array3::<f64>::zeros(self.image.dim())
+                        Array3::<f64>::zeros(self.image.shape())
                     };
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
@@ -178,7 +174,7 @@ impl ReverseTimeMigration {
             // Each directional term: 0.25·(S[+1]−S[-1])·(R[+1]−R[-1])
             // Three sequential Moirai passes over same-shape strided views.
             RtmImagingCondition::Poynting => {
-                let (_, nx, ny, nz) = source_wavefield.dim();
+                let (_, nx, ny, nz) = source_wavefield.shape();
                 Self::ensure_3d_interior((nx, ny, nz))?;
                 let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];
 

@@ -112,7 +112,7 @@ pub(super) fn absorbing_weights(
 ) -> KwaversResult<Vec<f64>> {
     boundary.validate_for_grid(grid)?;
     match boundary {
-        AbsorbingBoundary::Disabled => Ok(vec![1.0; grid.len()]),
+        AbsorbingBoundary::Disabled => Ok(vec![1.0; (grid.shape()[0] * grid.shape()[1] * grid.shape()[2])]),
         AbsorbingBoundary::Polynomial {
             thickness_cells,
             strength_nepers,
@@ -129,7 +129,7 @@ fn polynomial_weights(
 ) -> KwaversResult<Vec<f64>> {
     let (nx, ny, nz) = grid.dimensions;
     validate_grid_support(grid, thickness_cells)?;
-    let mut weights = Vec::with_capacity(grid.len());
+    let mut weights = Vec::with_capacity((grid.shape()[0] * grid.shape()[1] * grid.shape()[2]));
     for ix in 0..nx {
         let ax = axis_depth(ix, nx, thickness_cells, order);
         for iy in 0..ny {

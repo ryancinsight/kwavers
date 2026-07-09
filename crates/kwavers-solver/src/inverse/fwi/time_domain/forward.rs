@@ -23,12 +23,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array2,
-    Array3,
-    Array4,
-};
+use leto::{Array2, Array3, Array4};
 
 fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
     let shape = field.shape();
@@ -279,8 +274,7 @@ impl FwiProcessor {
             // unified Solver trait (T19a/T19b). No concrete-type path remains.
             solver.step_forward()?;
             history
-                .slice_mut(s![t, .., .., ..])
-                .assign(&leto_view3(solver.pressure_field()));
+                .slice_mut(s![t, .., .., ..]).unwrap().unwrap().assign(&leto_view3(solver.pressure_field()));
         }
 
         let recorded = solver.recorded_sensor_pressure().ok_or_else(|| {
@@ -288,7 +282,7 @@ impl FwiProcessor {
                 message: "FWI forward model requires at least one receiver".to_owned(),
             })
         })?;
-        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).to_owned();
+        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).unwrap().to_owned();
 
         Ok((synthetic, history))
     }
@@ -329,7 +323,7 @@ impl FwiProcessor {
                 message: "FWI forward model requires at least one receiver".to_owned(),
             })
         })?;
-        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).to_owned();
+        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).unwrap().to_owned();
 
         Ok(synthetic)
     }
@@ -399,7 +393,7 @@ impl FwiProcessor {
             grid,
             &self.sa_config(),
             &acq,
-            self.sa_damping.as_ref().map(/* ArrayBase */ .view),
+            self.sa_damping.as_ref().map(|arr| arr.view()),
         )
     }
 
@@ -426,7 +420,7 @@ impl FwiProcessor {
             grid,
             &self.sa_config(),
             &acq,
-            self.sa_damping.as_ref().map(/* ArrayBase */ .view),
+            self.sa_damping.as_ref().map(|arr| arr.view()),
         )
     }
 
@@ -462,8 +456,8 @@ impl FwiProcessor {
             &self.sa_config(),
             &acq,
             forward_history.view(),
-            source_mask.map(/* ArrayBase */ .view),
-            self.sa_damping.as_ref().map(/* ArrayBase */ .view),
+            source_mask.map(|arr| arr.view()),
+            self.sa_damping.as_ref().map(|arr| arr.view()),
         )
     }
 
@@ -521,7 +515,7 @@ impl FwiProcessor {
             &acq,
             seed.p_last.view(),
             seed.p_second_last.view(),
-            source_mask.map(/* ArrayBase */ .view),
+            source_mask.map(|arr| arr.view()),
         )
     }
 }

@@ -37,7 +37,7 @@ impl PhysicsTestUtils {
         sound_speed: f64,
         time: f64,
     ) -> Array3<f64> {
-        let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         let wavelength = sound_speed / frequency;
         let k = TWO_PI / wavelength;
         let omega = TWO_PI * frequency;
@@ -236,7 +236,7 @@ mod tests {
     #[test]
     fn energy_conservation_unity_for_equal_fields() {
         let grid = small_grid();
-        let field = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 3.0);
+        let field = Array3::<f64>::from_elem([grid.nx, grid.ny, grid.nz], 3.0);
         let ratio = PhysicsTestUtils::measure_energy_conservation(&field, &field, &grid);
         assert!(
             (ratio - 1.0).abs() < 1e-14,
@@ -248,8 +248,8 @@ mod tests {
     #[test]
     fn energy_conservation_zero_for_zero_initial_field() {
         let grid = small_grid();
-        let zero = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
-        let nonzero = Array3::<f64>::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+        let zero = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz]);
+        let nonzero = Array3::<f64>::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
         let ratio = PhysicsTestUtils::measure_energy_conservation(&zero, &nonzero, &grid);
         assert_eq!(
             ratio, 0.0,

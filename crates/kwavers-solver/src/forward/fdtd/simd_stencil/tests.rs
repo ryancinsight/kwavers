@@ -51,14 +51,14 @@ fn test_fused_update() {
     let pressure = Array3::ones((16, 16, 16));
     let pressure_prev = Array3::ones((16, 16, 16));
     let mut velocity = Array3::zeros((16, 16, 16));
-    let velocity_dim = velocity.dim();
+    let velocity_dim = velocity.shape();
     let velocity_div = Array3::zeros((16, 16, 16));
 
     let result = processor.fused_update(&pressure, &pressure_prev, &mut velocity, &velocity_div);
 
     let p_new = result.unwrap();
     assert_eq!(p_new.shape(), pressure.shape());
-    assert_eq!(velocity.dim(), velocity_dim);
+    assert_eq!(velocity.shape(), velocity_dim);
 }
 
 /// Tiled and non-tiled (tile=256) results must be bitwise identical on a 17³ grid.
