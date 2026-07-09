@@ -41,7 +41,8 @@
 
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use kwavers_core::constants::numerical::THIRD_ORDER_DIFF_COEFF;
-use ndarray::{Array3, Zip};
+use moirai_parallel::ParallelSliceMut;
+use ndarray::Array3;
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace.
 ///
@@ -85,21 +86,61 @@ pub fn compute_diffusive_term_workspace(
     // ∂³p/∂t³ ≈ (p[n] - 3*p[n-1] + 3*p[n-2] - p[n-3]) / dt³
     let dt_cubed = dt.powi(3);
 
-    Zip::from(diffusive_term_out)
-        .and(pressure)
-        .and(pressure_prev)
-        .and(pressure_prev2)
-        .and(pressure_prev3)
-        .par_for_each(|diff, &p, &p_prev, &p_prev2, &p_prev3| {
+    // Standard-layout asserts: original Zip iteration is layout-agnostic; the
+    // migrated par_mut().enumerate() requires C-contiguous storage so the
+    // flat-slice index space matches Zip's C-order iteration. Failing here
+    // produces a discoverable error before any silent OOB reads.
+    assert!(
+        diffusive_term_out.is_standard_layout(),
+        "diffusive_term_out must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure.is_standard_layout(),
+        "pressure must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure_prev.is_standard_layout(),
+        "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure_prev2.is_standard_layout(),
+        "pressure_prev2 must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure_prev3.is_standard_layout(),
+        "pressure_prev3 must be C-contiguous (default Array3 layout) for the migration"
+    );
+    {
+        let diff_slice = diffusive_term_out
+            .as_slice_mut()
+            .expect("diffusive_term_out: standard-layout asserted just above; layout matched");
+        let p_slice = pressure
+            .as_slice()
+            .expect("pressure: standard-layout asserted just above; layout matched");
+        let prev_slice = pressure_prev
+            .as_slice()
+            .expect("pressure_prev: standard-layout asserted just above; layout matched");
+        let prev2_slice = pressure_prev2
+            .as_slice()
+            .expect("pressure_prev2: standard-layout asserted just above; layout matched");
+        let prev3_slice = pressure_prev3
+            .as_slice()
+            .expect("pressure_prev3: standard-layout asserted just above; layout matched");
+        diff_slice.par_mut().enumerate(|idx, diff: &mut f64| {
+            let p_val = p_slice[idx];
+            let prev_val = prev_slice[idx];
+            let prev2_val = prev2_slice[idx];
+            let prev3_val = prev3_slice[idx];
             // ∂³p/∂t³ ≈ (p[n] − 3p[n−1] + 3p[n−2] − p[n−3]) / Δt³  + O(Δt)
             // (four-point backward, exact for cubic polynomials)
             let d3p_dt3 = (THIRD_ORDER_DIFF_COEFF
-                .mul_add(p_prev2, THIRD_ORDER_DIFF_COEFF.mul_add(-p_prev, p))
-                - p_prev3)
+                .mul_add(prev2_val, THIRD_ORDER_DIFF_COEFF.mul_add(-prev_val, p_val))
+                - prev3_val)
                 / dt_cubed;
             // coeff = +(δ/c₀²); positive contribution to explicit ∂²p/∂t²
             *diff = coeff * d3p_dt3;
         });
+    }
 }
 
 /// Compute frequency-dependent absorption coefficient
