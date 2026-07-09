@@ -1,4 +1,4 @@
-use ndarray::Array4;
+use leto::Array4;
 
 use super::super::{Beamforming3dApodizationWindow, BeamformingAlgorithm3D};
 use super::config::SaftConfig;

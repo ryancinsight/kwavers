@@ -1,7 +1,7 @@
 //! Acoustic intensity and power flux.
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::zip_mut_two_refs;
 
@@ -68,7 +68,7 @@ pub fn acoustic_power_through_z_plane(
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn uniform(val: f64) -> Array3<f64> {
         Array3::from_elem((4, 4, 4), val)

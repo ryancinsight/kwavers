@@ -45,7 +45,10 @@
 use std::collections::HashMap;
 
 use moirai_parallel::{map_collect_with, Adaptive};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::geometry::{DeviceLayout, Point2};

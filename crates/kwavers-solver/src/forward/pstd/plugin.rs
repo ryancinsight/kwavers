@@ -1,6 +1,6 @@
 //! Spectral solver plugin implementation
 
-use ndarray::Array4;
+use leto::Array4;
 use std::fmt::Debug;
 
 use super::{PSTDConfig, PSTDSolver};
@@ -11,7 +11,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::GridSource;
 
-fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: ndarray::ArrayView3<'_, f64>) {
+fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
     for (dst_value, src_value) in dst
         .as_slice_mut()
         .expect("leto PSTD field must be contiguous")
@@ -22,7 +22,7 @@ fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: ndarray::ArrayV
     }
 }
 
-fn copy_leto_into_ndarray(dst: &mut ndarray::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
+fn copy_leto_into_ndarray(dst: &mut leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
     for (dst_value, src_value) in dst.iter_mut().zip(src.iter()) {
         *dst_value = *src_value;
     }
@@ -128,7 +128,7 @@ impl crate::plugin::Plugin for PSTDPlugin {
 
         copy_ndarray_view_into_leto(
             &mut solver.fields.p,
-            fields.index_axis(ndarray::Axis(0), pressure_idx),
+            fields.index_axis(0, pressure_idx),
         );
 
         if self.ivp_seeded {
@@ -140,15 +140,15 @@ impl crate::plugin::Plugin for PSTDPlugin {
             // (the historical bug this replaces).
             copy_ndarray_view_into_leto(
                 &mut solver.fields.ux,
-                fields.index_axis(ndarray::Axis(0), vx_idx),
+                fields.index_axis(0, vx_idx),
             );
             copy_ndarray_view_into_leto(
                 &mut solver.fields.uy,
-                fields.index_axis(ndarray::Axis(0), vy_idx),
+                fields.index_axis(0, vy_idx),
             );
             copy_ndarray_view_into_leto(
                 &mut solver.fields.uz,
-                fields.index_axis(ndarray::Axis(0), vz_idx),
+                fields.index_axis(0, vz_idx),
             );
         } else {
             // First step: the field array carries the zero-velocity IVP initial
@@ -166,19 +166,19 @@ impl crate::plugin::Plugin for PSTDPlugin {
 
         // Sync back to global fields
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(ndarray::Axis(0), pressure_idx),
+            &mut fields.index_axis_mut(0, pressure_idx),
             &solver.fields.p,
         );
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(ndarray::Axis(0), vx_idx),
+            &mut fields.index_axis_mut(0, vx_idx),
             &solver.fields.ux,
         );
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(ndarray::Axis(0), vy_idx),
+            &mut fields.index_axis_mut(0, vy_idx),
             &solver.fields.uy,
         );
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(ndarray::Axis(0), vz_idx),
+            &mut fields.index_axis_mut(0, vz_idx),
             &solver.fields.uz,
         );
 

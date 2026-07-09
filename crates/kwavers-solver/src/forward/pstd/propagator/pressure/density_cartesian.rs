@@ -3,7 +3,10 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array1, Array3 as NdArray3};
+use leto::{
+    Array1,
+    Array3 as NdArray3,
+};
 
 // Implementation note on divergence caching:
 // `update_density_cartesian` writes ∂u_α/∂α directly into `div_ux`/`div_uy`/`div_uz`

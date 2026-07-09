@@ -37,7 +37,7 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::radiation_for
 use kwavers_physics::acoustics::imaging::modalities::elastography::AcousticRadiationForce;
 use kwavers_solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers_solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 /// Clinical liver fibrosis assessment using SWE

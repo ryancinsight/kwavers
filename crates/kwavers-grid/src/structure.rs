@@ -4,7 +4,7 @@
 
 use super::error::GridError;
 use log::debug;
-use crate::compat::ndarray::Array3;
+use crate::compat::leto::Array3;
 
 /// Epsilon for floating point comparisons of grid spacing (crate SSOT).
 pub(crate) const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;

@@ -2,7 +2,7 @@
 
 use super::super::*;
 use approx::assert_abs_diff_eq;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_boundary_accuracy_degradation() {

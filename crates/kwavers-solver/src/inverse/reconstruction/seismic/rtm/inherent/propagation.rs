@@ -17,7 +17,11 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{s, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    Array4,
+};
 
 use super::super::super::constants::RTM_STORAGE_DECIMATION;
 use super::super::super::wavelet::SeismicRickerWavelet;
@@ -74,7 +78,7 @@ impl ReverseTimeMigration {
     ///
     pub(super) fn backward_propagation(
         &self,
-        shot_data: &ndarray::Array2<f64>,
+        shot_data: &leto::Array2<f64>,
         receiver_positions: &[(usize, usize, usize)],
         grid: &Grid,
         n_time_steps: usize,

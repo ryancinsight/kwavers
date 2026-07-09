@@ -11,10 +11,10 @@ struct LinearPinnPredictor;
 impl super::PinnUncertaintyPredictor for LinearPinnPredictor {
     fn predict_coordinates(
         &self,
-        x: &ndarray::Array1<f64>,
-        t: &ndarray::Array1<f64>,
-    ) -> kwavers_core::error::KwaversResult<ndarray::Array2<f32>> {
-        let mut prediction = ndarray::Array2::zeros((x.len(), 1));
+        x: &leto::Array1<f64>,
+        t: &leto::Array1<f64>,
+    ) -> kwavers_core::error::KwaversResult<leto::Array2<f32>> {
+        let mut prediction = leto::Array2::zeros((x.len(), 1));
         for idx in 0..x.len() {
             prediction[[idx, 0]] = (x[idx] + 2.0 * t[idx]) as f32;
         }
@@ -58,7 +58,7 @@ fn test_pinn_uncertainty_uses_solver_agnostic_predictor() {
         calibration_size: 4,
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
-    let inputs = ndarray::array![[1.0_f32, 2.0_f32], [3.0_f32, 4.0_f32]];
+    let inputs = leto::array![[1.0_f32, 2.0_f32], [3.0_f32, 4.0_f32]];
 
     let result = quantifier
         .quantify_pinn_uncertainty(&LinearPinnPredictor, &inputs, None)
@@ -84,7 +84,7 @@ fn test_pinn_uncertainty_rejects_missing_time_column() {
         calibration_size: 4,
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
-    let inputs = ndarray::Array2::from_elem((2, 1), 1.0_f32);
+    let inputs = leto::Array2::from_elem((2, 1), 1.0_f32);
 
     let err = quantifier
         .quantify_pinn_uncertainty(&LinearPinnPredictor, &inputs, None)

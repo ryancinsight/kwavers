@@ -1,6 +1,6 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 use kwavers_core::error::KwaversResult;

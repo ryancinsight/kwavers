@@ -5,7 +5,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
 use leto::{Array1, Array3 as LetoArray3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Clone, Copy)]
 enum SpectralAxis {

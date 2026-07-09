@@ -12,9 +12,9 @@ use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
 use model::EnsembleModel;
 #[cfg(not(feature = "pinn"))]
-use ndarray::Array2;
+use leto::Array2;
 #[cfg(feature = "pinn")]
-use ndarray::Array2;
+use leto::Array2;
 use std::collections::HashMap;
 
 /// Configuration for ensemble methods

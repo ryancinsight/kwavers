@@ -2,7 +2,7 @@
 //! synthetic kernels (no real PSTD runs needed) to exercise resampling,
 //! placement, and `(f0, pnp)` blending invariants.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     helmholtz_residual_field, helmholtz_residual_kernel, helmholtz_residual_stats,

@@ -22,7 +22,7 @@
 
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_1d_array, ifft_1d_array};
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
 
 /// Evaluate the exact manufactured solution p(x, t) = sin(2π x / L) cos(2π c t / L).

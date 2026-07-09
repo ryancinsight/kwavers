@@ -16,7 +16,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Scattered acoustic field from bubble cloud

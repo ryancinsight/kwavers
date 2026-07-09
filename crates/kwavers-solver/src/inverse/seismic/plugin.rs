@@ -13,7 +13,10 @@ use kwavers_core::error::KwaversResult;
 // Yes, Plugin implementation in Solver is fine.
 
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use super::parameters::{FwiParameters, MigrationAperture, RtmSettings};
 use super::rtm::RtmProcessor;

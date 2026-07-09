@@ -38,7 +38,7 @@ use kwavers_solver::inverse::same_aperture::{
     solve_tikhonov_h1, ultraharmonic_operator, vector_from_image, EncodedOperator, LinearOperator,
     PcgSettings, SameApertureMedium, SameApertureSettings, C_REF_M_S, SAME_APERTURE_OPERATOR_MODEL,
 };
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::{PassiveReconstructionMode, TheranosticInverseConfig};
 use super::elastic_shear::{

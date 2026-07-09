@@ -38,7 +38,7 @@ impl Simulation {
         pml_alpha_xyz: Option<(f64, f64, f64)>,
         axisymmetric: bool,
         record_modes: &[String],
-    ) -> KwaversResult<(PSTDSolver, KwaversGrid, ndarray::Array3<bool>)> {
+    ) -> KwaversResult<(PSTDSolver, KwaversGrid, leto::Array3<bool>)> {
         use kwavers_core::error::ValidationError;
 
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
@@ -94,9 +94,9 @@ impl Simulation {
                     out
                 };
 
-                let mut padded_mask = ndarray::Array3::<bool>::from_elem((pnx, pny, pnz), false);
+                let mut padded_mask = leto::Array3::<bool>::from_elem((pnx, pny, pnz), false);
                 padded_mask
-                    .slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
+                    slice_mut(&[(Some(p as isize) as usize, Some(nx + p as isize) as usize, 1), (Some(py as isize) as usize, Some(ny + py as isize) as usize, 1), (Some(pz_embed as isize) as usize, Some(nz + pz_embed as isize) as usize, 1)])
                     .assign(&sensor_mask);
 
                 let padded_source = GridSource {

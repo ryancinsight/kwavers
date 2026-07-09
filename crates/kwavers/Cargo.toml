@@ -48,7 +48,6 @@ nifti = { workspace = true, optional = true }
 
 # Essential numerical computing
 moirai-parallel = { workspace = true }
-ndarray = { version = "0.16", features = ["serde"] }
 leto = { workspace = true }
 eunomia = { workspace = true }
 apollo = { workspace = true }

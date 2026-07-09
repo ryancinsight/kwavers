@@ -1,4 +1,4 @@
-use ndarray::Array4;
+use leto::Array4;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

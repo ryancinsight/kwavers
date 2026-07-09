@@ -7,7 +7,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_skull_adaptive_transcranial_benchmark, target_index_from_mask_fraction_3d,
     SkullAdaptiveBenchmarkConfig, TranscranialFusPlanConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

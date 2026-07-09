@@ -1,6 +1,6 @@
 //! NEON SIMD implementations for aarch64
 
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(target_arch = "aarch64")]
 pub fn add_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {

@@ -17,7 +17,10 @@ use kwavers_solver::inverse::fwi::time_domain::{
 };
 use kwavers_solver::inverse::seismic::parameters::FwiParameters;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::io::Write;
 
 const NX: usize = 64;

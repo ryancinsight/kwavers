@@ -1,7 +1,7 @@
 //! Configuration types for SIRT/ART/OSEM reconstruction.
 
 use kwavers_math::inverse_problems::RegularizationConfig;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt;
 
 /// Algorithm selection for iterative reconstruction.

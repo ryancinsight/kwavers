@@ -71,7 +71,7 @@ pub fn stress_divergence_into(
     //
     // Migration (Batch #1 slice 7): the original used `Zip::indexed.on 3 view_muts`
     // for joint `(i,j,k)`-parallel iteration.  After the assert-message
-    // harmonization chore, the verbose `is_standard_layout()` precondition is
+    // harmonization chore, the verbose `is_c_contiguous()` precondition is
     // required on EVERY operand (8 here: scratch.{sxx,syy,szz} + ux/uy/uz + λ/μ).
     //
     // Note: the phase-1 helper `kwavers_safety::with_zip_standard_layout` does
@@ -89,35 +89,35 @@ pub fn stress_divergence_into(
     // the joint per-iteration writes (all three outputs updated atomically
     // per `(i,j,k)`) without requiring Zip::indexed's three-way .and() chain.
     assert!(
-        scratch.sxx.is_standard_layout(),
+        scratch.sxx.is_c_contiguous(),
         "scratch.sxx must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.syy.is_standard_layout(),
+        scratch.syy.is_c_contiguous(),
         "scratch.syy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.szz.is_standard_layout(),
+        scratch.szz.is_c_contiguous(),
         "scratch.szz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        ux.is_standard_layout(),
+        ux.is_c_contiguous(),
         "ux must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uy.is_standard_layout(),
+        uy.is_c_contiguous(),
         "uy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uz.is_standard_layout(),
+        uz.is_c_contiguous(),
         "uz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        lambda.is_standard_layout(),
+        lambda.is_c_contiguous(),
         "lambda must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        mu.is_standard_layout(),
+        mu.is_c_contiguous(),
         "mu must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -150,31 +150,31 @@ pub fn stress_divergence_into(
     // scratch.{sxy,sxz,syz} + 4 captured immuts ux/uy/uz/mu; note `lambda`
     // is unused in this pass).
     assert!(
-        scratch.sxy.is_standard_layout(),
+        scratch.sxy.is_c_contiguous(),
         "scratch.sxy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.sxz.is_standard_layout(),
+        scratch.sxz.is_c_contiguous(),
         "scratch.sxz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.syz.is_standard_layout(),
+        scratch.syz.is_c_contiguous(),
         "scratch.syz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        ux.is_standard_layout(),
+        ux.is_c_contiguous(),
         "ux must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uy.is_standard_layout(),
+        uy.is_c_contiguous(),
         "uy must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        uz.is_standard_layout(),
+        uz.is_c_contiguous(),
         "uz must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        mu.is_standard_layout(),
+        mu.is_c_contiguous(),
         "mu must be C-contiguous (default Array3 layout) for the migration"
     );
     {
@@ -218,39 +218,39 @@ pub fn stress_divergence_into(
     // verbose asserts (3 mut on scratch.{div_x,div_y,div_z} + 6 captured immut
     // views sxx_v..syz_v).
     assert!(
-        scratch.div_x.is_standard_layout(),
+        scratch.div_x.is_c_contiguous(),
         "scratch.div_x must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.div_y.is_standard_layout(),
+        scratch.div_y.is_c_contiguous(),
         "scratch.div_y must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        scratch.div_z.is_standard_layout(),
+        scratch.div_z.is_c_contiguous(),
         "scratch.div_z must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        sxx_v.is_standard_layout(),
+        sxx_v.is_c_contiguous(),
         "sxx_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        syy_v.is_standard_layout(),
+        syy_v.is_c_contiguous(),
         "syy_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        szz_v.is_standard_layout(),
+        szz_v.is_c_contiguous(),
         "szz_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        sxy_v.is_standard_layout(),
+        sxy_v.is_c_contiguous(),
         "sxy_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        sxz_v.is_standard_layout(),
+        sxz_v.is_c_contiguous(),
         "sxz_v must be C-contiguous (default Array3 layout) for the migration"
     );
     assert!(
-        syz_v.is_standard_layout(),
+        syz_v.is_c_contiguous(),
         "syz_v must be C-contiguous (default Array3 layout) for the migration"
     );
     {

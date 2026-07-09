@@ -2,7 +2,7 @@
 
 use super::types::WENOLimiter;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl WENOLimiter {
     /// WENO5 limiting implementation

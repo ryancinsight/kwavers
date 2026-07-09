@@ -1,6 +1,6 @@
 //! Active-support graph construction for same-aperture inverse problems.
 
-use ndarray::Array2;
+use leto::Array2;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PlanarPoint {

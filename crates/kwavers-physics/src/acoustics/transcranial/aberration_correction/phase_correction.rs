@@ -116,7 +116,7 @@ impl TranscranialAberrationCorrection {
     ///
     pub fn calculate_correction(
         &self,
-        skull_ct_data: &ndarray::Array3<f64>,
+        skull_ct_data: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<PhaseCorrection> {
@@ -163,7 +163,7 @@ impl TranscranialAberrationCorrection {
     ///
     pub(crate) fn calculate_aberration_phases(
         &self,
-        skull_ct_data: &ndarray::Array3<f64>,
+        skull_ct_data: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<Vec<f64>> {

@@ -2,7 +2,7 @@
 
 use crate::workspace::inplace_ops::apply_inplace;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::types::WaveletBasis;
 

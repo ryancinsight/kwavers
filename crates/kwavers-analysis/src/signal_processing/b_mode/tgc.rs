@@ -23,7 +23,7 @@
 //!   §4.2 (attenuation) and §10.4 (TGC). Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Time-gain-compensation parameters.
 #[derive(Debug, Clone, Copy)]

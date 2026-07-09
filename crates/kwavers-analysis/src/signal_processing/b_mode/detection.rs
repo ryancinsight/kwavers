@@ -12,7 +12,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_signal::analytic::hilbert_transform;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Envelope of an RF line: the magnitude of its analytic (Hilbert) signal.
 ///

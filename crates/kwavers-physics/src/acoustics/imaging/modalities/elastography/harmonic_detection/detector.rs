@@ -3,7 +3,10 @@
 use super::config::HarmonicDetectionConfig;
 use super::types::HarmonicDisplacementField;
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array4,
+};
 
 /// Harmonic detection and analysis processor
 pub struct HarmonicDetector {

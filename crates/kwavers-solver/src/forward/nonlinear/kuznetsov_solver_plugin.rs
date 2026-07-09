@@ -15,7 +15,10 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::traits::AcousticWaveModel;
 use kwavers_source::NullSource;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// Catalog plugin wrapping the full Kuznetsov solver.
 #[derive(Debug)]

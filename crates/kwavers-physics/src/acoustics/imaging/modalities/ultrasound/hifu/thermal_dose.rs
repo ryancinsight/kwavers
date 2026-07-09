@@ -20,7 +20,7 @@ use kwavers_core::constants::medical::{
 };
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Thermal dose calculation in cumulative equivalent minutes at 43 deg C.
 #[derive(Debug, Clone)]

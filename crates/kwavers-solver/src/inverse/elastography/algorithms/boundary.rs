@@ -53,7 +53,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn fill_boundaries_handles_singleton_z_plane() {

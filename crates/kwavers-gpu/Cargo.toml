@@ -24,7 +24,6 @@ kwavers-solver = { path = "../kwavers-solver" }
 kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true }
 
 leto = { workspace = true }
-ndarray = { workspace = true }
 tracing = { workspace = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 log = "0.4"

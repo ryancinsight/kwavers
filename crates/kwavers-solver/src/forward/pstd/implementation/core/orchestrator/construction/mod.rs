@@ -22,14 +22,14 @@ use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
 use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use ndarray::s;
+use s;
 use std::sync::Arc;
 
 const DENSE_CONSTRUCTION_CHUNK: usize = 4096;
 
-fn leto_to_ndarray(input: &Array3<f64>) -> ndarray::Array3<f64> {
+fn leto_to_ndarray(input: &Array3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = input.shape();
-    ndarray::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
+    leto::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
         .expect("Leto PSTD field shape must match ndarray boundary shape")
 }
 
@@ -222,18 +222,18 @@ impl PSTDSolver {
         let (rho0, c0, bon) = if medium.is_homogeneous() {
             let bon = config
                 .nonlinearity
-                .then(|| ndarray::Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)));
+                .then(|| leto::Array3::from_elem(shape, medium.nonlinearity(0, 0, 0)));
             (
-                ndarray::Array3::from_elem(shape, medium.density(0, 0, 0)),
-                ndarray::Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
+                leto::Array3::from_elem(shape, medium.density(0, 0, 0)),
+                leto::Array3::from_elem(shape, medium.sound_speed(0, 0, 0)),
                 bon,
             )
         } else {
-            let mut rho0 = ndarray::Array3::zeros(shape);
-            let mut c0 = ndarray::Array3::zeros(shape);
+            let mut rho0 = leto::Array3::zeros(shape);
+            let mut c0 = leto::Array3::zeros(shape);
             let mut bon = config
                 .nonlinearity
-                .then(|| ndarray::Array3::<f64>::zeros(shape));
+                .then(|| leto::Array3::<f64>::zeros(shape));
 
             for k in 0..grid.nz {
                 for j in 0..grid.ny {
@@ -339,7 +339,7 @@ impl PSTDSolver {
             as_ctx: None,
             alpha_np_m: None, // allocated on demand by populate_alpha_np_m_at_frequency / set_alpha_np_m
             dirichlet_pml_bypass_x: Vec::new(),
-            pml_bypass_plane_scratch: ndarray::Array3::zeros((0, grid.ny, grid.nz)),
+            pml_bypass_plane_scratch: leto::Array3::zeros((0, grid.ny, grid.nz)),
         };
 
         if solver.config.kspace_method == KSpaceMethod::FullKSpace {

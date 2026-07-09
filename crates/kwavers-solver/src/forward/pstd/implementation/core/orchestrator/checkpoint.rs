@@ -1,15 +1,15 @@
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use ndarray::Array2;
+use leto::Array2;
 
-fn leto_to_ndarray(input: &LetoArray3<f64>) -> ndarray::Array3<f64> {
+fn leto_to_ndarray(input: &LetoArray3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = input.shape();
-    ndarray::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
+    leto::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
         .expect("Leto checkpoint field shape must match ndarray storage")
 }
 
-fn assign_ndarray_to_leto(dst: &mut LetoArray3<f64>, src: &ndarray::Array3<f64>) {
+fn assign_ndarray_to_leto(dst: &mut LetoArray3<f64>, src: &leto::Array3<f64>) {
     assert_eq!(
         dst.shape(),
         [src.shape()[0], src.shape()[1], src.shape()[2]],
@@ -55,7 +55,7 @@ impl PSTDSolver {
         let rhoz = leto_to_ndarray(&self.rhoz);
         let sensor_data_nd = sensor_data
             .as_ref()
-            .map(|data| ndarray::Array2::try_from(data.clone()))
+            .map(|data| leto::Array2::try_from(data.clone()))
             .transpose()
             .map_err(|e| KwaversError::InternalError(format!("checkpoint sensor conversion failed: {e}")))?;
         PSTDCheckpoint::save_borrowed(

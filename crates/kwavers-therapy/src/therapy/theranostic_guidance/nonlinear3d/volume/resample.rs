@@ -1,6 +1,6 @@
 //! Lattice resampling kernels for nonlinear 3-D CT volume preparation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
 

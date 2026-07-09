@@ -4,7 +4,7 @@ use super::memory::GPUMemoryPool;
 use super::metrics::SweGpuStepMetrics;
 use super::solver::GPUElasticWaveSolver3D;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_gpu_device_capabilities() {

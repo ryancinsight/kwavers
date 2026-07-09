@@ -1,6 +1,6 @@
 //! Common types for Doppler velocity estimation
 
-use ndarray::Array2;
+use leto::Array2;
 use serde::{Deserialize, Serialize};
 
 /// Flow direction classification

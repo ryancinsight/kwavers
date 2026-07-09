@@ -4,7 +4,10 @@ use super::config::SwePmlConfig;
 use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_pair_mut};
 use kwavers_grid::Grid;
 use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3, Zip};
+use leto::{
+    Array1,
+    Array3,
+};
 
 const PML_CHUNK: usize = 4096;
 

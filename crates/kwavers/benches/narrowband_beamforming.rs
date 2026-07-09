@@ -29,7 +29,7 @@ use kwavers_analysis::signal_processing::beamforming::narrowband::{
     NarrowbandSteering, SnapshotScenario, SnapshotSelection,
 };
 use kwavers_analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Generate synthetic RF data for benchmarking (plane wave from broadside)

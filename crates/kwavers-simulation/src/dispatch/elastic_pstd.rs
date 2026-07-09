@@ -12,17 +12,17 @@ fn to_leto3(arr: leto::ArrayView3<'_, f64>) -> leto::Array3<f64> {
 }
 
 /// Convert a leto Array3<bool> to a sensor-mask Array3<bool>.
-fn sensor_mask_to_leto(mask: &ndarray::Array3<bool>) -> leto::Array3<bool> {
+fn sensor_mask_to_leto(mask: &leto::Array3<bool>) -> leto::Array3<bool> {
     let shape = mask.dim();
     leto::Array3::from_shape_vec([shape.0, shape.1, shape.2], mask.iter().copied().collect())
         .expect("elastic_pstd: sensor mask conversion")
 }
 
-/// Convert a leto Array2<f64> to ndarray::Array2<f64>.
-fn leto_to_ndarray2(arr: leto::Array2<f64>) -> ndarray::Array2<f64> {
+/// Convert a leto Array2<f64> to leto::Array2<f64>.
+fn leto_to_ndarray2(arr: leto::Array2<f64>) -> leto::Array2<f64> {
     let [rows, cols] = arr.shape();
     let flat = arr.into_vec();
-    ndarray::Array2::from_shape_vec((rows, cols), flat)
+    leto::Array2::from_shape_vec((rows, cols), flat)
         .expect("elastic_pstd: leto→ndarray Array2 shape mismatch")
 }
 
@@ -88,7 +88,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .vz
         .clone()
         .map(leto_to_ndarray2)
-        .unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
+        .unwrap_or_else(|| leto::Array2::zeros((1, 0)));
 
     Ok(SimulationRunResult {
         sensor_data,

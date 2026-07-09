@@ -41,7 +41,13 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::utils::{fft_shift_2d, ifft_shift_2d};
 use leto::Array2 as LetoArray2;
 use moirai_parallel::{for_each_mut_with, Adaptive};
-use ndarray::{s, Array1, Array2, ArrayView1, ArrayView2, Axis};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    Array2,
+    ArrayView1,
+    ArrayView2,
+};
 use kwavers_math::fft::Complex64;
 
 /// Order of the sensor data axes.
@@ -273,7 +279,7 @@ fn interpolate_on_axis(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use ndarray::array;
+    use array;
 
     #[test]
     fn line_reconstruction_zero_input_stays_zero() {

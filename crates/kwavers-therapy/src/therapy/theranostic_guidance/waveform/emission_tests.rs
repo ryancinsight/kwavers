@@ -1,7 +1,7 @@
 use super::*;
 use crate::therapy::theranostic_guidance::config::AnatomyKind;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array2;
+use leto::Array2;
 
 /// A point cavitation source in a homogeneous water domain must localize to
 /// within one wavelength of its true position under the genuine PAM

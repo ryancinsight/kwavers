@@ -22,7 +22,10 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{Array1, Array2, Axis};
+use leto::{
+    Array1,
+    Array2,
+};
 
 #[cfg(test)]
 mod tests;

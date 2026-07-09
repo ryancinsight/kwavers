@@ -4,7 +4,7 @@ use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::wave_model::NonlinearWave;
 use super::array_boundary::{leto_real_field, ndarray_real_field};
@@ -123,7 +123,7 @@ mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// A spatially uniform (constant) pressure field has zero gradient and zero
     /// Laplacian. Both terms of the Westervelt nonlinear operator vanish, so the

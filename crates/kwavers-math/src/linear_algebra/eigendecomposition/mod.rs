@@ -38,7 +38,10 @@ mod helpers;
 #[cfg(test)]
 mod tests;
 
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use num_complex::Complex;
 
 /// Advanced eigenvalue decomposition with multiple algorithms

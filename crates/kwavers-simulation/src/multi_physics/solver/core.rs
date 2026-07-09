@@ -1,7 +1,7 @@
 //! `SimulationMultiPhysicsSolver` — multi-physics simulation orchestrator.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::super::residual::max_abs_difference;

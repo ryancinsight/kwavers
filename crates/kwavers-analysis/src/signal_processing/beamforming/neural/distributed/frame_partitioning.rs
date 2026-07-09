@@ -6,7 +6,7 @@
 use kwavers_solver::interface::pinn_beamforming::{
     DistributedConfig, LoadBalancingStrategy, PinnBeamformingDecompositionStrategy,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::ops::Range;
 
 /// Chunk result produced by a distributed worker.

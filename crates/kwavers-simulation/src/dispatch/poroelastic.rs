@@ -76,7 +76,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let stable_dt = solver.compute_stable_timestep()?;
 
     let n_sensors: usize = 1;
-    let sensor_data = ndarray::Array2::from_elem((n_sensors, 1), stable_dt);
+    let sensor_data = leto::Array2::from_elem((n_sensors, 1), stable_dt);
 
     Ok(SimulationRunResult {
         sensor_data,

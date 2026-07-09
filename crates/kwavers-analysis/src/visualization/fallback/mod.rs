@@ -6,7 +6,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use log::{info, warn};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Fallback renderer for CPU-based visualization
 #[derive(Debug)]
@@ -73,7 +73,7 @@ impl FallbackRenderer {
         }
 
         // Normalize field values to 0-9 range for ASCII display
-        let slice = field.slice(ndarray::s![.., .., z_slice]);
+        let slice = field.index_axis::<2>(2, z_slice);
         let min_val = slice.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = slice.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 

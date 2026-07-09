@@ -36,7 +36,10 @@
 //!   for 3D ultrasound." *J. Med. Ultrason.* 40, 395–408.
 
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 use crate::signal_processing::beamforming::three_dimensional::apodization::create_apodization_weights;
 use crate::signal_processing::beamforming::three_dimensional::config::{
@@ -184,7 +187,7 @@ mod tests {
     };
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array4;
+    use leto::Array4;
 
     fn make_config(
         nel: (usize, usize, usize),

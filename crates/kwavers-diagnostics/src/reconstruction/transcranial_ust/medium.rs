@@ -9,7 +9,11 @@ use kwavers_core::constants::ct_acoustics::{
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_37C};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::interpolation::bilinear_index_space;
-use ndarray::{s, Array2, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 
 use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 

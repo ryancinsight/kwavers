@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},

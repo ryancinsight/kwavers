@@ -19,7 +19,6 @@ kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
 kwavers-analysis = { path = "../kwavers-analysis" }
 kwavers-simulation = { path = "../kwavers-simulation" }
-ndarray = { version = "0.16", features = ["serde"] }
 moirai-parallel = { workspace = true }
 leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

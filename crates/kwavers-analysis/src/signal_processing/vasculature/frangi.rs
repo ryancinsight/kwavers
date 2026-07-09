@@ -44,7 +44,7 @@
 //! - Smith (1961). J. ACM 8(1), pp. 105-111.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute the Frangi vesselness response for a 3-D image.
 ///

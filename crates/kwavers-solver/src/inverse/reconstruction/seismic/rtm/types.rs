@@ -27,7 +27,7 @@
 //!
 //! Reference: Baysal et al. (1983), *Geophysics* **48**(11), 1514–1524.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::SeismicImagingConfig;
 

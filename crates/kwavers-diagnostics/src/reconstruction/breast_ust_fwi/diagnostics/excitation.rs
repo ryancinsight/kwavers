@@ -3,7 +3,10 @@ use super::residual::{
     BreastUstReceiverChannelPolicy,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 use kwavers_math::fft::Complex64;
 use std::f64::consts::{PI, TAU};
 

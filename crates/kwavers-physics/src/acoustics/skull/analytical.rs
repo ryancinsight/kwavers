@@ -1,6 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 /// Generate spherical skull.
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.

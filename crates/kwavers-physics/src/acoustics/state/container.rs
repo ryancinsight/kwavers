@@ -6,7 +6,12 @@
 
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
+use leto::{
+    Array3,
+    Array4,
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 pub use kwavers_field::indices as field_indices;
 

@@ -28,7 +28,10 @@ use super::displacement::DisplacementField;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// Extract the complex first-harmonic displacement field [m] from an MRE
 /// motion-encoded phase-offset stack.

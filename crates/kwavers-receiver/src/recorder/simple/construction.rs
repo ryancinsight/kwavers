@@ -9,7 +9,7 @@ use crate::recorder::pressure_statistics::PressureFieldStatistics;
 use crate::recorder::velocity_statistics::VelocityComponentStats;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::{Array1, Array2, Array3 as LetoArray3};
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 use super::SensorRecorder;
 

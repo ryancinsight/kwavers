@@ -5,7 +5,7 @@ use anyhow::Result;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_analytical_infinite_medium() {

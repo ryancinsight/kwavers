@@ -1,7 +1,7 @@
 mod initialization;
 mod pressure_correction;
 
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn zeros_k_mag(nx: usize, ny: usize, nz: usize) -> Array3<f64> {
     Array3::zeros((nx, ny, nz))

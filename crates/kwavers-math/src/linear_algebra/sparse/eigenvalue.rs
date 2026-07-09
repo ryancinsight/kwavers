@@ -6,7 +6,7 @@
 
 use super::csr::CompressedSparseRowMatrix;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Eigenvalue solver for sparse matrices
 #[derive(Debug)]

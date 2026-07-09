@@ -4,7 +4,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::KSpaceCalculator;
 use leto::Array1;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Wavenumber grid for PSTD simulations
 #[derive(Debug, Clone)]

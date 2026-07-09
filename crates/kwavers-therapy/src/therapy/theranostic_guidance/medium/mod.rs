@@ -17,7 +17,7 @@ pub use brain::{prepare_brain_slice, BrainTargetSelection};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::interpolation::bilinear_index_space;
 use kwavers_solver::inverse::same_aperture::C_REF_M_S;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::AnatomyKind;
 

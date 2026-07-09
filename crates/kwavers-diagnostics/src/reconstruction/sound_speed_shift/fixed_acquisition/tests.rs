@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::SoundSpeedShiftPlan;
 use crate::reconstruction::sound_speed_shift::{

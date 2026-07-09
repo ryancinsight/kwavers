@@ -2,13 +2,16 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
-fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
+fn leto_view3(field: &LetoArray3<f64>) -> leto::ArrayView3<'_, f64> {
     let shape = field.shape();
-    ndarray::ArrayView3::from_shape(
+    leto::ArrayView3::from_shape(
         (shape[0], shape[1], shape[2]),
         field
             .as_slice()

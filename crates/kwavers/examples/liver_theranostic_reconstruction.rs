@@ -84,7 +84,10 @@ use kwavers_solver::inverse::seismic::{
 };
 use kwavers_source::{GridSource, SourceMode};
 use moirai_parallel::{map_collect_index_with, map_collect_with, Adaptive};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::BufWriter;
@@ -269,9 +272,9 @@ fn load_liver_ct(ct_path: &str, seg_path: &str) -> Option<LiverPhantom> {
             ct_dims[2] as usize,
             ct_dims[3] as usize,
         );
-        let ct_vol: ndarray::ArrayD<f64> = ct_obj.into_volume().into_ndarray::<f64>().ok()?;
+        let ct_vol: ArrayD<f64> = ct_obj.into_volume().into_ndarray::<f64>().ok()?;
 
-        let seg_vol: Option<ndarray::ArrayD<f64>> =
+        let seg_vol: Option<ArrayD<f64>> =
             ReaderOptions::new().read_file(seg_path).ok().and_then(|s| {
                 let d = s.header().dim;
                 if d[1] as usize == vnx && d[2] as usize == vny && d[3] as usize == vnz {

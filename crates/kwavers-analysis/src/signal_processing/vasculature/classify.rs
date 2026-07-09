@@ -30,7 +30,7 @@
 //! linear segments and a conservative approximation for branching vessels.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{VascularVesselType, VesselClassification};
 

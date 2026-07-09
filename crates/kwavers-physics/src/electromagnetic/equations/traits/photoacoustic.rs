@@ -22,9 +22,9 @@ pub trait PhotoacousticCoupling: ElectromagneticWaveEquation {
     /// p₀ = Γ μ_a Φ
     fn initial_pressure_from_fluence(
         &self,
-        fluence: &ndarray::ArrayD<f64>,
+        fluence: &ArrayD<f64>,
         position: &[f64],
-    ) -> ndarray::ArrayD<f64> {
+    ) -> ArrayD<f64> {
         let gamma = self.gruneisen_parameter(position);
         let mu_a = self.optical_absorption(position);
         fluence.mapv(|phi| gamma * mu_a * phi)

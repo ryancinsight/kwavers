@@ -2,7 +2,7 @@
 
 use super::constants::DEFAULT_SEED;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array1;
+use leto::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 

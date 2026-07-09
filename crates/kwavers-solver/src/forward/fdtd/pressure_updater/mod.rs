@@ -7,7 +7,10 @@
 
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, ArrayView3, Zip};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 pub mod divergence;
 pub mod nonlinear;

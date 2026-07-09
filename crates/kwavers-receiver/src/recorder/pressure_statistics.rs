@@ -10,7 +10,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
 use leto::Array1;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 #[doc(hidden)]
 pub trait PressureArray3Access {

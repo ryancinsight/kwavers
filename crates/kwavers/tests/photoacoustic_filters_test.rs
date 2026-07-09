@@ -6,7 +6,7 @@ use kwavers_solver::reconstruction::photoacoustic::{
     Filters, PhotoacousticAlgorithm, ReconstructionPhotoacousticConfig,
 };
 use kwavers_solver::reconstruction::ReconstructionFilterType;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 /// Helper to create test configuration

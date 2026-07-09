@@ -1,7 +1,7 @@
 //! Acoustic pressure, intensity, and heat-source thermal bindings.
 
 use kwavers_physics::analytical::thermal;
-use ndarray::Array2;
+use leto::Array2;
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

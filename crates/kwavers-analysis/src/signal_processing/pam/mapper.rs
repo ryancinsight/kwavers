@@ -8,7 +8,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_transducer::passive_acoustic_mapping::geometry::PamArrayGeometry;
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug)]
 pub struct PassiveAcousticMapper {

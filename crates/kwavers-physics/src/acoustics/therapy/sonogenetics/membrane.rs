@@ -40,7 +40,7 @@
 //! - Duque, M. et al. (2023). Sonogenetic control via MscL-G22S. *Science*, 380, 1084-1090.
 
 use crate::parallel::zip_mut_two_refs;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Cell geometry and membrane parameters for the Laplace tension model.
 ///
@@ -149,7 +149,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Analytical reference:
     ///   I = 1e5 W/m², c = 1500 m/s, R = 10 μm

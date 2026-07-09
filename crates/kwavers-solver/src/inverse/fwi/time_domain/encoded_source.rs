@@ -52,7 +52,10 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
-use ndarray::{Array2, Array3, Zip};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Generate the `n × n` Sylvester–Hadamard code matrix (`n` a power of two).
 ///
@@ -277,7 +280,7 @@ mod tests {
     use crate::inverse::seismic::parameters::FwiParameters;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_source::SourceMode;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn hadamard_codes_are_orthogonal() {

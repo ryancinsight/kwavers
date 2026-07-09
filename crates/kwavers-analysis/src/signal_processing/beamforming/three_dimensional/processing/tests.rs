@@ -14,12 +14,12 @@ impl super::super::provider::BeamformingGpuProvider for TestBeamformingProvider 
     fn process_delay_and_sum(
         &self,
         config: &super::super::config::BeamformingConfig3D,
-        rf_data: &ndarray::Array4<f32>,
+        rf_data: &leto::Array4<f32>,
         _dynamic_focusing: bool,
         apodization_window: &super::super::config::Beamforming3dApodizationWindow,
-        _apodization_weights: &ndarray::Array3<f32>,
+        _apodization_weights: &leto::Array3<f32>,
         _sub_volume_size: Option<(usize, usize, usize)>,
-    ) -> kwavers_core::error::KwaversResult<ndarray::Array3<f32>> {
+    ) -> kwavers_core::error::KwaversResult<leto::Array3<f32>> {
         super::super::delay_and_sum_cpu_reference(rf_data, config, apodization_window)
     }
 }
@@ -32,7 +32,7 @@ fn test_validate_input_empty_data() {
         use super::super::processor::BeamformingProcessor3D;
         let proc = BeamformingProcessor3D::with_provider(config, TestBeamformingProvider)
             .expect("test provider construction is infallible");
-        let empty_data = ndarray::Array4::<f32>::zeros((0, 0, 0, 0));
+        let empty_data = leto::Array4::<f32>::zeros((0, 0, 0, 0));
         assert!(proc.validate_input(&empty_data).is_err());
     }
 
@@ -51,7 +51,7 @@ fn test_validate_input_channel_mismatch() {
         use super::super::processor::BeamformingProcessor3D;
         let proc = BeamformingProcessor3D::with_provider(config, TestBeamformingProvider)
             .expect("test provider construction is infallible");
-        let bad_data = ndarray::Array4::<f32>::zeros((1, 100, 1024, 1));
+        let bad_data = leto::Array4::<f32>::zeros((1, 100, 1024, 1));
         assert!(proc.validate_input(&bad_data).is_err());
     }
 

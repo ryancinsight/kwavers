@@ -30,7 +30,7 @@
 use super::core::DGSolver;
 use super::rk_update::{update_euler, update_ssp_final, update_ssp_second};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 mod tensor;
 pub use tensor::{
@@ -388,7 +388,7 @@ mod tests {
         );
     }
 
-    fn weighted_sum(values: &Array3<f64>, weights: &ndarray::Array1<f64>) -> f64 {
+    fn weighted_sum(values: &Array3<f64>, weights: &leto::Array1<f64>) -> f64 {
         let mut sum = 0.0;
         for elem in 0..values.dim().0 {
             for node in 0..values.dim().1 {

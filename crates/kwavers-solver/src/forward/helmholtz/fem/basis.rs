@@ -5,7 +5,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_mesh::Tetrahedron;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Gauss quadrature points and weights for tetrahedral elements
 #[derive(Debug, Clone)]
@@ -306,10 +306,10 @@ impl GaussQuadrature {
         global_mass: &mut kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix<
             kwavers_math::fft::Complex64,
         >,
-        global_rhs: &mut ndarray::Array1<kwavers_math::fft::Complex64>,
-        elem_stiffness: &ndarray::Array2<kwavers_math::fft::Complex64>,
-        elem_mass: &ndarray::Array2<kwavers_math::fft::Complex64>,
-        elem_rhs: &ndarray::Array1<kwavers_math::fft::Complex64>,
+        global_rhs: &mut leto::Array1<kwavers_math::fft::Complex64>,
+        elem_stiffness: &leto::Array2<kwavers_math::fft::Complex64>,
+        elem_mass: &leto::Array2<kwavers_math::fft::Complex64>,
+        elem_rhs: &leto::Array1<kwavers_math::fft::Complex64>,
         element: &Tetrahedron,
         _basis: &BasisFunction,
     ) -> KwaversResult<()> {

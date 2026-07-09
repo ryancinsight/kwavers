@@ -103,7 +103,7 @@
 //! // let solver = ElasticWaveSolver::new(&grid, &medium, config)?;
 //!
 //! // Run simulation
-//! // let fields = solver.propagate(&ndarray::Array3::zeros((64, 64, 64)))?;
+//! // let fields = solver.propagate(&leto::Array3::zeros((64, 64, 64)))?;
 //! # Ok(())
 //! # }
 //! ```

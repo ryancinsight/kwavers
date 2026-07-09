@@ -6,7 +6,7 @@ use crate::forward::pstd::dg::dg_solver::rk_update::{
 };
 use crate::forward::pstd::dg::dg_solver::topology::DgTopology;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl DGSolver {
     /// Advance a tensor-product acoustic state by one SSP-RK3 step with a

@@ -1,7 +1,7 @@
 //! LiteratureValidator struct and validation methods.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::types::{treeby_2010, LiteratureValidationResult};
 

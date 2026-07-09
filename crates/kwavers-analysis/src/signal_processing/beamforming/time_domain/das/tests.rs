@@ -2,7 +2,7 @@
 
 use super::core::{delay_and_sum, DEFAULT_DELAY_REFERENCE};
 use crate::signal_processing::beamforming::time_domain::delay_reference::DelayReference;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn das_aligns_impulses_with_reference_sensor_0() {

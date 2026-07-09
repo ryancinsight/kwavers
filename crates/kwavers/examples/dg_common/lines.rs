@@ -1,5 +1,8 @@
 use super::{physical_coordinate, ELEMENTS};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 pub trait LineField3 {
     fn shape3(&self) -> [usize; 3];

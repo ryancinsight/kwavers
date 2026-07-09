@@ -26,7 +26,7 @@
 //! - Thomenius (1996): "Evolution of ultrasound beamformers"
 
 use super::config::Beamforming3dApodizationWindow;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Create 3D apodization weights for a transducer array
 ///

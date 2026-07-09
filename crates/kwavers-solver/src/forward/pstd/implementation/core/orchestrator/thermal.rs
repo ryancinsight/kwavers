@@ -44,7 +44,10 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::{fmt, sync::Arc};
 
 fn copy_scaled_absorption_field(dst: &mut Array3<f64>, alpha_si: &Array3<f64>, factor: f64) {
@@ -179,7 +182,7 @@ impl PSTDSolver {
     /// Returns `None` when thermal coupling has not been requested (lossless path or
     /// before `populate_alpha_np_m_at_frequency` / `set_alpha_np_m` is called).
     #[must_use]
-    pub fn alpha_np_m(&self) -> Option<ndarray::ArrayView3<'_, f64>> {
+    pub fn alpha_np_m(&self) -> Option<leto::ArrayView3<'_, f64>> {
         self.alpha_np_m.as_ref().map(|a| a.view())
     }
 

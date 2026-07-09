@@ -3,7 +3,7 @@ use kwavers_diagnostics::reconstruction::transcranial_ust::{
     TranscranialUstBornInversionConfig,
 };
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
-use ndarray::Array1;
+use leto::Array1;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

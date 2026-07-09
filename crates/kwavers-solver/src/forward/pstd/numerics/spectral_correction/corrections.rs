@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 use super::SpectralCorrectionMethod;

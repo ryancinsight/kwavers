@@ -5,7 +5,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use ndarray::Array1;
+use leto::Array1;
 
 const DENSE_IVP_CHUNK: usize = 4096;
 

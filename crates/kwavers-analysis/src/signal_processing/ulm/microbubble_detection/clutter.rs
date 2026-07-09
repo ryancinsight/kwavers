@@ -27,7 +27,11 @@ use super::types::SvdClutterConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{s, Array1, Array2};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    Array2,
+};
 
 /// SVD spatiotemporal clutter filter.
 ///
@@ -98,7 +102,7 @@ impl UlmSvdClutterFilter {
                 }
             }
             let mut result = Array2::<f64>::zeros((n_px, n_t));
-            ndarray::linalg::general_mat_mul(1.0, &us, &vt_k, 0.0, &mut result);
+            linalg::general_mat_mul(1.0, &us, &vt_k, 0.0, &mut result);
             result
         };
 

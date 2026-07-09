@@ -1,7 +1,7 @@
 //! RITK-backed medical image loading shared by PyO3 bindings.
 
 use coeus_core::SequentialBackend;
-use ndarray::Array3;
+use leto::Array3;
 use numpy::{ToPyArray, PyArray3};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

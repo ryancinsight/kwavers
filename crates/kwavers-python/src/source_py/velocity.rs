@@ -41,7 +41,7 @@ impl Source {
             unreachable!()
         };
 
-        let mut u_signal = ndarray::Array3::<f64>::zeros((3, 1, nt));
+        let mut u_signal = leto::Array3::<f64>::zeros((3, 1, nt));
         if let Some(ref sx) = ux {
             let arr = sx.as_array();
             for t in 0..nt {
@@ -146,7 +146,7 @@ impl Source {
             )));
         }
 
-        let mut u_signal = ndarray::Array3::<f64>::zeros((3, num_sources, nt));
+        let mut u_signal = leto::Array3::<f64>::zeros((3, num_sources, nt));
         if let Some(ref sx) = ux {
             let arr = sx.as_array();
             for s in 0..num_sources {

@@ -1,7 +1,7 @@
 //! Open-probability equations for mechanosensitive channel gates.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::constants::K_B;
 use super::params::{BoltzmannGatingParams, GatingModel, PressureThresholdParams};

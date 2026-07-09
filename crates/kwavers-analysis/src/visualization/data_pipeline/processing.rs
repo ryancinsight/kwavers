@@ -2,7 +2,7 @@
 
 use super::ProcessingOperation;
 use kwavers_core::utils::iterators::apply_inplace;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Processing configuration
 #[derive(Debug, Clone)]
@@ -136,7 +136,7 @@ impl ProcessingStage {
 mod tests {
     use super::{ProcessingStage, VisualizationProcessingConfig};
     use crate::visualization::data_pipeline::ProcessingOperation;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn normalize_maps_contiguous_values_to_configured_range() {

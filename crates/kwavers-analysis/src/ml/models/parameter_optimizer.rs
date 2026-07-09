@@ -3,7 +3,10 @@
 use super::{MLModel, MlModelMetadata};
 use crate::ml::inference::InferenceEngine;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Parameter optimization model
 #[derive(Debug)]

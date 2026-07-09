@@ -10,7 +10,7 @@
 use super::*;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 const DX: f64 = 1.0e-3;
 const RHO: f64 = 1000.0;
@@ -281,10 +281,10 @@ fn k_mu_gradient_is_valid_descent_direction() {
         }
         let mut mu_p = mu0.clone();
         let mut mu_m = mu0.clone();
-        ndarray::Zip::from(&mut mu_p)
+        leto_ops::zip_from_mut(mu_p)
             .and(&delta)
             .for_each(|m, &d| *m += eps * d);
-        ndarray::Zip::from(&mut mu_m)
+        leto_ops::zip_from_mut(mu_m)
             .and(&delta)
             .for_each(|m, &d| *m -= eps * d);
         let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))
@@ -553,10 +553,10 @@ fn k_mu_gradient_3d_is_valid_descent_direction() {
         }
         let mut mu_p = mu0.clone();
         let mut mu_m = mu0.clone();
-        ndarray::Zip::from(&mut mu_p)
+        leto_ops::zip_from_mut(mu_p)
             .and(&delta)
             .for_each(|mm, &d| *mm += eps * d);
-        ndarray::Zip::from(&mut mu_m)
+        leto_ops::zip_from_mut(mu_m)
             .and(&delta)
             .for_each(|mm, &d| *mm -= eps * d);
         let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))

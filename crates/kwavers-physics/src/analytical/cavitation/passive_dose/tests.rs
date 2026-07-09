@@ -487,7 +487,7 @@ fn passive_point_source_rf_rejects_bad_input() {
 #[test]
 fn receiver_array_incoherent_power_sum() {
     // 2 channels × 3 bins, row-major.
-    let ch = vec![1.0, 2.0, 3.0, /*ch1*/ 4.0, 5.0, 6.0];
+    let ch = vec![1.0, 2.0, 3.0 4.0, 5.0, 6.0];
     let s = integrate_receiver_array_psd(&ch, 2, 3);
     assert_eq!(s, vec![5.0, 7.0, 9.0]);
 }
@@ -1025,7 +1025,7 @@ fn volume_emission_sweep_rejects_invalid_radius_population() {
 #[test]
 fn ensemble_sums_delayed_gained_series() {
     // 2 bubbles × 3 samples; bubble 0 at delay 0 gain 1, bubble 1 at delay 2 gain 2.
-    let emissions = vec![1.0, 2.0, 3.0, /*b1*/ 1.0, 1.0, 1.0];
+    let emissions = vec![1.0, 2.0, 3.0 1.0, 1.0, 1.0];
     let out = ensemble_emission_superposition(&emissions, 2, 3, &[0, 2], &[1.0, 2.0], 6);
     // b0 → [1,2,3,0,0,0]; b1 (×2, +2) → [0,0,2,2,2,0]; sum:
     assert_eq!(out, vec![1.0, 2.0, 5.0, 2.0, 2.0, 0.0]);

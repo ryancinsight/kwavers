@@ -39,7 +39,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::numerical::EPSILON;

@@ -32,7 +32,7 @@ use crate::constants::{CONSERVATION_TOLERANCE, DEFAULT_POLYNOMIAL_ORDER, DISCONT
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 
-use ndarray::Array3;
+use leto::Array3;
 use spectral_solver::RegionPSTDSolver;
 use std::sync::Arc;
 
@@ -262,7 +262,7 @@ impl NumericalSolver for HybridSpectralDGSolver {
 mod tests {
     use super::{HybridSpectralDGConfig, HybridSpectralDGSolver};
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::sync::Arc;
 
     #[test]

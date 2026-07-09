@@ -15,9 +15,16 @@ use super::types::{
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
 #[cfg(feature = "pinn")]
-use ndarray::{Array1, Array2, Array3 as NdArray3};
+use leto::{
+    Array1,
+    Array2,
+    Array3 as NdArray3,
+};
 #[cfg(not(feature = "pinn"))]
-use ndarray::{Array1, Array3 as NdArray3};
+use leto::{
+    Array1,
+    Array3 as NdArray3,
+};
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
 

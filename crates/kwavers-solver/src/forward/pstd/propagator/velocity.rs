@@ -50,9 +50,9 @@ use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
-use leto::Array3 as LetoArray3;
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array1, Array2, ArrayView2, ArrayView3, ArrayViewMut2};
+use leto::{Array1, Array2, ArrayView2, ArrayView3, ArrayViewMut2};
 
 #[derive(Clone, Copy)]
 enum VelocityAxis {
@@ -99,32 +99,10 @@ fn as_pml_index(axis: AsVelocityAxis, i: usize, k: usize) -> usize {
     }
 }
 
-fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
-    let shape = field.shape();
-    ndarray::ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("PSTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("PSTD leto field shape must match contiguous storage")
-}
-
-fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ndarray::ArrayViewMut3<'_, f64> {
-    let shape = field.shape();
-    ndarray::ArrayViewMut3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice_mut()
-            .expect("PSTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("PSTD leto field shape must match contiguous storage")
-}
-
 fn apply_shifted_kappa(
-    grad_k: &mut LetoArray3<Complex64>,
-    spectrum: &LetoArray3<Complex64>,
-    kappa: &LetoArray3<f64>,
+    grad_k: &mut Array3<Complex64>,
+    spectrum: &Array3<Complex64>,
+    kappa: &Array3<f64>,
     shift: &Array1<Complex64>,
     axis: VelocityAxis,
 ) {
@@ -166,8 +144,8 @@ fn apply_shifted_kappa(
 }
 
 fn update_velocity_fused(
-    velocity: &mut LetoArray3<f64>,
-    gradient: &LetoArray3<f64>,
+    velocity: &mut Array3<f64>,
+    gradient: &Array3<f64>,
     rho0: ArrayView3<'_, f64>,
     pml: &[f64],
     axis: VelocityAxis,
@@ -213,8 +191,8 @@ fn update_velocity_fused(
 }
 
 fn update_velocity_unfused(
-    velocity: &mut LetoArray3<f64>,
-    gradient: &LetoArray3<f64>,
+    velocity: &mut Array3<f64>,
+    gradient: &Array3<f64>,
     rho0: ArrayView3<'_, f64>,
     dt: f64,
 ) {
@@ -386,7 +364,7 @@ impl PSTDSolver {
         let use_fused = self.pml_exp.is_some() && self.dirichlet_pml_bypass_x.is_empty();
 
         if use_fused {
-            let rho0 = leto_view3(&self.materials.rho0);
+            let rho0 = .view(&self.materials.rho0);
             // ── Fused path: no separate pre/post PML passes ───────────────────────
             // SAFETY of disjoint borrows: `pml_exp` is a separate field from
             // `fields`, `dpx`, `materials` — Rust's field-granular borrow rules allow
@@ -487,7 +465,7 @@ impl PSTDSolver {
             );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-            update_velocity_unfused(&mut self.fields.ux, &self.dpx, leto_view3(&self.materials.rho0), dt);
+            update_velocity_unfused(&mut self.fields.ux, &self.dpx, .view(&self.materials.rho0), dt);
 
             // Y-direction
             if has_y {
@@ -504,7 +482,7 @@ impl PSTDSolver {
                 update_velocity_unfused(
                     &mut self.fields.uy,
                     &self.dpx,
-                    leto_view3(&self.materials.rho0),
+                    .view(&self.materials.rho0),
                     dt,
                 );
             }
@@ -524,7 +502,7 @@ impl PSTDSolver {
                 update_velocity_unfused(
                     &mut self.fields.uz,
                     &self.dpx,
-                    leto_view3(&self.materials.rho0),
+                    .view(&self.materials.rho0),
                     dt,
                 );
             }
@@ -577,8 +555,8 @@ impl PSTDSolver {
             KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
         })?;
 
-        let pressure = leto_view3(&self.fields.p);
-        let rho0 = leto_view3(&self.materials.rho0);
+        let pressure = .view(&self.fields.p);
+        let rho0 = .view(&self.materials.rho0);
         ctx.compute_vel_grads(pressure.slice(s![.., 0, ..]));
 
         if use_fused {
@@ -598,7 +576,7 @@ impl PSTDSolver {
                 .as_slice()
                 .ok_or_else(|| KwaversError::InternalError("pml_vel_z contiguous".into()))?;
 
-            let mut ux = leto_view_mut3(&mut self.fields.ux);
+            let mut ux = .view_mut(&mut self.fields.ux);
             update_axisymmetric_velocity_fused(
                 ux.slice_mut(s![.., 0, ..]),
                 &ctx.dpdx,
@@ -608,7 +586,7 @@ impl PSTDSolver {
                 dt,
             );
 
-            let mut uz = leto_view_mut3(&mut self.fields.uz);
+            let mut uz = .view_mut(&mut self.fields.uz);
             update_axisymmetric_velocity_fused(
                 uz.slice_mut(s![.., 0, ..]),
                 &ctx.dpdr,
@@ -618,7 +596,7 @@ impl PSTDSolver {
                 dt,
             );
         } else {
-            let mut ux = leto_view_mut3(&mut self.fields.ux);
+            let mut ux = .view_mut(&mut self.fields.ux);
             update_axisymmetric_velocity_unfused(
                 ux.slice_mut(s![.., 0, ..]),
                 &ctx.dpdx,
@@ -626,7 +604,7 @@ impl PSTDSolver {
                 dt,
             );
 
-            let mut uz = leto_view_mut3(&mut self.fields.uz);
+            let mut uz = .view_mut(&mut self.fields.uz);
             update_axisymmetric_velocity_unfused(
                 uz.slice_mut(s![.., 0, ..]),
                 &ctx.dpdr,
@@ -664,19 +642,19 @@ impl PSTDSolver {
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_velocity_pml_directional(
-                    leto_view_mut3(&mut self.fields.ux).into(),
+                    .view_mut(&mut self.fields.ux).into(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    leto_view_mut3(&mut self.fields.uy).into(),
+                    .view_mut(&mut self.fields.uy).into(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    leto_view_mut3(&mut self.fields.uz).into(),
+                    .view_mut(&mut self.fields.uz).into(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     2,

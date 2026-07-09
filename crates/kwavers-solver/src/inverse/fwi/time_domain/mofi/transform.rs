@@ -13,7 +13,7 @@
 //! same quantity reverse-mode autodiff would produce in the original paper) and
 //! the projection `(∂c_φ/∂φ)ᵀ g`.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// SE(2) rigid-body transform parameters.
 ///

@@ -4,7 +4,11 @@ use super::FwiProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with, Adaptive};
-use ndarray::{Array3, Array4, ArrayView3, Axis, Zip};
+use leto::{
+    Array3,
+    Array4,
+    ArrayView3,
+};
 
 fn pressure_second_derivative_views_into(
     dst: &mut Array3<f64>,

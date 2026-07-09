@@ -7,7 +7,7 @@ use kwavers_core::constants::fundamental::{
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::{HEAT_CAPACITY_RATIO_DIATOMIC, ROOM_TEMPERATURE_K};
-use ndarray::Array1;
+use leto::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

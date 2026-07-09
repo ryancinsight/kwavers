@@ -2,7 +2,7 @@ use super::*;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Construct a minimal grid suitable for HAS tests.
 /// # Panics

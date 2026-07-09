@@ -1,6 +1,9 @@
 //! Time reversal utilities for acoustic focusing
 
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Time reversal processing utilities
 #[derive(Debug)]
@@ -37,7 +40,10 @@ impl TimeReversalUtils {
 #[cfg(test)]
 mod tests {
     use super::TimeReversalUtils;
-    use ndarray::{array, Array2};
+    use leto::{
+    /* array -- no leto equivalent */,
+    Array2,
+};
 
     #[test]
     fn time_reverse_signals_reverses_each_sensor_row() {

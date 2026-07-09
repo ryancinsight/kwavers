@@ -7,7 +7,7 @@ use kwavers_imaging::ultrasound::hifu::{
     TreatmentPhase, TreatmentTarget,
 };
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn hifu_pressure_field_is_centered_at_geometric_focus_depth(

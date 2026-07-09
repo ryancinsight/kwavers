@@ -16,7 +16,10 @@
 //! (producing unit-length direction vectors — useful as logit pre-processing).
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Single affine-layer inference engine.
 ///
@@ -121,7 +124,10 @@ impl InferenceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{array, Array2};
+    use leto::{
+    /* array -- no leto equivalent */,
+    Array2,
+};
 
     // Identity weight matrix: Y = X · I = X (no bias).
     // Expected output == input, verifiable analytically.
@@ -146,7 +152,7 @@ mod tests {
     #[test]
     fn test_forward_with_bias() {
         let weights = Array2::eye(3);
-        let bias = ndarray::array![10.0_f32, 20.0, 30.0];
+        let bias = leto::array![10.0_f32, 20.0, 30.0];
         let engine = InferenceEngine::from_weights(weights, Some(bias), 32, false);
 
         let input = array![[1.0_f32, 1.0, 1.0]];

@@ -3,7 +3,7 @@
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Plane wave analytical solutions
 #[derive(Debug)]

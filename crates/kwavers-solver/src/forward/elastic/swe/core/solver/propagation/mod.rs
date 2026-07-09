@@ -180,7 +180,7 @@ impl ElasticWaveSolver {
     ///
     pub fn propagate_waves(
         &self,
-        initial_displacement: &ndarray::Array3<f64>,
+        initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let (nx, ny, nz) = self.grid.dimensions();
         if initial_displacement.dim() != (nx, ny, nz) {

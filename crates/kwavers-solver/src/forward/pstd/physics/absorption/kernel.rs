@@ -1,5 +1,5 @@
 use super::strata::ExponentStrata;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Precomputed spectral absorption arrays for power-law fractional Laplacian.
 ///

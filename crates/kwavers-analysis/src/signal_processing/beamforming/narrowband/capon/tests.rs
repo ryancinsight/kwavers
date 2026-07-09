@@ -4,7 +4,7 @@ use approx::assert_abs_diff_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 fn sensor_positions_m() -> Vec<[f64; 3]> {
     vec![

@@ -13,7 +13,11 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::advanced::{
     PlaneWaveReconstruction, SyntheticApertureConfig, SyntheticApertureReconstruction,
     UltrasoundPlaneWaveConfig,
 };
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🩺 Advanced Ultrasound Imaging Demonstration");

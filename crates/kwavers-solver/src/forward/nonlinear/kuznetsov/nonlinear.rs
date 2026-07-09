@@ -52,7 +52,7 @@
 
 use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
 use moirai_parallel::ParallelSliceMut;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace.
 ///

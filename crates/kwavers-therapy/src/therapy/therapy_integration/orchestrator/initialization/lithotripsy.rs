@@ -32,7 +32,7 @@ use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
 #[cfg(feature = "nifti")]
 use log::info;
 use log::warn;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::super::config::TherapySessionConfig;
 

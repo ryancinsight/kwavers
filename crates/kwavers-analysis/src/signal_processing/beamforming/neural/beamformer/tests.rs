@@ -1,4 +1,4 @@
-use ndarray::Array4;
+use leto::Array4;
 
 use super::super::config::{NeuralBeamformingConfig, NeuralBeamformingMode};
 use super::super::types::BeamformingFeedback;

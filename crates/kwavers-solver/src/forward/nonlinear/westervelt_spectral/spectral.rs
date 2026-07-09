@@ -4,7 +4,9 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array, fft_3d_array_into, ifft_3d_array, Complex64};
 use leto::Array3 as LetoArray3;
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 
 /// Initialize k-space grids for spectral operations
 pub fn initialize_kspace_grids(
@@ -267,7 +269,7 @@ mod tests {
         let grid = make_grid(n, dx);
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
-        let field = ndarray::Array3::from_elem((n, n, n), 7.5_f64);
+        let field = leto::Array3::from_elem((n, n, n), 7.5_f64);
         let lap = compute_laplacian_spectral(&field, &k_sq);
 
         let max_abs = lap.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
@@ -296,7 +298,7 @@ mod tests {
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
         let k1 = 2.0 * PI / (n as f64 * dx); // fundamental wavenumber
-        let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+        let mut field = leto::Array3::<f64>::zeros((n, n, n));
         for i in 0..n {
             let x = i as f64 * dx;
             let val = (k1 * x).sin();
@@ -340,7 +342,7 @@ mod tests {
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
         let k1 = 2.0 * PI / (n as f64 * dx);
-        let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+        let mut field = leto::Array3::<f64>::zeros((n, n, n));
         for i in 0..n {
             let x = i as f64 * dx;
             for j in 0..n {
@@ -356,7 +358,7 @@ mod tests {
         // Zero-allocation path
         let shape = (n, n, n);
         let mut fft_scratch = LetoArray3::<Complex64>::from_elem([n, n, n], Complex64::default());
-        let mut lap_into = ndarray::Array3::<f64>::zeros(shape);
+        let mut lap_into = leto::Array3::<f64>::zeros(shape);
         compute_laplacian_spectral_into(&field, &k_sq, &mut fft_scratch, &mut lap_into);
 
         // Results must be bitwise identical

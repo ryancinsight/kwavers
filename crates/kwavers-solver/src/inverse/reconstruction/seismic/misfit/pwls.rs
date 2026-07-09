@@ -25,7 +25,7 @@
 //! estimator in seismic/ultrasound practice.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Data-fidelity weighting strategy for the L2 misfit (the PWLS / MBIR lesson).
 ///
@@ -165,7 +165,7 @@ pub fn weighted_l2_residual(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Uniform weighting reproduces plain L2 bit-for-bit: all-ones weights, the
     /// weighted objective equals `(dt/2)‖r‖²`, and the weighted residual equals

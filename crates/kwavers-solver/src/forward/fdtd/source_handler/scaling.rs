@@ -12,7 +12,7 @@ impl Array3ValueAccess for leto::Array3<f64> {
     }
 }
 
-impl Array3ValueAccess for ndarray::Array3<f64> {
+impl Array3ValueAccess for leto::Array3<f64> {
     fn at(&self, i: usize, j: usize, k: usize) -> f64 {
         self[[i, j, k]]
     }

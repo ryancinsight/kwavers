@@ -1,7 +1,7 @@
 use super::model::CherenkovModel;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Piezo-optic coefficient: Δn per unit compression excess.
 ///

@@ -48,7 +48,11 @@ use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, ShearWaveInversion, ShearWaveInversionConfig,
 };
 use leto::Array3 as LetoArray3;
-use ndarray::{s, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    Array4,
+};
 use std::time::Instant;
 
 fn estimate_elastic_time_step(grid: &Grid, medium: &dyn Medium, config: &ElasticWaveConfig) -> f64 {

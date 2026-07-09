@@ -36,7 +36,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers::math::numerics::operators::differential::{DifferentialOperator, CentralDifference4};
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! let dx = 0.001; // 1 mm grid spacing
 //! let op = CentralDifference4::new(dx, dx, dx)?;
@@ -53,7 +53,10 @@
 //!   DOI: 10.1137/0908025
 
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 use super::DifferentialOperator;
 

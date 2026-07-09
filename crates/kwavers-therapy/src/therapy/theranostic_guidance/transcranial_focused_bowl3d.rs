@@ -21,7 +21,10 @@
 //! - Voxel body threshold (−350 HU) captures all head/neck tissue.
 //! - The z-axis is approximately aligned with the inferior-superior axis.
 
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::transducers::focused::BowlAngularBounds;

@@ -10,7 +10,10 @@ use super::super::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 impl FwiProcessor {
     /// Multi-source FWI inversion.

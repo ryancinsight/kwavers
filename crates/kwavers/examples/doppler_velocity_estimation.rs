@@ -19,7 +19,7 @@
 use kwavers_analysis::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, ColorFlowConfig, ColorFlowImaging,
 };
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

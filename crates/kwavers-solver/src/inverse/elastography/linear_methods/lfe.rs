@@ -12,7 +12,7 @@ use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::algorithms::{fill_boundaries, spatial_smoothing};
 use super::super::types::elasticity_map_from_speed;

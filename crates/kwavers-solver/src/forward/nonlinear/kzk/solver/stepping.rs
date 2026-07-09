@@ -1,7 +1,6 @@
 //! KZK Strang-split propagation: per-step operator application and
 //! conservation-diagnostic dispatch.
 
-use ndarray::Axis;
 use tracing::warn;
 
 use super::KZKSolver;

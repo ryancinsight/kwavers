@@ -76,7 +76,7 @@
 //! use kwavers_solver::inverse::pinn::ml::wave_equation_1d::{
 //!     PinnWave1D, PinnConfig, PinnTrainer
 //! };
-//! use ndarray::Array1;
+//! use leto::Array1;
 //!
 //! // Coeus compute backend (self-instantiates via `Default`; no device handle).
 //! type Backend = coeus_core::MoiraiBackend;

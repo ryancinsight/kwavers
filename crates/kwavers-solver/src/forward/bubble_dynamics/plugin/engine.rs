@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_physics::acoustics::bubble_dynamics::{
     bubble_field::BubbleField, bubble_state::BubbleState, gilmore::GilmoreSolver,

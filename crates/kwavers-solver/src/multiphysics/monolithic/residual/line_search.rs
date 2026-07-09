@@ -2,7 +2,7 @@ use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm_squared;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::UnifiedFieldType;
-use ndarray::Array3;
+use leto::Array3;
 
 impl MonolithicCoupler {
     /// Find an adaptive Newton step size that reduces the residual norm.

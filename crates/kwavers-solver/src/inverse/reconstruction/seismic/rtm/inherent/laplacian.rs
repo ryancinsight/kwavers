@@ -22,7 +22,10 @@
 //! Each pass uses same-shape strided views over the interior stencil.
 
 use kwavers_core::error::{KwaversResult, ValidationError};
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 
 use super::super::types::ReverseTimeMigration;
 use super::parallel::for_each_view_mut;

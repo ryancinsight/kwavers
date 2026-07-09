@@ -49,7 +49,11 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 use coeus_autograd::Var;
 

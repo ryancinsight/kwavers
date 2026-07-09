@@ -6,7 +6,11 @@ use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::{constants::SOUND_SPEED_WATER, error::KwaversResult};
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array2, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 
 use super::validation::{

@@ -4,9 +4,8 @@
 //! and vectors, including system solving, matrix inversion, and basic decompositions.
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::Array2 as LetoArray2;
+use leto::{Array1, Array2};
 use leto_ops::{qr_decompose, svd_rank_revealing};
-use ndarray::{Array1, Array2};
 use std::fmt::Display;
 
 /// Basic linear algebra operations for real-valued matrices
@@ -141,11 +140,10 @@ impl LinearAlgebra {
     ///   non-finite value, or is rank-deficient under Leto's QR contract.
     ///
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
-        let leto_matrix = ndarray_to_leto(matrix);
         let qr =
-            qr_decompose(&leto_matrix.view()).map_err(leto_linalg_error("QR decomposition"))?;
-        let q = leto_to_ndarray(qr.q(), "QR Q")?;
-        let r = leto_to_ndarray(qr.r(), "QR R")?;
+            qr_decompose(&matrix.view()).map_err(leto_linalg_error("QR decomposition"))?;
+        let q = qr.q().to_owned();
+        let r = qr.r().to_owned();
         Ok((q, r))
     }
 
@@ -161,27 +159,13 @@ impl LinearAlgebra {
     /// - Returns [`Err`] if Leto rejects the input shape or values.
     ///
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
-        let leto_matrix = ndarray_to_leto(matrix);
-        let svd = svd_rank_revealing(&leto_matrix.view()).map_err(leto_linalg_error("SVD"))?;
-        let u = leto_to_ndarray(svd.left_singular_vectors, "SVD U")?;
+        let svd = svd_rank_revealing(&matrix.view()).map_err(leto_linalg_error("SVD"))?;
+        let u = svd.left_singular_vectors.to_owned();
         let s = Array1::from_vec(svd.singular_values);
-        let v = leto_to_ndarray(svd.right_singular_vectors, "SVD V")?;
+        let v = svd.right_singular_vectors.to_owned();
 
         Ok((u, s, v))
     }
-}
-
-fn ndarray_to_leto(matrix: &Array2<f64>) -> LetoArray2<f64> {
-    matrix.clone().into()
-}
-
-fn leto_to_ndarray(matrix: LetoArray2<f64>, method: &'static str) -> KwaversResult<Array2<f64>> {
-    matrix.try_into().map_err(|error| {
-        KwaversError::Numerical(NumericalError::SolverFailed {
-            method: method.to_owned(),
-            reason: format!("failed to convert Leto matrix result to ndarray: {error}"),
-        })
-    })
 }
 
 fn leto_linalg_error(
@@ -190,23 +174,19 @@ fn leto_linalg_error(
     move |error| {
         KwaversError::Numerical(NumericalError::SolverFailed {
             method: method.to_owned(),
-            reason: leto_error_reason(error),
+            reason: error.to_string(),
         })
     }
-}
-
-fn leto_error_reason(error: impl Display) -> String {
-    error.to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn test_solve_linear_system() {
-        let a = Array2::from_shape_vec((2, 2), vec![2.0, 1.0, 1.0, 2.0]).unwrap();
+        let a = Array2::from_vec(vec![2.0, 1.0, 1.0, 2.0], (2, 2)).unwrap();
         let b = Array1::from_vec(vec![3.0, 3.0]);
 
         let x = LinearAlgebra::solve_linear_system(&a, &b).unwrap();
@@ -216,11 +196,11 @@ mod tests {
 
     #[test]
     fn test_matrix_inverse() {
-        let a = Array2::from_shape_vec((2, 2), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+        let a = Array2::from_vec(vec![1.0, 2.0, 3.0, 4.0], (2, 2)).unwrap();
         let a_inv = LinearAlgebra::matrix_inverse(&a).unwrap();
 
         // Check A * A^(-1) = I
-        let identity = a.dot(&a_inv);
+        let identity = a.matmul(&a_inv);
         for i in 0..2 {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };
@@ -233,14 +213,13 @@ mod tests {
     fn test_qr_reconstruction_and_orthogonality() {
         // Square and over-determined (m > n) cases: A = Q·R with Qᵀ Q = I.
         let cases = [
-            Array2::from_shape_vec((3, 3), vec![1.0, 2.0, 0.0, 0.0, 1.0, 3.0, 4.0, 0.0, 1.0])
-                .unwrap(),
-            Array2::from_shape_vec((4, 2), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).unwrap(),
+            Array2::from_vec(vec![1.0, 2.0, 0.0, 0.0, 1.0, 3.0, 4.0, 0.0, 1.0], (3, 3)).unwrap(),
+            Array2::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0], (4, 2)).unwrap(),
         ];
         for a in &cases {
             let (q, r) = LinearAlgebra::qr_decomposition(a).unwrap();
             // Reconstruction A = Q·R.
-            let recon = q.dot(&r);
+            let recon = q.matmul(&r);
             assert_eq!(recon.dim(), a.dim());
             for i in 0..a.nrows() {
                 for j in 0..a.ncols() {
@@ -253,7 +232,7 @@ mod tests {
                 }
             }
             // Q has orthonormal columns: Qᵀ Q = I (k×k).
-            let qtq = q.t().dot(&q);
+            let qtq = q.transpose().matmul(&q);
             for i in 0..qtq.nrows() {
                 for j in 0..qtq.ncols() {
                     let expected = if i == j { 1.0 } else { 0.0 };
@@ -274,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_svd_reconstruction() {
-        let a = Array2::from_shape_vec((2, 2), vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+        let a = Array2::from_vec(vec![1.0, 2.0, 3.0, 4.0], (2, 2)).unwrap();
         let (u, s, v) = LinearAlgebra::svd(&a).unwrap();
 
         // Check A = U * S * V^T
@@ -284,7 +263,7 @@ mod tests {
             s_mat[[i, i]] = s[i];
         }
 
-        let reconstructed = u.dot(&s_mat).dot(&v.t());
+        let reconstructed = u.matmul(&s_mat).matmul(&v.transpose());
 
         // Check reconstruction error
         for i in 0..2 {
@@ -301,7 +280,7 @@ mod tests {
         }
 
         // Check U is orthogonal: U^T * U = I
-        let u_ortho = u.t().dot(&u);
+        let u_ortho = u.transpose().matmul(&u);
         for i in 0..2 {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };
@@ -313,7 +292,7 @@ mod tests {
         }
 
         // Check V is orthogonal: V^T * V = I
-        let v_ortho = v.t().dot(&v);
+        let v_ortho = v.transpose().matmul(&v);
         for i in 0..2 {
             for j in 0..2 {
                 let expected = if i == j { 1.0 } else { 0.0 };

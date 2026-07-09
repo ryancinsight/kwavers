@@ -29,7 +29,7 @@ use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver, NumericalSolver};
 use kwavers_solver::interface::{Solver, SolverStatistics};
 use kwavers_source::Source;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 

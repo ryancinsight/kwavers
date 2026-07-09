@@ -5,7 +5,10 @@
 
 use apollo::{fft_1d_complex, ifft_1d_complex, Complex64};
 use leto::Array1 as LetoArray1;
-use ndarray::{Array2, ArrayViewMut2};
+use leto::{
+    Array2,
+    ArrayViewMut2,
+};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;

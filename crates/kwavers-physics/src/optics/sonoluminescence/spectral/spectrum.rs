@@ -1,6 +1,9 @@
 //! Emission spectrum data models
 
-use ndarray::{s, Array1};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+};
 
 /// Emission spectrum data
 #[derive(Debug, Clone)]

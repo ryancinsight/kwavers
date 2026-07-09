@@ -2,7 +2,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug, Clone)]
 pub struct ReactionKinetics {

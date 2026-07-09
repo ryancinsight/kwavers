@@ -8,7 +8,7 @@
 //! * The cumulative-weight table is rebuilt when the mode changes.
 //! * Empty / single-voxel datasets are handled gracefully.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::{KernelCubeSampler, SamplingMode};
 use super::B;

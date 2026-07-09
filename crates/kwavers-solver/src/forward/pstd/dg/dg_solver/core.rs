@@ -15,7 +15,11 @@ use super::topology::CoefficientLayout;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use std::sync::Arc;
 
 /// DG solver for hyperbolic conservation laws

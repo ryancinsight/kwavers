@@ -2,7 +2,7 @@
 
 use super::{ShockCapture, ShockDetectionResult};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 impl ShockCapture {
     /// Compute artificial viscosity source term: `Q_av = μ |∇p| ∇²p / ρ₀`

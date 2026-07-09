@@ -45,7 +45,11 @@ use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array3, ArrayView3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    ArrayView3,
+};
 
 #[inline]
 fn dense_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {

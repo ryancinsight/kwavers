@@ -17,7 +17,10 @@
 //! §4; Kopriva (2009) §3.4.
 
 use super::topology::{CoefficientLayout, DgTopology};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 pub(super) struct RhsOperator<'a> {
     pub(super) n_nodes: usize,

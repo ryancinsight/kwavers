@@ -15,7 +15,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::{
     compute_bmode_image, UltrasoundConfig, UltrasoundMode,
 };
 #[cfg(not(feature = "gpu"))]
-use ndarray::Array2;
+use leto::Array2;
 
 #[cfg(feature = "gpu")]
 use super::super::super::simulation::generate_realistic_rf_data;
@@ -32,7 +32,7 @@ impl ClinicalWorkflowOrchestrator {
             use kwavers_physics::acoustics::imaging::modalities::ultrasound::{
                 compute_bmode_image, UltrasoundConfig, UltrasoundMode,
             };
-            use ndarray::Array2;
+            use leto::Array2;
 
             let config = UltrasoundConfig {
                 mode: UltrasoundMode::BMode,

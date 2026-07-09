@@ -1,6 +1,10 @@
 //! Total Variation (ISTA) and L1/Lasso (FISTA) regularized solvers.
 
-use ndarray::{Array1, Array2, ArrayView1};
+use leto::{
+    Array1,
+    Array2,
+    ArrayView1,
+};
 
 use kwavers_core::error::KwaversResult;
 

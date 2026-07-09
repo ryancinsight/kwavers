@@ -5,7 +5,10 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_mesh::{MeshBoundaryType, TetrahedralMesh};
-use ndarray::{arr2, Array2};
+use leto::{
+    /* arr2 -- no leto equivalent */,
+    Array2,
+};
 use kwavers_math::fft::Complex64;
 
 fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {

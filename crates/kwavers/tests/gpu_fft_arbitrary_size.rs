@@ -27,7 +27,10 @@ use kwavers_math::fft::{
     gpu_fft::{FftBackend, GpuFft3d, WgpuBackend},
     Complex64, Shape3D,
 };
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 

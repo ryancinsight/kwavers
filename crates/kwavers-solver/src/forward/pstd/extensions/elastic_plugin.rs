@@ -27,7 +27,9 @@
 //! consumed: an acoustic pressure source is not an elastic velocity source, and
 //! conflating them would misrepresent the excitation.
 
-use ndarray::{Array4, Axis};
+use leto::{
+    Array4,
+};
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -175,7 +177,9 @@ mod tests {
     use kwavers_grid::Grid;
     use kwavers_medium::elastic::lame_from_speeds;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::{Array4, Axis};
+    use leto::{
+    Array4,
+};
 
     fn grid() -> Grid {
         Grid::new(24, 24, 1, 1e-3, 1e-3, 1e-3).expect("grid")

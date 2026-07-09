@@ -1,7 +1,7 @@
 use super::extractor::FeatureExtractor;
 use approx::assert_relative_eq;
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_feature_extractor_creation() {

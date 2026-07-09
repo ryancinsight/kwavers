@@ -8,7 +8,9 @@ use kwavers_physics::foundations::{
     AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, TimeIntegration,
 };
 
-use ndarray::{ArrayD, IxDyn};
+use leto::{
+    /* ArrayD -- no leto equivalent */,
+};
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffWaveEquation
     for ElasticPINN2DSolver<B>

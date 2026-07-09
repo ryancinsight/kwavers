@@ -22,7 +22,7 @@
 
 pub mod neon {
     use crate::simd_safe::auto_detect::ops;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Add two arrays element-wise: `out[i] = a[i] + b[i]`.
     ///

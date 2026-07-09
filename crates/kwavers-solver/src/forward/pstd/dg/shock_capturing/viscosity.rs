@@ -4,7 +4,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4, Axis};
+use leto::{
+    Array3,
+    Array4,
+};
 
 use kwavers_core::constants::numerical::{
     LINEAR_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT, QUADRATIC_VISCOSITY_COEFF,

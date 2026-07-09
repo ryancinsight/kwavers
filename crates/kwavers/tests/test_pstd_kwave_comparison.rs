@@ -46,7 +46,7 @@ use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolve
 use kwavers_source::{
     GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };
-use ndarray::Array3;
+use leto::Array3;
 use plotters::prelude::*;
 use std::sync::Arc;
 

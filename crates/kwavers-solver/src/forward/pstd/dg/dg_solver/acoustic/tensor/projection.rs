@@ -2,7 +2,7 @@ use super::{validate_tensor_state, ACOUSTIC_PRESSURE_VAR};
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::dg_solver::topology::DgTopology;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug, Clone)]
 pub(super) struct AxisMap {

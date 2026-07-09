@@ -23,7 +23,7 @@ use kwavers_analysis::signal_processing::localization::beamforming_search::{
 use kwavers_receiver::{Position, Sensor, SensorArray, SensorArrayGeometry};
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 
-use ndarray::Array3;
+use leto::Array3;
 
 fn make_array(sound_speed: f64) -> SensorArray {
     // Small 2D aperture in the xy-plane, z=0.

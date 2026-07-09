@@ -2,7 +2,12 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{s, Array2, Array3, ArrayView3, Zip};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+    ArrayView3,
+};
 
 fn validate_pair_shapes(
     observed: &Array2<f64>,
@@ -141,7 +146,10 @@ pub fn accumulate_signed_correlation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{Array2, Array3};
+    use leto::{
+    Array2,
+    Array3,
+};
 
     #[test]
     fn test_l2_residual_is_synthetic_minus_observed() {

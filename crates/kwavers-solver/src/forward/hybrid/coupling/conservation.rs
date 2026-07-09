@@ -2,7 +2,7 @@
 
 use super::InterfaceGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Conservation enforcer for interface coupling
 #[derive(Debug)]

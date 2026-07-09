@@ -6,7 +6,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::AcousticProperties;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -47,7 +47,7 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
     let mut temperature = Array3::<f64>::zeros((nx, nx, 1));
     // Use iterator-based approach with slice for 2D iteration
     temperature
-        .slice_mut(ndarray::s![.., .., 0])
+        .index_axis::<2>(2, 0)
         .indexed_iter_mut()
         .for_each(|((i, j), value)| {
             let x = i as f64 * dx;
@@ -162,7 +162,7 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
         // Use iterator approach for initialization
         p_curr
-            .slice_mut(ndarray::s![.., 0, 0])
+            .slice_with::<1>(&[SliceArg::All, SliceArg::Index(0 as isize), SliceArg::Index(0 as isize)])
             .indexed_iter_mut()
             .for_each(|(i, value)| {
                 let x = i as f64 * dx;
@@ -170,7 +170,7 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
             });
 
         p_prev
-            .slice_mut(ndarray::s![.., 0, 0])
+            .slice_with::<1>(&[SliceArg::All, SliceArg::Index(0 as isize), SliceArg::Index(0 as isize)])
             .indexed_iter_mut()
             .for_each(|(i, value)| {
                 let x = i as f64 * dx;
@@ -207,7 +207,7 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
         // Use iterator with enumerate for index access
         p_curr
-            .slice(ndarray::s![.., 0, 0])
+            .slice_with::<1>(&[SliceArg::All, SliceArg::Index(0 as isize), SliceArg::Index(0 as isize)])
             .iter()
             .enumerate()
             .for_each(|(i, &actual)| {

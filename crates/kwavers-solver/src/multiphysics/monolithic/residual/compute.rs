@@ -4,7 +4,10 @@ use super::super::state_vector::field_block_view;
 use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 
 impl MonolithicCoupler {
     /// Compute residual F(u) = u − u_prev − Δt·R(u).

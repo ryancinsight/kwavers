@@ -278,7 +278,7 @@ pub fn two_way_transmission(absorption_1d: &[f64], dx_m: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn base(nx: usize) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
         let c = Array3::from_elem((nx, 1, 1), 1481.0); // water

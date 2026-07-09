@@ -1,7 +1,7 @@
 use super::FemHelmholtzSolver;
 use kwavers_boundary::FemBoundaryManager;
 use kwavers_mesh::TetrahedralMesh;
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {

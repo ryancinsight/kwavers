@@ -1,7 +1,10 @@
 //! Spatial geometry helpers: coordinate mapping, masking, and distance.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use super::super::geometry::Point2;
 
@@ -67,7 +70,7 @@ pub(super) fn distance_sq(a: Point2, b: Point2) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn source_mask_selects_nearest_target_focus() {

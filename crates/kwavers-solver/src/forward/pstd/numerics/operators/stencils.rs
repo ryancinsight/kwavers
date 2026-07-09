@@ -4,7 +4,7 @@
 //! Based on: Fornberg, B. (1988). "Generation of finite difference formulas on
 //! arbitrarily spaced grids." Mathematics of computation, 51(184), 699-706.
 
-use ndarray::Array1;
+use leto::Array1;
 
 use kwavers_core::error::{KwaversError, ValidationError};
 

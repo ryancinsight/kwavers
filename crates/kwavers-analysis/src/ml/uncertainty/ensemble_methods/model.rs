@@ -2,9 +2,9 @@
 use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
 #[cfg(not(feature = "pinn"))]
-use ndarray::Array2;
+use leto::Array2;
 #[cfg(feature = "pinn")]
-use ndarray::Array2;
+use leto::Array2;
 
 /// Individual ensemble model
 #[derive(Debug, Clone)]

@@ -1,5 +1,5 @@
 use kwavers_core::utils::iterators::apply_inplace;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::local_ops::{
     compute_laplacian, compute_local_entropy, compute_local_std, compute_spatial_gradient,
@@ -28,13 +28,13 @@ use super::local_ops::{
 /// # Example
 ///
 /// ```rust,ignore
-/// use ndarray::Array3;
+/// use leto::Array3;
 /// let image = Array3::<f32>::zeros((1, 1, 256));
 /// let features = extract_all_features(&image);
 /// assert_eq!(features.len(), 6);
 /// ```
-pub fn extract_all_features(image: &Array3<f32>) -> ndarray::Array1<f32> {
-    use ndarray::Array1;
+pub fn extract_all_features(image: &Array3<f32>) -> leto::Array1<f32> {
+    use leto::Array1;
 
     // 1. Mean intensity
     let mean_intensity = image.mean().unwrap_or(0.0);
@@ -122,15 +122,15 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 /// assert_eq!(stacked.shape(), &[1, 5, 256, 256]);
 /// ```
 #[must_use]
-pub fn concatenate_features(features: &[Array3<f32>]) -> ndarray::Array4<f32> {
+pub fn concatenate_features(features: &[Array3<f32>]) -> leto::Array4<f32> {
     if features.is_empty() {
-        return ndarray::Array4::zeros((0, 0, 0, 0));
+        return leto::Array4::zeros((0, 0, 0, 0));
     }
 
     let (d0, d1, d2) = features[0].dim();
     let num_features = features.len();
 
-    let mut stacked = ndarray::Array4::zeros((d0, num_features, d1, d2));
+    let mut stacked = leto::Array4::zeros((d0, num_features, d1, d2));
 
     for (feat_idx, feature) in features.iter().enumerate() {
         for k in 0..d0 {

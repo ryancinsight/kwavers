@@ -6,7 +6,7 @@ use super::bubble_state::BubbleState;
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::fundamental::{ATMOSPHERIC_PRESSURE, DENSITY_WATER_NOMINAL};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Bubble interaction calculator

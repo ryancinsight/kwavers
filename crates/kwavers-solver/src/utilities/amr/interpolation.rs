@@ -2,7 +2,7 @@
 
 use super::octree::Octree;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Interpolation scheme for refinement/coarsening
 #[derive(Debug, Clone, Copy)]
@@ -117,7 +117,7 @@ impl AmrConservativeInterpolator {
                 {
                     // Get coarse subregion
                     let coarse_region =
-                        coarse_field.slice(ndarray::s![i_min..i_max, j_min..j_max, k_min..k_max]);
+                        coarse_fieldslice(&[(Some(i_min as isize) as usize, Some(i_max as isize) as usize, 1), (Some(j_min as isize) as usize, Some(j_max as isize) as usize, 1), (Some(k_min as isize) as usize, Some(k_max as isize) as usize, 1)]);
 
                     // Interpolate to refined mesh
                     let refined_region = match self.scheme {

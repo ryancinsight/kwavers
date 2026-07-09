@@ -21,7 +21,10 @@ use super::transform::{bilinear_with_gradient, PlaneGeometry};
 use crate::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Control-lattice interpolation basis for the FFD displacement field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

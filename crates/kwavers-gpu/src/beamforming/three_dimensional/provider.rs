@@ -9,7 +9,10 @@ use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::backend::traits::GpuProvider;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// Hephaestus-backed WGPU implementation of the 3-D beamforming provider.
 #[derive(Debug)]
@@ -233,7 +236,7 @@ mod tests {
         delay_and_sum_cpu_reference, Beamforming3dApodizationWindow, BeamformingAlgorithm3D,
         BeamformingConfig3D, BeamformingProcessor3D,
     };
-    use ndarray::Array4;
+    use leto::Array4;
 
     #[test]
     fn wgpu_das_matches_cpu_reference_when_available() {

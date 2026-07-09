@@ -20,7 +20,7 @@ use super::MultiPhysicsCoupling;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Acoustic-thermal coupling for thermoacoustic effects
 pub trait AcousticThermalCoupling: MultiPhysicsCoupling {

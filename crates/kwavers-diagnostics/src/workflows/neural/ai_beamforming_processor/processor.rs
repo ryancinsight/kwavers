@@ -1,6 +1,9 @@
 //! AIEnhancedBeamformingProcessor struct and impl.
 
-use ndarray::{Array3, ArrayView4};
+use leto::{
+    Array3,
+    ArrayView4,
+};
 use std::time::Instant;
 
 use kwavers_core::error::KwaversResult;

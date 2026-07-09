@@ -1,7 +1,7 @@
 //! Haar wavelet transform implementation.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::core::WaveletTransform;
 

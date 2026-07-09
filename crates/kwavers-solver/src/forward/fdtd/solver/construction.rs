@@ -8,7 +8,7 @@
 
 use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::central_diff::CentralDifferenceOperator;
 use super::{FdtdMetrics, GenericFdtdSolver};

@@ -31,7 +31,10 @@
 //!   DOI: 10.1090/S0025-5718-1988-0935077-0
 
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 use super::super::DifferentialOperator;
 

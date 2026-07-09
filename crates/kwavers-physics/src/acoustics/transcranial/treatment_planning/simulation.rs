@@ -11,7 +11,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use kwavers_core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;

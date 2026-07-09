@@ -2,7 +2,10 @@
 
 use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 use super::{
     boltzmann_p_open, compute_membrane_tension, BoltzmannGatingParams, CellMembraneParams,

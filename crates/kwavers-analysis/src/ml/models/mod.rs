@@ -17,7 +17,7 @@ pub use parameter_optimizer::ParameterOptimizerModel;
 pub use tissue_classifier::TissueClassifierModel;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Common trait for all ML models
 pub trait MLModel {
@@ -70,7 +70,11 @@ pub mod constants {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{array, Array1, Array2};
+    use leto::{
+    /* array -- no leto equivalent */,
+    Array1,
+    Array2,
+};
 
     // ── AnomalyDetectorModel ─────────────────────────────────────────────────
 

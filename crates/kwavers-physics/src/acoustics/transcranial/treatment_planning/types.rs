@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Treatment target volume in brain coordinates
 #[derive(Debug, Clone)]

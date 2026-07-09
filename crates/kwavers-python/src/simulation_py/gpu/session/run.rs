@@ -83,7 +83,7 @@ impl GpuPstdSession {
             let materialize_t0 = std::time::Instant::now();
             let n_sensors = self.sensor_indices.len();
             let out_flat: Vec<f64> = sensor_data_f32.iter().map(|&v| v as f64).collect();
-            let out = ndarray::Array2::from_shape_vec((n_sensors, time_steps), out_flat)
+            let out = leto::Array2::from_shape_vec((n_sensors, time_steps), out_flat)
                 .expect("sensor_data shape mismatch");
             self.last_materialize_ns = materialize_t0.elapsed().as_nanos() as u64;
             if self.last_medium_upload_ns == 0 {

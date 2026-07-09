@@ -4,7 +4,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Validator for time-reversal inputs
 #[derive(Debug)]

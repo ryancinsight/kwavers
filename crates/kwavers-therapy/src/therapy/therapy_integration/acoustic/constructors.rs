@@ -4,7 +4,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_simulation::backends::acoustic::{AcousticSolverBackend, FdtdBackend};
-use ndarray::Array3;
+use leto::Array3;
 
 impl AcousticWaveSolver {
     /// Create new acoustic wave solver with automatic backend selection

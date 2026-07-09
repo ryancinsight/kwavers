@@ -18,7 +18,7 @@
 //! - Hamilton & Blackstock (1998). Nonlinear Acoustics. Academic Press. §4.3.
 //! - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Return `true` if any cell has crossed the shock-formation threshold σ ≥ 1.
 ///

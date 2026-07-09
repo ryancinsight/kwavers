@@ -39,7 +39,7 @@ use kwavers_grid::Grid;
 use kwavers_imaging::photoacoustic::InitialPressure;
 use kwavers_medium::properties::OpticalPropertyData;
 use leto::Array3;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 /// Compute initial pressure distribution from optical absorption.
 ///

@@ -4,7 +4,11 @@ use std::collections::VecDeque;
 
 use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 
 use super::super::aperture::{
     abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,

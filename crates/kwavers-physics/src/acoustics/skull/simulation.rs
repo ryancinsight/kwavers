@@ -1,7 +1,7 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::aberration::AberrationCorrection;
 use super::analytical::{generate_ellipsoidal_skull, generate_spherical_skull};
@@ -68,7 +68,7 @@ impl TranscranialSimulation {
     pub fn load_ct_geometry(&mut self, ct_path: &str) -> KwaversResult<()> {
         use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
         let mut loader = CTImageLoader::new();
-        let ct_data = ndarray::Array3::try_from(loader.load(ct_path)?)
+        let ct_data = leto::Array3::try_from(loader.load(ct_path)?)
             .map_err(|err| KwaversError::Shape(err.to_string()))?;
 
         self.skull_mask = Some(HeterogeneousSkull::generate_mask_from_ct(&ct_data));

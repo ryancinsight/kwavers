@@ -8,7 +8,10 @@ use super::PolarizationModel;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 use num_complex::Complex64;
 
 /// Physically accurate polarization model using Jones calculus

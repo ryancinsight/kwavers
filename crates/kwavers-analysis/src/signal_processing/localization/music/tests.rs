@@ -2,7 +2,7 @@ use crate::signal_processing::localization::model_order::ModelOrderCriterion;
 use crate::signal_processing::localization::{AcousticLocalizationConfig, LocalizationProcessor};
 use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{MUSICConfig, MUSICProcessor};
 

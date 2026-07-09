@@ -193,7 +193,7 @@ pub fn marchenko_wasserstein_misfit(
     cfg: &MarchenkoConfig,
 ) -> kwavers_core::error::KwaversResult<f64> {
     use crate::inverse::reconstruction::seismic::{MisfitFunction, MisfitType};
-    use ndarray::Array2;
+    use leto::Array2;
 
     let g_obs = redatum(reflection_obs, cfg).green_minus;
     let g_mod = redatum(reflection_mod, cfg).green_minus;

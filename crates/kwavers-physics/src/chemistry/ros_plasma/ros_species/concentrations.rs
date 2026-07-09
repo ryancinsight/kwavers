@@ -1,7 +1,7 @@
 //! ROS concentrations tracking and integration
 
 use super::types::ROSSpecies;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use kwavers_core::constants::chemistry::{

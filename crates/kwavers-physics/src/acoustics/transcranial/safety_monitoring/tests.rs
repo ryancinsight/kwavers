@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_safety_monitor_creation() {

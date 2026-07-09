@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_bvf_water_is_zero() {

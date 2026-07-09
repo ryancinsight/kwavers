@@ -31,7 +31,7 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
 
     fn update(
         &mut self,
-        fields: &mut ndarray::Array4<f64>,
+        fields: &mut leto::Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
@@ -41,7 +41,7 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
         use kwavers_field::mapping::UnifiedFieldType;
 
         let pressure_field =
-            fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+            fields.index_axis(0, UnifiedFieldType::Pressure.index());
         let mut pressure_array = pressure_field.to_owned();
 
         if let Some(operators) = &self.frequency_operators {
@@ -57,7 +57,7 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
             self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
 
             let mut pressure_slice =
-                fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+                fields.index_axis_mut(0, UnifiedFieldType::Pressure.index());
             pressure_slice.assign(&pressure_array);
         }
 

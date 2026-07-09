@@ -1,7 +1,10 @@
 use super::types::{SnapshotMethod, SnapshotSelection, StftBinConfig};
 use apollo::fft_1d_array;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use eunomia::Complex64;
 
 /// Extract complex snapshots according to a selection policy.

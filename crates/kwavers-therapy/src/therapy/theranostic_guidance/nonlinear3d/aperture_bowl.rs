@@ -2,7 +2,7 @@
 
 use std::collections::HashSet;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -180,7 +180,7 @@ fn dot(a: [f64; 3], b: [f64; 3]) -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use ndarray::Array3;
+    use leto::Array3;
 
     use super::super::types::Nonlinear3dVolume;
     use super::*;

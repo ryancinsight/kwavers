@@ -10,13 +10,13 @@ impl Simulation {
         grid: &KwaversGrid,
         sensor: Option<&Sensor>,
         transducer: Option<&TransducerArray2D>,
-    ) -> ndarray::Array3<bool> {
+    ) -> leto::Array3<bool> {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
 
         if let Some(trans) = transducer {
-            let mut mask = ndarray::Array3::<bool>::from_elem((nx, ny, nz), false);
+            let mut mask = leto::Array3::<bool>::from_elem((nx, ny, nz), false);
             let width_pts = (trans.inner.element_width() / grid.dx).round() as isize;
             let length_pts = (trans.inner.element_length() / grid.dz).round() as isize;
 
@@ -54,7 +54,7 @@ impl Simulation {
             return mask.clone();
         }
 
-        let mut mask = ndarray::Array3::<bool>::from_elem((nx, ny, nz), false);
+        let mut mask = leto::Array3::<bool>::from_elem((nx, ny, nz), false);
 
         if sensor.sensor_type == "grid" {
             mask.fill(true);

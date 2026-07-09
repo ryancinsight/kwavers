@@ -8,7 +8,10 @@ use super::ErrorEstimator;
 use super::RefinementCriterion;
 use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, Array3, Axis};
+use leto::{
+    Array2,
+    Array3,
+};
 
 impl ErrorEstimator {
     /// Gradient-based error estimation

@@ -1,6 +1,6 @@
 use super::super::types::{ClinicalThresholds, FeatureMap, LesionDetection, TissueClassification};
 use super::NeuralClinicalDecisionSupport;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_clinical_decision_support_creation() {

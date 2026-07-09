@@ -1,6 +1,6 @@
 //! Dense Tikhonov/H1 PCG reconstruction tests.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     attach_time_shifts, horizontal_samples, predict_sound_speed_time_shifts,

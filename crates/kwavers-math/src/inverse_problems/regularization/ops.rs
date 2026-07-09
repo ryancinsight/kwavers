@@ -1,29 +1,16 @@
 //! Shared traversal helpers for regularization gradients.
 
 use crate::parallel::zip_mut_ref;
-use ndarray::{ArrayBase, Data, DataMut, Dimension};
+use leto::{ArrayView, ArrayViewMut};
 
-pub(super) fn for_each_pair_mut<Sg, Sm, D, F>(
-    gradient: &mut ArrayBase<Sg, D>,
-    model: &ArrayBase<Sm, D>,
+pub(super) fn for_each_pair_mut<const N: usize, F>(
+    gradient: ArrayViewMut<'_, f64, N>,
+    model: ArrayView<'_, f64, N>,
     f: F,
 ) where
-    Sg: DataMut<Elem = f64>,
-    Sm: Data<Elem = f64>,
-    D: Dimension,
     F: Fn(&mut f64, f64) + Send + Sync + Copy,
 {
-    assert_eq!(
-        gradient.dim(),
-        model.dim(),
-        "regularization gradient and model shapes must match"
-    );
-
-    zip_mut_ref(
-        gradient.view_mut(),
-        model.view(),
-        |gradient_value, &model_value| {
-            f(gradient_value, model_value);
-        },
-    );
+    zip_mut_ref(gradient, model, |gradient_value, &model_value| {
+        f(gradient_value, model_value);
+    });
 }

@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_treatment_planner_creation() {

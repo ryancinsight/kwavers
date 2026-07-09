@@ -4,7 +4,7 @@
 //! error estimation and tolerance requirements.
 
 use super::traits::{ErrorEstimatorTrait, TimeStepper};
-use ndarray::Array3;
+use leto::Array3;
 
 fn fold_abs_diffs<F>(
     field_low: &Array3<f64>,
@@ -271,7 +271,9 @@ pub type ErrorEstimator = RichardsonErrorEstimator;
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{Array3, ShapeBuilder};
+    use leto::{
+    Array3,
+};
 
     use super::{
         EmbeddedRKErrorEstimator, ErrorEstimatorTrait, ErrorNorm, RichardsonErrorEstimator,

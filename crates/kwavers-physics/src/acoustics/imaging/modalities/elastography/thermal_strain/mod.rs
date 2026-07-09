@@ -81,7 +81,7 @@ pub use config::ThermalStrainConfig;
 pub use tracking::TrackingParams;
 
 use kwavers_core::error::{KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Result of a thermal strain reconstruction.
 #[derive(Debug, Clone)]

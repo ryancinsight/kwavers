@@ -1,6 +1,8 @@
 use super::*;
 use kwavers_grid::Grid;
-use ndarray::{Array3, ShapeBuilder};
+use leto::{
+    Array3,
+};
 use num_complex::Complex;
 
 #[test]

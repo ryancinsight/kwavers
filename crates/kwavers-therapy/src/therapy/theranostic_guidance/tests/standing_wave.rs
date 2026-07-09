@@ -100,13 +100,13 @@ fn snapshot_shape_and_energy() {
     for k in 0..n_snap {
         let energy: f32 = result
             .snapshot_fields_re
-            .slice(ndarray::s![k, .., ..])
+            .index_axis::<2>(0, k)
             .iter()
             .map(|&v| v * v)
             .sum::<f32>()
             + result
                 .snapshot_fields_im
-                .slice(ndarray::s![k, .., ..])
+                .index_axis::<2>(0, k)
                 .iter()
                 .map(|&v| v * v)
                 .sum::<f32>();

@@ -1,6 +1,9 @@
 use super::EigenSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use num_complex::Complex;
 
 /// `(Q, R)` factor pair from a complex QR decomposition.

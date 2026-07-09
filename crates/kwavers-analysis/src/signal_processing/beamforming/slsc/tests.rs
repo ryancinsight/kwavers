@@ -1,6 +1,9 @@
 use super::beamformer::compute_lag_coherence;
 use super::*;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 
 #[test]

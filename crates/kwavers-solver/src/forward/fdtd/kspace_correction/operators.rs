@@ -7,7 +7,10 @@ use kwavers_math::fft::shift_operators::{
 use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]

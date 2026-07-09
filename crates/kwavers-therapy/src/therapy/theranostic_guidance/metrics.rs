@@ -1,7 +1,7 @@
 //! Value-semantic metrics for theranostic inverse outputs.
 
 use kwavers_math::statistics::{nrmse, pearson};
-use ndarray::Array2;
+use leto::Array2;
 
 #[derive(Clone, Debug)]
 pub struct ReconstructionMetrics {

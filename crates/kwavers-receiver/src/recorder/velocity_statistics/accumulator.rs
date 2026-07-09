@@ -33,7 +33,7 @@
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
 use leto::Array1;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 use super::helpers::validate_sample_output_len;
 

@@ -1,7 +1,7 @@
 //! `KernelCube` — bilinear interpolator across a sparse `(f0, pnp)`
 //! grid of cached [`FocalKernel`]s.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

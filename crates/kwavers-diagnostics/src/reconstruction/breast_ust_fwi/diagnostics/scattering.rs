@@ -19,7 +19,10 @@ use super::residual::{
     validate_ring_channel_policy_shape, BreastUstReceiverChannelPolicy,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 use kwavers_math::fft::Complex64;
 
 /// Per-model finite-window scattering-increment residual.

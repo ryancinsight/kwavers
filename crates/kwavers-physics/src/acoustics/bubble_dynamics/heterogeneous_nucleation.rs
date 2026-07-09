@@ -83,7 +83,7 @@ pub struct ClassicalHeterogeneousNucleation<T: std::fmt::Debug + Clone> {
     pub reference_stiffness: T,
 }
 
-impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationModel
+impl<T: eunomia::FloatElement + std::fmt::Debug + Clone> HeterogeneousNucleationModel
     for ClassicalHeterogeneousNucleation<T>
 {
     type Scalar = T;

@@ -84,7 +84,7 @@
 //! ```rust,ignore
 //! use kwavers_analysis::signal_processing::beamforming::DelayAndSum;
 //! use kwavers_receiver::GridSensorSet;
-//! use ndarray::Array2;
+//! use leto::Array2;
 //!
 //! // 1. Define sensor geometry (domain layer)
 //! let sensor_positions = vec![[0.0, 0.0, 0.0], [0.001, 0.0, 0.0], ...];

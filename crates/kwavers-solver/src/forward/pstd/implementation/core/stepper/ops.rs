@@ -6,7 +6,7 @@ use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_mut_enumerated_with,
     for_each_chunk_pair_mut_enumerated_with, for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 const DENSE_SOURCE_CHUNK: usize = 4096;
 

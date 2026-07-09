@@ -5,7 +5,7 @@ use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::Solver;
 use kwavers_solver::pstd::config::BoundaryConfig;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_kspace_solver_init_and_step() {

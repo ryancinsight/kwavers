@@ -1,6 +1,6 @@
 //! Synthetic CT fixtures shared by the nonlinear 3-D pipeline tests.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Synthetic brain CT: ellipsoidal skull shell (cortical bone HU values)
 /// wrapping an ellipsoidal brain interior (soft tissue HU), surrounded by

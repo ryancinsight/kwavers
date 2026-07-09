@@ -213,7 +213,7 @@ mod update;
 #[cfg(test)]
 mod tests;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::forward::nonlinear::conservation::{
     ConservationDiagnostics, ConservationTolerances, ConservationTracker,

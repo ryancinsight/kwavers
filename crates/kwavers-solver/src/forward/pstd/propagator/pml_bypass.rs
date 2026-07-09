@@ -3,7 +3,11 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use ndarray::{s, Array3, ArrayViewMut3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    ArrayViewMut3,
+};
 
 impl PSTDSolver {
     pub(crate) fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ArrayViewMut3<'_, f64> {
@@ -89,7 +93,7 @@ impl PSTDSolver {
     }
 
     fn validate_x_plane_scratch_view(
-        field: &ndarray::ArrayView3<'_, f64>,
+        field: &leto::ArrayView3<'_, f64>,
         rows: &[usize],
         scratch: &Array3<f64>,
     ) -> KwaversResult<()> {
@@ -118,7 +122,7 @@ impl PSTDSolver {
     }
 
     fn save_x_planes_view(
-        field: &ndarray::ArrayView3<'_, f64>,
+        field: &leto::ArrayView3<'_, f64>,
         rows: &[usize],
         scratch: &mut Array3<f64>,
     ) {

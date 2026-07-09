@@ -8,7 +8,10 @@ use kwavers_solver::plugin::PluginManager;
 use kwavers_solver::pstd::config::BoundaryConfig;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
 use kwavers_source::Source;
-use ndarray::{s, Array4, Zip};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array4,
+};
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;

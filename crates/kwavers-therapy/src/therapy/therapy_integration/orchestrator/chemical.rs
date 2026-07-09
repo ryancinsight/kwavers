@@ -26,7 +26,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::chemistry::ChemicalModel;
 use kwavers_physics::traits::ChemicalModelTrait;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::super::config::AcousticTherapyParams;

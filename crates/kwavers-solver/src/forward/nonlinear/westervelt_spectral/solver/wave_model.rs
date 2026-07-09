@@ -5,7 +5,10 @@ use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, Array4, Axis};
+use leto::{
+    Array3,
+    Array4,
+};
 use std::time::Instant;
 
 use super::super::nonlinear::{compute_nonlinear_term_into, compute_viscoelastic_term_into};

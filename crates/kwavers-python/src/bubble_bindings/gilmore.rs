@@ -13,7 +13,7 @@
 
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
-use ndarray::Array1;
+use leto::Array1;
 use numpy::{ToPyArray, PyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

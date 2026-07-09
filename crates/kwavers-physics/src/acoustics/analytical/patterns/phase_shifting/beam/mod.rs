@@ -6,7 +6,10 @@
 //! - Wooh & Shi (1999): "A simulation study of the beam steering characteristics for linear phased arrays"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 use crate::acoustics::analytical::patterns::phase_shifting::core::{
     calculate_wavelength, wrap_phase, MAX_STEERING_ANGLE,
@@ -156,7 +159,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::arr2;
+    
     use std::f64::consts::PI;
 
     fn linear_array() -> Array2<f64> {

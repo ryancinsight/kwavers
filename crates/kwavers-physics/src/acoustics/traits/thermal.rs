@@ -1,6 +1,9 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 use std::fmt::Debug;
 
 /// Trait for thermal models.

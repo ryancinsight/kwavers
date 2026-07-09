@@ -2,7 +2,7 @@ use crate::acoustics::skull::HeterogeneousSkull;
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::constants::C_WATER_DEFAULT;
 use super::AberrationCorrection;

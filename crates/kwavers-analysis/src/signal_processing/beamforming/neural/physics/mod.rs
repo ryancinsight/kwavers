@@ -33,7 +33,7 @@
 //! - Donoho (1995): "De-noising by soft-thresholding" - Sparsity enforcement
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::types::BeamformingFeedback;
 

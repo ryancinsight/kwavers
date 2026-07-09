@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_compute_validation_metrics() {

@@ -4,7 +4,7 @@ use crate::forward::nonlinear::conservation::{ConservationDiagnostics, Conservat
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_math::fft::Complex64;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_conservation_diagnostics_integration() {

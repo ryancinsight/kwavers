@@ -4,7 +4,10 @@
 
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;

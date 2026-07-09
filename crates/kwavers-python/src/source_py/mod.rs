@@ -5,7 +5,10 @@ mod velocity;
 
 pub(crate) use helpers::pressure_signal_to_matrix;
 
-use ndarray::{Array2, Array3, Axis};
+use leto::{
+    Array2,
+    Array3,
+};
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -38,7 +41,7 @@ pub struct Source {
     /// Initial pressure distribution (for p0 / IVP sources)
     pub(crate) initial_pressure: Option<Array3<f64>>,
     /// Velocity signal [3, num_sources, time_steps] for velocity sources
-    pub(crate) velocity_signal: Option<ndarray::Array3<f64>>,
+    pub(crate) velocity_signal: Option<leto::Array3<f64>>,
     /// Propagation direction for plane wave sources
     pub(crate) direction: Option<(f64, f64, f64)>,
     /// KWaveArray for custom transducer geometry sources
@@ -47,9 +50,9 @@ pub struct Source {
     /// velocity-source path (Phase A.3 of ADR 007). Each entry is `Some`
     /// when the corresponding component is to be driven; `None` otherwise.
     /// The `mask` field above carries the `u_mask` for this source path.
-    pub(crate) elastic_ux_signal_1d: Option<ndarray::Array1<f64>>,
-    pub(crate) elastic_uy_signal_1d: Option<ndarray::Array1<f64>>,
-    pub(crate) elastic_uz_signal_1d: Option<ndarray::Array1<f64>>,
+    pub(crate) elastic_ux_signal_1d: Option<leto::Array1<f64>>,
+    pub(crate) elastic_uy_signal_1d: Option<leto::Array1<f64>>,
+    pub(crate) elastic_uz_signal_1d: Option<leto::Array1<f64>>,
 }
 
 #[pymethods]

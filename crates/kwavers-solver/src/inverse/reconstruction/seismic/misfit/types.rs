@@ -1,7 +1,7 @@
 //! `MisfitType` enum and `MisfitFunction` dispatcher.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Type of misfit function for FWI
 #[derive(Debug, Clone, Copy)]

@@ -2,7 +2,7 @@
 //! phases are derived analytically from the single-bin DFT of a sampled sinusoid.
 
 use super::{extract_first_harmonic, harmonic_snapshot, mre_displacement_field_z};
-use ndarray::Array4;
+use leto::Array4;
 use std::f64::consts::PI;
 
 const KAPPA: f64 = 1.0e4; // rad/m encoding sensitivity

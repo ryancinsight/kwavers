@@ -4,7 +4,7 @@
 //! memory safety practices with comprehensive safety documentation.
 
 use crate::simd_safe::auto_detect::ops;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Add two arrays using AVX2 instructions
 ///
@@ -38,7 +38,7 @@ pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multipl
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_avx2_add() {

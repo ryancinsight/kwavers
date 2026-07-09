@@ -1,7 +1,10 @@
 //! Training dataset and batch operations.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+};
 
 /// Training metrics for monitoring convergence
 #[derive(Debug, Clone)]

@@ -4,7 +4,7 @@
 //! public [`reconstruct_sound_speed_shift`] / [`reconstruct_sound_speed_shift_with_workspace`]
 //! APIs.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     attach_time_shifts, horizontal_samples, predict_sound_speed_time_shifts,

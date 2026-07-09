@@ -23,7 +23,10 @@ use super::super::config::PinnConfig;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Coeus-backed Physics-Informed Neural Network for 1D Wave Equation.
 ///

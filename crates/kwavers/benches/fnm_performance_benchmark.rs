@@ -7,7 +7,7 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_solver::analytical::transducer::{FNMConfig, FastNearfieldSolver};
 use kwavers_transducer::RectangularTransducer;
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

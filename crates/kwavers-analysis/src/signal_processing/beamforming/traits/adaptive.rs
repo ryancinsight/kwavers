@@ -1,7 +1,10 @@
 //! Adaptive beamforming trait — data-driven weight optimization with
 //! diagonal loading and pseudospectrum.
 
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use num_complex::Complex64;
 
 use kwavers_core::error::KwaversResult;

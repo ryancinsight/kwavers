@@ -100,7 +100,7 @@ use crate::inverse::reconstruction::seismic::{DataWeighting, MisfitType};
 use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Reference density for seismic-tradition acoustic FWI [kg/m³].
 ///

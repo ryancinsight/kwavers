@@ -32,7 +32,10 @@ use super::super::traits::{DGOperations, NumericalSolver};
 use super::core::DGSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 impl NumericalSolver for DGSolver {
     fn solve(

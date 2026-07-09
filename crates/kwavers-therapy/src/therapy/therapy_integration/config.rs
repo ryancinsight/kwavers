@@ -237,7 +237,7 @@ pub struct PatientParameters {
     /// 3D map of skull thickness from CT imaging.
     /// Used for transcranial aberration correction.
     /// None if not applicable (non-transcranial therapy).
-    pub skull_thickness: Option<ndarray::Array3<f64>>,
+    pub skull_thickness: Option<leto::Array3<f64>>,
 
     /// Tissue properties map
     ///

@@ -3,7 +3,7 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::forward::pstd::extensions::ElasticPstdMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::geometry::{DeviceLayout, Point2};
 use super::super::medium::PreparedTheranosticSlice;
@@ -11,7 +11,7 @@ use super::geometry::index_point_m;
 
 pub(super) fn elastic_medium(
     prepared: &PreparedTheranosticSlice,
-    lesion_target: &ndarray::Array2<f64>,
+    lesion_target: &leto::Array2<f64>,
     baseline_shear_speed_m_s: f64,
     lesion_fraction: f64,
 ) -> ElasticPstdMedium {

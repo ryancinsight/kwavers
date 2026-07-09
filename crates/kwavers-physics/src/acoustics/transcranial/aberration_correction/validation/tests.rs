@@ -1,7 +1,7 @@
 use super::super::phase_correction::TranscranialAberrationCorrection;
 use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
-use ndarray::Array3;
+use leto::Array3;
 
 fn make_correction() -> TranscranialAberrationCorrection {
     let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();

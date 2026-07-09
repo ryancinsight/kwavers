@@ -2,7 +2,7 @@
 //!
 //! SRP: changes when the output schema for a single reconstruction frame changes.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Reconstructed image for a single RF measurement frame.
 #[derive(Debug, Clone)]

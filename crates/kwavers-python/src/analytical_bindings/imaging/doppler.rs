@@ -5,7 +5,7 @@ use kwavers_analysis::signal_processing::doppler::{
 };
 use kwavers_physics::analytical::imaging::{self, ContrastAgentDopplerConfig};
 use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
-use ndarray::Array2;
+use leto::Array2;
 use numpy::{ToPyArray, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -148,8 +148,8 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
         .collect();
     let cw_velocity_m_s = leto1_to_nd1(fixture.cw_velocity_m_s);
     let cw_power = leto1_to_nd1(fixture.cw_power);
-    let beam_angles_rad = ndarray::Array1::from_vec(fixture.beam_angles_rad);
-    let projected_velocity_m_s = ndarray::Array1::from_vec(fixture.projected_velocity_m_s);
+    let beam_angles_rad = leto::Array1::from_vec(fixture.beam_angles_rad);
+    let projected_velocity_m_s = leto::Array1::from_vec(fixture.projected_velocity_m_s);
     let out = PyDict::new(py);
     out.set_item("cw_velocity_m_s", cw_velocity_m_s.to_pyarray(py))?;
     out.set_item("cw_power", cw_power.to_pyarray(py))?;

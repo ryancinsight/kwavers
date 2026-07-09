@@ -11,7 +11,7 @@
 //! - Temperature-dependent absorption for HIFU simulations
 
 use kwavers_medium::absorption::SpatiallyVaryingAbsorption;
-use ndarray::Array3;
+use leto::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Spatially-Varying Power Law Attenuation Example ===\n");

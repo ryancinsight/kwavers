@@ -7,7 +7,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX, TOTAL_FIELDS};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Unified multi-physics solver

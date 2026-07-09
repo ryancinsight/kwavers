@@ -3,7 +3,7 @@
 use super::BreastUstMriBreastSide;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::VecDeque;
 
 const MRI_EXTENT_X_MM: f64 = 340.0;

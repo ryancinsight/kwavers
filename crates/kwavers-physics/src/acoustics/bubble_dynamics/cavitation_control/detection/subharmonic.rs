@@ -4,7 +4,10 @@ use super::constants::{MIN_SPECTRAL_POWER, SUBHARMONIC_THRESHOLD};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod};
 use apollo::fft_1d_leto;
-use ndarray::{Array1, ArrayView1};
+use leto::{
+    Array1,
+    ArrayView1,
+};
 
 /// Subharmonic detector for stable cavitation
 pub struct SubharmonicDetector {

@@ -28,7 +28,7 @@ use std::path::PathBuf;
 
 use coeus_autograd::Var;
 use coeus_core::MoiraiBackend;
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_physics::field_surrogate::{discover_focal_kernels, FocalKernel};
 use kwavers_solver::inverse::pinn::ml::field_surrogate::{

@@ -18,7 +18,7 @@
 //! obtained from pre-treatment imaging (CT, MRI, ultrasound) and mapped to computational grids.
 
 use kwavers_medium::properties::AcousticPropertyData;
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(test)]
 mod tests;

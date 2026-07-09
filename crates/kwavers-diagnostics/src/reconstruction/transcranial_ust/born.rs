@@ -10,7 +10,7 @@ use kwavers_solver::inverse::linear_born_inversion::{
     schedule::{continuation_rows, stage_iteration_count},
     LinearBornInversionConfig,
 };
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_solver::inverse::linear_born_inversion::high_pass_enhance_slice;
 

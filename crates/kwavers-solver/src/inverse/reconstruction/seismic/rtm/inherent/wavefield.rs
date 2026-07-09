@@ -38,7 +38,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 
 use super::super::super::fd_coeffs::{FD_COEFF_0, FD_COEFF_1, FD_COEFF_2};
 use super::super::types::ReverseTimeMigration;

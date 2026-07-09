@@ -44,7 +44,7 @@
 use super::config::BubbleIMEXConfig;
 use crate::acoustics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use kwavers_core::error::{KwaversResult, PhysicsError};
-use ndarray::Array1;
+use leto::Array1;
 use std::sync::Arc;
 
 use kwavers_core::constants::thermodynamic::VAPOR_DIFFUSION_COEFFICIENT;

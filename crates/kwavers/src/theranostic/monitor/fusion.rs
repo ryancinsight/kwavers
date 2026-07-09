@@ -19,7 +19,7 @@
 //! raw energy for PAM).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 use crate::parallel::zip_two_mut_two_refs;
 
@@ -122,7 +122,7 @@ pub fn lesion_extent(confidence: &Array2<f64>, threshold: f64) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     fn peak_at(n: usize, i: usize, j: usize, val: f64) -> Array2<f64> {
         let mut m = Array2::zeros((n, n));
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn hybrid_pipeline_localizes_lesion_from_both_channels() {
         use super::super::{fd, pam};
-        use ndarray::Array3;
+        use leto::Array3;
 
         let n = 12usize;
         let centre = n / 2; // 6

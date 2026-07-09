@@ -53,7 +53,10 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, ArrayView2};
+use leto::{
+    Array3,
+    ArrayView2,
+};
 use kwavers_math::fft::Complex64;
 
 /// k-space pseudospectral time-reversal reconstructor.

@@ -9,7 +9,7 @@
 //! - Mallat (2008): "A Wavelet Tour of Signal Processing"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::core::WaveletTransform;
 

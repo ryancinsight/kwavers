@@ -7,7 +7,11 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult},
 };
 use kwavers_transducer::transducers::focused::BowlAngularBounds;
-use ndarray::{s, Array2, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 
 use super::super::geometry::{
     focused_bowl_cap_points, FocusedBowlCapSpec, FocusedBowlVertexDirection,

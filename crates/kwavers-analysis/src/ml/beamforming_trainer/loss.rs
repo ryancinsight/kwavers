@@ -8,7 +8,7 @@
 use super::BeamformingTrainer;
 use crate::ml::training::{PhysicsLoss, TrainingDataset};
 use kwavers_core::error::KwaversResult;
-use ndarray::s;
+use s;
 
 impl BeamformingTrainer {
     /// Compute loss for entire epoch (simplified implementation)

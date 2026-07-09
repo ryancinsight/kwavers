@@ -12,7 +12,7 @@ use apollo::{fft_1d_leto, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::error::KwaversResult;
 use kwavers_signal::analytic::hilbert_transform;
 use leto::Array1 as LetoArray1;
-use ndarray::Array2;
+use leto::Array2;
 use kwavers_math::fft::Complex64;
 
 impl MisfitFunction {

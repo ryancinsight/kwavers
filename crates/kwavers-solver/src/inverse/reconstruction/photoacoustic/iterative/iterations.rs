@@ -5,7 +5,10 @@ use super::IterativeMethods;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::utils::iterators::apply_inplace;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 impl IterativeMethods {
     /// One SIRT step: x ← x + λ · Aᵀ(y − Ax).
@@ -83,10 +86,10 @@ impl IterativeMethods {
             let start_idx = subset_idx * subset_size;
             let end_idx = ((subset_idx + 1) * subset_size).min(n_measurements);
 
-            let a_subset = a.slice(ndarray::s![start_idx..end_idx, ..]);
-            let y_subset = y.slice(ndarray::s![start_idx..end_idx]);
+            let a_subset = aslice(&[(Some(start_idx as isize) as usize, Some(end_idx as isize) as usize, 1), (0, usize::MAX, 1)]);
+            let y_subset = yslice(&[(Some(start_idx as isize) as usize, Some(end_idx as isize) as usize, 1)]);
 
-            let sensitivity = a_subset.sum_axis(ndarray::Axis(0));
+            let sensitivity = a_subset.sum_axis(0);
             let forward_proj = a_subset.dot(x);
 
             let mut ratio = Array1::zeros(end_idx - start_idx);

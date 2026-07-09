@@ -1,7 +1,7 @@
 //! Acoustic specific trait extensions
 
 use super::core::WaveEquation;
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Acoustic wave equation trait (scalar pressure field)
 ///

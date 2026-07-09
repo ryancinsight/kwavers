@@ -3,7 +3,7 @@
 //! Calculates total light emission from blackbody, bremsstrahlung,
 //! and Cherenkov radiation mechanisms at each spatial point.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::constants::fundamental::{BOLTZMANN, ELEMENTARY_CHARGE};
 
@@ -127,7 +127,7 @@ impl SonoluminescenceEmission {
         compression: f64,
     ) -> EmissionSpectrum {
         let wavelengths = self.analyzer.range.wavelengths();
-        let mut intensities = ndarray::Array1::zeros(wavelengths.len());
+        let mut intensities = leto::Array1::zeros(wavelengths.len());
 
         if temperature < self.params.min_temperature || radius <= 0.0 {
             return EmissionSpectrum::new(wavelengths, intensities, 0.0);

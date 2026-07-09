@@ -3,7 +3,7 @@ use super::dataset::{EpochTrainingMetrics, TrainingDataset};
 use super::history::TrainingHistory;
 use super::loss::{Optimizer, PhysicsLoss};
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_training_config_default() {

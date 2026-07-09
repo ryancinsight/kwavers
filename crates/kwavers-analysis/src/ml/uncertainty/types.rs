@@ -1,6 +1,6 @@
 //! Data types and traits for uncertainty quantification.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Uncertainty quantification methods.
 #[derive(Debug, Clone, Copy, PartialEq)]

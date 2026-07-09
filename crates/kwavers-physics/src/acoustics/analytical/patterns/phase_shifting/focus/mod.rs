@@ -6,7 +6,10 @@
 //! - Ebbini & Cain (1989): "Multiple-focus ultrasound phased-array pattern synthesis"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 use crate::phase_modulation::phase_shifting::core::{
     calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE,
@@ -190,7 +193,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::arr2;
+    
 
     fn linear_array() -> Array2<f64> {
         arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])

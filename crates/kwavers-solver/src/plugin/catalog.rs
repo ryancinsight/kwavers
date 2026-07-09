@@ -510,7 +510,7 @@ mod tests {
     /// CFL = c·dt/dx = 1500·5e-8/1e-3 = 0.075.
     fn assert_plugin_evolves_field(mut plugin: Box<dyn Plugin>) {
         use crate::plugin::test_support::{make_context, null_plugin_fields, NullBoundary};
-        use ndarray::Array4;
+        use leto::Array4;
 
         let grid = Grid::new(16, 16, 16, 1e-3, 1e-3, 1e-3).expect("grid");
         let medium = water(&grid);

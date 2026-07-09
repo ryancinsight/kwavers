@@ -16,7 +16,7 @@
 //! - Kendall & Gal (2017): "What Uncertainties Do We Need in Bayesian Deep Learning?"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Uncertainty estimator for neural beamforming using dropout-based methods.
 #[derive(Debug, Clone)]
@@ -145,7 +145,7 @@ impl Default for UncertaintyEstimator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array;
+    use Array;
 
     #[test]
     fn test_uncertainty_estimator_creation() {

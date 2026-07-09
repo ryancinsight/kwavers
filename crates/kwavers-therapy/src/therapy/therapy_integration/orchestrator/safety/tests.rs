@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::medical::TI_LIMIT_SOFT_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_thermal_index_calculation() {

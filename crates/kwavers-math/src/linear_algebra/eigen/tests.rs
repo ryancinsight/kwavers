@@ -1,6 +1,6 @@
 use super::decomposition::EigenDecomposition;
 use eunomia::Complex64 as Complex;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_real_symmetric_eigendecomposition() {

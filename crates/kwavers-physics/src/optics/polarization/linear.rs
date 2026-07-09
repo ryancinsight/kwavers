@@ -5,7 +5,10 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
 use moirai_parallel::{for_each_mut_with, Adaptive};
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 use num_complex::Complex64;
 
 /// Legacy linear polarization model (deprecated — use JonesPolarizationModel)

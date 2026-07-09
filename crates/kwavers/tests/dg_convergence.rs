@@ -32,7 +32,7 @@ use kwavers_solver::forward::pstd::dg::config::{
 };
 use kwavers_solver::forward::pstd::dg::dg_solver::core::DGSolver;
 use kwavers_solver::forward::pstd::dg::{BasisType, FluxType, LimiterType};
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 use std::sync::Arc;
 

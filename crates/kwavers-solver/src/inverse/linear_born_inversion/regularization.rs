@@ -14,7 +14,7 @@
 //! buffers with `std::mem::swap`, eliminating the `Vec::clone` that previously
 //! occurred on every diffusion iteration.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::LinearBornInversionConfig;
 use super::VolumeVoxel;

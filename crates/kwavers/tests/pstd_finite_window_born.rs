@@ -7,7 +7,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn finite_window_born_is_linear_in_slowness_squared_contrast() {
@@ -247,7 +247,7 @@ fn second_order_does_not_worsen_pstd_match() {
     let mut pstd_norm_sq = 0.0_f64;
     let mut first_residual_sq = 0.0_f64;
     let mut second_residual_sq = 0.0_f64;
-    let pstd_row = pstd_data.observed_pressure.index_axis(ndarray::Axis(0), 0);
+    let pstd_row = pstd_data.observed_pressure.index_axis(0, 0);
     for ((&pstd, &first), &second) in pstd_row
         .iter()
         .zip(first_order.iter())
@@ -375,12 +375,12 @@ fn finite_window_first_variation_residual(
     let mut residual_norm_sq = 0.0_f64;
     for (((&pstd_perturbed, &pstd_reference), &born_perturbed), &born_reference) in perturbed_data
         .observed_pressure
-        .index_axis(ndarray::Axis(0), 0)
+        .index_axis(0, 0)
         .iter()
         .zip(
             reference_data
                 .observed_pressure
-                .index_axis(ndarray::Axis(0), 0)
+                .index_axis(0, 0)
                 .iter(),
         )
         .zip(born_perturbed.iter())

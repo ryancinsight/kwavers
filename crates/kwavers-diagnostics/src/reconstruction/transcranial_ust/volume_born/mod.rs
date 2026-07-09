@@ -10,7 +10,7 @@ use kwavers_solver::inverse::linear_born_inversion::{
     high_pass_enhance_volume, pcg_invert, VolumeOperator, VolumeVoxel,
 };
 use kwavers_transducer::transducers::TransducerGeometry;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     config::{TranscranialUstBornInversionConfig, SOUND_SPEED_TISSUE},

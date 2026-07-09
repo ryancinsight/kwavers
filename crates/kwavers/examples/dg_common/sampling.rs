@@ -1,7 +1,10 @@
 use super::{exact_gaussian_pressure, physical_coordinate, NamedLine, DT, ELEMENTS, STEPS};
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 const COMMON_SAMPLING_ORDER: usize = 4;
 

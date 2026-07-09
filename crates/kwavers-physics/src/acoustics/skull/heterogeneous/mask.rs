@@ -2,7 +2,7 @@ use crate::acoustics::skull::AcousticSkullProperties;
 use crate::parallel::zip_mut_ref;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::constants::ALPHA_WATER;
 use super::model::HeterogeneousSkull;

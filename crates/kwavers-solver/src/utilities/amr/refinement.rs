@@ -2,7 +2,9 @@
 
 use kwavers_core::error::KwaversResult;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 
 /// Refinement level information
 #[derive(Debug, Clone)]

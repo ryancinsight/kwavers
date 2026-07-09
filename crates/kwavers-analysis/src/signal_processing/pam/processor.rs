@@ -1,7 +1,7 @@
 use super::config::PAMConfig;
 use apollo::fft_1d_array;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 pub struct PAMProcessor {
     pub(super) config: PAMConfig,

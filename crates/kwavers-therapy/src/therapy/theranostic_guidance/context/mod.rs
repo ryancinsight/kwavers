@@ -10,7 +10,10 @@ mod brain;
 mod surface;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 pub(super) use super::geometry::{centered_origin_2d, IndexBounds3, Point3};
 pub use abdomen::build_abdominal_placement_context;

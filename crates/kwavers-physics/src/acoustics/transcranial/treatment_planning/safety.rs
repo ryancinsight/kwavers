@@ -5,7 +5,7 @@ use super::types::TranscranialSafetyConstraints;
 use crate::acoustics::analysis::calculate_mechanical_index;
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 impl TreatmentPlanner {
     /// Validate safety constraints

@@ -27,7 +27,7 @@
 //! borrows.  The velocity-Verlet update reads `{ax,ay,az}` immutably and
 //! writes `{vx,vy,vz}` on the wave field — separate allocation entirely.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Reusable scratch arrays for one `TimeIntegrator` velocity-Verlet step.
 ///

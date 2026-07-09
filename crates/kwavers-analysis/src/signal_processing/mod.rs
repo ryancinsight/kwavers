@@ -55,7 +55,7 @@
 //!     delay_and_sum, DelayReference, DEFAULT_DELAY_REFERENCE
 //! };
 //! use kwavers_receiver::GridSensorSet;
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! // Sensor geometry (domain primitive)
 //! let sensors = GridSensorSet::new(positions, sample_rate)?;

@@ -22,7 +22,7 @@
 //! intensity calculations, where I ∝ p_rms².
 
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array2;
+use leto::Array2;
 
 use super::KZKSolver;
 use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;

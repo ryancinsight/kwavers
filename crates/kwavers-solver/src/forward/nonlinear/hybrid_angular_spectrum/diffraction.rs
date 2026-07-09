@@ -8,7 +8,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array2 as LetoArray2;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Diffraction operator using FFT-based angular spectrum
@@ -85,7 +85,7 @@ impl HybridAsDiffractionOperator {
 
     fn propagate_2d_plane(&self, plane: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
         // Convert to complex Array2
-        let plane_2d = plane.index_axis(ndarray::Axis(2), 0).to_owned();
+        let plane_2d = plane.index_axis(2, 0).to_owned();
         let field = LetoArray2::from_shape_vec(
             [self.nx, self.ny],
             plane_2d

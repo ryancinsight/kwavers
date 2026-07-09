@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 use kwavers_math::fft::Complex64;
 
 use super::config::BurtonMillerConfig;

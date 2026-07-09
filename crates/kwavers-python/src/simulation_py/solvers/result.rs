@@ -2,7 +2,7 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 
-use ndarray::Array1;
+use leto::Array1;
 
 use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use crate::simulation_result_py::{SimulationResult, SimulationRunResult};
@@ -49,7 +49,7 @@ impl Simulation {
             };
 
         let to_py_array1 = |arr: &leto::Array1<f64>| {
-            let nd: ndarray::Array1<f64> = arr.clone().try_into().expect("sample stats must convert");
+            let nd: leto::Array1<f64> = arr.clone().try_into().expect("sample stats must convert");
             PyArray1::from_owned_array(py, nd).into()
         };
         let p_max = stats.as_ref().map(|s| to_py_array1(&s.p_max));

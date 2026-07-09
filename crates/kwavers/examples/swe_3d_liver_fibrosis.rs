@@ -45,7 +45,7 @@ use kwavers_solver::forward::elastic::{
 use kwavers_therapy::therapy::swe_3d_workflows::{
     ElasticityMap3D, MultiPlanarReconstruction, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🫀 3D SWE Liver Fibrosis Assessment Example");

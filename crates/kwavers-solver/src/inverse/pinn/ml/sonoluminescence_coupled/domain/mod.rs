@@ -11,7 +11,7 @@ mod residuals;
 
 use crate::inverse::pinn::ml::physics::PinnCouplingInterface;
 use kwavers_physics::optics::sonoluminescence::SonoluminescenceEmission;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::config::{SonoluminescenceCouplingConfig, SonoluminescenceCouplingType};
 

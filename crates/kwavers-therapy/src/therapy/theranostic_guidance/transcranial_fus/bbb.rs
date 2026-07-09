@@ -1,4 +1,7 @@
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Compute BBB opening dose and derived fields for a set of sonication subspots.
 ///

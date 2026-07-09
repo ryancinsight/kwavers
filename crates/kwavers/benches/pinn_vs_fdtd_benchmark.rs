@@ -12,7 +12,10 @@ use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_source::GridSource;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::wave_equation_2d::{

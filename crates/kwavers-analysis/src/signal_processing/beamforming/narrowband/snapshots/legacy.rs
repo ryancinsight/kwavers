@@ -7,7 +7,10 @@ use apollo::{fft_1d_array, ifft_1d_complex};
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Convert a real-valued time series into its analytic signal via Hilbert transform.
 ///
@@ -190,7 +193,7 @@ mod tests {
     };
     use approx::assert_abs_diff_eq;
     use eunomia::Complex64;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn analytic_signal_of_cos_has_unit_magnitude_envelope_for_tone() {

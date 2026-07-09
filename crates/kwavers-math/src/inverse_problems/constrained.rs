@@ -15,7 +15,7 @@
 //! to it.
 
 use crate::parallel::zip_mut_ref;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Pointwise box constraints `lower ≤ m(r) ≤ upper` on a model field.
 #[derive(Debug, Clone, Copy)]
@@ -112,7 +112,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn new_orders_bounds() {

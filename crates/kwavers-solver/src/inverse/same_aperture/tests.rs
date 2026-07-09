@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     active_grid, build_fundamental_matrix, encode_measurements, fundamental_operator,

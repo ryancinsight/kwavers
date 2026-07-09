@@ -2,7 +2,7 @@
 
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Tier 3 — comprehensive validation (>30 s).
 /// Uses a 64×64×128 grid.

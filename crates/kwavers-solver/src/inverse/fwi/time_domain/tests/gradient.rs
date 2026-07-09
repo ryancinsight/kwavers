@@ -3,7 +3,10 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Zip};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Verify the post-correlation velocity-gradient scaling applies the
 /// per-voxel `-2 / (ρ(x) · c(x)³)` factor exactly.

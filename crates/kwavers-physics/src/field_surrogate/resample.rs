@@ -23,7 +23,7 @@
 //! Cubic can be added behind a separate function if a future use case
 //! requires it.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::kernel::FocalKernel;
 

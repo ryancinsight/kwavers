@@ -10,7 +10,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
-use ndarray::Array1;
+use leto::Array1;
 use num_complex::Complex64;
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;

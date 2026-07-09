@@ -28,7 +28,7 @@ use kwavers_solver::forward::fdtd::config::{FdtdConfig, KSpaceCorrectionMode};
 use kwavers_solver::forward::fdtd::solver::FdtdSolver;
 use kwavers_source::custom::FunctionSource;
 use kwavers_source::{GridSource, SourceField};
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Simple sine wave signal for testing

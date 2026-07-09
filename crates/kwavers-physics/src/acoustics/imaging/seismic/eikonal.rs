@@ -18,7 +18,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// A large sentinel traveltime marking not-yet-reached nodes.
 const FAR: f64 = 1.0e30;

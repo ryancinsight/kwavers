@@ -2,7 +2,7 @@
 
 use super::{IterativeSolver, SolverConfig};
 use crate::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
+use leto::Array1;
 use eunomia::Complex64;
 
 #[test]

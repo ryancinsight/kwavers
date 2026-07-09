@@ -1,7 +1,7 @@
 //! Volumetric phase-screen integration.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::model::AberrationCorrection;
 use kwavers_core::constants::numerical::TWO_PI;

@@ -4,7 +4,10 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_with, Adaptive};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 const TRIAL_MODEL_CHUNK_LEN: usize = 4096;
 

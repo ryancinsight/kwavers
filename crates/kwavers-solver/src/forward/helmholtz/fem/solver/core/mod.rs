@@ -29,7 +29,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use kwavers_mesh::TetrahedralMesh;
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 /// Finite Element Helmholtz solver for complex geometries.

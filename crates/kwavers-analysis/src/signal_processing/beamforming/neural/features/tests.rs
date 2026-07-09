@@ -2,7 +2,7 @@ use super::computation::{
     compute_laplacian, compute_local_entropy, compute_local_std, compute_spatial_gradient,
     concatenate_features, extract_all_features, normalize_features,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 fn create_test_image() -> Array3<f32> {
     let mut image = Array3::zeros((1, 10, 10));

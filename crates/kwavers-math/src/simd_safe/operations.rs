@@ -1,6 +1,6 @@
 //! Main SIMD operations structure with architecture dispatch
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// SIMD lane width for f64, selected at compile time per target ISA.
 ///

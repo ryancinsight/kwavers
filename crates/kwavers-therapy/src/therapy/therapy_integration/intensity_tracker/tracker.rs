@@ -7,7 +7,7 @@ use kwavers_core::constants::medical::{
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Real-time acoustic intensity tracker
 ///

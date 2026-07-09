@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_simd_config_detection() {

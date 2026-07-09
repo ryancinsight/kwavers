@@ -1,4 +1,6 @@
-use ndarray::{Array3, Axis};
+use leto::{
+    Array3,
+};
 use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -53,7 +55,7 @@ impl Source {
                 "At least one of ux, uy, uz must be provided",
             ));
         }
-        let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<ndarray::Array1<f64>> {
+        let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<leto::Array1<f64>> {
             opt.map(|sig| sig.as_array().to_owned())
         };
         let mask_f64 = mask_arr.mapv(|b| if b { 1.0 } else { 0.0 });

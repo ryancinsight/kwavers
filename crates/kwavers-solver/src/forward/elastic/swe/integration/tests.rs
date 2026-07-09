@@ -6,7 +6,7 @@ use crate::forward::elastic::swe::scratch::ElasticStepScratch;
 use crate::forward::elastic::swe::types::ElasticWaveField;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 fn make_integrator(
     grid: &Grid,

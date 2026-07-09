@@ -1,7 +1,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::NumericsTrilinearInterpolator;
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 use std::collections::HashMap;
 
 use super::residual::max_abs_difference;

@@ -21,8 +21,8 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         let emission_calculator =
             SonoluminescenceEmission::new(config.grid_shape, config.emission_params.clone());
 
-        let bubble_states = ndarray::Array3::zeros(config.grid_shape);
-        let temperature_field = ndarray::Array3::zeros(config.grid_shape);
+        let bubble_states = leto::Array3::zeros(config.grid_shape);
+        let temperature_field = leto::Array3::zeros(config.grid_shape);
 
         let coupling_interfaces = Self::create_coupling_interfaces(&config, &coupling_type);
 
@@ -116,8 +116,8 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
     /// Update bubble state and temperature fields.
     pub fn update_bubble_states(
         &mut self,
-        new_bubble_states: ndarray::Array3<f64>,
-        new_temperature: ndarray::Array3<f64>,
+        new_bubble_states: leto::Array3<f64>,
+        new_temperature: leto::Array3<f64>,
     ) {
         self.bubble_states = new_bubble_states;
         self.temperature_field = new_temperature;

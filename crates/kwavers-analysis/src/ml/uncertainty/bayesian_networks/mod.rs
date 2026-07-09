@@ -8,7 +8,7 @@ mod inference;
 #[cfg(test)]
 mod tests;
 
-use ndarray::Array2;
+use leto::Array2;
 use std::collections::HashMap;
 
 /// Configuration for Bayesian PINN

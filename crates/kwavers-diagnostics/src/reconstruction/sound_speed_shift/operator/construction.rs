@@ -1,6 +1,6 @@
 //! Construction of the speed-shift operator from acquisition geometry.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::inverse::same_aperture::active_grid;

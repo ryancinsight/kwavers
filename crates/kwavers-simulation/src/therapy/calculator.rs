@@ -14,7 +14,7 @@ use kwavers_physics::therapy::types::{
     DomainTherapyModality, DomainTherapyParameters, DomainTreatmentMetrics,
 };
 use kwavers_solver::forward::thermal::PennesSolver;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Main therapy calculator

@@ -1,6 +1,6 @@
 //! Reconstruction comparison metrics.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::{SoundSpeedShiftImage, SoundSpeedShiftPlan};
 use super::types::OpenProsShiftReconstructionMetrics;

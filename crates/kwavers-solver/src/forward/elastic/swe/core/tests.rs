@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_elastic_wave_solver_recording() -> KwaversResult<()> {

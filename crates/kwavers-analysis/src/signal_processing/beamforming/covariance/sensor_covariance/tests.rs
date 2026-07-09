@@ -3,7 +3,7 @@ use super::shrinkage::shrinkage_to_identity_real;
 use super::{CovarianceEstimator, SpatialSmoothingComplex};
 use approx::assert_abs_diff_eq;
 use eunomia::Complex64;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn estimate_complex_is_hermitian_for_simple_data() {

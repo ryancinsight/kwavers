@@ -2,7 +2,10 @@ use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;
 use approx::assert_abs_diff_eq;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 #[test]
 fn test_linear_interpolator_simple() {

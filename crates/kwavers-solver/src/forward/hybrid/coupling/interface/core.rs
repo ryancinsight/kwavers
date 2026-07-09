@@ -8,7 +8,11 @@ use crate::forward::hybrid::domain_decomposition::DomainRegion;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use ndarray::{s, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    Array4,
+};
 
 /// Main coupling interface between PSTD and FDTD domains
 #[derive(Debug)]
@@ -154,7 +158,7 @@ impl CouplingInterface {
         // populated. This preserves the existing interpolation/conservation
         // contract while enforcing the component-first field layout.
         let mut interface_data = Array3::zeros((ex - sx, ey - sy, ez - sz));
-        let pressure = fields.index_axis(ndarray::Axis(0), p_idx);
+        let pressure = fields.index_axis(0, p_idx);
 
         match self.geometry.normal_direction {
             0 => {
@@ -211,7 +215,7 @@ impl CouplingInterface {
         let ex = ex.min(nx);
         let ey = ey.min(ny);
         let ez = ez.min(nz);
-        let mut pressure = fields.index_axis_mut(ndarray::Axis(0), p_idx);
+        let mut pressure = fields.index_axis_mut(0, p_idx);
 
         match self.geometry.normal_direction {
             0 => {
@@ -329,7 +333,7 @@ mod tests {
     use super::*;
     use crate::forward::hybrid::domain_decomposition::DomainType;
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    use ndarray::Array4;
+    use leto::Array4;
 
     fn test_interface() -> CouplingInterface {
         let grid = Grid::new(4, 3, 2, 1.0, 1.0, 1.0).unwrap();
@@ -380,7 +384,7 @@ mod tests {
         let p_idx = UnifiedFieldType::Pressure.index();
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
-        fields.index_axis_mut(ndarray::Axis(0), t_idx).fill(25.0);
+        fields.index_axis_mut(0, t_idx).fill(25.0);
         let mut data = Array3::<f64>::zeros((2, 3, 2));
         for j in 0..3 {
             for k in 0..2 {
@@ -411,7 +415,7 @@ mod tests {
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
         fields
-            .index_axis_mut(ndarray::Axis(0), t_idx)
+            .index_axis_mut(0, t_idx)
             .fill(BODY_TEMPERATURE_C);
 
         let mut value = 1.0;

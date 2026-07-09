@@ -1,7 +1,7 @@
 //! Conformal prediction for PINN uncertainty quantification.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Conformal prediction for uncertainty quantification.
 pub struct PinnConformalPredictor<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {

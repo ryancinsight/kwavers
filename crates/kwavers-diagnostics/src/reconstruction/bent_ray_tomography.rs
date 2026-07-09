@@ -29,7 +29,7 @@
 //! - Nolet, G. (1987). *Seismic Tomography*. (bent-ray traveltime inversion)
 
 use super::bent_ray::bent_ray_path;
-use ndarray::Array2;
+use leto::Array2;
 
 /// One traveltime measurement: a source→receiver pair and its observed
 /// first-arrival traveltime \[s]. Source/receiver are grid indices `(i, j)`.

@@ -7,7 +7,10 @@
 use super::super::csr::CompressedSparseRowMatrix;
 use super::IterativeSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, ArrayView1};
+use leto::{
+    Array1,
+    ArrayView1,
+};
 use eunomia::Complex64;
 
 impl IterativeSolver {

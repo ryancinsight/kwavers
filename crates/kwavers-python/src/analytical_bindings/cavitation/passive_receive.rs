@@ -36,7 +36,7 @@ pub fn receiver_channel_psd_from_source(
             alpha_np_m,
         )
     });
-    let arr = ndarray::Array2::from_shape_vec((recv.nrows(), psd.len()), flat)
+    let arr = leto::Array2::from_shape_vec((recv.nrows(), psd.len()), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr.to_pyarray(py).unbind())
 }
@@ -105,7 +105,7 @@ pub fn passive_cavitation_point_source_rf(
             "receiver/source coordinates and acoustic parameters must be finite and positive",
         ));
     }
-    let arr = ndarray::Array2::from_shape_vec((recv.nrows(), n_samples), flat)
+    let arr = leto::Array2::from_shape_vec((recv.nrows(), n_samples), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr.to_pyarray(py).unbind())
 }

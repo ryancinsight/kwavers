@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex;
 
 fn create_hermitian_2x2() -> Array2<Complex<f64>> {

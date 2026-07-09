@@ -6,7 +6,7 @@ use crate::signal_processing::localization::LocalizationResult;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_receiver::array::{Position, SensorArray};
 use kwavers_transducer::beamforming::processor::BeamformingProcessor;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Beamforming-based localization using raw time-series data (SSOT compliant).
 /// # Errors

@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Utility functions for photoacoustic reconstruction
 #[derive(Debug)]

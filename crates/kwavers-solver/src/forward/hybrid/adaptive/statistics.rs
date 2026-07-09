@@ -1,6 +1,6 @@
 // adaptive/statistics.rs - Statistical analysis for adaptive selection
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Frequency spectrum analysis
 #[derive(Debug, Clone)]

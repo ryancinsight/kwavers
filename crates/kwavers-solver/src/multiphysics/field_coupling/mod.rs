@@ -8,7 +8,7 @@ mod coupling_ops;
 mod tests;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Field coupling strategy
 #[derive(Debug, Clone, Copy, PartialEq)]

@@ -22,7 +22,7 @@ use super::super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::optimization::LbfgsMemory;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Maximum Armijo backtracking halvings per outer L-BFGS iteration.
 const MAX_LINE_SEARCH: usize = 12;
@@ -54,7 +54,7 @@ impl FwiProcessor {
     ///   misfit evaluation, or regularization.
     pub fn invert_lbfgs(
         &self,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         initial_model: &Array3<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,

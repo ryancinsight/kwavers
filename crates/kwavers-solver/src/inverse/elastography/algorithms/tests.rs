@@ -1,6 +1,6 @@
 //! Unit tests for elastography algorithm primitives.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;

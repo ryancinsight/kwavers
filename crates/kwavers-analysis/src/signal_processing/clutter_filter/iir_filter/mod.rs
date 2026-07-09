@@ -39,7 +39,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 #[cfg(test)]
 mod tests;

@@ -13,7 +13,7 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::utils::iterators::apply_inplace;
-use ndarray::Array2;
+use leto::Array2;
 
 mod post_process;
 mod shrinkage;

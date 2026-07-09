@@ -1,4 +1,7 @@
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 pub(crate) fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> {
     let n = field.len();

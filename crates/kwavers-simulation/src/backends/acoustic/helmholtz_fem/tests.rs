@@ -7,7 +7,7 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemPreconditionerType};
-use ndarray::arr2;
+
 
 fn medium_for(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)

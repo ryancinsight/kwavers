@@ -1,6 +1,6 @@
 //! Construction and metadata access for fixed acquisition plans.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::KwaversResult;
 

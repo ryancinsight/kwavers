@@ -62,7 +62,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::special::legendre::legendre_poly;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasisType {
@@ -226,7 +229,7 @@ pub(super) fn fourier_vandermonde_entry(n_modes: usize, mode: usize, theta: f64)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::arr1;
+    
 
     #[test]
     fn fourier_vandermonde_evaluates_real_trigonometric_basis() {

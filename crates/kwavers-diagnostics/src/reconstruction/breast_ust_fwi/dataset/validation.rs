@@ -2,7 +2,7 @@
 
 use super::{BreastUstPstdDatasetConfig, PSTD_DATASET_CFL_LIMIT};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn validate_config(config: &BreastUstPstdDatasetConfig) -> KwaversResult<()> {
     if !config.spacing_m.is_finite() || config.spacing_m <= 0.0 {

@@ -1,7 +1,9 @@
 use super::{ThermalAcousticConfig, ThermalAcousticCoupler};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 
 impl ThermalAcousticCoupler {
     /// Create new thermal-acoustic coupler with default configuration

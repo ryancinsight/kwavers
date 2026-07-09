@@ -4,7 +4,10 @@
 //! blood flow signals. Essential for clean Doppler velocity estimation.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 use num_complex::Complex64;
 
 /// Wall filter types

@@ -54,7 +54,11 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult},
     utils::iterators::apply_inplace,
 };
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use rand::distributions::{Distribution, Uniform};
 
 #[cfg(test)]

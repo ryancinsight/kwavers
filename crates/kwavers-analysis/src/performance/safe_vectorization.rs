@@ -10,7 +10,7 @@
 //! - Moirai-backed traversal for large standard-layout arrays
 
 use kwavers_core::utils::iterators::{apply_inplace, for_each_indexed_pair_mut};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Safe vectorization operations using iterator combinators
 #[derive(Debug, Clone, Copy)]

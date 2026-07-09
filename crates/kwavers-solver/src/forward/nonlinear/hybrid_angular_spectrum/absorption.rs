@@ -34,7 +34,10 @@ use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::utils::iterators::apply_inplace;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Absorption operator implementing power-law frequency-dependent attenuation.
 #[derive(Debug)]
@@ -144,7 +147,7 @@ mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array2;
+    use leto::Array2;
 
     fn default_config() -> HASConfig {
         HASConfig::default()

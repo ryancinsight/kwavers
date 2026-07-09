@@ -6,7 +6,10 @@ use crate::signal_processing::beamforming::utils::steering::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum value `P_Capon(p)` for a candidate point.

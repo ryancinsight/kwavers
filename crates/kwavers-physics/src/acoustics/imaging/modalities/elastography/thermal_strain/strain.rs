@@ -10,7 +10,7 @@
 //! - Kallel, F., & Ophir, J. (1997). "A least-squares strain estimator for
 //!   elastography." *Ultrasonic Imaging*, 19(3), 195–208.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Slope of the least-squares line through `values` sampled on a uniform grid
 /// with spacing `dz`.

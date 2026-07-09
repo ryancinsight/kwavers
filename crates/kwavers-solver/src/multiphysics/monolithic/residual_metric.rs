@@ -1,6 +1,6 @@
 //! Residual norm metrics for Newton-Krylov convergence tests.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute squared L2 norm without taking a square root.
 ///
@@ -18,7 +18,7 @@ pub(in crate::multiphysics::monolithic) fn norm(a: &Array3<f64>) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_norm_squared_matches_l2_norm_contract() {

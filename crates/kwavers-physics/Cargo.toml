@@ -19,9 +19,6 @@ kwavers-source = { path = "../kwavers-source" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 apollo = { workspace = true }
-ndarray = { version = "0.16", features = ["serde"] }
-ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
-num-traits = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 leto = { workspace = true }

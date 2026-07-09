@@ -4,7 +4,10 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::{Array3, ArrayView1};
+use leto::{
+    Array3,
+    ArrayView1,
+};
 
 #[test]
 fn pstd_dataset_preserves_shape_and_is_input_sensitive() {

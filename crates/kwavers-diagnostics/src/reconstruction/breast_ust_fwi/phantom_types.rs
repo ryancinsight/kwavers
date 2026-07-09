@@ -1,6 +1,6 @@
 //! Shared phantom-domain types for Ali et al. breast UST FWI ingest.
 
-use ndarray::Array3;
+use leto::Array3;
 use std::path::PathBuf;
 
 /// Unit of stored sound-speed samples.

@@ -71,7 +71,7 @@ mod tests;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     HASConfig, HasAbsorptionOperator, HybridAsDiffractionOperator, HybridAsNonlinearOperator,

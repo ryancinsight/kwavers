@@ -9,7 +9,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::geometry::delays;
 use kwavers_math::geometry::distance3;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Steering vector calculation methods
 #[derive(Debug, Clone, PartialEq)]

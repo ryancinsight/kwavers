@@ -6,7 +6,7 @@
 use super::DispersionAnalysis;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Numerical method for dispersion calculation
 #[derive(Debug, Clone, Copy)]

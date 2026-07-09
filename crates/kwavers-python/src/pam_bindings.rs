@@ -16,7 +16,10 @@ use kwavers_analysis::signal_processing::pam::{
 };
 use kwavers_math::fft::Complex64 as KwComplex;
 use kwavers_math::linear_algebra::EigenDecomposition;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

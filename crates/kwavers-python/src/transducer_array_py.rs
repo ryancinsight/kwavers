@@ -1,4 +1,4 @@
-use ndarray::Array1;
+use leto::Array1;
 use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

@@ -62,7 +62,7 @@
 use super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
 use kwavers_core::error::KwaversResult;
 use log::info;
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex;
 
 impl TranscranialAberrationCorrection {

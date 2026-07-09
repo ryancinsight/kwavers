@@ -23,7 +23,7 @@
 //! expected standing-wave bin, avoiding a full FFT dependency for a single
 //! frequency component.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::StandingWaveOptConfig;
 use crate::parallel::zip_two_mut_two_refs;

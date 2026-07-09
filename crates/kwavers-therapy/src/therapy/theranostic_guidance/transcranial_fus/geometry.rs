@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::transducers::focused::{SphericalCapConfig, SphericalCapLayout};

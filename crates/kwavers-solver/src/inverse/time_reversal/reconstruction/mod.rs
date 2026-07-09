@@ -10,7 +10,10 @@ use kwavers_medium::Medium;
 use kwavers_receiver::recorder::Recorder;
 use kwavers_source::{Source, TimeVaryingSource};
 use log::{debug, info};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::collections::HashMap;
 use std::sync::Arc;
 

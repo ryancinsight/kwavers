@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 
 #[test]

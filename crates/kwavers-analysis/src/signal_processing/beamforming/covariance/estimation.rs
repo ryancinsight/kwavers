@@ -2,7 +2,7 @@ use super::is_hermitian;
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::utils::iterators::apply_inplace;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Estimate sample covariance matrix from multi-snapshot sensor data.
 ///

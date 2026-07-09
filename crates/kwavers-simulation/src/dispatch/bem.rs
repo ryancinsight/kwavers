@@ -1,7 +1,10 @@
 //! BEM solver dispatch.
 
 use kwavers_math::fft::Complex64;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::f64::consts::TAU;
 
 use crate::dispatch::shared::trim_initial_recorder_sample;
@@ -107,7 +110,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .collect();
 
     let n_sensors = sensor_indices.len().max(1);
-    let mut sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, 1));
+    let mut sensor_data = leto::Array2::<f64>::zeros((n_sensors, 1));
 
     let eval_points: Vec<[f64; 3]> = sensor_indices
         .iter()

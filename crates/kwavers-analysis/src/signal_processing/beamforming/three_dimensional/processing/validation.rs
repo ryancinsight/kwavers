@@ -2,7 +2,7 @@ use super::super::processor::BeamformingProcessor3D;
 #[cfg(feature = "gpu")]
 use super::super::provider::BeamformingGpuProvider;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array4;
+use leto::Array4;
 
 #[cfg(feature = "gpu")]
 impl<P> BeamformingProcessor3D<P>

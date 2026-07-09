@@ -17,7 +17,6 @@ kwavers-field = { path = "../kwavers-field" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-source = { path = "../kwavers-source" }
 kwavers-receiver = { path = "../kwavers-receiver" }
-ndarray = { version = "0.16", features = ["serde"] }
 leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }

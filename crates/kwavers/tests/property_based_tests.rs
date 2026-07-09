@@ -49,14 +49,17 @@ use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
 use kwavers_source::SourceMode;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use proptest::prelude::*;
 
 trait Field3 {
     fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a>;
 }
 
-impl Field3 for ndarray::Array3<f64> {
+impl Field3 for leto::Array3<f64> {
     fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
         Box::new(self.iter())
     }

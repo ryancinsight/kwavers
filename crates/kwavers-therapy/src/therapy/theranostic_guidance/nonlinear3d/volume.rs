@@ -1,6 +1,6 @@
 //! CT/NIfTI volume preparation for nonlinear 3-D propagation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::constants::ct_acoustics::HU_BONE_THRESHOLD;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;

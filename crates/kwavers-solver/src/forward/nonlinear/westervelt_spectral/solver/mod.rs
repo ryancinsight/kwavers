@@ -47,7 +47,10 @@ use kwavers_math::fft::Complex64;
 use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
 use log::warn;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 use std::sync::{Arc, Mutex};
 
 use super::metrics::WesterveltStepMetrics;

@@ -2,7 +2,7 @@
 
 use kwavers_grid::Grid;
 use moirai_parallel::{reduce_index_with, Sequential};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute total acoustic energy and relative error against `initial_energy`.
 #[allow(clippy::too_many_arguments)]
@@ -107,7 +107,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     type AcousticFields = (
         Array3<f64>,

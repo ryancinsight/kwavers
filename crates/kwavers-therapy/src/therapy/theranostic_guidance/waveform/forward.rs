@@ -4,7 +4,7 @@ use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_mut_enumerated_with,
     for_each_chunk_pair_mut_enumerated_with, Adaptive,
 };
-use ndarray::Array2;
+use leto::Array2;
 
 use super::types::{AcousticGrid, CheckpointSchedule, WavefieldRun};
 use super::utils::{linear, ricker};

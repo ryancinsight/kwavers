@@ -13,7 +13,10 @@ use kwavers_field::indices::LIGHT_IDX;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
-use ndarray::{Array3, Array4, Axis};
+use leto::{
+    Array3,
+    Array4,
+};
 use std::time::Instant;
 
 /// Time-domain light diffusion solver

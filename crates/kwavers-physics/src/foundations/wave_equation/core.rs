@@ -1,7 +1,7 @@
 //! Core wave equation traits
 
 use super::domain::{Domain, TimeIntegration};
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Abstract wave equation trait for traditional numerical solvers
 ///

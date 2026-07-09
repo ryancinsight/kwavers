@@ -1,7 +1,7 @@
 //! `ModelRegularizer2D` — regularization on 2D spatial model arrays.
 
 use super::{config::RegularizationConfig, ops::for_each_pair_mut};
-use ndarray::Array2;
+use leto::Array2;
 
 /// 2D Model Regularizer
 ///
@@ -43,7 +43,7 @@ impl ModelRegularizer2D {
 
     fn apply_tikhonov(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
         let weight = self.config.tikhonov_weight;
-        for_each_pair_mut(gradient, model, |g, m| *g += weight * m);
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| *g += weight * m);
     }
 
     fn apply_total_variation(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
@@ -82,11 +82,15 @@ impl ModelRegularizer2D {
         }
 
         let weight = self.config.smoothness_weight;
-        for_each_pair_mut(gradient, &laplacian, |g, lap| *g += weight * lap);
+        for_each_pair_mut(gradient.view_mut(), laplacian.view(), |g, lap| {
+            *g += weight * lap
+        });
     }
 
     fn apply_l1(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
         let weight = self.config.l1_weight;
-        for_each_pair_mut(gradient, model, |g, m| *g += weight * m.signum());
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| {
+            *g += weight * m.signum()
+        });
     }
 }

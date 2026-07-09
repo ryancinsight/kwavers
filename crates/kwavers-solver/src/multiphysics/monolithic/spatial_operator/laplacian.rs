@@ -1,4 +1,6 @@
-use ndarray::{Array3, ArrayBase, Data, Ix3};
+use leto::{
+    Array3,
+};
 
 /// Compute the 3-D Laplacian ∇²f using second-order central differences.
 ///

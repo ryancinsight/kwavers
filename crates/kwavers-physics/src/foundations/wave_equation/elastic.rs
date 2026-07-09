@@ -1,7 +1,7 @@
 //! Elastic specific trait extensions
 
 use super::core::{AutodiffWaveEquation, WaveEquation};
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Elastic wave equation trait for traditional solvers (vector displacement field)
 ///

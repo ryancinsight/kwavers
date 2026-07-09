@@ -11,7 +11,7 @@
 //! computation. The cost is a full `(n,n,n)` complex grid instead of `(n,n,n/2+1)`.
 
 use kwavers_math::fft::{fft_3d_array_into, fftfreq, ifft_3d_array_into, Complex64};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Build the `|k|^power` spectral-filter array of full-spectrum shape `(n, n, n)`
 /// matching the complex FFT output layout. All three axes use `fftfreq` (cycles

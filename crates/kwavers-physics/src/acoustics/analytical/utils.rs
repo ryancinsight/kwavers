@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 // Physical constants for dispersion correction
 /// Second-order dispersion correction coefficient for k-space methods
@@ -170,7 +170,7 @@ mod tests {
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn small_grid() -> Grid {
         Grid::new(16, 4, 4, 1e-4, 1e-4, 1e-4).unwrap()

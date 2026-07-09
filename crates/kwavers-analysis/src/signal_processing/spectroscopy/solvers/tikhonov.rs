@@ -4,7 +4,10 @@
 //! linear systems in spectroscopic unmixing.
 
 use anyhow::{Context, Result};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Solve Tikhonov-regularized least squares: (EᵀE + λI)C = Eᵀμ
 ///

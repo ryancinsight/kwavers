@@ -7,7 +7,11 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::forward::pstd::config::BoundaryConfig;
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::{s, Array2, ArrayView1};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    ArrayView1,
+};
 use kwavers_math::fft::Complex64;
 
 pub(super) fn pstd_boundary(cpml_thickness_cells: usize) -> BoundaryConfig {

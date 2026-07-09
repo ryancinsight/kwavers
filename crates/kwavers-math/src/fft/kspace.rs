@@ -5,7 +5,10 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::{Array1 as LetoArray1, Array3 as LetoArray3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::f64::consts::PI;
 
 const KSPACE_CHUNK_LEN: usize = 4096;

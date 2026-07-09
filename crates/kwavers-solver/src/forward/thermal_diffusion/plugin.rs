@@ -4,7 +4,7 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
-use ndarray::Array4;
+use leto::Array4;
 
 use super::solver::ThermalDiffusionSolver;
 
@@ -72,7 +72,7 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
         if let Some(ref mut solver) = self.solver {
             let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
                 Some(
-                    fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Temperature as usize + 1),
+                    fields.index_axis(0, UnifiedFieldType::Temperature as usize + 1),
                 )
             } else {
                 None
@@ -82,7 +82,7 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
 
             let temp_idx = UnifiedFieldType::Temperature as usize;
             if fields.shape()[0] > temp_idx {
-                let mut temp_field = fields.index_axis_mut(ndarray::Axis(0), temp_idx);
+                let mut temp_field = fields.index_axis_mut(0, temp_idx);
                 temp_field.assign(solver.temperature());
             }
         }
@@ -114,7 +114,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_thermal_diffusion_creation() {

@@ -9,7 +9,11 @@ use apollo::{fft_1d_leto, ifft_1d_leto};
 use kwavers_core::error::KwaversResult;
 use kwavers_signal::{analytic, window_value, SignalWindowType};
 use leto::Array1 as LetoArray1;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 
 use crate::reconstruction::photoacoustic::config::ReconstructionPhotoacousticConfig;

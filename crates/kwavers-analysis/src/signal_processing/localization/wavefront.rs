@@ -4,7 +4,7 @@
 //! and distinguish between plane waves (far-field) and spherical waves (near-field).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Wavefront type detection
 #[derive(Debug, Clone, Copy, PartialEq)]

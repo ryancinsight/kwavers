@@ -1,5 +1,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use eunomia::Complex64;
 
 /// Complex linear algebra operations for beamforming

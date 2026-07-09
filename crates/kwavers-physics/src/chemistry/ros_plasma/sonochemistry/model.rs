@@ -7,7 +7,7 @@ use super::super::{
 };
 use super::transfer::estimate_collapse_energy;
 use kwavers_core::constants::fundamental::AVOGADRO;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Sonochemical yield parameters

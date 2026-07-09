@@ -2,7 +2,7 @@
 mod tests {
     use super::super::helpers::*;
     use kwavers_core::constants::tissue_thermal::THERMAL_DIFFUSIVITY_TISSUE;
-    use ndarray::Array1;
+    use leto::Array1;
     use std::f64::consts::PI;
 
     #[test]

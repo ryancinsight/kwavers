@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{path, row_entries};
 use crate::reconstruction::sound_speed_shift::{

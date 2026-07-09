@@ -89,7 +89,7 @@ use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::StaggeredGridOperator;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::{Source, SourceInjectionMode};
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 use super::config::FdtdConfig;

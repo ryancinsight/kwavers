@@ -26,7 +26,7 @@
 //! Per-axis array length equals the number of GLL nodes along that axis
 //! (`element_count · n_nodes`).
 
-use ndarray::Array1;
+use leto::Array1;
 
 use super::config::{DgCpmlAxis, DgCpmlConfig};
 use kwavers_core::error::{KwaversError, KwaversResult};

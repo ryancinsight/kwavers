@@ -1,7 +1,7 @@
 //! Borrowed-image streaming for fixed-acquisition batch reconstruction.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::super::solved_image_from_operator_into;
 use super::super::super::types::SoundSpeedShiftImageView;

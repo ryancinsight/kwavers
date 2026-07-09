@@ -2,7 +2,7 @@ use super::super::super::wave_model::NonlinearWave;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 /// A spatially uniform field has zero spectral gradient in every direction.
 ///

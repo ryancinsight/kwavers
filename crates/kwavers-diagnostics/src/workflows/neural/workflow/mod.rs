@@ -33,7 +33,7 @@ use super::AIEnhancedBeamformingProcessor;
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use ndarray::ArrayView4;
+use leto::ArrayView4;
 
 /// Real-Time Workflow Manager
 ///

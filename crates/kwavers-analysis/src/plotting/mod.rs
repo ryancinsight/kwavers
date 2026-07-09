@@ -6,7 +6,7 @@
 // Note: Field indices imported from physics::field_indices for SSOT
 
 #[cfg(not(feature = "plotting"))]
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(feature = "plotting")]
 mod plotting_impl {
@@ -14,7 +14,10 @@ mod plotting_impl {
     use kwavers_grid::Grid;
     use kwavers_receiver::recorder::Recorder;
     use log::info;
-    use ndarray::{Array2, Array3};
+    use leto::{
+    Array2,
+    Array3,
+};
     use plotly::{
         common::{ColorBar, Mode, Title},
         HeatMap, Layout, Plot, Scatter, Scatter3D,
@@ -49,7 +52,7 @@ mod plotting_impl {
     ) {
         info!("Generating 2D pressure field plot: {}", filename);
 
-        let slice = pressure.slice(ndarray::s![.., .., z_slice]);
+        let slice = pressure.index_axis::<2>(2, z_slice);
         let (nx, ny) = slice.dim();
 
         let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
@@ -150,8 +153,8 @@ mod plotting_impl {
     ) {
         info!("Generating field comparison plot: {}", filename);
 
-        let slice1 = field1.slice(ndarray::s![.., .., z_slice]);
-        let slice2 = field2.slice(ndarray::s![.., .., z_slice]);
+        let slice1 = field1.index_axis::<2>(2, z_slice);
+        let slice2 = field2.index_axis::<2>(2, z_slice);
         let (nx, ny) = slice1.dim();
 
         // Calculate difference

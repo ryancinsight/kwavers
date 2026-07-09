@@ -9,7 +9,7 @@
 //! |------------------|-----------------------------------|
 //! | `Float`          | `eunomia::RealField`              |
 //! | `NumCast`        | (vestigial in this file; dropped) |
-//! | `Zero::zero()`   | `T::ZERO` (`<T as NumericElement>`)|
+//! | `<_>::zero()`   | `T::ZERO` (`<T as NumericElement>`)|
 //!
 //! Source of truth: <https://eunomia.dev/traits/real_field>
 //!

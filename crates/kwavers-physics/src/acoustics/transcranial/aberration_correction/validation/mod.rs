@@ -57,7 +57,7 @@ impl TranscranialAberrationCorrection {
     pub fn validate_correction(
         &self,
         correction: &PhaseCorrection,
-        skull_model: &ndarray::Array3<f64>,
+        skull_model: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<CorrectionValidation> {

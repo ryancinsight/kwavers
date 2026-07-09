@@ -20,7 +20,7 @@ pub use metrics::{compute_correlation, compute_mean_relative_error, compute_vali
 use crate::inverse::pinn::ml::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
 use crate::inverse::pinn::ml::wave_equation_1d::PinnWave1D;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Standard validation metrics.
 #[derive(Debug, Clone)]
@@ -136,7 +136,7 @@ where
     let x = Array1::from_vec(x);
     let t = Array1::from_vec(t);
     let pinn_prediction_flat = pinn.predict(&x, &t)?;
-    let pinn_prediction = ndarray::Array2::from_shape_vec(
+    let pinn_prediction = leto::Array2::from_shape_vec(
         (fdtd_config.nx, fdtd_config.nt),
         pinn_prediction_flat.iter().copied().collect(),
     )

@@ -3,7 +3,7 @@
 //! Covers: lateral and axial PSF models, Doppler frequency shift,
 //! plane-wave compounding PSF, and resolution limits.
 
-use ndarray::Array1;
+use leto::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;

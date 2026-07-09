@@ -21,12 +21,12 @@ impl BeamformingGpuProvider for TestBeamformingProvider {
     fn process_delay_and_sum(
         &self,
         config: &BeamformingConfig3D,
-        rf_data: &ndarray::Array4<f32>,
+        rf_data: &leto::Array4<f32>,
         _dynamic_focusing: bool,
         apodization_window: &Beamforming3dApodizationWindow,
-        _apodization_weights: &ndarray::Array3<f32>,
+        _apodization_weights: &leto::Array3<f32>,
         _sub_volume_size: Option<(usize, usize, usize)>,
-    ) -> kwavers_core::error::KwaversResult<ndarray::Array3<f32>> {
+    ) -> kwavers_core::error::KwaversResult<leto::Array3<f32>> {
         delay_and_sum_cpu_reference(rf_data, config, apodization_window)
     }
 }
@@ -132,7 +132,7 @@ fn test_processor_creation_cpu_only() {
 #[cfg(feature = "gpu")]
 #[test]
 fn das_provider_contract_matches_cpu_reference() {
-    use ndarray::Array4;
+    use leto::Array4;
 
     let config = BeamformingConfig3D {
         num_elements_3d: (2, 1, 2),

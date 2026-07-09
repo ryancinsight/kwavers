@@ -1,6 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use kwavers_solver::amr::ErrorEstimator;
-use ndarray::Array3;
+use leto::Array3;
 
 fn gradient_error_benchmark(c: &mut Criterion) {
     let mut group = c.benchmark_group("gradient_error");

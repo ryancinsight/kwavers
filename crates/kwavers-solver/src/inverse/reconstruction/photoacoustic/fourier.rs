@@ -15,7 +15,12 @@ use kwavers_math::fft::{Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_signal::window_value;
 use kwavers_signal::SignalWindowType;
 use leto::{Array1 as LetoArray1, Array3 as LetoArray3};
-use ndarray::{Array1, Array2, Array3, ArrayView2};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+    ArrayView2,
+};
 use std::f64::consts::PI;
 
 /// Fourier domain reconstruction algorithm

@@ -1,6 +1,6 @@
 use super::FdtdSimdStencilProcessor;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl FdtdSimdStencilProcessor {
     /// Update velocity field using in-place scratch buffer (no per-step allocation).

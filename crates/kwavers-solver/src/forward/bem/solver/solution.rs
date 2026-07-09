@@ -10,7 +10,7 @@ use kwavers_math::linear_algebra::sparse::{
     solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };
 use moirai_parallel::{map_collect_with, Adaptive};
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 impl BemSolver {

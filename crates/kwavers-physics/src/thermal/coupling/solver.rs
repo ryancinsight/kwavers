@@ -3,7 +3,7 @@
 use super::coefficients::TemperatureCoefficients;
 use super::heating::AcousticHeatingSource;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Evaluates bi-directional physical coupling between thermal and acoustic phenomena
 #[derive(Debug)]

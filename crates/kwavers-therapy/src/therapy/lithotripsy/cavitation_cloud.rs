@@ -19,7 +19,11 @@ use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prospe
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 
 /// How the inter-bubble acoustic coupling is solved each step.

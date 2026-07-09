@@ -1,6 +1,6 @@
 //! CT-derived sound-speed, density, beta, and attenuation maps.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Per-voxel acoustic material maps for the nonlinear 3-D solver:
 /// `(sound speed, density, nonlinearity β, attenuation, power-law exponent y)`,

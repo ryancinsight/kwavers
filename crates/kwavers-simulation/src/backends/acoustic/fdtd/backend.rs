@@ -6,7 +6,7 @@ use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 /// FDTD solver backend adapter.
 ///

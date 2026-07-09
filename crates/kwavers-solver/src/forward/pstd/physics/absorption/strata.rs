@@ -33,7 +33,10 @@
 
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 
 /// Maximum number of exponent strata. Caps the per-step inverse-FFT count and
 /// the symbol memory; a CT body model spans y ∈ [1.0, 1.1], so an 8-point
@@ -194,7 +197,7 @@ pub(crate) fn build_exponent_strata(
 #[cfg(test)]
 mod tests {
     use super::{build_exponent_strata, MAX_STRATA};
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// A uniform exponent field yields no strata (caller uses the uniform path).
     #[test]

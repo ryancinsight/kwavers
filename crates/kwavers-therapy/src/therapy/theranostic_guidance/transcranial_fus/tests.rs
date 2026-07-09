@@ -10,7 +10,10 @@ use super::subspot::{gbm_subspot_covered_fraction, gbm_subspot_raster};
 use super::types::TranscranialFusPlanConfig;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 #[test]
 fn focused_cap_count_and_radius() {

@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array;
+use Array;
 
 #[test]
 fn test_physics_constraints_creation() {

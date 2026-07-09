@@ -2,7 +2,7 @@ use super::{PstdSemCouplingConfig, SpectralCouplingInterface};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Paired interface region: PSTD grid points and the matching SEM node indices.
 type PstdSemRegion = (Vec<(usize, usize, usize)>, Vec<usize>);

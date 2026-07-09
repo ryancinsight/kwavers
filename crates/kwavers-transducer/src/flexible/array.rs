@@ -57,7 +57,7 @@ impl FlexibleTransducerArray {
         measurement_data: ArrayView2<f64>,
         timestamp: f64,
     ) -> KwaversResult<()> {
-        let measurement_data = ndarray::Array2::try_from(measurement_data.to_contiguous())
+        let measurement_data = leto::Array2::try_from(measurement_data.to_contiguous())
             .map_err(|err| KwaversError::Shape(err.to_string()))?;
         // Process calibration based on configured method
         let new_positions = match &self.config.calibration_method {
@@ -108,9 +108,9 @@ impl FlexibleTransducerArray {
     }
 
     /// Calculate element normals from positions
-    fn calculate_normals(&self, positions: &ndarray::Array2<f64>) -> ndarray::Array2<f64> {
+    fn calculate_normals(&self, positions: &leto::Array2<f64>) -> leto::Array2<f64> {
         let n = positions.shape()[0];
-        let mut normals = ndarray::Array2::zeros([n, 3]);
+        let mut normals = leto::Array2::zeros([n, 3]);
 
         for i in 0..n {
             // Simple normal calculation based on neighboring elements

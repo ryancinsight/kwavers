@@ -1,6 +1,6 @@
 //! Physics-informed loss components and optimizer types.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Physics loss component
 ///

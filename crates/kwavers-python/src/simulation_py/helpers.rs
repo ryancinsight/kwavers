@@ -1,5 +1,5 @@
 use kwavers_signal::Signal;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Simple sine wave signal for testing
 #[derive(Clone)]

@@ -6,7 +6,7 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Thermal-optical solver for coupled simulations
 #[derive(Debug)]

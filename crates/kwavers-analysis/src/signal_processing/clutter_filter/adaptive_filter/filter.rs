@@ -1,7 +1,10 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::EigenDecomposition;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Adaptive clutter filter using eigendecomposition.
 ///
@@ -108,7 +111,7 @@ impl AdaptiveFilter {
 
     fn filter_single_pixel(
         &mut self,
-        signal: &ndarray::ArrayView1<f64>,
+        signal: &leto::ArrayView1<f64>,
     ) -> KwaversResult<Array1<f64>> {
         let n_frames = signal.len();
 

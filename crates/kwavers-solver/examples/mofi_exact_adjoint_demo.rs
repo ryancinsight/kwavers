@@ -16,7 +16,10 @@ use kwavers_solver::inverse::fwi::time_domain::{
 };
 use kwavers_solver::inverse::seismic::parameters::FwiParameters;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 fn main() {
     let (nx, ny) = (32usize, 32);

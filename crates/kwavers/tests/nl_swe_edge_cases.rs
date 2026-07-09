@@ -11,7 +11,7 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::prelude::v1::*;
 
 /// Edge case testing framework

@@ -38,7 +38,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
             .map(|m| m.iter().filter(|&&a| a).count())
             .unwrap_or(0),
     );
-    let mut sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
+    let mut sensor_data = leto::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
 
     // Record initial state
     if let Some(ref mask) = req.sensor_mask {

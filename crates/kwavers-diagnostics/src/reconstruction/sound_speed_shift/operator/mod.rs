@@ -6,7 +6,7 @@ mod graph;
 mod row_storage;
 mod validation;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_solver::inverse::same_aperture::ActiveGrid;
 

@@ -1,6 +1,6 @@
 use std::f64::consts::{FRAC_PI_2, PI, TAU};
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{CurvedArray2d, CurvedArrayShiftScan};
 use crate::reconstruction::sound_speed_shift::{

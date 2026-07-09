@@ -16,8 +16,11 @@ use kwavers_solver::forward::pstd::dg::{
 };
 use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_solver::interface::solver::Solver;
-use ndarray::Array1;
-use ndarray::{Array2, Array3};
+use leto::Array1;
+use leto::{
+    Array2,
+    Array3,
+};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -296,7 +299,7 @@ trait PressureGrid3 {
     fn at(&self, i: usize, j: usize, k: usize) -> f64;
 }
 
-impl PressureGrid3 for ndarray::Array3<f64> {
+impl PressureGrid3 for leto::Array3<f64> {
     fn nz(&self) -> usize { self.shape()[2] }
     fn at(&self, i: usize, j: usize, k: usize) -> f64 { self[[i, j, k]] }
 }

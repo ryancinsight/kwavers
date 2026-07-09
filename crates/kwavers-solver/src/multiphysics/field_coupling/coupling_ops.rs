@@ -3,7 +3,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TI
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
-use ndarray::Array3;
+use leto::Array3;
 
 impl MultiphysicsFieldCoupler {
     /// Apply weak coupling (single pass)

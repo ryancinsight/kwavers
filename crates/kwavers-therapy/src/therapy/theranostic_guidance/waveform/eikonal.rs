@@ -55,7 +55,7 @@
 //! Reference: Sethian (1996), "A fast marching level set method for
 //! monotonically advancing fronts", PNAS 93:1591.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Solve `|∇T| = 1 / c` on the 2-D grid `speed` with a single point source
 /// at cell `source`.  Returns the travel-time field `T` (seconds), in the
@@ -205,7 +205,7 @@ fn godunov_update(a: f64, b: f64, h: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// In a homogeneous medium the Eikonal travel-time from a point source
     /// is the radial distance divided by the constant speed.

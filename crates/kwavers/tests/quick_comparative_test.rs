@@ -10,9 +10,9 @@ use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
 
-fn leto_view3(field: &leto::Array3<f64>) -> ndarray::ArrayView3<'_, f64> {
+fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
     let shape = field.shape();
-    ndarray::ArrayView3::from_shape(
+    leto::ArrayView3::from_shape(
         (shape[0], shape[1], shape[2]),
         field.as_slice().expect("quick test pressure field must be contiguous"),
     )
@@ -199,12 +199,12 @@ fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) ->
 }
 
 /// Quick energy calculation (sum of squares)
-fn calculate_energy_quick(field: ndarray::ArrayView3<f64>) -> f64 {
+fn calculate_energy_quick(field: leto::ArrayView3<f64>) -> f64 {
     field.iter().map(|&x| x * x).sum::<f64>().sqrt()
 }
 
 /// Quick stability calculation (checks for NaN/inf and gradient magnitude)
-fn calculate_stability_quick(field: ndarray::ArrayView3<f64>) -> f64 {
+fn calculate_stability_quick(field: leto::ArrayView3<f64>) -> f64 {
     // Check for invalid values
     let has_nan = field.iter().any(|&x| x.is_nan());
     let has_inf = field.iter().any(|&x| x.is_infinite());

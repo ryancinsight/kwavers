@@ -11,7 +11,11 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_math::inverse_problems::ModelRegularizer3D;
 use log::debug;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 use super::config::{SirtAlgorithm, SirtConfig, SirtResult};
 

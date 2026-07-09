@@ -44,7 +44,10 @@
 
 use crate::fft::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 /// Generate the 1-D staggered-shift operator for one axis.
 ///

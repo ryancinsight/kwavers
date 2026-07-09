@@ -3,7 +3,7 @@ use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
 use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Generate a deterministic pseudo-noise matrix using a simple LCG for portability.
 fn make_noise_matrix(rows: usize, cols: usize, seed: u64) -> Array2<f64> {

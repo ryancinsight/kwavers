@@ -2,7 +2,7 @@ use super::interpolator::UtilConservativeInterpolator;
 use super::mode::ConservationMode;
 use approx::assert_relative_eq;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Transfer from a grid to itself must be the identity.
 /// Conservation error must be < 1e-12.

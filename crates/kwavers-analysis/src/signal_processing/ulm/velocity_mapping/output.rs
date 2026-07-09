@@ -1,6 +1,6 @@
 //! `VelocityMap` — output of the velocity mapping algorithm.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Output of the velocity mapping algorithm.
 #[derive(Debug)]

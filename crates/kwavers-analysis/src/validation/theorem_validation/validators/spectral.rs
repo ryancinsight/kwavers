@@ -1,7 +1,7 @@
 //! Spectral energy theorem validators (Parseval).
 
 use super::super::{TheoremValidation, TheoremValidator};
-use ndarray::Array1;
+use leto::Array1;
 use num_complex::Complex64;
 
 impl TheoremValidator {

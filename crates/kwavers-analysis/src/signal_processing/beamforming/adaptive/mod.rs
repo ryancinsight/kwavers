@@ -96,7 +96,10 @@
 //! use kwavers_analysis::signal_processing::beamforming::adaptive::{
 //!     MinimumVariance, AdaptiveTimeDomainBeamformer
 //! };
-//! use ndarray::{Array1, Array2};
+//! use leto::{
+    Array1,
+    Array2,
+};
 //! use eunomia::Complex64;
 //!
 //! // Create 8-element linear array covariance matrix
@@ -177,7 +180,10 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 // Algorithm implementations
 pub mod music;

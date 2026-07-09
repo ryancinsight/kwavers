@@ -19,7 +19,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::hifu::DomainHIFUTransducer;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 const RADIAL_APERTURE_SAMPLES: usize = 4;

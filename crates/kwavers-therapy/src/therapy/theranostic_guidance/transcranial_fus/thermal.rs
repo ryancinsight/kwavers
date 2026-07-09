@@ -63,7 +63,7 @@
 //! - Hasgall et al. (2022). IT'IS database v4.1. doi:10.13099/VIP21000-04-1.
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::medical::{

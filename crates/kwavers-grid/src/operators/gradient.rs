@@ -1,11 +1,11 @@
 //! Gradient operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::ndarray::{Array3, ArrayView3};
+use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
-use num_traits::Float;
+use eunomia::FloatElement;
 
 /// Compute the gradient of a 3D field
 /// # Errors

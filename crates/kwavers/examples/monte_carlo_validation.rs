@@ -33,7 +33,7 @@ use kwavers_phantom::PhantomBuilder;
 use kwavers_physics::optics::map_builder::OpticalPropertyMap;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 fn main() -> Result<()> {

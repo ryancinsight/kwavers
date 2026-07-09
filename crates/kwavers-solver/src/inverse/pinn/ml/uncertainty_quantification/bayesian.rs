@@ -4,7 +4,7 @@ use super::types::{
     PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 use super::conformal::PinnConformalPredictor;
 

@@ -5,7 +5,7 @@ use kwavers_solver::inverse::reconstruction::photoacoustic::{
     ReconstructionPhotoacousticConfig,
 };
 use kwavers_solver::reconstruction::{ReconstructionConfig, Reconstructor};
-use ndarray::Array2;
+use leto::Array2;
 
 fn art_reconstruction_benchmark(c: &mut Criterion) {
     let grid_size = [32, 32, 32]; // 32768 voxels

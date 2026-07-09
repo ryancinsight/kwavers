@@ -31,7 +31,7 @@
 //! - Hamilton, M. F., & Blackstock, D. T. (1998). "Nonlinear Acoustics", Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Nonlinear elastic wave field with harmonic components
 ///

@@ -30,7 +30,11 @@
 //! migration", *The Leading Edge* **28**(4), 446–452.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    Array4,
+};
 
 use super::super::super::config::RtmImagingCondition;
 use super::super::super::constants::RTM_AMPLITUDE_THRESHOLD;

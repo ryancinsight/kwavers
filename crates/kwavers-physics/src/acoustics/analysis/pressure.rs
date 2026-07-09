@@ -2,7 +2,10 @@
 
 use kwavers_core::constants::medical::{FDA_DERATING_FACTOR, IEC_REFERENCE_ACOUSTIC_POWER_W};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 #[inline]
 fn positive_finite(value: f64) -> bool {
@@ -158,7 +161,7 @@ pub fn calculate_isppa(pressure_field: &Array3<f64>, density: f64, sound_speed: 
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // ── calculate_intensity ───────────────────────────────────────────────────
 

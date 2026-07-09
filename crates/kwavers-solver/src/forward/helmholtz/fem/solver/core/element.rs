@@ -1,6 +1,9 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use kwavers_math::fft::Complex64;
 
 /// Per-element FEM assembly arrays: stiffness `K_e`, consistent mass `M_e`, and

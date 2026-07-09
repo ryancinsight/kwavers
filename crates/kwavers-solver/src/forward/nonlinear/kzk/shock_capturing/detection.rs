@@ -5,7 +5,7 @@ use apollo::fft_1d_leto;
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array1 as LetoArray1;
-use ndarray::Array2;
+use leto::Array2;
 
 impl ShockCapture {
     /// Create new shock capture instance

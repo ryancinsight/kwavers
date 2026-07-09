@@ -4,7 +4,7 @@ use super::NonlinearElasticWaveSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 /// CFL stability factor used internally by [`NonlinearElasticWaveSolver::calculate_time_step_for_amplitude`].
 const CFL: f64 = 0.45;

@@ -1,7 +1,7 @@
 //! Embed a [`FocalKernel`] into a target grid centred on the planner's
 //! focal voxel, zero-filling regions outside the kernel footprint.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::kernel::FocalKernel;
 
@@ -62,12 +62,8 @@ pub fn place_kernel_at_focus(
     let dst_y1 = dst_y0 + (src_y1 - src_y0) as usize;
     let dst_z1 = dst_z0 + (src_z1 - src_z0) as usize;
 
-    let src_view = kernel.field.slice(ndarray::s![
-        src_x0 as usize..src_x1 as usize,
-        src_y0 as usize..src_y1 as usize,
-        src_z0 as usize..src_z1 as usize,
-    ]);
-    out.slice_mut(ndarray::s![dst_x0..dst_x1, dst_y0..dst_y1, dst_z0..dst_z1])
+    let src_view = kernel.fieldslice(&[(Some(src_x0 as usize as isize) as usize, Some(src_x1 as usize as isize) as usize, 1), (Some(src_y0 as usize as isize) as usize, Some(src_y1 as usize as isize) as usize, 1), (Some(src_z0 as usize as isize) as usize, Some(src_z1 as usize as isize) as usize, 1)]);
+    outslice_mut(&[(Some(dst_x0 as isize) as usize, Some(dst_x1 as isize) as usize, 1), (Some(dst_y0 as isize) as usize, Some(dst_y1 as isize) as usize, 1), (Some(dst_z0 as isize) as usize, Some(dst_z1 as isize) as usize, 1)])
         .assign(&src_view);
 
     out

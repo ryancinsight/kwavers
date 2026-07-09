@@ -32,7 +32,7 @@ use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
-use ndarray::Array3;
+use leto::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 Sonoluminescence Hypothesis Comparison");

@@ -345,7 +345,7 @@ fn tensor_ssp_rk3_source_callback_uses_stage_times() {
 
     let expected = t0 * dt + 0.5 * dt * dt;
     for &value in state
-        .index_axis(ndarray::Axis(2), ACOUSTIC_PRESSURE_VAR)
+        .index_axis(2, ACOUSTIC_PRESSURE_VAR)
         .iter()
     {
         assert!(

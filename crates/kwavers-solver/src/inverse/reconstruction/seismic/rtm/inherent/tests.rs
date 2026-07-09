@@ -5,7 +5,12 @@
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{s, Array2, Array3, Array4};
+    use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+    Array4,
+};
 
     use crate::inverse::reconstruction::seismic::config::{
         RtmImagingCondition, SeismicImagingConfig,

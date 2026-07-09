@@ -2,7 +2,11 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::utils::iterators::apply_inplace;
-use ndarray::{s, Array1, Array2};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    Array2,
+};
 
 use super::config::PolynomialFilterConfig;
 

@@ -3,7 +3,7 @@
 use super::{MlBayesianPINN, UncertaintyDecomposition};
 use kwavers_core::error::KwaversResult;
 use log::info;
-use ndarray::Array2;
+use leto::Array2;
 
 impl MlBayesianPINN {
     /// Estimate epistemic vs aleatoric uncertainty.

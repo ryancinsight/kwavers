@@ -1,7 +1,11 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::tissue_acoustics::DENSITY_BRAIN;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 /// Full configuration for the transcranial FUS planning pipeline.
 #[derive(Clone, Debug)]

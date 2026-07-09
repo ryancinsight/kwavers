@@ -10,7 +10,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::SOUND_SPEED_WATER;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 #[test]

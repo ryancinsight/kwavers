@@ -1,6 +1,6 @@
 use super::{SlscBeamformer, SlscConfig};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex64;
 
 /// Batch processing for multiple frames
@@ -9,7 +9,7 @@ use num_complex::Complex64;
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
 pub fn process_slsc_batch(
-    data: &ndarray::Array3<Complex64>,
+    data: &leto::Array3<Complex64>,
     config: &SlscConfig,
 ) -> KwaversResult<Array2<f64>> {
     let (n_elements, n_frames, n_samples) = (data.dim().0, data.dim().1, data.dim().2);
@@ -28,7 +28,7 @@ pub fn process_slsc_batch(
 
     for frame_idx in 0..n_frames {
         let frame_data: Array2<Complex64> = data
-            .slice(ndarray::s![.., frame_idx, ..])
+            .index_axis::<2>(1, frame_idx)
             .to_owned()
             .into_dimensionality()
             .map_err(|_| {

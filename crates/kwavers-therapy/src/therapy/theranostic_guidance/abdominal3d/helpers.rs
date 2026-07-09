@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -137,7 +137,10 @@ pub(crate) fn index_to_point(
 
 /// Euclidean distance between two 3-D points [m].
 pub(super) fn distance_3d(a: Point3, b: Point3) -> f64 {
-    kwavers_math::vector3::distance3([a.x_m, a.y_m, a.z_m], [b.x_m, b.y_m, b.z_m])
+    let dx = a.x_m - b.x_m;
+    let dy = a.y_m - b.y_m;
+    let dz = a.z_m - b.z_m;
+    (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
 /// Convert voxel indices to physical metres relative to `center_index`.

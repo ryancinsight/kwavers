@@ -28,7 +28,11 @@ use kwavers_grid::Grid;
 use kwavers_physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
 use kwavers_physics::skull::heterogeneous::SkullLayer;
 use kwavers_transducer::transducers::focused::{BowlConfig, BowlTransducer};
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use ritk_io::{load_native_dicom_series, scan_dicom_directory};
 
 #[path = "skull_ct_phase_correction/diagnostics_3d.rs"]

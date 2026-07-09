@@ -21,7 +21,7 @@
 //! - Dijkstra, E. W. (1959). "A note on two problems in connexion with graphs."
 //!   *Numer. Math.*, 1, 269–271.
 
-use ndarray::Array2;
+use leto::Array2;
 use std::cmp::Ordering;
 use std::collections::BinaryHeap;
 
@@ -209,7 +209,7 @@ pub fn bent_ray_traveltime(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Homogeneous medium, axis-aligned ray: the bent path is the straight grid
     /// row and the traveltime equals `s · distance` exactly.

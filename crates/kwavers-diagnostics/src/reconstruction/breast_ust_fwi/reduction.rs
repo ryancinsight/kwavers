@@ -1,7 +1,7 @@
 //! Reduced-domain preparation for Ali 2025 breast-FWI probes.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 const DEFAULT_DIAMETER_LATERAL_EXTENT_FRACTION: f64 = 0.80;
 const ALI_2025_ROW_SPACING_M: f64 = 0.0024;

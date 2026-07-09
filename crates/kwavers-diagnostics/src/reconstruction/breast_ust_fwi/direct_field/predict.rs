@@ -9,7 +9,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::cbs::{
     pstd_modal_frequency_bin_response, pstd_modal_theta_squared, pstd_source_kappa_symbol,
     PstdTemporalBinConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 

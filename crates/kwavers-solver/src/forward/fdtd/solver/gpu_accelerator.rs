@@ -4,7 +4,7 @@
 //! per call and return a fresh pressure volume as `leto::Array3<f64>`.
 
 use leto::Array3 as LetoArray3;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 use kwavers_core::error::KwaversResult;
 

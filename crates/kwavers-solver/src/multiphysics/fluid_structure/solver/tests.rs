@@ -1,5 +1,5 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::interface::{FsiInterface, FsiInterfaceSpec};
 use super::struct_impl::FluidStructureSolver;

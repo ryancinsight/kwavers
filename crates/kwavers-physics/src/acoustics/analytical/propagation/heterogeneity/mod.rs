@@ -1,6 +1,6 @@
 // physics/heterogeneity/mod.rs
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use rand::Rng;
 
 #[derive(Debug)]

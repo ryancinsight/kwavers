@@ -17,7 +17,7 @@ impl NonlinearElasticWaveSolver {
     ///
     pub fn propagate_waves(
         &self,
-        initial_displacement: &ndarray::Array3<f64>,
+        initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<NonlinearElasticWaveField>> {
         let max_abs_u = initial_displacement
             .iter()

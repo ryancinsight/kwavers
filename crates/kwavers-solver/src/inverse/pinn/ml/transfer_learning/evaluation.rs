@@ -21,9 +21,9 @@ where
         let mut total_boundary_error = 0.0;
 
         for point in &test_points {
-            let x_arr = ndarray::Array1::from_vec(vec![point.x]);
-            let y_arr = ndarray::Array1::from_vec(vec![point.y]);
-            let t_arr = ndarray::Array1::from_vec(vec![0.0]);
+            let x_arr = leto::Array1::from_vec(vec![point.x]);
+            let y_arr = leto::Array1::from_vec(vec![point.y]);
+            let t_arr = leto::Array1::from_vec(vec![0.0]);
             let _prediction = model.predict(&x_arr, &y_arr, &t_arr)?;
             let residual = self.compute_pde_residual(model, point.x, point.y, 0.0)?;
             total_residual += residual * residual;
@@ -79,23 +79,23 @@ where
     ) -> KwaversResult<f64> {
         let eps = 1e-6;
 
-        let x_arr = ndarray::Array1::from_vec(vec![x]);
-        let y_arr = ndarray::Array1::from_vec(vec![y]);
-        let t_arr = ndarray::Array1::from_vec(vec![t]);
+        let x_arr = leto::Array1::from_vec(vec![x]);
+        let y_arr = leto::Array1::from_vec(vec![y]);
+        let t_arr = leto::Array1::from_vec(vec![t]);
 
         let u_center = model.predict(&x_arr, &y_arr, &t_arr)?;
         let u_val = u_center[[0, 0]];
 
-        let x_plus = ndarray::Array1::from_vec(vec![x + eps]);
+        let x_plus = leto::Array1::from_vec(vec![x + eps]);
         let u_x_plus = model.predict(&x_plus, &y_arr, &t_arr)?[[0, 0]];
 
-        let x_minus = ndarray::Array1::from_vec(vec![x - eps]);
+        let x_minus = leto::Array1::from_vec(vec![x - eps]);
         let u_x_minus = model.predict(&x_minus, &y_arr, &t_arr)?[[0, 0]];
 
-        let y_plus = ndarray::Array1::from_vec(vec![y + eps]);
+        let y_plus = leto::Array1::from_vec(vec![y + eps]);
         let u_y_plus = model.predict(&x_arr, &y_plus, &t_arr)?[[0, 0]];
 
-        let y_minus = ndarray::Array1::from_vec(vec![y - eps]);
+        let y_minus = leto::Array1::from_vec(vec![y - eps]);
         let u_y_minus = model.predict(&x_arr, &y_minus, &t_arr)?[[0, 0]];
 
         let laplacian = (u_x_plus - 2.0 * u_val + u_x_minus) / (eps * eps)
@@ -141,9 +141,9 @@ where
                     .collect();
 
                 for (x, y) in &boundary_points {
-                    let x_arr = ndarray::Array1::from_vec(vec![*x]);
-                    let y_arr = ndarray::Array1::from_vec(vec![*y]);
-                    let t_arr = ndarray::Array1::from_vec(vec![0.0]);
+                    let x_arr = leto::Array1::from_vec(vec![*x]);
+                    let y_arr = leto::Array1::from_vec(vec![*y]);
+                    let t_arr = leto::Array1::from_vec(vec![0.0]);
                     let u = model.predict(&x_arr, &y_arr, &t_arr)?[[0, 0]];
                     total_violation += u * u;
                     count += 1;
@@ -160,19 +160,19 @@ where
                     let x = x_min + (x_max - x_min) * frac;
                     let y = y_min + (y_max - y_min) * frac;
 
-                    let x_arr = ndarray::Array1::from_vec(vec![x]);
-                    let y0 = ndarray::Array1::from_vec(vec![y_min]);
-                    let y_eps = ndarray::Array1::from_vec(vec![y_min + eps]);
-                    let t_arr = ndarray::Array1::from_vec(vec![0.0]);
+                    let x_arr = leto::Array1::from_vec(vec![x]);
+                    let y0 = leto::Array1::from_vec(vec![y_min]);
+                    let y_eps = leto::Array1::from_vec(vec![y_min + eps]);
+                    let t_arr = leto::Array1::from_vec(vec![0.0]);
                     let u0 = model.predict(&x_arr, &y0, &t_arr)?[[0, 0]];
                     let u_eps = model.predict(&x_arr, &y_eps, &t_arr)?[[0, 0]];
                     let dudn = (u_eps - u0) / eps;
                     total_violation += dudn * dudn;
                     count += 1;
 
-                    let x0 = ndarray::Array1::from_vec(vec![x_min]);
-                    let x_eps_arr = ndarray::Array1::from_vec(vec![x_min + eps]);
-                    let y_arr = ndarray::Array1::from_vec(vec![y]);
+                    let x0 = leto::Array1::from_vec(vec![x_min]);
+                    let x_eps_arr = leto::Array1::from_vec(vec![x_min + eps]);
+                    let y_arr = leto::Array1::from_vec(vec![y]);
                     let u0 = model.predict(&x0, &y_arr, &t_arr)?[[0, 0]];
                     let u_eps = model.predict(&x_eps_arr, &y_arr, &t_arr)?[[0, 0]];
                     let dudn = (u_eps - u0) / eps;

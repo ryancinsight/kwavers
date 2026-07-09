@@ -3,7 +3,10 @@
 //! intensity, and peak positive pressure.
 
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use super::KZKSolver;
 

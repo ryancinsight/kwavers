@@ -8,7 +8,9 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::bubble_dynamics::BubbleParameters;
 use kwavers_physics::factory::models::BubbleModel;
-use ndarray::{Array4, Axis};
+use leto::{
+    Array4,
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 

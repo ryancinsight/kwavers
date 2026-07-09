@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::{
     build_abdominal_placement_context, placement_metrics, prepare_abdominal_slice,
@@ -277,8 +277,8 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
 }
 
 fn peak_index(
-    image: &ndarray::Array2<f64>,
-    mask: &ndarray::Array2<bool>,
+    image: &leto::Array2<f64>,
+    mask: &leto::Array2<bool>,
 ) -> Option<(usize, usize)> {
     image
         .indexed_iter()

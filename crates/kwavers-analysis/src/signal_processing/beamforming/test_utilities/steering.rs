@@ -2,7 +2,7 @@
 
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Create a steering vector for a uniform linear array (ULA).
 ///

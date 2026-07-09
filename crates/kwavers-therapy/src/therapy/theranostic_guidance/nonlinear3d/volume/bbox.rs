@@ -2,7 +2,10 @@
 
 use std::collections::VecDeque;
 
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use crate::therapy::theranostic_guidance::geometry::IndexBounds3;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -298,7 +301,7 @@ pub(super) fn physical_distance(a: [f64; 3], b: [f64; 3], spacing_mm: [f64; 3]) 
 
 #[cfg(test)]
 mod tests {
-    use ndarray::Array3;
+    use leto::Array3;
 
     use super::*;
 

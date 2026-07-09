@@ -16,7 +16,7 @@
 //! `O(N)` DFT, which is essentially instant after the Green's functions are
 //! precomputed.  The step size `α` is selected by Armijo backtracking.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     config::StandingWaveOptConfig,
@@ -127,7 +127,7 @@ pub(super) fn run_optimization(
     g_im: Vec<Array2<f64>>,
     config: &StandingWaveOptConfig,
 ) -> StandingWaveOptResult {
-    use ndarray::Array3;
+    use leto::Array3;
 
     let element_ys = config.element_ys();
     let mut phases = config.das_phases(&element_ys);
@@ -156,10 +156,10 @@ pub(super) fn run_optimization(
     // Capture iter-0 snapshot
     if snap_iters.contains(&0) {
         snap_re
-            .slice_mut(ndarray::s![snap_cursor, .., ..])
+            .index_axis::<2>(0, snap_cursor)
             .assign(&init_re.mapv(|v| v as f32));
         snap_im
-            .slice_mut(ndarray::s![snap_cursor, .., ..])
+            .index_axis::<2>(0, snap_cursor)
             .assign(&init_im.mapv(|v| v as f32));
         snap_iter_out.push(0);
         snap_cursor += 1;
@@ -186,10 +186,10 @@ pub(super) fn run_optimization(
 
         if snap_iters.contains(&k) && snap_cursor < n_snap {
             snap_re
-                .slice_mut(ndarray::s![snap_cursor, .., ..])
+                .index_axis::<2>(0, snap_cursor)
                 .assign(&p_re_k.mapv(|v| v as f32));
             snap_im
-                .slice_mut(ndarray::s![snap_cursor, .., ..])
+                .index_axis::<2>(0, snap_cursor)
                 .assign(&p_im_k.mapv(|v| v as f32));
             snap_iter_out.push(k);
             snap_cursor += 1;

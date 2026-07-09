@@ -3,7 +3,7 @@
 use super::config::SensitivityConfig;
 use super::types::{MorrisResults, SensitivityIndices};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array1;
+use leto::Array1;
 use std::collections::HashMap;
 
 /// Sensitivity analyzer

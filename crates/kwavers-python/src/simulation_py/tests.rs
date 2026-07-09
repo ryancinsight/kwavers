@@ -4,7 +4,10 @@ mod simulation_contract_tests {
     use crate::grid_py::Grid;
     use crate::misc_bindings::time_reversal_reconstruction_impl;
     use kwavers_receiver::recorder::fields::SensorRecordField;
-    use ndarray::{array, Array2};
+    use leto::{
+    /* array -- no leto equivalent */,
+    Array2,
+};
 
     #[test]
     fn trim_initial_recorder_sample_aligns_with_kwave_time_axis() {

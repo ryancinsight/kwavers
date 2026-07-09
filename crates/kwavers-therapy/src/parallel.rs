@@ -4,7 +4,10 @@ use moirai_parallel::{
     for_each_chunk_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with,
     for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
-use ndarray::{ArrayView, ArrayViewMut, Dimension, Zip};
+use leto::{
+    ArrayView,
+    ArrayViewMut,
+};
 
 const THERAPY_CHUNK_SIZE: usize = 4096;
 
@@ -639,7 +642,10 @@ pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, D, F>(
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{s, Array2};
+    use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+};
 
     use super::{
         zip_mut_five_refs, zip_mut_four_refs, zip_mut_ref, zip_mut_three_refs,

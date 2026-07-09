@@ -9,7 +9,10 @@ use super::{
 };
 use crate::signal_processing::beamforming::time_domain::das::delay_and_sum;
 use crate::signal_processing::beamforming::time_domain::delay_reference::DelayReference;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 
@@ -467,7 +470,7 @@ fn pcf_via_weights_is_low_for_a_quadrature_spread_aperture() {
         .weights(&aligned)
         .expect("pcf weights");
     // Interior samples (away from Hilbert edge transients) are near-incoherent.
-    for &v in cf.slice(ndarray::s![16..48]).iter() {
+    for &v in cfslice(&[(Some(16 as isize) as usize, Some(48 as isize) as usize, 1)]).iter() {
         assert!((0.0..=1.0).contains(&v), "PCF out of [0,1]: {v}");
         assert!(
             v < 0.2,

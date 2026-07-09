@@ -3,7 +3,10 @@ use super::shifter::PhaseShifter;
 use approx::assert_relative_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{arr2, Array2};
+use leto::{
+    /* arr2 -- no leto equivalent */,
+    Array2,
+};
 use std::f64::consts::PI;
 
 fn linear_array() -> Array2<f64> {

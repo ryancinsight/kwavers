@@ -1,8 +1,12 @@
 //! Compressed Sparse Row (CSR) matrix format
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, ArrayView1, ArrayView2};
-use num_traits::Zero;
+use leto::{
+    Array1,
+    ArrayView1,
+    ArrayView2,
+};
+use eunomia::NumericElement;
 use std::ops::{AddAssign, Mul};
 
 /// Compressed Sparse Row matrix format
@@ -22,7 +26,7 @@ pub struct CompressedSparseRowMatrix<T = f64> {
     pub nnz: usize,
 }
 
-pub trait CsrScalar: Copy + Zero + AddAssign + Mul<Output = Self> {
+pub trait CsrScalar: Copy + Default + AddAssign + Mul<Output = Self> {
     fn magnitude(self) -> f64;
 }
 
@@ -165,11 +169,11 @@ impl<T> CompressedSparseRowMatrix<T> {
 
     /// Convert to dense matrix
     #[must_use]
-    pub fn to_dense(&self) -> ndarray::Array2<T>
+    pub fn to_dense(&self) -> leto::Array2<T>
     where
-        T: Copy + Zero,
+        T: Copy + /*Zero*/ Default,
     {
-        let mut dense = ndarray::Array2::from_elem((self.rows, self.cols), T::zero());
+        let mut dense = leto::Array2::from_elem((self.rows, self.cols), T::default());
 
         for i in 0..self.rows {
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
@@ -221,7 +225,7 @@ impl<T> CompressedSparseRowMatrix<T> {
     #[must_use]
     pub fn get_diagonal(&self, row: usize) -> T
     where
-        T: Copy + Zero,
+        T: Copy + /*Zero*/ Default,
     {
         let row_start = self.row_pointers[row];
         let row_end = self.row_pointers[row + 1];
@@ -232,7 +236,7 @@ impl<T> CompressedSparseRowMatrix<T> {
             }
         }
 
-        T::zero()
+        T::default()
     }
 
     /// Zero out row (except diagonal)
@@ -330,7 +334,7 @@ mod tests {
     //! produce bit-exact outputs (3²+4²=25, 5²+12²=169, 6²+8²=100).
 
     use super::CsrScalar;
-    use num_traits::Zero;
+    use eunomia::NumericElement;
 
     // ───── `CsrScalar::magnitude` over `num_complex::Complex64` (current surface) ─────
 

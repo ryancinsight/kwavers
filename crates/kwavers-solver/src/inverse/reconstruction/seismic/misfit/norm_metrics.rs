@@ -2,7 +2,7 @@
 
 use super::types::MisfitFunction;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 impl MisfitFunction {
     /// L2 norm misfit: 0.5 * ||d_obs − d_syn||²

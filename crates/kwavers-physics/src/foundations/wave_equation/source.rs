@@ -1,6 +1,6 @@
 //! Source term definitions
 
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Source term trait
 ///

@@ -1,6 +1,9 @@
 use super::*;
 use crate::forward::pstd::dg::basis::build_vandermonde;
-use ndarray::{arr1, Array1};
+use leto::{
+    /* arr1 -- no leto equivalent */,
+    Array1,
+};
 
 #[test]
 fn legendre_derivative_endpoint_limits_are_finite() {

@@ -40,7 +40,7 @@ mod tests;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::simd::{MathSimdLevel, SimdConfig};
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::OnceLock;
 
 /// Global SIMD configuration (computed once at startup)

@@ -3,7 +3,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::optimization::LbfgsMemory;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::ElasticFwi;
 
@@ -204,7 +204,7 @@ impl ElasticFwi {
     fn add_regularization_gradient(&self, grad: &mut Array3<f64>, mu: &Array3<f64>) {
         if self.config.tikhonov_weight > 0.0 {
             let w = self.config.tikhonov_weight;
-            ndarray::Zip::from(&mut *grad)
+            leto_ops::zip_from_mut(*grad)
                 .and(mu)
                 .and(&self.mu_start)
                 .for_each(|g, &m, &m0| *g += w * (m - m0));

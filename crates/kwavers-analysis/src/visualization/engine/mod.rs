@@ -7,7 +7,10 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
 use log::{debug, info, warn};
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -166,7 +169,7 @@ impl VisualizationEngine {
                 let transfer_start = Instant::now();
                 for (i, &field_type) in field_types.iter().enumerate() {
                     if i < fields.shape()[3] {
-                        let field = fields.slice(ndarray::s![.., .., .., i]);
+                        let field = fields.index_axis::<3>(3, i);
                         pipeline.upload_field(&field.to_owned(), field_type).await?;
                     }
                 }
@@ -197,7 +200,7 @@ impl VisualizationEngine {
             warn!("Multi-field rendering requires GPU visualization feature");
             // Render first field as fallback
             if !field_types.is_empty() && fields.shape()[3] > 0 {
-                let field = fields.slice(ndarray::s![.., .., .., 0]).to_owned();
+                let field = fields.index_axis::<3>(3, 0).to_owned();
                 super::fallback::render_field(&field, field_types[0], grid)?;
             }
         }

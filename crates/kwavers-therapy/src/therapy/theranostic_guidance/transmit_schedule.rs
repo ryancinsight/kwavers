@@ -9,7 +9,7 @@
 
 use std::cmp::Ordering;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

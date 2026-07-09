@@ -24,7 +24,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::cavitation_control::FeedbackController;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::AcousticTherapyParams;
 use super::super::state::AcousticField;
@@ -83,7 +83,7 @@ pub fn update_cavitation_control(
     // Process the acoustic signal through the feedback controller
     // Use pressure field as the input signal for cavitation detection and control
     let signal = acoustic_field.pressure.as_slice().unwrap();
-    let array_view = ndarray::ArrayView1::from(signal);
+    let array_view = leto::ArrayView1::from(signal);
     let control_output = cavitation_controller.process(&array_view);
 
     // Extract cavitation activity using detector-based approach

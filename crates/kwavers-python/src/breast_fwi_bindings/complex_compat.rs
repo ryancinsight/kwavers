@@ -2,7 +2,11 @@ use std::convert::TryInto;
 
 use kwavers_math::fft::Complex64 as KwComplex;
 use leto::{Array1 as LetoArray1, Array2 as LetoArray2, Array3 as LetoArray3};
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 pub fn nc_to_ec1(arr: Array1<num_complex::Complex64>) -> Array1<KwComplex> {
     arr.map(|c| KwComplex::new(c.re, c.im))

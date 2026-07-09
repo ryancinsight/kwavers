@@ -13,7 +13,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array4, ArrayView3, Axis};
+use leto::{
+    Array4,
+    ArrayView3,
+};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component

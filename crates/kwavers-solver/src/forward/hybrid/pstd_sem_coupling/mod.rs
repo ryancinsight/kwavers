@@ -30,7 +30,7 @@ mod tests;
 pub use coupler::PstdSemCoupler;
 pub use solver::PstdSemSolver;
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Configuration for PSTD-SEM coupling
 #[derive(Debug, Clone)]

@@ -1,5 +1,8 @@
 use kwavers_field::UnifiedFieldType;
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 use std::collections::HashMap;
 
 /// Return field keys in deterministic stacked-state order.

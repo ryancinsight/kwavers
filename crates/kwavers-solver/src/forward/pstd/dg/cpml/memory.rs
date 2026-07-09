@@ -38,7 +38,7 @@
 //! field state layout. One ψ component per axis-variable pair; inactive axes
 //! carry zeros and are skipped during RHS evaluation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Number of auxiliary CPML memory variables per GLL node.
 pub const DG_CPML_MEMORY_VARS: usize = 6;

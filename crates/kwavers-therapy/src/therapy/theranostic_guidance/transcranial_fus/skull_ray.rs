@@ -1,4 +1,8 @@
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 /// Per-element skull-path correction: `(phases_rad, delays_s, skull_lengths_m,
 /// amplitude_weights)`, one value per transducer element.

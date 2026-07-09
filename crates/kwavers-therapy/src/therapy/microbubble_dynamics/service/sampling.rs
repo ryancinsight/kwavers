@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use kwavers_physics::therapy::microbubble::Position3D;

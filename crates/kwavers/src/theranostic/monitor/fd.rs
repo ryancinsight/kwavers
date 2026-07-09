@@ -31,7 +31,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     invert, invert_gauss_newton, simulate_frequency_observation, Config, FrequencyObservation,
     GaussNewtonConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Configuration for the frequency-domain CBS monitor channel.
@@ -204,7 +204,7 @@ pub fn differential_lesion_map(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Build an `(n, n, 1)` homogeneous slice with an optional square Δc bump.
     fn slice_with_bump(n: usize, base: f64, bump: f64, half: usize) -> Array3<f64> {

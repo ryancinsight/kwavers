@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::numerical::{NUMERICAL_SHOCK_DETECTION_THRESHOLD, WENO_EPSILON};
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 /// WENO-based shock limiter
 #[derive(Debug, Clone)]

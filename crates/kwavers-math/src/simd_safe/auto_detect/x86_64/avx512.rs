@@ -4,7 +4,7 @@
 //! safety documentation per ICSE 2020 standards.
 
 use crate::simd_safe::auto_detect::ops;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Add two arrays using AVX-512 instructions
 ///

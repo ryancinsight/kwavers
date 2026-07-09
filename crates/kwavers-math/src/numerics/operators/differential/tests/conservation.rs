@@ -3,7 +3,7 @@
 use super::super::*;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_staggered_conservation() {

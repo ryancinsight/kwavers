@@ -1,6 +1,6 @@
 //! Forward prediction through a cached fixed-acquisition operator.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

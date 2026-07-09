@@ -1,7 +1,10 @@
 //! Provider-owned traversal adapters for simulation fields.
 
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{ArrayView3, ArrayViewMut3, Zip};
+use leto::{
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 const FIELD_CHUNK_SIZE: usize = 4096;
 

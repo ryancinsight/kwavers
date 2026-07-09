@@ -4,7 +4,7 @@ use super::config::VelocityMapConfig;
 use super::output::VelocityMap;
 use crate::signal_processing::ulm::tracking::BubbleTrack;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Reconstructs a 2D velocity field from accumulated bubble tracks.
 #[derive(Debug)]

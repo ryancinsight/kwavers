@@ -19,7 +19,7 @@
 use super::config::GMRESConfig;
 use super::types::GmresConvergenceInfo;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 /// GMRES solver for linear systems A·x = b.
 ///

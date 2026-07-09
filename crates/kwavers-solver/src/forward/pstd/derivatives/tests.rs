@@ -1,6 +1,6 @@
 use super::operator::SpectralDerivativeOperator;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 /// **Theorem (spectral derivative exactness for DFT-representable modes):**
 ///

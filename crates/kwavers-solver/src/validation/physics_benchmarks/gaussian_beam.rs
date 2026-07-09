@@ -7,7 +7,7 @@
 //! - Saleh & Teich (2007) "Fundamentals of Photonics", Ch. 3
 
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 /// Analytical Gaussian beam parameters

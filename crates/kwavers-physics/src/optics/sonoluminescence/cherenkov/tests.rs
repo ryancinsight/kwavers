@@ -1,7 +1,7 @@
 use super::model::CherenkovModel;
 use approx;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
 
 #[test]

@@ -2,7 +2,7 @@
 //!
 //! This module provides configuration and utilities for multi-frequency acoustic simulations.
 
-use ndarray::Array1;
+use leto::Array1;
 
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 

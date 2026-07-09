@@ -133,7 +133,7 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     config: &Nonlinear3dConfig,
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    use ndarray::Array1;
+    use leto::Array1;
     let out = PyDict::new(py);
     out.set_item("anatomy", config.anatomy.label())?;
     out.set_item("ct_hu", result.ct_hu.to_pyarray(py))?;

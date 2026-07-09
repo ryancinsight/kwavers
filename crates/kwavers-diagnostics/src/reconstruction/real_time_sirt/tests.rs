@@ -6,7 +6,10 @@ use crate::reconstruction::acoustic_projection::{
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_solver::inverse::reconstruction::unified_sirt::SirtConfig;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 #[test]
 fn test_config_default() {

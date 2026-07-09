@@ -18,7 +18,10 @@ use crate::inverse::seismic::parameters::{FwiParameters, RegularizationParameter
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Single-shot problem with a long quiet pre-arrival window (source at `ix=1`,
 /// receivers at `ix=6`) so the per-trace noise variance is estimable.

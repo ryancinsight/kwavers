@@ -21,7 +21,7 @@
 //!   Multidimensional Seismic Imaging, Migration, and Inversion*. Springer.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// A recorded trace for one source–receiver pair.
 #[derive(Debug, Clone)]

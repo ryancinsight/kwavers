@@ -21,7 +21,7 @@ use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Electromagnetic-thermal coupling for photothermal effects
 pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {

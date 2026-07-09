@@ -21,7 +21,7 @@ use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::inverse::elastography::elastic_fwi::{
     reconstruct_lesion_transmission, TransmissionFwiParams,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::io::Write;
 
 const NXY: usize = 36;

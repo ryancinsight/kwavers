@@ -2,7 +2,11 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{map_collect_mut_with, Adaptive};
-use ndarray::{s, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    Array4,
+};
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::interface::pinn_beamforming::{

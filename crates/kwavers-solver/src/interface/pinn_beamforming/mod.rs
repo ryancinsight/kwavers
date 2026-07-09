@@ -16,7 +16,10 @@
 //! ```
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// Configuration for PINN-based beamforming.
 #[derive(Debug, Clone, Default)]

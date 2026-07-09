@@ -1,5 +1,8 @@
 use super::*;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 // ── body_neighbors ────────────────────────────────────────────────────────
 

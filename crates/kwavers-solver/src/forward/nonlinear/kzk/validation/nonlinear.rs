@@ -6,7 +6,7 @@ mod tests {
     use kwavers_core::constants::fundamental::DENSITY_WATER;
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER_37C;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Test harmonic generation in nonlinear propagation
     /// # Panics

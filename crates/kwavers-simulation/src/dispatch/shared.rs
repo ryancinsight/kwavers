@@ -71,35 +71,35 @@ pub(crate) fn recording_modes_from_strings(modes: &[String]) -> Vec<RecordingMod
 
 /// Trim the initial recorder sample (record-start offset) from owned data.
 pub(crate) fn trim_initial_recorder_sample(
-    recorded_data: ndarray::Array2<f64>,
+    recorded_data: leto::Array2<f64>,
     time_steps: usize,
     record_start_index: usize,
-) -> ndarray::Array2<f64> {
+) -> leto::Array2<f64> {
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
     if recorded_data.ncols() > time_steps {
         recorded_data
-            .slice(ndarray::s![.., skip..time_steps])
+            slice(&[(0, usize::MAX, 1), (Some(skip as isize) as usize, Some(time_steps as isize) as usize, 1)])
             .to_owned()
     } else {
-        recorded_data.slice(ndarray::s![.., skip..]).to_owned()
+        recorded_data.slice_with::<2>(&[SliceArg::All, SliceArg::Range { start: Some(skip as isize), end: None, step: 1 }]).to_owned()
     }
 }
 
 /// Trim the initial recorder sample (record-start offset) from a view.
 pub(crate) fn trim_initial_recorder_view(
-    recorded_data: ndarray::ArrayView2<'_, f64>,
+    recorded_data: leto::ArrayView2<'_, f64>,
     time_steps: usize,
     record_start_index: usize,
-) -> ndarray::Array2<f64> {
+) -> leto::Array2<f64> {
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
     if recorded_data.ncols() > time_steps {
         recorded_data
-            .slice(ndarray::s![.., skip..time_steps])
+            slice(&[(0, usize::MAX, 1), (Some(skip as isize) as usize, Some(time_steps as isize) as usize, 1)])
             .to_owned()
     } else {
-        recorded_data.slice(ndarray::s![.., skip..]).to_owned()
+        recorded_data.slice_with::<2>(&[SliceArg::All, SliceArg::Range { start: Some(skip as isize), end: None, step: 1 }]).to_owned()
     }
 }
 

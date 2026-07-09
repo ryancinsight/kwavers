@@ -1,7 +1,7 @@
 //! Internal mutable 3-D scalar-volume abstraction for elastography filters.
 
 use leto::Array3 as LetoArray3;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 /// Mutable 3-D `f64` volume used by elastography smoothing and boundary fills.
 pub trait Volume3 {

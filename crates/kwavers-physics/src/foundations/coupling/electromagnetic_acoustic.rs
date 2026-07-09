@@ -65,7 +65,7 @@
 //!   Rev. Sci. Instrum. 77(4), 041101. DOI: 10.1063/1.2195024
 
 use super::MultiPhysicsCoupling;
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Electromagnetic-acoustic coupling for photoacoustic effects
 pub trait ElectromagneticAcousticCoupling: MultiPhysicsCoupling {

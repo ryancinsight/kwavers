@@ -1,5 +1,5 @@
 use super::{FdtdAvx512Config, FdtdAvx512StencilProcessor};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_avx512_processor_creation() {

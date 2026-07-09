@@ -92,7 +92,7 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
         let (seg, _) = load_ritk_nifti(Path::new(seg_path))?;
         seg.mapv(|v| v > 0.5)
     } else {
-        ndarray::Array3::from_elem(ct.dim(), false)
+        leto::Array3::from_elem(ct.dim(), false)
     };
 
     // Derive target index from brain centroid.
@@ -317,7 +317,7 @@ pub fn bbb_opening_from_subspots_py<'py>(
     let opened = permeability
         .indexed_iter()
         .map(|((ix, iy, iz), &p)| p >= 0.50 && tumor[[ix, iy, iz]]);
-    let opened_mask = ndarray::Array3::from_shape_vec(tumor.dim(), opened.collect())
+    let opened_mask = leto::Array3::from_shape_vec(tumor.dim(), opened.collect())
         .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?;
 
     let out = PyDict::new(py);
@@ -490,7 +490,7 @@ fn plan_to_pydict<'py>(
 
 /// Compute the centroid of the brain mask as integer voxel indices.
 /// Falls back to the array centre if the mask is empty.
-fn brain_centroid(brain_mask: &ndarray::Array3<bool>) -> [usize; 3] {
+fn brain_centroid(brain_mask: &leto::Array3<bool>) -> [usize; 3] {
     let (nx, ny, nz) = brain_mask.dim();
     let mut sx = 0.0_f64;
     let mut sy = 0.0_f64;

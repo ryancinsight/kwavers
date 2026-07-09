@@ -12,7 +12,10 @@ use kwavers_core::constants::SOUND_SPEED_WATER;
 /// Default quantization levels for phase control
 const DEFAULT_QUANTIZATION_LEVELS: u32 = 256;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Phase shifter for beam control
 #[derive(Debug)]

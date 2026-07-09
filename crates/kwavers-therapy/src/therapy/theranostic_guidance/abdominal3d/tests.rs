@@ -2,7 +2,7 @@ use super::super::geometry::Point3;
 use super::bowl::bowl_elements;
 use super::helpers::{distance_3d, keep_largest_connected_component_3d};
 use super::placement::plan_abdominal_array_placement;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Returns a toy CT volume: a sphere of radius R_body centred at the
 /// volume centre, with a smaller sphere of label 1 at offset (R_organ, 0, 0).

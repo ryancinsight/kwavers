@@ -1,6 +1,6 @@
 use super::config::{SirtAlgorithm, SirtConfig, SirtResult};
 use super::reconstructor::SirtReconstructor;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_sirt_config_default() {

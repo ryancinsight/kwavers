@@ -16,7 +16,12 @@
 
 use super::traits::Interpolator;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
+use leto::{
+    Array1,
+    Array3,
+    ArrayView1,
+    ArrayView3,
+};
 
 /// Trilinear interpolator (C⁰, order 1, monotonicity-preserving).
 #[derive(Debug, Clone)]

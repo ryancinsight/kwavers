@@ -1,4 +1,6 @@
-use ndarray::{Array2, Axis};
+use leto::{
+    Array2,
+};
 use numpy::{PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

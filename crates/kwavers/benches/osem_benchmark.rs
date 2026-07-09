@@ -3,7 +3,7 @@ use kwavers_solver::inverse::reconstruction::photoacoustic::{
     IterativeAlgorithm, PhotoacousticAlgorithm, PhotoacousticReconstructor,
     ReconstructionPhotoacousticConfig,
 };
-use ndarray::Array2;
+use leto::Array2;
 
 fn osem_reconstruction_benchmark(c: &mut Criterion) {
     let grid_size = [16, 16, 16]; // 4096 voxels

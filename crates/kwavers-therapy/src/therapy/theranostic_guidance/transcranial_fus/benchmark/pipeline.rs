@@ -1,4 +1,7 @@
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

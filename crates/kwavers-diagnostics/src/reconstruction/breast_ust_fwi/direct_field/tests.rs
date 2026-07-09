@@ -15,7 +15,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, AbsorbingBoundary, Config as FrequencyDomainFwiConfig,
     PstdSpectralConvergentBornOperator, PstdTemporalTransferConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 use std::f64::consts::PI;
 use std::sync::Arc;

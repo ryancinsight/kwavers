@@ -1,7 +1,10 @@
 //! Data types for flexible array calibration.
 
 use leto::{Array1, Array2};
-use ndarray::{Array1 as NdArray1, Array2 as NdArray2};
+use leto::{
+    Array1 as NdArray1,
+    Array2 as NdArray2,
+};
 
 /// Calibration data storage
 #[derive(Debug, Clone)]

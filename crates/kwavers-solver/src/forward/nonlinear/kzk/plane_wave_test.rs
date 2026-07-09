@@ -6,7 +6,7 @@ mod tests {
         constants::*, parabolic_diffraction::KzkParabolicDiffractionOperator, KZKConfig,
     };
     use kwavers_core::constants::SOUND_SPEED_WATER;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn test_plane_wave_propagation() {

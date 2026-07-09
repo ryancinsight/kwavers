@@ -3,7 +3,7 @@
 //! operator and preconditioner kernels.
 
 use anyhow::Result;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,

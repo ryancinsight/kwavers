@@ -2,7 +2,7 @@ use super::super::DifferentialOperator;
 use super::core::CentralDifference6;
 use approx::assert_abs_diff_eq;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 fn assert_invalid_grid_spacing(
     result: KwaversResult<CentralDifference6>,

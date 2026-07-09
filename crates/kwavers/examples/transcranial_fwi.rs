@@ -81,7 +81,10 @@ use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -284,7 +287,7 @@ fn load_ct_slice(
         let (vol_nx, vol_ny, vol_nz) = (dims[0] as usize, dims[1] as usize, dims[2] as usize);
 
         // into_ndarray yields ArrayD<T>; we request f64 directly.
-        let data: ndarray::ArrayD<f64> = volume.into_ndarray::<f64>().ok()?;
+        let data: ArrayD<f64> = volume.into_ndarray::<f64>().ok()?;
 
         let coronal_idx = vol_ny / 2; // mid-coronal slice
 
@@ -662,7 +665,7 @@ fn main() -> KwaversResult<()> {
     let t0 = Instant::now();
     let mut shots: Vec<(
         kwavers_solver::inverse::fwi::time_domain::FwiGeometry,
-        ndarray::Array2<f64>,
+        leto::Array2<f64>,
     )> = Vec::with_capacity(n_shots);
     for &(ix, iz) in &HEMI_SOURCE_POSITIONS {
         let geometry = build_shot(ix, iz, nt, dt, f0);

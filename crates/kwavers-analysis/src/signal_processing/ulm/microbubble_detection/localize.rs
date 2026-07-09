@@ -19,7 +19,10 @@
 
 use super::types::{BubbleDetection, GaussianLocalizationConfig};
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array2};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+};
 
 /// Sub-pixel microbubble localizer using Gauss-Newton least squares.
 #[derive(Debug)]

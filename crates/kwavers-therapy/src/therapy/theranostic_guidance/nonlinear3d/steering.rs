@@ -1,6 +1,6 @@
 //! Electronic steering calibration for abdominal nonlinear histotripsy solves.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::AnatomyKind;
 use super::encoding::SourceEncoding;

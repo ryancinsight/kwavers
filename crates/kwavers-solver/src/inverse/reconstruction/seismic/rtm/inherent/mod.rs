@@ -19,7 +19,7 @@ pub(super) mod tests;
 mod wavefield;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::types::ReverseTimeMigration;
 use parallel::for_each_view_mut;
@@ -40,7 +40,7 @@ impl ReverseTimeMigration {
     ///
     pub fn migrate_shot(
         &mut self,
-        shot_data: &ndarray::Array2<f64>,
+        shot_data: &leto::Array2<f64>,
         source_position: (usize, usize, usize),
         receiver_positions: &[(usize, usize, usize)],
         grid: &kwavers_grid::Grid,

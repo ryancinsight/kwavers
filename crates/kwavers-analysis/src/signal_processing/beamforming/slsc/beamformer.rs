@@ -2,7 +2,11 @@ use super::SlscConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::utils::iterators::apply_inplace;
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 
 /// Short-Lag Spatial Coherence beamformer

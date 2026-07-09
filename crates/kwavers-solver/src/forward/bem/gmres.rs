@@ -24,7 +24,10 @@
 //!   Comput. 7(3), 856–869. DOI: 10.1137/0907058
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Solve `A·x = b` using preconditioned restarted GMRES.
 ///

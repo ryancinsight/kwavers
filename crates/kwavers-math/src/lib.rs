@@ -36,8 +36,6 @@ pub mod simd;
 pub mod simd_safe;
 pub mod special;
 pub mod statistics;
-pub mod tensor;
-pub mod vector3;
 
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Core Mathematical API)
@@ -68,8 +66,3 @@ pub use simd::{
 
 /// Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps;
-
-/// Host tensor abstraction for ndarray-backed forward-solver boundaries.
-pub use tensor::{
-    convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView,
-};

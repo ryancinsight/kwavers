@@ -6,7 +6,10 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
-use ndarray::{Array3, ArrayView2};
+use leto::{
+    Array3,
+    ArrayView2,
+};
 
 use super::config::ReconstructionPhotoacousticConfig;
 use super::filters::Filters;
@@ -296,7 +299,7 @@ impl PhotoacousticReconstructor {
 
         // Flatten sensor data
         let b = sensor_data.as_slice().unwrap();
-        let b = ndarray::ArrayView1::from(b);
+        let b = leto::ArrayView1::from(b);
 
         // Solve using robust linear algebra with regularization
         let solution = if self.config.regularization_parameter > 0.0 {

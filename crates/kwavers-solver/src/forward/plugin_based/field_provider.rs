@@ -6,7 +6,10 @@
 use super::field_registry::FieldRegistry;
 use kwavers_core::error::FieldError;
 use kwavers_field::mapping::UnifiedFieldType;
-use ndarray::{ArrayView3, ArrayViewMut3};
+use leto::{
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 /// Field provider for plugins with restricted access
 #[derive(Debug)]

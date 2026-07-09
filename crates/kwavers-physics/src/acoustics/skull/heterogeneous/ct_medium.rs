@@ -21,7 +21,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousMedium;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Builder turning a Hounsfield-unit CT volume into a fully-specified,
 /// tissue-varying [`HeterogeneousMedium`].
@@ -108,7 +108,7 @@ mod tests {
     use kwavers_core::constants::hu_mapping::HuAcousticModel;
     use kwavers_grid::Grid;
     use kwavers_medium::{AcousticProperties, CoreMedium};
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn grid_4x4x4() -> Grid {
         Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).expect("valid grid")

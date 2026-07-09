@@ -1,6 +1,6 @@
 //! Input validation for nonlinear 3-D volume preparation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

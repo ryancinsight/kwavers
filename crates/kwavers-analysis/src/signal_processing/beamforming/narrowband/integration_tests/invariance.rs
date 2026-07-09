@@ -11,7 +11,7 @@ use crate::signal_processing::beamforming::{
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn pipeline_is_invariant_to_global_time_shift() {

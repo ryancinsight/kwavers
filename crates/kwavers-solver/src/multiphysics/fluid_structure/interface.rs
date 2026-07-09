@@ -1,6 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 ///
 /// Contains the material properties and geometric information required for
@@ -116,7 +116,7 @@ impl FsiInterface {
     /// Set interface location from spatial predicate
     ///
     /// Uses a level set function to determine interface location. Atlas-typed
-    /// migration from `ndarray::Zip::indexed(...).par_for_each` (which forced
+    /// migration from `/* FIXME-zip */ leto_ops::indexed(...).par_for_each` (which forced
     /// the `ndarray/rayon` feature) to `moirai_parallel::enumerate_mut_with`
     /// so the FSI mask fan-out routes through Moirai instead of the legacy
     /// rayon-backed ndarray parallel module.
@@ -150,7 +150,7 @@ impl FsiInterface {
         }
 
         // Fallback when the mask is non-contiguous (rare; preserved for safety).
-        ndarray::Zip::indexed(&mut self.interface_mask).for_each(|(i, j, k), mask| {
+        leto_ops::zip_indexed_mut(self.interface_mask).for_each(|(i, j, k), mask| {
             let phi_ijk = level_set(i, j, k);
             *mask = if i > 0 && j > 0 && k > 0 {
                 let phi_im = level_set(i - 1, j, k);

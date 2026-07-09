@@ -1,7 +1,7 @@
 //! `ModelRegularizer3D` — regularization on 3D spatial model arrays.
 
 use super::{config::RegularizationConfig, ops::for_each_pair_mut};
-use ndarray::Array3;
+use leto::Array3;
 
 /// 3D Model Regularizer
 ///
@@ -42,11 +42,9 @@ impl ModelRegularizer3D {
         }
     }
 
-    /// Apply Tikhonov (L2) regularization
-    /// Penalizes large model values: grad_reg = λ·m
     fn apply_tikhonov(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
         let weight = self.config.tikhonov_weight;
-        for_each_pair_mut(gradient, model, |g, m| *g += weight * m);
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| *g += weight * m);
     }
 
     /// Apply Total Variation regularization
@@ -98,13 +96,15 @@ impl ModelRegularizer3D {
         }
 
         let weight = self.config.smoothness_weight;
-        for_each_pair_mut(gradient, &laplacian, |g, lap| *g += weight * lap);
+        for_each_pair_mut(gradient.view_mut(), laplacian.view(), |g, lap| {
+            *g += weight * lap
+        });
     }
 
-    /// Apply L1 (Lasso) regularization
-    /// Sparsity-promoting penalty: grad_reg = λ·sign(m)
     fn apply_l1(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
         let weight = self.config.l1_weight;
-        for_each_pair_mut(gradient, model, |g, m| *g += weight * m.signum());
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| {
+            *g += weight * m.signum()
+        });
     }
 }

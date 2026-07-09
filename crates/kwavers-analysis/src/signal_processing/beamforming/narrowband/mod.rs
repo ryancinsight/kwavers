@@ -97,7 +97,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers_analysis::signal_processing::beamforming::narrowband;
-//! use ndarray::Array2;
+//! use leto::Array2;
 //! use num_complex::Complex64;
 //!
 //! // Time-domain sensor data (N_sensors × N_samples)
@@ -259,7 +259,7 @@ mod tests {
     #[test]
     fn snapshots_module_exports_accessible() {
         // Verify snapshots module is correctly exported
-        use ndarray::Array3;
+        use leto::Array3;
 
         let n_sensors = 2;
         let n_samples = 128;
@@ -287,7 +287,7 @@ mod tests {
     #[test]
     fn capon_module_exports_accessible() {
         // Verify capon module is correctly exported
-        use ndarray::Array3;
+        use leto::Array3;
 
         let n_sensors = 2;
         let n_samples = 64;

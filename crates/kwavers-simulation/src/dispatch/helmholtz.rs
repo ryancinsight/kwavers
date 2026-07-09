@@ -1,7 +1,7 @@
 //! Helmholtz FEM solver dispatch.
 
 use kwavers_math::fft::Complex64;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::TAU;
 
 use crate::dispatch::shared::trim_initial_recorder_sample;
@@ -57,7 +57,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .collect();
 
     let n_sensors = sensor_indices.len().max(1);
-    let mut sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, 1));
+    let mut sensor_data = leto::Array2::<f64>::zeros((n_sensors, 1));
     for (idx, &(i, j, k)) in sensor_indices.iter().enumerate() {
         let node_idx = i + req.grid.nx * (j + req.grid.ny * k);
         sensor_data[[idx, 0]] = solver.solution()[node_idx].norm();
@@ -66,19 +66,19 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let sensor_data = trim_initial_recorder_sample(sensor_data, 1, req.record_start_index);
     let stats = if !sensor_indices.is_empty() {
         Some(SampledStatistics {
-            p_max: ndarray::Array1::from_vec(
+            p_max: leto::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
             )
             .into(),
-            p_min: ndarray::Array1::from_vec(
+            p_min: leto::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
             )
             .into(),
-            p_rms: ndarray::Array1::from_vec(
+            p_rms: leto::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
             )
             .into(),
-            p_final: ndarray::Array1::from_vec(
+            p_final: leto::Array1::from_vec(
                 sensor_data.rows().into_iter().map(|row| row[0]).collect(),
             )
             .into(),

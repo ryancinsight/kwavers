@@ -2,7 +2,7 @@
 //! (ADR 033 increment 2).
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{l2_misfit, sample_receivers, ElasticFwi, ReceiverTraces};
 use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveField};
@@ -64,7 +64,7 @@ impl ElasticFwi {
         let wmax = illum.iter().fold(0.0_f64, |m, &v| m.max(v));
         if wmax > 0.0 {
             let floor = self.config.precond_eps * wmax;
-            ndarray::Zip::from(&mut grad)
+            leto_ops::zip_from_mut(grad)
                 .and(&illum)
                 .for_each(|g, &w| *g /= w + floor);
         }

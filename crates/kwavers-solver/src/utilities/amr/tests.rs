@@ -1,7 +1,7 @@
 //! Tests for AMR module
 
 use super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_octree_creation() {

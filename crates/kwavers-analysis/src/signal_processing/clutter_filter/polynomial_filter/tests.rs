@@ -1,6 +1,6 @@
 //! Tests for `PolynomialFilter` and `PolynomialFilterConfig`.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::PolynomialFilterConfig;
 use super::filter::PolynomialFilter;

@@ -36,7 +36,10 @@
 use super::super::types::FeatureMap;
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 use std::collections::HashMap;
 
 /// Feature Extractor for Ultrasound Analysis
@@ -49,7 +52,7 @@ use std::collections::HashMap;
 /// ```ignore
 /// use kwavers_transducer::beamforming::neural::config::FeatureConfig;
 /// use kwavers_transducer::beamforming::neural::features::FeatureExtractor;
-/// use ndarray::Array3;
+/// use leto::Array3;
 ///
 /// let config = FeatureConfig::default();
 /// let extractor = FeatureExtractor::new(config);

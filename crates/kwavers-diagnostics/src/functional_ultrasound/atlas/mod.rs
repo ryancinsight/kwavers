@@ -18,7 +18,7 @@ mod query;
 mod tests;
 
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Brain atlas reference data.
 #[derive(Debug, Clone)]

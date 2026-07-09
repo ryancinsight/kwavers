@@ -76,7 +76,7 @@ impl TimeReversalConfig {
                     value: self.iterations as f64,
                     min: 1.0,
                     max: usize::MAX as f64,
-                }, /* field: iterations */
+                }
             ));
         }
 
@@ -86,7 +86,7 @@ impl TimeReversalConfig {
                     value: self.tolerance,
                     min: 0.0,
                     max: 1.0,
-                }, /* field: tolerance */
+                }
             ));
         }
 
@@ -116,7 +116,7 @@ impl TimeReversalConfig {
                     value: self.max_amplification,
                     min: 0.0,
                     max: usize::MAX as f64,
-                }, /* field: max_amplification */
+                }
             ));
         }
 
@@ -126,7 +126,7 @@ impl TimeReversalConfig {
                     value: self.reference_sound_speed,
                     min: 0.0,
                     max: usize::MAX as f64,
-                }, /* field: reference_sound_speed */
+                }
             ));
         }
 

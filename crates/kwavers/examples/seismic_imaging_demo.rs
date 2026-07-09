@@ -97,7 +97,10 @@ use kwavers_solver::inverse::seismic::{
     rtm::RtmProcessor,
 };
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Zip};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
@@ -972,7 +975,7 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
     let (_, _, nz) = hu.dim();
     (0..nz)
         .max_by_key(|&z| {
-            hu.slice(ndarray::s![.., .., z])
+            hu.index_axis::<2>(2, z)
                 .iter()
                 .filter(|&&h| h > 300.0)
                 .count()
@@ -984,7 +987,7 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 ///
 /// Falls back to the geometric centre when no bone is present.
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.slice(ndarray::s![.., .., z]);
+    let slice = hu.index_axis::<2>(2, z);
     let (nx, ny) = slice.dim();
     let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
     for ((x, y), &h) in slice.indexed_iter() {
@@ -1033,7 +1036,7 @@ fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
     let (nx, ny, _) = hu.dim();
     let r = hu
-        .slice(ndarray::s![.., .., z])
+        .index_axis::<2>(2, z)
         .indexed_iter()
         .filter(|(_, &h)| h > 300.0)
         .map(|((x, y), _)| {

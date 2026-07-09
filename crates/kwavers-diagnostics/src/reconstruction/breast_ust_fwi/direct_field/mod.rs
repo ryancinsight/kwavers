@@ -24,7 +24,7 @@ mod tests;
 use super::{generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use ndarray::Array3;
+use leto::Array3;
 
 pub const BREAST_UST_HOMOGENEOUS_DIRECT_FIELD_DIAGNOSTIC_MODEL: &str =
     "clinical_breast_ust_homogeneous_direct_field_diagnostic";

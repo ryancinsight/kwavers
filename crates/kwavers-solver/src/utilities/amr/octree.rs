@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Bounds;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Octree node for spatial subdivision
 #[derive(Debug, Clone)]

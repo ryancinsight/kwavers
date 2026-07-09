@@ -37,7 +37,7 @@ use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 use leto::Array3 as LetoArray3;
 use std::time::{Duration, Instant};
 

@@ -2,7 +2,11 @@
 
 use super::FWI_FIELD_CHUNK;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use leto::{
+    Array3,
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 pub(in crate::inverse::fwi::time_domain) fn write_negative_product(
     dst: &mut Array3<f64>,

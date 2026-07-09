@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_ensemble_quantifier_creation() {

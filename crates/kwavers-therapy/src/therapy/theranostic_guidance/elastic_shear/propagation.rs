@@ -5,7 +5,10 @@ use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::{
     ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdVelocitySource,
 };
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 const ELASTIC_CFL: f64 = 0.30;
 

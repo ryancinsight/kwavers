@@ -8,7 +8,10 @@ use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
 use moirai_parallel::ParallelSliceMut;
-use ndarray::{Array3, Array4, Zip};
+use leto::{
+    Array3,
+    Array4,
+};
 use tracing::{error, info, warn};
 
 impl AcousticWaveModel for KuznetsovWave {
@@ -34,7 +37,7 @@ impl AcousticWaveModel for KuznetsovWave {
             );
         }
 
-        let mut pressure_field = fields.index_axis_mut(ndarray::Axis(0), 0);
+        let mut pressure_field = fields.index_axis_mut(0, 0);
 
         if self.first_step {
             self.pressure_current.assign(&pressure_field);

@@ -82,7 +82,7 @@ impl Medium {
 
         if let Some(py_ap) = alpha_power {
             if let Ok(scalar) = py_ap.extract::<f64>() {
-                het.alpha_power = ndarray::Array3::from_elem((nx, ny, nz), scalar).into();
+                het.alpha_power = leto::Array3::from_elem((nx, ny, nz), scalar).into();
             } else if let Ok(arr) = py_ap.extract::<PyReadonlyArray3<f64>>() {
                 let ap_arr = arr.as_array().to_owned();
                 if ap_arr.shape() != [nx, ny, nz] {

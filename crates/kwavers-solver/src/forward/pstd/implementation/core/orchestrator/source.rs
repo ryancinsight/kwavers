@@ -14,7 +14,7 @@ impl PSTDSolver {
         let mask = ndarray_mask(&mask_leto);
         let mode = source_injection::determine_injection_mode(&mask);
 
-        let grad_mask: Option<ndarray::Array3<f64>> = match source.source_type() {
+        let grad_mask: Option<leto::Array3<f64>> = match source.source_type() {
             SourceField::VelocityX => {
                 if let Some(ops) = &self.kspace_operators {
                     Some(ops.spectral_grad_x(&mask_leto)?)
@@ -46,8 +46,8 @@ impl PSTDSolver {
     }
 }
 
-fn ndarray_mask(mask: &leto::Array3<f64>) -> ndarray::Array3<f64> {
+fn ndarray_mask(mask: &leto::Array3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = mask.shape();
-    ndarray::Array3::from_shape_vec((nx, ny, nz), mask.iter().copied().collect())
+    leto::Array3::from_shape_vec((nx, ny, nz), mask.iter().copied().collect())
         .expect("PSTD source mask shape must match contiguous ndarray storage")
 }

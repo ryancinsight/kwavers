@@ -3,7 +3,7 @@
 //! This module provides vector norms and basic vector operations
 //! commonly used in numerical algorithms and signal processing.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Vector norms and basic operations
 #[derive(Debug)]
@@ -115,7 +115,7 @@ impl VectorOperations {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_norm_l2() {

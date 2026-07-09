@@ -5,7 +5,7 @@ use kwavers_core::constants::{
     thermodynamic::{BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER},
 };
 use kwavers_core::error::KwaversError;
-use ndarray::Array3;
+use leto::Array3;
 
 /// A large-magnitude field with a small *relative* change must be reported
 /// as converged, even though the absolute difference is large.

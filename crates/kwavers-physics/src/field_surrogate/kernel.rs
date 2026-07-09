@@ -1,7 +1,7 @@
 //! `FocalKernel` — a per-voxel focal-pressure field with geometry +
 //! source metadata, captured from a single PSTD pulse.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// A cached focal-pressure kernel from a single focused-bowl PSTD pulse.
 ///

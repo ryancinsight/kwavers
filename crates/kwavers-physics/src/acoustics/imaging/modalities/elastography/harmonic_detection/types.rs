@@ -1,7 +1,7 @@
 //! Types and data structures for harmonic detection
 
 use super::config::HarmonicDetectionConfig;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Multi-frequency displacement field with harmonic components
 #[derive(Debug, Clone)]

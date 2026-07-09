@@ -1,6 +1,6 @@
 // adaptive/metrics.rs - Metrics for the adaptive module (compatibility layer)
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Detailed metrics for adaptive selection
 #[derive(Debug, Clone)]

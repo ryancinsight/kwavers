@@ -3,7 +3,7 @@
 use super::constants::{BROADBAND_THRESHOLD_DB, MIN_SPECTRAL_POWER, TEMPORAL_SMOOTHING};
 use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
-use ndarray::ArrayView1;
+use leto::ArrayView1;
 
 /// Broadband detector for inertial cavitation
 pub struct BroadbandDetector {
@@ -143,7 +143,7 @@ mod tests {
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::traits::CavitationDetector;
     use crate::acoustics::bubble_dynamics::cavitation_control::detection::types::CavitationDetectionState;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::arr1;
+    
 
     #[test]
     fn broadband_detector_rejects_empty_and_nonfinite_signals() {

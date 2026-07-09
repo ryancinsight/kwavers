@@ -12,7 +12,9 @@ use kwavers_math::fft::{
 };
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 use leto::Array3 as LetoArray3;
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 use std::sync::Arc;
 
 /// One relaxation arm with its precomputed per-voxel exponential-integrator

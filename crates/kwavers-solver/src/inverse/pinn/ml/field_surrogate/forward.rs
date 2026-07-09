@@ -7,7 +7,7 @@
 //! committing the planner to the training backend tensor API.
 
 use coeus_autograd::Var;
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::{KwaversError, KwaversResult};

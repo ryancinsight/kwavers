@@ -67,7 +67,7 @@ use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 const PRESSURE_UPDATE_CHUNK: usize = 4096;
 

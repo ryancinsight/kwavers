@@ -1,7 +1,10 @@
 //! Phase correction extraction for planar array elements.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 use super::model::AberrationCorrection;
 use kwavers_core::constants::numerical::TWO_PI;

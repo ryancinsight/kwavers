@@ -2,7 +2,7 @@ use super::field::AblationField;
 use super::kinetics::AblationKinetics;
 use super::state::AblationState;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_kinetics_creation() {

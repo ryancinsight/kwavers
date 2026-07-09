@@ -2,7 +2,7 @@
 
 use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::Grid;
-use num_traits::Float;
+use eunomia::FloatElement;
 use std::sync::{Arc, RwLock};
 
 /// Gradient cache for performance optimization

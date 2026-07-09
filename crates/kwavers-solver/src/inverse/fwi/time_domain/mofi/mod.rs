@@ -47,7 +47,10 @@ use crate::inverse::reconstruction::seismic::MisfitType;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use moirai_parallel::{map_collect_with, Adaptive};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use transform::{project_gradient, transform_template, transform_with_jacobian, PlaneGeometry};
 
 /// MOFI optimisation settings.
@@ -105,7 +108,7 @@ pub struct MofiResult {
 /// ```no_run
 /// use kwavers_solver::inverse::fwi::time_domain::{mofi_transform, RigidTransform};
 /// use kwavers_grid::Grid;
-/// use ndarray::Array3;
+/// use leto::Array3;
 /// let grid = Grid::new(32, 32, 1, 1e-3, 1e-3, 1e-3).unwrap();
 /// let template = Array3::from_elem((32, 32, 1), 1500.0);
 /// let phi = RigidTransform { theta_rad: 6_f64.to_radians(), delta_x_m: 2e-3, delta_y_m: -1e-3 };

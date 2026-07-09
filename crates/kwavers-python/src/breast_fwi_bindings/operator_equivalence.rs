@@ -8,7 +8,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstForwardOperatorPrediction, BreastUstReceiverChannelPolicy,
     BreastUstScatteringIncrementDiagnostics, BreastUstScatteringIncrementModelDiagnostics,
 };
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex64;
 use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;

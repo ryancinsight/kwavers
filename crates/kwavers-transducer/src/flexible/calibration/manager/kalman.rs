@@ -3,7 +3,7 @@
 use super::CalibrationManager;
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
-use ndarray::Array2 as NdArray2;
+use leto::Array2 as NdArray2;
 
 use super::super::types::KalmanState;
 

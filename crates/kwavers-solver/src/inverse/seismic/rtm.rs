@@ -7,7 +7,7 @@ use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Reverse Time Migration processor
 /// Follows Single Responsibility Principle - only handles RTM computations
@@ -93,8 +93,6 @@ impl RtmProcessor {
         source_wavefield: &Array3<f64>,
         receiver_wavefield: &Array3<f64>,
     ) {
-        use ndarray::Zip;
-
         if let (Some(image), Some(source), Some(receiver)) = (
             image.as_slice_mut(),
             source_wavefield.as_slice(),
@@ -149,8 +147,6 @@ impl RtmProcessor {
         source_wavefield: &Array3<f64>,
         receiver_wavefield: &Array3<f64>,
     ) -> KwaversResult<()> {
-        use ndarray::Zip;
-
         // I_norm(x) = S(x)·R(x) / (Φ(x) + ε)
         if let (Some(image), Some(source), Some(receiver)) = (
             image.as_slice_mut(),
@@ -238,7 +234,7 @@ impl Default for RtmProcessor {
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Zero-lag imaging condition: I(x) = S(x)·R(x).
     ///

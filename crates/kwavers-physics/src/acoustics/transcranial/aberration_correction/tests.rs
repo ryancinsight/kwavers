@@ -3,7 +3,7 @@
 use super::*;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex;
 use std::f64::consts::PI;
 

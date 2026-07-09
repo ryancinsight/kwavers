@@ -3,7 +3,10 @@
 use super::FwiProcessor;
 use crate::inverse::fwi::time_domain::field_ops::{add_scaled_field, write_negative_product};
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 
 /// Zero the gradient within `radius` voxels (L2 norm) of every active source voxel.
 ///

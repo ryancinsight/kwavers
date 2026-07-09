@@ -28,7 +28,10 @@ use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
 #[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 #[cfg(feature = "gpu")]
 use wgpu::util::DeviceExt;
 

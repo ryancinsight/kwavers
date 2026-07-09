@@ -30,10 +30,10 @@ fn test_source_injection_sign_matches_kwave() {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
-    let mut p_mask = ndarray::Array3::<f64>::zeros((n, n, n));
+    let mut p_mask = leto::Array3::<f64>::zeros((n, n, n));
     p_mask[[src, src, src]] = 1.0;
 
-    let mut p_signal = ndarray::Array2::<f64>::zeros((1, 2));
+    let mut p_signal = leto::Array2::<f64>::zeros((1, 2));
     p_signal[[0, 1]] = 1.0;
 
     let source = GridSource {
@@ -96,9 +96,9 @@ fn test_nyquist_not_zeroed_propagation_amplitude() {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
-    let mut p_mask = ndarray::Array3::<f64>::zeros((n, n, n));
+    let mut p_mask = leto::Array3::<f64>::zeros((n, n, n));
     p_mask[[src, src, src]] = 1.0;
-    let mut p_signal = ndarray::Array2::<f64>::zeros((1, 4));
+    let mut p_signal = leto::Array2::<f64>::zeros((1, 4));
     p_signal[[0, 1]] = 1.0;
 
     let source = GridSource {
@@ -206,9 +206,9 @@ fn test_propagation_amplitude_with_cpml_boundary() {
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::new(rho0, c0, 0.0, 0.0, &grid);
 
-    let mut p_mask = ndarray::Array3::<f64>::zeros((n, n, n));
+    let mut p_mask = leto::Array3::<f64>::zeros((n, n, n));
     p_mask[[src, src, src]] = 1.0;
-    let mut p_signal = ndarray::Array2::<f64>::zeros((1, 4));
+    let mut p_signal = leto::Array2::<f64>::zeros((1, 4));
     p_signal[[0, 1]] = 1.0;
 
     let source = GridSource {

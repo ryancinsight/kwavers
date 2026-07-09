@@ -161,7 +161,7 @@ mod absorption_tests {
 #[cfg(test)]
 mod finite_difference_tests {
 
-    use ndarray::Array1;
+    use leto::Array1;
 
     /// Validate 2nd order finite difference accuracy
     /// Reference: LeVeque, R. J. (2007). Finite Difference Methods

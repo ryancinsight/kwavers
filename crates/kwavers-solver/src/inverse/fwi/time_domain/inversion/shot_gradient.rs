@@ -3,7 +3,10 @@
 use super::super::{geometry::FwiGeometry, gradient::mute_gradient_near_sources, FwiProcessor};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();

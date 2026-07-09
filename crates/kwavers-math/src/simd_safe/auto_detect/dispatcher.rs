@@ -6,7 +6,7 @@
 use super::capability::SimdCapability;
 use super::ops;
 use super::x86_64;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Automatic SIMD dispatcher
 #[derive(Debug)]
@@ -116,7 +116,7 @@ impl Default for SimdAuto {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_simd_auto_creation() {

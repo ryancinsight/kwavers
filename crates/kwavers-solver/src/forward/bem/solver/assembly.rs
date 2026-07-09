@@ -5,7 +5,7 @@ use kwavers_math::linear_algebra::sparse::{
     solver::{IterativeSolver, SolverConfig, SparsePreconditioner},
     CompressedSparseRowMatrix,
 };
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 impl BemSolver {

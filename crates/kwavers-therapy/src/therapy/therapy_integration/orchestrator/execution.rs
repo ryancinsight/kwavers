@@ -31,7 +31,7 @@ use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_pair_mut};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::AcousticTherapyParams;
 use super::super::state::AcousticField;

@@ -5,7 +5,7 @@
 //! isolated checkerboard updates while preserving coherent target-scale
 //! contrasts.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::stencil::index;
 use super::types::Nonlinear3dConfig;

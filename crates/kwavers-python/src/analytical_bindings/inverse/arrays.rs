@@ -1,6 +1,9 @@
 //! NumPy conversion helpers for inverse-problem bindings.
 
-use ndarray::{Array2, ArrayView2};
+use leto::{
+    Array2,
+    ArrayView2,
+};
 use numpy::{ToPyArray, PyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

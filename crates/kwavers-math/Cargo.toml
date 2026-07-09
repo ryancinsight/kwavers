@@ -12,10 +12,8 @@ num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 moirai-parallel = { workspace = true }
 hermes-simd = { workspace = true }
-ndarray = { version = "0.16", features = ["serde"] }
-leto = { workspace = true, features = ["ndarray-compat"] }
+leto = { workspace = true, features = ["std"] }
 leto-ops = { workspace = true }
-num-traits = "0.2" # Phase-1A pilot ported numeric_ops.rs only; full kwavers-math sweep lands in Phase-1B once eunomia exposes a non-sealed Scalar trait usable for num_complex::Complex<f64> (csr.rs blocker).
 eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"

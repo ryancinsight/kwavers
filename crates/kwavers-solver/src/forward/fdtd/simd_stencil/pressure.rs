@@ -1,6 +1,6 @@
 use super::FdtdSimdStencilProcessor;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl FdtdSimdStencilProcessor {
     /// Update pressure field using cache-tiled stencil.

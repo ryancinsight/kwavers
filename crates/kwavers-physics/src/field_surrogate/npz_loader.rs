@@ -29,7 +29,10 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use ndarray_npy::NpzReader;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -78,7 +81,7 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
     // Python's `np.array((i, j, k), dtype=np.int64)` round-trips as
     // either i64 or i32 depending on the writer; try i64 first, then
     // fall back to i32 for older fixtures.
-    let arr: Vec<i64> = match npz.by_name::<ndarray::OwnedRepr<i64>, ndarray::Ix1>("focus_idx") {
+    let arr: Vec<i64> = match npz.by_name::<Vec<i64>, usize>("focus_idx") {
         Ok(a) => a.iter().copied().collect(),
         Err(_) => {
             let a: Array1<i32> = npz
@@ -229,7 +232,7 @@ mod tests {
     use super::*;
 
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-    use ndarray::array;
+    use array;
     use ndarray_npy::NpzWriter;
     use std::io::Cursor;
 
@@ -237,7 +240,7 @@ mod tests {
         // Build a tiny 4×3×3 kernel with the focal voxel at (2, 1, 1)
         // carrying p_min = -10 MPa. Off-focus voxels carry small
         // values so the round-trip can verify shape preservation.
-        let mut p_min = ndarray::Array3::<f64>::from_elem((4, 3, 3), -1.0e3);
+        let mut p_min = leto::Array3::<f64>::from_elem((4, 3, 3), -1.0e3);
         p_min[[2, 1, 1]] = -1.0e7;
 
         let mut buf = Cursor::new(Vec::<u8>::new());
@@ -302,7 +305,7 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
+            let p_min = leto::Array3::<f64>::zeros((2, 2, 2));
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![5.0e-4_f64]).unwrap();
             w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
@@ -325,7 +328,7 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
+            let p_min = leto::Array3::<f64>::zeros((2, 2, 2));
             w.add_array("p_min", &p_min).unwrap();
             w.add_array("dx", &array![1.0e-3_f64]).unwrap();
             w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();

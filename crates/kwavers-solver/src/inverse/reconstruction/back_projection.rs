@@ -2,7 +2,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use super::config::{ReconstructionConfig, Reconstructor};
 use super::filters::apply_reconstruction_filter;

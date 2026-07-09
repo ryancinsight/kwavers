@@ -15,7 +15,7 @@
 //! - Radon, J. (1917). "Über die Bestimmung von Funktionen durch ihre
 //!   Integralwerte längs gewisser Mannigfaltigkeiten."
 
-use ndarray::Array2;
+use leto::Array2;
 
 const PI: f64 = std::f64::consts::PI;
 

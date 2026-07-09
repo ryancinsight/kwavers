@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_spectral_dg_shock_detection() {

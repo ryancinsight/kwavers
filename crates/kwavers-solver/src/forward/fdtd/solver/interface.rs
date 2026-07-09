@@ -6,7 +6,7 @@
 //! all heavy work happens in [`super::GenericFdtdSolver::new`].
 
 use leto::Array3 as LetoArray3;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
@@ -53,7 +53,7 @@ impl Solver for GenericFdtdSolver<NdArray3<f64>> {
         &self.fields.p
     }
 
-    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+    fn recorded_sensor_pressure(&self) -> Option<leto::Array2<f64>> {
         self.sensor_recorder
             .extract_pressure_data()
             .and_then(|data| data.try_into().ok())

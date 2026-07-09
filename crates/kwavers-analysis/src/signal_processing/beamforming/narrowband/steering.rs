@@ -32,7 +32,7 @@ use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::geometry::distance3;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Newtype representing a narrowband steering vector (complex phasors).
 ///

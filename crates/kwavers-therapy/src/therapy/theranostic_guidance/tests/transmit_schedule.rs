@@ -1,5 +1,5 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::{
     select_transmit_schedule, AnatomyKind, DeviceLayout, Point2, PreparedTheranosticSlice,

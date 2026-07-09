@@ -5,7 +5,10 @@ use super::metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// Method selection result
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -49,7 +52,7 @@ impl AdaptiveMethodSelector {
         let mut selection = Array3::from_elem((nx, ny, nz), SelectedMethod::Spectral);
 
         // Analyze field properties
-        let pressure_field = fields.index_axis(ndarray::Axis(0), 0);
+        let pressure_field = fields.index_axis(0, 0);
 
         // Compute metrics for different regions
         for k in 0..nz {
@@ -73,7 +76,7 @@ impl AdaptiveMethodSelector {
     /// Select method for a single point
     fn select_for_point(
         &self,
-        field: ndarray::ArrayView3<f64>,
+        field: leto::ArrayView3<f64>,
         position: (usize, usize, usize),
         grid: &Grid,
         dt: f64,
@@ -108,7 +111,7 @@ impl AdaptiveMethodSelector {
     /// Extract local region around a point
     fn extract_region(
         &self,
-        field: ndarray::ArrayView3<f64>,
+        field: leto::ArrayView3<f64>,
         position: (usize, usize, usize),
     ) -> Array3<f64> {
         let (i, j, k) = position;

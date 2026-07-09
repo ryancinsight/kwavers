@@ -10,7 +10,11 @@
 //! receive), so beamforming the RF reconstructs the reflectivity map with a realistic
 //! point-spread function and speckle — a genuine receive-data → image pipeline.
 
-use ndarray::{Array2, ArrayView1, ArrayView2};
+use leto::{
+    Array2,
+    ArrayView1,
+    ArrayView2,
+};
 use std::f64::consts::{LN_2, PI};
 
 /// Synthesize per-element channel RF (shape `(n_elem, n_samples)`) from point
@@ -106,7 +110,10 @@ pub fn delta_bmode_db(envelope: &[f64], baseline: &[f64], epsilon: f64) -> Vec<f
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{array, Array1};
+    use leto::{
+    /* array -- no leto equivalent */,
+    Array1,
+};
 
     #[test]
     fn echo_peaks_at_one_way_time_of_flight() {

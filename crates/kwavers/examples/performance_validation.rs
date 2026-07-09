@@ -5,7 +5,7 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

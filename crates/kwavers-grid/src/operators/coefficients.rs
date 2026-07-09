@@ -7,7 +7,7 @@
 //! - Fornberg, B. (1988). "Generation of finite difference formulas"
 //! - LeVeque, R.J. (2007). "Finite Difference Methods for ODEs and PDEs"
 
-use num_traits::Float;
+use eunomia::FloatElement;
 
 /// Spatial accuracy order for finite difference schemes
 #[derive(Debug, Clone, Copy, PartialEq)]

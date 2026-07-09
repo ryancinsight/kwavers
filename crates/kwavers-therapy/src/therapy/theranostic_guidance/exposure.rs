@@ -1,6 +1,6 @@
 //! Display-normalization helpers for clinical theranostic workflows.
 
-use ndarray::Array2;
+use leto::Array2;
 
 pub fn normalize_positive(image: &Array2<f64>, mask: &Array2<bool>) -> Array2<f64> {
     let mut max_value = 0.0;

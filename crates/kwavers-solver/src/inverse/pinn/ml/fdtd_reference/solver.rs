@@ -3,7 +3,10 @@
 use super::{config::FDTDConfig, InitialCondition};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// 1D FDTD solver for wave equation.
 ///

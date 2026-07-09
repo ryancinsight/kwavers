@@ -14,7 +14,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn build_solver_with_sensor(
     nx: usize,
@@ -138,7 +138,7 @@ fn test_checkpoint_roundtrip_serialisation() {
         })
     };
 
-    let sensor_data = ndarray::Array2::from_shape_fn((3, 5), |(i, j)| (i * 5 + j) as f64);
+    let sensor_data = leto::Array2::from_shape_fn((3, 5), |(i, j)| (i * 5 + j) as f64);
 
     let ckpt = PSTDCheckpoint {
         nx,

@@ -1,7 +1,10 @@
 //! Spatial phase randomization
 
 use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -78,7 +81,7 @@ impl SpatialRandomization {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// generate_correlated_phases returns one phase per element.
     #[test]

@@ -4,7 +4,9 @@ use kwavers_field::indices::LIGHT_IDX;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_receiver::recorder::Recorder;
 use log::info;
-use ndarray::{Array3, Axis};
+use leto::{
+    Array3,
+};
 use std::fs::File;
 use std::io::{self, Write};
 
@@ -24,7 +26,7 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
 
     match recorder.pressure_data() {
         Some(data) => {
-            let data: ndarray::Array2<f64> = data
+            let data: leto::Array2<f64> = data
                 .clone()
                 .try_into()
                 .expect("pressure recorder data must convert to ndarray");
@@ -60,7 +62,7 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
 
     match recorder.light_data() {
         Some(data) => {
-            let data: ndarray::Array2<f64> = data
+            let data: leto::Array2<f64> = data
                 .clone()
                 .try_into()
                 .expect("light recorder data must convert to ndarray");
@@ -91,13 +93,13 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
     writeln!(file, "Metric,Value")?;
 
     if let Some((step, fields)) = recorder.fields_snapshots.last() {
-        let fields: ndarray::Array4<f64> = fields
+        let fields: leto::Array4<f64> = fields
             .clone()
             .try_into()
             .expect("field snapshots must convert to ndarray");
-        let pressure: ndarray::ArrayView3<f64> =
+        let pressure: leto::ArrayView3<f64> =
             fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
-        let light: ndarray::ArrayView3<f64> = fields.index_axis(Axis(0), LIGHT_IDX);
+        let light: leto::ArrayView3<f64> = fields.index_axis(Axis(0), LIGHT_IDX);
 
         let max_pressure = pressure.iter().fold(f64::NEG_INFINITY, |acc, &val: &f64| {
             f64::max(acc, val.abs())

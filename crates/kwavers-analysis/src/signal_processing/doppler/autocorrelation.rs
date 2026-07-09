@@ -22,7 +22,10 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, ArrayView3};
+use leto::{
+    Array2,
+    ArrayView3,
+};
 use num_complex::Complex64;
 
 /// Configuration for autocorrelation velocity estimation
@@ -134,7 +137,7 @@ impl AutocorrelationEstimator {
     ///
     /// ```ignore
     /// use kwavers_analysis::signal_processing::doppler::{AutocorrelationEstimator, AutocorrelationConfig};
-    /// use ndarray::Array3;
+    /// use leto::Array3;
     /// use num_complex::Complex64;
     ///
     /// let config = AutocorrelationConfig::vascular();
@@ -275,7 +278,7 @@ impl AutocorrelationEstimator {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::f64::consts::PI;
 
     #[test]

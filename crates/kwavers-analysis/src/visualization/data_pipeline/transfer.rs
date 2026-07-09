@@ -4,7 +4,7 @@ use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use log::{debug, info};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::Arc;

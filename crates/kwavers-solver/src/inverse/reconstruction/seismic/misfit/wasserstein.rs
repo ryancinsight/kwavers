@@ -11,7 +11,7 @@
 
 use super::types::MisfitFunction;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 impl MisfitFunction {
     /// Wasserstein distance misfit (1-Wasserstein via CDF L1 distance).
@@ -108,8 +108,8 @@ impl MisfitFunction {
 }
 
 fn cumulative_distributions(
-    obs_prob: &ndarray::Array1<f64>,
-    syn_prob: &ndarray::Array1<f64>,
+    obs_prob: &leto::Array1<f64>,
+    syn_prob: &leto::Array1<f64>,
     n: usize,
 ) -> (Vec<f64>, Vec<f64>) {
     let mut obs_cdf = Vec::with_capacity(n);

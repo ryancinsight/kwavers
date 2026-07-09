@@ -2,7 +2,10 @@
 
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::seismic::{EikonalSolver, KirchhoffMigrator, Trace};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use numpy::{ToPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

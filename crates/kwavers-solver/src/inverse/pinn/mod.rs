@@ -106,12 +106,11 @@
 //!
 //! ## Tensor Interoperability
 //!
-//! The `kwavers_math::tensor` module provides conversion between ndarray (used by
-//! forward solvers) and Coeus tensors (used by PINNs):
+//! Leto arrays (used by forward solvers) convert directly to Coeus tensors (used by PINNs):
 //!
 //! ```rust,ignore
-//! // Forward solver output (ndarray)
-//! let pressure_field: ArrayD<f64> = acoustic_solver.pressure();
+//! // Forward solver output (leto)
+//! let pressure_field: Array3<f64> = acoustic_solver.pressure();
 //!
 //! // Convert to Coeus tensor for PINN training
 //! let training_tensor = Tensor::<B, 3>::from_data(pressure_field.into());

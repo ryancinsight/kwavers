@@ -7,7 +7,7 @@
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::zip_mut_ref;
 

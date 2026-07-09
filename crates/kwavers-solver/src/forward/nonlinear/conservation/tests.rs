@@ -99,7 +99,7 @@ fn test_conservation_tolerances() {
 
 #[test]
 fn test_field_integration() {
-    use ndarray::Array3;
+    use leto::Array3;
     let field = Array3::<f64>::ones((10, 10, 10));
     let dx = 0.1;
     let dy = 0.1;
@@ -113,7 +113,7 @@ fn test_field_integration() {
 
 #[test]
 fn test_field_rms() {
-    use ndarray::Array3;
+    use leto::Array3;
     let field = Array3::<f64>::from_elem((5, 5, 5), 2.0);
     let rms = helpers::field_rms(&field);
     assert!((rms - 2.0).abs() < 1e-10);

@@ -40,7 +40,7 @@ use kwavers_math::fft::{
     gpu_fft::{FftBackend, GpuFft3d, WgpuBackend},
     Complex64, Shape3D,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 // ── GPU plan initialisation ───────────────────────────────────────────────────
 

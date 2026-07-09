@@ -6,7 +6,7 @@ use crate::plugin::{Plugin, PluginContext};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array4;
+use leto::Array4;
 
 /// Strategy for executing plugins
 pub trait ExecutionStrategy: Send + Sync {

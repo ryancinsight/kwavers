@@ -55,7 +55,7 @@ use kwavers_solver::forward::elastic::{
 use kwavers_therapy::therapy::swe_3d_workflows::{
     ElasticityMap3D, Swe3dClinicalDecisionSupport, VolumetricROI,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::default::Default;
 use std::println;
 use std::vec::Vec;

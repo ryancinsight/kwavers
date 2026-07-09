@@ -6,7 +6,10 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     TheranosticInverseConfig, TheranosticInverseResult, THERANOSTIC_OPERATOR_MODEL,
     TRANSMIT_SCHEDULE_MODEL,
 };
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

@@ -1,7 +1,7 @@
 //! Shared helper functions for narrowband integration tests.
 
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 use eunomia::Complex64;
 use std::f64::consts::PI;
 
@@ -76,11 +76,11 @@ pub(super) fn generate_ula_positions(n_sensors: usize, spacing_m: f64) -> Vec<[f
 
 /// Compute sample covariance matrix from complex snapshots.
 pub(super) fn compute_sample_covariance(
-    snapshots: &ndarray::Array2<Complex64>,
-) -> ndarray::Array2<Complex64> {
+    snapshots: &leto::Array2<Complex64>,
+) -> leto::Array2<Complex64> {
     let n_sensors = snapshots.nrows();
     let n_snapshots = snapshots.ncols();
-    let mut cov = ndarray::Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
+    let mut cov = leto::Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
 
     for k in 0..n_snapshots {
         let snapshot = snapshots.column(k);

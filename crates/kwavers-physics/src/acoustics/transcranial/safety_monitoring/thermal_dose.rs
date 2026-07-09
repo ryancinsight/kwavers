@@ -114,7 +114,7 @@ impl TranscranialSafetyMonitor {
 mod tests {
     use super::*;
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// **Test: CEM43 dose rate at body temperature (37 °C)**
     ///

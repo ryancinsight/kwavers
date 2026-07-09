@@ -8,7 +8,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, SystemError};
 use kwavers_grid::Grid;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::VecDeque;
 
 fn add_scaled_inplace(target: &mut Array3<f64>, rhs: &Array3<f64>, scale: f64) {
@@ -462,7 +462,9 @@ impl TimeStepper for AdamsBashforth {
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{Array3, ShapeBuilder};
+    use leto::{
+    Array3,
+};
 
     use super::{
         adams_bashforth2_inplace, adams_bashforth3_inplace, add_scaled_inplace, combine_rk4_inplace,

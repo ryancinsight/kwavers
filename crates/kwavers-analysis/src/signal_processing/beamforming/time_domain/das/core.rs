@@ -4,7 +4,10 @@ use crate::signal_processing::beamforming::time_domain::delay_reference::{
     relative_delays_s, DelayReference,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Validate the common DAS input contract and return `(n_elements, n_samples)`.
 ///

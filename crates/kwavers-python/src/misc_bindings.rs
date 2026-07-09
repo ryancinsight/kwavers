@@ -4,7 +4,10 @@ use kwavers_core::error::KwaversError;
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
 };
-use ndarray::{Array2, Array3, Axis};
+use leto::{
+    Array2,
+    Array3,
+};
 use numpy::{PyArray2, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -88,7 +91,7 @@ fn resample_to_target_grid<'py>(
     let target = [target_dims.0, target_dims.1, target_dims.2];
 
     let resampled = py.detach(|| kwavers_resample(&source_leto, &transform, target));
-    let out = ndarray::Array3::from_shape_vec(
+    let out = leto::Array3::from_shape_vec(
         (target[0], target[1], target[2]),
         resampled
             .as_slice_memory_order()

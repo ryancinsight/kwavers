@@ -4,7 +4,7 @@
 
 use super::HASConfig;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Nonlinear operator for Burgers equation
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use super::filter::AdaptiveFilter;
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_adaptive_filter_creation() {

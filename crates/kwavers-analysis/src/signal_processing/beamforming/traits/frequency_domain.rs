@@ -1,7 +1,10 @@
 //! Frequency-domain beamforming trait — FFT-bin steering vectors and sample
 //! covariance for narrowband and adaptive subspace methods.
 
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use num_complex::Complex64;
 
 use kwavers_core::error::KwaversResult;

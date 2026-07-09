@@ -3,7 +3,7 @@
 //! Unified Laplacian operator implementation for discretized grids.
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use crate::compat::leto::{Array3, ArrayView3, ArrayViewMut3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;

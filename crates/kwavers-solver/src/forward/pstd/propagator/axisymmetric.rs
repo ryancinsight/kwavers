@@ -13,7 +13,12 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array2 as LetoArray2;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array1, Array2, ArrayView2};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    Array2,
+    ArrayView2,
+};
 use kwavers_math::fft::Complex64;
 
 #[inline]

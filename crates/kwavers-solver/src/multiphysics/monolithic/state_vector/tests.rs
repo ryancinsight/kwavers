@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_field::UnifiedFieldType;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 #[test]

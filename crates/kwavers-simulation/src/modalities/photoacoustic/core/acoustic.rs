@@ -6,7 +6,7 @@ use kwavers_solver::inverse::reconstruction::photoacoustic::{
     PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
 };
 use leto::Array3;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::acoustics;
 use super::super::reconstruction;

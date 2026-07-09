@@ -8,7 +8,7 @@ use crate::plugin::{Plugin, PluginFields};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Per-plugin and total execution timings.

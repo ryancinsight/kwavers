@@ -39,7 +39,11 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::fft::apply_spectral_response_1d;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 /// Butterworth magnitude order for the zero-phase multiscale low-pass.
 ///

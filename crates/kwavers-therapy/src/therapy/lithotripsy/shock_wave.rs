@@ -7,7 +7,7 @@
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Shock wave parameters for lithotripsy.
 #[derive(Debug, Clone)]

@@ -7,7 +7,12 @@ use kwavers_core::error::{FieldError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use log::{debug, info};
-use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
+use leto::{
+    Array3,
+    Array4,
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 #[derive(Clone, Debug)]
 struct FieldMetadata {

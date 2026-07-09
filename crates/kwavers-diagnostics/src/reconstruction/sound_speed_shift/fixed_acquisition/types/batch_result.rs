@@ -1,6 +1,6 @@
 //! Fixed-acquisition batch result types.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::super::types::{ShiftPrior, ShiftSampling};
 

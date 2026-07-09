@@ -2,7 +2,10 @@
 
 use super::{MLModel, MlModelMetadata};
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Convergence prediction model
 #[derive(Debug)]
@@ -86,7 +89,7 @@ impl MLModel for ConvergencePredictorModel {
         // Heuristic convergence prediction for testing
         // Maps input through sigmoid-like function as convergence probability estimator
         let mut output = Array2::zeros((input.nrows(), 1));
-        for (i, row) in input.axis_iter(ndarray::Axis(0)).enumerate() {
+        for (i, row) in input.axis_iter(0).enumerate() {
             // Heuristic: higher mean values -> higher convergence probability
             let mean_val = row.mean().unwrap_or(0.0);
             // Sigmoid-like mapping: 1 / (1 + exp(-x))

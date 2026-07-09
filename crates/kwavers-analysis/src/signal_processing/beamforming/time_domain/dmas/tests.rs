@@ -3,7 +3,7 @@
 
 use super::{delay_and_sum_dmas, dmas_combine};
 use crate::signal_processing::beamforming::time_domain::delay_reference::DelayReference;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn dmas_combine_two_channels_equals_their_product() {

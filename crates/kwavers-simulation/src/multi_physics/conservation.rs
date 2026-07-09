@@ -1,6 +1,9 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 /// Conservation enforcement for multi-physics coupling
 #[derive(Debug)]

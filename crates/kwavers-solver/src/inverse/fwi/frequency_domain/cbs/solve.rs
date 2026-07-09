@@ -56,7 +56,10 @@ use super::grid::GridSpec;
 use super::potential::{convergence_epsilon, pointwise_preconditioner, shifted_potential};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::complex::ComplexLinearAlgebra;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use eunomia::Complex64;
 
 /// CBS fixed-point solver settings.

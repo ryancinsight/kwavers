@@ -36,7 +36,7 @@
 
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Attenuation calculator for wave propagation in absorbing media
 #[derive(Debug)]

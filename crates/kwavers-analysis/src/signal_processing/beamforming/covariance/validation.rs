@@ -1,6 +1,6 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Validate covariance matrix structure: square, Hermitian, finite values.
 ///

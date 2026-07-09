@@ -5,7 +5,11 @@ use crate::signal_processing::spectroscopy::types::{
     SpectralUnmixingConfig, UnmixingResult, VolumetricUnmixingResult,
 };
 use anyhow::Result;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 /// Spectral unmixing solver
 #[derive(Debug)]
@@ -204,7 +208,7 @@ impl SpectralUnmixer {
 mod tests {
     use super::*;
     use crate::signal_processing::spectroscopy::types::SpectralUnmixingConfig;
-    use ndarray::array;
+    use array;
 
     /// End-to-end blood-oxygenation recovery. Build a 2-chromophore (HbO₂, Hb)
     /// extinction matrix from the corrected Prahl/OMLC near-infrared values

@@ -3,7 +3,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_synthetic_aperture_config() {

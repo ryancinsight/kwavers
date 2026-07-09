@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn leto_real_field(field: &Array3<f64>) -> leto::Array3<f64> {
     let (nx, ny, nz) = field.dim();

@@ -1,5 +1,8 @@
 use crate::workspace::inplace_ops::apply_inplace;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 pub use kwavers_physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
 

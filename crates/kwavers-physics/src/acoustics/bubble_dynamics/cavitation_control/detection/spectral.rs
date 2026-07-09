@@ -5,7 +5,11 @@ use super::traits::{CavitationDetector, DetectorParameters};
 use super::types::{CavitationDetectionState, CavitationMetrics, DetectionMethod, HistoryBuffer};
 use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{s, Array1, ArrayView1};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    ArrayView1,
+};
 
 /// Spectral detector for cavitation using FFT analysis
 pub struct SpectralDetector {
@@ -57,7 +61,7 @@ impl SpectralDetector {
         let n = signal.len().min(SPECTRAL_WINDOW_SIZE);
 
         // Apply window
-        let mut windowed = ndarray::Array1::from_vec(
+        let mut windowed = leto::Array1::from_vec(
             signal
                 .iter()
                 .take(n)
@@ -68,7 +72,7 @@ impl SpectralDetector {
 
         // Pad if necessary
         if windowed.len() < SPECTRAL_WINDOW_SIZE {
-            let mut padded = ndarray::Array1::<f64>::zeros(SPECTRAL_WINDOW_SIZE);
+            let mut padded = leto::Array1::<f64>::zeros(SPECTRAL_WINDOW_SIZE);
             padded.slice_mut(s![..windowed.len()]).assign(&windowed);
             windowed = padded;
         }

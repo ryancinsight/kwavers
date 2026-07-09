@@ -11,7 +11,10 @@ use kwavers_analysis::signal_processing::beamforming::utils::{
 };
 use kwavers_analysis::signal_processing::beamforming::MinimumVariance;
 use kwavers_math::fft::Complex64;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Convert a `num_complex::Complex<f64>` steering vector to `eunomia::Complex64`.
 fn nc_to_ec(v: Array1<num_complex::Complex<f64>>) -> Array1<Complex64> {
@@ -373,7 +376,7 @@ fn validate_blackbody_radiation_planck_law() {
     use kwavers_physics::optics::sonoluminescence::blackbody::{
         calculate_blackbody_emission, BlackbodyModel,
     };
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Create simple test fields
     let temperature_field = Array3::from_elem((2, 2, 2), 6000.0); // 6000 K (typical sonoluminescence)
@@ -412,7 +415,7 @@ fn validate_bremsstrahlung_kramers_law() {
     use kwavers_physics::optics::sonoluminescence::bremsstrahlung::{
         calculate_bremsstrahlung_emission, BremsstrahlungModel,
     };
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Create test fields
     let temperature_field = Array3::from_elem((2, 2, 2), 10000.0); // 10000 K plasma
@@ -545,7 +548,7 @@ fn validate_sonoluminescence_spectral_analysis() {
     // Theorem: Broadband emission from multiple mechanisms
 
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Create test fields
     let grid_shape = (4, 4, 4);
@@ -607,7 +610,7 @@ fn validate_acoustic_to_optic_energy_conversion() {
 
     use kwavers_physics::bubble_dynamics::BubbleParameters;
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Step 1: Ultrasound excitation (acoustic energy input)
     let _acoustic_pressure = 2e5; // 2 bar ultrasound pressure
@@ -680,7 +683,7 @@ fn validate_interdisciplinary_coupling_efficiency() {
 
     use kwavers_physics::bubble_dynamics::BubbleParameters;
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Acoustic input energy (simplified)
     let _acoustic_energy_density = 1000.0; // J/m³ (typical ultrasound intensity)
@@ -807,7 +810,7 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     };
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
     use leto::Array3 as LetoArray3;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::collections::HashMap;
 
     // Create fusion configuration

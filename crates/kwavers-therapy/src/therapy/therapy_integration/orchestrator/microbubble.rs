@@ -64,7 +64,7 @@ use kwavers_physics::therapy::microbubble::{
     MarmottantShellProperties, MicrobubbleState, Position3D,
 };
 use kwavers_simulation::imaging::ceus::ContrastEnhancedUltrasound;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::state::AcousticField;
 

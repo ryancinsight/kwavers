@@ -61,7 +61,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use kwavers_solver::inverse::fwi::frequency_domain::{
     self, Config as FrequencyDomainFwiConfig, FrequencyObservation,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::io::Read;
 use std::path::Path;
 
@@ -228,10 +228,10 @@ mod tests {
         let truth_leto: leto::Array3<f64> = truth.clone().into();
         let observed =
             simulate_frequency_observation(&truth_leto, &array, 230_000.0, &config).expect("observed");
-        let observed_nd: ndarray::Array2<kwavers_math::fft::Complex64> =
+        let observed_nd: leto::Array2<kwavers_math::fft::Complex64> =
             observed.try_into().expect("contiguous");
         let sliced: leto::Array2<kwavers_math::fft::Complex64> =
-            observed_nd.slice(ndarray::s![0..3, ..]).to_owned().into();
+            observed_ndslice(&[(Some(0 as isize) as usize, Some(3 as isize) as usize, 1), (0, usize::MAX, 1)]).to_owned().into();
         let observations = [FrequencyObservation::new(
             230_000.0,
             sliced,

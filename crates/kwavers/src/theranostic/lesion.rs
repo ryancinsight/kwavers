@@ -30,7 +30,7 @@
 use kwavers_physics::acoustics::bubble_dynamics::wood_sound_speed;
 use kwavers_physics::thermal::TemperatureCoefficients;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::zip_mut_ref;
 
@@ -151,7 +151,7 @@ pub fn lesion_mask(cem43_dose: &LetoArray3<f64>, threshold_min: f64) -> LetoArra
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn thermal_shift_matches_linear_law() {

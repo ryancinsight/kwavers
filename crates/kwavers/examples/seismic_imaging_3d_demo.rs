@@ -23,7 +23,10 @@ use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::{Array2, Array3, Zip};
+use leto::{
+    Array2,
+    Array3,
+};
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
 use ritk_io::ImageReader;
@@ -387,7 +390,7 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
     let (_, _, nz) = hu.dim();
     (0..nz)
         .max_by_key(|&z| {
-            hu.slice(ndarray::s![.., .., z])
+            hu.index_axis::<2>(2, z)
                 .iter()
                 .filter(|&&h| h > 300.0)
                 .count()
@@ -397,7 +400,7 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 
 /// Find the centroid (x_ct, y_ct) of bone voxels on an axial slice.
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.slice(ndarray::s![.., .., z]);
+    let slice = hu.index_axis::<2>(2, z);
     let (nx, ny) = slice.dim();
     let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
     for ((x, y), &h) in slice.indexed_iter() {
@@ -418,7 +421,7 @@ fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
     let (nx, ny, _) = hu.dim();
     let r = hu
-        .slice(ndarray::s![.., .., z])
+        .index_axis::<2>(2, z)
         .indexed_iter()
         .filter(|(_, &h)| h > 300.0)
         .map(|((x, y), _)| {

@@ -8,7 +8,7 @@ use kwavers_medium::Medium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_source::GridSource;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::optics;
 

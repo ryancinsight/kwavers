@@ -1,4 +1,4 @@
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 /// Error metrics for comparing numerical and analytical solutions.
 ///

@@ -1,7 +1,7 @@
 use super::physics;
 use super::{ProfileSet, WaterTankOutput};
 use anyhow::Result;
-use ndarray::Array2;
+use leto::Array2;
 use plotters::coord::types::RangedCoordf64;
 use plotters::coord::Shift;
 use plotters::prelude::*;

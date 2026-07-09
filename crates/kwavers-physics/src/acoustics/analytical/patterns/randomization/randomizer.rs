@@ -4,7 +4,11 @@ use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
 use super::distribution::PhaseDistribution;
 use super::scheme::RandomizationScheme;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array2, ArrayView1};
+use leto::{
+    Array1,
+    Array2,
+    ArrayView1,
+};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
@@ -220,7 +224,7 @@ mod tests {
     /// After apply_to_field with zero phases, field is unchanged.
     #[test]
     fn apply_to_field_with_zero_phases_leaves_field_unchanged() {
-        use ndarray::arr2;
+        
         let r = PhaseRandomizer::new(
             RandomizationScheme::Temporal { period: 1e-3 },
             PhaseDistribution::Uniform,

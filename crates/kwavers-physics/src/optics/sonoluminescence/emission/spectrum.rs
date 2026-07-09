@@ -1,5 +1,10 @@
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
-use ndarray::{s, Array1, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    Array3,
+    Array4,
+};
 
 use crate::parallel::for_each_indexed_three_mut;
 

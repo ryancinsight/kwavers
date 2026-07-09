@@ -5,7 +5,7 @@ mod tests {
     use super::super::super::*;
     use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Test power-law absorption: spectral field amplitude decay.
     ///

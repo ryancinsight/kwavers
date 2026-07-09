@@ -10,7 +10,10 @@
 //!
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Multi-angle plane wave compounding
 #[derive(Debug)]

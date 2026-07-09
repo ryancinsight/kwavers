@@ -56,7 +56,11 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use leto::Array1 as LetoArray1;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
-use ndarray::{Array1, Array3, ArrayView3};
+use leto::{
+    Array1,
+    Array3,
+    ArrayView3,
+};
 
 /// Spectral derivative operator for 3D fields.
 ///

@@ -11,8 +11,10 @@ use super::{
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
-use ndarray::Axis;
-use ndarray::{Array2, Array3, Zip};
+use leto::{
+    Array2,
+    Array3,
+};
 
 const RHO: f64 = 1000.0;
 
@@ -292,7 +294,7 @@ fn self_adjoint_sponge_absorbs_outgoing_waves() {
     };
     let model = Array3::from_elem((nx, ny, 1), c0);
 
-    let final_energy = |damp: Option<ndarray::ArrayView3<f64>>| -> f64 {
+    let final_energy = |damp: Option<leto::ArrayView3<f64>>| -> f64 {
         let (_, history) =
             forward(model.view(), density.view(), &grid, &cfg, &acq, damp).expect("fwd");
         history

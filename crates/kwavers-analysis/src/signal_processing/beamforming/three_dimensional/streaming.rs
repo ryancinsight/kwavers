@@ -9,7 +9,10 @@
 #[cfg(feature = "gpu")]
 use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// Streaming buffer for real-time data processing.
 ///

@@ -51,7 +51,7 @@
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::for_each_indexed_pair_mut;
 

@@ -5,7 +5,7 @@ use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
 use leto::Array3;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -51,7 +51,7 @@ impl BeamformingProcessor {
     pub fn eigendecomposition(
         &self,
         matrix: &Array2<f64>,
-    ) -> KwaversResult<(ndarray::Array1<f64>, Array2<f64>)> {
+    ) -> KwaversResult<(leto::Array1<f64>, Array2<f64>)> {
         EigenDecomposition::eigendecomposition(matrix)
     }
 
@@ -213,7 +213,7 @@ impl BeamformingProcessor {
         let inv_cov = self.matrix_inverse(&covariance)?;
 
         // Uniform steering normalized to unity gain
-        let a = ndarray::Array1::from_vec(vec![1.0 / (n_elements as f64).sqrt(); n_elements]);
+        let a = leto::Array1::from_vec(vec![1.0 / (n_elements as f64).sqrt(); n_elements]);
         let inv_cov_a = inv_cov.dot(&a);
         let denominator = a.dot(&inv_cov_a);
 

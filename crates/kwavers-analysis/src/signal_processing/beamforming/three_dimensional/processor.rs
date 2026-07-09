@@ -96,7 +96,7 @@ where
     pub(super) fn create_apodization_weights(
         &self,
         window: &super::config::Beamforming3dApodizationWindow,
-    ) -> ndarray::Array3<f32> {
+    ) -> leto::Array3<f32> {
         super::apodization::create_apodization_weights(self.config.num_elements_3d, window)
     }
 
@@ -107,11 +107,11 @@ where
     #[cfg(feature = "gpu")]
     pub(super) fn delay_and_sum_gpu(
         &self,
-        rf_data: &ndarray::Array4<f32>,
+        rf_data: &leto::Array4<f32>,
         dynamic_focusing: bool,
         apodization_window: &super::config::Beamforming3dApodizationWindow,
-        apodization_weights: &ndarray::Array3<f32>,
-    ) -> KwaversResult<ndarray::Array3<f32>> {
+        apodization_weights: &leto::Array3<f32>,
+    ) -> KwaversResult<leto::Array3<f32>> {
         self.provider.process_delay_and_sum(
             &self.config,
             rf_data,
@@ -133,10 +133,10 @@ where
     #[cfg(feature = "gpu")]
     pub(super) fn dynamic_focus_gpu(
         &self,
-        rf_data: &ndarray::Array4<f32>,
+        rf_data: &leto::Array4<f32>,
         apodization_window: &super::config::Beamforming3dApodizationWindow,
-        apodization_weights: &ndarray::Array3<f32>,
-    ) -> KwaversResult<ndarray::Array3<f32>> {
+        apodization_weights: &leto::Array3<f32>,
+    ) -> KwaversResult<leto::Array3<f32>> {
         self.provider.process_delay_and_sum(
             &self.config,
             rf_data,
@@ -154,12 +154,12 @@ where
     #[cfg(feature = "gpu")]
     pub(super) fn delay_and_sum_subvolume_gpu(
         &self,
-        rf_data: &ndarray::Array4<f32>,
+        rf_data: &leto::Array4<f32>,
         dynamic_focusing: bool,
         apodization_window: &super::config::Beamforming3dApodizationWindow,
-        apodization_weights: &ndarray::Array3<f32>,
+        apodization_weights: &leto::Array3<f32>,
         sub_volume_size: (usize, usize, usize),
-    ) -> KwaversResult<ndarray::Array3<f32>> {
+    ) -> KwaversResult<leto::Array3<f32>> {
         self.provider.process_delay_and_sum(
             &self.config,
             rf_data,

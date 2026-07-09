@@ -1,5 +1,9 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array3, ArrayView1};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    ArrayView1,
+};
 use kwavers_math::fft::Complex64;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

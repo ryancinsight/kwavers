@@ -1,4 +1,8 @@
-use ndarray::{s, Array3, ArrayView3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+    ArrayView3,
+};
 
 /// Borrow one field block from a stacked monolithic state without allocation.
 ///

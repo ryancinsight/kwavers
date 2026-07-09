@@ -26,7 +26,10 @@ use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use std::fs::{self, File};

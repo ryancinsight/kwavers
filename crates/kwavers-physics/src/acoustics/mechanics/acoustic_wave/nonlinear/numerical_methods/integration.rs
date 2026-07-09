@@ -2,7 +2,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::debug;
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 use super::super::wave_model::NonlinearWave;
@@ -97,7 +97,7 @@ mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// `update_wave_inner` must return Err when the pressure array shape does not
     /// match the grid dimensions.

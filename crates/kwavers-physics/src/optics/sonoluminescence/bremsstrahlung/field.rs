@@ -1,6 +1,6 @@
 //! Field assembly for bremsstrahlung power density.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::model::BremsstrahlungModel;
 

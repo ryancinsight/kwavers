@@ -3,7 +3,7 @@
 use super::IterativeMethods;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 impl IterativeMethods {
     /// Build system matrix A where y = Ax (y: measurements, x: image).

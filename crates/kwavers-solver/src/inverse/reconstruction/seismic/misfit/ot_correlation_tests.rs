@@ -7,7 +7,7 @@
 //! shift-monotonicity that gives the metrics that property.
 
 use super::types::{MisfitFunction, MisfitType};
-use ndarray::Array2;
+use leto::Array2;
 
 /// A single trace holding a unit impulse at sample `pos`.
 fn impulse_trace(n: usize, pos: usize) -> Array2<f64> {

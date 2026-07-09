@@ -1,7 +1,7 @@
 //! PyO3 wrappers for multi-focus transducer fields.
 
 use kwavers_physics::analytical::transducer;
-use ndarray::Array2;
+use leto::Array2;
 use numpy::{ToPyArray, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

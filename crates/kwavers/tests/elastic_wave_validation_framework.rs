@@ -25,7 +25,7 @@
 use kwavers_physics::foundations::wave_equation::{
     AutodiffElasticWaveEquation, ElasticWaveEquation,
 };
-use ndarray::ArrayD;
+use ArrayD;
 
 // ============================================================================
 // Validation Result Types

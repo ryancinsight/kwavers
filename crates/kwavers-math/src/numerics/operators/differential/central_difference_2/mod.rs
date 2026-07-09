@@ -35,7 +35,7 @@
 //!
 //! ```rust,ignore
 //! use kwavers::math::numerics::operators::differential::{DifferentialOperator, CentralDifference2};
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! let dx = 0.001; // 1 mm grid spacing
 //! let op = CentralDifference2::new(dx, dx, dx)?;
@@ -51,7 +51,11 @@
 //!   DOI: 10.1090/S0025-5718-1988-0935077-0
 
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{s, Array3, ArrayView3, Zip};
+use leto::{
+    Array3,
+    ArrayView3,
+};
+use leto_ops::zip2_mut_with;
 
 use super::{traversal, DifferentialOperator};
 
@@ -170,22 +174,22 @@ impl CentralDifference2 {
         }
 
         // Interior: central difference via contiguous slice pairs
-        Zip::from(dst.slice_mut(s![1..nx - 1, .., ..]))
-            .and(field.slice(s![2..nx, .., ..]))
-            .and(field.slice(s![0..nx - 2, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
+        let mut dst_slice = dst.slice_mut(&[(1, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(2, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx - 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv2dx).unwrap();
 
         // Left boundary (i=0): forward difference
-        Zip::from(dst.slice_mut(s![0, .., ..]))
-            .and(field.slice(s![1, .., ..]))
-            .and(field.slice(s![0, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dx);
+        let mut dst_slice = dst.slice_mut(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(1, 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dx).unwrap();
 
         // Right boundary (i=nx−1): backward difference
-        Zip::from(dst.slice_mut(s![nx - 1, .., ..]))
-            .and(field.slice(s![nx - 1, .., ..]))
-            .and(field.slice(s![nx - 2, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dx);
+        let mut dst_slice = dst.slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(nx - 2, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dx).unwrap();
 
         Ok(())
     }
@@ -238,22 +242,22 @@ impl CentralDifference2 {
         }
 
         // Interior
-        Zip::from(dst.slice_mut(s![.., 1..ny - 1, ..]))
-            .and(field.slice(s![.., 2..ny, ..]))
-            .and(field.slice(s![.., 0..ny - 2, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (1, ny - 1, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (2, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, ny - 2, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv2dy).unwrap();
 
         // Bottom boundary (j=0)
-        Zip::from(dst.slice_mut(s![.., 0, ..]))
-            .and(field.slice(s![.., 1, ..]))
-            .and(field.slice(s![.., 0, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dy);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (1, 2, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dy).unwrap();
 
         // Top boundary (j=ny−1)
-        Zip::from(dst.slice_mut(s![.., ny - 1, ..]))
-            .and(field.slice(s![.., ny - 1, ..]))
-            .and(field.slice(s![.., ny - 2, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dy);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (ny - 2, ny - 1, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dy).unwrap();
 
         Ok(())
     }
@@ -307,22 +311,22 @@ impl CentralDifference2 {
         }
 
         // Interior (innermost dimension — highest SIMD throughput)
-        Zip::from(dst.slice_mut(s![.., .., 1..nz - 1]))
-            .and(field.slice(s![.., .., 2..nz]))
-            .and(field.slice(s![.., .., 0..nz - 2]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (1, nz - 1, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (2, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 2, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv2dz).unwrap();
 
         // Near boundary (k=0)
-        Zip::from(dst.slice_mut(s![.., .., 0]))
-            .and(field.slice(s![.., .., 1]))
-            .and(field.slice(s![.., .., 0]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dz);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (1, 2, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dz).unwrap();
 
         // Far boundary (k=nz−1)
-        Zip::from(dst.slice_mut(s![.., .., nz - 1]))
-            .and(field.slice(s![.., .., nz - 1]))
-            .and(field.slice(s![.., .., nz - 2]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dz);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (nz - 2, nz - 1, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dz).unwrap();
 
         Ok(())
     }

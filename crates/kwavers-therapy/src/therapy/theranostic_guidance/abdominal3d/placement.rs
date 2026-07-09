@@ -49,7 +49,7 @@
 //!   disruptive technology for non-invasive therapy. Phys. Med. Biol. 61(17):
 //!   R206–R248.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

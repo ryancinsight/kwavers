@@ -23,7 +23,7 @@ use kwavers_core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::scene::target_index_from_mask_fraction_2d;
 use super::{validate_masks, AnatomyKind, PreparedTheranosticSlice};

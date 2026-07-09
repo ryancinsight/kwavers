@@ -113,7 +113,7 @@ pub(super) fn cavitation_emission_waveform(
 mod tests {
     use super::*;
     use kwavers_math::fft::apply_spectral_response_1d;
-    use ndarray::Array1;
+    use leto::Array1;
 
     /// The synthesized emission must contain the three cavitation lines
     /// (f₀/2, f₀, 3f₀/2) with the expected relative ordering and resolvable

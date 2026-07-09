@@ -20,7 +20,7 @@
 use super::das::align_channels;
 use super::delay_reference::DelayReference;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Sign-preserving DMAS combination of one aligned, apodized aperture column.
 ///

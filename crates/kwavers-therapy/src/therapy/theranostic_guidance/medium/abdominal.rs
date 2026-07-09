@@ -21,7 +21,11 @@ use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2, Array3, Axis};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 
 use crate::parallel::{zip_three_mut_two_refs, zip_two_mut_four_refs};
 
@@ -170,7 +174,7 @@ pub fn prepare_abdominal_slice(
 
 /// Index of the axial (z) slice that contains the most label-2 (tumour) voxels.
 ///
-/// Iterates z-slices via [`ndarray::Axis`] view and returns the index of the
+/// Iterates z-slices via [`Axis`] view and returns the index of the
 /// slice with the maximum label-2 count.  Returns [`KwaversError::InvalidInput`]
 /// when no label-2 cell exists in the volume.
 pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {

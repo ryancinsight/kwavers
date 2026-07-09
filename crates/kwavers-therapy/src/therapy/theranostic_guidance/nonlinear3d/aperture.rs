@@ -132,8 +132,8 @@ fn is_brain_cap_cell(
 }
 
 fn exterior_boundary_cells(
-    mask: &ndarray::Array3<bool>,
-    exterior: &ndarray::Array3<bool>,
+    mask: &leto::Array3<bool>,
+    exterior: &leto::Array3<bool>,
 ) -> Vec<GridIndex> {
     let mut out = Vec::new();
     for ((x, y, z), active) in mask.indexed_iter() {
@@ -145,8 +145,8 @@ fn exterior_boundary_cells(
 }
 
 fn touches_exterior(
-    mask: &ndarray::Array3<bool>,
-    exterior: &ndarray::Array3<bool>,
+    mask: &leto::Array3<bool>,
+    exterior: &leto::Array3<bool>,
     x: usize,
     y: usize,
     z: usize,
@@ -160,7 +160,7 @@ fn touches_exterior(
         || (z + 1 < nz && !mask[[x, y, z + 1]] && exterior[[x, y, z + 1]])
 }
 
-fn boundary_cells(mask: &ndarray::Array3<bool>) -> Vec<GridIndex> {
+fn boundary_cells(mask: &leto::Array3<bool>) -> Vec<GridIndex> {
     let mut out = Vec::new();
     for ((x, y, z), active) in mask.indexed_iter() {
         if *active && is_boundary(mask, x, y, z) {
@@ -170,7 +170,7 @@ fn boundary_cells(mask: &ndarray::Array3<bool>) -> Vec<GridIndex> {
     out
 }
 
-fn is_boundary(mask: &ndarray::Array3<bool>, x: usize, y: usize, z: usize) -> bool {
+fn is_boundary(mask: &leto::Array3<bool>, x: usize, y: usize, z: usize) -> bool {
     let (nx, ny, nz) = mask.dim();
     x == 0
         || y == 0
@@ -186,7 +186,7 @@ fn is_boundary(mask: &ndarray::Array3<bool>, x: usize, y: usize, z: usize) -> bo
         || !mask[[x, y, z + 1]]
 }
 
-fn axial_peak(mask: &ndarray::Array3<bool>) -> usize {
+fn axial_peak(mask: &leto::Array3<bool>) -> usize {
     let (_, _, nz) = mask.dim();
     (0..nz)
         .max_by_key(|z| {

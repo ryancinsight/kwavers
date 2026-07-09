@@ -20,7 +20,7 @@
 
 use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex};
 use leto::Array2 as LetoArray2;
-use ndarray::Array2;
+use leto::Array2;
 use kwavers_math::fft::Complex64;
 
 const TAU: f64 = std::f64::consts::TAU;

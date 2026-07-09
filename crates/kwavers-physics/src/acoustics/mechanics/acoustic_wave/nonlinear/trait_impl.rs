@@ -8,7 +8,10 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
 use log::info;
-use ndarray::{Array3, Array4, Axis};
+use leto::{
+    Array3,
+    Array4,
+};
 
 use super::wave_model::NonlinearWave;
 

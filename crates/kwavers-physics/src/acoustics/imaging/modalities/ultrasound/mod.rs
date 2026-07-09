@@ -5,7 +5,7 @@
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex;
 
 pub mod advanced;
@@ -48,9 +48,9 @@ pub fn compute_bmode_image(rf_data: &Array2<f64>, config: &UltrasoundConfig) -> 
 /// - **Speckle reduction**: Anisotropic diffusion and wavelet-domain denoising.
 /// - **Harmonic imaging**: Tissue harmonic and compound harmonic B-mode reconstruction.
 /// - **Spatial compounding**: Multi-angle coherent compounding for artifact reduction.
-fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
+fn compute_envelope(signal: &leto::Array1<f64>) -> leto::Array1<f64> {
     let n = signal.len();
-    let mut envelope = ndarray::Array1::zeros(n);
+    let mut envelope = leto::Array1::zeros(n);
     for i in 0..n {
         let real = signal[i];
         let imag = if i > 0 && i < n - 1 {
@@ -67,16 +67,16 @@ fn compute_envelope(signal: &ndarray::Array1<f64>) -> ndarray::Array1<f64> {
 // SOUND_SPEED_TISSUE = 1540.0 m/s imported from kwavers_core::constants::fundamental
 const MAX_TGC_GAIN: f64 = 100.0;
 
-fn apply_tgc(signal: &ndarray::Array1<f64>, frequency: f64) -> ndarray::Array1<f64> {
+fn apply_tgc(signal: &leto::Array1<f64>, frequency: f64) -> leto::Array1<f64> {
     const DEFAULT_SAMPLING_FREQUENCY: f64 = 40e6;
     apply_tgc_with_sampling(signal, frequency, DEFAULT_SAMPLING_FREQUENCY)
 }
 
 fn apply_tgc_with_sampling(
-    signal: &ndarray::Array1<f64>,
+    signal: &leto::Array1<f64>,
     frequency: f64,
     sampling_frequency: f64,
-) -> ndarray::Array1<f64> {
+) -> leto::Array1<f64> {
     let n = signal.len();
     let mut compensated = signal.clone();
     // α[Np/m] = α[dB/(cm·MHz)] × f[MHz] × (1/CM_TO_M) [cm/m] × (1/NP_TO_DB) [Np/dB]

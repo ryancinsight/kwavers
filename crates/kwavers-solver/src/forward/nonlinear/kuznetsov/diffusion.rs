@@ -42,7 +42,7 @@
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use kwavers_core::constants::numerical::THIRD_ORDER_DIFF_COEFF;
 use moirai_parallel::ParallelSliceMut;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace.
 ///

@@ -46,7 +46,7 @@ use super::rk_update::{update_euler, update_forward_euler, update_ssp_final, upd
 use super::topology::CoefficientLayout;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 impl DGSolver {
     /// Advance the field by one time step `dt` using the configured integrator.
@@ -303,8 +303,8 @@ impl DGSolver {
 fn apply_shock_capture_for_layout(
     config: super::super::config::DGConfig,
     layout: CoefficientLayout,
-    xi_nodes: &ndarray::Array1<f64>,
-    weights: &ndarray::Array1<f64>,
+    xi_nodes: &leto::Array1<f64>,
+    weights: &leto::Array1<f64>,
     coeffs: &mut Array3<f64>,
     scratch: &mut Array3<f64>,
 ) -> KwaversResult<()> {

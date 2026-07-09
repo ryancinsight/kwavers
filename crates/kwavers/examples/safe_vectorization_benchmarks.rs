@@ -35,7 +35,10 @@
 use kwavers_analysis::performance::SafeVectorOps;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3, Zip};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::time::Instant;
 
 /// Benchmark result for a single test

@@ -12,7 +12,7 @@
 mod tests;
 
 use moirai_parallel::ParallelSliceMut;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Operator splitting solver for nonlinear acoustics
 #[derive(Debug)]

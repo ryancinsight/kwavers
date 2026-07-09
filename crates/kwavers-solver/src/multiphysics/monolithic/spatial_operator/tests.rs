@@ -1,6 +1,8 @@
 use super::*;
 use crate::multiphysics::monolithic::state_vector::field_block_view;
-use ndarray::{Array3, ArrayBase, Data, Ix3};
+use leto::{
+    Array3,
+};
 
 fn laplacian_3d<S>(
     field: &ArrayBase<S, Ix3>,

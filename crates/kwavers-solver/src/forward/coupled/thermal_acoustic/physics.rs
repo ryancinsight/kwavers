@@ -2,8 +2,6 @@ use super::ThermalAcousticCoupler;
 use kwavers_core::constants::RHO_C_SOFT_TISSUE;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
-use ndarray::Zip;
-
 impl ThermalAcousticCoupler {
     #[inline]
     pub(super) fn cell_indices(index: usize, ny: usize, nz: usize) -> (usize, usize, usize) {

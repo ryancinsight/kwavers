@@ -2,7 +2,7 @@
 
 use super::model::ChemicalModel;
 use super::parameters::ChemicalMetrics;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 impl ChemicalModel {

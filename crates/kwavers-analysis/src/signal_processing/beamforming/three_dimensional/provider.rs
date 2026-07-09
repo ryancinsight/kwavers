@@ -3,7 +3,10 @@
 use super::config::{Beamforming3dApodizationWindow, BeamformingConfig3D};
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::backend::traits::GpuProvider;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 /// 3-D beamforming GPU provider contract.
 ///

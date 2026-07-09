@@ -20,7 +20,7 @@ pub use types::{ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODE
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::same_aperture::C_REF_M_S;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::TheranosticInverseConfig;
 use super::exposure::normalize_positive;

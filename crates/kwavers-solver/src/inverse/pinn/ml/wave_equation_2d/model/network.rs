@@ -5,7 +5,10 @@ use super::wave_speed::WaveSpeedFn;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use std::sync::Arc;
 
 /// Decomposed physics-informed loss components returned by

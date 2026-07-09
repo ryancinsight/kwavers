@@ -3,11 +3,11 @@
 use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
 use super::functions::{gradient_optimized, gradient_with_strategy};
-use crate::compat::ndarray::{Array3, ArrayView3};
+use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
 use leto::Array3 as LetoArray3;
-use num_traits::Float;
+use eunomia::FloatElement;
 
 /// Boundary handling strategy
 #[derive(Debug, Clone, Copy, PartialEq)]

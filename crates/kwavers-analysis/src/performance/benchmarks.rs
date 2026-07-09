@@ -74,7 +74,7 @@ impl ProductionBenchmarks {
     /// Benchmark safe vectorization performance
     #[must_use]
     pub fn benchmark_vectorization(&self) -> BenchmarkResult {
-        use ndarray::Array3;
+        use leto::Array3;
 
         let shape = (100, 100, 100);
         let a: Array3<f64> = Array3::zeros(shape);

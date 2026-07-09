@@ -1,6 +1,9 @@
 use super::{EigenResult, EigenSolver, EigenSolverConfig};
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use num_complex::Complex;
 
 impl EigenSolver {

@@ -1,7 +1,11 @@
 use super::super::{FwiGeometry, FwiProcessor};
 use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Array4};
+use leto::{
+    Array2,
+    Array3,
+    Array4,
+};
 
 #[test]
 fn test_gradient_calculation() {

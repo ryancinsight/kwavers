@@ -1,6 +1,6 @@
 use crate::Grid;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 use numpy::PyArray3;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

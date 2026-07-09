@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug)]
 pub struct HybridCoupler {

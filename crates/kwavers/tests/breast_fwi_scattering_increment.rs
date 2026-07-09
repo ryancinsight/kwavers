@@ -3,7 +3,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstReceiverChannelPolicy,
 };
 use kwavers_math::fft::Complex64;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn scattering_increment_public_api_identifies_exact_model() {

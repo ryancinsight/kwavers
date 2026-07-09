@@ -1,5 +1,5 @@
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1};
-use ndarray::Array2;
+use leto::Array2;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 

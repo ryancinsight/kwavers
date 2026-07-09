@@ -4,7 +4,7 @@ use super::{MlBayesianPINN, MlPredictionWithUncertainty};
 #[cfg(feature = "pinn")]
 use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 use std::collections::HashMap;
 
 impl MlBayesianPINN {

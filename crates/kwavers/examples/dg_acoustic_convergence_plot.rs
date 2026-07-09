@@ -20,7 +20,10 @@ use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDg1DWorkspace;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use plotters::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;

@@ -2,7 +2,10 @@
 //!
 //! Implements Planck's law for thermal radiation from hot bubble interior
 
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::f64::consts::PI;
 
 use kwavers_core::constants::fundamental::{

@@ -1,7 +1,7 @@
 use super::SourceHandler;
 use kwavers_source::SourceMode;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3 as NdArray3;
+use leto::Array3 as NdArray3;
 
 pub(crate) trait Array3Read {
     fn at(&self, i: usize, j: usize, k: usize) -> f64;

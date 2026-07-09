@@ -1,6 +1,6 @@
 //! `WaveGeometry2D` spatial queries: `contains`, `bounding_box`, `sample_points`.
 
-use ndarray::Array1;
+use leto::Array1;
 
 use super::WaveGeometry2D;
 

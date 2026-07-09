@@ -29,7 +29,10 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::f64::consts::PI;
 use std::sync::Arc;
 

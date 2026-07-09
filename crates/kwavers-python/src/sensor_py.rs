@@ -1,6 +1,6 @@
 //! `Sensor` pyclass — acoustic field recorder configuration.
 
-use ndarray::Array3;
+use leto::Array3;
 use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

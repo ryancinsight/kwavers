@@ -4,7 +4,7 @@ use super::types::{MechanicalIndex, SafetyThresholds, TranscranialSafetyDose};
 use kwavers_core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Safety monitoring system for tFUS
 #[derive(Debug)]

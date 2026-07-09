@@ -3,7 +3,10 @@ use super::coupler::FdtdFemCoupler;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 /// FDTD-FEM Coupled Solver
 #[derive(Debug)]

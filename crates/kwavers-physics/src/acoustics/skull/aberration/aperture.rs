@@ -1,7 +1,7 @@
 //! Aperture-plane phase maps.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::model::AberrationCorrection;
 use kwavers_core::constants::numerical::TWO_PI;

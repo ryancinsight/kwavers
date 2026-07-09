@@ -27,7 +27,7 @@ use kwavers_core::constants::thermodynamic::{
 };
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::constants::tissue_thermal::THERMAL_CONDUCTIVITY_BLOOD;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Temperature-dependent perfusion model
 #[derive(Debug)]

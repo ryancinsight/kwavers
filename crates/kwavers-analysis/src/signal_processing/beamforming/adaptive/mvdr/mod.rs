@@ -95,9 +95,9 @@ impl MinimumVariance {
     ///
     pub(super) fn loaded_covariance(
         &self,
-        covariance: &ndarray::Array2<Complex64>,
+        covariance: &leto::Array2<Complex64>,
         steering_len: usize,
-    ) -> kwavers_core::error::KwaversResult<ndarray::Array2<Complex64>> {
+    ) -> kwavers_core::error::KwaversResult<leto::Array2<Complex64>> {
         use kwavers_core::error::KwaversError;
 
         let n = covariance.nrows();

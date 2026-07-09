@@ -58,7 +58,7 @@ use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use leto::Array1 as LetoArray1;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 
 /// Power-law absorption operator for the KZK equation.

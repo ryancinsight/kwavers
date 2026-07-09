@@ -24,7 +24,7 @@ mod tests {
     use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
     use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_threshold_calculations() {

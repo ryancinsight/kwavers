@@ -5,7 +5,7 @@
 //! functions remain below Clippy's argument-count threshold while preserving
 //! field-name explicitness at every call site.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Instantaneous acoustic field state (all shared borrows).
 ///

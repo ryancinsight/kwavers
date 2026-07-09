@@ -1,7 +1,7 @@
 //! Shared Moirai-backed traversal for finite-difference output buffers.
 
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 const DIFFERENTIAL_CHUNK_LEN: usize = 4096;
 

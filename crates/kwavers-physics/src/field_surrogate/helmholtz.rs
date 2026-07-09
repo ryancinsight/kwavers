@@ -32,7 +32,7 @@
 //! analysis; callers should mask them out before computing
 //! summary statistics.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::kernel::FocalKernel;
 use kwavers_core::constants::numerical::TWO_PI;

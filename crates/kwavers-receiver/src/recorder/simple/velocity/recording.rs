@@ -47,7 +47,7 @@ impl VelocitySamples3 for leto::Array3<f64> {
     }
 }
 
-impl VelocitySamples3 for ndarray::Array3<f64> {
+impl VelocitySamples3 for leto::Array3<f64> {
     fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self[[i, j, k]]
     }

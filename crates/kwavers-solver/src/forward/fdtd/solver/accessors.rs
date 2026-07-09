@@ -2,7 +2,10 @@
 //! metrics access/merge, sensor data extraction, orchestrated run loop.
 
 use log::info;
-use ndarray::{Array3, ArrayView2};
+use leto::{
+    Array3,
+    ArrayView2,
+};
 use std::sync::Arc;
 
 use super::{FdtdGpuAccelerator, FdtdMetrics, GenericFdtdSolver};
@@ -88,7 +91,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
     /// Extract recorded sensor data as `Array2<f64>`
     /// Returns None if no sensors are configured or no data has been recorded
-    pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
+    pub fn extract_recorded_sensor_data(&self) -> Option<leto::Array2<f64>> {
         self.sensor_recorder
             .extract_pressure_data()
             .and_then(|data| data.try_into().ok())
@@ -122,7 +125,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     pub fn run_orchestrated(
         &mut self,
         steps: usize,
-    ) -> KwaversResult<Option<ndarray::Array2<f64>>> {
+    ) -> KwaversResult<Option<leto::Array2<f64>>> {
         // Record initial state t=0 to match k-Wave's convention (returning Nt+1 points)
         if self.time_step_index == 0 {
             self.sensor_recorder.record_step(&self.fields.p)?;

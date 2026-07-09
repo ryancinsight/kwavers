@@ -19,7 +19,10 @@ use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
-use ndarray::{s, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array4,
+};
 
 /// Test CFL stability condition
 ///

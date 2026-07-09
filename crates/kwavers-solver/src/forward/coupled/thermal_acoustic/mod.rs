@@ -49,7 +49,7 @@ use kwavers_core::constants::{
     DC_DT_SOFT_TISSUE, DENSITY_WATER_NOMINAL, DRHO_DT_SOFT_TISSUE, SOUND_SPEED_TISSUE,
     THERMAL_DIFFUSIVITY_TISSUE,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 mod physics;
 mod stepping;

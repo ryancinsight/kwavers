@@ -19,7 +19,7 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> PSTDSolver {
     let config = PSTDConfig {

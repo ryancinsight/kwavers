@@ -7,7 +7,10 @@ use kwavers_solver::forward::hybrid::{HybridConfig, HybridDecompositionStrategy,
 use kwavers_solver::forward::pstd::config::{BoundaryConfig as PSTDBoundaryConfig, PSTDConfig};
 use kwavers_solver::plugin::{Plugin, PluginContext, PluginFields};
 use kwavers_source::{GaussianBuilder, Source};
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 use std::sync::Arc;
 
 #[test]
@@ -85,7 +88,7 @@ fn test_hybrid_source_application() {
     let p_idx = 0; // Pressure
                    // Check max pressure
     let max_p = fields
-        .index_axis(ndarray::Axis(0), p_idx)
+        .index_axis(0, p_idx)
         .iter()
         .fold(0.0f64, |a, &b| a.max(b.abs()));
 

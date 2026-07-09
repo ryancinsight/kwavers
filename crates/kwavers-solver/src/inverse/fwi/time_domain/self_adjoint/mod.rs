@@ -30,7 +30,14 @@ mod tests;
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3, Array4, ArrayView2, ArrayView3, ArrayView4, Axis, Zip};
+use leto::{
+    Array2,
+    Array3,
+    Array4,
+    ArrayView2,
+    ArrayView3,
+    ArrayView4,
+};
 
 /// Time-stepping parameters for the self-adjoint engine.
 #[derive(Debug, Clone, Copy)]

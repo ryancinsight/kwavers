@@ -1,7 +1,7 @@
 use super::compound::PlaneWaveCompound;
 use super::config::PlaneWaveCompoundingConfig;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex;
 
 #[test]

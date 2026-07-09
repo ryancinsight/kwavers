@@ -7,7 +7,10 @@
 
 use crate::fft::{fft_1d_complex_slice_inplace, ifft_1d_complex_slice_inplace};
 use eunomia::Complex64;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Check if a number is a "good" size for FFT (composite of small primes 2, 3, 5)
 #[must_use]
@@ -175,7 +178,10 @@ pub fn analytic_signal_1d(signal: &Array1<f64>) -> Array1<Complex64> {
 #[cfg(test)]
 mod tests {
     use super::{analytic_signal_1d, apply_spectral_response_1d, fft_shift_2d, ifft_shift_2d};
-    use ndarray::{Array1, Array2};
+    use leto::{
+    Array1,
+    Array2,
+};
     use eunomia::Complex64;
 
     #[test]

@@ -2,7 +2,7 @@
 //!
 //! Handles PSTD, PSTD+Thermal, and GPU PSTD dispatch paths.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::configs::ThermalConfig;
 use crate::dispatch::shared::{record_modes_to_spec, trim_initial_recorder_view};
@@ -188,7 +188,7 @@ pub(crate) fn prepare_solver(
 
             let mut padded_mask = Array3::<bool>::from_elem((pnx, pny, pnz), false);
             padded_mask
-                .slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
+                slice_mut(&[(Some(p as isize) as usize, Some(nx + p as isize) as usize, 1), (Some(py as isize) as usize, Some(ny + py as isize) as usize, 1), (Some(pz_embed as isize) as usize, Some(nz + pz_embed as isize) as usize, 1)])
                 .assign(&sensor_mask);
 
             let padded_source =

@@ -5,7 +5,7 @@ use super::super::super::traits::{DGOperations, NumericalSolver};
 use super::super::core::DGSolver;
 use super::super::topology::CoefficientLayout;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Build a minimal DGSolver for testing.

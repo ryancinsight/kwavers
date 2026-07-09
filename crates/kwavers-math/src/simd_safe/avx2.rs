@@ -2,7 +2,7 @@
 
 #![allow(unsafe_code)]
 
-use ndarray::Array3;
+use leto::Array3;
 
 #[inline]
 unsafe fn add_fields_avx2_inner(a: &[f64], b: &[f64], out: &mut [f64]) {
@@ -172,7 +172,7 @@ unsafe fn scale_field_avx2_inner(field: &[f64], scalar: f64, out: &mut [f64]) {
     //   - Special values: NaN/Inf propagate according to IEEE-754 (no special handling needed)
     // ALTERNATIVES:
     //   - Scalar implementation: for i in 0..len { out[i] = field[i] * scalar }
-    //   - ndarray::ArrayBase::mapv_inplace with closure
+    //   - ArrayBase::mapv_inplace with closure
     //   - Rejection reason: 3-4x throughput advantage, critical for time-stepping (field scaling frequent)
     // PERFORMANCE:
     //   - Expected speedup: 3-4x over scalar (memory bandwidth limited for large fields)

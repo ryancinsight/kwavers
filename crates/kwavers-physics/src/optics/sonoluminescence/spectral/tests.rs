@@ -3,7 +3,7 @@
 mod tests {
     use super::super::range::SpectralRange;
     use super::super::spectrum::EmissionSpectrum;
-    use ndarray::Array1;
+    use leto::Array1;
 
     #[test]
     fn test_spectral_range() {

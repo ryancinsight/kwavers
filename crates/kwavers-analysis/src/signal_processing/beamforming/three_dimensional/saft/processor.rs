@@ -2,7 +2,10 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use log::info;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 use std::f64::consts::PI;
 
 use super::super::{BeamformingAlgorithm3D, BeamformingConfig3D};

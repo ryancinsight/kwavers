@@ -3,7 +3,10 @@
 use super::types::{CalibrationData, CalibrationQualityMetrics, GeometrySnapshot, KalmanState};
 use kwavers_core::error::KwaversResult;
 use leto::{Array2 as LetoArray2, Array3};
-use ndarray::{Array1, Array2 as NdArray2};
+use leto::{
+    Array1,
+    Array2 as NdArray2,
+};
 
 mod acoustic;
 mod kalman;

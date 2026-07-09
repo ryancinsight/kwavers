@@ -7,7 +7,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use kwavers_mesh::Tetrahedron;
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 /// FEM matrix assembly utilities
@@ -59,8 +59,8 @@ impl FemAssembly {
     pub fn assemble_global_matrices_parallel(
         &self,
         elements: &[Tetrahedron],
-        element_stiffness: &[ndarray::Array2<Complex64>],
-        element_mass: &[ndarray::Array2<Complex64>],
+        element_stiffness: &[leto::Array2<Complex64>],
+        element_mass: &[leto::Array2<Complex64>],
         element_rhs: &[Array1<Complex64>],
     ) -> KwaversResult<(
         CompressedSparseRowMatrix<Complex64>,
@@ -108,8 +108,8 @@ impl FemAssembly {
     fn validate_element_array_lengths(
         &self,
         elements: &[Tetrahedron],
-        element_stiffness: &[ndarray::Array2<Complex64>],
-        element_mass: &[ndarray::Array2<Complex64>],
+        element_stiffness: &[leto::Array2<Complex64>],
+        element_mass: &[leto::Array2<Complex64>],
         element_rhs: &[Array1<Complex64>],
     ) -> KwaversResult<()> {
         let expected = elements.len();
@@ -135,8 +135,8 @@ impl FemAssembly {
     fn assemble_single_element(
         &self,
         element: &Tetrahedron,
-        elem_stiffness: &ndarray::Array2<Complex64>,
-        elem_mass: &ndarray::Array2<Complex64>,
+        elem_stiffness: &leto::Array2<Complex64>,
+        elem_mass: &leto::Array2<Complex64>,
         elem_rhs: &Array1<Complex64>,
     ) -> KwaversResult<ElementContribution> {
         Ok(ElementContribution {
@@ -291,8 +291,8 @@ impl FemAssembly {
 /// Element contribution to global matrices
 #[derive(Debug)]
 struct ElementContribution {
-    stiffness: ndarray::Array2<Complex64>,
-    mass: ndarray::Array2<Complex64>,
+    stiffness: leto::Array2<Complex64>,
+    mass: leto::Array2<Complex64>,
     rhs: Array1<Complex64>,
     node_indices: [usize; 4],
 }
@@ -306,7 +306,7 @@ impl Default for FemAssembly {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     fn unit_tetrahedron() -> Tetrahedron {
         Tetrahedron {

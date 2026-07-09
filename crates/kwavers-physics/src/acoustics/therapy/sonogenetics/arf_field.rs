@@ -39,7 +39,7 @@
 //! - Temkin, S. (2001). *Elements of Acoustics*. Acoustical Society of America.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::parallel::{zip_mut_ref, zip_two_mut_four_refs};
 
@@ -205,7 +205,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Uniform pressure field: I = p² / (ρ·c); F = 2·α·I / c.
     ///

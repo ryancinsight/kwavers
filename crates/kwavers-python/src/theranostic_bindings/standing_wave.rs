@@ -132,30 +132,30 @@ pub fn run_standing_wave_suppression_py<'py>(
 
     // Element positions
     let eys: Vec<i64> = result.element_ys.iter().map(|&v| v as i64).collect();
-    dict.set_item("element_ys", ndarray::Array1::from(eys).to_pyarray(py))?;
+    dict.set_item("element_ys", leto::Array1::from(eys).to_pyarray(py))?;
 
     // Time series
     dict.set_item(
         "swi_history",
-        ndarray::Array1::from(result.swi_history).to_pyarray(py),
+        leto::Array1::from(result.swi_history).to_pyarray(py),
     )?;
     dict.set_item(
         "focal_pressure_history",
-        ndarray::Array1::from(result.focal_pressure_history).to_pyarray(py),
+        leto::Array1::from(result.focal_pressure_history).to_pyarray(py),
     )?;
     dict.set_item(
         "objective_history",
-        ndarray::Array1::from(result.objective_history).to_pyarray(py),
+        leto::Array1::from(result.objective_history).to_pyarray(py),
     )?;
 
     // Phases
     dict.set_item(
         "initial_phases",
-        ndarray::Array1::from(result.initial_phases).to_pyarray(py),
+        leto::Array1::from(result.initial_phases).to_pyarray(py),
     )?;
     dict.set_item(
         "final_phases",
-        ndarray::Array1::from(result.final_phases).to_pyarray(py),
+        leto::Array1::from(result.final_phases).to_pyarray(py),
     )?;
 
     // Field snapshots
@@ -166,7 +166,7 @@ pub fn run_standing_wave_suppression_py<'py>(
         .collect();
     dict.set_item(
         "snapshot_iterations",
-        ndarray::Array1::from(snap_iters).to_pyarray(py),
+        leto::Array1::from(snap_iters).to_pyarray(py),
     )?;
     dict.set_item(
         "snapshot_fields_re",

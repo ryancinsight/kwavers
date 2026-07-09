@@ -2,7 +2,7 @@
 
 use super::InterpolationManager;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl InterpolationManager {
     /// Volume-weighted conservative interpolation preserving integral quantities.

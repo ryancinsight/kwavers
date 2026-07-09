@@ -1,8 +1,8 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::Array3 as LetoArray3;
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array2, ArrayView2, ArrayViewMut2};
+use leto::{Array2, ArrayView2, ArrayViewMut2};
 
 #[derive(Clone, Copy)]
 enum AsAxis {
@@ -21,28 +21,6 @@ fn pml_index(axis: AsAxis, i: usize, k: usize) -> usize {
         AsAxis::X => i,
         AsAxis::R => k,
     }
-}
-
-fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
-    let shape = field.shape();
-    ndarray::ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("PSTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("PSTD leto field shape must match contiguous storage")
-}
-
-fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ndarray::ArrayViewMut3<'_, f64> {
-    let shape = field.shape();
-    ndarray::ArrayViewMut3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice_mut()
-            .expect("PSTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("PSTD leto field shape must match contiguous storage")
 }
 
 fn compute_axisymmetric_coefficient(

@@ -4,7 +4,7 @@ use super::clutter::UlmSvdClutterFilter;
 use super::localize::GaussianLocalizer;
 use super::types::{BubbleDetection, GaussianLocalizationConfig, SvdClutterConfig};
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Full ULM detection pipeline: SVD filtering + Gaussian localization.
 #[derive(Debug)]

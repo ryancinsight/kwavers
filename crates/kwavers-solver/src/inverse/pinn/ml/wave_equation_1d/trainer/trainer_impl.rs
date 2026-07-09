@@ -1,4 +1,7 @@
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 use coeus_autograd::Var;
 

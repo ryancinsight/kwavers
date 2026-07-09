@@ -7,7 +7,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Test Rayleigh collapse time for bubble dynamics

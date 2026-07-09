@@ -1,5 +1,8 @@
 use moirai_parallel::ParallelSliceMut;
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -296,7 +299,7 @@ impl FluidStructureSolver {
         let [nx, ny, nz] = self.interface.normal;
         let mut traction = Array1::zeros(3);
 
-        ndarray::Zip::indexed(&self.interface.interface_mask)
+        leto_ops::zip_indexed(self.interface.interface_mask)
             .and(fluid_pressure.view())
             .for_each(|(i, j, k), mask, &p| {
                 if *mask {
@@ -339,7 +342,7 @@ impl FluidStructureSolver {
         .iter()
         .enumerate()
         .for_each(|(dim, &n)| {
-            ndarray::Zip::indexed(&self.interface.interface_mask)
+            leto_ops::zip_indexed(self.interface.interface_mask)
                 .and(fluid_velocity[dim].view())
                 .and(solid_velocity[dim].view())
                 .for_each(|(_i, _j, _k), mask, &v_f, &v_s| {

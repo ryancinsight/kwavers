@@ -2,7 +2,9 @@ use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::{Array3, ShapeBuilder};
+use leto::{
+    Array3,
+};
 
 fn assert_relative_roundoff_eq(actual: f64, expected: f64, operations: usize) {
     let tolerance = f64::EPSILON * operations as f64 * expected.abs().max(1.0);

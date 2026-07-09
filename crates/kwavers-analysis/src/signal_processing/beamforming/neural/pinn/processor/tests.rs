@@ -33,7 +33,7 @@ fn test_memory_calculation() {
 #[cfg(feature = "pinn")]
 #[test]
 fn test_process_volume() {
-    use ndarray::Array4;
+    use leto::Array4;
 
     let config = PINNBeamformingConfig {
         rf_data_channels: 8,

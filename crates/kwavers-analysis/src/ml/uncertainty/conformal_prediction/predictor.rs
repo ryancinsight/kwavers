@@ -8,7 +8,10 @@ use super::types::{
 use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
 use log::info;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use std::collections::HashMap;
 
 /// Conformal predictor for uncertainty quantification
@@ -308,7 +311,7 @@ impl MlConformalPredictor {
 mod tests {
     use super::*;
     use crate::ml::uncertainty::conformal_prediction::config::ConformalConfig;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn test_conformal_predictor_creation() {

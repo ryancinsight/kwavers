@@ -7,7 +7,7 @@
 //! - Cohen, Daubechies & Feauveau (1992): "Biorthogonal bases of compactly supported wavelets"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::core::WaveletTransform;
 

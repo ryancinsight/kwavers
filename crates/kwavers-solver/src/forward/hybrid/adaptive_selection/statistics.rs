@@ -2,7 +2,7 @@
 
 use super::selector::SelectedMethod;
 use log::info;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Statistics for method selection
 #[derive(Debug, Clone, Default)]

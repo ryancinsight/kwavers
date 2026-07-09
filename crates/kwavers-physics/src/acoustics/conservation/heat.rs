@@ -1,6 +1,6 @@
 //! Acoustic-to-thermal coupling source terms.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute volumetric heat source from acoustic absorption [W/m^3].
 ///

@@ -17,7 +17,7 @@
 //! - Treeby & Cox (2010), J. Acoust. Soc. Am. 128:2741 — k-Wave padded simulation domain.
 //! - Komatitsch & Martin (2007), Geophysics 72:SM155, §2 — CPML on outer strip.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::medium::PreparedTheranosticSlice;

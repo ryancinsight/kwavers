@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
@@ -41,7 +41,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .map(|((i, j, k), _)| (i, j, k))
         .collect();
     let n_sensors = sensor_indices.len().max(1);
-    let mut sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
+    let mut sensor_data = leto::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
 
     for (idx, &(i, j, k)) in sensor_indices.iter().enumerate() {
         sensor_data[[idx, 0]] = field[[i, j, k]];
@@ -60,26 +60,26 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let stats = if !sensor_indices.is_empty() {
         let n_cols = sensor_data.ncols();
         Some(SampledStatistics {
-            p_max: ndarray::Array1::from_iter(
+            p_max: leto::Array1::from_iter(
                 sensor_data
                     .rows()
                     .into_iter()
                     .map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))),
             )
             .into(),
-            p_min: ndarray::Array1::from_iter(
+            p_min: leto::Array1::from_iter(
                 sensor_data
                     .rows()
                     .into_iter()
                     .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b))),
             )
             .into(),
-            p_rms: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| {
+            p_rms: leto::Array1::from_iter(sensor_data.rows().into_iter().map(|row| {
                 let sq: f64 = row.iter().map(|v| v * v).sum();
                 (sq / n_cols as f64).sqrt()
             }))
             .into(),
-            p_final: ndarray::Array1::from_iter(
+            p_final: leto::Array1::from_iter(
                 sensor_data
                     .rows()
                     .into_iter()

@@ -6,7 +6,7 @@
 //! index, so the arithmetic is bit-identical to per-axis literal indexing (the
 //! `tests` module pins this against the original literal formulas).
 
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 /// Read `f` at `base` shifted by `off` along `axis` (caller guarantees the
 /// resulting index is in bounds for the stencil branch in use).
@@ -67,7 +67,7 @@ pub fn fd1_z(f: ArrayView3<f64>, i: usize, j: usize, k: usize, nz: usize, dz: f6
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Reference implementations using the original per-axis *literal* indexing.
     // The axis-generic wrappers above must match these bit-for-bit.

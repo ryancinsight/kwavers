@@ -4,7 +4,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::warn;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::types::{ConservationError, ConservationHistory, ConservedQuantities};
 

@@ -14,7 +14,10 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 
 /// Plane wave imaging configuration

@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 pub(super) fn validate_pressure_field_domain(
     pressure_field: ArrayView3<f64>,

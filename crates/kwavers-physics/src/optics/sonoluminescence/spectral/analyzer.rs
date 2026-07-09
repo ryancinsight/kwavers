@@ -1,7 +1,7 @@
 use super::range::SpectralRange;
 use super::spectrum::EmissionSpectrum;
 use kwavers_core::constants::optical::WIEN_CONSTANT;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Spectral analyzer for sonoluminescence
 #[derive(Debug)]

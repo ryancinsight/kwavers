@@ -43,7 +43,11 @@ use super::das::{align_channels, sum_aligned};
 use super::delay_reference::DelayReference;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_signal::analytic::hilbert_transform;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

@@ -3,7 +3,7 @@ use super::{
     validate_covariance_matrix,
 };
 use approx::assert_relative_eq;
-use ndarray::Array2;
+use leto::Array2;
 use eunomia::Complex64;
 
 #[test]

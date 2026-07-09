@@ -15,7 +15,12 @@ use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::{Source, SourceInjectionMode};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array1, Array2, Array3, ArrayView2};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+    ArrayView2,
+};
 use std::env;
 use std::sync::Arc;
 

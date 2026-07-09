@@ -146,7 +146,7 @@ impl VisualizationConfig {
                     value: self.target_fps,
                     min: 0.0,
                     max: f64::INFINITY,
-                }, /* field: target_fps */
+                }
             ));
         }
 
@@ -156,7 +156,7 @@ impl VisualizationConfig {
                     value: self.max_texture_size as f64,
                     min: 1.0,
                     max: f64::INFINITY,
-                }, /* field: max_texture_size */
+                }
             ));
         }
 

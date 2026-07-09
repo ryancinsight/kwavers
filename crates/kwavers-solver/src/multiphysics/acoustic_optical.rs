@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Acoustic-optical solver for coupled simulations
 #[derive(Debug)]

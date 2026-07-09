@@ -25,7 +25,10 @@ use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
 use kwavers_gpu::beamforming::three_dimensional::WgpuBeamformingProvider;
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 #[cfg(feature = "gpu")]
 use std::time::Instant;
 

@@ -3,7 +3,7 @@ use super::music::MUSIC;
 use crate::signal_processing::beamforming::test_utilities;
 use approx::assert_relative_eq;
 use eunomia::Complex64;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 #[test]
@@ -237,7 +237,7 @@ fn music_pseudospectrum_at_signal_direction_is_near_infinite() {
     r[(2, 2)] = Complex64::new(1.0, 0.0);
     r[(3, 3)] = Complex64::new(1.0, 0.0);
 
-    let a_signal = ndarray::array![
+    let a_signal = leto::array![
         Complex64::new(1.0, 0.0),
         Complex64::new(0.0, 0.0),
         Complex64::new(0.0, 0.0),
@@ -269,7 +269,7 @@ fn music_pseudospectrum_at_orthogonal_direction_is_one() {
     r[(2, 2)] = Complex64::new(1.0, 0.0);
     r[(3, 3)] = Complex64::new(1.0, 0.0);
 
-    let a_noise = ndarray::array![
+    let a_noise = leto::array![
         Complex64::new(0.0, 0.0),
         Complex64::new(1.0, 0.0),
         Complex64::new(0.0, 0.0),

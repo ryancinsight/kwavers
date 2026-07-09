@@ -35,7 +35,7 @@
 use kwavers_grid::Grid;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 use std::f64::consts::PI;
 

@@ -21,7 +21,10 @@ use crate::reconstruction::acoustic_projection::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::time::Instant;
 
 /// Compute the per-sensor squared row norm `‖A_row_s‖²` for the acoustic projection matrix.

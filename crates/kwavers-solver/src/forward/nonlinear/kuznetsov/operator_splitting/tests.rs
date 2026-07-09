@@ -1,7 +1,7 @@
 use super::OperatorSplittingSolver;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_harmonic_generation() -> Result<(), kwavers_core::error::KwaversError> {

@@ -42,7 +42,7 @@ use kwavers_solver::forward::optical::diffusion::{
 };
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{map_collect_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Initialize optical properties based on tissue type and geometry
 ///
@@ -216,7 +216,7 @@ pub fn compute_fluence_at_wavelength(
 /// ```rust,no_run
 /// # use kwavers_simulation::modalities::photoacoustic::optics::*;
 /// # use kwavers_grid::Grid;
-/// # use ndarray::Array3;
+/// # use leto::Array3;
 /// # use kwavers_medium::properties::OpticalPropertyData;
 /// # fn main() -> kwavers_core::error::KwaversResult<()> {
 /// # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;

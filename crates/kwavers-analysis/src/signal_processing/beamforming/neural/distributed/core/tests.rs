@@ -52,7 +52,7 @@ fn test_fault_tolerance_config() {
 fn test_distributed_processing_matches_sequential_result() {
     use crate::signal_processing::beamforming::neural::pinn::NeuralBeamformingProcessor;
     use crate::signal_processing::beamforming::neural::types::PINNBeamformingConfig;
-    use ndarray::Array4;
+    use leto::Array4;
 
     let beamforming_config = PINNBeamformingConfig {
         rf_data_channels: 2,

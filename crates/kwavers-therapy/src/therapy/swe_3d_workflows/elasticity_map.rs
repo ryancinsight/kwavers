@@ -1,7 +1,9 @@
 use super::roi::VolumetricROI;
 use super::statistics::VolumetricStatistics;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Axis};
+use leto::{
+    Array3,
+};
 
 #[derive(Debug, Clone)]
 pub struct ElasticityMap3D {
@@ -188,7 +190,7 @@ pub struct ElasticityMap2D {
     pub reliability_mask: Array2<bool>,
 }
 
-type Array2<T> = ndarray::Array2<T>;
+type Array2<T> = leto::Array2<T>;
 
 #[cfg(test)]
 mod tests {

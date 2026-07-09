@@ -36,7 +36,7 @@
 //! recursive-convolution post-updates and preserves the formal third-order
 //! accuracy of the stepper.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::super::core::DGSolver;
 use super::super::super::rk_update::{update_euler, update_ssp_final, update_ssp_second};

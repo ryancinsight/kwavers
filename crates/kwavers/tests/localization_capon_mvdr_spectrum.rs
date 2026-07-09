@@ -38,7 +38,7 @@ use kwavers_analysis::signal_processing::beamforming::narrowband::capon::{
 };
 use kwavers_analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use kwavers_receiver::Position;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Construct a small 2D array (xy-plane, z=0) with modest aperture.
 ///

@@ -1,6 +1,6 @@
 use super::simulator::BBBOpening;
 use super::types::BBBParameters;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_bbb_opening_creation() {

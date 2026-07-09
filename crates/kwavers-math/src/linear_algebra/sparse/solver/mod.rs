@@ -10,7 +10,10 @@ mod tests;
 
 use super::csr::CompressedSparseRowMatrix;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, ArrayView1};
+use leto::{
+    Array1,
+    ArrayView1,
+};
 use eunomia::Complex64;
 
 /// Solver configuration.

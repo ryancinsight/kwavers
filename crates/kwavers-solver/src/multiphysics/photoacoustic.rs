@@ -12,7 +12,7 @@ use kwavers_physics::electromagnetic::equations::{
     EMMaterialDistribution, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };
 use kwavers_physics::electromagnetic::photoacoustic::{GrueneisenModel, OpticalAbsorption};
-use ndarray::ArrayD;
+use ArrayD;
 
 /// Photoacoustic solver implementation
 pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
@@ -253,7 +253,7 @@ mod tests {
         let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);
 
         // Test fluence to pressure conversion
-        let fluence = ArrayD::from_elem(ndarray::IxDyn(&[5, 5, 5]), 100.0); // 100 J/m²
+        let fluence = ArrayD::from_elem(usize(&[5, 5, 5]), 100.0); // 100 J/m²
         let pressure = pa_solver.compute_initial_pressure(&fluence).unwrap();
 
         // Pressure should be positive and proportional to fluence

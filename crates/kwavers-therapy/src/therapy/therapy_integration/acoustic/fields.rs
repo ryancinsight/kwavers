@@ -2,7 +2,7 @@ use super::AcousticWaveSolver;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_source::Source;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 impl AcousticWaveSolver {

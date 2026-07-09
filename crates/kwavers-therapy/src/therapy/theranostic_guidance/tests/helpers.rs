@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 use std::collections::VecDeque;
 
 use super::super::{Point2, Point3};

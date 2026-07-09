@@ -1,7 +1,11 @@
 //! Rayleigh-Sommerfeld angular-spectrum solver dispatch.
 
 use kwavers_math::fft::Complex64;
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 
 use crate::dispatch::shared::{next_pow2, trim_initial_recorder_sample};
 use crate::types::{SimulationRunRequest, SimulationRunResult};

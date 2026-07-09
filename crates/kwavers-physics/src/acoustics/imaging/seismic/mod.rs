@@ -9,7 +9,7 @@
 //!    48(11), 1514-1524.
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 pub mod eikonal;
 pub mod kirchhoff;

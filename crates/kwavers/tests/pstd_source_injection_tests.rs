@@ -35,7 +35,7 @@ use kwavers_solver::interface::Solver;
 use kwavers_source::{
     GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Helper: run PSTD for `nt` steps and return max |p| over the pressure field.

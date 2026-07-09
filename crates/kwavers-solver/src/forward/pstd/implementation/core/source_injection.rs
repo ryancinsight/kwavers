@@ -25,7 +25,7 @@
 //! <https://doi.org/10.1117/1.3360308>
 
 use kwavers_source::SourceInjectionMode;
-use ndarray::Array3;
+use leto::Array3;
 use tracing::debug;
 
 /// Classify how `mask` should be injected during PSTD time-stepping.
@@ -119,7 +119,7 @@ pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Single active voxel in the interior → normalised (scale = 1.0 / 1 = 1.0).
     /// # Panics

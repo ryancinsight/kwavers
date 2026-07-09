@@ -1,7 +1,7 @@
 use super::super::phase_correction::TranscranialAberrationCorrection;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
-use ndarray::Array3;
+use leto::Array3;
 
 impl TranscranialAberrationCorrection {
     /// Calculate focal acoustic intensity at the target using trilinear interpolation.

@@ -7,7 +7,7 @@ use super::core::DGSolver;
 use super::topology::{CoefficientLayout, DgTopology};
 use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl DGSolver {
     pub(super) fn ensure_rk_workspace(&mut self, dim: (usize, usize, usize)) {

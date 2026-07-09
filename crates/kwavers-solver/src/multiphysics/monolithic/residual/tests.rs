@@ -3,7 +3,7 @@ use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm;
 use crate::integration::nonlinear::GMRESConfig;
 use kwavers_field::UnifiedFieldType;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_compute_residual_zero_fields() {

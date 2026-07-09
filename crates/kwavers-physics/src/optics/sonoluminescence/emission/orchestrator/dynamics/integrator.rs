@@ -6,7 +6,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::thermodynamic::BUBBLE_REFERENCE_TEMPERATURE_K;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::emission_calculator::SonoluminescenceEmission;
 use super::thermodynamics::update_thermodynamics;

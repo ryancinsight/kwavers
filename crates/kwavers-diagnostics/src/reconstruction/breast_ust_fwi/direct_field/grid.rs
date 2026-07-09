@@ -1,7 +1,7 @@
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 

@@ -5,7 +5,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::frequency_operator::FrequencyOperator;
 use kwavers_core::constants::numerical::TWO_PI;

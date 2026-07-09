@@ -2,7 +2,7 @@
 
 use super::{MLModel, MlModelMetadata};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Outcome prediction model
 #[derive(Debug)]
@@ -56,7 +56,7 @@ impl MLModel for OutcomePredictorModel {
             ));
         }
 
-        let mean = input.mean_axis(ndarray::Axis(1)).ok_or_else(|| {
+        let mean = input.mean_axis(1).ok_or_else(|| {
             kwavers_core::error::KwaversError::Validation(
                 kwavers_core::error::ValidationError::FieldValidation {
                     field: "input".to_owned(),

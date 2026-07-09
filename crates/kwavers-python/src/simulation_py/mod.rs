@@ -10,10 +10,10 @@ pub use gpu::GpuPstdSession;
 
 /// Elastic velocity source bundle: (mask, ux_signal, uy_signal, uz_signal, mode).
 pub(crate) type ElasticVelocitySource = Option<(
-    ndarray::Array3<bool>,
-    Option<ndarray::Array1<f64>>,
-    Option<ndarray::Array1<f64>>,
-    Option<ndarray::Array1<f64>>,
+    leto::Array3<bool>,
+    Option<leto::Array1<f64>>,
+    Option<leto::Array1<f64>>,
+    Option<leto::Array1<f64>>,
     String,
 )>;
 

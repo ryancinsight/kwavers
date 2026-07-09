@@ -27,7 +27,7 @@
 //!   reconstruction of photoacoustic wave fields." Journal of Biomedical Optics, 15(2).
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use serde::{Deserialize, Serialize};
 
 mod corrections;

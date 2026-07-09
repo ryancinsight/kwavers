@@ -7,7 +7,7 @@
 //! to within the transform's f32 round-trip tolerance, and that
 //! sub-`p_eps` pressures are compressed instead of vanishing.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::ParamFieldPINNConfig;
 use super::super::forward::{infer_grid, GridQueryParams};

@@ -78,7 +78,7 @@ pub trait Solver: Debug + Send + Sync {
     /// downcasting to the concrete solver type. Allocating once at the end of
     /// a run is acceptable; callers that want zero-copy access should hold a
     /// concrete-typed reference and use the inherent view accessors.
-    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+    fn recorded_sensor_pressure(&self) -> Option<leto::Array2<f64>> {
         None
     }
 

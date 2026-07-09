@@ -253,7 +253,7 @@ impl PSTDSolver {
 
         // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.
         let shape = self.fields.p.shape();
-        let mut old_p = ndarray::Array3::zeros((shape[0], shape[1], shape[2]));
+        let mut old_p = leto::Array3::zeros((shape[0], shape[1], shape[2]));
         for (dst, src) in old_p.iter_mut().zip(self.fields.p.iter()) {
             *dst = *src;
         }

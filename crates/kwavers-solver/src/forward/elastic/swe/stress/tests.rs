@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// fd1_x on a linear field f = A*x gives the constant A at all interior points.
 /// # Panics

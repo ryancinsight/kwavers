@@ -3,7 +3,7 @@
 use std::collections::HashMap;
 
 use log::{debug, warn};
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

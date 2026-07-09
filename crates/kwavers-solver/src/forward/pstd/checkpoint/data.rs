@@ -39,7 +39,10 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 

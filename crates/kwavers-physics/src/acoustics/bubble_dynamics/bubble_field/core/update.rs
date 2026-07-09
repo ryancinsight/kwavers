@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 

@@ -17,7 +17,7 @@ use crate::acoustics::analysis::calculate_mechanical_index;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use crate::parallel::zip_mut_ref;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water
 /// at 1 MHz, based on the Apfel-Holland theoretical framework.
@@ -232,7 +232,7 @@ impl CavitationCore for CavitationModel {
 mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MPA_TO_PA;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// `CavitationModel::new` defaults to the MechanicalIndex threshold model.
     #[test]

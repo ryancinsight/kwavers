@@ -4,7 +4,7 @@ use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
 use crate::parallel::zip_mut_ref;
 use kwavers_core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Cavitation damage model

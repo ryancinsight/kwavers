@@ -4,7 +4,7 @@
 //! resampling path in the codebase. Physical-coordinate callers that carry a
 //! grid spacing should divide physical coordinates by the spacing before calling.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Bilinear interpolation at fractional array indices.
 ///

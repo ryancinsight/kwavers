@@ -15,7 +15,11 @@ use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
 #[cfg(feature = "gpu")]
 use leto::Array3 as LetoArray3;
-use ndarray::{s, Array2, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 use kwavers_math::fft::Complex64;
 
 mod signal;

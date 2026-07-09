@@ -6,7 +6,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Trait for discontinuity detection
 pub trait DiscontinuityDetection: Send + Sync {

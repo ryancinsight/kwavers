@@ -124,7 +124,7 @@
 //! ```rust,ignore
 //! #[cfg(feature = "experimental-neural")]
 //! use kwavers_analysis::signal_processing::beamforming::experimental::NeuralBeamformer;
-//! use ndarray::Array2;
+//! use leto::Array2;
 //!
 //! // ⚠️ EXPERIMENTAL: Not for production use ⚠️
 //! let model_path = "trained_models/neural_beamformer_v1.onnx";

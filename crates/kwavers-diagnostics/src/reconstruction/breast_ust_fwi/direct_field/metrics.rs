@@ -6,7 +6,10 @@ use super::BreastUstDirectFieldDiagnostics;
 use crate::reconstruction::breast_ust_fwi::BreastUstPstdDatasetConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use ndarray::{s, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array3,
+};
 use kwavers_math::fft::Complex64;
 
 pub(super) fn diagnostics_for_prediction(

@@ -1,6 +1,6 @@
 //! Forward prediction sign contract.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{predict_sound_speed_time_shifts, SoundSpeedShiftConfig, SoundSpeedShiftSample};
 use kwavers_solver::inverse::same_aperture::PlanarPoint;

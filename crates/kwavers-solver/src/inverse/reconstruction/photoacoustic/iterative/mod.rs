@@ -7,7 +7,11 @@ mod iterations;
 mod system;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array3, ArrayView2};
+use leto::{
+    Array1,
+    Array3,
+    ArrayView2,
+};
 
 use super::algorithms::PhotoacousticAlgorithm;
 use super::config::ReconstructionPhotoacousticConfig;

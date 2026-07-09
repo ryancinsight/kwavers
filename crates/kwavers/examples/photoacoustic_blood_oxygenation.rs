@@ -27,7 +27,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
 use kwavers_optics::chromophores::HemoglobinDatabase;
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 fn main() -> Result<()> {

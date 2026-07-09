@@ -39,7 +39,7 @@ pub use wavelet::{WaveletBasis, WaveletTransform};
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Adaptive Mesh Refinement solver
 #[derive(Debug)]

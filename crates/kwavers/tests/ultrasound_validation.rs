@@ -21,7 +21,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::InversionMethod;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
 
 /// Simple finite difference derivative computation for validation

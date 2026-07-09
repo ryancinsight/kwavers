@@ -1,7 +1,7 @@
 //! In-place array operations for memory-efficient solver computations.
 
 use moirai_parallel::{enumerate_mut_with, for_each_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Add two arrays in-place: `a += b`.
 #[inline]

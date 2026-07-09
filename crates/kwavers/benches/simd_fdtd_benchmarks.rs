@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_math::simd_safe::SimdOps;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Generate test data for FDTD benchmarking
 fn generate_test_data(

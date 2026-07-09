@@ -12,7 +12,7 @@ mod forward;
 mod helpers;
 mod passive_inverse;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::metrics::metrics_from_score;
 use super::types::{

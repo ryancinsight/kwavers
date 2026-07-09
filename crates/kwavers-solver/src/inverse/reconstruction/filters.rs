@@ -1,7 +1,7 @@
 //! Reconstruction filter implementations
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 use super::config::ReconstructionFilterType;

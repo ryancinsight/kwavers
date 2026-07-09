@@ -1,7 +1,10 @@
 use super::super::types::{FeatureMap, LesionDetection};
 use super::NeuralClinicalDecisionSupport;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 impl NeuralClinicalDecisionSupport {
     /// Detect lesions.

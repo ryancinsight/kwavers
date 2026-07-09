@@ -6,7 +6,7 @@ use super::metrics::SweGpuStepMetrics;
 use super::types::{GPUInversionResult, GPUPropagationResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Legacy 3D elastic-wave GPU performance model.

@@ -6,7 +6,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::geometry::Point2;
 use super::super::medium::PreparedTheranosticSlice;
@@ -160,7 +160,7 @@ fn arrival_half_window_samples(dt_s: f64, frequency_hz: f64) -> usize {
 mod tests {
     use super::*;
     use kwavers_solver::inverse::same_aperture::C_REF_M_S;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn residual_migration_samples_expected_arrival() {

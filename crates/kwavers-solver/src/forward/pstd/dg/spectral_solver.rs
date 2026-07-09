@@ -11,7 +11,7 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 use std::sync::Arc;
 
@@ -321,7 +321,7 @@ mod tests {
     use super::RegionPSTDSolver;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::sync::Arc;
 
     #[test]

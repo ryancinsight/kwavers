@@ -12,7 +12,7 @@
 //! - Misaridis & Jensen (2005), "Use of modulated excitation signals"
 
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array1;
+use leto::Array1;
 use num_complex::Complex64;
 use std::f64::consts::PI;
 

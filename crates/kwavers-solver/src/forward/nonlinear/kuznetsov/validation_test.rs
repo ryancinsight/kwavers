@@ -13,7 +13,7 @@ mod tests {
     use kwavers_medium::HomogeneousMedium;
     use kwavers_physics::traits::AcousticWaveModel;
     use kwavers_source::PointSource;
-    use ndarray::Array4;
+    use leto::Array4;
 
     /// Test linear wave propagation (nonlinearity = 0, diffusivity = 0)
     /// Should match standard linear acoustic wave equation
@@ -47,7 +47,7 @@ mod tests {
 
         // Initialize pressure field
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let prev_pressure = fields.index_axis(0, 0).to_owned();
 
         // Propagate for fewer time steps for fast validation
         let n_steps = 20;
@@ -59,7 +59,7 @@ mod tests {
         }
 
         // Check that wave has propagated outward
-        let pressure = fields.index_axis(ndarray::Axis(0), 0);
+        let pressure = fields.index_axis(0, 0);
         let center_val = pressure[[grid.nx / 2, grid.ny / 2, grid.nz / 2]].abs();
         let edge_val = pressure[[0, grid.ny / 2, grid.nz / 2]].abs();
 
@@ -86,7 +86,7 @@ mod tests {
         let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, 32, 32, 32));
-        let prev = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let prev = fields.index_axis(0, 0).to_owned();
 
         // This should not produce a warning for homogeneous media
         solver
@@ -126,7 +126,7 @@ mod tests {
 
         // Initialize with Gaussian pulse
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let mut pressure = fields.index_axis_mut(ndarray::Axis(0), 0);
+        let mut pressure = fields.index_axis_mut(0, 0);
 
         // Create initial Gaussian pulse
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -156,7 +156,7 @@ mod tests {
         }
 
         // Compute final energy
-        let final_pressure = fields.index_axis(ndarray::Axis(0), 0);
+        let final_pressure = fields.index_axis(0, 0);
         let final_energy: f64 = final_pressure.iter().map(|&p| p * p).sum();
 
         // A pressure-only Gaussian with zero initial velocity is NOT a traveling
@@ -220,7 +220,7 @@ mod tests {
 
         // Initialize with Gaussian pulse
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let mut pressure = fields.index_axis_mut(ndarray::Axis(0), 0);
+        let mut pressure = fields.index_axis_mut(0, 0);
 
         // Create initial Gaussian pulse
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -250,7 +250,7 @@ mod tests {
         }
 
         // Compute final energy
-        let final_pressure = fields.index_axis(ndarray::Axis(0), 0);
+        let final_pressure = fields.index_axis(0, 0);
         let final_energy: f64 = final_pressure.iter().map(|&p| p * p).sum();
 
         // Verify solver ran without panicking and energy is in reasonable range
@@ -295,7 +295,7 @@ mod tests {
         let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let prev_pressure = fields.index_axis(0, 0).to_owned();
 
         // Propagate to allow nonlinear effects to develop
         let n_steps = 1000;
@@ -307,7 +307,7 @@ mod tests {
         }
 
         // Analyze spectrum at a propagated distance
-        let pressure = fields.index_axis(ndarray::Axis(0), 0);
+        let pressure = fields.index_axis(0, 0);
         let probe_value = pressure[[grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2]];
 
         // Nonlinear propagation produces energy at harmonics
@@ -360,7 +360,7 @@ mod tests {
         for ((_, i, _, _), p) in fields.indexed_iter_mut() {
             *p = amplitude * (TWO_PI * m as f64 * i as f64 / nx as f64).sin();
         }
-        let prev = fields.index_axis(ndarray::Axis(0), 0).to_owned();
+        let prev = fields.index_axis(0, 0).to_owned();
 
         // The pure tone has zero second-harmonic content at t = 0.
         let line0: Vec<f64> = (0..nx).map(|i| fields[[0, i, 8, 8]]).collect();

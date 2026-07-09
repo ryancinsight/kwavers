@@ -36,7 +36,10 @@ use kwavers_physics::acoustics::therapy::sonogenetics::{
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
     pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use numpy::{ToPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

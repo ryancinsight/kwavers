@@ -2,7 +2,7 @@ use super::super::config::PinnConfig;
 use super::core::PinnWave1D;
 use coeus_autograd::Var;
 use coeus_core::MoiraiBackend;
-use ndarray::Array1;
+use leto::Array1;
 
 type TestBackend = MoiraiBackend;
 

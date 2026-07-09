@@ -1,6 +1,9 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, ArrayView2};
+use leto::{
+    Array1,
+    ArrayView2,
+};
 use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {

@@ -5,7 +5,7 @@ use consus_core::{ByteOrder, Datatype};
 use consus_hdf5::dataset::StorageLayout;
 use consus_hdf5::file::Hdf5File;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn read_dataset_payload<R: consus_io::ReadAt + Sync>(
     hdf5: &Hdf5File<R>,

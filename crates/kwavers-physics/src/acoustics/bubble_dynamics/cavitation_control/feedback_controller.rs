@@ -11,7 +11,7 @@ pub use super::control::{ControlOutput, ControlStrategy, FeedbackConfig};
 pub use super::detection::CavitationMetrics;
 use super::detection::{CavitationDetector, SpectralDetector};
 use super::pid_controller::{PIDConfig, PIDController, PIDGains};
-use ndarray::ArrayView1;
+use leto::ArrayView1;
 
 /// Main feedback controller
 pub struct FeedbackController {
@@ -177,7 +177,7 @@ impl FeedbackController {
 mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array1;
+    use leto::Array1;
 
     #[test]
     fn test_feedback_controller_creation() {

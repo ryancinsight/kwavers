@@ -3,7 +3,7 @@
 use super::config::GMRESConfig;
 use super::solver::GMRESSolver;
 use approx::assert_relative_eq;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_gmres_identity_matrix() {

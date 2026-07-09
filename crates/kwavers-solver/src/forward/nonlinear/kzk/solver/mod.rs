@@ -32,7 +32,10 @@ mod traits;
 #[cfg(test)]
 mod tests;
 
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;

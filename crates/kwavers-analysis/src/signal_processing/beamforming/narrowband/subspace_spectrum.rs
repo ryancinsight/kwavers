@@ -25,7 +25,10 @@ use crate::signal_processing::beamforming::narrowband::snapshots::{
 };
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use eunomia::Complex64;
 
 /// Method selector for the subspace localization map.

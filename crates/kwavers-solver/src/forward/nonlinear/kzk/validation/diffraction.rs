@@ -5,7 +5,7 @@ mod tests {
     use super::super::super::*;
     use crate::forward::nonlinear::kzk::constants::*;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array2;
+    use leto::Array2;
     use std::f64::consts::PI;
 
     /// Test linear propagation of Gaussian beam (COMPREHENSIVE - Tier 3)

@@ -6,7 +6,7 @@
 //! - Hamilton, M. F. & Blackstock, D. T. (1998). Nonlinear Acoustics, Ch. 3.
 //! - Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::solver::FdtdSolver;
 

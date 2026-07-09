@@ -21,7 +21,11 @@
 //! binding divides by `ρ·cp` to produce K/s, which is what
 //! `ThermalDiffusionSolver::update` expects for its `external_source` argument.
 
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use numpy::{ToPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -355,7 +359,7 @@ impl ThermalSimulation {
         let temperature_at_sensors: Option<Py<PyArray2<f64>>> = if n_sensors > 0 {
             Some(
                 sensor_data
-                    .slice(ndarray::s![..n_sensors, ..])
+                    .index_axis::<1>(0, ..n_sensors)
                     .to_owned()
                     .to_pyarray(py)
                     .into(),

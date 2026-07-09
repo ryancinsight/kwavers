@@ -1,6 +1,6 @@
 use std::f64::consts::PI;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::transducers::focused::BowlTransducer;
@@ -330,7 +330,7 @@ pub fn angle_span(layout: &DeviceLayout) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn transcranial_projection_ring_is_focus_relative() {

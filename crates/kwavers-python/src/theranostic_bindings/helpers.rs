@@ -5,12 +5,15 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     DevicePlacementMetrics, PlacementContext, Point3, ReconstructionMetrics,
     VolumeReconstructionMetrics,
 };
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-pub(super) fn labels_from_volume(volume: ndarray::Array3<f64>) -> ndarray::Array3<i16> {
+pub(super) fn labels_from_volume(volume: leto::Array3<f64>) -> leto::Array3<i16> {
     volume.mapv(|value| value.round().clamp(i16::MIN as f64, i16::MAX as f64) as i16)
 }
 

@@ -193,7 +193,7 @@ pub(crate) fn build_simulation_result(
     let nz = grid.nz.max(1);
     let nx = grid.nx;
 
-    let time_vec = ndarray::Array1::linspace(0.0, dt * (time_steps as f64 - 1.0), time_steps);
+    let time_vec = leto::Array1::linspace(0.0, dt * (time_steps as f64 - 1.0), time_steps);
     let time_array = PyArray1::from_owned_array(py, time_vec).unbind();
 
     let final_time = dt * (time_steps as f64 - 1.0);
@@ -212,13 +212,13 @@ pub(crate) fn build_simulation_result(
 
     // Sampled statistics
     let (p_max, p_min, p_rms, p_final) = if let Some(ref stats) = result.stats {
-        let p_max_nd: ndarray::Array1<f64> =
+        let p_max_nd: leto::Array1<f64> =
             stats.p_max.clone().try_into().expect("sample p_max must convert");
-        let p_min_nd: ndarray::Array1<f64> =
+        let p_min_nd: leto::Array1<f64> =
             stats.p_min.clone().try_into().expect("sample p_min must convert");
-        let p_rms_nd: ndarray::Array1<f64> =
+        let p_rms_nd: leto::Array1<f64> =
             stats.p_rms.clone().try_into().expect("sample p_rms must convert");
-        let p_final_nd: ndarray::Array1<f64> =
+        let p_final_nd: leto::Array1<f64> =
             stats.p_final.clone().try_into().expect("sample p_final must convert");
         (
             Some(PyArray1::from_owned_array(py, p_max_nd).unbind()),
@@ -284,23 +284,23 @@ pub(crate) fn build_simulation_result(
     // Velocity statistics
     let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
         if let Some(ref vstats) = result.velocity_stats {
-            let ux_max_nd: ndarray::Array1<f64> =
+            let ux_max_nd: leto::Array1<f64> =
                 vstats.ux_max.clone().try_into().expect("ux_max must convert");
-            let ux_min_nd: ndarray::Array1<f64> =
+            let ux_min_nd: leto::Array1<f64> =
                 vstats.ux_min.clone().try_into().expect("ux_min must convert");
-            let ux_rms_nd: ndarray::Array1<f64> =
+            let ux_rms_nd: leto::Array1<f64> =
                 vstats.ux_rms.clone().try_into().expect("ux_rms must convert");
-            let uy_max_nd: ndarray::Array1<f64> =
+            let uy_max_nd: leto::Array1<f64> =
                 vstats.uy_max.clone().try_into().expect("uy_max must convert");
-            let uy_min_nd: ndarray::Array1<f64> =
+            let uy_min_nd: leto::Array1<f64> =
                 vstats.uy_min.clone().try_into().expect("uy_min must convert");
-            let uy_rms_nd: ndarray::Array1<f64> =
+            let uy_rms_nd: leto::Array1<f64> =
                 vstats.uy_rms.clone().try_into().expect("uy_rms must convert");
-            let uz_max_nd: ndarray::Array1<f64> =
+            let uz_max_nd: leto::Array1<f64> =
                 vstats.uz_max.clone().try_into().expect("uz_max must convert");
-            let uz_min_nd: ndarray::Array1<f64> =
+            let uz_min_nd: leto::Array1<f64> =
                 vstats.uz_min.clone().try_into().expect("uz_min must convert");
-            let uz_rms_nd: ndarray::Array1<f64> =
+            let uz_rms_nd: leto::Array1<f64> =
                 vstats.uz_rms.clone().try_into().expect("uz_rms must convert");
             (
                 Some(PyArray1::from_owned_array(py, ux_max_nd).unbind()),

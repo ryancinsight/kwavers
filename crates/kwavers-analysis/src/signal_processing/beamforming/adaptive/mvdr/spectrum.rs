@@ -1,7 +1,10 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 use super::{validate_real_positive_denominator, MinimumVariance};
 

@@ -26,7 +26,7 @@ fn test_prediction_statistics() {
     // predictions[i] = all (i as f32) on (10, 20); i in 0..5
     // Mean = (0+1+2+3+4)/5 = 2.0
     // Variance (Bessel) = ((4+1+0+1+4)/4) = 2.5; std dev ≈ 1.5811
-    use ndarray::Array2;
+    use leto::Array2;
     let config = BayesianConfig {
         dropout_rate: 0.1,
         num_samples: 5,
@@ -97,7 +97,7 @@ fn test_prediction_statistics_empty_rejects() {
 fn test_uncertainty_decomposition() {
     // predictions: 1.0, 1.1, 0.9 on (5,5)
     // Mean = 1.0; std dev ≈ 0.1; epistemic = aleatoric = 0.5 * total; ratio = 1.0
-    use ndarray::Array2;
+    use leto::Array2;
     let config = BayesianConfig::default();
     let bayesian = MlBayesianPINN::new(config).unwrap();
     let predictions = vec![
@@ -133,7 +133,7 @@ fn test_uncertainty_decomposition() {
 
 #[test]
 fn test_uncertainty_decomposition_rejects_single_prediction() {
-    use ndarray::Array2;
+    use leto::Array2;
     let bayesian = MlBayesianPINN::new(BayesianConfig::default()).unwrap();
     let err = bayesian
         .decompose_uncertainty(&[Array2::from_elem((3, 3), 1.0_f32)])

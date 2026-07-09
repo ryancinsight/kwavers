@@ -1,6 +1,6 @@
 //! Medium and speed helpers for the 2-D acoustic waveform simulation.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::medium::PreparedTheranosticSlice;

@@ -15,7 +15,13 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
-use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
+use leto::{
+    Array2,
+    Array3,
+    Array4,
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
     let shape = field.shape();

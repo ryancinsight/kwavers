@@ -19,7 +19,7 @@
 use super::super::core::DGSolver;
 use super::super::topology::DgTopology;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 mod boundary;
 mod cpml;

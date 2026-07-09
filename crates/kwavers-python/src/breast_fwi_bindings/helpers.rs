@@ -9,7 +9,11 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::{s, Array2, Array3};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 use num_complex::Complex64;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

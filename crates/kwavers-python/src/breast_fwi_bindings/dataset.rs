@@ -6,7 +6,7 @@ use super::PyMultiRowRingArray;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     generate_breast_ust_pstd_frequency_dataset, BreastUstPstdDatasetConfig,
 };
-use ndarray::Array1;
+use leto::Array1;
 use numpy::{ToPyArray, PyReadonlyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;

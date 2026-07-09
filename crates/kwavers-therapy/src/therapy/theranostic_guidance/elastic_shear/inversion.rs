@@ -17,7 +17,10 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::ElasticPstdVelocitySource;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::exposure::normalize_positive;

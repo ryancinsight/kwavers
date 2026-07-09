@@ -78,7 +78,7 @@
 /// ```ignore
 /// use kwavers::solver::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 /// use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
-/// use ndarray::Array2;
+/// use leto::Array2;
 ///
 /// let config = KZKConfig::default();
 /// let dz = config.dz;
@@ -127,7 +127,7 @@ pub trait KZKSolverTrait {
     /// ## Returns
     ///
     /// `Array2<f64>` of shape `(nx, ny)` with units of Pa.
-    fn current_field(&self) -> ndarray::Array2<f64>;
+    fn current_field(&self) -> leto::Array2<f64>;
 
     /// Return the peak positive pressure field (Pa) at the current z-plane.
     ///
@@ -144,10 +144,10 @@ pub trait KZKSolverTrait {
     ///
     /// Returns zeros.  Backends with direct 3D array access should override
     /// this with an efficient implementation.
-    fn peak_pressure(&self) -> ndarray::Array2<f64> {
+    fn peak_pressure(&self) -> leto::Array2<f64> {
         // Default: return zeros as a sentinel value.
         // Implementations with 3D pressure access should override this.
         let rms = self.current_field();
-        ndarray::Array2::zeros(rms.raw_dim())
+        leto::Array2::zeros(rms.raw_dim())
     }
 }

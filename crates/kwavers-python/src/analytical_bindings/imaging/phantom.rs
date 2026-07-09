@@ -1,7 +1,7 @@
 //! IVUS phantom construction bindings.
 
 use kwavers_physics::analytical::imaging;
-use ndarray::Array2;
+use leto::Array2;
 use numpy::ToPyArray;
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

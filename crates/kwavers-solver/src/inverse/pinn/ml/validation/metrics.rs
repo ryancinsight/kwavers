@@ -2,7 +2,7 @@
 
 use super::PinnValidationMetrics;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Compute MAE, RMSE, relative L2 error, and max pointwise error.
 /// # Errors

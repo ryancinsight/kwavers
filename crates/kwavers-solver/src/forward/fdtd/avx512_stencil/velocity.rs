@@ -16,7 +16,7 @@
 
 use super::FdtdAvx512StencilProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 impl FdtdAvx512StencilProcessor {
     /// Update velocity field with AVX-512 acceleration.

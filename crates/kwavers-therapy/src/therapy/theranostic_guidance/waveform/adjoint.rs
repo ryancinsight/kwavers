@@ -175,7 +175,7 @@
 //!
 //! Total cost: ≈ 1.5 × forward passes.  Memory: O(√T · N²).
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::forward::{apply_attenuation, c2dt2_field, inject_sources, step_wavefield_cpml};
 use super::types::{AcousticGrid, CheckpointSchedule};

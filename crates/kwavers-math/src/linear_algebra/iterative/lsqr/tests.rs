@@ -1,7 +1,10 @@
 use super::matfree::{solve_lsqr_matfree, MatFreeOperator};
 use super::solver::LsqrSolver;
 use super::types::{LsqrConfig, StopReason};
-use ndarray::{arr1, Array2};
+use leto::{
+    /* arr1 -- no leto equivalent */,
+    Array2,
+};
 
 // ─── Matrix-free LSQR tests ──────────────────────────────────────────────────
 

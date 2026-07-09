@@ -1,7 +1,7 @@
 use super::super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 use num_complex::Complex;
 
 impl TranscranialAberrationCorrection {
@@ -12,7 +12,7 @@ impl TranscranialAberrationCorrection {
     pub(super) fn simulate_corrected_field(
         &self,
         correction: &PhaseCorrection,
-        _skull_model: &ndarray::Array3<f64>,
+        _skull_model: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         _target_point: &[f64; 3],
     ) -> KwaversResult<Array3<f64>> {

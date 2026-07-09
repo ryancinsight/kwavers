@@ -4,7 +4,7 @@ use super::super::backend::AcousticSolverBackend;
 use super::backend::FdtdBackend;
 use kwavers_core::error::KwaversResult;
 use kwavers_source::Source;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 impl AcousticSolverBackend for FdtdBackend {

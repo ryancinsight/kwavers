@@ -1,5 +1,5 @@
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute acoustic observables from a pressure field.
 ///

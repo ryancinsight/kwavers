@@ -1,6 +1,6 @@
 //! Quality monitoring for interface coupling
 
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::VecDeque;
 
 const MAX_HISTORY_SIZE: usize = 100;

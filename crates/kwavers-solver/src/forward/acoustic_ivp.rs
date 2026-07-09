@@ -23,7 +23,7 @@
 //! already available from the source-injection operator.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute the spectral IVP velocity scale from the source-injection phase factor.
 ///
@@ -65,7 +65,7 @@ mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::f64::consts::FRAC_PI_4;
 
     #[test]

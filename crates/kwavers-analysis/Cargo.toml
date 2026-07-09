@@ -20,11 +20,9 @@ kwavers-signal = { path = "../kwavers-signal" }
 kwavers-solver = { path = "../kwavers-solver" }
 apollo = { workspace = true }
 eunomia = { workspace = true }
-ndarray = { version = "0.16", features = ["serde"] }
 leto = { workspace = true }
 leto-ops = { workspace = true }
 moirai-parallel = { workspace = true }
-num-traits = "0.2"
 rand = "0.8"
 log = "0.4"
 anyhow = "1.0"

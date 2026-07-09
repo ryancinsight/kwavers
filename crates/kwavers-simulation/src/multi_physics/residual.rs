@@ -1,7 +1,7 @@
 //! Residual metrics for coupled multi-physics convergence.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 /// Compute the L-infinity update residual between two scalar fields.
 ///
@@ -49,7 +49,7 @@ pub(super) fn max_abs_difference(
 mod tests {
     use super::max_abs_difference;
     use kwavers_core::error::KwaversError;
-    use ndarray::array;
+    use array;
 
     #[test]
     fn max_abs_difference_returns_l_infinity_norm() {

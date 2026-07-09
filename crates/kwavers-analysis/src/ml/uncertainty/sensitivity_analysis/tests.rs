@@ -2,7 +2,7 @@
 
 use super::analyzer::SensitivityAnalyzer;
 use super::config::SensitivityConfig;
-use ndarray::Array1;
+use leto::Array1;
 
 #[test]
 fn test_sensitivity_analyzer_creation() {

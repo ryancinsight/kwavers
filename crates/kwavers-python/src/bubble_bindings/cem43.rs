@@ -21,7 +21,7 @@
 //! - Sapareto & Dewey (1984) Int. J. Radiat. Oncol. Biol. Phys. 10(6):787
 
 use kwavers_physics::analytical::safety::cem43_cumulative;
-use ndarray::Array1;
+use leto::Array1;
 use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

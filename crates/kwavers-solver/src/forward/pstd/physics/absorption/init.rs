@@ -37,7 +37,7 @@ use kwavers_physics::acoustics::mechanics::absorption::{
     np_m_to_power_law_db_cm, power_law_db_cm_to_np_omega_m, AbsorptionMode,
 };
 use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
-use ndarray::Array3;
+use leto::Array3;
 
 fn map_real_field(input: &Array3<f64>, mut map: impl FnMut(f64) -> f64) -> Array3<f64> {
     let shape = input.shape();

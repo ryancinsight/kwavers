@@ -67,7 +67,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     use crate::acoustics::traits::LightDiffusionModelTrait;
     use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
     use kwavers_field::indices::LIGHT_IDX;
-    use ndarray::Array4;
+    use leto::Array4;
 
     let grid = kwavers_grid::Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let props = DiffusionOpticalProperties {
@@ -79,7 +79,7 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
 
     let phi0 = 1.0_f64;
     let mut fields: Array4<f64> = Array4::from_elem((LIGHT_IDX + 1, 8, 8, 8), phi0);
-    let source: ndarray::Array3<f64> = ndarray::Array3::zeros((8, 8, 8));
+    let source: leto::Array3<f64> = leto::Array3::zeros((8, 8, 8));
     let medium = kwavers_medium::homogeneous::HomogeneousMedium::water(&grid);
     let dt = 1.0e-12_f64; // 1 ps; chosen so dt·c·μₐ ≪ 1 (≈ 2.14e-3).
 

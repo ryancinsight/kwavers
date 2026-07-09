@@ -14,7 +14,7 @@ use kwavers_medium::Medium;
 use kwavers_receiver::recorder::traits::RecorderTrait;
 use kwavers_source::{Source, SourceField};
 use log::{debug, info};
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 use super::field_registry::FieldRegistry;
@@ -328,7 +328,7 @@ impl PluginBasedSolver {
     }
 
     /// Get field by type
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<ndarray::Array3<f64>> {
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<leto::Array3<f64>> {
         self.field_registry
             .get_field(field_type)
             .ok()

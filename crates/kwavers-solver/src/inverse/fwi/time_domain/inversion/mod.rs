@@ -7,7 +7,9 @@ mod shot_gradient;
 use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 
 fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
@@ -31,7 +33,7 @@ impl FwiProcessor {
     ///
     pub fn invert(
         &self,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         initial_model: &Array3<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
@@ -122,7 +124,7 @@ impl FwiProcessor {
     pub(in crate::inverse::fwi::time_domain) fn descent_update(
         &self,
         current_model: &Array3<f64>,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
         dtv_scale: f64,
@@ -172,7 +174,7 @@ impl FwiProcessor {
     pub(in crate::inverse::fwi::time_domain) fn misfit_and_gradient(
         &self,
         current_model: &Array3<f64>,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
         dtv_scale: f64,
@@ -200,7 +202,7 @@ impl FwiProcessor {
     pub(in crate::inverse::fwi::time_domain) fn forward_misfit_raw_gradient(
         &self,
         current_model: &Array3<f64>,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>)> {

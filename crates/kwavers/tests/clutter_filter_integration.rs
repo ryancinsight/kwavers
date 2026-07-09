@@ -13,7 +13,7 @@ use kwavers_analysis::signal_processing::clutter_filter::{
     SvdClutterFilterConfig,
 };
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 /// Generate synthetic functional ultrasound data
@@ -240,7 +240,7 @@ fn test_power_doppler_computation() -> KwaversResult<()> {
     let filtered = svd_filter.filter(&data)?;
 
     // Compute Power Doppler: sum of squared magnitudes over time
-    let pd_image = filtered.mapv(|x| x * x).sum_axis(ndarray::Axis(1));
+    let pd_image = filtered.mapv(|x| x * x).sum_axis(1);
 
     assert_eq!(pd_image.len(), data.dim().0);
     assert!(pd_image.iter().all(|&x| x >= 0.0));
@@ -295,7 +295,7 @@ fn test_realistic_fus_workflow() -> KwaversResult<()> {
     let filtered = svd_filter.filter(&data)?;
 
     // Compute Power Doppler
-    let power_doppler = filtered.mapv(|x| x * x).sum_axis(ndarray::Axis(1));
+    let power_doppler = filtered.mapv(|x| x * x).sum_axis(1);
 
     let original_power: f64 = data.iter().map(|x| x * x).sum();
     let filtered_power: f64 = filtered.iter().map(|x| x * x).sum();

@@ -17,7 +17,10 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use ndarray::{Array3, ArrayView3, Zip};
+use leto::{
+    Array3,
+    ArrayView3,
+};
 
 use kwavers_physics::thermal::diffusion::{
     BioheatParameters, CattaneoVernotte, HyperbolicParameters, PennesBioheat,

@@ -3,7 +3,7 @@
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use kwavers_medium::{ArrayAccess, CoreMedium, HomogeneousMedium};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Test basic medium and grid initialization
 #[test]

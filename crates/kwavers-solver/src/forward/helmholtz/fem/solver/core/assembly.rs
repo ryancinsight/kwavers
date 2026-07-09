@@ -4,7 +4,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use kwavers_medium::Medium;
 use kwavers_mesh::MeshBoundaryType;
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {

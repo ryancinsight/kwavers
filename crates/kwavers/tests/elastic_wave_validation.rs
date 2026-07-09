@@ -69,9 +69,9 @@ struct TestElasticMedium {
     density: f64,
     lame_lambda: f64,
     lame_mu: f64,
-    bubble_radius_field: ndarray::Array3<f64>,
-    bubble_velocity_field: ndarray::Array3<f64>,
-    thermal_field: ndarray::Array3<f64>,
+    bubble_radius_field: leto::Array3<f64>,
+    bubble_velocity_field: leto::Array3<f64>,
+    thermal_field: leto::Array3<f64>,
 }
 
 impl TestElasticMedium {
@@ -80,9 +80,9 @@ impl TestElasticMedium {
             density,
             lame_lambda,
             lame_mu,
-            bubble_radius_field: ndarray::Array3::zeros((1, 1, 1)),
-            bubble_velocity_field: ndarray::Array3::zeros((1, 1, 1)),
-            thermal_field: ndarray::Array3::from_elem((1, 1, 1), 293.15),
+            bubble_radius_field: leto::Array3::zeros((1, 1, 1)),
+            bubble_velocity_field: leto::Array3::zeros((1, 1, 1)),
+            thermal_field: leto::Array3::from_elem((1, 1, 1), 293.15),
         }
     }
 
@@ -140,21 +140,21 @@ impl ElasticProperties for TestElasticMedium {
 
 // Implement other required traits with defaults
 impl ArrayAccess for TestElasticMedium {
-    fn density_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn density_array(&self) -> leto::ArrayView3<'_, f64> {
         // For test purposes, create a small array and return view
         // In production, this would return a view of stored data
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn sound_speed_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn sound_speed_array(&self) -> leto::ArrayView3<'_, f64> {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn absorption_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn absorption_array(&self) -> leto::ArrayView3<'_, f64> {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 
-    fn nonlinearity_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn nonlinearity_array(&self) -> leto::ArrayView3<'_, f64> {
         panic!("ArrayAccess not implemented for test medium - use CoreMedium methods")
     }
 }
@@ -188,16 +188,16 @@ impl AcousticProperties for TestElasticMedium {
 }
 
 impl ElasticArrayAccess for TestElasticMedium {
-    fn lame_lambda_array(&self) -> ndarray::Array3<f64> {
+    fn lame_lambda_array(&self) -> leto::Array3<f64> {
         // Note: This is a simplified test implementation
-        ndarray::Array3::from_elem((10, 10, 10), self.lame_lambda)
+        leto::Array3::from_elem((10, 10, 10), self.lame_lambda)
     }
 
-    fn lame_mu_array(&self) -> ndarray::Array3<f64> {
-        ndarray::Array3::from_elem((10, 10, 10), self.lame_mu)
+    fn lame_mu_array(&self) -> leto::Array3<f64> {
+        leto::Array3::from_elem((10, 10, 10), self.lame_mu)
     }
 
-    fn shear_sound_speed_array(&self) -> ndarray::Array3<f64> {
+    fn shear_sound_speed_array(&self) -> leto::Array3<f64> {
         // Mathematical specification: c_s = sqrt(μ / ρ)
         // where μ is shear modulus (Pa) and ρ is density (kg/m³)
         let shear_speed = if self.density > 0.0 {
@@ -205,7 +205,7 @@ impl ElasticArrayAccess for TestElasticMedium {
         } else {
             0.0
         };
-        ndarray::Array3::from_elem((10, 10, 10), shear_speed)
+        leto::Array3::from_elem((10, 10, 10), shear_speed)
     }
 }
 
@@ -235,11 +235,11 @@ impl ThermalProperties for TestElasticMedium {
 
 // Implement ThermalField trait for test
 impl ThermalField for TestElasticMedium {
-    fn thermal_field(&self) -> &ndarray::Array3<f64> {
+    fn thermal_field(&self) -> &leto::Array3<f64> {
         &self.thermal_field
     }
 
-    fn update_thermal_field(&mut self, _temperature: &ndarray::Array3<f64>) {
+    fn update_thermal_field(&mut self, _temperature: &leto::Array3<f64>) {
         // No-op for test
     }
 }
@@ -289,18 +289,18 @@ impl BubbleProperties for TestElasticMedium {
 }
 
 impl BubbleState for TestElasticMedium {
-    fn bubble_radius(&self) -> &ndarray::Array3<f64> {
+    fn bubble_radius(&self) -> &leto::Array3<f64> {
         &self.bubble_radius_field
     }
 
-    fn bubble_velocity(&self) -> &ndarray::Array3<f64> {
+    fn bubble_velocity(&self) -> &leto::Array3<f64> {
         &self.bubble_velocity_field
     }
 
     fn update_bubble_state(
         &mut self,
-        radius: &ndarray::Array3<f64>,
-        velocity: &ndarray::Array3<f64>,
+        radius: &leto::Array3<f64>,
+        velocity: &leto::Array3<f64>,
     ) {
         self.bubble_radius_field = radius.clone();
         self.bubble_velocity_field = velocity.clone();

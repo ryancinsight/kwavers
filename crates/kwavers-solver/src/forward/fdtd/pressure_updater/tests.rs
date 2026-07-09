@@ -5,11 +5,13 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3 as LetoArray3;
-use ndarray::{Array3, Zip};
+use leto::{
+    Array3,
+};
 
-fn leto_view3(field: &LetoArray3<f64>) -> ndarray::ArrayView3<'_, f64> {
+fn leto_view3(field: &LetoArray3<f64>) -> leto::ArrayView3<'_, f64> {
     let shape = field.shape();
-    ndarray::ArrayView3::from_shape(
+    leto::ArrayView3::from_shape(
         (shape[0], shape[1], shape[2]),
         field
             .as_slice()

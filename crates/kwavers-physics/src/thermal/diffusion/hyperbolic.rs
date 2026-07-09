@@ -6,7 +6,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::ops::Range;
 
 /// Parameters for the Cattaneo-Vernotte hyperbolic heat update.

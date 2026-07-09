@@ -1,7 +1,7 @@
 use super::*;
 use crate::forward::bem::field::BemSolution;
 use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
-use ndarray::Array1;
+use leto::Array1;
 use kwavers_math::fft::Complex64;
 
 fn create_test_mesh() -> TetrahedralMesh {

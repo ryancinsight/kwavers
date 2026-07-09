@@ -79,7 +79,9 @@ pub struct EmpiricalBioDamageModel<T: std::fmt::Debug + Clone> {
     pub necrosis_rate: T,
 }
 
-impl<T: num_traits::Float + std::fmt::Debug + Clone> BioDamageModel for EmpiricalBioDamageModel<T> {
+impl<T: eunomia::FloatElement + std::fmt::Debug + Clone> BioDamageModel
+    for EmpiricalBioDamageModel<T>
+{
     type Scalar = T;
 
     #[inline(always)]

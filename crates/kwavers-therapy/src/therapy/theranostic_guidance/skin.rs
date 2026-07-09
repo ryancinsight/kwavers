@@ -3,7 +3,7 @@
 use std::collections::VecDeque;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 use super::geometry::centered_origin_2d;
 

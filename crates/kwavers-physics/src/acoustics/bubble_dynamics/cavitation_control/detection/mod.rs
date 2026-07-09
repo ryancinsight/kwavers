@@ -11,7 +11,7 @@
 //!
 //! ```rust
 //! use kwavers_physics::cavitation_control::{CavitationDetector, SpectralDetector};
-//! use ndarray::Array1;
+//! use leto::Array1;
 //!
 //! let mut detector = SpectralDetector::new(1e6, 10e6);
 //! let signal = Array1::<f64>::zeros(1024);

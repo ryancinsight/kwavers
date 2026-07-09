@@ -2,7 +2,7 @@ use super::MonolithicCoupler;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 impl MonolithicCoupler {

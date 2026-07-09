@@ -24,7 +24,7 @@
 //! pressure field due to unit-amplitude driving of element i.
 
 use moirai_parallel::{map_collect_with, Adaptive};
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::StandingWaveOptConfig;
 use crate::parallel::{zip_mut_four_refs, zip_mut_ref, zip_two_mut_ref};

@@ -4,7 +4,7 @@ use super::types::{AdaptiveSolution, AdaptiveSolutionStep};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use log::info;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Adaptive resolution techniques for large volumes
 #[derive(Debug)]

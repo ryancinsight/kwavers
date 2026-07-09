@@ -13,7 +13,7 @@
 //! - `k`: Damage rate parameter (0.01 per event)
 
 use super::material::StoneMaterial;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Stone fracture mechanics model.
 #[derive(Debug, Clone)]

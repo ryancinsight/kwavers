@@ -45,7 +45,7 @@ fn test_set_array_position_matches_manual_position_rotation() {
 
     let manual_count = m_manual.iter().filter(|&&b| b).count();
     let native_count = m_native.iter().filter(|&&b| b).count();
-    let inter = ndarray::Zip::from(&m_manual)
+    let inter = leto_ops::zip_from(m_manual)
         .and(&m_native)
         .fold(0usize, |acc, &a, &b| acc + usize::from(a && b));
 

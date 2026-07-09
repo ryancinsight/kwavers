@@ -6,7 +6,10 @@ use crate::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, DopplerResult, WallFilter, WallFilterConfig,
 };
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, ArrayView3};
+use leto::{
+    Array2,
+    ArrayView3,
+};
 use num_complex::Complex64;
 
 /// Color flow imaging configuration
@@ -126,7 +129,10 @@ mod tests {
     use crate::signal_processing::doppler::{
         AutocorrelationConfig, WallFilterConfig, WallFilterType,
     };
-    use ndarray::{Array2, Array3};
+    use leto::{
+    Array2,
+    Array3,
+};
     use num_complex::Complex64;
 
     // Helper: config with HighPass wall filter and no spatial averaging.

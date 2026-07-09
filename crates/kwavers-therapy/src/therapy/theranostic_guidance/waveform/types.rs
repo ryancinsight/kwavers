@@ -1,6 +1,6 @@
 //! Internal and public types for the 2-D acoustic waveform simulation.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Padded 2-D simulation domain that encompasses both the body slice and the
 /// transducer aperture, surrounded by coupling water and CPML on the outer ring.

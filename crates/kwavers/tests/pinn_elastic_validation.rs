@@ -30,7 +30,9 @@ use kwavers_physics::foundations::wave_equation::{
     AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, WaveEquationBoundary,
 };
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D, ElasticPINN2DSolver};
-use ndarray::{Array2, ArrayD};
+use leto::{
+    Array2,
+};
 
 // Import validation framework
 mod elastic_wave_validation_framework;

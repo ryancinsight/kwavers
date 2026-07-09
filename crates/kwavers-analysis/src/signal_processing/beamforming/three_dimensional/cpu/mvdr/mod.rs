@@ -59,7 +59,10 @@
 //!   interference." *IEEE Trans. Acoust. Speech Signal Process.* 33(3), 527–536.
 
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use ndarray::{Array3, Array4};
+use leto::{
+    Array3,
+    Array4,
+};
 
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 use kwavers_core::error::{KwaversError, KwaversResult};

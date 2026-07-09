@@ -20,7 +20,11 @@ use crate::interface::pinn_beamforming::{
     PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
-use ndarray::{Array1, Array2, Array3};
+use leto::{
+    Array1,
+    Array2,
+    Array3,
+};
 use std::sync::{Arc, Mutex};
 
 #[cfg(test)]

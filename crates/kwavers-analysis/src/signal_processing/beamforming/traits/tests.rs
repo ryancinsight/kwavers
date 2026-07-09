@@ -1,6 +1,6 @@
 //! Trait-conformance tests using a mock beamformer.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{Beamformer, TimeDomainBeamformer};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;

@@ -5,7 +5,7 @@
 //! field update so distributed sources contribute additively and Dirichlet
 //! masks override the staggered solve.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::GenericFdtdSolver;
 use kwavers_core::error::KwaversResult;

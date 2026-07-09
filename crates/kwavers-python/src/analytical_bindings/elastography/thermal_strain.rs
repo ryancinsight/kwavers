@@ -5,7 +5,7 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::{
     ThermalStrainConfig, ThermalStrainImager,
 };
 use kwavers_physics::analytical::elastography;
-use ndarray::Array3;
+use leto::Array3;
 use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

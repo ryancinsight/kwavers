@@ -3,8 +3,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
-use ndarray::Array4;
+use leto::Array3;
+use leto::Array4;
 
 // Domain imports
 use kwavers_imaging::ultrasound::ceus::MicrobubblePopulation;

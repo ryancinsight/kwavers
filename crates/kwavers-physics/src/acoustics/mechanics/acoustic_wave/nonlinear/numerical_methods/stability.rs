@@ -2,7 +2,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use log::warn;
 use moirai_parallel::{for_each_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 use std::f64;
 
 use super::super::wave_model::NonlinearWave;
@@ -87,7 +87,7 @@ mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Values beyond `max_pressure` are clamped to ±max_pressure.
     #[test]

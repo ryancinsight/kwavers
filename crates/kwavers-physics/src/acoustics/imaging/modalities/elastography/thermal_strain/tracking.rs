@@ -17,7 +17,10 @@
 //!   tracking methods for ultrasonic elasticity imaging using short-time
 //!   correlation." *IEEE TUFFC*, 46(1), 82–96.
 
-use ndarray::{Array3, ArrayView1};
+use leto::{
+    Array3,
+    ArrayView1,
+};
 
 /// Parameters controlling the cross-correlation displacement estimator.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -102,7 +105,7 @@ pub fn track_line_samples(
     // to store the result; it is not a plain element index.
     #[allow(clippy::needless_range_loop)]
     for z in guard..(nz - guard) {
-        let ref_win = reference.slice(ndarray::s![(z - w)..=(z + w)]);
+        let ref_win = referenceslice(&[(Some((z - w) as isize) as usize, Some(=(z + w) as isize) as usize, 1)]);
         let mut best_corr = f64::NEG_INFINITY;
         let mut best_lag = 0isize;
         // Sample correlation at every integer lag, retaining the three values
@@ -110,7 +113,7 @@ pub fn track_line_samples(
         let mut corr = vec![0.0; (2 * max_lag + 1) as usize];
         for (idx, lag) in (-max_lag..=max_lag).enumerate() {
             let center = (z as isize + lag) as usize;
-            let trk_win = tracked.slice(ndarray::s![(center - w)..=(center + w)]);
+            let trk_win = trackedslice(&[(Some((center - w) as isize) as usize, Some(=(center + w) as isize) as usize, 1)]);
             let c = ncc(ref_win, trk_win);
             corr[idx] = c;
             if c > best_corr {
@@ -145,8 +148,8 @@ pub fn track_axial_displacement(
     let mut field = Array3::zeros((nx, ny, nz));
     for i in 0..nx {
         for j in 0..ny {
-            let ref_line = reference.slice(ndarray::s![i, j, ..]);
-            let trk_line = tracked.slice(ndarray::s![i, j, ..]);
+            let ref_line = reference.slice_with::<1>(&[SliceArg::Index(i as isize), SliceArg::Index(j as isize), SliceArg::All]);
+            let trk_line = tracked.slice_with::<1>(&[SliceArg::Index(i as isize), SliceArg::Index(j as isize), SliceArg::All]);
             let disp_samples = track_line_samples(ref_line, trk_line, params);
             for (z, &d) in disp_samples.iter().enumerate() {
                 field[[i, j, z]] = d * dz;

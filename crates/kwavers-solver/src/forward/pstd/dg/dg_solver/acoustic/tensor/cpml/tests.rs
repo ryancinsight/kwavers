@@ -8,7 +8,7 @@ use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::DGConfig;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 const POLY_ORDER: usize = 2;

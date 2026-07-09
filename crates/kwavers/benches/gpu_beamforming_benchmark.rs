@@ -58,7 +58,10 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Benchmark configuration for a specific problem size
 #[derive(Debug, Clone)]

@@ -4,7 +4,11 @@ use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use leto::Array2 as LetoArray2;
-use ndarray::{s, Array2, Array3, Axis};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+};
 use kwavers_math::fft::Complex64;
 use std::collections::HashMap;
 

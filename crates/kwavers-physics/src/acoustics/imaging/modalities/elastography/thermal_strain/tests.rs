@@ -10,7 +10,11 @@ use super::config::ThermalStrainConfig;
 use super::strain::least_squares_strain;
 use super::tracking::{track_line_samples, TrackingParams};
 use super::{ThermalStrainImager, ThermalStrainResult};
-use ndarray::{Array1, Array3, ArrayView1};
+use leto::{
+    Array1,
+    Array3,
+    ArrayView1,
+};
 
 // ── Deterministic synthetic RF generation (no RNG; reproducible) ──────────────
 

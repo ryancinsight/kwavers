@@ -34,7 +34,10 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 use std::time::Instant;
 

@@ -3,7 +3,7 @@
 //! medium, in 1-D, 2-D, and 3-D.
 
 use super::ViscoacousticMemorySolver;
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 

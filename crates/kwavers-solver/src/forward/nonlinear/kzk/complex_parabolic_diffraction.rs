@@ -17,7 +17,10 @@
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use leto::Array2 as LetoArray2;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{Array2, ArrayViewMut2};
+use leto::{
+    Array2,
+    ArrayViewMut2,
+};
 use kwavers_math::fft::Complex64;
 
 use super::KZKConfig;

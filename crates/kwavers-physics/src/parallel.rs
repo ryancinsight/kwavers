@@ -4,7 +4,10 @@ use moirai_parallel::{
     enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with,
     for_each_chunk_triple_mut_enumerated_with, Adaptive,
 };
-use ndarray::{ArrayView3, ArrayViewMut3, Zip};
+use leto::{
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 const FIELD_CHUNK_SIZE: usize = 1024;
 

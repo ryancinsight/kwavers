@@ -22,7 +22,10 @@ pub use kwavers_solver::forward::elastic::{
 pub use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt,
 };
-pub use ndarray::{Array3, Array4};
+pub use leto::{
+    Array3,
+    Array4,
+};
 pub use std::f64::consts::PI;
 
 /// Test hyperelastic constitutive models
@@ -143,7 +146,7 @@ mod hyperelastic_tests {
 #[cfg(test)]
 mod harmonic_detection_tests {
     use super::*;
-    use ndarray::Array4;
+    use leto::Array4;
 
     #[test]
     fn test_harmonic_detector_creation() {

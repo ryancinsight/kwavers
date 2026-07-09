@@ -9,7 +9,7 @@ use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 use kwavers_math::fft::Complex64;
 
 /// Mixed-Domain Propagation Plugin
@@ -257,7 +257,7 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
 
     fn update(
         &mut self,
-        fields: &mut ndarray::Array4<f64>,
+        fields: &mut leto::Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
@@ -268,7 +268,7 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
 
         // Extract pressure field
         let pressure_field =
-            fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+            fields.index_axis(0, UnifiedFieldType::Pressure.index());
         let pressure_array = pressure_field.to_owned();
 
         // Determine optimal domain based on field characteristics
@@ -292,7 +292,7 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
 
         // Update pressure field in the fields array
         let mut pressure_slice =
-            fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+            fields.index_axis_mut(0, UnifiedFieldType::Pressure.index());
         pressure_slice.assign(&result);
 
         Ok(())

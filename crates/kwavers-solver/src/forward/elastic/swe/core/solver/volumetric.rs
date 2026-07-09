@@ -8,7 +8,7 @@ use super::super::super::types::{
 };
 use super::definition::ElasticWaveSolver;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 impl ElasticWaveSolver {
     /// Propagate volumetric waves with body forces.

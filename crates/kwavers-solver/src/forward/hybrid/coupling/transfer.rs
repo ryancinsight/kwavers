@@ -2,7 +2,7 @@
 
 use super::InterfaceGeometry;
 use kwavers_core::error::{KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Paired `(source, target)` grid-index lists for an interface transfer.

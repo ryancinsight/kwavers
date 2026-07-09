@@ -7,10 +7,13 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_medium::Medium;
 use kwavers_source::{Source, SourceField};
 use log::debug;
-use ndarray::{s, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array4,
+};
 use std::time::Instant;
 
-fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: ndarray::ArrayView3<'_, f64>) {
+fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
     for (dst_value, src_value) in dst
         .as_slice_mut()
         .expect("leto hybrid field must be contiguous")
@@ -22,7 +25,7 @@ fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: ndarray::ArrayV
 }
 
 fn copy_leto_slice_into_ndarray(
-    dst: &mut ndarray::ArrayViewMut3<'_, f64>,
+    dst: &mut leto::ArrayViewMut3<'_, f64>,
     src: &leto::Array3<f64>,
     region: &DomainRegion,
 ) {
@@ -71,36 +74,36 @@ impl HybridSolver {
 
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.p,
-            fields.index_axis(ndarray::Axis(0), p_idx),
+            fields.index_axis(0, p_idx),
         );
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.ux,
-            fields.index_axis(ndarray::Axis(0), vx_idx),
+            fields.index_axis(0, vx_idx),
         );
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.uy,
-            fields.index_axis(ndarray::Axis(0), vy_idx),
+            fields.index_axis(0, vy_idx),
         );
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.uz,
-            fields.index_axis(ndarray::Axis(0), vz_idx),
+            fields.index_axis(0, vz_idx),
         );
 
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.p,
-            fields.index_axis(ndarray::Axis(0), p_idx),
+            fields.index_axis(0, p_idx),
         );
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.ux,
-            fields.index_axis(ndarray::Axis(0), vx_idx),
+            fields.index_axis(0, vx_idx),
         );
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.uy,
-            fields.index_axis(ndarray::Axis(0), vy_idx),
+            fields.index_axis(0, vy_idx),
         );
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.uz,
-            fields.index_axis(ndarray::Axis(0), vz_idx),
+            fields.index_axis(0, vz_idx),
         );
 
         let amp = source.amplitude(t);
@@ -126,24 +129,24 @@ impl HybridSolver {
             let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
-                    let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
+                    let mut p_view = fields.index_axis_mut(0, p_idx);
                     copy_leto_slice_into_ndarray(&mut p_view, &self.pstd_solver.fields.p, &region);
 
-                    let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
+                    let mut vx_view = fields.index_axis_mut(0, vx_idx);
                     copy_leto_slice_into_ndarray(
                         &mut vx_view,
                         &self.pstd_solver.fields.ux,
                         &region,
                     );
 
-                    let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
+                    let mut vy_view = fields.index_axis_mut(0, vy_idx);
                     copy_leto_slice_into_ndarray(
                         &mut vy_view,
                         &self.pstd_solver.fields.uy,
                         &region,
                     );
 
-                    let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
+                    let mut vz_view = fields.index_axis_mut(0, vz_idx);
                     copy_leto_slice_into_ndarray(
                         &mut vz_view,
                         &self.pstd_solver.fields.uz,
@@ -151,24 +154,24 @@ impl HybridSolver {
                     );
                 }
                 DomainType::FDTD => {
-                    let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
+                    let mut p_view = fields.index_axis_mut(0, p_idx);
                     copy_leto_slice_into_ndarray(&mut p_view, &self.fdtd_solver.fields.p, &region);
 
-                    let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
+                    let mut vx_view = fields.index_axis_mut(0, vx_idx);
                     copy_leto_slice_into_ndarray(
                         &mut vx_view,
                         &self.fdtd_solver.fields.ux,
                         &region,
                     );
 
-                    let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
+                    let mut vy_view = fields.index_axis_mut(0, vy_idx);
                     copy_leto_slice_into_ndarray(
                         &mut vy_view,
                         &self.fdtd_solver.fields.uy,
                         &region,
                     );
 
-                    let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
+                    let mut vz_view = fields.index_axis_mut(0, vz_idx);
                     copy_leto_slice_into_ndarray(
                         &mut vz_view,
                         &self.fdtd_solver.fields.uz,
@@ -303,7 +306,7 @@ impl HybridSolver {
     fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;
 
-        let pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure = fields.index_axis(0, UnifiedFieldType::Pressure.index());
         let has_nan = pressure.iter().any(|&x| x.is_nan());
         let has_inf = pressure.iter().any(|&x| x.is_infinite());
 
@@ -337,7 +340,7 @@ impl HybridSolver {
 
     /// Extract recorded sensor data from the internal FDTD solver.
     /// Returns None if no sensors are configured or no data has been recorded.
-    pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
+    pub fn extract_recorded_sensor_data(&self) -> Option<leto::Array2<f64>> {
         self.fdtd_solver.extract_recorded_sensor_data()
     }
 }
@@ -353,7 +356,7 @@ mod tests {
     use kwavers_medium::HomogeneousMedium;
     use kwavers_signal::Signal;
     use kwavers_source::PointSource;
-    use ndarray::Array4;
+    use leto::Array4;
     use std::sync::Arc;
 
     #[derive(Debug, Clone)]

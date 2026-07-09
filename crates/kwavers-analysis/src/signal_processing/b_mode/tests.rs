@@ -3,7 +3,10 @@
 use super::detection::{envelope, log_compress};
 use super::scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
 use super::tgc::TgcConfig;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 use std::f64::consts::PI;
 
 // ── Time-gain compensation ────────────────────────────────────────────────────

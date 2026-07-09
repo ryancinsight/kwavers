@@ -50,7 +50,7 @@
 //! DOI: 10.1109/TMI.2013.2239671
 
 use kwavers_core::utils::iterators::for_each_indexed_mut;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::wave_field::NonlinearElasticWaveField;
 use super::NonlinearElasticWaveSolver;

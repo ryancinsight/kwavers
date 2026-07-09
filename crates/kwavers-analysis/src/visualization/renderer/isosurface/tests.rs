@@ -1,6 +1,6 @@
 use super::IsosurfaceExtractor;
 use crate::visualization::VisualizationConfig;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn extracts_triangles_for_cube_index_48() {

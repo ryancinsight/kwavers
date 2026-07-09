@@ -5,33 +5,14 @@
 //! - `update_velocity_staggered`
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::Array3 as LetoArray3;
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::{s, Array3, ArrayView3, ArrayViewMut3, Zip};
+use leto::{
+    ArrayView3,
+    ArrayViewMut3,
+};
 
 use super::solver::FdtdSolver;
-
-fn leto_view3(field: &LetoArray3<f64>) -> ArrayView3<'_, f64> {
-    let shape = field.shape();
-    ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("FDTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("FDTD leto field shape must match contiguous storage")
-}
-
-fn leto_view_mut3(field: &mut LetoArray3<f64>) -> ArrayViewMut3<'_, f64> {
-    let shape = field.shape();
-    ArrayViewMut3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice_mut()
-            .expect("FDTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("FDTD leto field shape must match contiguous storage")
-}
 
 fn update_velocity_from_gradient(
     velocity: &mut LetoArray3<f64>,
@@ -200,8 +181,9 @@ impl FdtdSolver {
                 dt,
             );
             {
-                let mut ux = leto_view_mut3(&mut self.fields.ux);
-                ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
+                let mut ux = self.fields.ux.view_mut();
+                let mut boundary = ux.slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+                boundary.fill(0.0);
             }
 
             update_velocity_from_gradient(
@@ -211,8 +193,9 @@ impl FdtdSolver {
                 dt,
             );
             {
-                let mut uy = leto_view_mut3(&mut self.fields.uy);
-                uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
+                let mut uy = self.fields.uy.view_mut();
+                let mut boundary = uy.slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
+                boundary.fill(0.0);
             }
 
             update_velocity_from_gradient(
@@ -222,8 +205,9 @@ impl FdtdSolver {
                 dt,
             );
             {
-                let mut uz = leto_view_mut3(&mut self.fields.uz);
-                uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
+                let mut uz = self.fields.uz.view_mut();
+                let mut boundary = uz.slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
+                boundary.fill(0.0);
             }
         }
 
@@ -254,11 +238,11 @@ impl FdtdSolver {
         }
 
         self.central_operator
-            .apply_x_into(leto_view3(&self.fields.p), &mut self.dvx_scratch)?;
+            .apply_x_into(self.fields.p.view(), &mut self.dvx_scratch)?;
         self.central_operator
-            .apply_y_into(leto_view3(&self.fields.p), &mut self.dvy_scratch)?;
+            .apply_y_into(self.fields.p.view(), &mut self.dvy_scratch)?;
         self.central_operator
-            .apply_z_into(leto_view3(&self.fields.p), &mut self.divergence_scratch)?;
+            .apply_z_into(self.fields.p.view(), &mut self.divergence_scratch)?;
 
         if let Some(ref mut cpml) = self.cpml_boundary {
             cpml.update_and_apply_p_gradient_correction(&mut self.dvx_scratch, 0);
@@ -314,26 +298,26 @@ impl FdtdSolver {
         let dx = self.staggered_operator.dx;
         let dy = self.staggered_operator.dy;
         let dz = self.staggered_operator.dz;
-        let pressure = leto_view3(&self.fields.p);
+        let pressure = self.fields.p.view();
 
         if nx > 1 {
             if let Some(ref mut dp_dx) = self.dp_dx_scratch {
-                let hi = pressure.slice(s![1.., .., ..]);
-                let lo = pressure.slice(s![..nx - 1, .., ..]);
+                let hi = pressure.slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+                let lo = pressure.slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
                 compute_forward_gradient(dp_dx.view_mut(), hi, lo, dx);
             }
         }
         if ny > 1 {
             if let Some(ref mut dp_dy) = self.dp_dy_scratch {
-                let hi = pressure.slice(s![.., 1.., ..]);
-                let lo = pressure.slice(s![.., ..ny - 1, ..]);
+                let hi = pressure.slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)]).unwrap();
+                let lo = pressure.slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap();
                 compute_forward_gradient(dp_dy.view_mut(), hi, lo, dy);
             }
         }
         if nz > 1 {
             if let Some(ref mut dp_dz) = self.dp_dz_scratch {
-                let hi = pressure.slice(s![.., .., 1..]);
-                let lo = pressure.slice(s![.., .., ..nz - 1]);
+                let hi = pressure.slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)]).unwrap();
+                let lo = pressure.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap();
                 compute_forward_gradient(dp_dz.view_mut(), hi, lo, dz);
             }
         }
@@ -351,45 +335,48 @@ impl FdtdSolver {
         }
 
         if let Some(ref dp_dx) = self.dp_dx_scratch {
-            let rho_left = self.materials.rho0.slice(s![..nx - 1, .., ..]);
-            let rho_right = self.materials.rho0.slice(s![1..nx, .., ..]);
-            let mut ux = leto_view_mut3(&mut self.fields.ux);
+            let rho_left = self.materials.rho0.slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+            let rho_right = self.materials.rho0.slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+            let mut ux = self.fields.ux.view_mut();
             update_staggered_velocity(
-                ux.slice_mut(s![..nx - 1, .., ..]),
+                ux.slice_mut(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap(),
                 rho_left,
                 rho_right,
                 dp_dx.view(),
                 dt,
             );
-            ux.slice_mut(s![nx - 1, .., ..]).fill(0.0);
+            let mut boundary = ux.slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+            boundary.fill(0.0);
         }
 
         if let Some(ref dp_dy) = self.dp_dy_scratch {
-            let rho_front = self.materials.rho0.slice(s![.., ..ny - 1, ..]);
-            let rho_back = self.materials.rho0.slice(s![.., 1..ny, ..]);
-            let mut uy = leto_view_mut3(&mut self.fields.uy);
+            let rho_front = self.materials.rho0.slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap();
+            let rho_back = self.materials.rho0.slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)]).unwrap();
+            let mut uy = self.fields.uy.view_mut();
             update_staggered_velocity(
-                uy.slice_mut(s![.., ..ny - 1, ..]),
+                uy.slice_mut(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap(),
                 rho_front,
                 rho_back,
                 dp_dy.view(),
                 dt,
             );
-            uy.slice_mut(s![.., ny - 1, ..]).fill(0.0);
+            let mut boundary = uy.slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
+            boundary.fill(0.0);
         }
 
         if let Some(ref dp_dz) = self.dp_dz_scratch {
-            let rho_near = self.materials.rho0.slice(s![.., .., ..nz - 1]);
-            let rho_far = self.materials.rho0.slice(s![.., .., 1..nz]);
-            let mut uz = leto_view_mut3(&mut self.fields.uz);
+            let rho_near = self.materials.rho0.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap();
+            let rho_far = self.materials.rho0.slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)]).unwrap();
+            let mut uz = self.fields.uz.view_mut();
             update_staggered_velocity(
-                uz.slice_mut(s![.., .., ..nz - 1]),
+                uz.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap(),
                 rho_near,
                 rho_far,
                 dp_dz.view(),
                 dt,
             );
-            uz.slice_mut(s![.., .., nz - 1]).fill(0.0);
+            let mut boundary = uz.slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
+            boundary.fill(0.0);
         }
 
         Ok(())

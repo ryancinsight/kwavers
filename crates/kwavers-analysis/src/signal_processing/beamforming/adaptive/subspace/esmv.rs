@@ -3,7 +3,11 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use kwavers_math::linear_algebra::{ComplexLinearAlgebra, EigenDecomposition};
-use ndarray::{s, Array1, Array2};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array1,
+    Array2,
+};
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
 ///

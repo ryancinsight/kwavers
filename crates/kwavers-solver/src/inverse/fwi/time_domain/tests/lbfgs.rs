@@ -11,7 +11,10 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 
 /// Build the shared small-grid FWI problem: grid, geometry, true model, and a
 /// homogeneous initial model. The anomaly is a `+anomaly` m/s Gaussian bump at

@@ -1,7 +1,7 @@
 //! Dense Runge-Kutta coefficient update helpers for DG states.
 
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn update_euler(
     stage: &mut Array3<f64>,

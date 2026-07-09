@@ -3,7 +3,7 @@
 
 use anyhow::Result;
 use leto::Array3 as LetoArray3;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{DiffusionSolver, DiffusionVolume};
 

@@ -56,7 +56,10 @@ use kwavers_solver::feature::SolverFeature;
 use kwavers_solver::interface::{Solver, SolverStatistics};
 use kwavers_source::{GridSource, Source};
 use leto::Array1 as LetoArray1;
-use ndarray::{Array2, Array3};
+use leto::{
+    Array2,
+    Array3,
+};
 use std::f64::consts::PI;
 use std::time::{Duration, Instant};
 

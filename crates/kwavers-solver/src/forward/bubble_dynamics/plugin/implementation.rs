@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use ndarray::{Array3, Array4, Axis};
+use leto::{
+    Array3,
+    Array4,
+};
 
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;

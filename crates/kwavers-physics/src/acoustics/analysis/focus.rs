@@ -3,7 +3,10 @@
 use super::validation::{invalid_parameter, validate_pressure_field_domain};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::{Array1, ArrayView3};
+use leto::{
+    Array1,
+    ArrayView3,
+};
 
 /// Find focus location using maximum pressure
 /// # Errors
@@ -174,7 +177,7 @@ fn axis_slice_count(grid: &Grid, axis: usize) -> KwaversResult<usize> {
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn small_grid() -> Grid {
         Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()

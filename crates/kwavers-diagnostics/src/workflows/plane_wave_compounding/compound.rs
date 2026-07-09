@@ -17,7 +17,7 @@
 use super::config::PlaneWaveCompoundingConfig;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 use num_complex::Complex;
 
 /// Plane wave compounding processor.

@@ -1,6 +1,6 @@
 use super::{SlscBeamformer, SlscConfig};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array1;
+use leto::Array1;
 use num_complex::Complex64;
 
 /// Multi-lag SLSC for enhanced imaging
@@ -35,7 +35,7 @@ impl MultiLagSlsc {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn process_multi(&self, data: &ndarray::Array2<Complex64>) -> KwaversResult<Array1<f64>> {
+    pub fn process_multi(&self, data: &leto::Array2<Complex64>) -> KwaversResult<Array1<f64>> {
         let mut combined = Array1::zeros(data.ncols());
 
         for (config, weight) in self.configs.iter().zip(&self.combination_weights) {

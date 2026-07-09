@@ -3,7 +3,10 @@
 use super::{MLModel, MlModelMetadata};
 use crate::ml::inference::InferenceEngine;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{
+    Array1,
+    Array2,
+};
 
 /// Tissue classification model for acoustic simulations
 #[derive(Debug)]
@@ -88,7 +91,7 @@ impl TissueClassifierModel {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
-        let input = features.clone().insert_axis(ndarray::Axis(0));
+        let input = features.clone().insert_axis(0);
         let output = self.engine.forward(&input)?;
 
         // Find class with highest probability

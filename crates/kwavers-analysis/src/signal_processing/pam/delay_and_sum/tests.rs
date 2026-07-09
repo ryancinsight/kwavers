@@ -5,7 +5,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array1;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_pam_creation() {
@@ -243,7 +243,7 @@ fn beamform_with_delays_aligns_on_supplied_delays() {
     let delays = Array2::from_shape_vec(
         (2, 3),
         vec![
-            10.0, 12.0, 14.0, /* aligned */ 0.0, 0.0, 0.0, /* mis-aligned */
+            10.0, 12.0, 14.0 0.0, 0.0, 0.0
         ],
     )
     .unwrap();

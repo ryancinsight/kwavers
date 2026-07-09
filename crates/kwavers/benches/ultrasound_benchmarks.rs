@@ -32,7 +32,10 @@ fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>
     derivative[0] = (field[1] - field[0]) / dx;
     derivative[field.len() - 1] = (field[field.len() - 1] - field[field.len() - 2]) / dx;
 }
-use ndarray::{Array1, Array3};
+use leto::{
+    Array1,
+    Array3,
+};
 use std::f64::consts::PI;
 
 /// Benchmark 1D wave equation accuracy and performance

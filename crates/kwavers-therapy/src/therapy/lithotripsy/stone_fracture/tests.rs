@@ -3,7 +3,7 @@
 use super::material::StoneMaterial;
 use super::model::StoneFractureModel;
 use kwavers_core::constants::numerical::MPA_TO_PA;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_calcium_oxalate_properties() {

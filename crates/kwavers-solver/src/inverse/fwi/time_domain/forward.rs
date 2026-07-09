@@ -23,11 +23,16 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
-use ndarray::{s, Array2, Array3, Array4};
+use leto::{
+    /* s -- no leto equivalent */,
+    Array2,
+    Array3,
+    Array4,
+};
 
-fn leto_view3(field: &leto::Array3<f64>) -> ndarray::ArrayView3<'_, f64> {
+fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
     let shape = field.shape();
-    ndarray::ArrayView3::from_shape(
+    leto::ArrayView3::from_shape(
         (shape[0], shape[1], shape[2]),
         field
             .as_slice()
@@ -137,7 +142,7 @@ impl FwiProcessor {
     pub(super) fn build_fdtd_boxed(
         &self,
         model: &Array3<f64>,
-        sensor_mask: Option<ndarray::Array3<bool>>,
+        sensor_mask: Option<leto::Array3<bool>>,
         grid: &Grid,
         dt: f64,
         source: GridSource,
@@ -198,7 +203,7 @@ impl FwiProcessor {
     pub(super) fn build_pstd_boxed(
         &self,
         model: &Array3<f64>,
-        sensor_mask: Option<ndarray::Array3<bool>>,
+        sensor_mask: Option<leto::Array3<bool>>,
         grid: &Grid,
         dt: f64,
         source: GridSource,
@@ -394,7 +399,7 @@ impl FwiProcessor {
             grid,
             &self.sa_config(),
             &acq,
-            self.sa_damping.as_ref().map(ndarray::ArrayBase::view),
+            self.sa_damping.as_ref().map(/* ArrayBase */ .view),
         )
     }
 
@@ -421,7 +426,7 @@ impl FwiProcessor {
             grid,
             &self.sa_config(),
             &acq,
-            self.sa_damping.as_ref().map(ndarray::ArrayBase::view),
+            self.sa_damping.as_ref().map(/* ArrayBase */ .view),
         )
     }
 
@@ -457,8 +462,8 @@ impl FwiProcessor {
             &self.sa_config(),
             &acq,
             forward_history.view(),
-            source_mask.map(ndarray::ArrayBase::view),
-            self.sa_damping.as_ref().map(ndarray::ArrayBase::view),
+            source_mask.map(/* ArrayBase */ .view),
+            self.sa_damping.as_ref().map(/* ArrayBase */ .view),
         )
     }
 
@@ -516,7 +521,7 @@ impl FwiProcessor {
             &acq,
             seed.p_last.view(),
             seed.p_second_last.view(),
-            source_mask.map(ndarray::ArrayBase::view),
+            source_mask.map(/* ArrayBase */ .view),
         )
     }
 }
