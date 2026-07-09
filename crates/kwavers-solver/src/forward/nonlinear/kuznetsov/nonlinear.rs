@@ -51,7 +51,8 @@
 //!   SIAM. §2.2.
 
 use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
-use ndarray::{Array3, Zip};
+use moirai_parallel::ParallelSliceMut;
+use ndarray::Array3;
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace.
 ///
@@ -102,17 +103,50 @@ pub fn compute_nonlinear_term_workspace(
     // Derived from: ∂²p/∂t² = c₀²∇²p + (β/ρ₀c₀²)∂²(p²)/∂t² + …
     let coeff = beta / (density * sound_speed.powi(2));
 
-    Zip::from(nonlinear_term_out)
-        .and(pressure)
-        .and(pressure_prev)
-        .and(pressure_prev2)
-        .par_for_each(|nl, &p, &p_prev, &p_prev2| {
-            let p2 = p * p;
-            let p2_prev = p_prev * p_prev;
-            let p2_prev2 = p_prev2 * p_prev2;
+    // Standard-layout asserts: original Zip iteration is layout-agnostic; the
+    // migrated par_mut().enumerate() requires C-contiguous storage so the
+    // flat-slice index space matches Zip's C-order iteration. Failing here
+    // produces a discoverable error before any silent OOB reads.
+    assert!(
+        nonlinear_term_out.is_standard_layout(),
+        "nonlinear_term_out must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure.is_standard_layout(),
+        "pressure must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure_prev.is_standard_layout(),
+        "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
+    );
+    assert!(
+        pressure_prev2.is_standard_layout(),
+        "pressure_prev2 must be C-contiguous (default Array3 layout) for the migration"
+    );
+    {
+        let nl_slice = nonlinear_term_out
+            .as_slice_mut()
+            .expect("nonlinear_term_out: standard-layout asserted just above; layout matched");
+        let p_slice = pressure
+            .as_slice()
+            .expect("pressure: standard-layout asserted just above; layout matched");
+        let prev_slice = pressure_prev
+            .as_slice()
+            .expect("pressure_prev: standard-layout asserted just above; layout matched");
+        let prev2_slice = pressure_prev2
+            .as_slice()
+            .expect("pressure_prev2: standard-layout asserted just above; layout matched");
+        nl_slice.par_mut().enumerate(|idx, nl: &mut f64| {
+            let p_val = p_slice[idx];
+            let prev_val = prev_slice[idx];
+            let prev2_val = prev2_slice[idx];
+            let p2 = p_val * p_val;
+            let p2_prev = prev_val * prev_val;
+            let p2_prev2 = prev2_val * prev2_val;
             let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
             *nl = coeff * d2p2_dt2; // positive; added to leapfrog RHS
         });
+    }
 }
 
 /// Compute the quadratic nonlinearity coefficient
