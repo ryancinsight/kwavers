@@ -11,7 +11,8 @@
 #[cfg(test)]
 mod tests;
 
-use ndarray::{Array3, Zip};
+use moirai_parallel::ParallelSliceMut;
+use ndarray::Array3;
 
 /// Operator splitting solver for nonlinear acoustics
 #[derive(Debug)]
@@ -186,11 +187,30 @@ impl OperatorSplittingSolver {
 
         // Apply the nonlinear correction
         let scale = self.dt * self.sound_speed * norm_factor / beta;
-        Zip::from(pressure)
-            .and(&flux_gradient)
-            .par_for_each(|p, &grad| {
+        // Standard-layout asserts: original Zip iteration is layout-agnostic; the
+        // migrated par_mut().enumerate() requires C-contiguous storage so the
+        // flat-slice index space matches Zip's C-order iteration. Failing here
+        // produces a discoverable error before any silent OOB reads.
+        assert!(
+            pressure.is_standard_layout(),
+            "pressure must be C-contiguous (default Array3 layout) for the migration"
+        );
+        assert!(
+            flux_gradient.is_standard_layout(),
+            "flux_gradient must be C-contiguous (default Array3 layout) for the migration"
+        );
+        {
+            let p_slice = pressure
+                .as_slice_mut()
+                .expect("pressure: standard-layout asserted just above; layout matched");
+            let grad_slice = flux_gradient
+                .as_slice()
+                .expect("flux_gradient: standard-layout asserted just above; layout matched");
+            p_slice.par_mut().enumerate(|idx, p: &mut f64| {
+                let grad = grad_slice[idx];
                 *p -= scale * grad;
             });
+        }
     }
 
     /// Step 3: Linear propagation again for dt/2 (Strang splitting)
