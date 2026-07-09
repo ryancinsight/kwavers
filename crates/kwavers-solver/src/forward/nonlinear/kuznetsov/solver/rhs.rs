@@ -25,6 +25,7 @@ use crate::forward::nonlinear::kuznetsov::nonlinear::compute_nonlinear_term_work
 use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
 use kwavers_medium::Medium;
 use kwavers_source::Source;
+use moirai_parallel::ParallelSliceMut;
 use ndarray::Zip;
 
 impl KuznetsovWave {
@@ -197,9 +198,27 @@ impl KuznetsovWave {
         } else {
             // Homogeneous: uniform properties — fully parallel from the start.
             let c0_squared = uniform_sound_speed * uniform_sound_speed;
-            Zip::from(&mut *rhs)
-                .and(&self.workspace.laplacian)
-                .par_for_each(|r, &lap| *r = c0_squared * lap);
+            // Slice 6 site 2: linear term (homogeneous) -- 1 mut + 1 immut layout
+            assert!(
+                rhs.is_standard_layout(),
+                "rhs must be C-contiguous (default Array3 layout) for the migration"
+            );
+            assert!(
+                self.workspace.laplacian.is_standard_layout(),
+                "laplacian must be C-contiguous (default Array3 layout) for the migration"
+            );
+            {
+                let r_slice = rhs
+                    .as_slice_mut()
+                    .expect("rhs: standard-layout asserted just above; layout matched");
+                let lap_slice = self.workspace.laplacian
+                    .as_slice()
+                    .expect("laplacian: standard-layout asserted just above; layout matched");
+                r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                    let lap = lap_slice[idx];
+                    *r = c0_squared * lap;
+                });
+            }
 
             // Source term: sample serially (Source is ?Sync), accumulate into cache.
             {
@@ -214,20 +233,74 @@ impl KuznetsovWave {
                     }
                 }
             }
-            Zip::from(&mut *rhs)
-                .and(&self.workspace.cache_source)
-                .par_for_each(|r, &s| *r += s);
+            // Slice 6 site 3: source accumulation (homogeneous) -- 1 mut + 1 immut layout
+            assert!(
+                rhs.is_standard_layout(),
+                "rhs must be C-contiguous (default Array3 layout) for the migration"
+            );
+            assert!(
+                self.workspace.cache_source.is_standard_layout(),
+                "cache_source must be C-contiguous (default Array3 layout) for the migration"
+            );
+            {
+                let r_slice = rhs
+                    .as_slice_mut()
+                    .expect("rhs: standard-layout asserted just above; layout matched");
+                let src_slice = self.workspace.cache_source
+                    .as_slice()
+                    .expect("cache_source: standard-layout asserted just above; layout matched");
+                r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                    let s = src_slice[idx];
+                    *r += s;
+                });
+            }
 
             if include_nonlinearity {
-                Zip::from(&mut *rhs)
-                    .and(&self.workspace.nonlinear_term)
-                    .par_for_each(|r, &nl| *r += nl);
+                // Slice 6 site 4: nonlinearity add (homogeneous) -- 1 mut + 1 immut
+                assert!(
+                    rhs.is_standard_layout(),
+                    "rhs must be C-contiguous (default Array3 layout) for the migration"
+                );
+                assert!(
+                    self.workspace.nonlinear_term.is_standard_layout(),
+                    "nonlinear_term must be C-contiguous (default Array3 layout) for the migration"
+                );
+                {
+                    let r_slice = rhs
+                        .as_slice_mut()
+                        .expect("rhs: standard-layout asserted just above; layout matched");
+                    let nl_slice = self.workspace.nonlinear_term
+                        .as_slice()
+                        .expect("nonlinear_term: standard-layout asserted just above; layout matched");
+                    r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                        let nl = nl_slice[idx];
+                        *r += nl;
+                    });
+                }
             }
 
             if include_diffusion {
-                Zip::from(&mut *rhs)
-                    .and(&self.workspace.diffusive_term)
-                    .par_for_each(|r, &diff| *r += diff);
+                // Slice 6 site 5: diffusion add (homogeneous) -- 1 mut + 1 immut
+                assert!(
+                    rhs.is_standard_layout(),
+                    "rhs must be C-contiguous (default Array3 layout) for the migration"
+                );
+                assert!(
+                    self.workspace.diffusive_term.is_standard_layout(),
+                    "diffusive_term must be C-contiguous (default Array3 layout) for the migration"
+                );
+                {
+                    let r_slice = rhs
+                        .as_slice_mut()
+                        .expect("rhs: standard-layout asserted just above; layout matched");
+                    let diff_slice = self.workspace.diffusive_term
+                        .as_slice()
+                        .expect("diffusive_term: standard-layout asserted just above; layout matched");
+                    r_slice.par_mut().enumerate(|idx, r: &mut f64| {
+                        let diff = diff_slice[idx];
+                        *r += diff;
+                    });
+                }
             }
         }
     }
