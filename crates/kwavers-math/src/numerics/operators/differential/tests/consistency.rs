@@ -13,7 +13,7 @@ fn test_operator_consistency_on_quadratic() {
     let op4 = CentralDifference4::new(dx, dx, dx).unwrap();
     let op6 = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((30, 5, 5));
+    let mut field = Array3::zeros([30, 5, 5]);
     for i in 0..30 {
         let x = (i as f64) * dx;
         for j in 0..5 {
@@ -42,7 +42,7 @@ fn test_all_directions_symmetry() {
     let dx = 0.1;
     let op = CentralDifference4::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 20, 20));
+    let mut field = Array3::zeros([20, 20, 20]);
     for i in 0..20 {
         for j in 0..20 {
             for k in 0..20 {
@@ -79,7 +79,7 @@ fn test_high_frequency_dispersion() {
     let op4 = CentralDifference4::new(dx, dx, dx).unwrap();
     let op6 = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((80, 5, 5));
+    let mut field = Array3::zeros([80, 5, 5]);
     for i in 0..80 {
         let x = (i as f64) * dx;
         for j in 0..5 {

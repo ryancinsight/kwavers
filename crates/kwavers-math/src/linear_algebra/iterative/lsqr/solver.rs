@@ -38,8 +38,8 @@ impl LsqrSolver {
     /// and Givens QR factorisation.
     #[must_use]
     pub fn solve(&self, a_matrix: &Array2<f64>, b_vector: &Array1<f64>) -> LsqrResult {
-        let (_m, n) = a_matrix.dim();
-        let mut x = Array1::zeros(n);
+        let [_m, n] = a_matrix.shape();
+        let mut x = Array1::zeros([n]);
 
         // Initialise Lanczos bidiagonalisation
         let mut u = b_vector.clone();
@@ -58,7 +58,7 @@ impl LsqrSolver {
         }
 
         u /= beta;
-        let mut v = a_matrix.t().dot(&u);
+        let mut v = a_matrix.transpose([1, 0]).unwrap().dot(&u);
         let mut alpha = norm_l2(&v);
 
         if alpha < 1e-12 {
@@ -96,7 +96,7 @@ impl LsqrSolver {
                 u_new /= beta_new;
             }
 
-            let mut v_new = a_matrix.t().dot(&u_new) - beta_new * &v;
+            let mut v_new = a_matrix.transpose([1, 0]).unwrap().dot(&u_new) - beta_new * &v;
             let alpha_new = norm_l2(&v_new);
             if alpha_new > 1e-12 {
                 v_new /= alpha_new;

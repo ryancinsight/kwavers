@@ -1,8 +1,5 @@
-use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    Array2,
-};
+﻿use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use ndarray::{Array1, Array2};
 use eunomia::Complex64;
 
 /// Complex linear algebra operations for beamforming
@@ -123,7 +120,7 @@ impl ComplexLinearAlgebra {
             }
         }
 
-        Array2::from_shape_vec((n, n), result)
+        Array2::from_vec([n, n], result)
             .map_err(|e| KwaversError::Numerical(NumericalError::SolverFailed {
                 method: "matrix_inverse_complex".to_owned(),
                 reason: e.to_string(),

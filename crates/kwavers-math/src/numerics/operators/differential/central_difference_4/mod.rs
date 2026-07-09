@@ -41,7 +41,7 @@
 //! let dx = 0.001; // 1 mm grid spacing
 //! let op = CentralDifference4::new(dx, dx, dx)?;
 //!
-//! let field = Array3::zeros((100, 100, 100));
+//! let field = Array3::zeros([100, 100, 100]);
 //! let gradient_x = op.apply_x(field.view())?;
 //! ```
 //!
@@ -143,7 +143,7 @@ impl CentralDifference4 {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
@@ -184,7 +184,7 @@ impl CentralDifference4 {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
@@ -225,7 +225,7 @@ impl CentralDifference4 {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
@@ -264,7 +264,7 @@ impl CentralDifference4 {
 
 impl DifferentialOperator for CentralDifference4 {
     fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
@@ -273,13 +273,13 @@ impl DifferentialOperator for CentralDifference4 {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         self.apply_x_into(field, &mut result)?;
         Ok(result)
     }
 
     fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
@@ -288,13 +288,13 @@ impl DifferentialOperator for CentralDifference4 {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         self.apply_y_into(field, &mut result)?;
         Ok(result)
     }
 
     fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 5 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 5,
@@ -303,7 +303,7 @@ impl DifferentialOperator for CentralDifference4 {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         self.apply_z_into(field, &mut result)?;
         Ok(result)
     }

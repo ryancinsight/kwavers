@@ -157,9 +157,9 @@ pub fn norm_neon(field: &Array3<f64>) -> f64 {
 ///
 #[cfg(not(target_arch = "aarch64"))]
 pub fn add_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-    let dims = a.dim();
-    assert_eq!(dims, b.dim());
-    assert_eq!(dims, out.dim());
+    let dims = a.shape();
+    assert_eq!(dims, b.shape());
+    assert_eq!(dims, out.shape());
 
     for i in 0..dims.0 {
         for j in 0..dims.1 {
@@ -176,8 +176,8 @@ pub fn add_fields_neon(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) 
 ///
 #[cfg(not(target_arch = "aarch64"))]
 pub fn scale_field_neon(field: &Array3<f64>, scalar: f64, out: &mut Array3<f64>) {
-    let dims = field.dim();
-    assert_eq!(dims, out.dim());
+    let dims = field.shape();
+    assert_eq!(dims, out.shape());
 
     for i in 0..dims.0 {
         for j in 0..dims.1 {

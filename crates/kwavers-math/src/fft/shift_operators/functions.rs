@@ -72,8 +72,8 @@ use leto::{
 #[must_use]
 pub fn generate_shift_1d(n: usize, dk: f64, ds: f64) -> (Array1<Complex64>, Array1<Complex64>) {
     let i_unit = Complex64::new(0.0, 1.0);
-    let mut shift_pos = Array1::from_elem(n, Complex64::default());
-    let mut shift_neg = Array1::from_elem(n, Complex64::default());
+    let mut shift_pos = Array1::from_elem([n], Complex64::default());
+    let mut shift_neg = Array1::from_elem([n], Complex64::default());
 
     for idx in 0..n {
         // Signed wavenumber in FFT order.
@@ -162,7 +162,7 @@ pub fn generate_kappa(
     let dk_y = TWO_PI / (ny as f64 * dy);
     let dk_z = TWO_PI / (nz as f64 * dz);
 
-    let mut kappa = Array3::zeros((nx, ny, nz));
+    let mut kappa = Array3::zeros([nx, ny, nz]);
 
     for i in 0..nx {
         let si = if i <= nx / 2 {
@@ -231,7 +231,7 @@ pub fn generate_source_kappa(
     let dk_y = TWO_PI / (ny as f64 * dy);
     let dk_z = TWO_PI / (nz as f64 * dz);
 
-    let mut kappa = Array3::zeros((nx, ny, nz));
+    let mut kappa = Array3::zeros([nx, ny, nz]);
 
     for i in 0..nx {
         let si = if i <= nx / 2 {

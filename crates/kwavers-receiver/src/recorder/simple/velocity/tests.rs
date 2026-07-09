@@ -75,7 +75,7 @@ fn velocity_stats_allocate_only_requested_components() {
     let pressure = Array3::zeros([3, 1, 1]);
     recorder.record_step(&pressure).unwrap();
     // ux values at (0,0,0)=1.0, (1,0,0)=3.0, (2,0,0)=5.0 → sensor at (1,0,0): max=3, rms=3
-    let ux = Array3::from_shape_vec((3, 1, 1), vec![1.0, 3.0, 5.0]).unwrap();
+    let ux = Array3::from_vec([3, 1, 1], vec![1.0, 3.0, 5.0]).unwrap();
     let uy = Array3::from_elem([3, 1, 1], 7.0);
     let uz = Array3::from_elem([3, 1, 1], 11.0);
     recorder.record_velocity_step(&ux, &uy, &uz).unwrap();
@@ -123,7 +123,7 @@ fn velocity_only_spec_records_after_pressure_step_without_pressure_buffer() {
     let pressure = Array3::zeros([3, 1, 1]);
     recorder.record_step(&pressure).unwrap();
 
-    let ux = Array3::from_shape_vec((3, 1, 1), vec![1.0, 3.0, 5.0]).unwrap();
+    let ux = Array3::from_vec([3, 1, 1], vec![1.0, 3.0, 5.0]).unwrap();
     let uy = Array3::from_elem([3, 1, 1], 7.0);
     let uz = Array3::from_elem([3, 1, 1], 11.0);
     recorder.record_velocity_step(&ux, &uy, &uz).unwrap();
@@ -147,7 +147,7 @@ fn velocity_views_expose_recorded_prefix_without_clone() {
 
     recorder.record_step(&Array3::zeros([2, 1, 1])).unwrap();
     // ux[1,0,0] = 9.0
-    let ux = Array3::from_shape_vec((2, 1, 1), vec![2.0, 9.0]).unwrap();
+    let ux = Array3::from_vec([2, 1, 1], vec![2.0, 9.0]).unwrap();
     let u0 = Array3::zeros([2, 1, 1]);
     recorder.record_velocity_step(&ux, &u0, &u0).unwrap();
 
@@ -197,7 +197,7 @@ fn intensity_records_pressure_velocity_product_and_time_average() {
     let mut p0 = Array3::zeros([3, 1, 1]);
     p0[[1, 0, 0]] = 4.0;
     recorder.record_step(&p0).unwrap();
-    let ux0 = Array3::from_shape_vec((3, 1, 1), vec![0.0, 2.0, 0.0]).unwrap();
+    let ux0 = Array3::from_vec([3, 1, 1], vec![0.0, 2.0, 0.0]).unwrap();
     let u0 = Array3::zeros([3, 1, 1]);
     recorder.record_velocity_step(&ux0, &u0, &u0).unwrap();
 
@@ -205,7 +205,7 @@ fn intensity_records_pressure_velocity_product_and_time_average() {
     let mut p1 = Array3::zeros([3, 1, 1]);
     p1[[1, 0, 0]] = 10.0;
     recorder.record_step(&p1).unwrap();
-    let ux1 = Array3::from_shape_vec((3, 1, 1), vec![0.0, -1.0, 0.0]).unwrap();
+    let ux1 = Array3::from_vec([3, 1, 1], vec![0.0, -1.0, 0.0]).unwrap();
     recorder.record_velocity_step(&ux1, &u0, &u0).unwrap();
 
     let ix = recorder.extract_ix_data().unwrap();
@@ -253,7 +253,7 @@ fn intensity_average_does_not_allocate_velocity_or_intensity_time_series() {
     recorder.record_step(&pressure).unwrap();
 
     // ux at sensor (1,0,0) = 2.0  →  I_x = 4.0 * 2.0 = 8.0
-    let ux = Array3::from_shape_vec((3, 1, 1), vec![1.0, 2.0, 3.0]).unwrap();
+    let ux = Array3::from_vec([3, 1, 1], vec![1.0, 2.0, 3.0]).unwrap();
     let u0 = Array3::zeros([3, 1, 1]);
     recorder.record_velocity_step(&ux, &u0, &u0).unwrap();
 

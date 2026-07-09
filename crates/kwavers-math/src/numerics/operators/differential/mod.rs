@@ -35,7 +35,7 @@
 //! use leto::Array3;
 //!
 //! let op = CentralDifference2::new(0.001, 0.001, 0.001)?;
-//! let field = Array3::zeros((100, 100, 100));
+//! let field = Array3::zeros([100, 100, 100]);
 //! let gradient_x = op.apply_x(field.view())?;
 //! ```
 //!

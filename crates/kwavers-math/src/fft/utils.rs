@@ -53,10 +53,10 @@ pub fn ifft_normalization_factor(n: usize) -> f64 {
 
 /// Shift the zero frequency component to the center of the spectrum (`fftshift`).
 pub fn fft_shift_2d(spectrum: &mut Array2<Complex64>) {
-    let (nx, ny) = spectrum.dim();
+    let [nx, ny] = spectrum.shape();
     let shift_x = nx.div_ceil(2);
     let shift_y = ny.div_ceil(2);
-    let mut shifted = Array2::from_elem(spectrum.raw_dim(), Complex64::default());
+    let mut shifted = Array2::from_elem([nx, ny], Complex64::default());
     for i in 0..nx {
         let src_i = (i + shift_x) % nx;
         for j in 0..ny {
@@ -69,10 +69,10 @@ pub fn fft_shift_2d(spectrum: &mut Array2<Complex64>) {
 
 /// Inverse FFT shift - move zero frequency back to the corner (`ifftshift`).
 pub fn ifft_shift_2d(spectrum: &mut Array2<Complex64>) {
-    let (nx, ny) = spectrum.dim();
+    let [nx, ny] = spectrum.shape();
     let shift_x = nx / 2;
     let shift_y = ny / 2;
-    let mut shifted = Array2::from_elem(spectrum.raw_dim(), Complex64::default());
+    let mut shifted = Array2::from_elem([nx, ny], Complex64::default());
     for i in 0..nx {
         let src_i = (i + shift_x) % nx;
         for j in 0..ny {
@@ -108,7 +108,7 @@ where
 {
     let n = signal.len();
     if n == 0 {
-        return Array1::zeros(0);
+        return Array1::zeros([0]);
     }
 
     let mut spectrum = signal.mapv(|value| Complex64::new(value, 0.0));
@@ -124,7 +124,7 @@ where
     // Apollo uses FFTW-compatible 1/N inverse normalisation;
     // no additional scaling is required.
     ifft_1d_complex_slice_inplace(spectrum.as_slice_mut().expect("contiguous spectrum"));
-    Array1::from_shape_fn(n, |idx| spectrum[idx].re)
+    Array1::from_shape_fn([n], |[idx]| spectrum[idx].re)
 }
 
 /// Compute the discrete analytic signal of a real trace.

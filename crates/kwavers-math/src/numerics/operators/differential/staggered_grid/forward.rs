@@ -27,7 +27,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -37,7 +37,7 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
+            dst.shape(),
             (nx - 1, ny, nz),
             "apply_forward_x_into: dst shape {dst:?} does not match expected ({}, {ny}, {nz})",
             nx - 1
@@ -76,7 +76,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -86,7 +86,7 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
+            dst.shape(),
             (nx, ny - 1, nz),
             "apply_forward_y_into: dst shape {dst:?} does not match expected ({nx}, {}, {nz})",
             ny - 1
@@ -125,7 +125,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -135,7 +135,7 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
+            dst.shape(),
             (nx, ny, nz - 1),
             "apply_forward_z_into: dst shape {dst:?} does not match expected ({nx}, {ny}, {})",
             nz - 1
@@ -166,7 +166,7 @@ impl StaggeredGridOperator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn apply_forward_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -175,7 +175,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx - 1, ny, nz));
+        let mut result = Array3::zeros([nx - 1, ny, nz]);
         self.apply_forward_x_into(field, &mut result)?;
         Ok(result)
     }
@@ -184,7 +184,7 @@ impl StaggeredGridOperator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn apply_forward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -193,7 +193,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny - 1, nz));
+        let mut result = Array3::zeros([nx, ny - 1, nz]);
         self.apply_forward_y_into(field, &mut result)?;
         Ok(result)
     }
@@ -202,7 +202,7 @@ impl StaggeredGridOperator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn apply_forward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -211,7 +211,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz - 1));
+        let mut result = Array3::zeros([nx, ny, nz - 1]);
         self.apply_forward_z_into(field, &mut result)?;
         Ok(result)
     }

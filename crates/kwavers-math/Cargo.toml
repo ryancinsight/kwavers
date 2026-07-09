@@ -8,6 +8,8 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+# Required for linear algebra bridge (ndarray↔leto conversions)
+ndarray = { workspace = true }
 num-complex = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 moirai-parallel = { workspace = true }

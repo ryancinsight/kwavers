@@ -46,7 +46,7 @@ impl ModelRegularizer1D {
             return;
         }
 
-        let mut laplacian = Array1::zeros(n);
+        let mut laplacian = Array1::zeros([n]);
         for i in 1..n - 1 {
             laplacian[i] = 2.0f64.mul_add(-gradient[i], gradient[i + 1] + gradient[i - 1]);
         }

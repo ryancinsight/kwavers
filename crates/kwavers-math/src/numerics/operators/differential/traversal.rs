@@ -13,7 +13,7 @@ where
         return false;
     }
 
-    let (_nx, ny, nz) = dst.dim();
+    let [_nx, ny, nz] = dst.shape();
     let Some(values) = dst.as_slice_mut() else {
         return false;
     };

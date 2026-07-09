@@ -41,12 +41,12 @@ pub fn tv_denoise_chambolle(
     frozen: Option<&leto::Array3<bool>>,
 ) -> Array3<f64> {
     if let Some(m) = frozen {
-        assert_eq!(m.dim(), image.dim(), "frozen mask must match image shape");
+        assert_eq!(m.shape(), image.shape(), "frozen mask must match image shape");
     }
     if weight <= 0.0 {
         return image.clone();
     }
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
     // Chambolle–Pock primal-dual for ROF (στ‖∇‖² ≤ 1, ‖∇‖² ≤ 8).
     let sigma = 0.35_f64;
     let tau = 0.35_f64;
@@ -139,7 +139,7 @@ mod tests {
     #[test]
     fn tv_denoise_reduces_noise_and_preserves_edge() {
         let (nx, ny) = (40usize, 40);
-        let mut clean = Array3::zeros((nx, ny, 1));
+        let mut clean = Array3::zeros([nx, ny, 1]);
         for j in 0..ny {
             for i in 0..nx {
                 clean[[i, j, 0]] = if i < nx / 2 { 1.0 } else { 2.0 }; // step edge
@@ -185,7 +185,7 @@ mod tests {
     /// `weight = 0` is a no-op; frozen voxels are left untouched.
     #[test]
     fn zero_weight_and_frozen_are_identity() {
-        let mut img = Array3::zeros((8, 8, 1));
+        let mut img = Array3::zeros([8, 8, 1]);
         for (n, v) in img.iter_mut().enumerate() {
             *v = (n % 5) as f64;
         }

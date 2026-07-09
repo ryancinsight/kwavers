@@ -134,11 +134,11 @@ impl EigenvalueSolver {
         for _iter in 0..self.max_iterations {
             // Solve (A - shift*I) * w = v using simple iterative method
             // For production use, should implement LU decomposition or GMRES
-            let mut w = Array1::zeros(n);
+            let mut w = Array1::zeros([n]);
 
             // Simple Jacobi iteration for linear solve (A - shift*I)w = v
             for _jacobi in 0..50 {
-                let mut w_next = Array1::zeros(n);
+                let mut w_next = Array1::zeros([n]);
 
                 for i in 0..n {
                     let mut sum = v[i];

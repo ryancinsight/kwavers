@@ -4,7 +4,7 @@
 //! and vectors, including system solving, matrix inversion, and basic decompositions.
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{Array1, Array2};
+use ndarray::{Array1, Array2};
 use leto_ops::{qr_decompose, svd_rank_revealing};
 use std::fmt::Display;
 
@@ -25,12 +25,12 @@ impl LinearAlgebra {
     /// # Errors
     /// Returns NumericalError if the matrix is singular or ill-conditioned
     pub fn solve_linear_system(a: &Array2<f64>, b: &Array1<f64>) -> KwaversResult<Array1<f64>> {
-        let n = a.nrows();
-        if a.ncols() != n || b.len() != n {
+        let n = a.shape()[0];
+        if a.shape()[1] != n || b.len() != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "solve_linear_system".to_owned(),
                 expected: format!("{}×{} matrix and {} vector", n, n, n),
-                actual: format!("{}×{} matrix and {} vector", a.nrows(), a.ncols(), b.len()),
+                actual: format!("{}×{} matrix and {} vector", a.shape()[0], a.shape()[1], b.len()),
             }));
         }
 
@@ -104,18 +104,18 @@ impl LinearAlgebra {
     /// # Errors
     /// Returns NumericalError if the matrix is singular
     pub fn matrix_inverse(matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let n = matrix.nrows();
-        if matrix.ncols() != n {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "matrix_inverse".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
         // Create identity matrix
         let identity = Array2::eye(n);
-        let mut result = Array2::zeros((n, n));
+        let mut result = Array2::zeros([n, n]);
 
         // Solve for each column of the identity matrix
         for i in 0..n {
@@ -140,10 +140,12 @@ impl LinearAlgebra {
     ///   non-finite value, or is rank-deficient under Leto's QR contract.
     ///
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
-        let qr =
-            qr_decompose(&matrix.view()).map_err(leto_linalg_error("QR decomposition"))?;
-        let q = qr.q().to_owned();
-        let r = qr.r().to_owned();
+        let ml: leto::Array2<f64> = matrix.clone().into();
+        let qr = qr_decompose(&ml.view()).map_err(leto_linalg_error("QR decomposition"))?;
+        let q: Array2<f64> = qr.q().to_owned().try_into()
+            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "QR-Q".into(), reason: "layout".into() }))?;
+        let r: Array2<f64> = qr.r().to_owned().try_into()
+            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "QR-R".into(), reason: "layout".into() }))?;
         Ok((q, r))
     }
 
@@ -159,11 +161,13 @@ impl LinearAlgebra {
     /// - Returns [`Err`] if Leto rejects the input shape or values.
     ///
     pub fn svd(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array1<f64>, Array2<f64>)> {
-        let svd = svd_rank_revealing(&matrix.view()).map_err(leto_linalg_error("SVD"))?;
-        let u = svd.left_singular_vectors.to_owned();
+        let ml: leto::Array2<f64> = matrix.clone().into();
+        let svd = svd_rank_revealing(&ml.view()).map_err(leto_linalg_error("SVD"))?;
+        let u: Array2<f64> = svd.left_singular_vectors.to_owned().try_into()
+            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "SVD-U".into(), reason: "layout".into() }))?;
         let s = Array1::from_vec(svd.singular_values);
-        let v = svd.right_singular_vectors.to_owned();
-
+        let v: Array2<f64> = svd.right_singular_vectors.to_owned().try_into()
+            .map_err(|_| KwaversError::Numerical(NumericalError::SolverFailed { method: "SVD-V".into(), reason: "layout".into() }))?;
         Ok((u, s, v))
     }
 }
@@ -220,9 +224,9 @@ mod tests {
             let (q, r) = LinearAlgebra::qr_decomposition(a).unwrap();
             // Reconstruction A = Q·R.
             let recon = q.matmul(&r);
-            assert_eq!(recon.dim(), a.dim());
-            for i in 0..a.nrows() {
-                for j in 0..a.ncols() {
+            assert_eq!(recon.shape(), a.shape());
+            for i in 0..a.shape()[0] {
+                for j in 0..a.shape()[1] {
                     assert!(
                         (recon[[i, j]] - a[[i, j]]).abs() < 1e-9,
                         "QR reconstruction mismatch at [{i},{j}]: {} vs {}",
@@ -233,15 +237,15 @@ mod tests {
             }
             // Q has orthonormal columns: Qᵀ Q = I (k×k).
             let qtq = q.transpose().matmul(&q);
-            for i in 0..qtq.nrows() {
-                for j in 0..qtq.ncols() {
+            for i in 0..qtq.shape()[0] {
+                for j in 0..qtq.shape()[1] {
                     let expected = if i == j { 1.0 } else { 0.0 };
                     assert!((qtq[[i, j]] - expected).abs() < 1e-9, "Q not orthonormal");
                 }
             }
             // R is upper triangular.
-            for i in 0..r.nrows() {
-                for j in 0..i.min(r.ncols()) {
+            for i in 0..r.shape()[0] {
+                for j in 0..i.min(r.shape()[1]) {
                     assert!(
                         r[[i, j]].abs() < 1e-9,
                         "R not upper triangular at [{i},{j}]"
@@ -258,7 +262,7 @@ mod tests {
 
         // Check A = U * S * V^T
         // Construct S as a diagonal matrix
-        let mut s_mat = Array2::zeros((2, 2));
+        let mut s_mat = Array2::zeros([2, 2]);
         for i in 0..2 {
             s_mat[[i, i]] = s[i];
         }

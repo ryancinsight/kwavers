@@ -83,7 +83,7 @@ impl IterativeSolver {
         }
 
         let n = a.rows;
-        let mut x = x0.map_or_else(|| Array1::zeros(n), |v| v.to_owned());
+        let mut x = x0.map_or_else(|| Array1::zeros([n]), |v| v.to_owned());
 
         let mut r = b.to_owned() - a.multiply_vector(x.view())?;
         let mut p = r.clone();

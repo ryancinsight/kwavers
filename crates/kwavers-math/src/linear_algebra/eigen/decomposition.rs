@@ -23,12 +23,12 @@ impl EigenDecomposition {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn eigendecomposition(matrix: &Array2<f64>) -> KwaversResult<(Array1<f64>, Array2<f64>)> {
-        let n = matrix.nrows();
-        if matrix.ncols() != n {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "eigendecomposition".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -77,12 +77,12 @@ impl EigenDecomposition {
     pub fn hermitian_eigendecomposition_complex(
         matrix: &Array2<Complex64>,
     ) -> KwaversResult<(Array1<f64>, Array2<Complex64>)> {
-        let n = matrix.nrows();
-        if matrix.ncols() != n {
+        let n = matrix.shape()[0];
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "hermitian_eigendecomposition_complex".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -183,7 +183,7 @@ impl EigenDecomposition {
             }
         }
 
-        let mut eigenvals = Array1::zeros(n);
+        let mut eigenvals = Array1::zeros([n]);
         for i in 0..n {
             eigenvals[i] = h[[i, i]].re;
         }

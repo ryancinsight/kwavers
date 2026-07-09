@@ -49,8 +49,8 @@ fn pressure_stat_fill_reuses_caller_storage() {
     let modes = [RecordingMode::AllStatistics];
     let mut recorder = SensorRecorder::with_modes(Some(&mask), (3, 1, 1), 2, &modes).unwrap();
 
-    let p0 = Array3::from_shape_vec((3, 1, 1), vec![1.0, 9.0, -2.0]).unwrap();
-    let p1 = Array3::from_shape_vec((3, 1, 1), vec![4.0, 8.0, 6.0]).unwrap();
+    let p0 = Array3::from_vec([3, 1, 1], vec![1.0, 9.0, -2.0]).unwrap();
+    let p1 = Array3::from_vec([3, 1, 1], vec![4.0, 8.0, 6.0]).unwrap();
     recorder.record_step(&p0).unwrap();
     recorder.record_step(&p1).unwrap();
 

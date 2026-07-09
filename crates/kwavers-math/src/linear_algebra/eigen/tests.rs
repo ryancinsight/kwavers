@@ -4,7 +4,7 @@ use leto::Array2;
 
 #[test]
 fn test_real_symmetric_eigendecomposition() {
-    let matrix = Array2::from_shape_vec((2, 2), vec![2.0, 1.0, 1.0, 2.0]).unwrap();
+    let matrix = Array2::from_vec([2, 2], vec![2.0, 1.0, 1.0, 2.0]).unwrap();
     let (eigenvals, eigenvecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
 
     assert!((eigenvals[0] - 3.0).abs() < 1e-6);
@@ -27,7 +27,7 @@ fn test_real_symmetric_eigendecomposition() {
 #[test]
 fn test_real_symmetric_unequal_diagonal() {
     // [[4,1],[1,2]] ⇒ λ = 3 ± √2.
-    let matrix = Array2::from_shape_vec((2, 2), vec![4.0, 1.0, 1.0, 2.0]).unwrap();
+    let matrix = Array2::from_vec([2, 2], vec![4.0, 1.0, 1.0, 2.0]).unwrap();
     let (vals, vecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
 
     let hi = 3.0 + 2.0_f64.sqrt();
@@ -45,7 +45,7 @@ fn test_real_symmetric_unequal_diagonal() {
     }
     // Reconstruction A = V Λ Vᵀ.
     let lambda = Array2::from_diag(&vals);
-    let recon = vecs.dot(&lambda).dot(&vecs.t());
+    let recon = vecs.dot(&lambda).dot(&vecs.transpose([1, 0]).unwrap());
     for i in 0..2 {
         for j in 0..2 {
             assert!((recon[[i, j]] - matrix[[i, j]]).abs() < 1e-8);
@@ -58,7 +58,7 @@ fn test_real_symmetric_unequal_diagonal() {
 #[test]
 fn test_real_symmetric_3x3_reconstruction() {
     let matrix =
-        Array2::from_shape_vec((3, 3), vec![6.0, 2.0, 1.0, 2.0, 5.0, 3.0, 1.0, 3.0, 4.0]).unwrap();
+        Array2::from_vec([3, 3], vec![6.0, 2.0, 1.0, 2.0, 5.0, 3.0, 1.0, 3.0, 4.0]).unwrap();
     let (vals, vecs) = EigenDecomposition::eigendecomposition(&matrix).unwrap();
     // Trace and determinant invariants.
     let trace = matrix[[0, 0]] + matrix[[1, 1]] + matrix[[2, 2]];
@@ -69,7 +69,7 @@ fn test_real_symmetric_3x3_reconstruction() {
     );
     // Reconstruction.
     let lambda = Array2::from_diag(&vals);
-    let recon = vecs.dot(&lambda).dot(&vecs.t());
+    let recon = vecs.dot(&lambda).dot(&vecs.transpose([1, 0]).unwrap());
     for i in 0..3 {
         for j in 0..3 {
             assert!(
@@ -132,7 +132,7 @@ fn test_hermitian_eigendecomposition_diagonal() {
 
     let lambda_diag = Array2::from_diag(&eigenvals.mapv(|x| Complex::new(x, 0.0)));
     let vdag: Array2<Complex> = eigenvecs
-        .t()
+        .transpose([1, 0]).unwrap()
         .mapv(|z| z.conj())
         .into_dimensionality()
         .unwrap();
@@ -184,7 +184,7 @@ fn test_hermitian_eigendecomposition_2x2() {
     }
 
     let vdag: Array2<Complex> = eigenvecs
-        .t()
+        .transpose([1, 0]).unwrap()
         .mapv(|z| z.conj())
         .into_dimensionality()
         .unwrap();

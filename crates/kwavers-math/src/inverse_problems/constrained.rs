@@ -128,7 +128,7 @@ mod tests {
         assert_eq!(c.project_value(1540.0), 1540.0); // inside → unchanged
 
         let mut field =
-            Array3::from_shape_vec((2, 1, 2), vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
+            Array3::from_vec([2, 1, 2], vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
         c.project(&mut field);
         assert_eq!(
             field.iter().cloned().collect::<Vec<_>>(),
@@ -142,7 +142,7 @@ mod tests {
         // minimiser is clip(t, [lo, hi]) element-wise.
         let c = BoxConstraints::sound_speed_tissue(); // [1400, 1650]
                                                       // target field: below / inside / above the box
-        let target = Array3::from_shape_vec((3, 1, 1), vec![1000.0, 1500.0, 2000.0]).unwrap();
+        let target = Array3::from_vec([3, 1, 1], vec![1000.0, 1500.0, 2000.0]).unwrap();
         let t = target.clone();
         let start = Array3::from_elem((3, 1, 1), 1540.0);
 

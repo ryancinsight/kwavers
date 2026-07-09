@@ -4757,6 +4757,7 @@ dependencies = [
  "leto-ops",
  "log",
  "moirai-parallel",
+ "ndarray",
  "num-complex",
  "rand 0.8.5",
  "serde",

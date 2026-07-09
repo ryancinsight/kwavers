@@ -9,7 +9,7 @@ fn test_boundary_accuracy_degradation() {
     let dx = 0.1;
     let op = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 5, 5));
+    let mut field = Array3::zeros([20, 5, 5]);
     for i in 0..20 {
         let x = (i as f64) * dx;
         for j in 0..5 {
@@ -59,7 +59,7 @@ fn test_anisotropic_grid() {
 
     let op = CentralDifference4::new(dx, dy, dz).unwrap();
 
-    let mut field = Array3::zeros((20, 40, 10));
+    let mut field = Array3::zeros([20, 40, 10]);
     for i in 0..20 {
         for j in 0..40 {
             for k in 0..10 {

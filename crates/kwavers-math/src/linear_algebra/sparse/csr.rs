@@ -34,7 +34,7 @@ impl CompressedSparseRowMatrix<f64> {
     /// Create CSR matrix from dense matrix with sparsity threshold
     #[must_use]
     pub fn from_dense(dense: ArrayView2<f64>, threshold: f64) -> Self {
-        let (rows, cols) = dense.dim();
+        let [rows, cols] = dense.shape();
         let mut values = Vec::new();
         let mut col_indices = Vec::new();
         let mut row_pointers = vec![0; rows + 1];

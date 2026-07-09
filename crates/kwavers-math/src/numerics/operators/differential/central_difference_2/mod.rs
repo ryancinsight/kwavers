@@ -40,7 +40,7 @@
 //! let dx = 0.001; // 1 mm grid spacing
 //! let op = CentralDifference2::new(dx, dx, dx)?;
 //!
-//! let field = Array3::zeros((100, 100, 100));
+//! let field = Array3::zeros([100, 100, 100]);
 //! let gradient_x = op.apply_x(field.view())?;
 //! ```
 //!
@@ -137,7 +137,7 @@ impl CentralDifference2 {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -146,7 +146,7 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(dst.shape(), (nx, ny, nz), "dst shape must match field shape");
         let inv2dx = 0.5 / self.dx;
         let inv_dx = 1.0 / self.dx;
 
@@ -205,7 +205,7 @@ impl CentralDifference2 {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -214,7 +214,7 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(dst.shape(), (nx, ny, nz), "dst shape must match field shape");
         let inv2dy = 0.5 / self.dy;
         let inv_dy = 1.0 / self.dy;
 
@@ -274,7 +274,7 @@ impl CentralDifference2 {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -283,7 +283,7 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(dst.shape(), (nx, ny, nz), "dst shape must match field shape");
         let inv2dz = 0.5 / self.dz;
         let inv_dz = 1.0 / self.dz;
 
@@ -334,19 +334,19 @@ impl CentralDifference2 {
 
 impl DifferentialOperator for CentralDifference2 {
     fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.apply_x_into(field, &mut result)?;
         Ok(result)
     }
 
     fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.apply_y_into(field, &mut result)?;
         Ok(result)
     }
 
     fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.apply_z_into(field, &mut result)?;
         Ok(result)
     }

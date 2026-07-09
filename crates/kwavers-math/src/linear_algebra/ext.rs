@@ -1,9 +1,9 @@
-use crate::linear_algebra::{
+﻿use crate::linear_algebra::{
     ComplexLinearAlgebra, EigenDecomposition, LinearAlgebra, VectorOperations,
 };
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use leto::{Array1, Array2};
+use ndarray::{Array1, Array2};
 
 /// Compute L2 norm of a 3D array.
 #[must_use]

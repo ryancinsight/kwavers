@@ -274,7 +274,7 @@ fn test_lsqr_diagonal_system() {
 ///
 #[test]
 fn test_lsqr_overdetermined_exact_solution() {
-    let a = Array2::from_shape_vec((3, 2), vec![1.0, 0.0, 0.0, 2.0, 1.0, 1.0]).unwrap();
+    let a = Array2::from_vec([3, 2], vec![1.0, 0.0, 0.0, 2.0, 1.0, 1.0]).unwrap();
     let b = arr1(&[1.0, 4.0, 3.0]);
 
     let cfg = LsqrConfig {
@@ -306,7 +306,7 @@ fn test_lsqr_overdetermined_exact_solution() {
 #[test]
 fn test_lsqr_overdetermined_system() {
     // Overdetermined system (more equations than unknowns)
-    let a = Array2::from_shape_vec((3, 2), vec![1.0, 0.0, 1.0, 1.0, 0.0, 1.0]).unwrap();
+    let a = Array2::from_vec([3, 2], vec![1.0, 0.0, 1.0, 1.0, 0.0, 1.0]).unwrap();
     let b = arr1(&[1.0, 2.0, 1.0]);
 
     let solver = LsqrSolver::new(LsqrConfig::default());

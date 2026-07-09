@@ -90,7 +90,7 @@ mod tests {
     fn zip_mut_two_refs_updates_dense_arrays() {
         let first = Array3::from_shape_fn((2, 2, 2), |(i, j, k)| (i + j + k) as i32);
         let second = Array3::from_shape_fn((2, 2, 2), |(i, j, k)| (2 * i + j + k) as i32);
-        let mut out = Array3::zeros((2, 2, 2));
+        let mut out = Array3::zeros([2, 2, 2]);
 
         zip_mut_two_refs(
             out.view_mut(),

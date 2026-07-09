@@ -31,7 +31,7 @@ impl SensorMask3 for LetoArray3<bool> {
 
 impl SensorMask3 for NdArray3<bool> {
     fn shape3(&self) -> [usize; 3] {
-        let dim = self.dim();
+        let dim = self.shape();
         [dim.0, dim.1, dim.2]
     }
 

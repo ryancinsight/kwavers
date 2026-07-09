@@ -133,8 +133,8 @@ impl EigenSolver {
 
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
-        let mut sorted_eigenvalues = Array1::zeros(n);
-        let mut sorted_eigenvectors = Array2::zeros((n, n));
+        let mut sorted_eigenvalues = Array1::zeros([n]);
+        let mut sorted_eigenvectors = Array2::zeros([n, n]);
 
         for (new_idx, &old_idx) in indices.iter().enumerate() {
             sorted_eigenvalues[new_idx] = eigenvalues[old_idx];

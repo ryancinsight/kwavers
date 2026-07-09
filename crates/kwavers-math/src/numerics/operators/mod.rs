@@ -34,7 +34,7 @@
 //! let dx = 0.001; // 1 mm grid spacing
 //! let op = CentralDifference2::new(dx, dx, dx)?;
 //!
-//! let field = Array3::zeros((100, 100, 100));
+//! let field = Array3::zeros([100, 100, 100]);
 //! let gradient_x = op.apply_x(field.view())?;
 //! ```
 //!

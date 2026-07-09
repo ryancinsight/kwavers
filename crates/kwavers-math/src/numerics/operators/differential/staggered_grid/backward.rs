@@ -27,7 +27,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -37,10 +37,10 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
+            dst.shape(),
             (nx, ny, nz),
             "apply_backward_x_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
-            dst.dim()
+            dst.shape()
         );
         let dx = self.dx;
         if field.is_standard_layout() {
@@ -86,7 +86,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -96,10 +96,10 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
+            dst.shape(),
             (nx, ny, nz),
             "apply_backward_y_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
-            dst.dim()
+            dst.shape()
         );
         let dy = self.dy;
         if field.is_standard_layout() {
@@ -145,7 +145,7 @@ impl StaggeredGridOperator {
         field: ArrayView3<f64>,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -155,10 +155,10 @@ impl StaggeredGridOperator {
             .into());
         }
         debug_assert_eq!(
-            dst.dim(),
+            dst.shape(),
             (nx, ny, nz),
             "apply_backward_z_into: dst shape {:?} must be ({nx}, {ny}, {nz})",
-            dst.dim()
+            dst.shape()
         );
         let dz = self.dz;
         if field.is_standard_layout() {
@@ -198,7 +198,7 @@ impl StaggeredGridOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_backward_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -207,7 +207,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 1..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -229,7 +229,7 @@ impl StaggeredGridOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_backward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -238,7 +238,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 1..ny {
                 for k in 0..nz {
@@ -260,7 +260,7 @@ impl StaggeredGridOperator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply_backward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 2 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 2,
@@ -269,7 +269,7 @@ impl StaggeredGridOperator {
             }
             .into());
         }
-        let mut result = Array3::zeros((nx, ny, nz));
+        let mut result = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 1..nz {

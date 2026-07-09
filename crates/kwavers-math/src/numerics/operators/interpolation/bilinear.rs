@@ -13,7 +13,7 @@ use leto::Array2;
 /// sample so the function is defined on the closed domain `[0, nx−1] × [0, ny−1]`.
 #[must_use]
 pub fn bilinear_index_space(input: &Array2<f64>, x: f64, y: f64) -> f64 {
-    let (nx, ny) = input.dim();
+    let [nx, ny] = input.shape();
     let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
     let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
     let x1 = (x0 + 1).min(nx - 1);

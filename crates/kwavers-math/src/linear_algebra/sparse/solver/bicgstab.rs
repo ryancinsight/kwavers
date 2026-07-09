@@ -26,7 +26,7 @@ impl IterativeSolver {
         x0: Option<ArrayView1<f64>>,
     ) -> KwaversResult<Array1<f64>> {
         let n = a.rows;
-        let mut x = x0.map_or_else(|| Array1::zeros(n), |v| v.to_owned());
+        let mut x = x0.map_or_else(|| Array1::zeros([n]), |v| v.to_owned());
 
         let mut r = b.to_owned() - a.multiply_vector(x.view())?;
         let r0 = r.clone();
@@ -39,8 +39,8 @@ impl IterativeSolver {
         let mut alpha = 1.0;
         let mut omega = 1.0;
 
-        let mut v = Array1::zeros(n);
-        let mut p = Array1::zeros(n);
+        let mut v = Array1::zeros([n]);
+        let mut p = Array1::zeros([n]);
 
         for iteration in 0..self.config.max_iterations {
             let rho_prev = rho;

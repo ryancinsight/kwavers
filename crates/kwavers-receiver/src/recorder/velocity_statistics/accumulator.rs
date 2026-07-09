@@ -60,7 +60,7 @@ impl VelocityArray3Access for leto::Array3<f64> {
 
 impl VelocityArray3Access for NdArray3<f64> {
     fn shape3(&self) -> [usize; 3] {
-        let dim = self.dim();
+        let dim = self.shape();
         [dim.0, dim.1, dim.2]
     }
 

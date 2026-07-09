@@ -49,7 +49,7 @@ fn test_trilinear_linear_function() {
     let dx = 1.0;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let mut data = Array3::zeros((4, 4, 4));
+    let mut data = Array3::zeros([4, 4, 4]);
     for i in 0..4 {
         for j in 0..4 {
             for k in 0..4 {
@@ -72,7 +72,7 @@ fn test_trilinear_at_corner() {
     let dx = 0.1;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let mut data = Array3::zeros((3, 3, 3));
+    let mut data = Array3::zeros([3, 3, 3]);
     data[[1, 1, 1]] = 5.0;
 
     let result = interp
@@ -87,7 +87,7 @@ fn test_interpolation_out_of_bounds() {
     let dx = 0.1;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let data = Array3::zeros((5, 5, 5));
+    let data = Array3::zeros([5, 5, 5]);
     let result = interp.interpolate_point(data.view(), 1.0, 0.0, 0.0);
 
     assert!(result.is_err());
@@ -99,7 +99,7 @@ fn test_trilinear_3d_batch() {
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
     let data =
-        Array3::from_shape_vec((2, 2, 2), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
+        Array3::from_vec([2, 2, 2], vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
 
     let target_x = Array1::from_vec(vec![0.5]);
     let target_y = Array1::from_vec(vec![0.5]);
