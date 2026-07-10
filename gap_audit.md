@@ -1,5 +1,9 @@
 # Gap Audit
 
+- Closed 2026-07-10: six production documentation sites described removed
+  Rayon, Tokio, nalgebra, or ndarray execution. Their contracts now match the
+  live Moirai/Leto implementations. Evidence tier: static source audit.
+
 Module-by-module audit of physics/numerics implementations, marking items for
 future revision. Compact + link-navigable per agent-artifact policy; closed
 history (pre-2026-05-29) was pruned from `docs/` during the workspace-split

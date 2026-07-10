@@ -5,10 +5,7 @@ use super::super::provider::BeamformingGpuProvider;
 #[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 #[cfg(feature = "gpu")]
 impl<P> BeamformingProcessor3D<P>
@@ -63,7 +60,7 @@ impl BeamformingProcessor3D {
     ///
     /// Forwards to [`super::super::cpu::delay_and_sum_cpu`].  The `dynamic_focusing`
     /// and `sub_volume_size` flags are accepted for API symmetry with the GPU path;
-    /// the CPU kernel processes the whole volume in a single Rayon-parallel pass.
+    /// the CPU kernel processes the whole volume through Moirai data parallelism.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
@@ -113,7 +110,7 @@ impl BeamformingProcessor3D {
     ///
     /// Forwards to [`super::super::cpu::mvdr_cpu`] which implements spatially-smoothed
     /// covariance estimation (Shan & Kailath 1985), relative diagonal loading,
-    /// and Cholesky/LU solve via nalgebra.
+    /// and the Leto-owned linear-solver surface.
     ///
     /// # References
     /// - Capon (1969): original MVDR

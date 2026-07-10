@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - provider documentation reconciliation [patch]
+
+- Corrected stale production documentation that still attributed migrated
+  beamforming, inverse, FSI, parser, and SIMD paths to legacy providers.
+
 ### Fixed (2026-07-10) - clutter-filter SVD/eigensolver selection [patch]
 - [patch] `kwavers-analysis` clutter filters used the wrong Leto decompositions
   for their (inherently rank-deficient / symmetric) inputs, surfaced by the first

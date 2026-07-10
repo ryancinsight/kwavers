@@ -1,5 +1,12 @@
 # Project Checklist
 
+- [x] [patch] Reconcile production architecture documentation after the
+      provider migration: beamforming, inverse operators, FSI traversal,
+      parser diagnostics, and aarch64 SIMD documentation now name Moirai and
+      Leto instead of removed Rayon, Tokio, nalgebra, or ndarray paths.
+      Completion evidence: touched-file rustfmt and a scoped production-source
+      audit find no stale provider names in the corrected modules.
+
 > Target version: 4.0.0 at next release — CLD-13 changed a public field type
 > (`PhotoacousticResult`/`PhotoacousticSimulation::pressure_fields`), a SemVer
 > breaking change ([major], `cargo-semver-checks` authoritative). Practical

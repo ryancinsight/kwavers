@@ -46,8 +46,7 @@ pub enum Manifest {
     /// missing token, an unexpected atom, or an unsupported format revision.
     #[error("manifest: malformed input near byte {offset}: {message}")]
     Parse {
-        /// Approximate byte offset where the parse failed (best-effort; tokio positioners
-        /// do not guarantee pinpoint accuracy).
+        /// Approximate byte offset where the parser detected the malformed input.
         offset: usize,
         /// Diagnostic message.
         message: String,

@@ -3,16 +3,16 @@
 //! ## Design
 //!
 //! Signatures match the x86_64 variants so the dispatcher compiles and
-//! executes correctly on aarch64 targets.  The current bodies use ndarray
+//! executes correctly on aarch64 targets. The current bodies use Leto
 //! `Zip`-based implementations identical to the x86_64 fallback path —
 //! LLVM autovectorises these to ASIMD/NEON instructions on `-C target-cpu=native`.
 //!
 //! ## Theorem: LLVM autovectorisation contract
 //!
-//! ndarray `Zip::for_each` over contiguous f64 slices emits a loop with no
+//! Leto element-wise traversal over contiguous `f64` slices emits a loop with no
 //! aliasing.  LLVM's autovectoriser is guaranteed to fold independent
 //! element-wise operations into NEON `FADD`/`FMUL`/`VFMA` instructions when:
-//!   1. The slice is contiguous (ndarray layout check is statically verifiable
+//!   1. The slice is contiguous (the Leto layout check is statically verifiable
 //!      for standard column/row-major `Array3`).
 //!   2. `-C target-cpu=native` or `+neon` feature is active.
 //!   3. No `restrict`-defeating aliasing annotations are required.

@@ -1,5 +1,8 @@
 # Backlog / Strategy
 
+- [x] [patch] Reconcile stale provider names in production module contracts;
+  closed 2026-07-10 with Moirai/Leto ownership reflected at each touched site.
+
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
