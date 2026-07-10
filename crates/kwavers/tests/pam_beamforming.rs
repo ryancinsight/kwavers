@@ -210,16 +210,17 @@ fn synth_impulses_has_one_impulse_per_element() {
     let data =
         synth_sensor_data_impulses(&geometry, n_samples, focal, sample_rate, SOUND_SPEED_WATER);
 
-    // Count impulses per element channel.
+    // Count impulses per element channel. `data` is (n_elements, 1, n_samples);
+    // the channel is the last-axis time series at [elem, 0, :].
     for elem in 0..elements {
-        let channel = data.index_axis::<1>(0, elem).expect("index_axis");
         let mut count = 0usize;
-        for v in channel.iter() {
-            if *v == 1.0 {
+        for t in 0..n_samples {
+            let v = data[[elem, 0, t]];
+            if v == 1.0 {
                 count += 1;
             } else {
                 // enforce exact 0/1 outputs from the generator
-                assert!(*v == 0.0, "unexpected non-binary sample: {v}");
+                assert!(v == 0.0, "unexpected non-binary sample: {v}");
             }
         }
         assert_eq!(

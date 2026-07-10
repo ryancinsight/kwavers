@@ -247,7 +247,7 @@ fn second_order_does_not_worsen_pstd_match() {
     let mut pstd_norm_sq = 0.0_f64;
     let mut first_residual_sq = 0.0_f64;
     let mut second_residual_sq = 0.0_f64;
-    let pstd_row = pstd_data.observed_pressure.index_axis::<1>(0, 0).expect("index_axis");
+    let pstd_row = pstd_data.observed_pressure.index_axis::<2>(0, 0).expect("index_axis");
     for ((&pstd, &first), &second) in pstd_row
         .iter()
         .zip(first_order.iter())
@@ -375,12 +375,12 @@ fn finite_window_first_variation_residual(
     let mut residual_norm_sq = 0.0_f64;
     for (((&pstd_perturbed, &pstd_reference), &born_perturbed), &born_reference) in perturbed_data
         .observed_pressure
-        .index_axis::<1>(0, 0).expect("index_axis")
+        .index_axis::<2>(0, 0).expect("index_axis")
         .iter()
         .zip(
             reference_data
                 .observed_pressure
-                .index_axis::<1>(0, 0).expect("index_axis")
+                .index_axis::<2>(0, 0).expect("index_axis")
                 .iter(),
         )
         .zip(born_perturbed.iter())
