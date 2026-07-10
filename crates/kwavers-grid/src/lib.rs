@@ -7,7 +7,6 @@
 //! classification) previously co-located in `kwavers-domain`.
 
 pub mod adapter;
-pub mod compat;
 pub mod config;
 pub mod coordinates;
 pub mod error;
@@ -170,40 +169,22 @@ impl Grid {
         ))
     }
 
-    /// Compute kx array — delegates to [`Self::kx`].
+    /// Compute the x-axis wave-number vector.
     #[inline]
     pub fn compute_kx(&self) -> leto::Array1<f64> {
-        self.kx()
+        KSpaceCalculator::generate_k_vector(self.nx, self.dx)
     }
 
-    /// Compute ky array — delegates to [`Self::ky`].
+    /// Compute the y-axis wave-number vector.
     #[inline]
     pub fn compute_ky(&self) -> leto::Array1<f64> {
-        self.ky()
+        KSpaceCalculator::generate_k_vector(self.ny, self.dy)
     }
 
-    /// Compute kz array — delegates to [`Self::kz`].
+    /// Compute the z-axis wave-number vector.
     #[inline]
     pub fn compute_kz(&self) -> leto::Array1<f64> {
-        self.kz()
-    }
-
-    /// Compute kx array — delegates to [`Self::kx`].
-    #[inline]
-    pub fn compute_kx_leto(&self) -> leto::Array1<f64> {
-        self.kx()
-    }
-
-    /// Compute ky array — delegates to [`Self::ky`].
-    #[inline]
-    pub fn compute_ky_leto(&self) -> leto::Array1<f64> {
-        self.ky()
-    }
-
-    /// Compute kz array — delegates to [`Self::kz`].
-    #[inline]
-    pub fn compute_kz_leto(&self) -> leto::Array1<f64> {
-        self.kz()
+        KSpaceCalculator::generate_k_vector(self.nz, self.dz)
     }
 
     /// Calculate CFL timestep for given sound speed
@@ -213,42 +194,6 @@ impl Grid {
     #[must_use]
     pub fn cfl_timestep(&self, max_sound_speed: f64) -> f64 {
         stability::StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
-    }
-
-    /// Get kx array.
-    #[inline]
-    pub fn kx(&self) -> leto::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nx, self.dx).into()
-    }
-
-    /// Get ky array.
-    #[inline]
-    pub fn ky(&self) -> leto::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.ny, self.dy).into()
-    }
-
-    /// Get kz array.
-    #[inline]
-    pub fn kz(&self) -> leto::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nz, self.dz).into()
-    }
-
-    /// Get kx array in leto format.
-    #[inline]
-    pub fn kx_leto(&self) -> leto::Array1<f64> {
-        self.kx()
-    }
-
-    /// Get ky array in leto format.
-    #[inline]
-    pub fn ky_leto(&self) -> leto::Array1<f64> {
-        self.ky()
-    }
-
-    /// Get kz array in leto format.
-    #[inline]
-    pub fn kz_leto(&self) -> leto::Array1<f64> {
-        self.kz()
     }
 
     /// Get x coordinates (compatibility)

@@ -14,6 +14,15 @@ do not assert an unconfirmed physics error.
 
 ### Atlas provider migration residuals (2026-07-01)
 
+- **kwavers-grid duplicate Leto compatibility surface - RESOLVED [arch].**
+  Deleted `compat.rs`, redundant `_leto` forwarding APIs, duplicate wave-number
+  names, and allocating Leto-to-Leto k-space conversions. Canonical grid
+  operations import Leto directly and accept borrowed views where appropriate.
+  Evidence tier: compile-time integration, empirical unit tests, and static
+  source audit. All-target grid clippy passes; grid nextest passes 38/38;
+  doctests and warning-clean docs pass; `kwavers-physics` library check passes.
+  The broader test frontier remains in unrelated `kwavers-math` and
+  `kwavers-solver` Leto test/API conversions.
 - **kwavers-analysis signal-processing FFT facade holdouts - RESOLVED [patch].**
   Narrowband legacy analytic-baseband and windowed STFT snapshot extraction now
   route through Apollo 1-D FFT APIs over Leto buffers instead of importing FFT

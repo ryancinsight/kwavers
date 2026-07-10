@@ -29,38 +29,28 @@ pub struct FDCoefficients;
 impl FDCoefficients {
     /// Get coefficients for first derivative (generic over float type)
     ///
-    /// # Panics
-    /// Never panics - all coefficients are mathematically exact rational numbers
-    /// that convert precisely to any IEEE 754 floating-point type.
+    /// Coefficients are converted once from their `f64` rational evaluation to
+    /// the native precision selected by `T`.
     #[must_use]
     pub fn first_derivative<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
-        // SAFETY: All coefficients are exact rational numbers that convert
-        // precisely to f32/f64 without loss of precision or overflow.
-        // Mathematical proof: All values are in range [-1, 1] with denominators
-        // that are powers of small primes, ensuring exact IEEE 754 representation.
         match order {
-            FdAccuracyOrder::Second => {
-                vec![T::from_f64(0.5 as f64)]
-            }
+            FdAccuracyOrder::Second => vec![T::from_f64(0.5)],
             FdAccuracyOrder::Fourth => {
-                vec![
-                    T::from_f64(-1.0 / 12.0 as f64),
-                    T::from_f64(2.0 / 3.0 as f64),
-                ]
+                vec![T::from_f64(-1.0 / 12.0), T::from_f64(2.0 / 3.0)]
             }
             FdAccuracyOrder::Sixth => {
                 vec![
-                    T::from_f64(1.0 / 60.0 as f64),
-                    T::from_f64(-3.0 / 20.0 as f64),
-                    T::from_f64(3.0 / 4.0 as f64),
+                    T::from_f64(1.0 / 60.0),
+                    T::from_f64(-3.0 / 20.0),
+                    T::from_f64(3.0 / 4.0),
                 ]
             }
             FdAccuracyOrder::Eighth => {
                 vec![
-                    T::from_f64(-1.0 / 280.0 as f64),
-                    T::from_f64(4.0 / 105.0 as f64),
-                    T::from_f64(-1.0 / 5.0 as f64),
-                    T::from_f64(4.0 / 5.0 as f64),
+                    T::from_f64(-1.0 / 280.0),
+                    T::from_f64(4.0 / 105.0),
+                    T::from_f64(-1.0 / 5.0),
+                    T::from_f64(4.0 / 5.0),
                 ]
             }
         }
@@ -71,31 +61,27 @@ impl FDCoefficients {
     /// Returns coefficients for the points at ±h, ±2h, etc. from center.
     /// The center point coefficient should be computed separately.
     ///
-    /// # Panics
-    /// Never panics - all coefficients are exact IEEE 754 representations.
+    /// Coefficients are rounded once to the native precision selected by `T`.
     #[must_use]
     pub fn second_derivative_pairs<T: FloatElement>(order: FdAccuracyOrder) -> Vec<T> {
         match order {
-            FdAccuracyOrder::Second => vec![T::from_f64(1.0 as f64)],
+            FdAccuracyOrder::Second => vec![T::from_f64(1.0)],
             FdAccuracyOrder::Fourth => {
-                vec![
-                    T::from_f64(-1.0 / 12.0 as f64),
-                    T::from_f64(4.0 / 3.0 as f64),
-                ]
+                vec![T::from_f64(-1.0 / 12.0), T::from_f64(4.0 / 3.0)]
             }
             FdAccuracyOrder::Sixth => {
                 vec![
-                    T::from_f64(1.0 / 90.0 as f64),
-                    T::from_f64(-3.0 / 20.0 as f64),
-                    T::from_f64(3.0 / 2.0 as f64),
+                    T::from_f64(1.0 / 90.0),
+                    T::from_f64(-3.0 / 20.0),
+                    T::from_f64(3.0 / 2.0),
                 ]
             }
             FdAccuracyOrder::Eighth => {
                 vec![
-                    T::from_f64(-1.0 / 560.0 as f64),
-                    T::from_f64(8.0 / 315.0 as f64),
-                    T::from_f64(-1.0 / 5.0 as f64),
-                    T::from_f64(8.0 / 5.0 as f64),
+                    T::from_f64(-1.0 / 560.0),
+                    T::from_f64(8.0 / 315.0),
+                    T::from_f64(-1.0 / 5.0),
+                    T::from_f64(8.0 / 5.0),
                 ]
             }
         }
@@ -103,21 +89,14 @@ impl FDCoefficients {
 
     /// Get center coefficient for second derivative
     ///
-    /// # Panics
-    /// Never panics - all coefficients are exact IEEE 754 representations.
+    /// The coefficient is rounded once to the native precision selected by `T`.
     #[must_use]
     pub fn second_derivative_center<T: FloatElement>(order: FdAccuracyOrder) -> T {
         match order {
-            FdAccuracyOrder::Second => T::from_f64(-2.0 as f64),
-            FdAccuracyOrder::Fourth => {
-                T::from_f64(-5.0 / 2.0 as f64)
-            }
-            FdAccuracyOrder::Sixth => {
-                T::from_f64(-49.0 / 18.0 as f64)
-            }
-            FdAccuracyOrder::Eighth => {
-                T::from_f64(-205.0 / 72.0 as f64)
-            }
+            FdAccuracyOrder::Second => T::from_f64(-2.0),
+            FdAccuracyOrder::Fourth => T::from_f64(-5.0 / 2.0),
+            FdAccuracyOrder::Sixth => T::from_f64(-49.0 / 18.0),
+            FdAccuracyOrder::Eighth => T::from_f64(-205.0 / 72.0),
         }
     }
 }

@@ -1,11 +1,10 @@
 //! Gradient operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
-use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
 use eunomia::FloatElement;
+use kwavers_core::error::KwaversResult;
+use leto::{Array3, ArrayView3};
 
 /// Compute the gradient of a 3D field
 /// # Errors
@@ -43,15 +42,14 @@ where
     let stencil_radius = coeffs.len();
 
     // X-direction gradient
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
     for i in stencil_radius..nx - stencil_radius {
         for j in 0..ny {
             for k in 0..nz {
                 let mut grad_val = T::from_f64(0.0);
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val =
-                        grad_val + coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                    grad_val += coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                 }
                 grad_x[[i, j, k]] = grad_val * dx_inv;
             }
@@ -59,15 +57,14 @@ where
     }
 
     // Y-direction gradient
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
     for i in 0..nx {
         for j in stencil_radius..ny - stencil_radius {
             for k in 0..nz {
                 let mut grad_val = T::from_f64(0.0);
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val =
-                        grad_val + coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                    grad_val += coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                 }
                 grad_y[[i, j, k]] = grad_val * dy_inv;
             }
@@ -75,15 +72,14 @@ where
     }
 
     // Z-direction gradient
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
     for i in 0..nx {
         for j in 0..ny {
             for k in stencil_radius..nz - stencil_radius {
                 let mut grad_val = T::from_f64(0.0);
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val =
-                        grad_val + coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                    grad_val += coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                 }
                 grad_z[[i, j, k]] = grad_val * dz_inv;
             }
@@ -91,23 +87,4 @@ where
     }
 
     Ok((grad_x, grad_y, grad_z))
-}
-
-/// Compute the gradient of a 3D leto field.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub fn gradient_leto<T>(
-    field: &LetoArray3<T>,
-    grid: &Grid,
-    order: FdAccuracyOrder,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let field_view = field.view();
-    gradient(&field_view, grid, order)
 }

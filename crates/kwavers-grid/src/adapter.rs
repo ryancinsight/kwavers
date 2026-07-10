@@ -85,7 +85,7 @@ impl GridAdapter {
     /// This provides a bridge in the opposite direction for code that still
     /// requires the legacy `Grid` struct.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn from_topology(topology: &dyn GridTopology) -> KwaversResult<Self> {
         let dims = topology.dimensions();
@@ -157,7 +157,7 @@ impl GridTopology for GridAdapter {
     }
 
     fn create_field(&self) -> Array3<f64> {
-        self.grid.create_field_leto()
+        self.grid.create_field()
     }
 }
 

@@ -3,10 +3,9 @@
 //! Unified Laplacian operator implementation for discretized grids.
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::leto::{Array3, ArrayView3, ArrayViewMut3};
 use crate::Grid;
 use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Configuration for Laplacian computation
@@ -82,7 +81,7 @@ impl LaplacianOperator {
 
     /// Compute Laplacian of a scalar field
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn apply(&self, field: ArrayView3<'_, f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
@@ -91,17 +90,9 @@ impl LaplacianOperator {
         Ok(result)
     }
 
-    /// Compute Laplacian for a leto-backed scalar field.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn apply_leto(&self, field: &LetoArray3<f64>) -> KwaversResult<LetoArray3<f64>> {
-        self.apply(field.view())
-    }
-
     /// Compute Laplacian in-place (zero-copy when possible)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn apply_mut(
         &self,
@@ -311,19 +302,6 @@ pub fn laplacian(
     operator.apply(field)
 }
 
-/// Compute Laplacian for a leto-backed scalar field.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
-pub fn laplacian_leto(
-    field: &LetoArray3<f64>,
-    grid: &Grid,
-    order: FdAccuracyOrder,
-) -> KwaversResult<LetoArray3<f64>> {
-    let operator = LaplacianOperator::with_order(grid, order);
-    operator.apply_leto(field)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -394,7 +372,9 @@ mod tests {
         let expected = operator.apply(field.view()).unwrap();
         let mut storage = Array3::zeros([12, 10, 10]);
         {
-            let mut output = storage.slice_mut(&[(1, 11, 1), (0, 10, 1), (0, 10, 1)]).unwrap();
+            let mut output = storage
+                .slice_mut(&[(1, 11, 1), (0, 10, 1), (0, 10, 1)])
+                .unwrap();
             operator.apply_mut(field.view(), output.reborrow()).unwrap();
         }
 

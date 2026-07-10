@@ -9,6 +9,18 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [arch] Consolidate `kwavers-grid` on one native Leto API per operation:
+      remove `compat`, delete redundant `_leto` forwarding surfaces, update all
+      workspace callers, and resolve the resulting grid clippy frontier.
+      Decision: [ADR 034](docs/ADR/034-kwavers-grid-native-leto-surface.md).
+      Verification: static audit finds no compatibility or duplicate grid
+      provider surface; exact formatting passes; all-target clippy passes; full
+      grid nextest passes 38/38; doctests pass with five intentionally ignored;
+      docs are warning-clean; and `kwavers-physics` library check passes. The
+      `kwavers-math` test target remains blocked by 124 unrelated Leto test
+      errors; the full facade test target reaches `kwavers-solver` and remains
+      blocked by 89 unrelated Leto migration errors.
+
 - [x] [patch] Close the `kwavers-physics` Leto test migration frontier by
       converting sonoluminescence spectral grids, reductions, constructors,
       fixed-rank shapes, and typed shape-error assertions to native Leto

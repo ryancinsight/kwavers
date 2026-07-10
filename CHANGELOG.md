@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Breaking (2026-07-10) - kwavers-grid native Leto surface [arch]
+- [major] Removed the transitional `kwavers_grid::compat` module and redundant
+  `_leto` grid, differential-operator, and k-space APIs. Removed duplicate
+  `Grid::kx`/`ky`/`kz` names in favor of the existing `compute_kx`/`compute_ky`/
+  `compute_kz` surface. Canonical operations now import and return Leto types
+  directly, while differential operators retain borrowed Leto views as their
+  zero-copy input boundary. Also removed identity and allocating Leto-to-Leto
+  k-space conversions and corrected finite-difference coefficient
+  documentation to state native-precision rounding.
+
+### Migration
+- Replace `kwavers_grid::compat::*` imports with direct `leto` imports. Replace
+  deleted `_leto` forwarding calls with the unsuffixed operation and pass
+  `.view()` when its canonical signature accepts `ArrayView3`. Replace
+  `Grid::kx`/`ky`/`kz` with `compute_kx`/`compute_ky`/`compute_kz`.
+- Verification: static duplicate audit clean; exact formatting and all-target
+  grid clippy pass; grid nextest passes 38/38; doctests pass with five
+  intentionally ignored; grid docs are warning-clean; and `kwavers-physics`
+  library check passes. Existing `kwavers-math` and `kwavers-solver` Leto
+  migration errors block their broader test/facade gates.
+
 ### Fixed (2026-07-10) - physics Leto test migration closure [patch]
 - [patch] Migrated the remaining sonoluminescence tests and spectrum
   construction to native Leto spectral ranges, iterator reductions,

@@ -1,15 +1,14 @@
 //! Curl operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
-use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
 use eunomia::FloatElement;
+use kwavers_core::error::KwaversResult;
+use leto::{Array3, ArrayView3};
 
 /// Compute curl of a vector field
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -58,9 +57,9 @@ where
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
 
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
 
     // Compute curl in interior points
     for i in stencil_radius..nx - stencil_radius {
@@ -77,16 +76,16 @@ where
                     let offset = n + 1;
 
                     // For curl_x = ∂vz/∂y - ∂vy/∂z
-                    dvz_dy = dvz_dy + coeff * (vz[[i, j + offset, k]] - vz[[i, j - offset, k]]);
-                    dvy_dz = dvy_dz + coeff * (vy[[i, j, k + offset]] - vy[[i, j, k - offset]]);
+                    dvz_dy += coeff * (vz[[i, j + offset, k]] - vz[[i, j - offset, k]]);
+                    dvy_dz += coeff * (vy[[i, j, k + offset]] - vy[[i, j, k - offset]]);
 
                     // For curl_y = ∂vx/∂z - ∂vz/∂x
-                    dvx_dz = dvx_dz + coeff * (vx[[i, j, k + offset]] - vx[[i, j, k - offset]]);
-                    dvz_dx = dvz_dx + coeff * (vz[[i + offset, j, k]] - vz[[i - offset, j, k]]);
+                    dvx_dz += coeff * (vx[[i, j, k + offset]] - vx[[i, j, k - offset]]);
+                    dvz_dx += coeff * (vz[[i + offset, j, k]] - vz[[i - offset, j, k]]);
 
                     // For curl_z = ∂vy/∂x - ∂vx/∂y
-                    dvy_dx = dvy_dx + coeff * (vy[[i + offset, j, k]] - vy[[i - offset, j, k]]);
-                    dvx_dy = dvx_dy + coeff * (vx[[i, j + offset, k]] - vx[[i, j - offset, k]]);
+                    dvy_dx += coeff * (vy[[i + offset, j, k]] - vy[[i - offset, j, k]]);
+                    dvx_dy += coeff * (vx[[i, j + offset, k]] - vx[[i, j - offset, k]]);
                 }
 
                 curl_x[[i, j, k]] = dvz_dy * dy_inv - dvy_dz * dz_inv;
@@ -97,29 +96,6 @@ where
     }
 
     Ok((curl_x, curl_y, curl_z))
-}
-
-/// Compute curl of a leto 3D vector field.
-/// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub fn curl_leto<T>(
-    vx: &LetoArray3<T>,
-    vy: &LetoArray3<T>,
-    vz: &LetoArray3<T>,
-    grid: &Grid,
-    order: FdAccuracyOrder,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let vx_view = vx.view();
-    let vy_view = vy.view();
-    let vz_view = vz.view();
-    curl(&vx_view, &vy_view, &vz_view, grid, order)
 }
 
 #[cfg(test)]

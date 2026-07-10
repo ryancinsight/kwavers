@@ -3,11 +3,10 @@
 use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
 use super::functions::{gradient_optimized, gradient_with_strategy};
-use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
-use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
 use eunomia::FloatElement;
+use kwavers_core::error::KwaversResult;
+use leto::{Array3, ArrayView3};
 
 /// Boundary handling strategy
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -131,23 +130,5 @@ impl GradientOperator {
         } else {
             gradient_with_strategy(field, grid, order, self.boundary_strategy)
         }
-    }
-
-    /// Compute gradient for leto arrays using the same operator configuration.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    pub fn compute_leto<T>(
-        &self,
-        field: &LetoArray3<T>,
-        grid: &Grid,
-        order: FdAccuracyOrder,
-        cache: Option<&GradientCache<T>>,
-    ) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
-    where
-        T: FloatElement + Clone + Send + Sync + Default,
-    {
-        let field_view = field.view();
-        self.compute(&field_view, grid, order, cache)
     }
 }

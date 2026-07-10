@@ -3,11 +3,10 @@
 use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use super::cache::GradientCache;
 use super::operator::BoundaryStrategy;
-use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
-use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
 use eunomia::FloatElement;
+use kwavers_core::error::KwaversResult;
+use leto::{Array3, ArrayView3};
 
 /// Optimized gradient computation with caching and parallelization
 /// # Errors
@@ -56,9 +55,9 @@ where
         )
     } else {
         (
-            T::from_f64(1.0) / T::from_f64(grid.dx as f64),
-            T::from_f64(1.0) / T::from_f64(grid.dy as f64),
-            T::from_f64(1.0) / T::from_f64(grid.dz as f64),
+            T::from_f64(1.0) / T::from_f64(grid.dx),
+            T::from_f64(1.0) / T::from_f64(grid.dy),
+            T::from_f64(1.0) / T::from_f64(grid.dz),
         )
     };
 
@@ -68,8 +67,7 @@ where
                 let mut grad_val = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val =
-                        grad_val + *coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
+                    grad_val += *coeff * (field[[i + offset, j, k]] - field[[i - offset, j, k]]);
                 }
                 grad_x[[i, j, k]] = grad_val * dx_inv;
             }
@@ -82,8 +80,7 @@ where
                 let mut grad_val = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val =
-                        grad_val + *coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
+                    grad_val += *coeff * (field[[i, j + offset, k]] - field[[i, j - offset, k]]);
                 }
                 grad_y[[i, j, k]] = grad_val * dy_inv;
             }
@@ -96,8 +93,7 @@ where
                 let mut grad_val = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    grad_val =
-                        grad_val + *coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
+                    grad_val += *coeff * (field[[i, j, k + offset]] - field[[i, j, k - offset]]);
                 }
                 grad_z[[i, j, k]] = grad_val * dz_inv;
             }
@@ -155,9 +151,9 @@ where
 
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let _stencil_radius = coeffs.len();
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
 
     let map_index = |idx: isize, len: usize| -> Option<usize> {
         if (0..(len as isize)).contains(&idx) {
@@ -220,21 +216,21 @@ where
                 let mut gx = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
-                    gx = gx + *coeff * (get(ii + offset, jj, kk) - get(ii - offset, jj, kk));
+                    gx += *coeff * (get(ii + offset, jj, kk) - get(ii - offset, jj, kk));
                 }
                 grad_x[[i, j, k]] = gx * dx_inv;
 
                 let mut gy = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
-                    gy = gy + *coeff * (get(ii, jj + offset, kk) - get(ii, jj - offset, kk));
+                    gy += *coeff * (get(ii, jj + offset, kk) - get(ii, jj - offset, kk));
                 }
                 grad_y[[i, j, k]] = gy * dy_inv;
 
                 let mut gz = T::from_f64(0.0);
                 for (n, coeff) in coeffs.iter().enumerate() {
                     let offset = (n + 1) as isize;
-                    gz = gz + *coeff * (get(ii, jj, kk + offset) - get(ii, jj, kk - offset));
+                    gz += *coeff * (get(ii, jj, kk + offset) - get(ii, jj, kk - offset));
                 }
                 grad_z[[i, j, k]] = gz * dz_inv;
             }
@@ -242,37 +238,4 @@ where
     }
 
     Ok((grad_x, grad_y, grad_z))
-}
-
-/// Optimized gradient computation for leto fields.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
-pub fn gradient_optimized_leto<T>(
-    field: &LetoArray3<T>,
-    grid: &Grid,
-    order: FdAccuracyOrder,
-    cache: Option<&GradientCache<T>>,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let field_view = field.view();
-    gradient_optimized(&field_view, grid, order, cache)
-}
-
-/// Gradient computation with boundary handling for leto fields.
-/// # Errors
-/// - Returns [`Err`] if an internal constraint is violated.
-///
-pub fn gradient_with_boundaries_leto<T>(
-    field: &LetoArray3<T>,
-    grid: &Grid,
-    order: FdAccuracyOrder,
-) -> KwaversResult<(LetoArray3<T>, LetoArray3<T>, LetoArray3<T>)>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let field_view = field.view();
-    gradient_with_boundaries(&field_view, grid, order)
 }

@@ -1,15 +1,14 @@
 //! Divergence operations module
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
-use crate::compat::leto::{Array3, ArrayView3};
 use crate::Grid;
-use kwavers_core::error::KwaversResult;
-use leto::Array3 as LetoArray3;
 use eunomia::FloatElement;
+use kwavers_core::error::KwaversResult;
+use leto::{Array3, ArrayView3};
 
 /// Compute divergence of a vector field
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -55,9 +54,9 @@ where
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
 
-    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx as f64);
-    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy as f64);
-    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz as f64);
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
 
     // Compute divergence in interior points
     for i in stencil_radius..nx - stencil_radius {
@@ -70,19 +69,19 @@ where
                 // ∂vx/∂x
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    div_x = div_x + coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
+                    div_x += coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
                 }
 
                 // ∂vy/∂y
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    div_y = div_y + coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
+                    div_y += coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
                 }
 
                 // ∂vz/∂z
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    div_z = div_z + coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
+                    div_z += coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
                 }
 
                 divergence[[i, j, k]] = div_x * dx_inv + div_y * dy_inv + div_z * dz_inv;
@@ -91,29 +90,6 @@ where
     }
 
     Ok(divergence)
-}
-
-/// Compute divergence of a leto 3D vector field.
-/// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
-///
-/// # Panics
-/// - Panics if an internal invariant assumed to hold at this call site is violated.
-///
-pub fn divergence_leto<T>(
-    vx: &LetoArray3<T>,
-    vy: &LetoArray3<T>,
-    vz: &LetoArray3<T>,
-    grid: &Grid,
-    order: FdAccuracyOrder,
-) -> KwaversResult<LetoArray3<T>>
-where
-    T: FloatElement + Clone + Send + Sync + Default,
-{
-    let vx_view = vx.view();
-    let vy_view = vy.view();
-    let vz_view = vz.view();
-    divergence(&vx_view, &vy_view, &vz_view, grid, order)
 }
 
 #[cfg(test)]

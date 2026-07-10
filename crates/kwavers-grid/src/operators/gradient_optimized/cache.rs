@@ -33,9 +33,9 @@ where
         Self {
             coefficients_cache: RwLock::new(Vec::new()),
             spacing_inverses: (
-                T::from_f64(1.0) / T::from_f64(grid.dx as f64),
-                T::from_f64(1.0) / T::from_f64(grid.dy as f64),
-                T::from_f64(1.0) / T::from_f64(grid.dz as f64),
+                T::from_f64(1.0) / T::from_f64(grid.dx),
+                T::from_f64(1.0) / T::from_f64(grid.dy),
+                T::from_f64(1.0) / T::from_f64(grid.dz),
             ),
             cache_hits: Arc::new(RwLock::new(0)),
             cache_misses: Arc::new(RwLock::new(0)),

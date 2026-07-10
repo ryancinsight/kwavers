@@ -3,6 +3,18 @@
 > Active strategy at top; CLOSED history retained below for traceability.
 > Full gap inventory: [gap_audit.md](gap_audit.md). Active increment: [CHECKLIST.md](CHECKLIST.md).
 
+## DONE: kwavers-grid native Leto surface [arch]
+
+Delete the obsolete compatibility re-export module and redundant `_leto`
+forwarding APIs now that the canonical grid storage and operator signatures are
+Leto-native. Update all workspace callers without a compatibility bridge, then
+close the package clippy frontier. Decision:
+[ADR 034](docs/ADR/034-kwavers-grid-native-leto-surface.md). Verification:
+static duplicate audit clean; all-target grid clippy clean; grid nextest 38/38;
+doctests and warning-clean docs pass; `kwavers-physics` library check passes.
+Residual test compilation failures are isolated to existing `kwavers-math` and
+`kwavers-solver` Leto migration frontiers.
+
 ## DONE: kwavers-analysis narrowband Apollo FFT routing [patch]
 
 Routed narrowband legacy analytic-baseband and windowed STFT snapshot extraction

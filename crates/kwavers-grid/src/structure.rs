@@ -3,8 +3,8 @@
 //! This module defines the core grid structure for spatial discretization.
 
 use super::error::GridError;
+use leto::Array3;
 use log::debug;
-use crate::compat::leto::Array3;
 
 /// Epsilon for floating point comparisons of grid spacing (crate SSOT).
 pub(crate) const GRID_SPACING_EQUALITY_EPSILON: f64 = 1e-10;
@@ -286,12 +286,6 @@ impl Grid {
     #[inline]
     pub fn create_field(&self) -> Array3<f64> {
         Array3::zeros([self.nx, self.ny, self.nz])
-    }
-
-    /// Create a zero-initialized Leto field with grid dimensions.
-    #[inline]
-    pub fn create_field_leto(&self) -> leto::Array3<f64> {
-        self.create_field()
     }
 }
 

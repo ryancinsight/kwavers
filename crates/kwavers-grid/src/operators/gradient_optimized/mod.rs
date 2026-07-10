@@ -23,8 +23,5 @@ pub mod functions;
 pub mod operator;
 
 pub use cache::GradientCache;
-pub use functions::{
-    gradient_optimized, gradient_optimized_leto, gradient_with_boundaries,
-    gradient_with_boundaries_leto,
-};
+pub use functions::{gradient_optimized, gradient_with_boundaries};
 pub use operator::{BoundaryStrategy, GradientOperator, GradientOperatorBuilder};
