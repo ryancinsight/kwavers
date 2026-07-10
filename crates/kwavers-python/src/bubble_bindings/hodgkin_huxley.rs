@@ -24,7 +24,7 @@
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     yoo_thermal_neural_response, ThermalNeuralParams,
 };
-use leto::Array1;
+use numpy::ndarray::Array1;
 use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

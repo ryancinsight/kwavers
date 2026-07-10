@@ -4,7 +4,7 @@
 //! read-only ndarray views and the authoritative validation/beamforming contract
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
-use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
+use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, nd_to_leto2};
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
 use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
@@ -129,7 +129,7 @@ fn music_pseudospectrum(
     let si = steering_imag
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    if sr.len() != h.nrows() || si.len() != h.nrows() {
+    if sr.len() != h.shape()[0] || si.len() != h.shape()[0] {
         return Err(PyValueError::new_err(
             "steering real/imag parts must have length N matching the covariance",
         ));
@@ -196,8 +196,10 @@ fn passive_acoustic_map_das<'py>(
     };
     let pam = DelayAndSumPAM::new(sensors, config)
         .map_err(|err| PyValueError::new_err(format!("kwavers PAM config error: {err}")))?;
+    let passive_leto = nd_to_leto2(passive_data.as_array().to_owned());
+    let grid_leto = nd_to_leto2(grid_points.as_array().to_owned());
     let intensity = pam
-        .beamform_view(passive_data.as_array(), grid_points.as_array())
+        .beamform_view(passive_leto.view(), grid_leto.view())
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers PAM error: {err}")))?;
 
     Ok(PyArray1::from_owned_array(py, leto1_to_nd1(intensity)).into())
@@ -235,15 +237,18 @@ fn beamform_image_delay_and_sum<'py>(
     )
     .map_err(|err| PyValueError::new_err(format!("kwavers imaging_das config error: {err}")))?;
 
+    let sensor_leto = nd_to_leto2(sensor_data.as_array().to_owned());
+    let positions_leto = nd_to_leto2(sensor_positions.as_array().to_owned());
+    let grid_leto = nd_to_leto2(grid_points.as_array().to_owned());
     let image = beamform_image_das(
-        sensor_data.as_array(),
-        sensor_positions.as_array(),
-        grid_points.as_array(),
+        sensor_leto.view(),
+        positions_leto.view(),
+        grid_leto.view(),
         &config,
     )
     .map_err(|err| PyRuntimeError::new_err(format!("kwavers imaging_das error: {err}")))?;
 
-    Ok(PyArray1::from_owned_array(py, image).into())
+    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(image)).into())
 }
 
 fn parse_imaging_apodization(value: &str) -> PyResult<ImagingDasApodization> {

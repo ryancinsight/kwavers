@@ -95,9 +95,13 @@ impl Simulation {
                 };
 
                 let mut padded_mask = leto::Array3::<bool>::from_elem((pnx, pny, pnz), false);
-                padded_mask
-                    slice_mut(&[(Some(p as isize) as usize, Some(nx + p as isize) as usize, 1), (Some(py as isize) as usize, Some(ny + py as isize) as usize, 1), (Some(pz_embed as isize) as usize, Some(nz + pz_embed as isize) as usize, 1)])
-                    .assign(&sensor_mask);
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            padded_mask[[i + p, j + py, k + pz_embed]] = sensor_mask[[i, j, k]];
+                        }
+                    }
+                }
 
                 let padded_source = GridSource {
                     p0: grid_source.p0.map(&embed),

@@ -16,7 +16,7 @@
 //! - Keller & Miksis (1980) J. Acoust. Soc. Am. 68(2):628.
 //! - de Jong et al. (1994) Ultrasonics 32:447 (linear shell viscosity).
 
-use leto::Array1;
+use numpy::ndarray::Array1;
 use numpy::{ToPyArray, PyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

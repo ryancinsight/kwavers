@@ -11,10 +11,8 @@ use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::inverse::elastography::elastic_fwi::{
     reconstruct_lesion_transmission, TransmissionFwiParams,
 };
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::Array3;
+use numpy::ndarray::Array2;
 use numpy::{ToPyArray, PyArray2, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

@@ -2,7 +2,9 @@
 //! (`ali_2025_breast_fwi_frequency_sweep_hz`, `simulate_breast_fwi_frequency_observation`,
 //! `snap_breast_fwi_array_to_grid`, `invert_breast_fwi`).
 
-use super::complex_compat::{ec_to_nc2, leto2_to_nd2, nc_to_ec2, nd_to_leto2, nd_to_leto3};
+use super::complex_compat::{
+    ec_to_nc2, leto2_to_nd2, leto3_to_nd3, nc_to_ec2, nd_to_leto2, nd_to_leto3,
+};
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     reconstruct_breast_ust_sound_speed_volume, snap_multi_row_ring_array_to_grid,
 };
@@ -10,7 +12,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
-use leto::Array1;
+use numpy::ndarray::Array1;
 use eunomia::Complex64;
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::prelude::*;
@@ -97,7 +99,7 @@ pub fn invert_breast_fwi<'py>(
     config: &PyFrequencyDomainFwiConfig,
 ) -> PyResult<Bound<'py, PyDict>> {
     let pressure = observed_pressure.as_array().to_owned();
-    let initial = initial_sound_speed_m_s.as_array().to_owned();
+    let initial = nd_to_leto3(initial_sound_speed_m_s.as_array().to_owned());
     let observations = observations_from_stack(&frequencies_hz, pressure)?;
     let result = py
         .detach(|| {
@@ -111,7 +113,10 @@ pub fn invert_breast_fwi<'py>(
         .map_err(kwavers_to_py)?;
 
     let out = PyDict::new(py);
-    out.set_item("sound_speed_m_s", result.sound_speed_m_s.to_pyarray(py))?;
+    out.set_item(
+        "sound_speed_m_s",
+        leto3_to_nd3(result.sound_speed_m_s).to_pyarray(py),
+    )?;
     out.set_item(
         "objective_history",
         Array1::from(result.objective_history).to_pyarray(py),

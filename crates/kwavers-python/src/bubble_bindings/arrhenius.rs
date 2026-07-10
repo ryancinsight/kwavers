@@ -22,7 +22,7 @@
 //!
 //! - Henriques & Moritz (1947) Am. J. Pathol. 23:695
 
-use leto::Array1;
+use numpy::ndarray::Array1;
 use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

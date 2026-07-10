@@ -5,6 +5,9 @@ use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,
     delta_bmode_db as core_delta_bmode_db, simulate_receive_rf as core_simulate_receive_rf,
 };
+use crate::breast_fwi_bindings::complex_compat::{
+    leto1_to_nd1, leto2_to_nd2, nd_to_leto1, nd_to_leto2,
+};
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -54,8 +57,20 @@ pub fn simulate_receive_rf<'py>(
             "scat_pos rows must match scat_amp length",
         ));
     }
-    let rf = core_simulate_receive_rf(sp, sa, ep, c, fs, f0, frac_bw, n_samples);
-    Ok(rf.to_pyarray(py).unbind())
+    let sp_leto = nd_to_leto2(sp.to_owned());
+    let sa_leto = nd_to_leto1(sa.to_owned());
+    let ep_leto = nd_to_leto2(ep.to_owned());
+    let rf = core_simulate_receive_rf(
+        sp_leto.view(),
+        sa_leto.view(),
+        ep_leto.view(),
+        c,
+        fs,
+        f0,
+        frac_bw,
+        n_samples,
+    );
+    Ok(leto2_to_nd2(rf).to_pyarray(py).unbind())
 }
 
 /// B-mode envelope detection: the analytic-signal magnitude `|z(t)|`, where
@@ -70,9 +85,9 @@ pub fn simulate_receive_rf<'py>(
 #[pyfunction]
 #[pyo3(signature = (rf,))]
 pub fn bmode_envelope(py: Python<'_>, rf: PyReadonlyArray1<f64>) -> PyResult<Py<PyArray1<f64>>> {
-    let rf_arr = rf.as_array().to_owned();
+    let rf_arr = nd_to_leto1(rf.as_array().to_owned());
     let env = py.detach(|| core_bmode_envelope(&rf_arr));
-    Ok(env.to_pyarray(py).unbind())
+    Ok(leto1_to_nd1(env).to_pyarray(py).unbind())
 }
 
 /// Log-compress an envelope image with a fixed sequence reference.

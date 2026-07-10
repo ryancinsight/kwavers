@@ -74,7 +74,9 @@ pub fn plan_abdominal_array_placement_from_ritk_ct<'py>(
         }
     } else {
         let (mut ct, spacing_mm) = load_ritk_nifti(ct_path)?;
-        ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+        for hu in ct.iter_mut() {
+            *hu = hu.clamp(-1024.0, 3071.0);
+        }
         let (label_f64, _) = load_ritk_nifti(Path::new(seg_nifti_path))?;
         let label = labels_from_volume(label_f64);
         (ct, label, spacing_mm)

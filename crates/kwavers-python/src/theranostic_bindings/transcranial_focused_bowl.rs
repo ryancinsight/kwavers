@@ -46,7 +46,9 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
         synthetic_brain_phantom()
     } else {
         let (mut ct, spacing_mm) = load_ritk_nifti(ct_path)?;
-        ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+        for hu in ct.iter_mut() {
+            *hu = hu.clamp(-1024.0, 3071.0);
+        }
         (ct, spacing_mm)
     };
 

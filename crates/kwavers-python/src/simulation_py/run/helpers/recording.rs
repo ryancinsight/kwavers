@@ -54,13 +54,13 @@ impl Simulation {
     ) -> leto::Array2<f64> {
         let start = record_start_index.max(1).min(time_steps);
         let skip = start.saturating_sub(1);
-        if recorded_data.ncols() > time_steps {
-            recorded_data
-                slice(&[(0, usize::MAX, 1), (Some(skip as isize) as usize, Some(time_steps as isize) as usize, 1)])
-                .to_owned()
-        } else {
-            recorded_data.slice_with::<2>(&[SliceArg::All, SliceArg::Range { start: Some(skip as isize), end: None, step: 1 }]).to_owned()
-        }
+        let nrows = recorded_data.shape()[0];
+        let ncols = recorded_data.shape()[1];
+        let end = if ncols > time_steps { time_steps } else { ncols };
+        recorded_data
+            .slice(&[(0, nrows, 1), (skip, end, 1)])
+            .expect("recorder trim slice bounds")
+            .to_contiguous()
     }
 
     /// Borrowed-view variant of [`trim_initial_recorder_sample`].
@@ -71,13 +71,13 @@ impl Simulation {
     ) -> leto::Array2<f64> {
         let start = record_start_index.max(1).min(time_steps);
         let skip = start.saturating_sub(1);
-        if recorded_data.ncols() > time_steps {
-            recorded_data
-                slice(&[(0, usize::MAX, 1), (Some(skip as isize) as usize, Some(time_steps as isize) as usize, 1)])
-                .to_owned()
-        } else {
-            recorded_data.slice_with::<2>(&[SliceArg::All, SliceArg::Range { start: Some(skip as isize), end: None, step: 1 }]).to_owned()
-        }
+        let nrows = recorded_data.shape()[0];
+        let ncols = recorded_data.shape()[1];
+        let end = if ncols > time_steps { time_steps } else { ncols };
+        recorded_data
+            .slice(&[(0, nrows, 1), (skip, end, 1)])
+            .expect("recorder trim slice bounds")
+            .to_contiguous()
     }
 
     /// Return the minimum active axis length and admissible CPML thickness.

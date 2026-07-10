@@ -36,10 +36,9 @@ use kwavers_physics::acoustics::therapy::sonogenetics::{
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
     pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
-use leto::{
-    Array1,
-    Array3,
-};
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
+use leto::Array3;
+use numpy::ndarray::Array1;
 use numpy::{ToPyArray, PyReadonlyArray1};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -313,10 +312,10 @@ pub fn gaussian_beam_pressure_field_py<'py>(
         })
         .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
-    dict.set_item("x", field.x_m.to_pyarray(py))?;
-    dict.set_item("y", field.y_m.to_pyarray(py))?;
-    dict.set_item("z", field.z_m.to_pyarray(py))?;
-    dict.set_item("pressure", field.pressure_pa.to_pyarray(py))?;
+    dict.set_item("x", leto3_to_nd3(field.x_m).to_pyarray(py))?;
+    dict.set_item("y", leto3_to_nd3(field.y_m).to_pyarray(py))?;
+    dict.set_item("z", leto3_to_nd3(field.z_m).to_pyarray(py))?;
+    dict.set_item("pressure", leto3_to_nd3(field.pressure_pa).to_pyarray(py))?;
     Ok(dict)
 }
 

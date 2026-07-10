@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Changed (2026-07-10) - kwavers-python PyO3 boundary Leto migration [minor]
+- [minor] Migrated the `kwavers-python` PyO3 binding surface (69 files) onto the
+  Leto+eunomia compute stack, closing the last open crate of the bulk migration.
+  Leto compute outputs convert to numpy via `letoN_to_ndN(...).to_pyarray(py)`;
+  numpy inputs convert via `nd_to_letoN(param.as_array().to_owned())`; the
+  `complex_compat` module is the single `KwComplex ↔ eunomia::Complex64` bridge
+  (its `nd_to_leto*`/`nc_to_ec*` helpers corrected to take `numpy::ndarray` inputs
+  with `.mapv`, fixing the prior inverted leto→leto no-op semantics). Restored the
+  regressed `eunomia = { features = ["numpy"] }` edge so `eunomia::Complex64`
+  satisfies `numpy::Element`. leto API translations: `.dim()`→`.shape()`,
+  `.nrows()/.ncols()`→`.shape()[0]/[1]`, `.row(i)`→`.index_axis::<1>(0,i)`,
+  `.outer_iter()`→`.rows()`, `mapv_inplace`→`iter_mut()`. Three broken migration
+  artifacts reconstructed with preserved semantics (verified value-semantic on
+  review): PSTD `padded_mask` embed offsets, recorder time-axis trim, and
+  time-reversal axis-1 reversal. `ndarray` remains only as the `numpy::ndarray`
+  boundary type (rust-numpy is ndarray-native); no shim helpers added.
+  `cargo check -p kwavers-python --all-targets` clean.
+
 ### Fixed (2026-07-10) - Hermitian eigensolver rotation correctness [patch]
 - [patch] `kwavers-math::linear_algebra::EigenSolver::jacobi_hermitian` produced
   wrong eigenvalues for complex Hermitian matrices with non-zero imaginary

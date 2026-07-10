@@ -13,10 +13,7 @@ use kwavers_math::{
     fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array},
     signal::window::hann,
 };
-use leto::{
-    Array1,
-    Array3,
-};
+use numpy::ndarray::{Array1, Array3};
 use eunomia::Complex64;
 use numpy::{ToPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;

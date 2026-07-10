@@ -1,11 +1,11 @@
-use leto::{
-    Array3,
-};
+use leto::Array3;
+use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
+use crate::breast_fwi_bindings::complex_compat::{nd_to_leto1, nd_to_leto3};
 
 #[pymethods]
 impl Source {
@@ -56,9 +56,9 @@ impl Source {
             ));
         }
         let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<leto::Array1<f64>> {
-            opt.map(|sig| sig.as_array().to_owned())
+            opt.map(|sig| nd_to_leto1(sig.as_array().to_owned()))
         };
-        let mask_f64 = mask_arr.mapv(|b| if b { 1.0 } else { 0.0 });
+        let mask_f64 = nd_to_leto3(mask_arr.mapv(|b| if b { 1.0 } else { 0.0 }));
         let amplitude = [&ux, &uy, &uz]
             .iter()
             .filter_map(|sig| {
@@ -93,9 +93,9 @@ impl Source {
     #[pyo3(signature = (field, axis="z"))]
     fn from_initial_displacement(field: &Bound<'_, PyAny>, axis: &str) -> PyResult<Self> {
         let field_arr: Array3<f64> = if let Ok(f3) = field.extract::<PyReadonlyArray3<f64>>() {
-            f3.as_array().to_owned()
+            nd_to_leto3(f3.as_array().to_owned())
         } else if let Ok(f2) = field.extract::<PyReadonlyArray2<f64>>() {
-            f2.as_array().insert_axis(Axis(2)).to_owned()
+            nd_to_leto3(f2.as_array().insert_axis(Axis(2)).to_owned())
         } else {
             return Err(PyValueError::new_err(
                 "Initial displacement must be a 2D or 3D ndarray of float64 values",

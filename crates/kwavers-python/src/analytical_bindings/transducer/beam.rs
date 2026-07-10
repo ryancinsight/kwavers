@@ -1,7 +1,7 @@
 //! PyO3 wrappers for 2-D transducer beam and focus helpers.
 
 use kwavers_physics::analytical::transducer;
-use leto::Array2;
+use numpy::ndarray::Array2;
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

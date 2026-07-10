@@ -2,10 +2,8 @@
 
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::seismic::{EikonalSolver, KirchhoffMigrator, Trace};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::Array3;
+use numpy::ndarray::Array2;
 use numpy::{ToPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -28,7 +26,7 @@ pub fn eikonal_traveltime_2d(
     let (rows, cols) = speed.dim();
     let grid = Grid::new(rows, cols, 1, spacing_m, spacing_m, spacing_m)
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let speed3 = Array3::from_shape_fn((rows, cols, 1), |(row, col, _)| speed[[row, col]]);
+    let speed3 = Array3::from_shape_fn((rows, cols, 1), |[row, col, _]| speed[[row, col]]);
     let solver = EikonalSolver::from_sound_speed(&grid, &speed3)
         .map_err(|e| PyValueError::new_err(e.to_string()))?
         .with_iterations(iterations);

@@ -10,6 +10,7 @@ use pyo3::types::{PyDict, PyList};
 use std::path::Path;
 
 use super::helpers::{kwavers_to_py, labels_from_volume, metric3d_dict, points3_to_array};
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use crate::ritk_image::load_ritk_nifti;
 
 #[pyfunction]
@@ -71,7 +72,9 @@ pub fn run_theranostic_nonlinear_3d_from_ritk<'py>(
 ) -> PyResult<Bound<'py, PyDict>> {
     let anatomy = AnatomyKind::from_name(anatomy).map_err(kwavers_to_py)?;
     let (mut ct, spacing_mm) = load_ritk_nifti(Path::new(ct_nifti_path))?;
-    ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+    for hu in ct.iter_mut() {
+        *hu = hu.clamp(-1024.0, 3071.0);
+    }
     let labels = if let Some(path) = segmentation_nifti_path {
         let (seg, _) = load_ritk_nifti(Path::new(path))?;
         Some(labels_from_volume(seg))
@@ -133,59 +136,59 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     config: &Nonlinear3dConfig,
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
-    use leto::Array1;
+    use numpy::ndarray::Array1;
     let out = PyDict::new(py);
     out.set_item("anatomy", config.anatomy.label())?;
-    out.set_item("ct_hu", result.ct_hu.to_pyarray(py))?;
-    out.set_item("label", result.label.to_pyarray(py))?;
-    out.set_item("body_mask", result.body_mask.to_pyarray(py))?;
-    out.set_item("target_mask", result.target_mask.to_pyarray(py))?;
-    out.set_item("inversion_mask", result.inversion_mask.to_pyarray(py))?;
+    out.set_item("ct_hu", leto3_to_nd3(result.ct_hu).to_pyarray(py))?;
+    out.set_item("label", leto3_to_nd3(result.label).to_pyarray(py))?;
+    out.set_item("body_mask", leto3_to_nd3(result.body_mask).to_pyarray(py))?;
+    out.set_item("target_mask", leto3_to_nd3(result.target_mask).to_pyarray(py))?;
+    out.set_item("inversion_mask", leto3_to_nd3(result.inversion_mask).to_pyarray(py))?;
     out.set_item(
         "background_sound_speed_m_s",
-        result.background_sound_speed_m_s.to_pyarray(py),
+        leto3_to_nd3(result.background_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "true_sound_speed_m_s",
-        result.true_sound_speed_m_s.to_pyarray(py),
+        leto3_to_nd3(result.true_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_sound_speed_m_s",
-        result.reconstructed_sound_speed_m_s.to_pyarray(py),
+        leto3_to_nd3(result.reconstructed_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_delta_c_m_s",
-        result.reconstructed_delta_c_m_s.to_pyarray(py),
+        leto3_to_nd3(result.reconstructed_delta_c_m_s).to_pyarray(py),
     )?;
-    out.set_item("background_beta", result.background_beta.to_pyarray(py))?;
-    out.set_item("true_beta", result.true_beta.to_pyarray(py))?;
+    out.set_item("background_beta", leto3_to_nd3(result.background_beta).to_pyarray(py))?;
+    out.set_item("true_beta", leto3_to_nd3(result.true_beta).to_pyarray(py))?;
     out.set_item(
         "reconstructed_beta",
-        result.reconstructed_beta.to_pyarray(py),
+        leto3_to_nd3(result.reconstructed_beta).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_delta_beta",
-        result.reconstructed_delta_beta.to_pyarray(py),
+        leto3_to_nd3(result.reconstructed_delta_beta).to_pyarray(py),
     )?;
     out.set_item(
         "multiparameter_fwi_score",
-        result.multiparameter_fwi_score.to_pyarray(py),
+        leto3_to_nd3(result.multiparameter_fwi_score).to_pyarray(py),
     )?;
     out.set_item(
         "nonlinear_fusion_score",
-        result.nonlinear_fusion_score.to_pyarray(py),
+        leto3_to_nd3(result.nonlinear_fusion_score).to_pyarray(py),
     )?;
     out.set_item(
         "westervelt_peak_pressure_pa",
-        result.westervelt_peak_pressure_pa.to_pyarray(py),
+        leto3_to_nd3(result.westervelt_peak_pressure_pa).to_pyarray(py),
     )?;
     out.set_item(
         "cavitation_source_density",
-        result.cavitation_source_density.to_pyarray(py),
+        leto3_to_nd3(result.cavitation_source_density).to_pyarray(py),
     )?;
     out.set_item(
         "reconstructed_cavitation_density",
-        result.reconstructed_cavitation_density.to_pyarray(py),
+        leto3_to_nd3(result.reconstructed_cavitation_density).to_pyarray(py),
     )?;
     out.set_item(
         "fwi_objective_history",

@@ -10,7 +10,7 @@
 //! # References
 //! - Rayleigh (1917) Phil. Mag. 34:94; Plesset (1949) J. Appl. Mech. 16:277.
 
-use leto::Array1;
+use numpy::ndarray::Array1;
 use numpy::{ToPyArray, PyArray1};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;

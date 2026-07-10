@@ -3,7 +3,7 @@
 //! Westervelt harmonic evolution).
 
 use kwavers_physics::analytical::wave;
-use leto::Array2;
+use numpy::ndarray::Array2;
 use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;

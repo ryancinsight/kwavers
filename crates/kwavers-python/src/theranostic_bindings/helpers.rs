@@ -5,10 +5,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     DevicePlacementMetrics, PlacementContext, Point3, ReconstructionMetrics,
     VolumeReconstructionMetrics,
 };
-use leto::{
-    Array1,
-    Array2,
-};
+use numpy::ndarray::{Array1, Array2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
