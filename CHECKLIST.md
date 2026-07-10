@@ -9,6 +9,20 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [minor] Close the kwavers-python PyO3 boundary Leto migration (last open
+      crate) and resolve the full-workspace test failures it surfaced. Net:
+      `cargo nextest run --workspace` 6096/6099 pass (was 20 fail + 4 timeout).
+      Fixed correctness defects: complex Hermitian eig sign (kwavers-math
+      `jacobi_hermitian`); leto `FixedMatrix<f64,3,3>::symmetric_eigen`
+      depressed-cubic sign (christoffel ×4); clutter-filter decompositions
+      (`svd_rank_revealing` for rank-deficient ensembles + `symmetric_eigen_jacobi`
+      for the adaptive filter's symmetric covariance — fixed 12+ tests & the
+      integration timeouts); pam/pstd `index_axis` output-rank (×3). Commits
+      `ba6ea4aa8`, `fd20a4bb4`, `6a8db7802`, `5fa15c61f` + leto working-tree
+      `symmetric_eigen` fix. Residual (filed in gap_audit, NOT migration-correctness):
+      2 kwavers-driver env failures (missing gitignored KiCad fixtures); 1
+      kwavers-therapy FWI perf timeout at 72×72×3 (profile-first DoR).
+
 - [x] [arch] Consolidate `kwavers-grid` on one native Leto API per operation:
       remove `compat`, delete redundant `_leto` forwarding surfaces, update all
       workspace callers, and resolve the resulting grid clippy frontier.
