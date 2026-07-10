@@ -9,6 +9,11 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Migrate chemistry and field-surrogate test iteration/indexing to
+      native Leto contracts. Verification: direct rustfmt passes; focused
+      nextest compilation reduces the package frontier from 20 to 13 errors,
+      all remaining diagnostics isolated to sonoluminescence tests.
+
 - [x] [patch] Migrate repeated acoustic test iteration and shape idioms to
       explicit Leto iterators, fixed-rank arrays, value shape comparisons, and
       array callback indices. Verification: direct rustfmt passes; focused

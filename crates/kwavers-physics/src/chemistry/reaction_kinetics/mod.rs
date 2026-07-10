@@ -1,8 +1,8 @@
 // physics/chemistry/reaction_kinetics/mod.rs
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use log::debug;
 use leto::Array3;
+use log::debug;
 
 #[derive(Debug, Clone)]
 pub struct ReactionKinetics {
@@ -90,8 +90,8 @@ mod tests {
         let medium = HomogeneousMedium::water(&grid);
         let mut kinetics = ReactionKinetics::new(&grid);
 
-        let radical_init = Array3::from_elem((2, 2, 1), 3.0);
-        let temperature = Array3::from_elem((2, 2, 1), REACTION_REFERENCE_TEMPERATURE);
+        let radical_init = Array3::from_elem([2, 2, 1], 3.0);
+        let temperature = Array3::from_elem([2, 2, 1], REACTION_REFERENCE_TEMPERATURE);
         let dt = 2.0e-6;
 
         kinetics.update_reactions(&radical_init, &temperature, &grid, dt, &medium);
@@ -103,13 +103,13 @@ mod tests {
         let expected_h2o2 = k2 * hydroxyl_before_recombination.powi(2) * dt;
         let expected_oh = (hydroxyl_before_recombination - 2.0 * expected_h2o2).max(0.0);
 
-        for &oh in &kinetics.hydroxyl_concentration {
+        for &oh in kinetics.hydroxyl_concentration.iter() {
             assert!(
                 (oh - expected_oh).abs() <= expected_oh.abs().max(1.0) * 1.0e-12,
                 "OH concentration {oh} should equal {expected_oh}"
             );
         }
-        for &h2o2 in &kinetics.hydrogen_peroxide {
+        for &h2o2 in kinetics.hydrogen_peroxide.iter() {
             assert!(
                 (h2o2 - expected_h2o2).abs() <= expected_h2o2.abs().max(1.0) * 1.0e-12,
                 "H2O2 concentration {h2o2} should equal {expected_h2o2}"

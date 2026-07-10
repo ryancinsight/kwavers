@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - chemistry and field-surrogate Leto tests [patch]
+- [patch] Migrated chemistry concentration assertions and field-surrogate
+  fixtures to explicit Leto iteration, fallible indexed iteration, fixed-rank
+  shapes, and array indices. Focused nextest compilation reduces the package
+  frontier from 20 to 13 errors, now isolated to sonoluminescence tests.
+
 ### Fixed (2026-07-10) - acoustic Leto iteration and shape tests [patch]
 - [patch] Migrated ultrasound-code, cavitation, skull-aberration, acoustic-state,
   sonogenetics-channel, and transcranial-aberration tests to explicit Leto

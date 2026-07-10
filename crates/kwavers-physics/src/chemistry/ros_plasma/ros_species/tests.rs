@@ -42,7 +42,7 @@ fn ros_decay_matches_species_lifetime_exponential() {
 
     let expected = initial * (-dt / species.lifetime_water()).exp();
     let field = ros.get(species).expect("invariant: H2O2 field exists");
-    for &actual in field {
+    for &actual in field.iter() {
         assert!(
             (actual - expected).abs() <= expected.abs().max(1.0) * 1.0e-12,
             "decayed concentration {actual} should equal {expected}"
