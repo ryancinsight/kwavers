@@ -9,6 +9,12 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Migrate repeated acoustic test iteration and shape idioms to
+      explicit Leto iterators, fixed-rank arrays, value shape comparisons, and
+      array callback indices. Verification: direct rustfmt passes; focused
+      nextest compilation reduces the package frontier from 33 to 20 errors
+      with no remaining diagnostic in the six migrated acoustic clusters.
+
 - [x] [patch] Migrate the MRE and thermal-strain test cluster to native Leto
       fixed-rank shapes, callback indices, mutation, view sizing, and
       reductions. Verification: direct rustfmt and diff checks pass; focused

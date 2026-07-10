@@ -10,7 +10,7 @@ fn test_physics_state_creation() {
     let state = PhysicsState::new(grid);
 
     let pressure = state.get_field(field_indices::PRESSURE_IDX).unwrap();
-    assert_eq!(pressure.shape(), &[10, 10, 10]);
+    assert_eq!(pressure.shape(), [10, 10, 10]);
 
     let mut state = state;
     state
@@ -48,7 +48,7 @@ fn test_zero_copy_access() {
 
     state
         .with_field(field_indices::PRESSURE_IDX, |field| {
-            assert_eq!(field.shape(), &[10, 10, 10]);
+            assert_eq!(field.shape(), [10, 10, 10]);
         })
         .unwrap();
 

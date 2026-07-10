@@ -52,7 +52,7 @@ mod tests {
 
     #[test]
     fn test_cavitation_model_update() {
-        let mut model = CavitationModel::new((5, 5, 5));
+        let mut model = CavitationModel::new([5, 5, 5]);
         model.threshold_model = ThresholdModel::MechanicalIndex;
 
         let mut pressure = Array3::from_elem((5, 5, 5), ATMOSPHERIC_PRESSURE);

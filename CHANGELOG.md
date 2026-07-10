@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - acoustic Leto iteration and shape tests [patch]
+- [patch] Migrated ultrasound-code, cavitation, skull-aberration, acoustic-state,
+  sonogenetics-channel, and transcranial-aberration tests to explicit Leto
+  element iteration, fixed-rank array shapes, value shape comparisons, and
+  array callback indices. Focused nextest compilation reduces the package
+  frontier from 33 to 20 errors with no remaining diagnostic in these clusters.
+
 ### Fixed (2026-07-10) - elastography Leto test migration [patch]
 - [patch] Migrated MRE and thermal-strain fixtures from ndarray tuple shapes,
   callback indices, `mapv_inplace`, view `len`, and direct array reductions to

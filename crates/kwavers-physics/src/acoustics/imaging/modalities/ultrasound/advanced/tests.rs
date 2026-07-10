@@ -52,7 +52,7 @@ fn test_barker_generation() {
     let code = processor.generate_code();
 
     assert_eq!(code.len(), 7);
-    for &val in &code {
+    for &val in code.iter() {
         assert!((val.re - 1.0).abs() < 1e-6 || (val.re + 1.0).abs() < 1e-6);
         assert!(val.im.abs() < 1e-6);
     }
