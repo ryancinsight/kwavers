@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - acoustic heat Leto fixtures [patch]
+- [patch] Replaced stale `uniform_ndarray` calls and two duplicate fill helpers
+  in acoustic heat-conservation tests with the canonical Leto
+  `Array3::from_elem` constructor. Focused nextest compilation reduces the
+  package frontier from 42 to 39 errors; no heat-conservation diagnostic
+  remains.
+
 ### Fixed (2026-07-10) - analytical acoustics Leto test migration [patch]
 - [patch] Replaced ndarray `arr2!`/`array!` fixture construction, view
   `to_vec`, implicit axis indexing, and tuple-shaped callback indices in the

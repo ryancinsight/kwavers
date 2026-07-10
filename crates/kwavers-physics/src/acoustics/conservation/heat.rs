@@ -50,18 +50,6 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 
-    fn uniform_leto(s: [usize; 3], val: f64) -> leto::Array3<f64> {
-        let mut arr = leto::Array3::<f64>::zeros(s);
-        arr.fill(val);
-        arr
-    }
-
-    fn uniform_leto_owned(s: [usize; 3], val: f64) -> leto::Array3<f64> {
-        let mut arr = leto::Array3::zeros(s);
-        arr.fill(val);
-        arr
-    }
-
     /// Zero pressure and zero velocity → zero heat source at every cell.
     ///
     /// energy_density = 0 → q = 2·α·c·0 = 0 regardless of α.
@@ -69,9 +57,9 @@ mod tests {
     fn heat_source_zero_for_zero_acoustic_fields() {
         let s3 = [4, 4, 4];
         let zero = leto::Array3::<f64>::zeros(s3);
-        let rho = uniform_leto_owned(s3, DENSITY_WATER_NOMINAL);
-        let c = uniform_leto_owned(s3, SOUND_SPEED_WATER_SIM);
-        let alpha = uniform_leto_owned(s3, 5.0);
+        let rho = Array3::from_elem(s3, DENSITY_WATER_NOMINAL);
+        let c = Array3::from_elem(s3, SOUND_SPEED_WATER_SIM);
+        let alpha = Array3::from_elem(s3, 5.0);
         let q = acoustic_heat_source(&zero, &zero, &zero, &zero, &rho, &c, &alpha);
         assert!(
             q.iter().all(|&v| v == 0.0),
@@ -85,11 +73,11 @@ mod tests {
     #[test]
     fn heat_source_zero_for_zero_absorption() {
         let s3 = [4, 4, 4];
-        let p = uniform_leto(s3, 5000.0);
-        let v = uniform_leto(s3, 0.1);
-        let rho = uniform_leto_owned(s3, DENSITY_WATER_NOMINAL);
-        let c = uniform_leto_owned(s3, SOUND_SPEED_WATER_SIM);
-        let alpha = Array3::<f64>::zeros((4, 4, 4));
+        let p = Array3::from_elem(s3, 5000.0);
+        let v = Array3::from_elem(s3, 0.1);
+        let rho = Array3::from_elem(s3, DENSITY_WATER_NOMINAL);
+        let c = Array3::from_elem(s3, SOUND_SPEED_WATER_SIM);
+        let alpha = Array3::<f64>::zeros(s3);
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
         assert!(
             q.iter().all(|&v| v == 0.0),
@@ -107,11 +95,11 @@ mod tests {
         let rho0 = DENSITY_WATER_NOMINAL;
         let c0 = SOUND_SPEED_WATER_SIM;
         let a0 = 3.0_f64;
-        let p = uniform_leto(s3, p0);
+        let p = Array3::from_elem(s3, p0);
         let v = leto::Array3::<f64>::zeros(s3);
-        let rho = uniform_leto_owned(s3, rho0);
-        let c = uniform_leto_owned(s3, c0);
-        let alpha = uniform_leto_owned(s3, a0);
+        let rho = Array3::from_elem(s3, rho0);
+        let c = Array3::from_elem(s3, c0);
+        let alpha = Array3::from_elem(s3, a0);
 
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
 
@@ -128,12 +116,11 @@ mod tests {
     #[test]
     fn heat_source_nonnegative_for_physical_fields() {
         let s3 = [4, 4, 4];
-        let s = (4, 4, 4);
-        let p = uniform_leto(s3, 1000.0); // 1000 Pa test pressure
-        let v = uniform_leto(s3, 0.5);
-        let rho = uniform_ndarray(s, DENSITY_WATER_NOMINAL);
-        let c = uniform_ndarray(s, SOUND_SPEED_WATER_SIM);
-        let alpha = uniform_ndarray(s, 2.0);
+        let p = Array3::from_elem(s3, 1000.0); // 1000 Pa test pressure
+        let v = Array3::from_elem(s3, 0.5);
+        let rho = Array3::from_elem(s3, DENSITY_WATER_NOMINAL);
+        let c = Array3::from_elem(s3, SOUND_SPEED_WATER_SIM);
+        let alpha = Array3::from_elem(s3, 2.0);
         let q = acoustic_heat_source(&p, &v, &v, &v, &rho, &c, &alpha);
         assert!(
             q.iter().all(|&qv| qv >= 0.0),

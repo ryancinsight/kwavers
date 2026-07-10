@@ -9,6 +9,12 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Consolidate acoustic heat test fixtures on
+      `Array3::from_elem`, deleting duplicate fill helpers and stale ndarray
+      constructor names. Verification: direct rustfmt passes; focused nextest
+      compilation reduces the package frontier from 42 to 39 errors with no
+      remaining heat-conservation diagnostic.
+
 - [x] [patch] Migrate the analytical-acoustics test cluster to native Leto
       constructors, views, iteration, and index shapes. Completion condition:
       phase-shifting, phase-randomization, pulse-echo, and the nonlinear
