@@ -128,12 +128,12 @@ impl CalibrationManager {
         let mat_matvec = |a: &Array2<f64>, x: &Array1<f64>| -> Array1<f64> {
             let [r, c] = a.shape();
             let mut out = vec![0.0; r];
-            for i in 0..r {
+            for (i, output) in out.iter_mut().enumerate() {
                 let mut acc = 0.0;
                 for k in 0..c {
                     acc += *a.get([i, k]).unwrap() * *x.get([k]).unwrap();
                 }
-                out[i] = acc;
+                *output = acc;
             }
             Array1::from_vec([r], out).unwrap()
         };

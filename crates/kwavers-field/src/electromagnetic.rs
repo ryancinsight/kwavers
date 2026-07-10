@@ -22,7 +22,10 @@ pub struct EMFields {
 impl EMFields {
     /// Create new EM fields from electric and magnetic components
     #[must_use]
-    pub fn new(electric: ArrayD<f64, VecStorage<f64>>, magnetic: ArrayD<f64, VecStorage<f64>>) -> Self {
+    pub fn new(
+        electric: ArrayD<f64, VecStorage<f64>>,
+        magnetic: ArrayD<f64, VecStorage<f64>>,
+    ) -> Self {
         Self {
             electric,
             magnetic,
@@ -314,10 +317,10 @@ impl PoyntingVector {
         let mut spatial_idx = vec![0usize; ndim - 1];
         for _ in 0..spatial_len {
             let mut dot = 0.0;
-            for comp in 0..normal_len {
+            for (comp, &normal_component) in surface_normal.iter().take(normal_len).enumerate() {
                 let mut idx = spatial_idx.clone();
                 idx.push(comp);
-                dot += self.vector[&idx[..]] * surface_normal[comp];
+                dot += self.vector[&idx[..]] * normal_component;
             }
             sum_s_dot_n += dot;
 
@@ -366,6 +369,7 @@ mod tests {
 
         // For 2D, S_z = Ex*Hy - Ey*Hx = 1*1 - 0*0 = 1 → magnitude = 1
         assert_eq!(*poynting.magnitude.get(&[0, 0]).unwrap(), 1.0);
+        assert_eq!(poynting.total_power(&[0.0, 0.0, 1.0], 2.0), 2.0);
     }
 
     #[test]

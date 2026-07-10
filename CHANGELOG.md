@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Cleared the Poynting surface-power range-loop diagnostic and added an exact
+  projected-power regression.
+
 ### Added (2026-07-10) - Consus NPZ provider [minor]
 
 - Replaced `kwavers-physics` direct `ndarray-npy` parsing with typed

@@ -1,12 +1,21 @@
 # Project Checklist
 
+- [x] [patch] Clear the warning-denied `kwavers-field` gate exposed by the
+      Consus NPZ integration: Poynting surface projection now iterates the
+      borrowed normal directly and carries a value-semantic power assertion.
+      Follow-through removed two identity Leto conversions and an indexed
+      output loop in `kwavers-transducer`, then cleared the remaining
+      needless-borrow, identity-conversion, and indexed-output diagnostics in
+      the affected physics cone.
+
 - [x] [minor] Replace the `kwavers-physics` `ndarray-npy` production edge with
       the upstream Consus typed NPZ provider. `FocalKernel` loading now moves a
       boxed typed payload directly into Leto, validates rank before
       construction, and retains the i64/i32 focus-index compatibility contract
       without an ndarray conversion. Evidence: package compile; focused NPZ
-      nextest 5/5; static manifest/source audit has no `ndarray-npy`; Clippy
-      reaches an unrelated pre-existing `kwavers-field` range-loop lint.
+      nextest 5/5; static manifest/source audit has no `ndarray-npy`; package
+      library Clippy passes with warnings denied. Follow-through cleanup also
+      passes 39 focused physics tests and one exact Poynting-power regression.
 
 - [x] [patch] Reconcile production architecture documentation after the
       provider migration: beamforming, inverse operators, FSI traversal,

@@ -106,7 +106,7 @@ pub fn track_line_samples(
     if nz <= 2 * guard {
         return disp;
     }
-    for z in guard..(nz - guard) {
+    for (z, displacement) in disp.iter_mut().enumerate().take(nz - guard).skip(guard) {
         let ref_win = reference
             .slice(&[(z - w, z + w, 1)])
             .expect("reference window is in bounds");
@@ -131,7 +131,7 @@ pub fn track_line_samples(
         } else {
             parabolic_subsample(corr[best_idx - 1], corr[best_idx], corr[best_idx + 1])
         };
-        disp[z] = best_lag as f64 + sub;
+        *displacement = best_lag as f64 + sub;
     }
     disp
 }

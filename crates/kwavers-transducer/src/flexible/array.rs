@@ -95,8 +95,7 @@ impl FlexibleTransducerArray {
 
         // Update geometry state
         let normals = self.calculate_normals(&new_positions);
-        self.geometry_state
-            .update_positions(new_positions.into(), normals.into());
+        self.geometry_state.update_positions(new_positions, normals);
         self.geometry_state.timestamp = timestamp;
 
         // Update deformation state

@@ -3,8 +3,9 @@
 - Closed 2026-07-10: `kwavers-physics` was the sole direct `ndarray-npy`
   consumer. `consus-npy` now owns bounded typed NPY/NPZ parsing, and the
   consumer constructs Leto arrays directly from the owned payload. Evidence
-  tier: NumPy-generated provider fixture, compile-time typed integration, and
-  five value-semantic consumer tests.
+  tier: NumPy-generated provider fixture, compile-time typed integration, five
+  value-semantic consumer tests, warning-denied library Clippy, and 39 focused
+  adjacent physics regressions.
 
 - Closed 2026-07-10: six production documentation sites described removed
   Rayon, Tokio, nalgebra, or ndarray execution. Their contracts now match the

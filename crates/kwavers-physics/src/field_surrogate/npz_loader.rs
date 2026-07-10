@@ -98,7 +98,7 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
                 .into_values()
                 .into_vec()
                 .into_iter()
-                .map(|v| i64::from(v))
+                .map(i64::from)
                 .collect()
         }
     };

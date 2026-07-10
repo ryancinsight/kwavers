@@ -159,7 +159,7 @@ impl SpectralDetector {
     fn detect_broadband(&self, psd: &Array1<f64>) -> f64 {
         if let Some(baseline) = &self.baseline_spectrum {
             // Compare with baseline
-            let current_energy: f64 = sum_all(&psd).unwrap_or(0.0);
+            let current_energy: f64 = sum_all(psd).unwrap_or(0.0);
             let baseline_energy: f64 = sum_all(baseline).unwrap_or(0.0);
 
             if baseline_energy > MIN_SPECTRAL_POWER {
@@ -171,8 +171,8 @@ impl SpectralDetector {
         }
 
         // Fallback: check for elevated noise floor
-        let mean_power = mean_all(&psd).unwrap_or(0.0);
-        let std_power = std_all(&psd, 0.0).unwrap_or(0.0);
+        let mean_power = mean_all(psd).unwrap_or(0.0);
+        let std_power = std_all(psd, 0.0).unwrap_or(0.0);
 
         if mean_power > MIN_SPECTRAL_POWER {
             (std_power / mean_power).min(1.0)
