@@ -460,8 +460,8 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
 
     // Pearson r — undefined when the reconstructed model has no spatial variation
     // (all voxels equal, variance = 0).  Guard against the 0/0 NaN.
-    let mean_t = true_model.sum() / n;
-    let mean_r = reconstructed.sum() / n;
+    let mean_t = true_model.iter().sum::<f64>() / n;
+    let mean_r = reconstructed.iter().sum::<f64>() / n;
     let cov = true_model
         .iter()
         .zip(reconstructed.iter())

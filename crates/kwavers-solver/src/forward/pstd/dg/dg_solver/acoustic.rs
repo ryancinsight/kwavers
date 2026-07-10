@@ -62,7 +62,7 @@ impl AcousticDg1DWorkspace {
     }
 
     fn ensure_dim(&mut self, dim: (usize, usize, usize)) {
-        if self.p_original.shape() != dim {
+        if self.p_original.shape() != [dim.0, dim.1, dim.2] {
             *self = Self::new(dim);
         }
     }
@@ -87,7 +87,7 @@ impl DGSolver {
         workspace: &mut AcousticDg1DWorkspace,
     ) -> KwaversResult<()> {
         validate_acoustic_inputs(self.n_nodes, pressure, velocity, density)?;
-        workspace.ensure_dim(pressure.shape());
+        workspace.ensure_dim((pressure.shape()[0], pressure.shape()[1], pressure.shape()[2]));
         workspace.p_original.assign(pressure);
         workspace.u_original.assign(velocity);
 
@@ -189,11 +189,11 @@ impl DGSolver {
                 let mut du = 0.0;
                 let mut dp = 0.0;
                 for j in 0..self.n_nodes {
-                    du += self.diff_matrix[[i, j]] * velocity[(elem, j, 0)];
-                    dp += self.diff_matrix[[i, j]] * pressure[(elem, j, 0)];
+                    du += self.diff_matrix[[i, j]] * velocity[[elem, j, 0]];
+                    dp += self.diff_matrix[[i, j]] * pressure[[elem, j, 0]];
                 }
-                pressure_rhs[(elem, i, 0)] -= bulk * du;
-                velocity_rhs[(elem, i, 0)] -= inv_density * dp;
+                pressure_rhs[[elem, i, 0]] -= bulk * du;
+                velocity_rhs[[elem, i, 0]] -= inv_density * dp;
             }
         }
 
@@ -202,20 +202,20 @@ impl DGSolver {
             let right_elem = (elem + 1) % n_elements;
 
             let left_ext = AcousticState {
-                pressure: pressure[(left_elem, self.n_nodes - 1, 0)],
-                velocity: velocity[(left_elem, self.n_nodes - 1, 0)],
+                pressure: pressure[[left_elem, self.n_nodes - 1, 0]],
+                velocity: velocity[[left_elem, self.n_nodes - 1, 0]],
             };
             let left_int = AcousticState {
-                pressure: pressure[(elem, 0, 0)],
-                velocity: velocity[(elem, 0, 0)],
+                pressure: pressure[[elem, 0, 0]],
+                velocity: velocity[[elem, 0, 0]],
             };
             let right_int = AcousticState {
-                pressure: pressure[(elem, self.n_nodes - 1, 0)],
-                velocity: velocity[(elem, self.n_nodes - 1, 0)],
+                pressure: pressure[[elem, self.n_nodes - 1, 0]],
+                velocity: velocity[[elem, self.n_nodes - 1, 0]],
             };
             let right_ext = AcousticState {
-                pressure: pressure[(right_elem, 0, 0)],
-                velocity: velocity[(right_elem, 0, 0)],
+                pressure: pressure[[right_elem, 0, 0]],
+                velocity: velocity[[right_elem, 0, 0]],
             };
 
             let flux_left = lax_friedrichs_acoustic_flux(
@@ -242,12 +242,12 @@ impl DGSolver {
 
             for i in 0..self.n_nodes {
                 if n_face > 0 {
-                    pressure_rhs[(elem, i, 0)] += self.lift_matrix[[i, 0]] * p_res_left;
-                    velocity_rhs[(elem, i, 0)] += self.lift_matrix[[i, 0]] * u_res_left;
+                    pressure_rhs[[elem, i, 0]] += self.lift_matrix[[i, 0]] * p_res_left;
+                    velocity_rhs[[elem, i, 0]] += self.lift_matrix[[i, 0]] * u_res_left;
                 }
                 if n_face > 1 {
-                    pressure_rhs[(elem, i, 0)] += self.lift_matrix[[i, 1]] * p_res_right;
-                    velocity_rhs[(elem, i, 0)] += self.lift_matrix[[i, 1]] * u_res_right;
+                    pressure_rhs[[elem, i, 0]] += self.lift_matrix[[i, 1]] * p_res_right;
+                    velocity_rhs[[elem, i, 0]] += self.lift_matrix[[i, 1]] * u_res_right;
                 }
             }
         }
@@ -357,10 +357,10 @@ mod tests {
     #[test]
     fn periodic_acoustic_rhs_preserves_component_masses() {
         let solver = make_solver();
-        let pressure = Array3::from_shape_fn((4, 3, 1), |(elem, node, _)| {
+        let pressure = Array3::from_shape_fn((4, 3, 1), |[elem, node, _]| {
             (elem as f64 + node as f64).sin()
         });
-        let velocity = Array3::from_shape_fn((4, 3, 1), |(elem, node, _)| {
+        let velocity = Array3::from_shape_fn((4, 3, 1), |[elem, node, _]| {
             (0.3 * elem as f64 + 0.7 * node as f64).cos()
         });
         let mut pressure_rhs = Array3::zeros((4, 3, 1));
@@ -392,7 +392,7 @@ mod tests {
         let mut sum = 0.0;
         for elem in 0..values.shape()[0] {
             for node in 0..values.shape()[1] {
-                sum += weights[node] * values[(elem, node, 0)];
+                sum += weights[node] * values[[elem, node, 0]];
             }
         }
         sum

@@ -279,11 +279,35 @@ mod tests {
         EmbeddedRKErrorEstimator, ErrorEstimatorTrait, ErrorNorm, RichardsonErrorEstimator,
     };
 
+    /// Build an owned f-contiguous (column-major) `Array3`, the leto-native
+    /// analogue of ndarray's `from_shape_fn(shape.f(), …)`: logical element
+    /// `[i, j, k]` holds `f([i, j, k])`, but the physical layout is
+    /// non-C-contiguous, so `as_slice()` returns `None`, exercising the
+    /// logical-iterator path.
+    fn from_shape_fn_fortran<F>(shape: [usize; 3], mut f: F) -> Array3<f64>
+    where
+        F: FnMut([usize; 3]) -> f64,
+    {
+        let layout = leto::Layout::f_contiguous(shape).expect("f-contiguous layout");
+        let [d0, d1, d2] = shape;
+        let mut data = vec![0.0_f64; d0 * d1 * d2];
+        for i in 0..d0 {
+            for j in 0..d1 {
+                for k in 0..d2 {
+                    data[i + j * d0 + k * d0 * d1] = f([i, j, k]);
+                }
+            }
+        }
+        leto::Array::new(layout, leto::VecStorage::new(data)).expect("valid f-contiguous array")
+    }
+
     #[test]
     fn richardson_error_uses_logical_order_for_nonstandard_layouts() {
         let shape = (2, 3, 4);
-        let low = Array3::from_shape_fn(shape.f(), |(i, j, k)| (100 * i + 10 * j + k) as f64);
-        let high = Array3::from_shape_fn(shape, |(i, j, k)| {
+        let low = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (100 * i + 10 * j + k) as f64
+        });
+        let high = Array3::from_shape_fn(shape, |[i, j, k]| {
             (100 * i + 10 * j + k) as f64 + (1 + i + j + k) as f64
         });
         let estimator = RichardsonErrorEstimator::new(2);
@@ -294,7 +318,7 @@ mod tests {
         );
         let error = estimator.estimate_local_error(&low, &high, 0.1);
 
-        let max_delta = Array3::from_shape_fn(shape, |(i, j, k)| (1 + i + j + k) as f64)
+        let max_delta = Array3::from_shape_fn(shape, |[i, j, k]| (1 + i + j + k) as f64)
             .iter()
             .copied()
             .fold(0.0, f64::max);
@@ -305,11 +329,11 @@ mod tests {
     #[test]
     fn embedded_error_norms_use_logical_order_for_nonstandard_layouts() {
         let shape = (2, 3, 4);
-        let low = Array3::from_shape_fn(shape, |(i, j, k)| (100 * i + 10 * j + k) as f64);
-        let high = Array3::from_shape_fn(shape.f(), |(i, j, k)| {
+        let low = Array3::from_shape_fn(shape, |[i, j, k]| (100 * i + 10 * j + k) as f64);
+        let high = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
             (100 * i + 10 * j + k) as f64 + (1 + i + j + k) as f64
         });
-        let deltas: Vec<f64> = Array3::from_shape_fn(shape, |(i, j, k)| (1 + i + j + k) as f64)
+        let deltas: Vec<f64> = Array3::from_shape_fn(shape, |[i, j, k]| (1 + i + j + k) as f64)
             .iter()
             .copied()
             .collect();

@@ -23,8 +23,8 @@ fn pstd_receiver_projection_uses_exact_grid_cells_and_adjoint() {
     let sampled = sample_array_for_operator(grid, &field, &array, operator).unwrap();
     let adjoint = receiver_adjoint_for_operator(grid, &array, &receiver_values, operator).unwrap();
 
-    assert_eq!(sampled, field.iter().cloned().collect::<Vec<_>>());
-    assert_eq!(adjoint, receiver_values.iter().cloned().collect::<Vec<_>>());
+    assert_eq!(sampled, field.to_vec());
+    assert_eq!(adjoint, receiver_values.to_vec());
     assert!(
         (inner_product(&sampled, &receiver_values) - inner_product(&field, &adjoint)).norm()
             <= 1.0e-14

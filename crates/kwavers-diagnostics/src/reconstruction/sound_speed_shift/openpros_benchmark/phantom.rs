@@ -10,7 +10,7 @@ pub(super) fn active_mask(config: &OpenProsShiftBenchmarkConfig) -> Array2<bool>
 
 pub(super) fn shift_phantom(config: &OpenProsShiftBenchmarkConfig) -> Array2<f64> {
     let shape = config.shape();
-    Array2::from_shape_fn(shape, |(ix, iy)| {
+    Array2::from_shape_fn(shape, |[ix, iy]| {
         let axial = normalized(ix, shape.0);
         let lateral = normalized(iy, shape.1);
         let gland = ellipse(axial + 0.08, lateral, 0.34, 0.52);

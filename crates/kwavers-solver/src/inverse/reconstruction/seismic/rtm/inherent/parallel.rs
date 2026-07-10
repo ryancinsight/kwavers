@@ -31,7 +31,7 @@ impl StridedMutView {
 
 pub(super) fn for_each_view_mut<F>(mut view: ArrayViewMut3<'_, f64>, f: F)
 where
-    F: Fn((usize, usize, usize), &mut f64) + Send + Sync,
+    F: Fn([usize; 3], &mut f64) + Send + Sync,
 {
     let [nx, ny, nz] = view.shape();
     let len = nx
@@ -42,8 +42,16 @@ where
         let strides = view.strides();
         [strides[0], strides[1], strides[2]]
     };
+    // A sub-view (e.g. an interior `slice_with_mut` window) carries its start in
+    // `layout.offset`; `data_mut()` returns the backing pointer at the storage
+    // base, so the logical origin is `base + offset`. Without this the strided
+    // writes land at the wrong cell for any non-zero-offset view.
+    let offset = view.offset();
     let view_ptr = StridedMutView {
-        base: view.as_mut_ptr(),
+        // SAFETY: `offset` is an in-bounds element offset within the view's
+        // backing storage (produced by leto's layout slicing), so advancing the
+        // base pointer by it stays inside the same allocation.
+        base: unsafe { view.data_mut().as_mut_ptr().add(offset) },
         strides,
     };
     let f = &f;
@@ -56,6 +64,6 @@ where
         let k = rem % nz;
         // SAFETY: `linear` is unique for this invocation, and row-major logical
         // index decoding covers every element in the mutable view exactly once.
-        f((i, j, k), unsafe { &mut *view_ptr.ptr_at(i, j, k) });
+        f([i, j, k], unsafe { &mut *view_ptr.ptr_at(i, j, k) });
     });
 }

@@ -154,7 +154,7 @@ impl AIEnhancedBeamformingProcessor {
         rf_data: ArrayView4<f32>,
         angles: &[f32],
     ) -> KwaversResult<Array3<f32>> {
-        let (nt, nchan, nframes, _) = rf_data.dim();
+        let [nt, nchan, nframes, _] = rf_data.shape();
         let mut volume = Array3::<f32>::zeros((64, 64, nframes));
 
         for frame in 0..nframes {
@@ -188,7 +188,7 @@ impl AIEnhancedBeamformingProcessor {
         volume: &Array3<f32>,
         _features: &FeatureMap,
     ) -> KwaversResult<(Array3<f32>, Array3<f32>)> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
 
         if !self.config.enable_realtime_pinn {
             let uncertainty_volume = Array3::<f32>::from_elem((nx, ny, nz), 1.0);

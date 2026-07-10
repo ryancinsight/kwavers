@@ -11,12 +11,7 @@ use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
 
 fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
-    let shape = field.shape();
-    leto::ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field.as_slice().expect("quick test pressure field must be contiguous"),
-    )
-    .expect("quick test pressure field shape must match contiguous storage")
+    field.view()
 }
 
 /// Quick comparison test - runs in under 10 seconds
@@ -217,10 +212,10 @@ fn calculate_stability_quick(field: leto::ArrayView3<f64>) -> f64 {
     let mut gradient_sum = 0.0;
     let mut value_count = 0;
 
-    let shape = field.dim();
-    for i in 1..shape.0.saturating_sub(1) {
-        for j in 1..shape.1.saturating_sub(1) {
-            for k in 1..shape.2.saturating_sub(1) {
+    let shape = field.shape();
+    for i in 1..shape[0].saturating_sub(1) {
+        for j in 1..shape[1].saturating_sub(1) {
+            for k in 1..shape[2].saturating_sub(1) {
                 let gx = (field[[i + 1, j, k]] - field[[i - 1, j, k]]).abs();
                 let gy = (field[[i, j + 1, k]] - field[[i, j - 1, k]]).abs();
                 let gz = (field[[i, j, k + 1]] - field[[i, j, k - 1]]).abs();

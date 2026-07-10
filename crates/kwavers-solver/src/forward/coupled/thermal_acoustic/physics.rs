@@ -51,14 +51,16 @@ impl ThermalAcousticCoupler {
             return;
         }
 
-        Zip::from(sound_speed.view_mut())
-            .and(density.view_mut())
-            .and(temperature.view())
-            .for_each(|c, rho, &t| {
-                let d_t = t - d_t_offset;
-                *c = dc_dt.mul_add(d_t, c_ref);
-                *rho = drho_dt.mul_add(d_t, rho_ref);
-            });
+        leto_ops::zip_mut_with(&mut sound_speed.view_mut(), &temperature.view(), |c, t| {
+            let d_t = *t - d_t_offset;
+            *c = dc_dt.mul_add(d_t, c_ref);
+        })
+        .expect("invariant: material property field shapes asserted equal");
+        leto_ops::zip_mut_with(&mut density.view_mut(), &temperature.view(), |rho, t| {
+            let d_t = *t - d_t_offset;
+            *rho = drho_dt.mul_add(d_t, rho_ref);
+        })
+        .expect("invariant: material property field shapes asserted equal");
     }
 
     /// Compute acoustic heating source from pressure field.
@@ -96,17 +98,20 @@ impl ThermalAcousticCoupler {
             return;
         }
 
-        Zip::from(acoustic_heating.view_mut())
-            .and(pressure_prev.view())
-            .and(density.view())
-            .and(sound_speed.view())
-            .for_each(|q, &p, &rho, &c| {
-                if rho > 0.0 && c > 0.0 {
-                    *q = 2.0 * alpha_ac * (p * p) / (rho * c);
+        leto_ops::zip3_mut_with(
+            &mut acoustic_heating.view_mut(),
+            &pressure_prev.view(),
+            &density.view(),
+            &sound_speed.view(),
+            |q, p, rho, c| {
+                if *rho > 0.0 && *c > 0.0 {
+                    *q = 2.0 * alpha_ac * (*p * *p) / (*rho * *c);
                 } else {
                     *q = 0.0;
                 }
-            });
+            },
+        )
+        .expect("invariant: acoustic heating field shapes asserted equal");
     }
 
     /// Advance thermal equation (Pennes bioheat) one time step.
@@ -169,10 +174,13 @@ impl ThermalAcousticCoupler {
                 *t_new = dt.mul_add(d_t_dt, t);
             });
         } else {
-            Zip::indexed(temperature.view_mut()).for_each(|(i, j, k), t_new| {
-                if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                    return;
-                }
+            temperature
+                .indexed_iter_mut()
+                .expect("invariant: contiguous owned temperature array")
+                .for_each(|([i, j, k], t_new)| {
+                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                        return;
+                    }
                 let t = temperature_prev[[i, j, k]];
                 let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[[i + 1, j, k]])
                     + temperature_prev[[i - 1, j, k]])

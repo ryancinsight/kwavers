@@ -22,7 +22,7 @@ impl IterativeMethods {
         sensor_positions: &[[f64; 3]],
         grid_size: [usize; 3],
     ) -> KwaversResult<Array2<f64>> {
-        let n_sensors = (sensor_positions.shape()[0] * sensor_positions.shape()[1] * sensor_positions.shape()[2]);
+        let n_sensors = sensor_positions.len();
         let n_voxels = grid_size[0] * grid_size[1] * grid_size[2];
         let mut matrix = Array2::zeros((n_sensors, n_voxels));
 

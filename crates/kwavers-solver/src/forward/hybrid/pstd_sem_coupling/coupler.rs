@@ -68,7 +68,7 @@ impl PstdSemCoupler {
     }
 
     fn extract_pstd_interface(&self, pstd_field: &Array3<f64>) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity((self.interface.pstd_interface_points.shape()[0] * self.interface.pstd_interface_points.shape()[1] * self.interface.pstd_interface_points.shape()[2]));
+        let mut interface_values = Vec::with_capacity(self.interface.pstd_interface_points.len() );
         for &(i, j, k) in &self.interface.pstd_interface_points {
             interface_values.push(pstd_field[[i, j, k]]);
         }
@@ -76,13 +76,13 @@ impl PstdSemCoupler {
     }
 
     fn extract_sem_interface(&self, sem_field: &[f64]) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity((self.interface.sem_interface_nodes.shape()[0] * self.interface.sem_interface_nodes.shape()[1] * self.interface.sem_interface_nodes.shape()[2]));
+        let mut interface_values = Vec::with_capacity(self.interface.sem_interface_nodes.len() );
         for &node_idx in &self.interface.sem_interface_nodes {
             let value = sem_field.get(node_idx).ok_or_else(|| {
                 KwaversError::InvalidInput(format!(
                     "SEM interface node index {} is out of bounds (sem_field len {})",
                     node_idx,
-                    (sem_field.shape()[0] * sem_field.shape()[1] * sem_field.shape()[2])
+                    (sem_field.len())
                 ))
             })?;
             interface_values.push(*value);
@@ -127,7 +127,7 @@ impl PstdSemCoupler {
                 KwaversError::InvalidInput(format!(
                     "SEM interface node index {} is out of bounds (sem_field len {})",
                     sem_node,
-                    (sem_field.shape()[0] * sem_field.shape()[1] * sem_field.shape()[2])
+                    (sem_field.len())
                 ))
             })?;
 
@@ -173,7 +173,7 @@ impl PstdSemCoupler {
     ///
     #[must_use]
     pub fn has_converged(&self, tolerance: f64) -> bool {
-        if (self.convergence_history.shape()[0] * self.convergence_history.shape()[1] * self.convergence_history.shape()[2]) < 2 {
+        if (self.convergence_history.len()) < 2 {
             return false;
         }
         let last_residual = *self.convergence_history.last().unwrap();

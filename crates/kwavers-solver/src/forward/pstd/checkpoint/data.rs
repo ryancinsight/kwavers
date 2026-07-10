@@ -174,7 +174,7 @@ impl PSTDCheckpoint {
                 w.write_all(&(n_sensors as u64).to_le_bytes())?;
                 w.write_all(&(n_recorded as u64).to_le_bytes())?;
                 w.write_all(&(sensor_expected_steps as u64).to_le_bytes())?;
-                for &v in data {
+                for &v in data.iter() {
                     w.write_all(&v.to_le_bytes())?;
                 }
             }

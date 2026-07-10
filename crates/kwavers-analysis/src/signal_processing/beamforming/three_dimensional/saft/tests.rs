@@ -132,7 +132,7 @@ fn test_reconstruct_volume_basic() {
     }
 
     let vol = processor.reconstruct_volume(&rf_data).unwrap();
-    assert_eq!(vol.dim(), (16, 16, 16));
+    assert_eq!(vol.shape(), [16, 16, 16]);
     let max_val = vol.iter().cloned().fold(0.0_f32, f32::max);
     assert!(
         max_val > 0.0,

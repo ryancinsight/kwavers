@@ -66,7 +66,7 @@ fn test_adapt_multiple_sources() {
     let sources = vec![source1, source2];
     let pinn_sources = adapt_sources(&sources, 0.0).expect("Should adapt all sources");
 
-    assert_eq!((pinn_sources.shape()[0] * pinn_sources.shape()[1] * pinn_sources.shape()[2]), 2);
+    assert_eq!((pinn_sources.len()), 2);
     assert!((pinn_sources[0].frequency - MHZ_TO_HZ).abs() < 1e-6);
     assert!((pinn_sources[1].frequency - 2.0 * MHZ_TO_HZ).abs() < 1e-6);
 }

@@ -144,7 +144,7 @@ impl ParabolicDiffractionOperator {
                 *s = ApolloComplex64::new(value.re, value.im);
             });
         } else {
-            for (s, &value) in scratch.iter_mut().zip(field.iter()) {
+            for (s, &value) in scratch.iter_mut().zip(field.as_view().iter()) {
                 *s = ApolloComplex64::new(value.re, value.im);
             }
         }
@@ -198,13 +198,18 @@ impl ParabolicDiffractionOperator {
             .scratch
             .as_slice()
             .expect("invariant: complex KZK diffraction scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_mut() {
+        if let Some(field_values) = field.as_mut_slice() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, value| {
                 let scratch_value = scratch[idx];
                 *value = Complex64::new(scratch_value.re, scratch_value.im);
             });
         } else {
-            for (value, &s) in field.iter_mut().zip(scratch.iter()) {
+            for (([_, _], value), &s) in field
+                .reborrow()
+                .indexed_iter_mut()
+                .expect("invariant: 2-D field view yields indexed iterator")
+                .zip(scratch.iter())
+            {
                 *value = Complex64::new(s.re, s.im);
             }
         }

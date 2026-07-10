@@ -19,7 +19,7 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::displacement:
 /// Returns a `Vec<[f64; 3]>` of `[x, y, z]` coordinates in metres.
 #[must_use]
 pub fn find_push_locations(displacement: &DisplacementField, grid: &Grid) -> Vec<[f64; 3]> {
-    let (nx, ny, nz) = displacement.uz.shape();
+    let [nx, ny, nz] = displacement.uz.shape();
     let mut locations = Vec::new();
     let threshold = displacement.uz.iter().copied().fold(0.0, f64::max) * 0.3;
 

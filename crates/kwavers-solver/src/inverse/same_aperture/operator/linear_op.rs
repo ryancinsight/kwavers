@@ -7,7 +7,6 @@ use super::dot::{
 };
 use super::rows::{write_passive_row, write_pitch_catch_row};
 use super::types::{FiniteFrequencyOperator, OperatorKind};
-use moirai_parallel::ParallelSliceMut;
 
 const PITCH_CATCH_ROW_VALUES: usize = 7;
 const PASSIVE_ROW_VALUES: usize = 5;
@@ -18,15 +17,15 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
     }
 
     fn cols(&self) -> usize {
-        (self.active.shape()[0] * self.active.shape()[1] * self.active.shape()[2])
+self.active.len()
     }
 
     fn matvec(&self, x: &[f32], out: &mut [f32]) {
-        debug_assert_eq!((x.shape()[0] * x.shape()[1] * x.shape()[2]), self.cols());
-        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.rows());
+        debug_assert_eq!(x.len(), self.cols());
+        debug_assert_eq!(out.len(), self.rows());
         match &self.kind {
             OperatorKind::PitchCatch(specs) => {
-                out.iter_mut().enumerate(|row, dst| {
+                for (row, dst) in out.iter_mut().enumerate() {
                     *dst = pitch_catch_row_dot(
                         &specs[row],
                         self.inv_row_norms[row],
@@ -34,10 +33,10 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
                         self.active,
                         self.medium,
                     );
-                });
+                }
             }
             OperatorKind::Passive(specs) => {
-                out.iter_mut().enumerate(|row, dst| {
+                for (row, dst) in out.iter_mut().enumerate() {
                     *dst = passive_row_dot(
                         &specs[row],
                         self.inv_row_norms[row],
@@ -45,32 +44,32 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
                         self.active,
                         self.medium,
                     );
-                });
+                }
             }
         }
     }
 
     fn t_matvec(&self, y: &[f32], out: &mut [f32]) {
-        debug_assert_eq!((y.shape()[0] * y.shape()[1] * y.shape()[2]), self.rows());
-        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols());
+        debug_assert_eq!(y.len(), self.rows());
+        debug_assert_eq!(out.len(), self.cols());
         let scaled = scaled_input(y, &self.inv_row_norms);
         match &self.kind {
             OperatorKind::PitchCatch(specs) => {
-                out.iter_mut().enumerate(|col, dst| {
+                for (col, dst) in out.iter_mut().enumerate() {
                     *dst = pitch_catch_column_dot(specs, &scaled, col, self.active, self.medium);
-                });
+                }
             }
             OperatorKind::Passive(specs) => {
-                out.iter_mut().enumerate(|col, dst| {
+                for (col, dst) in out.iter_mut().enumerate() {
                     *dst = passive_column_dot(specs, &scaled, col, self.active, self.medium);
-                });
+                }
             }
         }
     }
 
     fn row_values(&self, row: usize, out: &mut [f32]) {
         debug_assert!(row < self.rows());
-        debug_assert_eq!((out.shape()[0] * out.shape()[1] * out.shape()[2]), self.cols());
+        debug_assert_eq!(out.len(), self.cols());
         match &self.kind {
             OperatorKind::PitchCatch(specs) => {
                 write_pitch_catch_row(
@@ -97,7 +96,7 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
         let mut diag = vec![0.0_f32; self.cols()];
         match &self.kind {
             OperatorKind::PitchCatch(specs) => {
-                diag.iter_mut().enumerate(|col, dst| {
+                for (col, dst) in diag.iter_mut().enumerate() {
                     *dst = pitch_catch_column_norm_sq(
                         specs,
                         &self.inv_row_norms,
@@ -105,10 +104,10 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
                         self.active,
                         self.medium,
                     );
-                });
+                }
             }
             OperatorKind::Passive(specs) => {
-                diag.iter_mut().enumerate(|col, dst| {
+                for (col, dst) in diag.iter_mut().enumerate() {
                     *dst = passive_column_norm_sq(
                         specs,
                         &self.inv_row_norms,
@@ -116,7 +115,7 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
                         self.active,
                         self.medium,
                     );
-                });
+                }
             }
         }
         diag
@@ -124,9 +123,9 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
 
     fn storage_values(&self) -> usize {
         let kind_values = match &self.kind {
-            OperatorKind::PitchCatch(specs) => (specs.shape()[0] * specs.shape()[1] * specs.shape()[2]) * PITCH_CATCH_ROW_VALUES,
-            OperatorKind::Passive(specs) => (specs.shape()[0] * specs.shape()[1] * specs.shape()[2]) * PASSIVE_ROW_VALUES,
+            OperatorKind::PitchCatch(specs) => specs.len() * PITCH_CATCH_ROW_VALUES,
+            OperatorKind::Passive(specs) => specs.len() * PASSIVE_ROW_VALUES,
         };
-        (self.row_norms.shape()[0] * self.row_norms.shape()[1] * self.row_norms.shape()[2]) + (self.inv_row_norms.shape()[0] * self.inv_row_norms.shape()[1] * self.inv_row_norms.shape()[2]) + kind_values
+        self.row_norms.len() + self.inv_row_norms.len() + kind_values
     }
 }

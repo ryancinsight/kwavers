@@ -148,12 +148,12 @@ impl EnsembleQuantifier {
             ));
         }
 
-        let shape = predictions[0].dim();
+        let shape = predictions[0].shape();
         let mut weighted_sum = Array2::zeros(shape);
         let mut total_weight = 0.0;
 
         for (prediction, &weight) in predictions.iter().zip(weights.iter()) {
-            weighted_sum = &weighted_sum + &(&prediction.view() * weight as f32);
+            weighted_sum = &weighted_sum + &(prediction * weight as f32);
             total_weight += weight;
         }
 
@@ -166,7 +166,7 @@ impl EnsembleQuantifier {
         let mut variance = Array2::zeros(shape);
         for (prediction, &weight) in predictions.iter().zip(weights.iter()) {
             let diff = prediction - &mean_prediction;
-            let weighted_diff = &diff * &diff * weight as f32;
+            let weighted_diff = &(&diff * &diff) * weight as f32;
             variance = &variance + &weighted_diff;
         }
 

@@ -43,7 +43,7 @@ fn synth_narrowband_sensor_data(
         let tau = tof_s(pos, true_source, sound_speed);
         for t in 0..n_samples {
             let time_s = (t as f64) / sampling_frequency_hz;
-            data[(i, 0, t)] = (omega * (time_s - tau)).cos();
+            data[[i, 0, t]] = (omega * (time_s - tau)).cos();
         }
     }
 
@@ -79,8 +79,8 @@ fn stft_bin_snapshots_shape_is_correct() {
     };
 
     let snaps = extract_stft_bin_snapshots(&data, &cfg).expect("snapshots");
-    assert_eq!(snaps.nrows(), sensors.len());
-    assert!(snaps.ncols() > 0);
+    assert_eq!(snaps.shape()[0], sensors.len());
+    assert!(snaps.shape()[1] > 0);
 }
 
 #[test]
@@ -119,7 +119,7 @@ fn stft_bin_picks_correct_bin_for_exact_tone() {
     for s in 0..n_sensors {
         for t in 0..n_samples {
             let ts = (t as f64) / fs;
-            data[(s, 0, t)] = (TWO_PI * f * ts).cos();
+            data[[s, 0, t]] = (TWO_PI * f * ts).cos();
         }
     }
 
@@ -135,7 +135,7 @@ fn stft_bin_picks_correct_bin_for_exact_tone() {
     let snaps = extract_stft_bin_snapshots(&data, &cfg).expect("snaps");
     let bin = cfg.bin_index();
 
-    let mags: Vec<f64> = (0..snaps.ncols()).map(|i| snaps[(0, i)].norm()).collect();
+    let mags: Vec<f64> = (0..snaps.shape()[1]).map(|i| snaps[[0, i]].norm()).collect();
     let mean = mags.iter().copied().sum::<f64>() / mags.len().max(1) as f64;
 
     assert!(mean > 1.0, "expected non-trivial bin magnitude at k={bin}");

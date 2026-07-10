@@ -97,12 +97,13 @@ impl MixedDomainPropagationPlugin {
     #[must_use]
     pub fn analyze_field(&self, field: &Array3<f64>) -> DomainSelection {
         // Calculate field statistics for domain selection
-        let mean = {
-            let arr = &field;
-            let sum: f64 = arr.iter().sum();
-            sum / arr.shape().iter().product::<usize>() as f64
-        }.unwrap_or(0.0);
-        let variance = field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (field.shape()[0] * field.shape()[1] * field.shape()[2]) as f64;
+        let n = field.len();
+        let mean = if n == 0 {
+            0.0
+        } else {
+            field.iter().sum::<f64>() / n as f64
+        };
+        let variance = field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (field.len()) as f64;
 
         // Estimate nonlinearity strength from field variance
         let nonlinearity_metric = variance.sqrt() / (mean.abs() + 1e-10);
@@ -271,9 +272,10 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
         use kwavers_field::mapping::UnifiedFieldType;
 
         // Extract pressure field
-        let pressure_field =
-            fields.index_axis(0, UnifiedFieldType::Pressure.index());
-        let pressure_array = pressure_field.to_owned();
+        let pressure_field = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
+        let pressure_array = pressure_field.to_contiguous();
 
         // Determine optimal domain based on field characteristics
         let domain = self.select_optimal_domain(&pressure_array, grid)?;
@@ -295,8 +297,9 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
         }?;
 
         // Update pressure field in the fields array
-        let mut pressure_slice =
-            fields.index_axis_mut(0, UnifiedFieldType::Pressure.index());
+        let mut pressure_slice = fields
+            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
         pressure_slice.assign(&result);
 
         Ok(())

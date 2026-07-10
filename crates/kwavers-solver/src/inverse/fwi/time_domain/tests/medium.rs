@@ -73,7 +73,7 @@ fn test_fwi_resolved_density_heterogeneous_and_default() {
     let rho_default = default_processor
         .resolved_density(&grid)
         .expect("default density resolution must succeed");
-    assert_eq!(rho_default.shape(), dims);
+    assert_eq!(rho_default.shape(), [dims.0, dims.1, dims.2]);
     assert!(rho_default
         .iter()
         .all(|&v| (v - RHO_SEISMIC_REF).abs() < f64::EPSILON));

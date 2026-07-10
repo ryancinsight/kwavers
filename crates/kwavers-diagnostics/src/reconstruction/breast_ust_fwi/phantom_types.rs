@@ -68,12 +68,13 @@ pub struct BreastUstAliPhantom {
 impl BreastUstAliPhantom {
     #[must_use]
     pub fn dimensions(&self) -> (usize, usize, usize) {
-        self.sound_speed_m_s.dim()
+        let [nx, ny, nz] = self.sound_speed_m_s.shape();
+        (nx, ny, nz)
     }
 
     #[must_use]
     pub fn physical_extent_m(&self) -> [f64; 3] {
-        let (nx, ny, nz) = self.sound_speed_m_s.dim();
+        let [nx, ny, nz] = self.sound_speed_m_s.shape();
         [
             nx as f64 * self.spacing_m,
             ny as f64 * self.spacing_m,

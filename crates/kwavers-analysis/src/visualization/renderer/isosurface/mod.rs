@@ -33,7 +33,7 @@ impl IsosurfaceExtractor {
     ///
     pub fn extract(&self, field: &Array3<f64>, threshold: f64) -> KwaversResult<Vec<[f32; 3]>> {
         let mut vertices = Vec::new();
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         if nx < 2 || ny < 2 || nz < 2 {
             return Ok(vertices);

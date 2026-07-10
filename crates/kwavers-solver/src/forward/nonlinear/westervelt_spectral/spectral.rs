@@ -4,9 +4,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_math::fft::{fft_3d_array, fft_3d_array_into, ifft_3d_array, Complex64};
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 /// Initialize k-space grids for spectral operations
 pub fn initialize_kspace_grids(
@@ -52,73 +50,24 @@ pub fn initialize_kspace_grids(
     let mut kz = Array3::<f64>::zeros((nx, ny, nz));
     let mut k_squared = Array3::<f64>::zeros((nx, ny, nz));
 
-    // Slice 9: MIGRATED the deferred heterogeneous Zip::indexed 4-mut
-    // chain to verbose is_standard_layout + flat-slice + Zip::indexed
-    // on first view_mut pattern. 7 layout/length precondition asserts
-    // total — 4 verbose is_standard_layout on {kx, ky, kz, k_squared}
-    // (mut outs) + 3 debug_assert_eq! on {kx_axis, ky_axis, kz_axis}.len()
-    // (closure-captured Vec<f64> immuts; Vec<T> is unconditionally
-    // C-contiguous, so length is the only precondition).
-    //
-    // Strategy: extend divergence.rs (slice 7) 3-mut strategy to 4 muts.
-    // Keep Zip::indexed on kx.view_mut() so the (i,j,k) index is direct
-    // (kx_axis[i] / ky_axis[j] / kz_axis[k] closure-captured Vec reads
-    // require i/j/k). Pre-extract flat as_slice_mut() buffers for
-    // {ky, kz, k_squared}, then write each parallel-iteration output via
-    // op_slice[idx]. Per-iteration cost is 2 muls + 2 adds for idx —
-    // ~10 cycles (vs ~100 cycles for a div/mod-based idx-to-(i,j,k)
-    // decomposition in a drop-everything flat-slice pattern). Race-
-    // freedom: each parallel task writes to 4 distinct output elements
-    // (kx_v[i,j,k] via the Zip iterator + 3 disjoint slice[idx] writes)
-    // all addressed by the same (i,j,k) tuple.
-    //
-    // WHY NOT HELPER: kwavers_safety::with_zip_standard_layout is the
-    // canonical SSOT for future Batch #2 work, but was not adopted here
-    // because: (a) the verbose-form assert pattern is the established
-    // Batch #1 SSOT across slices 1-8 (helper adoption in 0 of 9
-    // migrated sites so far); (b) the slice 9 4-mut extension
-    // deliberately matches divergence.rs slice 7 3-mut verbatim for
-    // source-level consistency; (c) broader helper-validation across
-    // heterogeneous patterns is deferred to Batch #2.
-    assert!(
-        kx,
-        "kx must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        ky,
-        "ky must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        kz,
-        "kz must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        k_squared,
-        "k_squared must be C-contiguous (default Array3 layout) for the migration"
-    );
-    debug_assert_eq!((kx_axis.shape()[0] * kx_axis.shape()[1] * kx_axis.shape()[2]), nx, "kx_axis length must equal nx");
-    debug_assert_eq!((ky_axis.shape()[0] * ky_axis.shape()[1] * ky_axis.shape()[2]), ny, "ky_axis length must equal ny");
-    debug_assert_eq!((kz_axis.shape()[0] * kz_axis.shape()[1] * kz_axis.shape()[2]), nz, "kz_axis length must equal nz");
-    {
-        let ky_slice = ky
-            .as_slice_mut()
-            .expect("ky: standard-layout asserted just above; layout matched");
-        let kz_slice = kz
-            .as_slice_mut()
-            .expect("kz: standard-layout asserted just above; layout matched");
-        let k2_slice = k_squared
-            .as_slice_mut()
-            .expect("k_squared: standard-layout asserted just above; layout matched");
-        Zip::indexed(kx.view_mut()).par_for_each(|(i, j, k), o_kx| {
-            let kx_val = kx_axis[i];
-            let ky_val = ky_axis[j];
-            let kz_val = kz_axis[k];
-            let idx = i * (ny * nz) + j * nz + k;
-            *o_kx = kx_val;
-            ky_slice[idx] = ky_val;
-            kz_slice[idx] = kz_val;
-            k2_slice[idx] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
-        });
+    // Separable wavenumber fill: each cell reads its precomputed per-axis value
+    // and writes the four output grids at the collocated index. Each iteration is
+    // independent, so the loop order is immaterial to the result.
+    debug_assert_eq!(kx_axis.len(), nx, "kx_axis length must equal nx");
+    debug_assert_eq!(ky_axis.len(), ny, "ky_axis length must equal ny");
+    debug_assert_eq!(kz_axis.len(), nz, "kz_axis length must equal nz");
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let kx_val = kx_axis[i];
+                let ky_val = ky_axis[j];
+                let kz_val = kz_axis[k];
+                kx[[i, j, k]] = kx_val;
+                ky[[i, j, k]] = ky_val;
+                kz[[i, j, k]] = kz_val;
+                k_squared[[i, j, k]] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+            }
+        }
     }
 
     (k_squared, kx, ky, kz)
@@ -194,7 +143,11 @@ pub fn compute_laplacian_spectral_into(
         [nx, ny, nz],
         "fft_scratch shape mismatch"
     );
-    debug_assert_eq!(out.shape(), field.shape(), "laplacian output shape mismatch");
+    debug_assert_eq!(
+        out.shape(),
+        field.shape(),
+        "laplacian output shape mismatch"
+    );
     debug_assert_eq!(k_squared.shape(), field.shape(), "k_squared shape mismatch");
 
     // Step 1: real→complex DFT into scratch (no allocation)

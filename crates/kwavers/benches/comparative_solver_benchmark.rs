@@ -17,14 +17,7 @@ use leto::{
 };
 
 fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
-    let shape = field.shape();
-    ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("benchmark pressure field must be contiguous"),
-    )
-    .expect("benchmark pressure field shape must match contiguous storage")
+    field.view()
 }
 
 /// Benchmark configuration
@@ -193,7 +186,7 @@ fn calculate_stability(field: ArrayView3<f64>) -> f64 {
     } else {
         // RMS gradient as stability proxy
         let mut gradient_sum = 0.0;
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return 1.0;
         }

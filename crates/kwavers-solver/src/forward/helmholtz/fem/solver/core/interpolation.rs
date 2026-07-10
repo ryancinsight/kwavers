@@ -20,7 +20,11 @@ impl FemHelmholtzSolver {
         let num_points = query_points.shape()[0];
         let mut results = Array1::zeros(num_points);
 
-        for (i, row) in query_points.axis_iter(0).enumerate() {
+        for (i, row) in query_points
+            .axis_iter::<1>(0)
+            .expect("invariant: axis 0 valid for 2D query points")
+            .enumerate()
+        {
             let point = [row[0], row[1], row[2]];
             let elements = self.mesh.locate_point(point);
 

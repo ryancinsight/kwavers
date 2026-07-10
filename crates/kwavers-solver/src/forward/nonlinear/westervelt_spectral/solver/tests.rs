@@ -187,7 +187,9 @@ fn update_wave_preserves_pressure_buffer_storage_for_zero_state() {
         .each_ref()
         .map(|buffer| buffer.as_ptr() as usize);
     after.sort_unstable();
-    let pressure = fields.index_axis(0, UnifiedFieldType::Pressure.index());
+    let pressure = fields
+        .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+        .expect("invariant: pressure field index within unified field rank");
 
     assert_eq!(after, before);
     assert_eq!(solver.nonlinear_scratch.as_ptr(), nonlinear_before);
@@ -250,7 +252,9 @@ fn lossy_westervelt_stays_finite_and_bounded() {
             .unwrap();
     }
 
-    let p = fields.index_axis(0, 0);
+    let p = fields
+        .index_axis::<3>(0, 0)
+        .expect("invariant: field 0 within unified field rank");
     assert!(
         p.iter().all(|v| v.is_finite()),
         "lossy Westervelt must stay finite (was Inf/NaN before the c² coefficient fix)"
@@ -391,12 +395,18 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
             &mut damp, &p, &p_prev, &medium, &grid, dt,
         );
         let mut p_next = Array3::<f64>::zeros((nx, ny, nz));
-        leto_ops::zip_from_mut(p_next)
-            .and(&p)
-            .and(&p_prev)
-            .and(&lap)
-            .and(&damp)
-            .for_each(|pn, &pc, &pp, &l, &d| *pn = 2.0 * pc - pp + dt2 * (c * c * l + d));
+        {
+            // 4 read inputs + 1 mut output; leto_ops zip is single-lhs only, so a
+            // native flat-index loop over the same-shape contiguous field slices.
+            let pn = p_next.as_slice_mut().expect("invariant: p_next contiguous");
+            let pc = p.as_slice().expect("invariant: p contiguous");
+            let pp = p_prev.as_slice().expect("invariant: p_prev contiguous");
+            let ls = lap.as_slice().expect("invariant: lap contiguous");
+            let ds = damp.as_slice().expect("invariant: damp contiguous");
+            for i in 0..pn.len() {
+                pn[i] = 2.0 * pc[i] - pp[i] + dt2 * (c * c * ls[i] + ds[i]);
+            }
+        }
         p_prev = std::mem::replace(&mut p, p_next);
         if step < window {
             max_early = max_early.max(amp(&p));

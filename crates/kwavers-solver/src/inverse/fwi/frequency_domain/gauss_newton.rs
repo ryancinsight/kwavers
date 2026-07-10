@@ -136,7 +136,7 @@ pub fn invert_gauss_newton(
     Ok(InversionResult {
         sound_speed_m_s: slowness_to_sound_speed(&slowness)?,
         objective_history: history,
-        frequencies_used: (observations.shape()[0] * observations.shape()[1] * observations.shape()[2]),
+        frequencies_used: (observations.len()),
         transmissions_used: observations
             .first()
             .map(|obs| obs.observed_pressure.shape()[0])
@@ -312,7 +312,7 @@ mod tests {
         let obj_end = *result.objective_history.last().unwrap();
         eprintln!(
             "GN objective {obj_start:.4e} -> {obj_end:.4e} ({} steps); centre Δc {:+.2}",
-            (result.objective_history.shape()[0] * result.objective_history.shape()[1] * result.objective_history.shape()[2]),
+            (result.objective_history.len()),
             result.sound_speed_m_s[[centre, centre, 0]] - 1500.0
         );
         assert!(

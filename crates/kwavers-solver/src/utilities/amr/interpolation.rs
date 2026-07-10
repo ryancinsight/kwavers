@@ -116,18 +116,20 @@ impl AmrConservativeInterpolator {
                     && k_max <= nz
                 {
                     // Get coarse subregion
-                    let coarse_region =
-                        coarse_fieldslice(&[(Some(i_min as isize) as usize, Some(i_max as isize) as usize, 1), (Some(j_min as isize) as usize, Some(j_max as isize) as usize, 1), (Some(k_min as isize) as usize, Some(k_max as isize) as usize, 1)]);
+                    let coarse_region = coarse_field
+                        .slice(&[
+                            (i_min, i_max, 1),
+                            (j_min, j_max, 1),
+                            (k_min, k_max, 1),
+                        ])
+                        .expect("invariant: coarse subregion within field bounds")
+                        .to_contiguous();
 
                     // Interpolate to refined mesh
                     let refined_region = match self.scheme {
-                        AmrInterpolationScheme::Linear => {
-                            self.prolongate(&coarse_region.to_owned())
-                        }
-                        AmrInterpolationScheme::Cubic => self.prolongate(&coarse_region.to_owned()),
-                        AmrInterpolationScheme::Conservative => {
-                            self.prolongate(&coarse_region.to_owned())
-                        }
+                        AmrInterpolationScheme::Linear => self.prolongate(&coarse_region),
+                        AmrInterpolationScheme::Cubic => self.prolongate(&coarse_region),
+                        AmrInterpolationScheme::Conservative => self.prolongate(&coarse_region),
                     };
 
                     // Write refined values back to output (if dimensions match)

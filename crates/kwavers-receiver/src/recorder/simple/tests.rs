@@ -13,12 +13,12 @@ fn pressure_view_exposes_recorded_prefix_without_clone() {
     recorder.record_step(&p0).unwrap();
 
     let full = recorder.pressure_data_view().unwrap();
-    assert_eq!(full.shape(), (1, 2));
+    assert_eq!(full.shape(), [1, 2]);
     assert_eq!(full[[0, 0]], 7.0);
     assert_eq!(full[[0, 1]], 0.0);
 
     let recorded = recorder.recorded_pressure_view().unwrap();
-    assert_eq!(recorded.shape(), (1, 1));
+    assert_eq!(recorded.shape(), [1, 1]);
     assert_eq!(recorded[[0, 0]], 7.0);
 }
 

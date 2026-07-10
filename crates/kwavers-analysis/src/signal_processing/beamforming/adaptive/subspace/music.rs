@@ -2,11 +2,11 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use kwavers_math::linear_algebra::EigenDecomposition;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::{
-    /* s -- no leto equivalent */,
     Array1,
     Array2,
+    SliceArg,
 };
 
 /// MUSIC (Multiple Signal Classification) Algorithm
@@ -55,9 +55,9 @@ impl MUSIC {
         covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> KwaversResult<f64> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
 
-        if n == 0 || covariance.ncols() != n {
+        if n == 0 || covariance.shape()[1] != n {
             return Err(KwaversError::InvalidInput(
                 "MUSIC::pseudospectrum: covariance must be non-empty square matrix".to_owned(),
             ));
@@ -76,7 +76,7 @@ impl MUSIC {
             )));
         }
 
-        for &val in steering {
+        for &val in steering.iter() {
             if !val.re.is_finite() || !val.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
                     operation: "MUSIC::pseudospectrum".to_owned(),
@@ -85,8 +85,10 @@ impl MUSIC {
             }
         }
 
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(covariance)?;
+        let (eigenvalues, eigenvectors) = {
+            let r = EigenSolver::jacobi_hermitian(covariance, EigenSolverConfig::default())?;
+            (r.eigenvalues, r.eigenvectors)
+        };
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
@@ -95,7 +97,9 @@ impl MUSIC {
 
         let mut en_h_a_norm_sq = 0.0;
         for &idx in indices.iter().skip(noise_start) {
-            let eigenvec = eigenvectors.slice(s![.., idx]);
+            let eigenvec = eigenvectors
+                .slice_with::<1>(&[SliceArg::All, SliceArg::Index(idx as isize)])
+                .expect("eigenvector column slice");
 
             let mut e_h_a = Complex64::default();
             for j in 0..n {

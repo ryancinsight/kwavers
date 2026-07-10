@@ -44,7 +44,7 @@ fn synth_narrowband_sensor_data(
         let tau = tof_s(pos, true_source, sound_speed) + extra_delay_s;
         for t in 0..n_samples {
             let time_s = (t as f64) / sampling_frequency_hz;
-            data[(i, 0, t)] = (omega * (time_s - tau)).cos();
+            data[[i, 0, t]] = (omega * (time_s - tau)).cos();
         }
     }
 
@@ -58,8 +58,8 @@ fn capon_spectrum_is_finite_for_simple_case() {
 
     let mut x = Array3::<f64>::zeros((n_sensors, 1, n_samples));
     for t in 0..n_samples {
-        x[(0, 0, t)] = 1.0;
-        x[(1, 0, t)] = 1.0;
+        x[[0, 0, t]] = 1.0;
+        x[[1, 0, t]] = 1.0;
     }
 
     let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];

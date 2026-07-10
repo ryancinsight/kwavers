@@ -156,11 +156,13 @@ pub(super) fn run_optimization(
     // Capture iter-0 snapshot
     if snap_iters.contains(&0) {
         snap_re
-            .index_axis::<2>(0, snap_cursor)
-            .assign(&init_re.mapv(|v| v as f32));
+            .index_axis_mut::<2>(0, snap_cursor)
+            .expect("invariant: snapshot index in bounds")
+            .assign(&init_re.mapv(|v| v as f32).view());
         snap_im
-            .index_axis::<2>(0, snap_cursor)
-            .assign(&init_im.mapv(|v| v as f32));
+            .index_axis_mut::<2>(0, snap_cursor)
+            .expect("invariant: snapshot index in bounds")
+            .assign(&init_im.mapv(|v| v as f32).view());
         snap_iter_out.push(0);
         snap_cursor += 1;
     }
@@ -186,11 +188,13 @@ pub(super) fn run_optimization(
 
         if snap_iters.contains(&k) && snap_cursor < n_snap {
             snap_re
-                .index_axis::<2>(0, snap_cursor)
-                .assign(&p_re_k.mapv(|v| v as f32));
+                .index_axis_mut::<2>(0, snap_cursor)
+                .expect("invariant: snapshot index in bounds")
+                .assign(&p_re_k.mapv(|v| v as f32).view());
             snap_im
-                .index_axis::<2>(0, snap_cursor)
-                .assign(&p_im_k.mapv(|v| v as f32));
+                .index_axis_mut::<2>(0, snap_cursor)
+                .expect("invariant: snapshot index in bounds")
+                .assign(&p_im_k.mapv(|v| v as f32).view());
             snap_iter_out.push(k);
             snap_cursor += 1;
         }

@@ -26,13 +26,14 @@ pub(in crate::multiphysics::monolithic) fn flatten_fields(
 
     let first = &fields[&field_order[0]];
     let [nx, ny, nz] = first.shape();
-    let n_fields = (field_order.shape()[0] * field_order.shape()[1] * field_order.shape()[2]);
+    let n_fields = field_order.len() ;
 
     let mut stacked = Array3::zeros((n_fields * nx, ny, nz));
     for (i, ft) in field_order.iter().enumerate() {
         let src = &fields[ft];
         stacked
-            .slice_mut(s![i * nx..(i + 1) * nx, .., ..])
+            .slice_with_mut(&s![i * nx..(i + 1) * nx, .., ..])
+            .expect("invariant: field block slice within stacked-state bounds")
             .assign(src);
     }
     stacked
@@ -52,11 +53,15 @@ pub(in crate::multiphysics::monolithic) fn unflatten_fields(
     }
 
     let total_rows = u.shape()[0];
-    let nx = total_rows / (field_order.shape()[0] * field_order.shape()[1] * field_order.shape()[2]);
+    let nx =
+        total_rows / (field_order.len());
 
     for (i, ft) in field_order.iter().enumerate() {
         if let Some(field) = fields.get_mut(ft) {
-            field.assign(&u.slice(s![i * nx..(i + 1) * nx, .., ..]));
+            field.assign(
+                &u.slice_with(&s![i * nx..(i + 1) * nx, .., ..])
+                    .expect("invariant: field block slice within stacked-state bounds"),
+            );
         }
     }
 }

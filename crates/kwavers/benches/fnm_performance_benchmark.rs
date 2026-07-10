@@ -39,7 +39,7 @@ impl RayleighSommerfeldSolver {
     /// Compute pressure field using direct Rayleigh-Sommerfeld integration
     /// This is O(n²) complexity where n is the number of transducer elements
     fn compute_field(&self, velocity: &Array2<Complex64>, z: f64) -> Array2<Complex64> {
-        let (n_elem_x, n_elem_y) = velocity.dim();
+        let [n_elem_x, n_elem_y] = velocity.shape();
         let mut pressure = Array2::<Complex64>::zeros((n_elem_x, n_elem_y));
 
         let k = self.transducer.wavenumber(self.c0);

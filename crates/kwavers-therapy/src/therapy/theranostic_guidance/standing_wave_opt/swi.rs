@@ -44,8 +44,8 @@ pub(super) fn superpose(
     g_im: &[Array2<f64>],
     phases: &[f64],
 ) -> (Array2<f64>, Array2<f64>) {
-    let nx = g_re[0].nrows();
-    let ny = g_re[0].ncols();
+    let nx = g_re[0].shape()[0];
+    let ny = g_re[0].shape()[1];
     let mut p_re = Array2::<f64>::zeros((nx, ny));
     let mut p_im = Array2::<f64>::zeros((nx, ny));
     for ((&phi, gre), gim) in phases.iter().zip(g_re).zip(g_im) {

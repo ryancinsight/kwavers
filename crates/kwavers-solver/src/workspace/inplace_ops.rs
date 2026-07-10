@@ -37,7 +37,9 @@ pub fn scale_inplace(a: &mut Array3<f64>, scalar: f64) {
     if let Some(slice) = a.as_slice_mut() {
         for_each_mut_with::<Adaptive, _, _>(slice, |x| *x *= scalar);
     } else {
-        a.mapv_inplace(|x| x * scalar);
+        for x in a.iter_mut() {
+            *x *= scalar;
+        }
     }
 }
 
@@ -69,6 +71,8 @@ where
     if let Some(slice) = a.as_slice_mut() {
         for_each_mut_with::<Adaptive, _, _>(slice, |x| *x = f(*x));
     } else {
-        a.mapv_inplace(f);
+        for x in a.iter_mut() {
+            *x = f(*x);
+        }
     }
 }

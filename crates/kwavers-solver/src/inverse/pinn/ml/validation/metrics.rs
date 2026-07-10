@@ -61,7 +61,7 @@ pub fn compute_correlation(
     reference: &Array2<f64>,
     prediction: &Array2<f64>,
 ) -> KwaversResult<f64> {
-    let n = (reference.shape()[0] * reference.shape()[1] * reference.shape()[2]) as f64;
+    let n = (reference.len()) as f64;
     let mean_ref: f64 = reference.iter().sum::<f64>() / n;
     let mean_pred: f64 = prediction.iter().sum::<f64>() / n;
 

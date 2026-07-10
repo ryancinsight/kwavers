@@ -95,7 +95,12 @@ impl TimeReversalReconstructor {
                 self.propagate_backwards(grid, solver, recorder, frequency, &reversed_signals)?;
 
             // Accumulate reconstruction
-            reconstruction += &iteration_result;
+            leto_ops::zip_mut_with(
+                &mut reconstruction.view_mut(),
+                &iteration_result.view(),
+                |a, b| *a += *b,
+            )
+            .expect("invariant: reconstruction and iteration result shapes asserted equal");
 
             // Check convergence for iterative methods
             if self.config.iterations > 1 {
@@ -130,7 +135,9 @@ impl TimeReversalReconstructor {
         let mut reversed_signals = HashMap::new();
         for (sensor_idx, &(i, j, k)) in sensor_indices.iter().enumerate() {
             // Get signal for this sensor
-            let signal_row = pressure_data.index_axis(0, sensor_idx).unwrap();
+            let signal_row = pressure_data
+                .index_axis::<1>(0, sensor_idx)
+                .expect("invariant: sensor index within pressure data axis 0");
             let mut signal = signal_row.iter().cloned().collect::<Vec<_>>();
 
             // Reverse the signal in time
@@ -180,7 +187,7 @@ impl TimeReversalReconstructor {
             reversed_signals.insert(sensor_idx, signal);
         }
 
-        debug!("Prepared {} reversed signals", (reversed_signals.shape()[0] * reversed_signals.shape()[1] * reversed_signals.shape()[2]));
+        debug!("Prepared {} reversed signals", (reversed_signals.len()));
         Ok(reversed_signals)
     }
 

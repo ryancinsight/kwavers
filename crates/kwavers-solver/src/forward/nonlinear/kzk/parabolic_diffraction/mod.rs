@@ -192,7 +192,7 @@ impl KzkParabolicDiffractionOperator {
                 *s = Complex64::new(field_values[idx], 0.0);
             });
         } else {
-            for (s, &x) in scratch.iter_mut().zip(field.iter()) {
+            for (s, &x) in scratch.iter_mut().zip(field.as_view().iter()) {
                 *s = Complex64::new(x, 0.0);
             }
         }
@@ -232,12 +232,17 @@ impl KzkParabolicDiffractionOperator {
             .scratch
             .as_slice()
             .expect("invariant: KZK parabolic scratch is standard-layout");
-        if let Some(field_values) = field.as_slice_mut() {
+        if let Some(field_values) = field.as_mut_slice() {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, out| {
                 *out = scratch[idx].re;
             });
         } else {
-            for (out, value) in field.iter_mut().zip(scratch.iter()) {
+            for (([_, _], out), value) in field
+                .reborrow()
+                .indexed_iter_mut()
+                .expect("invariant: 2-D field view yields indexed iterator")
+                .zip(scratch.iter())
+            {
                 *out = value.re;
             }
         }

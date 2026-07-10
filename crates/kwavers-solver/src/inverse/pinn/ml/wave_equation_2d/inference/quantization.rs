@@ -29,7 +29,7 @@ impl WaveQuantizer2D {
     ) -> Vec<ActivationType> {
         let mut activations = Vec::new();
         // Assume hidden layers use Tanh
-        for _ in 0..(_pinn.hidden_layers.shape()[0] * _pinn.hidden_layers.shape()[1] * _pinn.hidden_layers.shape()[2]) {
+        for _ in 0..(_pinn.hidden_layers.len()) {
             activations.push(ActivationType::Tanh);
         }
         activations.push(ActivationType::Linear);

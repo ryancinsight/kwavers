@@ -39,17 +39,19 @@ impl UlmDetector {
         n_x: usize,
     ) -> KwaversResult<Vec<BubbleDetection>> {
         let (bubble_data, _k) = self.clutter_filter.filter(iq_block)?;
-        let n_t = bubble_data.ncols();
+        let n_t = bubble_data.shape()[1];
         let mut all_detections = Vec::new();
 
         for t in 0..n_t {
-            let frame_col = bubble_data.column(t);
-            if frame_col.len() != n_z * n_x {
+            let frame_col = bubble_data
+                .index_axis::<1>(1, t)
+                .expect("invariant: column index within bounds");
+            if frame_col.shape()[0] != n_z * n_x {
                 return Err(KwaversError::Numerical(NumericalError::SolverFailed {
                     method: "ULM detect".to_owned(),
                     reason: format!(
                         "pixel count {} ≠ n_z×n_x = {}×{}={}",
-                        frame_col.len(),
+                        frame_col.shape()[0],
                         n_z,
                         n_x,
                         n_z * n_x

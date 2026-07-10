@@ -6,6 +6,13 @@ use super::config::PolynomialFilterConfig;
 use super::filter::PolynomialFilter;
 use kwavers_core::constants::numerical::TWO_PI;
 
+/// Population standard deviation (ddof = 0) over all elements.
+fn population_std(a: &Array2<f64>) -> f64 {
+    let n = a.size() as f64;
+    let mean = a.iter().sum::<f64>() / n;
+    (a.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n).sqrt()
+}
+
 #[test]
 fn test_config_validation() {
     let config = PolynomialFilterConfig::with_order(2);
@@ -49,8 +56,8 @@ fn test_filter_with_linear_trend() {
 
     let filtered = filter.filter(&data).unwrap();
 
-    let original_mean = data.mean().unwrap();
-    let filtered_mean = filtered.mean().unwrap().abs();
+    let original_mean = leto::mean_all(&data).unwrap();
+    let filtered_mean = leto::mean_all(&filtered).unwrap().abs();
 
     assert!(filtered_mean < original_mean);
 }
@@ -75,7 +82,7 @@ fn test_filter_preserves_oscillations() {
 
     let filtered = filter.filter(&data).unwrap();
 
-    let filtered_std = filtered.std(0.0);
+    let filtered_std = population_std(&filtered);
     assert!(filtered_std > 1.0);
 }
 

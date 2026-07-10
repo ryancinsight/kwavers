@@ -88,7 +88,8 @@ fn wall_filter_highpass_ensemble_sum_is_zero_for_arbitrary_input() {
             let sum: Complex64 = (0..ensemble_size).map(|n| out[[n, depth, beam]]).sum();
             assert!(
                 sum.norm() < 1e-10,
-                "ensemble sum at ({depth},{beam}) = {sum:.2e}, expected 0"
+                "ensemble sum norm at ({depth},{beam}) = {:.2e}, expected 0",
+                sum.norm()
             );
         }
     }

@@ -8,7 +8,7 @@
 use super::BeamformingTrainer;
 use crate::ml::training::{PhysicsLoss, TrainingDataset};
 use kwavers_core::error::KwaversResult;
-use s;
+use leto::SliceArg;
 
 impl BeamformingTrainer {
     /// Compute loss for entire epoch (simplified implementation)
@@ -61,16 +61,23 @@ impl BeamformingTrainer {
             return Ok(0.0);
         }
 
-        let n_rows = batch.targets.dim().0;
-        let n_cols = batch.targets.dim().1;
+        let n_rows = batch.targets.shape()[0];
+        let n_cols = batch.targets.shape()[1];
         let inv_n = 1.0 / n_rows as f64;
 
         let mut mse = 0.0;
         for col in 0..n_cols {
-            let col_mean: f64 = batch.targets.column(col).sum() * inv_n;
+            let col_mean: f64 = batch
+                .targets
+                .index_axis::<1>(1, col)
+                .expect("invariant: column index in bounds")
+                .iter()
+                .sum::<f64>()
+                * inv_n;
             mse += batch
                 .targets
-                .column(col)
+                .index_axis::<1>(1, col)
+                .expect("invariant: column index in bounds")
                 .iter()
                 .map(|&y| (y - col_mean).powi(2))
                 .sum::<f64>();
@@ -106,11 +113,33 @@ impl BeamformingTrainer {
         }
 
         if self.physics_loss.reciprocity_weight > 0.0 {
-            let n_cols = batch.inputs.dim().1;
+            let n_cols = batch.inputs.shape()[1];
             if n_cols >= 2 {
                 let half = n_cols / 2;
-                let forward = batch.inputs.slice(s![.., 0..half]).to_owned();
-                let reverse = batch.inputs.slice(s![.., half..half * 2]).to_owned();
+                let forward = batch
+                    .inputs
+                    .slice_with::<2>(&[
+                        SliceArg::All,
+                        SliceArg::Range {
+                            start: Some(0),
+                            end: Some(half as isize),
+                            step: 1,
+                        },
+                    ])
+                    .expect("invariant: column range in bounds")
+                    .to_contiguous();
+                let reverse = batch
+                    .inputs
+                    .slice_with::<2>(&[
+                        SliceArg::All,
+                        SliceArg::Range {
+                            start: Some(half as isize),
+                            end: Some((half * 2) as isize),
+                            step: 1,
+                        },
+                    ])
+                    .expect("invariant: column range in bounds")
+                    .to_contiguous();
                 loss += self.physics_loss.reciprocity_weight
                     * PhysicsLoss::reciprocity_violation(&forward, &reverse);
             }

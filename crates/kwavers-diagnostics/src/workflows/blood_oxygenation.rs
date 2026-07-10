@@ -81,7 +81,7 @@ pub fn estimate_oxygenation(
     }
 
     // Get spatial dimensions
-    let (nx, ny, nz) = absorption_maps[0].dim();
+    let [nx, ny, nz] = absorption_maps[0].shape();
 
     // Create hemoglobin database
     let hb_db = HemoglobinDatabase::standard();

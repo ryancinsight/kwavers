@@ -1,6 +1,5 @@
-﻿use crate::linear_algebra::{
-    ComplexLinearAlgebra, EigenDecomposition, LinearAlgebra, VectorOperations,
-};
+use crate::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use crate::linear_algebra::{ComplexLinearAlgebra, VectorOperations};
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, Array2};
@@ -31,15 +30,33 @@ pub trait LinearAlgebraExt<T> {
 
 impl LinearAlgebraExt<f64> for Array2<f64> {
     fn solve_into(&self, b: Array1<f64>) -> KwaversResult<Array1<f64>> {
-        LinearAlgebra::solve_linear_system(self, &b)
+        Ok(leto_ops::solve(&self.view(), &b.view())?)
     }
 
     fn inv(&self) -> KwaversResult<Self> {
-        LinearAlgebra::matrix_inverse(self)
+        Ok(leto_ops::inv(&self.view())?)
     }
 
     fn eig(&self) -> KwaversResult<(Array1<f64>, Self)> {
-        EigenDecomposition::eigendecomposition(self)
+        // The Hermitian eigensolver operates on complex matrices; a real matrix
+        // is promoted with zero imaginary part. For symmetric real inputs the
+        // eigenvectors are real (imaginary part ~0), so projecting to the real
+        // part preserves the original real-valued contract of this method.
+        let n = self.shape()[0];
+        let mut complex = Array2::<Complex64>::zeros([n, n]);
+        for i in 0..n {
+            for j in 0..n {
+                complex[[i, j]] = Complex64::new(self[[i, j]], 0.0);
+            }
+        }
+        let result = EigenSolver::qr_algorithm(&complex, EigenSolverConfig::default())?;
+        let mut eigenvectors = Array2::<f64>::zeros([n, n]);
+        for i in 0..n {
+            for j in 0..n {
+                eigenvectors[[i, j]] = result.eigenvectors[[i, j]].re;
+            }
+        }
+        Ok((result.eigenvalues, eigenvectors))
     }
 }
 
@@ -53,13 +70,12 @@ impl LinearAlgebraExt<Complex64> for Array2<Complex64> {
     }
 
     fn eig(&self) -> KwaversResult<(Array1<Complex64>, Self)> {
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(self)?;
-        let n = eigenvalues.shape()[0];
-        let mut eig_complex = Array1::zeros([n]);
+        let result = EigenSolver::jacobi_hermitian(self, EigenSolverConfig::default())?;
+        let n = result.eigenvalues.shape()[0];
+        let mut eig_complex = Array1::<Complex64>::zeros([n]);
         for i in 0..n {
-            eig_complex[i] = Complex64::new(eigenvalues[i], 0.0);
+            eig_complex[i] = Complex64::new(result.eigenvalues[i], 0.0);
         }
-        Ok((eig_complex, eigenvectors))
+        Ok((eig_complex, result.eigenvectors))
     }
 }

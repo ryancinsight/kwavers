@@ -8,9 +8,9 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::forward::pstd::config::BoundaryConfig;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{
-    /* s -- no leto equivalent */,
     Array2,
     ArrayView1,
+    SliceArg,
 };
 use kwavers_math::fft::Complex64;
 
@@ -27,7 +27,7 @@ pub(super) fn tone_signal(
     steps: usize,
     config: BreastUstPstdDatasetConfig,
 ) -> Array2<f64> {
-    Array2::from_shape_fn((1, steps), |(_, n)| {
+    Array2::from_shape_fn((1, steps), |[_, n]| {
         let phase = TWO_PI * frequency_hz * n as f64 * config.time_step_s;
         config.source_amplitude_pa * phase.sin()
     })
@@ -39,8 +39,14 @@ pub(super) fn frequency_bin(
     dt: f64,
     start_sample: usize,
 ) -> Complex64 {
-    let _window = samples.slice(s![start_sample..]);
-    let scale = 2.0 / _window.len() as f64;
+    let _window = samples
+        .slice_with::<1>(&[SliceArg::Range {
+            start: Some(start_sample as isize),
+            end: None,
+            step: 1,
+        }])
+        .expect("start_sample within trace");
+    let scale = 2.0 / _window.size() as f64;
     samples.iter().skip(start_sample).enumerate().fold(
         Complex64::new(0.0, 0.0),
         |acc, (n, &sample)| {

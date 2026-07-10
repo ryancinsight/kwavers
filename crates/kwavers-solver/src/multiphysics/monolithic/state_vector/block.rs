@@ -11,5 +11,7 @@ pub(in crate::multiphysics::monolithic) fn field_block_view(
     block_rows: usize,
     block: usize,
 ) -> ArrayView3<'_, f64> {
-    stacked.slice(s![block * block_rows..(block + 1) * block_rows, .., ..])
+    stacked
+        .slice_with(&s![block * block_rows..(block + 1) * block_rows, .., ..])
+        .expect("invariant: field block slice within stacked-state bounds")
 }

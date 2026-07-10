@@ -224,9 +224,9 @@ fn numerical_solver_solve_reconstructs_updated_modal_state_to_grid() {
 #[test]
 fn project_to_dg_round_trips_tensor_product_layouts_for_1d_2d_3d() {
     let cases = [
-        ((4, 1, 1), (2, 2, 1), 1),
-        ((4, 4, 1), (4, 4, 1), 2),
-        ((4, 4, 4), (8, 8, 1), 3),
+        ((4, 1, 1), [2, 2, 1], 1),
+        ((4, 4, 1), [4, 4, 1], 2),
+        ((4, 4, 4), [8, 8, 1], 3),
     ];
 
     for (dims, expected_coeff_dim, expected_dimensionality) in cases {
@@ -237,7 +237,7 @@ fn project_to_dg_round_trips_tensor_product_layouts_for_1d_2d_3d() {
         };
         let grid = Arc::new(Grid::new(dims.0, dims.1, dims.2, 1.0, 1.0, 1.0).unwrap());
         let mut solver = DGSolver::new(config, Arc::clone(&grid)).unwrap();
-        let field = Array3::from_shape_fn(dims, |(i, j, k)| {
+        let field = Array3::from_shape_fn(dims, |[i, j, k]| {
             i as f64 + 10.0 * j as f64 + 100.0 * k as f64
         });
         let mut recovered = Array3::zeros(dims);
@@ -246,7 +246,7 @@ fn project_to_dg_round_trips_tensor_product_layouts_for_1d_2d_3d() {
         solver.project_to_grid(&mut recovered).unwrap();
 
         assert_eq!(
-            solver.modal_coefficients().unwrap().dim(),
+            solver.modal_coefficients().unwrap().shape(),
             expected_coeff_dim
         );
         match solver.coefficient_layout {
@@ -275,8 +275,8 @@ fn fourier_periodic_nodes_generates_equispaced_nodes_and_uniform_weights() {
     let n = 8_usize;
     let (nodes, weights) = fourier_periodic_nodes(n).expect("fourier_periodic_nodes failed");
 
-    assert_eq!((nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]), n);
-    assert_eq!((weights.shape()[0] * weights.shape()[1] * weights.shape()[2]), n);
+    assert_eq!((nodes.len()), n);
+    assert_eq!((weights.len()), n);
 
     let expected_weight = 2.0 / n as f64;
     for j in 0..n {
@@ -319,7 +319,7 @@ fn new_fourier_constructs_with_correct_metadata_and_zero_lift() {
 
     // Lift matrix must be all-zero (no net boundary flux in a periodic element).
     let lift = &*solver.lift_matrix;
-    assert_eq!(lift.shape(), &[poly_order + 1, 2]);
+    assert_eq!(lift.shape(), [poly_order + 1, 2]);
     for &v in lift.iter() {
         assert_eq!(v, 0.0, "lift entry must be exactly 0.0");
     }

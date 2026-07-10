@@ -29,7 +29,7 @@ impl DGSolver {
         F: FnMut(f64, &mut Array3<f64>),
     {
         validate_tensor_state(self, state, density)?;
-        workspace.ensure_dim(state.shape());
+        workspace.ensure_dim((state.shape()[0], state.shape()[1], state.shape()[2]));
         workspace.original.assign(state);
 
         self.compute_acoustic_tensor_rhs_into(&workspace.original, density, &mut workspace.rhs)?;

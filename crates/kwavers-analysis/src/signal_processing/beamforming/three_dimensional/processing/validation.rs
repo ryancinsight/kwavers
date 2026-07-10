@@ -63,7 +63,7 @@ impl BeamformingProcessor3D {
                 "RF data array is empty".to_owned(),
             ));
         }
-        let (_, channels, samples, _) = rf_data.dim();
+        let [_, channels, samples, _] = rf_data.shape();
         let expected_channels = self.config.num_elements_3d.0
             * self.config.num_elements_3d.1
             * self.config.num_elements_3d.2;

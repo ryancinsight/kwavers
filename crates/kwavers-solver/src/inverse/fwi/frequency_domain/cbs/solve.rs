@@ -272,7 +272,7 @@ fn solve_adjoint_dense_free_space(
 ) -> KwaversResult<CbsSolution> {
     let operator = dense_free_space_operator_matrix(grid, reference_wavenumber, epsilon, shifted);
     let adjoint_operator = hermitian_transpose(&operator);
-    let rhs = Array1::from_vec([adjoint_rhs.len()], adjoint_rhs.iter().cloned().collect::<Vec<_>>())
+    let rhs = Array1::from_vec([adjoint_rhs.len()], adjoint_rhs.to_vec())
         .expect("dense adjoint rhs shape must match");
     let solution = ComplexLinearAlgebra::solve_linear_system_complex(&adjoint_operator, &rhs)?;
     let residual = dense_matvec_residual(&adjoint_operator, &solution, adjoint_rhs);

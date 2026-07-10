@@ -237,12 +237,22 @@ impl ErrorEstimator {
             return Ok(());
         }
 
-        let mut prev_plane = field.index_axis(0, 0).unwrap().to_owned();
-        let mut curr_plane = field.index_axis(0, 1).unwrap().to_owned();
+        let mut prev_plane = field
+            .index_axis::<2>(0, 0)
+            .expect("invariant: plane index within axis-0 bounds")
+            .to_contiguous();
+        let mut curr_plane = field
+            .index_axis::<2>(0, 1)
+            .expect("invariant: plane index within axis-0 bounds")
+            .to_contiguous();
         let mut next_plane = Array2::<f64>::zeros((ny, nz));
 
         for i in 1..nx - 1 {
-            next_plane.assign(&field.index_axis(0, i + 1));
+            next_plane.assign(
+                &field
+                    .index_axis::<2>(0, i + 1)
+                    .expect("invariant: plane index within axis-0 bounds"),
+            );
 
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {

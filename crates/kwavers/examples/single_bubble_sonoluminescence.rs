@@ -189,7 +189,7 @@ fn run_comprehensive_simulation(
     };
 
     let mut simulator =
-        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
+        IntegratedSonoluminescence::new({ let d = grid.dimensions(); [d.0, d.1, d.2] }, bubble_params.clone(), emission_params);
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());
@@ -225,7 +225,7 @@ fn run_comprehensive_simulation(
 
         // Extract data at center point
         let dims = grid.dimensions();
-        let center = (dims.0 / 2, dims.1 / 2, dims.2 / 2);
+        let center = [dims.0 / 2, dims.1 / 2, dims.2 / 2];
 
         // Store physical quantities
         results.times.push(time);

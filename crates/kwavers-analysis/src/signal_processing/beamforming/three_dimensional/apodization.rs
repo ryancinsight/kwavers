@@ -168,7 +168,7 @@ mod tests {
     fn test_rectangular_window() {
         let weights =
             create_apodization_weights((8, 8, 4), &Beamforming3dApodizationWindow::Rectangular);
-        assert_eq!(weights.dim(), (8, 8, 4));
+        assert_eq!(weights.shape(), [8, 8, 4]);
         // All weights should be 1.0 for rectangular window
         assert!(weights.iter().all(|&w| (w - 1.0).abs() < 1e-6));
     }
@@ -177,7 +177,7 @@ mod tests {
     fn test_hamming_window() {
         let weights =
             create_apodization_weights((16, 16, 8), &Beamforming3dApodizationWindow::Hamming);
-        assert_eq!(weights.dim(), (16, 16, 8));
+        assert_eq!(weights.shape(), [16, 16, 8]);
         // All weights should be in valid range
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
         // Check that weights vary across the array (not uniform)
@@ -195,7 +195,7 @@ mod tests {
     fn test_hann_window() {
         let weights =
             create_apodization_weights((12, 12, 6), &Beamforming3dApodizationWindow::Hann);
-        assert_eq!(weights.dim(), (12, 12, 6));
+        assert_eq!(weights.shape(), [12, 12, 6]);
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
         // Corner elements should have reduced weight (but for small arrays, may be close to 1.0)
         let corner_weight = weights[[0, 0, 0]];
@@ -211,7 +211,7 @@ mod tests {
     fn test_blackman_window() {
         let weights =
             create_apodization_weights((10, 10, 5), &Beamforming3dApodizationWindow::Blackman);
-        assert_eq!(weights.dim(), (10, 10, 5));
+        assert_eq!(weights.shape(), [10, 10, 5]);
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
     }
 
@@ -222,7 +222,7 @@ mod tests {
             (8, 8, 4),
             &Beamforming3dApodizationWindow::Gaussian { sigma },
         );
-        assert_eq!(weights.dim(), (8, 8, 4));
+        assert_eq!(weights.shape(), [8, 8, 4]);
         assert!(weights.iter().all(|&w| (0.0..=1.0).contains(&w)));
         // Center should have maximum weight (closest to array center)
         // For 8x8x4 array, center is at [3.5, 3.5, 1.5]
@@ -237,7 +237,7 @@ mod tests {
             (8, 8, 4),
             &Beamforming3dApodizationWindow::Custom(custom_weights),
         );
-        assert_eq!(weights.dim(), (8, 8, 4));
+        assert_eq!(weights.shape(), [8, 8, 4]);
         // All weights should be 0.5
         assert!(weights.iter().all(|&w| (w - 0.5).abs() < 1e-6));
     }

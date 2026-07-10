@@ -200,7 +200,7 @@ mod tests {
         let w = omega(5e6);
         let z = crosstalk_matrix(&positions, &areas, w, RHO, C);
 
-        assert_eq!(z.shape(), (4, 4));
+        assert_eq!(z.shape(), [4, 4]);
         for i in 0..4 {
             assert!(z[[i, i]].norm() <= 1e-300, "diagonal must be zero");
             for j in 0..4 {
@@ -228,7 +228,7 @@ mod tests {
         let positions = vec![[0.0, 0.0, 0.0], [1e-4, 0.0, 0.0]];
         let areas = vec![a]; // wrong length
         let z = crosstalk_matrix(&positions, &areas, omega(5e6), RHO, C);
-        assert_eq!(z.shape(), (0, 0));
+        assert_eq!(z.shape(), [0, 0]);
     }
 }
 

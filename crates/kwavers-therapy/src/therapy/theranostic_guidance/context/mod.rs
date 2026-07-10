@@ -67,12 +67,12 @@ pub(super) fn distance_3d(a: Point3, b: Point3) -> f64 {
 }
 
 pub(super) fn centroid_2d(mask: &Array2<bool>, sx: f64, sy: f64) -> Option<Point3> {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     let center = centered_origin_2d(nx, ny);
     let mut sum_x = 0.0;
     let mut sum_y = 0.0;
     let mut count = 0.0;
-    for ((ix, iy), active) in mask.indexed_iter() {
+    for ([ix, iy], active) in mask.indexed_iter() {
         if *active {
             sum_x += (ix as f64 - center.0) * sx;
             sum_y += (iy as f64 - center.1) * sy;
@@ -90,7 +90,7 @@ pub(super) fn centroid_index(mask: &Array2<bool>) -> Option<(usize, usize)> {
     let mut sx = 0.0;
     let mut sy = 0.0;
     let mut count = 0.0;
-    for ((ix, iy), active) in mask.indexed_iter() {
+    for ([ix, iy], active) in mask.indexed_iter() {
         if *active {
             sx += ix as f64;
             sy += iy as f64;
@@ -110,7 +110,7 @@ pub(super) fn volume_bbox(mask: &Array3<bool>) -> KwaversResult<IndexBounds3> {
         z1: 0,
     };
     let mut any = false;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
+    for ([ix, iy, iz], active) in mask.indexed_iter() {
         if *active {
             b.x0 = b.x0.min(ix);
             b.x1 = b.x1.max(ix);

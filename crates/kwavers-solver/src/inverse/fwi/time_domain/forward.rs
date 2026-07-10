@@ -25,16 +25,6 @@ use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
 use leto::{Array2, Array3, Array4};
 
-fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
-    let shape = field.shape();
-    leto::ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("FWI solver pressure field must be contiguous"),
-    )
-    .expect("FWI solver pressure field shape must match contiguous storage")
-}
 
 fn ndarray_from_leto2(field: &leto::Array2<f64>) -> Array2<f64> {
     let [nrows, ncols] = field.shape();
@@ -164,8 +154,8 @@ impl FwiProcessor {
 
         let density = self.resolved_density(grid)?;
         let medium = HeterogeneousFactory::from_arrays(
-            model.clone().into(),
-            density.into(),
+            model.clone(),
+            density,
             None,
             None, // alpha_power: default 1.0
             None,
@@ -229,8 +219,8 @@ impl FwiProcessor {
 
         let density = self.resolved_density(grid)?;
         let medium = HeterogeneousFactory::from_arrays(
-            model.clone().into(),
-            density.into(),
+            model.clone(),
+            density,
             None,
             None, // alpha_power: default 1.0
             None,
@@ -274,7 +264,9 @@ impl FwiProcessor {
             // unified Solver trait (T19a/T19b). No concrete-type path remains.
             solver.step_forward()?;
             history
-                .slice_mut(s![t, .., .., ..]).unwrap().unwrap().assign(&leto_view3(solver.pressure_field()));
+                .slice_with_mut(&s![t, .., .., ..])
+                .unwrap()
+                .assign(&solver.pressure_field().view());
         }
 
         let recorded = solver.recorded_sensor_pressure().ok_or_else(|| {
@@ -282,7 +274,10 @@ impl FwiProcessor {
                 message: "FWI forward model requires at least one receiver".to_owned(),
             })
         })?;
-        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).unwrap().to_owned();
+        let synthetic = recorded
+            .slice_with(&s![.., 0..self.parameters.nt])
+            .unwrap()
+            .to_contiguous();
 
         Ok((synthetic, history))
     }
@@ -323,7 +318,10 @@ impl FwiProcessor {
                 message: "FWI forward model requires at least one receiver".to_owned(),
             })
         })?;
-        let synthetic = recorded.slice(s![.., 0..self.parameters.nt]).unwrap().to_owned();
+        let synthetic = recorded
+            .slice_with(&s![.., 0..self.parameters.nt])
+            .unwrap()
+            .to_contiguous();
 
         Ok(synthetic)
     }

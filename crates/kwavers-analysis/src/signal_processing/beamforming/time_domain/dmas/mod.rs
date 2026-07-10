@@ -74,7 +74,7 @@ pub fn delay_and_sum_dmas(
         weights,
         reference,
     )?;
-    let (n_elements, n_samples) = aligned.dim();
+    let [n_elements, n_samples] = aligned.shape();
 
     let mut output = Array3::<f64>::zeros((1, 1, n_samples));
     let mut column = vec![0.0_f64; n_elements];

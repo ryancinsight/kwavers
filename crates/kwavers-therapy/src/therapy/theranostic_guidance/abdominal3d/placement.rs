@@ -97,11 +97,11 @@ pub fn plan_abdominal_array_placement(
             "abdominal array placement requires positive finite CT spacing".to_owned(),
         ));
     }
-    if ct_hu.dim() != label.dim() {
+    if ct_hu.shape() != label.shape() {
         return Err(KwaversError::InvalidInput(format!(
             "CT shape {:?} does not match segmentation shape {:?}",
-            ct_hu.dim(),
-            label.dim()
+            ct_hu.shape(),
+            label.shape()
         )));
     }
 

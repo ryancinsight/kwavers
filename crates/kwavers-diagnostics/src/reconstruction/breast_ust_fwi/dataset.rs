@@ -16,9 +16,9 @@ use kwavers_source::{GridSource, SourceMode};
 #[cfg(feature = "gpu")]
 use leto::Array3 as LetoArray3;
 use leto::{
-    /* s -- no leto equivalent */,
     Array2,
     Array3,
+    SliceArg,
 };
 use kwavers_math::fft::Complex64;
 
@@ -98,8 +98,13 @@ impl BreastUstPstdDataset {
                 FrequencyObservation::new(
                     frequency_hz,
                     self.observed_pressure
-                        .slice(s![index, .., ..])
-                        .to_owned()
+                        .slice_with::<2>(&[
+                            SliceArg::Index(index as isize),
+                            SliceArg::All,
+                            SliceArg::All,
+                        ])
+                        .expect("frequency index within observation cube")
+                        .to_contiguous()
                         .into(),
                 )
             })
@@ -130,8 +135,9 @@ pub fn generate_breast_ust_pstd_frequency_dataset(
     validate_frequencies(frequencies_hz, config.time_step_s)?;
     validate_cfl(sound_speed_m_s, config)?;
 
+    let [ss_nx, ss_ny, ss_nz] = sound_speed_m_s.shape();
     let receiver_indices =
-        map_ring_points_to_grid(sound_speed_m_s.dim(), config, array.elements())?;
+        map_ring_points_to_grid((ss_nx, ss_ny, ss_nz), config, array.elements())?;
     let transmissions = array.circumferential_elements();
     let receivers = receiver_indices.len();
     let mut observed = Array3::<Complex64>::zeros((frequencies_hz.len(), transmissions, receivers));
@@ -146,8 +152,9 @@ pub fn generate_breast_ust_pstd_frequency_dataset(
 
         for transmit_index in 0..transmissions {
             let source_points = array.cylindrical_source(transmit_index);
+            let [src_nx, src_ny, src_nz] = sound_speed_m_s.shape();
             let source_indices =
-                map_ring_points_to_grid(sound_speed_m_s.dim(), config, &source_points)?;
+                map_ring_points_to_grid((src_nx, src_ny, src_nz), config, &source_points)?;
             let traces = run_pstd_transmit(
                 sound_speed_m_s,
                 &receiver_indices,
@@ -159,7 +166,9 @@ pub fn generate_breast_ust_pstd_frequency_dataset(
 
             for receiver in 0..receivers {
                 observed[[frequency_index, transmit_index, receiver]] = frequency_bin(
-                    traces.row(receiver),
+                    traces
+                        .index_axis::<1>(0, receiver)
+                        .expect("receiver index within trace rows"),
                     frequency_hz,
                     config.time_step_s,
                     bin_start,
@@ -216,7 +225,7 @@ fn run_pstd_transmit(
     steps: usize,
     config: BreastUstPstdDatasetConfig,
 ) -> KwaversResult<Array2<f64>> {
-    let (nx, ny, nz) = sound_speed_m_s.dim();
+    let [nx, ny, nz] = sound_speed_m_s.shape();
     let grid = Grid::new(
         nx,
         ny,

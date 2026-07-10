@@ -10,8 +10,8 @@ fn test_schwarz_dirichlet_transmission() {
     let ny = 5;
     let nz = 5;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 100.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 200.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 100.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 200.0);
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
         .with_transmission_condition(BoundaryTransmissionCondition::Dirichlet);
@@ -33,8 +33,8 @@ fn test_schwarz_optimized_relaxation() {
     let ny = 5;
     let nz = 5;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 10.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 30.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 10.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 30.0);
 
     let theta = 0.7;
 

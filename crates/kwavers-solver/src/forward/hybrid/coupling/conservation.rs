@@ -65,7 +65,7 @@ impl HybridCouplingConservationEnforcer {
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
     ) {
-        let n = (target.shape()[0] * target.shape()[1] * target.shape()[2]) as f64;
+        let n = (target.len()) as f64;
         let source_sum: f64 = interpolated.iter().sum();
         let source_mean = source_sum / n;
         let target_sum: f64 = target.iter().sum();

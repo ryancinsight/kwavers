@@ -59,7 +59,7 @@ fn test_conservation_tracker() {
     };
     let diagnostics = tracker.update(&solver, 1, 0.001);
 
-    assert_eq!((diagnostics.shape()[0] * diagnostics.shape()[1] * diagnostics.shape()[2]), 3);
+    assert_eq!((diagnostics.len()), 3);
     assert_eq!(diagnostics[0].law, NonlinearConservationLaw::Energy);
     assert!(diagnostics[0].is_acceptable());
 

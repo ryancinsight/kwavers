@@ -107,8 +107,8 @@ fn test_apply_hamming_filter() {
 
     let filtered = result.unwrap();
     assert_eq!(
-        filtered.dim(),
-        data.dim(),
+        filtered.shape(),
+        data.shape(),
         "Output dimensions should match input"
     );
 }
@@ -138,8 +138,8 @@ fn test_apply_hann_filter() {
 
     let filtered = result.unwrap();
     assert_eq!(
-        filtered.dim(),
-        data.dim(),
+        filtered.shape(),
+        data.shape(),
         "Output dimensions should match input"
     );
 }

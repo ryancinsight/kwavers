@@ -240,16 +240,18 @@ pub fn run_theranostic_inverse(
     let anatomy_result = solve_tikhonov_h1(&fundamental, &anatomy_vec, &active, inverse_settings);
     let mut history = anatomy_result.objective_history;
     let anatomy_reconstruction =
-        image_from_vector(&anatomy_result.model, &active, active_mask.dim());
+        image_from_vector(&anatomy_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1]));
 
     let mut lesion_speed = lesion_target.clone();
-    lesion_speed.mapv_inplace(|v| v * config.lesion_delta_c_m_s / C_REF_M_S);
+    for v in lesion_speed.iter_mut() {
+        *v = *v * config.lesion_delta_c_m_s / C_REF_M_S;
+    }
     let lesion_speed_vec = vector_from_image(&lesion_speed, &active);
     let active_result =
         solve_tikhonov_h1(&fundamental, &lesion_speed_vec, &active, inverse_settings);
     history.extend(active_result.objective_history);
     let active_lesion_reconstruction = normalize_positive(
-        &image_from_vector(&negated(&active_result.model), &active, active_mask.dim()),
+        &image_from_vector(&negated(&active_result.model), &active, (active_mask.shape()[0], active_mask.shape()[1])),
         active_mask,
     );
     let waveform_rtm_reconstruction = waveform.reconstruction.clone();
@@ -263,7 +265,7 @@ pub fn run_theranostic_inverse(
     let harmonic_result = solve_tikhonov_h1(&harmonic, &harmonic_vec, &active, inverse_settings);
     history.extend(harmonic_result.objective_history);
     let harmonic_reconstruction = normalize_positive(
-        &image_from_vector(&harmonic_result.model, &active, active_mask.dim()),
+        &image_from_vector(&harmonic_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1])),
         active_mask,
     );
 
@@ -283,7 +285,7 @@ pub fn run_theranostic_inverse(
                     solve_tikhonov_h1(&passive, &sub_target_vec, &active, inverse_settings);
                 history.extend(sub_result.objective_history);
                 let subharmonic = normalize_positive(
-                    &image_from_vector(&sub_result.model, &active, active_mask.dim()),
+                    &image_from_vector(&sub_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1])),
                     active_mask,
                 );
 
@@ -296,7 +298,7 @@ pub fn run_theranostic_inverse(
                 );
                 history.extend(ultra_result.objective_history);
                 let ultraharmonic = normalize_positive(
-                    &image_from_vector(&ultra_result.model, &active, active_mask.dim()),
+                    &image_from_vector(&ultra_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1])),
                     active_mask,
                 );
                 (subharmonic, ultraharmonic)
@@ -409,7 +411,7 @@ fn lesion_source(prepared: &PreparedTheranosticSlice, exposure: &Array2<f64>) ->
         .filter_map(|(value, active)| active.then_some(*value))
         .fold(0.0, f64::max)
         .max(1.0e-12);
-    Array2::from_shape_fn(exposure.dim(), |idx| {
+    Array2::from_shape_fn(exposure.shape(), |idx| {
         if prepared.target_mask[idx] {
             (exposure[idx] / target_peak).clamp(0.0, 1.0)
         } else {
@@ -426,14 +428,14 @@ fn harmonic_target(prepared: &PreparedTheranosticSlice, lesion: &Array2<f64>) ->
         .filter_map(|(value, active)| active.then_some(*value))
         .sum::<f64>()
         / prepared.body_mask.iter().filter(|v| **v).count().max(1) as f64;
-    Array2::from_shape_fn(lesion.dim(), |idx| {
+    Array2::from_shape_fn(lesion.shape(), |idx| {
         let contrast = ((prepared.sound_speed_m_s[idx] - median).abs() / 120.0).clamp(0.0, 1.0);
         lesion[idx] * (0.8 + 0.2 * contrast)
     })
 }
 
 fn ultraharmonic_target(prepared: &PreparedTheranosticSlice, lesion: &Array2<f64>) -> Array2<f64> {
-    Array2::from_shape_fn(lesion.dim(), |idx| {
+    Array2::from_shape_fn(lesion.shape(), |idx| {
         let attenuation = prepared.attenuation_np_per_m_mhz[idx];
         lesion[idx] * (0.7 + 0.3 * (attenuation / 18.0).clamp(0.0, 1.0))
     })
@@ -510,7 +512,7 @@ fn passive_pam_channels(
     let to_image = |intensity: &[f64]| -> Array2<f64> {
         let model: Vec<f32> = intensity.iter().map(|&v| v as f32).collect();
         normalize_positive(
-            &image_from_vector(&model, active, active_mask.dim()),
+            &image_from_vector(&model, active, (active_mask.shape()[0], active_mask.shape()[1])),
             active_mask,
         )
     };
@@ -520,13 +522,13 @@ fn passive_pam_channels(
 /// Body-centred physical coordinates of the cavitation emission cells (the
 /// target/lesion region), using the same origin convention as `active_grid`.
 fn target_emission_points(prepared: &PreparedTheranosticSlice) -> Vec<Point2> {
-    let (nx, ny) = prepared.target_mask.dim();
+    let [nx, ny] = prepared.target_mask.shape();
     let cx = (nx.saturating_sub(1)) as f64 * 0.5;
     let cy = (ny.saturating_sub(1)) as f64 * 0.5;
     prepared
         .target_mask
         .indexed_iter()
-        .filter_map(|((ix, iy), &active)| {
+        .filter_map(|([ix, iy], &active)| {
             active.then_some(Point2 {
                 x_m: (ix as f64 - cx) * prepared.spacing_m,
                 y_m: (iy as f64 - cy) * prepared.spacing_m,
@@ -564,7 +566,7 @@ fn fuse_maps(
     u: &Array2<f64>,
     mask: &Array2<bool>,
 ) -> Array2<f64> {
-    let fused = Array2::from_shape_fn(a.dim(), |idx| {
+    let fused = Array2::from_shape_fn(a.shape(), |idx| {
         if mask[idx] {
             (FUSED_WEIGHT_ACTIVE * a[idx]
                 + FUSED_WEIGHT_SUBHARMONIC * s[idx]

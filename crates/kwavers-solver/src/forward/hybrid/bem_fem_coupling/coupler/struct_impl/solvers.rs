@@ -28,7 +28,7 @@ impl BemFemCoupler {
     ) -> KwaversResult<()> {
         use crate::forward::bem::field::{compute_vertex_normals, plane_wave_incident};
 
-        let nv = (self.bem_solver.vertices.shape()[0] * self.bem_solver.vertices.shape()[1] * self.bem_solver.vertices.shape()[2]);
+        let nv = self.bem_solver.vertices.len();
         if nv == 0 {
             return Ok(());
         }
@@ -52,7 +52,7 @@ impl BemFemCoupler {
         let p_surface = self.bem_solver.solve_rigid(p_inc, dp_inc_dn)?;
 
         for (local_idx, &global_idx) in self.interface.bem_interface_elements.iter().enumerate() {
-            if global_idx < (bem_boundary_values.shape()[0] * bem_boundary_values.shape()[1] * bem_boundary_values.shape()[2]) && local_idx < (p_surface.shape()[0] * p_surface.shape()[1] * p_surface.shape()[2]) {
+            if global_idx < (bem_boundary_values.len()) && local_idx < (p_surface.len()) {
                 bem_boundary_values[global_idx] = p_surface[local_idx];
             }
         }
@@ -74,7 +74,7 @@ impl BemFemCoupler {
         fem_mesh: &TetrahedralMesh,
         wavenumber: f64,
     ) -> KwaversResult<CompressedSparseRowMatrix<Complex64>> {
-        let num_nodes = (fem_mesh.nodes.shape()[0] * fem_mesh.nodes.shape()[1] * fem_mesh.nodes.shape()[2]);
+        let num_nodes = fem_mesh.nodes.len();
         let mut coo = CoordinateMatrix::create(num_nodes, num_nodes);
 
         // Reference-element shape-function gradients for linear tetrahedra.
@@ -169,7 +169,9 @@ impl BemFemCoupler {
         };
         let solver = IterativeSolver::create(config);
 
-        let initial_guess = Array1::from_vec(fem_field.iter().cloned().collect::<Vec<_>>());
+        let guess_values: Vec<_> = fem_field.to_vec();
+        let initial_guess = Array1::from_vec([guess_values.len()], guess_values)
+            .expect("invariant: initial guess is 1-D with the collected length");
         let solution = solver.bicgstab_complex(matrix, rhs.view(), Some(initial_guess.view()))?;
 
         for i in 0..num_nodes {

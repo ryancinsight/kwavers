@@ -1,8 +1,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{
-    /* s -- no leto equivalent */,
     Array3,
     ArrayView1,
+    SliceArg,
 };
 use kwavers_math::fft::Complex64;
 
@@ -89,8 +89,11 @@ pub fn scaled_observation_residual_metrics(
     receiver_mask: Option<&Array3<bool>>,
 ) -> KwaversResult<BreastUstScaledObservationResidualMetrics> {
     let mask = receiver_mask.map_or_else(
-        || Ok(Array3::from_elem(predicted.dim(), true)),
-        |mask| validated_receiver_mask(predicted.dim(), mask),
+        || Ok(Array3::from_elem(predicted.shape(), true)),
+        |mask| {
+            let [f, t, r] = predicted.shape();
+            validated_receiver_mask((f, t, r), mask)
+        },
     )?;
     scaled_observation_residual_metrics_by_receiver(predicted, observed, |f, t, r| mask[[f, t, r]])
 }
@@ -101,7 +104,7 @@ pub(crate) fn scaled_observation_residual_metrics_by_receiver(
     selected: impl Fn(usize, usize, usize) -> bool,
 ) -> KwaversResult<BreastUstScaledObservationResidualMetrics> {
     validate_observation_pair(predicted, observed)?;
-    let (frequency_count, transmission_count, receiver_count) = predicted.dim();
+    let [frequency_count, transmission_count, receiver_count] = predicted.shape();
     let mut residual_norm_sq = 0.0;
     let mut observed_norm_sq = 0.0;
     let mut max_abs_residual = 0.0;
@@ -114,8 +117,20 @@ pub(crate) fn scaled_observation_residual_metrics_by_receiver(
 
     for frequency_index in 0..frequency_count {
         for transmit_index in 0..transmission_count {
-            let predicted_row = predicted.slice(s![frequency_index, transmit_index, ..]);
-            let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
+            let predicted_row = predicted
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
+            let observed_row = observed
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
             let scale = row_scale_selected(predicted_row, observed_row, |receiver| {
                 selected(frequency_index, transmit_index, receiver)
             })?;
@@ -177,7 +192,7 @@ pub(crate) fn scaled_observation_residual_metrics_by_policy(
     receiver_channel_policy: BreastUstReceiverChannelPolicy,
 ) -> KwaversResult<BreastUstScaledObservationResidualMetrics> {
     validate_observation_pair(predicted, observed)?;
-    let (_, transmission_count, receiver_count) = predicted.dim();
+    let [_, transmission_count, receiver_count] = predicted.shape();
     validate_ring_channel_policy_shape(
         transmission_count,
         receiver_count,
@@ -195,7 +210,10 @@ pub fn source_channel_residual_diagnostics(
     rows: usize,
 ) -> KwaversResult<BreastUstSourceChannelResidualDiagnostics> {
     validate_observation_pair(predicted, observed)?;
-    let shape = predicted.dim();
+    let shape = {
+        let [f, t, r] = predicted.shape();
+        (f, t, r)
+    };
     let active_mask = source_receiver_mask(shape, circumferential_elements, rows)?;
     let passive_mask = passive_receiver_mask(shape, circumferential_elements, rows)?;
     let full_metrics = scaled_observation_residual_metrics(predicted, observed, None)?;
@@ -283,12 +301,24 @@ fn scaled_residual_cube(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
 ) -> KwaversResult<Array3<Complex64>> {
-    let (frequency_count, transmission_count, receiver_count) = predicted.dim();
-    let mut residual = Array3::<Complex64>::zeros(predicted.dim());
+    let [frequency_count, transmission_count, receiver_count] = predicted.shape();
+    let mut residual = Array3::<Complex64>::zeros(predicted.shape());
     for frequency_index in 0..frequency_count {
         for transmit_index in 0..transmission_count {
-            let predicted_row = predicted.slice(s![frequency_index, transmit_index, ..]);
-            let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
+            let predicted_row = predicted
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
+            let observed_row = observed
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
             let scale = row_scale(predicted_row, observed_row)?;
             for receiver_index in 0..receiver_count {
                 residual[[frequency_index, transmit_index, receiver_index]] = scale
@@ -305,7 +335,7 @@ pub(crate) fn row_scale_selected(
     observed: ArrayView1<'_, Complex64>,
     selected: impl Fn(usize) -> bool,
 ) -> KwaversResult<Complex64> {
-    if predicted.len() != observed.len() || predicted.is_empty() {
+    if predicted.size() != observed.size() || predicted.size() == 0 {
         return Err(KwaversError::DimensionMismatch(
             "observation rows must have equal nonzero length".into(),
         ));
@@ -352,11 +382,11 @@ fn validated_receiver_mask(
     observation_shape: (usize, usize, usize),
     receiver_mask: &Array3<bool>,
 ) -> KwaversResult<Array3<bool>> {
-    if receiver_mask.dim() != observation_shape {
+    if receiver_mask.shape() != [observation_shape.0, observation_shape.1, observation_shape.2] {
         return Err(KwaversError::DimensionMismatch(format!(
             "receiver_mask shape mismatch: expected {:?}, got {:?}",
             observation_shape,
-            receiver_mask.dim()
+            receiver_mask.shape()
         )));
     }
     let (frequency_count, transmission_count, receiver_count) = observation_shape;
@@ -400,14 +430,15 @@ pub(crate) fn validate_observation_pair(
     predicted: &Array3<Complex64>,
     observed: &Array3<Complex64>,
 ) -> KwaversResult<()> {
-    if predicted.dim() != observed.dim() {
+    if predicted.shape() != observed.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "observation shape mismatch: predicted {:?}, observed {:?}",
-            predicted.dim(),
-            observed.dim()
+            predicted.shape(),
+            observed.shape()
         )));
     }
-    validate_observation_shape(predicted.dim())
+    let [f, t, r] = predicted.shape();
+    validate_observation_shape((f, t, r))
 }
 
 fn validate_observation_shape(shape: (usize, usize, usize)) -> KwaversResult<()> {

@@ -63,7 +63,9 @@ impl CoupledPhysicsSolver for MockSolver {
         _source_domain: SimulationPhysicsDomain,
         source: ArrayView3<f64>,
     ) -> KwaversResult<()> {
-        self.field += &source;
+        for (f, s) in self.field.iter_mut().zip(source.iter()) {
+            *f += *s;
+        }
         Ok(())
     }
 }

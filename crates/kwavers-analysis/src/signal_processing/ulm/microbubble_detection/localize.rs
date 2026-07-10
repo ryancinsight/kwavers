@@ -20,8 +20,8 @@
 use super::types::{BubbleDetection, GaussianLocalizationConfig};
 use kwavers_core::error::KwaversResult;
 use leto::{
-    /* s -- no leto equivalent */,
     Array2,
+    SliceArg,
 };
 
 /// Sub-pixel microbubble localizer using Gauss-Newton least squares.
@@ -56,7 +56,7 @@ impl GaussianLocalizer {
         envelope: &Array2<f64>,
         frame_idx: usize,
     ) -> KwaversResult<Vec<BubbleDetection>> {
-        let (n_z, n_x) = (envelope.nrows(), envelope.ncols());
+        let [n_z, n_x] = envelope.shape();
         if n_z < 3 || n_x < 3 {
             return Ok(Vec::new());
         }
@@ -80,7 +80,13 @@ impl GaussianLocalizer {
                 let iz1 = (iz + hw + 1).min(n_z);
                 let ix0 = ix.saturating_sub(hw);
                 let ix1 = (ix + hw + 1).min(n_x);
-                let patch = envelope.slice(s![iz0..iz1, ix0..ix1]).to_owned();
+                let patch = envelope
+                    .slice_with::<2>(&[
+                        SliceArg::Range { start: Some(iz0 as isize), end: Some(iz1 as isize), step: 1 },
+                        SliceArg::Range { start: Some(ix0 as isize), end: Some(ix1 as isize), step: 1 },
+                    ])
+                    .expect("invariant: fit-window slice within bounds")
+                    .to_contiguous();
 
                 if let Some((z_sub, x_sub, amp, sigma, bg)) = gauss_newton_fit_2d(
                     &patch,
@@ -137,7 +143,7 @@ fn noise_std_estimate(a: &Array2<f64>) -> f64 {
 /// Returns true iff `envelope[[iz, ix]]` is a strict local maximum in its 3×3 neighbourhood.
 fn is_local_max(a: &Array2<f64>, iz: usize, ix: usize) -> bool {
     let center = a[[iz, ix]];
-    let (nz, nx) = (a.nrows(), a.ncols());
+    let [nz, nx] = a.shape();
     for dz in [-1i32, 0, 1] {
         for dx in [-1i32, 0, 1] {
             if dz == 0 && dx == 0 {
@@ -176,7 +182,7 @@ pub(super) fn gauss_newton_fit_2d(
     x0_init: f64,
     max_iter: usize,
 ) -> Option<(f64, f64, f64, f64, f64)> {
-    let (nz, nx) = (patch.nrows(), patch.ncols());
+    let [nz, nx] = patch.shape();
     let n = nz * nx;
 
     let bg_init = patch.iter().copied().fold(f64::MAX, f64::min);

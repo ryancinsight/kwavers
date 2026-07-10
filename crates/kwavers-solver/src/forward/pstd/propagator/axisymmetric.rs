@@ -367,7 +367,7 @@ impl AsContext {
             }
         }));
 
-        let kappa_2d = Array2::from_shape_fn((nx, nr_exp), |(i, k)| {
+        let kappa_2d = Array2::from_shape_fn((nx, nr_exp), |[i, k]| {
             let k2d = kx[i].hypot(kz[k]);
             let arg = c_ref * k2d * dt / 2.0;
             if arg.abs() < 1e-12 {
@@ -491,7 +491,7 @@ impl AsContext {
     /// WS (whole-sample symmetric) expansion: a (nx,nr) into out (nx,4*nr).
     pub fn ws_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
-        out.slice_mut(s![.., 0..nr]).unwrap().unwrap().assign(a);
+        out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
         for k in 0..nr - 1 {
             let src = nr - 1 - k;
             let dst = nr + 1 + k;
@@ -516,7 +516,7 @@ impl AsContext {
     /// HAHS expansion (radial velocity): a (nx,nr) into out (nx,4*nr).
     pub fn hahs_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
-        out.slice_mut(s![.., 0..nr]).unwrap().unwrap().assign(a);
+        out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
         for k in 0..nr {
             let src = nr - 1 - k;
             for i in 0..out.shape()[0] {
@@ -539,7 +539,7 @@ impl AsContext {
     /// HSHA expansion (ur/r term): a (nx,nr) into out (nx,4*nr).
     pub fn hsha_expand(a: &Array2<f64>, out: &mut Array2<f64>, nr: usize) {
         out.fill(0.0);
-        out.slice_mut(s![.., 0..nr]).unwrap().unwrap().assign(a);
+        out.slice_with_mut(&s![.., 0..nr]).unwrap().assign(a);
         for k in 0..nr {
             let src = nr - 1 - k;
             for i in 0..out.shape()[0] {

@@ -92,8 +92,9 @@ impl MultiPhysicsFieldCoupler {
         )?;
 
         // Apply relaxation for stability
-        let current_target = target_solver.get_field(field_name)?.to_owned();
-        let relaxed_field = &interpolated * relaxation + &current_target * (1.0 - relaxation);
+        let current_target = target_solver.get_field(field_name)?.to_contiguous();
+        let relaxed_field =
+            &(&interpolated * relaxation) + &(&current_target * (1.0 - relaxation));
 
         // Update target field
         target_solver.set_field(field_name, relaxed_field.view())?;
@@ -139,11 +140,12 @@ impl MultiPhysicsFieldCoupler {
             )?
         } else {
             // No registered coupling: assume same grid (identity transfer)
-            source_snapshot.to_owned()
+            source_snapshot.to_contiguous()
         };
 
-        let current_target = target_solver.get_field(field_name)?.to_owned();
-        let relaxed_field = &interpolated * relaxation + &current_target * (1.0 - relaxation);
+        let current_target = target_solver.get_field(field_name)?.to_contiguous();
+        let relaxed_field =
+            &(&interpolated * relaxation) + &(&current_target * (1.0 - relaxation));
         target_solver.set_field(field_name, relaxed_field.view())?;
 
         let residual = max_abs_difference(relaxed_field.view(), current_target.view())?;

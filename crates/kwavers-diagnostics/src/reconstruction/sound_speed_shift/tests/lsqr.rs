@@ -40,7 +40,7 @@ fn lsqr_prior_recovers_uniform_sound_speed_shift() {
 
     assert_eq!(image.active_voxels, 9);
     assert_eq!(image.rows_used, 3);
-    for value in &image.sound_speed_shift_m_s {
+    for value in image.sound_speed_shift_m_s.iter() {
         assert!(
             (*value - 20.0).abs() <= 1.0e-3,
             "LSQR reconstruction value {value:.6} differs from 20 m/s by more than 1e-3"
@@ -227,7 +227,7 @@ fn lsqr_zero_rhs_returns_zero_solution() {
         image.active_voxels, 9,
         "active voxel count must be 9 even for zero RHS"
     );
-    for value in &image.sound_speed_shift_m_s {
+    for value in image.sound_speed_shift_m_s.iter() {
         assert!(
             value.abs() < 1.0e-12,
             "zero RHS must yield zero solution, got {value:.3e}"

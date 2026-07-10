@@ -116,7 +116,7 @@ pub fn focused_aperture_pressure_at(t: f64) -> f64 {
 
 pub fn analytical_peak_map() -> Array2<f64> {
     let elems = elements();
-    Array2::from_shape_fn((NX, NY), |(i, j)| {
+    Array2::from_shape_fn((NX, NY), |[i, j]| {
         if j <= SOURCE_Y {
             return 0.0;
         }

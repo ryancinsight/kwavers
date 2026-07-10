@@ -7,7 +7,7 @@ use leto::{Array2, Array3, ArrayView3};
 fn validate_pair_shapes(
     observed: &Array2<f64>,
     synthetic: &Array2<f64>,
-) -> KwaversResult<(usize, usize)> {
+) -> KwaversResult<[usize; 2]> {
     if observed.shape() != synthetic.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
@@ -59,7 +59,7 @@ pub fn l2_objective(
 
     validate_pair_shapes(observed, synthetic)?;
     let residual = synthetic - observed;
-    Ok(0.5 * dt * residual.mapv(|x| x * x).sum())
+    Ok(0.5 * dt * residual.mapv(|x| x * x).iter().sum::<f64>())
 }
 
 /// Reverse the sample axis of a trace matrix.
@@ -71,7 +71,7 @@ pub fn l2_objective(
 ///
 #[must_use]
 pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
-    data.slice(s![.., ..;-1]).unwrap().to_owned()
+    data.slice_with(&s![.., ..;-1]).unwrap().to_contiguous()
 }
 
 /// Accumulate a signed zero-lag correlation into a gradient volume.
@@ -103,7 +103,7 @@ pub fn accumulate_signed_correlation(
         ));
     }
 
-    if gradient && forward && adjoint
+    if gradient.view().is_c_contiguous() && forward.is_c_contiguous() && adjoint.is_c_contiguous()
     {
         let forward = forward
             .as_slice()
@@ -127,12 +127,10 @@ pub fn accumulate_signed_correlation(
             },
         );
     } else {
-        Zip::from(gradient.view_mut())
-            .and(forward)
-            .and(adjoint)
-            .for_each(|g, &f, &a| {
-                *g += scale * f * a;
-            });
+        leto_ops::zip2_mut_with(&mut gradient.view_mut(), &forward, &adjoint, |g, f, a| {
+            *g += scale * *f * *a;
+        })
+        .expect("invariant: gradient, forward, adjoint shapes asserted equal above");
     }
 
     Ok(())

@@ -154,14 +154,14 @@ fn test_profiled_disc_enters_per_element_source_weights() {
         weight_delta > 1.0,
         "profiled disc must change the finite-source weight map"
     );
-    assert!(profiled_weights.sum() > 0.0);
+    assert!(profiled_weights.iter().sum::<f64>() > 0.0);
 
     let signal = Array2::<f64>::ones((1, 1));
     let (mask, per_cell) = profiled
         .build_per_element_source(&grid, &signal)
         .expect("profiled source");
     let active_cells = KWaveArray::active_cells_fortran_order(&mask);
-    assert_eq!(active_cells.len(), per_cell.nrows());
+    assert_eq!(active_cells.len(), per_cell.shape()[0]);
     assert!(!active_cells.is_empty());
     for (row, &(i, j, k)) in active_cells.iter().enumerate() {
         assert!(
@@ -200,7 +200,7 @@ fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
     let weighted = arr.get_array_weighted_mask(&grid);
     let active_cells = KWaveArray::active_cells_fortran_order(&mask);
 
-    assert_eq!(active_cells.len(), per_cell.nrows());
+    assert_eq!(active_cells.len(), per_cell.shape()[0]);
     assert!(!active_cells.is_empty());
     for (row, &(i, j, k)) in active_cells.iter().enumerate() {
         let expected = weighted[[i, j, k]];

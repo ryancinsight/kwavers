@@ -32,7 +32,7 @@ pub struct BemSolution {
 /// *Journal of Graphics Tools*, 4(2), 1–6.
 #[must_use]
 pub fn compute_vertex_normals(vertices: &[[f64; 3]], triangles: &[[usize; 3]]) -> Vec<[f64; 3]> {
-    let nv = (vertices.shape()[0] * vertices.shape()[1] * vertices.shape()[2]);
+    let nv = vertices.len();
     let mut normals = vec![[0.0f64; 3]; nv];
 
     for tri in triangles {
@@ -115,7 +115,7 @@ pub fn plane_wave_incident(
 
     let ik = Complex64::new(0.0, wavenumber);
 
-    let n = (vertices.shape()[0] * vertices.shape()[1] * vertices.shape()[2]);
+    let n = vertices.len();
     let mut p_inc = Vec::with_capacity(n);
     let mut dp_inc_dn = Vec::with_capacity(n);
 

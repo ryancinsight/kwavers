@@ -54,7 +54,7 @@ fn test_accessor_methods() {
     let simulator = PhotoacousticSimulator::new(grid.clone(), parameters.clone(), &medium).unwrap();
 
     assert_eq!(simulator.grid().dimensions(), (16, 16, 8));
-    assert_eq!(simulator.optical_properties().dim(), (16, 16, 8));
+    assert_eq!(simulator.optical_properties().shape(), [16, 16, 8]);
     assert_eq!(
         simulator.parameters().wavelengths.len(),
         parameters.wavelengths.len()

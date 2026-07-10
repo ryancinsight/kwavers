@@ -135,7 +135,8 @@ impl MultiPhysicsConservationEnforcer {
         target_grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let expected_source_dim = (source_grid.nx, source_grid.ny, source_grid.nz);
-        let actual_source_dim = source_field.dim();
+        let [asx, asy, asz] = source_field.shape();
+        let actual_source_dim = (asx, asy, asz);
         if actual_source_dim != expected_source_dim {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
@@ -152,7 +153,7 @@ impl MultiPhysicsConservationEnforcer {
             && (source_grid.dy - target_grid.dy).abs() <= self.tolerance
             && (source_grid.dz - target_grid.dz).abs() <= self.tolerance;
         if same_grid {
-            return Ok(source_field.to_owned());
+            return Ok(source_field.to_contiguous());
         }
 
         let mut result = Array3::zeros((target_grid.nx, target_grid.ny, target_grid.nz));

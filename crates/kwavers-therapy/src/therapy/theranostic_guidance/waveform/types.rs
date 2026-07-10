@@ -24,7 +24,7 @@ pub(super) struct PaddedSimulation {
     /// Body sub-region dimensions in REFINED cells:
     /// `body_dims = (nx_body * refinement, ny_body * refinement)`.
     pub(super) body_dims: (usize, usize),
-    /// Caller-visible body dimensions (matches `prepared.sound_speed_m_s.dim()`).
+    /// Caller-visible body dimensions (matches `prepared.sound_speed_m_s.shape()`).
     pub(super) body_dims_coarse: (usize, usize),
     /// Internal grid-refinement factor (refined cells per body cell along
     /// each axis).  Chosen so `λ / dx_refined ≥ 4` at the highest configured

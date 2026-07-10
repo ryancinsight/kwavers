@@ -90,7 +90,7 @@ pub fn trace_weights(observed: &Array2<f64>, weighting: DataWeighting) -> Array2
         1.0
     } else {
         positive.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        VARIANCE_FLOOR_FRACTION * positive[(positive.shape()[0] * positive.shape()[1] * positive.shape()[2]) / 2]
+        VARIANCE_FLOOR_FRACTION * positive[(positive.len()) / 2]
     };
 
     let inv: Vec<f64> = var.iter().map(|v| 1.0 / v.max(floor)).collect();
@@ -159,7 +159,7 @@ pub fn weighted_l2_residual(
     weights: &Array2<f64>,
 ) -> KwaversResult<Array2<f64>> {
     validate_triple(observed, synthetic, weights)?;
-    Ok((synthetic - observed) * weights)
+    Ok(&(synthetic - observed) * weights)
 }
 
 #[cfg(test)]
@@ -179,7 +179,7 @@ mod tests {
 
         let dt = 0.5;
         let j_w = weighted_l2_objective(dt, &obs, &syn, &w).unwrap();
-        let plain: f64 = (&syn - &obs).mapv(|x| x * x).sum();
+        let plain: f64 = (&syn - &obs).mapv(|x| x * x).iter().sum::<f64>();
         assert!(
             (j_w - 0.5 * dt * plain).abs() < 1e-12,
             "weighted == plain L2"
@@ -214,7 +214,11 @@ mod tests {
             (w0 / w1 - 100.0).abs() / 100.0 < 0.05,
             "weight ratio tracks 1/σ²"
         );
-        let mean_w = w.index_axis(1, 0).unwrap().mean().unwrap();
+        let mean_w = {
+            let col = w.index_axis::<1>(1, 0).unwrap();
+            let (sum, count) = col.iter().fold((0.0_f64, 0usize), |(s, c), &v| (s + v, c + 1));
+            sum / count as f64
+        };
         assert!(
             (mean_w - 1.0).abs() < 1e-9,
             "weights mean-normalised to 1; got {mean_w}"

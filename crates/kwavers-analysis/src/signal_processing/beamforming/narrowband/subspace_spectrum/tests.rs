@@ -16,7 +16,7 @@ use crate::signal_processing::beamforming::adaptive::subspace::{EigenspaceMV, MU
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, TWO_PI};
-use kwavers_math::linear_algebra::EigenDecomposition;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::{
     Array1,
     Array2,
@@ -69,18 +69,20 @@ fn eigenvalue_split_matches_theorem_22_2() {
     // R = σ_n² I + σ_s² Σ_k e_k e_kᴴ.
     let mut r = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
-        r[(i, i)] += Complex64::new(sigma_n2, 0.0);
+        r[[i, i]] += Complex64::new(sigma_n2, 0.0);
     }
     for ev in &e {
         for i in 0..n {
             for j in 0..n {
-                r[(i, j)] += Complex64::new(sigma_s2, 0.0) * ev[i] * ev[j].conj();
+                r[[i, j]] += Complex64::new(sigma_s2, 0.0) * ev[i] * ev[j].conj();
             }
         }
     }
 
-    let (eigenvalues, _) =
-        EigenDecomposition::hermitian_eigendecomposition_complex(&r).expect("eig");
+    let eigenvalues =
+        EigenSolver::jacobi_hermitian(&r, EigenSolverConfig::default())
+            .expect("eig")
+            .eigenvalues;
     let mut vals: Vec<f64> = (0..n).map(|i| eigenvalues[i]).collect();
     vals.sort_by(|a, b| b.total_cmp(a));
 
@@ -113,13 +115,13 @@ fn build_source_covariance(
     let n = positions.len();
     let mut r = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
-        r[(i, i)] += Complex64::new(sigma_n2, 0.0);
+        r[[i, i]] += Complex64::new(sigma_n2, 0.0);
     }
     for &sp in source_points {
         let a = steering(positions, sp, f, c);
         for i in 0..n {
             for j in 0..n {
-                r[(i, j)] += Complex64::new(sigma_s2, 0.0) * a[i] * a[j].conj();
+                r[[i, j]] += Complex64::new(sigma_s2, 0.0) * a[i] * a[j].conj();
             }
         }
     }
@@ -156,7 +158,7 @@ fn subspace_beats_das_peak_to_sidelobe() {
         for i in 0..positions.len() {
             let mut ra_i = Complex64::new(0.0, 0.0);
             for j in 0..positions.len() {
-                ra_i += r[(i, j)] * a[j];
+                ra_i += r[[i, j]] * a[j];
             }
             das_p += a[i].conj() * ra_i;
         }
@@ -227,7 +229,7 @@ fn end_to_end_localizes_single_tone_source() {
         let tau = (dx * dx + dy * dy + dz * dz).sqrt() / c;
         for t in 0..n_samples {
             let time = t as f64 / fs;
-            data[(i, 0, t)] = (TWO_PI * f * (time - tau)).cos();
+            data[[i, 0, t]] = (TWO_PI * f * (time - tau)).cos();
         }
     }
 

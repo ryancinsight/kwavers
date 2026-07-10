@@ -174,7 +174,9 @@ impl PhotoacousticTimeReversal {
         for s in 0..n_time {
             // Reversed sensor time index.
             let sensor_t = n_time - 1 - s;
-            let sensor_row = sensor_data.index_axis(0, sensor_t).unwrap();
+            let sensor_row = sensor_data
+                .slice_with::<1>(&s![sensor_t, ..])
+                .expect("invariant: reversed sensor time index within record length");
 
             // Hard Dirichlet source: replace field values at sensor locations.
             // (Treeby et al. 2010, §2.3; k-Wave `source.p_mode = 'dirichlet'`.)

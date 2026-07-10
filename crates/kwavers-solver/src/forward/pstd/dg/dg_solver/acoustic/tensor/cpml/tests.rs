@@ -43,8 +43,8 @@ fn neutral_profile_matches_standard_rhs_bit_for_bit() {
     let mut state = Array3::<f64>::zeros(shape);
     for elem in 0..shape.0 {
         for node in 0..shape.1 {
-            state[(elem, node, ACOUSTIC_PRESSURE_VAR)] = ((elem * N_NODES + node) as f64).sin();
-            state[(elem, node, ACOUSTIC_VELOCITY_X_VAR)] =
+            state[[elem, node, ACOUSTIC_PRESSURE_VAR]] = ((elem * N_NODES + node) as f64).sin();
+            state[[elem, node, ACOUSTIC_VELOCITY_X_VAR]] =
                 0.5 * ((elem * N_NODES + node) as f64).cos();
         }
     }
@@ -150,7 +150,7 @@ fn step_with_neutral_profile_matches_standard_step() {
     for elem in 0..shape.0 {
         for node in 0..shape.1 {
             let x = (elem * N_NODES + node) as f64;
-            state_a[(elem, node, ACOUSTIC_PRESSURE_VAR)] = (x * 0.3).sin();
+            state_a[[elem, node, ACOUSTIC_PRESSURE_VAR]] = (x * 0.3).sin();
         }
     }
     let mut state_b = state_a.clone();
@@ -219,8 +219,8 @@ fn cpml_attenuates_right_propagating_plane_wave_below_periodic_baseline() {
             let global_node = elem * N_NODES + node;
             let x = (global_node as f64 - center_node as f64) / sigma_pulse;
             let p = (-x * x).exp();
-            state[(elem, node, ACOUSTIC_PRESSURE_VAR)] = p;
-            state[(elem, node, ACOUSTIC_VELOCITY_X_VAR)] = p / impedance;
+            state[[elem, node, ACOUSTIC_PRESSURE_VAR]] = p;
+            state[[elem, node, ACOUSTIC_VELOCITY_X_VAR]] = p / impedance;
         }
     }
 
@@ -289,7 +289,7 @@ fn inner_region_l2(state: &Array3<f64>, inner_start: usize, inner_end: usize) ->
         for node in 0..nodes_per {
             let global_node = elem * N_NODES + node;
             if global_node >= inner_start && global_node < inner_end {
-                let p = state[(elem, node, ACOUSTIC_PRESSURE_VAR)];
+                let p = state[[elem, node, ACOUSTIC_PRESSURE_VAR]];
                 sum += p * p;
             }
         }

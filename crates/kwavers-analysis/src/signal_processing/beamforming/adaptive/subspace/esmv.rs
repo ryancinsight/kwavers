@@ -2,11 +2,12 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use kwavers_math::linear_algebra::{ComplexLinearAlgebra, EigenDecomposition};
+use kwavers_math::linear_algebra::ComplexLinearAlgebra;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::{
-    /* s -- no leto equivalent */,
     Array1,
     Array2,
+    SliceArg,
 };
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
@@ -70,9 +71,9 @@ impl EigenspaceMV {
         covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> KwaversResult<Array1<Complex64>> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
 
-        if n == 0 || covariance.ncols() != n {
+        if n == 0 || covariance.shape()[1] != n {
             return Err(KwaversError::InvalidInput(
                 "EigenspaceMV::compute_weights: covariance must be non-empty square matrix"
                     .to_owned(),
@@ -92,7 +93,7 @@ impl EigenspaceMV {
             )));
         }
 
-        for &val in steering {
+        for &val in steering.iter() {
             if !val.re.is_finite() || !val.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
                     operation: "EigenspaceMV::compute_weights".to_owned(),
@@ -103,22 +104,26 @@ impl EigenspaceMV {
 
         let mut r_loaded = covariance.clone();
         for i in 0..n {
-            r_loaded[(i, i)] += Complex64::new(self.diagonal_loading, 0.0);
+            r_loaded[[i, i]] += Complex64::new(self.diagonal_loading, 0.0);
         }
 
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&r_loaded)?;
+        let (eigenvalues, eigenvectors) = {
+            let r = EigenSolver::jacobi_hermitian(&r_loaded, EigenSolverConfig::default())?;
+            (r.eigenvalues, r.eigenvectors)
+        };
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
         let mut p_s = Array2::<Complex64>::from_elem((n, n), Complex64::default());
         for &idx in indices.iter().take(self.num_sources) {
-            let eigenvec = eigenvectors.slice(s![.., idx]);
+            let eigenvec = eigenvectors
+                .slice_with::<1>(&[SliceArg::All, SliceArg::Index(idx as isize)])
+                .expect("eigenvector column slice");
 
             for i in 0..n {
                 for j in 0..n {
-                    p_s[(i, j)] += eigenvec[i] * eigenvec[j].conj();
+                    p_s[[i, j]] += eigenvec[i] * eigenvec[j].conj();
                 }
             }
         }
@@ -128,7 +133,7 @@ impl EigenspaceMV {
         let mut ps_r_inv_a = Array1::<Complex64>::from_elem(n, Complex64::default());
         for i in 0..n {
             for j in 0..n {
-                ps_r_inv_a[i] += p_s[(i, j)] * r_inv_a[j];
+                ps_r_inv_a[i] += p_s[[i, j]] * r_inv_a[j];
             }
         }
 
@@ -146,7 +151,7 @@ impl EigenspaceMV {
 
         let weights = ps_r_inv_a.mapv(|x| x / a_h_r_inv_ps_a);
 
-        for &w in &weights {
+        for &w in weights.iter() {
             if !w.re.is_finite() || !w.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::InvalidOperation(
                     "EigenspaceMV::compute_weights: non-finite weight computed".to_owned(),
@@ -179,9 +184,9 @@ impl EigenspaceMV {
         covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> KwaversResult<f64> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
 
-        if n == 0 || covariance.ncols() != n {
+        if n == 0 || covariance.shape()[1] != n {
             return Err(KwaversError::InvalidInput(
                 "EigenspaceMV::signal_subspace_response: covariance must be non-empty square matrix"
                     .to_owned(),
@@ -199,7 +204,7 @@ impl EigenspaceMV {
                 self.num_sources
             )));
         }
-        for &val in steering {
+        for &val in steering.iter() {
             if !val.re.is_finite() || !val.im.is_finite() {
                 return Err(KwaversError::Numerical(NumericalError::NaN {
                     operation: "EigenspaceMV::signal_subspace_response".to_owned(),
@@ -208,8 +213,10 @@ impl EigenspaceMV {
             }
         }
 
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(covariance)?;
+        let (eigenvalues, eigenvectors) = {
+            let r = EigenSolver::jacobi_hermitian(covariance, EigenSolverConfig::default())?;
+            (r.eigenvalues, r.eigenvectors)
+        };
 
         let mut indices: Vec<usize> = (0..n).collect();
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
@@ -217,7 +224,9 @@ impl EigenspaceMV {
         // aᴴ P_s a = Σ_{k<K} |e_kᴴ a|²  (P_s = Σ_{k<K} e_k e_kᴴ, Hermitian projector).
         let mut projection_power = 0.0_f64;
         for &idx in indices.iter().take(self.num_sources) {
-            let eigenvec = eigenvectors.slice(s![.., idx]);
+            let eigenvec = eigenvectors
+                .slice_with::<1>(&[SliceArg::All, SliceArg::Index(idx as isize)])
+                .expect("eigenvector column slice");
             let mut e_h_a = Complex64::default();
             for j in 0..n {
                 e_h_a += eigenvec[j].conj() * steering[j];

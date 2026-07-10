@@ -43,7 +43,7 @@ fn test_calculate_steering() {
         .expect("Calculation failed");
 
     // Check dimensions: (n_sensors, n_angles) = (2, 2)
-    assert_eq!(result.shape(), &[2, 2]);
+    assert_eq!(result.shape(), [2, 2]);
 
     // Check Broadside (Column 0)
     // Expect equal phases (or 0 phase if reference is at origin)

@@ -192,7 +192,7 @@ where
         let output = network.forward(&input);
         // Output is `[n, 3]`; already host-resident f32.
         let out_vec = output.tensor.as_slice();
-        debug_assert_eq!((out_vec.shape()[0] * out_vec.shape()[1] * out_vec.shape()[2]), n * OUTPUT_DIM);
+        debug_assert_eq!((out_vec.len()), n * OUTPUT_DIM);
 
         for off in 0..n {
             let lin = linear_idx + off;

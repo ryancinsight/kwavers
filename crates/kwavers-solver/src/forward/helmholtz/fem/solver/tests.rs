@@ -5,10 +5,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_mesh::{MeshBoundaryType, TetrahedralMesh};
-use leto::{
-    /* arr2 -- no leto equivalent */,
-    Array2,
-};
+use leto::Array2;
 use kwavers_math::fft::Complex64;
 
 fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
@@ -85,12 +82,16 @@ fn test_interpolate_solution_basic() {
     solver.solution[n2] = Complex64::new(2.0, 0.0);
     solver.solution[n3] = Complex64::new(3.0, 0.0);
 
-    let query_points = arr2(&[[0.25, 0.25, 0.25], [1.0, 0.0, 0.0], [2.0, 2.0, 2.0]]);
+    let query_points = Array2::from_shape_vec(
+        (3, 3),
+        vec![0.25, 0.25, 0.25, 1.0, 0.0, 0.0, 2.0, 2.0, 2.0],
+    )
+    .expect("invariant: 3x3 query points shape matches data length");
     let result = solver
         .interpolate_solution(query_points.view())
         .expect("Interpolation failed");
 
-    assert_eq!((result.shape()[0] * result.shape()[1] * result.shape()[2]), 3);
+    assert_eq!((result.len()), 3);
     assert_relative_eq!(result[0].re, 1.5, epsilon = 1e-10);
     assert_relative_eq!(result[0].im, 0.0, epsilon = 1e-10);
     assert_relative_eq!(result[1].re, 1.0, epsilon = 1e-10);
@@ -304,7 +305,7 @@ fn fem_p1_interpolation_error_converges_as_h_squared() {
                 }
             }
         }
-        let npts = (test_pts.shape()[0] * test_pts.shape()[1] * test_pts.shape()[2]);
+        let npts = test_pts.len() ;
         let mut raw = vec![0.0f64; npts * 3];
         for (idx, pt) in test_pts.iter().enumerate() {
             raw[idx * 3] = pt[0];
@@ -346,7 +347,7 @@ fn fem_p1_interpolation_error_converges_as_h_squared() {
     let ratio = e_coarse / e_fine;
     let rate = ratio.ln() / 2.0_f64.ln();
     assert!(
-        rate >= 1.5 && rate <= 4.5,
+        (1.5..=4.5).contains(&rate),
         "P1 interpolation convergence rate must be in [1.5, 4.5]: rate={rate:.3} \
          e(h=0.25)={e_coarse:.4e}, e(h=0.125)={e_fine:.4e}, ratio={ratio:.3}"
     );

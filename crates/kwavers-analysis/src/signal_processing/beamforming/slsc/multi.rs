@@ -36,13 +36,16 @@ impl MultiLagSlsc {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn process_multi(&self, data: &leto::Array2<Complex64>) -> KwaversResult<Array1<f64>> {
-        let mut combined = Array1::zeros(data.ncols());
+        let mut combined = Array1::zeros(data.shape()[1]);
 
         for (config, weight) in self.configs.iter().zip(&self.combination_weights) {
             let slsc = SlscBeamformer::with_config(config.clone());
             let coherence = slsc.process(data)?;
 
-            combined += &coherence.mapv(|v| v * weight);
+            let scaled = coherence.mapv(|v| v * weight);
+            for (c, s) in combined.iter_mut().zip(scaled.iter()) {
+                *c += *s;
+            }
         }
 
         Ok(combined)

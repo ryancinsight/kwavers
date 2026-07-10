@@ -155,7 +155,7 @@ impl AutocorrelationEstimator {
         &self,
         iq_data: &ArrayView3<Complex64>,
     ) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
-        let (ensemble_size, n_depths, n_beams) = iq_data.dim();
+        let [ensemble_size, n_depths, n_beams] = iq_data.shape();
 
         if ensemble_size < 2 {
             return Err(KwaversError::Validation(
@@ -200,7 +200,7 @@ impl AutocorrelationEstimator {
         depth: usize,
         beam: usize,
     ) -> (f64, f64) {
-        let ensemble_size = iq_data.dim().0;
+        let ensemble_size = iq_data.shape()[0];
 
         // Compute lag-1 autocorrelation: R₁ = Σ(I_n * conj(I_{n+1}))
         let mut r1 = Complex64::new(0.0, 0.0);
@@ -264,7 +264,7 @@ impl AutocorrelationEstimator {
     ) -> Array2<f64> {
         let mut filtered = velocity.clone();
 
-        for ((i, j), var) in variance.indexed_iter() {
+        for ([i, j], var) in variance.indexed_iter() {
             if *var > self.config.variance_threshold {
                 filtered[[i, j]] = 0.0; // Reject high-variance estimate
             }
@@ -373,8 +373,8 @@ mod tests {
         };
         let estimator = AutocorrelationEstimator::new(config);
 
-        let velocity = Array2::from_shape_fn((4, 4), |(i, j)| (i + j) as f64);
-        let variance = Array2::from_shape_fn((4, 4), |(i, j)| {
+        let velocity = Array2::from_shape_fn((4, 4), |[i, j]| (i + j) as f64);
+        let variance = Array2::from_shape_fn((4, 4), |[i, j]| {
             if i + j < 4 {
                 0.2
             } else {

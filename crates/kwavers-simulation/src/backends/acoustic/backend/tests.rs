@@ -104,12 +104,12 @@ fn test_backend_field_access() {
 
     // Test field dimensions
     let p = backend.get_pressure_field();
-    assert_eq!(p.shape(), &[5, 5, 5]);
+    assert_eq!(p.shape(), [5, 5, 5]);
 
     let (vx, vy, vz) = backend.get_velocity_fields();
-    assert_eq!(vx.shape(), &[5, 5, 5]);
-    assert_eq!(vy.shape(), &[5, 5, 5]);
-    assert_eq!(vz.shape(), &[5, 5, 5]);
+    assert_eq!(vx.shape(), [5, 5, 5]);
+    assert_eq!(vy.shape(), [5, 5, 5]);
+    assert_eq!(vz.shape(), [5, 5, 5]);
 }
 
 #[test]

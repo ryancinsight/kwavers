@@ -4,28 +4,6 @@ use crate::types::{SimulationRunRequest, SimulationRunResult};
 use kwavers_core::error::KwaversResult;
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdMedium, ElasticPstdOrchestrator};
 
-/// Convert a leto view to an owned leto Array3<f64>.
-fn to_leto3(arr: leto::ArrayView3<'_, f64>) -> leto::Array3<f64> {
-    let shape = arr.shape();
-    let flat: Vec<f64> = arr.iter().copied().collect();
-    leto::Array3::from_shape_vec(shape, flat).expect("elastic_pstd: leto view → owned shape mismatch")
-}
-
-/// Convert a leto Array3<bool> to a sensor-mask Array3<bool>.
-fn sensor_mask_to_leto(mask: &leto::Array3<bool>) -> leto::Array3<bool> {
-    let shape = mask.dim();
-    leto::Array3::from_shape_vec([shape.0, shape.1, shape.2], mask.iter().copied().collect())
-        .expect("elastic_pstd: sensor mask conversion")
-}
-
-/// Convert a leto Array2<f64> to leto::Array2<f64>.
-fn leto_to_ndarray2(arr: leto::Array2<f64>) -> leto::Array2<f64> {
-    let [rows, cols] = arr.shape();
-    let flat = arr.into_vec();
-    leto::Array2::from_shape_vec((rows, cols), flat)
-        .expect("elastic_pstd: leto→ndarray Array2 shape mismatch")
-}
-
 /// Run an elastic pseudo-spectral time-domain simulation.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let lame_lambda = req.medium.lame_lambda_array();
@@ -76,26 +54,23 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         orch.seed_initial_displacement(u0, axis);
     }
 
-    // Convert sensor mask from ndarray to leto for the orchestrator.
-    let sensor_mask_leto = req.sensor_mask.as_ref().map(sensor_mask_to_leto);
     let recorded = orch.propagate(
         req.time_steps,
         req.elastic_velocity_source.as_ref(),
-        sensor_mask_leto.as_ref(),
+        req.sensor_mask.as_ref(),
     )?;
 
     let sensor_data = recorded
         .vz
         .clone()
-        .map(leto_to_ndarray2)
         .unwrap_or_else(|| leto::Array2::zeros((1, 0)));
 
     Ok(SimulationRunResult {
         sensor_data,
         stats: None,
-        ux_data: recorded.vx.map(leto_to_ndarray2),
-        uy_data: recorded.vy.map(leto_to_ndarray2),
-        uz_data: recorded.vz.map(leto_to_ndarray2),
+        ux_data: recorded.vx,
+        uy_data: recorded.vy,
+        uz_data: recorded.vz,
         ix_data: None,
         iy_data: None,
         iz_data: None,

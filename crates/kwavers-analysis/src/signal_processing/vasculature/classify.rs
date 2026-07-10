@@ -44,7 +44,7 @@ pub(super) fn classify_vessels(
     image: &Array3<f64>,
     mask: &Array3<f64>,
 ) -> KwaversResult<VesselClassification> {
-    if image.dim() != mask.dim() {
+    if image.shape() != mask.shape() {
         return Err(KwaversError::InvalidInput(
             "vessel image and mask shapes must match".to_owned(),
         ));
@@ -72,7 +72,7 @@ pub(super) fn classify_vessels(
     let mut vessel_count = 0_usize;
     let mut background_count = 0_usize;
 
-    for ((i, j, k), &value) in image.indexed_iter() {
+    for ([i, j, k], &value) in image.indexed_iter() {
         if mask[[i, j, k]] > 0.0 {
             vessel_sum += value;
             vessel_count += 1;
@@ -108,7 +108,7 @@ pub(super) fn classify_vessels(
 /// Return indices of all voxels where `mask > 0`.
 pub(super) fn masked_points(mask: &Array3<f64>) -> Vec<[usize; 3]> {
     mask.indexed_iter()
-        .filter_map(|((i, j, k), &v)| (v > 0.0).then_some([i, j, k]))
+        .filter_map(|([i, j, k], &v)| (v > 0.0).then_some([i, j, k]))
         .collect()
 }
 
@@ -126,7 +126,7 @@ pub(super) fn centerline_from_points(mask: &Array3<f64>, points: &[[usize; 3]]) 
 
 /// Count the number of 6-adjacent vessel-class neighbours of `point`.
 pub(super) fn vessel_neighbor_count(mask: &Array3<f64>, point: &[usize; 3]) -> usize {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     let [i, j, k] = *point;
     usize::from(i > 0 && mask[[i - 1, j, k]] > 0.0)
         + usize::from(i + 1 < nx && mask[[i + 1, j, k]] > 0.0)

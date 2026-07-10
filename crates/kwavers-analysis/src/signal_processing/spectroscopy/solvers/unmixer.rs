@@ -35,7 +35,7 @@ impl SpectralUnmixer {
         chromophore_names: Vec<String>,
         config: SpectralUnmixingConfig,
     ) -> Result<Self> {
-        let (n_wavelengths, n_chromophores) = extinction_matrix.dim();
+        let [n_wavelengths, n_chromophores] = extinction_matrix.shape();
 
         if wavelengths.len() != n_wavelengths {
             anyhow::bail!(
@@ -83,7 +83,7 @@ impl SpectralUnmixer {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn unmix_single(&self, absorption_spectrum: &Array1<f64>) -> Result<UnmixingResult> {
-        let n_wavelengths = self.extinction_matrix.nrows();
+        let n_wavelengths = self.extinction_matrix.shape()[0];
 
         if absorption_spectrum.len() != n_wavelengths {
             anyhow::bail!(
@@ -109,7 +109,13 @@ impl SpectralUnmixer {
         };
 
         // Compute residual: r = μ - EC
-        let reconstruction = self.extinction_matrix.dot(&concentrations);
+        let mut reconstruction = Array1::<f64>::zeros(n_wavelengths);
+        leto_ops::matvec(
+            &self.extinction_matrix.view(),
+            &concentrations.view(),
+            &mut reconstruction.view_mut(),
+        )
+        .expect("invariant: EC reconstruction dimensions match");
         let residual = absorption_spectrum - &reconstruction;
         let residual_norm = residual.iter().map(|&x| x * x).sum::<f64>().sqrt();
         let spectrum_norm = absorption_spectrum
@@ -139,8 +145,8 @@ impl SpectralUnmixer {
         &self,
         absorption_maps: &[Array3<f64>],
     ) -> Result<VolumetricUnmixingResult> {
-        let n_wavelengths = self.extinction_matrix.nrows();
-        let n_chromophores = self.extinction_matrix.ncols();
+        let n_wavelengths = self.extinction_matrix.shape()[0];
+        let n_chromophores = self.extinction_matrix.shape()[1];
 
         if absorption_maps.len() != n_wavelengths {
             anyhow::bail!(
@@ -150,7 +156,7 @@ impl SpectralUnmixer {
             );
         }
 
-        let (nx, ny, nz) = absorption_maps[0].dim();
+        let [nx, ny, nz] = absorption_maps[0].shape();
 
         // Initialize output arrays
         let mut concentration_maps = Vec::with_capacity(n_chromophores);
@@ -208,7 +214,6 @@ impl SpectralUnmixer {
 mod tests {
     use super::*;
     use crate::signal_processing::spectroscopy::types::SpectralUnmixingConfig;
-    use array;
 
     /// End-to-end blood-oxygenation recovery. Build a 2-chromophore (HbO₂, Hb)
     /// extinction matrix from the corrected Prahl/OMLC near-infrared values
@@ -221,13 +226,14 @@ mod tests {
     #[test]
     fn recovers_known_oxygen_saturation_from_hemoglobin_spectra() {
         // Columns: [HbO₂, Hb]; rows: 700/750/800/850/900 nm.
-        let e = array![
-            [1.160, 7.177_12],
-            [2.072, 5.620_96],
-            [3.264, 3.046_88],
-            [4.232, 2.765_28],
-            [4.792, 3.047_36],
-        ];
+        let e = Array2::from_shape_vec(
+            (5, 2),
+            vec![
+                1.160, 7.177_12, 2.072, 5.620_96, 3.264, 3.046_88, 4.232, 2.765_28, 4.792,
+                3.047_36,
+            ],
+        )
+        .unwrap();
         let config = SpectralUnmixingConfig {
             regularization_lambda: 1e-6,
             non_negative: true,
@@ -242,8 +248,10 @@ mod tests {
         .expect("well-conditioned unmixer");
 
         for &true_so2 in &[0.98_f64, 0.70, 0.50] {
-            let c_true = array![true_so2, 1.0 - true_so2];
-            let mu = e.dot(&c_true); // forward model μ = E·c
+            let c_true = Array1::from_vec(2, vec![true_so2, 1.0 - true_so2]).unwrap();
+            // forward model μ = E·c
+            let mut mu = Array1::<f64>::zeros(5);
+            leto_ops::matvec(&e.view(), &c_true.view(), &mut mu.view_mut()).unwrap();
             let result = unmixer.unmix_single(&mu).expect("unmix");
             let (hbo2, hb) = (result.concentrations[0], result.concentrations[1]);
             let so2 = hbo2 / (hbo2 + hb);

@@ -49,11 +49,11 @@ fn test_covariance_estimation() {
     let config = MUSICConfig::default();
     let processor = MUSICProcessor::new(&config).unwrap();
 
-    let snapshots = Array2::from_shape_fn((2, 10), |(i, j)| Complex64::new((i + j) as f64, 0.0));
+    let snapshots = Array2::from_shape_fn((2, 10), |[i, j]| Complex64::new((i + j) as f64, 0.0));
 
     let cov = processor.estimate_covariance(&snapshots).unwrap();
 
-    assert_eq!(cov.dim(), (2, 2));
+    assert_eq!(cov.shape(), [2, 2]);
 
     // Check Hermitian property: R[i,j] = conj(R[j,i])
     for i in 0..2 {
@@ -93,7 +93,7 @@ fn test_music_run_single_source() {
     let processor = MUSICProcessor::new(&config).unwrap();
 
     let num_sensors = config.config.sensor_positions.len();
-    let snapshots = Array2::from_shape_fn((num_sensors, 50), |(i, j)| {
+    let snapshots = Array2::from_shape_fn((num_sensors, 50), |[i, j]| {
         Complex64::new((i + j) as f64 / 10.0, (i * j) as f64 / 20.0)
     });
 
@@ -114,7 +114,7 @@ fn test_music_automatic_source_detection() {
     let processor = MUSICProcessor::new(&config).unwrap();
 
     let num_sensors = 4;
-    let snapshots = Array2::from_shape_fn((num_sensors, 100), |(i, j)| {
+    let snapshots = Array2::from_shape_fn((num_sensors, 100), |[i, j]| {
         if i < 2 {
             Complex64::new(10.0 * (i + j) as f64, 0.0)
         } else {

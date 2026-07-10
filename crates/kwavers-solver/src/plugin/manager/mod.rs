@@ -63,7 +63,7 @@ pub struct PluginManager {
 impl std::fmt::Debug for PluginManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PluginManager")
-            .field("plugins_count", &(self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2]))
+            .field("plugins_count", &(self.plugins.len()))
             .field("execution_order", &self.execution_order)
             .field("execution_strategy", &"<dyn ExecutionStrategy>")
             .field("extra_fields", &self.extra_fields)
@@ -144,13 +144,13 @@ impl PluginManager {
     /// Number of registered plugins.
     #[must_use]
     pub fn plugin_count(&self) -> usize {
-        (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2])
+        self.plugins.len()
     }
 
     /// Alias for `plugin_count`.
     #[must_use]
     pub fn component_count(&self) -> usize {
-        (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2])
+        self.plugins.len()
     }
 
     /// Dependency-resolved execution order (indices into `plugins`).

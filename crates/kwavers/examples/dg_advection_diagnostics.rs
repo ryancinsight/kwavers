@@ -246,7 +246,7 @@ fn evolve_characteristic(
         let coeffs = solver.modal_coefficients_mut().expect("coefficients");
         for elem in 0..ELEMENTS {
             for node in 0..xi_nodes.len() {
-                coeffs[(elem, node, 0)] = initial(physical_coordinate(elem, xi_nodes[node]));
+                coeffs[[elem, node, 0]] = initial(physical_coordinate(elem, xi_nodes[node]));
             }
         }
     }
@@ -262,7 +262,7 @@ fn initialize_sine_coefficients(coeffs: &mut Array3<f64>, xi_nodes: &Array1<f64>
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
             let x = physical_coordinate(elem, xi_nodes[node]);
-            coeffs[(elem, node, 0)] = (k * x).sin();
+            coeffs[[elem, node, 0]] = (k * x).sin();
         }
     }
 }
@@ -271,7 +271,7 @@ fn initialize_right_going_characteristic(coeffs: &mut Array3<f64>, xi_nodes: &Ar
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
             let x = physical_coordinate(elem, xi_nodes[node]);
-            coeffs[(elem, node, 0)] = 2.0 * (k * x).sin();
+            coeffs[[elem, node, 0]] = 2.0 * (k * x).sin();
         }
     }
 }
@@ -281,22 +281,22 @@ fn exact_shifted_coefficients(xi_nodes: &Array1<f64>, k: f64, displacement: f64)
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
             let x = physical_coordinate(elem, xi_nodes[node]);
-            exact[(elem, node, 0)] = (k * (x - displacement)).sin();
+            exact[[elem, node, 0]] = (k * (x - displacement)).sin();
         }
     }
     exact
 }
 
 fn exact_shifted_characteristic(xi_nodes: &Array1<f64>, k: f64, displacement: f64) -> Array3<f64> {
-    2.0 * exact_shifted_coefficients(xi_nodes, k, displacement)
+    &exact_shifted_coefficients(xi_nodes, k, displacement) * 2.0
 }
 
 fn reflect_coefficients(coeffs: &Array3<f64>) -> Array3<f64> {
-    let mut reflected = Array3::zeros(coeffs.raw_dim());
-    let n_nodes = coeffs.dim().1;
+    let mut reflected = Array3::zeros(coeffs.shape());
+    let n_nodes = coeffs.shape()[1];
     for elem in 0..ELEMENTS {
         for node in 0..n_nodes {
-            reflected[(elem, node, 0)] = coeffs[(ELEMENTS - 1 - elem, n_nodes - 1 - node, 0)];
+            reflected[[elem, node, 0]] = coeffs[[ELEMENTS - 1 - elem, n_nodes - 1 - node, 0]];
         }
     }
     reflected
@@ -306,8 +306,8 @@ fn pressure_velocity_from_characteristics(
     w_plus: &Array3<f64>,
     w_minus: &Array3<f64>,
 ) -> (Array3<f64>, Array3<f64>) {
-    let pressure = 0.5 * (w_plus + w_minus);
-    let velocity = (w_plus - w_minus) / (2.0 * DENSITY * SOUND_SPEED);
+    let pressure = &(w_plus + w_minus) * 0.5;
+    let velocity = &(w_plus - w_minus) / (2.0 * DENSITY * SOUND_SPEED);
     (pressure, velocity)
 }
 
@@ -321,8 +321,8 @@ fn exact_bidirectional_acoustic(
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
             let x = physical_coordinate(elem, xi_nodes[node]);
-            w_plus[(elem, node, 0)] = (k * (x - displacement)).sin();
-            w_minus[(elem, node, 0)] = (k * (x + displacement)).sin();
+            w_plus[[elem, node, 0]] = (k * (x - displacement)).sin();
+            w_minus[[elem, node, 0]] = (k * (x + displacement)).sin();
         }
     }
     pressure_velocity_from_characteristics(&w_plus, &w_minus)
@@ -336,7 +336,7 @@ fn weighted_mass(coeffs: &Array3<f64>, weights: &Array1<f64>) -> f64 {
     let mut mass = 0.0;
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
-            mass += weights[node] * coeffs[(elem, node, 0)];
+            mass += weights[node] * coeffs[[elem, node, 0]];
         }
     }
     mass
@@ -347,16 +347,16 @@ fn relative_l2(actual: &Array3<f64>, expected: &Array3<f64>, weights: &Array1<f6
     let mut expected_sq = 0.0;
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
-            let diff = actual[(elem, node, 0)] - expected[(elem, node, 0)];
+            let diff = actual[[elem, node, 0]] - expected[[elem, node, 0]];
             diff_sq += weights[node] * diff * diff;
-            expected_sq += weights[node] * expected[(elem, node, 0)] * expected[(elem, node, 0)];
+            expected_sq += weights[node] * expected[[elem, node, 0]] * expected[[elem, node, 0]];
         }
     }
     diff_sq.sqrt() / expected_sq.sqrt().max(f64::EPSILON)
 }
 
 fn pressure_from_characteristic(characteristic: &Array3<f64>) -> Array3<f64> {
-    0.5 * characteristic
+    characteristic * 0.5
 }
 
 fn velocity_from_characteristic(characteristic: &Array3<f64>) -> Array3<f64> {
@@ -375,8 +375,8 @@ fn acoustic_energy(pressure: &Array3<f64>, velocity: &Array3<f64>, weights: &Arr
     let mut energy = 0.0;
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
-            let p = pressure[(elem, node, 0)];
-            let u = velocity[(elem, node, 0)];
+            let p = pressure[[elem, node, 0]];
+            let u = velocity[[elem, node, 0]];
             energy += weights[node]
                 * (p * p / (2.0 * DENSITY * SOUND_SPEED * SOUND_SPEED) + 0.5 * DENSITY * u * u);
         }
@@ -407,7 +407,7 @@ fn measured_phase(
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
             let x = physical_coordinate(elem, xi_nodes[node]);
-            let value = coeffs[(elem, node, 0)];
+            let value = coeffs[[elem, node, 0]];
             sin_coeff += weights[node] * value * (k * x).sin();
             cos_coeff += weights[node] * value * (k * x).cos();
         }
@@ -421,7 +421,7 @@ fn amplitude(coeffs: &Array3<f64>, weights: &Array1<f64>, xi_nodes: &Array1<f64>
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
             let x = physical_coordinate(elem, xi_nodes[node]);
-            let value = coeffs[(elem, node, 0)];
+            let value = coeffs[[elem, node, 0]];
             sin_coeff += weights[node] * value * (k * x).sin();
             cos_coeff += weights[node] * value * (k * x).cos();
         }

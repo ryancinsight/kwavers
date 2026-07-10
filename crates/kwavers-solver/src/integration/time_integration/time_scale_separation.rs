@@ -13,10 +13,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array4,
-    ArrayView3,
-};
+use leto::{Array4, ArrayView3};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component
@@ -73,7 +70,9 @@ impl TimeScaleSeparator {
 
         // Analyze each field component
         for f in 0..fields.shape()[0] {
-            let field = fields.index_axis(0, f);
+            let field = fields
+                .index_axis::<3>(0, f)
+                .expect("invariant: component index within Array4 axis-0 bounds");
 
             // Compute characteristic time scales
             let (grad_max, laplacian_max) = self.compute_spatial_derivatives(field, &self.grid)?;
@@ -106,8 +105,8 @@ impl TimeScaleSeparator {
     ///
     pub fn is_stiff(&self) -> bool {
         if let Some(last_scales) = self.time_scale_history.last() {
-            if (last_scales.shape()[0] * last_scales.shape()[1] * last_scales.shape()[2]) >= 2 {
-                let ratio = last_scales[(last_scales.shape()[0] * last_scales.shape()[1] * last_scales.shape()[2]) - 1] / last_scales[0];
+            if last_scales.len() >= 2 {
+                let ratio = last_scales[last_scales.len() - 1] / last_scales[0];
                 return ratio > self.min_separation_ratio;
             }
         }

@@ -50,7 +50,7 @@ pub struct PreparedTheranosticSlice {
 pub fn target_contrast(prepared: &PreparedTheranosticSlice) -> Array2<f64> {
     let reference =
         median_in_mask(&prepared.sound_speed_m_s, &prepared.body_mask).unwrap_or(C_REF_M_S);
-    let mut out = Array2::<f64>::zeros(prepared.sound_speed_m_s.dim());
+    let mut out = Array2::<f64>::zeros(prepared.sound_speed_m_s.shape());
     for ((idx, value), active) in prepared
         .sound_speed_m_s
         .indexed_iter()
@@ -101,7 +101,7 @@ pub(super) fn median_in_mask(values: &Array2<f64>, mask: &Array2<bool>) -> Optio
 /// should enforce `size >= 2` at their API boundary (e.g. `grid_size` in
 /// [`prepare_abdominal_slice`]) to produce a meaningful solver grid.
 pub(super) fn resample(input: &Array2<f64>, size: usize) -> Array2<f64> {
-    let (nx, ny) = input.dim();
+    let [nx, ny] = input.shape();
     if size == 1 {
         let cx = (nx - 1) as f64 * 0.5;
         let cy = (ny - 1) as f64 * 0.5;
@@ -109,7 +109,7 @@ pub(super) fn resample(input: &Array2<f64>, size: usize) -> Array2<f64> {
     }
     let scale_x = (nx - 1) as f64 / (size - 1) as f64;
     let scale_y = (ny - 1) as f64 / (size - 1) as f64;
-    Array2::from_shape_fn((size, size), |(ix, iy)| {
+    Array2::from_shape_fn((size, size), |[ix, iy]| {
         bilinear_index_space(input, ix as f64 * scale_x, iy as f64 * scale_y)
     })
 }
@@ -117,8 +117,8 @@ pub(super) fn resample(input: &Array2<f64>, size: usize) -> Array2<f64> {
 /// Resample an integer label map to `size × size` by max-pooling, preserving
 /// the highest label value in each output cell.
 pub(super) fn resample_labels_max(input: &Array2<i16>, size: usize) -> Array2<i16> {
-    let (nx, ny) = input.dim();
-    Array2::from_shape_fn((size, size), |(ix, iy)| {
+    let [nx, ny] = input.shape();
+    Array2::from_shape_fn((size, size), |[ix, iy]| {
         let x0 = (ix * nx) / size;
         let x1 = (((ix + 1) * nx).saturating_sub(1)) / size;
         let y0 = (iy * ny) / size;

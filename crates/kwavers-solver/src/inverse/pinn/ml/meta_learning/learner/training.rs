@@ -40,7 +40,7 @@ where
             accumulated_grads = add_gradients(accumulated_grads, &val_grads);
         }
 
-        let num_tasks = (tasks.shape()[0] * tasks.shape()[1] * tasks.shape()[2]).max(1) as f32;
+        let num_tasks = (tasks.len()).max(1) as f32;
         let averaged_grads: Vec<Option<Vec<f32>>> = accumulated_grads
             .into_iter()
             .map(|opt| opt.map(|g| g.into_iter().map(|v| v / num_tasks).collect()))
@@ -75,7 +75,7 @@ where
         self.base_model.load_parameters(&updated_params);
 
         let average_physics_loss = if !physics_losses.is_empty() {
-            physics_losses.iter().sum::<f64>() / (physics_losses.shape()[0] * physics_losses.shape()[1] * physics_losses.shape()[2]) as f64
+            physics_losses.iter().sum::<f64>() / (physics_losses.len()) as f64
         } else {
             0.0
         };
@@ -84,7 +84,7 @@ where
 
         let meta_loss = MetaLoss {
             total_loss: if !tasks.is_empty() {
-                total_loss / (tasks.shape()[0] * tasks.shape()[1] * tasks.shape()[2]) as f64
+                total_loss / (tasks.len()) as f64
             } else {
                 0.0
             },
@@ -94,7 +94,7 @@ where
         };
 
         self.stats.meta_epochs_completed += 1;
-        self.stats.total_tasks_processed += (tasks.shape()[0] * tasks.shape()[1] * tasks.shape()[2]);
+        self.stats.total_tasks_processed += (tasks.len());
         self.stats.average_meta_loss = (self.stats.average_meta_loss + meta_loss.total_loss) / 2.0;
         self.stats.best_generalization_score = self
             .stats
@@ -144,12 +144,12 @@ where
 
     /// Compute generalization score across tasks
     pub(super) fn compute_generalization_score(&self, task_losses: &[f64]) -> f64 {
-        let mean = task_losses.iter().sum::<f64>() / (task_losses.shape()[0] * task_losses.shape()[1] * task_losses.shape()[2]) as f64;
+        let mean = task_losses.iter().sum::<f64>() / (task_losses.len()) as f64;
         let variance = task_losses
             .iter()
             .map(|loss| (loss - mean).powi(2))
             .sum::<f64>()
-            / (task_losses.shape()[0] * task_losses.shape()[1] * task_losses.shape()[2]) as f64;
+            / (task_losses.len()) as f64;
         1.0 / (1.0 + variance.sqrt())
     }
 }

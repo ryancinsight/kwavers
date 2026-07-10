@@ -31,7 +31,7 @@ impl NeuralBeamformer {
         let beamformed = &base_image * scale_factor;
 
         let uncertainty = self.uncertainty_estimator.estimate(&beamformed)?;
-        let mean_uncertainty = uncertainty.mean().unwrap_or(0.0) as f64;
+        let mean_uncertainty = leto::mean_all(&uncertainty).unwrap_or(0.0) as f64;
 
         Ok(HybridBeamformingResult {
             image: beamformed,

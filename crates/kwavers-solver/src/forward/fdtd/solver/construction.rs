@@ -163,7 +163,7 @@ impl GenericFdtdSolver<Array3<f64>> {
         // c_ref = mean sound speed over all grid cells (same convention as PSTD).
         let mut kspace_ops = if config.kspace_correction == KSpaceCorrectionMode::Spectral {
             let c_sum: f64 = materials.c0.iter().sum();
-            let c_ref = c_sum / (materials.c0.shape()[0] * materials.c0.shape()[1] * materials.c0.shape()[2]) as f64;
+            let c_ref = c_sum / (materials.c0.len()) as f64;
             Some(KSpaceFdtdOperators::new(
                 grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, c_ref, config.dt,
             ))
@@ -190,7 +190,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             let rho0_ref = if materials.rho0.is_empty() {
                 DENSITY_WATER_NOMINAL
             } else {
-                materials.rho0.iter().copied().sum::<f64>() / (materials.rho0.shape()[0] * materials.rho0.shape()[1] * materials.rho0.shape()[2]) as f64
+                materials.rho0.iter().copied().sum::<f64>() / (materials.rho0.len()) as f64
             };
             let Some(kspace_ops) = kspace_ops.as_mut() else {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {

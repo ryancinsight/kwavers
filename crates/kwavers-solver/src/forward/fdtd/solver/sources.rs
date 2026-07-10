@@ -205,42 +205,48 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         // X boundaries (planes at x=0 or x=nx-1)
         let x0_count = mask
-            .slice(s![0, .., ..])
+            .slice_with::<2>(&s![0, .., ..])
+            .expect("invariant: x=0 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
         let xn_count = mask
-            .slice(s![nx - 1, .., ..])
+            .slice_with::<2>(&s![nx - 1, .., ..])
+            .expect("invariant: x=nx-1 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
 
         // Y boundaries (planes at y=0 or y=ny-1)
         let y0_count = mask
-            .slice(s![.., 0, ..])
+            .slice_with::<2>(&s![.., 0, ..])
+            .expect("invariant: y=0 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
         let yn_count = mask
-            .slice(s![.., ny - 1, ..])
+            .slice_with::<2>(&s![.., ny - 1, ..])
+            .expect("invariant: y=ny-1 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
 
         // Z boundaries (planes at z=0 or z=nz-1)
         let z0_count = mask
-            .slice(s![.., .., 0])
+            .slice_with::<2>(&s![.., .., 0])
+            .expect("invariant: z=0 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
         let zn_count = mask
-            .slice(s![.., .., nz - 1])
+            .slice_with::<2>(&s![.., .., nz - 1])
+            .expect("invariant: z=nz-1 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
 
         // Compute total mask statistics
-        for &val in mask {
+        for &val in mask.iter() {
             if val > 0.0 {
                 nonzero_count += 1;
                 mask_sum += val;

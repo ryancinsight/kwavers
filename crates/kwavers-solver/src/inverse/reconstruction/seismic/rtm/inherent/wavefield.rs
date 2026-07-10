@@ -69,12 +69,12 @@ impl ReverseTimeMigration {
         let mut laplacian = Array3::<f64>::zeros((nx, ny, nz));
         let inn = s![2..nx - 2, 2..ny - 2, 2..nz - 2];
 
-        let x_pm2 = pressure.slice(s![..nx - 4, 2..ny - 2, 2..nz - 2]);
-        let x_pm1 = pressure.slice(s![1..nx - 3, 2..ny - 2, 2..nz - 2]);
-        let x_p0 = pressure.slice(s![2..nx - 2, 2..ny - 2, 2..nz - 2]);
-        let x_pp1 = pressure.slice(s![3..nx - 1, 2..ny - 2, 2..nz - 2]);
-        let x_pp2 = pressure.slice(s![4..nx, 2..ny - 2, 2..nz - 2]);
-        for_each_view_mut(laplacian.slice_mut(inn), |idx, lap| {
+        let x_pm2 = pressure.slice_with::<3>(&s![..nx - 4, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let x_pm1 = pressure.slice_with::<3>(&s![1..nx - 3, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let x_p0 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let x_pp1 = pressure.slice_with::<3>(&s![3..nx - 1, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let x_pp2 = pressure.slice_with::<3>(&s![4..nx, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        for_each_view_mut(laplacian.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, lap| {
             let pm2 = x_pm2[idx];
             let pm1 = x_pm1[idx];
             let p0 = x_p0[idx];
@@ -89,12 +89,12 @@ impl ReverseTimeMigration {
             ) / dx2;
         });
 
-        let y_pm2 = pressure.slice(s![2..nx - 2, ..ny - 4, 2..nz - 2]);
-        let y_pm1 = pressure.slice(s![2..nx - 2, 1..ny - 3, 2..nz - 2]);
-        let y_p0 = pressure.slice(s![2..nx - 2, 2..ny - 2, 2..nz - 2]);
-        let y_pp1 = pressure.slice(s![2..nx - 2, 3..ny - 1, 2..nz - 2]);
-        let y_pp2 = pressure.slice(s![2..nx - 2, 4..ny, 2..nz - 2]);
-        for_each_view_mut(laplacian.slice_mut(inn), |idx, lap| {
+        let y_pm2 = pressure.slice_with::<3>(&s![2..nx - 2, ..ny - 4, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let y_pm1 = pressure.slice_with::<3>(&s![2..nx - 2, 1..ny - 3, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let y_p0 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let y_pp1 = pressure.slice_with::<3>(&s![2..nx - 2, 3..ny - 1, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let y_pp2 = pressure.slice_with::<3>(&s![2..nx - 2, 4..ny, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        for_each_view_mut(laplacian.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, lap| {
             let pm2 = y_pm2[idx];
             let pm1 = y_pm1[idx];
             let p0 = y_p0[idx];
@@ -109,12 +109,12 @@ impl ReverseTimeMigration {
             ) / dy2;
         });
 
-        let z_pm2 = pressure.slice(s![2..nx - 2, 2..ny - 2, ..nz - 4]);
-        let z_pm1 = pressure.slice(s![2..nx - 2, 2..ny - 2, 1..nz - 3]);
-        let z_p0 = pressure.slice(s![2..nx - 2, 2..ny - 2, 2..nz - 2]);
-        let z_pp1 = pressure.slice(s![2..nx - 2, 2..ny - 2, 3..nz - 1]);
-        let z_pp2 = pressure.slice(s![2..nx - 2, 2..ny - 2, 4..nz]);
-        for_each_view_mut(laplacian.slice_mut(inn), |idx, lap| {
+        let z_pm2 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, ..nz - 4]).expect("invariant: RTM stencil slice in range");
+        let z_pm1 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, 1..nz - 3]).expect("invariant: RTM stencil slice in range");
+        let z_p0 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, 2..nz - 2]).expect("invariant: RTM stencil slice in range");
+        let z_pp1 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, 3..nz - 1]).expect("invariant: RTM stencil slice in range");
+        let z_pp2 = pressure.slice_with::<3>(&s![2..nx - 2, 2..ny - 2, 4..nz]).expect("invariant: RTM stencil slice in range");
+        for_each_view_mut(laplacian.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, lap| {
             let pm2 = z_pm2[idx];
             let pm1 = z_pm1[idx];
             let p0 = z_p0[idx];

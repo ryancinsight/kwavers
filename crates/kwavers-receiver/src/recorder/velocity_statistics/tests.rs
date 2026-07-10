@@ -90,7 +90,7 @@ fn test_fill_rms_matches_sample_rms() {
     let positions = vec![(0, 0, 0), (3, 3, 0)];
 
     let via_sample = stats.sample_rms(&positions);
-    let mut via_fill = Array1::zeros([positions.len(]));
+    let mut via_fill = Array1::zeros(positions.len());
     stats.fill_rms(&positions, &mut via_fill).unwrap();
 
     for i in 0..positions.len() {

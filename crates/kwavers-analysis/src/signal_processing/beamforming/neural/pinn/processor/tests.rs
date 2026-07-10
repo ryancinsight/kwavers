@@ -48,7 +48,7 @@ fn test_process_volume() {
     let rf_data = Array4::<f32>::ones((2, 8, 128, 1));
 
     let output = processor.process_volume(&rf_data).unwrap();
-    assert_eq!(output.volume.dim(), (2, 8, 128));
-    assert_eq!(output.uncertainty.dim(), (2, 8, 128));
-    assert_eq!(output.confidence.dim(), (2, 8, 128));
+    assert_eq!(output.volume.shape(), [2, 8, 128]);
+    assert_eq!(output.uncertainty.shape(), [2, 8, 128]);
+    assert_eq!(output.confidence.shape(), [2, 8, 128]);
 }

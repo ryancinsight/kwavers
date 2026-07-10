@@ -52,7 +52,9 @@ impl AdaptiveMethodSelector {
         let mut selection = Array3::from_elem((nx, ny, nz), SelectedMethod::Spectral);
 
         // Analyze field properties
-        let pressure_field = fields.index_axis(0, 0);
+        let pressure_field = fields
+            .index_axis::<3>(0, 0)
+            .expect("invariant: pressure field index 0 within field stack");
 
         // Compute metrics for different regions
         for k in 0..nz {
@@ -224,7 +226,10 @@ impl AdaptiveMethodSelector {
         // threshold = 0.0: No hysteresis (fully responsive)
         // threshold = 1.0: Maximum hysteresis (very stable)
 
-        for ((i, j, k), current) in selection.indexed_iter_mut() {
+        for ([i, j, k], current) in selection
+            .indexed_iter_mut()
+            .expect("invariant: selection array yields indexed iterator")
+        {
             if *current != previous[[i, j, k]] {
                 // Prevent switching if hysteresis threshold indicates stability preference
                 // In proper implementation, would compare score differences to threshold

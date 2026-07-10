@@ -68,8 +68,8 @@ impl DGSolver {
                     field: "modal_coefficients".to_owned(),
                 })
             })?
-            .dim();
-        self.ensure_rk_workspace(dim);
+            .shape();
+        self.ensure_rk_workspace((dim[0], dim[1], dim[2]));
 
         match self.config.time_integrator {
             DgTimeIntegrator::SspRk3 => self.step_ssp_rk3(dt, self.config.sound_speed),

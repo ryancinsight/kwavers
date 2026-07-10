@@ -13,7 +13,7 @@ impl PluginManager {
     /// - Returns [`KwaversError::Validation`] if a duplicate field provider or circular dependency is detected.
     ///
     pub(super) fn resolve_dependencies(&mut self) -> KwaversResult<()> {
-        let n = (self.plugins.shape()[0] * self.plugins.shape()[1] * self.plugins.shape()[2]);
+        let n = self.plugins.len();
         if n == 0 {
             self.execution_order.clear();
             return Ok(());

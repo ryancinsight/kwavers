@@ -34,7 +34,7 @@ pub(crate) fn prepare_volume(
 ) -> KwaversResult<Nonlinear3dVolume> {
     validation::validate_inputs(ct_hu, label_volume, spacing_mm)?;
     let source_dimensions = {
-        let (nx, ny, nz) = ct_hu.dim();
+        let [nx, ny, nz] = ct_hu.shape();
         [nx, ny, nz]
     };
     let source_spacing_m = [
@@ -159,7 +159,7 @@ fn brain_target_center_index(
     ct_hu: &Array3<f64>,
     target_fraction_xyz: Option<[f64; 3]>,
 ) -> KwaversResult<[f64; 3]> {
-    let brain_support = Array3::from_shape_fn(body.dim(), |idx| {
+    let brain_support = Array3::from_shape_fn(body.shape(), |idx| {
         body[idx] && ct_hu[idx] < HU_BONE_THRESHOLD
     });
     let support = if brain_support.iter().any(|active| *active) {

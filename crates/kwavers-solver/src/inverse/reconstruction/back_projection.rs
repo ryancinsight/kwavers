@@ -71,7 +71,7 @@ impl UniversalBackProjection {
             }
         }
 
-        value / (sensor_positions.shape()[0] * sensor_positions.shape()[1] * sensor_positions.shape()[2]) as f64
+        value / (sensor_positions.len()) as f64
     }
 }
 

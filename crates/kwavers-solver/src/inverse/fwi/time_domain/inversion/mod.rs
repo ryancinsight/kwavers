@@ -264,11 +264,11 @@ impl FwiProcessor {
 fn relative_model_change(old: &Array3<f64>, new: &Array3<f64>) -> f64 {
     let mut diff_sq = 0.0_f64;
     let mut old_sq = 0.0_f64;
-    Zip::from(old).and(new).for_each(|&o, &n| {
-        let d = n - o;
+    for (o, n) in old.iter().zip(new.iter()) {
+        let d = *n - *o;
         diff_sq += d * d;
-        old_sq += o * o;
-    });
+        old_sq += *o * *o;
+    }
     if old_sq <= 0.0 {
         return 0.0;
     }

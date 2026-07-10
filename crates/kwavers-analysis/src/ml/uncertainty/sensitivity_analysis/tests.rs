@@ -50,7 +50,8 @@ fn test_sensitivity_analysis() {
     // S₁(p₀) ≈ 4/(4.25) ≈ 0.941, S₁(p₁) ≈ 0.25/(4.25) ≈ 0.059
     // Therefore total_sensitivity(p₀) >> total_sensitivity(p₁).
     let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
-    let model_fn = |params: &Array1<f64>| Array1::from_vec(vec![2.0 * params[0] + 0.5 * params[1]]);
+    let model_fn =
+        |params: &Array1<f64>| Array1::from_vec(1, vec![2.0 * params[0] + 0.5 * params[1]]).unwrap();
     let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
 
     let indices = analyzer.analyze(model_fn, &parameter_ranges, 50).unwrap();
@@ -77,7 +78,7 @@ fn test_morris_screening() {
     // f(p) = p₀ + p₁: both parameters equally important, no interactions.
     // Morris μ* should be positive for both; σ should be small (linear model).
     let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
-    let model_fn = |params: &Array1<f64>| Array1::from_vec(vec![params[0] + params[1]]);
+    let model_fn = |params: &Array1<f64>| Array1::from_vec(1, vec![params[0] + params[1]]).unwrap();
     let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
 
     let results = analyzer

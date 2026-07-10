@@ -15,11 +15,11 @@ pub(super) fn validate_inputs(
         ));
     }
     if let Some(labels) = label_volume {
-        if labels.dim() != ct_hu.dim() {
+        if labels.shape() != ct_hu.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "CT shape {:?} does not match segmentation shape {:?}",
-                ct_hu.dim(),
-                labels.dim()
+                ct_hu.shape(),
+                labels.shape()
             )));
         }
     }

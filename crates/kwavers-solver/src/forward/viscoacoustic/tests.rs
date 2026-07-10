@@ -3,8 +3,8 @@
 //! medium, in 1-D, 2-D, and 3-D.
 
 use super::ViscoacousticMemorySolver;
-use leto::Array3;
 use kwavers_math::fft::Complex64;
+use leto::Array3;
 use std::f64::consts::TAU;
 
 const RHO: f64 = 1000.0;
@@ -81,7 +81,7 @@ fn decay_matches_dispersion_1d() {
     for &m in &[6.0, 12.0, 24.0] {
         let mut solver = ViscoacousticMemorySolver::new_1d(n, dx, dt, RHO, M_INF, &ARMS).unwrap();
         let k0 = TAU * m / (n as f64 * dx);
-        let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| (k0 * i as f64 * dx).cos());
+        let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| (k0 * i as f64 * dx).cos());
         solver.set_pressure(&p0).unwrap();
 
         let (decay_meas, omega_meas) = measure(&mut solver, 400, 4000, dt);
@@ -110,7 +110,7 @@ fn decay_matches_dispersion_2d_diagonal() {
             ViscoacousticMemorySolver::new(n, n, 1, dx, dx, dx, dt, RHO, M_INF, &ARMS).unwrap();
         let kc = TAU * m / (n as f64 * dx);
         let kmag = kc * 2.0_f64.sqrt();
-        let p0 = Array3::from_shape_fn((n, n, 1), |(i, j, _)| {
+        let p0 = Array3::from_shape_fn((n, n, 1), |[i, j, _]| {
             (kc * (i as f64 + j as f64) * dx).cos()
         });
         solver.set_pressure(&p0).unwrap();
@@ -140,7 +140,7 @@ fn decay_matches_dispersion_3d_diagonal() {
         ViscoacousticMemorySolver::new(n, n, n, dx, dx, dx, dt, RHO, M_INF, &ARMS).unwrap();
     let kc = TAU * m / (n as f64 * dx);
     let kmag = kc * 3.0_f64.sqrt();
-    let p0 = Array3::from_shape_fn((n, n, n), |(i, j, k)| {
+    let p0 = Array3::from_shape_fn((n, n, n), |[i, j, k]| {
         (kc * (i as f64 + j as f64 + k as f64) * dx).cos()
     });
     solver.set_pressure(&p0).unwrap();
@@ -167,7 +167,7 @@ fn lossless_3d_no_secular_energy_drift() {
     let mut solver =
         ViscoacousticMemorySolver::new(n, n, n, dx, dx, dx, dt, RHO, M_INF, &[]).unwrap();
     let kc = TAU * 2.0 / (n as f64 * dx);
-    let p0 = Array3::from_shape_fn((n, n, n), |(i, j, k)| {
+    let p0 = Array3::from_shape_fn((n, n, n), |[i, j, k]| {
         (kc * (i as f64 + j as f64 + k as f64) * dx).cos()
     });
     solver.set_pressure(&p0).unwrap();
@@ -180,7 +180,7 @@ fn lossless_3d_no_secular_energy_drift() {
         })
         .collect();
     let half = total / 2;
-    let mean = |s: &[f64]| s.iter().sum::<f64>() / (s.shape()[0] * s.shape()[1] * s.shape()[2]) as f64;
+    let mean = |s: &[f64]| s.iter().sum::<f64>() / s.len() as f64;
     let (first, second) = (mean(&energies[..half]), mean(&energies[half..]));
     assert!(
         (second - first).abs() / first < 2e-3,
@@ -206,7 +206,7 @@ fn absorbing_layer_suppresses_boundary_reflection() {
         // A zero-velocity Gaussian splits into two counter-propagating halves
         // that travel out toward both (absorbing) boundaries.
         let (x0, w) = (n as f64 / 2.0, 12.0);
-        let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| {
+        let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| {
             let d = (i as f64 - x0) / w;
             (-d * d).exp()
         });
@@ -243,7 +243,7 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
     let (m_a, m_b) = (M_INF, 4.0 * M_INF); // Z_B/Z_A = 2 ⇒ R = 1/3
 
     let rho = Array3::from_elem((n, 1, 1), RHO);
-    let m_inf = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| if i < interface { m_a } else { m_b });
+    let m_inf = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| if i < interface { m_a } else { m_b });
     let mut s =
         ViscoacousticMemorySolver::new_heterogeneous(n, 1, 1, dx, 1.0, 1.0, dt, &rho, &m_inf, &[])
             .unwrap();
@@ -252,7 +252,7 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
     // Zero-velocity Gaussian at x0=128 (region A) splits into ± halves of
     // amplitude 0.5·peak; the rightward half (incident) hits the interface.
     let (x0, w) = (128.0_f64, 10.0_f64);
-    let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| {
+    let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| {
         let d = (i as f64 - x0) / w;
         (-d * d).exp()
     });
@@ -307,7 +307,7 @@ fn power_law_medium_reproduces_target_absorption() {
     // Standing wave near f_ref (k ≈ 2π f_ref / c) → measure temporal decay γ;
     // spatial α(ω) = γ/c_p, compare to the target scaled by the power law.
     let k0 = TAU * 17.0 / (n as f64 * dx); // ω_r ≈ c·k0 ≈ 2π·498 kHz
-    let p0 = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| (k0 * i as f64 * dx).cos());
+    let p0 = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| (k0 * i as f64 * dx).cos());
     s.set_pressure(&p0).unwrap();
     let (decay, omega) = measure(&mut s, 400, 4000, dt);
 

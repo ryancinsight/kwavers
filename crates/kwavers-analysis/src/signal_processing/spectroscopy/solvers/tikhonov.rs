@@ -25,11 +25,15 @@ use leto::{
 ///
 #[allow(non_snake_case)] // E is standard notation for extinction coefficient matrix
 pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<Array1<f64>> {
-    let n_chromophores = e.ncols();
+    let n_chromophores = e.shape()[1];
 
     // Compute EᵀE (Gram matrix)
-    let et = e.t();
-    let ete = et.dot(e);
+    let et = e
+        .transpose([1, 0])
+        .expect("invariant: 2-D transpose axes valid");
+    let mut ete = Array2::<f64>::zeros((n_chromophores, n_chromophores));
+    leto_ops::matmul(&et, &e.view(), &mut ete.view_mut())
+        .expect("invariant: EᵀE dimensions match");
 
     // Add regularization: EᵀE + λI
     // This ensures the matrix is positive-definite even if E is rank-deficient
@@ -39,7 +43,9 @@ pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<
     }
 
     // Compute Eᵀμ (Right-hand side)
-    let et_mu = et.dot(mu);
+    let mut et_mu = Array1::<f64>::zeros(n_chromophores);
+    leto_ops::matvec(&et, &mu.view(), &mut et_mu.view_mut())
+        .expect("invariant: Eᵀμ dimensions match");
 
     // Solve (EᵀE + λI)C = Eᵀμ using Cholesky decomposition (LLᵀ)
     // Cholesky is more stable and efficient for SPD systems than Gaussian elimination
@@ -57,8 +63,8 @@ pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<
 ///
 #[allow(non_snake_case)]
 fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
-    let n = A.nrows();
-    if A.ncols() != n {
+    let n = A.shape()[0];
+    if A.shape()[1] != n {
         anyhow::bail!("Matrix A must be square");
     }
 
@@ -100,7 +106,9 @@ fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
 
     // 3. Solve Lᵀx = y (Backward substitution)
     let mut x = Array1::zeros(n);
-    let LT = L.t();
+    let LT = L
+        .transpose([1, 0])
+        .expect("invariant: 2-D transpose axes valid");
     for i in (0..n).rev() {
         let mut sum = 0.0;
         for j in (i + 1)..n {
@@ -118,20 +126,31 @@ fn cholesky_solve(A: &Array2<f64>, b: &Array1<f64>) -> Result<Array1<f64>> {
 ///
 #[allow(non_snake_case)]
 pub fn estimate_condition_number(A: &Array2<f64>) -> Result<f64> {
-    let (_, n) = A.dim();
-    let ata = A.t().dot(A);
+    let n = A.shape()[1];
+    let at = A
+        .transpose([1, 0])
+        .expect("invariant: 2-D transpose axes valid");
+    let mut ata = Array2::<f64>::zeros((n, n));
+    leto_ops::matmul(&at, &A.view(), &mut ata.view_mut())
+        .expect("invariant: AᵀA dimensions match");
 
     // Power iteration for largest eigenvalue λ_max
     let mut v = Array1::from_elem(n, 1.0 / (n as f64).sqrt());
     for _ in 0..20 {
-        let v_new = ata.dot(&v);
+        let mut v_new = Array1::<f64>::zeros(n);
+        leto_ops::matvec(&ata.view(), &v.view(), &mut v_new.view_mut())
+            .expect("invariant: AᵀA·v dimensions match");
         let norm = v_new.iter().map(|&x| x * x).sum::<f64>().sqrt();
         if norm < 1e-15 {
             break;
         }
-        v = v_new / norm;
+        v = &v_new / norm;
     }
-    let lambda_max = v.dot(&ata.dot(&v));
+    let mut ata_v = Array1::<f64>::zeros(n);
+    leto_ops::matvec(&ata.view(), &v.view(), &mut ata_v.view_mut())
+        .expect("invariant: AᵀA·v dimensions match");
+    let lambda_max = leto_ops::dot(&v.view(), &ata_v.view())
+        .expect("invariant: dot dimensions match");
 
     // Approximate smallest eigenvalue λ_min via Trace(AᵀA) - λ_max (rough heuristic for small n)
     // For n=2,3 this is acceptable. For larger n, we would need inverse power iteration.

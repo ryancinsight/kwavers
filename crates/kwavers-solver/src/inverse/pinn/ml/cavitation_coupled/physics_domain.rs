@@ -35,7 +35,7 @@ where
         // Falls back to collocation points if no bubbles have nucleated yet.
         let backend = B::default();
         let bubble_positions = if !self.bubble_locations.is_empty() {
-            let n = (self.bubble_locations.shape()[0] * self.bubble_locations.shape()[1] * self.bubble_locations.shape()[2]);
+            let n = (self.bubble_locations.len());
             let xs: Vec<f32> = self
                 .bubble_locations
                 .iter()

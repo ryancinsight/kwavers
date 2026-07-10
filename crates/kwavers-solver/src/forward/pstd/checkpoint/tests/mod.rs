@@ -133,12 +133,12 @@ fn test_checkpoint_roundtrip_serialisation() {
     let n = nx * ny * nz;
 
     let make_arr = |offset: f64| -> Array3<f64> {
-        Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             (i * ny * nz + j * nz + k) as f64 + offset
         })
     };
 
-    let sensor_data = leto::Array2::from_shape_fn((3, 5), |(i, j)| (i * 5 + j) as f64);
+    let sensor_data = leto::Array2::from_shape_fn((3, 5), |[i, j]| (i * 5 + j) as f64);
 
     let ckpt = PSTDCheckpoint {
         nx,
@@ -147,10 +147,10 @@ fn test_checkpoint_roundtrip_serialisation() {
         time_step_index: 7,
         total_steps: 20,
         dt: 1e-8,
-        p: make_arr(0.0).into(),
-        ux: make_arr(1000.0).into(),
-        uy: make_arr(2000.0).into(),
-        uz: make_arr(3000.0).into(),
+        p: make_arr(0.0),
+        ux: make_arr(1000.0),
+        uy: make_arr(2000.0),
+        uz: make_arr(3000.0),
         rhox: make_arr(4000.0),
         rhoy: make_arr(5000.0),
         rhoz: make_arr(6000.0),
@@ -207,10 +207,10 @@ fn test_checkpoint_validate_restore_contract_rejects_mismatch() {
         time_step_index: 1,
         total_steps: 4,
         dt: 1.0e-8,
-        p: Array3::zeros((2, 2, 2)).into(),
-        ux: Array3::zeros((2, 2, 2)).into(),
-        uy: Array3::zeros((2, 2, 2)).into(),
-        uz: Array3::zeros((2, 2, 2)).into(),
+        p: Array3::zeros((2, 2, 2)),
+        ux: Array3::zeros((2, 2, 2)),
+        uy: Array3::zeros((2, 2, 2)),
+        uz: Array3::zeros((2, 2, 2)),
         rhox: Array3::zeros((2, 2, 2)),
         rhoy: Array3::zeros((2, 2, 2)),
         rhoz: Array3::zeros((2, 2, 2)),

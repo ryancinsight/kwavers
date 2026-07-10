@@ -161,7 +161,7 @@ impl PhysicsConstraints {
     /// - Strength: 10% of reciprocity_weight (α ∈ [0, 0.1])
     fn apply_reciprocity(&self, image: &Array3<f32>) -> Array3<f32> {
         let mut result = image.clone();
-        let (rows, cols, depth) = image.dim();
+        let [rows, cols, depth] = image.shape();
         let alpha = (self.reciprocity_weight * 0.1) as f32;
 
         for i in 1..rows - 1 {
@@ -206,7 +206,7 @@ impl PhysicsConstraints {
     /// - Boundary: Neumann (zero-flux, preserved edges)
     fn apply_coherence(&self, image: &Array3<f32>) -> Array3<f32> {
         let mut smoothed = image.clone();
-        let (rows, cols, depth) = image.dim();
+        let [rows, cols, depth] = image.shape();
         let lambda = (self.coherence_weight * 0.25) as f32;
 
         for k in 0..depth {

@@ -122,7 +122,7 @@ mod tests {
 
         cache.populate_density_array(&tissue_map, &mut output);
 
-        for ((i, j, k), &tissue) in tissue_map.indexed_iter() {
+        for ([i, j, k], &tissue) in tissue_map.indexed_iter() {
             let expected = TISSUE_PROPERTIES
                 .get(&tissue)
                 .map_or(DENSITY_WATER_NOMINAL, |p| p.density);
@@ -147,7 +147,7 @@ mod tests {
 
         cache.populate_sound_speed_array(&tissue_map, &mut output);
 
-        for ((i, j, k), &tissue) in tissue_map.indexed_iter() {
+        for ([i, j, k], &tissue) in tissue_map.indexed_iter() {
             let expected = TISSUE_PROPERTIES
                 .get(&tissue)
                 .map_or(SOUND_SPEED_WATER_SIM, |p| p.sound_speed);

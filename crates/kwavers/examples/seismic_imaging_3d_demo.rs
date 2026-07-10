@@ -316,7 +316,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
                     }
                 }
             }
-            hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+            for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
             return Ok(CtVolume {
                 hu,
                 spacing_mm: [0.5, 0.5, 4.0],
@@ -374,7 +374,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             }
         }
     }
-    hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+    for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
     Ok(CtVolume {
         hu,
         spacing_mm: [spacing[0], spacing[1], spacing[2]],
@@ -387,10 +387,11 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 
 /// Find the axial slice index with the maximum count of bone voxels (HU > 300).
 fn skull_equator_z(hu: &Array3<f64>) -> usize {
-    let (_, _, nz) = hu.dim();
+    let [_, _, nz] = hu.shape();
     (0..nz)
         .max_by_key(|&z| {
             hu.index_axis::<2>(2, z)
+                .expect("index_axis")
                 .iter()
                 .filter(|&&h| h > 300.0)
                 .count()
@@ -400,10 +401,10 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 
 /// Find the centroid (x_ct, y_ct) of bone voxels on an axial slice.
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.index_axis::<2>(2, z);
-    let (nx, ny) = slice.dim();
+    let slice = hu.index_axis::<2>(2, z).expect("index_axis");
+    let [nx, ny] = slice.shape();
     let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
-    for ((x, y), &h) in slice.indexed_iter() {
+    for ([x, y], &h) in slice.indexed_iter() {
         if h > 300.0 {
             sx += x as f64;
             sy += y as f64;
@@ -419,12 +420,13 @@ fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
 
 /// Measure the outer skull radius in an axial slice.
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
-    let (nx, ny, _) = hu.dim();
+    let [nx, ny, _] = hu.shape();
     let r = hu
         .index_axis::<2>(2, z)
+        .expect("index_axis")
         .indexed_iter()
         .filter(|(_, &h)| h > 300.0)
-        .map(|((x, y), _)| {
+        .map(|([x, y], _)| {
             let dx = x as f64 - cx;
             let dy = y as f64 - cy;
             (dx * dx + dy * dy).sqrt()
@@ -441,7 +443,7 @@ fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
 ///
 /// Clamps all indices to valid range.  Returns 0.0 for empty volumes.
 fn trilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let (nx, ny, nz) = hu.dim();
+    let [nx, ny, nz] = hu.shape();
     if nx == 0 || ny == 0 || nz == 0 {
         return 0.0;
     }
@@ -626,7 +628,7 @@ fn build_brain_velocity_3d(
     let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
     let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
 
-    let (mni_nx, mni_ny, mni_nz) = gm.dim();
+    let [mni_nx, mni_ny, mni_nz] = gm.shape();
     let cx_mni = mni_nx / 2;
     let cy_mni = mni_ny / 2;
     let cz_mni = mni_nz / 2;
@@ -725,7 +727,7 @@ fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
         nonzero[idx.min(nonzero.len() - 1)].max(1.0)
     };
 
-    vol.mapv_inplace(|v| (v / p99).clamp(0.0, 1.0));
+    for v in vol.iter_mut() { *v = (*v / p99).clamp(0.0, 1.0); }
 
     Ok((vol, [spacing[0], spacing[1], spacing[2]]))
 }
@@ -761,7 +763,7 @@ fn build_brain_velocity_from_t1(
     t1: &Array3<f64>,
     t1_spacing: [f64; 3],
 ) -> Array3<f64> {
-    let (t1_nx, t1_ny, t1_nz) = t1.dim();
+    let [t1_nx, t1_ny, t1_nz] = t1.shape();
     let cx_t1 = t1_nx as f64 / 2.0;
     let cy_t1 = t1_ny as f64 / 2.0;
     let cz_t1 = t1_nz as f64 / 2.0;
@@ -869,7 +871,7 @@ fn build_phantom_3d() -> (SkullPhantom, Option<CtVolume>) {
         print!("  CT source       : {}  ", ct_path.display());
         match load_ct_volume(&ct_path) {
             Ok(vol) => {
-                let (cx, cy, nz) = vol.hu.dim();
+                let [cx, cy, nz] = vol.hu.shape();
                 println!(
                     "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
                     vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
@@ -1069,8 +1071,8 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
         .map(|(&t, &r)| (t - r).powi(2))
         .sum();
     let rmse = (l2 / n).sqrt();
-    let mean_t = true_model.sum() / n;
-    let mean_r = reconstructed.sum() / n;
+    let mean_t = true_model.iter().sum::<f64>() / n;
+    let mean_r = reconstructed.iter().sum::<f64>() / n;
     let cov = true_model
         .iter()
         .zip(reconstructed.iter())
@@ -1118,13 +1120,13 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
     let cz = (NZ / 2) as f64;
     let free_pairs: Vec<(f64, f64)> = true_model
         .indexed_iter()
-        .filter(|((ix, iy, iz), _)| {
+        .filter(|([ix, iy, iz], _)| {
             let dx = *ix as f64 - cx;
             let dy = *iy as f64 - cy;
             let dz = *iz as f64 - cz;
             (dx * dx + dy * dy + dz * dz).sqrt() < R_SKULL_IN
         })
-        .map(|((ix, iy, iz), &t)| (t, reconstructed[[ix, iy, iz]]))
+        .map(|([ix, iy, iz], &t)| (t, reconstructed[[ix, iy, iz]]))
         .collect();
     print_quality_pairs(&free_pairs);
 }
@@ -1344,7 +1346,7 @@ fn main() -> KwaversResult<()> {
     let t1_result = if t1_path.exists() {
         match load_t1_mri(&t1_path) {
             Ok(r) => {
-                let (t1_nx, t1_ny, t1_nz) = r.0.dim();
+                let [t1_nx, t1_ny, t1_nz] = r.0.shape();
                 println!(
                     "  T1 loaded       : {t1_nx}×{t1_ny}×{t1_nz} voxels @ [{:.2},{:.2},{:.2}] mm",
                     r.1[0], r.1[1], r.1[2]
@@ -1670,7 +1672,7 @@ fn main() -> KwaversResult<()> {
                 let (bt_min, bt_max) = skull_mask
                     .indexed_iter()
                     .filter(|(_, &frozen)| !frozen)
-                    .map(|((ix, iy, iz), _)| brain_true[[ix, iy, iz]])
+                    .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
                     .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
                         (mn.min(c), mx.max(c))
                     });
@@ -1687,14 +1689,16 @@ fn main() -> KwaversResult<()> {
                     None => skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER }),
                 };
                 // Fill frozen voxels with CT skull velocity.
-                Zip::from(&mut brain_initial)
-                    .and(&skull_mask)
-                    .and(&phantom.sound_speed)
-                    .for_each(|c, &frozen, &ct| {
-                        if frozen {
-                            *c = ct;
+                let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
+                for i in 0..bi_nx {
+                    for j in 0..bi_ny {
+                        for k in 0..bi_nz {
+                            if skull_mask[[i, j, k]] {
+                                brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
+                            }
                         }
-                    });
+                    }
+                }
 
                 // Stage-2 FWI at 400 kHz, 15 iterations.
                 let f0_brain = 400_000.0_f64;

@@ -24,7 +24,8 @@ pub fn envelope(rf: &Array1<f64>) -> Array1<f64> {
         &leto::Array1::from_vec([rf.len()], rf.iter().copied().collect())
             .expect("RF line length must match its Leto shape"),
     );
-    Array1::from_vec(analytic.iter().map(|z| z.norm()).collect())
+    let mags: Vec<f64> = analytic.iter().map(|z| z.norm()).collect();
+    Array1::from_vec([mags.len()], mags).expect("envelope magnitudes must match Leto shape")
 }
 
 /// Log-compress an envelope to a normalized display image in `[0, 1]`.

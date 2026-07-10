@@ -58,7 +58,7 @@ mod tests {
 
     fn var_col(backend: &TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
         Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![(values.shape()[0] * values.shape()[1] * values.shape()[2]), 1], values, backend),
+            coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, backend),
             false,
         )
     }
@@ -98,7 +98,7 @@ mod tests {
 
         assert_eq!(
             updated_network.hidden_layer_count(),
-            (config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) - 1
+            (config.hidden_layers.len()) - 1
         );
         Ok(())
     }

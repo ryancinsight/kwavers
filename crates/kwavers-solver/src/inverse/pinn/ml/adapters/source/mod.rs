@@ -121,7 +121,7 @@ impl PinnAcousticSource {
     fn classify_source(source: &dyn Source, positions: &[(f64, f64, f64)]) -> PinnSourceClass {
         match source.source_type() {
             SourceField::Pressure => {
-                if (positions.shape()[0] * positions.shape()[1] * positions.shape()[2]) == 1 {
+                if (positions.len()) == 1 {
                     PinnSourceClass::Monopole
                 } else {
                     PinnSourceClass::Distributed

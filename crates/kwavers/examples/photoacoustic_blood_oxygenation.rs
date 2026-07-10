@@ -219,7 +219,11 @@ fn main() -> Result<()> {
         println!(
             "  Fluence computed: max = {:.2e} W/m², mean = {:.2e} W/m²",
             fluence.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-            fluence.mean().unwrap_or(0.0)
+            if fluence.len() == 0 {
+                0.0
+            } else {
+                fluence.iter().sum::<f64>() / fluence.len() as f64
+            }
         );
         println!("  Time: {:.2} ms", start.elapsed().as_secs_f64() * 1e3);
     }
@@ -251,9 +255,9 @@ fn main() -> Result<()> {
     );
     println!(
         "Output dimensions: {}×{}×{}",
-        oxygenation_result.so2_map.dim().0,
-        oxygenation_result.so2_map.dim().1,
-        oxygenation_result.so2_map.dim().2
+        oxygenation_result.so2_map.shape()[0],
+        oxygenation_result.so2_map.shape()[1],
+        oxygenation_result.so2_map.shape()[2]
     );
     println!();
 

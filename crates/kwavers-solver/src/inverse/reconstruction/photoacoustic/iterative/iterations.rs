@@ -3,7 +3,6 @@
 use super::IterativeAlgorithm;
 use super::IterativeMethods;
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::apply_inplace;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::{
     Array1,
@@ -21,10 +20,27 @@ impl IterativeMethods {
         x: &Array1<f64>,
         y: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let ax = leto_ops::Dot::dot(a, x);
-        let residual = y - &ax;
-        let update = a.transpose([1, 0]).unwrap().dot(&residual);
-        Ok(x + self.relaxation_factor * &update)
+        let n_rows = a.shape()[0];
+        // ax = A·x
+        let mut ax = Array1::<f64>::zeros(n_rows);
+        leto_ops::matvec(&a.view(), &x.view(), &mut ax.view_mut())
+            .expect("invariant: SIRT A·x conforms");
+        // residual = y − ax
+        let mut residual = Array1::<f64>::zeros(n_rows);
+        for i in 0..n_rows {
+            residual[i] = y[i] - ax[i];
+        }
+        // update = Aᵀ·residual  (transposed view; matvec handles the strides)
+        let at = a.transpose([1, 0]).expect("invariant: SIRT transpose valid");
+        let mut update = Array1::<f64>::zeros(at.shape()[0]);
+        leto_ops::matvec(&at, &residual.view(), &mut update.view_mut())
+            .expect("invariant: SIRT Aᵀ·residual conforms");
+        // x ← x + λ·update
+        let mut out = Array1::<f64>::zeros(x.len());
+        for i in 0..x.len() {
+            out[i] = x[i] + self.relaxation_factor * update[i];
+        }
+        Ok(out)
     }
 
     /// One ART step: sequential Kaczmarz row projections.
@@ -39,22 +55,24 @@ impl IterativeMethods {
         x: &mut Array1<f64>,
         y: &Array1<f64>,
     ) -> KwaversResult<()> {
-        for (i, row) in a.rows().into_iter().enumerate() {
-            let ax_i = leto_ops::Dot::dot(row, x);
+        let n_rows = a.shape()[0];
+        for i in 0..n_rows {
+            let row = a
+                .index_axis::<1>(0, i)
+                .expect("invariant: ART row index in range");
+            let ax_i = leto_ops::dot(&row, &x.view()).expect("invariant: ART aᵢ·x conforms");
             let residual = y[i] - ax_i;
-            let row_norm_sq = row.dot(&row);
+            let row_norm_sq = leto_ops::dot(&row, &row).expect("invariant: ART ‖aᵢ‖² conforms");
 
             if row_norm_sq > 0.0 {
                 let update_factor = self.relaxation_factor * residual / row_norm_sq;
-                if let (Some(x_values), Some(row_values)) =
-                    (x.as_slice_mut(), row.as_slice())
-                {
+                if let (Some(x_values), Some(row_values)) = (x.as_slice_mut(), row.as_slice()) {
                     enumerate_mut_with::<Adaptive, _, _>(x_values, |idx, x_value| {
                         *x_value += update_factor * row_values[idx];
                     });
                 } else {
-                    for (x_value, &a_value) in x.iter_mut().zip(row.iter()) {
-                        *x_value += update_factor * a_value;
+                    for k in 0..x.len() {
+                        x[k] += update_factor * row[k];
                     }
                 }
             }
@@ -78,7 +96,9 @@ impl IterativeMethods {
     ) -> KwaversResult<()> {
         let [n_measurements, n_voxels] = a.shape();
 
-        apply_inplace(x, |v| v.max(1e-10));
+        for value in x.iter_mut() {
+            *value = value.max(1e-10);
+        }
 
         let subset_size = n_measurements.div_ceil(subsets);
 
@@ -86,20 +106,41 @@ impl IterativeMethods {
             let start_idx = subset_idx * subset_size;
             let end_idx = ((subset_idx + 1) * subset_size).min(n_measurements);
 
-            let a_subset = aslice(&[(Some(start_idx as isize) as usize, Some(end_idx as isize) as usize, 1), (0, usize::MAX, 1)]);
-            let y_subset = yslice(&[(Some(start_idx as isize) as usize, Some(end_idx as isize) as usize, 1)]);
+            let a_subset = a
+                .slice_with::<2>(&s![start_idx..end_idx, ..])
+                .expect("invariant: OSEM measurement-row subset in range");
+            let y_subset = y
+                .slice_with::<1>(&s![start_idx..end_idx])
+                .expect("invariant: OSEM measurement subset in range");
+            let n_sub = end_idx - start_idx;
 
-            let sensitivity = a_subset.sum_axis(0);
-            let forward_proj = leto_ops::Dot::dot(a_subset, x);
+            // sensitivity[j] = Σ_i A_subset[i, j]  (column sums)
+            let mut sensitivity = Array1::<f64>::zeros(n_voxels);
+            for ii in 0..n_sub {
+                for j in 0..n_voxels {
+                    sensitivity[j] += a_subset[[ii, j]];
+                }
+            }
 
-            let mut ratio = Array1::zeros(end_idx - start_idx);
-            for i in 0..(ratio.shape()[0] * ratio.shape()[1] * ratio.shape()[2]) {
+            // forward_proj = A_subset · x
+            let mut forward_proj = Array1::<f64>::zeros(n_sub);
+            leto_ops::matvec(&a_subset, &x.view(), &mut forward_proj.view_mut())
+                .expect("invariant: OSEM A_s·x conforms");
+
+            let mut ratio = Array1::<f64>::zeros(n_sub);
+            for i in 0..ratio.len() {
                 if forward_proj[i] > 1e-10 {
                     ratio[i] = y_subset[i] / forward_proj[i];
                 }
             }
 
-            let correction = a_subset.transpose([1, 0]).unwrap().dot(&ratio);
+            // correction = A_subsetᵀ · ratio  (transposed view)
+            let at = a_subset
+                .transpose([1, 0])
+                .expect("invariant: OSEM subset transpose valid");
+            let mut correction = Array1::<f64>::zeros(n_voxels);
+            leto_ops::matvec(&at, &ratio.view(), &mut correction.view_mut())
+                .expect("invariant: OSEM A_sᵀ·ratio conforms");
 
             for i in 0..n_voxels {
                 if sensitivity[i] > 1e-10 {
@@ -123,10 +164,10 @@ impl IterativeMethods {
             return Ok(());
         }
 
-        let n = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
+        let n = x.len();
         let grid_size_est = (n as f64).cbrt() as usize;
 
-        let mut grad_reg = Array1::zeros(n);
+        let mut grad_reg = Array1::<f64>::zeros(n);
 
         for idx in 0..n {
             let (i, j, k) = self.linear_to_3d_index(idx, [grid_size_est; 3]);
@@ -159,10 +200,14 @@ impl IterativeMethods {
             }
         }
 
-        *x = &*x - self.regularization_parameter * grad_reg;
+        for idx in 0..n {
+            x[idx] -= self.regularization_parameter * grad_reg[idx];
+        }
 
         if matches!(self.algorithm, IterativeAlgorithm::OSEM { .. }) {
-            apply_inplace(x, |v| v.max(0.0));
+            for value in x.iter_mut() {
+            *value = value.max(0.0);
+        }
         }
 
         Ok(())

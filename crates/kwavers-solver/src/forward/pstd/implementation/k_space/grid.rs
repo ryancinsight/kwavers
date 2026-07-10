@@ -43,13 +43,13 @@ impl PSTDKSGrid {
     /// Compute wavenumber grid for one dimension using FFT conventions
     #[must_use]
     pub fn compute_wavenumbers(n: usize, dx: f64) -> Array1<f64> {
-        KSpaceCalculator::generate_k_vector(n, dx).into()
+        KSpaceCalculator::generate_k_vector(n, dx)
     }
 
     /// Get grid dimensions (nx, ny, nz)
     #[must_use]
     pub fn dimensions(&self) -> (usize, usize, usize) {
         let shape = self.k_mag.shape();
-        (shape.0, shape.1, shape.2)
+        (shape[0], shape[1], shape[2])
     }
 }

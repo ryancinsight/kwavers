@@ -65,7 +65,7 @@ fn normalize_abs(map: &Array2<f64>) -> Array2<f64> {
     if span > 0.0 {
         map.mapv(|v| (v.abs() - lo) / span)
     } else {
-        Array2::zeros(map.raw_dim())
+        Array2::zeros(map.shape())
     }
 }
 
@@ -81,11 +81,11 @@ pub fn fuse_lesion_map(
     passive_energy: &Array2<f64>,
     weights: FusionWeights,
 ) -> KwaversResult<FusedLesion> {
-    if quantitative_dc.dim() != passive_energy.dim() {
+    if quantitative_dc.shape() != passive_energy.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "fusion maps differ: quantitative {:?} vs passive {:?}",
-            quantitative_dc.dim(),
-            passive_energy.dim()
+            quantitative_dc.shape(),
+            passive_energy.shape()
         )));
     }
     let q = normalize_abs(quantitative_dc);
@@ -97,8 +97,8 @@ pub fn fuse_lesion_map(
     // (each normalized map is already in [0, 1]).
     let w_max = wq.max(wp).max(f64::EPSILON);
 
-    let mut agreement = Array2::zeros(q.raw_dim());
-    let mut union = Array2::zeros(q.raw_dim());
+    let mut agreement = Array2::zeros(q.shape());
+    let mut union = Array2::zeros(q.shape());
     zip_two_mut_two_refs(
         agreement.view_mut(),
         union.view_mut(),

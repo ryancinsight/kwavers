@@ -60,7 +60,7 @@ mod tests {
             .add_pec_boundary(BoundaryPosition::Left)
             .add_pmc_boundary(BoundaryPosition::Right);
 
-        assert_eq!((domain.boundary_specs.shape()[0] * domain.boundary_specs.shape()[1] * domain.boundary_specs.shape()[2]), 2);
+        assert_eq!((domain.boundary_specs.len()), 2);
 
         match &domain.boundary_specs[0] {
             ElectromagneticBoundarySpec::PerfectElectricConductor { .. } => {

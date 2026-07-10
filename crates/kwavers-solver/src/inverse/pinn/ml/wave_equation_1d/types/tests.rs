@@ -14,7 +14,7 @@ fn test_record_epoch() {
     metrics.record_epoch(0.1, 0.05, 0.03, 0.02);
 
     assert_eq!(metrics.epochs_completed, 1);
-    assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 1);
+    assert_eq!((metrics.total_loss.len()), 1);
     assert_eq!(metrics.total_loss[0], 0.1);
     assert_eq!(metrics.data_loss[0], 0.05);
     assert_eq!(metrics.pde_loss[0], 0.03);

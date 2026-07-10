@@ -10,7 +10,7 @@ type TestBackend = coeus_core::MoiraiBackend;
 
 fn var_row(backend: &TestBackend, values: &[f32]) -> Var<f32, TestBackend> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![1, (values.shape()[0] * values.shape()[1] * values.shape()[2])], values, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![1, (values.len())], values, backend),
         false,
     )
 }

@@ -20,7 +20,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PinnConformalPredictor")
-            .field("calibration_scores_len", &(self.calibration_scores.shape()[0] * self.calibration_scores.shape()[1] * self.calibration_scores.shape()[2]))
+            .field("calibration_scores_len", &(self.calibration_scores.len()))
             .field("alpha", &self.alpha)
             .field("quantile", &self.quantile)
             .finish_non_exhaustive()
@@ -56,13 +56,13 @@ where
         calibration_inputs: &[Vec<f32>],
         calibration_targets: &[f32],
     ) -> KwaversResult<()> {
-        if (calibration_inputs.shape()[0] * calibration_inputs.shape()[1] * calibration_inputs.shape()[2]) != (calibration_targets.shape()[0] * calibration_targets.shape()[1] * calibration_targets.shape()[2]) {
+        if (calibration_inputs.len()) != (calibration_targets.len()) {
             return Err(KwaversError::InvalidInput(
                 "Calibration inputs and targets must have same length".into(),
             ));
         }
 
-        let mut scores: Vec<f32> = Vec::with_capacity((calibration_inputs.shape()[0] * calibration_inputs.shape()[1] * calibration_inputs.shape()[2]));
+        let mut scores: Vec<f32> = Vec::with_capacity((calibration_inputs.len()));
 
         for (input, target) in calibration_inputs.iter().zip(calibration_targets.iter()) {
             let score = self.compute_nonconformity_score(input, *target)?;
@@ -76,7 +76,7 @@ where
         }
 
         scores.sort_by(|a, b| a.total_cmp(b));
-        let n = (scores.shape()[0] * scores.shape()[1] * scores.shape()[2]);
+        let n = (scores.len());
         let k = (((n as f64 + 1.0) * (1.0 - self.alpha)).ceil() as usize).clamp(1, n);
         let q_hat = scores[k - 1];
 
@@ -98,7 +98,7 @@ where
             )
         })?;
 
-        if (input.shape()[0] * input.shape()[1] * input.shape()[2]) != 3 {
+        if (input.len()) != 3 {
             return Err(KwaversError::InvalidInput(
                 "Expected input to be [x, y, t]".into(),
             ));
@@ -123,7 +123,7 @@ where
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     fn compute_nonconformity_score(&self, input: &[f32], target: f32) -> KwaversResult<f32> {
-        if (input.shape()[0] * input.shape()[1] * input.shape()[2]) != 3 {
+        if (input.len()) != 3 {
             return Err(KwaversError::InvalidInput(
                 "Expected input to be [x, y, t]".into(),
             ));

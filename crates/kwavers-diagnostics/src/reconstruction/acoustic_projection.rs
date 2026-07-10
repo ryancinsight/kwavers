@@ -110,7 +110,7 @@ pub(crate) fn project_acoustic(
     image: &Array3<f64>,
     geom: &AcousticProjectionGeometry,
 ) -> Array1<f64> {
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
     let (dx, dy, dz) = geom.voxel_spacing;
     let alpha = geom.alpha_nepers_per_m_per_hz();
     let f_c = geom.center_frequency_hz;

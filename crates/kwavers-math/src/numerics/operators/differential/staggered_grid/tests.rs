@@ -77,7 +77,7 @@ fn test_forward_difference_linear_function() {
         }
     }
     let grad = op.apply_forward_x(field.view()).unwrap();
-    assert_eq!(grad.shape(), (9, 5, 5));
+    assert_eq!(grad.shape(), [9, 5, 5]);
     for i in 0..9 {
         for j in 0..5 {
             for k in 0..5 {
@@ -100,7 +100,7 @@ fn test_backward_difference_linear_function() {
         }
     }
     let grad = op.apply_backward_x(field.view()).unwrap();
-    assert_eq!(grad.shape(), (10, 5, 5));
+    assert_eq!(grad.shape(), [10, 5, 5]);
     for i in 1..10 {
         for j in 0..5 {
             for k in 0..5 {

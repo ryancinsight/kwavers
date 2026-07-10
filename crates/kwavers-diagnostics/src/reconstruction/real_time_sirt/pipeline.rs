@@ -226,7 +226,7 @@ impl RealTimeSirtPipeline {
         }
 
         let mut image = self.current_image.clone().unwrap();
-        let (nx, ny, nz) = image.dim();
+        let [nx, ny, nz] = image.shape();
         let relaxation = self.config.sirt_config.relaxation_factor;
         let n_meas = preprocessed.len();
         let meas_norm = {
@@ -263,7 +263,7 @@ impl RealTimeSirtPipeline {
                 }
                 let res_norm: f64 = residual.iter().map(|&r| r * r).sum::<f64>().sqrt();
                 convergence_error = res_norm / meas_norm;
-                let scaled = Array1::from_shape_fn(n_sensors, |s| residual[s] / row_norm_sq[s]);
+                let scaled = Array1::from_shape_fn(n_sensors, |[s]| residual[s] / row_norm_sq[s]);
                 let backproj = backproject_acoustic(&scaled, (nx, ny, nz), geom);
                 for i in 0..nx {
                     for j in 0..ny {
@@ -342,7 +342,7 @@ impl RealTimeSirtPipeline {
         if rf_data.is_empty() {
             return Err(KwaversError::InvalidInput("Empty RF data".to_owned()));
         }
-        for &val in rf_data {
+        for &val in rf_data.iter() {
             if !val.is_finite() {
                 return Err(KwaversError::InvalidInput(
                     "RF data contains NaN or Inf".to_owned(),
@@ -383,7 +383,7 @@ impl RealTimeSirtPipeline {
         if sigma <= 0.0 {
             return Ok(image.clone());
         }
-        let (nx, ny, nz) = image.dim();
+        let [nx, ny, nz] = image.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return Ok(image.clone());
         }

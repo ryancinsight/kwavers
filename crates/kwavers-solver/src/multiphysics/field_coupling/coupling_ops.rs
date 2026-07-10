@@ -32,7 +32,7 @@ impl MultiphysicsFieldCoupler {
         dt: f64,
     ) -> KwaversResult<()> {
         validate_coupled_field_set(fields)?;
-        let mut previous_fields = fields.iter().cloned().collect::<Vec<_>>();
+        let mut previous_fields = fields.to_vec();
 
         for iteration in 0..self.max_iterations {
             self.apply_weak_coupling(fields, dt)?;
@@ -70,7 +70,7 @@ impl MultiphysicsFieldCoupler {
     fn couple_acoustic_to_optical(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, intensity) = read_write_fields::<PRESSURE_IDX, LIGHT_IDX>(fields)?;
 
-        for ((i, j, k), &p) in pressure.indexed_iter() {
+        for ([i, j, k], &p) in pressure.indexed_iter() {
             let delta_n = 1e-12 * p;
             let modulation = (self.coupling_strength * delta_n).mul_add(dt, 1.0);
             intensity[[i, j, k]] *= modulation;
@@ -85,7 +85,7 @@ impl MultiphysicsFieldCoupler {
 
         let absorption_coefficient = 10.0; // 10 m⁻¹ (typical for tissue)
 
-        for ((i, j, k), &i_val) in intensity.indexed_iter() {
+        for ([i, j, k], &i_val) in intensity.indexed_iter() {
             let heat_source = absorption_coefficient * i_val;
             let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
             temperature[[i, j, k]] += delta_t;
@@ -100,7 +100,7 @@ impl MultiphysicsFieldCoupler {
 
         let absorption_coefficient = 0.5; // 0.5 Np/m (typical for tissue)
 
-        for ((i, j, k), &p) in pressure.indexed_iter() {
+        for ([i, j, k], &p) in pressure.indexed_iter() {
             let intensity = p * p / (DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
             let heat_source = absorption_coefficient * intensity;
             let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
@@ -139,7 +139,7 @@ impl MultiphysicsFieldCoupler {
     fn apply_relaxation(&self, previous: &[Array3<f64>], current: &mut [Array3<f64>]) {
         let omega = 0.5;
         for (prev_field, curr_field) in previous.iter().zip(current.iter_mut()) {
-            for ((i, j, k), &prev_val) in prev_field.indexed_iter() {
+            for ([i, j, k], &prev_val) in prev_field.indexed_iter() {
                 let curr_val = curr_field[[i, j, k]];
                 curr_field[[i, j, k]] = omega * curr_val + (1.0 - omega) * prev_val;
             }
@@ -200,9 +200,9 @@ impl MultiphysicsFieldCoupler {
 }
 
 fn validate_coupled_field_set(fields: &[Array3<f64>]) -> KwaversResult<()> {
-    validate_field_index::<PRESSURE_IDX>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
-    validate_field_index::<TEMPERATURE_IDX>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
-    validate_field_index::<LIGHT_IDX>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
+    validate_field_index::<PRESSURE_IDX>(fields.len() )?;
+    validate_field_index::<TEMPERATURE_IDX>(fields.len() )?;
+    validate_field_index::<LIGHT_IDX>(fields.len() )?;
     validate_coupled_shapes::<PRESSURE_IDX, TEMPERATURE_IDX>(
         &fields[PRESSURE_IDX],
         &fields[TEMPERATURE_IDX],
@@ -229,8 +229,8 @@ fn copy_fields_into(target: &mut [Array3<f64>], source: &[Array3<f64>]) {
 fn read_write_fields<const READ: usize, const WRITE: usize>(
     fields: &mut [Array3<f64>],
 ) -> KwaversResult<(&Array3<f64>, &mut Array3<f64>)> {
-    validate_field_index::<READ>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
-    validate_field_index::<WRITE>((fields.shape()[0] * fields.shape()[1] * fields.shape()[2]))?;
+    validate_field_index::<READ>(fields.len() )?;
+    validate_field_index::<WRITE>(fields.len() )?;
     if READ == WRITE {
         return Err(KwaversError::InvalidInput(format!(
             "MultiphysicsFieldCoupler requires distinct read/write indices, got {READ}"

@@ -113,10 +113,10 @@ fn test_gaussian_beam_phase_accuracy() {
 
     // ── Cross-correlation phase velocity ──────────────────────────────────────
     // C(τ) = Σₜ p₁(t)·p₂(t+τ);  c_meas = Δx_sensors / (τ*·dt)
-    let lag_max = ((sensor1.shape()[0] * sensor1.shape()[1] * sensor1.shape()[2]) / 2).max(1);
+    let lag_max = ((sensor1.len()) / 2).max(1);
     let (best_lag, best_corr) = (1..lag_max)
         .map(|lag| {
-            let n_valid = (sensor1.shape()[0] * sensor1.shape()[1] * sensor1.shape()[2]).saturating_sub(lag);
+            let n_valid = (sensor1.len()).saturating_sub(lag);
             let corr: f64 = sensor1[..n_valid]
                 .iter()
                 .zip(&sensor2[lag..lag + n_valid])

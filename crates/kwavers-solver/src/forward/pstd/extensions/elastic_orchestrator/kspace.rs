@@ -140,7 +140,7 @@ pub(super) fn build_kappa(
     dy: f64,
     dz: f64,
 ) -> Array3<f64> {
-    canonical_generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt).into()
+    canonical_generate_kappa(nx, ny, nz, dx, dy, dz, c_ref, dt)
 }
 
 // ─── Spectral derivative helpers ─────────────────────────────────────────────

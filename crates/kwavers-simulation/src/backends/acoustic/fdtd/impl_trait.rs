@@ -28,14 +28,39 @@ impl AcousticSolverBackend for FdtdBackend {
         let p = &self.pressure;
         let rho = &self.solver.materials.rho0;
         let c = &self.solver.materials.c0;
-        let impedance = rho * c;
-        Ok(p.mapv(|p_val| p_val * p_val) / &impedance)
+        let mut result = Array3::<f64>::zeros(p.shape());
+        for (p_idx, (&p_val, (&rho_val, &c_val))) in
+            p.iter().zip(rho.iter().zip(c.iter())).enumerate()
+        {
+            let shape = p.shape();
+            let i = p_idx / (shape[1] * shape[2]);
+            let rem = p_idx % (shape[1] * shape[2]);
+            let j = rem / shape[2];
+            let k = rem % shape[2];
+            let impedance = rho_val * c_val;
+            let val = if impedance > 0.0 {
+                p_val * p_val / impedance
+            } else {
+                0.0
+            };
+            result[[i, j, k]] = val;
+        }
+        Ok(result)
     }
 
     fn get_impedance_field(&self) -> KwaversResult<Array3<f64>> {
         let rho = &self.solver.materials.rho0;
         let c = &self.solver.materials.c0;
-        Ok(rho * c)
+        let mut result = Array3::<f64>::zeros(rho.shape());
+        for (idx, (&rho_val, &c_val)) in rho.iter().zip(c.iter()).enumerate() {
+            let shape = rho.shape();
+            let i = idx / (shape[1] * shape[2]);
+            let rem = idx % (shape[1] * shape[2]);
+            let j = rem / shape[2];
+            let k = rem % shape[2];
+            result[[i, j, k]] = rho_val * c_val;
+        }
+        Ok(result)
     }
 
     fn get_dt(&self) -> f64 {

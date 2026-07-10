@@ -23,8 +23,8 @@ fn test_pstd_sem_coupling_creation() {
     let solver = PstdSemSolver::new(config, pstd_grid, sem_mesh).unwrap();
     // Fresh solver: PSTD field is all-zero (16×16×16 grid), no convergence history.
     assert_eq!(
-        solver.pstd_field().dim(),
-        (16, 16, 16),
+        solver.pstd_field().shape(),
+        [16, 16, 16],
         "pstd_field must match 16×16×16 grid"
     );
     assert!(

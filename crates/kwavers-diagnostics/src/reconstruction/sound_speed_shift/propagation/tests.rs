@@ -35,7 +35,10 @@ fn circular_arc_path_is_longer_than_its_chord() {
 #[test]
 fn finite_frequency_entries_conserve_segment_length_on_full_mask() {
     let mask = Array2::from_elem((9, 9), true);
-    let active_lookup = full_lookup(mask.dim());
+    let active_lookup = full_lookup({
+        let [rows, cols] = mask.shape();
+        (rows, cols)
+    });
     let sample = SoundSpeedShiftSample::new(
         PlanarPoint {
             x_m: -0.002,
@@ -56,7 +59,10 @@ fn finite_frequency_entries_conserve_segment_length_on_full_mask() {
         ..Default::default()
     };
 
-    let entries = row_entries(&sample, &active_lookup, mask.dim(), config);
+    let entries = row_entries(&sample, &active_lookup, {
+        let [rows, cols] = mask.shape();
+        (rows, cols)
+    }, config);
     let total = entries.iter().map(|(_, weight)| *weight).sum::<f64>();
 
     assert!((total - 0.004).abs() <= 1.0e-14);

@@ -118,8 +118,8 @@ impl Plugin for MechanicalStressPlugin {
 
     fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         let elastic_medium = ElasticPstdMedium {
-            lame_lambda: medium.lame_lambda_array().into(),
-            lame_mu: medium.lame_mu_array().into(),
+            lame_lambda: medium.lame_lambda_array(),
+            lame_mu: medium.lame_mu_array(),
             density: medium.density_array().to_contiguous(),
         };
         self.orchestrator = Some(ElasticPstdOrchestrator::new(grid, elastic_medium, self.dt)?);
@@ -147,7 +147,9 @@ impl Plugin for MechanicalStressPlugin {
 
         // Provide the isotropic pressure p = -⅓ tr(σ) to the unified cube.
         let pressure = orchestrator.pressure_field();
-        let mut pressure_plane = fields.index_axis_mut(0, UnifiedFieldType::Pressure.index());
+        let mut pressure_plane = fields
+            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within unified field array");
         let [nx, ny, nz] = pressure.shape();
         for i in 0..nx {
             for j in 0..ny {
@@ -245,7 +247,7 @@ mod tests {
         plugin
             .update(&mut fields, &g, &medium, 5e-8, 0.0, &mut ctx)
             .expect("first step");
-        let after_one = fields.index_axis(0, p_idx).unwrap().to_owned();
+        let after_one = fields.index_axis::<3>(0, p_idx).unwrap().to_contiguous();
         let energy_one: f64 = after_one.iter().map(|v| v * v).sum();
         assert!(
             energy_one > 0.0,
@@ -255,7 +257,7 @@ mod tests {
         plugin
             .update(&mut fields, &g, &medium, 5e-8, 5e-8, &mut ctx)
             .expect("second step");
-        let after_two = fields.index_axis(0, p_idx).unwrap().to_owned();
+        let after_two = fields.index_axis::<3>(0, p_idx).unwrap().to_contiguous();
 
         // The wave propagates: the field is different between steps (genuine
         // evolution, not a static write).

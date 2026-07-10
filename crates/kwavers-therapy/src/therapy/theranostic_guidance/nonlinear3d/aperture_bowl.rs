@@ -28,7 +28,7 @@ pub(super) fn abdominal_bowl_candidates(
     volume: &Nonlinear3dVolume,
     requested_count: usize,
 ) -> KwaversResult<Vec<GridIndex>> {
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let exterior = exterior_air_mask(&volume.body_mask);
     let focus_m = grid_point_m(volume.focus, n, volume.spacing_m);
     let center = [0.5 * (n - 1) as f64; 3];
@@ -108,10 +108,10 @@ fn source_eligible_exterior_cells(
     focus_m: Point3,
     outward: [f64; 3],
 ) -> Vec<ExteriorCell> {
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let cos_limit = (BOWL_THETA_MAX_RAD.cos() - 0.15).max(0.0);
     let mut cells = Vec::new();
-    for ((x, y, z), is_exterior) in exterior.indexed_iter() {
+    for ([x, y, z], is_exterior) in exterior.indexed_iter() {
         if !*is_exterior
             || volume.body_mask[[x, y, z]]
             || x == 0
@@ -235,7 +235,7 @@ mod tests {
         target_mask: Array3<bool>,
         focus: GridIndex,
     ) -> Nonlinear3dVolume {
-        let n = body_mask.dim().0;
+        let n = body_mask.shape()[0];
         let f64_zeros = Array3::from_elem((n, n, n), 0.0);
         let speed = Array3::from_elem((n, n, n), SOUND_SPEED_WATER_SIM);
         Nonlinear3dVolume {

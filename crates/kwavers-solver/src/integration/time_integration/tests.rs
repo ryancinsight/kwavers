@@ -12,10 +12,7 @@ use super::time_stepper::{AdamsBashforth, AdamsBashforthConfig, RK4Config, Runge
 use super::traits::{MultiRateConfig, TimeStepper};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 use std::collections::HashMap;
 
 #[test]
@@ -181,7 +178,7 @@ fn time_scale_separator_matches_quadratic_closed_form() -> KwaversResult<()> {
     let expected_diffusive = 1.0 / grad_max;
     let expected_acoustic = 1.0 / laplacian_max.sqrt();
 
-    assert_eq!((scales.shape()[0] * scales.shape()[1] * scales.shape()[2]), 2);
+    assert_eq!(scales.len(), 2);
     assert!(
         (scales[0] - expected_diffusive).abs() < 1e-15,
         "diffusive scale {}, expected {}",

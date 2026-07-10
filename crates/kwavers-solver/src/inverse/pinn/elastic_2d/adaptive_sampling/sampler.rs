@@ -73,7 +73,7 @@ impl AdaptiveSampler {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn resample(&mut self, residuals: &[f64]) -> KwaversResult<Vec<usize>> {
-        let n_candidates = (residuals.shape()[0] * residuals.shape()[1] * residuals.shape()[2]);
+        let n_candidates = (residuals.len());
         if n_candidates == 0 {
             return Err(KwaversError::InvalidInput(
                 "No candidate points for resampling".into(),
@@ -107,7 +107,7 @@ impl AdaptiveSampler {
                 if n_keep > 0 && !self.current_indices.is_empty() {
                     let mut old = self.current_indices.clone();
                     old.shuffle(&mut self.rng);
-                    selected.extend_from_slice(&old[..n_keep.min((old.shape()[0] * old.shape()[1] * old.shape()[2]))]);
+                    selected.extend_from_slice(&old[..n_keep.min((old.len()))]);
                 }
                 selected.extend(self.weighted_sample(&probs, n_new)?);
                 self.current_indices = selected.clone();
@@ -128,9 +128,9 @@ impl AdaptiveSampler {
                     return self.resample(&vec![1.0; n_candidates]);
                 }
                 candidates.sort_by(|a, b| b.1.total_cmp(&a.1));
-                let k = ((top_k_ratio * (candidates.shape()[0] * candidates.shape()[1] * candidates.shape()[2]) as f64) as usize)
+                let k = ((top_k_ratio * (candidates.len()) as f64) as usize)
                     .max(self.n_points)
-                    .min((candidates.shape()[0] * candidates.shape()[1] * candidates.shape()[2]));
+                    .min((candidates.len()));
                 candidates.truncate(k);
                 let mut indices: Vec<usize> = candidates.into_iter().map(|(i, _)| i).collect();
                 indices.shuffle(&mut self.rng);
@@ -170,7 +170,7 @@ impl AdaptiveSampler {
         if n_samples == 0 {
             return Ok(Vec::new());
         }
-        let n = (probs.shape()[0] * probs.shape()[1] * probs.shape()[2]);
+        let n = (probs.len());
         if n_samples > n {
             return Err(KwaversError::InvalidInput(format!(
                 "Cannot sample {} points from {} candidates",
@@ -196,7 +196,7 @@ impl AdaptiveSampler {
         let mut indices = self.current_indices.clone();
         indices.shuffle(&mut self.rng);
         let batch_size = if self.batch_size == 0 {
-            (indices.shape()[0] * indices.shape()[1] * indices.shape()[2])
+            (indices.len())
         } else {
             self.batch_size
         };

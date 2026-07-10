@@ -144,12 +144,12 @@ impl PhotoacousticReconstructor {
         // Apply preprocessing if configured
         let processed_data = if let Some(bandpass) = self.config.bandpass_filter {
             self.filters.apply_bandpass_filter(
-                &sensor_data.to_owned(),
+                &sensor_data.to_contiguous(),
                 bandpass,
                 sampling_frequency,
             )?
         } else {
-            sensor_data.to_owned()
+            sensor_data.to_contiguous()
         };
 
         // Apply envelope detection if configured
@@ -212,7 +212,7 @@ impl PhotoacousticReconstructor {
         sensor_positions: &[[f64; 3]],
     ) -> KwaversResult<Array3<f64>> {
         // Apply FBP filter
-        let filtered_data = self.filters.apply_fbp_filter(&sensor_data.to_owned())?;
+        let filtered_data = self.filters.apply_fbp_filter(&sensor_data.to_contiguous())?;
 
         // Perform back-projection with filtered data
         self.universal_back_projection(
@@ -298,8 +298,12 @@ impl PhotoacousticReconstructor {
         )?;
 
         // Flatten sensor data
-        let b = sensor_data.as_slice().unwrap();
-        let b = leto::ArrayView1::from(b);
+        let b_slice = sensor_data
+            .as_slice()
+            .expect("invariant: sensor data view is contiguous");
+        let b_layout = leto::Layout::<1>::c_contiguous([b_slice.len()])
+            .expect("invariant: 1-D contiguous layout for sensor-data length");
+        let b = leto::ArrayView1::new(b_layout, b_slice);
 
         // Solve using robust linear algebra with regularization
         let solution = if self.config.regularization_parameter > 0.0 {

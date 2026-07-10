@@ -48,7 +48,7 @@ fn test_linear_array_phase_accuracy() {
     }
 
     // All elements driven in phase
-    let signal = Array2::from_shape_fn((1, 500), |(_, t)| {
+    let signal = Array2::from_shape_fn((1, 500), |[_, t]| {
         let t_f64 = t as f64 * config.dt;
         (TWO_PI * frequency * t_f64).sin()
     });

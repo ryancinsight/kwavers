@@ -4,9 +4,9 @@ use super::*;
 fn test_wave_field_creation() {
     let field = NonlinearElasticWaveField::new(10, 10, 10, 3);
 
-    assert_eq!(field.u_fundamental.shape(), (10, 10, 10));
-    assert_eq!(field.u_second.shape(), (10, 10, 10));
-    assert_eq!((field.u_harmonics.shape()[0] * field.u_harmonics.shape()[1] * field.u_harmonics.shape()[2]), 1); // 3 total - 2 = 1 additional
+    assert_eq!(field.u_fundamental.shape(), [10, 10, 10]);
+    assert_eq!(field.u_second.shape(), [10, 10, 10]);
+    assert_eq!((field.u_harmonics.len()), 1); // 3 total - 2 = 1 additional
     assert_eq!(field.num_harmonics(), 3);
     assert_eq!(field.time, 0.0);
     assert_eq!(field.frequency, 50.0);
@@ -46,7 +46,7 @@ fn test_harmonic_spectrum() {
     field.u_harmonics[0][[5, 5, 5]] = 0.01;
 
     let spectrum = field.harmonic_spectrum(5, 5, 5);
-    assert_eq!((spectrum.shape()[0] * spectrum.shape()[1] * spectrum.shape()[2]), 3);
+    assert_eq!((spectrum.len()), 3);
     assert_eq!(spectrum[0], 1.0);
     assert_eq!(spectrum[1], 0.1);
     assert_eq!(spectrum[2], 0.01);

@@ -60,13 +60,13 @@ pub struct QuantizedTensor {
 impl QuantizedTensor {
     pub fn len(&self) -> usize {
         match &self.data {
-            QuantizedData::F32(v) => (v.shape()[0] * v.shape()[1] * v.shape()[2]),
-            QuantizedData::I8(v) => (v.shape()[0] * v.shape()[1] * v.shape()[2]),
+            QuantizedData::F32(v) => (v.len()),
+            QuantizedData::I8(v) => (v.len()),
         }
     }
 
     pub fn is_empty(&self) -> bool {
-        (self.shape()[0] * self.shape()[1] * self.shape()[2]) == 0
+        (self.len()) == 0
     }
 
     pub fn dequantize(&self) -> Vec<f32> {

@@ -47,12 +47,14 @@ impl ReverseTimeMigration {
         let src_signal = wavelet.generate_time_series(self.config.dt, n_time_steps);
 
         for (t, &src_val) in src_signal.iter().enumerate() {
-            pressure[source_position] += src_val;
+            pressure[[source_position.0, source_position.1, source_position.2]] += src_val;
             self.update_wavefield(&mut pressure, &pressure_prev, grid)?;
 
             if t % RTM_STORAGE_DECIMATION == 0 {
                 stored
-                    .slice_mut(s![t / RTM_STORAGE_DECIMATION, .., .., ..]).unwrap().unwrap().assign(&pressure);
+                    .slice_with_mut(&s![t / RTM_STORAGE_DECIMATION, .., .., ..])
+                    .unwrap()
+                    .assign(&pressure);
             }
 
             std::mem::swap(&mut pressure, &mut pressure_prev);
@@ -85,12 +87,15 @@ impl ReverseTimeMigration {
 
         for t in (0..n_time_steps).rev() {
             for (rec_idx, &rec_pos) in receiver_positions.iter().enumerate() {
-                pressure[rec_pos] += shot_data[[rec_idx, t]];
+                pressure[[rec_pos.0, rec_pos.1, rec_pos.2]] += shot_data[[rec_idx, t]];
             }
 
             self.update_wavefield(&mut pressure, &pressure_prev, grid)?;
 
-            backward.slice_mut(s![t, .., .., ..]).unwrap().unwrap().assign(&pressure);
+            backward
+                .slice_with_mut(&s![t, .., .., ..])
+                .unwrap()
+                .assign(&pressure);
 
             std::mem::swap(&mut pressure, &mut pressure_prev);
         }
@@ -116,15 +121,25 @@ impl ReverseTimeMigration {
             let t_rem = t % RTM_STORAGE_DECIMATION;
 
             if t_rem == 0 {
-                full.slice_mut(s![t, .., .., ..]).unwrap().unwrap().assign(&decimated.slice(s![t_dec, .., .., ..]));
+                full.slice_with_mut::<3>(&s![t, .., .., ..])
+                    .expect("invariant: RTM full-wavefield time slice in range")
+                    .assign(
+                        &decimated
+                            .slice_with::<3>(&s![t_dec, .., .., ..])
+                            .expect("invariant: RTM decimated time slice in range"),
+                    );
             } else if t_dec + 1 < decimated.shape()[0] {
                 let weight = t_rem as f64 / RTM_STORAGE_DECIMATION as f64;
-                let snap1 = decimated.slice(s![t_dec, .., .., ..]);
-                let snap2 = decimated.slice(s![t_dec + 1, .., .., ..]);
+                let snap1 = decimated.slice_with::<3>(&s![t_dec, .., .., ..]).expect("invariant: RTM stencil slice in range");
+                let snap2 = decimated.slice_with::<3>(&s![t_dec + 1, .., .., ..]).expect("invariant: RTM stencil slice in range");
 
-                for_each_view_mut(full.slice_mut(s![t, .., .., ..]), |idx, f| {
-                    *f = (1.0 - weight).mul_add(snap1[idx], weight * snap2[idx]);
-                });
+                for_each_view_mut(
+                    full.slice_with_mut::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM full-wavefield time slice in range"),
+                    |idx, f| {
+                        *f = (1.0 - weight).mul_add(snap1[idx], weight * snap2[idx]);
+                    },
+                );
             }
         }
 

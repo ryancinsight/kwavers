@@ -187,11 +187,11 @@ mod tests {
     #[test]
     fn test_fft_shift_2d_matches_numpy_convention_for_odd_sizes() {
         let mut spectrum =
-            Array2::from_shape_fn((3, 5), |(i, j)| Complex64::new((10 * i + j) as f64, 0.0));
+            Array2::from_shape_fn((3, 5), |[i, j]| Complex64::new((10 * i + j) as f64, 0.0));
         let original = spectrum.clone();
         fft_shift_2d(&mut spectrum);
 
-        let expected = Array2::from_shape_fn((3, 5), |(i, j)| {
+        let expected = Array2::from_shape_fn((3, 5), |[i, j]| {
             let src_i = (i + 3_usize.div_ceil(2)) % 3;
             let src_j = (j + 5_usize.div_ceil(2)) % 5;
             original[[src_i, src_j]]
@@ -202,7 +202,7 @@ mod tests {
     #[test]
     fn test_ifft_shift_2d_is_inverse_of_fft_shift_2d_for_odd_sizes() {
         let mut spectrum =
-            Array2::from_shape_fn((5, 3), |(i, j)| Complex64::new((10 * i + j) as f64, 0.0));
+            Array2::from_shape_fn((5, 3), |[i, j]| Complex64::new((10 * i + j) as f64, 0.0));
         let original = spectrum.clone();
         fft_shift_2d(&mut spectrum);
         ifft_shift_2d(&mut spectrum);
@@ -211,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_apply_spectral_response_1d_preserves_constant_gain() {
-        let signal = Array1::from_vec(vec![1.0, 0.0, -1.0, 0.0]);
+        let signal = Array1::from_vec(4, vec![1.0, 0.0, -1.0, 0.0]).unwrap();
         let filtered = apply_spectral_response_1d(&signal, 4.0, |_, _, _| 1.0);
         assert_eq!(filtered.len(), signal.len());
         for (lhs, rhs) in filtered.iter().zip(signal.iter()) {
@@ -224,7 +224,7 @@ mod tests {
         use std::f64::consts::TAU;
 
         let n = 16;
-        let signal = Array1::from_shape_fn(n, |k| (TAU * 2.0 * k as f64 / n as f64).cos());
+        let signal = Array1::from_shape_fn(n, |[k]| (TAU * 2.0 * k as f64 / n as f64).cos());
         let analytic = analytic_signal_1d(&signal);
 
         for (value, &source) in analytic.iter().zip(signal.iter()) {

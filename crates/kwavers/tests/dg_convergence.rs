@@ -62,7 +62,7 @@ fn sinusoidal_field(grid: &Grid) -> Array3<f64> {
         let val = (2.0 * PI * x / lx).sin();
         for iy in 0..grid.ny {
             for iz in 0..grid.nz {
-                field[(ix, iy, iz)] = val;
+                field[[ix, iy, iz]] = val;
             }
         }
     }

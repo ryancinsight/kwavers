@@ -68,7 +68,7 @@ impl ElasticWaveSolver {
             .map(|vs| {
                 vs.mask
                     .indexed_iter()
-                    .filter_map(|(idx, &active)| active.then_some(idx))
+                    .filter_map(|(idx, &active)| active.then_some((idx[0], idx[1], idx[2])))
                     .collect()
             });
 

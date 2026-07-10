@@ -40,7 +40,7 @@ fn test_point_source_phase_accuracy() {
     }
 
     // Create sine wave signal
-    let signal = Array2::from_shape_fn((1, config.nt), |(_, t)| {
+    let signal = Array2::from_shape_fn((1, config.nt), |[_, t]| {
         let t_f64 = t as f64 * config.dt;
         (TWO_PI * frequency * t_f64).sin()
     });
@@ -84,16 +84,16 @@ fn test_point_source_phase_accuracy() {
     let _phase_tolerance = PI / 2.0;
     println!(
         "Point source: collected {} phase samples",
-        (phase_samples.shape()[0] * phase_samples.shape()[1] * phase_samples.shape()[2])
+        (phase_samples.len())
     );
     assert!(
-        (phase_samples.shape()[0] * phase_samples.shape()[1] * phase_samples.shape()[2]) >= 4,
+        (phase_samples.len()) >= 4,
         "Need at least 4 phase samples for validation"
     );
 
     // Verify wave propagated (non-zero pressure at measurement points)
     let avg_pressure: f64 =
-        phase_samples.iter().map(|(_, p)| p.abs()).sum::<f64>() / (phase_samples.shape()[0] * phase_samples.shape()[1] * phase_samples.shape()[2]) as f64;
+        phase_samples.iter().map(|(_, p)| p.abs()).sum::<f64>() / (phase_samples.len()) as f64;
     println!(
         "Average pressure at measurement radius: {:.2e}",
         avg_pressure

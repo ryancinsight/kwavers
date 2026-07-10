@@ -1,17 +1,20 @@
 //! Linear algebra operations.
 //!
 //! Submodules:
-//! - `basic`: real-matrix solve, inversion, decomposition
 //! - `complex`: complex-matrix solve and inversion
-//! - `eigen`: eigendecomposition (real symmetric, complex Hermitian)
+//! - `eigendecomposition`: general eigendecomposition
+//! - `iterative`: iterative solvers (LSQR)
 //! - `norms`: vector norms
 //! - `numeric_ops`: generic float trait (`NumericOps`)
 //! - `ext`: fluent ndarray extension trait (`LinearAlgebraExt`) and `norm_l2`
 //! - `tolerance`: numerical tolerance constants
+//! - `sparse`: sparse matrix operations (CSR, COO)
+//!
+//! Note: Basic linear algebra operations (solve, inv, LU, QR, Cholesky, symmetric eigen)
+//! are provided by leto-ops and should be used directly instead of the deprecated
+//! `basic` and `eigen` modules.
 
-pub mod basic;
 pub mod complex;
-pub mod eigen;
 pub mod eigendecomposition;
 pub mod ext;
 pub mod iterative;
@@ -20,9 +23,7 @@ pub mod numeric_ops;
 pub mod sparse;
 pub mod tolerance;
 
-pub use basic::LinearAlgebra;
 pub use complex::ComplexLinearAlgebra;
-pub use eigen::EigenDecomposition;
 pub use eigendecomposition::{EigenResult, EigenSolver, EigenSolverConfig};
 pub use ext::{norm_l2, LinearAlgebraExt};
 pub use norms::VectorOperations;

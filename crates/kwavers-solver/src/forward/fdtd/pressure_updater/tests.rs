@@ -9,16 +9,6 @@ use leto::{
     Array3,
 };
 
-fn leto_view3(field: &LetoArray3<f64>) -> leto::ArrayView3<'_, f64> {
-    let shape = field.shape();
-    leto::ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("FDTD leto field must be contiguous for ndarray view"),
-    )
-    .expect("FDTD leto field shape must match contiguous storage")
-}
 
 fn leto_to_ndarray3(field: &LetoArray3<f64>) -> Array3<f64> {
     let shape = field.shape();
@@ -130,15 +120,15 @@ fn test_fdtd_pressure_numerical_identity() {
     let mut dvz_s = Array3::<f64>::zeros((n, n, n));
     solver
         .central_operator
-        .apply_x_into(leto_view3(&solver.fields.ux), &mut dvx_s)
+        .apply_x_into(solver.fields.ux.view(), &mut dvx_s)
         .unwrap();
     solver
         .central_operator
-        .apply_y_into(leto_view3(&solver.fields.uy), &mut dvy_s)
+        .apply_y_into(solver.fields.uy.view(), &mut dvy_s)
         .unwrap();
     solver
         .central_operator
-        .apply_z_into(leto_view3(&solver.fields.uz), &mut dvz_s)
+        .apply_z_into(solver.fields.uz.view(), &mut dvz_s)
         .unwrap();
 
     // Verify analytical reference: interior divergence = 3.0 exactly (linear field, O2 stencil).
@@ -209,22 +199,25 @@ fn test_staggered_divergence_uses_scratch_buffer() {
 
     let dvx = solver
         .staggered_operator
-        .apply_backward_x(leto_view3(&solver.fields.ux))
+        .apply_backward_x(solver.fields.ux.view())
         .unwrap();
     let dvy = solver
         .staggered_operator
-        .apply_backward_y(leto_view3(&solver.fields.uy))
+        .apply_backward_y(solver.fields.uy.view())
         .unwrap();
     let dvz = solver
         .staggered_operator
-        .apply_backward_z(leto_view3(&solver.fields.uz))
+        .apply_backward_z(solver.fields.uz.view())
         .unwrap();
 
     let mut expected = dvz.clone();
-    Zip::from(&mut expected)
-        .and(&dvx)
-        .and(&dvy)
-        .for_each(|d, &dx_v, &dy_v| *d += dx_v + dy_v);
+    leto_ops::zip2_mut_with(
+        &mut expected.view_mut(),
+        &dvx.view(),
+        &dvy.view(),
+        |d, dx_v, dy_v| *d += *dx_v + *dy_v,
+    )
+    .expect("invariant: divergence field shapes asserted equal");
 
     assert_eq!(solver.divergence_scratch, expected);
 }

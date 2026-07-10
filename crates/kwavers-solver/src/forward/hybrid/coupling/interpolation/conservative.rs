@@ -47,7 +47,7 @@ impl InterpolationManager {
         let source_volume = dx * dy * dz;
 
         // For each target cell, find overlapping source cells and compute volume-weighted average
-        for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take((result.shape()[0] * result.shape()[1] * result.shape()[2])) {
+        for (idx, &(tx, ty, tz)) in target_coords.iter().enumerate().take(result.len()) {
             let fi = ((tx - min_x) / dx).max(0.0).min((shape[0] - 1) as f64);
             let fj = ((ty - min_y) / dy).max(0.0).min((shape[1] - 1) as f64);
             let fk = ((tz - min_z) / dz).max(0.0).min((shape[2] - 1) as f64);

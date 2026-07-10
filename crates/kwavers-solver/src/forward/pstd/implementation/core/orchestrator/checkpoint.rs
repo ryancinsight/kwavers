@@ -141,7 +141,7 @@ impl PSTDSolver {
 
         if let Some(sensor_data) = ckpt.sensor_data {
             self.sensor_recorder
-                .restore_from_checkpoint(sensor_data.into(), ckpt.sensor_next_step)?;
+                .restore_from_checkpoint(sensor_data, ckpt.sensor_next_step)?;
         }
 
         let _ = std::fs::remove_file(path);

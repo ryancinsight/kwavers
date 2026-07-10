@@ -4,7 +4,7 @@ use leto::{
 };
 
 pub(crate) fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> {
-    let n = (field.shape()[0] * field.shape()[1] * field.shape()[2]);
+    let n = field.len() ;
     let mut laplacian = Array1::zeros(n);
     let dx2_inv = 1.0 / (dx * dx);
 

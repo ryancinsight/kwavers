@@ -2,7 +2,6 @@
 
 use kwavers_core::error::KwaversResult;
 use leto::{
-    /* s -- no leto equivalent */,
     Array3,
     Array4,
     ArrayView3,

@@ -14,7 +14,7 @@ impl PSTDSolver {
         let mut pressure =
             leto::Array3::from_shape_vec((nx, ny, nz), self.fields.p.iter().copied().collect())
                 .expect("leto pressure field shape must map to ndarray");
-        boundary.apply_acoustic(pressure.view_mut().unwrap().into(), &self.grid, time_index)?;
+        boundary.apply_acoustic(pressure.view_mut(), &self.grid, time_index)?;
         for (dst_value, src_value) in self
             .fields
             .p

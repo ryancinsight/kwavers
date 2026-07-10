@@ -199,7 +199,7 @@ impl PSTDSolver {
         match self.alpha_np_m.as_ref() {
             None => Array3::zeros((nx, ny, nz)),
             Some(alpha) => {
-                let alpha_leto = alpha.clone().into();
+                let alpha_leto = alpha.clone();
                 acoustic_heat_source(
                     &self.fields.p,
                     &self.fields.ux,

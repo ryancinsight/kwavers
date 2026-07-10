@@ -47,7 +47,7 @@ mod tests {
 
         // Initialize pressure field
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(0, 0).unwrap().to_owned();
+        let prev_pressure = fields.index_axis(0, 0).unwrap().to_contiguous();
 
         // Propagate for fewer time steps for fast validation
         let n_steps = 20;
@@ -59,7 +59,7 @@ mod tests {
         }
 
         // Check that wave has propagated outward
-        let pressure = fields.index_axis(0, 0);
+        let pressure = fields.index_axis(0, 0).unwrap();
         let center_val = pressure[[grid.nx / 2, grid.ny / 2, grid.nz / 2]].abs();
         let edge_val = pressure[[0, grid.ny / 2, grid.nz / 2]].abs();
 
@@ -86,7 +86,7 @@ mod tests {
         let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, 32, 32, 32));
-        let prev = fields.index_axis(0, 0).unwrap().to_owned();
+        let prev = fields.index_axis(0, 0).unwrap().to_contiguous();
 
         // This should not produce a warning for homogeneous media
         solver
@@ -126,7 +126,7 @@ mod tests {
 
         // Initialize with Gaussian pulse
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let mut pressure = fields.index_axis_mut(0, 0);
+        let mut pressure = fields.index_axis_mut(0, 0).unwrap();
 
         // Create initial Gaussian pulse
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -144,10 +144,10 @@ mod tests {
         }
 
         // Compute initial energy
-        let initial_energy: f64 = pressure.iter().map(|&p| p * p).sum();
+        let initial_energy: f64 = pressure.as_view().iter().map(|&p| p * p).sum();
 
         // Propagate for many steps
-        let prev_pressure = pressure.to_owned();
+        let prev_pressure = pressure.to_contiguous();
         for step in 0..200 {
             let t = step as f64 * dt;
             solver
@@ -156,7 +156,7 @@ mod tests {
         }
 
         // Compute final energy
-        let final_pressure = fields.index_axis(0, 0);
+        let final_pressure = fields.index_axis::<3>(0, 0).unwrap();
         let final_energy: f64 = final_pressure.iter().map(|&p| p * p).sum();
 
         // A pressure-only Gaussian with zero initial velocity is NOT a traveling
@@ -220,7 +220,7 @@ mod tests {
 
         // Initialize with Gaussian pulse
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let mut pressure = fields.index_axis_mut(0, 0);
+        let mut pressure = fields.index_axis_mut(0, 0).unwrap();
 
         // Create initial Gaussian pulse
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
@@ -238,10 +238,10 @@ mod tests {
         }
 
         // Compute initial energy
-        let initial_energy: f64 = pressure.iter().map(|&p| p * p).sum();
+        let initial_energy: f64 = pressure.as_view().iter().map(|&p| p * p).sum();
 
         // Propagate for fewer steps for fast validation
-        let prev_pressure = pressure.to_owned();
+        let prev_pressure = pressure.to_contiguous();
         for step in 0..20 {
             let t = step as f64 * dt;
             solver
@@ -250,7 +250,7 @@ mod tests {
         }
 
         // Compute final energy
-        let final_pressure = fields.index_axis(0, 0);
+        let final_pressure = fields.index_axis::<3>(0, 0).unwrap();
         let final_energy: f64 = final_pressure.iter().map(|&p| p * p).sum();
 
         // Verify solver ran without panicking and energy is in reasonable range
@@ -295,7 +295,7 @@ mod tests {
         let source = PointSource::new(position, signal);
 
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        let prev_pressure = fields.index_axis(0, 0).unwrap().to_owned();
+        let prev_pressure = fields.index_axis(0, 0).unwrap().to_contiguous();
 
         // Propagate to allow nonlinear effects to develop
         let n_steps = 1000;
@@ -307,7 +307,7 @@ mod tests {
         }
 
         // Analyze spectrum at a propagated distance
-        let pressure = fields.index_axis(0, 0);
+        let pressure = fields.index_axis(0, 0).unwrap();
         let probe_value = pressure[[grid.nx * 3 / 4, grid.ny / 2, grid.nz / 2]];
 
         // Nonlinear propagation produces energy at harmonics
@@ -357,10 +357,13 @@ mod tests {
         // Finite-amplitude pure-tone initial condition (uniform in y, z).
         let amplitude = 0.5 * MPA_TO_PA; // 0.5 MPa — drives measurable nonlinearity.
         let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-        for ((_, i, _, _), p) in fields.indexed_iter_mut() {
+        for ([_, i, _, _], p) in fields
+            .indexed_iter_mut()
+            .expect("invariant: fields buffer is materialized")
+        {
             *p = amplitude * (TWO_PI * m as f64 * i as f64 / nx as f64).sin();
         }
-        let prev = fields.index_axis(0, 0).unwrap().to_owned();
+        let prev = fields.index_axis(0, 0).unwrap().to_contiguous();
 
         // The pure tone has zero second-harmonic content at t = 0.
         let line0: Vec<f64> = (0..nx).map(|i| fields[[0, i, 8, 8]]).collect();

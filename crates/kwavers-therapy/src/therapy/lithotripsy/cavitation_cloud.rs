@@ -13,7 +13,6 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::iterative::lsqr::{
     solve_lsqr_matfree, LsqrConfig, MatFreeOperator,
 };
-use kwavers_math::linear_algebra::LinearAlgebra;
 use kwavers_physics::acoustics::bubble_dynamics::adaptive_integration::integrate_bubble_dynamics_adaptive;
 use kwavers_physics::acoustics::bubble_dynamics::bubbly_medium::commander_prosperetti_attenuation;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
@@ -24,6 +23,7 @@ use leto::{
     Array2,
     Array3,
 };
+use leto_ops::solve;
 use std::f64::consts::PI;
 
 /// How the inter-bubble acoustic coupling is solved each step.
@@ -313,11 +313,11 @@ impl CavitationCloudDynamics {
     /// Initialize cloud based on geometry and pressure field.
     pub fn initialize_cloud(&mut self, geometry: &Array3<f64>, pressure: &Array3<f64>) {
         let r0 = self.parameters.initial_bubble_radius.max(1e-12);
-        if self.density_field.dim() != pressure.dim() {
-            self.density_field = Array3::zeros(pressure.dim());
-            self.radius_field = Array3::from_elem(pressure.dim(), r0);
-            self.velocity_field = Array3::zeros(pressure.dim());
-            self.prev_total_pressure = Array3::zeros(pressure.dim());
+        if self.density_field.shape() != pressure.shape() {
+            self.density_field = Array3::zeros(pressure.shape());
+            self.radius_field = Array3::from_elem(pressure.shape(), r0);
+            self.velocity_field = Array3::zeros(pressure.shape());
+            self.prev_total_pressure = Array3::zeros(pressure.shape());
             self.total_seeded = false;
         } else {
             // Reset the representative bubbles to equilibrium for a fresh run.
@@ -327,7 +327,7 @@ impl CavitationCloudDynamics {
         }
         // Simple init: nucleate bubbles where pressure < threshold (-1 MPa) and near stone
         let threshold = -MPA_TO_PA;
-        for ((i, j, k), p) in pressure.indexed_iter() {
+        for ([i, j, k], p) in pressure.indexed_iter() {
             if *p < threshold && geometry[[i, j, k]] < 0.5 {
                 // Near stone but not inside?
                 self.density_field[[i, j, k]] = self.parameters.bubble_density;
@@ -356,7 +356,7 @@ impl CavitationCloudDynamics {
         );
         let axis = self.parameters.incident_axis.min(2);
         let ds = self.parameters.cell_spacing[axis];
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
         let n_axis = [nx, ny, nz][axis];
         let (n_a, n_b) = match axis {
             0 => (ny, nz),
@@ -419,7 +419,7 @@ impl CavitationCloudDynamics {
 
     /// Active cells `(idx, position, R, Ṙ)` with seeded bubbles.
     fn active_cells(&self) -> Vec<([usize; 3], [f64; 3], f64, f64)> {
-        let (nx, ny, nz) = self.density_field.dim();
+        let [nx, ny, nz] = self.density_field.shape();
         let mut cells = Vec::new();
         for i in 0..nx {
             for j in 0..ny {
@@ -498,7 +498,7 @@ impl CavitationCloudDynamics {
         dt: f64,
         time: f64,
     ) -> Array3<f64> {
-        let mut field = Array3::<f64>::zeros(self.density_field.dim());
+        let mut field = Array3::<f64>::zeros(self.density_field.shape());
         if !self.parameters.coupling_enabled {
             return field;
         }
@@ -676,7 +676,7 @@ impl CavitationCloudDynamics {
                 m[[a, b]] -= d[a] * g[[a, b]];
             }
         }
-        match LinearAlgebra::solve_linear_system(&m, &e) {
+        match solve(&m.view(), &e.view()) {
             Ok(s) => apply_g(s.as_slice().unwrap_or(&[])),
             Err(_) => {
                 // Singular/ill-posed system: surface via the fallback path (a damped
@@ -834,7 +834,7 @@ impl CavitationCloudDynamics {
         time: f64,
         pressure: &Array3<f64>,
     ) -> KwaversResult<()> {
-        if pressure.dim() != self.density_field.dim() {
+        if pressure.shape() != self.density_field.shape() {
             return Err(KwaversError::InvalidInput(
                 "Pressure field dimensions must match cavitation cloud".to_owned(),
             ));
@@ -850,7 +850,7 @@ impl CavitationCloudDynamics {
         let r0 = params.r0;
         let p_vapor = VAPOR_PRESSURE_WATER;
         let efficiency = self.parameters.erosion_efficiency;
-        let (nx, ny, nz) = self.density_field.dim();
+        let [nx, ny, nz] = self.density_field.shape();
 
         // Cloud-scale shielding (ADR 029): screen the incident field by the cloud's
         // void fraction before it drives the bubbles (avoids cloning when off).

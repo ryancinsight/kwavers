@@ -40,7 +40,7 @@ pub(crate) fn fused_score(
         .filter_map(|(value, active)| active.then_some(*value))
         .fold(0.0, f64::max)
         .max(1.0e-12);
-    Array3::from_shape_fn(fwi_score.dim(), |idx| {
+    Array3::from_shape_fn(fwi_score.shape(), |idx| {
         if !body[idx] {
             return 0.0;
         }

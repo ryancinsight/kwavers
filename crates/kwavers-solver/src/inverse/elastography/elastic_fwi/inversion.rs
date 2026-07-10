@@ -89,9 +89,11 @@ impl ElasticFwi {
     /// # Errors
     /// Propagates solver errors.
     pub fn run_lbfgs(&mut self, memory: usize) -> KwaversResult<Array3<f64>> {
-        let dim = self.solver.mu().dim();
+        let dim = self.solver.mu().shape();
         let mut model = self.solver.mu().clone();
-        model.mapv_inplace(|m| m.clamp(self.config.mu_min, self.config.mu_max));
+        for m in model.iter_mut() {
+            *m = m.clamp(self.config.mu_min, self.config.mu_max);
+        }
 
         let mut mem = LbfgsMemory::new(memory);
         let (mut objective, grad0) = self.misfit_and_true_gradient(&model)?;

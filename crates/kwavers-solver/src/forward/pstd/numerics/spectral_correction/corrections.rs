@@ -92,7 +92,7 @@ fn fill_spectral_correction(
 ///
 /// ## Theorem (race-freedom)
 ///
-/// Each element `kappa[(i,j,k)]` depends only on `(i,j,k)` via
+/// Each element `kappa[[i,j,k]]` depends only on `(i,j,k)` via
 /// `compute_wavenumber_component` (pure function of the grid constants).
 /// No two Moirai tasks share a write target, so dense traversal is race-free.
 fn compute_exact_dispersion_correction(
@@ -372,7 +372,7 @@ pub fn apply_correction(field_k: &mut Array3<eunomia::Complex<f64>>, kappa: &Arr
         kappa.shape()
     );
 
-    if field_k && kappa {
+    if field_k.view().is_contiguous() && kappa.view().is_contiguous() {
         if let (Some(field_values), Some(kappa_values)) = (
             field_k.as_slice_mut(),
             kappa.as_slice(),

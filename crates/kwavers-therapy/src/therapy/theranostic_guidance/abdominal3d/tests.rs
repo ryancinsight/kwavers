@@ -13,7 +13,7 @@ fn toy_abdominal_volume(
     organ_offset: [f64; 3],
 ) -> (Array3<f64>, Array3<i16>) {
     let centre = 0.5 * (n as f64 - 1.0);
-    let ct = Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
+    let ct = Array3::from_shape_fn((n, n, n), |[ix, iy, iz]| {
         let dx = ix as f64 - centre;
         let dy = iy as f64 - centre;
         let dz = iz as f64 - centre;
@@ -24,7 +24,7 @@ fn toy_abdominal_volume(
             -1000.0
         }
     });
-    let label = Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
+    let label = Array3::from_shape_fn((n, n, n), |[ix, iy, iz]| {
         let dx = ix as f64 - (centre + organ_offset[0]);
         let dy = iy as f64 - (centre + organ_offset[1]);
         let dz = iz as f64 - (centre + organ_offset[2]);
@@ -206,7 +206,7 @@ fn keep_largest_connected_component_drops_smaller_components() {
         "filter must retain the entire largest component"
     );
     // Property (i): every retained voxel must have been in the input.
-    for ((ix, iy, iz), &retained) in filtered.indexed_iter() {
+    for ([ix, iy, iz], &retained) in filtered.indexed_iter() {
         if retained {
             assert!(
                 mask[[ix, iy, iz]],

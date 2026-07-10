@@ -28,7 +28,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
             .field("config", &self.config)
             .field("coupling_type", &self.coupling_type)
             .field("bubble_model", &self.bubble_model)
-            .field("bubble_states_len", &(self.bubble_states.shape()[0] * self.bubble_states.shape()[1] * self.bubble_states.shape()[2]))
+            .field("bubble_states_len", &(self.bubble_states.len()))
             .field("bubble_locations", &self.bubble_locations)
             .field("coupling_interfaces", &self.coupling_interfaces)
             .field("domain_dims", &self.domain_dims)

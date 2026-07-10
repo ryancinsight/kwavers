@@ -85,6 +85,7 @@ pub fn reconstruct_brain_slice(
     let nrows = config.measurement_count();
     let data = matrix_vector(&matrix, nrows, active.len(), |j| active[j].target_contrast);
     let migration_model = migration_contrast(&matrix, &data, nrows, active.len(), linear);
+    let [shape_x, shape_y] = medium.sound_speed_m_s.shape();
     let inversion = invert(
         &matrix,
         &data,
@@ -92,7 +93,7 @@ pub fn reconstruct_brain_slice(
         active.len(),
         linear,
         &active,
-        medium.sound_speed_m_s.dim(),
+        (shape_x, shape_y),
     );
 
     let mut migration = medium.initial_sound_speed_m_s.clone();
@@ -177,7 +178,7 @@ struct InversionState {
 }
 
 fn active_voxels(medium: &AcousticSlice) -> Vec<ActiveVoxel> {
-    let (nx, ny) = medium.sound_speed_m_s.dim();
+    let [nx, ny] = medium.sound_speed_m_s.shape();
     let cx = (nx - 1) as f64 / 2.0;
     let cy = (ny - 1) as f64 / 2.0;
     let mut active = Vec::new();

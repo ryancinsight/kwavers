@@ -2,10 +2,10 @@
 
 use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use leto::Array2 as LetoArray2;
 use leto::{Array2, Array3};
-use kwavers_math::fft::Complex64;
 use std::collections::HashMap;
 
 use super::types::{AngularSpectrumFactors, FNMConfig};
@@ -271,7 +271,8 @@ impl FastNearfieldSolver {
         }
 
         // Stack into 3D array (z, x, y)
-        let shape = ((z_values.shape()[0] * z_values.shape()[1] * z_values.shape()[2]), results[0].nrows(), results[0].ncols());
+        let [n_rows, n_cols] = results[0].shape();
+        let shape = (z_values.len(), n_rows, n_cols);
         let mut stacked = Array3::<Complex64>::zeros(shape);
 
         for (i, field) in results.into_iter().enumerate() {
@@ -292,7 +293,12 @@ impl FastNearfieldSolver {
         let start_y = (n_ky - n_elem_y) / 2;
 
         padded
-            .slice_mut(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y]).unwrap().unwrap().assign(velocity);
+            .slice_with_mut(&s![
+                start_x..start_x + n_elem_x,
+                start_y..start_y + n_elem_y
+            ])
+            .unwrap()
+            .assign(velocity);
 
         padded
     }
@@ -318,14 +324,15 @@ impl FastNearfieldSolver {
 
         // Cache memory
         for factors in self.cached_factors.values() {
-            total += (factors.green_spectrum.shape()[0] * factors.green_spectrum.shape()[1] * factors.green_spectrum.shape()[2]) * std::mem::size_of::<Complex64>();
-            total += (factors.kx.shape()[0] * factors.kx.shape()[1] * factors.kx.shape()[2]) * std::mem::size_of::<f64>();
-            total += (factors.ky.shape()[0] * factors.ky.shape()[1] * factors.ky.shape()[2]) * std::mem::size_of::<f64>();
+            total += (factors.green_spectrum.len())
+                * std::mem::size_of::<Complex64>();
+            total += factors.kx.len() * std::mem::size_of::<f64>();
+            total += factors.ky.len() * std::mem::size_of::<f64>();
         }
 
         // Base memory for precomputed vectors
-        total += (self.kx.shape()[0] * self.kx.shape()[1] * self.kx.shape()[2]) * std::mem::size_of::<f64>();
-        total += (self.ky.shape()[0] * self.ky.shape()[1] * self.ky.shape()[2]) * std::mem::size_of::<f64>();
+        total += self.kx.len() * std::mem::size_of::<f64>();
+        total += self.ky.len() * std::mem::size_of::<f64>();
 
         total
     }

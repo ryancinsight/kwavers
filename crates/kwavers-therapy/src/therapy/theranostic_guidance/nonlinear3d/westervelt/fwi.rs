@@ -16,7 +16,7 @@ pub fn run_fwi(
     aperture: &Nonlinear3dAperture,
     config: &Nonlinear3dConfig,
 ) -> WesterveltFwiResult {
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let true_speed = flatten(&volume.true_sound_speed_m_s);
     let background = flatten(&volume.background_sound_speed_m_s);
     let density = flatten(&volume.density_kg_m3);
@@ -331,5 +331,5 @@ fn flatten(values: &Array3<f64>) -> Vec<f64> {
 }
 
 fn unflatten(values: &[f64], n: usize) -> Array3<f64> {
-    Array3::from_shape_fn((n, n, n), |(x, y, z)| values[index(x, y, z, n)])
+    Array3::from_shape_fn((n, n, n), |[x, y, z]| values[index(x, y, z, n)])
 }

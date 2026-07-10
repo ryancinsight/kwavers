@@ -10,12 +10,12 @@ use super::{RowContext, VolumeOperator};
 impl<'a> VolumeOperator<'a> {
     /// Compute the L2 row-normalisation factors `‖A[row, :]‖` for all rows.
     pub fn row_norms(&self) -> Vec<f64> {
-        map_collect_index_with::<Adaptive, _, _>((self.row_contexts.shape()[0] * self.row_contexts.shape()[1] * self.row_contexts.shape()[2]), |row| self.row_norm(row))
+        map_collect_index_with::<Adaptive, _, _>(self.row_contexts.len(), |row| self.row_norm(row))
     }
 
     /// Synthetic data vector `A · target_contrast` for all rows.
     pub fn data_from_target(&self, row_norms: &[f64]) -> Vec<f64> {
-        map_collect_index_with::<Adaptive, _, _>((self.row_contexts.shape()[0] * self.row_contexts.shape()[1] * self.row_contexts.shape()[2]), |row| {
+        map_collect_index_with::<Adaptive, _, _>(self.row_contexts.len(), |row| {
             self.project_row_with_norm(row, row_norms[row], |col| self.active[col].target_contrast)
         })
     }
@@ -34,7 +34,7 @@ impl<'a> VolumeOperator<'a> {
         let ncols = self.n_active;
         let reg = config.regularization.max(1.0e-12);
         let mut diagonal = fold_reduce_with::<Adaptive, _, _, _, _>(
-            (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
+            rows.len(),
             || vec![0.0f64; ncols],
             |mut partial, row_index| {
                 let row = rows[row_index];
@@ -73,7 +73,7 @@ impl<'a> VolumeOperator<'a> {
         let ncols = self.n_active;
         let diagonal = self.diagonal(rows, row_norms, config);
         let adjoint = fold_reduce_with::<Adaptive, _, _, _, _>(
-            (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
+            rows.len(),
             || vec![0.0f64; ncols],
             |mut partial, row_index| {
                 let row = rows[row_index];
@@ -110,7 +110,7 @@ impl<'a> VolumeOperator<'a> {
         regularization: f64,
     ) -> f64 {
         let data_misfit = reduce_index_with::<Adaptive, _, _, _>(
-            (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
+            rows.len(),
             0.0,
             |row_index| {
                 let row = rows[row_index];
@@ -139,7 +139,7 @@ impl<'a> VolumeOperator<'a> {
     ) -> Vec<f64> {
         let ncols = self.n_active;
         let mut residual = fold_reduce_with::<Adaptive, _, _, _, _>(
-            (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
+            rows.len(),
             || (vec![0.0f64; ncols], vec![0.0f64; ncols]),
             |(mut partial, mut row_values), row_index| {
                 let row = rows[row_index];
@@ -185,7 +185,7 @@ impl<'a> VolumeOperator<'a> {
     ) -> Vec<f64> {
         let ncols = self.n_active;
         let mut out = fold_reduce_with::<Adaptive, _, _, _, _>(
-            (rows.shape()[0] * rows.shape()[1] * rows.shape()[2]),
+            rows.len(),
             || (vec![0.0f64; ncols], vec![0.0f64; ncols]),
             |(mut partial, mut row_values), row_index| {
                 let row = rows[row_index];

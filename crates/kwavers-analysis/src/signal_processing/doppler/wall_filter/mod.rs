@@ -61,7 +61,7 @@ impl WallFilter {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply(&self, iq_data: &ArrayView3<Complex64>) -> KwaversResult<Array3<Complex64>> {
-        let (ensemble_size, n_depths, n_beams) = iq_data.dim();
+        let [ensemble_size, n_depths, n_beams] = iq_data.shape();
         let mut filtered = Array3::<Complex64>::zeros((ensemble_size, n_depths, n_beams));
 
         match self.config.filter_type {

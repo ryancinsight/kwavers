@@ -23,7 +23,7 @@ const PI: f64 = std::f64::consts::PI;
 /// returns 0 outside the grid.
 #[inline]
 fn sample(img: &Array2<f64>, x: f64, y: f64) -> f64 {
-    let (ny, nx) = img.dim();
+    let [ny, nx] = img.shape();
     if x < 0.0 || y < 0.0 || x > (nx - 1) as f64 || y > (ny - 1) as f64 {
         return 0.0;
     }
@@ -44,7 +44,7 @@ fn sample(img: &Array2<f64>, x: f64, y: f64) -> f64 {
 /// detector bins, projections taken at angles uniformly spanning `[0, π)`.
 #[must_use]
 pub fn radon_transform(image: &Array2<f64>, n_angles: usize) -> Array2<f64> {
-    let (ny, nx) = image.dim();
+    let [ny, nx] = image.shape();
     if ny == 0 || nx == 0 || n_angles == 0 {
         return Array2::zeros((n_angles, nx.max(ny)));
     }
@@ -128,7 +128,7 @@ fn interp(proj: &[f64], t: f64) -> f64 {
 /// shape `(output_size, output_size)`.
 #[must_use]
 pub fn filtered_backprojection(sinogram: &Array2<f64>, output_size: usize) -> Array2<f64> {
-    let (n_angles, n_det) = sinogram.dim();
+    let [n_angles, n_det] = sinogram.shape();
     if n_angles == 0 || n_det == 0 || output_size == 0 {
         return Array2::zeros((output_size, output_size));
     }
@@ -155,7 +155,9 @@ pub fn filtered_backprojection(sinogram: &Array2<f64>, output_size: usize) -> Ar
                 let theta = PI * k as f64 / n_angles as f64;
                 let (st, ct) = theta.sin_cos();
                 let t = xc * ct + yc * st + half; // detector coordinate
-                let row = filtered.row(k);
+                let row = filtered
+                    .index_axis::<1>(0, k)
+                    .expect("angle index within filtered sinogram");
                 acc += interp(row.as_slice().unwrap(), t);
             }
             img[[oy, ox]] = acc * scale;
@@ -183,7 +185,7 @@ mod tests {
     }
 
     fn positive_centroid(a: &Array2<f64>) -> (f64, f64) {
-        let (ny, nx) = a.dim();
+        let [ny, nx] = a.shape();
         let (mut sx, mut sy, mut sw) = (0.0, 0.0, 0.0);
         for y in 0..ny {
             for x in 0..nx {

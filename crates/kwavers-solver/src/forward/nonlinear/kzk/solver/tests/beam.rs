@@ -44,7 +44,7 @@ fn test_gaussian_beam_propagation() {
 
     let intensity = solver.get_intensity();
     assert!(
-        intensity.sum() > 0.0,
+        intensity.iter().sum::<f64>() > 0.0,
         "intensity must be positive after propagation"
     );
 }
@@ -89,7 +89,7 @@ fn test_gaussian_beam_propagation_fast() {
 
     let intensity = solver.get_intensity();
     assert!(
-        intensity.sum() > 0.0,
+        intensity.iter().sum::<f64>() > 0.0,
         "intensity must be positive after propagation"
     );
 }

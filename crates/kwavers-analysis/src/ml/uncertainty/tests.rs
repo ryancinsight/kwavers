@@ -58,13 +58,14 @@ fn test_pinn_uncertainty_uses_solver_agnostic_predictor() {
         calibration_size: 4,
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
-    let inputs = leto::array![[1.0_f32, 2.0_f32], [3.0_f32, 4.0_f32]];
+    let inputs =
+        leto::Array2::from_shape_vec((2, 2), vec![1.0_f32, 2.0_f32, 3.0_f32, 4.0_f32]).unwrap();
 
     let result = quantifier
         .quantify_pinn_uncertainty(&LinearPinnPredictor, &inputs, None)
         .unwrap();
 
-    assert_eq!(result.mean_prediction.dim(), (2, 1));
+    assert_eq!(result.mean_prediction.shape(), [2, 1]);
     assert_eq!(result.mean_prediction[[0, 0]], 5.0);
     assert_eq!(result.mean_prediction[[1, 0]], 11.0);
     assert_eq!(result.uncertainty[[0, 0]], 0.0);
@@ -108,7 +109,7 @@ fn test_beamforming_uncertainty() {
     let result = quantifier
         .quantify_beamforming_uncertainty(&image, 0.8)
         .unwrap();
-    assert_eq!(result.uncertainty_map.dim(), (32, 32, 16));
+    assert_eq!(result.uncertainty_map.shape(), [32, 32, 16]);
     let confidence_err = (result.confidence_score - 0.8).abs();
     assert!(
         confidence_err < 1e-10,

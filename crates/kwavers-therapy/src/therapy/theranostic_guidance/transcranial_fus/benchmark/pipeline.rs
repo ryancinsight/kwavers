@@ -56,8 +56,8 @@ pub fn run_skull_adaptive_transcranial_benchmark(
         config,
     )?;
 
-    let shape = ct_hu.dim();
-    let dims = [shape.0, shape.1, shape.2];
+    let shape = ct_hu.shape();
+    let dims = shape;
     let reference_unscaled = rayleigh_pressure_field_unscaled(
         &placement.element_positions_m,
         &phases_rad,
@@ -115,18 +115,18 @@ fn validate_inputs(
     target_index: [usize; 3],
     config: &SkullAdaptiveBenchmarkConfig,
 ) -> KwaversResult<()> {
-    let shape = ct_hu.dim();
-    if shape != skull_mask.dim() || shape != brain_mask.dim() {
+    let shape = ct_hu.shape();
+    if shape != skull_mask.shape() || shape != brain_mask.shape() {
         return Err(KwaversError::InvalidInput(
             "ct_hu, skull_mask, and brain_mask must have identical shapes".to_owned(),
         ));
     }
-    if shape.0 < 8 || shape.1 < 8 || shape.2 < 8 {
+    if shape[0] < 8 || shape[1] < 8 || shape[2] < 8 {
         return Err(KwaversError::InvalidInput(
             "benchmark CT volume must be at least 8 x 8 x 8".to_owned(),
         ));
     }
-    if target_index[0] >= shape.0 || target_index[1] >= shape.1 || target_index[2] >= shape.2 {
+    if target_index[0] >= shape[0] || target_index[1] >= shape[1] || target_index[2] >= shape[2] {
         return Err(KwaversError::InvalidInput(
             "target_index is outside the CT volume".to_owned(),
         ));

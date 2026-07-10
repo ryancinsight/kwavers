@@ -54,7 +54,7 @@ fn test_boundary_conditions() {
     });
 
     let bcs = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::boundary_conditions(&domain);
-    assert_eq!((bcs.shape()[0] * bcs.shape()[1] * bcs.shape()[2]), 1);
+    assert_eq!((bcs.len()), 1);
     assert!(!bcs.is_empty());
 }
 
@@ -68,7 +68,7 @@ fn test_validation_metrics() {
     );
 
     let metrics = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::validation_metrics(&domain);
-    assert_eq!((metrics.shape()[0] * metrics.shape()[1] * metrics.shape()[2]), 3);
+    assert_eq!((metrics.len()), 3);
     assert_eq!(metrics[0].name, "wave_speed_accuracy");
     assert_eq!(metrics[1].name, "energy_conservation");
     assert_eq!(metrics[2].name, "nonlinearity_error");
@@ -85,7 +85,7 @@ fn test_coupling_interfaces() {
 
     let interfaces =
         <AcousticWaveDomain as SimulationPhysicsDomain<B>>::coupling_interfaces(&domain);
-    assert_eq!((interfaces.shape()[0] * interfaces.shape()[1] * interfaces.shape()[2]), 2);
+    assert_eq!((interfaces.len()), 2);
     assert_eq!(interfaces[0].name, "acoustic_solid");
     assert_eq!(interfaces[1].name, "acoustic_thermal");
 }

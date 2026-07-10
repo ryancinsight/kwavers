@@ -14,14 +14,14 @@ impl DelayAndSumPAM {
     /// Events are sorted in descending intensity order.
     ///
     /// # Errors
-    /// Returns `Err` when `intensity_map.len() != grid_points.nrows()`.
+    /// Returns `Err` when `intensity_map.len() != grid_points.shape()[0]`.
     pub fn detect_events(
         &self,
         intensity_map: &Array1<f64>,
         grid_points: &Array2<f64>,
         time: f64,
     ) -> KwaversResult<Vec<PamCavitationEvent>> {
-        if intensity_map.len() != grid_points.nrows() {
+        if intensity_map.len() != grid_points.shape()[0] {
             return Err(KwaversError::InvalidInput(
                 "Intensity map and grid points size mismatch".to_owned(),
             ));
@@ -32,7 +32,9 @@ impl DelayAndSumPAM {
 
         for (idx, &intensity) in intensity_map.iter().enumerate() {
             if intensity > threshold {
-                let grid_point = grid_points.row(idx);
+                let grid_point = grid_points
+                    .index_axis::<1>(0, idx)
+                    .expect("invariant: row index within bounds");
                 let position = [grid_point[0], grid_point[1], grid_point[2]];
                 let coherence = self.coherence_factor(intensity, threshold);
                 events.push(PamCavitationEvent {
@@ -66,14 +68,14 @@ impl DelayAndSumPAM {
         grid_points: &Array2<f64>,
         time: f64,
     ) -> KwaversResult<Vec<PamCavitationEvent>> {
-        let (num_sensors_data, _) = passive_data.dim();
+        let [num_sensors_data, _] = passive_data.shape();
         if num_sensors_data != self.num_sensors {
             return Err(KwaversError::InvalidInput(format!(
                 "Data has {} sensors but PAM configured for {}",
                 num_sensors_data, self.num_sensors
             )));
         }
-        if intensity_map.len() != grid_points.nrows() {
+        if intensity_map.len() != grid_points.shape()[0] {
             return Err(KwaversError::InvalidInput(
                 "Intensity map and grid points size mismatch".to_owned(),
             ));
@@ -85,7 +87,9 @@ impl DelayAndSumPAM {
 
         for (idx, &intensity) in intensity_map.iter().enumerate() {
             if intensity > threshold {
-                let grid_point = grid_points.row(idx);
+                let grid_point = grid_points
+                    .index_axis::<1>(0, idx)
+                    .expect("invariant: row index within bounds");
                 let position = [grid_point[0], grid_point[1], grid_point[2]];
                 let coherence = self.coherence_factor(intensity, threshold);
                 let delays_samples = self.compute_delays(&position)?;

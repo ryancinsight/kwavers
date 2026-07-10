@@ -136,7 +136,8 @@ mod tests {
     fn test_add_operation() {
         let simd = SimdAuto::new();
         let a = Array3::<f64>::ones((2, 2, 2));
-        let b = Array3::<f64>::ones((2, 2, 2)) * 2.0;
+        let mut b = Array3::<f64>::ones((2, 2, 2));
+        b.iter_mut().for_each(|v| *v *= 2.0);
         let mut out = Array3::<f64>::zeros((2, 2, 2));
 
         simd.add_inplace(&a, &b, &mut out);
@@ -148,7 +149,8 @@ mod tests {
     #[test]
     fn test_scale_operation() {
         let simd = SimdAuto::new();
-        let mut array = Array3::<f64>::ones((2, 2, 2)) * 2.0;
+        let mut array = Array3::<f64>::ones((2, 2, 2));
+        array.iter_mut().for_each(|v| *v *= 2.0);
 
         simd.scale_inplace(&mut array, 3.0);
 

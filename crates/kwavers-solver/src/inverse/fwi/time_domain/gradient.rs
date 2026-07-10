@@ -25,7 +25,7 @@ pub(super) fn mute_gradient_near_sources(
 ) {
     let r_sq = (radius * radius) as f64;
     let [nx, ny, nz] = gradient.shape();
-    for ((si, sj, sk), &m) in source_p_mask.indexed_iter() {
+    for ([si, sj, sk], &m) in source_p_mask.indexed_iter() {
         if m > 0.5 {
             let imin = si.saturating_sub(radius);
             let imax = (si + radius + 1).min(nx);
@@ -83,17 +83,29 @@ impl FwiProcessor {
         let mut smoothed = Array3::<f64>::zeros((nx, ny, nz));
 
         smoothed
-            .slice_mut(s![0, .., ..]).unwrap().unwrap().assign(&gradient.slice(s![0, .., ..]));
+            .slice_with_mut::<2>(&s![0, .., ..])
+            .unwrap()
+            .assign(&gradient.slice_with::<2>(&s![0, .., ..]).expect("invariant: boundary face slice is valid"));
         smoothed
-            .slice_mut(s![nx - 1, .., ..]).unwrap().unwrap().assign(&gradient.slice(s![nx - 1, .., ..]));
+            .slice_with_mut::<2>(&s![nx - 1, .., ..])
+            .unwrap()
+            .assign(&gradient.slice_with::<2>(&s![nx - 1, .., ..]).expect("invariant: boundary face slice is valid"));
         smoothed
-            .slice_mut(s![.., 0, ..]).unwrap().unwrap().assign(&gradient.slice(s![.., 0, ..]));
+            .slice_with_mut::<2>(&s![.., 0, ..])
+            .unwrap()
+            .assign(&gradient.slice_with::<2>(&s![.., 0, ..]).expect("invariant: boundary face slice is valid"));
         smoothed
-            .slice_mut(s![.., ny - 1, ..]).unwrap().unwrap().assign(&gradient.slice(s![.., ny - 1, ..]));
+            .slice_with_mut::<2>(&s![.., ny - 1, ..])
+            .unwrap()
+            .assign(&gradient.slice_with::<2>(&s![.., ny - 1, ..]).expect("invariant: boundary face slice is valid"));
         smoothed
-            .slice_mut(s![.., .., 0]).unwrap().unwrap().assign(&gradient.slice(s![.., .., 0]));
+            .slice_with_mut::<2>(&s![.., .., 0])
+            .unwrap()
+            .assign(&gradient.slice_with::<2>(&s![.., .., 0]).expect("invariant: boundary face slice is valid"));
         smoothed
-            .slice_mut(s![.., .., nz - 1]).unwrap().unwrap().assign(&gradient.slice(s![.., .., nz - 1]));
+            .slice_with_mut::<2>(&s![.., .., nz - 1])
+            .unwrap()
+            .assign(&gradient.slice_with::<2>(&s![.., .., nz - 1]).expect("invariant: boundary face slice is valid"));
 
         if ny <= 2 {
             for i in 1..nx - 1 {
@@ -274,7 +286,10 @@ fn directional_tv_weights(model: &Array3<f64>, directions: &[([isize; 3], f64)])
     let [nx, ny, nz] = model.shape();
     let dims = [nx, ny, nz];
     let mut w = Array3::<f64>::zeros((nx, ny, nz));
-    for ((i, j, k), w_val) in w.indexed_iter_mut() {
+    for ([i, j, k], w_val) in w
+        .indexed_iter_mut()
+        .expect("invariant: weight array yields indexed iterator")
+    {
         let p = [i, j, k];
         let center = model[[i, j, k]];
         let mut acc = TV_EPSILON_SQUARED;
@@ -300,7 +315,7 @@ pub(in crate::inverse::fwi::time_domain) fn directional_tv_functional(
     model: &Array3<f64>,
     directions: &[([isize; 3], f64)],
 ) -> f64 {
-    directional_tv_weights(model, directions).sum()
+    directional_tv_weights(model, directions).iter().sum()
 }
 
 /// Analytically derived gradient `∂J/∂m` of the directional-TV functional
@@ -324,7 +339,10 @@ pub(in crate::inverse::fwi::time_domain) fn directional_tv_gradient(
     let w = directional_tv_weights(model, directions);
 
     let mut grad = Array3::<f64>::zeros((nx, ny, nz));
-    for ((i, j, k), g_val) in grad.indexed_iter_mut() {
+    for ([i, j, k], g_val) in grad
+        .indexed_iter_mut()
+        .expect("invariant: gradient array yields indexed iterator")
+    {
         let p = [i, j, k];
         let center = model[[i, j, k]];
         let w_c = w[[i, j, k]];

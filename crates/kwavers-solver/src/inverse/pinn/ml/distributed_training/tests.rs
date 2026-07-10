@@ -111,7 +111,7 @@ fn test_gradient_aggregation_config() {
 
     match config.gradient_aggregation {
         GradientAggregation::Weighted { weights } => {
-            assert_eq!((weights.shape()[0] * weights.shape()[1] * weights.shape()[2]), 2);
+            assert_eq!((weights.len()), 2);
             assert!((weights.iter().sum::<f32>() - 1.0).abs() < 1e-6);
         }
         _ => panic!("Expected weighted aggregation"),

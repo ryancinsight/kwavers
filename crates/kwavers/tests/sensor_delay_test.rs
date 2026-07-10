@@ -56,7 +56,7 @@ fn test_geometric_delay_calculation() {
 
     // 4. Verification
     // delays shape: (2, 4)
-    assert_eq!(delays.shape(), &[2, 4]);
+    assert_eq!(delays.shape(), [2, 4]);
 
     // Check Sensor 0 (0,0,0)
     // Point 0 (0,0,0): dist=0, delay=0

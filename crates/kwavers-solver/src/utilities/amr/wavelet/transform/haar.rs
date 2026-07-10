@@ -43,7 +43,7 @@ impl WaveletTransform {
 
     /// 1D Haar forward transform
     pub(super) fn haar_1d_forward(&self, data: &[f64], result: &mut [f64]) {
-        let n = (data.shape()[0] * data.shape()[1] * data.shape()[2]);
+        let n = data.len();
 
         // Compute averages and differences
         for i in 0..n / 2 {

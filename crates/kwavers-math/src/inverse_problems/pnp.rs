@@ -155,7 +155,16 @@ mod tests {
             *v += 0.25 * u;
         }
 
-        let err = |a: &Array3<f64>| (a - &clean).mapv(|x| x * x).sum().sqrt();
+        let err = |a: &Array3<f64>| {
+            a.iter()
+                .zip(clean.iter())
+                .map(|(x, c)| {
+                    let d = x - c;
+                    d * d
+                })
+                .sum::<f64>()
+                .sqrt()
+        };
         let noisy_err = err(&noisy);
         let den = tv_denoise_chambolle(&noisy, 0.4, 200, None);
         let den_err = err(&den);

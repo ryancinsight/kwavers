@@ -76,7 +76,7 @@ fn test_distributed_processing_matches_sequential_result() {
     let mut distributed =
         DistributedNeuralBeamformingProcessor::new(beamforming_config, distributed_config).unwrap();
 
-    let rf_data = Array4::from_shape_fn((4, 2, 3, 1), |(frame, channel, sample, _)| {
+    let rf_data = Array4::from_shape_fn((4, 2, 3, 1), |[frame, channel, sample, _]| {
         frame as f32 + 0.1 * channel as f32 + 0.01 * sample as f32
     });
 

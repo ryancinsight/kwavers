@@ -56,8 +56,8 @@ impl ReverseTimeMigration {
             // ── ZeroLag ───────────────────────────────────────────────────
             RtmImagingCondition::ZeroLag => {
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice(s![t, .., .., ..]);
-                    let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
+                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
                         let s = src[idx];
@@ -74,8 +74,8 @@ impl ReverseTimeMigration {
                 let mut rcv_energy = Array3::<f64>::zeros(self.image.shape());
 
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice(s![t, .., .., ..]);
-                    let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
+                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
                         *img += src[idx] * rcv[idx];
@@ -105,8 +105,8 @@ impl ReverseTimeMigration {
             // ── Laplacian ─────────────────────────────────────────────────
             RtmImagingCondition::Laplacian => {
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice(s![t, .., .., ..]).unwrap().to_owned();
-                    let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
+                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
 
                     let src_lap = self.compute_laplacian(&src)?;
 
@@ -122,8 +122,8 @@ impl ReverseTimeMigration {
                 let mut src_energy = Array3::<f64>::zeros(self.image.shape());
 
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice(s![t, .., .., ..]);
-                    let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
+                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
                         *img += src[idx] * rcv[idx];
@@ -148,16 +148,35 @@ impl ReverseTimeMigration {
             // I(x) = Σ_t (∂S/∂t)·R   via centred differences
             RtmImagingCondition::SourceNormalized => {
                 for t in 0..n_time_steps {
-                    let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
-                    let src_dt = if t == 0 && n_time_steps > 1 {
-                        &source_wavefield.slice(s![1, .., .., ..])
-                            - &source_wavefield.slice(s![0, .., .., ..])
-                    } else if t + 1 == n_time_steps && n_time_steps > 1 {
-                        &source_wavefield.slice(s![t, .., .., ..])
-                            - &source_wavefield.slice(s![t - 1, .., .., ..])
-                    } else if n_time_steps > 1 {
-                        0.5 * (&source_wavefield.slice(s![t + 1, .., .., ..])
-                            - &source_wavefield.slice(s![t - 1, .., .., ..]))
+                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    // Centred temporal derivative ∂S/∂t: forward diff at t=0,
+                    // backward diff at the final step, centred (×0.5) in the interior.
+                    let src_dt: Array3<f64> = if n_time_steps > 1 {
+                        let (hi, lo, scale) = if t == 0 {
+                            (1usize, 0usize, 1.0)
+                        } else if t + 1 == n_time_steps {
+                            (t, t - 1, 1.0)
+                        } else {
+                            (t + 1, t - 1, 0.5)
+                        };
+                        let a = source_wavefield
+                            .slice_with::<3>(&s![hi, .., .., ..])
+                            .expect("invariant: RTM forward time index in range");
+                        let b = source_wavefield
+                            .slice_with::<3>(&s![lo, .., .., ..])
+                            .expect("invariant: RTM backward time index in range");
+                        let mut out = Array3::<f64>::zeros(self.image.shape());
+                        leto_ops::sub(&a, &b, &mut out.view_mut())
+                            .expect("invariant: RTM temporal-difference shapes match");
+                        if scale != 1.0 {
+                            for value in out
+                                .as_slice_mut()
+                                .expect("invariant: RTM difference buffer contiguous")
+                            {
+                                *value *= scale;
+                            }
+                        }
+                        out
                     } else {
                         Array3::<f64>::zeros(self.image.shape())
                     };
@@ -174,38 +193,38 @@ impl ReverseTimeMigration {
             // Each directional term: 0.25·(S[+1]−S[-1])·(R[+1]−R[-1])
             // Three sequential Moirai passes over same-shape strided views.
             RtmImagingCondition::Poynting => {
-                let (_, nx, ny, nz) = source_wavefield.shape();
+                let [_, nx, ny, nz] = source_wavefield.shape();
                 Self::ensure_3d_interior((nx, ny, nz))?;
                 let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];
 
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice(s![t, .., .., ..]);
-                    let rcv = receiver_wavefield.slice(s![t, .., .., ..]);
+                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
 
                     // x: 0.25·(S[i+1]−S[i-1])·(R[i+1]−R[i-1])
-                    let sxp = src.slice(s![2..nx, 1..ny - 1, 1..nz - 1]);
-                    let sxm = src.slice(s![..nx - 2, 1..ny - 1, 1..nz - 1]);
-                    let rxp = rcv.slice(s![2..nx, 1..ny - 1, 1..nz - 1]);
-                    let rxm = rcv.slice(s![..nx - 2, 1..ny - 1, 1..nz - 1]);
-                    for_each_view_mut(self.image.slice_mut(inn), |idx, img| {
+                    let sxp = src.slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    let sxm = src.slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    let rxp = rcv.slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    let rxm = rcv.slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    for_each_view_mut(self.image.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, img| {
                         *img += 0.25 * (sxp[idx] - sxm[idx]) * (rxp[idx] - rxm[idx]);
                     });
 
                     // y
-                    let syp = src.slice(s![1..nx - 1, 2..ny, 1..nz - 1]);
-                    let sym = src.slice(s![1..nx - 1, ..ny - 2, 1..nz - 1]);
-                    let ryp = rcv.slice(s![1..nx - 1, 2..ny, 1..nz - 1]);
-                    let rym = rcv.slice(s![1..nx - 1, ..ny - 2, 1..nz - 1]);
-                    for_each_view_mut(self.image.slice_mut(inn), |idx, img| {
+                    let syp = src.slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    let sym = src.slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    let ryp = rcv.slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    let rym = rcv.slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1]).expect("invariant: RTM slice indices in range");
+                    for_each_view_mut(self.image.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, img| {
                         *img += 0.25 * (syp[idx] - sym[idx]) * (ryp[idx] - rym[idx]);
                     });
 
                     // z
-                    let szp = src.slice(s![1..nx - 1, 1..ny - 1, 2..nz]);
-                    let szm = src.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]);
-                    let rzp = rcv.slice(s![1..nx - 1, 1..ny - 1, 2..nz]);
-                    let rzm = rcv.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]);
-                    for_each_view_mut(self.image.slice_mut(inn), |idx, img| {
+                    let szp = src.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz]).expect("invariant: RTM slice indices in range");
+                    let szm = src.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2]).expect("invariant: RTM slice indices in range");
+                    let rzp = rcv.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz]).expect("invariant: RTM slice indices in range");
+                    let rzm = rcv.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2]).expect("invariant: RTM slice indices in range");
+                    for_each_view_mut(self.image.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, img| {
                         *img += 0.25 * (szp[idx] - szm[idx]) * (rzp[idx] - rzm[idx]);
                     });
                 }

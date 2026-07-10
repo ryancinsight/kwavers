@@ -3225,7 +3225,6 @@ name = "gaia"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "approx",
  "aquamarine",
  "eunomia",
  "geometry-predicates",
@@ -4770,7 +4769,6 @@ dependencies = [
  "leto-ops",
  "log",
  "moirai-parallel",
- "ndarray",
  "rand 0.8.5",
  "serde",
 ]
@@ -4842,7 +4840,6 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
- "ndarray",
  "ndarray-npy",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
@@ -5022,6 +5019,7 @@ dependencies = [
  "kwavers-source",
  "kwavers-transducer",
  "leto",
+ "leto-ops",
  "log",
  "moirai-parallel",
  "serde",
@@ -7275,7 +7273,6 @@ dependencies = [
 name = "ritk-core"
 version = "0.9.0"
 dependencies = [
- "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "mnemosyne",
@@ -7343,7 +7340,6 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "burn",
- "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "ritk-core",
@@ -7361,7 +7357,6 @@ version = "0.2.0"
 dependencies = [
  "anyhow",
  "arrayvec",
- "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "consus-core",
@@ -7406,7 +7401,6 @@ name = "ritk-jpeg"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "image 0.24.9",
  "ritk-core",
@@ -7429,7 +7423,6 @@ name = "ritk-metaimage"
 version = "0.1.1"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "bytemuck",
  "coeus-core",
  "flate2",
@@ -7444,7 +7437,6 @@ name = "ritk-mgh"
 version = "0.2.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "flate2",
  "ritk-core",
@@ -7458,7 +7450,6 @@ name = "ritk-minc"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "consus-core",
  "consus-hdf5",
@@ -7474,7 +7465,6 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "burn",
- "burn-ndarray",
  "bytemuck",
  "coeus-tensor",
  "onnx-ir",
@@ -7499,7 +7489,6 @@ name = "ritk-nifti"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "flate2",
  "ritk-core",
@@ -7513,7 +7502,6 @@ name = "ritk-nrrd"
 version = "0.1.1"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "bytemuck",
  "coeus-core",
  "flate2",
@@ -7528,7 +7516,6 @@ name = "ritk-png"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "image 0.24.9",
  "ritk-core",
@@ -7595,7 +7582,6 @@ name = "ritk-statistics"
 version = "0.1.1"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "moirai",
@@ -7609,7 +7595,6 @@ name = "ritk-tensor-ops"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "coeus-leto",
  "coeus-ops",
@@ -7624,7 +7609,6 @@ name = "ritk-tiff"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "burn-ndarray",
  "coeus-core",
  "ritk-core",
  "ritk-image",
@@ -7668,7 +7652,6 @@ name = "ritk-wgpu-compat"
 version = "0.1.0"
 dependencies = [
  "burn",
- "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "hephaestus-wgpu",

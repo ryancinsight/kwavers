@@ -52,7 +52,8 @@ fn test_filter_removes_low_frequency_component() {
     }
 
     let filtered = filter.filter(&data).unwrap();
-    let filtered_mean: f64 = filtered.row(0).mean().unwrap();
+    let filtered_mean: f64 =
+        leto::mean_all(&filtered.index_axis::<1>(0, 0).unwrap().to_contiguous()).unwrap();
     assert!(filtered_mean.abs() < 0.5 * dc_component);
 }
 
@@ -147,7 +148,7 @@ fn test_cbr_history() {
     let config = AdaptiveFilterConfig::default();
     let mut filter = AdaptiveFilter::new(config).unwrap();
 
-    let data = Array2::<f64>::from_shape_fn((3, 16), |(_, t)| (TWO_PI * t as f64 / 8.0).sin());
+    let data = Array2::<f64>::from_shape_fn((3, 16), |[_, t]| (TWO_PI * t as f64 / 8.0).sin());
 
     filter.filter(&data).unwrap();
     assert_eq!(filter.cbr_history().len(), 3);

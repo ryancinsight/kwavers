@@ -166,7 +166,9 @@ fn main() {
             .expect("forward");
         let rms = (data.iter().map(|v| v * v).sum::<f64>() / data.len() as f64).sqrt();
         let sigma = (NOISE_PCT / 100.0) * rms;
-        data.mapv_inplace(|v| v + sigma * next_noise());
+        for value in data.iter_mut() {
+            *value += sigma * next_noise();
+        }
         shots.push((geometry, data));
     }
 

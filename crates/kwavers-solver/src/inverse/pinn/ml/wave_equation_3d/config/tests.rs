@@ -80,7 +80,7 @@ fn test_metrics_update() {
     metrics.training_time_secs = 123.45;
 
     assert_eq!(metrics.epochs_completed, 100);
-    assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 2);
+    assert_eq!((metrics.total_loss.len()), 2);
     assert_eq!(metrics.total_loss[1], 0.05);
     assert_eq!(metrics.training_time_secs, 123.45);
 }

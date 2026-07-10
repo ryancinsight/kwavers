@@ -64,10 +64,12 @@ impl FourierReconstructor {
         // Process each sensor
         for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
             // Get sensor signal
-            let signal = sensor_data.index_axis(1, sensor_idx).unwrap();
+            let signal = sensor_data
+                .slice_with::<1>(&s![.., sensor_idx])
+                .expect("invariant: sensor index within column count");
 
             // Apply ramp filter for derivative (d/dt -> multiplication by iω in Fourier)
-            let filtered_signal = self.apply_ramp_filter(signal.to_owned())?;
+            let filtered_signal = self.apply_ramp_filter(signal.to_contiguous())?;
 
             // Compute angular spectrum for this sensor
             let angular_spectrum = self.compute_angular_spectrum(&filtered_signal, sensor_pos)?;
@@ -88,7 +90,7 @@ impl FourierReconstructor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn apply_ramp_filter(&self, signal: Array1<f64>) -> KwaversResult<Array1<f64>> {
-        let n = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
+        let n = signal.len();
         let leto_signal = LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
             .expect("photoacoustic ramp-filter signal length must match its Leto shape");
         let mut complex_signal = fft_1d_leto(leto_signal.view());
@@ -110,9 +112,9 @@ impl FourierReconstructor {
             *val *= ApolloComplex64::new(0.0, omega);
         }
 
-        Ok(Array1::from_vec(
-            ifft_1d_leto(complex_signal.view()).into_vec(),
-        ))
+        let filtered_vec = ifft_1d_leto(complex_signal.view()).into_vec();
+        Ok(Array1::from_vec(filtered_vec.len(), filtered_vec)
+            .expect("invariant: ramp-filtered signal length matches its Leto shape"))
     }
 
     /// Compute angular spectrum from filtered sensor data
@@ -124,7 +126,7 @@ impl FourierReconstructor {
         filtered_signal: &Array1<f64>,
         sensor_pos: &[f64; 3],
     ) -> KwaversResult<Array2<Complex64>> {
-        let n_time = (filtered_signal.shape()[0] * filtered_signal.shape()[1] * filtered_signal.shape()[2]);
+        let n_time = filtered_signal.len();
         let n_freq = n_time / 2 + 1;
 
         let signal = LetoArray1::from_shape_vec([n_time], filtered_signal.iter().cloned().collect::<Vec<_>>())

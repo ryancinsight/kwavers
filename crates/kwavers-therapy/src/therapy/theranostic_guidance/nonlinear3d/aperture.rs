@@ -41,7 +41,7 @@ pub(crate) fn build_aperture(
             select_evenly_preserving_order(sources.clone(), config.receiver_count)
         }
     };
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let therapy_points_m = sources
         .iter()
         .map(|idx| source_frame_grid_point_m(*idx, volume, n))
@@ -90,7 +90,7 @@ fn source_axis_index(index: usize, min: usize, max: usize, n: usize) -> f64 {
 }
 
 fn brain_candidates(volume: &Nonlinear3dVolume, requested_count: usize) -> Vec<GridIndex> {
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let peak_z = axial_peak(&volume.body_mask);
     let target = centroid_index(&volume.target_mask).unwrap_or(volume.focus);
     let superior_positive = peak_z <= n / 2;
@@ -136,7 +136,7 @@ fn exterior_boundary_cells(
     exterior: &leto::Array3<bool>,
 ) -> Vec<GridIndex> {
     let mut out = Vec::new();
-    for ((x, y, z), active) in mask.indexed_iter() {
+    for ([x, y, z], active) in mask.indexed_iter() {
         if *active && touches_exterior(mask, exterior, x, y, z) {
             out.push(GridIndex { x, y, z });
         }
@@ -151,7 +151,7 @@ fn touches_exterior(
     y: usize,
     z: usize,
 ) -> bool {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     (x > 0 && !mask[[x - 1, y, z]] && exterior[[x - 1, y, z]])
         || (x + 1 < nx && !mask[[x + 1, y, z]] && exterior[[x + 1, y, z]])
         || (y > 0 && !mask[[x, y - 1, z]] && exterior[[x, y - 1, z]])
@@ -162,7 +162,7 @@ fn touches_exterior(
 
 fn boundary_cells(mask: &leto::Array3<bool>) -> Vec<GridIndex> {
     let mut out = Vec::new();
-    for ((x, y, z), active) in mask.indexed_iter() {
+    for ([x, y, z], active) in mask.indexed_iter() {
         if *active && is_boundary(mask, x, y, z) {
             out.push(GridIndex { x, y, z });
         }
@@ -171,7 +171,7 @@ fn boundary_cells(mask: &leto::Array3<bool>) -> Vec<GridIndex> {
 }
 
 fn is_boundary(mask: &leto::Array3<bool>, x: usize, y: usize, z: usize) -> bool {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     x == 0
         || y == 0
         || z == 0
@@ -187,12 +187,12 @@ fn is_boundary(mask: &leto::Array3<bool>, x: usize, y: usize, z: usize) -> bool 
 }
 
 fn axial_peak(mask: &leto::Array3<bool>) -> usize {
-    let (_, _, nz) = mask.dim();
+    let [_, _, nz] = mask.shape();
     (0..nz)
         .max_by_key(|z| {
             let mut count = 0usize;
-            for x in 0..mask.dim().0 {
-                for y in 0..mask.dim().1 {
+            for x in 0..mask.shape()[0] {
+                for y in 0..mask.shape()[1] {
                     count += usize::from(mask[[x, y, *z]]);
                 }
             }

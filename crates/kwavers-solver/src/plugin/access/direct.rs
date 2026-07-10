@@ -61,7 +61,10 @@ impl<'a> DirectPluginFieldAccess<'a> {
             .into());
         }
 
-        Ok(self.fields.index_axis(0, index))
+        Ok(self
+            .fields
+            .index_axis::<3>(0, index)
+            .expect("invariant: field index within fields axis 0"))
     }
 
     /// Get a mutable view of a field
@@ -81,6 +84,9 @@ impl<'a> DirectPluginFieldAccess<'a> {
             .into());
         }
 
-        Ok(self.fields.index_axis_mut(0, index))
+        Ok(self
+            .fields
+            .index_axis_mut::<3>(0, index)
+            .expect("invariant: field index within fields axis 0"))
     }
 }

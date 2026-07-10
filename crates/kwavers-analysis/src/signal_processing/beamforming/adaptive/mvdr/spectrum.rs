@@ -20,13 +20,13 @@ impl MinimumVariance {
         covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> KwaversResult<f64> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
 
-        if n == 0 || covariance.ncols() != n {
+        if n == 0 || covariance.shape()[1] != n {
             return Err(KwaversError::InvalidInput(format!(
                 "MVDR pseudospectrum: covariance must be square; got {}×{}",
                 n,
-                covariance.ncols()
+                covariance.shape()[1]
             )));
         }
         if steering.len() != n {

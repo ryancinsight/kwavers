@@ -21,7 +21,7 @@ fn test_single_point_prediction() {
     let result = predictor.predict_point(0.5, 0.5, 0.1);
 
     let displacement = result.unwrap();
-    assert_eq!((displacement.shape()[0] * displacement.shape()[1] * displacement.shape()[2]), 2);
+    assert_eq!((displacement.len()), 2);
 }
 
 #[test]

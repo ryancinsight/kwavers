@@ -71,7 +71,7 @@ fn test_slsc_grid_processing() {
         .process_grid(&data, (height, width))
         .expect("Grid processing should succeed");
 
-    assert_eq!(result.shape(), &[height, width]);
+    assert_eq!(result.shape(), [height, width]);
 }
 
 // ─── compute_lag_coherence exact value-semantic tests ────────────────────────
@@ -200,7 +200,7 @@ fn slsc_process_volume_identical_input_yields_all_ones() {
         .process_volume(&data)
         .expect("volume SLSC processing should succeed");
 
-    assert_eq!(result.shape(), &[3, 5]);
+    assert_eq!(result.shape(), [3, 5]);
     for beam in 0..3 {
         for sample in 0..5 {
             let c = result[[beam, sample]];
@@ -221,7 +221,7 @@ fn slsc_coherence_map_clamps_to_unit_interval() {
         .create_coherence_map(&data, Some(40.0))
         .expect("coherence map should succeed");
 
-    assert_eq!(map.shape(), &[1, 4]);
+    assert_eq!(map.shape(), [1, 4]);
     for (idx, &value) in map.iter().enumerate() {
         assert_eq!(value, 1.0, "map[{idx}] should be clamped to 1.0");
     }
@@ -273,7 +273,7 @@ fn slsc_batch_identical_input_yields_all_ones() {
 
     assert_eq!(
         result.shape(),
-        &[n_frames, n_samples],
+        [n_frames, n_samples],
         "output shape must be (n_frames, n_samples)"
     );
     for frame in 0..n_frames {

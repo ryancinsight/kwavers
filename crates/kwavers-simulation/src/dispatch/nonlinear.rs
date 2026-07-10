@@ -44,7 +44,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     if let Some(ref mask) = req.sensor_mask {
         let p0 = solver.pressure();
         let mut sensor_idx = 0;
-        for ((i, j, k), &active) in mask.indexed_iter() {
+        for ([i, j, k], &active) in mask.indexed_iter() {
             if active {
                 sensor_data[[sensor_idx, 0]] = p0[[i, j, k]];
                 sensor_idx += 1;
@@ -60,7 +60,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         if let Some(ref mask) = req.sensor_mask {
             let pressure = solver.pressure();
             let mut sensor_idx = 0;
-            for ((i, j, k), &active) in mask.indexed_iter() {
+            for ([i, j, k], &active) in mask.indexed_iter() {
                 if active {
                     sensor_data[[sensor_idx, step + 1]] = pressure[[i, j, k]];
                     sensor_idx += 1;

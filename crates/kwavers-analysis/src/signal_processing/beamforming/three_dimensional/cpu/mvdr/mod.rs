@@ -102,7 +102,7 @@ pub fn mvdr_cpu(
     diagonal_loading: f32,
     subarray_size: [usize; 3],
 ) -> KwaversResult<Array3<f32>> {
-    let (frames, channels, samples, _) = rf_data.dim();
+    let [frames, channels, samples, _] = rf_data.shape();
     let (nel_x, nel_y, nel_z) = config.num_elements_3d;
     let (vol_x, vol_y, vol_z) = config.volume_dims;
     let expected_channels = nel_x * nel_y * nel_z;

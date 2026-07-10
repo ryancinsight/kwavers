@@ -25,7 +25,7 @@
 use kwavers_physics::foundations::wave_equation::{
     AutodiffElasticWaveEquation, ElasticWaveEquation,
 };
-use ArrayD;
+use leto::Array3;
 
 // ============================================================================
 // Validation Result Types
@@ -340,8 +340,8 @@ pub fn validate_wave_speeds<T: ElasticWaveEquation>(
     let cs_computed = solver.s_wave_speed();
 
     // Compute analytical wave speeds
-    let cp_analytical = ((lambda + 2.0 * &mu) / &rho).mapv(f64::sqrt);
-    let cs_analytical = (mu / rho).mapv(f64::sqrt);
+    let cp_analytical = (&(&lambda + &(&mu * 2.0)) / &rho).mapv(f64::sqrt);
+    let cs_analytical = (&mu / &rho).mapv(f64::sqrt);
 
     // Compute errors
     let cp_error = &cp_computed - &cp_analytical;
@@ -397,8 +397,8 @@ pub fn validate_wave_speeds_autodiff<T: AutodiffElasticWaveEquation>(
     let cs_computed = solver.s_wave_speed();
 
     // Compute analytical wave speeds
-    let cp_analytical = ((lambda + 2.0 * &mu) / &rho).mapv(f64::sqrt);
-    let cs_analytical = (mu / rho).mapv(f64::sqrt);
+    let cp_analytical = (&(&lambda + &(&mu * 2.0)) / &rho).mapv(f64::sqrt);
+    let cs_analytical = (&mu / &rho).mapv(f64::sqrt);
 
     // Compute errors
     let cp_error = &cp_computed - &cp_analytical;
@@ -680,8 +680,8 @@ pub fn validate_plane_wave_pde<T: ElasticWaveEquation>(
 /// For conservative systems: dE/dt ≈ 0 (modulo boundary flux and dissipation)
 pub fn validate_energy_conservation<T: ElasticWaveEquation>(
     solver: &T,
-    displacement: &ArrayD<f64>,
-    velocity: &ArrayD<f64>,
+    displacement: &Array3<f64>,
+    velocity: &Array3<f64>,
     reference_energy: f64,
     tolerance: f64,
 ) -> ValidationResult {

@@ -50,7 +50,7 @@ pub(crate) struct SelfAdjointConfig {
 
 /// Acquisition geometry: source voxels + per-source signal, receiver voxels.
 ///
-/// `source_signal` is `(n_rows, nt)` with `n_rows == (source_voxels.shape()[0] * source_voxels.shape()[1] * source_voxels.shape()[2])` for a
+/// `source_signal` is `(n_rows, nt)` with `n_rows == (source_voxels.len())` for a
 /// per-voxel signal, or `n_rows == 1` to broadcast one signal to every source
 /// voxel. Receiver traces are returned/consumed in `receiver_voxels` order.
 #[derive(Clone, Copy)]
@@ -617,15 +617,15 @@ pub(crate) fn gradient(
         }
 
         // Gradient term for n = m-1: g += coeff · ξ^n · (p^{m} − 2p^{m-1} + p^{m-2}).
-        let p_m = history.index_axis(0, m).unwrap();
-        let p_m1 = history.index_axis(0, m - 1).unwrap();
         for i in 0..dims.0 {
             for j in 0..dims.1 {
                 for k in 0..dims.2 {
+                    let pm = history[[m, i, j, k]];
+                    let pm1 = history[[m - 1, i, j, k]];
                     let pm2 = if m >= 2 { history[[m - 2, i, j, k]] } else { 0.0 };
                     gradient[[i, j, k]] += coeff[[i, j, k]]
                         * xi_prev[[i, j, k]]
-                        * (p_m[[i, j, k]] - 2.0 * p_m1[[i, j, k]] + pm2);
+                        * (pm - 2.0 * pm1 + pm2);
                 }
             }
         }

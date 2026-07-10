@@ -5,7 +5,7 @@ fn test_neural_layer_creation() {
     let layer = NeuralLayer::new(64, 32).unwrap();
     assert_eq!(layer.input_size(), 64);
     assert_eq!(layer.output_size(), 32);
-    assert_eq!(layer.weights().dim(), (64, 32));
+    assert_eq!(layer.weights().shape(), [64, 32]);
     assert_eq!(layer.biases().len(), 32);
 }
 
@@ -40,7 +40,7 @@ fn test_neural_layer_forward() {
 
     let output = layer.forward(&input).unwrap();
 
-    assert_eq!(output.dim(), (2, 3, 4));
+    assert_eq!(output.shape(), [2, 3, 4]);
     assert!(output.iter().all(|&x| x.is_finite()));
 }
 
@@ -84,9 +84,9 @@ fn test_neural_layer_forward_shape_preservation() {
     let output = layer.forward(&input).unwrap();
 
     // Spatial dimensions preserved, feature dimension transformed
-    assert_eq!(output.dim().0, 5);
-    assert_eq!(output.dim().1, 7);
-    assert_eq!(output.dim().2, 8);
+    assert_eq!(output.shape()[0], 5);
+    assert_eq!(output.shape()[1], 7);
+    assert_eq!(output.shape()[2], 8);
 }
 
 #[test]

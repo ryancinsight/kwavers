@@ -47,7 +47,7 @@ fn ang_bin(bin: usize, n: usize, d: f64) -> f64 {
 /// `v = c/2` accounts for the round trip.
 #[must_use]
 pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64) -> Array2<f64> {
-    let (nx, nt) = data.dim();
+    let [nx, nt] = data.shape();
     if nx == 0 || nt == 0 {
         return Array2::zeros((nx, nt));
     }
@@ -56,7 +56,7 @@ pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64
 
     // real RF → complex, then 2-D FFT over (x, t) → S(k_x, ω)
     let mut s0 = Array2::<Complex64>::zeros((nx, nt));
-    for ((i, j), &val) in data.indexed_iter() {
+    for ([i, j], &val) in data.indexed_iter() {
         s0[[i, j]] = Complex64::new(val, 0.0);
     }
     let s = fft_2d_complex(&s0.into());
@@ -109,7 +109,7 @@ mod tests {
     fn argmax2(a: &Array2<f64>) -> (usize, usize) {
         let mut best = (0usize, 0usize);
         let mut bv = f64::NEG_INFINITY;
-        for ((i, j), &v) in a.indexed_iter() {
+        for ([i, j], &v) in a.indexed_iter() {
             if v.abs() > bv {
                 bv = v.abs();
                 best = (i, j);

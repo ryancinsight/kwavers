@@ -1,7 +1,7 @@
 use crate::signal_processing::localization::SourceLocation;
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::EigenDecomposition;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::Array2;
 
 use super::super::model_order::{ModelOrderConfig, ModelOrderEstimator};
@@ -50,7 +50,7 @@ impl MUSICProcessor {
 
         // Precompute E_n E_n^H for efficiency
         let num_sensors = sensor_positions.len();
-        let noise_subspace_dim = noise_eigenvectors.ncols();
+        let noise_subspace_dim = noise_eigenvectors.shape()[1];
         let mut noise_projector = Array2::zeros((num_sensors, num_sensors));
 
         for i in 0..num_sensors {
@@ -185,13 +185,15 @@ impl MUSICProcessor {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn run(&self, snapshots: &Array2<Complex64>) -> KwaversResult<MUSICResult> {
-        let num_sensors = snapshots.nrows();
-        let num_snapshots = snapshots.ncols();
+        let num_sensors = snapshots.shape()[0];
+        let num_snapshots = snapshots.shape()[1];
 
         let covariance = self.estimate_covariance(snapshots)?;
 
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&covariance)?;
+        let (eigenvalues, eigenvectors) = {
+            let r = EigenSolver::jacobi_hermitian(&covariance, EigenSolverConfig::default())?;
+            (r.eigenvalues, r.eigenvectors)
+        };
 
         let num_sources = if let Some(k) = self.config.num_sources {
             k
@@ -199,7 +201,7 @@ impl MUSICProcessor {
             let model_config = ModelOrderConfig::new(num_sensors, num_snapshots)?
                 .with_criterion(self.config.model_order_criterion);
             let estimator = ModelOrderEstimator::new(model_config)?;
-            let real_eigenvalues: Vec<f64> = eigenvalues.to_vec();
+            let real_eigenvalues: Vec<f64> = eigenvalues.iter().copied().collect();
             let result = estimator.estimate(&real_eigenvalues)?;
             result.num_sources
         };

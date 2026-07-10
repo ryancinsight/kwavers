@@ -57,10 +57,10 @@ fn test_projection_dimensions_match() {
     let projection = CylindricalMediumProjection::new(&medium, &grid, &topology).unwrap();
 
     let c_field = projection.sound_speed_field();
-    assert_eq!(c_field.shape(), &[128, 64]);
+    assert_eq!(c_field.shape(), [128, 64]);
 
     let rho_field = projection.density_field();
-    assert_eq!(rho_field.shape(), &[128, 64]);
+    assert_eq!(rho_field.shape(), [128, 64]);
 }
 
 #[test]
@@ -242,9 +242,9 @@ fn test_property_array_dimensions() {
 
     let projection = CylindricalMediumProjection::new(&medium, &grid, &topology).unwrap();
 
-    assert_eq!(projection.sound_speed_field().shape(), &[96, 48]);
-    assert_eq!(projection.density_field().shape(), &[96, 48]);
-    assert_eq!(projection.absorption_field().shape(), &[96, 48]);
+    assert_eq!(projection.sound_speed_field().shape(), [96, 48]);
+    assert_eq!(projection.density_field().shape(), [96, 48]);
+    assert_eq!(projection.absorption_field().shape(), [96, 48]);
     assert_eq!(projection.dimensions(), (96, 48));
 }
 
@@ -290,7 +290,7 @@ fn test_projection_with_nonlinearity() {
 
     // Water should have nonlinearity
     if let Some(nonlin_field) = projection.nonlinearity_field() {
-        assert_eq!(nonlin_field.shape(), &[32, 16]);
+        assert_eq!(nonlin_field.shape(), [32, 16]);
 
         // Check all values are in physical range for B/A (typically 1-20)
         for &b_over_a in nonlin_field.iter() {

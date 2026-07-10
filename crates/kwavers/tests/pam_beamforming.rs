@@ -186,7 +186,7 @@ fn pam_time_exposure_acoustics_outputs_single_time_plane() {
         .process(&sensor_data, sample_rate)
         .expect("PAM process (TEA)");
 
-    assert_eq!(map.shape(), &[1, 1, 1]);
+    assert_eq!(map.shape(), [1, 1, 1]);
 
     let v = map[[0, 0, 0]];
     assert!(v.is_finite());
@@ -212,7 +212,7 @@ fn synth_impulses_has_one_impulse_per_element() {
 
     // Count impulses per element channel.
     for elem in 0..elements {
-        let channel = data.index_axis(Axis(0), elem);
+        let channel = data.index_axis::<1>(0, elem).expect("index_axis");
         let mut count = 0usize;
         for v in channel.iter() {
             if *v == 1.0 {

@@ -28,12 +28,12 @@ impl ElasticWaveSolver {
     ///
     pub fn new(grid: &Grid, medium: &dyn Medium, config: ElasticWaveConfig) -> KwaversResult<Self> {
         let (nx, ny, nz) = grid.dimensions();
-        let density = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| medium.density(i, j, k));
-        let lambda = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        let density = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| medium.density(i, j, k));
+        let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             medium.lame_lambda(x, y, z, grid)
         });
-        let mu = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        let mu = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             medium.lame_mu(x, y, z, grid)
         });

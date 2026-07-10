@@ -75,7 +75,7 @@ pub struct MarchenkoResult {
 /// (`O(L log L)`) is the documented optimisation (ADR 019) — premature while the
 /// kernel is experimental.
 fn conv_causal(r: &[f64], f: &[f64]) -> Vec<f64> {
-    let l = (f.shape()[0] * f.shape()[1] * f.shape()[2]);
+    let l = f.len();
     let mut out = vec![0.0; l];
     for (k, &rk) in r.iter().enumerate() {
         if rk == 0.0 {
@@ -90,7 +90,7 @@ fn conv_causal(r: &[f64], f: &[f64]) -> Vec<f64> {
 
 /// Causal correlation `(R ⋆ f)[i] = Σ_k R[k] f[i+k]` (R applied time-reversed).
 fn corr_causal(r: &[f64], f: &[f64]) -> Vec<f64> {
-    let l = (f.shape()[0] * f.shape()[1] * f.shape()[2]);
+    let l = f.len();
     let mut out = vec![0.0; l];
     for (k, &rk) in r.iter().enumerate() {
         if rk == 0.0 {
@@ -129,10 +129,10 @@ fn apply_window(x: &mut [f64], center: usize, half: usize) {
 /// equations and the validation plan.
 ///
 /// # Panics
-/// - Panics if `reflection` is empty or `t_d_samples ≥ (reflection.shape()[0] * reflection.shape()[1] * reflection.shape()[2])`.
+/// - Panics if `reflection` is empty or `t_d_samples ≥ (reflection.len())`.
 #[must_use]
 pub fn redatum(reflection: &[f64], cfg: &MarchenkoConfig) -> MarchenkoResult {
-    let nt = (reflection.shape()[0] * reflection.shape()[1] * reflection.shape()[2]);
+    let nt = reflection.len();
     assert!(nt > 0, "reflection response must be non-empty");
     assert!(
         cfg.t_d_samples < nt,
@@ -197,9 +197,9 @@ pub fn marchenko_wasserstein_misfit(
 
     let g_obs = redatum(reflection_obs, cfg).green_minus;
     let g_mod = redatum(reflection_mod, cfg).green_minus;
-    let l = (g_obs.shape()[0] * g_obs.shape()[1] * g_obs.shape()[2]);
+    let l = g_obs.len();
     let obs = Array2::from_shape_vec((1, l), g_obs).expect("row vector shape");
-    let modeled = Array2::from_shape_vec((1, (g_mod.shape()[0] * g_mod.shape()[1] * g_mod.shape()[2])), g_mod).expect("row vector shape");
+    let modeled = Array2::from_shape_vec((1, (g_mod.len())), g_mod).expect("row vector shape");
     MisfitFunction::new(MisfitType::Wasserstein).compute(&obs, &modeled)
 }
 

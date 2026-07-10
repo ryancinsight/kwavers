@@ -21,14 +21,22 @@ pub trait PinnUncertaintyPredictor {
     ///   provided.
     /// - Propagates backend/model prediction failures.
     fn predict_inputs(&self, inputs: &Array2<f32>) -> KwaversResult<Array2<f32>> {
-        if inputs.ncols() < 2 {
+        if inputs.shape()[1] < 2 {
             return Err(KwaversError::InvalidInput(
                 "PINN uncertainty inputs must contain x and t columns".to_owned(),
             ));
         }
 
-        let x = inputs.column(0).mapv(f64::from).to_owned();
-        let t = inputs.column(1).mapv(f64::from).to_owned();
+        let x = inputs
+            .index_axis::<1>(1, 0)
+            .expect("invariant: column 0 exists")
+            .to_contiguous()
+            .mapv(f64::from);
+        let t = inputs
+            .index_axis::<1>(1, 1)
+            .expect("invariant: column 1 exists")
+            .to_contiguous()
+            .mapv(f64::from);
         self.predict_coordinates(&x, &t)
     }
 }
@@ -36,7 +44,6 @@ pub trait PinnUncertaintyPredictor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use array;
 
     struct SumPredictor;
 
@@ -56,11 +63,12 @@ mod tests {
 
     #[test]
     fn input_matrix_routes_columns_to_predictor() {
-        let inputs = array![[1.0_f32, 0.25_f32], [2.0_f32, 0.5_f32]];
+        let inputs =
+            Array2::from_shape_vec((2, 2), vec![1.0_f32, 0.25_f32, 2.0_f32, 0.5_f32]).unwrap();
 
         let prediction = SumPredictor.predict_inputs(&inputs).unwrap();
 
-        assert_eq!(prediction.dim(), (2, 1));
+        assert_eq!(prediction.shape(), [2, 1]);
         assert_eq!(prediction[[0, 0]], 1.25);
         assert_eq!(prediction[[1, 0]], 2.5);
     }

@@ -81,7 +81,7 @@ fn body_radius_from_focus(mask: &Array2<bool>, spacing_m: f64, focus: Point2) ->
     let center = centered_origin(mask);
     mask.indexed_iter()
         .filter(|(_, active)| **active)
-        .map(|((ix, iy), _)| {
+        .map(|([ix, iy], _)| {
             let x = (ix as f64 - center.0) * spacing_m;
             let y = (iy as f64 - center.1) * spacing_m;
             (x - focus.x_m).hypot(y - focus.y_m)
@@ -180,7 +180,7 @@ fn centroid_or_center(mask: &Array2<bool>, fallback: &Array2<bool>, spacing_m: f
     let mut sy = 0.0;
     let mut n = 0.0;
     let center = centered_origin(selected);
-    for ((ix, iy), active) in selected.indexed_iter() {
+    for ([ix, iy], active) in selected.indexed_iter() {
         if *active {
             sx += (ix as f64 - center.0) * spacing_m;
             sy += (iy as f64 - center.1) * spacing_m;
@@ -201,7 +201,7 @@ fn nearest_body_point(mask: &Array2<bool>, spacing_m: f64, focus: Point2) -> Poi
     let center = centered_origin(mask);
     let mut best = Point2 { x_m: 0.0, y_m: 0.0 };
     let mut best_distance = f64::INFINITY;
-    for ((ix, iy), active) in mask.indexed_iter() {
+    for ([ix, iy], active) in mask.indexed_iter() {
         if *active {
             let point = Point2 {
                 x_m: (ix as f64 - center.0) * spacing_m,
@@ -221,7 +221,7 @@ fn nearest_body_boundary_point(mask: &Array2<bool>, spacing_m: f64, focus: Point
     let center = centered_origin(mask);
     let mut best = Point2 { x_m: 0.0, y_m: 0.0 };
     let mut best_distance = f64::INFINITY;
-    for ((ix, iy), active) in mask.indexed_iter() {
+    for ([ix, iy], active) in mask.indexed_iter() {
         if *active && is_boundary_2d(mask, ix, iy) {
             let point = Point2 {
                 x_m: (ix as f64 - center.0) * spacing_m,
@@ -242,7 +242,7 @@ fn nearest_body_boundary_point(mask: &Array2<bool>, spacing_m: f64, focus: Point
 }
 
 fn centered_origin(mask: &Array2<bool>) -> (f64, f64) {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     ((nx - 1) as f64 * 0.5, (ny - 1) as f64 * 0.5)
 }
 
@@ -255,7 +255,7 @@ pub fn placement_metrics(
     let center = centered_origin(body_mask);
     let body_points = body_mask
         .indexed_iter()
-        .filter_map(|((ix, iy), active)| {
+        .filter_map(|([ix, iy], active)| {
             active.then_some(Point2 {
                 x_m: (ix as f64 - center.0) * spacing_m,
                 y_m: (iy as f64 - center.1) * spacing_m,

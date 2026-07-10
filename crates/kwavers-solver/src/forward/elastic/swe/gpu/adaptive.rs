@@ -172,7 +172,7 @@ impl AdaptiveResolution {
             .iter()
             .copied()
             .fold(0.0_f64, |a, b| a + b.abs())
-            / (displacement.shape()[0] * displacement.shape()[1] * displacement.shape()[2]) as f64;
+            / (displacement.len()) as f64;
         let signal_bonus = (signal_strength * 1000.0).min(0.1);
 
         (base_quality + resolution_bonus + signal_bonus).min(1.0)

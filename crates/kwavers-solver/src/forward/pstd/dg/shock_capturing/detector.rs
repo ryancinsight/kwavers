@@ -257,7 +257,7 @@ impl ShockDetector {
         velocity: &Array4<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (_, nx, ny, nz) = velocity.shape();
+        let [_, nx, ny, nz] = velocity.shape();
         let mut indicator = Array3::zeros((nx, ny, nz));
 
         // Compute velocity divergence
@@ -282,7 +282,7 @@ impl ShockDetector {
         // Normalize
         let max_div = indicator.iter().copied().fold(0.0_f64, f64::max);
         if max_div > 0.0 {
-            indicator /= max_div;
+            indicator.iter_mut().for_each(|value| *value /= max_div);
         }
 
         Ok(indicator)

@@ -12,7 +12,6 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_core::utils::iterators::apply_inplace;
 use leto::Array2;
 
 mod post_process;
@@ -79,7 +78,7 @@ impl CovarianceEstimator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn estimate(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (num_sensors, num_snapshots) = data.dim();
+        let [num_sensors, num_snapshots] = data.shape();
 
         if num_sensors == 0 || num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(
@@ -90,7 +89,9 @@ impl CovarianceEstimator {
         let mut covariance = Array2::zeros((num_sensors, num_sensors));
 
         for snapshot in 0..num_snapshots {
-            let x = data.column(snapshot);
+            let x = data
+                .index_axis::<1>(1, snapshot)
+                .expect("snapshot column within bounds");
             for i in 0..num_sensors {
                 for j in 0..num_sensors {
                     covariance[[i, j]] += x[i] * x[j];
@@ -98,7 +99,9 @@ impl CovarianceEstimator {
             }
         }
 
-        apply_inplace(&mut covariance, |x| x / num_snapshots as f64);
+        for v in covariance.iter_mut() {
+            *v = *v / num_snapshots as f64;
+        }
 
         if self.forward_backward_averaging {
             covariance = self.apply_forward_backward_averaging(&covariance);
@@ -117,7 +120,7 @@ impl CovarianceEstimator {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn estimate_complex(&self, data: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
-        let (num_sensors, num_snapshots) = data.dim();
+        let [num_sensors, num_snapshots] = data.shape();
 
         if num_sensors == 0 || num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(
@@ -129,16 +132,20 @@ impl CovarianceEstimator {
             Array2::<Complex64>::from_elem((num_sensors, num_sensors), Complex64::default());
 
         for snapshot in 0..num_snapshots {
-            let x = data.column(snapshot);
+            let x = data
+                .index_axis::<1>(1, snapshot)
+                .expect("snapshot column within bounds");
             for i in 0..num_sensors {
                 for j in 0..num_sensors {
-                    covariance[(i, j)] += x[i] * x[j].conj();
+                    covariance[[i, j]] += x[i] * x[j].conj();
                 }
             }
         }
 
         let inv_n = 1.0 / (num_snapshots as f64);
-        apply_inplace(&mut covariance, |v| v * inv_n);
+        for v in covariance.iter_mut() {
+            *v = *v * inv_n;
+        }
 
         if self.forward_backward_averaging {
             covariance = self.apply_forward_backward_averaging_complex(&covariance);
@@ -151,7 +158,7 @@ impl CovarianceEstimator {
     /// Apply forward-backward averaging (real-valued): `R_fb = 0.5 * (R + J R J)`.
     #[must_use]
     pub fn apply_forward_backward_averaging(&self, covariance: &Array2<f64>) -> Array2<f64> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
         let mut fb_covariance = Array2::zeros((n, n));
 
         for i in 0..n {
@@ -173,14 +180,14 @@ impl CovarianceEstimator {
         &self,
         covariance: &Array2<Complex64>,
     ) -> Array2<Complex64> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
         let mut fb = Array2::<Complex64>::from_elem((n, n), Complex64::default());
 
         for i in 0..n {
             for j in 0..n {
-                let forward = covariance[(i, j)];
-                let backward = covariance[(n - 1 - i, n - 1 - j)].conj();
-                fb[(i, j)] = (forward + backward) * 0.5;
+                let forward = covariance[[i, j]];
+                let backward = covariance[[n - 1 - i, n - 1 - j]].conj();
+                fb[[i, j]] = (forward + backward) * 0.5;
             }
         }
         fb
@@ -188,8 +195,8 @@ impl CovarianceEstimator {
 
     fn apply_post_process_real(&self, covariance: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         self.post_process.validate()?;
-        let m = covariance.nrows();
-        if m == 0 || covariance.ncols() != m {
+        let m = covariance.shape()[0];
+        if m == 0 || covariance.shape()[1] != m {
             return Err(KwaversError::InvalidInput(
                 "CovarianceEstimator::apply_post_process_real: covariance must be square and non-empty".to_owned(),
             ));
@@ -218,8 +225,8 @@ impl CovarianceEstimator {
         covariance: &Array2<Complex64>,
     ) -> KwaversResult<Array2<Complex64>> {
         self.post_process.validate()?;
-        let m = covariance.nrows();
-        if m == 0 || covariance.ncols() != m {
+        let m = covariance.shape()[0];
+        if m == 0 || covariance.shape()[1] != m {
             return Err(KwaversError::InvalidInput(
                 "CovarianceEstimator::apply_post_process_complex: covariance must be square and non-empty".to_owned(),
             ));

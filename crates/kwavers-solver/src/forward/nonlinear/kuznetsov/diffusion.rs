@@ -41,8 +41,8 @@
 
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_FOR_ABSORPTION_HZ;
 use kwavers_core::constants::numerical::THIRD_ORDER_DIFF_COEFF;
-use moirai_parallel::ParallelSliceMut;
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Compute the diffusive term for the Kuznetsov equation using workspace.
 ///
@@ -86,30 +86,6 @@ pub fn compute_diffusive_term_workspace(
     // ∂³p/∂t³ ≈ (p[n] - 3*p[n-1] + 3*p[n-2] - p[n-3]) / dt³
     let dt_cubed = dt.powi(3);
 
-    // Standard-layout asserts: original Zip iteration is layout-agnostic; the
-    // migrated par_mut().enumerate() requires C-contiguous storage so the
-    // flat-slice index space matches Zip's C-order iteration. Failing here
-    // produces a discoverable error before any silent OOB reads.
-    assert!(
-        diffusive_term_out,
-        "diffusive_term_out must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        pressure,
-        "pressure must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        pressure_prev,
-        "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        pressure_prev2,
-        "pressure_prev2 must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        pressure_prev3,
-        "pressure_prev3 must be C-contiguous (default Array3 layout) for the migration"
-    );
     {
         let diff_slice = diffusive_term_out
             .as_slice_mut()
@@ -126,7 +102,7 @@ pub fn compute_diffusive_term_workspace(
         let prev3_slice = pressure_prev3
             .as_slice()
             .expect("pressure_prev3: standard-layout asserted just above; layout matched");
-        diff_slice.iter_mut().enumerate(|idx, diff: &mut f64| {
+        enumerate_mut_with::<Adaptive, _, _>(diff_slice, |idx, diff: &mut f64| {
             let p_val = p_slice[idx];
             let prev_val = prev_slice[idx];
             let prev2_val = prev2_slice[idx];

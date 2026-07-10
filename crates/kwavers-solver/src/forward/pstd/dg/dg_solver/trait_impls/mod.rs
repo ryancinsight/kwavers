@@ -114,7 +114,9 @@ impl DGOperations for DGSolver {
         for e in 0..n_elements {
             for v in 0..n_vars {
                 let f_col: Array1<f64> = (0..self.n_nodes).map(|i| field[[e, i, v]]).collect();
-                let c_col = v_inv.dot(&f_col);
+                let mut c_col = Array1::<f64>::zeros(v_inv.shape()[0]);
+                leto_ops::matvec(&v_inv.view(), &f_col.view(), &mut c_col.view_mut())
+                    .expect("invariant: DG modal projection V⁻¹·f conforms");
                 for i in 0..self.n_nodes {
                     coefficients[[e, i, v]] = c_col[i];
                 }
@@ -158,7 +160,9 @@ impl DGOperations for DGSolver {
                 let c_col: Array1<f64> = (0..self.n_nodes)
                     .map(|i| coefficients[[e, i, var]])
                     .collect();
-                let f_col = v.dot(&c_col);
+                let mut f_col = Array1::<f64>::zeros(v.shape()[0]);
+                leto_ops::matvec(&v.view(), &c_col.view(), &mut f_col.view_mut())
+                    .expect("invariant: DG nodal reconstruction V·c conforms");
                 for i in 0..self.n_nodes {
                     field[[e, i, var]] = f_col[i];
                 }
@@ -221,7 +225,7 @@ impl DGSolver {
             if element_id < coeffs.shape()[0] {
                 let mut data = Vec::with_capacity(self.n_nodes);
                 for node in 0..self.n_nodes {
-                    data.push(coeffs[(element_id, node, 0)]);
+                    data.push(coeffs[[element_id, node, 0]]);
                 }
                 Some(data)
             } else {
@@ -238,9 +242,9 @@ impl DGSolver {
     ///
     pub fn set_element_data(&mut self, element_id: usize, data: &[f64]) -> KwaversResult<()> {
         if let Some(ref mut coeffs) = self.modal_coefficients {
-            if element_id < coeffs.shape()[0] && (data.shape()[0] * data.shape()[1] * data.shape()[2]) == self.n_nodes {
+            if element_id < coeffs.shape()[0] && (data.len()) == self.n_nodes {
                 for (i, &value) in data.iter().enumerate() {
-                    coeffs[(element_id, i, 0)] = value;
+                    coeffs[[element_id, i, 0]] = value;
                 }
                 Ok(())
             } else {

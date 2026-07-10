@@ -32,7 +32,7 @@ pub(super) fn nonlinear_least_squares_inversion(
     _grid: &Grid,
     config: &NonlinearInversionConfig,
 ) -> KwaversResult<NonlinearParameterMap> {
-    let (nx, ny, nz) = harmonic_field.fundamental_magnitude.shape();
+    let [nx, ny, nz] = harmonic_field.fundamental_magnitude.shape();
 
     let mut nonlinearity_parameter = Array3::zeros([nx, ny, nz]);
     let mut nonlinearity_uncertainty = Array3::zeros([nx, ny, nz]);

@@ -74,7 +74,7 @@ impl MUSICProcessor {
         &self,
         snapshots: &Array2<Complex64>,
     ) -> KwaversResult<Array2<Complex64>> {
-        let (num_sensors, num_snapshots) = snapshots.dim();
+        let [num_sensors, num_snapshots] = snapshots.shape();
 
         if num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(

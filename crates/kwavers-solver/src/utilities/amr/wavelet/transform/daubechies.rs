@@ -144,7 +144,7 @@ impl WaveletTransform {
 
     /// Generate highpass filter from lowpass using quadrature mirror relationship.
     pub(super) fn wavelet_highpass_from_lowpass(h: &[f64]) -> Vec<f64> {
-        let n = (h.shape()[0] * h.shape()[1] * h.shape()[2]);
+        let n = h.len();
         let mut g = vec![0.0; n];
         for i in 0..n {
             g[i] = if i % 2 == 0 {

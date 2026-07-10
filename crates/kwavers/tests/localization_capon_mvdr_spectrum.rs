@@ -116,7 +116,7 @@ fn synth_narrowband_sensor_data(
         for t in 0..n_samples {
             let time_s = (t as f64) / sampling_frequency_hz;
             let phase = omega * (time_s - tau);
-            data[(i, 0, t)] = phase.cos() + (phase + std::f64::consts::FRAC_PI_2).cos();
+            data[[i, 0, t]] = phase.cos() + (phase + std::f64::consts::FRAC_PI_2).cos();
         }
     }
 

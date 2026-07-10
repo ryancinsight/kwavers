@@ -5,8 +5,8 @@ use kwavers_core::constants::fundamental::{
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{
+    Array1,
     Array3,
-    ArrayView1,
 };
 
 #[test]
@@ -31,7 +31,7 @@ fn pstd_dataset_preserves_shape_and_is_input_sensitive() {
         generate_breast_ust_pstd_frequency_dataset(&perturbed, &array, &[200_000.0], config)
             .expect("perturbed dataset");
 
-    assert_eq!(first.observed_pressure.dim(), (1, 4, 4));
+    assert_eq!(first.observed_pressure.shape(), [1, 4, 4]);
     assert_eq!(first.transmissions, 4);
     assert_eq!(first.receivers, 4);
     assert_eq!(first.time_steps_per_frequency[0], 50);
@@ -75,9 +75,9 @@ fn frequency_bin_uses_trailing_steady_state_window() {
     let mut samples = Vec::new();
     samples.extend((0..10).map(|n| 100.0 * (TWO_PI * n as f64 / 10.0).sin()));
     samples.extend((10..20).map(|n| 3.0 * (TWO_PI * n as f64 / 10.0).sin()));
-    let trace = ArrayView1::from(&samples);
+    let trace = Array1::from_vec(samples.len(), samples).expect("trace length");
 
-    let bin = frequency_bin(trace, 1.0, 0.1, 10);
+    let bin = frequency_bin(trace.view(), 1.0, 0.1, 10);
 
     assert!(bin.re.abs() <= 1.0e-12, "bin={bin}");
     assert!((bin.im + 3.0).abs() <= 1.0e-12, "bin={bin}");

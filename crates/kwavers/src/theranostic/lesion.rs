@@ -93,12 +93,12 @@ pub fn thermal_perturbed_sound_speed(
 ) -> Array3<f64> {
     let [nx, ny, nz] = temperature_c.shape();
     assert_eq!(
-        base_c.dim(),
-        (nx, ny, nz),
+        base_c.shape(),
+        [nx, ny, nz],
         "invariant: thermal lesion perturbation requires matching base and temperature shapes"
     );
     let mut out = base_c.clone();
-    for ((i, j, k), c) in out.indexed_iter_mut() {
+    for ([i, j, k], c) in out.indexed_iter_mut().expect("invariant: contiguous lesion field") {
         *c = coeff.sound_speed(*c, temperature_c[[i, j, k]], reference_c);
     }
     out
@@ -114,8 +114,8 @@ pub fn cavitation_perturbed_sound_speed(
     void_fraction: &Array3<f64>,
 ) -> Array3<f64> {
     assert_eq!(
-        base_c.dim(),
-        void_fraction.dim(),
+        base_c.shape(),
+        void_fraction.shape(),
         "invariant: cavitation lesion perturbation requires matching base and void-fraction shapes"
     );
     let mut out = base_c.clone();

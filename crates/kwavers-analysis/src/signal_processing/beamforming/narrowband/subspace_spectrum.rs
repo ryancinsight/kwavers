@@ -114,7 +114,7 @@ fn validate_inputs(
     candidate: [f64; 3],
     cfg: &SubspaceSpectrumConfig,
 ) -> KwaversResult<usize> {
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "subspace spectrum expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"

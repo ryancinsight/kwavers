@@ -24,9 +24,7 @@ use super::super::scratch::ElasticStepScratch;
 use super::super::types::ElasticWaveField;
 use super::fd_stencils::{fd1_x, fd1_y, fd1_z};
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 /// Fill `scratch.{sxx,…,syz,div_x,div_y,div_z}` with the elastic stress
 /// tensor divergence ∇·σ, reusing the caller's pre-allocated workspace.
@@ -55,7 +53,7 @@ pub fn stress_divergence_into(
     field: &ElasticWaveField,
     scratch: &mut ElasticStepScratch,
 ) {
-    let (nx, ny, nz) = field.ux.shape();
+    let [nx, ny, nz] = field.ux.shape();
     let dx = grid.dx;
     let dy = grid.dy;
     let dz = grid.dz;
@@ -88,39 +86,16 @@ pub fn stress_divergence_into(
     // `syy_slice[idx]`/`szz_slice[idx]` inside the closure.  This preserves
     // the joint per-iteration writes (all three outputs updated atomically
     // per `(i,j,k)`) without requiring Zip::indexed's three-way .and() chain.
-    assert!(
-        scratch.sxx,
-        "scratch.sxx must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        scratch.syy,
-        "scratch.syy must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        scratch.szz,
-        "scratch.szz must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        ux,
-        "ux must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        uy,
-        "uy must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        uz,
-        "uz must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        lambda,
-        "lambda must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        mu,
-        "mu must be C-contiguous (default Array3 layout) for the migration"
-    );
+
     {
+        // Native indexed FD stencil writing three co-located outputs per (i,j,k).
+        // leto/moirai has no indexed multi-mutable-output parallel primitive; this
+        // sequential form is correctness-preserving. Reparallelizing this hot
+        // elastic-stress kernel is tracked perf-debt (see kwavers-solver backlog).
+        let sxx_slice = scratch
+            .sxx
+            .as_slice_mut()
+            .expect("sxx: standard-layout asserted just above; layout matched");
         let syy_slice = scratch
             .syy
             .as_slice_mut()
@@ -129,18 +104,22 @@ pub fn stress_divergence_into(
             .szz
             .as_slice_mut()
             .expect("szz: standard-layout asserted just above; layout matched");
-        Zip::indexed(scratch.sxx.view_mut()).par_for_each(|(i, j, k), o_sxx| {
-            let idx = i * (ny * nz) + j * nz + k;
-            let exx = fd1_x(ux, i, j, k, nx, dx);
-            let eyy = fd1_y(uy, i, j, k, ny, dy);
-            let ezz = fd1_z(uz, i, j, k, nz, dz);
-            let la = lambda[[i, j, k]];
-            let mv = mu[[i, j, k]];
-            let la2mu = 2.0f64.mul_add(mv, la);
-            *o_sxx = la2mu.mul_add(exx, la * (eyy + ezz));
-            syy_slice[idx] = la2mu.mul_add(eyy, la * (exx + ezz));
-            szz_slice[idx] = la2mu.mul_add(ezz, la * (exx + eyy));
-        });
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let idx = i * (ny * nz) + j * nz + k;
+                    let exx = fd1_x(ux, i, j, k, nx, dx);
+                    let eyy = fd1_y(uy, i, j, k, ny, dy);
+                    let ezz = fd1_z(uz, i, j, k, nz, dz);
+                    let la = lambda[[i, j, k]];
+                    let mv = mu[[i, j, k]];
+                    let la2mu = 2.0f64.mul_add(mv, la);
+                    sxx_slice[idx] = la2mu.mul_add(exx, la * (eyy + ezz));
+                    syy_slice[idx] = la2mu.mul_add(eyy, la * (exx + ezz));
+                    szz_slice[idx] = la2mu.mul_add(ezz, la * (exx + eyy));
+                }
+            }
+        }
     }
 
     // --- Pass 1b: off-diagonal stress components {σxy, σxz, σyz} ---
@@ -149,35 +128,14 @@ pub fn stress_divergence_into(
     // adaptation pattern as Pass 1a.  7 verbose asserts (3 mut on
     // scratch.{sxy,sxz,syz} + 4 captured immuts ux/uy/uz/mu; note `lambda`
     // is unused in this pass).
-    assert!(
-        scratch.sxy,
-        "scratch.sxy must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        scratch.sxz,
-        "scratch.sxz must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        scratch.syz,
-        "scratch.syz must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        ux,
-        "ux must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        uy,
-        "uy must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        uz,
-        "uz must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        mu,
-        "mu must be C-contiguous (default Array3 layout) for the migration"
-    );
+
     {
+        // Native indexed FD stencil (see Pass 1a note); sequential pending an
+        // indexed multi-mutable-output parallel primitive.
+        let sxy_slice = scratch
+            .sxy
+            .as_slice_mut()
+            .expect("sxy: standard-layout asserted just above; layout matched");
         let sxz_slice = scratch
             .sxz
             .as_slice_mut()
@@ -186,16 +144,20 @@ pub fn stress_divergence_into(
             .syz
             .as_slice_mut()
             .expect("syz: standard-layout asserted just above; layout matched");
-        Zip::indexed(scratch.sxy.view_mut()).par_for_each(|(i, j, k), o_sxy| {
-            let idx = i * (ny * nz) + j * nz + k;
-            let exy_2 = fd1_y(ux, i, j, k, ny, dy) + fd1_x(uy, i, j, k, nx, dx);
-            let exz_2 = fd1_z(ux, i, j, k, nz, dz) + fd1_x(uz, i, j, k, nx, dx);
-            let eyz_2 = fd1_z(uy, i, j, k, nz, dz) + fd1_y(uz, i, j, k, ny, dy);
-            let mv = mu[[i, j, k]];
-            *o_sxy = mv * exy_2;
-            sxz_slice[idx] = mv * exz_2;
-            syz_slice[idx] = mv * eyz_2;
-        });
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let idx = i * (ny * nz) + j * nz + k;
+                    let exy_2 = fd1_y(ux, i, j, k, ny, dy) + fd1_x(uy, i, j, k, nx, dx);
+                    let exz_2 = fd1_z(ux, i, j, k, nz, dz) + fd1_x(uz, i, j, k, nx, dx);
+                    let eyz_2 = fd1_z(uy, i, j, k, nz, dz) + fd1_y(uz, i, j, k, ny, dy);
+                    let mv = mu[[i, j, k]];
+                    sxy_slice[idx] = mv * exy_2;
+                    sxz_slice[idx] = mv * exz_2;
+                    syz_slice[idx] = mv * eyz_2;
+                }
+            }
+        }
     }
 
     // --- Pass 2: ∇·σ (parallelised over i-j-k) ---
@@ -217,43 +179,14 @@ pub fn stress_divergence_into(
     // Migration (Batch #1 slice 7): same 3-mut Zip::indexed adaptation.  9
     // verbose asserts (3 mut on scratch.{div_x,div_y,div_z} + 6 captured immut
     // views sxx_v..syz_v).
-    assert!(
-        scratch.div_x,
-        "scratch.div_x must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        scratch.div_y,
-        "scratch.div_y must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        scratch.div_z,
-        "scratch.div_z must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        sxx_v,
-        "sxx_v must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        syy_v,
-        "syy_v must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        szz_v,
-        "szz_v must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        sxy_v,
-        "sxy_v must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        sxz_v,
-        "sxz_v must be C-contiguous (default Array3 layout) for the migration"
-    );
-    assert!(
-        syz_v,
-        "syz_v must be C-contiguous (default Array3 layout) for the migration"
-    );
+
     {
+        // Native indexed FD divergence (see Pass 1a note); sequential pending an
+        // indexed multi-mutable-output parallel primitive.
+        let div_x_slice = scratch
+            .div_x
+            .as_slice_mut()
+            .expect("div_x: standard-layout asserted just above; layout matched");
         let div_y_slice = scratch
             .div_y
             .as_slice_mut()
@@ -262,18 +195,22 @@ pub fn stress_divergence_into(
             .div_z
             .as_slice_mut()
             .expect("div_z: standard-layout asserted just above; layout matched");
-        Zip::indexed(scratch.div_x.view_mut()).par_for_each(|(i, j, k), o_dx| {
-            let idx = i * (ny * nz) + j * nz + k;
-            *o_dx = fd1_x(sxx_v, i, j, k, nx, dx)
-                + fd1_y(sxy_v, i, j, k, ny, dy)
-                + fd1_z(sxz_v, i, j, k, nz, dz);
-            div_y_slice[idx] = fd1_x(sxy_v, i, j, k, nx, dx)
-                + fd1_y(syy_v, i, j, k, ny, dy)
-                + fd1_z(syz_v, i, j, k, nz, dz);
-            div_z_slice[idx] = fd1_x(sxz_v, i, j, k, nx, dx)
-                + fd1_y(syz_v, i, j, k, ny, dy)
-                + fd1_z(szz_v, i, j, k, nz, dz);
-        });
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let idx = i * (ny * nz) + j * nz + k;
+                    div_x_slice[idx] = fd1_x(sxx_v, i, j, k, nx, dx)
+                        + fd1_y(sxy_v, i, j, k, ny, dy)
+                        + fd1_z(sxz_v, i, j, k, nz, dz);
+                    div_y_slice[idx] = fd1_x(sxy_v, i, j, k, nx, dx)
+                        + fd1_y(syy_v, i, j, k, ny, dy)
+                        + fd1_z(syz_v, i, j, k, nz, dz);
+                    div_z_slice[idx] = fd1_x(sxz_v, i, j, k, nx, dx)
+                        + fd1_y(syz_v, i, j, k, ny, dy)
+                        + fd1_z(szz_v, i, j, k, nz, dz);
+                }
+            }
+        }
     }
 }
 
@@ -294,7 +231,7 @@ pub fn stress_divergence(
     mu: &Array3<f64>,
     field: &ElasticWaveField,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let (nx, ny, nz) = field.ux.shape();
+    let [nx, ny, nz] = field.ux.shape();
     let mut scratch = ElasticStepScratch::new(nx, ny, nz);
     stress_divergence_into(grid, lambda, mu, field, &mut scratch);
     (scratch.div_x, scratch.div_y, scratch.div_z)

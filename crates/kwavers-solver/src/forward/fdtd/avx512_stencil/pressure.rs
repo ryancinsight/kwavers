@@ -52,7 +52,7 @@ impl FdtdAvx512StencilProcessor {
             ));
         }
         let shape = p_curr.shape();
-        if shape != (self.nx, self.ny, self.nz) {
+        if shape != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(
                 "Field dimensions do not match processor configuration".to_owned(),
             ));
@@ -119,7 +119,10 @@ impl FdtdAvx512StencilProcessor {
         let p_curr_ptr = p_curr.as_ptr();
         let p_prev_ptr = p_prev.as_ptr();
         let _u_div_ptr = u_div.as_ptr();
-        let p_new_ptr = p_new.as_mut_ptr();
+        let p_new_ptr = p_new
+            .as_slice_memory_order_mut()
+            .expect("invariant: AVX-512 stencil output field must be contiguous")
+            .as_mut_ptr();
 
         let coeff_central = _mm512_set1_pd(self.pressure_central_coeff);
         let coeff = _mm512_set1_pd(self.pressure_coeff);

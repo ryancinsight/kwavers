@@ -72,7 +72,7 @@ fn with_lesion(background: &Array3<f64>, radius: f64) -> Array3<f64> {
 
 /// Write a normalized grayscale PNG of a 2-D field.
 fn write_png(path: &str, field: &Array2<f64>) {
-    let (nx, nz) = field.dim();
+    let [nx, nz] = field.shape();
     let hi = field
         .iter()
         .copied()

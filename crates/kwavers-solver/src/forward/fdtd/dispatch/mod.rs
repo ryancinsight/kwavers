@@ -236,7 +236,7 @@ impl FdtdStencilDispatcher {
             ));
         }
 
-        if p_curr.shape() != (self.nx, self.ny, self.nz) {
+        if p_curr.shape() != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(
                 "Field dimensions do not match processor configuration".to_owned(),
             ));

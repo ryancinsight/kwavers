@@ -47,7 +47,7 @@ where
         t_data: &[f32],
         v_data: &[f32],
     ) -> KwaversResult<Var<f32, B>> {
-        if (v_data.shape()[0] * v_data.shape()[1] * v_data.shape()[2]) != (t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2]) {
+        if (v_data.len()) != (t_data.len()) {
             return Err(KwaversError::InvalidInput(
                 "v_data and t_data must have equal length".into(),
             ));
@@ -63,7 +63,7 @@ where
         let eps = 1e-6_f32;
         let mut v_ic = Vec::new();
 
-        for i in 0..(t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2]) {
+        for i in 0..(t_data.len()) {
             if (t_data[i] - min_t).abs() <= eps {
                 v_ic.push(v_data[i]);
             }
@@ -75,7 +75,7 @@ where
             ));
         }
 
-        let n_ic = (v_ic.shape()[0] * v_ic.shape()[1] * v_ic.shape()[2]);
+        let n_ic = (v_ic.len());
         let backend = B::default();
         Ok(Var::new(
             coeus_tensor::Tensor::from_slice_on(vec![n_ic, 1], &v_ic, &backend),
@@ -106,7 +106,7 @@ where
         let mut z_ic = Vec::new();
         let mut u_ic = Vec::new();
 
-        for i in 0..(t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2]) {
+        for i in 0..(t_data.len()) {
             if (t_data[i] - min_t).abs() <= eps {
                 x_ic.push(x_data[i]);
                 y_ic.push(y_data[i]);
@@ -121,7 +121,7 @@ where
             ));
         }
 
-        let n_ic = (x_ic.shape()[0] * x_ic.shape()[1] * x_ic.shape()[2]);
+        let n_ic = (x_ic.len());
         let t_ic = vec![min_t; n_ic];
 
         let backend = B::default();

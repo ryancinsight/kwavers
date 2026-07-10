@@ -71,7 +71,7 @@ pub fn delay_and_sum_cpu(
     config: &BeamformingConfig3D,
     apodization: &Beamforming3dApodizationWindow,
 ) -> KwaversResult<Array3<f32>> {
-    let (frames, channels, samples, _) = rf_data.dim();
+    let [frames, channels, samples, _] = rf_data.shape();
     let (vol_x, vol_y, vol_z) = config.volume_dims;
     let (nel_x, nel_y, nel_z) = config.num_elements_3d;
     let expected_channels = nel_x * nel_y * nel_z;
@@ -119,7 +119,7 @@ pub fn delay_and_sum_cpu(
 
     // Apodization weights — flat, indexed by channel (same order as elem_pos).
     let apod_3d = create_apodization_weights((nel_x, nel_y, nel_z), apodization);
-    let apod_flat: Vec<f32> = apod_3d.into_raw_vec_and_offset().0;
+    let apod_flat: Vec<f32> = apod_3d.iter().copied().collect();
 
     // Safe RF accessor: returns the linearly interpolated value at fractional
     // sample index `tau_s` for channel `ch` in `frame`.  Returns 0.0 if the

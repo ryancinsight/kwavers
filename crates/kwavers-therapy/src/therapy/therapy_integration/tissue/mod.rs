@@ -174,10 +174,10 @@ impl TissuePropertyMap {
     /// ```
     pub fn at(&self, index: (usize, usize, usize)) -> Result<AcousticPropertyData, String> {
         let (i, j, k) = index;
-        let shape = self.speed_of_sound.dim();
+        let shape = self.speed_of_sound.shape();
 
         // Bounds checking
-        if i >= shape.0 || j >= shape.1 || k >= shape.2 {
+        if i >= shape[0] || j >= shape[1] || k >= shape[2] {
             return Err(format!(
                 "Index ({}, {}, {}) out of bounds for shape {:?}",
                 i, j, k, shape
@@ -200,7 +200,8 @@ impl TissuePropertyMap {
     ///
     #[inline]
     pub fn shape(&self) -> (usize, usize, usize) {
-        self.speed_of_sound.dim()
+        let s = self.speed_of_sound.shape();
+        (s[0], s[1], s[2])
     }
 
     /// Get the number of dimensions (always 3 for tissue maps)
@@ -221,28 +222,28 @@ impl TissuePropertyMap {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn validate_shape_consistency(&self) -> Result<(), String> {
-        let shape = self.speed_of_sound.dim();
+        let shape = self.speed_of_sound.shape();
 
-        if self.density.dim() != shape {
+        if self.density.shape() != shape {
             return Err(format!(
                 "Density shape {:?} does not match sound speed shape {:?}",
-                self.density.dim(),
+                self.density.shape(),
                 shape
             ));
         }
 
-        if self.attenuation.dim() != shape {
+        if self.attenuation.shape() != shape {
             return Err(format!(
                 "Attenuation shape {:?} does not match sound speed shape {:?}",
-                self.attenuation.dim(),
+                self.attenuation.shape(),
                 shape
             ));
         }
 
-        if self.nonlinearity.dim() != shape {
+        if self.nonlinearity.shape() != shape {
             return Err(format!(
                 "Nonlinearity shape {:?} does not match sound speed shape {:?}",
-                self.nonlinearity.dim(),
+                self.nonlinearity.shape(),
                 shape
             ));
         }

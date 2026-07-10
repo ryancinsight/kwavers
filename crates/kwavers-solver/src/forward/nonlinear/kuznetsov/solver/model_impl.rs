@@ -7,11 +7,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
-use moirai_parallel::ParallelSliceMut;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use tracing::{error, info, warn};
 
 impl AcousticWaveModel for KuznetsovWave {
@@ -37,39 +34,28 @@ impl AcousticWaveModel for KuznetsovWave {
             );
         }
 
-        let mut pressure_field = fields.index_axis_mut(0, 0);
+        let mut pressure_field = fields
+            .index_axis_mut::<3>(0, 0)
+            .expect("invariant: pressure field index 0 within field stack");
 
         if self.first_step {
-            self.pressure_current.assign(&pressure_field);
-            self.pressure_prev.assign(&pressure_field);
+            self.pressure_current.assign(&pressure_field.as_view());
+            self.pressure_prev.assign(&pressure_field.as_view());
 
             self.compute_rhs(source, medium, t, dt);
             let rhs = &self.workspace.k1;
 
             {
-                assert!(
-                    pressure_field,
-                    "pressure_field must be C-contiguous (Array3 subview of C-contiguous Array4) for the migration"
-                );
                 let new_slice = pressure_field
-                    .as_slice_mut()
+                    .as_mut_slice()
                     .expect("pressure_field: standard-layout asserted just above; layout matched");
-                assert!(
-                    self.pressure_current,
-                    "pressure_current must be C-contiguous (default Array3 layout) for the migration"
-                );
-                let curr_slice = self
-                    .pressure_current
-                    .as_slice()
-                    .expect("pressure_current: standard-layout asserted just above; layout matched");
-                assert!(
-                    rhs,
-                    "rhs must be C-contiguous (default Array3 layout) for the migration"
+                let curr_slice = self.pressure_current.as_slice().expect(
+                    "pressure_current: standard-layout asserted just above; layout matched",
                 );
                 let rhs_slice = rhs
                     .as_slice()
                     .expect("rhs: standard-layout asserted just above; layout matched");
-                new_slice.iter_mut().enumerate(|idx, p_next: &mut f64| {
+                enumerate_mut_with::<Adaptive, _, _>(new_slice, |idx, p_next: &mut f64| {
                     let p_curr = curr_slice[idx];
                     let accel = rhs_slice[idx];
                     *p_next = (0.5 * dt * dt).mul_add(accel, p_curr);
@@ -83,37 +69,20 @@ impl AcousticWaveModel for KuznetsovWave {
             let rhs = &self.workspace.k1;
 
             {
-                assert!(
-                    pressure_field,
-                    "pressure_field must be C-contiguous (Array3 subview of C-contiguous Array4) for the migration"
-                );
                 let new_slice = pressure_field
-                    .as_slice_mut()
+                    .as_mut_slice()
                     .expect("pressure_field: standard-layout asserted just above; layout matched");
-                assert!(
-                    self.pressure_current,
-                    "pressure_current must be C-contiguous (default Array3 layout) for the migration"
-                );
-                let curr_slice = self
-                    .pressure_current
-                    .as_slice()
-                    .expect("pressure_current: standard-layout asserted just above; layout matched");
-                assert!(
-                    self.pressure_prev,
-                    "pressure_prev must be C-contiguous (default Array3 layout) for the migration"
+                let curr_slice = self.pressure_current.as_slice().expect(
+                    "pressure_current: standard-layout asserted just above; layout matched",
                 );
                 let prev_slice = self
                     .pressure_prev
                     .as_slice()
                     .expect("pressure_prev: standard-layout asserted just above; layout matched");
-                assert!(
-                    rhs,
-                    "rhs must be C-contiguous (default Array3 layout) for the migration"
-                );
                 let rhs_slice = rhs
                     .as_slice()
                     .expect("rhs: standard-layout asserted just above; layout matched");
-                new_slice.iter_mut().enumerate(|idx, p_next: &mut f64| {
+                enumerate_mut_with::<Adaptive, _, _>(new_slice, |idx, p_next: &mut f64| {
                     let p_curr = curr_slice[idx];
                     let p_prev = prev_slice[idx];
                     let accel = rhs_slice[idx];
@@ -122,7 +91,7 @@ impl AcousticWaveModel for KuznetsovWave {
             }
 
             self.pressure_prev.assign(&self.pressure_current);
-            self.pressure_current.assign(&pressure_field);
+            self.pressure_current.assign(&pressure_field.as_view());
             self.workspace.update_time_history(&self.pressure_current);
         }
 

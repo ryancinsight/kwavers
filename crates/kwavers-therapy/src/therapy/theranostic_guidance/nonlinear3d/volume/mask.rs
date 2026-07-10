@@ -3,8 +3,8 @@
 use std::collections::VecDeque;
 
 use leto::{
-    /* s -- no leto equivalent */,
     Array3,
+    SliceArg,
 };
 
 use kwavers_core::constants::ct_acoustics::{
@@ -24,7 +24,7 @@ pub(super) fn body_mask_full(
     ct_hu: &Array3<f64>,
     label_volume: Option<&Array3<i16>>,
 ) -> Array3<bool> {
-    let anatomical_body = Array3::from_shape_fn(ct_hu.dim(), |idx| {
+    let anatomical_body = Array3::from_shape_fn(ct_hu.shape(), |idx| {
         let label = label_volume.map_or(0, |labels| labels[idx]);
         match anatomy {
             AnatomyKind::Brain => ct_hu[idx] > HU_BRAIN_BODY_THRESHOLD,
@@ -34,7 +34,7 @@ pub(super) fn body_mask_full(
         }
     });
     let exterior_air = exterior_air_mask(&anatomical_body);
-    Array3::from_shape_fn(ct_hu.dim(), |idx| {
+    Array3::from_shape_fn(ct_hu.shape(), |idx| {
         let label = label_volume.map_or(0, |labels| labels[idx]);
         anatomical_body[idx]
             || (ct_hu[idx] < INTERNAL_GAS_HU_THRESHOLD && label == 0 && !exterior_air[idx])
@@ -43,11 +43,14 @@ pub(super) fn body_mask_full(
 
 pub(super) fn target_mask_full(label: &Array3<i16>) -> KwaversResult<Array3<bool>> {
     let z = largest_target_slice(label)?;
-    let label_slice = label.slice(s![.., .., z]).to_owned();
+    let label_slice = label
+        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(z as isize)])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
     let slice_target = largest_connected_target_component(&label_slice)?;
     let seed = slice_target
         .indexed_iter()
-        .find_map(|((x, y), active)| active.then_some((x, y, z)))
+        .find_map(|([x, y], active)| active.then_some((x, y, z)))
         .ok_or_else(|| {
             KwaversError::InvalidInput(
                 "segmentation contains no connected label-2 nonlinear 3-D target".to_owned(),
@@ -67,7 +70,7 @@ pub(super) fn single_target_label_volume(
     label: &Array3<i16>,
     target: &Array3<bool>,
 ) -> Array3<i16> {
-    Array3::from_shape_fn(label.dim(), |idx| {
+    Array3::from_shape_fn(label.shape(), |idx| {
         if label[idx] == 2 && !target[idx] {
             1
         } else {
@@ -106,19 +109,19 @@ pub(super) fn masks(
 }
 
 fn connected_target_component_3d(label: &Array3<i16>, seed: (usize, usize, usize)) -> Array3<bool> {
-    let (nx, ny, nz) = label.dim();
-    let mut component = Array3::<bool>::from_elem(label.dim(), false);
+    let [nx, ny, nz] = label.shape();
+    let mut component = Array3::<bool>::from_elem(label.shape(), false);
     let mut queue = VecDeque::from([seed]);
-    component[seed] = true;
+    component[[seed.0, seed.1, seed.2]] = true;
     while let Some((x, y, z)) = queue.pop_front() {
         if label[[x, y, z]] != 2 {
             continue;
         }
         for next in target_neighbors_3d(x, y, z, nx, ny, nz) {
-            if component[next] || label[next] != 2 {
+            if component[[next.0, next.1, next.2]] || label[[next.0, next.1, next.2]] != 2 {
                 continue;
             }
-            component[next] = true;
+            component[[next.0, next.1, next.2]] = true;
             queue.push_back(next);
         }
     }
@@ -169,9 +172,9 @@ fn synthetic_brain_target(
     target_fraction_xyz: Option<[f64; 3]>,
     target_center_index: Option<[f64; 3]>,
 ) -> KwaversResult<Array3<bool>> {
-    let n = body.dim().0;
+    let n = body.shape()[0];
     let brain_support =
-        Array3::from_shape_fn(body.dim(), |idx| body[idx] && ct[idx] < HU_BONE_THRESHOLD);
+        Array3::from_shape_fn(body.shape(), |idx| body[idx] && ct[idx] < HU_BONE_THRESHOLD);
     let support = if brain_support.iter().any(|active| *active) {
         &brain_support
     } else {
@@ -192,7 +195,7 @@ fn synthetic_brain_target(
     let rx = (6.0e-3 / spacing_m).max(1.3);
     let ry = (8.0e-3 / spacing_m).max(1.3);
     let rz = (6.0e-3 / spacing_m).max(1.3);
-    Ok(Array3::from_shape_fn(body.dim(), |(ix, iy, iz)| {
+    Ok(Array3::from_shape_fn(body.shape(), |[ix, iy, iz]| {
         body[[ix, iy, iz]]
             && ((ix as f64 - center[0]) / rx).powi(2)
                 + ((iy as f64 - center[1]) / ry).powi(2)
@@ -207,7 +210,7 @@ pub(super) fn inversion_mask(
     spacing_m: f64,
 ) -> Array3<bool> {
     let radius = (8.0e-3 / spacing_m).ceil().max(1.0) as isize;
-    Array3::from_shape_fn(target.dim(), |(ix, iy, iz)| {
+    Array3::from_shape_fn(target.shape(), |[ix, iy, iz]| {
         if !body[[ix, iy, iz]] {
             return false;
         }
@@ -226,10 +229,10 @@ pub(super) fn inversion_mask(
                     if x < 0 || y < 0 || z < 0 {
                         continue;
                     }
-                    let idx = (x as usize, y as usize, z as usize);
-                    if idx.0 < target.dim().0
-                        && idx.1 < target.dim().1
-                        && idx.2 < target.dim().2
+                    let idx = [x as usize, y as usize, z as usize];
+                    if idx[0] < target.shape()[0]
+                        && idx[1] < target.shape()[1]
+                        && idx[2] < target.shape()[2]
                         && target[idx]
                     {
                         return true;
@@ -249,13 +252,13 @@ mod tests {
     fn abdominal_target_mask_uses_one_connected_treatment_component() {
         let mut label = Array3::<i16>::zeros((8, 8, 4));
         for idx in [
-            (1, 1, 1),
-            (1, 2, 1),
-            (2, 1, 1),
-            (2, 1, 2),
-            (6, 6, 1),
-            (6, 5, 1),
-            (6, 6, 2),
+            [1, 1, 1],
+            [1, 2, 1],
+            [2, 1, 1],
+            [2, 1, 2],
+            [6, 6, 1],
+            [6, 5, 1],
+            [6, 6, 2],
         ] {
             label[idx] = 2;
         }
@@ -277,7 +280,7 @@ mod tests {
         let mut label = Array3::<i16>::zeros((4, 4, 2));
         label[[1, 1, 0]] = 2;
         label[[3, 3, 0]] = 2;
-        let mut target = Array3::<bool>::from_elem(label.dim(), false);
+        let mut target = Array3::<bool>::from_elem(label.shape(), false);
         target[[1, 1, 0]] = true;
 
         let filtered = single_target_label_volume(&label, &target);

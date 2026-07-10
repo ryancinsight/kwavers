@@ -352,19 +352,19 @@ impl PSTDSolver {
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_acoustic_directional(
-                    Self::leto_view_mut3(&mut self.rhox).into(),
+                    self.rhox.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
                 boundary.apply_acoustic_directional(
-                    Self::leto_view_mut3(&mut self.rhoy).into(),
+                    self.rhoy.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
                 boundary.apply_acoustic_directional(
-                    Self::leto_view_mut3(&mut self.rhoz).into(),
+                    self.rhoz.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     2,
@@ -379,19 +379,19 @@ impl PSTDSolver {
                     &mut self.rhox,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_acoustic_directional(field.into(), grid, step, 0),
+                    |field| boundary.apply_acoustic_directional(field, grid, step, 0),
                 )?;
                 Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhoy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_acoustic_directional(field.into(), grid, step, 1),
+                    |field| boundary.apply_acoustic_directional(field, grid, step, 1),
                 )?;
                 Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhoz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_acoustic_directional(field.into(), grid, step, 2),
+                    |field| boundary.apply_acoustic_directional(field, grid, step, 2),
                 )?;
             }
             Ok(())

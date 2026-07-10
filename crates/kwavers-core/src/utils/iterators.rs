@@ -266,7 +266,7 @@ mod tests {
 
     #[test]
     fn apply_inplace_updates_values() {
-        let mut data = Array3::from_vec(vec![1i32, 2, 3, 4, 5, 6], [1, 2, 3])
+        let mut data = Array3::from_vec([1, 2, 3], vec![1i32, 2, 3, 4, 5, 6])
             .expect("shape matches data length");
         apply_inplace(&mut data, |value| value * value);
         let values: Vec<i32> = data.iter().copied().collect();

@@ -88,10 +88,19 @@ impl MLModel for ConvergencePredictorModel {
     fn predict(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
         // Heuristic convergence prediction for testing
         // Maps input through sigmoid-like function as convergence probability estimator
-        let mut output = Array2::zeros((input.nrows(), 1));
-        for (i, row) in input.axis_iter(0).enumerate() {
+        let n_rows = input.shape()[0];
+        let mut output = Array2::zeros((n_rows, 1));
+        for i in 0..n_rows {
+            let row = input
+                .index_axis::<1>(0, i)
+                .expect("invariant: row index in bounds");
             // Heuristic: higher mean values -> higher convergence probability
-            let mean_val = row.mean().unwrap_or(0.0);
+            let count = row.size();
+            let mean_val = if count == 0 {
+                0.0
+            } else {
+                row.iter().sum::<f32>() / count as f32
+            };
             // Sigmoid-like mapping: 1 / (1 + exp(-x))
             let prob = 1.0 / (1.0 + (-mean_val).exp());
             output[[i, 0]] = prob;

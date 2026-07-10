@@ -40,7 +40,7 @@ fn test_ghost_cell_traction_balance() {
     let i_face = nx / 2;
     for j in 0..nx {
         for k in 0..nx {
-            solver.interface.interface_mask[(i_face, j, k)] = true;
+            solver.interface.interface_mask[[i_face, j, k]] = true;
         }
     }
 
@@ -62,8 +62,8 @@ fn test_ghost_cell_traction_balance() {
     let mut traction_jump_sq = 0.0f64;
     for j in 0..nx {
         for k in 0..nx {
-            let t_fluid_x = -fluid_pressure[(i_face, j, k)] * 1.0;
-            let t_solid_x = solver.p_fluid_ghost[(i_face, j, k)];
+            let t_fluid_x = -fluid_pressure[[i_face, j, k]] * 1.0;
+            let t_solid_x = solver.p_fluid_ghost[[i_face, j, k]];
             traction_jump_sq += (t_fluid_x + t_solid_x).powi(2);
         }
     }
@@ -74,7 +74,7 @@ fn test_ghost_cell_traction_balance() {
     );
     for j in 0..nx {
         for k in 0..nx {
-            let t_x = solver.t_solid_ghost[0][(i_face, j, k)];
+            let t_x = solver.t_solid_ghost[0][[i_face, j, k]];
             assert!(
                 (t_x + p0).abs() < 1e-10,
                 "Solid ghost traction t_x = {}, expected {}",
@@ -83,7 +83,7 @@ fn test_ghost_cell_traction_balance() {
             );
         }
     }
-    let _ = solid_stress[0].sum();
+    let _ = solid_stress[0].iter().sum::<f64>();
 }
 
 /// Test ghost exchange updates values without replacing workspace buffers.
@@ -102,7 +102,7 @@ fn test_exchange_ghost_cells_reuses_workspace_buffers() {
 
     let mut solver = FluidStructureSolver::new(interface);
     let i_face = nx / 2;
-    solver.interface.interface_mask[(i_face, 2, 2)] = true;
+    solver.interface.interface_mask[[i_face, 2, 2]] = true;
 
     let pressure_a = Array3::from_elem((nx, nx, nx), 10.0);
     let stress_a: [Array3<f64>; 6] = [
@@ -121,8 +121,8 @@ fn test_exchange_ghost_cells_reuses_workspace_buffers() {
         solver.t_solid_ghost[1].as_ptr(),
         solver.t_solid_ghost[2].as_ptr(),
     ];
-    assert_eq!(solver.p_fluid_ghost[(i_face, 2, 2)], 20.0);
-    assert_eq!(solver.t_solid_ghost[0][(i_face, 2, 2)], -10.0);
+    assert_eq!(solver.p_fluid_ghost[[i_face, 2, 2]], 20.0);
+    assert_eq!(solver.t_solid_ghost[0][[i_face, 2, 2]], -10.0);
 
     let pressure_b = Array3::from_elem((nx, nx, nx), 30.0);
     let stress_b: [Array3<f64>; 6] = [
@@ -139,8 +139,8 @@ fn test_exchange_ghost_cells_reuses_workspace_buffers() {
     assert_eq!(solver.t_solid_ghost[0].as_ptr(), t_ptrs[0]);
     assert_eq!(solver.t_solid_ghost[1].as_ptr(), t_ptrs[1]);
     assert_eq!(solver.t_solid_ghost[2].as_ptr(), t_ptrs[2]);
-    assert_eq!(solver.p_fluid_ghost[(i_face, 2, 2)], 40.0);
-    assert_eq!(solver.t_solid_ghost[0][(i_face, 2, 2)], -30.0);
+    assert_eq!(solver.p_fluid_ghost[[i_face, 2, 2]], 40.0);
+    assert_eq!(solver.t_solid_ghost[0][[i_face, 2, 2]], -30.0);
 }
 
 /// Test ghost cell velocity continuity across interface.
@@ -156,7 +156,7 @@ fn test_ghost_cell_velocity_continuity() {
     let i_face = nx / 2;
     for j in 0..nx {
         for k in 0..nx {
-            solver.interface.interface_mask[(i_face, j, k)] = true;
+            solver.interface.interface_mask[[i_face, j, k]] = true;
         }
     }
 

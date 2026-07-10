@@ -121,7 +121,7 @@ fn interpolate_dg_element(
 ) -> f64 {
     for node in 0..nodes.len() {
         if (xi - nodes[node]).abs() <= 1.0e-14 {
-            return pressure[(elem, node, 0)];
+            return pressure[[elem, node, 0]];
         }
     }
 
@@ -133,7 +133,7 @@ fn interpolate_dg_element(
                 basis *= (xi - nodes[other]) / (nodes[node] - nodes[other]);
             }
         }
-        value += pressure[(elem, node, 0)] * basis;
+        value += pressure[[elem, node, 0]] * basis;
     }
     value
 }

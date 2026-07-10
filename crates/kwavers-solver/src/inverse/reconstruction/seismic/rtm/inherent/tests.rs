@@ -27,14 +27,14 @@ mod tests {
     fn laplacian_errors_on_2d_grid_instead_of_panicking() {
         let rtm = rtm_with_condition(RtmImagingCondition::Laplacian);
         assert!(
-            rtm.compute_laplacian(&Array3::<f64>::zeros((8, 8, 1)))
+            rtm.compute_laplacian(&Array3::<f64>::zeros((8, 8, 1)).view())
                 .is_err(),
             "2-D grid must yield a typed error, not a panic"
         );
         // 3-D still computes correctly: the Laplacian of a linear ramp f(i)=i is
         // zero in the interior (the second difference of a linear function).
-        let ramp = Array3::from_shape_fn((4, 4, 4), |(i, _, _)| i as f64);
-        let lap = rtm.compute_laplacian(&ramp).expect("3-D laplacian");
+        let ramp = Array3::from_shape_fn((4, 4, 4), |[i, _, _]| i as f64);
+        let lap = rtm.compute_laplacian(&ramp.view()).expect("3-D laplacian");
         assert_eq!(lap.shape(), [4, 4, 4]);
         assert!(
             lap[[1, 1, 1]].abs() < 1e-12,
@@ -79,7 +79,10 @@ mod tests {
         let mut rtm = rtm_with_condition(RtmImagingCondition::SourceNormalized);
         let mut source = Array4::zeros((3, 3, 3, 3));
         for t in 0..3_usize {
-            source.slice_mut(s![t, .., .., ..]).unwrap().fill(t as f64);
+            source
+                .slice_with_mut::<3>(&s![t, .., .., ..])
+                .unwrap()
+                .fill(t as f64);
         }
         let receiver = Array4::from_elem((3, 3, 3, 3), 3.0);
 

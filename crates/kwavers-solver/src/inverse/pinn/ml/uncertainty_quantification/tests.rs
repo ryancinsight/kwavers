@@ -44,8 +44,8 @@ fn test_prediction_with_uncertainty() {
         method: PinnUncertaintyMethod::DeepEnsemble,
     };
 
-    assert_eq!((prediction.mean.shape()[0] * prediction.mean.shape()[1] * prediction.mean.shape()[2]), 2);
-    assert_eq!((prediction.std.shape()[0] * prediction.std.shape()[1] * prediction.std.shape()[2]), 2);
+    assert_eq!((prediction.mean.len()), 2);
+    assert_eq!((prediction.std.len()), 2);
     assert!(prediction.reliability >= 0.0 && prediction.reliability <= 1.0);
 }
 

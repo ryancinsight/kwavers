@@ -205,7 +205,7 @@ mod tests {
     fn neutral_inner_band_has_zero_sigma_unit_kappa() {
         let profile = standard_profile(4);
         let thickness_nodes = 4 * 3;
-        for i in thickness_nodes..((profile.sigma.shape()[0] * profile.sigma.shape()[1] * profile.sigma.shape()[2]) - thickness_nodes) {
+        for i in thickness_nodes..((profile.sigma.len()) - thickness_nodes) {
             assert_eq!(profile.sigma[i], 0.0);
             assert_eq!(profile.kappa[i], 1.0);
             assert_eq!(profile.alpha[i], 0.0);
@@ -234,7 +234,7 @@ mod tests {
     fn outer_strip_sigma_is_monotonic_increasing_outward() {
         let profile = standard_profile(6);
         let thickness_nodes = 6 * 3;
-        let len = (profile.sigma.shape()[0] * profile.sigma.shape()[1] * profile.sigma.shape()[2]);
+        let len = profile.sigma.len();
         for i in (len - thickness_nodes + 1)..len {
             assert!(
                 profile.sigma[i] >= profile.sigma[i - 1],
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn kappa_max_one_keeps_kappa_unity() {
         let profile = standard_profile(4);
-        for value in &profile.kappa {
+        for value in profile.kappa.iter() {
             assert_eq!(*value, 1.0);
         }
     }
@@ -339,7 +339,7 @@ mod tests {
         let profiles =
             DgCpmlProfiles::new(&cfg, SOUND_SPEED_WATER_SIM, [16, 16, 16], 3, [1.0e-3; 3]).unwrap();
         for axis in &profiles.axes {
-            assert_eq!((axis.sigma.shape()[0] * axis.sigma.shape()[1] * axis.sigma.shape()[2]), 16 * 3);
+            assert_eq!((axis.sigma.len()), 16 * 3);
             assert!(axis.sigma.iter().any(|s| *s > 0.0));
         }
     }

@@ -219,6 +219,16 @@ pub enum KwaversError {
     /// Anyhow errors
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+
+    /// Leto (array/layout) errors
+    #[error("Leto error: {0}")]
+    Leto(String),
+}
+
+impl From<leto::LetoError> for KwaversError {
+    fn from(err: leto::LetoError) -> Self {
+        Self::Leto(err.to_string())
+    }
 }
 
 /// Result type alias for operations that may return a `KwaversError`

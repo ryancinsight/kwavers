@@ -56,7 +56,7 @@ impl BemSolver {
         p_inc: Vec<Complex64>,
         dp_inc_dn: Vec<Complex64>,
     ) -> KwaversResult<Vec<Complex64>> {
-        let n = (self.vertices.shape()[0] * self.vertices.shape()[1] * self.vertices.shape()[2]);
+        let n = self.vertices.len() ;
         if n == 0 {
             return Ok(Vec::new());
         }
@@ -74,7 +74,7 @@ impl BemSolver {
             let (row_start, row_end) = (window[0], window[1]);
             for ptr in row_start..row_end {
                 let j = g_mat.col_indices[ptr];
-                if j < (dp_inc_dn.shape()[0] * dp_inc_dn.shape()[1] * dp_inc_dn.shape()[2]) {
+                if j < (dp_inc_dn.len()) {
                     *rhs_elem += g_mat.values[ptr] * dp_inc_dn[j];
                 }
             }
@@ -104,7 +104,8 @@ impl BemSolver {
             nnz: h_mat.nnz,
         };
 
-        let rhs_arr = Array1::from_vec(rhs);
+        let rhs_arr = Array1::from_vec(rhs.len(), rhs)
+            .expect("invariant: BEM RHS vector length well-formed");
         let solver_config = kwavers_math::linear_algebra::sparse::solver::SolverConfig {
             max_iterations: self.config.max_iterations,
             tolerance: self.config.tolerance,
@@ -157,7 +158,7 @@ impl BemSolver {
             .try_into()
             .map_err(|e| KwaversError::InternalError(format!("BEM RHS conversion failed: {e}")))?;
         let x = self.solve_bem_system(&a_matrix, &b_vector_nd)?;
-        let x_leto = x.clone().into();
+        let x_leto = x.clone();
 
         let (boundary_pressure, boundary_velocity) =
             self.boundary_manager.reconstruct_solution(&x_leto, wavenumber);
@@ -231,6 +232,7 @@ impl BemSolver {
                 total_field
             });
 
-        Ok(Array1::from_vec(results))
+        Ok(Array1::from_vec(results.len(), results)
+            .expect("invariant: BEM result vector length well-formed"))
     }
 }

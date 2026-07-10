@@ -50,7 +50,7 @@ fn adam_and_adamw_reduce_loss_and_update_parameters() {
 
     let var_col = |values: &[f32]| {
         Var::new(
-            coeus_tensor::Tensor::from_slice_on(vec![(values.shape()[0] * values.shape()[1] * values.shape()[2]), 1], values, &backend),
+            coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, &backend),
             false,
         )
     };

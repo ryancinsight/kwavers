@@ -30,11 +30,11 @@ fn test_training_metrics_completeness() -> KwaversResult<()> {
     let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, epochs)?;
 
     assert_eq!(metrics.epochs_completed, epochs);
-    assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), epochs);
-    assert_eq!((metrics.data_loss.shape()[0] * metrics.data_loss.shape()[1] * metrics.data_loss.shape()[2]), epochs);
-    assert_eq!((metrics.pde_loss.shape()[0] * metrics.pde_loss.shape()[1] * metrics.pde_loss.shape()[2]), epochs);
-    assert_eq!((metrics.bc_loss.shape()[0] * metrics.bc_loss.shape()[1] * metrics.bc_loss.shape()[2]), epochs);
-    assert_eq!((metrics.ic_loss.shape()[0] * metrics.ic_loss.shape()[1] * metrics.ic_loss.shape()[2]), epochs);
+    assert_eq!((metrics.total_loss.len()), epochs);
+    assert_eq!((metrics.data_loss.len()), epochs);
+    assert_eq!((metrics.pde_loss.len()), epochs);
+    assert_eq!((metrics.bc_loss.len()), epochs);
+    assert_eq!((metrics.ic_loss.len()), epochs);
     assert!(metrics.training_time_secs > 0.0);
 
     assert!(metrics.total_loss.iter().all(|&l| l.is_finite()));
@@ -64,7 +64,7 @@ fn test_prediction_shape_consistency() -> KwaversResult<()> {
         let t_test = vec![0.1; n];
 
         let predictions = solver.predict(&x_test, &y_test, &z_test, &t_test)?;
-        assert_eq!((predictions.shape()[0] * predictions.shape()[1] * predictions.shape()[2]), n);
+        assert_eq!((predictions.len()), n);
         assert!(predictions.iter().all(|&p| p.is_finite()));
     }
     Ok(())

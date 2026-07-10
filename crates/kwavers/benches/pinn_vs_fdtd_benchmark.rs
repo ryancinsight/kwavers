@@ -115,9 +115,9 @@ fn generate_training_data(
     }
 
     (
-        Array1::from_vec(x_data),
-        Array1::from_vec(y_data),
-        Array1::from_vec(t_data),
+        Array1::from_vec(x_data.len(), x_data).unwrap(),
+        Array1::from_vec(y_data.len(), y_data).unwrap(),
+        Array1::from_vec(t_data.len(), t_data).unwrap(),
         Array2::from_shape_vec((n_data_points, 1), u_data).unwrap(),
     )
 }

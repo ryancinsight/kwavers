@@ -151,7 +151,7 @@ pub fn transcranial_pennes_thermal_dose(
     dt_s: f64,
     baseline_c: f64,
 ) -> TranscranialThermalResult {
-    let (nx, ny, nz) = intensity_w_m2.dim();
+    let [nx, ny, nz] = intensity_w_m2.shape();
     let freq_mhz = frequency_hz * 1.0e-6;
 
     // Per-tissue absorption [Np/m] at operating frequency.
@@ -279,7 +279,7 @@ pub fn transcranial_pennes_thermal_dose(
 /// Boundary rule: ghost cell equals the nearest boundary value (∂T/∂n = 0).
 /// At i=0: T[-1] = T[0]; at i=nx-1: T[nx] = T[nx-1].
 fn laplacian_neumann_3d(arr: &Array3<f64>, dx2: f64, dy2: f64, dz2: f64) -> Array3<f64> {
-    let (nx, ny, nz) = arr.dim();
+    let [nx, ny, nz] = arr.shape();
     let mut lap = Array3::<f64>::zeros((nx, ny, nz));
     for ix in 0..nx {
         for iy in 0..ny {

@@ -101,7 +101,7 @@ impl SourceHandler {
         if let Some(signal) = &self.source.p_signal {
             if time_index < signal.shape()[1] {
                 let mode = self.source.p_mode;
-                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.shape()[0] * self.p_indices.shape()[1] * self.p_indices.shape()[2]) > 1;
+                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.len()) > 1;
 
                 for (idx, &(i, j, k, weight)) in self.p_indices.iter().enumerate() {
                     let val = if is_scalar_signal {
@@ -130,7 +130,7 @@ impl SourceHandler {
         if let Some(signal) = &self.source.p_signal {
             if time_index < signal.shape()[1] {
                 let mode = self.source.p_mode;
-                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.shape()[0] * self.p_indices.shape()[1] * self.p_indices.shape()[2]) > 1;
+                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.len()) > 1;
 
                 for (idx, &(i, j, k, weight)) in self.p_indices.iter().enumerate() {
                     let val = if is_scalar_signal {
@@ -163,7 +163,7 @@ impl SourceHandler {
         if let Some(signal) = &self.source.p_signal {
             if time_index < signal.shape()[1] {
                 let mode = self.source.p_mode;
-                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.shape()[0] * self.p_indices.shape()[1] * self.p_indices.shape()[2]) > 1;
+                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.len()) > 1;
 
                 for (idx, &(i, j, k, weight)) in self.p_indices.iter().enumerate() {
                     let val = if is_scalar_signal {
@@ -188,7 +188,7 @@ impl SourceHandler {
 
         if let Some(signal) = &self.source.p_signal {
             if time_index < signal.shape()[1] {
-                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.shape()[0] * self.p_indices.shape()[1] * self.p_indices.shape()[2]) > 1;
+                let is_scalar_signal = signal.shape()[0] == 1 && (self.p_indices.len()) > 1;
 
                 for (idx, &(i, j, k, weight)) in self.p_indices.iter().enumerate() {
                     let val = if is_scalar_signal {
@@ -220,7 +220,7 @@ impl SourceHandler {
         if let Some(signal) = &self.source.u_signal {
             if time_index < signal.shape()[2] {
                 let mode = self.source.u_mode;
-                let is_scalar_signal = signal.shape()[1] == 1 && (self.u_indices.shape()[0] * self.u_indices.shape()[1] * self.u_indices.shape()[2]) > 1;
+                let is_scalar_signal = signal.shape()[1] == 1 && (self.u_indices.len()) > 1;
                 let has_kappa = !self.u_kappa.is_empty();
                 // Per-source-point per-axis k-Wave additive scale `2·c₀·Δt/Δα`.
                 // Vectors are populated by `prepare_velocity_source_scaling`;

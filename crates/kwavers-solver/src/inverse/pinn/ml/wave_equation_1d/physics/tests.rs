@@ -6,7 +6,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 type TestBackend = MoiraiBackend;
 
 fn var2(vals: &[f32], backend: &TestBackend) -> Var<f32, TestBackend> {
-    let n = (vals.shape()[0] * vals.shape()[1] * vals.shape()[2]);
+    let n = (vals.len());
     Var::new(
         coeus_tensor::Tensor::from_slice_on(vec![n, 1], vals, backend),
         false,

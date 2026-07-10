@@ -33,7 +33,6 @@ use super::HASConfig;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::error::KwaversResult;
-use kwavers_core::utils::iterators::apply_inplace;
 use leto::{
     Array2,
     Array3,
@@ -137,7 +136,7 @@ impl HasAbsorptionOperator {
                                                  // α_n = α₀ · n^y  (power-law frequency scaling)
             let alpha_n = alpha_np_f0 * harmonic_order.powf(self.power_law_exp);
             let decay = (-alpha_n * dz).exp();
-            apply_inplace(plane, |v| v * decay);
+            plane.iter_mut().for_each(|v| *v *= decay);
         }
     }
 }
@@ -165,7 +164,7 @@ mod tests {
         config.attenuation_coeff = 0.0;
         let op = HasAbsorptionOperator::new(&config).unwrap();
 
-        let pressure = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| (i + j + k) as f64 + 1.0);
+        let pressure = Array3::from_shape_fn((4, 4, 4), |[i, j, k]| (i + j + k) as f64 + 1.0);
         let result = op.apply(&pressure, 0.05).unwrap();
 
         for ((_, &orig), &out) in pressure.indexed_iter().zip(result.iter()) {

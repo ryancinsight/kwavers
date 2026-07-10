@@ -21,8 +21,8 @@ pub(super) fn max_abs_difference(
     current: ArrayView3<'_, f64>,
     reference: ArrayView3<'_, f64>,
 ) -> KwaversResult<f64> {
-    let current_shape = current.dim();
-    let reference_shape = reference.dim();
+    let current_shape = current.shape();
+    let reference_shape = reference.shape();
     if current_shape != reference_shape {
         return Err(KwaversError::DimensionMismatch(format!(
             "residual metric shape mismatch: current {current_shape:?}, reference {reference_shape:?}"
@@ -49,12 +49,12 @@ pub(super) fn max_abs_difference(
 mod tests {
     use super::max_abs_difference;
     use kwavers_core::error::KwaversError;
-    use array;
+    use leto::Array3;
 
     #[test]
     fn max_abs_difference_returns_l_infinity_norm() {
-        let current = array![[[0.0, 2.0], [-1.0, 7.0]]];
-        let reference = array![[[0.0, 1.0], [3.0, 1.0]]];
+        let current = Array3::from_shape_vec((1, 2, 2), vec![0.0, 2.0, -1.0, 7.0]).unwrap();
+        let reference = Array3::from_shape_vec((1, 2, 2), vec![0.0, 1.0, 3.0, 1.0]).unwrap();
 
         let residual = max_abs_difference(current.view(), reference.view()).unwrap();
 
@@ -63,22 +63,22 @@ mod tests {
 
     #[test]
     fn max_abs_difference_rejects_shape_mismatch() {
-        let current = array![[[1.0, 2.0]]];
-        let reference = array![[[1.0], [2.0]]];
+        let current = Array3::from_shape_vec((1, 1, 2), vec![1.0, 2.0]).unwrap();
+        let reference = Array3::from_shape_vec((1, 2, 1), vec![1.0, 2.0]).unwrap();
 
         let error = max_abs_difference(current.view(), reference.view()).unwrap_err();
 
         assert!(matches!(
             error,
             KwaversError::DimensionMismatch(message)
-                if message.contains("current (1, 1, 2), reference (1, 2, 1)")
+                if message.contains("current [1, 1, 2], reference [1, 2, 1]")
         ));
     }
 
     #[test]
     fn max_abs_difference_rejects_non_finite_update() {
-        let current = array![[[f64::NAN]]];
-        let reference = array![[[1.0]]];
+        let current = Array3::from_shape_vec((1, 1, 1), vec![f64::NAN]).unwrap();
+        let reference = Array3::from_shape_vec((1, 1, 1), vec![1.0]).unwrap();
 
         let error = max_abs_difference(current.view(), reference.view()).unwrap_err();
 

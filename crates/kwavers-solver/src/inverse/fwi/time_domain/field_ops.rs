@@ -15,9 +15,9 @@ pub(in crate::inverse::fwi::time_domain) fn write_negative_product(
 ) {
     if dst.shape() == lhs.shape()
         && dst.shape() == rhs.shape()
-        && dst
-        && lhs
-        && rhs
+        && dst.view().is_c_contiguous()
+        && lhs.view().is_c_contiguous()
+        && rhs.view().is_c_contiguous()
     {
         let lhs = lhs
             .as_slice()
@@ -39,7 +39,10 @@ pub(in crate::inverse::fwi::time_domain) fn write_negative_product(
             },
         );
     } else {
-        for ((i, j, k), value) in dst.indexed_iter_mut() {
+        for ([i, j, k], value) in dst
+            .indexed_iter_mut()
+            .expect("invariant: destination array yields indexed iterator")
+        {
             *value = -lhs[[i, j, k]] * rhs[[i, j, k]];
         }
     }
@@ -49,7 +52,7 @@ pub(in crate::inverse::fwi::time_domain) fn add_assign_field(
     dst: &mut Array3<f64>,
     src: &Array3<f64>,
 ) {
-    if dst.shape() == src.shape() && dst && src {
+    if dst.shape() == src.shape() && dst.view().is_c_contiguous() && src.view().is_c_contiguous() {
         let src = src
             .as_slice()
             .expect("invariant: standard-layout source exposes memory-order slice");
@@ -67,7 +70,10 @@ pub(in crate::inverse::fwi::time_domain) fn add_assign_field(
             },
         );
     } else {
-        for ((i, j, k), value) in dst.indexed_iter_mut() {
+        for ([i, j, k], value) in dst
+            .indexed_iter_mut()
+            .expect("invariant: destination array yields indexed iterator")
+        {
             *value += src[[i, j, k]];
         }
     }
@@ -78,7 +84,7 @@ pub(in crate::inverse::fwi::time_domain) fn add_scaled_field(
     src: &Array3<f64>,
     scale: f64,
 ) {
-    if dst.shape() == src.shape() && dst && src {
+    if dst.shape() == src.shape() && dst.view().is_c_contiguous() && src.view().is_c_contiguous() {
         let src = src
             .as_slice()
             .expect("invariant: standard-layout source exposes memory-order slice");
@@ -96,7 +102,10 @@ pub(in crate::inverse::fwi::time_domain) fn add_scaled_field(
             },
         );
     } else {
-        for ((i, j, k), value) in dst.indexed_iter_mut() {
+        for ([i, j, k], value) in dst
+            .indexed_iter_mut()
+            .expect("invariant: destination array yields indexed iterator")
+        {
             *value += src[[i, j, k]] * scale;
         }
     }
@@ -126,7 +135,7 @@ pub(in crate::inverse::fwi::time_domain) fn subtract_scaled_field(
     gradient: &Array3<f64>,
     scale: f64,
 ) {
-    if dst.shape() == gradient.shape() && dst && gradient {
+    if dst.shape() == gradient.shape() && dst.view().is_c_contiguous() && gradient.view().is_c_contiguous() {
         let gradient = gradient
             .as_slice()
             .expect("invariant: standard-layout gradient exposes memory-order slice");
@@ -144,7 +153,10 @@ pub(in crate::inverse::fwi::time_domain) fn subtract_scaled_field(
             },
         );
     } else {
-        for ((i, j, k), value) in dst.indexed_iter_mut() {
+        for ([i, j, k], value) in dst
+            .indexed_iter_mut()
+            .expect("invariant: destination array yields indexed iterator")
+        {
             *value -= gradient[[i, j, k]] * scale;
         }
     }
@@ -155,8 +167,8 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_field(
     frozen_mask: &Array3<bool>,
 ) {
     if field.shape() == frozen_mask.shape()
-        && field
-        && frozen_mask
+        && field.view().is_c_contiguous()
+        && frozen_mask.view().is_c_contiguous()
     {
         let frozen_mask = frozen_mask
             .as_slice()
@@ -177,7 +189,10 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_field(
             },
         );
     } else {
-        for ((i, j, k), value) in field.indexed_iter_mut() {
+        for ([i, j, k], value) in field
+            .indexed_iter_mut()
+            .expect("invariant: field array yields indexed iterator")
+        {
             if frozen_mask[[i, j, k]] {
                 *value = 0.0;
             }
@@ -190,7 +205,7 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_by_threshold(
     mask: &Array3<f64>,
     threshold: f64,
 ) {
-    if field.shape() == mask.shape() && field && mask {
+    if field.shape() == mask.shape() && field.view().is_c_contiguous() && mask.view().is_c_contiguous() {
         let mask = mask
             .as_slice()
             .expect("invariant: standard-layout mask exposes memory-order slice");
@@ -210,7 +225,10 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_by_threshold(
             },
         );
     } else {
-        for ((i, j, k), value) in field.indexed_iter_mut() {
+        for ([i, j, k], value) in field
+            .indexed_iter_mut()
+            .expect("invariant: field array yields indexed iterator")
+        {
             if mask[[i, j, k]] > threshold {
                 *value = 0.0;
             }
@@ -225,9 +243,9 @@ pub(in crate::inverse::fwi::time_domain) fn scale_velocity_gradient(
 ) {
     if gradient.shape() == model.shape()
         && gradient.shape() == density.shape()
-        && gradient
-        && model
-        && density
+        && gradient.is_c_contiguous()
+        && model.is_c_contiguous()
+        && density.is_c_contiguous()
     {
         let model = model
             .as_slice()
@@ -236,7 +254,7 @@ pub(in crate::inverse::fwi::time_domain) fn scale_velocity_gradient(
             .as_slice()
             .expect("invariant: standard-layout density exposes memory-order slice");
         let gradient = gradient
-            .as_slice_mut()
+            .as_mut_slice()
             .expect("invariant: standard-layout gradient exposes memory-order slice");
         for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
             gradient,
@@ -250,7 +268,10 @@ pub(in crate::inverse::fwi::time_domain) fn scale_velocity_gradient(
             },
         );
     } else {
-        for ((i, j, k), value) in gradient.indexed_iter_mut() {
+        for ([i, j, k], value) in gradient
+            .indexed_iter_mut()
+            .expect("invariant: gradient view yields indexed iterator")
+        {
             let c = model[[i, j, k]];
             let rho = density[[i, j, k]];
             *value *= -2.0 / (rho * c.powi(3));
@@ -265,11 +286,11 @@ pub(in crate::inverse::fwi::time_domain) fn apply_frozen_reference_or_clamp(
     c_min: f64,
     c_max: f64,
 ) {
-    if model
+    if model.view().is_c_contiguous()
         && model.shape() == frozen_mask.shape()
         && model.shape() == reference_model.shape()
-        && frozen_mask
-        && reference_model
+        && frozen_mask.view().is_c_contiguous()
+        && reference_model.view().is_c_contiguous()
     {
         let frozen_mask = frozen_mask
             .as_slice()
@@ -296,7 +317,10 @@ pub(in crate::inverse::fwi::time_domain) fn apply_frozen_reference_or_clamp(
             },
         );
     } else {
-        for ((i, j, k), value) in model.indexed_iter_mut() {
+        for ([i, j, k], value) in model
+            .indexed_iter_mut()
+            .expect("invariant: model array yields indexed iterator")
+        {
             if frozen_mask[[i, j, k]] {
                 *value = reference_model[[i, j, k]];
             } else {

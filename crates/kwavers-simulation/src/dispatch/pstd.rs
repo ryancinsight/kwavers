@@ -2,7 +2,7 @@
 //!
 //! Handles PSTD, PSTD+Thermal, and GPU PSTD dispatch paths.
 
-use leto::Array3;
+use leto::{Array3, SliceArg};
 
 use crate::configs::ThermalConfig;
 use crate::dispatch::shared::{record_modes_to_spec, trim_initial_recorder_view};
@@ -188,7 +188,24 @@ pub(crate) fn prepare_solver(
 
             let mut padded_mask = Array3::<bool>::from_elem((pnx, pny, pnz), false);
             padded_mask
-                slice_mut(&[(Some(p as isize) as usize, Some(nx + p as isize) as usize, 1), (Some(py as isize) as usize, Some(ny + py as isize) as usize, 1), (Some(pz_embed as isize) as usize, Some(nz + pz_embed as isize) as usize, 1)])
+                .slice_with_mut::<3>(&[
+                    SliceArg::Range {
+                        start: Some(p as isize),
+                        end: Some((nx + p) as isize),
+                        step: 1,
+                    },
+                    SliceArg::Range {
+                        start: Some(py as isize),
+                        end: Some((ny + py) as isize),
+                        step: 1,
+                    },
+                    SliceArg::Range {
+                        start: Some(pz_embed as isize),
+                        end: Some((nz + pz_embed) as isize),
+                        step: 1,
+                    },
+                ])
+                .expect("invariant: padded-mask embed slice bounds")
                 .assign(&sensor_mask);
 
             let padded_source =

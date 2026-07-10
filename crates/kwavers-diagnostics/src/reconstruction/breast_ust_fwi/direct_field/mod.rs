@@ -127,7 +127,10 @@ pub fn diagnose_breast_ust_homogeneous_direct_field(
         frequencies_hz,
         reference_speed_m_s,
         config.spacing_m,
-        homogeneous_sound_speed_m_s.dim(),
+        {
+            let [nx, ny, nz] = homogeneous_sound_speed_m_s.shape();
+            (nx, ny, nz)
+        },
         config.time_step_s,
     )?;
     let pstd_periodic = predict::pstd_periodic_observation_cube(
@@ -135,7 +138,10 @@ pub fn diagnose_breast_ust_homogeneous_direct_field(
         frequencies_hz,
         reference_speed_m_s,
         config.spacing_m,
-        homogeneous_sound_speed_m_s.dim(),
+        {
+            let [nx, ny, nz] = homogeneous_sound_speed_m_s.shape();
+            (nx, ny, nz)
+        },
         config.time_step_s,
         &dataset.time_steps_per_frequency,
         &dataset.frequency_bin_start_steps_per_frequency,

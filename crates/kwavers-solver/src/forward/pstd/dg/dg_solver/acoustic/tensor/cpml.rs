@@ -70,7 +70,7 @@ impl DGSolver {
     ) -> KwaversResult<()> {
         let topology = super::validate_tensor_state(self, state, density)?;
         let expected_field = state.shape();
-        let expected_memory = (expected_field.0, expected_field.1, DG_CPML_MEMORY_VARS);
+        let expected_memory = [expected_field[0], expected_field[1], DG_CPML_MEMORY_VARS];
         if rhs.shape() != expected_field {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML field RHS shape {:?} does not match state {:?}",
@@ -94,15 +94,15 @@ impl DGSolver {
         }
         for (axis, profile) in profiles.axes.iter().enumerate() {
             let expected = topology.element_counts[axis] * self.n_nodes;
-            if (profile.sigma.shape()[0] * profile.sigma.shape()[1] * profile.sigma.shape()[2]) != expected
-                || (profile.kappa.shape()[0] * profile.kappa.shape()[1] * profile.kappa.shape()[2]) != expected
-                || (profile.alpha.shape()[0] * profile.alpha.shape()[1] * profile.alpha.shape()[2]) != expected
+            if (profile.sigma.len()) != expected
+                || (profile.kappa.len()) != expected
+                || (profile.alpha.len()) != expected
             {
                 return Err(KwaversError::InvalidInput(format!(
                     "DG CPML profile axis {axis} length mismatch: σ={}, κ={}, α={}, expected {}",
-                    (profile.sigma.shape()[0] * profile.sigma.shape()[1] * profile.sigma.shape()[2]),
-                    (profile.kappa.shape()[0] * profile.kappa.shape()[1] * profile.kappa.shape()[2]),
-                    (profile.alpha.shape()[0] * profile.alpha.shape()[1] * profile.alpha.shape()[2]),
+                    (profile.sigma.len()),
+                    (profile.kappa.len()),
+                    (profile.alpha.len()),
                     expected
                 )));
             }
@@ -169,9 +169,9 @@ impl DGSolver {
                     for j in 0..self.n_nodes {
                         let source_node = topology.node_with_axis(node, axis, j);
                         du += self.diff_matrix[[node_coords[axis], j]]
-                            * state[(elem, source_node, velocity_var)];
+                            * state[[elem, source_node, velocity_var]];
                         dp += self.diff_matrix[[node_coords[axis], j]]
-                            * state[(elem, source_node, ACOUSTIC_PRESSURE_VAR)];
+                            * state[[elem, source_node, ACOUSTIC_PRESSURE_VAR]];
                     }
                     axis_du[axis * nodes_per_element + node] = axis_scales[axis] * du;
                     axis_dp[axis * nodes_per_element + node] = axis_scales[axis] * dp;
@@ -191,8 +191,8 @@ impl DGSolver {
                 }
                 let velocity_var = velocity_var(axis);
                 for node in 0..nodes_per_element {
-                    let surface_p = surface_rhs_per_axis[axis][(elem, node, ACOUSTIC_PRESSURE_VAR)];
-                    let surface_u = surface_rhs_per_axis[axis][(elem, node, velocity_var)];
+                    let surface_p = surface_rhs_per_axis[axis][[elem, node, ACOUSTIC_PRESSURE_VAR]];
+                    let surface_u = surface_rhs_per_axis[axis][[elem, node, velocity_var]];
                     axis_du[axis * nodes_per_element + node] += -surface_p / bulk;
                     axis_dp[axis * nodes_per_element + node] += -surface_u / inv_density;
                 }
@@ -215,18 +215,18 @@ impl DGSolver {
                     let raw_dp = axis_dp[axis * nodes_per_element + node];
                     let pi = pressure_memory_index(axis);
                     let vi = velocity_memory_index(axis);
-                    let psi_p = memory_state[(elem, node, pi)];
-                    let psi_u = memory_state[(elem, node, vi)];
+                    let psi_p = memory_state[[elem, node, pi]];
+                    let psi_u = memory_state[[elem, node, vi]];
 
                     // Field RHS: stretched derivative.
-                    rhs[(elem, node, ACOUSTIC_PRESSURE_VAR)] -= bulk * (raw_du / kappa + psi_p);
-                    rhs[(elem, node, velocity_var)] -= inv_density * (raw_dp / kappa + psi_u);
+                    rhs[[elem, node, ACOUSTIC_PRESSURE_VAR]] -= bulk * (raw_du / kappa + psi_p);
+                    rhs[[elem, node, velocity_var]] -= inv_density * (raw_dp / kappa + psi_u);
 
                     // Memory RHS: first-order auxiliary ODE.
                     let decay = sigma / kappa + alpha;
                     let drive = sigma / (kappa * kappa);
-                    memory_rhs[(elem, node, pi)] = -decay * psi_p - drive * raw_du;
-                    memory_rhs[(elem, node, vi)] = -decay * psi_u - drive * raw_dp;
+                    memory_rhs[[elem, node, pi]] = -decay * psi_p - drive * raw_du;
+                    memory_rhs[[elem, node, vi]] = -decay * psi_u - drive * raw_dp;
                 }
             }
         }
@@ -287,7 +287,7 @@ impl DGSolver {
         F: FnMut(f64, &mut Array3<f64>),
     {
         super::validate_tensor_state(self, state, density)?;
-        workspace.ensure_dim(state.shape());
+        workspace.ensure_dim((state.shape()[0], state.shape()[1], state.shape()[2]));
         memory.ensure_dim(state.shape()[0], state.shape()[1]);
         workspace.original.assign(state);
         memory.original.assign(&memory.state);

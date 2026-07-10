@@ -60,13 +60,13 @@ impl<B: BackendOps<f32> + Default> WaveSpeedFn<B> {
                 reason: format!("Grid size overflows usize: [{nx}, {ny}]"),
             })
         })?;
-        if (slice.shape()[0] * slice.shape()[1] * slice.shape()[2]) != expected_len {
+        if (slice.len()) != expected_len {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::InvalidConfiguration {
                     parameter: "wave_speed_grid".to_string(),
                     reason: format!(
                         "Wave speed grid data length mismatch: expected {expected_len}, got {}",
-                        (slice.shape()[0] * slice.shape()[1] * slice.shape()[2])
+                        (slice.len())
                     ),
                 },
             ));

@@ -1,8 +1,8 @@
-use leto::Array3;
+use leto::{Array3, ArrayView3};
 
 /// Compute the 3-D Laplacian ∇²f using second-order central differences.
 pub(in crate::multiphysics::monolithic) fn laplacian_3d_into(
-    field: &Array3<f64>,
+    field: &ArrayView3<'_, f64>,
     _grid_dims: (usize, usize, usize),
     dx: f64,
     dy: f64,

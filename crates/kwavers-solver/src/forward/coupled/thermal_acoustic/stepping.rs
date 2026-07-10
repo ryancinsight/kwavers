@@ -186,16 +186,19 @@ impl ThermalAcousticCoupler {
                     }
                 });
             } else {
-                Zip::indexed(velocity_x.view_mut()).for_each(|(i, j, k), vx| {
-                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                        return;
-                    }
-                    let rho = dens[[i, j, k]];
-                    if rho > 0.0 {
-                        let dp_dx = (pp[[i + 1, j, k]] - pp[[i - 1, j, k]]) / (2.0 * dx);
-                        *vx = (dt / rho).mul_add(-dp_dx, vxp[[i, j, k]]);
-                    }
-                });
+                velocity_x
+                    .indexed_iter_mut()
+                    .expect("invariant: contiguous owned velocity_x array")
+                    .for_each(|([i, j, k], vx)| {
+                        if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                            return;
+                        }
+                        let rho = dens[[i, j, k]];
+                        if rho > 0.0 {
+                            let dp_dx = (pp[[i + 1, j, k]] - pp[[i - 1, j, k]]) / (2.0 * dx);
+                            *vx = (dt / rho).mul_add(-dp_dx, vxp[[i, j, k]]);
+                        }
+                    });
             }
         }
         {
@@ -221,16 +224,19 @@ impl ThermalAcousticCoupler {
                     }
                 });
             } else {
-                Zip::indexed(velocity_y.view_mut()).for_each(|(i, j, k), vy| {
-                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                        return;
-                    }
-                    let rho = dens[[i, j, k]];
-                    if rho > 0.0 {
-                        let dp_dy = (pp[[i, j + 1, k]] - pp[[i, j - 1, k]]) / (2.0 * dy);
-                        *vy = (dt / rho).mul_add(-dp_dy, vyp[[i, j, k]]);
-                    }
-                });
+                velocity_y
+                    .indexed_iter_mut()
+                    .expect("invariant: contiguous owned velocity_y array")
+                    .for_each(|([i, j, k], vy)| {
+                        if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                            return;
+                        }
+                        let rho = dens[[i, j, k]];
+                        if rho > 0.0 {
+                            let dp_dy = (pp[[i, j + 1, k]] - pp[[i, j - 1, k]]) / (2.0 * dy);
+                            *vy = (dt / rho).mul_add(-dp_dy, vyp[[i, j, k]]);
+                        }
+                    });
             }
         }
         {
@@ -256,16 +262,19 @@ impl ThermalAcousticCoupler {
                     }
                 });
             } else {
-                Zip::indexed(velocity_z.view_mut()).for_each(|(i, j, k), vz| {
-                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                        return;
-                    }
-                    let rho = dens[[i, j, k]];
-                    if rho > 0.0 {
-                        let dp_dz = (pp[[i, j, k + 1]] - pp[[i, j, k - 1]]) / (2.0 * dz);
-                        *vz = (dt / rho).mul_add(-dp_dz, vzp[[i, j, k]]);
-                    }
-                });
+                velocity_z
+                    .indexed_iter_mut()
+                    .expect("invariant: contiguous owned velocity_z array")
+                    .for_each(|([i, j, k], vz)| {
+                        if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                            return;
+                        }
+                        let rho = dens[[i, j, k]];
+                        if rho > 0.0 {
+                            let dp_dz = (pp[[i, j, k + 1]] - pp[[i, j, k - 1]]) / (2.0 * dz);
+                            *vz = (dt / rho).mul_add(-dp_dz, vzp[[i, j, k]]);
+                        }
+                    });
             }
         }
 
@@ -301,17 +310,20 @@ impl ThermalAcousticCoupler {
                     *p = (rho_c_sq * dt).mul_add(-div_u, pp[index]);
                 });
             } else {
-                Zip::indexed(pressure.view_mut()).for_each(|(i, j, k), p| {
-                    if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
-                        return;
-                    }
-                    let rho_c_sq = dens[[i, j, k]] * ss[[i, j, k]] * ss[[i, j, k]];
-                    let du_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * dx);
-                    let dv_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * dy);
-                    let dw_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * dz);
-                    let div_u = du_dx + dv_dy + dw_dz;
-                    *p = (rho_c_sq * dt).mul_add(-div_u, pp[[i, j, k]]);
-                });
+                pressure
+                    .indexed_iter_mut()
+                    .expect("invariant: contiguous owned pressure array")
+                    .for_each(|([i, j, k], p)| {
+                        if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
+                            return;
+                        }
+                        let rho_c_sq = dens[[i, j, k]] * ss[[i, j, k]] * ss[[i, j, k]];
+                        let du_dx = (vx[[i + 1, j, k]] - vx[[i - 1, j, k]]) / (2.0 * dx);
+                        let dv_dy = (vy[[i, j + 1, k]] - vy[[i, j - 1, k]]) / (2.0 * dy);
+                        let dw_dz = (vz[[i, j, k + 1]] - vz[[i, j, k - 1]]) / (2.0 * dz);
+                        let div_u = du_dx + dv_dy + dw_dz;
+                        *p = (rho_c_sq * dt).mul_add(-div_u, pp[[i, j, k]]);
+                    });
             }
         }
     }

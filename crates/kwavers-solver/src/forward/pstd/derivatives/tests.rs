@@ -130,9 +130,9 @@ fn test_derivative_output() {
     let deriv_y = op.derivative_y(&field_view).unwrap();
     let deriv_z = op.derivative_z(&field_view).unwrap();
 
-    assert_eq!(deriv_x.shape(), &[32, 32, 32]);
-    assert_eq!(deriv_y.shape(), &[32, 32, 32]);
-    assert_eq!(deriv_z.shape(), &[32, 32, 32]);
+    assert_eq!(deriv_x.shape(), [32, 32, 32]);
+    assert_eq!(deriv_y.shape(), [32, 32, 32]);
+    assert_eq!(deriv_z.shape(), [32, 32, 32]);
 
     assert!(deriv_x.iter().all(|&x| x.is_finite()));
     assert!(deriv_y.iter().all(|&y| y.is_finite()));

@@ -99,14 +99,14 @@ where
         let mut params = input_size * config.hidden_layers[0] + config.hidden_layers[0];
 
         // Hidden layers
-        for i in 0..(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]).saturating_sub(1) {
+        for i in 0..(config.hidden_layers.len()).saturating_sub(1) {
             params +=
                 config.hidden_layers[i] * config.hidden_layers[i + 1] + config.hidden_layers[i + 1];
             // weights + biases
         }
 
         // Last hidden to output
-        params += config.hidden_layers[(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) - 1] * output_size + output_size;
+        params += config.hidden_layers[(config.hidden_layers.len()) - 1] * output_size + output_size;
 
         params
     }
@@ -248,7 +248,7 @@ where
             }
         }
 
-        let n = (x_vals.shape()[0] * x_vals.shape()[1] * x_vals.shape()[2]);
+        let n = (x_vals.len());
         let x_data = Array1::from_vec(x_vals);
         let t_data = Array1::from_vec(t_vals);
         let u_data = Array2::from_shape_vec((n, 1), u_vals)

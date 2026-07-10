@@ -21,7 +21,7 @@ impl BemFemCoupler {
                 kwavers_core::error::KwaversError::InvalidInput(format!(
                     "FEM interface node index {} is out of bounds (fem_field len {})",
                     node_idx,
-                    (fem_field.shape()[0] * fem_field.shape()[1] * fem_field.shape()[2])
+                    (fem_field.len())
                 ))
             })?;
             interface_values.push(*value);
@@ -43,12 +43,12 @@ impl BemFemCoupler {
         bem_boundary_values: &mut [Complex64],
     ) -> KwaversResult<()> {
         for (i, &fem_value) in fem_values.iter().enumerate() {
-            if i < (self.interface.fem_interface_nodes.shape()[0] * self.interface.fem_interface_nodes.shape()[1] * self.interface.fem_interface_nodes.shape()[2]) {
+            if i < (self.interface.fem_interface_nodes.len()) {
                 let fem_node_idx = self.interface.fem_interface_nodes[i];
                 if let Some(&bem_element_idx) =
                     self.interface.node_element_mapping.get(&fem_node_idx)
                 {
-                    if bem_element_idx < (bem_boundary_values.shape()[0] * bem_boundary_values.shape()[1] * bem_boundary_values.shape()[2]) {
+                    if bem_element_idx < (bem_boundary_values.len()) {
                         let current_value = bem_boundary_values[bem_element_idx];
                         bem_boundary_values[bem_element_idx] = self.config.relaxation_factor
                             * fem_value
@@ -75,7 +75,7 @@ impl BemFemCoupler {
                 kwavers_core::error::KwaversError::InvalidInput(format!(
                     "BEM interface element index {} out of bounds (len {})",
                     bem_element_idx,
-                    (bem_boundary_values.shape()[0] * bem_boundary_values.shape()[1] * bem_boundary_values.shape()[2])
+                    (bem_boundary_values.len())
                 ))
             })?;
             interface_values.push(*value);
@@ -97,9 +97,9 @@ impl BemFemCoupler {
     ) -> KwaversResult<f64> {
         let mut max_residual: f64 = 0.0;
         for (i, &bem_value) in bem_values.iter().enumerate() {
-            if i < (self.interface.fem_interface_nodes.shape()[0] * self.interface.fem_interface_nodes.shape()[1] * self.interface.fem_interface_nodes.shape()[2]) {
+            if i < (self.interface.fem_interface_nodes.len()) {
                 let fem_node_idx = self.interface.fem_interface_nodes[i];
-                if fem_node_idx < (fem_field.shape()[0] * fem_field.shape()[1] * fem_field.shape()[2]) {
+                if fem_node_idx < (fem_field.len()) {
                     let current_value = fem_field[fem_node_idx];
                     let new_value = self.config.relaxation_factor * bem_value
                         + (1.0 - self.config.relaxation_factor) * current_value;

@@ -44,7 +44,7 @@ impl MlBayesianPINN {
             ));
         }
 
-        let shape = predictions[0].dim();
+        let shape = predictions[0].shape();
         let mut mean_prediction = Array2::zeros(shape);
         let mut variance: Array2<f32> = Array2::zeros(shape);
 
@@ -60,8 +60,8 @@ impl MlBayesianPINN {
         variance = &variance / (predictions.len() - 1) as f32;
 
         let mut uncertainty = Array2::zeros(shape);
-        for i in 0..shape.0 {
-            for j in 0..shape.1 {
+        for i in 0..shape[0] {
+            for j in 0..shape[1] {
                 uncertainty[[i, j]] = variance[[i, j]].sqrt();
             }
         }

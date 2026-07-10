@@ -65,51 +65,54 @@ pub(super) fn compute_nonlinear_term_into(
     let rho_arr = medium.density_array();
     let c_arr = medium.sound_speed_array();
 
-    Zip::indexed(output)
-        .and(pressure)
-        .and(prev_pressure)
-        .for_each(|(i, j, k), nl_val, &p_curr, &p_prev| {
-            if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
-                let rho = rho_arr[[i, j, k]].max(1e-9);
-                let c = c_arr[[i, j, k]].max(1e-9);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                if i > 0 && i < nx - 1 && j > 0 && j < ny - 1 && k > 0 && k < nz - 1 {
+                    let p_curr = pressure[[i, j, k]];
+                    let p_prev = prev_pressure[[i, j, k]];
+                    let rho = rho_arr[[i, j, k]].max(1e-9);
+                    let c = c_arr[[i, j, k]].max(1e-9);
 
-                // Get spatially-varying nonlinearity coefficient
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
-                let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
-                    medium, x, y, z, grid,
-                );
+                    // Get spatially-varying nonlinearity coefficient
+                    let x = i as f64 * grid.dx;
+                    let y = j as f64 * grid.dy;
+                    let z = k as f64 * grid.dz;
+                    let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
+                        medium, x, y, z, grid,
+                    );
 
-                // Explicit-form nonlinear coefficient for leapfrog:
-                // ∂²p/∂t² = c²∇²p + (β/ρc²)∂²(p²)/∂t² + …
-                // Coefficient is positive; the ∂²(p²)/∂t² factor is positive for
-                // forward-propagating waves with positive nonlinearity parameter.
-                let nonlinear_coeff = beta / (rho * c.powi(2));
+                    // Explicit-form nonlinear coefficient for leapfrog:
+                    // ∂²p/∂t² = c²∇²p + (β/ρc²)∂²(p²)/∂t² + …
+                    // Coefficient is positive; the ∂²(p²)/∂t² factor is positive for
+                    // forward-propagating waves with positive nonlinearity parameter.
+                    let nonlinear_coeff = beta / (rho * c.powi(2));
 
-                let term = if let Some(p_history) = pressure_history {
-                    // Full second-order accuracy with pressure history
-                    let p_prev_prev = p_history[[i, j, k]];
-                    let d2p_dt2 = (2.0f64.mul_add(-p_prev, p_curr) + p_prev_prev) / (dt * dt);
-                    let dp_dt = (p_curr - p_prev) / dt;
+                    let term = if let Some(p_history) = pressure_history {
+                        // Full second-order accuracy with pressure history
+                        let p_prev_prev = p_history[[i, j, k]];
+                        let d2p_dt2 = (2.0f64.mul_add(-p_prev, p_curr) + p_prev_prev) / (dt * dt);
+                        let dp_dt = (p_curr - p_prev) / dt;
 
-                    // Westervelt nonlinear term
-                    let p_squared_second_deriv =
-                        (2.0 * p_curr).mul_add(d2p_dt2, 2.0 * dp_dt.powi(2));
-                    nonlinear_coeff * p_squared_second_deriv
-                } else {
-                    // Bootstrap for first iteration
-                    let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
-                    let d2p_dt2_bootstrap = dp_dt / dt.max(1e-12);
+                        // Westervelt nonlinear term
+                        let p_squared_second_deriv =
+                            (2.0 * p_curr).mul_add(d2p_dt2, 2.0 * dp_dt.powi(2));
+                        nonlinear_coeff * p_squared_second_deriv
+                    } else {
+                        // Bootstrap for first iteration
+                        let dp_dt = (p_curr - p_prev) / dt.max(1e-12);
+                        let d2p_dt2_bootstrap = dp_dt / dt.max(1e-12);
 
-                    let p_squared_second_deriv =
-                        (2.0 * p_curr).mul_add(d2p_dt2_bootstrap, 2.0 * dp_dt.powi(2));
-                    nonlinear_coeff * p_squared_second_deriv
-                };
+                        let p_squared_second_deriv =
+                            (2.0 * p_curr).mul_add(d2p_dt2_bootstrap, 2.0 * dp_dt.powi(2));
+                        nonlinear_coeff * p_squared_second_deriv
+                    };
 
-                *nl_val = term;
+                    output[[i, j, k]] = term;
+                }
             }
-        });
+        }
+    }
 }
 
 /// Fill a caller-owned viscoelastic damping workspace.

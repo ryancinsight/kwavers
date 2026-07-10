@@ -74,7 +74,7 @@ impl BrainAtlas {
 
         let annotation = if annotation.is_empty() {
             Array3::zeros(shape)
-        } else if annotation.dim() == shape {
+        } else if annotation.shape() == [shape.0, shape.1, shape.2] {
             annotation
         } else {
             return Err(KwaversError::InvalidInput(

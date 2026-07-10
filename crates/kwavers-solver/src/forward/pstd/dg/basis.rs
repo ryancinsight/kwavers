@@ -84,7 +84,7 @@ pub fn build_vandermonde(
     poly_order: usize,
     basis_type: BasisType,
 ) -> KwaversResult<Array2<f64>> {
-    let n_nodes = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
+    let n_nodes = nodes.len();
     let n_modes = poly_order + 1;
 
     if n_nodes != n_modes {
@@ -233,11 +233,11 @@ mod tests {
 
     #[test]
     fn fourier_vandermonde_evaluates_real_trigonometric_basis() {
-        let nodes = arr1(&[-0.5, 0.0, 0.5]);
+        let nodes = Array1::from_vec(3, vec![-0.5, 0.0, 0.5]).unwrap();
 
         let v = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap();
 
-        assert_eq!(v.shape(), &[3, 3]);
+        assert_eq!(v.shape(), [3, 3]);
         for row in 0..3 {
             assert_eq!(v[[row, 0]], 1.0);
         }
@@ -251,7 +251,7 @@ mod tests {
 
     #[test]
     fn fourier_vandermonde_rejects_duplicate_periodic_endpoints() {
-        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let nodes = Array1::from_vec(3, vec![-1.0, 0.0, 1.0]).unwrap();
 
         let error = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap_err();
 

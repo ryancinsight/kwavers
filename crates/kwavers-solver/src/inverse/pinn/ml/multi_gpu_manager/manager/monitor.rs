@@ -12,7 +12,7 @@ impl MultiGpuManager {
         utilization: f32,
         memory_used: usize,
     ) {
-        if gpu_id < (self.devices.shape()[0] * self.devices.shape()[1] * self.devices.shape()[2]) {
+        if gpu_id < (self.devices.len()) {
             self.devices[gpu_id].compute_load = utilization;
             self.devices[gpu_id].memory_used = memory_used;
 
@@ -33,7 +33,7 @@ impl MultiGpuManager {
             return 0.0;
         }
         let loads: Vec<f32> = self.devices.iter().map(|d| d.compute_load).collect();
-        let mean_load = loads.iter().sum::<f32>() / (loads.shape()[0] * loads.shape()[1] * loads.shape()[2]) as f32;
+        let mean_load = loads.iter().sum::<f32>() / (loads.len()) as f32;
         if mean_load == 0.0 {
             return 0.0;
         }
@@ -41,13 +41,13 @@ impl MultiGpuManager {
             .iter()
             .map(|&load| (load - mean_load).powi(2))
             .sum::<f32>()
-            / (loads.shape()[0] * loads.shape()[1] * loads.shape()[2]) as f32;
+            / (loads.len()) as f32;
         variance.sqrt() / mean_load
     }
 
     /// Calculate average GPU utilization as the scaling efficiency proxy.
     pub fn calculate_scaling_efficiency(&self) -> f64 {
-        let n_gpus = (self.devices.shape()[0] * self.devices.shape()[1] * self.devices.shape()[2]) as f64;
+        let n_gpus = (self.devices.len()) as f64;
         self.devices
             .iter()
             .map(|d| d.compute_load as f64)
@@ -61,12 +61,12 @@ impl MultiGpuManager {
     ///
     pub fn get_performance_summary(&self) -> PerformanceSummary {
         PerformanceSummary {
-            num_gpus: (self.devices.shape()[0] * self.devices.shape()[1] * self.devices.shape()[2]),
+            num_gpus: (self.devices.len()),
             load_imbalance: self.calculate_load_imbalance(),
             scaling_efficiency: self.calculate_scaling_efficiency(),
             communication_overhead: self.performance_monitor.communication_overhead,
             average_utilization: self.devices.iter().map(|d| d.compute_load).sum::<f32>()
-                / (self.devices.shape()[0] * self.devices.shape()[1] * self.devices.shape()[2]) as f32,
+                / (self.devices.len()) as f32,
         }
     }
 
@@ -75,7 +75,7 @@ impl MultiGpuManager {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn handle_gpu_failure(&mut self, failed_gpu_id: usize) -> KwaversResult<()> {
-        if failed_gpu_id >= (self.devices.shape()[0] * self.devices.shape()[1] * self.devices.shape()[2]) {
+        if failed_gpu_id >= (self.devices.len()) {
             return Ok(());
         }
         self.devices[failed_gpu_id].healthy = false;
@@ -119,7 +119,7 @@ impl MultiGpuManager {
         }
 
         while let Some(work) = self.work_queue.pop_front() {
-            let best_gpu = healthy_gpus[(self.work_queue.shape()[0] * self.work_queue.shape()[1] * self.work_queue.shape()[2]) % (healthy_gpus.shape()[0] * healthy_gpus.shape()[1] * healthy_gpus.shape()[2])];
+            let best_gpu = healthy_gpus[(self.work_queue.len()) % (healthy_gpus.len())];
             let mut reassigned_work = work;
             reassigned_work.device_id = best_gpu;
             self.active_work.insert(reassigned_work.id, reassigned_work);

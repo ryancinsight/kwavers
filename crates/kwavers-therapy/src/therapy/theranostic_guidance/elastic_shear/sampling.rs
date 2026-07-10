@@ -83,8 +83,8 @@ pub(super) fn migrate_residual(
     receiver_points: &[Point2],
     shear_speed_m_s: f64,
 ) -> Array2<f64> {
-    let dims = prepared.ct_hu.dim();
-    let (nx, ny) = dims;
+    let dims = prepared.ct_hu.shape();
+    let [nx, ny] = dims;
     let spacing_m = prepared.spacing_m;
 
     // Flat row-major computation: flat_idx = ix * ny + iy.
@@ -122,12 +122,12 @@ pub(super) fn trace_energy(data: &Array2<f64>) -> f64 {
 }
 
 fn linear_sample(data: &Array2<f64>, row: usize, sample: f64) -> f64 {
-    if row >= data.nrows() || sample < 0.0 {
+    if row >= data.shape()[0] || sample < 0.0 {
         return 0.0;
     }
     let left = sample.floor() as usize;
     let right = left + 1;
-    if right >= data.ncols() {
+    if right >= data.shape()[1] {
         return 0.0;
     }
     let alpha = sample - left as f64;

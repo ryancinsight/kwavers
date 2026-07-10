@@ -205,16 +205,16 @@ impl BeamformingProcessor3D {
         rf_frame: &Array3<f32>,
         algorithm: &BeamformingAlgorithm3D,
     ) -> KwaversResult<Option<Array3<f32>>> {
-        let (channels, samples, _trailing) = rf_frame.dim();
-        let rf_data = rf_frame
-            .view()
-            .into_shape_with_order((1, channels, samples, 1_usize))
-            .map_err(|e| {
-                KwaversError::InvalidInput(format!(
-                    "streaming frame reshape [channels={channels}, samples={samples}, 1]: {e}"
-                ))
-            })?
-            .to_owned();
+        let [channels, samples, _trailing] = rf_frame.shape();
+        let rf_data = Array4::from_shape_vec(
+            [1, channels, samples, 1_usize],
+            rf_frame.iter().copied().collect(),
+        )
+        .map_err(|e| {
+            KwaversError::InvalidInput(format!(
+                "streaming frame reshape [channels={channels}, samples={samples}, 1]: {e}"
+            ))
+        })?;
         self.process_volume(&rf_data, algorithm).map(Some)
     }
 }

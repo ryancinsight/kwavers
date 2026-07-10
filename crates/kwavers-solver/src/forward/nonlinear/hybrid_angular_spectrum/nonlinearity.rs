@@ -57,7 +57,7 @@ impl HybridAsNonlinearOperator {
         let coeff = -self.beta * dz / (self.rho0 * self.c0 * self.c0 * self.c0);
 
         // Apply nonlinear correction using characteristic method
-        for ((i, j, k), val) in pressure.indexed_iter() {
+        for ([i, j, k], val) in pressure.indexed_iter() {
             // Nonlinear steepening: Δp ≈ −β/(ρc³) × p × ∂p/∂τ × Δz
             // ∂p/∂τ ≈ −c₀ × ∂p/∂z for a forward-propagating plane wave
             let dp_dz = if k < pressure.shape()[2] - 1 {

@@ -94,7 +94,7 @@ fn p_wave_arrival_time_matches_analytical() {
     let src_x = 8usize;
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     // Extend through all z so the slab behaves as a 2-D problem
-    src_mask.index_axis::<2>(0, src_x).fill(true);
+    src_mask.index_axis_mut::<2>(0, src_x).expect("index_axis").fill(true);
     let source = ElasticPstdVelocitySource {
         mask: src_mask.into(),
         ux: Some(signal.into()),
@@ -296,7 +296,7 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
 
     let src_x = 12usize;
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
-    src_mask.index_axis::<2>(0, src_x).fill(true);
+    src_mask.index_axis_mut::<2>(0, src_x).expect("index_axis").fill(true);
 
     // Sensor inside the would-be PML region (last ~10 cells from the
     // x = nx-1 boundary, but spaced safely inside the absorbing layer).

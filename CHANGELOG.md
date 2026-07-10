@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - kwavers bulk Leto migration closure (compute stage) [minor]
+- [minor] Consolidated the kwavers compute pipeline (analysis, solver, simulation,
+  therapy, diagnostics, physics, grid-adjacent) on the Leto+/eunomia/moirai-parallel
+  stack. Migration completes the `kwavers-physics`, `kwavers-solver`, `kwavers-analysis`,
+  `kwavers-simulation`, `kwavers-therapy`, and `kwavers-diagnostics` source surfaces to
+  native Leto array operations; removes the `kwavers-math::linear_algebra::basic` and
+  `eigen` shim modules in favor of `leto_ops::{solve, inv, qr, svd,
+  symmetric_eigen_jacobi, kron, matmul, matvec}`; replaces all `Vec<f64>` →
+  `Array*::from_vec(vec)` call sites with the two-argument `Array*::from_vec(shape, vec)`
+  contract; and rewrites the kwavers-precision `LinearAlgebra`/`EigenDecomposition`
+  trait surfaces on `kwavers-math::linear_algebra::{EigenSolver, ComplexLinearAlgebra,
+  LinearAlgebraExt}` as documented migration SSOT. Internal bindings (`Array{1,2,3}::eye`,
+  `Array2::zeros`, `Lanes`-based reductions) standardized on Leto's typed shape and
+  zero-copy view API. Removes the workspace-level `ndarray` dependency. Workspace library
+  check passes for all 24 member crates excluding `kwavers-python`; the kwavers facade,
+  kwavers-physics, kwavers-solver, kwavers-analysis, kwavers-simulation, kwavers-therapy,
+  and kwavers-diagnostics crate-frontier are clear. `kwavers-python` Leto↔PyO3 binding
+  surface remains an open follow-up (filed under Bulk migration priority #2
+  in gap_audit.md).
+
 ### Breaking (2026-07-10) - kwavers-grid native Leto surface [arch]
 - [major] Removed the transitional `kwavers_grid::compat` module and redundant
   `_leto` grid, differential-operator, and k-space APIs. Removed duplicate

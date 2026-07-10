@@ -113,7 +113,7 @@ fn transcranial_ust_volume_inversion_reconstructs_coupled_three_dimensional_arra
 
     let result = reconstruct_brain_volume(&volume, &config).unwrap();
 
-    assert_eq!(result.reconstruction_sound_speed_m_s.dim(), (12, 12, 12));
+    assert_eq!(result.reconstruction_sound_speed_m_s.shape(), [12, 12, 12]);
     assert_eq!(result.synthetic_data.len(), config.measurement_count());
     assert!(result.metrics.active_voxels > 40);
     assert_eq!(

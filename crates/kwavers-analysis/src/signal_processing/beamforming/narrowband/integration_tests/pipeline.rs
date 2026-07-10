@@ -47,10 +47,10 @@ fn end_to_end_pipeline_produces_finite_spectrum() {
     let snapshots = extract_narrowband_snapshots(&data, &selection).expect("snapshot extraction");
 
     assert!(
-        snapshots.nrows() == n_sensors,
+        snapshots.shape()[0] == n_sensors,
         "snapshot dimensions mismatch"
     );
-    assert!(snapshots.ncols() > 0, "no snapshots extracted");
+    assert!(snapshots.shape()[1] > 0, "no snapshots extracted");
 
     // Pipeline step 2: Compute Capon spectrum at broadside
     let cfg = CaponSpectrumConfig {
@@ -59,7 +59,7 @@ fn end_to_end_pipeline_produces_finite_spectrum() {
         diagonal_loading: 1e-3,
         covariance: CovarianceEstimator {
             forward_backward_averaging: false,
-            num_snapshots: snapshots.ncols(),
+            num_snapshots: snapshots.shape()[1],
             post_process: CovariancePostProcess::None,
         },
         steering: SteeringVectorMethod::SphericalWave {

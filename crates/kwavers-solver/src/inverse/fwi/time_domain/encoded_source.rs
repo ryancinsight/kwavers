@@ -75,8 +75,8 @@ pub fn hadamard_codes(n: usize) -> KwaversResult<Vec<Vec<f64>>> {
     }
     // Sylvester construction: H_1 = [1]; H_{2m} = [[H_m, H_m], [H_m, -H_m]].
     let mut h = vec![vec![1.0_f64]];
-    while (h.shape()[0] * h.shape()[1] * h.shape()[2]) < n {
-        let m = (h.shape()[0] * h.shape()[1] * h.shape()[2]);
+    while h.len() < n {
+        let m = h.len();
         let mut next = vec![vec![0.0_f64; 2 * m]; 2 * m];
         for i in 0..m {
             for j in 0..m {
@@ -115,13 +115,13 @@ pub fn encode_shots(
             },
         ));
     }
-    if (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]) != (shots.shape()[0] * shots.shape()[1] * shots.shape()[2]) {
+    if codes.len() != shots.len() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "encode_shots code count {} must equal shot count {}",
-                    (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]),
-                    (shots.shape()[0] * shots.shape()[1] * shots.shape()[2])
+                    codes.len(),
+                    shots.len()
                 ),
             },
         ));
@@ -156,9 +156,12 @@ pub fn encode_shots(
                 encoded_signal[[row, col]] += code * signal[[row, col]];
             }
         }
-        Zip::from(&mut encoded_data)
-            .and(data)
-            .for_each(|out, &d| *out += code * d);
+        let [data_rows, data_cols] = data.shape();
+        for row in 0..data_rows {
+            for col in 0..data_cols {
+                encoded_data[[row, col]] += code * data[[row, col]];
+            }
+        }
     }
 
     let source = GridSource {
@@ -237,13 +240,13 @@ impl FwiProcessor {
             ));
         }
         for codes in code_schedule {
-            if (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]) != (shots.shape()[0] * shots.shape()[1] * shots.shape()[2]) {
+            if codes.len() != shots.len() {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "invert_encoded code vector length {} must equal shot count {}",
-                            (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]),
-                            (shots.shape()[0] * shots.shape()[1] * shots.shape()[2])
+                            codes.len(),
+                            shots.len()
                         ),
                     },
                 ));
@@ -286,9 +289,9 @@ mod tests {
     fn hadamard_codes_are_orthogonal() {
         for &n in &[1usize, 2, 4, 8] {
             let codes = hadamard_codes(n).expect("power of two");
-            assert_eq!((codes.shape()[0] * codes.shape()[1] * codes.shape()[2]), n);
+            assert_eq!(codes.len(), n);
             for (i, row) in codes.iter().enumerate() {
-                assert_eq!((row.shape()[0] * row.shape()[1] * row.shape()[2]), n);
+                assert_eq!((row.len()), n);
                 assert!(row.iter().all(|&v| v == 1.0 || v == -1.0));
                 // Column-orthogonality: Σ_k c_ki c_kj = n δ_ij.
                 for j in 0..n {
@@ -395,18 +398,23 @@ mod tests {
         let mut reference = Array3::<f64>::zeros(dims);
         for (geometry, observed) in &shots {
             let g = raw_gradient(&processor, &model, geometry, observed, &grid);
-            reference += &g;
+            leto_ops::zip_mut_with(&mut reference.view_mut(), &g.view(), |r, gv| *r += *gv)
+                .expect("invariant: gradient shapes match");
         }
 
         // Encoded: average over the 2×2 Hadamard set.
-        let codes = hadamard_codes((shots.shape()[0] * shots.shape()[1] * shots.shape()[2])).expect("hadamard");
+        let codes = hadamard_codes(shots.len()).expect("hadamard");
         let mut encoded_avg = Array3::<f64>::zeros(dims);
         for code in &codes {
             let (geometry, encoded_data) = encode_shots(&shots, code).expect("encode");
             let g = raw_gradient(&processor, &model, &geometry, &encoded_data, &grid);
-            encoded_avg += &g;
+            leto_ops::zip_mut_with(&mut encoded_avg.view_mut(), &g.view(), |a, gv| *a += *gv)
+                .expect("invariant: gradient shapes match");
         }
-        encoded_avg.mapv_inplace(|v| v / (codes.shape()[0] * codes.shape()[1] * codes.shape()[2]) as f64);
+        let ncodes = codes.len() as f64;
+        for v in encoded_avg.iter_mut() {
+            *v /= ncodes;
+        }
 
         let max_ref = reference.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));
         assert!(max_ref > 1e-18, "reference gradient must be non-trivial");

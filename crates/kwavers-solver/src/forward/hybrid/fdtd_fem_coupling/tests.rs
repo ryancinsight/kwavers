@@ -22,8 +22,8 @@ fn test_fdtd_fem_coupling_creation() {
     let solver = FdtdFemSolver::new(config, fdtd_grid, fem_mesh).unwrap();
     // Fresh solver: FDTD field is all-zero (ndarray zeros), FEM field is empty history.
     assert_eq!(
-        solver.fdtd_field().dim(),
-        (10, 10, 10),
+        solver.fdtd_field().shape(),
+        [10, 10, 10],
         "fdtd_field must match 10×10×10 grid"
     );
     assert!(

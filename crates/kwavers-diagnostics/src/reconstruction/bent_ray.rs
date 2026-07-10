@@ -94,7 +94,7 @@ pub fn bent_ray_path(
     source: (usize, usize),
     receiver: (usize, usize),
 ) -> Option<BentRay> {
-    let (nx, ny) = slowness.dim();
+    let [nx, ny] = slowness.shape();
     if source.0 >= nx || source.1 >= ny || receiver.0 >= nx || receiver.1 >= ny {
         return None;
     }

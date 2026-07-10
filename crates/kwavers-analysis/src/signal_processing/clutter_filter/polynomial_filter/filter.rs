@@ -1,11 +1,10 @@
 //! `PolynomialFilter`: polynomial regression clutter filter implementation.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_core::utils::iterators::apply_inplace;
 use leto::{
-    /* s -- no leto equivalent */,
     Array1,
     Array2,
+    SliceArg,
 };
 
 use super::config::PolynomialFilterConfig;
@@ -60,7 +59,7 @@ impl PolynomialFilter {
     /// - Time complexity: O(n_pixels × n_frames × order²)
     /// - Space complexity: O(n_frames × order)
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_pixels, n_frames) = slow_time_data.dim();
+        let [n_pixels, n_frames] = slow_time_data.shape();
 
         if n_frames <= self.config.polynomial_order {
             return Err(KwaversError::InvalidInput(format!(
@@ -73,7 +72,9 @@ impl PolynomialFilter {
 
         if self.config.normalize_time {
             let max_time = (n_frames - 1) as f64;
-            apply_inplace(&mut time, |t| t / max_time);
+            for t in time.iter_mut() {
+                *t /= max_time;
+            }
         }
 
         // Vandermonde matrix: V[t, i] = t^i for i = 0..=polynomial_order.
@@ -85,17 +86,36 @@ impl PolynomialFilter {
         }
 
         // Precompute (VᵀV)⁻¹Vᵀ — same for all pixels.
-        let vt = vandermonde.t().to_owned();
-        let vtv = vt.dot(&vandermonde);
+        let k = self.config.polynomial_order + 1;
+        let vt = vandermonde
+            .transpose([1, 0])
+            .expect("2D transpose axes valid")
+            .to_contiguous();
+        let mut vtv = Array2::<f64>::zeros((k, k));
+        leto_ops::matmul(&vt.view(), &vandermonde.view(), &mut vtv.view_mut())
+            .expect("VᵀV matmul shapes conform");
         let vtv_inv = self.pseudo_inverse(&vtv)?;
-        let projection = vtv_inv.dot(&vt);
+        let mut projection = Array2::<f64>::zeros((k, n_frames));
+        leto_ops::matmul(&vtv_inv.view(), &vt.view(), &mut projection.view_mut())
+            .expect("projection matmul shapes conform");
 
         let mut filtered_data = Array2::<f64>::zeros((n_pixels, n_frames));
 
         for pixel_idx in 0..n_pixels {
-            let signal = slow_time_data.slice(s![pixel_idx, ..]).to_owned();
-            let coefficients = projection.dot(&signal);
-            let polynomial_fit = vandermonde.dot(&coefficients);
+            let signal = slow_time_data
+                .slice_with::<1>(&[SliceArg::Index(pixel_idx as isize), SliceArg::All])
+                .expect("pixel row slice valid")
+                .to_contiguous();
+            let mut coefficients = Array1::<f64>::zeros(k);
+            leto_ops::matvec(&projection.view(), &signal.view(), &mut coefficients.view_mut())
+                .expect("coefficients matvec shapes conform");
+            let mut polynomial_fit = Array1::<f64>::zeros(n_frames);
+            leto_ops::matvec(
+                &vandermonde.view(),
+                &coefficients.view(),
+                &mut polynomial_fit.view_mut(),
+            )
+            .expect("polynomial-fit matvec shapes conform");
 
             for (t, (&original, &fit)) in signal.iter().zip(polynomial_fit.iter()).enumerate() {
                 filtered_data[[pixel_idx, t]] = original - fit;
@@ -113,7 +133,7 @@ impl PolynomialFilter {
     /// - Returns [`KwaversError::InvalidInput`] if the matrix is not square.
     /// - Returns [`KwaversError::Numerical`] if the matrix is singular (pivot < 1e-12).
     fn pseudo_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n, m) = matrix.dim();
+        let [n, m] = matrix.shape();
 
         if n != m {
             return Err(KwaversError::InvalidInput(

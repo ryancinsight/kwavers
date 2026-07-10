@@ -344,8 +344,9 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
 
     // Create test vectors for dot product
     let vec_size = size * size;
-    let a_vec = Array1::<f64>::from_vec((0..vec_size).map(|i| i as f64).collect());
-    let b_vec = Array1::<f64>::from_vec((0..vec_size).map(|i| (i as f64).sin()).collect());
+    let a_vec = Array1::<f64>::from_vec(vec_size, (0..vec_size).map(|i| i as f64).collect()).unwrap();
+    let b_vec =
+        Array1::<f64>::from_vec(vec_size, (0..vec_size).map(|i| (i as f64).sin()).collect()).unwrap();
 
     // Test: Dot Product
     {
@@ -450,13 +451,15 @@ fn benchmark_signal_processing(suite: &mut BenchmarkSuite, size: usize) -> Kwave
     // Create test signals
     let signal_length = size * size;
     let signal = Array1::<f64>::from_vec(
+        signal_length,
         (0..signal_length)
             .map(|i| (2.0 * std::f64::consts::PI * i as f64 / 32.0).sin())
             .collect(),
-    );
+    )
+    .unwrap();
 
     // Simple FIR filter kernel
-    let kernel = Array1::<f64>::from_vec(vec![0.25, 0.5, 0.25]); // Simple low-pass
+    let kernel = Array1::<f64>::from_vec(3, vec![0.25, 0.5, 0.25]).unwrap(); // Simple low-pass
 
     // Test: Convolution (simplified 1D)
     {
@@ -602,21 +605,19 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
             // Create new pressure array using safe operations
             let mut new_pressure = Array3::<f64>::zeros((size, size, size));
 
-            // Use Zip for safe vectorized operations
-            Zip::indexed(&mut new_pressure)
-                .and(&pressure)
-                .and(&velocity_x)
-                .and(&velocity_y)
-                .and(&velocity_z)
-                .for_each(|(i, j, k), new_p, &p, &_vx, &_vy, &_vz| {
-                    if i > 0 && i < size - 1 && j > 0 && j < size - 1 && k > 0 && k < size - 1 {
+            // Interior-cell pressure update using index-based iteration
+            for i in 1..size - 1 {
+                for j in 1..size - 1 {
+                    for k in 1..size - 1 {
                         let div_v = (velocity_x[[i + 1, j, k]] - velocity_x[[i - 1, j, k]])
                             / (2.0 * dx)
                             + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]]) / (2.0 * dx)
                             + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]]) / (2.0 * dx);
-                        *new_p = p - dt * rho0 * c0 * c0 * div_v;
+                        new_pressure[[i, j, k]] =
+                            pressure[[i, j, k]] - dt * rho0 * c0 * c0 * div_v;
                     }
-                });
+                }
+            }
             pressure.assign(&new_pressure);
         }
         let safe_time = start.elapsed().as_secs_f64();

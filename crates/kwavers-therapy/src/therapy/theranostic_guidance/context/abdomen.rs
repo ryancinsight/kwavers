@@ -5,9 +5,9 @@ use std::collections::VecDeque;
 use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{
-    /* s -- no leto equivalent */,
     Array2,
     Array3,
+    SliceArg,
 };
 
 use super::super::aperture::{
@@ -29,19 +29,25 @@ pub fn build_abdominal_placement_context(
     spacing_mm: [f64; 3],
     config: &TheranosticInverseConfig,
 ) -> KwaversResult<PlacementContext> {
-    if ct_volume_hu.dim() != label_volume.dim() {
+    if ct_volume_hu.shape() != label_volume.shape() {
         return Err(KwaversError::InvalidInput(format!(
             "CT shape {:?} does not match segmentation shape {:?}",
-            ct_volume_hu.dim(),
-            label_volume.dim()
+            ct_volume_hu.shape(),
+            label_volume.shape()
         )));
     }
     validate_spacing(spacing_mm)?;
     let slice_index = largest_target_slice(label_volume)?;
-    let ct_slice = ct_volume_hu.slice(s![.., .., slice_index]).to_owned();
-    let label_slice = label_volume.slice(s![.., .., slice_index]).to_owned();
+    let ct_slice = ct_volume_hu
+        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
+    let label_slice = label_volume
+        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
     let target_mask = largest_connected_target_component(&label_slice)?;
-    let tissue = Array2::from_shape_fn(ct_slice.dim(), |idx| {
+    let tissue = Array2::from_shape_fn(ct_slice.shape(), |idx| {
         ct_slice[idx] > HU_ABDOMEN_BODY_THRESHOLD || label_slice[idx] > 0
     });
     let body_mask = connected_body_component(&tissue, &target_mask)?;
@@ -73,7 +79,7 @@ pub fn build_abdominal_placement_context(
         arc.cutout_angle_rad,
     );
     let imaging_points_m = abdominal_imaging_points(frame, skin, config.central_cutout_m, 64);
-    let surface_stride = (ct_slice.dim().0.max(ct_slice.dim().1) / 192).clamp(1, 6);
+    let surface_stride = (ct_slice.shape()[0].max(ct_slice.shape()[1]) / 192).clamp(1, 6);
     let body_surface_points_m =
         surface_points_2d(&body_mask, sx, sy, sz, slice_index, surface_stride);
 
@@ -182,7 +188,7 @@ fn connected_body_component(
     let seed = centroid_index(target).ok_or_else(|| {
         KwaversError::InvalidInput("connected body component requires a target seed".to_owned())
     })?;
-    let (nx, ny) = tissue.dim();
+    let [nx, ny] = tissue.shape();
     let mut body = Array2::<bool>::from_elem((nx, ny), false);
     let mut queue = VecDeque::from([seed]);
     while let Some((ix, iy)) = queue.pop_front() {

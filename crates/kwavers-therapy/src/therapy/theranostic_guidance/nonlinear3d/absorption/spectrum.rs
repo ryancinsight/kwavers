@@ -21,7 +21,7 @@ pub(super) fn build_k_power_spectrum(n: usize, spacing_m: f64, power: f64) -> Ar
     let ky = fftfreq(n, spacing_m);
     let kz = fftfreq(n, spacing_m);
     let two_pi = std::f64::consts::TAU;
-    Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
+    Array3::from_shape_fn((n, n, n), |[ix, iy, iz]| {
         let kx_v = two_pi * kx[ix];
         let ky_v = two_pi * ky[iy];
         let kz_v = two_pi * kz[iz];

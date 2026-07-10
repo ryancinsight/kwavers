@@ -77,12 +77,12 @@ where
                     reason: format!("Grid size overflows usize: {dims:?}"),
                 })
             })?;
-        if (slice.shape()[0] * slice.shape()[1] * slice.shape()[2]) != expected_len {
+        if (slice.len()) != expected_len {
             return Err(KwaversError::System(SystemError::InvalidConfiguration {
                 parameter: "wave_speed_grid".to_string(),
                 reason: format!(
                     "Wave speed grid data length mismatch: expected {expected_len}, got {}",
-                    (slice.shape()[0] * slice.shape()[1] * slice.shape()[2])
+                    (slice.len())
                 ),
             }));
         }

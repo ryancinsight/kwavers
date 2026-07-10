@@ -155,13 +155,17 @@ impl TherapyIntegrationOrchestrator {
 
         let power_factor = self.safety_controller.power_reduction_factor();
         if power_factor < 1.0 {
-            acoustic_field.pressure *= power_factor;
+            for value in acoustic_field.pressure.iter_mut() {
+                *value *= power_factor;
+            }
             for vel in &mut [
                 &mut acoustic_field.velocity_x,
                 &mut acoustic_field.velocity_y,
                 &mut acoustic_field.velocity_z,
             ] {
-                **vel *= power_factor;
+                for value in vel.iter_mut() {
+                    *value *= power_factor;
+                }
             }
         }
 

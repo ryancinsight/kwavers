@@ -93,7 +93,7 @@ fn snapshot_shape_and_energy() {
 
     let n_snap = result.snapshot_iterations.len();
     assert!(n_snap >= 1, "at least one snapshot expected");
-    let (sn, sx, sy) = result.snapshot_fields_re.dim();
+    let [sn, sx, sy] = result.snapshot_fields_re.shape();
     assert_eq!((sn, sx, sy), (n_snap, config.nx, config.ny));
 
     // Each snapshot slice must carry non-zero acoustic energy.
@@ -101,12 +101,14 @@ fn snapshot_shape_and_energy() {
         let energy: f32 = result
             .snapshot_fields_re
             .index_axis::<2>(0, k)
+            .unwrap()
             .iter()
             .map(|&v| v * v)
             .sum::<f32>()
             + result
                 .snapshot_fields_im
                 .index_axis::<2>(0, k)
+                .unwrap()
                 .iter()
                 .map(|&v| v * v)
                 .sum::<f32>();
@@ -143,5 +145,5 @@ fn geometry_scalars_consistent() {
     assert_eq!(result.element_ys.len(), config.n_elements);
     assert_eq!(result.reflector_x_start, config.layer_x_start);
     assert_eq!(result.reflector_x_end, config.layer_x_end);
-    assert_eq!(result.sound_speed_map.dim(), (config.nx, config.ny));
+    assert_eq!(result.sound_speed_map.shape(), [config.nx, config.ny]);
 }

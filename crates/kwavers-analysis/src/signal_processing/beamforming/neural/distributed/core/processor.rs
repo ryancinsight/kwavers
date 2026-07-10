@@ -3,7 +3,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use moirai_parallel::{map_collect_mut_with, Adaptive};
 use leto::{
-    /* s -- no leto equivalent */,
     Array3,
     Array4,
 };

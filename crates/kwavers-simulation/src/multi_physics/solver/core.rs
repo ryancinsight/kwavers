@@ -125,7 +125,7 @@ impl SimulationMultiPhysicsSolver {
         let mut snapshots: HashMap<SimulationPhysicsDomain, Array3<f64>> = HashMap::new();
         for (&domain, solver) in &self.solvers {
             if let Ok(field) = solver.get_field("pressure") {
-                snapshots.insert(domain, field.to_owned());
+                snapshots.insert(domain, field.to_contiguous());
             }
         }
         for &src in &domains {

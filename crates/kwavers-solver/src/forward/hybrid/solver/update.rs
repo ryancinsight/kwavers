@@ -26,24 +26,17 @@ fn copy_leto_slice_into_ndarray(
     src: &leto::Array3<f64>,
     region: &DomainRegion,
 ) {
-    let ndarray_slice = s![
-        region.start.0..region.end.0,
-        region.start.1..region.end.1,
-        region.start.2..region.end.2
-    ];
     let leto_slice = &[
         (region.start.0, region.end.0, 1isize),
         (region.start.1, region.end.1, 1isize),
         (region.start.2, region.end.2, 1isize),
     ];
-    let mut dst_slice = dst.slice_mut(ndarray_slice);
-    let src_slice = src
-        .slice(leto_slice)
-        .unwrap()
-        .expect("valid hybrid region slice");
-    for (dst_value, src_value) in dst_slice.iter_mut().zip(src_slice.iter()) {
+    let mut dst_slice = dst.reborrow().slice_mut(leto_slice).unwrap();
+    let src_slice = src.slice(leto_slice).unwrap();
+    leto_ops::zip_mut_with(&mut dst_slice, &src_slice, |dst_value, src_value| {
         *dst_value = *src_value;
-    }
+    })
+    .expect("invariant: source and destination region slices share shape");
 }
 
 impl HybridSolver {
@@ -72,32 +65,32 @@ impl HybridSolver {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        copy_ndarray_view_into_leto(&mut self.pstd_solver.fields.p, fields.index_axis(0, p_idx));
+        copy_ndarray_view_into_leto(&mut self.pstd_solver.fields.p, fields.index_axis(0, p_idx)?);
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.ux,
-            fields.index_axis(0, vx_idx),
+            fields.index_axis(0, vx_idx)?,
         );
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.uy,
-            fields.index_axis(0, vy_idx),
+            fields.index_axis(0, vy_idx)?,
         );
         copy_ndarray_view_into_leto(
             &mut self.pstd_solver.fields.uz,
-            fields.index_axis(0, vz_idx),
+            fields.index_axis(0, vz_idx)?,
         );
 
-        copy_ndarray_view_into_leto(&mut self.fdtd_solver.fields.p, fields.index_axis(0, p_idx));
+        copy_ndarray_view_into_leto(&mut self.fdtd_solver.fields.p, fields.index_axis(0, p_idx)?);
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.ux,
-            fields.index_axis(0, vx_idx),
+            fields.index_axis(0, vx_idx)?,
         );
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.uy,
-            fields.index_axis(0, vy_idx),
+            fields.index_axis(0, vy_idx)?,
         );
         copy_ndarray_view_into_leto(
             &mut self.fdtd_solver.fields.uz,
-            fields.index_axis(0, vz_idx),
+            fields.index_axis(0, vz_idx)?,
         );
 
         let amp = source.amplitude(t);
@@ -119,30 +112,28 @@ impl HybridSolver {
         self.pstd_solver.step_forward()?;
         self.fdtd_solver.step_forward()?;
 
-        for region_index in
-            0..(self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2])
-        {
+        for region_index in 0..self.regions.len() {
             let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
-                    let mut p_view = fields.index_axis_mut(0, p_idx);
+                    let mut p_view = fields.index_axis_mut(0, p_idx)?;
                     copy_leto_slice_into_ndarray(&mut p_view, &self.pstd_solver.fields.p, &region);
 
-                    let mut vx_view = fields.index_axis_mut(0, vx_idx);
+                    let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
                     copy_leto_slice_into_ndarray(
                         &mut vx_view,
                         &self.pstd_solver.fields.ux,
                         &region,
                     );
 
-                    let mut vy_view = fields.index_axis_mut(0, vy_idx);
+                    let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
                     copy_leto_slice_into_ndarray(
                         &mut vy_view,
                         &self.pstd_solver.fields.uy,
                         &region,
                     );
 
-                    let mut vz_view = fields.index_axis_mut(0, vz_idx);
+                    let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
                     copy_leto_slice_into_ndarray(
                         &mut vz_view,
                         &self.pstd_solver.fields.uz,
@@ -150,24 +141,24 @@ impl HybridSolver {
                     );
                 }
                 DomainType::FDTD => {
-                    let mut p_view = fields.index_axis_mut(0, p_idx);
+                    let mut p_view = fields.index_axis_mut(0, p_idx)?;
                     copy_leto_slice_into_ndarray(&mut p_view, &self.fdtd_solver.fields.p, &region);
 
-                    let mut vx_view = fields.index_axis_mut(0, vx_idx);
+                    let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
                     copy_leto_slice_into_ndarray(
                         &mut vx_view,
                         &self.fdtd_solver.fields.ux,
                         &region,
                     );
 
-                    let mut vy_view = fields.index_axis_mut(0, vy_idx);
+                    let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
                     copy_leto_slice_into_ndarray(
                         &mut vy_view,
                         &self.fdtd_solver.fields.uy,
                         &region,
                     );
 
-                    let mut vz_view = fields.index_axis_mut(0, vz_idx);
+                    let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
                     copy_leto_slice_into_ndarray(
                         &mut vz_view,
                         &self.fdtd_solver.fields.uz,
@@ -282,13 +273,11 @@ impl HybridSolver {
             self.config.decomposition_strategy.clone(),
         )?;
 
-        if (new_regions.shape()[0] * new_regions.shape()[1] * new_regions.shape()[2])
-            != (self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2])
-        {
+        if new_regions.len() != self.regions.len() {
             use log::info;
             info!(
                 "Domain decomposition updated: {} regions",
-                (new_regions.shape()[0] * new_regions.shape()[1] * new_regions.shape()[2])
+                new_regions.len()
             );
             self.regions = new_regions;
         }
@@ -304,7 +293,9 @@ impl HybridSolver {
     fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;
 
-        let pressure = fields.index_axis(0, UnifiedFieldType::Pressure.index());
+        let pressure = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
         let has_nan = pressure.iter().any(|&x| x.is_nan());
         let has_inf = pressure.iter().any(|&x| x.is_infinite());
 
@@ -400,7 +391,7 @@ mod tests {
         assert_eq!(solver.source_mask_scratch.as_ptr(), before);
         assert_eq!(solver.source_mask_scratch[[1, 2, 3]], 1.0);
         assert_eq!(
-            solver.source_mask_scratch.sum(),
+            solver.source_mask_scratch.iter().sum::<f64>(),
             1.0,
             "point-source mask must contain exactly one active cell"
         );

@@ -108,7 +108,8 @@ impl NonlinearElasticWaveField {
     /// 3D array of total displacement magnitudes in meters
     #[must_use]
     pub fn total_displacement_magnitude(&self) -> Array3<f64> {
-        let mut total = &self.u_fundamental * &self.u_fundamental + &self.u_second * &self.u_second;
+        let mut total = &(&self.u_fundamental * &self.u_fundamental)
+            + &(&self.u_second * &self.u_second);
 
         for harmonic in &self.u_harmonics {
             total = &total + &(harmonic * harmonic);
@@ -123,7 +124,7 @@ impl NonlinearElasticWaveField {
     /// Total number of harmonics including fundamental (1 + 1 + n_higher)
     #[must_use]
     pub fn num_harmonics(&self) -> usize {
-        2 + (self.u_harmonics.shape()[0] * self.u_harmonics.shape()[1] * self.u_harmonics.shape()[2]) // fundamental + second + higher
+        2 + (self.u_harmonics.len()) // fundamental + second + higher
     }
 
     /// Get the displacement at a specific harmonic

@@ -320,7 +320,7 @@ impl ThermalDiffusionSolver {
             }
         }
 
-        let (_, ny, nz) = shape;
+        let [_, ny, nz] = shape;
         let slab_len = ny * nz;
         let source_slice = external_source
             .as_ref()
@@ -357,9 +357,12 @@ impl ThermalDiffusionSolver {
                 },
             );
         } else {
-            Zip::indexed(&mut self.temperature)
-                .and(&self.laplacian_workspace)
-                .for_each(|(i, j, k), temp, &lap| {
+            let laplacian_workspace = &self.laplacian_workspace;
+            self.temperature
+                .indexed_iter_mut()
+                .expect("invariant: contiguous owned temperature array")
+                .for_each(|([i, j, k], temp)| {
+                    let lap = laplacian_workspace[[i, j, k]];
                     let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
                     update_cell(i, j, k, temp, lap, source);
                 });

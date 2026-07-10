@@ -58,7 +58,7 @@ impl FwiGeometry {
 
     #[must_use]
     pub(super) fn receiver_count(&self) -> usize {
-        (self.receiver_row_to_sensor_row.shape()[0] * self.receiver_row_to_sensor_row.shape()[1] * self.receiver_row_to_sensor_row.shape()[2])
+        self.receiver_row_to_sensor_row.len()
     }
 
     pub(super) fn collect_fortran_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
@@ -78,7 +78,7 @@ impl FwiGeometry {
 
     fn collect_row_major_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
         let mut indices = Vec::new();
-        for ((i, j, k), &active) in mask.indexed_iter() {
+        for ([i, j, k], &active) in mask.indexed_iter() {
             if active {
                 indices.push((i, j, k));
             }
@@ -96,7 +96,7 @@ impl FwiGeometry {
     pub(super) fn validate(&self, grid: &Grid, nt: usize) -> KwaversResult<()> {
         let expected_shape = grid.dimensions();
         let expected_shape_arr = [grid.nx, grid.ny, grid.nz];
-        if self.sensor_mask.shape() != expected_shape {
+        if self.sensor_mask.shape() != expected_shape_arr {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(

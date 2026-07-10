@@ -72,7 +72,7 @@ impl ShockWaveGenerator {
         let sigma_pos = self.parameters.focal_spot_diameter / 2.355; // FWHM to sigma
         let sigma_neg = sigma_pos * 2.0;
 
-        for ((i, j, k), val) in field.indexed_iter_mut() {
+        for ([i, j, k], val) in field.indexed_iter_mut().expect("invariant: dense layout iterable") {
             let x = i as f64 * grid.dx;
             let y = j as f64 * grid.dy;
             let z = k as f64 * grid.dz;

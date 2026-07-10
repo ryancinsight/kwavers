@@ -251,7 +251,7 @@ fn update_axisymmetric_velocity_fused(
 
     let [_nx, nr] = velocity.shape();
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
-        velocity.as_slice_mut(),
+        velocity.as_mut_slice(),
         gradient.as_slice(),
         rho0.as_slice(),
     ) {
@@ -290,7 +290,7 @@ fn update_axisymmetric_velocity_unfused(
     );
 
     if let (Some(velocity_values), Some(gradient_values), Some(rho_values)) = (
-        velocity.as_slice_mut(),
+        velocity.as_mut_slice(),
         gradient.as_slice(),
         rho0.as_slice(),
     ) {
@@ -557,7 +557,11 @@ impl PSTDSolver {
 
         let pressure = self.fields.p.view();
         let rho0 = self.materials.rho0.view();
-        ctx.compute_vel_grads(pressure.slice(s![.., 0, ..]));
+        ctx.compute_vel_grads(
+            pressure
+                .slice_with::<2>(&s![.., 0, ..])
+                .expect("invariant: axisymmetric r=0 plane within pressure bounds"),
+        );
 
         if use_fused {
             // Fused: ux = pml_x[i] · (pml_x[i] · ux − (dt/ρ₀) · ∂p/∂x)
@@ -576,39 +580,47 @@ impl PSTDSolver {
                 .as_slice()
                 .ok_or_else(|| KwaversError::InternalError("pml_vel_z contiguous".into()))?;
 
-            let mut ux = self.fields.ux.view_mut();
+            let ux = self.fields.ux.view_mut();
             update_axisymmetric_velocity_fused(
-                ux.slice_mut(s![.., 0, ..]),
+                ux.slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within ux bounds"),
                 &ctx.dpdx,
-                rho0.slice(s![.., 0, ..]),
+                rho0.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
                 pml_vx,
                 AsVelocityAxis::X,
                 dt,
             );
 
-            let mut uz = self.fields.uz.view_mut();
+            let uz = self.fields.uz.view_mut();
             update_axisymmetric_velocity_fused(
-                uz.slice_mut(s![.., 0, ..]),
+                uz.slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within uz bounds"),
                 &ctx.dpdr,
-                rho0.slice(s![.., 0, ..]),
+                rho0.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
                 pml_vz,
                 AsVelocityAxis::R,
                 dt,
             );
         } else {
-            let mut ux = self.fields.ux.view_mut();
+            let ux = self.fields.ux.view_mut();
             update_axisymmetric_velocity_unfused(
-                ux.slice_mut(s![.., 0, ..]),
+                ux.slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within ux bounds"),
                 &ctx.dpdx,
-                rho0.slice(s![.., 0, ..]),
+                rho0.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
                 dt,
             );
 
-            let mut uz = self.fields.uz.view_mut();
+            let uz = self.fields.uz.view_mut();
             update_axisymmetric_velocity_unfused(
-                uz.slice_mut(s![.., 0, ..]),
+                uz.slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within uz bounds"),
                 &ctx.dpdr,
-                rho0.slice(s![.., 0, ..]),
+                rho0.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
                 dt,
             );
 
@@ -642,19 +654,19 @@ impl PSTDSolver {
         let result = (|| -> KwaversResult<()> {
             if self.dirichlet_pml_bypass_x.is_empty() {
                 boundary.apply_velocity_pml_directional(
-                    Self::leto_view_mut3(&mut self.fields.ux).into(),
+                    self.fields.ux.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     0,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    Self::leto_view_mut3(&mut self.fields.uy).into(),
+                    self.fields.uy.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     1,
                 )?;
                 boundary.apply_velocity_pml_directional(
-                    Self::leto_view_mut3(&mut self.fields.uz).into(),
+                    self.fields.uz.view_mut(),
                     self.grid.as_ref(),
                     self.time_step_index,
                     2,
@@ -669,19 +681,19 @@ impl PSTDSolver {
                     &mut self.fields.ux,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_velocity_pml_directional(field.into(), grid, step, 0),
+                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 0),
                 )?;
                 Self::apply_x_plane_pml_bypass_leto(
                     &mut self.fields.uy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_velocity_pml_directional(field.into(), grid, step, 1),
+                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 1),
                 )?;
                 Self::apply_x_plane_pml_bypass_leto(
                     &mut self.fields.uz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
-                    |field| boundary.apply_velocity_pml_directional(field.into(), grid, step, 2),
+                    |field| boundary.apply_velocity_pml_directional(field, grid, step, 2),
                 )?;
             }
             Ok(())

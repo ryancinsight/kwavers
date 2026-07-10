@@ -89,13 +89,13 @@ fn test_set_sampling_switches_mode_idempotently() {
     assert!(matches!(sampler.sampling, SamplingMode::Uniform));
     // Switching back into importance mode must rebuild the table.
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.0 });
-    assert_eq!((sampler.shape()[0] * sampler.shape()[1] * sampler.shape()[2]), (sampler.shape()[0] * sampler.shape()[1] * sampler.shape()[2])); // still consistent
+    assert_eq!((sampler.len()), (sampler.len())); // still consistent
 }
 
 #[test]
 fn test_uniform_sampling_empirical_histogram_is_flat() {
     let sampler = make_cube_sampler();
-    let counts = vec![0usize; (sampler.shape()[0] * sampler.shape()[1] * sampler.shape()[2])];
+    let counts = vec![0usize; (sampler.len())];
     let n_batches = 50usize;
     let batch_size = 256usize;
     for step in 0..n_batches {
@@ -128,7 +128,7 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
 
     // Sanity check: the top-N voxels by magnitude account for
     // > 50 % of cumulative probability mass under exponent=2.
-    let total = (sampler.shape()[0] * sampler.shape()[1] * sampler.shape()[2]);
+    let total = (sampler.len());
     let n_focal = (total / 64).max(1); // ~1.5 % of voxels closest to peak
                                        // Without direct access to private fields, this test verifies
                                        // that the empirical distribution is *non-uniform* by running

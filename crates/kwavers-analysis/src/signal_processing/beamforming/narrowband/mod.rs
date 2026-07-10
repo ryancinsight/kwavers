@@ -266,7 +266,7 @@ mod tests {
         let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
         for s in 0..n_sensors {
             for t in 0..n_samples {
-                data[(s, 0, t)] = (s as f64) + (t as f64) * 1e-3;
+                data[[s, 0, t]] = (s as f64) + (t as f64) * 1e-3;
             }
         }
 
@@ -280,8 +280,8 @@ mod tests {
 
         let selection = SnapshotSelection::Auto(scenario);
         let snaps = extract_narrowband_snapshots(&data, &selection).expect("snapshots");
-        assert_eq!(snaps.nrows(), n_sensors);
-        assert!(snaps.ncols() > 0);
+        assert_eq!(snaps.shape()[0], n_sensors);
+        assert!(snaps.shape()[1] > 0);
     }
 
     #[test]
@@ -293,8 +293,8 @@ mod tests {
         let n_samples = 64;
         let mut x = Array3::<f64>::zeros((n_sensors, 1, n_samples));
         for t in 0..n_samples {
-            x[(0, 0, t)] = 1.0;
-            x[(1, 0, t)] = 1.0;
+            x[[0, 0, t]] = 1.0;
+            x[[1, 0, t]] = 1.0;
         }
 
         let positions = vec![[0.0, 0.0, 0.0], [0.01, 0.0, 0.0]];

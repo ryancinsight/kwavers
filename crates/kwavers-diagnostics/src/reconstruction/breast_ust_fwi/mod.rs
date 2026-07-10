@@ -230,8 +230,13 @@ mod tests {
             simulate_frequency_observation(&truth_leto, &array, 230_000.0, &config).expect("observed");
         let observed_nd: leto::Array2<kwavers_math::fft::Complex64> =
             observed.try_into().expect("contiguous");
-        let sliced: leto::Array2<kwavers_math::fft::Complex64> =
-            observed_ndslice(&[(Some(0 as isize) as usize, Some(3 as isize) as usize, 1), (0, usize::MAX, 1)]).to_owned().into();
+        let sliced: leto::Array2<kwavers_math::fft::Complex64> = observed_nd
+            .slice_with::<2>(&[
+                leto::SliceArg::Range { start: Some(0), end: Some(3), step: 1 },
+                leto::SliceArg::All,
+            ])
+            .expect("row slice within bounds")
+            .to_contiguous();
         let observations = [FrequencyObservation::new(
             230_000.0,
             sliced,

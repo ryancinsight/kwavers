@@ -33,16 +33,16 @@ where
         let start_time = Instant::now();
         let mut metrics = TrainingMetrics3D::default();
 
-        let n_data = (x_data.shape()[0] * x_data.shape()[1] * x_data.shape()[2]);
+        let n_data = (x_data.len());
         if n_data == 0 {
             return Err(KwaversError::InvalidInput(
                 "Training data must be non-empty".into(),
             ));
         }
-        if (y_data.shape()[0] * y_data.shape()[1] * y_data.shape()[2]) != n_data
-            || (z_data.shape()[0] * z_data.shape()[1] * z_data.shape()[2]) != n_data
-            || (t_data.shape()[0] * t_data.shape()[1] * t_data.shape()[2]) != n_data
-            || (u_data.shape()[0] * u_data.shape()[1] * u_data.shape()[2]) != n_data
+        if (y_data.len()) != n_data
+            || (z_data.len()) != n_data
+            || (t_data.len()) != n_data
+            || (u_data.len()) != n_data
         {
             return Err(KwaversError::InvalidInput(
                 "x_data, y_data, z_data, t_data, and u_data must have equal length".into(),
@@ -224,7 +224,7 @@ mod tests {
 
         let metrics = solver.train(&x_data, &y_data, &z_data, &t_data, &u_data, None, 5)?;
         assert_eq!(metrics.epochs_completed, 5);
-        assert_eq!((metrics.total_loss.shape()[0] * metrics.total_loss.shape()[1] * metrics.total_loss.shape()[2]), 5);
+        assert_eq!((metrics.total_loss.len()), 5);
         Ok(())
     }
 }

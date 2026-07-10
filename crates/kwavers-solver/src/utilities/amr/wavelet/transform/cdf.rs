@@ -159,7 +159,7 @@ impl WaveletTransform {
 
     /// Apply 1D wavelet transform using filter bank.
     pub(super) fn apply_wavelet_1d(signal: &mut [f64], h: &[f64], g: &[f64]) {
-        let n = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
+        let n = signal.len();
         if n < 2 {
             return;
         }
@@ -193,7 +193,7 @@ impl WaveletTransform {
 
     /// Apply 1D inverse wavelet transform.
     pub(super) fn apply_inverse_wavelet_1d(coeffs: &mut [f64], h: &[f64], g: &[f64]) {
-        let n = (coeffs.shape()[0] * coeffs.shape()[1] * coeffs.shape()[2]);
+        let n = coeffs.len();
         if n < 2 {
             return;
         }
@@ -208,7 +208,7 @@ impl WaveletTransform {
             // Contribution from approximation coefficients
             for (k, &h_k) in h.iter().enumerate() {
                 let idx = if i >= k { (i - k) / 2 } else { (n + i - k) / 2 } % half;
-                if (i + (h.shape()[0] * h.shape()[1] * h.shape()[2]) - k).is_multiple_of(2) {
+                if (i + (h.len()) - k).is_multiple_of(2) {
                     sum += h_k * coeffs[idx];
                 }
             }
@@ -216,7 +216,7 @@ impl WaveletTransform {
             // Contribution from detail coefficients
             for (k, &g_k) in g.iter().enumerate() {
                 let idx = if i >= k { (i - k) / 2 } else { (n + i - k) / 2 } % half;
-                if (i + (g.shape()[0] * g.shape()[1] * g.shape()[2]) - k).is_multiple_of(2) {
+                if (i + (g.len()) - k).is_multiple_of(2) {
                     sum += g_k * coeffs[half + idx];
                 }
             }

@@ -13,8 +13,8 @@ pub(super) fn select_skull_aware_placement(
     amplitude_weights: &Array1<f64>,
     config: &SkullAdaptiveBenchmarkConfig,
 ) -> KwaversResult<SkullAwareTransducerPlacement> {
-    let n = element_positions_m.nrows();
-    if n == 0 || element_positions_m.ncols() != 3 {
+    let n = element_positions_m.shape()[0];
+    if n == 0 || element_positions_m.shape()[1] != 3 {
         return Err(KwaversError::InvalidInput(
             "benchmark placement requires nonempty element_positions_m with 3 columns".to_owned(),
         ));

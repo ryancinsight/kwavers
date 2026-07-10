@@ -19,7 +19,7 @@ impl NeuralClinicalDecisionSupport {
         confidence: ArrayView3<f32>,
     ) -> KwaversResult<Vec<LesionDetection>> {
         let mut lesions = Vec::new();
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let margin = 10;
 
         for z in margin..nz.saturating_sub(margin) {
@@ -82,7 +82,7 @@ impl NeuralClinicalDecisionSupport {
         seed_y: usize,
         seed_z: usize,
     ) -> f32 {
-        let (dim_x, dim_y, dim_z) = volume.dim();
+        let [dim_x, dim_y, dim_z] = volume.shape();
 
         let local_mean = self.compute_local_statistics(&volume, seed_x, seed_y, seed_z);
         let threshold = 2.0f32.mul_add(self.config.segmentation_sensitivity, local_mean);
@@ -163,7 +163,7 @@ impl NeuralClinicalDecisionSupport {
         y: usize,
         z: usize,
     ) -> f32 {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let window_size = 5;
 
         let mut sum = 0.0;

@@ -57,7 +57,7 @@ impl FieldRegistry {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn build(&mut self) -> KwaversResult<()> {
-        let max_field_index = (self.fields.shape()[0] * self.fields.shape()[1] * self.fields.shape()[2]);
+        let max_field_index = self.fields.len();
         if max_field_index == 0 {
             self.data = None;
             self.deferred_allocation = false;
@@ -83,12 +83,12 @@ impl FieldRegistry {
         let idx = field_type as usize;
 
         // Check if already registered
-        if idx < (self.fields.shape()[0] * self.fields.shape()[1] * self.fields.shape()[2]) && self.fields[idx].is_some() {
+        if idx < (self.fields.len()) && self.fields[idx].is_some() {
             return Ok(());
         }
 
         // Ensure Vec is large enough
-        while (self.fields.shape()[0] * self.fields.shape()[1] * self.fields.shape()[2]) <= idx {
+        while (self.fields.len()) <= idx {
             self.fields.push(None);
         }
 
@@ -134,7 +134,9 @@ impl FieldRegistry {
 
         let data = self.data.as_ref().ok_or(FieldError::DataNotInitialized)?;
 
-        Ok(data.index_axis(0, metadata.index))
+        Ok(data
+            .index_axis::<3>(0, metadata.index)
+            .expect("invariant: field index within data axis 0"))
     }
 
     /// Get a mutable field view (zero-copy)
@@ -160,7 +162,9 @@ impl FieldRegistry {
 
         let data = self.data.as_mut().ok_or(FieldError::DataNotInitialized)?;
 
-        Ok(data.index_axis_mut(0, metadata_index))
+        Ok(data
+            .index_axis_mut::<3>(0, metadata_index)
+            .expect("invariant: field index within data axis 0"))
     }
 
     /// Set a specific field with dimension validation
@@ -173,7 +177,8 @@ impl FieldRegistry {
         values: &Array3<f64>,
     ) -> KwaversResult<()> {
         // Validate dimensions
-        let actual_dims = values.shape();
+        let [adx, ady, adz] = values.shape();
+        let actual_dims = (adx, ady, adz);
         if actual_dims != self.grid_dims {
             return Err(FieldError::DimensionMismatch {
                 field: field_type.name().to_owned(),
@@ -192,7 +197,7 @@ impl FieldRegistry {
     #[must_use]
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
         let idx = field_type as usize;
-        idx < (self.fields.shape()[0] * self.fields.shape()[1] * self.fields.shape()[2]) && self.fields[idx].is_some()
+        idx < (self.fields.len()) && self.fields[idx].is_some()
     }
 
     /// Get list of registered fields
@@ -200,7 +205,7 @@ impl FieldRegistry {
     pub fn registered_fields(&self) -> Vec<UnifiedFieldType> {
         (0..UnifiedFieldType::COUNT)
             .filter_map(|i| {
-                if i < (self.fields.shape()[0] * self.fields.shape()[1] * self.fields.shape()[2]) && self.fields[i].is_some() {
+                if i < (self.fields.len()) && self.fields[i].is_some() {
                     UnifiedFieldType::from_index(i)
                 } else {
                     None
@@ -262,15 +267,20 @@ impl FieldRegistry {
         }
 
         let (nx, ny, nz) = self.grid_dims;
-        let mut resized_data = Array4::zeros(((self.fields.shape()[0] * self.fields.shape()[1] * self.fields.shape()[2]), nx, ny, nz));
+        let mut resized_data = Array4::zeros(((self.fields.len()), nx, ny, nz));
 
         // Copy existing data if present
         if let Some(existing_data) = &self.data {
             let min_fields = existing_data.shape()[0].min(resized_data.shape()[0]);
             for i in 0..min_fields {
                 resized_data
-                    .index_axis_mut(0, i)
-                    .assign(&existing_data.index_axis(0, i));
+                    .index_axis_mut::<3>(0, i)
+                    .expect("invariant: field index within resized data axis 0")
+                    .assign(
+                        &existing_data
+                            .index_axis::<3>(0, i)
+                            .expect("invariant: field index within existing data axis 0"),
+                    );
             }
         }
 
@@ -305,6 +315,6 @@ mod tests {
 
         // Test field access
         let pressure = registry.get_field(UnifiedFieldType::Pressure).unwrap();
-        assert_eq!(pressure.shape(), &[10, 10, 10]);
+        assert_eq!(pressure.shape(), [10, 10, 10]);
     }
 }

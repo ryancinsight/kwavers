@@ -99,11 +99,11 @@ fn test_delay_surface() {
     };
     let pw = UltrafastPlaneWave::new(config);
 
-    let x_pixels = Array1::from_vec(vec![-0.005, 0.0, 0.005]);
-    let y_pixels = Array1::from_vec(vec![0.01, 0.02]);
+    let x_pixels = Array1::from_vec(3, vec![-0.005, 0.0, 0.005]).unwrap();
+    let y_pixels = Array1::from_vec(2, vec![0.01, 0.02]).unwrap();
 
     let surface = pw.delay_surface(&x_pixels, &y_pixels, 0.0).unwrap();
-    assert_eq!(surface.shape(), (3, 6));
+    assert_eq!(surface.shape(), [3, 6]);
 
     let y = 0.01;
     let expected_depth_delay = y / SOUND_SPEED_TISSUE;

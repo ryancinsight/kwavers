@@ -329,7 +329,7 @@ mod tests {
         let grid = Arc::new(Grid::new(4, 4, 4, 1.0, 1.0, 1.0).unwrap());
         let mut solver = RegionPSTDSolver::new(4, grid);
         let prev_ptr = solver.prev_field.as_ptr();
-        let field = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| {
+        let field = Array3::from_shape_fn((4, 4, 4), |[i, j, k]| {
             (i as f64 + 0.25 * j as f64 - 0.5 * k as f64).sin()
         });
         let mask = Array3::from_elem((4, 4, 4), true);

@@ -72,12 +72,12 @@ fn test_fdtd_backend_field_access() {
     let backend = FdtdBackend::new(&grid, &medium, AcousticSpatialOrder::Second).unwrap();
 
     let p = backend.get_pressure_field();
-    assert_eq!(p.shape(), &[32, 32, 32]);
+    assert_eq!(p.shape(), [32, 32, 32]);
 
     let (vx, vy, vz) = backend.get_velocity_fields();
-    assert_eq!(vx.shape(), &[32, 32, 32]);
-    assert_eq!(vy.shape(), &[32, 32, 32]);
-    assert_eq!(vz.shape(), &[32, 32, 32]);
+    assert_eq!(vx.shape(), [32, 32, 32]);
+    assert_eq!(vy.shape(), [32, 32, 32]);
+    assert_eq!(vz.shape(), [32, 32, 32]);
 }
 
 #[test]
@@ -89,7 +89,7 @@ fn test_fdtd_backend_intensity_computation() {
     let intensity = backend
         .get_intensity_field()
         .expect("Intensity computation failed");
-    assert_eq!(intensity.shape(), &[32, 32, 32]);
+    assert_eq!(intensity.shape(), [32, 32, 32]);
 
     let max_intensity = intensity.iter().cloned().fold(0.0_f64, f64::max);
     assert_eq!(max_intensity, 0.0);

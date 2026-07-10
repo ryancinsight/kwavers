@@ -8,9 +8,7 @@ use super::super::stress::stress_divergence_into;
 use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array1,
-};
+use leto::Array1;
 
 /// Time integration engine for elastic waves.
 ///
@@ -121,48 +119,36 @@ impl<'a> TimeIntegrator<'a> {
         // asserts (3 mut on field.{vx,vy,vz} + 3 immut scratch.{ax,ay,az}).
         // The Zip chain is dropped entirely: each worker task writes to
         // disjoint vx_slice[idx] / vy_slice[idx] / vz_slice[idx] elements.
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ax,
-            "scratch.ax must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ay,
-            "scratch.ay must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.az,
-            "scratch.az must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let vx_slice = field.vx.as_slice_mut()
+            let vx_slice = field
+                .vx
+                .as_slice_mut()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice_mut()
+            let vy_slice = field
+                .vy
+                .as_slice_mut()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice_mut()
+            let vz_slice = field
+                .vz
+                .as_slice_mut()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            let ax_slice = scratch.ax.as_slice()
+            let ax_slice = scratch
+                .ax
+                .as_slice()
                 .expect("scratch.ax: standard-layout asserted just above; layout matched");
-            let ay_slice = scratch.ay.as_slice()
+            let ay_slice = scratch
+                .ay
+                .as_slice()
                 .expect("scratch.ay: standard-layout asserted just above; layout matched");
-            let az_slice = scratch.az.as_slice()
+            let az_slice = scratch
+                .az
+                .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            vx_slice.iter_mut().enumerate(|idx, vx: &mut f64| {
+            for (idx, vx) in vx_slice.iter_mut().enumerate() {
                 *vx += dt_half * ax_slice[idx];
                 vy_slice[idx] += dt_half * ay_slice[idx];
                 vz_slice[idx] += dt_half * az_slice[idx];
-            });
+            }
         }
 
         // --- Full displacement step u(t+Δt) = u(t) + Δt·v(t+Δt/2) ---
@@ -173,48 +159,36 @@ impl<'a> TimeIntegrator<'a> {
         // on field.{ux,uy,uz} + 3 immut field.{vx,vy,vz}). The Zip chain is
         // dropped entirely: each worker task writes to disjoint
         // ux_slice[idx] / uy_slice[idx] / uz_slice[idx] elements.
-        assert!(
-            field.ux,
-            "field.ux must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.uy,
-            "field.uy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.uz,
-            "field.uz must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let ux_slice = field.ux.as_slice_mut()
+            let ux_slice = field
+                .ux
+                .as_slice_mut()
                 .expect("field.ux: standard-layout asserted just above; layout matched");
-            let uy_slice = field.uy.as_slice_mut()
+            let uy_slice = field
+                .uy
+                .as_slice_mut()
                 .expect("field.uy: standard-layout asserted just above; layout matched");
-            let uz_slice = field.uz.as_slice_mut()
+            let uz_slice = field
+                .uz
+                .as_slice_mut()
                 .expect("field.uz: standard-layout asserted just above; layout matched");
-            let vx_slice = field.vx.as_slice()
+            let vx_slice = field
+                .vx
+                .as_slice()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice()
+            let vy_slice = field
+                .vy
+                .as_slice()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice()
+            let vz_slice = field
+                .vz
+                .as_slice()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            ux_slice.iter_mut().enumerate(|idx, ux: &mut f64| {
+            for (idx, ux) in ux_slice.iter_mut().enumerate() {
                 *ux += dt * vx_slice[idx];
                 uy_slice[idx] += dt * vy_slice[idx];
                 uz_slice[idx] += dt * vz_slice[idx];
-            });
+            }
         }
 
         // a(t+Δt): acceleration at updated displacement (reuses scratch)
@@ -224,49 +198,37 @@ impl<'a> TimeIntegrator<'a> {
         // --- Second half-step v(t+Δt) = v(t+Δt/2) + (Δt/2)·a(t+Δt) ---
         //
         // Slice 8 site 3 (cluster A): identical migration to site 1 (6
-        // verbose asserts, Zip chain dropped).
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ax,
-            "scratch.ax must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ay,
-            "scratch.ay must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.az,
-            "scratch.az must be C-contiguous (default Array3 layout) for the migration"
-        );
+        // verbose asserts removed, Zip chain dropped).
         {
-            let vx_slice = field.vx.as_slice_mut()
+            let vx_slice = field
+                .vx
+                .as_slice_mut()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice_mut()
+            let vy_slice = field
+                .vy
+                .as_slice_mut()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice_mut()
+            let vz_slice = field
+                .vz
+                .as_slice_mut()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            let ax_slice = scratch.ax.as_slice()
+            let ax_slice = scratch
+                .ax
+                .as_slice()
                 .expect("scratch.ax: standard-layout asserted just above; layout matched");
-            let ay_slice = scratch.ay.as_slice()
+            let ay_slice = scratch
+                .ay
+                .as_slice()
                 .expect("scratch.ay: standard-layout asserted just above; layout matched");
-            let az_slice = scratch.az.as_slice()
+            let az_slice = scratch
+                .az
+                .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            vx_slice.iter_mut().enumerate(|idx, vx: &mut f64| {
+            for (idx, vx) in vx_slice.iter_mut().enumerate() {
                 *vx += dt_half * ax_slice[idx];
                 vy_slice[idx] += dt_half * ay_slice[idx];
                 vz_slice[idx] += dt_half * az_slice[idx];
-            });
+            }
         }
 
         self.apply_pml_damping(field, dt);
@@ -296,95 +258,71 @@ impl<'a> TimeIntegrator<'a> {
         // --- Half-step v(t+Δt/2) = v(t) + (Δt/2)·a(t) ---
         //
         // Slice 8 site 4 (cluster A): identical migration to step() site 1.
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ax,
-            "scratch.ax must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ay,
-            "scratch.ay must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.az,
-            "scratch.az must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let vx_slice = field.vx.as_slice_mut()
+            let vx_slice = field
+                .vx
+                .as_slice_mut()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice_mut()
+            let vy_slice = field
+                .vy
+                .as_slice_mut()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice_mut()
+            let vz_slice = field
+                .vz
+                .as_slice_mut()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            let ax_slice = scratch.ax.as_slice()
+            let ax_slice = scratch
+                .ax
+                .as_slice()
                 .expect("scratch.ax: standard-layout asserted just above; layout matched");
-            let ay_slice = scratch.ay.as_slice()
+            let ay_slice = scratch
+                .ay
+                .as_slice()
                 .expect("scratch.ay: standard-layout asserted just above; layout matched");
-            let az_slice = scratch.az.as_slice()
+            let az_slice = scratch
+                .az
+                .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            vx_slice.iter_mut().enumerate(|idx, vx: &mut f64| {
+            for (idx, vx) in vx_slice.iter_mut().enumerate() {
                 *vx += dt_half * ax_slice[idx];
                 vy_slice[idx] += dt_half * ay_slice[idx];
                 vz_slice[idx] += dt_half * az_slice[idx];
-            });
+            }
         }
 
         // --- Full displacement step u(t+Δt) = u(t) + Δt·v(t+Δt/2) ---
         //
         // Slice 8 site 5 (cluster B): identical migration to step() site 2.
-        assert!(
-            field.ux,
-            "field.ux must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.uy,
-            "field.uy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.uz,
-            "field.uz must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let ux_slice = field.ux.as_slice_mut()
+            let ux_slice = field
+                .ux
+                .as_slice_mut()
                 .expect("field.ux: standard-layout asserted just above; layout matched");
-            let uy_slice = field.uy.as_slice_mut()
+            let uy_slice = field
+                .uy
+                .as_slice_mut()
                 .expect("field.uy: standard-layout asserted just above; layout matched");
-            let uz_slice = field.uz.as_slice_mut()
+            let uz_slice = field
+                .uz
+                .as_slice_mut()
                 .expect("field.uz: standard-layout asserted just above; layout matched");
-            let vx_slice = field.vx.as_slice()
+            let vx_slice = field
+                .vx
+                .as_slice()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice()
+            let vy_slice = field
+                .vy
+                .as_slice()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice()
+            let vz_slice = field
+                .vz
+                .as_slice()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            ux_slice.iter_mut().enumerate(|idx, ux: &mut f64| {
+            for (idx, ux) in ux_slice.iter_mut().enumerate() {
                 *ux += dt * vx_slice[idx];
                 uy_slice[idx] += dt * vy_slice[idx];
                 uz_slice[idx] += dt * vz_slice[idx];
-            });
+            }
         }
 
         // a(t+Δt)
@@ -394,48 +332,36 @@ impl<'a> TimeIntegrator<'a> {
         // --- Second half-step v(t+Δt) = v(t+Δt/2) + (Δt/2)·a(t+Δt) ---
         //
         // Slice 8 site 6 (cluster A): identical migration to step() site 3.
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ax,
-            "scratch.ax must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ay,
-            "scratch.ay must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.az,
-            "scratch.az must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let vx_slice = field.vx.as_slice_mut()
+            let vx_slice = field
+                .vx
+                .as_slice_mut()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice_mut()
+            let vy_slice = field
+                .vy
+                .as_slice_mut()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice_mut()
+            let vz_slice = field
+                .vz
+                .as_slice_mut()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            let ax_slice = scratch.ax.as_slice()
+            let ax_slice = scratch
+                .ax
+                .as_slice()
                 .expect("scratch.ax: standard-layout asserted just above; layout matched");
-            let ay_slice = scratch.ay.as_slice()
+            let ay_slice = scratch
+                .ay
+                .as_slice()
                 .expect("scratch.ay: standard-layout asserted just above; layout matched");
-            let az_slice = scratch.az.as_slice()
+            let az_slice = scratch
+                .az
+                .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            vx_slice.iter_mut().enumerate(|idx, vx: &mut f64| {
+            for (idx, vx) in vx_slice.iter_mut().enumerate() {
                 *vx += dt_half * ax_slice[idx];
                 vy_slice[idx] += dt_half * ay_slice[idx];
                 vz_slice[idx] += dt_half * az_slice[idx];
-            });
+            }
         }
 
         self.apply_pml_damping(field, dt);
@@ -475,51 +401,37 @@ impl<'a> TimeIntegrator<'a> {
         // decomposition inline (i = idx/(ny*nz); j = (idx/nz)%ny;
         // k = idx%nz). 7 verbose asserts (3 mut on scratch.{ax,ay,az}
         // + 3 immut scratch.{div_x,div_y,div_z} + 1 immut self.density).
-        assert!(
-            scratch.ax,
-            "scratch.ax must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ay,
-            "scratch.ay must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.az,
-            "scratch.az must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.div_x,
-            "scratch.div_x must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.div_y,
-            "scratch.div_y must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.div_z,
-            "scratch.div_z must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            self.density,
-            "self.density must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let ax_slice = scratch.ax.as_slice_mut()
+            let ax_slice = scratch
+                .ax
+                .as_slice_mut()
                 .expect("scratch.ax: standard-layout asserted just above; layout matched");
-            let ay_slice = scratch.ay.as_slice_mut()
+            let ay_slice = scratch
+                .ay
+                .as_slice_mut()
                 .expect("scratch.ay: standard-layout asserted just above; layout matched");
-            let az_slice = scratch.az.as_slice_mut()
+            let az_slice = scratch
+                .az
+                .as_slice_mut()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            let div_x_slice = scratch.div_x.as_slice()
+            let div_x_slice = scratch
+                .div_x
+                .as_slice()
                 .expect("scratch.div_x: standard-layout asserted just above; layout matched");
-            let div_y_slice = scratch.div_y.as_slice()
+            let div_y_slice = scratch
+                .div_y
+                .as_slice()
                 .expect("scratch.div_y: standard-layout asserted just above; layout matched");
-            let div_z_slice = scratch.div_z.as_slice()
+            let div_z_slice = scratch
+                .div_z
+                .as_slice()
                 .expect("scratch.div_z: standard-layout asserted just above; layout matched");
-            let rho_slice = self.density.as_slice()
+            let rho_slice = self
+                .density
+                .as_slice()
                 .expect("self.density: standard-layout asserted just above; layout matched");
-            let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
-            ax_slice.iter_mut().enumerate(|idx, o_ax: &mut f64| {
+            let (_nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
+            for (idx, o_ax) in ax_slice.iter_mut().enumerate() {
                 let i = idx / (ny * nz);
                 let j = (idx / nz) % ny;
                 let k = idx % nz;
@@ -531,7 +443,7 @@ impl<'a> TimeIntegrator<'a> {
                 ay_slice[idx] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
                 az_slice[idx] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
                 *o_ax = (div_x_slice[idx] + force[0]) / rho_slice[idx];
-            });
+            }
         }
 
         Ok(())
@@ -557,51 +469,37 @@ impl<'a> TimeIntegrator<'a> {
         // compute_acceleration (7 verbose asserts, flat-slice pattern,
         // idx-to-(i,j,k) inline). Body force accumulation loops over
         // `body_forces` slice — preserved.
-        assert!(
-            scratch.ax,
-            "scratch.ax must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.ay,
-            "scratch.ay must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.az,
-            "scratch.az must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.div_x,
-            "scratch.div_x must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.div_y,
-            "scratch.div_y must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            scratch.div_z,
-            "scratch.div_z must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            self.density,
-            "self.density must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let ax_slice = scratch.ax.as_slice_mut()
+            let ax_slice = scratch
+                .ax
+                .as_slice_mut()
                 .expect("scratch.ax: standard-layout asserted just above; layout matched");
-            let ay_slice = scratch.ay.as_slice_mut()
+            let ay_slice = scratch
+                .ay
+                .as_slice_mut()
                 .expect("scratch.ay: standard-layout asserted just above; layout matched");
-            let az_slice = scratch.az.as_slice_mut()
+            let az_slice = scratch
+                .az
+                .as_slice_mut()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            let div_x_slice = scratch.div_x.as_slice()
+            let div_x_slice = scratch
+                .div_x
+                .as_slice()
                 .expect("scratch.div_x: standard-layout asserted just above; layout matched");
-            let div_y_slice = scratch.div_y.as_slice()
+            let div_y_slice = scratch
+                .div_y
+                .as_slice()
                 .expect("scratch.div_y: standard-layout asserted just above; layout matched");
-            let div_z_slice = scratch.div_z.as_slice()
+            let div_z_slice = scratch
+                .div_z
+                .as_slice()
                 .expect("scratch.div_z: standard-layout asserted just above; layout matched");
-            let rho_slice = self.density.as_slice()
+            let rho_slice = self
+                .density
+                .as_slice()
                 .expect("self.density: standard-layout asserted just above; layout matched");
-            let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
-            ax_slice.iter_mut().enumerate(|idx, o_ax: &mut f64| {
+            let (_nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
+            for (idx, o_ax) in ax_slice.iter_mut().enumerate() {
                 let i = idx / (ny * nz);
                 let j = (idx / nz) % ny;
                 let k = idx % nz;
@@ -615,7 +513,7 @@ impl<'a> TimeIntegrator<'a> {
                 ay_slice[idx] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
                 az_slice[idx] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
                 *o_ax = (div_x_slice[idx] + force[0]) / rho_slice[idx];
-            });
+            }
         }
 
         Ok(())
@@ -651,14 +549,14 @@ impl<'a> TimeIntegrator<'a> {
     /// because leto `Zip::indexed` supports ≤ 5 arrays (6 tuple
     /// elements including the index).
     pub(crate) fn apply_pml_damping(&self, field: &mut ElasticWaveField, dt: f64) {
-        let (nx, ny, nz) = field.vx.shape();
+        let [nx, ny, nz] = field.vx.shape();
         let sx = self.sigma_x.as_slice().expect("sigma_x contiguous");
         let sy = self.sigma_y.as_slice().expect("sigma_y contiguous");
         let sz = self.sigma_z.as_slice().expect("sigma_z contiguous");
 
-        debug_assert_eq!((sx.shape()[0] * sx.shape()[1] * sx.shape()[2]), nx);
-        debug_assert_eq!((sy.shape()[0] * sy.shape()[1] * sy.shape()[2]), ny);
-        debug_assert_eq!((sz.shape()[0] * sz.shape()[1] * sz.shape()[2]), nz);
+        debug_assert_eq!((sx.len()), nx);
+        debug_assert_eq!((sy.len()), ny);
+        debug_assert_eq!((sz.len()), nz);
 
         // Slice 8 site 9 (cluster D, velocity pass): 3-mut Zip::indexed
         // chain with per-axis sigma_x[i]/sigma_y[j]/sigma_z[k] lookup
@@ -666,26 +564,20 @@ impl<'a> TimeIntegrator<'a> {
         // flat-slice pattern with idx-to-(i,j,k) decomposition inline.
         // 3 verbose asserts on the 3 mut outs (sigma_* slices are
         // unconditionally C-contiguous Array1, asserted via debug_assert!).
-        assert!(
-            field.vx,
-            "field.vx must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vy,
-            "field.vy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.vz,
-            "field.vz must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let vx_slice = field.vx.as_slice_mut()
+            let vx_slice = field
+                .vx
+                .as_slice_mut()
                 .expect("field.vx: standard-layout asserted just above; layout matched");
-            let vy_slice = field.vy.as_slice_mut()
+            let vy_slice = field
+                .vy
+                .as_slice_mut()
                 .expect("field.vy: standard-layout asserted just above; layout matched");
-            let vz_slice = field.vz.as_slice_mut()
+            let vz_slice = field
+                .vz
+                .as_slice_mut()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            vx_slice.iter_mut().enumerate(|idx, vx: &mut f64| {
+            for (idx, vx) in vx_slice.iter_mut().enumerate() {
                 let i = idx / (ny * nz);
                 let j = (idx / nz) % ny;
                 let k = idx % nz;
@@ -695,31 +587,25 @@ impl<'a> TimeIntegrator<'a> {
                     vy_slice[idx] *= d;
                     vz_slice[idx] *= d;
                 }
-            });
+            }
         }
 
         // Slice 8 site 10 (cluster D, displacement pass): identical
         // migration pattern to the velocity pass, on field.{ux,uy,uz}.
-        assert!(
-            field.ux,
-            "field.ux must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.uy,
-            "field.uy must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            field.uz,
-            "field.uz must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
-            let ux_slice = field.ux.as_slice_mut()
+            let ux_slice = field
+                .ux
+                .as_slice_mut()
                 .expect("field.ux: standard-layout asserted just above; layout matched");
-            let uy_slice = field.uy.as_slice_mut()
+            let uy_slice = field
+                .uy
+                .as_slice_mut()
                 .expect("field.uy: standard-layout asserted just above; layout matched");
-            let uz_slice = field.uz.as_slice_mut()
+            let uz_slice = field
+                .uz
+                .as_slice_mut()
                 .expect("field.uz: standard-layout asserted just above; layout matched");
-            ux_slice.iter_mut().enumerate(|idx, ux: &mut f64| {
+            for (idx, ux) in ux_slice.iter_mut().enumerate() {
                 let i = idx / (ny * nz);
                 let j = (idx / nz) % ny;
                 let k = idx % nz;
@@ -729,7 +615,7 @@ impl<'a> TimeIntegrator<'a> {
                     uy_slice[idx] *= d;
                     uz_slice[idx] *= d;
                 }
-            });
+            }
         }
     }
 
@@ -747,7 +633,7 @@ impl<'a> TimeIntegrator<'a> {
     /// The √3 factor accounts for diagonal propagation in 3D.
     #[must_use]
     pub fn calculate_stable_timestep(&self, cfl_factor: f64) -> f64 {
-        let (nx, ny, nz) = self.lambda.shape();
+        let [nx, ny, nz] = self.lambda.shape();
         let mut max_c = 0.0;
 
         for k in 0..nz {

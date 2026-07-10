@@ -14,7 +14,7 @@ fn weighted_mass_rate(solver: &DGSolver, rhs: &Array3<f64>) -> f64 {
                 for node in 0..n_nodes {
                     let weight = topology.node_weight(node, &solver.weights);
                     for var in 0..n_vars {
-                        rate += weight * rhs[(elem, node, var)];
+                        rate += weight * rhs[[elem, node, var]];
                     }
                 }
             }
@@ -23,7 +23,7 @@ fn weighted_mass_rate(solver: &DGSolver, rhs: &Array3<f64>) -> f64 {
             for elem in 0..n_elements {
                 for node in 0..n_nodes {
                     for var in 0..n_vars {
-                        rate += solver.weights[node] * rhs[(elem, node, var)];
+                        rate += solver.weights[node] * rhs[[elem, node, var]];
                     }
                 }
             }
@@ -46,7 +46,7 @@ fn dg_rhs_preserves_periodic_global_mass() {
         let coeffs = solver.modal_coefficients_mut().unwrap();
         for elem in 0..4 {
             for node in 0..3 {
-                coeffs[(elem, node, 0)] =
+                coeffs[[elem, node, 0]] =
                     (0.7 * elem as f64 + 0.3 * node as f64).sin() + 0.2 * elem as f64;
             }
         }
@@ -76,7 +76,7 @@ fn dg_tensor_rhs_preserves_periodic_global_mass() {
     for i in 0..grid.nx {
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                field[(i, j, k)] = (0.4 * i as f64 + 0.7 * j as f64 + 0.2 * k as f64).sin()
+                field[[i, j, k]] = (0.4 * i as f64 + 0.7 * j as f64 + 0.2 * k as f64).sin()
                     + 0.05 * (i * j + k) as f64;
             }
         }
@@ -90,7 +90,7 @@ fn dg_tensor_rhs_preserves_periodic_global_mass() {
         )
         .unwrap();
     let rate = weighted_mass_rate(&solver, &rhs);
-    let tolerance = f64::EPSILON * (rhs.shape()[0] * rhs.shape()[1] * rhs.shape()[2]) as f64 * rhs.iter().map(|v| v.abs()).sum::<f64>();
+    let tolerance = f64::EPSILON * (rhs.len()) as f64 * rhs.iter().map(|v| v.abs()).sum::<f64>();
 
     assert!(
         rate.abs() <= tolerance,
@@ -127,10 +127,10 @@ fn solve_step_reuses_rk_workspace_and_preserves_constant_state() {
     let rhs = solver
         .compute_rhs_from_coeffs(solver.modal_coefficients.as_ref().unwrap(), 1.0)
         .unwrap();
-    for &value in &rhs {
+    for &value in rhs.iter() {
         assert!(value.abs() < 1e-12);
     }
-    for &value in solver.modal_coefficients.as_ref().unwrap() {
+    for &value in solver.modal_coefficients.as_ref().unwrap().iter() {
         assert!((value - 2.0).abs() < 1e-12);
     }
 }
@@ -154,25 +154,25 @@ fn solve_step_applies_configured_shock_capture_and_preserves_dg_mass_mean() {
     solver.initialize_modal_coefficients(5, 1);
     {
         let coeffs = solver.modal_coefficients_mut().unwrap();
-        coeffs[(0, 0, 0)] = 1.0;
-        coeffs[(0, 1, 0)] = 1.0;
-        coeffs[(0, 2, 0)] = 1.0;
-        coeffs[(1, 0, 0)] = 5.0;
-        coeffs[(1, 1, 0)] = 5.0;
-        coeffs[(1, 2, 0)] = 5.0;
-        coeffs[(2, 0, 0)] = 9.0;
-        coeffs[(2, 1, 0)] = 1.0;
-        coeffs[(2, 2, 0)] = 9.0;
-        coeffs[(3, 0, 0)] = 5.0;
-        coeffs[(3, 1, 0)] = 5.0;
-        coeffs[(3, 2, 0)] = 5.0;
-        coeffs[(4, 0, 0)] = 1.0;
-        coeffs[(4, 1, 0)] = 1.0;
-        coeffs[(4, 2, 0)] = 1.0;
+        coeffs[[0, 0, 0]] = 1.0;
+        coeffs[[0, 1, 0]] = 1.0;
+        coeffs[[0, 2, 0]] = 1.0;
+        coeffs[[1, 0, 0]] = 5.0;
+        coeffs[[1, 1, 0]] = 5.0;
+        coeffs[[1, 2, 0]] = 5.0;
+        coeffs[[2, 0, 0]] = 9.0;
+        coeffs[[2, 1, 0]] = 1.0;
+        coeffs[[2, 2, 0]] = 9.0;
+        coeffs[[3, 0, 0]] = 5.0;
+        coeffs[[3, 1, 0]] = 5.0;
+        coeffs[[3, 2, 0]] = 5.0;
+        coeffs[[4, 0, 0]] = 1.0;
+        coeffs[[4, 1, 0]] = 1.0;
+        coeffs[[4, 2, 0]] = 1.0;
     }
     let weights = solver.weights.clone();
     let mass_mean_before = ((0..solver.n_nodes)
-        .map(|node| weights[node] * solver.modal_coefficients.as_ref().unwrap()[(2, node, 0)])
+        .map(|node| weights[node] * solver.modal_coefficients.as_ref().unwrap()[[2, node, 0]])
         .sum::<f64>())
         / weights.iter().sum::<f64>();
     let coeff_ptr = solver.modal_coefficients.as_ref().unwrap().as_ptr();
@@ -183,12 +183,12 @@ fn solve_step_applies_configured_shock_capture_and_preserves_dg_mass_mean() {
     let coeffs = solver.modal_coefficients.as_ref().unwrap();
     assert_eq!(coeffs.as_ptr(), coeff_ptr);
     let mass_mean_after = ((0..solver.n_nodes)
-        .map(|node| weights[node] * coeffs[(2, node, 0)])
+        .map(|node| weights[node] * coeffs[[2, node, 0]])
         .sum::<f64>())
         / weights.iter().sum::<f64>();
     assert!((mass_mean_after - mass_mean_before).abs() < 1.0e-12);
     for node in 0..solver.n_nodes {
-        assert!((coeffs[(2, node, 0)] - mass_mean_before).abs() < 1.0e-12);
+        assert!((coeffs[[2, node, 0]] - mass_mean_before).abs() < 1.0e-12);
     }
 }
 
@@ -208,14 +208,14 @@ fn solve_step_leaves_modal_oscillation_when_shock_capture_disabled() {
     solver.initialize_modal_coefficients(5, 1);
     {
         let coeffs = solver.modal_coefficients_mut().unwrap();
-        coeffs[(2, 0, 0)] = 7.0;
-        coeffs[(2, 1, 0)] = 3.0;
+        coeffs[[2, 0, 0]] = 7.0;
+        coeffs[[2, 1, 0]] = 3.0;
     }
     let mut field = Array3::zeros((10, 2, 2));
 
     solver.solve_step(&mut field, 0.0).unwrap();
 
     let coeffs = solver.modal_coefficients.as_ref().unwrap();
-    assert!((coeffs[(2, 0, 0)] - 7.0).abs() < 1e-12);
-    assert!((coeffs[(2, 1, 0)] - 3.0).abs() < 1e-12);
+    assert!((coeffs[[2, 0, 0]] - 7.0).abs() < 1e-12);
+    assert!((coeffs[[2, 1, 0]] - 3.0).abs() < 1e-12);
 }

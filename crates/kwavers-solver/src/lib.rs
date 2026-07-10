@@ -1,3 +1,43 @@
+/// Internal re-exports for macro use.
+#[doc(hidden)]
+pub mod __private {
+    pub use leto::SliceArg;
+}
+
+/// ndarray `s!` macro replacement for leto `SliceArg`.
+///
+/// Accepts native Rust range expressions (`start..end`, `..end`, `start..`, `..`)
+/// and integer indices, separated by commas. Steps use semicolons: `start..end;step`.
+/// Returns `[leto::SliceArg; N]`.
+macro_rules! s {
+    // Internal: convert expression to SliceArg via From trait.
+    (@as_slicearg $r:expr) => {
+        <$crate::__private::SliceArg as ::std::convert::From<_>>::from($r)
+    };
+
+    // Final item with step: expr;step
+    (@parse [$($stack:tt)*] $r:expr; $s:expr) => {
+        [$($stack)* s!(@as_slicearg $r).step($s as isize)]
+    };
+    // Not-final item with step: expr;step,
+    (@parse [$($stack:tt)*] $r:expr; $s:expr, $($t:tt)*) => {
+        s!(@parse [$($stack)* s!(@as_slicearg $r).step($s as isize),] $($t)*)
+    };
+    // Final item without step: expr
+    (@parse [$($stack:tt)*] $r:expr) => {
+        [$($stack)* s!(@as_slicearg $r)]
+    };
+    // Not-final item without step: expr,
+    (@parse [$($stack:tt)*] $r:expr, $($t:tt)*) => {
+        s!(@parse [$($stack)* s!(@as_slicearg $r),] $($t)*)
+    };
+
+    // Entry point: delegate to internal parser.
+    ($($t:tt)*) => {
+        s!(@parse [] $($t)*)
+    };
+}
+
 // src/solver/mod.rs
 // Clean module structure focusing only on the plugin-based architecture
 

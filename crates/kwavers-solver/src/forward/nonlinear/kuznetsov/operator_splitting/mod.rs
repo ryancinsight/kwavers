@@ -11,8 +11,8 @@
 #[cfg(test)]
 mod tests;
 
-use moirai_parallel::ParallelSliceMut;
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Operator splitting solver for nonlinear acoustics
 #[derive(Debug)]
@@ -187,18 +187,6 @@ impl OperatorSplittingSolver {
 
         // Apply the nonlinear correction
         let scale = self.dt * self.sound_speed * norm_factor / beta;
-        // Standard-layout asserts: original Zip iteration is layout-agnostic; the
-        // migrated par_mut().enumerate() requires C-contiguous storage so the
-        // flat-slice index space matches Zip's C-order iteration. Failing here
-        // produces a discoverable error before any silent OOB reads.
-        assert!(
-            pressure,
-            "pressure must be C-contiguous (default Array3 layout) for the migration"
-        );
-        assert!(
-            flux_gradient,
-            "flux_gradient must be C-contiguous (default Array3 layout) for the migration"
-        );
         {
             let p_slice = pressure
                 .as_slice_mut()
@@ -206,7 +194,7 @@ impl OperatorSplittingSolver {
             let grad_slice = flux_gradient
                 .as_slice()
                 .expect("flux_gradient: standard-layout asserted just above; layout matched");
-            p_slice.iter_mut().enumerate(|idx, p: &mut f64| {
+            enumerate_mut_with::<Adaptive, _, _>(p_slice, |idx, p: &mut f64| {
                 let grad = grad_slice[idx];
                 *p -= scale * grad;
             });

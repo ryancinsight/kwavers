@@ -15,10 +15,10 @@ pub(super) fn elastic_medium(
     baseline_shear_speed_m_s: f64,
     lesion_fraction: f64,
 ) -> ElasticPstdMedium {
-    let (nx, ny) = prepared.ct_hu.dim();
+    let [nx, ny] = prepared.ct_hu.shape();
     let shape = (nx, ny, 1);
     let density = Array3::from_elem(shape, DENSITY_WATER_NOMINAL);
-    let lame_mu = Array3::from_shape_fn(shape, |(ix, iy, _)| {
+    let lame_mu = Array3::from_shape_fn(shape, |[ix, iy, _]| {
         if !prepared.body_mask[[ix, iy]] {
             return 0.0;
         }
@@ -37,11 +37,11 @@ pub(super) fn receiver_mask(
     prepared: &PreparedTheranosticSlice,
     layout: &DeviceLayout,
 ) -> KwaversResult<Array3<bool>> {
-    let (nx, ny) = prepared.ct_hu.dim();
+    let [nx, ny] = prepared.ct_hu.shape();
     let body_indices = prepared
         .body_mask
         .indexed_iter()
-        .filter_map(|(idx, active)| active.then_some(idx))
+        .filter_map(|(idx, active)| active.then_some((idx[0], idx[1])))
         .collect::<Vec<_>>();
     if body_indices.is_empty() {
         return Err(KwaversError::InvalidInput(
@@ -69,8 +69,8 @@ fn nearest_body_index(
         .iter()
         .copied()
         .min_by(|a, b| {
-            let da = index_point_m(a.0, a.1, prepared.ct_hu.dim(), prepared.spacing_m);
-            let db = index_point_m(b.0, b.1, prepared.ct_hu.dim(), prepared.spacing_m);
+            let da = index_point_m(a.0, a.1, prepared.ct_hu.shape(), prepared.spacing_m);
+            let db = index_point_m(b.0, b.1, prepared.ct_hu.shape(), prepared.spacing_m);
             use super::geometry::distance_sq;
             distance_sq(da, point).total_cmp(&distance_sq(db, point))
         })

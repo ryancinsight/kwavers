@@ -161,7 +161,7 @@ impl TransferOperators {
             .zip(operator.target_indices.iter())
             .enumerate()
         {
-            if idx < (operator.weights.shape()[0] * operator.weights.shape()[1] * operator.weights.shape()[2]) {
+            if idx < (operator.weights.len()) {
                 target[[ti, tj, tk]] += source[[si, sj, sk]] * operator.weights[idx];
             }
         }

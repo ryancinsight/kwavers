@@ -195,7 +195,7 @@ pub fn differential_lesion_map(
     array: &MultiRowRingArray,
     cfg: &FdMonitorConfig,
 ) -> KwaversResult<Array3<f64>> {
-    let reference = Array3::from_elem(background_true.dim(), cfg.reference_sound_speed_m_s);
+    let reference = Array3::from_elem(background_true.shape(), cfg.reference_sound_speed_m_s);
     let bg_recon = reconstruct(background_true, &reference, array, cfg)?;
     let pert_recon = reconstruct(perturbed_true, &reference, array, cfg)?;
     Ok(&pert_recon - &bg_recon)

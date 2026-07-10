@@ -27,8 +27,8 @@ impl MisfitFunction {
         let ntraces = observed.shape()[0];
 
         for i in 0..ntraces {
-            let obs_trace = observed.index_axis(0, i).unwrap().to_owned();
-            let syn_trace = synthetic.index_axis(0, i).unwrap().to_owned();
+            let obs_trace = observed.index_axis(0, i).unwrap().to_contiguous();
+            let syn_trace = synthetic.index_axis(0, i).unwrap().to_contiguous();
 
             // Shift to non-negative and normalize to probability distributions
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
@@ -37,8 +37,8 @@ impl MisfitFunction {
             let obs_shifted = obs_trace.mapv(|x| (x - obs_min).max(0.0));
             let syn_shifted = syn_trace.mapv(|x| (x - syn_min).max(0.0));
 
-            let obs_sum = obs_shifted.sum();
-            let syn_sum = syn_shifted.sum();
+            let obs_sum = obs_shifted.iter().sum::<f64>();
+            let syn_sum = syn_shifted.iter().sum::<f64>();
 
             if obs_sum < 1e-10 || syn_sum < 1e-10 {
                 continue;
@@ -47,7 +47,7 @@ impl MisfitFunction {
             let obs_prob = obs_shifted.mapv(|x| x / obs_sum);
             let syn_prob = syn_shifted.mapv(|x| x / syn_sum);
 
-            let n = (obs_prob.shape()[0] * obs_prob.shape()[1] * obs_prob.shape()[2]);
+            let n = obs_prob.len();
             let (obs_cdf, syn_cdf) = cumulative_distributions(&obs_prob, &syn_prob, n);
 
             // 1-Wasserstein = L1 distance between CDFs
@@ -75,8 +75,8 @@ impl MisfitFunction {
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let obs_trace = observed.index_axis(0, i).unwrap().to_owned();
-            let syn_trace = synthetic.index_axis(0, i).unwrap().to_owned();
+            let obs_trace = observed.index_axis(0, i).unwrap().to_contiguous();
+            let syn_trace = synthetic.index_axis(0, i).unwrap().to_contiguous();
 
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
             let syn_min = syn_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
@@ -84,8 +84,8 @@ impl MisfitFunction {
             let obs_shifted = obs_trace.mapv(|x| (x - obs_min).max(0.0));
             let syn_shifted = syn_trace.mapv(|x| (x - syn_min).max(0.0));
 
-            let obs_sum = obs_shifted.sum();
-            let syn_sum = syn_shifted.sum();
+            let obs_sum = obs_shifted.iter().sum::<f64>();
+            let syn_sum = syn_shifted.iter().sum::<f64>();
 
             if obs_sum < 1e-10 || syn_sum < 1e-10 {
                 continue;

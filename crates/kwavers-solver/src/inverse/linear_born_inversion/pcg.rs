@@ -40,9 +40,9 @@ pub fn invert(
     active: &[VolumeVoxel],
     shape: (usize, usize, usize),
 ) -> InversionState {
-    let mut model = vec![0.0; (active.shape()[0] * active.shape()[1] * active.shape()[2])];
-    let stages = continuation_rows(config, (data.shape()[0] * data.shape()[1] * data.shape()[2]));
-    let all_rows: Vec<usize> = (0..(data.shape()[0] * data.shape()[1] * data.shape()[2])).collect();
+    let mut model = vec![0.0; active.len()];
+    let stages = continuation_rows(config, data.len());
+    let all_rows: Vec<usize> = (0..(data.len())).collect();
     // Build active-index lookup once; passed through every composite_objective call so
     // the O(NX·NY·NZ) Array3 allocation occurs exactly once per inversion.
     let active_index = build_active_index(active, shape);
@@ -52,7 +52,7 @@ pub fn invert(
     )];
 
     for (stage_idx, rows) in stages.iter().enumerate() {
-        let stage_iterations = stage_iteration_count(config.iterations, (stages.shape()[0] * stages.shape()[1] * stages.shape()[2]), stage_idx);
+        let stage_iterations = stage_iteration_count(config.iterations, stages.len(), stage_idx);
         if stage_iterations == 0 {
             continue;
         }
@@ -86,7 +86,7 @@ pub fn invert(
     InversionState {
         model,
         history,
-        stages: (stages.shape()[0] * stages.shape()[1] * stages.shape()[2]),
+        stages: (stages.len()),
     }
 }
 
@@ -134,7 +134,7 @@ impl StagePcgContext<'_> {
         // incurred O(stage_iterations × backtrack_depth) heap allocations,
         // each ~400 KB.  Reusing these two buffers via `copy_from_slice`
         // reduces that to two allocations per `solve` call.
-        let ncols = (model.shape()[0] * model.shape()[1] * model.shape()[2]);
+        let ncols = model.len();
         let mut accepted_model = vec![0.0f64; ncols];
         let mut trial = vec![0.0f64; ncols];
 
@@ -281,7 +281,7 @@ fn smooth_active_values_3d(
     box_filter_z(&mut cnt_dense, nx, ny, nz, radius);
 
     // Gather: divide sum by count; fall back to original when count == 0.
-    let mut out = vec![0.0f64; (values.shape()[0] * values.shape()[1] * values.shape()[2])];
+    let mut out = vec![0.0f64; values.len()];
     for (col, voxel) in active.iter().enumerate() {
         let idx = voxel.ix * ny * nz + voxel.iy * nz + voxel.iz;
         let c = cnt_dense[idx];
@@ -359,12 +359,12 @@ fn box_filter_z(data: &mut [f64], _nx: usize, _ny: usize, nz: usize, r: usize) {
 /// Replace each element of `line` with the sum over the symmetric window of
 /// half-width `r`, computed in O(L) via prefix sums.
 ///
-/// `scratch` must have capacity ≥ `(line.shape()[0] * line.shape()[1] * line.shape()[2]) + 1`; it is resized as needed
+/// `scratch` must have capacity ≥ `(line.len()) + 1`; it is resized as needed
 /// so the caller may pass a pre-allocated buffer of the right size to avoid
 /// repeated heap allocation across calls.
 #[allow(clippy::needless_range_loop)]
 fn apply_box_filter_1d_with_scratch(line: &mut [f64], r: usize, scratch: &mut Vec<f64>) {
-    let n = (line.shape()[0] * line.shape()[1] * line.shape()[2]);
+    let n = line.len();
     if n == 0 {
         return;
     }

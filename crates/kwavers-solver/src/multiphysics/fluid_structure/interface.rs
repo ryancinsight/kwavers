@@ -128,7 +128,7 @@ impl FsiInterface {
         let nx = shape[0];
         let ny = shape[1];
         let nz = shape[2];
-        debug_assert_eq!(nx * ny * nz, (self.interface_mask.shape()[0] * self.interface_mask.shape()[1] * self.interface_mask.shape()[2]));
+        debug_assert_eq!(nx * ny * nz, (self.interface_mask.len()));
 
         if let Some(interface_mask) = self.interface_mask.as_slice_mut() {
             enumerate_mut_with::<Adaptive, _, _>(interface_mask, |index, mask| {
@@ -149,18 +149,25 @@ impl FsiInterface {
             return;
         }
 
-        // Fallback when the mask is non-contiguous (rare; preserved for safety).
-        leto_ops::zip_indexed_mut(self.interface_mask).for_each(|(i, j, k), mask| {
-            let phi_ijk = level_set(i, j, k);
-            *mask = if i > 0 && j > 0 && k > 0 {
-                let phi_im = level_set(i - 1, j, k);
-                let phi_jm = level_set(i, j - 1, k);
-                let phi_km = level_set(i, j, k - 1);
-                (phi_ijk * phi_im < 0.0) || (phi_ijk * phi_jm < 0.0) || (phi_ijk * phi_km < 0.0)
-            } else {
-                false
-            };
-        });
+        // Fallback when the mask is non-contiguous (rare): index-addressed loop,
+        // correct for arbitrary strides (leto indexes by [i,j,k]).
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let phi_ijk = level_set(i, j, k);
+                    self.interface_mask[[i, j, k]] = if i > 0 && j > 0 && k > 0 {
+                        let phi_im = level_set(i - 1, j, k);
+                        let phi_jm = level_set(i, j - 1, k);
+                        let phi_km = level_set(i, j, k - 1);
+                        (phi_ijk * phi_im < 0.0)
+                            || (phi_ijk * phi_jm < 0.0)
+                            || (phi_ijk * phi_km < 0.0)
+                    } else {
+                        false
+                    };
+                }
+            }
+        }
     }
 
     /// Acoustic impedance of fluid [Pa·s/m]

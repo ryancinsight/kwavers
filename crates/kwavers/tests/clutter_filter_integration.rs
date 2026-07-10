@@ -136,9 +136,9 @@ fn test_filter_cascading() -> KwaversResult<()> {
     let stage3 = svd_filter.filter(&stage2)?;
 
     // Each stage should work without errors
-    assert_eq!(stage1.dim(), data.dim());
-    assert_eq!(stage2.dim(), data.dim());
-    assert_eq!(stage3.dim(), data.dim());
+    assert_eq!(stage1.shape(), data.shape());
+    assert_eq!(stage2.shape(), data.shape());
+    assert_eq!(stage3.shape(), data.shape());
 
     Ok(())
 }
@@ -151,7 +151,7 @@ fn test_output_dimensions_match() -> KwaversResult<()> {
     let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
-    assert_eq!(result.dim(), data.dim(), "Output shape must match input");
+    assert_eq!(result.shape(), data.shape(), "Output shape must match input");
 
     Ok(())
 }
@@ -164,7 +164,7 @@ fn test_edge_case_single_pixel() -> KwaversResult<()> {
     let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
-    assert_eq!(result.dim(), data.dim());
+    assert_eq!(result.shape(), data.shape());
 
     Ok(())
 }
@@ -240,9 +240,13 @@ fn test_power_doppler_computation() -> KwaversResult<()> {
     let filtered = svd_filter.filter(&data)?;
 
     // Compute Power Doppler: sum of squared magnitudes over time
-    let pd_image = filtered.mapv(|x| x * x).sum_axis(1);
+    let pd_image = {
+        let sq = filtered.mapv(|x| x * x);
+        let [rows, cols] = sq.shape();
+        leto::Array1::from_shape_fn(rows, |[i]| (0..cols).map(|j| sq[[i, j]]).sum::<f64>())
+    };
 
-    assert_eq!(pd_image.len(), data.dim().0);
+    assert_eq!(pd_image.len(), data.shape()[0]);
     assert!(pd_image.iter().all(|&x| x >= 0.0));
 
     Ok(())
@@ -295,7 +299,11 @@ fn test_realistic_fus_workflow() -> KwaversResult<()> {
     let filtered = svd_filter.filter(&data)?;
 
     // Compute Power Doppler
-    let power_doppler = filtered.mapv(|x| x * x).sum_axis(1);
+    let power_doppler = {
+        let sq = filtered.mapv(|x| x * x);
+        let [rows, cols] = sq.shape();
+        leto::Array1::from_shape_fn(rows, |[i]| (0..cols).map(|j| sq[[i, j]]).sum::<f64>())
+    };
 
     let original_power: f64 = data.iter().map(|x| x * x).sum();
     let filtered_power: f64 = filtered.iter().map(|x| x * x).sum();

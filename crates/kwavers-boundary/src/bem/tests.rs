@@ -51,11 +51,15 @@ fn test_robin_boundary_condition() {
 
     let mut h_matrix = CompressedSparseRowMatrix::create(3, 3);
     let mut g_matrix = CompressedSparseRowMatrix::create(3, 3);
-    let mut boundary_values = Array1::from_vec(vec![
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-    ]);
+    let mut boundary_values = Array1::from_vec(
+        3,
+        vec![
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+        ],
+    )
+    .unwrap();
 
     h_matrix.set_diagonal(2, Complex64::new(2.0, 0.0));
 

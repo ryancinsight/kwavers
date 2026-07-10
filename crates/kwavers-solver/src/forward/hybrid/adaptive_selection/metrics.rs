@@ -179,16 +179,8 @@ impl MaterialMetrics {
 
     fn compute_homogeneity(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
         // Compute coefficient of variation as measure of homogeneity
-        let density_cv = density.std(0.0) / {
-            let arr = &density;
-            let sum: f64 = arr.iter().sum();
-            sum / arr.shape().iter().product::<usize>() as f64
-        }.unwrap_or(1.0);
-        let speed_cv = sound_speed.std(0.0) / {
-            let arr = &sound_speed;
-            let sum: f64 = arr.iter().sum();
-            sum / arr.shape().iter().product::<usize>() as f64
-        }.unwrap_or(1.0);
+        let density_cv = coefficient_of_variation(density.iter().copied());
+        let speed_cv = coefficient_of_variation(sound_speed.iter().copied());
 
         1.0 - (density_cv + speed_cv) / 2.0
     }
@@ -228,14 +220,31 @@ impl MaterialMetrics {
     }
 
     fn compute_impedance_contrast(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
-        // Compute acoustic impedance variation
-        let impedance = &density * &sound_speed;
-        impedance.std(0.0) / {
-            let arr = &impedance;
-            let sum: f64 = arr.iter().sum();
-            sum / arr.shape().iter().product::<usize>() as f64
-        }.unwrap_or(1.0)
+        // Compute acoustic impedance variation: coefficient of variation of ρ·c.
+        coefficient_of_variation(
+            density
+                .iter()
+                .zip(sound_speed.iter())
+                .map(|(&rho, &c)| rho * c),
+        )
     }
+}
+
+/// Population coefficient of variation (standard deviation with `ddof = 0`
+/// divided by the mean).
+///
+/// Reproduces the ndarray expression `arr.std(0.0) / arr.mean().unwrap_or(1.0)`:
+/// the mean is `Σx / n`, the population variance is `Σ(x − mean)² / n`, and an
+/// empty input yields `0.0` (degenerate; the source arrays are never empty).
+fn coefficient_of_variation(values: impl IntoIterator<Item = f64>) -> f64 {
+    let samples: Vec<f64> = values.into_iter().collect();
+    let n = samples.len();
+    if n == 0 {
+        return 0.0;
+    }
+    let mean = samples.iter().sum::<f64>() / n as f64;
+    let variance = samples.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n as f64;
+    variance.sqrt() / mean
 }
 
 /// Computational efficiency metrics

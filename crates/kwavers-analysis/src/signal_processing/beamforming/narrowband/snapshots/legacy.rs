@@ -138,7 +138,7 @@ pub fn extract_complex_baseband_snapshots(
 ) -> KwaversResult<Array2<Complex64>> {
     cfg.validate()?;
 
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "extract_complex_baseband_snapshots expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"
@@ -166,7 +166,7 @@ pub fn extract_complex_baseband_snapshots(
     for s in 0..n_sensors {
         let mut x = Vec::with_capacity(n_samples);
         for t in 0..n_samples {
-            x.push(sensor_data[(s, 0, t)]);
+            x.push(sensor_data[[s, 0, t]]);
         }
 
         let analytic = analytic_signal_hilbert(&x)?;
@@ -178,7 +178,7 @@ pub fn extract_complex_baseband_snapshots(
 
         for k in 0..n_snapshots {
             let t_idx = k * step;
-            snapshots[(s, k)] = baseband[t_idx];
+            snapshots[[s, k]] = baseband[t_idx];
         }
     }
 
@@ -243,7 +243,7 @@ mod tests {
         let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
         for s in 0..n_sensors {
             for t in 0..n_samples {
-                data[(s, 0, t)] = (s as f64) + (t as f64) * 1e-3;
+                data[[s, 0, t]] = (s as f64) + (t as f64) * 1e-3;
             }
         }
 
@@ -254,8 +254,8 @@ mod tests {
         };
 
         let snaps = extract_complex_baseband_snapshots(&data, &cfg).expect("snaps");
-        assert_eq!(snaps.nrows(), n_sensors);
-        assert!(snaps.ncols() > 0);
+        assert_eq!(snaps.shape()[0], n_sensors);
+        assert!(snaps.shape()[1] > 0);
     }
 
     #[test]

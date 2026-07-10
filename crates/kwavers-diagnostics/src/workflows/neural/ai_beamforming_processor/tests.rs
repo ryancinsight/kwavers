@@ -74,7 +74,7 @@ fn test_beamforming() {
     let volume = processor
         .perform_beamforming(rf_data.view(), &angles)
         .unwrap();
-    assert_eq!(volume.dim(), (64, 64, 20));
+    assert_eq!(volume.shape(), [64, 64, 20]);
 }
 
 #[test]
@@ -97,7 +97,7 @@ fn test_full_pipeline() {
     let ai_result = processor
         .process_ai_enhanced(rf_data.view(), &angles)
         .unwrap();
-    assert_eq!(ai_result.volume.dim(), (64, 64, 20));
+    assert_eq!(ai_result.volume.shape(), [64, 64, 20]);
     assert!(ai_result.performance.total_time_ms > 0.0);
     assert!(!ai_result.features.is_empty());
 }

@@ -145,23 +145,23 @@ impl EdgeRuntime {
                 })
             })?;
 
-        let input_len = (input.shape()[0] * input.shape()[1] * input.shape()[2]).min(layer.input_size);
-        let output_len = (output.shape()[0] * output.shape()[1] * output.shape()[2]).min(layer.output_size);
+        let input_len = (input.len()).min(layer.input_size);
+        let output_len = (output.len()).min(layer.output_size);
         output.truncate(output_len);
 
         let weights = weight_tensor.dequantize();
         let biases = bias_tensor.dequantize();
 
-        for out_idx in 0..(output.shape()[0] * output.shape()[1] * output.shape()[2]) {
+        for out_idx in 0..(output.len()) {
             let mut sum = 0.0f32;
             for (j, &input_val) in input.iter().enumerate().take(input_len) {
                 let weight_index = j * layer.output_size + out_idx;
-                if weight_index < (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]) {
+                if weight_index < (weights.len()) {
                     sum += input_val * weights[weight_index];
                 }
             }
 
-            if out_idx < (biases.shape()[0] * biases.shape()[1] * biases.shape()[2]) {
+            if out_idx < (biases.len()) {
                 sum += biases[out_idx];
             }
 

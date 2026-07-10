@@ -36,7 +36,7 @@ impl FdtdAvx512StencilProcessor {
         p: &Array3<f64>,
         dim: usize,
     ) -> KwaversResult<()> {
-        if p.shape() != (self.nx, self.ny, self.nz) {
+        if p.shape() != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(
                 "Pressure field dimensions mismatch".to_owned(),
             ));
@@ -103,7 +103,10 @@ impl FdtdAvx512StencilProcessor {
         }
 
         let p_ptr = p.as_ptr();
-        let u_ptr = u.as_mut_ptr();
+        let u_ptr = u
+            .as_slice_memory_order_mut()
+            .expect("invariant: AVX-512 velocity output field must be contiguous")
+            .as_mut_ptr();
         let coeff_vec = _mm512_set1_pd(self.velocity_coeff);
 
         let stride_xy = self.ny as isize;

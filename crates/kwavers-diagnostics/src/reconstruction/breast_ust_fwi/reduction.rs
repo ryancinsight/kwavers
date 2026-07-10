@@ -65,7 +65,10 @@ pub fn prepare_reduced_breast_ust_phantom(
         ));
     }
 
-    let original_shape = sound_speed_m_s.dim();
+    let original_shape = {
+        let [nx, ny, nz] = sound_speed_m_s.shape();
+        (nx, ny, nz)
+    };
     let decimated_shape = (
         original_shape.0.div_ceil(decimation),
         original_shape.1.div_ceil(decimation),
@@ -81,7 +84,7 @@ pub fn prepare_reduced_breast_ust_phantom(
         (decimated_shape.1 - reduced_shape.1) / 2,
         (decimated_shape.2 - reduced_shape.2) / 2,
     );
-    let reduced = Array3::from_shape_fn(reduced_shape, |(x, y, z)| {
+    let reduced = Array3::from_shape_fn(reduced_shape, |[x, y, z]| {
         sound_speed_m_s[[
             (crop_start.0 + x) * decimation,
             (crop_start.1 + y) * decimation,
@@ -247,7 +250,7 @@ fn validate_volume(volume: &Array3<f64>) -> KwaversResult<()> {
             "volume must not be empty".into(),
         ));
     }
-    for &value in volume {
+    for &value in volume.iter() {
         if !value.is_finite() {
             return Err(KwaversError::InvalidInput(
                 "volume contains nonfinite sound-speed values".into(),
@@ -301,7 +304,7 @@ mod tests {
 
     #[test]
     fn reduced_phantom_matches_decimate_then_center_crop_contract() {
-        let source = Array3::from_shape_fn((6, 8, 4), |(x, y, z)| {
+        let source = Array3::from_shape_fn((6, 8, 4), |[x, y, z]| {
             1400.0 + (x * 8 * 4 + y * 4 + z) as f64
         });
 

@@ -215,7 +215,7 @@ where
         config: &UniversalTrainingConfig,
     ) -> KwaversResult<TrainingOutcome> {
         let start_time = Instant::now();
-        let n_points = (collocation_points.shape()[0] * collocation_points.shape()[1] * collocation_points.shape()[2]);
+        let n_points = (collocation_points.len());
         let x_coords: Vec<f32> = collocation_points
             .iter()
             .map(|(x, _, _)| *x as f32)

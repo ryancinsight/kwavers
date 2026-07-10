@@ -65,7 +65,7 @@ fn test_adaptive_resolution() {
     let base_grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
     let adaptive = AdaptiveResolution::new(&base_grid, 3);
 
-    assert_eq!((adaptive.resolution_levels.shape()[0] * adaptive.resolution_levels.shape()[1] * adaptive.resolution_levels.shape()[2]), 3);
+    assert_eq!((adaptive.resolution_levels.len()), 3);
     assert!(
         adaptive.resolution_levels[0].scale_factor <= adaptive.resolution_levels[1].scale_factor
     );

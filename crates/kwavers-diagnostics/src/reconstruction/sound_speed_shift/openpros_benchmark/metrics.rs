@@ -41,8 +41,8 @@ fn image_error_metrics(
     truth: &Array2<f64>,
     active_mask: &Array2<bool>,
 ) -> (f64, f64, f64, f64) {
-    debug_assert_eq!(reconstructed.dim(), truth.dim());
-    debug_assert_eq!(reconstructed.dim(), active_mask.dim());
+    debug_assert_eq!(reconstructed.shape(), truth.shape());
+    debug_assert_eq!(reconstructed.shape(), active_mask.shape());
 
     let mut count = 0.0;
     let mut sum_abs = 0.0;

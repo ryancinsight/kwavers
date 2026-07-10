@@ -8,12 +8,11 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-# Required for linear algebra bridge (ndarray↔leto conversions)
-ndarray = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 moirai-parallel = { workspace = true }
 hermes-simd = { workspace = true }
 leto = { workspace = true, features = ["std"] }
+# see gap_audit.md Bulk-Migration priority #2 for the per-site ndarray->leto migration plan.
 leto-ops = { workspace = true }
 eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }

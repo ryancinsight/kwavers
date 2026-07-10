@@ -79,7 +79,7 @@ pub(crate) fn weighted_partition_sizes(
     let mut sizes = Vec::with_capacity(weights.len());
     let mut remainders = Vec::with_capacity(weights.len());
 
-    for &weight in &weights {
+    for &weight in weights.iter() {
         let exact = frame_count as f64 * weight / total_weight;
         let floored = exact.floor() as usize;
         sizes.push(floored.min(batch_size));

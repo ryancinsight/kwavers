@@ -102,12 +102,15 @@ impl RtmProcessor {
                 *img += source[index] * receiver[index];
             });
         } else {
-            Zip::from(image)
-                .and(source_wavefield)
-                .and(receiver_wavefield)
-                .for_each(|img, &src, &rcv| {
-                    *img += src * rcv;
-                });
+            leto_ops::zip2_mut_with(
+                &mut image.view_mut(),
+                &source_wavefield.view(),
+                &receiver_wavefield.view(),
+                |img, src, rcv| {
+                    *img += *src * *rcv;
+                },
+            )
+            .expect("invariant: RTM correlation field shapes asserted equal");
         }
     }
 
@@ -163,17 +166,20 @@ impl RtmProcessor {
                 };
             });
         } else {
-            Zip::from(image)
-                .and(source_wavefield)
-                .and(receiver_wavefield)
-                .for_each(|img, &src, &rcv| {
-                    let phi = src * src;
+            leto_ops::zip2_mut_with(
+                &mut image.view_mut(),
+                &source_wavefield.view(),
+                &receiver_wavefield.view(),
+                |img, src, rcv| {
+                    let phi = *src * *src;
                     *img = if phi > f64::EPSILON {
-                        src * rcv / phi
+                        *src * *rcv / phi
                     } else {
                         0.0
                     };
-                });
+                },
+            )
+            .expect("invariant: RTM normalized correlation field shapes asserted equal");
         }
 
         Ok(())

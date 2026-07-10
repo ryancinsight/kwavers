@@ -232,9 +232,9 @@ where
     ) -> KwaversResult<f32> {
         let backend = B::default();
 
-        let mut x_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.shape()[0] * training_data.collocation_points.shape()[1] * training_data.collocation_points.shape()[2]));
-        let mut y_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.shape()[0] * training_data.collocation_points.shape()[1] * training_data.collocation_points.shape()[2]));
-        let mut t_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.shape()[0] * training_data.collocation_points.shape()[1] * training_data.collocation_points.shape()[2]));
+        let mut x_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.len()));
+        let mut y_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.len()));
+        let mut t_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.len()));
 
         for (x, y, t) in &training_data.collocation_points {
             x_vec.push(*x as f32);
@@ -242,7 +242,7 @@ where
             t_vec.push(*t as f32);
         }
 
-        let batch_size = (x_vec.shape()[0] * x_vec.shape()[1] * x_vec.shape()[2]);
+        let batch_size = (x_vec.len());
         let x_var = Var::new(
             coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &x_vec, &backend),
             false,

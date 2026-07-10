@@ -31,7 +31,7 @@ impl PassiveOperator {
         active: &[usize],
         config: &Nonlinear3dConfig,
     ) -> Self {
-        let n = volume.body_mask.dim().0;
+        let n = volume.body_mask.shape()[0];
         let rows = aperture.receivers.len();
         let cols = active.len();
         // The passive subharmonic receiver path observes cavitation activity at
@@ -237,10 +237,10 @@ fn integrate_power_law_attenuation_along_ray(
             source_idx[1].round() as usize,
             source_idx[2].round() as usize,
         );
-        let dim = attenuation_field.dim();
-        let ix = ix.min(dim.0 - 1);
-        let iy = iy.min(dim.1 - 1);
-        let iz = iz.min(dim.2 - 1);
+        let dim = attenuation_field.shape();
+        let ix = ix.min(dim[0] - 1);
+        let iy = iy.min(dim[1] - 1);
+        let iz = iz.min(dim[2] - 1);
         let alpha_1mhz = attenuation_field[[ix, iy, iz]];
         let y = power_law_y_field[[ix, iy, iz]];
         return alpha_1mhz * subharmonic_mhz.powf(y) * spacing_m;

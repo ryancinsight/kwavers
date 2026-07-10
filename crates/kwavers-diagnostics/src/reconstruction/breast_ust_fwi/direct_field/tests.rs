@@ -34,7 +34,7 @@ fn point_source_prediction_matches_outgoing_green_formula() {
     let remote_distance = 2.0_f64.sqrt() * 0.003;
     let expected_remote =
         Complex64::new(remote_distance.cos(), remote_distance.sin()) / (FOUR_PI * remote_distance);
-    assert_eq!(cube.dim(), (1, 4, 4));
+    assert_eq!(cube.shape(), [1, 4, 4]);
     assert!((cube[[0, 0, 0]] - expected_self).norm() <= 1.0e-12);
     assert!((cube[[0, 0, 1]] - expected_remote).norm() <= 1.0e-12);
 }
@@ -64,7 +64,7 @@ fn source_kappa_weights_match_two_cell_symbol() {
 fn direct_field_metrics_recover_exact_scaled_prediction() {
     let array = MultiRowRingArray::new(4, 1, 0.006, 0.0).expect("array");
     let frequencies_hz = [100.0];
-    let predicted = Array3::from_shape_fn((1, 4, 4), |(_, transmit, receiver)| {
+    let predicted = Array3::from_shape_fn((1, 4, 4), |[_, transmit, receiver]| {
         Complex64::new(1.0 + transmit as f64, 0.5 + receiver as f64)
     });
     let scale = Complex64::new(0.25, -0.75);
@@ -213,7 +213,11 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
         cpml_thickness_cells: 0,
     };
     let unsnapped = MultiRowRingArray::new(4, 1, 0.00768, 0.0).expect("array");
-    let array = snap_multi_row_ring_array_to_grid(&unsnapped, model.dim(), config.spacing_m)
+    let model_shape = {
+        let [nx, ny, nz] = model.shape();
+        (nx, ny, nz)
+    };
+    let array = snap_multi_row_ring_array_to_grid(&unsnapped, model_shape, config.spacing_m)
         .expect("snapped array");
     let frequencies_hz = [200_000.0, 300_000.0];
 
@@ -225,7 +229,10 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
         &frequencies_hz,
         SOUND_SPEED_WATER_SIM,
         config.spacing_m,
-        model.dim(),
+        {
+            let [nx, ny, nz] = model.shape();
+            (nx, ny, nz)
+        },
         config.time_step_s,
         &dataset.time_steps_per_frequency,
         &dataset.frequency_bin_start_steps_per_frequency,
@@ -240,7 +247,7 @@ fn finite_grid_pstd_prediction_matches_homogeneous_dataset() {
     let mut max_reference = 0.0_f64;
     let mut scale_numerator = Complex64::new(0.0, 0.0);
     let mut scale_denominator = 0.0_f64;
-    for ((frequency, transmit, receiver), &observed) in dataset.observed_pressure.indexed_iter() {
+    for ([frequency, transmit, receiver], &observed) in dataset.observed_pressure.indexed_iter() {
         let expected = predicted[[frequency, transmit, receiver]];
         let abs_error = (observed - expected).norm();
         if abs_error > max_abs_error {
@@ -298,7 +305,11 @@ fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
         cpml_thickness_cells: 0,
     };
     let unsnapped = MultiRowRingArray::new(4, 1, 0.00768, 0.0).expect("array");
-    let array = snap_multi_row_ring_array_to_grid(&unsnapped, model.dim(), acquisition.spacing_m)
+    let model_shape = {
+        let [nx, ny, nz] = model.shape();
+        (nx, ny, nz)
+    };
+    let array = snap_multi_row_ring_array_to_grid(&unsnapped, model_shape, acquisition.spacing_m)
         .expect("snapped array");
     let frequencies_hz = [200_000.0, 300_000.0];
     let dataset =
@@ -309,7 +320,10 @@ fn pstd_spectral_cbs_matches_homogeneous_finite_grid_modal_prediction() {
         &frequencies_hz,
         SOUND_SPEED_WATER_SIM,
         acquisition.spacing_m,
-        model.dim(),
+        {
+            let [nx, ny, nz] = model.shape();
+            (nx, ny, nz)
+        },
         acquisition.time_step_s,
         &dataset.time_steps_per_frequency,
         &dataset.frequency_bin_start_steps_per_frequency,

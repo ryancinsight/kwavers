@@ -34,11 +34,11 @@ pub(super) fn apply_shock_capture_to_coeffs(
     if n_elements == 0 || n_nodes == 0 || n_vars == 0 {
         return Ok(());
     }
-    if (xi_nodes.shape()[0] * xi_nodes.shape()[1] * xi_nodes.shape()[2]) != n_nodes || (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]) != n_nodes {
+    if (xi_nodes.len()) != n_nodes || (weights.len()) != n_nodes {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
                 expected: format!("{} DG nodes", n_nodes),
-                actual: format!("xi={}, weights={}", (xi_nodes.shape()[0] * xi_nodes.shape()[1] * xi_nodes.shape()[2]), (weights.shape()[0] * weights.shape()[1] * weights.shape()[2])),
+                actual: format!("xi={}, weights={}", (xi_nodes.len()), (weights.len())),
             },
         ));
     }
@@ -70,7 +70,7 @@ pub(super) fn apply_shock_capture_to_coeffs(
             if indicator > threshold {
                 let limited_slope = apply_limiter(config.limiter_type, left_jump, right_jump);
                 for node in 0..n_nodes {
-                    scratch[(elem, node, var)] =
+                    scratch[[elem, node, var]] =
                         mean + 0.5 * (xi_nodes[node] - xi_mean) * limited_slope;
                 }
             }
@@ -109,11 +109,11 @@ pub(super) fn apply_shock_capture_to_tensor_coeffs(
             },
         ));
     }
-    if (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]) != topology.n_nodes {
+    if (weights.len()) != topology.n_nodes {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
                 expected: format!("{} one-dimensional DG weights", topology.n_nodes),
-                actual: format!("{}", (weights.shape()[0] * weights.shape()[1] * weights.shape()[2])),
+                actual: format!("{}", (weights.len())),
             },
         ));
     }
@@ -135,7 +135,7 @@ pub(super) fn apply_shock_capture_to_tensor_coeffs(
 
             if indicator > threshold {
                 for node in 0..topology.nodes_per_element {
-                    scratch[(elem, node, var)] = mean;
+                    scratch[[elem, node, var]] = mean;
                 }
             }
         }
@@ -165,7 +165,7 @@ fn element_mean(
     n_nodes: usize,
 ) -> f64 {
     let weighted_sum: f64 = (0..n_nodes)
-        .map(|node| weights[node] * coeffs[(elem, node, var)])
+        .map(|node| weights[node] * coeffs[[elem, node, var]])
         .sum();
     weighted_sum / weight_sum(weights, n_nodes)
 }
@@ -189,7 +189,7 @@ fn max_internal_variation(
     mean: f64,
 ) -> f64 {
     (0..n_nodes)
-        .map(|node| (coeffs[(elem, node, var)] - mean).abs())
+        .map(|node| (coeffs[[elem, node, var]] - mean).abs())
         .fold(0.0, f64::max)
 }
 
@@ -204,7 +204,7 @@ fn tensor_element_mean(
     let mut total_weight = 0.0;
     for node in 0..topology.nodes_per_element {
         let weight = topology.node_weight(node, weights);
-        weighted_sum += weight * coeffs[(elem, node, var)];
+        weighted_sum += weight * coeffs[[elem, node, var]];
         total_weight += weight;
     }
     weighted_sum / total_weight
@@ -243,6 +243,6 @@ fn tensor_internal_variation(
     mean: f64,
 ) -> f64 {
     (0..topology.nodes_per_element)
-        .map(|node| (coeffs[(elem, node, var)] - mean).abs())
+        .map(|node| (coeffs[[elem, node, var]] - mean).abs())
         .fold(0.0, f64::max)
 }

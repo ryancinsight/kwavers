@@ -89,8 +89,8 @@ fn demonstrate_synthetic_aperture() -> Result<(), Box<dyn std::error::Error>> {
     println!("  SA Image Statistics:");
     println!(
         "    Image Size: {} x {}",
-        sa_image.nrows(),
-        sa_image.ncols()
+        sa_image.shape()[0],
+        sa_image.shape()[1]
     );
     println!("    Max Value: {:.3}", image_stats.max_value);
     println!("    Mean Value: {:.3}", image_stats.mean_value);
@@ -164,8 +164,8 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
 
     let pw_compounding = PlaneWaveCompounding::new(&angles, base_config);
     let compounded_images = Array3::from_shape_vec(
-        (pw_images.len(), pw_images[0].nrows(), pw_images[0].ncols()),
-        pw_images.into_iter().flatten().collect(),
+        (pw_images.len(), pw_images[0].shape()[0], pw_images[0].shape()[1]),
+        pw_images.iter().flat_map(|a| a.iter().copied()).collect(),
     )?;
 
     let compounded_image = pw_compounding.compound(&compounded_images);
@@ -175,8 +175,8 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
     println!("  Compounded Image Statistics:");
     println!(
         "    Image Size: {} x {}",
-        compounded_image.nrows(),
-        compounded_image.ncols()
+        compounded_image.shape()[0],
+        compounded_image.shape()[1]
     );
     println!("    Max Value: {:.3}", image_stats.max_value);
     println!("    Mean Value: {:.3}", image_stats.mean_value);

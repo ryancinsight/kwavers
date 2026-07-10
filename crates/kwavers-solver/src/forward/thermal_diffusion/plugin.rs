@@ -72,7 +72,9 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
         if let Some(ref mut solver) = self.solver {
             let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
                 Some(
-                    fields.index_axis(0, UnifiedFieldType::Temperature as usize + 1),
+                    fields
+                        .index_axis::<3>(0, UnifiedFieldType::Temperature as usize + 1)
+                        .expect("invariant: heat source field axis index in range"),
                 )
             } else {
                 None
@@ -82,7 +84,9 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
 
             let temp_idx = UnifiedFieldType::Temperature as usize;
             if fields.shape()[0] > temp_idx {
-                let mut temp_field = fields.index_axis_mut(0, temp_idx);
+                let mut temp_field = fields
+                    .index_axis_mut::<3>(0, temp_idx)
+                    .expect("invariant: temperature field axis index in range");
                 temp_field.assign(solver.temperature());
             }
         }
@@ -121,7 +125,7 @@ mod tests {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = ThermalDiffusionConfig::default();
         let solver = ThermalDiffusionSolver::new(config, &grid);
-        assert_eq!(solver.temperature().shape(), &[32, 32, 32]);
+        assert_eq!(solver.temperature().shape(), [32, 32, 32]);
     }
 
     #[test]

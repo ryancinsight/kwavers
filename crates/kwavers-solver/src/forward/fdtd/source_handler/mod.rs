@@ -129,13 +129,13 @@ impl SourceHandler {
                 }
 
                 let mut source_fill_dims = 0;
-                if nx > 1 && (x_set.shape()[0] * x_set.shape()[1] * x_set.shape()[2]) > nx / 2 {
+                if nx > 1 && (x_set.len()) > nx / 2 {
                     source_fill_dims += 1;
                 }
-                if ny > 1 && (y_set.shape()[0] * y_set.shape()[1] * y_set.shape()[2]) > ny / 2 {
+                if ny > 1 && (y_set.len()) > ny / 2 {
                     source_fill_dims += 1;
                 }
-                if nz > 1 && (z_set.shape()[0] * z_set.shape()[1] * z_set.shape()[2]) > nz / 2 {
+                if nz > 1 && (z_set.len()) > nz / 2 {
                     source_fill_dims += 1;
                 }
 
@@ -180,12 +180,12 @@ impl SourceHandler {
             }
 
             let num_sources_signal = signal.shape()[0];
-            if num_sources_signal != 1 && num_sources_signal != (p_indices.shape()[0] * p_indices.shape()[1] * p_indices.shape()[2]) {
+            if num_sources_signal != 1 && num_sources_signal != (p_indices.len()) {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Pressure source signal shape mismatch: expected [1|{}, time], got [{}, time]",
-                            (p_indices.shape()[0] * p_indices.shape()[1] * p_indices.shape()[2]),
+                            (p_indices.len()),
                             num_sources_signal
                         ),
                     },
@@ -221,12 +221,12 @@ impl SourceHandler {
             }
 
             let num_sources_signal = signal.shape()[1];
-            if num_sources_signal != 1 && num_sources_signal != (u_indices.shape()[0] * u_indices.shape()[1] * u_indices.shape()[2]) {
+            if num_sources_signal != 1 && num_sources_signal != (u_indices.len()) {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Velocity source signal shape mismatch: expected [3, 1|{}, time], got [3, {}, time]",
-                            (u_indices.shape()[0] * u_indices.shape()[1] * u_indices.shape()[2]),
+                            (u_indices.len()),
                             num_sources_signal
                         ),
                     },

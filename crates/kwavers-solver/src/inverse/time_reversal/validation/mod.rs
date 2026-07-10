@@ -20,7 +20,7 @@ impl InputValidator {
         sensor_indices: &[(usize, usize, usize)],
         grid: &Grid,
     ) -> KwaversResult<()> {
-        let num_sensors = (sensor_indices.shape()[0] * sensor_indices.shape()[1] * sensor_indices.shape()[2]);
+        let num_sensors = sensor_indices.len();
         if num_sensors == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "sensor_indices".to_owned(),
@@ -80,10 +80,10 @@ impl InputValidator {
 
         // Check all signals have the same length
         for (i, signal) in signals.iter().enumerate() {
-            if (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]) != first_length {
+            if (signal.len()) != first_length {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
                     field: format!("signal[{i}]"),
-                    value: format!("length={}", (signal.shape()[0] * signal.shape()[1] * signal.shape()[2])),
+                    value: format!("length={}", (signal.len())),
                     constraint: format!("must match first signal length={first_length}"),
                 }));
             }

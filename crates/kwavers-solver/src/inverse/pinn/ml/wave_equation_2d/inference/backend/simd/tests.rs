@@ -78,7 +78,7 @@ fn test_matmul_simd_3x3() {
         output_size,
     );
 
-    assert_eq!((simd_result.shape()[0] * simd_result.shape()[1] * simd_result.shape()[2]), (scalar_result.shape()[0] * scalar_result.shape()[1] * scalar_result.shape()[2]));
+    assert_eq!((simd_result.len()), (scalar_result.len()));
     for (simd_val, scalar_val) in simd_result.iter().zip(scalar_result.iter()) {
         assert!(
             (simd_val - scalar_val).abs() < 1e-5,
@@ -131,7 +131,7 @@ fn test_matmul_simd_3x8() {
         output_size,
     );
 
-    assert_eq!((simd_result.shape()[0] * simd_result.shape()[1] * simd_result.shape()[2]), (scalar_result.shape()[0] * scalar_result.shape()[1] * scalar_result.shape()[2]));
+    assert_eq!((simd_result.len()), (scalar_result.len()));
     for (simd_val, scalar_val) in simd_result.iter().zip(scalar_result.iter()) {
         assert!(
             (simd_val - scalar_val).abs() < 1e-5,
@@ -188,7 +188,7 @@ fn test_matmul_simd_16x16() {
         output_size,
     );
 
-    assert_eq!((simd_result.shape()[0] * simd_result.shape()[1] * simd_result.shape()[2]), (scalar_result.shape()[0] * scalar_result.shape()[1] * scalar_result.shape()[2]));
+    assert_eq!((simd_result.len()), (scalar_result.len()));
     for (simd_val, scalar_val) in simd_result.iter().zip(scalar_result.iter()) {
         assert!(
             (simd_val - scalar_val).abs() < 1e-4,
@@ -243,7 +243,7 @@ fn test_matmul_simd_32x1() {
         output_size,
     );
 
-    assert_eq!((simd_result.shape()[0] * simd_result.shape()[1] * simd_result.shape()[2]), (scalar_result.shape()[0] * scalar_result.shape()[1] * scalar_result.shape()[2]));
+    assert_eq!((simd_result.len()), (scalar_result.len()));
     for (simd_val, scalar_val) in simd_result.iter().zip(scalar_result.iter()) {
         assert!(
             (simd_val - scalar_val).abs() < 1e-4,
@@ -264,7 +264,7 @@ fn test_forward_simd_multilayer() {
 
     // Network: 3 → 8 → 4 → 1
     let layer_sizes = vec![3, 8, 4, 1];
-    let num_layers = (layer_sizes.shape()[0] * layer_sizes.shape()[1] * layer_sizes.shape()[2]) - 1;
+    let num_layers = (layer_sizes.len()) - 1;
 
     // Create quantized network
     let mut weights = Vec::new();
@@ -314,7 +314,7 @@ fn test_forward_simd_multilayer() {
     let result = executor.predict(&network, &mut memory_pool, &x, &y, &t);
 
     let (predictions, uncertainties) = result.expect("Forward pass should succeed");
-    assert_eq!((predictions.shape()[0] * predictions.shape()[1] * predictions.shape()[2]), 2);
-    assert_eq!((uncertainties.shape()[0] * uncertainties.shape()[1] * uncertainties.shape()[2]), 2);
+    assert_eq!((predictions.len()), 2);
+    assert_eq!((uncertainties.len()), 2);
     assert!(predictions.iter().all(|&p| p.is_finite()));
 }

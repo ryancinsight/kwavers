@@ -46,7 +46,9 @@ impl AcousticWaveModel for WesterveltWave {
         // (zero initial velocity, the standard IVP start). Without this the
         // previous buffer is zero on step 0, injecting a spurious velocity kick.
         if self.current_step == 0 {
-            let initial_pressure = fields.index_axis(0, UnifiedFieldType::Pressure.index());
+            let initial_pressure = fields
+                .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+                .expect("invariant: pressure field index within field stack");
             self.initialize_buffers(initial_pressure);
         }
 
@@ -54,7 +56,9 @@ impl AcousticWaveModel for WesterveltWave {
             log::debug!("WesterveltWave: Potential instability at t={}", t);
         }
 
-        let pressure_field = fields.index_axis(0, UnifiedFieldType::Pressure.index());
+        let pressure_field = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
         self.pressure_buffers[self.buffer_indices[1]].assign(&pressure_field);
 
         let (next_idx, curr_idx, prev_idx) = (
@@ -112,7 +116,10 @@ impl AcousticWaveModel for WesterveltWave {
             grid,
             dt,
         );
-        self.nonlinear_scratch *= self.nonlinearity_scaling;
+        let nonlinearity_scaling = self.nonlinearity_scaling;
+        self.nonlinear_scratch
+            .iter_mut()
+            .for_each(|v| *v *= nonlinearity_scaling);
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.record_nonlinear(start.elapsed());
@@ -129,7 +136,10 @@ impl AcousticWaveModel for WesterveltWave {
             dt,
         );
         if self.damping_scaling != 1.0 {
-            self.damping_scratch *= self.damping_scaling;
+            let damping_scaling = self.damping_scaling;
+            self.damping_scratch
+                .iter_mut()
+                .for_each(|v| *v *= damping_scaling);
         }
         {
             let mut metrics = self.metrics.lock().unwrap();
@@ -207,7 +217,8 @@ impl AcousticWaveModel for WesterveltWave {
         });
 
         fields
-            .index_axis_mut(0, UnifiedFieldType::Pressure.index())
+            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack")
             .assign(pressure_next);
         {
             let mut metrics = self.metrics.lock().unwrap();

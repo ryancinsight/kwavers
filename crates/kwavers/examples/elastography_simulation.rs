@@ -27,7 +27,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _medium = HeterogeneousTissueMedium::new(grid.clone(), AbsorptionTissueType::Muscle);
 
     // Create shear modulus distribution with stiff inclusion
-    let mut mu = Array3::<f64>::ones((n, n, n)) * 3.0e3; // 3 kPa background (soft tissue)
+    let mut mu = &Array3::<f64>::ones((n, n, n)) * 3.0e3; // 3 kPa background (soft tissue)
 
     // Add stiffer inclusion (simulating tumor)
     let center = n / 2;
@@ -82,7 +82,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Track displacement evolution (simplified example)
     for step in 0..num_tracking_steps {
         // Simple displacement evolution (for demonstration)
-        displacement *= 0.99; // decay factor
+        for v in displacement.iter_mut() {
+            *v *= 0.99;
+        } // decay factor
 
         if step % 10 == 0 {
             // Save displacement field every 10 steps (demonstrates error handling)
@@ -103,7 +105,7 @@ fn save_displacement_snapshot(
     let filename = format!("displacement_step_{}.csv", step);
     let mut file = std::fs::File::create(&filename)?;
 
-    for ((i, j, k), &value) in displacement.indexed_iter() {
+    for ([i, j, k], &value) in displacement.indexed_iter() {
         if let Err(e) = writeln!(file, "{},{},{},{}", i, j, k, value) {
             eprintln!("Error writing to file: {}", e);
             return Err(e.into());

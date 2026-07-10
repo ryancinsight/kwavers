@@ -62,9 +62,9 @@ fn test_solver_uniform_medium() -> Result<()> {
         .max_by(|(_, a), (_, b)| a.total_cmp(b))
         .unwrap()
         .0;
-    let dist_from_center = ((max_idx.0 as isize - nx as isize / 2).pow(2)
-        + (max_idx.1 as isize - ny as isize / 2).pow(2)
-        + (max_idx.2 as isize - nz as isize / 2).pow(2)) as f64;
+    let dist_from_center = ((max_idx[0] as isize - nx as isize / 2).pow(2)
+        + (max_idx[1] as isize - ny as isize / 2).pow(2)
+        + (max_idx[2] as isize - nz as isize / 2).pow(2)) as f64;
     assert!(
         dist_from_center < 10.0,
         "Maximum fluence should be near source location"
@@ -150,8 +150,8 @@ fn test_solver_symmetry() -> Result<()> {
         .map(|&(i, j, k)| fluence[[i, j, k]])
         .collect();
 
-    if (fluence_values.shape()[0] * fluence_values.shape()[1] * fluence_values.shape()[2]) >= 2 {
-        let mean = fluence_values.iter().sum::<f64>() / (fluence_values.shape()[0] * fluence_values.shape()[1] * fluence_values.shape()[2]) as f64;
+    if (fluence_values.len()) >= 2 {
+        let mean = fluence_values.iter().sum::<f64>() / (fluence_values.len()) as f64;
         let max_deviation = fluence_values
             .iter()
             .map(|&f| (f - mean).abs() / mean)

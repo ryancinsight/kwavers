@@ -48,11 +48,15 @@ fn test_neumann_boundary_condition() {
 
     let mut stiffness = CompressedSparseRowMatrix::create(3, 3);
     let mut mass = CompressedSparseRowMatrix::create(3, 3);
-    let mut rhs = Array1::from_vec(vec![
-        Complex64::new(0.0, 0.0),
-        Complex64::new(1.0, 0.0),
-        Complex64::new(0.0, 0.0),
-    ]);
+    let mut rhs = Array1::from_vec(
+        3,
+        vec![
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+        ],
+    )
+    .unwrap();
 
     manager
         .apply_all(&mut stiffness, &mut mass, &mut rhs, 1.0)
@@ -70,11 +74,15 @@ fn test_robin_boundary_condition() {
 
     let mut stiffness = CompressedSparseRowMatrix::create(3, 3);
     let mut mass = CompressedSparseRowMatrix::create(3, 3);
-    let mut rhs = Array1::from_vec(vec![
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-    ]);
+    let mut rhs = Array1::from_vec(
+        3,
+        vec![
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+        ],
+    )
+    .unwrap();
 
     stiffness.set_diagonal(2, Complex64::new(2.0, 0.0));
 

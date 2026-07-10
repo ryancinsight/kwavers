@@ -37,7 +37,7 @@ impl PhysicsInformedLoss {
     /// The Laplacian is divided by dx² so both terms have units [field / m²].
     #[must_use]
     pub fn wave_equation_residual_3d(&self, field: &Array3<f64>) -> f64 {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let dx = self.config.grid_spacing;
         let inv_dx2 = 1.0 / (dx * dx);
 
@@ -79,7 +79,7 @@ impl PhysicsInformedLoss {
     /// The Laplacian is divided by dx² so both terms have units [field / m²].
     #[must_use]
     pub fn wave_equation_residual_2d(&self, field: &Array2<f64>) -> f64 {
-        let (nx, ny) = field.dim();
+        let [nx, ny] = field.shape();
         let dx = self.config.grid_spacing;
         let inv_dx2 = 1.0 / (dx * dx);
 
@@ -116,7 +116,7 @@ impl PhysicsInformedLoss {
     /// Reciprocity loss: MSE between forward and reverse impulse responses.
     #[must_use]
     pub fn reciprocity_loss(forward: &Array2<f64>, reverse: &Array2<f64>) -> f64 {
-        if forward.dim() != reverse.dim() {
+        if forward.shape() != reverse.shape() {
             return f64::INFINITY;
         }
 
@@ -130,7 +130,7 @@ impl PhysicsInformedLoss {
     /// Coherence loss: sum of squared phase differences between adjacent spatial points.
     #[must_use]
     pub fn coherence_loss(amplitudes: &Array2<f64>, phases: &Array2<f64>) -> f64 {
-        if amplitudes.dim() != phases.dim() {
+        if amplitudes.shape() != phases.shape() {
             return f64::INFINITY;
         }
 
@@ -138,7 +138,7 @@ impl PhysicsInformedLoss {
         // |wrap_to_pi(Δφ)|² (SSOT wrap; see `math::signal::wrap_to_pi`).
         // Correct for any gradient magnitude, unlike a single π-fold of |Δφ|.
         use kwavers_math::signal::wrap_to_pi;
-        let (nx, ny) = phases.dim();
+        let [nx, ny] = phases.shape();
         let mut loss = 0.0;
 
         for i in 0..nx - 1 {

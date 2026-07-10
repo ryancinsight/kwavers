@@ -63,7 +63,7 @@ impl WaveletTransform {
     /// Compute compression ratio
     #[must_use]
     pub fn compression_ratio(&self, coeffs: &Array3<f64>, threshold: f64) -> f64 {
-        let total = (coeffs.shape()[0] * coeffs.shape()[1] * coeffs.shape()[2]);
+        let total = coeffs.len();
         let nonzero = coeffs.iter().filter(|&&c| c.abs() >= threshold).count();
 
         total as f64 / nonzero.max(1) as f64

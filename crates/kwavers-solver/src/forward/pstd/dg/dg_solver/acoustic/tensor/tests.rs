@@ -39,7 +39,7 @@ fn weighted_rate(solver: &DGSolver, rhs: &Array3<f64>, var: usize) -> f64 {
     let mut rate = 0.0;
     for elem in 0..topology.n_elements {
         for node in 0..topology.nodes_per_element {
-            rate += topology.node_weight(node, &solver.weights) * rhs[(elem, node, var)];
+            rate += topology.node_weight(node, &solver.weights) * rhs[[elem, node, var]];
         }
     }
     rate
@@ -50,7 +50,7 @@ fn constant_2d_acoustic_state_has_zero_rhs() {
     let solver = make_solver(4, 4, 1);
     let state = Array3::from_shape_fn(
         solver.acoustic_tensor_state_shape().unwrap(),
-        |(_, _, v)| match v {
+        |[_, _, v]| match v {
             ACOUSTIC_PRESSURE_VAR => 2.0,
             ACOUSTIC_VELOCITY_X_VAR => 0.25,
             ACOUSTIC_VELOCITY_Y_VAR => -0.5,
@@ -63,7 +63,7 @@ fn constant_2d_acoustic_state_has_zero_rhs() {
         .compute_acoustic_tensor_rhs_into(&state, 1.25, &mut rhs)
         .unwrap();
 
-    for &value in &rhs {
+    for &value in rhs.iter() {
         assert!(value.abs() < 1.0e-12);
     }
 }
@@ -73,7 +73,7 @@ fn tensor_2d_acoustic_rhs_preserves_component_masses() {
     let solver = make_solver(4, 4, 1);
     let state = Array3::from_shape_fn(
         solver.acoustic_tensor_state_shape().unwrap(),
-        |(e, n, v)| (0.3 * e as f64 + 0.7 * n as f64 + 0.2 * v as f64).sin(),
+        |[e, n, v]| (0.3 * e as f64 + 0.7 * n as f64 + 0.2 * v as f64).sin(),
     );
     let mut rhs = Array3::zeros(state.shape());
 
@@ -99,7 +99,7 @@ fn tensor_3d_acoustic_rhs_preserves_component_masses() {
     let solver = make_solver(4, 4, 4);
     let state = Array3::from_shape_fn(
         solver.acoustic_tensor_state_shape().unwrap(),
-        |(e, n, v)| (0.2 * e as f64 + 0.5 * n as f64 + 0.11 * v as f64).cos(),
+        |[e, n, v]| (0.2 * e as f64 + 0.5 * n as f64 + 0.11 * v as f64).cos(),
     );
     let mut rhs = Array3::zeros(state.shape());
 
@@ -162,7 +162,7 @@ fn tensor_absorbing_boundary_replaces_periodic_exterior_face_state() {
     );
     let state = Array3::from_shape_fn(
         periodic.acoustic_tensor_state_shape().unwrap(),
-        |(_, _, var)| {
+        |[_, _, var]| {
             if var == ACOUSTIC_PRESSURE_VAR {
                 1.0
             } else {
@@ -219,7 +219,7 @@ fn tensor_axis_boundary_policy_preserves_periodic_invariant_axis() {
     );
     let state = Array3::from_shape_fn(
         periodic_z.acoustic_tensor_state_shape().unwrap(),
-        |(_, _, var)| {
+        |[_, _, var]| {
             if var == ACOUSTIC_PRESSURE_VAR {
                 1.0
             } else {
@@ -254,13 +254,14 @@ fn tensor_axis_boundary_policy_preserves_periodic_invariant_axis() {
 fn tensor_acoustic_step_preserves_constant_state() {
     let solver = make_solver(4, 4, 4);
     let mut state = Array3::from_elem(solver.acoustic_tensor_state_shape().unwrap(), 0.125_f64);
-    let mut workspace = AcousticDgTensorWorkspace::new(state.shape());
+    let mut workspace =
+        AcousticDgTensorWorkspace::new((state.shape()[0], state.shape()[1], state.shape()[2]));
 
     solver
         .step_acoustic_tensor_ssp_rk3(&mut state, 1.25, 0.01, &mut workspace)
         .unwrap();
 
-    for &value in &state {
+    for &value in state.iter() {
         assert!((value - 0.125).abs() < 1.0e-12);
     }
 }
@@ -276,7 +277,7 @@ fn tensor_uniform_projection_evaluates_gll_polynomial_on_grid_coordinates() {
             let node_coords = topology.node_coords(node);
             let x = dg_physical_coordinate(&solver, elem_coords[0], node_coords[0], 0);
             let y = dg_physical_coordinate(&solver, elem_coords[1], node_coords[1], 1);
-            state[(elem, node, ACOUSTIC_PRESSURE_VAR)] = 1.0 + 2.0 * x - 0.5 * y;
+            state[[elem, node, ACOUSTIC_PRESSURE_VAR]] = 1.0 + 2.0 * x - 0.5 * y;
         }
     }
     let mut pressure = Array3::zeros((solver.grid.nx, solver.grid.ny, solver.grid.nz));
@@ -290,7 +291,7 @@ fn tensor_uniform_projection_evaluates_gll_polynomial_on_grid_coordinates() {
             let x = i as f64 * solver.grid.dx;
             let y = j as f64 * solver.grid.dy;
             let expected = 1.0 + 2.0 * x - 0.5 * y;
-            let error = (pressure[(i, j, 0)] - expected).abs();
+            let error = (pressure[[i, j, 0]] - expected).abs();
             assert!(
                 error < 1.0e-12,
                 "uniform projection must reproduce affine fields at ({i},{j}); error={error:e}"
@@ -307,7 +308,7 @@ fn tensor_weak_cell_source_weights_conserve_reference_cell_measure() {
         .acoustic_tensor_cell_source_weights([5, 6, 0])
         .unwrap();
 
-    assert_eq!((sources.shape()[0] * sources.shape()[1] * sources.shape()[2]), topology.nodes_per_element);
+    assert_eq!((sources.len()), topology.nodes_per_element);
     let reference_measure = sources.iter().fold(0.0, |sum, source| {
         sum + topology.node_weight(source.node, &solver.weights) * source.weight
     });
@@ -322,7 +323,8 @@ fn tensor_weak_cell_source_weights_conserve_reference_cell_measure() {
 fn tensor_ssp_rk3_source_callback_uses_stage_times() {
     let solver = make_solver(4, 4, 1);
     let mut state = Array3::zeros(solver.acoustic_tensor_state_shape().unwrap());
-    let mut workspace = AcousticDgTensorWorkspace::new(state.shape());
+    let mut workspace =
+        AcousticDgTensorWorkspace::new((state.shape()[0], state.shape()[1], state.shape()[2]));
     let t0 = 2.0;
     let dt = 0.1;
 
@@ -336,7 +338,7 @@ fn tensor_ssp_rk3_source_callback_uses_stage_times() {
             |stage_t, rhs| {
                 for elem in 0..rhs.shape()[0] {
                     for node in 0..rhs.shape()[1] {
-                        rhs[(elem, node, ACOUSTIC_PRESSURE_VAR)] += stage_t;
+                        rhs[[elem, node, ACOUSTIC_PRESSURE_VAR]] += stage_t;
                     }
                 }
             },
@@ -345,7 +347,8 @@ fn tensor_ssp_rk3_source_callback_uses_stage_times() {
 
     let expected = t0 * dt + 0.5 * dt * dt;
     for &value in state
-        .index_axis(2, ACOUSTIC_PRESSURE_VAR)
+        .index_axis::<2>(2, ACOUSTIC_PRESSURE_VAR)
+        .expect("invariant: pressure var index within acoustic state rank")
         .iter()
     {
         assert!(

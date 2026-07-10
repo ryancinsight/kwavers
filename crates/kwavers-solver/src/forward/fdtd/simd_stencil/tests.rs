@@ -40,7 +40,7 @@ fn test_velocity_update() {
 
     let result = processor.update_velocity(&mut velocity, &pressure);
     result.unwrap();
-    assert_eq!(velocity.shape(), &[16, 16, 16]);
+    assert_eq!(velocity.shape(), [16, 16, 16]);
 }
 
 #[test]

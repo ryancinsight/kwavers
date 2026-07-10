@@ -28,12 +28,13 @@ impl SoundSpeedShiftPlan {
     ) -> KwaversResult<Self> {
         let operator = SoundSpeedShiftOperator::new(&samples, active_mask, config)?;
         let metrics = compute_solver_metrics(&operator, config);
+        let [mask_rows, mask_cols] = active_mask.shape();
         Ok(Self {
             samples,
             operator,
             metrics,
             config,
-            shape: active_mask.dim(),
+            shape: (mask_rows, mask_cols),
         })
     }
 

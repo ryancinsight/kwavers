@@ -94,7 +94,7 @@ fn draw_error_map(
     lhs: &Array2<f64>,
     rhs: &Array2<f64>,
 ) -> Result<()> {
-    let error = Array2::from_shape_fn((physics::NX, physics::NY), |(i, j)| {
+    let error = Array2::from_shape_fn((physics::NX, physics::NY), |[i, j]| {
         (lhs[[i, j]] - rhs[[i, j]]).abs()
     });
     let x_max = physics::NX as f64 * physics::DX * 1.0e3;

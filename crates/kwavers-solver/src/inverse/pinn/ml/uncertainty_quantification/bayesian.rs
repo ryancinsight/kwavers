@@ -27,7 +27,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PinnBayesianPINN")
-            .field("ensemble_size", &(self.ensemble.shape()[0] * self.ensemble.shape()[1] * self.ensemble.shape()[2]))
+            .field("ensemble_size", &(self.ensemble.len()))
             .field("config", &self.config)
             .field("stats", &self.stats)
             .finish_non_exhaustive()
@@ -153,7 +153,7 @@ where
         }
 
         let num_points = predictions[0].len();
-        let num_samples = (predictions.shape()[0] * predictions.shape()[1] * predictions.shape()[2]);
+        let num_samples = (predictions.len());
 
         let mut means = vec![0.0; num_points];
         let mut variances = vec![0.0; num_points];
@@ -193,7 +193,7 @@ where
         let entropy = self.compute_predictive_entropy(&variances);
         let reliability = self.compute_reliability_score(&variances);
 
-        let avg_uncertainty = variances.iter().sum::<f32>() / (variances.shape()[0] * variances.shape()[1] * variances.shape()[2]) as f32;
+        let avg_uncertainty = variances.iter().sum::<f32>() / (variances.len()) as f32;
         self.stats.total_predictions += 1;
         self.stats.average_uncertainty = (self.stats.average_uncertainty + avg_uncertainty) / 2.0;
 
@@ -217,7 +217,7 @@ where
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         input: &[f32],
     ) -> KwaversResult<Vec<f32>> {
-        if (input.shape()[0] * input.shape()[1] * input.shape()[2]) != 3 {
+        if (input.len()) != 3 {
             return Err(KwaversError::InvalidInput(
                 "Expected input to be [x, y, t]".into(),
             ));
@@ -238,7 +238,7 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_predictive_entropy(&self, variances: &[f32]) -> f32 {
-        let avg_variance = variances.iter().sum::<f32>() / (variances.shape()[0] * variances.shape()[1] * variances.shape()[2]) as f32;
+        let avg_variance = variances.iter().sum::<f32>() / (variances.len()) as f32;
         0.5 * (1.0 + (2.0 * std::f32::consts::PI * avg_variance).ln())
     }
 
@@ -247,7 +247,7 @@ where
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_reliability_score(&self, variances: &[f32]) -> f32 {
-        let avg_variance = variances.iter().sum::<f32>() / (variances.shape()[0] * variances.shape()[1] * variances.shape()[2]) as f32;
+        let avg_variance = variances.iter().sum::<f32>() / (variances.len()) as f32;
         1.0 / (1.0 + avg_variance / self.config.variance_threshold as f32)
     }
 
@@ -263,7 +263,7 @@ where
             return Ok(());
         }
 
-        let mut abs_errors = Vec::with_capacity((calibration_data.shape()[0] * calibration_data.shape()[1] * calibration_data.shape()[2]));
+        let mut abs_errors = Vec::with_capacity((calibration_data.len()));
         let mut covered = 0usize;
 
         for (input, target) in calibration_data {
@@ -286,8 +286,8 @@ where
             }
         }
 
-        let calibration_error = abs_errors.iter().sum::<f32>() / (abs_errors.shape()[0] * abs_errors.shape()[1] * abs_errors.shape()[2]) as f32;
-        let coverage_probability = covered as f32 / (calibration_data.shape()[0] * calibration_data.shape()[1] * calibration_data.shape()[2]) as f32;
+        let calibration_error = abs_errors.iter().sum::<f32>() / (abs_errors.len()) as f32;
+        let coverage_probability = covered as f32 / (calibration_data.len()) as f32;
 
         self.stats.calibration_error = calibration_error;
         self.stats.coverage_probability = coverage_probability;

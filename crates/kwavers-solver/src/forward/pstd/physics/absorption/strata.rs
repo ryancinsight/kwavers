@@ -71,7 +71,7 @@ fn assign_stratum_brackets(
         "invariant: stratum bracket shape matches exponent field"
     );
 
-    let m_count = (exponents.shape()[0] * exponents.shape()[1] * exponents.shape()[2]);
+    let m_count = exponents.len();
     let assign = |y: f64| -> (u32, f64) {
         // Largest m with exponents[m] <= y, clamped so m+1 is in range.
         let m = match exponents.binary_search_by(|e| e.partial_cmp(&y).expect("finite exponent")) {
@@ -92,7 +92,7 @@ fn assign_stratum_brackets(
         weight_hi.as_slice_mut(),
         y_field.as_slice(),
     ) {
-        let assignments = map_collect_index_with::<Adaptive, _, _>((y_values.shape()[0] * y_values.shape()[1] * y_values.shape()[2]), |index| {
+        let assignments = map_collect_index_with::<Adaptive, _, _>(y_values.len(), |index| {
             assign(y_values[index])
         });
         for (index, (lo, weight)) in assignments.into_iter().enumerate() {
@@ -155,7 +155,7 @@ pub(crate) fn build_exponent_strata(
     }
 
     // Few distinct exponents → represent them exactly; many → MAX_STRATA linspace.
-    let exponents: Vec<f64> = if (distinct.shape()[0] * distinct.shape()[1] * distinct.shape()[2]) <= MAX_STRATA {
+    let exponents: Vec<f64> = if (distinct.len()) <= MAX_STRATA {
         distinct
     } else {
         (0..MAX_STRATA)
@@ -164,9 +164,11 @@ pub(crate) fn build_exponent_strata(
     };
     // Half-spectrum symbols |k|^(y_m − 2) and |k|^(y_m − 1); DC bin → 0.
     let nz_c = k_mag.shape()[2] / 2 + 1;
-    let k_half = k_mag.slice(s![.., .., ..nz_c]);
+    let k_half = k_mag
+        .slice_with(&s![.., .., ..nz_c])
+        .expect("invariant: nz_c <= nz half-spectrum length");
     let symbol = |power: f64| -> Array3<f64> {
-        k_half.mapv(|k| {
+        k_half.as_array().mapv(|k| {
             if k > ABSORPTION_SINGULARITY_THRESHOLD {
                 k.powf(power)
             } else {
@@ -218,10 +220,10 @@ mod tests {
             }
         }
         // k_mag with nonzero magnitudes so symbols are well-defined.
-        let k = Array3::from_shape_fn((4, 4, 4), |(i, j, l)| (1 + i + j + l) as f64);
+        let k = Array3::from_shape_fn((4, 4, 4), |[i, j, l]| (1 + i + j + l) as f64);
         let s = build_exponent_strata(&y, &k).expect("non-uniform → strata");
 
-        assert_eq!((s.exponents.shape()[0] * s.exponents.shape()[1] * s.exponents.shape()[2]), 2);
+        assert_eq!((s.exponents.len()), 2);
         assert!((s.exponents[0] - ya).abs() < 1e-12);
         assert!((s.exponents[1] - yb).abs() < 1e-12);
 
@@ -249,12 +251,12 @@ mod tests {
     #[test]
     fn continuum_is_capped_and_spans_range() {
         let (n,) = (16usize,);
-        let y = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| {
+        let y = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| {
             1.0 + 0.1 * (i as f64) / ((n - 1) as f64)
         });
-        let k = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| (i + 1) as f64);
+        let k = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| (i + 1) as f64);
         let s = build_exponent_strata(&y, &k).expect("non-uniform");
-        assert!((s.exponents.shape()[0] * s.exponents.shape()[1] * s.exponents.shape()[2]) <= MAX_STRATA && (s.exponents.shape()[0] * s.exponents.shape()[1] * s.exponents.shape()[2]) >= 2);
+        assert!((s.exponents.len()) <= MAX_STRATA && (s.exponents.len()) >= 2);
         assert!((s.exponents[0] - 1.0).abs() < 1e-9);
         assert!((s.exponents.last().unwrap() - 1.1).abs() < 1e-9);
         for ((idx, &lo), &t) in s.bracket_lo.indexed_iter().zip(s.weight_hi.iter()) {

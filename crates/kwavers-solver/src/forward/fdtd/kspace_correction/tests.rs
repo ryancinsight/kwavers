@@ -36,7 +36,7 @@ fn test_kspace_shift_operators_match_pstd() {
     pstd_config.dt = dt;
     let pstd = PSTDSolver::new(pstd_config, grid, &medium, GridSource::default()).unwrap();
 
-    for i in 0..(pstd.ddx_k_shift_pos.shape()[0] * pstd.ddx_k_shift_pos.shape()[1] * pstd.ddx_k_shift_pos.shape()[2]) {
+    for i in 0..(pstd.ddx_k_shift_pos.len()) {
         let diff = (kops.ddx_k_shift_pos[i] - pstd.ddx_k_shift_pos[i]).norm();
         assert!(diff < 1e-14, "ddx_k_shift_pos[{i}] mismatch: diff={diff}");
     }

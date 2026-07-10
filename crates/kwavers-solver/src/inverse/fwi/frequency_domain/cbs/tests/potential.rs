@@ -6,7 +6,7 @@ fn scattering_potential_matches_slowness_square_contract() {
     let slowness = Array3::from_shape_vec([2, 1, 1], vec![0.0005, 0.00025]).unwrap();
     let potential = real_scattering_potential(4.0, &slowness, 0.00025).unwrap();
 
-    assert_eq!((potential.shape()[0] * potential.shape()[1] * potential.shape()[2]), 2);
+    assert_eq!((potential.len()), 2);
     assert_eq!(
         potential[0],
         16.0 * (0.0005_f64.powi(2) - 0.00025_f64.powi(2))

@@ -39,7 +39,7 @@ pub(super) fn acoustic_grid(
     baseline_speed: &Array2<f64>,
     true_speed: &Array2<f64>,
 ) -> PaddedSimulation {
-    let (nx_b_coarse, ny_b_coarse) = prepared.sound_speed_m_s.dim();
+    let [nx_b_coarse, ny_b_coarse] = prepared.sound_speed_m_s.shape();
     let dx_coarse = prepared.spacing_m;
     let (_, cmax_body) = speed_bounds(baseline_speed, true_speed);
     let cmin_water = SOUND_SPEED_WATER_SIM.min(cmax_body);
@@ -312,7 +312,7 @@ pub(super) fn passive_emission_grid(
     // Size the FDTD for the highest spectral line so every cavitation band is
     // numerically resolved.
     let max_line_hz = CAV_MAX_LINE_MULTIPLE * fundamental_hz;
-    let (nx_b_coarse, ny_b_coarse) = prepared.sound_speed_m_s.dim();
+    let [nx_b_coarse, ny_b_coarse] = prepared.sound_speed_m_s.shape();
     let dx_coarse = prepared.spacing_m;
     let medium_speed = &prepared.sound_speed_m_s;
     let cmax_body = medium_speed
@@ -446,10 +446,10 @@ fn upsample_field(coarse: &Array2<f64>, refinement: usize) -> Array2<f64> {
     if refinement <= 1 {
         return coarse.clone();
     }
-    let (nx_c, ny_c) = coarse.dim();
+    let [nx_c, ny_c] = coarse.shape();
     let nx_r = nx_c * refinement;
     let ny_r = ny_c * refinement;
-    Array2::from_shape_fn((nx_r, ny_r), |(ix, iy)| {
+    Array2::from_shape_fn((nx_r, ny_r), |[ix, iy]| {
         coarse[[ix / refinement, iy / refinement]]
     })
 }
@@ -466,7 +466,7 @@ fn build_padded_alpha_field_refined(
     refinement: usize,
 ) -> Vec<f32> {
     let f0_mhz = frequency_hz * 1.0e-6;
-    let (nx_b_c, ny_b_c) = prepared.attenuation_np_per_m_mhz.dim();
+    let [nx_b_c, ny_b_c] = prepared.attenuation_np_per_m_mhz.shape();
     let nx_b = nx_b_c * refinement;
     let ny_b = ny_b_c * refinement;
     let dx = prepared.spacing_m / refinement as f64;
@@ -572,9 +572,9 @@ fn embed_with_water(
     ny: usize,
     offset: (usize, usize),
 ) -> Array2<f64> {
-    let (nx_b, ny_b) = body.dim();
+    let [nx_b, ny_b] = body.shape();
     let (ox, oy) = offset;
-    Array2::from_shape_fn((nx, ny), |(ix, iy)| {
+    Array2::from_shape_fn((nx, ny), |[ix, iy]| {
         if ix >= ox && iy >= oy && ix < ox + nx_b && iy < oy + ny_b {
             body[[ix - ox, iy - oy]]
         } else {
@@ -638,7 +638,7 @@ fn build_padded_alpha_field(
 ) -> Vec<f32> {
     let f0_mhz = config.frequencies_hz[0] * 1.0e-6;
     let dx = prepared.spacing_m;
-    let (nx_b, ny_b) = prepared.sound_speed_m_s.dim();
+    let [nx_b, ny_b] = prepared.sound_speed_m_s.shape();
     let (ox, oy) = offset;
     let mut out = vec![0.0_f32; nx * ny];
     for ix in 0..nx {

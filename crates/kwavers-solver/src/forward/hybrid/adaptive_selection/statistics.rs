@@ -26,7 +26,7 @@ impl SelectionStatistics {
         self.fd_count = 0;
         self.dg_count = 0;
 
-        for &method in selection {
+        for &method in selection.iter() {
             match method {
                 SelectedMethod::Spectral => self.spectral_count += 1,
                 SelectedMethod::FiniteDifference => self.fd_count += 1,

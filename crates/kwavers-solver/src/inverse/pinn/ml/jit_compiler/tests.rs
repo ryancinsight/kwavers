@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn test_jit_compiler_creation() {
     let compiler = JitCompiler::new(OptimizationLevel::Basic);
-    assert_eq!((compiler.kernel_cache.shape()[0] * compiler.kernel_cache.shape()[1] * compiler.kernel_cache.shape()[2]), 0);
+    assert_eq!((compiler.kernel_cache.len()), 0);
     assert_eq!(compiler.stats.kernels_compiled, 0);
 }
 
@@ -11,7 +11,7 @@ fn test_jit_compiler_creation() {
 fn test_memory_pool_allocation() {
     let pool = JitMemoryPool::new();
     let buffer = pool.allocate_output_buffer(100).unwrap();
-    assert_eq!((buffer.shape()[0] * buffer.shape()[1] * buffer.shape()[2]), 128);
+    assert_eq!((buffer.len()), 128);
 }
 
 #[test]

@@ -29,7 +29,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use leto::Array3;
+use leto::{ndarray_compat::ndarray as nd, Array3};
 use ndarray_npy::NpzReader;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -49,7 +49,7 @@ fn read_field<R: std::io::Read + std::io::Seek>(
     npz: &mut NpzReader<R>,
     path: &Path,
 ) -> KwaversResult<Array3<f64>> {
-    let arr: ndarray::Array3<f64> = npz
+    let arr: nd::Array3<f64> = npz
         .by_name("p_min")
         .map_err(|e| map_read_err("p_min", path, e))?;
     let shape = [arr.shape()[0], arr.shape()[1], arr.shape()[2]];
@@ -63,7 +63,7 @@ fn read_scalar<R: std::io::Read + std::io::Seek>(
     name: &str,
     path: &Path,
 ) -> KwaversResult<f64> {
-    let arr: ndarray::Array1<f64> = npz
+    let arr: nd::Array1<f64> = npz
         .by_name(name)
         .map_err(|e| map_read_err(name, path, e))?;
     if arr.len() != 1 {
@@ -85,11 +85,11 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
     // fall back to i32 for older fixtures.
     let arr: Vec<i64> = match npz.by_name("focus_idx") {
         Ok(a) => {
-            let a: ndarray::Array1<i64> = a;
+            let a: nd::Array1<i64> = a;
             a.into_raw_vec_and_offset().0
         }
         Err(_) => {
-            let a: ndarray::Array1<i32> = npz
+            let a: nd::Array1<i32> = npz
                 .by_name("focus_idx")
                 .map_err(|e| map_read_err("focus_idx", path, e))?;
             a.into_raw_vec_and_offset()
@@ -242,7 +242,7 @@ pub fn discover_focal_kernels(dir: &Path) -> KwaversResult<Vec<FocalKernel>> {
 mod tests {
     use super::*;
 
-    use ndarray::array;
+    use super::nd;
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
     use ndarray_npy::NpzWriter;
     use std::io::Cursor;
@@ -251,21 +251,21 @@ mod tests {
         // Build a tiny 4×3×3 kernel with the focal voxel at (2, 1, 1)
         // carrying p_min = -10 MPa. Off-focus voxels carry small
         // values so the round-trip can verify shape preservation.
-        let mut p_min = leto::Array3::<f64>::from_elem([4, 3, 3], -1.0e3);
+        let mut p_min = nd::Array3::<f64>::from_elem([4, 3, 3], -1.0e3);
         p_min[[2, 1, 1]] = -1.0e7;
 
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
             w.add_array("p_min", &p_min).unwrap();
-            w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+            w.add_array("dx", &nd::array![5.0e-4_f64]).unwrap();
+            w.add_array("f0", &nd::array![MHZ_TO_HZ]).unwrap();
+            w.add_array("pnp_realised", &nd::array![10.0 * MPA_TO_PA])
                 .unwrap();
-            w.add_array("source_pa", &array![1.5 * MPA_TO_PA]).unwrap();
-            w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
-            w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
-            w.add_array("focus_idx", &array![2_i64, 1, 1]).unwrap();
+            w.add_array("source_pa", &nd::array![1.5 * MPA_TO_PA]).unwrap();
+            w.add_array("fwhm_lat_m", &nd::array![2.0e-3_f64]).unwrap();
+            w.add_array("fwhm_ax_m", &nd::array![6.0e-3_f64]).unwrap();
+            w.add_array("focus_idx", &nd::array![2_i64, 1, 1]).unwrap();
             w.finish().unwrap();
         }
         buf.into_inner()
@@ -316,15 +316,15 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = leto::Array3::<f64>::zeros([2, 2, 2]);
+            let p_min = nd::Array3::<f64>::zeros([2, 2, 2]);
             w.add_array("p_min", &p_min).unwrap();
-            w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+            w.add_array("dx", &nd::array![5.0e-4_f64]).unwrap();
+            w.add_array("pnp_realised", &nd::array![10.0 * MPA_TO_PA])
                 .unwrap();
-            w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
-            w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
-            w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
-            w.add_array("focus_idx", &array![1_i64, 1, 1]).unwrap();
+            w.add_array("source_pa", &nd::array![MPA_TO_PA]).unwrap();
+            w.add_array("fwhm_lat_m", &nd::array![2.0e-3_f64]).unwrap();
+            w.add_array("fwhm_ax_m", &nd::array![6.0e-3_f64]).unwrap();
+            w.add_array("focus_idx", &nd::array![1_i64, 1, 1]).unwrap();
             w.finish().unwrap();
         }
         let bytes = buf.into_inner();
@@ -339,16 +339,16 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = leto::Array3::<f64>::zeros([2, 2, 2]);
+            let p_min = nd::Array3::<f64>::zeros([2, 2, 2]);
             w.add_array("p_min", &p_min).unwrap();
-            w.add_array("dx", &array![1.0e-3_f64]).unwrap();
-            w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+            w.add_array("dx", &nd::array![1.0e-3_f64]).unwrap();
+            w.add_array("f0", &nd::array![MHZ_TO_HZ]).unwrap();
+            w.add_array("pnp_realised", &nd::array![10.0 * MPA_TO_PA])
                 .unwrap();
-            w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
-            w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
-            w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
-            w.add_array("focus_idx", &array![5_i64, 0, 0]).unwrap(); // 5 ≥ nx=2
+            w.add_array("source_pa", &nd::array![MPA_TO_PA]).unwrap();
+            w.add_array("fwhm_lat_m", &nd::array![2.0e-3_f64]).unwrap();
+            w.add_array("fwhm_ax_m", &nd::array![6.0e-3_f64]).unwrap();
+            w.add_array("focus_idx", &nd::array![5_i64, 0, 0]).unwrap(); // 5 ≥ nx=2
             w.finish().unwrap();
         }
         let path = write_to_tempfile(&buf.into_inner(), "kernel_oob.npz");

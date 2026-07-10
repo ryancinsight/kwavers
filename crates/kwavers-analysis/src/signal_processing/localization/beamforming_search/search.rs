@@ -104,7 +104,7 @@ impl BeamformSearch {
         array_centroid_m: [f64; 3],
         sensor_data: &Array3<f64>,
     ) -> KwaversResult<Position> {
-        let (n_elements, channels, n_samples) = sensor_data.dim();
+        let [n_elements, channels, n_samples] = sensor_data.shape();
         if channels != 1 {
             return Err(KwaversError::InvalidInput(format!(
                 "BeamformSearch expects sensor_data shape (n_elements, 1, n_samples); got channels={channels}"
@@ -190,7 +190,7 @@ impl BeamformSearch {
                     *delay_reference,
                 )?;
 
-                let (ox, oy, ot) = out.dim();
+                let [ox, oy, ot] = out.shape();
                 if ox != 1 || oy != 1 {
                     return Err(KwaversError::InvalidInput(format!(
                         "BeamformSearch expected SRP-DAS output shape (1,1,n_samples); got ({ox},{oy},...)"

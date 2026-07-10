@@ -14,8 +14,15 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
-        let diff = synthetic - observed;
-        Ok(0.5 * diff.mapv(|x| x * x).sum())
+        let sum_sq: f64 = synthetic
+            .iter()
+            .zip(observed.iter())
+            .map(|(&s, &o)| {
+                let d = s - o;
+                d * d
+            })
+            .sum();
+        Ok(0.5 * sum_sq)
     }
 
     /// L1 norm misfit: ||d_obs − d_syn||₁
@@ -27,8 +34,12 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<f64> {
-        let diff = synthetic - observed;
-        Ok(diff.mapv(f64::abs).sum())
+        let sum_abs: f64 = synthetic
+            .iter()
+            .zip(observed.iter())
+            .map(|(&s, &o)| (s - o).abs())
+            .sum();
+        Ok(sum_abs)
     }
 
     /// L1 adjoint source: sign(d_syn − d_obs)
@@ -40,8 +51,14 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let diff = synthetic - observed;
-        Ok(diff.mapv(f64::signum))
+        let [m, n] = synthetic.shape();
+        let mut adjoint = Array2::<f64>::zeros((m, n));
+        for i in 0..m {
+            for j in 0..n {
+                adjoint[[i, j]] = (synthetic[[i, j]] - observed[[i, j]]).signum();
+            }
+        }
+        Ok(adjoint)
     }
 
     /// Normalized cross-correlation misfit.
@@ -56,14 +73,20 @@ impl MisfitFunction {
         let mut misfit = 0.0;
 
         for i in 0..observed.shape()[0] {
-            let obs_trace = observed.index_axis(0, i).unwrap();
-            let syn_trace = synthetic.index_axis(0, i).unwrap();
+            let obs_trace = observed
+                .index_axis::<1>(0, i)
+                .expect("invariant: observed trace index in range");
+            let syn_trace = synthetic
+                .index_axis::<1>(0, i)
+                .expect("invariant: synthetic trace index in range");
 
-            let obs_norm = obs_trace.mapv(|x| x * x).sum().sqrt();
-            let syn_norm = syn_trace.mapv(|x| x * x).sum().sqrt();
+            let obs_norm = obs_trace.iter().map(|&x| x * x).sum::<f64>().sqrt();
+            let syn_norm = syn_trace.iter().map(|&x| x * x).sum::<f64>().sqrt();
 
             if obs_norm > 1e-10 && syn_norm > 1e-10 {
-                let correlation = obs_trace.dot(&syn_trace) / (obs_norm * syn_norm);
+                let correlation = leto_ops::dot(&obs_trace, &syn_trace)
+                    .expect("invariant: trace cross-correlation conforms")
+                    / (obs_norm * syn_norm);
                 misfit += 1.0 - correlation;
             }
         }
@@ -92,17 +115,23 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let mut adjoint = Array2::zeros(synthetic.shape());
+        let mut adjoint = Array2::<f64>::zeros(synthetic.shape());
 
         for i in 0..observed.shape()[0] {
-            let obs_trace = observed.index_axis(0, i).unwrap();
-            let syn_trace = synthetic.index_axis(0, i).unwrap();
+            let obs_trace = observed
+                .index_axis::<1>(0, i)
+                .expect("invariant: observed trace index in range");
+            let syn_trace = synthetic
+                .index_axis::<1>(0, i)
+                .expect("invariant: synthetic trace index in range");
 
-            let obs_norm = obs_trace.mapv(|x| x * x).sum().sqrt();
-            let syn_norm = syn_trace.mapv(|x| x * x).sum().sqrt();
+            let obs_norm = obs_trace.iter().map(|&x| x * x).sum::<f64>().sqrt();
+            let syn_norm = syn_trace.iter().map(|&x| x * x).sum::<f64>().sqrt();
 
             if obs_norm > 1e-10 && syn_norm > 1e-10 {
-                let correlation = obs_trace.dot(&syn_trace) / (obs_norm * syn_norm);
+                let correlation = leto_ops::dot(&obs_trace, &syn_trace)
+                    .expect("invariant: trace cross-correlation conforms")
+                    / (obs_norm * syn_norm);
 
                 for j in 0..adjoint.shape()[1] {
                     // ∂J/∂d_syn = −∂C/∂d_syn  (J = 1 − C)

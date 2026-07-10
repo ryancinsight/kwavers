@@ -60,7 +60,7 @@ impl std::fmt::Debug for PluginBasedSolver {
         f.debug_struct("PluginBasedSolver")
             .field("grid", &self.grid)
             .field("time", &self.time)
-            .field("sources_count", &(self.sources.shape()[0] * self.sources.shape()[1] * self.sources.shape()[2]))
+            .field("sources_count", &(self.sources.len()))
             .field("field_registry", &self.field_registry)
             .field("plugin_manager", &self.plugin_manager)
             .field("performance", &self.performance)
@@ -180,9 +180,10 @@ impl PluginBasedSolver {
             };
 
             if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
-                for (d, s) in field.iter_mut().zip(mask.iter()) {
-            *d += init_amp * *s;
-        };
+                leto_ops::zip_mut_with(&mut field, &mask.view(), |d, s| {
+                    *d += init_amp * *s;
+                })
+                .expect("invariant: source mask and field shapes asserted equal");
             }
         }
 
@@ -217,7 +218,7 @@ impl PluginBasedSolver {
             if step % 10 == 0 {
                 if let Some(ref mut recorder) = self.recorder {
                     if let Some(data) = self.field_registry.data() {
-                        let fields = data.clone().into();
+                        let fields = data.clone();
                         recorder.record(&fields, step)?;
                     }
                 }
@@ -251,9 +252,10 @@ impl PluginBasedSolver {
 
             if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
                 let amplitude = source.amplitude(t);
-                for (d, s) in field.iter_mut().zip(mask.iter()) {
-            *d += amplitude * *s;
-        };
+                leto_ops::zip_mut_with(&mut field, &mask.view(), |d, s| {
+                    *d += amplitude * *s;
+                })
+                .expect("invariant: source mask and field shapes asserted equal");
             }
         }
 
@@ -287,7 +289,7 @@ impl PluginBasedSolver {
             .get_field_mut(UnifiedFieldType::Pressure)
         {
             self.boundary
-                .apply_acoustic(pressure.into(), &self.grid, self.current_step)?;
+                .apply_acoustic(pressure, &self.grid, self.current_step)?;
         }
 
         self.current_step += 1;
@@ -336,7 +338,10 @@ impl PluginBasedSolver {
         self.field_registry
             .get_field(field_type)
             .ok()
-            .map(|view| view.to_owned())
+            .map(|view| {
+                leto::Array3::from_shape_vec(view.shape(), view.iter().copied().collect())
+                    .expect("invariant: field view shape yields valid owned array")
+            })
     }
 }
 

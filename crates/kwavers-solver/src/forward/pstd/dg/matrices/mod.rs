@@ -66,7 +66,7 @@ pub fn compute_mass_matrix(
 ) -> KwaversResult<Array2<f64>> {
     // With GLL quadrature, M is diagonal with entries equal to weights.
 
-    let n = (weights.shape()[0] * weights.shape()[1] * weights.shape()[2]);
+    let n = weights.len();
     let mut m = Array2::zeros((n, n));
 
     for i in 0..n {
@@ -95,7 +95,7 @@ pub fn compute_stiffness_matrix(
     // Then S = M * D.
     // Since M is diagonal (weights), S_ij = w_i * D_ij.
 
-    let n = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
+    let n = nodes.len();
     let mut s = Array2::zeros((n, n));
 
     for i in 0..n {
@@ -116,7 +116,7 @@ pub fn compute_diff_matrix(
     nodes: &Array1<f64>,
     basis_type: BasisType,
 ) -> KwaversResult<Array2<f64>> {
-    let n = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
+    let n = nodes.len();
     let n_modes = vandermonde.shape()[1];
     let mut vr = Array2::zeros((n, n_modes));
 
@@ -162,8 +162,10 @@ pub fn compute_diff_matrix(
     // Compute V^-1
     let v_inv = matrix_inverse(vandermonde)?;
 
-    // D = Vr * V_inv
-    let d = vr.dot(&v_inv);
+    // D = Vr · V_inv  (dense matrix–matrix product)
+    let mut d = Array2::<f64>::zeros((vr.shape()[0], v_inv.shape()[1]));
+    leto_ops::matmul(&vr.view(), &v_inv.view(), &mut d.view_mut())
+        .expect("invariant: DG derivative matrix Vr·V⁻¹ conforms");
 
     Ok(d)
 }

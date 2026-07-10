@@ -27,7 +27,7 @@ fn test_monolithic_coupler_creation() {
     let coupler = MonolithicCoupler::new(newton_config, gmres_config);
 
     assert!(coupler.convergence_history().is_empty());
-    assert_eq!((coupler.physics_components.shape()[0] * coupler.physics_components.shape()[1] * coupler.physics_components.shape()[2]), 0);
+    assert_eq!((coupler.physics_components.len()), 0);
 }
 
 /// Repeated shape-compatible solves reuse the previous-state snapshot buffer.
@@ -67,8 +67,8 @@ fn test_previous_state_snapshot_workspace_reuses_buffer() {
     let (nx, ny, nz) = grid.dimensions();
     let first_ptr = coupler.u_prev_scratch.as_ref().unwrap().as_ptr();
     assert_eq!(
-        coupler.u_prev_scratch.as_ref().unwrap().dim(),
-        (2 * nx, ny, nz)
+        coupler.u_prev_scratch.as_ref().unwrap().shape(),
+        [2 * nx, ny, nz]
     );
 
     fields
@@ -214,8 +214,8 @@ fn test_solve_rejects_field_grid_shape_mismatch() {
 
     match error {
         KwaversError::Validation(ValidationError::DimensionMismatch { expected, actual }) => {
-            assert_eq!(expected, "(3, 3, 3)");
-            assert_eq!(actual, "Pressure (2, 3, 3)");
+            assert_eq!(expected, "[3, 3, 3]");
+            assert_eq!(actual, "Pressure [2, 3, 3]");
         }
         other => panic!("expected dimension validation error, got {other:?}"),
     }

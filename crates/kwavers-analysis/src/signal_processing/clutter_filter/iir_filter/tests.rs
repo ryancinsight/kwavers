@@ -2,6 +2,13 @@ use super::*;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array2;
 
+/// Population standard deviation (ddof = 0) over all elements.
+fn population_std(a: &Array2<f64>) -> f64 {
+    let n = a.size() as f64;
+    let mean = a.iter().sum::<f64>() / n;
+    (a.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n).sqrt()
+}
+
 #[test]
 fn test_config_validation() {
     let config = IirFilterConfig::with_cutoff(0.1);
@@ -55,8 +62,8 @@ fn test_filter_removes_dc_component() {
     let filtered = filter.filter(&data).unwrap();
 
     // Check that DC component is significantly reduced
-    let original_mean = data.mean().unwrap();
-    let filtered_mean = filtered.mean().unwrap();
+    let original_mean = leto::mean_all(&data).unwrap();
+    let filtered_mean = leto::mean_all(&filtered).unwrap();
 
     // Filtered mean should be much smaller than original
     assert!(filtered_mean.abs() < 0.3 * original_mean.abs());
@@ -82,8 +89,8 @@ fn test_filter_preserves_high_frequency() {
     let filtered = filter.filter(&data).unwrap();
 
     // Check that high-frequency content is largely preserved
-    let filtered_std = filtered.std(0.0);
-    let original_std = data.std(0.0);
+    let filtered_std = population_std(&filtered);
+    let original_std = population_std(&data);
 
     assert!(filtered_std > 0.8 * original_std); // Should retain most amplitude
 }
@@ -95,12 +102,12 @@ fn test_zero_phase_filtering() {
 
     let n_frames = 50;
     let signal =
-        Array2::from_shape_fn((1, n_frames), |(_, t)| 5.0 + 2.0 * ((t as f64) * 0.4).sin());
+        Array2::from_shape_fn((1, n_frames), |[_, t]| 5.0 + 2.0 * ((t as f64) * 0.4).sin());
 
     // Zero-phase filtering should preserve signal shape better
     // (this is a weak test - full test would compare phase spectrum)
     let result = filter.filter(&signal).unwrap();
-    assert_eq!(result.dim(), signal.dim());
+    assert_eq!(result.shape(), signal.shape());
 }
 
 #[test]
@@ -108,8 +115,8 @@ fn test_higher_order_filter() {
     let config = IirFilterConfig::with_cutoff(0.05).with_order(2);
     let filter = IirFilter::new(config).unwrap();
 
-    let data = Array2::from_shape_fn((5, 100), |(_, t)| 10.0 + (t as f64) * 0.1);
+    let data = Array2::from_shape_fn((5, 100), |[_, t]| 10.0 + (t as f64) * 0.1);
 
     let filtered = filter.filter(&data).unwrap();
-    assert_eq!(filtered.dim(), data.dim());
+    assert_eq!(filtered.shape(), data.shape());
 }

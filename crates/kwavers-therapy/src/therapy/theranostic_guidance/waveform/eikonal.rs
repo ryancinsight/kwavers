@@ -69,9 +69,9 @@ pub(super) fn eikonal_travel_time(
     dx: f64,
     source: (usize, usize),
 ) -> Array2<f64> {
-    let (nx, ny) = speed.dim();
+    let [nx, ny] = speed.shape();
     let mut t = Array2::from_elem((nx, ny), f64::INFINITY);
-    t[source] = 0.0;
+    t[[source.0, source.1]] = 0.0;
 
     const MAX_OUTER_ITERS: usize = 64;
     const T_TOL_S: f64 = 1.0e-12;

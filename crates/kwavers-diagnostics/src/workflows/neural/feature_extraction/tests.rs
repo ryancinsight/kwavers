@@ -183,12 +183,12 @@ fn test_feature_extraction_preserves_dimensions() {
 
     // All features should have same dimensions as input
     for (_, feature_array) in features.morphological.iter() {
-        assert_eq!(feature_array.dim(), (20, 30, 40));
+        assert_eq!(feature_array.shape(), [20, 30, 40]);
     }
     for (_, feature_array) in features.spectral.iter() {
-        assert_eq!(feature_array.dim(), (20, 30, 40));
+        assert_eq!(feature_array.shape(), [20, 30, 40]);
     }
     for (_, feature_array) in features.texture.iter() {
-        assert_eq!(feature_array.dim(), (20, 30, 40));
+        assert_eq!(feature_array.shape(), [20, 30, 40]);
     }
 }

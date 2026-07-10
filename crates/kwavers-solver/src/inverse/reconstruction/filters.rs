@@ -35,7 +35,7 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
     let mut filtered = Array2::zeros(data.shape());
 
     for sensor_idx in 0..data.shape()[0] {
-        let trace = data.index_axis(0, sensor_idx).unwrap().to_owned();
+        let trace = data.index_axis::<1>(0, sensor_idx).unwrap().to_contiguous();
         let filtered_trace = kwavers_math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
@@ -47,7 +47,10 @@ fn apply_ram_lak_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult
                 }
             },
         );
-        filtered.index_axis_mut(0, sensor_idx).unwrap().assign(&filtered_trace);
+        filtered
+            .index_axis_mut::<1>(0, sensor_idx)
+            .unwrap()
+            .assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -73,7 +76,7 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
     let mut filtered = Array2::zeros(data.shape());
 
     for sensor_idx in 0..data.shape()[0] {
-        let trace = data.index_axis(0, sensor_idx).unwrap().to_owned();
+        let trace = data.index_axis::<1>(0, sensor_idx).unwrap().to_contiguous();
         let filtered_trace = kwavers_math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
@@ -88,7 +91,10 @@ fn apply_shepp_logan_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversRe
                 (2.0 / PI) * (PI * abs_freq / (2.0 * nyquist)).sin()
             },
         );
-        filtered.index_axis_mut(0, sensor_idx).unwrap().assign(&filtered_trace);
+        filtered
+            .index_axis_mut::<1>(0, sensor_idx)
+            .unwrap()
+            .assign(&filtered_trace);
     }
 
     Ok(filtered)
@@ -112,7 +118,7 @@ fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<
     let mut filtered = Array2::zeros(data.shape());
 
     for sensor_idx in 0..data.shape()[0] {
-        let trace = data.index_axis(0, sensor_idx).unwrap().to_owned();
+        let trace = data.index_axis::<1>(0, sensor_idx).unwrap().to_contiguous();
         let filtered_trace = kwavers_math::fft::apply_spectral_response_1d(
             &trace,
             sampling_freq,
@@ -127,7 +133,10 @@ fn apply_cosine_filter(data: &Array2<f64>, sampling_freq: f64) -> KwaversResult<
                 ram_lak * (PI * ram_lak / 2.0).cos()
             },
         );
-        filtered.index_axis_mut(0, sensor_idx).unwrap().assign(&filtered_trace);
+        filtered
+            .index_axis_mut::<1>(0, sensor_idx)
+            .unwrap()
+            .assign(&filtered_trace);
     }
 
     Ok(filtered)

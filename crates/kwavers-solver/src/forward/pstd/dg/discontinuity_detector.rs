@@ -28,7 +28,7 @@ impl DiscontinuityDetector {
         grid: &Grid,
         output: &mut Array3<bool>,
     ) -> KwaversResult<()> {
-        if field.shape() != (grid.nx, grid.ny, grid.nz) || output.shape() != field.shape() {
+        if field.shape() != [grid.nx, grid.ny, grid.nz] || output.shape() != field.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "DiscontinuityDetector dimension mismatch: field={:?}, output={:?}, grid=({}, {}, {})",
                 field.shape(),
@@ -128,7 +128,7 @@ mod tests {
         let grid = Grid::new(4, 4, 1, 1.0, 1.0, 1.0).unwrap();
         let field = Array3::from_shape_fn(
             (4, 4, 1),
-            |(i, j, _)| {
+            |[i, j, _]| {
                 if i >= 2 || j >= 2 {
                     3.0
                 } else {

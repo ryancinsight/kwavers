@@ -496,7 +496,11 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
     het.use_trilinear_interpolation = false; // piecewise-constant exponent lookup
     het.absorption.fill(alpha0);
     het.alpha0.fill(alpha0);
-    for ((i, _, _), a) in het.alpha_power.indexed_iter_mut() {
+    for ([i, _, _], a) in het
+        .alpha_power
+        .indexed_iter_mut()
+        .expect("invariant: alpha_power field is materialized")
+    {
         *a = if i < nx / 2 { ya } else { yb };
     }
     let cfg = PSTDConfig {

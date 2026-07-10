@@ -28,12 +28,12 @@ pub fn create_test_covariance(n: usize, decay: f64, diagonal_loading: f64) -> Ar
         for j in 0..n {
             let dist = (i as f64 - j as f64).abs();
             let val = (-decay * dist).exp();
-            r[(i, j)] = Complex64::new(val, 0.0);
+            r[[i, j]] = Complex64::new(val, 0.0);
         }
     }
 
     for i in 0..n {
-        r[(i, i)] += Complex64::new(diagonal_loading, 0.0);
+        r[[i, i]] += Complex64::new(diagonal_loading, 0.0);
     }
 
     r
@@ -100,7 +100,7 @@ pub fn create_diagonal_dominant_covariance(
                 let dist = (i as f64 - j as f64).abs();
                 Complex64::new(off_diagonal_magnitude / (1.0 + dist), 0.0)
             };
-            r[(i, j)] = val;
+            r[[i, j]] = val;
         }
     }
     r
@@ -108,7 +108,7 @@ pub fn create_diagonal_dominant_covariance(
 
 /// Create an identity covariance matrix (uncorrelated sensors).
 pub fn create_identity_covariance(n: usize) -> Array2<Complex64> {
-    Array2::from_diag(&Array1::from_elem(n, Complex64::new(1.0, 0.0)))
+    Array2::eye(n).mapv(|x| Complex64::new(x, 0.0))
 }
 
 /// Create a rank-deficient covariance matrix for testing singular cases.
@@ -131,7 +131,7 @@ pub fn create_rank_deficient_covariance(n: usize, rank: usize) -> Array2<Complex
     for i in 0..n {
         for j in 0..n {
             for k in 0..rank {
-                r[(i, j)] += u[(i, k)] * Complex64::new(lambda[k], 0.0) * u[(j, k)].conj();
+                r[[i, j]] += u[[i, k]] * Complex64::new(lambda[k], 0.0) * u[[j, k]].conj();
             }
         }
     }

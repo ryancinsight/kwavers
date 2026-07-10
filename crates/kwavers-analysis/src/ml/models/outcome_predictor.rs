@@ -56,7 +56,7 @@ impl MLModel for OutcomePredictorModel {
             ));
         }
 
-        let mean = input.mean_axis(1).ok_or_else(|| {
+        let mean = leto::mean_axis::<f32, _, 2, 1>(input, 1).map_err(|_| {
             kwavers_core::error::KwaversError::Validation(
                 kwavers_core::error::ValidationError::FieldValidation {
                     field: "input".to_owned(),
@@ -66,7 +66,7 @@ impl MLModel for OutcomePredictorModel {
             )
         })?;
 
-        let mut output = Array2::zeros((input.nrows(), 3));
+        let mut output = Array2::zeros((input.shape()[0], 3));
         for (i, &m) in mean.iter().enumerate() {
             output[[i, 0]] = m.clamp(0.0, 1.0);
             output[[i, 1]] = (1.0 - m).clamp(0.0, 1.0);

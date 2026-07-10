@@ -33,8 +33,8 @@ use crate::parallel::{zip_mut_four_refs, zip_mut_ref, zip_two_mut_ref};
 ///
 /// Returns ∇²f / dx² (scaled by 1/dx² already included via `idx = 1/dx²`).
 fn laplacian(field: &Array2<f64>, idx: f64) -> Array2<f64> {
-    let nx = field.nrows();
-    let ny = field.ncols();
+    let nx = field.shape()[0];
+    let ny = field.shape()[1];
     let mut lap = Array2::zeros((nx, ny));
     for xi in 0..nx {
         for yi in 0..ny {

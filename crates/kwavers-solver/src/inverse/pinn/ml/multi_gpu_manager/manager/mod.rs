@@ -44,7 +44,7 @@ impl MultiGpuManager {
     ) -> KwaversResult<Self> {
         let devices = Self::discover_gpu_devices()?;
 
-        if (devices.shape()[0] * devices.shape()[1] * devices.shape()[2]) < 2 {
+        if (devices.len()) < 2 {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::ResourceUnavailable {
                     resource: "Multiple GPU devices required for multi-GPU training".to_string(),
@@ -53,7 +53,7 @@ impl MultiGpuManager {
         }
 
         let communication_channels = Self::initialize_communication_channels(&devices);
-        let device_count = (devices.shape()[0] * devices.shape()[1] * devices.shape()[2]);
+        let device_count = (devices.len());
 
         Ok(Self {
             devices,
@@ -91,8 +91,8 @@ impl MultiGpuManager {
     ) -> HashMap<(usize, usize), PinnMultiGpuCommunicationChannel> {
         let mut channels = HashMap::new();
 
-        for i in 0..(devices.shape()[0] * devices.shape()[1] * devices.shape()[2]) {
-            for j in (i + 1)..(devices.shape()[0] * devices.shape()[1] * devices.shape()[2]) {
+        for i in 0..(devices.len()) {
+            for j in (i + 1)..(devices.len()) {
                 let channel = PinnMultiGpuCommunicationChannel {
                     bandwidth: 50.0,
                     latency: 5.0,
@@ -119,6 +119,6 @@ impl MultiGpuManager {
 
     /// Check if a GPU is healthy and available.
     pub fn is_gpu_healthy(&self, gpu_id: usize) -> bool {
-        gpu_id < (self.devices.shape()[0] * self.devices.shape()[1] * self.devices.shape()[2]) && self.devices[gpu_id].healthy
+        gpu_id < (self.devices.len()) && self.devices[gpu_id].healthy
     }
 }

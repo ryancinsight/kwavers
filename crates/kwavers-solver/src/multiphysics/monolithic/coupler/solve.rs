@@ -146,7 +146,7 @@ impl MonolithicCoupler {
                 1.0
             };
 
-            for (u_value, delta) in u_current.iter_mut().zip(&du.iter()) {
+            for (u_value, delta) in u_current.iter_mut().zip(du.iter()) {
             {
                 *u_value += step_size * delta;
             };

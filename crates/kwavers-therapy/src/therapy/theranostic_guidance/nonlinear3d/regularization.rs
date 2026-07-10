@@ -120,7 +120,7 @@ pub(super) fn multiparameter_score(
 ) -> Array3<f64> {
     let speed_scale = config.lesion_delta_c_m_s.abs().max(1.0);
     let beta_scale = config.lesion_delta_beta.abs().max(1.0e-6);
-    Array3::from_shape_fn((n, n, n), |(x, y, z)| {
+    Array3::from_shape_fn((n, n, n), |[x, y, z]| {
         let i = index(x, y, z, n);
         if !body[i] {
             return 0.0;

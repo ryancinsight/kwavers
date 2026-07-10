@@ -24,7 +24,7 @@ pub(super) fn cavitation_source(
     peak_pressure: &Array3<f64>,
     config: &Nonlinear3dConfig,
 ) -> Array3<f64> {
-    let dim = peak_pressure.dim();
+    let dim = peak_pressure.shape();
     if let (Some(pressures), Some(source_mask)) = (
         peak_pressure.as_slice_memory_order(),
         volume.inversion_mask.as_slice_memory_order(),
@@ -287,8 +287,8 @@ mod tests {
         config.bubble_time_steps_per_period = 24;
         config.cycles = 2.0;
         let n = 5;
-        let center = (2, 2, 2);
-        let boundary = (1, 1, 1);
+        let center = [2, 2, 2];
+        let boundary = [1, 1, 1];
         let volume = treatment_window_fixture(n, center);
         let mut pressure = Array3::<f64>::zeros((n, n, n));
         pressure[boundary] = 8.0e6;
@@ -307,7 +307,7 @@ mod tests {
         );
     }
 
-    fn treatment_window_fixture(n: usize, target: (usize, usize, usize)) -> Nonlinear3dVolume {
+    fn treatment_window_fixture(n: usize, target: [usize; 3]) -> Nonlinear3dVolume {
         let shape = (n, n, n);
         let body_mask = Array3::<bool>::from_elem(shape, true);
         let mut target_mask = Array3::<bool>::from_elem(shape, false);
@@ -334,9 +334,9 @@ mod tests {
             aperture_direction: None,
             aperture_skin: None,
             focus: GridIndex {
-                x: target.0,
-                y: target.1,
-                z: target.2,
+                x: target[0],
+                y: target[1],
+                z: target[2],
             },
         }
     }

@@ -189,9 +189,9 @@ pub(super) fn transform_with_jacobian(
 /// Project a pixel-wise model gradient `g = ∂f/∂c_φ` onto the SE(2) parameter
 /// space: `(∂f/∂θ, ∂f/∂δ₁, ∂f/∂δ₂) = (⟨g, ∂c_φ/∂θ⟩, ⟨g, ∂c_φ/∂δ₁⟩, ⟨g, ∂c_φ/∂δ₂⟩)`.
 pub(super) fn project_gradient(g: &Array3<f64>, jac: &TransformWithJacobian) -> [f64; 3] {
-    let g_theta = (g * &jac.d_theta).sum();
-    let g_dx = (g * &jac.d_delta_x).sum();
-    let g_dy = (g * &jac.d_delta_y).sum();
+    let g_theta = (g * &jac.d_theta).iter().sum::<f64>();
+    let g_dx = (g * &jac.d_delta_x).iter().sum::<f64>();
+    let g_dy = (g * &jac.d_delta_y).iter().sum::<f64>();
     [g_theta, g_dx, g_dy]
 }
 
@@ -226,7 +226,7 @@ mod transform_tests {
         let fd = |a: &RigidTransform, b: &RigidTransform, h: f64| {
             (&transform_template(&template, a, &geom, bg)
                 - &transform_template(&template, b, &geom, bg))
-                / (2.0 * h)
+                .mapv(|x| x / (2.0 * h))
         };
         let dtheta_fd = fd(
             &RigidTransform {

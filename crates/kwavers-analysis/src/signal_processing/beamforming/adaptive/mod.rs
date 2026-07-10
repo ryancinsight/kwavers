@@ -97,9 +97,9 @@
 //!     MinimumVariance, AdaptiveTimeDomainBeamformer
 //! };
 //! use leto::{
-    Array1,
-    Array2,
-};
+//!     Array1,
+//!     Array2,
+//! };
 //! use eunomia::Complex64;
 //!
 //! // Create 8-element linear array covariance matrix
@@ -306,7 +306,7 @@ mod tests {
             .expect("trait method should work");
 
         assert_eq!(weights.len(), n);
-        for &w in &weights {
+        for &w in weights.iter() {
             assert!(w.re.is_finite() && w.im.is_finite());
         }
     }

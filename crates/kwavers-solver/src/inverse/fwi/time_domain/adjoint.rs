@@ -23,16 +23,6 @@ use leto::{
     ArrayViewMut3,
 };
 
-fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
-    let shape = field.shape();
-    ArrayView3::from_shape(
-        (shape[0], shape[1], shape[2]),
-        field
-            .as_slice()
-            .expect("FWI solver pressure field must be contiguous"),
-    )
-    .expect("FWI solver pressure field shape must match contiguous storage")
-}
 
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
 /// `g_c(x) ← -(2 / (ρ(x) · c(x)³)) · g_correlation(x)` in place.
@@ -267,7 +257,7 @@ impl FwiProcessor {
         }
 
         let p_mask = {
-            let (nx, ny, nz) = geometry.sensor_mask.shape();
+            let [nx, ny, nz] = geometry.sensor_mask.shape();
             LetoArray3::from_shape_vec(
                 [nx, ny, nz],
                 geometry
@@ -426,7 +416,7 @@ impl FwiProcessor {
             accumulate_signed_correlation(
                 &mut gradient_m,
                 p_tt.view(),
-                leto_view3(solver.pressure_field()),
+                solver.pressure_field().view(),
                 -dt,
             )?;
         }
@@ -437,7 +427,7 @@ impl FwiProcessor {
         apply_velocity_gradient_scaling(gradient_m.view_mut(), model.view(), density_adj.view())?;
 
         let (gmax, gmax_idx) = gradient_m.indexed_iter().fold(
-            (0.0_f64, (0usize, 0usize, 0usize)),
+            (0.0_f64, [0usize, 0usize, 0usize]),
             |(best, bi), (idx, &v)| {
                 if v.abs() > best {
                     (v.abs(), idx)
@@ -449,9 +439,9 @@ impl FwiProcessor {
         log::info!(
             "adjoint gradient peak {:.4e} at ({},{},{})",
             gmax,
-            gmax_idx.0,
-            gmax_idx.1,
-            gmax_idx.2
+            gmax_idx[0],
+            gmax_idx[1],
+            gmax_idx[2]
         );
 
         Ok(gradient_m)

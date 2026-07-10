@@ -66,7 +66,7 @@ impl FallbackRenderer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn render_ascii_slice(&self, field: &Array3<f64>, z_slice: usize) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         if z_slice >= nz {
             return Ok(());
@@ -118,7 +118,7 @@ impl FallbackRenderer {
 
         // Write header
         writeln!(file, "# Field: {:?}", field_type)?;
-        writeln!(file, "# Shape: {:?}", field.dim())?;
+        writeln!(file, "# Shape: {:?}", field.shape())?;
 
         // Write data in simple format
         for ((i, j, k), &value) in field.indexed_iter() {

@@ -162,7 +162,7 @@ fn test_strang_splitting_second_order_convergence() {
         ..HASConfig::default()
     };
     let solver_ref = HybridAngularSpectrumSolver::new(&grid, &config_ref).unwrap();
-    let initial = Array3::from_shape_fn((8, 8, 4), |(i, _j, k)| {
+    let initial = Array3::from_shape_fn((8, 8, 4), |[i, _j, k]| {
         ((i + 1) as f64 * 100.0) * (1.0 + 0.1 * (k as f64))
     });
     let u_ref = solver_ref.propagate_steps(&initial, 200, dz_ref).unwrap();
@@ -259,7 +259,7 @@ fn test_harmonic_generation_by_nonlinearity() {
 
     // Sinusoidal initial field in z (uniform in x,y)
     let amplitude = 0.5 * MPA_TO_PA; // 0.5 MPa — large amplitude to drive nonlinearity
-    let initial = Array3::from_shape_fn((4, 4, nz), |(_, _, k)| {
+    let initial = Array3::from_shape_fn((4, 4, nz), |[_, _, k]| {
         amplitude * (TWO_PI * k as f64 / nz as f64).sin()
     });
 

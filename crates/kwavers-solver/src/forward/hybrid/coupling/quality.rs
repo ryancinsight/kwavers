@@ -76,7 +76,7 @@ impl QualityMonitor {
         let metrics = self.calculate_metrics(interpolated, target, time);
 
         // Add to history
-        if (self.history.shape()[0] * self.history.shape()[1] * self.history.shape()[2]) >= MAX_HISTORY_SIZE {
+        if (self.history.len()) >= MAX_HISTORY_SIZE {
             self.history.pop_front();
         }
         self.history.push_back(metrics);
@@ -119,7 +119,7 @@ impl QualityMonitor {
         target: &Array3<f64>,
     ) -> f64 {
         let diff = interpolated - target;
-        (diff.iter().map(|x| x * x).sum::<f64>() / (diff.shape()[0] * diff.shape()[1] * diff.shape()[2]) as f64).sqrt()
+        (diff.iter().map(|x| x * x).sum::<f64>() / (diff.len()) as f64).sqrt()
     }
 
     fn calculate_conservation_error(
@@ -167,7 +167,7 @@ impl QualityMonitor {
             .map_or(0, |(idx, _)| idx);
 
         // Calculate phase shift as normalized position difference
-        let total_size = (interpolated.shape()[0] * interpolated.shape()[1] * interpolated.shape()[2]);
+        let total_size = interpolated.len();
         if total_size > 0 {
             (interp_peak_idx as f64 - target_peak_idx as f64).abs() / total_size as f64
         } else {

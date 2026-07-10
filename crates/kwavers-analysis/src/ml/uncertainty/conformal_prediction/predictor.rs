@@ -156,7 +156,11 @@ impl MlConformalPredictor {
         Ok(ConformalResult {
             prediction_intervals,
             coverage_probability: self.estimate_coverage_probability(),
-            conformity_scores: Array1::from_vec(self.calibration_scores.clone()),
+            conformity_scores: Array1::from_vec(
+                self.calibration_scores.len(),
+                self.calibration_scores.clone(),
+            )
+            .expect("invariant: 1-D length matches vec"),
         })
     }
 

@@ -30,30 +30,53 @@ impl PhotoacousticLinearSolver {
     ) -> KwaversResult<Array1<f64>> {
         let [m, n] = a.shape();
 
-        if (b.shape()[0] * b.shape()[1] * b.shape()[2]) != m {
+        if b.shape()[0] != m {
             return Err(kwavers_core::error::NumericalError::MatrixDimension {
                 operation: "Total Variation regularized least squares".to_owned(),
                 expected: format!("RHS vector length {} to match matrix rows {}", m, m),
-                actual: format!("RHS vector length {}", (b.shape()[0] * b.shape()[1] * b.shape()[2])),
+                actual: format!("RHS vector length {}", b.shape()[0]),
             }
             .into());
         }
 
-        let mut x = Array1::zeros(n);
-        let at = a.transpose([1, 0]).unwrap();
-        let ata = leto_ops::Dot::dot(at, a);
-        let atb = at.dot(&b);
+        let mut x = Array1::<f64>::zeros(n);
+        // AᵀA (n×n) and Aᵀb (n) via native leto linear algebra.
+        let at = a.transpose([1, 0]).expect("invariant: TV transpose valid");
+        let mut ata = Array2::<f64>::zeros((n, n));
+        leto_ops::matmul(&at, &a.view(), &mut ata.view_mut()).expect("invariant: TV AᵀA conforms");
+        let mut atb = Array1::<f64>::zeros(n);
+        leto_ops::matvec(&at, &b, &mut atb.view_mut()).expect("invariant: TV Aᵀb conforms");
 
         let lipschitz = self.power_method(&ata)?;
         let step_size = 1.0 / lipschitz;
 
         for _iter in 0..self.max_iterations {
-            let gradient = ata.dot(&x) - &atb;
-            let x_grad = &x - step_size * &gradient;
+            // gradient = AᵀA·x − Aᵀb
+            let mut gradient = Array1::<f64>::zeros(n);
+            leto_ops::matvec(&ata.view(), &x.view(), &mut gradient.view_mut())
+                .expect("invariant: TV AᵀA·x conforms");
+            for j in 0..n {
+                gradient[j] -= atb[j];
+            }
+            // x_grad = x − step·gradient
+            let mut x_grad = Array1::<f64>::zeros(n);
+            for j in 0..n {
+                x_grad[j] = x[j] - step_size * gradient[j];
+            }
             x = self.tv_proximal(&x_grad, lambda * step_size, shape)?;
 
-            let residual = a.dot(&x) - b;
-            if residual.dot(&residual).sqrt() < self.tolerance {
+            // residual = A·x − b
+            let mut residual = Array1::<f64>::zeros(m);
+            leto_ops::matvec(&a.view(), &x.view(), &mut residual.view_mut())
+                .expect("invariant: TV A·x conforms");
+            for i in 0..m {
+                residual[i] -= b[i];
+            }
+            if leto_ops::dot(&residual.view(), &residual.view())
+                .expect("invariant: TV residual norm conforms")
+                .sqrt()
+                < self.tolerance
+            {
                 break;
             }
         }
@@ -71,14 +94,26 @@ impl PhotoacousticLinearSolver {
     fn power_method(&self, a: &Array2<f64>) -> KwaversResult<f64> {
         let n = a.shape()[0];
         let mut v = Array1::<f64>::ones(n);
-        v /= v.dot(&v).sqrt();
+        let norm0 = leto_ops::dot(&v.view(), &v.view())
+            .expect("invariant: power-method ‖v₀‖ conforms")
+            .sqrt();
+        for j in 0..n {
+            v[j] /= norm0;
+        }
 
         let mut eigenvalue = 0.0;
         for _ in 0..100 {
-            let av = a.dot(&v);
-            eigenvalue = v.dot(&av);
-            let av_norm = av.dot(&av).sqrt();
-            v = av / av_norm;
+            let mut av = Array1::<f64>::zeros(n);
+            leto_ops::matvec(&a.view(), &v.view(), &mut av.view_mut())
+                .expect("invariant: power-method A·v conforms");
+            eigenvalue =
+                leto_ops::dot(&v.view(), &av.view()).expect("invariant: power-method vᵀAv conforms");
+            let av_norm = leto_ops::dot(&av.view(), &av.view())
+                .expect("invariant: power-method ‖Av‖ conforms")
+                .sqrt();
+            for j in 0..n {
+                v[j] = av[j] / av_norm;
+            }
         }
 
         Ok(eigenvalue)
@@ -108,7 +143,7 @@ impl PhotoacousticLinearSolver {
                     let idx_y = i * ny * nz + (j + 1) * nz + k;
                     let idx_z = i * ny * nz + j * nz + (k + 1);
 
-                    if idx_x < (x.shape()[0] * x.shape()[1] * x.shape()[2]) && idx_y < (x.shape()[0] * x.shape()[1] * x.shape()[2]) && idx_z < (x.shape()[0] * x.shape()[1] * x.shape()[2]) {
+                    if idx_x < (x.len()) && idx_y < (x.len()) && idx_z < (x.len()) {
                         let grad_x = x[idx_x] - x[idx];
                         let grad_y = x[idx_y] - x[idx];
                         let grad_z = x[idx_z] - x[idx];

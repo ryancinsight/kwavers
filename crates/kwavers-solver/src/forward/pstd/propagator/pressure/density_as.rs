@@ -1,8 +1,7 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::Array3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::{Array2, ArrayView2, ArrayViewMut2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 #[derive(Clone, Copy)]
 enum AsAxis {
@@ -86,7 +85,7 @@ fn update_axisymmetric_density_fused(
 
     let [_nx, nr] = density.shape();
     if let (Some(density_values), Some(div_values), Some(coef_values)) = (
-        density.as_slice_mut(),
+        density.as_mut_slice(),
         divergence.as_slice(),
         coefficient.as_slice(),
     ) {
@@ -126,7 +125,7 @@ fn update_axisymmetric_density_unfused(
     );
 
     if let (Some(density_values), Some(div_values), Some(coef_values)) = (
-        density.as_slice_mut(),
+        density.as_mut_slice(),
         divergence.as_slice(),
         coefficient.as_slice(),
     ) {
@@ -189,26 +188,38 @@ impl PSTDSolver {
             KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
         })?;
 
-        let ux = leto_view3(&self.fields.ux);
-        let uz = leto_view3(&self.fields.uz);
-        let rho0 = leto_view3(&self.materials.rho0);
-        ctx.compute_density_divs(ux.slice(s![.., 0, ..]), uz.slice(s![.., 0, ..]));
+        let ux = self.fields.ux.view();
+        let uz = self.fields.uz.view();
+        let rho0 = self.materials.rho0.view();
+        ctx.compute_density_divs(
+            ux.slice_with::<2>(&s![.., 0, ..])
+                .expect("invariant: axisymmetric r=0 plane within ux bounds"),
+            uz.slice_with::<2>(&s![.., 0, ..])
+                .expect("invariant: axisymmetric r=0 plane within uz bounds"),
+        );
 
         // Populate the pre-allocated coefficient scratch (no heap allocation).
         // In fused mode, coef uses current (old) rhox/rhoz — consistent with
         // update_density_cartesian fused path.  In fallback mode, coef uses the
         // pre-PML'd rhox/rhoz (same as the previous non-fused AS implementation).
         if self.config.nonlinearity {
-            let rhox = leto_view3(&self.rhox);
-            let rhoz = leto_view3(&self.rhoz);
+            let rhox = self.rhox.view();
+            let rhoz = self.rhoz.view();
             compute_axisymmetric_coefficient(
                 &mut ctx.coef,
-                rho0.slice(s![.., 0, ..]),
-                rhox.slice(s![.., 0, ..]),
-                rhoz.slice(s![.., 0, ..]),
+                rho0.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
+                rhox.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhox bounds"),
+                rhoz.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhoz bounds"),
             );
         } else {
-            ctx.coef.assign(&rho0.slice(s![.., 0, ..]));
+            ctx.coef.assign(
+                &rho0
+                    .slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
+            );
         }
 
         if use_fused {
@@ -228,7 +239,10 @@ impl PSTDSolver {
             })?;
 
             update_axisymmetric_density_fused(
-                leto_view_mut3(&mut self.rhox).slice_mut(s![.., 0, ..]),
+                self.rhox
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhox bounds"),
                 &ctx.duxdx,
                 &ctx.coef,
                 pml_dx,
@@ -237,7 +251,10 @@ impl PSTDSolver {
             );
 
             update_axisymmetric_density_fused(
-                leto_view_mut3(&mut self.rhoz).slice_mut(s![.., 0, ..]),
+                self.rhoz
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhoz bounds"),
                 &ctx.duzdr,
                 &ctx.coef,
                 pml_dz,
@@ -246,14 +263,20 @@ impl PSTDSolver {
             );
         } else {
             update_axisymmetric_density_unfused(
-                leto_view_mut3(&mut self.rhox).slice_mut(s![.., 0, ..]),
+                self.rhox
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhox bounds"),
                 &ctx.duxdx,
                 &ctx.coef,
                 dt,
             );
 
             update_axisymmetric_density_unfused(
-                leto_view_mut3(&mut self.rhoz).slice_mut(s![.., 0, ..]),
+                self.rhoz
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhoz bounds"),
                 &ctx.duzdr,
                 &ctx.coef,
                 dt,
@@ -265,11 +288,15 @@ impl PSTDSolver {
         // Write divergences into div_ux/div_uz (the divergence cache).
         // apply_absorption_to_pressure fuses div_ux/div_uy/div_uz → dpx at Step 1 (Opt-7+12).
         // Writing to div_u* here (not dpx) ensures absorption receives the correct AS values.
-        leto_view_mut3(&mut self.div_ux)
-            .slice_mut(s![.., 0, ..]).unwrap().unwrap().assign(&ctx.duxdx);
+        self.div_ux.view_mut()
+            .slice_with_mut(&s![.., 0, ..])
+            .unwrap()
+            .assign(&ctx.duxdx);
         self.div_uy.fill(0.0);
-        leto_view_mut3(&mut self.div_uz)
-            .slice_mut(s![.., 0, ..]).unwrap().unwrap().assign(&ctx.duzdr);
+        self.div_uz.view_mut()
+            .slice_with_mut(&s![.., 0, ..])
+            .unwrap()
+            .assign(&ctx.duzdr);
         self.as_ctx = Some(ctx);
         Ok(())
     }

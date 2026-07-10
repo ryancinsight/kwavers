@@ -101,7 +101,7 @@ fn main() -> Result<()> {
 
     let ct = load_ct_with_ritk(&dicom_dir, series_uid)?;
     let skull = skull_from_hu(&ct);
-    let (nx, ny, nz) = skull.sound_speed.dim();
+    let [nx, ny, nz] = skull.sound_speed.shape();
     let grid = Grid::new(
         nx,
         ny,
@@ -435,9 +435,9 @@ fn element_projection_records(
     inputs
         .xs
         .iter()
-        .zip(inputs.ys)
-        .zip(inputs.zs)
-        .zip(inputs.corrections)
+        .zip(inputs.ys.iter())
+        .zip(inputs.zs.iter())
+        .zip(inputs.corrections.iter())
         .enumerate()
         .map(|(element, (((&x_m, &y_m), &bowl_z_m), &correction_rad))| {
             let metrics = element_path_metrics(
@@ -644,7 +644,7 @@ fn write_three_plane_ppm(
     let width = PANEL * 3;
     let height = PANEL;
     let mut rgb = vec![0_u8; width * height * 3];
-    let (nx, ny, nz) = hu.dim();
+    let [nx, ny, nz] = hu.shape();
     let mid_x = nx / 2;
     let mid_y = ny / 2;
     let mid_z = nz / 2;
@@ -889,7 +889,7 @@ fn draw_elements_on_axial(
 }
 
 fn draw_aperture_phase_strip(rgb: &mut [u8], width: usize, height: usize, aperture: &Array2<f64>) {
-    let (nx, ny) = aperture.dim();
+    let [nx, ny] = aperture.shape();
     let strip_h = 20;
     for px in 0..PANEL {
         let ix = px * nx / PANEL;

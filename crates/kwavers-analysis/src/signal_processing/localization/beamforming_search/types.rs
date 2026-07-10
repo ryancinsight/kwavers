@@ -221,7 +221,7 @@ impl BeamformingLocalizationInput {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self, expected_sensors: usize) -> KwaversResult<()> {
-        let (n_sensors, channels, n_samples) = self.sensor_data.dim();
+        let [n_sensors, channels, n_samples] = self.sensor_data.shape();
         if n_sensors != expected_sensors {
             return Err(KwaversError::InvalidInput(format!(
                 "BeamformingLocalizationInput: sensor_data n_sensors ({n_sensors}) does not match expected ({expected_sensors})"

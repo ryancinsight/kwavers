@@ -168,7 +168,7 @@ pub fn calculate_acoustic_heating(
     let dz = grid.dz;
 
     let mut temperature =
-        Array3::<f64>::from_elem(acoustic_field.pressure.dim(), BODY_TEMPERATURE_C);
+        Array3::<f64>::from_elem(acoustic_field.pressure.shape(), BODY_TEMPERATURE_C);
 
     for_each_indexed_pair_mut(
         temperature.view_mut(),

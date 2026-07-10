@@ -74,7 +74,7 @@ impl WavefrontAnalyzer {
         &self,
         pressure_field: &Array3<f64>,
     ) -> KwaversResult<WavefrontAnalysis> {
-        let (nx, ny, nz) = pressure_field.dim();
+        let [nx, ny, nz] = pressure_field.shape();
 
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(

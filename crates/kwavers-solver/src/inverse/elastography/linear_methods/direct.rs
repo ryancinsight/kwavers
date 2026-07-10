@@ -37,7 +37,7 @@ pub(super) fn direct_inversion(
     density: f64,
     frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
-    let (nx, ny, nz) = displacement.uz.shape();
+    let [nx, ny, nz] = displacement.uz.shape();
     let mut shear_wave_speed = LetoArray3::zeros([nx, ny, nz]);
 
     // 1. Compute Laplacian of displacement field

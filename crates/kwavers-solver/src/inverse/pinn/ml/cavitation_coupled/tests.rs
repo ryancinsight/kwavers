@@ -31,7 +31,7 @@ fn test_coupling_interfaces() {
 
     let interfaces = domain.coupling_interfaces();
     // Must have acoustic-bubble and multi-bubble Bjerknes interfaces.
-    assert!((interfaces.shape()[0] * interfaces.shape()[1] * interfaces.shape()[2]) >= 2);
+    assert!((interfaces.len()) >= 2);
 
     assert!(interfaces
         .iter()

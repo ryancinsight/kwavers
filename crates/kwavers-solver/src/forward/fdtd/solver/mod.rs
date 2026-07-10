@@ -184,7 +184,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
                 &self.gpu_accelerator.as_ref().map(|_| "GpuAccelerator"),
             )
             .field("source_handler", &self.source_handler)
-            .field("dynamic_sources_count", &(self.dynamic_sources.shape()[0] * self.dynamic_sources.shape()[1] * self.dynamic_sources.shape()[2]))
+            .field("dynamic_sources_count", &(self.dynamic_sources.len()))
             .field("sensor_recorder", &self.sensor_recorder)
             .field("time_step_index", &self.time_step_index)
             .field("fields", &self.fields)

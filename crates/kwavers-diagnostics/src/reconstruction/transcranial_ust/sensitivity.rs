@@ -234,7 +234,7 @@ pub(super) fn slowness_line_integral(
 }
 
 fn attenuation_at(medium: &AcousticSlice, x_m: f64, y_m: f64) -> f64 {
-    let (nx, ny) = medium.attenuation_np_per_m_mhz.dim();
+    let [nx, ny] = medium.attenuation_np_per_m_mhz.shape();
     let ix = x_m / medium.spacing_m + (nx - 1) as f64 / 2.0;
     let iy = y_m / medium.spacing_m + (ny - 1) as f64 / 2.0;
     if ix < 0.0 || iy < 0.0 || ix > (nx - 1) as f64 || iy > (ny - 1) as f64 {
@@ -258,7 +258,7 @@ fn attenuation_at(medium: &AcousticSlice, x_m: f64, y_m: f64) -> f64 {
 /// reconstruction grid still carries a finite, physical travel time (never zero,
 /// which would make τ singular).
 fn sound_speed_at(medium: &AcousticSlice, x_m: f64, y_m: f64) -> f64 {
-    let (nx, ny) = medium.sound_speed_m_s.dim();
+    let [nx, ny] = medium.sound_speed_m_s.shape();
     let ix = (x_m / medium.spacing_m + (nx - 1) as f64 / 2.0).clamp(0.0, (nx - 1) as f64);
     let iy = (y_m / medium.spacing_m + (ny - 1) as f64 / 2.0).clamp(0.0, (ny - 1) as f64);
     let x0 = ix.floor() as usize;

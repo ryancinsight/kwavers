@@ -34,7 +34,7 @@ impl AdaptiveSlsc {
         &self,
         data: &leto::Array2<Complex64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n_elements = data.nrows();
+        let n_elements = data.shape()[0];
 
         let optimal_lag = self.estimate_optimal_lag(data);
         let max_lag = ((optimal_lag as f64 * self.adaptation_rate) as usize)
@@ -51,8 +51,8 @@ impl AdaptiveSlsc {
     }
 
     fn estimate_optimal_lag(&self, data: &leto::Array2<Complex64>) -> usize {
-        let n_elements = data.nrows();
-        let sample_idx = data.ncols() / 2;
+        let n_elements = data.shape()[0];
+        let sample_idx = data.shape()[1] / 2;
 
         let sample_data: Vec<Complex64> = (0..n_elements).map(|i| data[[i, sample_idx]]).collect();
 

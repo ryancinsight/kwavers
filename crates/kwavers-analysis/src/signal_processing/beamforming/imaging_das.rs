@@ -81,7 +81,7 @@ impl ImagingDasConfig {
 ///
 /// `sensor_data` shape `(n_sensors, n_samples)`; `sensor_positions` and
 /// `grid_points` shape `(n, 3)` in `[x, y, z]` order. Returns a flat vector of
-/// length `grid_points.nrows()` matching grid-point row order.
+/// length `grid_points.shape()[0]` matching grid-point row order.
 ///
 /// # Errors
 /// Returns [`KwaversError::InvalidInput`] on any of:
@@ -95,22 +95,22 @@ pub fn beamform_image_das(
     grid_points: ArrayView2<'_, f64>,
     config: &ImagingDasConfig,
 ) -> KwaversResult<Array1<f64>> {
-    let (n_sensors, n_samples) = sensor_data.dim();
+    let [n_sensors, n_samples] = sensor_data.shape();
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(format!(
             "imaging_das: sensor_data must have n_sensors > 0 and n_samples > 0; got ({n_sensors}, {n_samples})"
         )));
     }
-    if sensor_positions.ncols() != 3 || sensor_positions.nrows() != n_sensors {
+    if sensor_positions.shape()[1] != 3 || sensor_positions.shape()[0] != n_sensors {
         return Err(KwaversError::InvalidInput(format!(
             "imaging_das: sensor_positions must have shape ({n_sensors}, 3); got {:?}",
-            sensor_positions.dim()
+            sensor_positions.shape()
         )));
     }
-    if grid_points.ncols() != 3 || grid_points.nrows() == 0 {
+    if grid_points.shape()[1] != 3 || grid_points.shape()[0] == 0 {
         return Err(KwaversError::InvalidInput(format!(
             "imaging_das: grid_points must have shape (n_pixels >= 1, 3); got {:?}",
-            grid_points.dim()
+            grid_points.shape()
         )));
     }
     if !sensor_data.iter().all(|v| v.is_finite()) {
@@ -134,21 +134,21 @@ pub fn beamform_image_das(
     let fs = config.sampling_frequency;
     let last_sample_f = (n_samples - 1) as f64;
 
-    let n_pixels = grid_points.nrows();
+    let n_pixels = grid_points.shape()[0];
     let mut image = Array1::<f64>::zeros(n_pixels);
 
-    for (pix, point) in grid_points.outer_iter().enumerate() {
-        let px = point[0];
-        let py = point[1];
-        let pz = point[2];
+    for pix in 0..n_pixels {
+        let px = grid_points[[pix, 0]];
+        let py = grid_points[[pix, 1]];
+        let pz = grid_points[[pix, 2]];
 
         let mut acc = 0.0_f64;
         let mut n_active = 0_usize;
 
         for s in 0..n_sensors {
-            let sx = sensor_positions[(s, 0)];
-            let sy = sensor_positions[(s, 1)];
-            let sz = sensor_positions[(s, 2)];
+            let sx = sensor_positions[[s, 0]];
+            let sy = sensor_positions[[s, 1]];
+            let sz = sensor_positions[[s, 2]];
 
             let dx = px - sx;
             let dy = py - sy;
@@ -163,8 +163,8 @@ pub fn beamform_image_das(
             let lo = sample_idx.floor() as usize;
             let hi = (lo + 1).min(n_samples - 1);
             let frac = sample_idx - lo as f64;
-            let v_lo = sensor_data[(s, lo)];
-            let v_hi = sensor_data[(s, hi)];
+            let v_lo = sensor_data[[s, lo]];
+            let v_hi = sensor_data[[s, hi]];
             let interp = (1.0 - frac) * v_lo + frac * v_hi;
 
             acc += weights[s] * interp;
@@ -206,7 +206,6 @@ mod tests {
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use leto::{
-    /* array -- no leto equivalent */,
     Array2,
 };
 
@@ -227,10 +226,10 @@ mod tests {
 
         // 8 sensors on a line at depth=0, lateral=-3.5..3.5 mm at 1 mm pitch.
         let mut sensor_positions = Array2::<f64>::zeros((8, 3));
-        for (s, mut row) in sensor_positions.outer_iter_mut().enumerate() {
-            row[0] = 0.0;
-            row[1] = (s as f64 - 3.5) * 1.0e-3;
-            row[2] = 0.0;
+        for s in 0..8 {
+            sensor_positions[[s, 0]] = 0.0;
+            sensor_positions[[s, 1]] = (s as f64 - 3.5) * 1.0e-3;
+            sensor_positions[[s, 2]] = 0.0;
         }
 
         // Synthesize a narrow Gaussian pulse at each sensor centred at its TOF.
@@ -238,13 +237,13 @@ mod tests {
         let pulse_sigma = 2.0 * dt;
         let mut sensor_data = Array2::<f64>::zeros((8, n_samples));
         for s in 0..8 {
-            let dx = source[0] - sensor_positions[(s, 0)];
-            let dy = source[1] - sensor_positions[(s, 1)];
-            let dz = source[2] - sensor_positions[(s, 2)];
+            let dx = source[0] - sensor_positions[[s, 0]];
+            let dy = source[1] - sensor_positions[[s, 1]];
+            let dz = source[2] - sensor_positions[[s, 2]];
             let tof = (dx * dx + dy * dy + dz * dz).sqrt() / c;
             for t in 0..n_samples {
                 let dtime = t as f64 * dt - tof;
-                sensor_data[(s, t)] = (-(dtime * dtime) / (2.0 * pulse_sigma * pulse_sigma)).exp();
+                sensor_data[[s, t]] = (-(dtime * dtime) / (2.0 * pulse_sigma * pulse_sigma)).exp();
             }
         }
 
@@ -303,9 +302,10 @@ mod tests {
 
     #[test]
     fn rejects_shape_mismatch() {
-        let sensor_data = array![[0.0, 1.0, 0.0], [0.0, 0.5, 0.0]];
-        let sensor_positions = array![[0.0, 0.0, 0.0]];
-        let grid_points = array![[0.0, 0.0, 0.0]];
+        let sensor_data =
+            Array2::from_shape_vec((2, 3), vec![0.0, 1.0, 0.0, 0.0, 0.5, 0.0]).unwrap();
+        let sensor_positions = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
+        let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
         let cfg = ImagingDasConfig::new(
             SOUND_SPEED_WATER_SIM,
             MHZ_TO_HZ,

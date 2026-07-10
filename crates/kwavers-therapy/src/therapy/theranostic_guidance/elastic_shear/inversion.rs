@@ -53,7 +53,7 @@ pub(super) fn run_iterative_elastic_fwi(
     receiver_points: &[Point2],
     lesion_fraction: f64,
 ) -> KwaversResult<ElasticFwiInversion> {
-    let mut model = Array2::<f64>::zeros(prepared.ct_hu.dim());
+    let mut model = Array2::<f64>::zeros(prepared.ct_hu.shape());
     let mut predicted_traces = baseline_traces.clone();
     let mut residual = observed_traces - &predicted_traces;
     let mut objective = fwi_objective(&residual);
@@ -85,7 +85,7 @@ pub(super) fn run_iterative_elastic_fwi(
                 source,
                 receiver_mask,
                 observed_traces,
-                predicted_traces.ncols(),
+                predicted_traces.shape()[1],
                 dt_s,
                 lesion_fraction,
                 &model,
@@ -166,7 +166,7 @@ fn candidate_model(
     body_mask: &Array2<bool>,
     scale: f64,
 ) -> Array2<f64> {
-    Array2::from_shape_fn(model.dim(), |idx| {
+    Array2::from_shape_fn(model.shape(), |idx| {
         if body_mask[idx] {
             (model[idx] + scale * gradient[idx]).clamp(0.0, 1.0)
         } else {

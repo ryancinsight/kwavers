@@ -312,9 +312,7 @@ impl PSTDSolver {
             // the per-voxel bracket weights, reproducing each tissue's own power
             // law. One forward FFT is re-formed per stratum (no extra buffers);
             // strata exist only for genuinely heterogeneous-y media.
-            let m_count = (strata.exponents.shape()[0]
-                * strata.exponents.shape()[1]
-                * strata.exponents.shape()[2]);
+            let m_count = strata.exponents.len();
 
             // L1 = Σ_m w_m(x) · IFFT( |k|^(y_m−2) · FFT(ρ₀·∇·u) ) → dpx.
             self.dpx.fill(0.0);
@@ -376,7 +374,10 @@ impl PSTDSolver {
             // Step 3: L1 = IFFT( |k|^(y−2) · FFT(ρ₀·∇·u) ) → dpx (clobbered).
             self.fft.forward_r2c_into(&self.dpx, &mut self.grad_k);
             {
-                let n1 = abs.nabla1.slice(s![.., .., ..nz_c]);
+                let n1 = abs
+                    .nabla1
+                    .slice_with(&s![.., .., ..nz_c])
+                    .expect("invariant: nz_c <= nz half-spectrum length");
                 multiply_spectral_operator(&mut self.grad_k, n1);
             }
             self.fft
@@ -387,7 +388,10 @@ impl PSTDSolver {
             // div_u still holds ρ_total from the EOS step in update_pressure.
             self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
             {
-                let n2 = abs.nabla2.slice(s![.., .., ..nz_c]);
+                let n2 = abs
+                    .nabla2
+                    .slice_with(&s![.., .., ..nz_c])
+                    .expect("invariant: nz_c <= nz half-spectrum length");
                 multiply_spectral_operator(&mut self.grad_k, n2);
             }
             self.fft

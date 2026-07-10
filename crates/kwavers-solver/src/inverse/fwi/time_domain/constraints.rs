@@ -17,10 +17,10 @@ fn pressure_second_derivative_views_into(
     p2: ArrayView3<'_, f64>,
     inv_dt_sq: f64,
 ) {
-    if dst
-        && p0
-        && p1
-        && p2
+    if dst.view().is_c_contiguous()
+        && p0.is_c_contiguous()
+        && p1.is_c_contiguous()
+        && p2.is_c_contiguous()
     {
         let p0 = p0
             .as_slice()
@@ -47,13 +47,10 @@ fn pressure_second_derivative_views_into(
             },
         );
     } else {
-        Zip::from(dst)
-            .and(&p0)
-            .and(&p1)
-            .and(&p2)
-            .for_each(|d, &v0, &v1, &v2| {
-                *d = (2.0f64.mul_add(-v1, v0) + v2) * inv_dt_sq;
-            });
+        leto_ops::zip3_mut_with(&mut dst.view_mut(), &p0, &p1, &p2, |d, v0, v1, v2| {
+            *d = (2.0f64.mul_add(-*v1, *v0) + *v2) * inv_dt_sq;
+        })
+        .expect("invariant: dst, p0, p1, p2 shapes asserted equal above");
     }
 }
 
@@ -89,7 +86,8 @@ impl FwiProcessor {
         model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        if model.shape() != grid.dimensions() {
+        let (grid_nx, grid_ny, grid_nz) = grid.dimensions();
+        if model.shape() != [grid_nx, grid_ny, grid_nz] {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
@@ -204,7 +202,9 @@ impl FwiProcessor {
 
         let nt = forward_history.shape()[0];
         let inv_dt_sq = 1.0 / (dt * dt);
-        let current = forward_history.index_axis(0, idx);
+        let current = forward_history
+            .index_axis::<3>(0, idx)
+            .expect("invariant: axis-0 index within forward-history bounds");
         if dst.shape() != current.shape() {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
@@ -218,21 +218,33 @@ impl FwiProcessor {
         }
 
         if idx == 0 {
-            let next = forward_history.index_axis(0, 1);
-            let next2 = forward_history.index_axis(0, 2);
+            let next = forward_history
+                .index_axis::<3>(0, 1)
+                .expect("invariant: axis-0 index within forward-history bounds");
+            let next2 = forward_history
+                .index_axis::<3>(0, 2)
+                .expect("invariant: axis-0 index within forward-history bounds");
             pressure_second_derivative_views_into(dst, current, next, next2, inv_dt_sq);
             return Ok(());
         }
 
         if idx + 1 == nt {
-            let prev = forward_history.index_axis(0, nt - 2);
-            let prev2 = forward_history.index_axis(0, nt - 3);
+            let prev = forward_history
+                .index_axis::<3>(0, nt - 2)
+                .expect("invariant: axis-0 index within forward-history bounds");
+            let prev2 = forward_history
+                .index_axis::<3>(0, nt - 3)
+                .expect("invariant: axis-0 index within forward-history bounds");
             pressure_second_derivative_views_into(dst, prev2, prev, current, inv_dt_sq);
             return Ok(());
         }
 
-        let prev = forward_history.index_axis(0, idx - 1);
-        let next = forward_history.index_axis(0, idx + 1);
+        let prev = forward_history
+            .index_axis::<3>(0, idx - 1)
+            .expect("invariant: axis-0 index within forward-history bounds");
+        let next = forward_history
+            .index_axis::<3>(0, idx + 1)
+            .expect("invariant: axis-0 index within forward-history bounds");
         pressure_second_derivative_views_into(dst, prev, current, next, inv_dt_sq);
         Ok(())
     }

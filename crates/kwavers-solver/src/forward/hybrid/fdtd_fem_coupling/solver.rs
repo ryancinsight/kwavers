@@ -32,7 +32,7 @@ impl FdtdFemSolver {
     ) -> KwaversResult<Self> {
         let coupler = FdtdFemCoupler::new(config.clone(), &fdtd_grid, &fem_mesh)?;
         let fdtd_field = Array3::zeros((fdtd_grid.nx, fdtd_grid.ny, fdtd_grid.nz));
-        let fem_field = vec![0.0; (fem_mesh.nodes.shape()[0] * fem_mesh.nodes.shape()[1] * fem_mesh.nodes.shape()[2])];
+        let fem_field = vec![0.0; fem_mesh.nodes.len() ];
 
         Ok(Self {
             config,

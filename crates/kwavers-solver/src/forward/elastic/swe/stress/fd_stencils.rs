@@ -135,7 +135,7 @@ mod tests {
     #[test]
     fn axis_generic_matches_literal_indexing() {
         let (nx, ny, nz) = (7usize, 6usize, 5usize);
-        let f = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        let f = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             (i * 31 + j * 17 + k * 7) as f64 * 0.0137 + 0.5
         });
         let (dx, dy, dz) = (1e-3, 2e-3, 3e-3);
@@ -154,7 +154,7 @@ mod tests {
 
     #[test]
     fn singleton_axis_is_zero() {
-        let f = Array3::from_shape_fn((1, 4, 4), |(i, j, k)| (i + j + k) as f64);
+        let f = Array3::from_shape_fn((1, 4, 4), |[i, j, k]| (i + j + k) as f64);
         let v = f.view();
         assert_eq!(fd1_x(v, 0, 1, 1, 1, 1e-3), 0.0);
     }
@@ -164,7 +164,7 @@ mod tests {
         // The 4th-order centered stencil differentiates cubics exactly.
         let n = 9usize;
         let dx = 0.1;
-        let f = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| {
+        let f = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| {
             let x = i as f64 * dx;
             x * x * x // f = x³ → f' = 3x²
         });

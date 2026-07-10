@@ -37,35 +37,39 @@ pub fn extract_all_features(image: &Array3<f32>) -> leto::Array1<f32> {
     use leto::Array1;
 
     // 1. Mean intensity
-    let mean_intensity = image.mean().unwrap_or(0.0);
+    let mean_intensity = leto::mean_all(image).unwrap_or(0.0);
 
     // 2. Standard deviation (global texture)
     let std_map = compute_local_std(image);
-    let mean_std = std_map.mean().unwrap_or(0.0);
+    let mean_std = leto::mean_all(&std_map).unwrap_or(0.0);
 
     // 3. Mean gradient magnitude (edge strength)
     let gradient_map = compute_spatial_gradient(image);
-    let mean_gradient = gradient_map.mean().unwrap_or(0.0);
+    let mean_gradient = leto::mean_all(&gradient_map).unwrap_or(0.0);
 
     // 4. Mean Laplacian (structural complexity)
     let laplacian_map = compute_laplacian(image);
-    let mean_laplacian = laplacian_map.mean().unwrap_or(0.0);
+    let mean_laplacian = leto::mean_all(&laplacian_map).unwrap_or(0.0);
 
     // 5. Entropy (information content)
     let entropy_map = compute_local_entropy(image);
-    let mean_entropy = entropy_map.mean().unwrap_or(0.0);
+    let mean_entropy = leto::mean_all(&entropy_map).unwrap_or(0.0);
 
     // 6. Peak intensity (dynamic range)
     let peak_intensity = image.iter().copied().fold(0.0f32, f32::max);
 
-    Array1::from_vec(vec![
-        mean_intensity,
-        mean_std,
-        mean_gradient,
-        mean_laplacian,
-        mean_entropy,
-        peak_intensity,
-    ])
+    Array1::from_vec(
+        6,
+        vec![
+            mean_intensity,
+            mean_std,
+            mean_gradient,
+            mean_laplacian,
+            mean_entropy,
+            peak_intensity,
+        ],
+    )
+    .expect("invariant: 6-element feature vector")
 }
 
 /// Normalize features to [0, 1] range.
@@ -127,7 +131,7 @@ pub fn concatenate_features(features: &[Array3<f32>]) -> leto::Array4<f32> {
         return leto::Array4::zeros((0, 0, 0, 0));
     }
 
-    let (d0, d1, d2) = features[0].dim();
+    let [d0, d1, d2] = features[0].shape();
     let num_features = features.len();
 
     let mut stacked = leto::Array4::zeros((d0, num_features, d1, d2));

@@ -351,7 +351,7 @@ pub fn coarse_pose_search(
     // preserves grid order, so reducing with a strict `<` reproduces the serial
     // first-minimum tie-break exactly.
     let mut candidates: Vec<RigidTransform> =
-        Vec::with_capacity((thetas.shape()[0] * thetas.shape()[1] * thetas.shape()[2]) * (deltas.shape()[0] * deltas.shape()[1] * deltas.shape()[2]) * (deltas.shape()[0] * deltas.shape()[1] * deltas.shape()[2]));
+        Vec::with_capacity((thetas.len()) * (deltas.len()) * (deltas.len()));
     for &theta in &thetas {
         for &dx in &deltas {
             for &dy in &deltas {
@@ -440,7 +440,7 @@ fn optimize_speed_scale(
         let residual = processor.compute_adjoint_source(observed, &synth)?;
         let g = processor
             .adjoint_gradient_self_adjoint(&residual, &model, geometry, grid, &history, None)?;
-        let g_alpha = (&g * &contrast).sum();
+        let g_alpha = (&g * &contrast).iter().sum::<f64>();
         if g_alpha.abs() <= f64::MIN_POSITIVE {
             break;
         }
@@ -683,7 +683,8 @@ pub fn align_from(
                 .to_owned(),
         ));
     }
-    if template.shape() != grid.dimensions() {
+    let (grid_nx, grid_ny, grid_nz) = grid.dimensions();
+    if template.shape() != [grid_nx, grid_ny, grid_nz] {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(

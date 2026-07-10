@@ -20,7 +20,7 @@ impl BurtonMillerAssembler {
 
     /// Compute area-weighted vertex normals for a triangular mesh (Gouraud shading).
     fn compute_vertex_normals(&self, nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
-        let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2])];
+        let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len() ];
 
         for &elem in elements {
             let (n1, n2, n3) = (elem[0], elem[1], elem[2]);

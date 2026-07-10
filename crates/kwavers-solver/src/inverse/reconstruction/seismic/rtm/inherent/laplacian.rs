@@ -56,28 +56,31 @@ impl ReverseTimeMigration {
     /// # Errors
     /// - [`ValidationError::DimensionMismatch`] when the grid lacks a 3-D interior
     ///   (see [`Self::ensure_3d_interior`]).
-    pub(super) fn compute_laplacian(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub(super) fn compute_laplacian(
+        &self,
+        field: &leto::ArrayView<'_, f64, 3>,
+    ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
         Self::ensure_3d_interior((nx, ny, nz))?;
         let mut laplacian = Array3::<f64>::zeros((nx, ny, nz));
         let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];
 
-        let xp = field.slice(s![2..nx, 1..ny - 1, 1..nz - 1]);
-        let xm = field.slice(s![..nx - 2, 1..ny - 1, 1..nz - 1]);
-        for_each_view_mut(laplacian.slice_mut(inn), |idx, lap| {
+        let xp = field.slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM laplacian stencil slice in range");
+        let xm = field.slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM laplacian stencil slice in range");
+        for_each_view_mut(laplacian.slice_with_mut::<3>(&inn).expect("invariant: RTM laplacian interior slice in range"), |idx, lap| {
             *lap += xp[idx] + xm[idx];
         });
 
-        let yp = field.slice(s![1..nx - 1, 2..ny, 1..nz - 1]);
-        let ym = field.slice(s![1..nx - 1, ..ny - 2, 1..nz - 1]);
-        for_each_view_mut(laplacian.slice_mut(inn), |idx, lap| {
+        let yp = field.slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1]).expect("invariant: RTM laplacian stencil slice in range");
+        let ym = field.slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1]).expect("invariant: RTM laplacian stencil slice in range");
+        for_each_view_mut(laplacian.slice_with_mut::<3>(&inn).expect("invariant: RTM laplacian interior slice in range"), |idx, lap| {
             *lap += yp[idx] + ym[idx];
         });
 
-        let zp = field.slice(s![1..nx - 1, 1..ny - 1, 2..nz]);
-        let zm = field.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]);
-        let center = field.slice(s![1..nx - 1, 1..ny - 1, 1..nz - 1]);
-        for_each_view_mut(laplacian.slice_mut(inn), |idx, lap| {
+        let zp = field.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz]).expect("invariant: RTM laplacian stencil slice in range");
+        let zm = field.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2]).expect("invariant: RTM laplacian stencil slice in range");
+        let center = field.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM laplacian stencil slice in range");
+        for_each_view_mut(laplacian.slice_with_mut::<3>(&inn).expect("invariant: RTM laplacian interior slice in range"), |idx, lap| {
             *lap += 6.0f64.mul_add(-center[idx], zp[idx] + zm[idx]);
         });
 

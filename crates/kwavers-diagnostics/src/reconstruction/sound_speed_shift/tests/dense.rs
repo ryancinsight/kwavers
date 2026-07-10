@@ -37,7 +37,7 @@ fn dense_prior_recovers_uniform_sound_speed_shift() {
     assert_eq!(image.model_family, SOUND_SPEED_SHIFT_MODEL);
     assert_eq!(image.rows_used, 3);
     assert_eq!(image.active_voxels, 9);
-    for value in &image.sound_speed_shift_m_s {
+    for value in image.sound_speed_shift_m_s.iter() {
         assert!(
             (*value - 20.0).abs() <= 1.0e-4,
             "dense reconstruction value {value} differs from 20 m/s"

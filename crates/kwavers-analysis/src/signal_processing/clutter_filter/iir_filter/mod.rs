@@ -238,7 +238,7 @@ impl IirFilter {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_pixels, n_frames) = slow_time_data.dim();
+        let [n_pixels, n_frames] = slow_time_data.shape();
 
         if n_frames < self.b_coeffs.len() {
             return Err(KwaversError::InvalidInput(format!(
@@ -252,10 +252,13 @@ impl IirFilter {
 
         for pixel_idx in 0..n_pixels {
             // Extract temporal signal
-            let signal = slow_time_data.row(pixel_idx);
+            let signal = slow_time_data
+                .index_axis::<1>(0, pixel_idx)
+                .expect("row index within pixel bounds");
 
             // Apply forward filter
-            let mut filtered = self.apply_iir_filter(&signal.to_vec());
+            let mut filtered =
+                self.apply_iir_filter(&signal.iter().copied().collect::<Vec<f64>>());
 
             // Apply backward filter if zero-phase requested
             if self.config.zero_phase {

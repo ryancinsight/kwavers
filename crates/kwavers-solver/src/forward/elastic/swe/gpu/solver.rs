@@ -230,7 +230,7 @@ impl GPUElasticWaveSolver3D {
         let start_time = std::time::Instant::now();
 
         let volume_size = grid.nx * grid.ny * grid.nz;
-        let total_memory = volume_size * std::mem::size_of::<f64>() * ((arrival_times.shape()[0] * arrival_times.shape()[1] * arrival_times.shape()[2]) + 2);
+        let total_memory = volume_size * std::mem::size_of::<f64>() * ((arrival_times.len()) + 2);
 
         if !self.device.can_handle_volume(grid) {
             return Err(KwaversError::ResourceLimitExceeded {
@@ -239,7 +239,7 @@ impl GPUElasticWaveSolver3D {
         }
 
         let mut memory_blocks = Vec::new();
-        for _ in 0..((arrival_times.shape()[0] * arrival_times.shape()[1] * arrival_times.shape()[2]) + 2) {
+        for _ in 0..((arrival_times.len()) + 2) {
             memory_blocks.push(
                 self.memory_pool
                     .allocate(volume_size * std::mem::size_of::<f64>())?,
@@ -257,7 +257,7 @@ impl GPUElasticWaveSolver3D {
             "multidirectional_inversion",
             grid_size,
             block_size,
-            volume_size * (arrival_times.shape()[0] * arrival_times.shape()[1] * arrival_times.shape()[2]),
+            volume_size * (arrival_times.len()),
         );
 
         let total_time = start_time.elapsed().as_secs_f64() + kernel_time;
@@ -274,7 +274,7 @@ impl GPUElasticWaveSolver3D {
             execution_time: total_time,
             kernel_time,
             memory_used: total_memory,
-            directions_processed: (wave_directions.shape()[0] * wave_directions.shape()[1] * wave_directions.shape()[2]),
+            directions_processed: (wave_directions.len()),
             convergence_iterations: 50,
             residual_error: 0.001,
         })

@@ -34,7 +34,7 @@ impl TissueClassifierModel {
     /// Create from weights
     #[must_use]
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let (features, classes) = weights.dim();
+        let [features, classes] = weights.shape();
         let engine = InferenceEngine::from_weights(weights, bias, 32, false);
 
         let metadata = MlModelMetadata {
@@ -91,7 +91,10 @@ impl TissueClassifierModel {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
-        let input = features.clone().insert_axis(0);
+        let input = features
+            .clone()
+            .into_shape([1, features.len()])
+            .expect("invariant: 1-D to (1, n) reshape preserves element count");
         let output = self.engine.forward(&input)?;
 
         // Find class with highest probability

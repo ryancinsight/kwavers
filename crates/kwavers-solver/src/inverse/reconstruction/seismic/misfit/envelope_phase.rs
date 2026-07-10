@@ -65,7 +65,7 @@ impl MisfitFunction {
         let env_syn = self.compute_envelope(synthetic)?;
 
         for i in 0..ntraces {
-            let syn_trace = synthetic.index_axis(0, i).unwrap().to_owned();
+            let syn_trace = synthetic.index_axis::<1>(0, i).unwrap().to_contiguous();
             let analytic = hilbert_transform(
                 &LetoArray1::from_vec([nsamples], syn_trace.iter().copied().collect())
                     .expect("envelope trace length must match its Leto shape"),
@@ -106,7 +106,7 @@ impl MisfitFunction {
         let phase_syn = self.compute_instantaneous_phase(synthetic)?;
 
         for i in 0..ntraces {
-            let syn_trace = synthetic.index_axis(0, i).unwrap().to_owned();
+            let syn_trace = synthetic.index_axis::<1>(0, i).unwrap().to_contiguous();
             let analytic = hilbert_transform(
                 &LetoArray1::from_vec([nsamples], syn_trace.iter().copied().collect())
                     .expect("phase trace length must match its Leto shape"),
@@ -149,7 +149,7 @@ impl MisfitFunction {
         let mut envelope = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let trace = signal.index_axis(0, i).unwrap();
+            let trace = signal.index_axis::<1>(0, i).unwrap();
             let trace_buffer = LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
                 .expect("seismic envelope trace length must match its Leto shape");
             let mut buffer = fft_1d_leto(trace_buffer.view());
@@ -190,7 +190,7 @@ impl MisfitFunction {
         let mut phase = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let trace = signal.index_axis(0, i).unwrap();
+            let trace = signal.index_axis::<1>(0, i).unwrap();
             let trace_buffer = LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
                 .expect("seismic phase trace length must match its Leto shape");
             let mut buffer = fft_1d_leto(trace_buffer.view());
@@ -224,6 +224,6 @@ impl MisfitFunction {
     ///
     fn l2_misfit_arrays(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<f64> {
         let diff = b - a;
-        Ok(0.5 * diff.mapv(|x| x * x).sum())
+        Ok(0.5 * diff.mapv(|x| x * x).iter().sum::<f64>())
     }
 }

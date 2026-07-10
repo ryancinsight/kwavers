@@ -60,8 +60,8 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict(&self, x: &[f32], y: &[f32], t: &[f32]) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
-        let batch_size = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
-        if (y.shape()[0] * y.shape()[1] * y.shape()[2]) != batch_size || (t.shape()[0] * t.shape()[1] * t.shape()[2]) != batch_size {
+        let batch_size = (x.len());
+        if (y.len()) != batch_size || (t.len()) != batch_size {
             return Err(KwaversError::InvalidInput(
                 "Input coordinate arrays must have the same length".into(),
             ));
@@ -86,7 +86,7 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
             let out = coeus_autograd::matmul(&input, &weight_var);
             input = coeus_autograd::add(&out, &bias_var);
 
-            if layer_idx < (self.weights.shape()[0] * self.weights.shape()[1] * self.weights.shape()[2]) - 1 {
+            if layer_idx < (self.weights.len()) - 1 {
                 input = match self.activation.as_str() {
                     "relu" => coeus_autograd::relu(&input),
                     "sigmoid" => coeus_autograd::sigmoid(&input),

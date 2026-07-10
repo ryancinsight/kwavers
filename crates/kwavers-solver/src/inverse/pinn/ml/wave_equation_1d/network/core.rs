@@ -52,7 +52,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PinnWave1D")
-            .field("hidden_layers", &(self.hidden_layers.shape()[0] * self.hidden_layers.shape()[1] * self.hidden_layers.shape()[2]))
+            .field("hidden_layers", &(self.hidden_layers.len()))
             .finish_non_exhaustive()
     }
 }
@@ -78,7 +78,7 @@ where
         let input_layer = Linear::new(input_size, first_hidden_size, true);
 
         let mut hidden_layers = Vec::new();
-        for i in 0..(config.hidden_layers.shape()[0] * config.hidden_layers.shape()[1] * config.hidden_layers.shape()[2]) - 1 {
+        for i in 0..(config.hidden_layers.len()) - 1 {
             let in_size = config.hidden_layers[i];
             let out_size = config.hidden_layers[i + 1];
             hidden_layers.push(Linear::new(in_size, out_size, true));
@@ -107,7 +107,7 @@ where
     /// Write optimizer-updated parameter values back into this network's layers.
     ///
     /// # Panics
-    /// - Panics if `(params.shape()[0] * params.shape()[1] * params.shape()[2])` does not match `self.parameters().len()`.
+    /// - Panics if `(params.len())` does not match `self.parameters().len()`.
     pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
         let mut offset = 0;
         let n_in = self.input_layer.parameters().len();
@@ -124,7 +124,7 @@ where
             .load_parameters(&params[offset..offset + n_out]);
         assert_eq!(
             offset + n_out,
-            (params.shape()[0] * params.shape()[1] * params.shape()[2]),
+            (params.len()),
             "load_parameters: parameter count mismatch"
         );
     }
@@ -168,13 +168,13 @@ where
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict(&self, x: &Array1<f64>, t: &Array1<f64>) -> KwaversResult<Array2<f64>> {
-        if (x.shape()[0] * x.shape()[1] * x.shape()[2]) != (t.shape()[0] * t.shape()[1] * t.shape()[2]) {
+        if (x.len()) != (t.len()) {
             return Err(KwaversError::InvalidInput(
                 "x and t must have same length".into(),
             ));
         }
 
-        let n = (x.shape()[0] * x.shape()[1] * x.shape()[2]);
+        let n = (x.len());
         let x_vec: Vec<f32> = x.iter().map(|&v| v as f32).collect();
         let t_vec: Vec<f32> = t.iter().map(|&v| v as f32).collect();
 

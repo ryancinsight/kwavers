@@ -129,7 +129,7 @@ fn velocity_only_spec_records_after_pressure_step_without_pressure_buffer() {
     recorder.record_velocity_step(&ux, &uy, &uz).unwrap();
 
     let ux_data = recorder.extract_ux_data().unwrap();
-    assert_eq!(ux_data.shape(), &[1, 1]);
+    assert_eq!(ux_data.shape(), [1, 1]);
     // Sensor is at (1,0,0) → ux[1,0,0] = 3.0
     assert_eq!(ux_data[[0, 0]], 3.0);
     assert_eq!(recorder.extract_uy_data(), None);
@@ -153,7 +153,7 @@ fn velocity_views_expose_recorded_prefix_without_clone() {
 
     // Full buffer view: (1 sensor, 2 expected_steps) — col 0 populated, col 1 zero.
     let full = recorder.ux_data_view().unwrap();
-    assert_eq!(full.shape(), (1, 2));
+    assert_eq!(full.shape(), [1, 2]);
     assert_eq!(full[[0, 0]], 9.0);
     assert_eq!(full[[0, 1]], 0.0);
 
@@ -163,7 +163,7 @@ fn velocity_views_expose_recorded_prefix_without_clone() {
 
     // Recorded-prefix view: only the populated column.
     let recorded = recorder.recorded_ux_view().unwrap();
-    assert_eq!(recorded.shape(), (1, 1));
+    assert_eq!(recorded.shape(), [1, 1]);
     assert_eq!(recorded[[0, 0]], 9.0);
 }
 
@@ -185,11 +185,11 @@ fn intensity_records_pressure_velocity_product_and_time_average() {
             .extract_pressure_data()
             .as_ref()
             .map(|data| data.shape()),
-        Some((1, 2))
+        Some([1, 2])
     );
     assert_eq!(
         recorder.extract_ix_data().as_ref().map(|data| data.shape()),
-        Some((1, 2))
+        Some([1, 2])
     );
     assert_eq!(recorder.extract_ux_data(), None);
 
@@ -239,13 +239,13 @@ fn intensity_average_does_not_allocate_velocity_or_intensity_time_series() {
             .extract_pressure_data()
             .as_ref()
             .map(|data| data.shape()),
-        Some((1, 1))
+        Some([1, 1])
     );
     assert_eq!(recorder.extract_ux_data(), None);
     assert_eq!(recorder.extract_ix_data(), None);
     assert_eq!(
         recorder.extract_i_avg_x(),
-        Some(Array1::from_vec(vec![0.0]))
+        Some(Array1::from_vec(1, vec![0.0]).unwrap())
     );
 
     let mut pressure = Array3::zeros([3, 1, 1]);

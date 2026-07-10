@@ -41,7 +41,7 @@ fn test_windowing_preserves_dimensions() {
 fn test_rectangular_window_is_identity() {
     let array = create_test_array(8);
     let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
-    let delays = Array2::from_shape_fn((8, 100), |(i, j)| i as f64 + j as f64 * 0.1);
+    let delays = Array2::from_shape_fn((8, 100), |[i, j]| i as f64 + j as f64 * 0.1);
 
     let windowed = beamformer
         .apply_windowing(&delays, BeamformerWindowType::Rectangular)
@@ -98,9 +98,18 @@ fn test_windowing_applied_per_column() {
     let beamformer = SensorBeamformer::new(array, MHZ_TO_HZ);
 
     let mut delays = Array2::zeros((4, 3));
-    delays.column_mut(0).fill(1.0);
-    delays.column_mut(1).fill(2.0);
-    delays.column_mut(2).fill(3.0);
+    delays
+        .index_axis_mut::<1>(1, 0)
+        .expect("column 0 in bounds")
+        .fill(1.0);
+    delays
+        .index_axis_mut::<1>(1, 1)
+        .expect("column 1 in bounds")
+        .fill(2.0);
+    delays
+        .index_axis_mut::<1>(1, 2)
+        .expect("column 2 in bounds")
+        .fill(3.0);
 
     let windowed = beamformer
         .apply_windowing(&delays, BeamformerWindowType::Hamming)

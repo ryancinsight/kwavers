@@ -5,6 +5,7 @@
 
 use kwavers_receiver::recorder::config::RecordingMode;
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
+use leto::SliceArg;
 
 // ── Recording mode helpers ────────────────────────────────────────────────────
 
@@ -77,12 +78,30 @@ pub(crate) fn trim_initial_recorder_sample(
 ) -> leto::Array2<f64> {
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
-    if recorded_data.ncols() > time_steps {
+    if recorded_data.shape()[1] > time_steps {
         recorded_data
-            slice(&[(0, usize::MAX, 1), (Some(skip as isize) as usize, Some(time_steps as isize) as usize, 1)])
-            .to_owned()
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: Some(time_steps as isize),
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     } else {
-        recorded_data.slice_with::<2>(&[SliceArg::All, SliceArg::Range { start: Some(skip as isize), end: None, step: 1 }]).to_owned()
+        recorded_data
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: None,
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     }
 }
 
@@ -94,12 +113,30 @@ pub(crate) fn trim_initial_recorder_view(
 ) -> leto::Array2<f64> {
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
-    if recorded_data.ncols() > time_steps {
+    if recorded_data.shape()[1] > time_steps {
         recorded_data
-            slice(&[(0, usize::MAX, 1), (Some(skip as isize) as usize, Some(time_steps as isize) as usize, 1)])
-            .to_owned()
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: Some(time_steps as isize),
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     } else {
-        recorded_data.slice_with::<2>(&[SliceArg::All, SliceArg::Range { start: Some(skip as isize), end: None, step: 1 }]).to_owned()
+        recorded_data
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: None,
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     }
 }
 

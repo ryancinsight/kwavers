@@ -64,7 +64,7 @@ pub struct MultiRegionDomain {
 impl std::fmt::Debug for MultiRegionDomain {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("MultiRegionDomain")
-            .field("regions", &format!("{} regions", (self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2])))
+            .field("regions", &format!("{} regions", (self.regions.len())))
             .field("material_ids", &self.material_ids)
             .field("interfaces", &self.interfaces)
             .finish()
@@ -83,13 +83,13 @@ impl MultiRegionDomain {
         interfaces: Vec<PinnGeometryInterfaceCondition>,
     ) -> Self {
         assert_eq!(
-            (regions.shape()[0] * regions.shape()[1] * regions.shape()[2]),
-            (material_ids.shape()[0] * material_ids.shape()[1] * material_ids.shape()[2]),
+            (regions.len()),
+            (material_ids.len()),
             "Each region must have a material ID"
         );
         assert_eq!(
-            (interfaces.shape()[0] * interfaces.shape()[1] * interfaces.shape()[2]),
-            (regions.shape()[0] * regions.shape()[1] * regions.shape()[2]) - 1,
+            (interfaces.len()),
+            (regions.len()) - 1,
             "Need N-1 interfaces for N regions"
         );
         Self {
@@ -120,7 +120,7 @@ impl MultiRegionDomain {
     ) -> Array2<f64> {
         let mut all_points = Vec::new();
 
-        for i in 0..(self.regions.shape()[0] * self.regions.shape()[1] * self.regions.shape()[2]) - 1 {
+        for i in 0..(self.regions.len()) - 1 {
             let boundary_i = self.regions[i].sample_boundary(n_points_per_interface * 2, seed);
             let tolerance = 1e-8;
 
@@ -136,14 +136,14 @@ impl MultiRegionDomain {
                     == PointLocation::Boundary
                 {
                     all_points.push(point_slice);
-                    if (all_points.shape()[0] * all_points.shape()[1] * all_points.shape()[2]) >= n_points_per_interface {
+                    if (all_points.len()) >= n_points_per_interface {
                         break;
                     }
                 }
             }
         }
 
-        let n_found = (all_points.shape()[0] * all_points.shape()[1] * all_points.shape()[2]);
+        let n_found = all_points.len() ;
         let dim = if n_found > 0 { all_points[0].len() } else { 2 };
         let mut result = Array2::zeros([n_found, dim]);
         for (i, point) in all_points.iter().enumerate() {

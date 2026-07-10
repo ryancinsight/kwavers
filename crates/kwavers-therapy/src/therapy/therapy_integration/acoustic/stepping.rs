@@ -10,8 +10,11 @@ impl AcousticWaveSolver {
         self.backend.step()?;
 
         let p = self.backend.get_pressure_field();
-        self.accumulated_p_squared
-            .zip_mut_with(p, |acc, &val| *acc += val * val);
+        leto_ops::zip_mut_with(
+            &mut self.accumulated_p_squared.view_mut(),
+            &p.view(),
+            |acc, val| *acc += val * val,
+        )?;
 
         Ok(())
     }

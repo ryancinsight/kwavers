@@ -161,7 +161,7 @@ mod harmonic_detection_tests {
     fn test_harmonic_displacement_field() {
         let mut field = HarmonicDisplacementField::new(10, 10, 10, 3, 100);
 
-        assert_eq!(field.fundamental_magnitude.dim(), (10, 10, 10));
+        assert_eq!(field.fundamental_magnitude.shape(), [10, 10, 10]);
         assert_eq!(field.harmonic_magnitudes.len(), 3);
         assert_eq!(field.time.len(), 100);
 
@@ -170,7 +170,7 @@ mod harmonic_detection_tests {
         field.harmonic_magnitudes[0].fill(0.1); // Second harmonic
 
         let ratio = field.harmonic_ratio(2);
-        assert_eq!(ratio.dim(), (10, 10, 10));
+        assert_eq!(ratio.shape(), [10, 10, 10]);
 
         for &val in ratio.iter() {
             assert!((val - 0.1).abs() < 1e-10);
@@ -552,7 +552,7 @@ mod convergence_tests {
 
             // Add noise
             let mut noisy_series = time_series.clone();
-            for ((i, j, k, t), value) in noisy_series.indexed_iter_mut() {
+            for ([i, j, k, t], value) in noisy_series.indexed_iter_mut().expect("indexed_iter_mut") {
                 let phase =
                     (i as f64) * 0.37 + (j as f64) * 0.61 + (k as f64) * 0.89 + (t as f64) * 0.13;
                 let noise = noise_level * (2.0 * PI * phase).sin();

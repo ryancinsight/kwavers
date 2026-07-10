@@ -8,7 +8,7 @@ use leto::Array3;
 
 use super::types::{ConservationError, ConservationHistory, ConservedQuantities};
 
-fn for_each_cell((nx, ny, nz): (usize, usize, usize), mut f: impl FnMut(usize, usize, usize)) {
+fn for_each_cell([nx, ny, nz]: [usize; 3], mut f: impl FnMut(usize, usize, usize)) {
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
@@ -170,10 +170,10 @@ impl ConservationMonitor {
             let x = i as f64 * self.grid.dx;
             let y = j as f64 * self.grid.dy;
             let z = k as f64 * self.grid.dz;
-            let p = pressure[(i, j, k)];
-            let vx = velocity_x[(i, j, k)];
-            let vy = velocity_y[(i, j, k)];
-            let vz = velocity_z[(i, j, k)];
+            let p = pressure[[i, j, k]];
+            let vx = velocity_x[[i, j, k]];
+            let vy = velocity_y[[i, j, k]];
+            let vz = velocity_z[[i, j, k]];
 
             let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
             let gamma = medium.gamma(x, y, z, &self.grid);
@@ -241,10 +241,10 @@ impl ConservationMonitor {
                     let x = i as f64 * self.grid.dx;
                     let y = j as f64 * self.grid.dy;
                     let z = k as f64 * self.grid.dz;
-                    let p = pressure[(i, j, k)];
-                    let vx_val = vx[(i, j, k)];
-                    let vy_val = vy[(i, j, k)];
-                    let vz_val = vz[(i, j, k)];
+                    let p = pressure[[i, j, k]];
+                    let vx_val = vx[[i, j, k]];
+                    let vy_val = vy[[i, j, k]];
+                    let vz_val = vz[[i, j, k]];
 
                     let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
                     let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
@@ -266,7 +266,7 @@ impl ConservationMonitor {
                 let x = i as f64 * self.grid.dx;
                 let y = j as f64 * self.grid.dy;
                 let z = k as f64 * self.grid.dz;
-                let p = pressure[(i, j, k)];
+                let p = pressure[[i, j, k]];
 
                 let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
                 let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);

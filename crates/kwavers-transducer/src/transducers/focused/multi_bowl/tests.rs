@@ -43,7 +43,7 @@ fn zero_amplitude_bowl_generates_finite_zero_field() {
     let grid = kwavers_grid::Grid::new(2, 2, 2, 0.004, 0.005, 0.006).unwrap();
     let source = array.generate_source(&grid, 0.37e-6).unwrap();
 
-    for value in source {
+    for &value in source.iter() {
         assert!(value.is_finite());
         assert_eq!(value, 0.0);
     }

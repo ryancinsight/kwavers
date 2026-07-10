@@ -59,9 +59,9 @@ impl Filters {
         let mut filtered = Array2::zeros((n_samples, n_sensors));
 
         for sensor_idx in 0..n_sensors {
-            let sensor_signal = data.index_axis(1, sensor_idx).unwrap();
+            let sensor_signal = data.index_axis::<1>(1, sensor_idx).expect("invariant: sensor column index in range");
             let filtered_signal = self.bandpass_filter_1d(
-                sensor_signal.to_owned(),
+                sensor_signal.to_contiguous(),
                 bandpass[0],
                 bandpass[1],
                 sampling_frequency,
@@ -86,7 +86,7 @@ impl Filters {
         high_freq: f64,
         sampling_freq: f64,
     ) -> KwaversResult<Array1<f64>> {
-        let n = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
+        let n = signal.len();
         if n == 0 {
             return Ok(signal);
         }
@@ -116,7 +116,7 @@ impl Filters {
         let mut envelope = Array2::zeros((n_samples, n_sensors));
 
         for sensor_idx in 0..n_sensors {
-            let signal = data.index_axis(1, sensor_idx).unwrap();
+            let signal = data.index_axis::<1>(1, sensor_idx).expect("invariant: sensor column index in range");
             let analytic_signal = analytic::hilbert_transform(
                 &LetoArray1::from_vec([n_samples], signal.iter().copied().collect())
                     .expect("photoacoustic signal length must match its Leto shape"),
@@ -157,8 +157,8 @@ impl Filters {
         let [n_samples, _] = data.shape();
         let filter = self.create_ram_lak_filter(n_samples);
 
-        for mut col in data.columns_mut() {
-            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -173,8 +173,8 @@ impl Filters {
         let [n_samples, _] = data.shape();
         let filter = self.create_shepp_logan_filter(n_samples);
 
-        for mut col in data.columns_mut() {
-            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -189,8 +189,8 @@ impl Filters {
         let [n_samples, _] = data.shape();
         let filter = self.create_cosine_filter(n_samples);
 
-        for mut col in data.columns_mut() {
-            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -254,8 +254,8 @@ impl Filters {
         let [n_samples, _] = data.shape();
         let filter = self.create_hamming_filter(n_samples);
 
-        for mut col in data.columns_mut() {
-            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -273,8 +273,8 @@ impl Filters {
         let [n_samples, _] = data.shape();
         let filter = self.create_hann_filter(n_samples);
 
-        for mut col in data.columns_mut() {
-            let filtered = self.apply_filter_1d(col.to_owned(), &filter)?;
+        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+            let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
 
@@ -338,7 +338,7 @@ impl Filters {
         signal: Array1<f64>,
         filter: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n = (signal.shape()[0] * signal.shape()[1] * signal.shape()[2]);
+        let n = signal.len();
         let leto_signal = LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
             .expect("photoacoustic filter signal length must match its Leto shape");
         let mut complex_signal = fft_1d_leto(leto_signal.view());
@@ -351,9 +351,9 @@ impl Filters {
             *val *= filter[i];
         }
 
-        Ok(Array1::from_vec(
-            ifft_1d_leto(complex_signal.view()).into_vec(),
-        ))
+        let reconstructed = ifft_1d_leto(complex_signal.view()).into_vec();
+        Ok(Array1::from_vec(reconstructed.len(), reconstructed)
+            .expect("invariant: reconstructed signal length well-formed"))
     }
 
     /// Apply reconstruction filter for regularization and denoising

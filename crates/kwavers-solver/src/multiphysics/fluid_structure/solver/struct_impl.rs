@@ -1,8 +1,4 @@
-use moirai_parallel::ParallelSliceMut;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -122,28 +118,18 @@ impl FluidStructureSolver {
             if iteration > 0 {
                 let omega = self.relaxation;
                 {
-                    assert!(
-                        self.p_fluid_ghost,
-                        "p_fluid_ghost must be standard-layout (C-contiguous) for flat-slice migration; \
-                         if this fires, the array was constructed from a non-contiguous source \
-                         (e.g. transposed view / slice_axis / slice_move) and the migration's \
-                         `as_slice_mut().expect()` panic would have fired one line later. \
-                         The explicit assert converts 'panic at migration site' to 'panic at first \
-                         non-contiguous use' for more discoverable failure."
-                    );
-                    let new_slice = self.p_fluid_ghost.as_slice_mut()
+                    let new_slice = self
+                        .p_fluid_ghost
+                        .as_slice_mut()
                         .expect("p_fluid_ghost is contiguous (default Array3 layout)");
-                    assert!(
-                        self.p_fluid_ghost_prev,
-                        "p_fluid_ghost_prev must be standard-layout (C-contiguous) for flat-slice migration; \
-                         see the p_fluid_ghost assert above for rationale."
-                    );
-                    let prev_slice = self.p_fluid_ghost_prev.as_slice()
+                    let prev_slice = self
+                        .p_fluid_ghost_prev
+                        .as_slice()
                         .expect("p_fluid_ghost_prev is contiguous (default Array3 layout)");
-                    new_slice.iter_mut().enumerate(|idx, new_val: &mut f64| {
+                    for (idx, new_val) in new_slice.iter_mut().enumerate() {
                         let prev = prev_slice[idx];
                         *new_val = omega * *new_val + (1.0 - omega) * prev;
-                    });
+                    }
                 }
                 for (tsg, tgp) in self
                     .t_solid_ghost
@@ -152,27 +138,16 @@ impl FluidStructureSolver {
                     .take(3)
                 {
                     {
-                        assert!(
-                            tsg,
-                            "t_solid_ghost component (1D sub-view of Array3) must be standard-layout; \
-                             1D views are trivially standard-layout so this assert is a documentation \
-                             invariant (it cannot fire for a 1D ArrayViewMut<f64, Ix1>). The assert is \
-                             included for symmetry with the 3D `p_fluid_ghost` assert above and to make \
-                             the migration's layout assumption explicit at the call site."
-                        );
-                        let new_slice = tsg.as_slice_mut()
+                        let new_slice = tsg
+                            .as_slice_mut()
                             .expect("t_solid_ghost component is contiguous (1D view)");
-                        assert!(
-                            tgp,
-                            "t_solid_ghost_prev component (1D sub-view of Array3) must be standard-layout; \
-                             see the tsg assert above for rationale."
-                        );
-                        let prev_slice = tgp.as_slice()
+                        let prev_slice = tgp
+                            .as_slice()
                             .expect("t_solid_ghost_prev component is contiguous (1D view)");
-                        new_slice.iter_mut().enumerate(|idx, new_val: &mut f64| {
+                        for (idx, new_val) in new_slice.iter_mut().enumerate() {
                             let prev = prev_slice[idx];
                             *new_val = omega * *new_val + (1.0 - omega) * prev;
-                        });
+                        }
                     }
                 }
             }
@@ -214,17 +189,17 @@ impl FluidStructureSolver {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    if !self.interface.interface_mask[(i, j, k)] {
+                    if !self.interface.interface_mask[[i, j, k]] {
                         continue;
                     }
 
-                    let p = fluid_pressure[(i, j, k)];
-                    let sxx = solid_stress[0][(i, j, k)];
-                    let syy = solid_stress[1][(i, j, k)];
-                    let szz = solid_stress[2][(i, j, k)];
-                    let sxy = solid_stress[3][(i, j, k)];
-                    let sxz = solid_stress[4][(i, j, k)];
-                    let syz = solid_stress[5][(i, j, k)];
+                    let p = fluid_pressure[[i, j, k]];
+                    let sxx = solid_stress[0][[i, j, k]];
+                    let syy = solid_stress[1][[i, j, k]];
+                    let szz = solid_stress[2][[i, j, k]];
+                    let sxy = solid_stress[3][[i, j, k]];
+                    let sxz = solid_stress[4][[i, j, k]];
+                    let syz = solid_stress[5][[i, j, k]];
 
                     let sigma_nn = n0 * n0 * sxx
                         + n1 * n1 * syy
@@ -233,10 +208,10 @@ impl FluidStructureSolver {
                         + 2.0 * n0 * n2 * sxz
                         + 2.0 * n1 * n2 * syz;
 
-                    self.p_fluid_ghost[(i, j, k)] = sigma_nn;
-                    self.t_solid_ghost[0][(i, j, k)] = -p * n0;
-                    self.t_solid_ghost[1][(i, j, k)] = -p * n1;
-                    self.t_solid_ghost[2][(i, j, k)] = -p * n2;
+                    self.p_fluid_ghost[[i, j, k]] = sigma_nn;
+                    self.t_solid_ghost[0][[i, j, k]] = -p * n0;
+                    self.t_solid_ghost[1][[i, j, k]] = -p * n1;
+                    self.t_solid_ghost[2][[i, j, k]] = -p * n2;
                 }
             }
         }
@@ -248,7 +223,7 @@ impl FluidStructureSolver {
                 for i in 0..nx {
                     for j in 0..ny {
                         for k in 0..nz {
-                            if !self.interface.interface_mask[(i, j, k)] {
+                            if !self.interface.interface_mask[[i, j, k]] {
                                 continue;
                             }
 
@@ -263,7 +238,7 @@ impl FluidStructureSolver {
                                 continue;
                             }
 
-                            let phi_interface = self.p_fluid_ghost[(i, j, k)];
+                            let phi_interface = self.p_fluid_ghost[[i, j, k]];
                             let phi_interior =
                                 if ii >= 0 && ii < sx && ji >= 0 && ji < sy && ki >= 0 && ki < sz {
                                     fluid_pressure[[ii as usize, ji as usize, ki as usize]]
@@ -274,7 +249,7 @@ impl FluidStructureSolver {
                                 2.0 * phi_interface - phi_interior;
 
                             for traction_component in self.t_solid_ghost.iter_mut().take(3) {
-                                let t_iface = traction_component[(i, j, k)];
+                                let t_iface = traction_component[[i, j, k]];
                                 traction_component[[ig as usize, jg as usize, kg as usize]] =
                                     t_iface;
                             }
@@ -299,26 +274,32 @@ impl FluidStructureSolver {
         let [nx, ny, nz] = self.interface.normal;
         let mut traction = Array1::zeros(3);
 
-        leto_ops::zip_indexed(self.interface.interface_mask)
-            .and(fluid_pressure.view())
-            .for_each(|(i, j, k), mask, &p| {
-                if *mask {
-                    let s_xx = solid_stress[0][[i, j, k]];
-                    let s_yy = solid_stress[1][[i, j, k]];
-                    let s_zz = solid_stress[2][[i, j, k]];
-                    let s_xy = solid_stress[3][[i, j, k]];
-                    let s_xz = solid_stress[4][[i, j, k]];
-                    let s_yz = solid_stress[5][[i, j, k]];
+        // Interface traction reduction: native indexed loop over the mask grid
+        // (leto_ops has no indexed-zip; the `(i,j,k)` index addresses solid_stress).
+        let [gi, gj, gk] = self.interface.interface_mask.shape();
+        for i in 0..gi {
+            for j in 0..gj {
+                for k in 0..gk {
+                    if self.interface.interface_mask[[i, j, k]] {
+                        let p = fluid_pressure[[i, j, k]];
+                        let s_xx = solid_stress[0][[i, j, k]];
+                        let s_yy = solid_stress[1][[i, j, k]];
+                        let s_zz = solid_stress[2][[i, j, k]];
+                        let s_xy = solid_stress[3][[i, j, k]];
+                        let s_xz = solid_stress[4][[i, j, k]];
+                        let s_yz = solid_stress[5][[i, j, k]];
 
-                    let t_x = -p * nx + s_xx * nx + s_xy * ny + s_xz * nz;
-                    let t_y = -p * ny + s_xy * nx + s_yy * ny + s_yz * nz;
-                    let t_z = -p * nz + s_xz * nx + s_yz * ny + s_zz * nz;
+                        let t_x = -p * nx + s_xx * nx + s_xy * ny + s_xz * nz;
+                        let t_y = -p * ny + s_xy * nx + s_yy * ny + s_yz * nz;
+                        let t_z = -p * nz + s_xz * nx + s_yz * ny + s_zz * nz;
 
-                    traction[0] += t_x;
-                    traction[1] += t_y;
-                    traction[2] += t_z;
+                        traction[0] += t_x;
+                        traction[1] += t_y;
+                        traction[2] += t_z;
+                    }
                 }
-            });
+            }
+        }
 
         Ok(traction)
     }
@@ -334,24 +315,24 @@ impl FluidStructureSolver {
     ) -> KwaversResult<bool> {
         let mut max_error = 0.0_f64;
 
-        [
-            self.interface.normal[0],
-            self.interface.normal[1],
-            self.interface.normal[2],
-        ]
-        .iter()
-        .enumerate()
-        .for_each(|(dim, &n)| {
-            leto_ops::zip_indexed(self.interface.interface_mask)
-                .and(fluid_velocity[dim].view())
-                .and(solid_velocity[dim].view())
-                .for_each(|(_i, _j, _k), mask, &v_f, &v_s| {
-                    if *mask {
-                        let error = (v_f * n - v_s * n).abs();
-                        max_error = max_error.max(error);
+        // Interface velocity-continuity check: native indexed loop over the mask
+        // grid per normal component (leto_ops has no indexed-zip primitive).
+        let normal = self.interface.normal;
+        let [gi, gj, gk] = self.interface.interface_mask.shape();
+        for (dim, &n) in normal.iter().enumerate() {
+            for i in 0..gi {
+                for j in 0..gj {
+                    for k in 0..gk {
+                        if self.interface.interface_mask[[i, j, k]] {
+                            let v_f = fluid_velocity[dim][[i, j, k]];
+                            let v_s = solid_velocity[dim][[i, j, k]];
+                            let error = (v_f * n - v_s * n).abs();
+                            max_error = max_error.max(error);
+                        }
                     }
-                });
-        });
+                }
+            }
+        }
 
         Ok(max_error < self.tolerance)
     }

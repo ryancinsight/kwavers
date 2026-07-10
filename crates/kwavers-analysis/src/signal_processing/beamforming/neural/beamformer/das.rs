@@ -19,7 +19,7 @@ impl NeuralBeamformer {
         rf_data: &Array4<f32>,
         steering_angles: &[f64],
     ) -> KwaversResult<Array3<f32>> {
-        let (frames, channels, samples, _) = rf_data.dim();
+        let [frames, channels, samples, _] = rf_data.shape();
         let num_angles = steering_angles.len();
 
         let mut image = Array3::<f32>::zeros((frames, num_angles, samples));
@@ -80,7 +80,7 @@ impl NeuralBeamformer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn assess_signal_quality(&self, rf_data: &Array4<f32>) -> KwaversResult<f64> {
-        let (frames, channels, samples, _) = rf_data.dim();
+        let [frames, channels, samples, _] = rf_data.shape();
 
         if channels == 0 || samples == 0 {
             return Ok(0.0);

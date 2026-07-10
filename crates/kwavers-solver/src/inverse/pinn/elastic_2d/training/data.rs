@@ -102,7 +102,7 @@ impl ElasticPinnTrainingMetrics {
         if self.epoch_times.is_empty() {
             0.0
         } else {
-            self.epoch_times.iter().sum::<f64>() / (self.epoch_times.shape()[0] * self.epoch_times.shape()[1] * self.epoch_times.shape()[2]) as f64
+            self.epoch_times.iter().sum::<f64>() / (self.epoch_times.len()) as f64
         }
     }
 
@@ -112,11 +112,11 @@ impl ElasticPinnTrainingMetrics {
     /// - Loss change < tolerance for N consecutive epochs
     /// - Absolute loss < absolute tolerance
     pub fn has_converged(&self, tolerance: f64, window: usize) -> bool {
-        if (self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) < window {
+        if (self.total_loss.len()) < window {
             return false;
         }
 
-        let recent = &self.total_loss[(self.total_loss.shape()[0] * self.total_loss.shape()[1] * self.total_loss.shape()[2]) - window..];
+        let recent = &self.total_loss[(self.total_loss.len()) - window..];
         let max = recent.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let min = recent.iter().copied().fold(f64::INFINITY, f64::min);
 

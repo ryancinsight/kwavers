@@ -40,8 +40,8 @@ fn test_prediction_statistics() {
         .compute_prediction_statistics(&predictions)
         .unwrap();
 
-    assert_eq!(result.mean_prediction.dim(), (10, 20));
-    assert_eq!(result.uncertainty.dim(), (10, 20));
+    assert_eq!(result.mean_prediction.shape(), [10, 20]);
+    assert_eq!(result.uncertainty.shape(), [10, 20]);
 
     let mean_err = (result.mean_prediction[[0, 0]] - 2.0_f32).abs();
     assert!(
@@ -108,9 +108,9 @@ fn test_uncertainty_decomposition() {
 
     let result = bayesian.decompose_uncertainty(&predictions).unwrap();
 
-    assert_eq!(result.total_uncertainty.dim(), (5, 5));
-    assert_eq!(result.epistemic_uncertainty.dim(), (5, 5));
-    assert_eq!(result.aleatoric_uncertainty.dim(), (5, 5));
+    assert_eq!(result.total_uncertainty.shape(), [5, 5]);
+    assert_eq!(result.epistemic_uncertainty.shape(), [5, 5]);
+    assert_eq!(result.aleatoric_uncertainty.shape(), [5, 5]);
 
     let expected_std = 0.1_f32;
     let total_err = (result.total_uncertainty[[0, 0]] - expected_std).abs();

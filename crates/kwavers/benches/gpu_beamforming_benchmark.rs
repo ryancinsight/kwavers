@@ -183,17 +183,17 @@ fn beamform_cpu(
     speed_of_sound: f32,
     sample_rate: f32,
 ) -> Array1<f32> {
-    let num_channels = rf_data.nrows();
-    let num_samples = rf_data.ncols();
-    let num_focal_points = focal_grid.nrows();
+    let num_channels = rf_data.shape()[0];
+    let num_samples = rf_data.shape()[1];
+    let num_focal_points = focal_grid.shape()[0];
     let mut output = Array1::<f32>::zeros(num_focal_points);
 
     for fp_idx in 0..num_focal_points {
-        let focal_point = focal_grid.row(fp_idx);
+        let focal_point = focal_grid.index_axis::<1>(0, fp_idx).expect("index_axis");
         let mut sum = 0.0;
 
         for ch in 0..num_channels {
-            let elem_pos = element_positions.row(ch);
+            let elem_pos = element_positions.index_axis::<1>(0, ch).expect("index_axis");
             let dx = focal_point[0] - elem_pos[0];
             let dy = focal_point[1] - elem_pos[1];
             let dz = focal_point[2] - elem_pos[2];
@@ -378,9 +378,9 @@ fn bench_distance_computation(c: &mut Criterion) {
                 Array2::<f32>::zeros((config.num_focal_points() as usize, config.num_channels));
 
             for fp_idx in 0..config.num_focal_points() as usize {
-                let focal_point = focal_grid.row(fp_idx);
+                let focal_point = focal_grid.index_axis::<1>(0, fp_idx).expect("index_axis");
                 for ch in 0..config.num_channels {
-                    let elem_pos = element_positions.row(ch);
+                    let elem_pos = element_positions.index_axis::<1>(0, ch).expect("index_axis");
                     let dx = focal_point[0] - elem_pos[0];
                     let dy = focal_point[1] - elem_pos[1];
                     let dz = focal_point[2] - elem_pos[2];

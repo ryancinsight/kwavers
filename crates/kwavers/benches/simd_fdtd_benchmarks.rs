@@ -45,7 +45,7 @@ fn scalar_pressure_update(
     sound_speed: &Array3<f64>,
     dt: f64,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
 
     for i in 0..nx {
         for j in 0..ny {

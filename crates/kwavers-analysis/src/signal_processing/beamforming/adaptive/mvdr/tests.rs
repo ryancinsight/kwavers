@@ -20,7 +20,7 @@ fn mvdr_computes_finite_weights() {
         .expect("weights should compute");
 
     assert_eq!(weights.len(), n);
-    for &w in &weights {
+    for &w in weights.iter() {
         assert!(
             w.re.is_finite() && w.im.is_finite(),
             "weight should be finite"

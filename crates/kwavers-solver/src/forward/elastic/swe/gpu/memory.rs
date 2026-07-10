@@ -44,7 +44,7 @@ impl GPUMemoryPool {
             });
         }
 
-        let block_id = (self.available_blocks.shape()[0] * self.available_blocks.shape()[1] * self.available_blocks.shape()[2]);
+        let block_id = self.available_blocks.len();
         self.available_blocks.push(GPUMemoryBlock {
             size: aligned_size,
             id: block_id,
@@ -67,7 +67,7 @@ impl GPUMemoryPool {
     /// Get memory usage statistics
     #[must_use]
     pub fn memory_stats(&self) -> SweGpuMemoryStats {
-        let total_blocks = (self.available_blocks.shape()[0] * self.available_blocks.shape()[1] * self.available_blocks.shape()[2]);
+        let total_blocks = self.available_blocks.len();
         let average_block_size = self.total_allocated.checked_div(total_blocks).unwrap_or(0);
 
         SweGpuMemoryStats {

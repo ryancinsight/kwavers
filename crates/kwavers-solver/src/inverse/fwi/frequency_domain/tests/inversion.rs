@@ -16,7 +16,7 @@ fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
 
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
-    assert!((result.objective_history.shape()[0] * result.objective_history.shape()[1] * result.objective_history.shape()[2]) >= 2);
+    assert!((result.objective_history.len()) >= 2);
     assert!(
         result.objective_history.last().copied().unwrap() < result.objective_history[0],
         "objective history={:?}",
@@ -169,7 +169,7 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
     assert!(
-        (result.objective_history.shape()[0] * result.objective_history.shape()[1] * result.objective_history.shape()[2]) >= 2,
+        (result.objective_history.len()) >= 2,
         "must record at least two objectives"
     );
     assert!(
@@ -247,7 +247,7 @@ fn ali2025_table1_parity_gate() {
 
     let truth_flat: Vec<f64> = truth.iter().copied().collect();
     let recon_flat: Vec<f64> = result.sound_speed_m_s.iter().copied().collect();
-    let n = (truth_flat.shape()[0] * truth_flat.shape()[1] * truth_flat.shape()[2]) as f64;
+    let n = (truth_flat.len()) as f64;
     let rmse = (truth_flat
         .iter()
         .zip(recon_flat.iter())

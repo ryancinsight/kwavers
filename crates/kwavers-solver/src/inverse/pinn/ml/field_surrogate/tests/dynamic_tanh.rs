@@ -7,7 +7,7 @@ use super::B;
 
 fn var_col(backend: &B, values: &[f32], cols: usize) -> Var<f32, B> {
     Var::new(
-        coeus_tensor::Tensor::from_slice_on(vec![(values.shape()[0] * values.shape()[1] * values.shape()[2]) / cols, cols], values, backend),
+        coeus_tensor::Tensor::from_slice_on(vec![(values.len()) / cols, cols], values, backend),
         false,
     )
 }

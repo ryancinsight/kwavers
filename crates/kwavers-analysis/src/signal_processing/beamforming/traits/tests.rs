@@ -25,7 +25,7 @@ impl Beamformer for MockBeamformer {
                 "Focal point contains non-finite values".into(),
             ));
         }
-        Ok(data.sum())
+        Ok(data.iter().sum::<f64>())
     }
 
     fn expected_sensor_count(&self) -> usize {

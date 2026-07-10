@@ -96,7 +96,7 @@ fn brain_slice_resampled_index_target_controls_focus_mask() {
     let mut sx = 0.0;
     let mut sy = 0.0;
     let mut count = 0.0;
-    for ((ix, iy), active) in prepared.target_mask.indexed_iter() {
+    for ([ix, iy], active) in prepared.target_mask.indexed_iter() {
         if *active {
             sx += ix as f64;
             sy += iy as f64;

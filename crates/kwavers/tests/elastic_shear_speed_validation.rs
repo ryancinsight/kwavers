@@ -62,7 +62,7 @@ fn test_homogeneous_medium_shear_speed() {
     let cs_array = medium.shear_sound_speed_array();
 
     // Verify array shape
-    assert_eq!(cs_array.dim(), (10, 10, 10));
+    assert_eq!(cs_array.shape(), [10, 10, 10]);
 
     // Verify all values are consistent (homogeneous)
     let first_val = cs_array[[0, 0, 0]];
@@ -144,7 +144,7 @@ fn test_tissue_medium_shear_speed_computation() {
     let cs_array = medium.shear_sound_speed_array();
 
     // Verify array shape
-    assert_eq!(cs_array.dim(), (20, 20, 20));
+    assert_eq!(cs_array.shape(), [20, 20, 20]);
 
     // Verify all values are reasonable
     for cs_val in cs_array.iter() {
@@ -175,7 +175,7 @@ fn test_tissue_medium_different_tissue_types() {
         let cs_array = medium.shear_sound_speed_array();
 
         // Verify array is filled
-        assert_eq!(cs_array.dim(), (10, 10, 10));
+        assert_eq!(cs_array.shape(), [10, 10, 10]);
 
         // Verify homogeneous (all same tissue)
         let first_val = cs_array[[0, 0, 0]];
@@ -253,13 +253,13 @@ fn test_array_dimensions_consistency() {
         let cs_array = medium.shear_sound_speed_array();
 
         assert_eq!(
-            cs_array.dim(),
-            (nx, ny, nz),
+            cs_array.shape(),
+            [nx, ny, nz],
             "Array dimensions mismatch: expected ({}, {}, {}), got {:?}",
             nx,
             ny,
             nz,
-            cs_array.dim()
+            cs_array.shape()
         );
     }
 }

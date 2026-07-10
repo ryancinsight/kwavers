@@ -169,7 +169,7 @@ impl HybridSpectralDGSolver {
         c: f64,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let shape = (self.grid.nx, self.grid.ny, self.grid.nz);
+        let shape = [self.grid.nx, self.grid.ny, self.grid.nz];
         if field.shape() != shape || output.shape() != shape {
             return Err(KwaversError::InvalidInput(format!(
                 "HybridSpectralDGSolver dimension mismatch: field={:?}, output={:?}, grid={shape:?}",
@@ -277,7 +277,7 @@ mod tests {
                 conservation_tolerance: 1.0e-12,
             };
             let mut solver = HybridSpectralDGSolver::new(config, Arc::clone(&grid));
-            let field = Array3::from_shape_fn(dims, |(i, j, k)| {
+            let field = Array3::from_shape_fn(dims, |[i, j, k]| {
                 (i as f64 + 0.5 * j as f64 + 0.25 * k as f64).sin()
             });
             let mut output = Array3::zeros(dims);

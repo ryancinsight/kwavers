@@ -193,7 +193,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .iter()
         .cloned()
         .fold(f64::NEG_INFINITY, f64::max);
-    let mean_alpha = absorption_field_3p5mhz.mean().unwrap();
+    let mean_alpha =
+        absorption_field_3p5mhz.iter().sum::<f64>() / absorption_field_3p5mhz.len() as f64;
 
     println!("   Frequency: 3.5 MHz");
     println!("   Field size: 100×100×100");

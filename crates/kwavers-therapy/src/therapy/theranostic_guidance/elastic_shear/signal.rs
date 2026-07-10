@@ -12,14 +12,14 @@ const TONE_BURST_CYCLES: f64 = 2.0;
 
 pub(super) fn velocity_source(
     source_mask_2d: &Array2<bool>,
-    shape_2d: (usize, usize),
+    shape_2d: [usize; 2],
     time_steps: usize,
     dt_s: f64,
     frequency_hz: f64,
     shear_speed_m_s: f64,
 ) -> ElasticPstdVelocitySource {
-    let mut mask = Array3::<bool>::from_elem((shape_2d.0, shape_2d.1, 1), false);
-    for ((ix, iy), active) in source_mask_2d.indexed_iter() {
+    let mut mask = Array3::<bool>::from_elem((shape_2d[0], shape_2d[1], 1), false);
+    for ([ix, iy], active) in source_mask_2d.indexed_iter() {
         mask[[ix, iy, 0]] = *active;
     }
     let duration_s = TONE_BURST_CYCLES / frequency_hz;

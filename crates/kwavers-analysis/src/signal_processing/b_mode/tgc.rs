@@ -56,7 +56,7 @@ impl TgcConfig {
     /// Per-sample linear gain curve for `n` axial samples.
     #[must_use]
     pub fn gain_curve(&self, n: usize) -> Array1<f64> {
-        Array1::from_shape_fn(n, |i| self.gain(i))
+        Array1::from_shape_fn(n, |[i]| self.gain(i))
     }
 
     /// Apply TGC to an axial RF/envelope line.

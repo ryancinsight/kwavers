@@ -23,7 +23,7 @@ fn scattering_increment_public_api_identifies_exact_model() {
     )
     .expect("shape");
     let scale = Complex64::new(2.0, -0.5);
-    let observed = baseline.mapv(|value| scale * value) + &increment;
+    let observed = &baseline.mapv(|value| scale * value) + &increment;
     let exact = &baseline + &increment.mapv(|value| value / scale);
     let half = &baseline + &increment.mapv(|value| value / (2.0 * scale));
     let predictions = [

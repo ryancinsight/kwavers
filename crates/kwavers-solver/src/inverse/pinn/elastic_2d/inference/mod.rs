@@ -130,7 +130,7 @@ where
             ));
         }
 
-        let n = (points.shape()[0] * points.shape()[1] * points.shape()[2]);
+        let n = (points.len());
         let backend = B::default();
 
         let x_data: Vec<f32> = points.iter().map(|(x, _, _)| *x as f32).collect();
@@ -174,8 +174,8 @@ where
         y_grid: &Array1<f64>,
         t: f64,
     ) -> KwaversResult<Array3<f64>> {
-        let nx = (x_grid.shape()[0] * x_grid.shape()[1] * x_grid.shape()[2]);
-        let ny = (y_grid.shape()[0] * y_grid.shape()[1] * y_grid.shape()[2]);
+        let nx = (x_grid.len());
+        let ny = (y_grid.len());
 
         // Create meshgrid
         let mut points = Vec::with_capacity(nx * ny);

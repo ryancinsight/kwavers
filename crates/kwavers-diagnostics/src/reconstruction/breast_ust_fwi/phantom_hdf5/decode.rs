@@ -95,13 +95,13 @@ pub(super) fn volume_from_storage_order(
         }
         BreastUstPhantomStorageOrder::FortranContiguous => Ok(Array3::from_shape_fn(
             (dims[0], dims[1], dims[2]),
-            |(i, j, k)| values[i + dims[0] * (j + dims[1] * k)],
+            |[i, j, k]| values[i + dims[0] * (j + dims[1] * k)],
         )),
     }
 }
 
 pub(super) fn validate_sound_speed_domain(sound_speed_m_s: &Array3<f64>) -> KwaversResult<()> {
-    for &speed in sound_speed_m_s {
+    for &speed in sound_speed_m_s.iter() {
         if !speed.is_finite() || speed <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "sound speed must be positive and finite, got {speed}"

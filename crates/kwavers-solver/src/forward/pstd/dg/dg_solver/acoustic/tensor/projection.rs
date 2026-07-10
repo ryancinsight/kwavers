@@ -27,7 +27,7 @@ impl DGSolver {
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
                 for k in 0..self.grid.nz {
-                    pressure[(i, j, k)] =
+                    pressure[[i, j, k]] =
                         interpolate_var(topology, state, &maps, [i, j, k], ACOUSTIC_PRESSURE_VAR);
                 }
             }
@@ -61,11 +61,11 @@ impl DGSolver {
             for j in 0..self.grid.ny {
                 for k in 0..self.grid.nz {
                     let index = [i, j, k];
-                    pressure[(i, j, k)] =
+                    pressure[[i, j, k]] =
                         interpolate_var(topology, state, &maps, index, ACOUSTIC_PRESSURE_VAR);
-                    ux[(i, j, k)] = interpolate_var(topology, state, &maps, index, 1);
-                    uy[(i, j, k)] = interpolate_var(topology, state, &maps, index, 2);
-                    uz[(i, j, k)] = interpolate_var(topology, state, &maps, index, 3);
+                    ux[[i, j, k]] = interpolate_var(topology, state, &maps, index, 1);
+                    uy[[i, j, k]] = interpolate_var(topology, state, &maps, index, 2);
+                    uz[[i, j, k]] = interpolate_var(topology, state, &maps, index, 3);
                 }
             }
         }
@@ -154,7 +154,7 @@ fn interpolate_var(
                 weight *= axis_maps[axis].basis[coords[axis]];
             }
         }
-        value += weight * state[(elem, node, var)];
+        value += weight * state[[elem, node, var]];
     }
     value
 }
@@ -162,9 +162,9 @@ fn interpolate_var(
 fn validate_grid_shape(
     solver: &DGSolver,
     name: &str,
-    dim: (usize, usize, usize),
+    dim: [usize; 3],
 ) -> KwaversResult<()> {
-    let expected = (solver.grid.nx, solver.grid.ny, solver.grid.nz);
+    let expected = [solver.grid.nx, solver.grid.ny, solver.grid.nz];
     if dim != expected {
         return Err(KwaversError::InvalidInput(format!(
             "DG acoustic {name} grid shape {dim:?} does not match {expected:?}"

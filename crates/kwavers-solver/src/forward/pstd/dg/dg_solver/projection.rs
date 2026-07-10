@@ -11,7 +11,7 @@ use leto::Array3;
 
 impl DGSolver {
     pub(super) fn ensure_rk_workspace(&mut self, dim: (usize, usize, usize)) {
-        if self.rk_original.shape() != dim {
+        if self.rk_original.shape() != [dim.0, dim.1, dim.2] {
             self.rk_original = Array3::zeros(dim);
             self.rk_stage = Array3::zeros(dim);
             self.rk_rhs = Array3::zeros(dim);
@@ -23,7 +23,7 @@ impl DGSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn project_to_dg(&mut self, field: &Array3<f64>) -> KwaversResult<()> {
-        if field.shape() != (self.grid.nx, self.grid.ny, self.grid.nz) {
+        if field.shape() != [self.grid.nx, self.grid.ny, self.grid.nz] {
             return Err(KwaversError::InvalidInput(format!(
                 "project_to_dg field shape {:?} does not match grid ({}, {}, {})",
                 field.shape(),
@@ -38,7 +38,7 @@ impl DGSolver {
         if self
             .modal_coefficients
             .as_ref()
-            .is_none_or(|coeffs| coeffs.shape() != dim)
+            .is_none_or(|coeffs| coeffs.shape() != [dim.0, dim.1, dim.2])
         {
             self.modal_coefficients = Some(Array3::zeros(dim));
         }
@@ -50,7 +50,7 @@ impl DGSolver {
         for elem in 0..topology.n_elements {
             for node in 0..topology.nodes_per_element {
                 let [i, j, k] = topology.grid_index(elem, node);
-                coeffs[(elem, node, 0)] = field[(i, j, k)];
+                coeffs[[elem, node, 0]] = field[[i, j, k]];
             }
         }
 
@@ -70,7 +70,7 @@ impl DGSolver {
 
         match self.coefficient_layout {
             CoefficientLayout::TensorProduct(topology) => {
-                if coeffs.shape() != (topology.n_elements, topology.nodes_per_element, 1) {
+                if coeffs.shape() != [topology.n_elements, topology.nodes_per_element, 1] {
                     return Err(KwaversError::InvalidInput(format!(
                         "project_to_grid tensor coefficient shape {:?} does not match topology ({}, {}, 1)",
                         coeffs.shape(),
@@ -78,7 +78,7 @@ impl DGSolver {
                         topology.nodes_per_element
                     )));
                 }
-                if field.shape() != (self.grid.nx, self.grid.ny, self.grid.nz) {
+                if field.shape() != [self.grid.nx, self.grid.ny, self.grid.nz] {
                     return Err(KwaversError::InvalidInput(format!(
                         "project_to_grid field shape {:?} does not match grid ({}, {}, {})",
                         field.shape(),
@@ -91,7 +91,7 @@ impl DGSolver {
                 for elem in 0..topology.n_elements {
                     for node in 0..topology.nodes_per_element {
                         let [i, j, k] = topology.grid_index(elem, node);
-                        field[(i, j, k)] = coeffs[(elem, node, 0)];
+                        field[[i, j, k]] = coeffs[[elem, node, 0]];
                     }
                 }
             }
@@ -99,7 +99,7 @@ impl DGSolver {
                 let n_elements = coeffs.shape()[0].min(self.grid.nx / self.n_nodes);
                 for elem in 0..n_elements {
                     for node in 0..self.n_nodes {
-                        field[(elem * self.n_nodes + node, 0, 0)] = coeffs[(elem, node, 0)];
+                        field[[elem * self.n_nodes + node, 0, 0]] = coeffs[[elem, node, 0]];
                     }
                 }
             }

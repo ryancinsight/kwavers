@@ -1,6 +1,5 @@
 use super::SlscConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_core::utils::iterators::apply_inplace;
 use moirai_parallel::{map_collect_index_with, Adaptive};
 use leto::{
     Array1,
@@ -50,7 +49,7 @@ impl SlscBeamformer {
     /// # Errors
     /// Returns error if input data has fewer than 2 elements
     pub fn process(&self, data: &Array2<Complex64>) -> KwaversResult<Array1<f64>> {
-        let (n_elements, n_samples) = (data.nrows(), data.ncols());
+        let [n_elements, n_samples] = data.shape();
 
         if n_elements < 2 {
             return Err(KwaversError::Validation(
@@ -65,7 +64,9 @@ impl SlscBeamformer {
         let mut coherence = Array1::zeros(n_samples);
 
         for sample_idx in 0..n_samples {
-            let sample_data = data.column(sample_idx);
+            let sample_data = data
+                .index_axis::<1>(1, sample_idx)
+                .expect("invariant: sample_idx < n_samples");
             let slice: Vec<Complex64> = sample_data.iter().copied().collect();
             coherence[sample_idx] = self.compute_short_lag_coherence(&slice, max_lag);
         }
@@ -84,7 +85,7 @@ impl SlscBeamformer {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn process_parallel(&self, data: &Array2<Complex64>) -> KwaversResult<Array1<f64>> {
-        let (n_elements, n_samples) = (data.nrows(), data.ncols());
+        let [n_elements, n_samples] = data.shape();
 
         if n_elements < 2 {
             return Err(KwaversError::Validation(
@@ -99,7 +100,9 @@ impl SlscBeamformer {
 
         let coherence_vec: Vec<f64> =
             map_collect_index_with::<Adaptive, _, _>(n_samples, |sample_idx| {
-                let sample_data = data.column(sample_idx);
+                let sample_data = data
+                    .index_axis::<1>(1, sample_idx)
+                    .expect("invariant: sample_idx < n_samples");
                 let slice: Vec<Complex64> = sample_data.iter().copied().collect();
                 self.compute_short_lag_coherence(&slice, max_lag)
             });
@@ -143,7 +146,7 @@ impl SlscBeamformer {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn process_volume(&self, data: &Array3<Complex64>) -> KwaversResult<Array2<f64>> {
-        let (n_elements, n_beams, n_samples) = (data.dim().0, data.dim().1, data.dim().2);
+        let [n_elements, n_beams, n_samples] = data.shape();
 
         if n_elements < 2 {
             return Err(KwaversError::Validation(
@@ -230,13 +233,15 @@ impl SlscBeamformer {
         let coherence = self.process(data)?;
         let dyn_range = dynamic_range_db.unwrap_or(40.0);
 
-        let mut map = Array2::zeros((1, coherence.len()));
+        let mut map = Array2::<f64>::zeros((1, coherence.len()));
         for (i, &value) in coherence.iter().enumerate() {
             let db_value = 20.0 * value.max(1e-10).log10();
             map[[0, i]] = (db_value + dyn_range) / dyn_range;
         }
 
-        apply_inplace(&mut map, |v| v.clamp(0.0, 1.0));
+        for value in map.iter_mut() {
+            *value = value.clamp(0.0, 1.0);
+        }
 
         Ok(map)
     }

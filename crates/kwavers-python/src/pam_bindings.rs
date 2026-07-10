@@ -15,7 +15,7 @@ use kwavers_analysis::signal_processing::pam::{
     DelayAndSumConfig, DelayAndSumPAM,
 };
 use kwavers_math::fft::Complex64 as KwComplex;
-use kwavers_math::linear_algebra::EigenDecomposition;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
 use leto::{
     Array1,
     Array2,
@@ -79,12 +79,12 @@ fn hermitian_eigenvalues_complex(
     covariance_imag: PyReadonlyArray2<f64>,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let h = hermitian_from_parts(&covariance_real, &covariance_imag)?;
-    let (mut eigenvalues, _) = EigenDecomposition::hermitian_eigendecomposition_complex(&h)
+    let result = EigenSolver::jacobi_hermitian(&h, EigenSolverConfig::default())
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let mut v = eigenvalues.to_vec();
+    let mut v = result.eigenvalues.into_vec();
     v.sort_by(|a, b| b.total_cmp(a));
-    eigenvalues = Array1::from(v);
-    Ok(PyArray1::from_owned_array(py, eigenvalues).into())
+    let eigenvalues = Array1::from(v);
+    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(eigenvalues)).into())
 }
 
 /// Deterministic Theorem 22.2 eigenspace PAM covariance eigenvalues.

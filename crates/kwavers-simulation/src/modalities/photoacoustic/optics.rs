@@ -271,7 +271,7 @@ mod tests {
 
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
-        assert_eq!(properties.dim(), (32, 32, 16));
+        assert_eq!(properties.shape(), [32, 32, 16]);
 
         // Check that we have heterogeneous properties (not all the same)
         let first_val = properties[[0, 0, 0]].absorption_coefficient;

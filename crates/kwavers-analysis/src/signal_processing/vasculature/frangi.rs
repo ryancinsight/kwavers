@@ -58,7 +58,7 @@ use leto::Array3;
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
 pub(super) fn compute_frangi_response(image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
     let mut response = Array3::zeros((nx, ny, nz));
 
     // Standard Frangi parameters.

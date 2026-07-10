@@ -102,12 +102,12 @@ pub fn predict_sound_speed_time_shifts(
     active_mask: &Array2<bool>,
     config: SoundSpeedShiftConfig,
 ) -> KwaversResult<Vec<f64>> {
-    if sound_speed_shift_m_s.dim() != active_mask.dim() {
+    if sound_speed_shift_m_s.shape() != active_mask.shape() {
         return Err(kwavers_core::error::KwaversError::DimensionMismatch(
             format!(
                 "speed-shift image shape {:?} does not match active-mask shape {:?}",
-                sound_speed_shift_m_s.dim(),
-                active_mask.dim()
+                sound_speed_shift_m_s.shape(),
+                active_mask.shape()
             ),
         ));
     }

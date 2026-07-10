@@ -169,11 +169,11 @@ impl MetaOptimizer {
     pub fn step(&mut self, params: &mut [Vec<f32>], gradients: &[Option<Vec<f32>>]) {
         self._iteration_count += 1;
 
-        if (self._m.shape()[0] * self._m.shape()[1] * self._m.shape()[2]) != (params.shape()[0] * params.shape()[1] * params.shape()[2]) {
-            self._m = vec![None; (params.shape()[0] * params.shape()[1] * params.shape()[2])];
+        if (self._m.len()) != (params.len()) {
+            self._m = vec![None; (params.len())];
         }
-        if (self._v.shape()[0] * self._v.shape()[1] * self._v.shape()[2]) != (params.shape()[0] * params.shape()[1] * params.shape()[2]) {
-            self._v = vec![None; (params.shape()[0] * params.shape()[1] * params.shape()[2])];
+        if (self._v.len()) != (params.len()) {
+            self._v = vec![None; (params.len())];
         }
 
         let beta1 = self._beta1 as f32;

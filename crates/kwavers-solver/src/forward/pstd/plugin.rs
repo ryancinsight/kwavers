@@ -23,9 +23,8 @@ fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView
 }
 
 fn copy_leto_into_ndarray(dst: &mut leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
-    for (dst_value, src_value) in dst.iter_mut().zip(src.iter()) {
-        *dst_value = *src_value;
-    }
+    leto_ops::zip_mut_with(dst, &src.view(), |d, s| *d = *s)
+        .expect("invariant: dst and src share shape");
 }
 
 /// PSTD solver plugin
@@ -128,7 +127,9 @@ impl crate::plugin::Plugin for PSTDPlugin {
 
         copy_ndarray_view_into_leto(
             &mut solver.fields.p,
-            fields.index_axis(0, pressure_idx),
+            fields
+                .index_axis::<3>(0, pressure_idx)
+                .expect("invariant: pressure field index within unified field array"),
         );
 
         if self.ivp_seeded {
@@ -140,15 +141,21 @@ impl crate::plugin::Plugin for PSTDPlugin {
             // (the historical bug this replaces).
             copy_ndarray_view_into_leto(
                 &mut solver.fields.ux,
-                fields.index_axis(0, vx_idx),
+                fields
+                    .index_axis::<3>(0, vx_idx)
+                    .expect("invariant: velocity-x field index within unified field array"),
             );
             copy_ndarray_view_into_leto(
                 &mut solver.fields.uy,
-                fields.index_axis(0, vy_idx),
+                fields
+                    .index_axis::<3>(0, vy_idx)
+                    .expect("invariant: velocity-y field index within unified field array"),
             );
             copy_ndarray_view_into_leto(
                 &mut solver.fields.uz,
-                fields.index_axis(0, vz_idx),
+                fields
+                    .index_axis::<3>(0, vz_idx)
+                    .expect("invariant: velocity-z field index within unified field array"),
             );
         } else {
             // First step: the field array carries the zero-velocity IVP initial
@@ -166,19 +173,27 @@ impl crate::plugin::Plugin for PSTDPlugin {
 
         // Sync back to global fields
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, pressure_idx),
+            &mut fields
+                .index_axis_mut::<3>(0, pressure_idx)
+                .expect("invariant: pressure field index within unified field array"),
             &solver.fields.p,
         );
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, vx_idx),
+            &mut fields
+                .index_axis_mut::<3>(0, vx_idx)
+                .expect("invariant: velocity-x field index within unified field array"),
             &solver.fields.ux,
         );
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, vy_idx),
+            &mut fields
+                .index_axis_mut::<3>(0, vy_idx)
+                .expect("invariant: velocity-y field index within unified field array"),
             &solver.fields.uy,
         );
         copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, vz_idx),
+            &mut fields
+                .index_axis_mut::<3>(0, vz_idx)
+                .expect("invariant: velocity-z field index within unified field array"),
             &solver.fields.uz,
         );
 

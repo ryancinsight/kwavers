@@ -237,7 +237,7 @@ fn update_3d_wave_equation_safe(
     velocity_z: &mut Array3<f64>,
     scalars: WaveUpdateScalars,
 ) -> KwaversResult<()> {
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
     let rho0 = 1000.0; // Water density
 
     // Update velocities: ∂v/∂t = -1/ρ ∇p
@@ -276,7 +276,7 @@ fn update_velocity_component_safe(
     rho0: f64,
     direction: usize, // 0=x, 1=y, 2=z
 ) -> KwaversResult<()> {
-    let (nx, ny, nz) = velocity.dim();
+    let [nx, ny, nz] = velocity.shape();
 
     match direction {
         0 => {
@@ -336,7 +336,7 @@ fn validate_against_greens_function(
 ) -> (f64, usize) {
     let mut max_error = 0.0f64;
     let mut samples = 0;
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
 
     // Check points at reasonable distance from source
     for i in 0..nx {
@@ -408,7 +408,7 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
 
     // Apply aperture function using safe vectorization
-    pressure.indexed_iter_mut().for_each(|((i, j, _), value)| {
+    pressure.indexed_iter_mut().expect("indexed_iter_mut").for_each(|([i, j, _], value)| {
         let dx_from_center = (i as f64 - aperture_center_x as f64) * dx;
         let dy_from_center = (j as f64 - aperture_center_y as f64) * dx;
         let r = (dx_from_center * dx_from_center + dy_from_center * dy_from_center).sqrt();
@@ -427,7 +427,8 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
 
     analytical_pattern
         .indexed_iter_mut()
-        .for_each(|((i, j), value)| {
+        .expect("indexed_iter_mut")
+        .for_each(|([i, j], value)| {
             let x = (i as f64 - aperture_center_x as f64) * dx;
             let y = (j as f64 - aperture_center_y as f64) * dx;
             let theta = (x * x + y * y).sqrt() / propagation_distance; // Small angle approximation
@@ -495,7 +496,7 @@ fn propagate_fresnel_safe(
     wavelength: f64,
     dx: f64,
 ) -> KwaversResult<Array3<f64>> {
-    let (nx, ny, nz) = input.dim();
+    let [nx, ny, nz] = input.shape();
     let k = 2.0 * PI / wavelength;
 
     // For this demonstration, use a simplified propagation
@@ -505,7 +506,8 @@ fn propagate_fresnel_safe(
     // Simple Fresnel approximation using safe iteration
     output
         .indexed_iter_mut()
-        .for_each(|((i, j, k_idx), value)| {
+        .expect("indexed_iter_mut")
+        .for_each(|([i, j, k_idx], value)| {
             let x = (i as f64 - nx as f64 / 2.0) * dx;
             let y = (j as f64 - ny as f64 / 2.0) * dx;
             let r_squared = x * x + y * y;
@@ -595,7 +597,8 @@ fn validate_lloyds_mirror_interference() -> KwaversResult<ValidationResult> {
     // Use safe iteration for interference calculation
     total_pattern
         .indexed_iter_mut()
-        .for_each(|((i, j, _), value)| {
+        .expect("indexed_iter_mut")
+        .for_each(|([i, j, _], value)| {
             if i > 30 {
                 // Observation region
                 let x = i as f64 * dx;
@@ -721,7 +724,7 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
     let amplitude0 = 1e5; // 100 kPa
 
     // Apply analytical absorption solution using safe vectorization
-    pressure.indexed_iter_mut().for_each(|((i, _, _), value)| {
+    pressure.indexed_iter_mut().expect("indexed_iter_mut").for_each(|([i, _, _], value)| {
         let x = i as f64 * dx;
         let amplitude = amplitude0 * (-alpha_theoretical * x).exp();
         *value = amplitude * (k * x).sin();
@@ -830,7 +833,7 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
     let k = omega / c0;
 
-    pressure.indexed_iter_mut().for_each(|((i, _, _), value)| {
+    pressure.indexed_iter_mut().expect("indexed_iter_mut").for_each(|([i, _, _], value)| {
         let x = i as f64 * dx;
         *value = amplitude * (k * x).sin();
     });
@@ -848,7 +851,8 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
 
         evolved_pressure
             .indexed_iter_mut()
-            .for_each(|((i, _, _), value)| {
+            .expect("indexed_iter_mut")
+            .for_each(|([i, _, _], value)| {
                 let x = i as f64 * dx;
 
                 // Burgers solution with implicit shock steepening

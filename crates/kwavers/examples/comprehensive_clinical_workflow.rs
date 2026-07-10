@@ -49,9 +49,9 @@ use kwavers_solver::inverse::elastography::{
 };
 use leto::Array3 as LetoArray3;
 use leto::{
-    /* s -- no leto equivalent */,
     Array3,
     Array4,
+    SliceArg,
 };
 use std::time::Instant;
 
@@ -349,7 +349,15 @@ impl LiverAssessmentWorkflow {
         let n_frames = displacement_history.len();
         let mut disp_ts = Array4::<f64>::zeros((nx, ny, nz, n_frames));
         for (t, field) in displacement_history.iter().enumerate() {
-            disp_ts.slice_mut(s![.., .., .., t]).assign(&field.uz);
+            disp_ts
+                .slice_with_mut::<3>(&[
+                    SliceArg::All,
+                    SliceArg::All,
+                    SliceArg::All,
+                    SliceArg::Index(t as isize),
+                ])
+                .expect("slice_with_mut")
+                .assign(&field.uz);
         }
 
         let sampling_frequency = 1.0 / dt;
@@ -394,7 +402,7 @@ impl LiverAssessmentWorkflow {
         let perfusion_map_nd = self
             .ceus_system
             .estimate_perfusion(&contrast_signal, &perfusion_model)?;
-        let (nx, ny, nz) = perfusion_map_nd.dim();
+        let [nx, ny, nz] = perfusion_map_nd.shape();
         let perfusion_map =
             LetoArray3::from_shape_vec([nx, ny, nz], perfusion_map_nd.iter().copied().collect())
                 .map_err(|error| {

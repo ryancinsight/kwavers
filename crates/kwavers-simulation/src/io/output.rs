@@ -30,10 +30,11 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
                 .clone()
                 .try_into()
                 .expect("pressure recorder data must convert to ndarray");
-            let max_steps = recorder.recorded_steps.len().min(data.ncols());
+            let max_steps = recorder.recorded_steps.len().min(data.shape()[1]);
             for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
                 write!(file, "{}", time.time_vector()[t].min(time_val))?;
-                data.column(t)
+                data.index_axis::<1>(1, t)
+                    .expect("invariant: valid column index")
                     .iter()
                     .try_for_each(|&val: &f64| write!(file, ",{val}"))?;
                 writeln!(file)?;
@@ -66,10 +67,11 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
                 .clone()
                 .try_into()
                 .expect("light recorder data must convert to ndarray");
-            let max_steps = recorder.recorded_steps.len().min(data.ncols());
+            let max_steps = recorder.recorded_steps.len().min(data.shape()[1]);
             for (t, &time_val) in recorder.recorded_steps.iter().take(max_steps).enumerate() {
                 write!(file, "{}", time.time_vector()[t].min(time_val))?;
-                data.column(t)
+                data.index_axis::<1>(1, t)
+                    .expect("invariant: valid column index")
                     .iter()
                     .try_for_each(|&val: &f64| write!(file, ",{val}"))?;
                 writeln!(file)?;
@@ -97,14 +99,18 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
             .clone()
             .try_into()
             .expect("field snapshots must convert to ndarray");
-        let pressure: leto::ArrayView3<f64> =
-            fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
-        let light: leto::ArrayView3<f64> = fields.index_axis(Axis(0), LIGHT_IDX);
+        let pressure: leto::ArrayView3<f64> = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: valid pressure field index");
+        let light: leto::ArrayView3<f64> = fields
+            .index_axis::<3>(0, LIGHT_IDX)
+            .expect("invariant: valid light field index");
 
         let max_pressure = pressure.iter().fold(f64::NEG_INFINITY, |acc, &val: &f64| {
             f64::max(acc, val.abs())
         });
-        let avg_pressure = pressure.iter().sum::<f64>() / pressure.len() as f64;
+        let avg_pressure =
+            pressure.iter().sum::<f64>() / pressure.shape().iter().product::<usize>() as f64;
         writeln!(file, "Last Step,{step}")?;
         writeln!(file, "Max Pressure,{max_pressure:.6e}")?;
         writeln!(file, "Avg Pressure,{avg_pressure:.6e}")?;
@@ -112,7 +118,8 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
         let max_light = light
             .iter()
             .fold(f64::NEG_INFINITY, |acc, &val| f64::max(acc, val));
-        let avg_light = light.iter().sum::<f64>() / light.len() as f64;
+        let avg_light =
+            light.iter().sum::<f64>() / light.shape().iter().product::<usize>() as f64;
         writeln!(file, "Last Light Step,{step}")?;
         writeln!(file, "Max Light Fluence,{max_light:.6e}")?;
         writeln!(file, "Avg Light Fluence,{avg_light:.6e}")?;
@@ -131,7 +138,7 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
 pub fn save_data_csv(data: &Array3<f64>, filename: &str) -> io::Result<()> {
     info!("Saving data to CSV: {}", filename);
     let mut file = File::create(filename)?;
-    let (nx, ny, nz) = data.dim();
+    let [nx, ny, nz] = data.shape();
 
     // Write header
     writeln!(file, "x,y,z,value")?;

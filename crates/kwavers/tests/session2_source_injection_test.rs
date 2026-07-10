@@ -202,13 +202,13 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
         .extract_recorded_sensor_data()
         .expect("No sensor data recorded");
 
-    println!("\nSensor data shape: {:?}", sensor_data.dim());
+    println!("\nSensor data shape: {:?}", sensor_data.shape());
 
     // Analyze results
-    let time_series = sensor_data.row(0); // First (and only) sensor
+    let time_series = sensor_data.index_axis::<1>(0, 0).expect("index_axis"); // First (and only) sensor
     let p_max = time_series.iter().map(|&p| p.abs()).fold(0.0, f64::max);
     let p_min = time_series.iter().copied().fold(f64::INFINITY, f64::min);
-    let p_mean = time_series.iter().map(|&p| p.abs()).sum::<f64>() / time_series.len() as f64;
+    let p_mean = time_series.iter().map(|&p| p.abs()).sum::<f64>() / time_series.shape()[0] as f64;
 
     println!("\nResults:");
     println!("  Max pressure:  {:.2} kPa", p_max / 1e3);
@@ -218,7 +218,7 @@ fn test_fdtd_plane_wave_source_injection() -> KwaversResult<()> {
 
     // Print first 10 values
     println!("\nFirst 10 timesteps:");
-    for i in 0..10.min(time_series.len()) {
+    for i in 0..10.min(time_series.shape()[0]) {
         let t = i as f64 * dt;
         let p = time_series[i];
         println!("  t[{}] = {:.2} ns: p = {:.2} Pa", i, t * 1e9, p);
@@ -390,7 +390,7 @@ fn test_fdtd_point_source_injection() -> KwaversResult<()> {
     let sensor_data = solver
         .extract_recorded_sensor_data()
         .expect("No sensor data recorded");
-    let time_series = sensor_data.row(0);
+    let time_series = sensor_data.index_axis::<1>(0, 0).expect("index_axis");
     let p_max = time_series.iter().map(|&p| p.abs()).fold(0.0, f64::max);
 
     println!("\nResults:");

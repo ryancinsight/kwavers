@@ -18,11 +18,11 @@ impl FemHelmholtzSolver {
     ///
     pub fn assemble_system<M: Medium + ?Sized>(&mut self, _medium: &M) -> KwaversResult<()> {
         if self.mesh.elements.is_empty() {
-            let num_nodes = (self.mesh.nodes.shape()[0] * self.mesh.nodes.shape()[1] * self.mesh.nodes.shape()[2]);
+            let num_nodes = self.mesh.nodes.len() ;
             let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut m_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut rhs_global = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
-            let mut rhs_boundary = rhs_global.clone().into();
+            let mut rhs_boundary = rhs_global.clone();
 
             self.boundary_manager.apply_all(
                 &mut k_global,
@@ -52,7 +52,7 @@ impl FemHelmholtzSolver {
 
         let k_sq = Complex64::from(self.config.wavenumber.powi(2));
 
-        if (k_global.values.shape()[0] * k_global.values.shape()[1] * k_global.values.shape()[2]) != (m_global.values.shape()[0] * m_global.values.shape()[1] * m_global.values.shape()[2]) {
+        if (k_global.values.len()) != (m_global.values.len()) {
             return Err(KwaversError::Numerical(NumericalError::Instability {
                 operation: "matrix_combination".to_owned(),
                 condition: 0.0,
@@ -65,7 +65,7 @@ impl FemHelmholtzSolver {
 
         self.system_matrix = k_global;
         self.rhs = rhs_global;
-        let mut rhs_boundary = self.rhs.clone().into();
+        let mut rhs_boundary = self.rhs.clone();
 
         self.boundary_manager.apply_all(
             &mut self.system_matrix,
@@ -135,16 +135,16 @@ impl FemHelmholtzSolver {
             return Ok(0);
         }
 
-        let count = (nodes.shape()[0] * nodes.shape()[1] * nodes.shape()[2]);
+        let count = nodes.len() ;
         self.boundary_manager.add_dirichlet(nodes);
         Ok(count)
     }
 
     pub(super) fn validate_node_index(&self, node_idx: usize) -> KwaversResult<()> {
-        if node_idx >= (self.rhs.shape()[0] * self.rhs.shape()[1] * self.rhs.shape()[2]) {
+        if node_idx >= (self.rhs.len()) {
             return Err(KwaversError::InvalidInput(format!(
                 "FEM node index {node_idx} is outside system dimension {}",
-                (self.rhs.shape()[0] * self.rhs.shape()[1] * self.rhs.shape()[2])
+                (self.rhs.len())
             )));
         }
         Ok(())

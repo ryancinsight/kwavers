@@ -171,7 +171,7 @@ fn das_provider_contract_matches_cpu_reference() {
         )
         .expect("GPU DAS reconstruction");
 
-    assert_eq!(cpu.dim(), gpu.dim(), "CPU/GPU volume dimensions differ");
+    assert_eq!(cpu.shape(), gpu.shape(), "CPU/GPU volume dimensions differ");
     for (c, g) in cpu.iter().zip(gpu.iter()) {
         let tol = 1.0e-3f32.mul_add(c.abs(), 1.0e-2);
         assert!(

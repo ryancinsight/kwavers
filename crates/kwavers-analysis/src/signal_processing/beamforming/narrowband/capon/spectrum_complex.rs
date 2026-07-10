@@ -30,7 +30,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
 ) -> KwaversResult<f64> {
     cfg.validate()?;
 
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "capon_spatial_spectrum_point_complex_baseband expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"
@@ -100,7 +100,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
     // 3) Diagonal loading.
     if cfg.diagonal_loading > 0.0 {
         for i in 0..n_sensors {
-            r[(i, i)] += Complex64::new(cfg.diagonal_loading, 0.0);
+            r[[i, i]] += Complex64::new(cfg.diagonal_loading, 0.0);
         }
     }
 

@@ -433,7 +433,7 @@ fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPro
 }
 
 fn flatten_kji(field: &Array3<f64>) -> Vec<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let mut out = Vec::with_capacity(nx * ny * nz);
     for k in 0..nz {
         for j in 0..ny {

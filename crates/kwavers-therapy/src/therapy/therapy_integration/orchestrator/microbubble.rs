@@ -152,7 +152,7 @@ pub fn update_microbubble_dynamics(
     dt: f64,
 ) -> KwaversResult<Option<Array3<f64>>> {
     // Get grid dimensions
-    let (nx, ny, nz) = acoustic_field.pressure.dim();
+    let [nx, ny, nz] = acoustic_field.pressure.shape();
 
     // Create representative microbubble at domain center
     // Future enhancement: Track full population with spatial distribution
@@ -272,7 +272,7 @@ mod tests {
             .unwrap()
             .unwrap();
 
-        assert_eq!(concentration.dim(), (8, 8, 8));
+        assert_eq!(concentration.shape(), [8, 8, 8]);
         // Concentration should be positive
         assert!(concentration.iter().all(|&c| c > 0.0));
     }
@@ -306,7 +306,7 @@ mod tests {
         let result = update_microbubble_dynamics(&mut ceus, &acoustic_field, 1e-6).unwrap();
         // Verify concentration field is returned and all values are positive
         if let Some(concentration) = result {
-            assert_eq!(concentration.dim(), (8, 8, 8));
+            assert_eq!(concentration.shape(), [8, 8, 8]);
             assert!(concentration.iter().all(|&c| c > 0.0));
         }
     }

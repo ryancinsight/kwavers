@@ -112,7 +112,8 @@ impl DgSimulationSolver {
 
         let shape = (grid.nx, grid.ny, grid.nz);
         let state = Array3::zeros(core.acoustic_tensor_state_shape()?);
-        let workspace = AcousticDgTensorWorkspace::new(state.dim());
+        let [ssx, ssy, ssz] = state.shape();
+        let workspace = AcousticDgTensorWorkspace::new((ssx, ssy, ssz));
         Ok(Self {
             core,
             grid: grid.clone(),

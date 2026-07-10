@@ -218,8 +218,8 @@ impl LinearBornInversionConfig {
     #[must_use]
     pub fn measurement_count(&self, element_count: usize) -> usize {
         element_count
-            * (self.receiver_offsets.shape()[0] * self.receiver_offsets.shape()[1] * self.receiver_offsets.shape()[2])
-            * (self.frequencies_hz.shape()[0] * self.frequencies_hz.shape()[1] * self.frequencies_hz.shape()[2])
+            * (self.receiver_offsets.len())
+            * (self.frequencies_hz.len())
             * self.harmonic_count()
     }
 }

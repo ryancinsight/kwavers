@@ -31,7 +31,7 @@ fn test_extract_all_features() {
 fn test_local_std() {
     let image = create_test_image();
     let std_map = compute_local_std(&image);
-    assert_eq!(std_map.dim(), (1, 10, 10));
+    assert_eq!(std_map.shape(), [1, 10, 10]);
     // Borders should be zero
     assert_eq!(std_map[[0, 0, 0]], 0.0);
     // Center should have some variation at edges
@@ -42,7 +42,7 @@ fn test_local_std() {
 fn test_spatial_gradient() {
     let image = create_test_image();
     let grad_map = compute_spatial_gradient(&image);
-    assert_eq!(grad_map.dim(), (1, 10, 10));
+    assert_eq!(grad_map.shape(), [1, 10, 10]);
     // Gradient should be high at edges of bright region
     assert!(grad_map[[0, 3, 3]] > 0.0 || grad_map[[0, 3, 4]] > 0.0);
 }
@@ -51,7 +51,7 @@ fn test_spatial_gradient() {
 fn test_laplacian() {
     let image = create_test_image();
     let lap_map = compute_laplacian(&image);
-    assert_eq!(lap_map.dim(), (1, 10, 10));
+    assert_eq!(lap_map.shape(), [1, 10, 10]);
     // Laplacian should detect edges
     assert!(lap_map[[0, 5, 5]] >= 0.0);
 }
@@ -60,7 +60,7 @@ fn test_laplacian() {
 fn test_local_entropy() {
     let image = create_test_image();
     let entropy_map = compute_local_entropy(&image);
-    assert_eq!(entropy_map.dim(), (1, 10, 10));
+    assert_eq!(entropy_map.shape(), [1, 10, 10]);
     // Entropy should be higher at edges (more variation)
     assert!(entropy_map[[0, 3, 3]] >= 0.0);
 }
@@ -104,14 +104,14 @@ fn test_concatenate_features() {
         compute_spatial_gradient(&image),
     ];
     let stacked = concatenate_features(&features);
-    assert_eq!(stacked.shape(), &[1, 3, 10, 10]);
+    assert_eq!(stacked.shape(), [1, 3, 10, 10]);
 }
 
 #[test]
 fn test_concatenate_empty() {
     let features: Vec<Array3<f32>> = vec![];
     let stacked = concatenate_features(&features);
-    assert_eq!(stacked.shape(), &[0, 0, 0, 0]);
+    assert_eq!(stacked.shape(), [0, 0, 0, 0]);
 }
 
 #[test]

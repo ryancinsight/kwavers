@@ -12,7 +12,7 @@ pub fn process_slsc_batch(
     data: &leto::Array3<Complex64>,
     config: &SlscConfig,
 ) -> KwaversResult<Array2<f64>> {
-    let (n_elements, n_frames, n_samples) = (data.dim().0, data.dim().1, data.dim().2);
+    let [n_elements, n_frames, n_samples] = data.shape();
 
     if n_elements < 2 {
         return Err(KwaversError::Validation(
@@ -29,15 +29,14 @@ pub fn process_slsc_batch(
     for frame_idx in 0..n_frames {
         let frame_data: Array2<Complex64> = data
             .index_axis::<2>(1, frame_idx)
-            .to_owned()
-            .into_dimensionality()
             .map_err(|_| {
                 KwaversError::Validation(kwavers_core::error::ValidationError::InvalidFormat {
                     field: "frame_data".to_owned(),
                     expected: "Array2".to_owned(),
                     actual: "Array3 slice".to_owned(),
                 })
-            })?;
+            })?
+            .to_contiguous();
 
         let coherence = slsc.process(&frame_data)?;
         results.push(coherence);
@@ -45,7 +44,10 @@ pub fn process_slsc_batch(
 
     let mut output = Array2::zeros((n_frames, n_samples));
     for (frame_idx, frame_result) in results.iter().enumerate() {
-        output.row_mut(frame_idx).assign(frame_result);
+        output
+            .index_axis_mut::<1>(0, frame_idx)
+            .expect("invariant: frame_idx < n_frames")
+            .assign(frame_result);
     }
 
     Ok(output)

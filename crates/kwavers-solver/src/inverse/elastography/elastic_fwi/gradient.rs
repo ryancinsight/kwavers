@@ -64,9 +64,10 @@ impl ElasticFwi {
         let wmax = illum.iter().fold(0.0_f64, |m, &v| m.max(v));
         if wmax > 0.0 {
             let floor = self.config.precond_eps * wmax;
-            leto_ops::zip_from_mut(grad)
-                .and(&illum)
-                .for_each(|g, &w| *g /= w + floor);
+            leto_ops::zip_mut_with(&mut grad.view_mut(), &illum.view(), |g, w| {
+                *g /= *w + floor;
+            })
+            .expect("invariant: gradient and illumination field shapes asserted equal");
         }
         self.mute_acquisition_imprint(&mut grad);
         Ok((j, grad))
@@ -169,9 +170,9 @@ fn k_mu_kernel(
     dt: f64,
     (dx, dy, dz): (f64, f64, f64),
 ) -> (Array3<f64>, Array3<f64>) {
-    let n = (fwd.shape()[0] * fwd.shape()[1] * fwd.shape()[2]);
+    let n = fwd.len();
     let dim = fwd[0].ux.shape();
-    let (nx, ny, nz) = dim;
+    let [nx, ny, nz] = dim;
     let mut grad = Array3::<f64>::zeros(dim);
     let mut illum = Array3::<f64>::zeros(dim);
 

@@ -79,7 +79,7 @@ use leto::Array3;
 /// strings at every site). Minor monomorphization cost (`Array3<f64>` ↦
 /// `A = f64`) is paid once per migration site.
 pub fn with_zip_standard_layout<'out, 'imm, A, F, R>(
-    out_name: &'static str,
+    _out_name: &'static str,
     out: &'out mut Array3<A>,
     immuts: &'imm [(&'static str, &'imm Array3<A>)],
     f: F,
@@ -98,20 +98,12 @@ where
     // `out_slice` is the helper's own reborrow of `out`.)
     F: for<'s> FnOnce(&'out mut [A], &'s [&'s [A]]) -> R,
 {
-    assert!(
-        out,
-        "{out_name} must be C-contiguous (default Array3 layout) for the Zip migration",
-    );
     let out_slice = out
         .as_slice_mut()
         .expect("standard-layout asserted just above; layout matched");
     let immut_slices: Vec<&'imm [A]> = immuts
         .iter()
-        .map(|(name, arr)| {
-            assert!(
-                arr,
-                "{name} must be C-contiguous (default Array3 layout) for the Zip migration",
-            );
+        .map(|(_name, arr)| {
             arr.as_slice()
                 .expect("standard-layout asserted just above; layout matched")
         })

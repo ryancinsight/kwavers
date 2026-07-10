@@ -109,7 +109,7 @@ impl FfdField {
     }
 
     fn len(&self) -> usize {
-        (self.ux.shape()[0] * self.ux.shape()[1] * self.ux.shape()[2])
+        self.ux.len()
     }
 }
 
@@ -219,8 +219,8 @@ fn project_warp_gradient(
     background: f64,
 ) -> (Vec<f64>, Vec<f64>) {
     let [nx, ny, nz] = template.shape();
-    let mut g_ux = vec![0.0; (field.shape()[0] * field.shape()[1] * field.shape()[2])];
-    let mut g_uy = vec![0.0; (field.shape()[0] * field.shape()[1] * field.shape()[2])];
+    let mut g_ux = vec![0.0; field.len()];
+    let mut g_uy = vec![0.0; field.len()];
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -251,8 +251,8 @@ fn project_warp_gradient(
 fn smoothness(field: &FfdField, weight: f64) -> (f64, Vec<f64>, Vec<f64>) {
     let (ncx, ncy) = (field.n_ctrl_x, field.n_ctrl_y);
     let mut r = 0.0;
-    let mut g_ux = vec![0.0; (field.shape()[0] * field.shape()[1] * field.shape()[2])];
-    let mut g_uy = vec![0.0; (field.shape()[0] * field.shape()[1] * field.shape()[2])];
+    let mut g_ux = vec![0.0; field.len()];
+    let mut g_uy = vec![0.0; field.len()];
     let idx = |p: usize, q: usize| q * ncx + p;
     let accumulate = |a: usize, b: usize, g_ux: &mut [f64], g_uy: &mut [f64], r: &mut f64| {
         let dux = field.ux[a] - field.ux[b];
@@ -303,7 +303,7 @@ pub fn align_nonrigid(
     let bg = config.background_c;
 
     let mut field = FfdField::zeros(config.n_ctrl_x, config.n_ctrl_y, config.basis);
-    let n = (field.shape()[0] * field.shape()[1] * field.shape()[2]);
+    let n = field.len();
 
     let data_misfit = |f: &FfdField| -> KwaversResult<f64> {
         let model = warp_template(template, f, &geom, bg);

@@ -11,7 +11,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::GridSource;
 
-fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
+fn copy_view_into_field(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
     for (dst_value, src_value) in dst
         .as_slice_mut()
         .expect("leto FDTD field must be contiguous")
@@ -22,10 +22,11 @@ fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView
     }
 }
 
-fn copy_leto_into_ndarray(dst: &mut leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
-    for (dst_value, src_value) in dst.iter_mut().zip(src.iter()) {
+fn copy_field_into_view(mut dst: leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
+    leto_ops::zip_mut_with(&mut dst, &src.view(), |dst_value, src_value| {
         *dst_value = *src_value;
-    }
+    })
+    .expect("invariant: FDTD field/view copy shapes match");
 }
 
 /// FDTD solver plugin
@@ -149,21 +150,21 @@ impl crate::plugin::Plugin for FdtdPlugin {
         // Sync input fields to solver state
         // Note: Solver owns its state (p, ux, uy, uz). We overwrite it with input fields.
         // This allows the plugin chain to modify fields before FDTD step.
-        copy_ndarray_view_into_leto(
+        copy_view_into_field(
             &mut solver.fields.p,
-            fields.index_axis(0, pressure_idx),
+            fields.index_axis(0, pressure_idx).expect("invariant: pressure field axis index in range"),
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_field(
             &mut solver.fields.ux,
-            fields.index_axis(0, vx_idx),
+            fields.index_axis(0, vx_idx).expect("invariant: velocity-x field axis index in range"),
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_field(
             &mut solver.fields.uy,
-            fields.index_axis(0, vy_idx),
+            fields.index_axis(0, vy_idx).expect("invariant: velocity-y field axis index in range"),
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_field(
             &mut solver.fields.uz,
-            fields.index_axis(0, vz_idx),
+            fields.index_axis(0, vz_idx).expect("invariant: velocity-z field axis index in range"),
         );
 
         // Perform time step
@@ -177,7 +178,7 @@ impl crate::plugin::Plugin for FdtdPlugin {
         .expect("leto pressure field shape must map to ndarray");
         context
             .boundary
-            .apply_acoustic(pressure.view_mut().unwrap().into(), grid, solver.time_step_index)?;
+            .apply_acoustic(pressure.view_mut(), grid, solver.time_step_index)?;
         for (dst_value, src_value) in solver
             .fields
             .p
@@ -190,20 +191,20 @@ impl crate::plugin::Plugin for FdtdPlugin {
         }
 
         // Sync output fields from solver state
-        copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, pressure_idx),
+        copy_field_into_view(
+            fields.index_axis_mut(0, pressure_idx).expect("invariant: pressure field axis index in range"),
             &solver.fields.p,
         );
-        copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, vx_idx),
+        copy_field_into_view(
+            fields.index_axis_mut(0, vx_idx).expect("invariant: velocity-x field axis index in range"),
             &solver.fields.ux,
         );
-        copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, vy_idx),
+        copy_field_into_view(
+            fields.index_axis_mut(0, vy_idx).expect("invariant: velocity-y field axis index in range"),
             &solver.fields.uy,
         );
-        copy_leto_into_ndarray(
-            &mut fields.index_axis_mut(0, vz_idx),
+        copy_field_into_view(
+            fields.index_axis_mut(0, vz_idx).expect("invariant: velocity-z field axis index in range"),
             &solver.fields.uz,
         );
 

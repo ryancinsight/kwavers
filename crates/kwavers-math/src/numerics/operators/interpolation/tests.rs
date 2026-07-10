@@ -12,8 +12,8 @@ fn test_linear_interpolator_simple() {
     let dx = 0.1;
     let interp = LinearInterpolator::new(dx);
 
-    let data = Array1::from_vec(vec![0.0, 0.2, 0.4, 0.6, 0.8]);
-    let target = Array1::from_vec(vec![0.05]);
+    let data = Array1::from_vec(5, vec![0.0, 0.2, 0.4, 0.6, 0.8]).unwrap();
+    let target = Array1::from_vec(1, vec![0.05]).unwrap();
     let result = interp.interpolate_1d(data.view(), target.view()).unwrap();
 
     assert_abs_diff_eq!(result[0], 0.1, epsilon = 1e-10);
@@ -24,8 +24,8 @@ fn test_linear_interpolator_exact_at_grid_points() {
     let dx = 1.0;
     let interp = LinearInterpolator::new(dx);
 
-    let data = Array1::from_vec(vec![1.0, 2.0, 3.0, 4.0]);
-    let target = Array1::from_vec(vec![2.0]);
+    let data = Array1::from_vec(4, vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+    let target = Array1::from_vec(1, vec![2.0]).unwrap();
     let result = interp.interpolate_1d(data.view(), target.view()).unwrap();
 
     assert_abs_diff_eq!(result[0], 3.0, epsilon = 1e-10);
@@ -101,9 +101,9 @@ fn test_trilinear_3d_batch() {
     let data =
         Array3::from_vec([2, 2, 2], vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
 
-    let target_x = Array1::from_vec(vec![0.5]);
-    let target_y = Array1::from_vec(vec![0.5]);
-    let target_z = Array1::from_vec(vec![0.5]);
+    let target_x = Array1::from_vec(1, vec![0.5]).unwrap();
+    let target_y = Array1::from_vec(1, vec![0.5]).unwrap();
+    let target_z = Array1::from_vec(1, vec![0.5]).unwrap();
 
     let result = interp
         .interpolate_3d(

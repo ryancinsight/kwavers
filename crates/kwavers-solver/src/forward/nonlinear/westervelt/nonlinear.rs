@@ -67,7 +67,7 @@ use super::WesterveltFdtd;
 impl WesterveltFdtd {
     /// Calculate the nonlinear term ∂²(p²)/∂t²
     pub(super) fn calculate_nonlinear_term_into(&mut self, dt: f64, grid: &Grid) {
-        debug_assert_eq!(self.nonlinear_term.shape(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(self.nonlinear_term.shape(), [grid.nx, grid.ny, grid.nz]);
         if let Some(ref p_prev2) = self.pressure_prev2 {
             // Full second-order time derivative of p²
             // ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²

@@ -355,6 +355,6 @@ mod tests {
         builder.set_background(OpticalPropertyData::soft_tissue());
 
         let map = builder.build();
-        assert_eq!(map.mu_a.shape(), &[10, 10, 10]);
+        assert_eq!(map.mu_a.shape(), [10, 10, 10]);
     }
 }

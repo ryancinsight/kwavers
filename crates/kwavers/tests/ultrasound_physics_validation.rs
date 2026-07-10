@@ -18,7 +18,7 @@ use leto::{
 
 /// Convert a `eunomia::Complex64` steering vector to `eunomia::Complex64`.
 fn nc_to_ec(v: Array1<eunomia::Complex64>) -> Array1<Complex64> {
-    v.map(|c| Complex64::new(c.re, c.im))
+    v.mapv(|c| Complex64::new(c.re, c.im))
 }
 
 // ============================================================================
@@ -101,12 +101,12 @@ fn validate_covariance_estimation() {
 
     // Validate matrix properties
     assert_eq!(
-        covariance.nrows(),
+        covariance.shape()[0],
         num_sensors,
         "Covariance matrix should be N×N"
     );
     assert_eq!(
-        covariance.ncols(),
+        covariance.shape()[1],
         num_sensors,
         "Covariance matrix should be square"
     );
@@ -272,7 +272,7 @@ fn validate_spatial_smoothing() {
 
     // Create fully coherent covariance matrix (rank 1)
     let mut covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
-    let coherent_vector = Array1::from_vec((0..num_sensors).map(|i| (i as f64).sin()).collect());
+    let coherent_vector = Array1::from_vec(num_sensors, (0..num_sensors).map(|i| (i as f64).sin()).collect()).unwrap();
 
     // R = v * vᴴ (rank 1 matrix)
     for i in 0..num_sensors {
@@ -286,12 +286,12 @@ fn validate_spatial_smoothing() {
 
     // Smoothed matrix should be smaller
     assert_eq!(
-        smoothed.nrows(),
+        smoothed.shape()[0],
         subarray_size,
         "Smoothed matrix should match subarray size"
     );
     assert_eq!(
-        smoothed.ncols(),
+        smoothed.shape()[1],
         subarray_size,
         "Smoothed matrix should be square"
     );
@@ -551,7 +551,7 @@ fn validate_sonoluminescence_spectral_analysis() {
     use leto::Array3;
 
     // Create test fields
-    let grid_shape = (4, 4, 4);
+    let grid_shape = [4, 4, 4];
     let temperature_field = Array3::from_elem(grid_shape, 8000.0); // Hot plasma
     let pressure_field = Array3::from_elem(grid_shape, 1e9); // High pressure
     let radius_field = Array3::from_elem(grid_shape, 1e-7); // Small radius
@@ -636,7 +636,7 @@ fn validate_acoustic_to_optic_energy_conversion() {
     );
 
     // Step 4: Sonoluminescence emission (optic output)
-    let grid_shape = (2, 2, 2);
+    let grid_shape = [2, 2, 2];
     let temperature_field = Array3::from_elem(grid_shape, 10000.0); // Post-collapse temperature
     let pressure_field = Array3::from_elem(grid_shape, 1e9); // Post-collapse pressure
     let radius_field = Array3::from_elem(grid_shape, 1e-7); // Post-collapse radius
@@ -701,7 +701,7 @@ fn validate_interdisciplinary_coupling_efficiency() {
     let _collapse_energy = 0.5 * collapse_pressure * initial_volume; // Simplified
 
     // Optical output via sonoluminescence
-    let grid_shape = (2, 2, 2);
+    let grid_shape = [2, 2, 2];
     let temperature_field = Array3::from_elem(grid_shape, 15000.0); // Very hot plasma
     let pressure_field = Array3::from_elem(grid_shape, 1e10); // Extreme pressure
     let radius_field = Array3::from_elem(grid_shape, 5e-8); // Very small radius
@@ -831,8 +831,8 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     let mut fusion = MultiModalFusion::new(fusion_config.clone());
 
     // Create mock ultrasound data (B-mode image)
-    let grid_shape = (8, 8, 8);
-    let leto_shape = [grid_shape.0, grid_shape.1, grid_shape.2];
+    let grid_shape = [8, 8, 8];
+    let leto_shape = grid_shape;
     let mut ultrasound_data = LetoArray3::from_elem(leto_shape, 0.8); // High echogenicity
                                                                       // Add some spatial variation
     for i in 4..8 {

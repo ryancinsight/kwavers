@@ -58,7 +58,7 @@ impl AcousticDgTensorWorkspace {
     }
 
     fn ensure_dim(&mut self, dim: (usize, usize, usize)) {
-        if self.original.shape() != dim {
+        if self.original.shape() != [dim.0, dim.1, dim.2] {
             *self = Self::new(dim);
         }
     }
@@ -165,12 +165,12 @@ impl DGSolver {
                     for j in 0..self.n_nodes {
                         let source_node = topology.node_with_axis(node, axis, j);
                         du += self.diff_matrix[[node_coords[axis], j]]
-                            * state[(elem, source_node, velocity_var)];
+                            * state[[elem, source_node, velocity_var]];
                         dp += self.diff_matrix[[node_coords[axis], j]]
-                            * state[(elem, source_node, ACOUSTIC_PRESSURE_VAR)];
+                            * state[[elem, source_node, ACOUSTIC_PRESSURE_VAR]];
                     }
-                    rhs[(elem, node, ACOUSTIC_PRESSURE_VAR)] -= bulk * axis_scales[axis] * du;
-                    rhs[(elem, node, velocity_var)] -= inv_density * axis_scales[axis] * dp;
+                    rhs[[elem, node, ACOUSTIC_PRESSURE_VAR]] -= bulk * axis_scales[axis] * du;
+                    rhs[[elem, node, velocity_var]] -= inv_density * axis_scales[axis] * dp;
                 }
             }
         }
@@ -204,7 +204,7 @@ impl DGSolver {
         pressure: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let topology = validate_tensor_state(self, state, 1.0)?;
-        if pressure.shape() != (self.grid.nx, self.grid.ny, self.grid.nz) {
+        if pressure.shape() != [self.grid.nx, self.grid.ny, self.grid.nz] {
             return Err(KwaversError::InvalidInput(format!(
                 "DG acoustic pressure grid shape {:?} does not match ({}, {}, {})",
                 pressure.shape(),
@@ -216,7 +216,7 @@ impl DGSolver {
         for elem in 0..topology.n_elements {
             for node in 0..topology.nodes_per_element {
                 let [i, j, k] = topology.grid_index(elem, node);
-                pressure[(i, j, k)] = state[(elem, node, ACOUSTIC_PRESSURE_VAR)];
+                pressure[[i, j, k]] = state[[elem, node, ACOUSTIC_PRESSURE_VAR]];
             }
         }
         Ok(())
@@ -235,7 +235,7 @@ impl DGSolver {
         uz: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let topology = validate_tensor_state(self, state, 1.0)?;
-        let expected = (self.grid.nx, self.grid.ny, self.grid.nz);
+        let expected = [self.grid.nx, self.grid.ny, self.grid.nz];
         for (name, dim) in [
             ("pressure", pressure.shape()),
             ("ux", ux.shape()),
@@ -252,10 +252,10 @@ impl DGSolver {
             for node in 0..topology.nodes_per_element {
                 let index = topology.grid_index(elem, node);
                 let [i, j, k] = index;
-                pressure[(i, j, k)] = state[(elem, node, ACOUSTIC_PRESSURE_VAR)];
-                ux[(i, j, k)] = state[(elem, node, ACOUSTIC_VELOCITY_X_VAR)];
-                uy[(i, j, k)] = state[(elem, node, ACOUSTIC_VELOCITY_Y_VAR)];
-                uz[(i, j, k)] = state[(elem, node, ACOUSTIC_VELOCITY_Z_VAR)];
+                pressure[[i, j, k]] = state[[elem, node, ACOUSTIC_PRESSURE_VAR]];
+                ux[[i, j, k]] = state[[elem, node, ACOUSTIC_VELOCITY_X_VAR]];
+                uy[[i, j, k]] = state[[elem, node, ACOUSTIC_VELOCITY_Y_VAR]];
+                uz[[i, j, k]] = state[[elem, node, ACOUSTIC_VELOCITY_Z_VAR]];
             }
         }
         Ok(())
@@ -274,7 +274,7 @@ impl DGSolver {
         state: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let topology = validate_tensor_state(self, state, 1.0)?;
-        let expected = (self.grid.nx, self.grid.ny, self.grid.nz);
+        let expected = [self.grid.nx, self.grid.ny, self.grid.nz];
         if pressure.shape() != expected {
             return Err(KwaversError::InvalidInput(format!(
                 "DG acoustic pressure grid shape {:?} does not match {expected:?}",
@@ -284,7 +284,7 @@ impl DGSolver {
         for elem in 0..topology.n_elements {
             for node in 0..topology.nodes_per_element {
                 let [i, j, k] = topology.grid_index(elem, node);
-                state[(elem, node, ACOUSTIC_PRESSURE_VAR)] = pressure[(i, j, k)];
+                state[[elem, node, ACOUSTIC_PRESSURE_VAR]] = pressure[[i, j, k]];
             }
         }
         Ok(())
@@ -321,11 +321,11 @@ fn validate_tensor_state(
         )));
     }
     let topology = DgTopology::from_grid(&solver.grid, solver.n_nodes)?;
-    let expected = (
+    let expected = [
         topology.n_elements,
         topology.nodes_per_element,
         ACOUSTIC_VARIABLES,
-    );
+    ];
     if state.shape() != expected {
         return Err(KwaversError::InvalidInput(format!(
             "DG acoustic tensor state shape {:?} does not match expected {:?}",

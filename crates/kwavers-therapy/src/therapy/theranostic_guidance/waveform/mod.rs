@@ -129,7 +129,7 @@ pub fn simulate_waveform_adjoint_rtm(
     let (nx_b, ny_b) = sim.body_dims;
     let (ox, oy) = sim.body_offset;
     let image_cropped_refined =
-        leto::Array2::from_shape_fn((nx_b, ny_b), |(ix, iy)| image[[ix + ox, iy + oy]]);
+        leto::Array2::from_shape_fn((nx_b, ny_b), |[ix, iy]| image[[ix + ox, iy + oy]]);
     let image_cropped =
         downsample_max(&image_cropped_refined, sim.body_dims_coarse, sim.refinement);
     let reconstruction = normalize_positive(&image_cropped, &prepared.body_mask);

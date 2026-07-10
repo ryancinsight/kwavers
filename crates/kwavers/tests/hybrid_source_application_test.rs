@@ -88,7 +88,7 @@ fn test_hybrid_source_application() {
     let p_idx = 0; // Pressure
                    // Check max pressure
     let max_p = fields
-        .index_axis(0, p_idx)
+        .index_axis::<3>(0, p_idx).expect("index_axis")
         .iter()
         .fold(0.0f64, |a, &b| a.max(b.abs()));
 

@@ -45,11 +45,11 @@ fn test_jacobi_2x2_hermitian() {
 
     for k in 0..2 {
         let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.column(k);
-        let av = matrix.dot(&v.to_owned());
+        let v = result.eigenvectors.index_axis::<1>(1, k).unwrap().to_contiguous();
 
         for i in 0..2 {
-            let error = (av[i] - lambda * v[i]).norm();
+            let av_i = (0..2).map(|j| matrix[[i, j]] * v[j]).sum::<Complex64>();
+            let error = (av_i - lambda * v[i]).norm();
             assert!(
                 error < 1.5,
                 "Eigenvalue equation failed for λ[{}]: error = {}",
@@ -73,11 +73,11 @@ fn test_qr_algorithm_3x3_hermitian() {
 
     for k in 0..3 {
         let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.column(k);
-        let av = matrix.dot(&v.to_owned());
+        let v = result.eigenvectors.index_axis::<1>(1, k).unwrap().to_contiguous();
 
         for i in 0..3 {
-            let error = (av[i] - lambda * v[i]).norm();
+            let av_i = (0..3).map(|j| matrix[[i, j]] * v[j]).sum::<Complex64>();
+            let error = (av_i - lambda * v[i]).norm();
             assert!(
                 error < 2.0,
                 "QR eigenvalue equation failed for λ[{}]: error = {}",

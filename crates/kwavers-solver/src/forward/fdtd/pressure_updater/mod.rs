@@ -39,15 +39,18 @@ pub(super) fn accumulate_two_fields(target: &mut Array3<f64>, x: &Array3<f64>, y
             *target_value += x_values[idx] + y_values[idx];
         });
     } else {
-        Zip::from(target)
-            .and(x)
-            .and(y)
-            .for_each(|target_value, &x_value, &y_value| *target_value += x_value + y_value);
+        leto_ops::zip2_mut_with(
+            &mut target.view_mut(),
+            &x.view(),
+            &y.view(),
+            |target_value, x_value, y_value| *target_value += *x_value + *y_value,
+        )
+        .expect("invariant: accumulate_two_fields shapes asserted equal above");
     }
 }
 
 pub(super) fn apply_pressure_update(
-    pressure: &mut LetoArray3<f64>,
+    pressure: &mut Array3<f64>,
     divergence: ArrayView3<'_, f64>,
     rho_c_squared: &Array3<f64>,
     dt: f64,

@@ -19,7 +19,7 @@ impl TimeReversalUtils {
     #[must_use]
     pub fn time_reverse_signals(signals: &Array2<f64>) -> Array2<f64> {
         let [n_sensors, n_samples] = signals.shape();
-        Array2::from_shape_fn((n_sensors, n_samples), |(sensor, sample)| {
+        Array2::from_shape_fn((n_sensors, n_samples), |[sensor, sample]| {
             signals[[sensor, n_samples - 1 - sample]]
         })
     }
@@ -28,7 +28,7 @@ impl TimeReversalUtils {
     #[must_use]
     pub fn calculate_focus_quality(field: &Array3<f64>) -> f64 {
         let max_val = field.iter().fold(0.0_f64, |a, &b| a.max(b.abs()));
-        let mean_val = field.iter().map(|x| x.abs()).sum::<f64>() / (field.shape()[0] * field.shape()[1] * field.shape()[2]) as f64;
+        let mean_val = field.iter().map(|x| x.abs()).sum::<f64>() / (field.len()) as f64;
         if mean_val > 0.0 {
             max_val / mean_val
         } else {
@@ -44,7 +44,7 @@ mod tests {
 
     #[test]
     fn time_reverse_signals_reverses_each_sensor_row() {
-        let signals = Array2::from_shape_fn((2, 4), |(s, t)| {
+        let signals = Array2::from_shape_fn((2, 4), |[s, t]| {
             if s == 0 { (t + 1) as f64 } else { ((t + 1) * 10) as f64 }
         });
 
@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn time_reverse_signals_is_involution_for_rectangular_data() {
         let signals =
-            Array2::from_shape_fn((3, 5), |(sensor, sample)| (10 * sensor + sample) as f64);
+            Array2::from_shape_fn((3, 5), |[sensor, sample]| (10 * sensor + sample) as f64);
 
         let reversed = TimeReversalUtils::time_reverse_signals(&signals);
         let restored = TimeReversalUtils::time_reverse_signals(&reversed);
@@ -71,7 +71,7 @@ mod tests {
 
     #[test]
     fn time_reverse_signals_handles_single_sample_and_empty_sensors() {
-        let single_sample = Array2::from_shape_fn((3, 1), |(s, _)| [5.0, 7.0, 11.0][s]);
+        let single_sample = Array2::from_shape_fn((3, 1), |[s, _]| [5.0, 7.0, 11.0][s]);
         let empty_sensors = Array2::<f64>::zeros((0, 4));
 
         assert_eq!(

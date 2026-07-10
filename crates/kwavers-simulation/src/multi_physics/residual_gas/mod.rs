@@ -64,10 +64,10 @@ impl ResidualGasField {
     /// fraction `gas_fraction` to `β` and reset the representative radius to the
     /// nucleation radius (each pulse refreshes the cloud).
     pub fn deposit(&mut self, gas_fraction: ArrayView3<'_, f64>) {
-        if gas_fraction.dim() == self.void_fraction.dim() {
-            self.void_fraction.zip_mut_with(&gas_fraction, |b, &g| {
-                *b = (*b + g.max(0.0)).min(1.0 - 1e-9)
-            });
+        if gas_fraction.shape() == self.void_fraction.shape() {
+            for (b, g) in self.void_fraction.iter_mut().zip(gas_fraction.iter()) {
+                *b = (*b + (*g).max(0.0)).min(1.0 - 1e-9);
+            }
         }
         self.representative_radius_m = self.deposit_radius_m;
     }
@@ -90,7 +90,9 @@ impl ResidualGasField {
         } else {
             0.0
         };
-        self.void_fraction.mapv_inplace(|b| b * factor);
+        for b in self.void_fraction.iter_mut() {
+            *b *= factor;
+        }
         self.representative_radius_m = r_new;
     }
 
@@ -132,7 +134,7 @@ impl ResidualGasField {
     /// Total residual gas volume `Σ β · dV` [m³] given the voxel volume.
     #[must_use]
     pub fn total_gas_volume(&self, dv_m3: f64) -> f64 {
-        self.void_fraction.sum() * dv_m3.max(0.0)
+        self.void_fraction.iter().sum::<f64>() * dv_m3.max(0.0)
     }
 
     /// Peak void fraction anywhere in the field.

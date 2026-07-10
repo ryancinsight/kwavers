@@ -37,7 +37,7 @@ pub(crate) fn nearest_external_skin_point(
     focus_y_m: f64,
 ) -> KwaversResult<SkinPoint2> {
     let exterior = exterior_air(body);
-    let (nx, ny) = body.dim();
+    let [nx, ny] = body.shape();
     let center = centered_origin_2d(nx, ny);
     let mut best = None;
     let mut best_distance = f64::INFINITY;
@@ -61,7 +61,7 @@ pub(crate) fn nearest_external_skin_point(
 }
 
 fn exterior_air(body: &Array2<bool>) -> Array2<bool> {
-    let (nx, ny) = body.dim();
+    let [nx, ny] = body.shape();
     let mut exterior = Array2::<bool>::from_elem((nx, ny), false);
     let mut queue = VecDeque::new();
     for ix in 0..nx {
@@ -101,7 +101,7 @@ fn push_exterior_seed(
 }
 
 fn touches_exterior(body: &Array2<bool>, exterior: &Array2<bool>, ix: usize, iy: usize) -> bool {
-    let (nx, ny) = body.dim();
+    let [nx, ny] = body.shape();
     ix == 0
         || iy == 0
         || ix + 1 == nx

@@ -16,7 +16,7 @@ fn test_sample_covariance_basic() {
 
     let cov = estimate_sample_covariance(&data, 0.0).expect("should compute");
 
-    assert_eq!(cov.shape(), &[2, 2]);
+    assert_eq!(cov.shape(), [2, 2]);
     assert!(is_hermitian(&cov, 1e-10));
     assert!(cov[[0, 0]].im.abs() < 1e-10);
     assert!(cov[[1, 1]].im.abs() < 1e-10);
@@ -46,8 +46,7 @@ fn test_sample_covariance_insufficient_snapshots() {
 
     let cov = estimate_sample_covariance(&data, 1e-4).unwrap();
     assert_eq!(
-        cov.dim(),
-        (8, 8),
+        cov.shape(), [8, 8],
         "covariance matrix must be 8×8 (n_sensors)"
     );
 }
@@ -74,7 +73,7 @@ fn test_forward_backward_averaging() {
     let cov_fb = estimate_forward_backward_covariance(&data, 1e-4).expect("should compute");
 
     assert!(is_hermitian(&cov_fb, 1e-10));
-    assert_eq!(cov_fb.shape(), &[4, 4]);
+    assert_eq!(cov_fb.shape(), [4, 4]);
     validate_covariance_matrix(&cov_fb).expect("should be valid");
 }
 

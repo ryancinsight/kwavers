@@ -50,7 +50,7 @@ fn test_input_validation_empty() {
 
 #[test]
 fn test_input_validation_valid() {
-    let valid = Array1::from_vec(vec![1.0, 2.0, 3.0]);
+    let valid = Array1::from_vec(3, vec![1.0, 2.0, 3.0]).unwrap();
     let mut pipeline = RealTimeSirtPipeline::new(RealTimeSirtConfig {
         enable_preprocessing: false,
         enable_quality_monitoring: false,
@@ -58,12 +58,12 @@ fn test_input_validation_valid() {
         ..Default::default()
     });
     let frame = pipeline.process_frame(&valid, (4, 4, 1)).unwrap();
-    assert_eq!(frame.image.dim(), (4, 4, 1));
+    assert_eq!(frame.image.shape(), [4, 4, 1]);
 }
 
 #[test]
 fn test_preprocessing() {
-    let data = Array1::from_vec(vec![1.0, 2.0, 4.0]);
+    let data = Array1::from_vec(3, vec![1.0, 2.0, 4.0]).unwrap();
     // Preprocessing normalises by max; verify via process_frame with known input
     let mut pipeline = RealTimeSirtPipeline::new(RealTimeSirtConfig {
         sirt_config: SirtConfig::default()
@@ -119,7 +119,7 @@ fn test_sirt_convergence_tracking() {
         ..Default::default()
     };
     let mut pipeline = RealTimeSirtPipeline::new(config);
-    let rf_data = Array1::from_shape_fn(64, |i| (i as f64 + 1.0) / 64.0);
+    let rf_data = Array1::from_shape_fn(64, |[i]| (i as f64 + 1.0) / 64.0);
 
     let frame1 = pipeline.process_frame(&rf_data, (8, 8, 8)).unwrap();
     assert!(
@@ -249,7 +249,7 @@ fn test_acoustic_backprojection_adjoint_property() {
             }
         }
     }
-    let y = Array1::from_vec(vec![1.0, 2.0, 3.0]);
+    let y = Array1::from_vec(3, vec![1.0, 2.0, 3.0]).unwrap();
     let ax = project_acoustic(&x, &geom);
     let ax_dot_y: f64 = ax.iter().zip(y.iter()).map(|(a, b)| a * b).sum();
     let aty = backproject_acoustic(&y, shape, &geom);
@@ -285,7 +285,7 @@ fn test_acoustic_sirt_converges_on_point_phantom() {
     let mut truth = Array3::zeros((4, 4, 4));
     truth[[2, 2, 2]] = 1.0;
     let b = project_acoustic(&truth, &geom);
-    let rf_data = Array1::from_vec(b.to_vec());
+    let rf_data = b;
     let config = RealTimeSirtConfig {
         sirt_config: SirtConfig::default()
             .with_iterations(10)

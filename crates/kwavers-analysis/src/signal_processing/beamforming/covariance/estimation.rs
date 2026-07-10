@@ -1,7 +1,6 @@
 use super::is_hermitian;
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_core::utils::iterators::apply_inplace;
 use leto::Array2;
 
 /// Estimate sample covariance matrix from multi-snapshot sensor data.
@@ -24,7 +23,7 @@ pub fn estimate_sample_covariance(
     data: &Array2<Complex64>,
     diagonal_loading: f64,
 ) -> KwaversResult<Array2<Complex64>> {
-    let (n_sensors, n_snapshots) = (data.nrows(), data.ncols());
+    let [n_sensors, n_snapshots] = data.shape();
 
     if n_snapshots == 0 {
         return Err(KwaversError::InvalidInput(
@@ -59,7 +58,9 @@ pub fn estimate_sample_covariance(
     let mut covariance =
         Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
     for m in 0..n_snapshots {
-        let snapshot = data.column(m);
+        let snapshot = data
+            .index_axis::<1>(1, m)
+            .expect("snapshot column within bounds");
         for i in 0..n_sensors {
             for j in 0..n_sensors {
                 covariance[[i, j]] += snapshot[i] * snapshot[j].conj();
@@ -68,7 +69,9 @@ pub fn estimate_sample_covariance(
     }
 
     let scale = 1.0 / (n_snapshots as f64);
-    apply_inplace(&mut covariance, |x| x * scale);
+    for x in covariance.iter_mut() {
+        *x = *x * scale;
+    }
 
     if diagonal_loading > 0.0 {
         for i in 0..n_sensors {
@@ -108,7 +111,7 @@ pub fn estimate_forward_backward_covariance(
     diagonal_loading: f64,
 ) -> KwaversResult<Array2<Complex64>> {
     let r_forward = estimate_sample_covariance(data, 0.0)?;
-    let n = data.nrows();
+    let n = data.shape()[0];
 
     // R_b = J R_f^* J: reverse rows and columns, conjugate
     let mut r_backward = Array2::<Complex64>::from_elem((n, n), Complex64::default());

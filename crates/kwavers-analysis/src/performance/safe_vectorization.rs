@@ -27,7 +27,7 @@ impl SafeVectorOps {
     #[inline]
     #[must_use]
     pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
-        debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
+        debug_assert_eq!(a.shape(), b.shape(), "Array dimensions must match");
         a + b
     }
 
@@ -38,10 +38,10 @@ impl SafeVectorOps {
     #[inline]
     #[must_use]
     pub fn add_arrays_parallel(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
-        debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
-        let mut result = Array3::<f64>::zeros(a.dim());
+        debug_assert_eq!(a.shape(), b.shape(), "Array dimensions must match");
+        let mut result = Array3::<f64>::zeros(a.shape());
         for_each_indexed_pair_mut(result.view_mut(), a.view(), |idx, r, &av| {
-            *r = av + b[idx];
+            *r = av + b[[idx.0, idx.1, idx.2]];
         });
         result
     }
@@ -103,9 +103,9 @@ impl SafeVectorOps {
     #[inline]
     #[must_use]
     pub fn add_arrays_chunked(a: &Array3<f64>, b: &Array3<f64>, chunk_size: usize) -> Array3<f64> {
-        debug_assert_eq!(a.dim(), b.dim(), "Array dimensions must match");
+        debug_assert_eq!(a.shape(), b.shape(), "Array dimensions must match");
 
-        let mut result = Array3::<f64>::zeros(a.dim());
+        let mut result = Array3::<f64>::zeros(a.shape());
 
         if let (Some(a_slice), Some(b_slice), Some(r_slice)) =
             (a.as_slice(), b.as_slice(), result.as_slice_mut())
@@ -124,7 +124,7 @@ impl SafeVectorOps {
         } else {
             // Non-contiguous fallback keeps ndarray's indexed stride semantics.
             for_each_indexed_pair_mut(result.view_mut(), a.view(), |idx, r, &av| {
-                *r = av + b[idx];
+                *r = av + b[[idx.0, idx.1, idx.2]];
             });
         }
 

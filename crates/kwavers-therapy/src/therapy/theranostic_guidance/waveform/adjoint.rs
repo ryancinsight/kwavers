@@ -365,7 +365,7 @@ pub(super) fn adjoint_image(
                     (next_adj[row_xp + iy] as f64 - next_adj[row_xm + iy] as f64) * inv_two_dx;
                 let dy_adj = (next_adj[idx + 1] as f64 - next_adj[idx - 1] as f64) * inv_two_dx;
 
-                let c = speed_m_s[(ix, iy)];
+                let c = speed_m_s[[ix, iy]];
                 let c2 = c * c;
                 let integrand = c2 * (dx_fwd * dx_adj + dy_fwd * dy_adj) - dt_fwd * dt_adj;
 
@@ -456,7 +456,7 @@ pub(super) fn adjoint_image(
     let mut interface_mask = vec![false; n];
     for ix in 1..grid.nx - 1 {
         for iy in 1..grid.ny - 1 {
-            let c0 = speed_m_s[(ix, iy)];
+            let c0 = speed_m_s[[ix, iy]];
             let mut max_rel_diff = 0.0_f64;
             for dx in [-1isize, 0, 1] {
                 for dy in [-1isize, 0, 1] {
@@ -465,7 +465,7 @@ pub(super) fn adjoint_image(
                     }
                     let nx_i = (ix as isize + dx) as usize;
                     let ny_i = (iy as isize + dy) as usize;
-                    let c_n = speed_m_s[(nx_i, ny_i)];
+                    let c_n = speed_m_s[[nx_i, ny_i]];
                     let rel = (c_n - c0).abs() / c0.max(1.0);
                     if rel > max_rel_diff {
                         max_rel_diff = rel;
@@ -490,7 +490,7 @@ pub(super) fn adjoint_image(
     // (e.g. slower-than-background lesion: reflection coefficient R < 0
     // inverts the scattered pulse, so q < 0 at the focus while p_fwd > 0),
     // consistent with the Born reflectivity interpretation.
-    Array2::from_shape_fn((grid.nx, grid.ny), |(ix, iy)| {
+    Array2::from_shape_fn((grid.nx, grid.ny), |[ix, iy]| {
         image[linear(ix, iy, grid.ny)]
     })
 }

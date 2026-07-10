@@ -46,7 +46,7 @@ impl HybridSolver {
         let regions =
             decomposer.decompose(grid, &default_medium, config.decomposition_strategy.clone())?;
 
-        info!("Hybrid solver initialized with {} regions", (regions.shape()[0] * regions.shape()[1] * regions.shape()[2]));
+        info!("Hybrid solver initialized with {} regions", (regions.len()));
 
         let shape = (grid.nx, grid.ny, grid.nz);
 
