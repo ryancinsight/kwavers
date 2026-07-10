@@ -755,7 +755,18 @@ execution edges include
 `kwavers-solver` direct Rayon/ndarray-parallel holdouts and top-level dev
 `tokio`.
 
-## TODO: kwavers-math full num_traits sweep (Phase-1B) [patch]
+## DONE: kwavers-math full num_traits sweep (Phase-1B) [patch] (2026-07-10)
+
+Reconciled stale: `csr.rs` already carries `impl CsrScalar for eunomia::Complex64`
+(no `num_complex`/`num_traits` imports); `crates/kwavers-math/Cargo.toml` declares
+neither `num-traits` nor `num-complex`; `kwavers-boundary/src` has no `num_complex`
+reference. All 263 `kwavers-math` tests pass. Removed the phantom-`ADR-0006`
+`#[cfg(any())]` frozen "post-ADR" fixture blocks (dead speculative code for a
+`ComplexField`-routed `CsrScalar` design that was not adopted — the shipped design
+uses per-impl `magnitude` + a `Default` bound). Superseded the `§3 deferral [arch]`
+item below.
+
+<details><summary>Original item spec (historical)</summary>
 
 Phase-1A closed `linear_algebra::numeric_ops.rs` against the eunomia numeric SSOT (`eunomia::RealField` + `NumericElement::ZERO`). The remaining `kwavers-math` legacy num_traits surface is:
 
@@ -768,7 +779,7 @@ Phase-1B DoR: choose one of the three Atlas-extension paths for the csr.rs block
 Atlas extension memo (CR-EUNOMIA-COMPLEX):
 `kwavers-math/src/linear_algebra/sparse/csr.rs` is blocked from dropping legacy dependencies because `impl CsrScalar for num_complex::Complex64` requires `num_traits::Zero`, but Eunomia's generic float traits (`NumericElement` / `FloatElement`) are sealed. Requesting either an unsealed `Scalar` supertrait in Eunomia or a native `eunomia::Complex` integration that supports magnitude/norm derivations to satisfy sparse CSR bounds.
 
-## TODO: kwavers-math Phase-1B §3 deferral [arch]
+### (historical) kwavers-math Phase-1B §3 deferral [arch]
 
 §3 of the kwavers-math `num_traits` sweep — the csr.rs SSOT rebind (and the related `kwavers-boundary` `num_complex::Complex64` → `eunomia::Complex64` migration) — is **deferred** pending the closure of the orphan-rule gap in `eunomia::types::complex::{ops.rs,float.rs}`. Concretely, eunomia does not yet provide the cross-impls that would let `Complex<f64> * Array1<f64>` (and the analogous `LinalgScalar`-shaped operations in `solver/bicgstab.rs`) compile through the SSOT route; the §2 batch attempted that path and reverted after 7× E0277 surfaced.
 
@@ -784,6 +795,16 @@ Acceptance:
 - `repos/kwavers/xtask` `legacy-migration-audit` source-legacy per-file list no longer contains `crates/kwavers-math/src/linear_algebra/sparse/csr.rs` or the FEM/BEM residuals from `crates/kwavers-boundary`.
 
 Reference: csr.rs `//!` mod-doc (`crates/kwavers-math/src/linear_algebra/sparse/csr.rs:1-9`), CHANGELOG `## Unreleased` `### Reverted (2026-07-05) - kwavers-math Phase-1B §2 ssot-rebind`, `repos/kwavers/gap_audit.md` row 18 "Atlas extension: eunomia Complex64 SSOT for csr.rs - OPENED".
+
+</details>
+
+**§3 outcome (2026-07-10):** the intent — drop `num-traits`/`num-complex` from
+`csr.rs` and `kwavers-boundary`, moving to `eunomia::Complex64` — is fully met. The
+shipped design differs from the acceptance's proposed mechanism: `CsrScalar` stays a
+minimal `Copy + Default + AddAssign + Mul` role trait with a per-impl `magnitude`
+(no `ComplexField` blanket, no eunomia orphan-rule/`ScalarOperand` extension required),
+so the deferral's eunomia-DoR became moot. `sparse::csr` tests (12) pass through the
+eunomia route.
 
 ## CLOSED: kwavers-imaging CT/NIfTI native RITK slice (2026-07-04)
 

@@ -317,12 +317,10 @@ impl<T> CompressedSparseRowMatrix<T> {
 #[cfg(test)]
 mod tests {
     //! CsrScalar-magnitude + cross-type default-equivalence regression pins.
-    //! (CR-EUNOMIA-COMPLEX, ADR 0006.)
     //!
     //! Drift surfaces as a numerical failure (not a silent compile regression)
     //! when a future change touches:
-    //! - `CsrScalar::magnitude` body (current: per-impl; post-ADR:
-    //!   default `<Self as ComplexField>::modulus().to_f64()`);
+    //! - the per-impl `CsrScalar::magnitude` body;
     //! - the `eunomia::ComplexField` blanket-impl wiring through
     //!   `Complex<T>::norm()` (csr.rs → eunomia::impls::field.rs:148-149);
     //! - the `eunomia::Complex64` value-domain invariants defined in
@@ -423,38 +421,6 @@ mod tests {
         // Canonical comparison stays field-level because `Complex64` uses a
         // public representation contract (`re`, `im`).
     }
-
-    // ───── Post-ADR-0006 §1 + §2 fixture block (frozen via `#[cfg(any())]`) ─────
-    // Compiles ONLY after ADR-0006 lands (csr.rs `num_traits::Zero` is replaced
-    // by `eunomia::ComplexField`; `ComplexField::zero()`/`one()` defaults are
-    // added).
-
-    /// USER-VERBATIM: `magnitude([3,4] eunomia::Complex) = 5` over the
-    /// post-ADR `eunomia::Complex64` route. Locks the `ComplexField` blanket
-    /// impl through the `CsrScalar` default body.
-    #[cfg(any())]
-    #[test]
-    fn csr_scalar_magnitude_eunomia_complex_3_4_5_post_adr() {
-        // Post-ADR: `CsrScalar::magnitude` defaults to
-        // `<Self as ComplexField>::modulus().to_f64()`, which for
-        // `eunomia::Complex64` routes through `Complex::norm()` via the blanket
-        // `impl<T: RealField> ComplexField for Complex<T>` at
-        // `crates/eunomia/src/impls/field.rs:118` → `self.norm()`:
-        // sqrt(3.0² + 4.0²) = sqrt(25.0) = 5.0 — bit-exact under IEEE 754.
-        let z = eunomia::Complex64::new(3.0, 4.0);
-        assert_eq!(CsrScalar::magnitude(z), 5.0);
-    }
-
-    /// Compile-time witness: `eunomia::Complex64` MUST satisfy the post-ADR
-    /// `CsrScalar: Copy + ComplexField + AddAssign + Mul<Output = Self>` bounds.
-    #[cfg(any())]
-    #[allow(dead_code)]
-    const _CSR_SCALAR_EUNOMIA_COMPLEX_TRAIT_WITNESS_POST_ADR: 
-        fn() -> eunomia::Complex64 = || {
-        let z: &dyn CsrScalar = &eunomia::Complex64::default();
-        let _ = z.magnitude();
-        <eunomia::Complex64 as eunomia::ComplexField>::zero()
-    };
 
     /// Pin `<eunomia::Complex<f64> as ComplexField>::modulus()` directly.
     /// This is the SSOT-source of `CsrScalar::magnitude` post-ADR §2.
