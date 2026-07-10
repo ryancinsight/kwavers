@@ -9,6 +9,12 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Migrate the MRE and thermal-strain test cluster to native Leto
+      fixed-rank shapes, callback indices, mutation, view sizing, and
+      reductions. Verification: direct rustfmt and diff checks pass; focused
+      nextest compilation reduces the package frontier from 39 to 33 errors
+      with no remaining diagnostics in either elastography cluster.
+
 - [x] [patch] Consolidate acoustic heat test fixtures on
       `Array3::from_elem`, deleting duplicate fill helpers and stale ndarray
       constructor names. Verification: direct rustfmt passes; focused nextest

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - elastography Leto test migration [patch]
+- [patch] Migrated MRE and thermal-strain fixtures from ndarray tuple shapes,
+  callback indices, `mapv_inplace`, view `len`, and direct array reductions to
+  native Leto fixed-rank shapes, mutation iterators, `size`, and iterator
+  reductions. Focused nextest compilation reduces the package frontier from 39
+  to 33 errors with no remaining MRE or thermal-strain diagnostic.
+
 ### Fixed (2026-07-10) - acoustic heat Leto fixtures [patch]
 - [patch] Replaced stale `uniform_ndarray` calls and two duplicate fill helpers
   in acoustic heat-conservation tests with the canonical Leto
