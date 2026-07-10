@@ -109,6 +109,11 @@ mod tests {
     use super::*;
     use leto::Array1;
 
+    fn positions<const N: usize>(rows: [[f64; 3]; N]) -> Array2<f64> {
+        Array2::from_shape_vec([N, 3], rows.into_iter().flatten().collect())
+            .expect("three-dimensional positions match their declared row count")
+    }
+
     #[test]
     fn echo_peaks_at_one_way_time_of_flight() {
         // One scatterer on the array normal; the nearest element sees the echo at
@@ -116,14 +121,16 @@ mod tests {
         let c = 1540.0;
         let fs = 40e6;
         let f0 = 3e6;
-        let scat = array![[0.0, 0.02, 0.0]]; // 20 mm depth along +y
+        let scat = positions([[0.0, 0.02, 0.0]]); // 20 mm depth along +y
         let amp = Array1::from(vec![1.0]);
-        let elem = array![[0.0, 0.0, 0.0]]; // single element at origin
+        let elem = positions([[0.0, 0.0, 0.0]]); // single element at origin
         let rf = simulate_receive_rf(scat.view(), amp.view(), elem.view(), c, fs, f0, 0.6, 2048);
         // Peak sample index ≈ (d/c)·fs.
         let expected = (0.02 / c * fs).round() as usize;
-        let row = rf.index_axis(0, 0);
-        let peak = (0..row.len())
+        let row = rf
+            .index_axis::<1>(0, 0)
+            .expect("single-element receive data has row zero");
+        let peak = (0..row.size())
             .max_by(|&a, &b| row[a].abs().total_cmp(&row[b].abs()))
             .unwrap();
         assert!(
@@ -134,9 +141,9 @@ mod tests {
 
     #[test]
     fn zero_reflectivity_gives_silence() {
-        let scat = array![[0.0, 0.02, 0.0]];
+        let scat = positions([[0.0, 0.02, 0.0]]);
         let amp = Array1::from(vec![0.0]);
-        let elem = array![[0.0, 0.0, 0.0]];
+        let elem = positions([[0.0, 0.0, 0.0]]);
         let rf = simulate_receive_rf(
             scat.view(),
             amp.view(),
@@ -153,10 +160,10 @@ mod tests {
     #[test]
     fn closer_scatterer_arrives_earlier() {
         let (c, fs, f0) = (1540.0, 40e6, 3e6);
-        let elem = array![[0.0, 0.0, 0.0]];
+        let elem = positions([[0.0, 0.0, 0.0]]);
         let amp = Array1::from(vec![1.0]);
         let near = simulate_receive_rf(
-            array![[0.0, 0.01, 0.0]].view(),
+            positions([[0.0, 0.01, 0.0]]).view(),
             amp.view(),
             elem.view(),
             c,
@@ -166,7 +173,7 @@ mod tests {
             2048,
         );
         let far = simulate_receive_rf(
-            array![[0.0, 0.03, 0.0]].view(),
+            positions([[0.0, 0.03, 0.0]]).view(),
             amp.view(),
             elem.view(),
             c,
@@ -176,8 +183,10 @@ mod tests {
             2048,
         );
         let pk = |r: &Array2<f64>| {
-            let row = r.index_axis(0, 0);
-            (0..row.len())
+            let row = r
+                .index_axis::<1>(0, 0)
+                .expect("single-element receive data has row zero");
+            (0..row.size())
                 .max_by(|&a, &b| row[a].abs().total_cmp(&row[b].abs()))
                 .unwrap()
         };

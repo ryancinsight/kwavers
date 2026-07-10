@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - analytical acoustics Leto test migration [patch]
+- [patch] Replaced ndarray `arr2!`/`array!` fixture construction, view
+  `to_vec`, implicit axis indexing, and tuple-shaped callback indices in the
+  phase-shifting, phase-randomization, pulse-echo, and nonlinear Nyquist tests
+  with native Leto APIs. The `kwavers-physics` test compile frontier decreased
+  from 60 to 42 errors; the selected analytical errors are absent from the
+  rerun diagnostic. Remaining failures are in unrelated migration clusters.
+
 ### Changed (2026-07-09) - nonlinear acoustic Leto boundary removal [patch]
 - [patch] Removed the allocating Leto-to-Leto `array_boundary` conversion
   module from nonlinear acoustic spectral methods. FFT inputs and inverse FFT

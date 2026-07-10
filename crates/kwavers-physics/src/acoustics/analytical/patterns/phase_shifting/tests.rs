@@ -3,14 +3,15 @@ use super::shifter::PhaseShifter;
 use approx::assert_relative_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::{
-    /* arr2 -- no leto equivalent */,
-    Array2,
-};
+use leto::Array2;
 use std::f64::consts::PI;
 
 fn linear_array() -> Array2<f64> {
-    arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])
+    Array2::from_shape_vec(
+        [3, 3],
+        vec![-0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0],
+    )
+    .expect("linear-array coordinates match the 3 by 3 shape")
 }
 
 #[test]

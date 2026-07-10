@@ -9,6 +9,13 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Migrate the analytical-acoustics test cluster to native Leto
+      constructors, views, iteration, and index shapes. Completion condition:
+      phase-shifting, phase-randomization, pulse-echo, and the nonlinear
+      Nyquist fixture produce no compile diagnostics. Verification: direct
+      rustfmt and diff checks pass; focused nextest compilation reduces the
+      package frontier from 60 to 42 errors, all outside this cluster.
+
 - [x] [patch] Remove the nonlinear acoustic Leto-to-Leto array boundary:
       delete the full-volume conversion module and route spectral/nonlinear FFT
       inputs and outputs directly as `leto::Array3`. Verification: no

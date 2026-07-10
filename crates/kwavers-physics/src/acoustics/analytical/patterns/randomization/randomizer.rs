@@ -208,7 +208,7 @@ mod tests {
             16,
         );
         r.update(period); // exactly at period → should trigger
-        let phases: Vec<f64> = r.phases().to_vec();
+        let phases: Vec<f64> = r.phases().iter().copied().collect();
         assert!(
             phases
                 .iter()
@@ -226,7 +226,9 @@ mod tests {
             3,
         );
         // phases are all zero → cos(0)=1 → no change
-        let mut field = arr2(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]);
+        let mut field =
+            Array2::from_shape_vec([3, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
+                .expect("phase-randomization fixture matches the 3 by 3 shape");
         let original = field.clone();
         r.apply_to_field(&mut field);
         for (a, b) in field.iter().zip(original.iter()) {
