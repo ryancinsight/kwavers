@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - physics Leto test migration closure [patch]
+- [patch] Migrated the remaining sonoluminescence tests and spectrum
+  construction to native Leto spectral ranges, iterator reductions,
+  constructors, and fixed-rank shapes; synchronized acoustic shape-error
+  assertions with the typed array-shape contract; and removed obsolete
+  Leto-to-Leto QR conversions in `kwavers-math`. Focused sonoluminescence
+  nextest passes 65/65, full `kwavers-physics` nextest passes 1713/1713 with
+  one skipped test, and doctests pass 8/8 with eight intentionally ignored.
+  All-target clippy advances past `kwavers-math` and remains blocked by 63
+  pre-existing `kwavers-grid` migration lints plus an unrelated malformed
+  `kwavers` example import.
+
 ### Fixed (2026-07-10) - chemistry and field-surrogate Leto tests [patch]
 - [patch] Migrated chemistry concentration assertions and field-surrogate
   fixtures to explicit Leto iteration, fallible indexed iteration, fixed-rank

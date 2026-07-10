@@ -9,6 +9,17 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Close the `kwavers-physics` Leto test migration frontier by
+      converting sonoluminescence spectral grids, reductions, constructors,
+      fixed-rank shapes, and typed shape-error assertions to native Leto
+      contracts; remove obsolete Leto-to-Leto QR conversions in
+      `kwavers-math`. Verification: direct rustfmt passes; focused
+      sonoluminescence nextest passes 65/65; full `kwavers-physics` nextest
+      passes 1713/1713 with one skipped test; doctests pass 8/8 with eight
+      intentionally ignored. The all-target clippy gate advances past
+      `kwavers-math` and remains blocked by 63 pre-existing `kwavers-grid`
+      migration lints plus an unrelated malformed `kwavers` example import.
+
 - [x] [patch] Migrate chemistry and field-surrogate test iteration/indexing to
       native Leto contracts. Verification: direct rustfmt passes; focused
       nextest compilation reduces the package frontier from 20 to 13 errors,

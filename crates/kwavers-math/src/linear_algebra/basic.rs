@@ -146,20 +146,10 @@ impl LinearAlgebra {
     ///   non-finite value, or is rank-deficient under Leto's QR contract.
     ///
     pub fn qr_decomposition(matrix: &Array2<f64>) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
-        let ml: leto::Array2<f64> = matrix.clone().into();
+        let ml = matrix.clone();
         let qr = qr_decompose(&ml.view()).map_err(leto_linalg_error("QR decomposition"))?;
-        let q: Array2<f64> = qr.q().to_owned().try_into().map_err(|_| {
-            KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "QR-Q".into(),
-                reason: "layout".into(),
-            })
-        })?;
-        let r: Array2<f64> = qr.r().to_owned().try_into().map_err(|_| {
-            KwaversError::Numerical(NumericalError::SolverFailed {
-                method: "QR-R".into(),
-                reason: "layout".into(),
-            })
-        })?;
+        let q = qr.q().to_owned();
+        let r = qr.r().to_owned();
         Ok((q, r))
     }
 

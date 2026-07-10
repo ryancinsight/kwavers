@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn spectral_field_derived_quantities_match_cell_spectra() {
-        let wavelengths = Array1::from_vec([3], vec![400.0e-9, 500.0e-9, 600.0e-9]);
+        let wavelengths = Array1::from(vec![400.0e-9, 500.0e-9, 600.0e-9]);
         let mut field = SpectralField::new([2, 1, 1], wavelengths.clone());
         field.intensities[[0, 0, 0, 0]] = 3.0;
         field.intensities[[0, 0, 0, 1]] = 3.0;

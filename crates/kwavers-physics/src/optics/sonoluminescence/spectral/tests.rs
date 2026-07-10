@@ -3,8 +3,6 @@
 mod tests {
     use super::super::range::SpectralRange;
     use super::super::spectrum::EmissionSpectrum;
-    use leto::Array1;
-
     #[test]
     fn test_spectral_range() {
         let range = SpectralRange::default();
@@ -17,7 +15,12 @@ mod tests {
 
     #[test]
     fn test_emission_spectrum() {
-        let wavelengths = Array1::linspace(400e-9, 700e-9, 100);
+        let wavelengths = SpectralRange {
+            lambda_min: 400e-9,
+            lambda_max: 700e-9,
+            n_points: 100,
+        }
+        .wavelengths();
         let intensities = wavelengths.mapv(|lambda| {
             // Gaussian peak at 550 nm
             let center: f64 = 550e-9;
