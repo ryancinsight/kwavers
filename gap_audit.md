@@ -4783,3 +4783,40 @@ discipline that turned 6/6 Sprint-A suspicions into 4 false positives.
 
 See [backlog.md](backlog.md) for sprint sequencing and [CHECKLIST.md](CHECKLIST.md)
 for the active increment.
+
+---
+
+# Findings 2026-07-10: full-workspace test triage (post kwavers-python close)
+
+The first full-workspace `cargo nextest run` after the kwavers-python migration
+surfaced 20 failures + 4 timeouts. Resolved clusters (committed): complex
+Hermitian eig sign (kwavers-math), leto `FixedMatrix` 3×3 symmetric-eigen sign
+bug (christoffel, 4), clutter-filter SVD/eigensolver selection (svd_filter +
+adaptive + ulm, 12+ tests & timeouts), pam/pstd `index_axis` output-rank (3).
+Two residual clusters, NOT migration-correctness defects:
+
+## kwavers-driver: missing gitignored KiCad fixtures [test-infra]
+- `component_accuracy::tests::{hv_driver_artifact_uses_exact_j4_power_header,
+  hv7355_32ch_artifact_has_renderable_component_models}` fail reading
+  `crates/kwavers-driver/tests/fixtures/boards/hv7355_{24,32}ch_tile/*.kicad_pcb`
+  (os error 3 — path not found). The fixtures directory is **gitignored** and
+  absent, so these tests can only pass where a developer generated the boards
+  locally. Pre-existing test-design defect (tests depend on absent gitignored
+  artifacts), independent of the Atlas migration.
+- DoR: either commit small deterministic `.kicad_pcb` fixtures (build-size
+  budget permitting), generate them in a build/test setup step, or gate the
+  tests behind a fixture-present guard. Owner decision needed on fixture policy.
+
+## kwavers-therapy: abdominal FWI preprocessing exceeds test-time budget [perf]
+- `theranostic_guidance::tests::abdominal::{abdominal_preprocessing_keeps_external_skin_between_target_and_aperture,
+  abdominal_preprocessing_selects_one_connected_treatment_component}` terminate
+  at the therapy profile timeout (90 s). Both call `run_theranostic_inverse` on
+  64×64×3 / 72×72×3 grids; the passing `abdominal_theranostic_inverse_recovers_lesion_support`
+  (42×42×3) already runs 16–19 s (near the 30 s slow threshold), so the FWI
+  inverse scales super-linearly past the budget at the larger grids.
+- DoR (profile-first per performance_engineering): flamegraph
+  `run_theranostic_inverse` at 64×64×3, identify the hot path (forward/adjoint
+  PSTD loop, per-iteration cost, leto array-op constants vs pre-migration),
+  and optimize the real component — never raise the timeout or shrink the grid
+  (test-gaming). Classify migration-regression vs inherent FWI cost by comparing
+  the 42×42×3 wall-time against the pre-migration commit.
