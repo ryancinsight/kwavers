@@ -208,7 +208,7 @@ fn bench_field_operations(c: &mut Criterion) {
         // Benchmark scalar multiplication
         group.bench_with_input(BenchmarkId::new("scalar_multiply", size), &size, |b, _| {
             b.iter(|| {
-                field1.mapv_inplace(|x| x * black_box(scalar));
+                for x in field1.iter_mut() { *x = *x * black_box(scalar); }
             })
         });
 

@@ -110,8 +110,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "  └─ Velocity map computed: {} × {}",
-        velocity.dim().0,
-        velocity.dim().1
+        velocity.shape()[0],
+        velocity.shape()[1]
     );
 
     // Find peak velocity in flow region

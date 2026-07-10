@@ -65,12 +65,6 @@ impl Field3 for leto::Array3<f64> {
     }
 }
 
-impl Field3 for leto::Array3<f64> {
-    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
-        Box::new(self.iter())
-    }
-}
-
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 struct PropertyTestConfig {

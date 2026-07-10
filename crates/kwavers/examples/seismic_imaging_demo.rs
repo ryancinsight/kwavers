@@ -342,7 +342,7 @@ fn build_brain_velocity_model(
     let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
     let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
 
-    let (mni_nx, mni_ny, mni_nz) = gm.dim();
+    let [mni_nx, mni_ny, mni_nz] = gm.shape();
     // MNI centroid voxel (brain centre-of-mass in MNI space ≈ [nx/2, ny/2, nz/2]).
     let cx_mni = mni_nx / 2; // ~90
     let cy_mni = mni_ny / 2; // ~108 — mid coronal slice (near AC)
@@ -817,7 +817,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
             // −4048 outside the reconstructed circle).  Values above 3071 are outside the
             // 12-bit DICOM signed range.  Neither appears in real tissue.
-            hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+            for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
 
             // Assumed spacing: 0.5 mm in-plane, 4.0 mm slice (256mm FOV / 512 px)
             return Ok(CtVolume {
@@ -888,7 +888,7 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
     // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
     // −4048 outside the reconstructed circle).  Values above 3071 are outside the
     // 12-bit DICOM signed range.  Neither appears in real tissue.
-    hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+    for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
 
     // spacing[0..2] = [x_spacing, y_spacing, z_spacing] in mm for both
     // DICOM (pixel_spacing + slice_thickness) and NIfTI (affine column norms).
@@ -972,10 +972,11 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 /// The equatorial skull cross-section has the largest bone ring area and gives
 /// the most informative FWI slice for hemispherical array geometry.
 fn skull_equator_z(hu: &Array3<f64>) -> usize {
-    let (_, _, nz) = hu.dim();
+    let [_, _, nz] = hu.shape();
     (0..nz)
         .max_by_key(|&z| {
             hu.index_axis::<2>(2, z)
+                .expect("index_axis")
                 .iter()
                 .filter(|&&h| h > 300.0)
                 .count()
@@ -987,10 +988,10 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 ///
 /// Falls back to the geometric centre when no bone is present.
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.index_axis::<2>(2, z);
-    let (nx, ny) = slice.dim();
+    let slice = hu.index_axis::<2>(2, z).expect("index_axis");
+    let [nx, ny] = slice.shape();
     let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
-    for ((x, y), &h) in slice.indexed_iter() {
+    for ([x, y], &h) in slice.indexed_iter() {
         if h > 300.0 {
             sx += x as f64;
             sy += y as f64;
@@ -1009,7 +1010,7 @@ fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
 /// Clamps out-of-bound indices to the boundary (reflects water coupling at
 /// CT field-of-view edges).
 fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
-    let (nx, ny, nz) = hu.dim();
+    let [nx, ny, nz] = hu.shape();
     if z >= nz {
         return 0.0;
     }
@@ -1034,12 +1035,13 @@ fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
 /// Returns `nx.min(ny) / 4` as a safe fallback when no bone is found
 /// (prevents division-by-zero in the scale computation).
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
-    let (nx, ny, _) = hu.dim();
+    let [nx, ny, _] = hu.shape();
     let r = hu
         .index_axis::<2>(2, z)
+        .expect("index_axis")
         .indexed_iter()
         .filter(|(_, &h)| h > 300.0)
-        .map(|((x, y), _)| {
+        .map(|([x, y], _)| {
             let dx = x as f64 - cx;
             let dy = y as f64 - cy;
             (dx * dx + dy * dy).sqrt()
@@ -1145,7 +1147,7 @@ fn build_phantom_for_demo() -> (SkullPhantom, Option<CtVolume>) {
         print!("  CT source       : {}  ", ct_path.display());
         match load_ct_volume(&ct_path) {
             Ok(vol) => {
-                let (cx, cy, nz) = vol.hu.dim();
+                let [cx, cy, nz] = vol.hu.shape();
                 println!(
                     "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
                     vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
@@ -1192,8 +1194,8 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
         .sum();
     let rmse = (l2 / n).sqrt();
 
-    let mean_t = true_model.sum() / n;
-    let mean_r = reconstructed.sum() / n;
+    let mean_t = true_model.iter().sum::<f64>() / n;
+    let mean_r = reconstructed.iter().sum::<f64>() / n;
     let cov = true_model
         .iter()
         .zip(reconstructed.iter())
@@ -1246,11 +1248,11 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
     let cz = (NZ / 2) as f64;
     let free_pairs: Vec<(f64, f64)> = true_model
         .indexed_iter()
-        .filter(|((ix, _iy, iz), _)| {
+        .filter(|([ix, _iy, iz], _)| {
             let r = (((*ix as f64) - cx).powi(2) + ((*iz as f64) - cz).powi(2)).sqrt();
             r < R_SKULL_IN
         })
-        .map(|((ix, _iy, iz), &t)| (t, reconstructed[[ix, _iy, iz]]))
+        .map(|([ix, _iy, iz], &t)| (t, reconstructed[[ix, _iy, iz]]))
         .collect();
     print_quality_pairs(&free_pairs);
 }
@@ -1488,7 +1490,7 @@ fn write_three_plane_png(
         let img_h = 2 * (PANEL + COLORBAR_H);
         let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-        let (nx_ct, ny_ct, nz_ct) = vol.hu.dim();
+        let [nx_ct, ny_ct, nz_ct] = vol.hu.shape();
         let cy_ct = ny_ct / 2;
         let cz_ct = nz_ct / 2;
         let cx_ct = nx_ct / 2;
@@ -2014,8 +2016,8 @@ fn write_brain_tissue_png(
     // to ≥ 20 m/s so the colorbar has a meaningful range even if errors are small.
     let max_diff = true_model
         .indexed_iter()
-        .filter(|((ix, _, iz), _)| is_brain(*ix, *iz))
-        .map(|((ix, _, iz), &t)| (reconstructed[[ix, 0, iz]] - t).abs())
+        .filter(|([ix, _, iz], _)| is_brain(*ix, *iz))
+        .map(|([ix, _, iz], &t)| (reconstructed[[ix, 0, iz]] - t).abs())
         .fold(0.0_f64, f64::max)
         .max(20.0);
 
@@ -2483,7 +2485,7 @@ fn main() -> KwaversResult<()> {
                 let (bt_min, bt_max) = skull_mask
                     .indexed_iter()
                     .filter(|(_, &frozen)| !frozen)
-                    .map(|((ix, iy, iz), _)| brain_true[[ix, iy, iz]])
+                    .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
                     .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
                         (mn.min(c), mx.max(c))
                     });
@@ -2542,14 +2544,16 @@ fn main() -> KwaversResult<()> {
                     let mut brain_initial =
                         skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER });
                     // Fill frozen voxels with CT skull velocity for the reference model.
-                    Zip::from(&mut brain_initial)
-                        .and(&skull_mask)
-                        .and(&phantom.sound_speed)
-                        .for_each(|c, &frozen, &ct| {
-                            if frozen {
-                                *c = ct;
+                    let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
+                    for i in 0..bi_nx {
+                        for j in 0..bi_ny {
+                            for k in 0..bi_nz {
+                                if skull_mask[[i, j, k]] {
+                                    brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
+                                }
                             }
-                        });
+                        }
+                    }
 
                     println!(
                         "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
@@ -2598,11 +2602,11 @@ fn main() -> KwaversResult<()> {
     {
         let recv_mask = &geom0.sensor_mask;
         let mut recv_idx = 0usize;
-        for ((i, _j, k), &active) in recv_mask.indexed_iter() {
+        for ([i, _j, k], &active) in recv_mask.indexed_iter() {
             if active {
-                if recv_idx < obs0.nrows() {
-                    let trace = obs0.row(recv_idx);
-                    let nt_obs = trace.len().max(1);
+                if recv_idx < obs0.shape()[0] {
+                    let trace = obs0.index_axis::<1>(0, recv_idx).expect("index_axis");
+                    let nt_obs = trace.shape()[0].max(1);
                     // RMS amplitude of the observed trace: scalar proxy for the
                     // receiver wavefield energy at this grid point.
                     let rms = (trace.iter().map(|&v| v * v).sum::<f64>() / nt_obs as f64).sqrt();

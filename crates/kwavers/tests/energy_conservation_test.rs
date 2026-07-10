@@ -44,16 +44,20 @@ where
     let dv = params.dx * params.dy * params.dz; // Volume element
     let half = T::from_f64(0.5);
 
-    Zip::from(pressure)
-        .and(velocity_x)
-        .and(velocity_y)
-        .and(velocity_z)
-        .fold(<T as NumericElement>::ZERO, |energy, &p, &vx, &vy, &vz| {
-            let kinetic = half * params.density * (vx * vx + vy * vy + vz * vz);
-            let potential =
-                half * p * p / (params.density * params.sound_speed * params.sound_speed);
-            energy + (kinetic + potential) * dv
-        })
+    pressure
+        .iter()
+        .zip(velocity_x.iter())
+        .zip(velocity_y.iter())
+        .zip(velocity_z.iter())
+        .fold(
+            <T as NumericElement>::ZERO,
+            |energy, (((&p, &vx), &vy), &vz)| {
+                let kinetic = half * params.density * (vx * vx + vy * vy + vz * vz);
+                let potential =
+                    half * p * p / (params.density * params.sound_speed * params.sound_speed);
+                energy + (kinetic + potential) * dv
+            },
+        )
 }
 
 #[test]

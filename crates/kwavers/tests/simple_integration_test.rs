@@ -68,10 +68,10 @@ fn test_medium_arrays() {
     let absorption_array = medium.absorption_array();
     let nonlinearity_array = medium.nonlinearity_array();
 
-    assert_eq!(density_array.shape(), &[10, 10, 10]);
-    assert_eq!(sound_speed_array.shape(), &[10, 10, 10]);
-    assert_eq!(absorption_array.shape(), &[10, 10, 10]);
-    assert_eq!(nonlinearity_array.shape(), &[10, 10, 10]);
+    assert_eq!(density_array.shape(), [10, 10, 10]);
+    assert_eq!(sound_speed_array.shape(), [10, 10, 10]);
+    assert_eq!(absorption_array.shape(), [10, 10, 10]);
+    assert_eq!(nonlinearity_array.shape(), [10, 10, 10]);
 
     // Check values are uniform for homogeneous medium
     assert!(density_array.iter().all(|&d| d == 1500.0));
