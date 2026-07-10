@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added (2026-07-10) - Consus NPZ provider [minor]
+
+- Replaced `kwavers-physics` direct `ndarray-npy` parsing with typed
+  `consus-npy` arrays and direct Leto construction.
+
 ### Fixed (2026-07-10) - provider documentation reconciliation [patch]
 
 - Corrected stale production documentation that still attributed migrated

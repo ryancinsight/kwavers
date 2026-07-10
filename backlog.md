@@ -1,5 +1,8 @@
 # Backlog / Strategy
 
+- [x] [minor] Move focal-kernel NPZ storage ownership upstream to Consus and
+  remove the direct `ndarray-npy` production dependency.
+
 - [x] [patch] Reconcile stale provider names in production module contracts;
   closed 2026-07-10 with Moirai/Leto ownership reflected at each touched site.
 

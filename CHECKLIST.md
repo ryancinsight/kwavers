@@ -1,5 +1,13 @@
 # Project Checklist
 
+- [x] [minor] Replace the `kwavers-physics` `ndarray-npy` production edge with
+      the upstream Consus typed NPZ provider. `FocalKernel` loading now moves a
+      boxed typed payload directly into Leto, validates rank before
+      construction, and retains the i64/i32 focus-index compatibility contract
+      without an ndarray conversion. Evidence: package compile; focused NPZ
+      nextest 5/5; static manifest/source audit has no `ndarray-npy`; Clippy
+      reaches an unrelated pre-existing `kwavers-field` range-loop lint.
+
 - [x] [patch] Reconcile production architecture documentation after the
       provider migration: beamforming, inverse operators, FSI traversal,
       parser diagnostics, and aarch64 SIMD documentation now name Moirai and
