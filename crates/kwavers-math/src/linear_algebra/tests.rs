@@ -88,10 +88,21 @@ fn complex_ext_eig_rejects_non_hermitian_matrix() {
 #[test]
 fn eigendecomposition_symmetric_2x2() {
     let a = Array2::<f64>::from_vec([2, 2], vec![2.0, 1.0, 1.0, 2.0]).unwrap();
-    let vals = symmetric_eigenvalues_jacobi(&a.view()).unwrap();
     let (vals2, vecs) = a.eig().unwrap();
-    for (i, &lambda) in vals.iter().enumerate() {
-        assert!((lambda - vals2[i]).abs() < 1e-10);
+
+    // Cross-check the eigenvalue set against an independent oracle. The oracle
+    // (`leto_ops`) sorts ascending while `eig()` sorts descending, so compare
+    // as order-independent sets rather than element-wise.
+    let oracle = symmetric_eigenvalues_jacobi(&a.view()).unwrap();
+    let mut oracle_sorted = oracle.clone();
+    oracle_sorted.sort_by(|x, y| y.total_cmp(x));
+    for (computed, expected) in (0..vals2.len()).map(|i| vals2[i]).zip(oracle_sorted) {
+        assert!((computed - expected).abs() < 1e-10);
+    }
+
+    // Authoritative check: each returned (λ_i, v_i) pair satisfies A·v = λ·v.
+    for i in 0..vals2.len() {
+        let lambda = vals2[i];
         let v = vecs.index_axis::<1>(1, i).unwrap().to_contiguous();
         let mut av = Array1::<f64>::zeros(2);
         leto_ops::matvec(&a.view(), &v.view(), &mut av.view_mut()).unwrap();

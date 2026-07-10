@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - Hermitian eigensolver rotation correctness [patch]
+- [patch] `kwavers-math::linear_algebra::EigenSolver::jacobi_hermitian` produced
+  wrong eigenvalues for complex Hermitian matrices with non-zero imaginary
+  off-diagonal entries. The rotation derived its angle from `|h_pq|` but applied a
+  purely real rotation using only `h_pq.re` (dropping the phase), and inverted the
+  `tan(2θ)` angle formula. Replaced with the standard phase-reduced complex
+  Hermitian Jacobi rotation (unitary `diag(1, ē)·[[c,s],[-s,c]]`, `ē = conj(h_pq)/|h_pq|`)
+  and Golub & Van Loan 8.4.1 stable angle selection. Verified against closed-form
+  eigenvalues: `[[2,1-i],[1+i,3]] → {4,1}`, `[[2,1],[1,2]] → {3,1}`; all 263
+  `kwavers-math` tests pass. Corrected `eigendecomposition_symmetric_2x2` to compare
+  eigenvalue sets order-independently (`qr_algorithm` sorts descending, the
+  `leto_ops` oracle ascending) while retaining the authoritative `A·v = λ·v` residual.
+
 ### Fixed (2026-07-10) - kwavers bulk Leto migration closure (compute stage) [minor]
 - [minor] Consolidated the kwavers compute pipeline (analysis, solver, simulation,
   therapy, diagnostics, physics, grid-adjacent) on the Leto+/eunomia/moirai-parallel

@@ -185,30 +185,40 @@ pub fn jacobi_hermitian(
                     max_off_diag = max_off_diag.max(h_pq_norm);
 
                     if h_pq_norm > 1e-15 {
-                        let theta = if (h_pp - h_qq).abs() < 1e-12 {
-                            std::f64::consts::PI / 4.0
+                        // Complex Hermitian Jacobi rotation. The off-diagonal
+                        // `h_pq = r·e^{iφ}` is first phase-reduced to the real
+                        // value `r`, turning the (p,q) block into the real
+                        // symmetric `[[h_pp, r], [r, h_qq]]`; a stable real
+                        // Jacobi rotation then zeroes it. The composite unitary
+                        // `U = diag(1, ē)·[[c, s], [-s, c]]` (ē = conj(h_pq)/r)
+                        // carries the phase back, so the update multiplies the
+                        // rotated `q`-column entries by `ē`.
+                        let e_bar = h_pq.conj() / h_pq_norm;
+                        let tau = (h_qq - h_pp) / (2.0 * h_pq_norm);
+                        // t solves t² + 2τt − 1 = 0 with the smaller-magnitude
+                        // root (sign(τ)) for numerical stability.
+                        let t = if tau >= 0.0 {
+                            1.0 / (tau + tau.mul_add(tau, 1.0).sqrt())
                         } else {
-                            0.5 * ((h_qq - h_pp) / (2.0 * h_pq_norm)).atan()
+                            -1.0 / (-tau + tau.mul_add(tau, 1.0).sqrt())
                         };
-
-                        let c = theta.cos();
-                        let s = theta.sin();
+                        let c = 1.0 / t.mul_add(t, 1.0).sqrt();
+                        let s = t * c;
 
                         for i in 0..n {
                             if i != p && i != q {
                                 let h_ip = h[[i, p]];
                                 let h_iq = h[[i, q]];
-                                h[[i, p]] = c * h_ip - s * h_iq;
-                                h[[i, q]] = s * h_ip + c * h_iq;
+                                h[[i, p]] = c * h_ip - e_bar * (s * h_iq);
+                                h[[i, q]] = s * h_ip + e_bar * (c * h_iq);
                                 h[[p, i]] = h[[i, p]].conj();
                                 h[[q, i]] = h[[i, q]].conj();
                             }
                         }
 
-                        let h_pp_new =
-                            (2.0 * s * c).mul_add(-h_pq.re, (c * c).mul_add(h_pp, s * s * h_qq));
-                        let h_qq_new =
-                            (2.0 * s * c).mul_add(h_pq.re, (s * s).mul_add(h_pp, c * c * h_qq));
+                        // Golub & Van Loan 8.4.1: λ_p = h_pp − t·r, λ_q = h_qq + t·r.
+                        let h_pp_new = t.mul_add(-h_pq_norm, h_pp);
+                        let h_qq_new = t.mul_add(h_pq_norm, h_qq);
 
                         h[[p, p]] = Complex64::new(h_pp_new, 0.0);
                         h[[q, q]] = Complex64::new(h_qq_new, 0.0);
@@ -218,8 +228,8 @@ pub fn jacobi_hermitian(
                         for i in 0..n {
                             let v_ip = v[[i, p]];
                             let v_iq = v[[i, q]];
-                            v[[i, p]] = c * v_ip - s * v_iq;
-                            v[[i, q]] = s * v_ip + c * v_iq;
+                            v[[i, p]] = c * v_ip - e_bar * (s * v_iq);
+                            v[[i, q]] = s * v_ip + e_bar * (c * v_iq);
                         }
 
                         _rotations += 1;
