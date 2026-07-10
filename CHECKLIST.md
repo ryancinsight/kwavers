@@ -9,6 +9,14 @@
 > decision rationale + migration guide are recorded in CHANGELOG.md.
 > Gap inventory: [gap_audit.md](gap_audit.md) · Strategy: [backlog.md](backlog.md).
 
+- [x] [patch] Remove the nonlinear acoustic Leto-to-Leto array boundary:
+      delete the full-volume conversion module and route spectral/nonlinear FFT
+      inputs and outputs directly as `leto::Array3`. Verification: no
+      `array_boundary`, `leto_real_field`, or `ndarray_real_field` symbols
+      remain; touched-file formatting and diff checks pass; `cargo check -p
+      kwavers-physics --lib` passes. Focused nextest compilation remains blocked
+      by 59 unrelated Leto test-migration errors recorded by the run.
+
 - [x] [patch] kwavers-analysis narrowband Apollo FFT routing: route
       narrowband legacy analytic-baseband and windowed STFT snapshot extraction
       through Apollo 1-D FFT APIs over Leto buffers instead of importing FFT

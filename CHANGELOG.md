@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Changed (2026-07-09) - nonlinear acoustic Leto boundary removal [patch]
+- [patch] Removed the allocating Leto-to-Leto `array_boundary` conversion
+  module from nonlinear acoustic spectral methods. FFT inputs and inverse FFT
+  outputs now remain native `leto::Array3` values through all 14 former
+  conversion sites. Production verification: `cargo check -p kwavers-physics
+  --lib` passed. The focused nextest build remains blocked by 59 unrelated
+  package test-migration errors after correcting the touched Nyquist fixture to
+  Leto's `[usize; 3]` index contract.
+
 ### Changed (2026-07-08) - kwavers-analysis narrowband Apollo FFT routing [patch]
 - [patch] Routed narrowband legacy analytic-baseband and windowed STFT
   snapshot extraction through Apollo 1-D FFT APIs over Leto buffers instead of

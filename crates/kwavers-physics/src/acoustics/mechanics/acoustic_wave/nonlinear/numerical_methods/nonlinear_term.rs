@@ -7,7 +7,6 @@ use leto::Array3 as LetoArray3;
 use leto::Array3;
 
 use super::super::wave_model::NonlinearWave;
-use super::array_boundary::{leto_real_field, ndarray_real_field};
 
 impl NonlinearWave {
     /// Computes the nonlinear source term for the Westervelt acoustic wave equation.
@@ -45,7 +44,7 @@ impl NonlinearWave {
         let [nx, ny, nz] = pressure.shape();
 
         // Single FFT of pressure — shared by gradient and Laplacian computations.
-        let mut pressure_k = fft_3d_array(&leto_real_field(pressure));
+        let mut pressure_k = fft_3d_array(pressure);
 
         // 2/3-rule dealiasing: zero bins with absolute frequency index > n/3 along
         // each axis. Physical-space products of the resulting bandlimited fields
@@ -81,11 +80,11 @@ impl NonlinearWave {
             }
         }
 
-        let p_filt = ndarray_real_field(ifft_3d_array(&pressure_k));
-        let grad_x = ndarray_real_field(ifft_3d_array(&grad_x_k));
-        let grad_y = ndarray_real_field(ifft_3d_array(&grad_y_k));
-        let grad_z = ndarray_real_field(ifft_3d_array(&grad_z_k));
-        let laplacian = ndarray_real_field(ifft_3d_array(&laplacian_k));
+        let p_filt = ifft_3d_array(&pressure_k);
+        let grad_x = ifft_3d_array(&grad_x_k);
+        let grad_y = ifft_3d_array(&grad_y_k);
+        let grad_z = ifft_3d_array(&grad_z_k);
+        let laplacian = ifft_3d_array(&laplacian_k);
 
         let mut nonlinear_term = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
@@ -171,7 +170,7 @@ mod tests {
 
         // cos(π·i) alternates ±1: DFT energy concentrated at index N/2 = 6
         let p_nyquist =
-            Array3::from_shape_fn([n, n, n], |(i, _j, _k)| 1e5_f64 * (PI * i as f64).cos());
+            Array3::from_shape_fn([n, n, n], |[i, _j, _k]| 1e5_f64 * (PI * i as f64).cos());
 
         let term = w
             .compute_nonlinear_term(&p_nyquist, &medium, &grid)

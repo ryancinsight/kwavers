@@ -8,7 +8,6 @@ use leto::Array3 as LetoArray3;
 use leto::Array3;
 
 use super::super::wave_model::NonlinearWave;
-use super::array_boundary::{leto_real_field, ndarray_real_field};
 
 impl NonlinearWave {
     /// Applies the 2/3-rule anti-aliasing filter to a 3-D spectral field in-place.
@@ -68,7 +67,7 @@ impl NonlinearWave {
         medium: &dyn Medium,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let pressure_k = fft_3d_array(&leto_real_field(pressure));
+        let pressure_k = fft_3d_array(pressure);
         let [nx, ny, nz] = pressure_k.shape();
 
         let kx = grid.compute_kx();
@@ -130,7 +129,7 @@ impl NonlinearWave {
             }
         }
 
-        Ok(ndarray_real_field(ifft_3d_array(&result_k)))
+        Ok(ifft_3d_array(&result_k))
     }
 }
 
@@ -146,7 +145,7 @@ impl NonlinearWave {
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
-        let field_k = fft_3d_array(&leto_real_field(field));
+        let field_k = fft_3d_array(field);
         let [nx, ny, nz] = field_k.shape();
 
         let kx = grid.compute_kx();
@@ -173,9 +172,9 @@ impl NonlinearWave {
         }
 
         Ok((
-            ndarray_real_field(ifft_3d_array(&grad_x_k)),
-            ndarray_real_field(ifft_3d_array(&grad_y_k)),
-            ndarray_real_field(ifft_3d_array(&grad_z_k)),
+            ifft_3d_array(&grad_x_k),
+            ifft_3d_array(&grad_y_k),
+            ifft_3d_array(&grad_z_k),
         ))
     }
 
@@ -194,7 +193,7 @@ impl NonlinearWave {
         field: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let field_k = fft_3d_array(&leto_real_field(field));
+        let field_k = fft_3d_array(field);
         let [nx, ny, nz] = field_k.shape();
 
         let mut laplacian_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
@@ -226,7 +225,7 @@ impl NonlinearWave {
             }
         }
 
-        Ok(ndarray_real_field(ifft_3d_array(&laplacian_k)))
+        Ok(ifft_3d_array(&laplacian_k))
     }
 }
 
