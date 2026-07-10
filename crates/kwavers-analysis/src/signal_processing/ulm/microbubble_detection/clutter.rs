@@ -27,7 +27,7 @@ use super::types::SvdClutterConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
 use leto::{Array1, Array2, SliceArg};
-use leto_ops::svd_decompose;
+use leto_ops::svd_rank_revealing;
 
 /// SVD spatiotemporal clutter filter.
 ///
@@ -69,7 +69,10 @@ impl UlmSvdClutterFilter {
             }));
         }
 
-        let svd = svd_decompose(&iq_data.view())?;
+        // IQ clutter ensembles are routinely rank-deficient (low-rank tissue
+        // clutter is the signal being separated), so use the rank-revealing SVD,
+        // which surfaces zero singular values instead of failing to converge.
+        let svd = svd_rank_revealing(&iq_data.view())?;
         let u = svd.left_singular_vectors;
         let vt = svd.right_singular_vectors;
         let sigma = Array1::from_vec(svd.singular_values.len(), svd.singular_values)?;

@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Fixed (2026-07-10) - clutter-filter SVD/eigensolver selection [patch]
+- [patch] `kwavers-analysis` clutter filters used the wrong Leto decompositions
+  for their (inherently rank-deficient / symmetric) inputs, surfaced by the first
+  full-workspace test run:
+  - SVD clutter filter (`svd_filter/mod.rs`) and ULM microbubble clutter filter
+    (`ulm/microbubble_detection/clutter.rs`) called `leto_ops::svd_decompose`
+    (bidiagonal QR, rejects rank-deficient input), which errored ("rank-deficient"
+    / "QR failed to converge") on low-rank tissue-clutter ensembles. Switched to
+    `svd_rank_revealing` (one-sided Jacobi), which surfaces zero singular values.
+  - Adaptive filter (`adaptive_filter/filter.rs`) computed the eigendecomposition
+    of its symmetric temporal covariance via the general complex QR
+    (`LinearAlgebraExt::eig`), which is pathologically slow (>60 s per 120×120,
+    per pixel → test timeouts). Switched to `leto_ops::symmetric_eigen_jacobi`
+    (correct for symmetric input; milliseconds). Resolves the clutter_filter
+    integration timeouts (test_all_separation_methods 60 s → 8.8 s) and the
+    svd_filter/ulm rank-deficiency failures. 69 kwavers-analysis clutter/svd/
+    adaptive tests pass.
+
 ### Changed (2026-07-10) - kwavers-python PyO3 boundary Leto migration [minor]
 - [minor] Migrated the `kwavers-python` PyO3 binding surface (69 files) onto the
   Leto+eunomia compute stack, closing the last open crate of the bulk migration.

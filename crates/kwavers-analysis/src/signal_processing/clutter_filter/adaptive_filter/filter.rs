@@ -1,6 +1,5 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::linear_algebra::LinearAlgebraExt;
 use leto::{
     Array1,
     Array2,
@@ -132,7 +131,15 @@ impl AdaptiveFilter {
             }
         }
 
-        let (eigenvalues, eigenvectors) = covariance.eig()?;
+        // The temporal covariance is symmetric by construction (R[i,j] = R[j,i]),
+        // so use the symmetric Jacobi eigensolver, which guarantees real
+        // eigenvalues and orthonormal eigenvectors. The general complex QR
+        // (`eig`) is unnecessary here and orders of magnitude slower on matrices
+        // this size (>60 s per 120×120 vs milliseconds), which per-pixel across
+        // an image made the adaptive filter unusable.
+        let decomposition = leto_ops::symmetric_eigen_jacobi(&covariance.view())?;
+        let eigenvalues = decomposition.eigenvalues;
+        let eigenvectors = decomposition.eigenvectors;
 
         // Sort descending
         let mut indices: Vec<usize> = (0..eigenvalues.len()).collect();
