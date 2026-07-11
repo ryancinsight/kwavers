@@ -9,10 +9,7 @@
 #[cfg(feature = "gpu")]
 use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 /// Streaming buffer for real-time data processing.
 ///
@@ -68,10 +65,12 @@ impl StreamingBuffer {
     /// # Errors
     /// Returns [`KwaversError::InvalidInput`] if frame dimensions don't match the buffer configuration.
     pub fn add_frame(&mut self, frame: &Array3<f32>) -> KwaversResult<bool> {
-        let (channels, samples, _) = frame.dim();
+        let frame_dims = frame.shape();
+        let channels = frame_dims[0];
+        let samples = frame_dims[1];
 
-        let expected_channels = self.rf_buffer.dim().1;
-        let expected_samples = self.rf_buffer.dim().2;
+        let expected_channels = self.rf_buffer.shape()[1];
+        let expected_samples = self.rf_buffer.shape()[2];
 
         if channels != expected_channels || samples != expected_samples {
             return Err(KwaversError::InvalidInput(format!(

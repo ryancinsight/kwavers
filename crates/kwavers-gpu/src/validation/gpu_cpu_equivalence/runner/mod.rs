@@ -7,13 +7,10 @@ use kwavers_signal::traits::Signal;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::interface::Solver;
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array2 as NdArray2,
-    Array3 as NdArray3,
-};
+use leto::{Array2 as NdArray2, Array3 as NdArray3};
 
 fn pressure_field_to_leto(pressure: &NdArray3<f64>) -> Result<LetoArray3<f64>, KwaversError> {
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
     let leto_shape = [nx, ny, nz];
     LetoArray3::from_shape_vec(leto_shape, pressure.iter().copied().collect()).map_err(|err| {
         KwaversError::InvalidInput(format!(

@@ -19,10 +19,10 @@ where
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
-        let rf_dims = rf_data.dim();
-        let _frames = rf_dims.0;
-        let channels = rf_dims.1;
-        let samples = rf_dims.2;
+        let rf_dims = rf_data.shape();
+        let _frames = rf_dims[0];
+        let channels = rf_dims[1];
+        let samples = rf_dims[2];
 
         if rf_data.is_empty() {
             return Err(KwaversError::InvalidInput(

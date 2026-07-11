@@ -28,10 +28,7 @@ use kwavers_analysis::signal_processing::beamforming::three_dimensional::{
 #[cfg(feature = "gpu")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "gpu")]
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 #[cfg(feature = "gpu")]
 use wgpu::util::DeviceExt;
 
@@ -72,9 +69,9 @@ impl<'a> DynamicFocusGPU<'a> {
         apodization_window: &Beamforming3dApodizationWindow,
         apodization_weights: &Array3<f32>,
     ) -> KwaversResult<Array3<f32>> {
-        let rf_dims = rf_data.dim();
-        let frames = rf_dims.0;
-        let samples = rf_dims.2;
+        let rf_dims = rf_data.shape();
+        let frames = rf_dims[0];
+        let samples = rf_dims[2];
 
         let (vol_x, vol_y, vol_z) = (
             self.config.volume_dims.0,
@@ -302,7 +299,7 @@ impl<'a> DynamicFocusGPU<'a> {
 
         let mapped = slice.get_mapped_range();
         let result_f32: &[f32] = bytemuck::cast_slice(&mapped);
-        let result = Array3::from_shape_fn((vol_x, vol_y, vol_z), |(x, y, z)| {
+        let result = Array3::from_shape_fn([vol_x, vol_y, vol_z], |[x, y, z]| {
             result_f32[x + y * vol_x + z * vol_x * vol_y]
         });
         staging.unmap();

@@ -64,6 +64,8 @@ impl GpuPstdSession {
 
         #[cfg(feature = "gpu")]
         {
+            use crate::breast_fwi_bindings::complex_compat::leto2_to_nd2;
+
             let total_t0 = std::time::Instant::now();
             self.last_medium_upload_ns = 0;
             self.last_medium_variable_upload_ns = 0;
@@ -90,7 +92,7 @@ impl GpuPstdSession {
                 self.last_total_ns = total_t0.elapsed().as_nanos() as u64;
             }
 
-            Ok(PyArray2::from_owned_array(_py, out))
+            Ok(PyArray2::from_owned_array(_py, leto2_to_nd2(out)))
         }
     }
 }
