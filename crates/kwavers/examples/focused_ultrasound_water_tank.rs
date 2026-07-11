@@ -116,9 +116,9 @@ mod tests {
                 assert_eq!(mask[[element.x, element.y, z]], 1.0);
                 let row = z * elements.len() + element_index;
                 let reference_row = element_index;
-                let row_view = signal.index_axis::<1>(1, row).expect("signal row");
+                let row_view = signal.index_axis::<1>(0, row).expect("signal row");
                 let reference_row_view = signal
-                    .index_axis::<1>(1, reference_row)
+                    .index_axis::<1>(0, reference_row)
                     .expect("reference row");
                 let row_error = row_view
                     .iter()
@@ -136,8 +136,8 @@ mod tests {
     #[test]
     fn water_tank_comparison_writes_nonempty_artifacts() {
         let output = run_comparison().unwrap();
-        assert_eq!(output.solver_fields.len(), 5);
-        assert_eq!(output.axial_fields.len(), 6);
+        assert_eq!(output.solver_fields.len(), 6);
+        assert_eq!(output.axial_fields.len(), 7);
         assert!(output
             .solver_metrics
             .iter()

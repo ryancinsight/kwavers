@@ -284,11 +284,7 @@ fn gaussian_dpdz(x: f64, y: f64, z: f64, center: (f64, f64, f64), sigma: f64) ->
     -(z - center.2) / (sigma * sigma) * gaussian_pressure(x, y, z, center, sigma)
 }
 
-fn summarize_field(
-    name: &'static str,
-    field: &LetoArray3<f64>,
-    elapsed: Duration,
-) -> RunSummary {
+fn summarize_field(name: &'static str, field: &LetoArray3<f64>, elapsed: Duration) -> RunSummary {
     let mut energy_sq: f64 = 0.0;
     let mut peak_abs: f64 = 0.0;
     for &value in field.iter() {
@@ -313,7 +309,11 @@ fn compare_fields(
     rhs: &'static str,
     b: &LetoArray3<f64>,
 ) -> Comparison {
-    assert_eq!(a.shape(), b.shape(), "comparison fields must share dimensions");
+    assert_eq!(
+        a.shape(),
+        b.shape(),
+        "comparison fields must share dimensions"
+    );
 
     let mut diff_sq: f64 = 0.0;
     let mut a_sq: f64 = 0.0;
@@ -453,7 +453,7 @@ mod tests {
         assert!(p0.iter().all(|value| value.is_finite()));
 
         // Compute energy centroid manually from the ndarray p0
-        let (nx, ny, nz) = p0.dim();
+        let [nx, ny, nz] = p0.shape();
         let mut weight_sum = 0.0f64;
         let mut x_sum = 0.0f64;
         let mut y_sum = 0.0f64;

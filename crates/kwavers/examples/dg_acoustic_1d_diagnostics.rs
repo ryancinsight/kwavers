@@ -61,8 +61,8 @@ fn main() -> KwaversResult<()> {
 mod tests {
     use super::*;
     use crate::dg_acoustic_common::{
-        embedded_grid, gaussian_embedded_source, run_embedded_gaussian_solver_matrix, EMBEDDED_NY,
-        EMBEDDED_NZ,
+        embedded_grid, gaussian_embedded_source, run_embedded_gaussian_solver_matrix, DENSITY, DT,
+        EMBEDDED_NY, EMBEDDED_NZ,
     };
     use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
     use std::f64::consts::PI;
@@ -104,11 +104,11 @@ mod tests {
 
         assert!(pressure.iter().all(|value| value.is_finite()));
         assert!(ux.iter().all(|value| value.is_finite()));
-        assert_eq!(pressure[(center_i, EMBEDDED_NY / 2, EMBEDDED_NZ / 2)], 1.0);
+        assert_eq!(pressure[[center_i, EMBEDDED_NY / 2, EMBEDDED_NZ / 2]], 1.0);
         assert!(uy.iter().all(|value| *value == 0.0));
         assert!(uz.iter().all(|value| *value == 0.0));
-        assert!(ux[(center_i - 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2)] > 0.0);
-        assert!(ux[(center_i + 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2)] < 0.0);
+        assert!(ux[[center_i - 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2]] > 0.0);
+        assert!(ux[[center_i + 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2]] < 0.0);
     }
 
     #[test]
