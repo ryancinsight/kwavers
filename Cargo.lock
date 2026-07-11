@@ -1401,6 +1401,7 @@ dependencies = [
 [[package]]
 name = "consus-npy"
 version = "0.1.0"
+source = "git+https://github.com/ryancinsight/consus?branch=codex%2Fconsus-npy-provider#464f20b4099382e831ec56a875f932871b314b2c"
 dependencies = [
  "byteorder",
  "thiserror 2.0.17",
@@ -7267,7 +7268,6 @@ name = "ritk-interpolation"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "burn",
  "coeus-core",
  "coeus-tensor",
  "ritk-core",
@@ -7549,7 +7549,6 @@ name = "ritk-transform"
 version = "0.1.0"
 dependencies = [
  "burn",
- "burn-ndarray",
  "coeus-core",
  "coeus-tensor",
  "ritk-core",

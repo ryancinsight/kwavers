@@ -69,7 +69,7 @@ consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std
 consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }
 consus-io = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
-consus-npy = { path = "../consus/crates/consus-npy" }
+consus-npy = { git = "https://github.com/ryancinsight/consus", branch = "codex/consus-npy-provider" }
 rand = "0.9"
 criterion = "0.5"
 
