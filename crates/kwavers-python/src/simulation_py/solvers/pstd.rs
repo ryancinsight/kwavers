@@ -305,36 +305,30 @@ impl Simulation {
         let ux_data = solver
             .sensor_recorder
             .recorded_ux_view()
-            .and_then(|d| d.try_into().ok())
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
         let uy_data = solver
             .sensor_recorder
             .recorded_uy_view()
-            .and_then(|d| d.try_into().ok())
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
         let uz_data = solver
             .sensor_recorder
             .recorded_uz_view()
-            .and_then(|d| d.try_into().ok())
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
         let ix_data = solver
             .sensor_recorder
             .recorded_ix_view()
-            .and_then(|d| d.try_into().ok())
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
         let iy_data = solver
             .sensor_recorder
             .recorded_iy_view()
-            .and_then(|d| d.try_into().ok())
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
         let iz_data = solver
             .sensor_recorder
             .recorded_iz_view()
-            .and_then(|d| d.try_into().ok())
             .map(|d| Self::trim_initial_recorder_view(d, total_steps, 1));
-        let i_avg_x = solver.sensor_recorder.extract_i_avg_x().and_then(|d| d.try_into().ok());
-        let i_avg_y = solver.sensor_recorder.extract_i_avg_y().and_then(|d| d.try_into().ok());
-        let i_avg_z = solver.sensor_recorder.extract_i_avg_z().and_then(|d| d.try_into().ok());
+        let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
+        let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
+        let i_avg_z = solver.sensor_recorder.extract_i_avg_z();
         let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
         let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 

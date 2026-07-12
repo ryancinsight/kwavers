@@ -1,14 +1,11 @@
 //! Phase 22 wrappers: PID controller, resampling, reconstruction, and bubble field.
 
+use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto2};
 use kwavers_core::error::KwaversError;
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
 };
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto2};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use numpy::{PyArray2, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -333,8 +330,8 @@ pub(crate) fn time_reversal_reconstruction_impl(
     });
 
     let grid_source = GridSource {
-        p_mask: Some(p_mask.into()),
-        p_signal: Some(reversed_signal.into()),
+        p_mask: Some(p_mask),
+        p_signal: Some(reversed_signal),
         p_mode: SourceMode::Dirichlet,
         ..GridSource::new_empty()
     };

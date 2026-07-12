@@ -2,9 +2,8 @@
 //! (`ali_2025_breast_fwi_frequency_sweep_hz`, `simulate_breast_fwi_frequency_observation`,
 //! `snap_breast_fwi_array_to_grid`, `invert_breast_fwi`).
 
-use super::complex_compat::{
-    ec_to_nc2, leto2_to_nd2, leto3_to_nd3, nc_to_ec2, nd_to_leto2, nd_to_leto3,
-};
+use super::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3};
+use eunomia::Complex64;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     reconstruct_breast_ust_sound_speed_volume, snap_multi_row_ring_array_to_grid,
 };
@@ -13,8 +12,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, FrequencyObservation,
 };
 use numpy::ndarray::Array1;
-use eunomia::Complex64;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -35,7 +33,7 @@ impl PyFrequencyObservation {
         Self {
             inner: FrequencyObservation::new(
                 frequency_hz,
-                nd_to_leto2(nc_to_ec2(observed_pressure.as_array().to_owned())),
+                nd_to_leto2(observed_pressure.as_array().to_owned()),
             ),
         }
     }
@@ -47,7 +45,7 @@ impl PyFrequencyObservation {
 
     #[getter]
     pub fn observed_pressure<'py>(&self, py: Python<'py>) -> Py<PyArray2<Complex64>> {
-        ec_to_nc2(leto2_to_nd2(self.inner.observed_pressure.clone()))
+        leto2_to_nd2(self.inner.observed_pressure.clone())
             .to_pyarray(py)
             .into()
     }
@@ -74,7 +72,7 @@ pub fn simulate_breast_fwi_frequency_observation<'py>(
             simulate_frequency_observation(&sound_speed, &array.inner, frequency_hz, &config.inner)
         })
         .map_err(kwavers_to_py)?;
-    Ok(ec_to_nc2(leto2_to_nd2(pressure)).to_pyarray(py).into())
+    Ok(leto2_to_nd2(pressure).to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -128,4 +126,3 @@ pub fn invert_breast_fwi<'py>(
     out.set_item("solver_model_family", result.solver_model_family)?;
     Ok(out)
 }
-

@@ -67,7 +67,7 @@ pub(crate) fn process_source_for_run(
         let p_mode = parse_source_mode(&src.source_mode);
         *grid_source = GridSource {
             p_mask: Some(float_mask),
-            p_signal: Some(signal.clone().into()),
+            p_signal: Some(signal.clone()),
             p_mode,
             ..GridSource::new_empty()
         };
@@ -103,7 +103,7 @@ pub(crate) fn process_source_for_run(
                 arr.num_elements()
             )));
         }
-        let signal_leto = signal.clone().into();
+        let signal_leto = signal.clone();
         let (mask, per_cell_signal) = arr
             .build_per_element_source(&grid.inner, &signal_leto)
             .map_err(PyValueError::new_err)?;
@@ -160,8 +160,8 @@ pub(crate) fn process_source_for_run(
         }
         let p_mode = parse_source_mode(&src.source_mode);
         *grid_source = GridSource {
-            p_mask: Some(mask.clone().into()),
-            p_signal: Some(signal.clone().into()),
+            p_mask: Some(mask.clone()),
+            p_signal: Some(signal.clone()),
             p_mode,
             ..GridSource::new_empty()
         };
@@ -170,7 +170,7 @@ pub(crate) fn process_source_for_run(
 
     if src.source_type == "p0" {
         if let Some(ref p0) = src.initial_pressure {
-            grid_source.p0 = Some(p0.clone().into());
+            grid_source.p0 = Some(p0.clone());
         }
         return Ok(());
     }
@@ -185,8 +185,8 @@ pub(crate) fn process_source_for_run(
             .as_ref()
             .ok_or_else(|| PyValueError::new_err("Velocity signal missing"))?;
         let u_mode = parse_source_mode(&src.source_mode);
-        grid_source.u_mask = Some(mask.clone().into());
-        grid_source.u_signal = Some(u_sig.clone().into());
+        grid_source.u_mask = Some(mask.clone());
+        grid_source.u_signal = Some(u_sig.clone());
         grid_source.u_mode = u_mode;
         return Ok(());
     }
@@ -215,7 +215,7 @@ pub(crate) fn process_source_for_run(
             .to_string();
         *elastic_ivp_axis = Some(axis_suffix);
         if let Some(ref p0) = src.initial_pressure {
-            grid_source.p0 = Some(p0.clone().into());
+            grid_source.p0 = Some(p0.clone());
         }
         return Ok(());
     }

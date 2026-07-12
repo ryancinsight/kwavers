@@ -1,12 +1,12 @@
 //! PyO3 wrappers for Doppler and vector-flow imaging helpers.
 
+use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
 use kwavers_analysis::signal_processing::doppler::{
     continuous_wave_vector_flow_fixture as core_continuous_wave_vector_flow_fixture, VectorVelocity,
 };
 use kwavers_physics::analytical::imaging::{self, ContrastAgentDopplerConfig};
-use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyReadonlyArray1};
+use numpy::{PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -170,11 +170,11 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
     )?;
     out.set_item(
         "true_velocity_m_s",
-        vec![fixture.true_velocity_m_s.vx, fixture.true_velocity_m_s.vz].to_pyarray(py),
+        [fixture.true_velocity_m_s.vx, fixture.true_velocity_m_s.vz].to_pyarray(py),
     )?;
     out.set_item(
         "recovered_velocity_m_s",
-        vec![
+        [
             fixture.recovered_velocity_m_s.vx,
             fixture.recovered_velocity_m_s.vz,
         ]

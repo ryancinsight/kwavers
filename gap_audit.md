@@ -1,5 +1,13 @@
 # Gap Audit
 
+- Closed 2026-07-11: six rank-specific PyO3 complex converters copied complete
+  arrays between identical `eunomia::Complex64` aliases. The converters and all
+  24 runtime call sites are deleted; the Leto/NumPy boundary remains explicit.
+  Follow-through also deletes the 29 stale same-type conversions exposed by
+  package Clippy. Evidence tier: compile-time type identity, package
+  compilation, static source audit, warning-denied package Clippy, and 6/6
+  focused package tests.
+
 - Closed 2026-07-11: `kwavers-boundary` duplicated Leto indexed traversal in a
   consumer-owned `parallel` module and retained an otherwise-unused direct
   Moirai dependency. CPML, smoothing, and adaptive coupling now use the

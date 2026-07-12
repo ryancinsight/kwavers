@@ -1,32 +1,7 @@
 use std::convert::TryInto;
 
-use kwavers_math::fft::Complex64 as KwComplex;
 use leto::{Array1 as LetoArray1, Array2 as LetoArray2, Array3 as LetoArray3};
 use numpy::ndarray::{Array1 as NdArray1, Array2 as NdArray2, Array3 as NdArray3};
-
-pub fn nc_to_ec1(arr: NdArray1<eunomia::Complex64>) -> NdArray1<KwComplex> {
-    arr.mapv(|c| KwComplex::new(c.re, c.im))
-}
-
-pub fn ec_to_nc1(arr: NdArray1<KwComplex>) -> NdArray1<eunomia::Complex64> {
-    arr.mapv(|c| eunomia::Complex64::new(c.re, c.im))
-}
-
-pub fn nc_to_ec2(arr: NdArray2<eunomia::Complex64>) -> NdArray2<KwComplex> {
-    arr.mapv(|c| KwComplex::new(c.re, c.im))
-}
-
-pub fn ec_to_nc2(arr: NdArray2<KwComplex>) -> NdArray2<eunomia::Complex64> {
-    arr.mapv(|c| eunomia::Complex64::new(c.re, c.im))
-}
-
-pub fn nc_to_ec3(arr: NdArray3<eunomia::Complex64>) -> NdArray3<KwComplex> {
-    arr.mapv(|c| KwComplex::new(c.re, c.im))
-}
-
-pub fn ec_to_nc3(arr: NdArray3<KwComplex>) -> NdArray3<eunomia::Complex64> {
-    arr.mapv(|c| eunomia::Complex64::new(c.re, c.im))
-}
 
 pub fn nd_to_leto1<T: Clone>(arr: NdArray1<T>) -> LetoArray1<T> {
     arr.into()

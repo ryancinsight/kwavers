@@ -1,5 +1,9 @@
 # Backlog / Strategy
 
+- [x] [patch] Delete the PyO3 complex-array identity conversion family and
+  remove 24 redundant allocation/traversal sites while preserving the real
+  Leto-to-NumPy ownership boundary.
+
 - [x] [patch] Remove the `kwavers-boundary` traversal adapter and use Leto's
   canonical indexed map/zip operations directly at all ten bounded consumers.
 

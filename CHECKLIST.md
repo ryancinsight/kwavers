@@ -1,5 +1,14 @@
 # Project Checklist
 
+- [x] [patch] Remove six rank-specific complex-array identity converters from
+      the PyO3 boundary and unwrap all 24 FFT/breast-FWI call sites. Kwavers,
+      Apollo, and Eunomia already share Eunomia's `Complex64`, so the removed
+      conversions performed full-array allocations without a type change.
+      Follow-through removes the 29 stale identity conversions exposed by the
+      package lint gate. Evidence: exact residual audit, package compile,
+      warning-denied all-target Clippy with dependency lints capped, and focused
+      package nextest 6/6.
+
 - [x] [patch] Delete the `kwavers-boundary` local traversal adapter and route
       CPML, smoothing, and adaptive-coupling mutation through Leto's canonical
       const-generic indexed operations. Remove the now-unused direct Moirai

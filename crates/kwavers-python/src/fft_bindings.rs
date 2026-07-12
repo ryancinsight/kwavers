@@ -6,16 +6,15 @@
 //! return f64.
 
 use crate::breast_fwi_bindings::complex_compat::{
-    ec_to_nc1, ec_to_nc3, leto1_to_nd1, leto3_to_nd3, nc_to_ec1, nc_to_ec3, nd_to_leto1,
-    nd_to_leto3,
+    leto1_to_nd1, leto3_to_nd3, nd_to_leto1, nd_to_leto3,
 };
+use eunomia::Complex64;
 use kwavers_math::{
     fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array},
     signal::window::hann,
 };
 use numpy::ndarray::{Array1, Array3};
-use eunomia::Complex64;
-use numpy::{ToPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
+use numpy::{PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -39,7 +38,7 @@ pub fn fft1<'py>(
         ));
     }
     let spectrum = py.detach(|| fft_1d_array(&nd_to_leto1(arr)));
-    Ok(ec_to_nc1(leto1_to_nd1(spectrum)).to_pyarray(py).into())
+    Ok(leto1_to_nd1(spectrum).to_pyarray(py).into())
 }
 
 /// Inverse 1-D DFT of a complex spectrum.
@@ -61,7 +60,7 @@ pub fn ifft1<'py>(
             "ifft1: input spectrum must be non-empty",
         ));
     }
-    let signal = py.detach(|| ifft_1d_array(&nd_to_leto1(nc_to_ec1(arr))));
+    let signal = py.detach(|| ifft_1d_array(&nd_to_leto1(arr)));
     Ok(leto1_to_nd1(signal).to_pyarray(py).into())
 }
 
@@ -86,7 +85,7 @@ pub fn fft3<'py>(
         ));
     }
     let spectrum = py.detach(|| fft_3d_array(&nd_to_leto3(arr)));
-    Ok(ec_to_nc3(leto3_to_nd3(spectrum)).to_pyarray(py).into())
+    Ok(leto3_to_nd3(spectrum).to_pyarray(py).into())
 }
 
 /// Inverse 3-D DFT of a complex spectrum.
@@ -109,7 +108,7 @@ pub fn ifft3<'py>(
             "ifft3: all dimensions must be non-zero",
         ));
     }
-    let field = py.detach(|| ifft_3d_array(&nd_to_leto3(nc_to_ec3(arr))));
+    let field = py.detach(|| ifft_3d_array(&nd_to_leto3(arr)));
     Ok(leto3_to_nd3(field).to_pyarray(py).into())
 }
 
@@ -175,4 +174,3 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(demeaned_hann_power_spectrum_1d, m)?)?;
     Ok(())
 }
-

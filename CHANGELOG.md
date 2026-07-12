@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Removed 24 redundant complex-array copies from FFT and breast-FWI PyO3
+  bindings now that Kwavers, Apollo, and Eunomia share one complex type, plus
+  29 stale same-type conversions across Python simulation construction and
+  recorder extraction.
+
 - Deleted the consumer-owned `kwavers-boundary` traversal adapter and routed
   CPML, smoothing, and adaptive-coupling mutation through canonical Leto
   indexed operations.
