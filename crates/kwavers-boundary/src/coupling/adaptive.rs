@@ -166,7 +166,7 @@ impl BoundaryCondition for AdaptiveBoundary {
 
     fn apply_scalar_spatial(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,
@@ -183,7 +183,8 @@ impl BoundaryCondition for AdaptiveBoundary {
         // Apply absorption: u(t+Δt) = u(t) × exp(-α·Δt)
         let absorption = self.current_absorption();
         let decay = (-absorption * _dt).exp();
-        crate::parallel::for_each_mut(field, |x| *x *= decay);
+        leto_ops::indexed_map_inplace(&mut field, |_, value| *value *= decay)
+            .expect("invariant: valid adaptive-coupling field layout");
 
         Ok(())
     }

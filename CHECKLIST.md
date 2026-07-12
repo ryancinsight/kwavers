@@ -1,5 +1,13 @@
 # Project Checklist
 
+- [x] [patch] Delete the `kwavers-boundary` local traversal adapter and route
+      CPML, smoothing, and adaptive-coupling mutation through Leto's canonical
+      const-generic indexed operations. Remove the now-unused direct Moirai
+      manifest edge; scheduling remains owned inside provider operations rather
+      than a consumer helper. Completion evidence: scoped static audit,
+      warning-denied all-target Clippy, full package nextest, doctests, and
+      warning-clean package docs.
+
 - [x] [patch] Clear the warning-denied `kwavers-field` gate exposed by the
       Consus NPZ integration: Poynting surface projection now iterates the
       borrowed normal directly and carries a value-semantic power assertion.

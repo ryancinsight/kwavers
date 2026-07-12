@@ -4644,8 +4644,8 @@ dependencies = [
  "kwavers-math",
  "kwavers-medium",
  "leto",
+ "leto-ops",
  "log",
- "moirai-parallel",
  "serde",
 ]
 

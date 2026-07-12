@@ -71,7 +71,6 @@ pub mod coupling;
 pub mod cpml;
 pub mod fem;
 pub mod field_updater;
-mod parallel;
 pub mod periodic;
 pub mod pml;
 pub mod smoothing;

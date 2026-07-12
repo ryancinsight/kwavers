@@ -71,7 +71,7 @@ impl CPMLBoundary {
 
     /// Create a new CPML boundary with optional explicit solver time step.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new_with_time_step(
         config: CPMLConfig,

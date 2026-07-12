@@ -16,7 +16,7 @@
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
-use crate::parallel::for_each_indexed_pair_mut;
+use leto_ops::indexed_zip_mut_with;
 
 /// Subgrid averaging configuration
 #[derive(Debug, Clone)]
@@ -77,10 +77,10 @@ impl SubgridAveraging {
         let half_kernel = self.config.kernel_size / 2;
 
         // Apply smoothing at boundary cells (where geometry is between 0 and 1)
-        for_each_indexed_pair_mut(
-            smoothed.view_mut(),
-            geometry.view(),
-            |(i, j, k), smooth, &vol_frac| {
+        indexed_zip_mut_with(
+            &mut smoothed.view_mut(),
+            &geometry.view(),
+            |[i, j, k], smooth, &vol_frac| {
                 // Only smooth cells near boundary (partial volume fraction)
                 if vol_frac > self.config.min_volume_fraction
                     && vol_frac < (1.0 - self.config.min_volume_fraction)
@@ -132,7 +132,8 @@ impl SubgridAveraging {
                     }
                 }
             },
-        );
+        )
+        .expect("invariant: smoothing property and geometry shapes match");
 
         Ok(smoothed)
     }

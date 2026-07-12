@@ -41,34 +41,34 @@ fn update_memory_along(
 
     // Left strip: grid coordinate == in-slice coordinate along `axis`.
     let left_args = axis_range_args(axis, 0, Some(left_count));
-    crate::parallel::for_each_indexed_pair_mut(
-        psi.slice_with_mut::<3>(&left_args)
-            .expect("invariant: valid left CPML memory slice"),
-        gradient
-            .slice_with::<3>(&left_args)
-            .expect("invariant: valid left CPML gradient slice"),
-        |(i, j, k), psi, &g| {
-            let c = [i, j, k][axis];
-            *psi = b[c].mul_add(*psi, a[c] * g);
-        },
-    );
+    let mut psi_left = psi
+        .slice_with_mut::<3>(&left_args)
+        .expect("invariant: valid left CPML memory slice");
+    let gradient_left = gradient
+        .slice_with::<3>(&left_args)
+        .expect("invariant: valid left CPML gradient slice");
+    leto_ops::indexed_zip_mut_with(&mut psi_left, &gradient_left, |[i, j, k], psi, &g| {
+        let c = [i, j, k][axis];
+        *psi = b[c].mul_add(*psi, a[c] * g);
+    })
+    .expect("invariant: left CPML memory and gradient shapes match");
 
     // Right strip: grid coordinate == right_start + in-slice coordinate.
     if n > thickness {
         let right_start = n - thickness;
         let psi_args = axis_range_args(axis, thickness, None);
         let gradient_args = axis_range_args(axis, right_start, None);
-        crate::parallel::for_each_indexed_pair_mut(
-            psi.slice_with_mut::<3>(&psi_args)
-                .expect("invariant: valid right CPML memory slice"),
-            gradient
-                .slice_with::<3>(&gradient_args)
-                .expect("invariant: valid right CPML gradient slice"),
-            |(i, j, k), psi, &g| {
-                let c = right_start + [i, j, k][axis];
-                *psi = b[c].mul_add(*psi, a[c] * g);
-            },
-        );
+        let mut psi_right = psi
+            .slice_with_mut::<3>(&psi_args)
+            .expect("invariant: valid right CPML memory slice");
+        let gradient_right = gradient
+            .slice_with::<3>(&gradient_args)
+            .expect("invariant: valid right CPML gradient slice");
+        leto_ops::indexed_zip_mut_with(&mut psi_right, &gradient_right, |[i, j, k], psi, &g| {
+            let c = right_start + [i, j, k][axis];
+            *psi = b[c].mul_add(*psi, a[c] * g);
+        })
+        .expect("invariant: right CPML memory and gradient shapes match");
     }
 }
 
@@ -86,34 +86,34 @@ fn apply_correction_along(
 
     // Left strip.
     let left_args = axis_range_args(axis, 0, Some(left_count));
-    crate::parallel::for_each_indexed_pair_mut(
-        gradient
-            .slice_with_mut::<3>(&left_args)
-            .expect("invariant: valid left CPML correction slice"),
-        psi.slice_with::<3>(&left_args)
-            .expect("invariant: valid left CPML memory correction slice"),
-        |(i, j, k), g, &psi| {
-            let c = [i, j, k][axis];
-            *g = *g / kappa[c] + psi;
-        },
-    );
+    let mut gradient_left = gradient
+        .slice_with_mut::<3>(&left_args)
+        .expect("invariant: valid left CPML correction slice");
+    let psi_left = psi
+        .slice_with::<3>(&left_args)
+        .expect("invariant: valid left CPML memory correction slice");
+    leto_ops::indexed_zip_mut_with(&mut gradient_left, &psi_left, |[i, j, k], g, &psi| {
+        let c = [i, j, k][axis];
+        *g = *g / kappa[c] + psi;
+    })
+    .expect("invariant: left CPML correction and memory shapes match");
 
     // Right strip.
     if n > thickness {
         let right_start = n - thickness;
         let gradient_args = axis_range_args(axis, right_start, None);
         let psi_args = axis_range_args(axis, thickness, None);
-        crate::parallel::for_each_indexed_pair_mut(
-            gradient
-                .slice_with_mut::<3>(&gradient_args)
-                .expect("invariant: valid right CPML correction slice"),
-            psi.slice_with::<3>(&psi_args)
-                .expect("invariant: valid right CPML memory correction slice"),
-            |(i, j, k), g, &psi| {
-                let c = right_start + [i, j, k][axis];
-                *g = *g / kappa[c] + psi;
-            },
-        );
+        let mut gradient_right = gradient
+            .slice_with_mut::<3>(&gradient_args)
+            .expect("invariant: valid right CPML correction slice");
+        let psi_right = psi
+            .slice_with::<3>(&psi_args)
+            .expect("invariant: valid right CPML memory correction slice");
+        leto_ops::indexed_zip_mut_with(&mut gradient_right, &psi_right, |[i, j, k], g, &psi| {
+            let c = right_start + [i, j, k][axis];
+            *g = *g / kappa[c] + psi;
+        })
+        .expect("invariant: right CPML correction and memory shapes match");
     }
 }
 

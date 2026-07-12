@@ -1,5 +1,8 @@
 # Backlog / Strategy
 
+- [x] [patch] Remove the `kwavers-boundary` traversal adapter and use Leto's
+  canonical indexed map/zip operations directly at all ten bounded consumers.
+
 - [x] [minor] Move focal-kernel NPZ storage ownership upstream to Consus and
   remove the direct `ndarray-npy` production dependency.
 

@@ -25,7 +25,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
 
     /// Return the directions where this boundary is active.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn active_directions(&self) -> BoundaryDirections;
 
@@ -36,7 +36,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// u(x,t) → u(x,t) * exp(-σ(x) * Δt)
     /// ```
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn apply_scalar_spatial(
         &mut self,
@@ -50,7 +50,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     ///
     /// Used for spectral / k-space pseudospectral solvers.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn apply_scalar_frequency(
         &mut self,
@@ -64,7 +64,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     ///
     /// Default: applies `apply_scalar_spatial` independently to each component.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn apply_vector_spatial(
         &mut self,

@@ -13,7 +13,7 @@ impl Boundary for CPMLBoundary {
 
     fn apply_acoustic(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
     ) -> KwaversResult<()> {
@@ -24,7 +24,7 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut field, |[i, j, k], val| {
             let s_x = sigma_x[i];
             let s_y = sigma_y[j];
             let s_z = sigma_z[k];
@@ -33,7 +33,8 @@ impl Boundary for CPMLBoundary {
             if sigma_total > 0.0 {
                 *val *= (-sigma_total * dt * 0.5).exp();
             }
-        });
+        })
+        .expect("invariant: valid acoustic CPML field layout");
 
         Ok(())
     }
@@ -49,7 +50,7 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field.view_mut(), |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut field.view_mut(), |[i, j, k], val| {
             let s_x = sigma_x[i];
             let s_y = sigma_y[j];
             let s_z = sigma_z[k];
@@ -60,7 +61,8 @@ impl Boundary for CPMLBoundary {
                 val.re *= decay;
                 val.im *= decay;
             }
-        });
+        })
+        .expect("invariant: valid frequency-domain CPML field layout");
 
         Ok(())
     }
@@ -78,7 +80,7 @@ impl Boundary for CPMLBoundary {
     ///
     fn apply_acoustic_directional(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
         axis: usize,
@@ -87,7 +89,7 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut field, |[i, j, k], val| {
             let sigma = match axis {
                 0 => sigma_x[i],
                 1 => sigma_y[j],
@@ -96,7 +98,8 @@ impl Boundary for CPMLBoundary {
             if sigma > 0.0 {
                 *val *= (-sigma * dt * 0.5).exp();
             }
-        });
+        })
+        .expect("invariant: valid directional CPML field layout");
         Ok(())
     }
 
@@ -116,7 +119,7 @@ impl Boundary for CPMLBoundary {
     ///
     fn apply_velocity_pml_directional(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &Grid,
         _time_step: usize,
         axis: usize,
@@ -125,7 +128,7 @@ impl Boundary for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x_sgx;
         let sigma_y = &self.profiles.sigma_y_sgy;
         let sigma_z = &self.profiles.sigma_z_sgz;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut field, |[i, j, k], val| {
             let sigma = match axis {
                 0 => sigma_x[i],
                 1 => sigma_y[j],
@@ -134,7 +137,8 @@ impl Boundary for CPMLBoundary {
             if sigma > 0.0 {
                 *val *= (-sigma * dt * 0.5).exp();
             }
-        });
+        })
+        .expect("invariant: valid staggered CPML field layout");
         Ok(())
     }
 

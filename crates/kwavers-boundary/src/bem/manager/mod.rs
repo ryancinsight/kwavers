@@ -66,7 +66,7 @@ impl BemBoundaryManager {
 
     /// Apply all boundary conditions to the BEM system.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn apply_all(
         &self,

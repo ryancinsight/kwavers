@@ -99,7 +99,7 @@ impl DomainPmlConfig {
 impl DomainPMLBoundary {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new(config: DomainPmlConfig) -> KwaversResult<Self> {
         config.validate()?;

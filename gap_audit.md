@@ -1,5 +1,12 @@
 # Gap Audit
 
+- Closed 2026-07-11: `kwavers-boundary` duplicated Leto indexed traversal in a
+  consumer-owned `parallel` module and retained an otherwise-unused direct
+  Moirai dependency. CPML, smoothing, and adaptive coupling now use the
+  canonical const-generic Leto operations, and the duplicate module and direct
+  dependency are deleted. Evidence tier: compile-time integration,
+  value-semantic package tests, warning-denied Clippy, and static source audit.
+
 - Closed 2026-07-10: `kwavers-physics` was the sole direct `ndarray-npy`
   consumer. `consus-npy` now owns bounded typed NPY/NPZ parsing, and the
   consumer constructs Leto arrays directly from the owned payload. Evidence

@@ -18,7 +18,7 @@ impl BoundaryCondition for CPMLBoundary {
 
     fn apply_scalar_spatial(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &dyn GridTopology,
         _time_step: usize,
         dt: f64,
@@ -34,7 +34,7 @@ impl BoundaryCondition for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field, |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut field, |[i, j, k], val| {
             let s_x = sigma_x[i];
             let s_y = sigma_y[j];
             let s_z = sigma_z[k];
@@ -43,7 +43,8 @@ impl BoundaryCondition for CPMLBoundary {
             if sigma_total > 0.0 {
                 *val *= (-sigma_total * dt * 0.5).exp();
             }
-        });
+        })
+        .expect("invariant: valid CPML boundary-condition field layout");
 
         Ok(())
     }
@@ -65,7 +66,7 @@ impl BoundaryCondition for CPMLBoundary {
         let sigma_x = &self.profiles.sigma_x;
         let sigma_y = &self.profiles.sigma_y;
         let sigma_z = &self.profiles.sigma_z;
-        crate::parallel::for_each_indexed_mut(field.view_mut(), |(i, j, k), val| {
+        leto_ops::indexed_map_inplace(&mut field.view_mut(), |[i, j, k], val| {
             let s_x = sigma_x[i];
             let s_y = sigma_y[j];
             let s_z = sigma_z[k];
@@ -76,7 +77,8 @@ impl BoundaryCondition for CPMLBoundary {
                 val.re *= decay;
                 val.im *= decay;
             }
-        });
+        })
+        .expect("invariant: valid CPML boundary-condition field layout");
 
         Ok(())
     }

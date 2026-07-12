@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Deleted the consumer-owned `kwavers-boundary` traversal adapter and routed
+  CPML, smoothing, and adaptive-coupling mutation through canonical Leto
+  indexed operations.
+
 - Cleared the Poynting surface-power range-loop diagnostic and added an exact
   projected-power regression.
 
