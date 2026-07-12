@@ -4846,3 +4846,18 @@ Two residual clusters, NOT migration-correctness defects:
   and optimize the real component — never raise the timeout or shrink the grid
   (test-gaming). Classify migration-regression vs inherent FWI cost by comparing
   the 42×42×3 wall-time against the pre-migration commit.
+- **Partial characterization (2026-07-12):** the O(N) setup (elastic-medium,
+  orchestrator) is negligible; cost is dominated by the per-timestep 3-D FFT loop
+  in the spectral forward/adjoint solver (`config.iterations=12` ×
+  `elastic_fwi_iterations=3` × n_time-steps × several FFTs each). NOT a plan-caching
+  issue — apollo already caches via `f64::get_3d_plan` (`PlanCacheProvider`).
+  The optimizable overhead is the kwavers FFT FACADE
+  (`kwavers-math/src/fft/mod.rs`): `fft_3d_array` allocates a fresh leto `Array3` +
+  element-wise `from_apollo_complex` conversion every call, and `fft_3d_array_into`
+  double-copies (`out.assign(&fft_3d_array(field))`) instead of routing to apollo's
+  zero-alloc `fft_3d_array_into`/`_typed_into`. NEXT (needs a CONFIRMED profile — a
+  prior attempt instrumented `prof_fft_take()` but ran out of budget before running
+  it): confirm facade-conversion vs inherent-FFT split, then eliminate the double
+  allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
+  buffers across timesteps) and verify no accuracy regression on the elastic_fwi
+  convergence tests. Dedicated effort; do not rush.
