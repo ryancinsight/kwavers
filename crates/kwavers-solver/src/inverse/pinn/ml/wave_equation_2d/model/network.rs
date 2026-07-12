@@ -210,7 +210,7 @@ where
         let u_var = self.forward(&x_var, &y_var, &t_var);
         let u_vec: Vec<f64> = u_var.tensor.as_slice().iter().map(|&v| v as f64).collect();
 
-        Ok(Array2::from_shape_vec((n, 1), u_vec).unwrap())
+        Ok(Array2::from_shape_vec([n, 1], u_vec).unwrap())
     }
 
     /// Compute PDE residual using finite differences.

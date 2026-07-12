@@ -18,11 +18,12 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         config: SonoluminescenceCouplingConfig,
         coupling_type: SonoluminescenceCouplingType,
     ) -> Self {
+        let grid_shape = [config.grid_shape.0, config.grid_shape.1, config.grid_shape.2];
         let emission_calculator =
-            SonoluminescenceEmission::new(config.grid_shape, config.emission_params.clone());
+            SonoluminescenceEmission::new(grid_shape, config.emission_params.clone());
 
-        let bubble_states = leto::Array3::zeros(config.grid_shape);
-        let temperature_field = leto::Array3::zeros(config.grid_shape);
+        let bubble_states = leto::Array3::zeros(grid_shape);
+        let temperature_field = leto::Array3::zeros(grid_shape);
 
         let coupling_interfaces = Self::create_coupling_interfaces(&config, &coupling_type);
 
@@ -132,7 +133,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Clone
             config: self.config.clone(),
             coupling_type: self.coupling_type.clone(),
             emission_calculator: SonoluminescenceEmission::new(
-                self.config.grid_shape,
+                [
+                    self.config.grid_shape.0,
+                    self.config.grid_shape.1,
+                    self.config.grid_shape.2,
+                ],
                 self.config.emission_params.clone(),
             ),
             bubble_states: self.bubble_states.clone(),

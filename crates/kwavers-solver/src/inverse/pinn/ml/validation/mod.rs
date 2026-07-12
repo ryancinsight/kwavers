@@ -115,29 +115,35 @@ where
     let fdtd_time = fdtd_start.elapsed().as_secs_f64();
 
     let pinn_start = Instant::now();
-    let x_coords = Array1::linspace(
-        0.0,
-        (fdtd_config.nx - 1) as f64 * fdtd_config.dx,
-        fdtd_config.nx,
-    );
-    let t_coords = Array1::linspace(
-        0.0,
-        (fdtd_config.nt - 1) as f64 * fdtd_config.dt,
-        fdtd_config.nt,
-    );
-    let mut x = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
-    let mut t = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
+    let x_coords = Array1::from_vec(
+        [fdtd_config.nx],
+        (0..fdtd_config.nx)
+            .map(|i| i as f64 * fdtd_config.dx)
+            .collect(),
+    )
+    .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let t_coords = Array1::from_vec(
+        [fdtd_config.nt],
+        (0..fdtd_config.nt)
+            .map(|i| i as f64 * fdtd_config.dt)
+            .collect(),
+    )
+    .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let mut x_values = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
+    let mut t_values = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
     for x_val in x_coords.iter() {
         for t_val in t_coords.iter() {
-            x.push(*x_val);
-            t.push(*t_val);
+            x_values.push(*x_val);
+            t_values.push(*t_val);
         }
     }
-    let x = Array1::from_vec(x);
-    let t = Array1::from_vec(t);
+    let x = Array1::from_vec([x_values.len()], x_values)
+        .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let t = Array1::from_vec([t_values.len()], t_values)
+        .map_err(|err| KwaversError::InternalError(err.to_string()))?;
     let pinn_prediction_flat = pinn.predict(&x, &t)?;
     let pinn_prediction = leto::Array2::from_shape_vec(
-        (fdtd_config.nx, fdtd_config.nt),
+        [fdtd_config.nx, fdtd_config.nt],
         pinn_prediction_flat.iter().copied().collect(),
     )
     .map_err(|err| KwaversError::InternalError(err.to_string()))?;

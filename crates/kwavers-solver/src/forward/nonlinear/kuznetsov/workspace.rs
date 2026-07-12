@@ -66,7 +66,7 @@ pub struct KuznetsovWorkspace {
     ///
     /// Filled serially once per `compute_rhs` call (trait objects are not
     /// `Sync`); thereafter the mathematical combination uses these arrays
-    /// through `Zip::indexed().par_for_each()` without touching the trait
+    /// through `moirai_parallel` dispatch without touching the trait
     /// objects — achieving full Rayon parallelism over the grid volume.
     pub cache_density: Array3<f64>,
     pub cache_sound_speed: Array3<f64>,

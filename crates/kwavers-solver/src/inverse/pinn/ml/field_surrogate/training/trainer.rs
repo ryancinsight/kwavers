@@ -1,5 +1,6 @@
 use coeus_optim::scheduler::{CosineAnneal, SchedulerStrategy};
 use coeus_optim::{Adam, Optimizer as CoeusOptimizer};
+use coeus_autograd::Parameter;
 
 use super::super::network::ParamFieldPINNNetwork;
 use super::helmholtz::helmholtz_residual_tensor;
@@ -49,7 +50,18 @@ where
         config: FieldSurrogateTrainingConfig,
     ) -> KwaversResult<Self> {
         config.validate()?;
-        let optimizer = Adam::new(network.parameters(), config.learning_rate, 0.9, 0.999, 1e-5);
+        let optimizer = Adam::new(
+            network
+                .parameters()
+                .into_iter()
+                .enumerate()
+                .map(|(index, var)| Parameter::new(var, format!("p{index}")))
+                .collect(),
+            config.learning_rate,
+            0.9,
+            0.999,
+            1e-5,
+        );
         let lr_schedule = match config.cosine_schedule {
             Some((max_iter, min_lr)) if max_iter > 0 => Some(CosineAnneal {
                 t_max: max_iter,
@@ -178,7 +190,13 @@ where
         };
         self.optimizer.lr = lr;
         self.optimizer.step();
-        self.network.load_parameters(&self.optimizer.params);
+        let updated_parameters = self
+            .optimizer
+            .params
+            .iter()
+            .map(|parameter| parameter.var.clone())
+            .collect::<Vec<_>>();
+        self.network.load_parameters(&updated_parameters);
 
         StepMetrics {
             data: data_value,

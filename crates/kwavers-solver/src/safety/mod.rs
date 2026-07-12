@@ -18,7 +18,7 @@
 //!
 //! This helper consolidates the precondition (layout assert + `as_slice()` /
 //! `as_slice_mut()` unwrap) into a single DRY function that all 6 files
-//! route through, plus any future `Zip::from(arr).and(...).par_for_each(...)`
+//! route through, plus any future flat-slice parallel
 //! migration.
 //!
 //! ## Closure-based API
@@ -39,7 +39,7 @@ use leto::Array3;
 /// slices.
 ///
 /// `arr.as_slice{_mut,}().expect(...)` boilerplate around every migrated
-/// `Zip::from(arr).and(immut1).and(immut2)...par_for_each(...)` site.
+/// flat-slice parallel site.
 ///
 /// The closure receives a mutable slice for `out` and an immutable
 /// slice-of-slices for `immuts`, both rooted at the same `0..len` C-order

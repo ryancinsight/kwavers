@@ -9,6 +9,7 @@
 //! θ_{t+1} = θ_t - η ∇L(θ_t)
 
 use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
+use coeus_autograd::Parameter;
 
 use super::network::PINN3DNetwork;
 
@@ -39,9 +40,20 @@ impl SimpleOptimizer3D {
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
     {
-        let mut opt = SGD::new(network.parameters(), self.learning_rate, 0.0);
+        let parameters = network
+            .parameters()
+            .into_iter()
+            .enumerate()
+            .map(|(index, var)| Parameter::new(var, format!("p{index}")))
+            .collect();
+        let mut opt = SGD::new(parameters, self.learning_rate, 0.0);
         opt.step();
-        network.load_parameters(&opt.params);
+        let updated_parameters = opt
+            .params
+            .iter()
+            .map(|parameter| parameter.var.clone())
+            .collect::<Vec<_>>();
+        network.load_parameters(&updated_parameters);
         network
     }
 }

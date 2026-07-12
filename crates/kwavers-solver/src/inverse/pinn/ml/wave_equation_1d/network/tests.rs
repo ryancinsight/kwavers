@@ -6,6 +6,10 @@ use leto::Array1;
 
 type TestBackend = MoiraiBackend;
 
+fn array1(values: Vec<f64>) -> Array1<f64> {
+    Array1::from_vec(values.len(), values).expect("valid 1D test vector")
+}
+
 #[test]
 fn test_pinn_creation() {
     let config = PinnConfig::default();
@@ -82,13 +86,13 @@ fn test_pinn_predict() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = Array1::from_vec(vec![0.0, 0.5, 1.0]);
-    let t = Array1::from_vec(vec![0.0, 0.1, 0.2]);
+    let x = array1(vec![0.0, 0.5, 1.0]);
+    let t = array1(vec![0.0, 0.1, 0.2]);
 
     let result = pinn.predict(&x, &t);
 
     let u = result.unwrap();
-    assert_eq!(u.shape(), &[3, 1]);
+    assert_eq!(u.shape(), [3, 1]);
     for &val in u.iter() {
         assert!(val.is_finite());
     }
@@ -102,8 +106,8 @@ fn test_pinn_predict_mismatched_lengths() {
     };
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
-    let x = Array1::from_vec(vec![0.0, 0.5]);
-    let t = Array1::from_vec(vec![0.0, 0.1, 0.2]);
+    let x = array1(vec![0.0, 0.5]);
+    let t = array1(vec![0.0, 0.1, 0.2]);
 
     let result = pinn.predict(&x, &t);
     assert!(result.is_err());

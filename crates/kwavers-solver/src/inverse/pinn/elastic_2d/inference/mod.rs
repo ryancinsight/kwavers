@@ -151,7 +151,7 @@ where
         let slice = output.tensor.as_slice();
 
         let values: Vec<f64> = slice.iter().map(|&v| v as f64).collect();
-        Array2::from_shape_vec((n, 2), values)
+        Array2::from_shape_vec([n, 2], values)
             .map_err(|e| KwaversError::InvalidInput(format!("Shape error: {}", e)))
     }
 

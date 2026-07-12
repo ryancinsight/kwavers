@@ -8,9 +8,7 @@ use kwavers_physics::foundations::{
     AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, TimeIntegration,
 };
 
-use leto::{
-    /* ArrayD -- no leto equivalent */,
-};
+use leto::Array3;
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AutodiffWaveEquation
     for ElasticPINN2DSolver<B>
@@ -38,16 +36,14 @@ where
         0.1 * min_dx / cp
     }
 
-    fn spatial_operator(&self, field: &ArrayD<f64>) -> ArrayD<f64> {
+    fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64> {
         // For PINNs, the spatial operator is implicitly encoded in the network
         // This method evaluates the PDE residual (not typically used in PINN inference)
         //
         // field shape: [nx, ny, 2] (displacement field on grid)
         // returns: [nx, ny, 2] (acceleration field: ∂²u/∂t²)
 
-        let shape = field.shape();
-        let nx = shape[0];
-        let ny = shape[1];
+        let [nx, ny, _] = field.shape();
 
         // Create coordinate arrays
         let (_x_grid, _y_grid) = self.grid_points();
@@ -58,16 +54,16 @@ where
         // which requires autodiff - not available in inference mode
 
         // Placeholder: return zeros (proper implementation requires autodiff backend)
-        ArrayD::zeros(IxDyn(shape))
+        Array3::zeros([nx, ny, 2])
     }
 
-    fn apply_boundary_conditions(&mut self, _field: &mut ArrayD<f64>) {
+    fn apply_boundary_conditions(&mut self, _field: &mut Array3<f64>) {
         // PINNs enforce boundary conditions during training via loss function
         // No explicit boundary enforcement needed during inference
         // This is a no-op for trained PINNs
     }
 
-    fn check_constraints(&self, field: &ArrayD<f64>) -> Result<(), String> {
+    fn check_constraints(&self, field: &Array3<f64>) -> Result<(), String> {
         // Verify field has correct shape and finite values
         let shape = field.shape();
 
@@ -102,31 +98,31 @@ where
     B::DeviceBuffer<f32>:
         coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
 {
-    fn lame_lambda(&self) -> ArrayD<f64> {
+    fn lame_lambda(&self) -> Array3<f64> {
         // Get current parameter (learned or fixed)
         let (lambda, _, _) = self.current_parameters();
 
         // Return homogeneous field (scalar broadcast to grid)
         let nx = self.domain.resolution[0];
         let ny = self.domain.resolution[1];
-        ArrayD::from_elem(IxDyn(&[nx, ny]), lambda)
+        Array3::from_elem([nx, ny, 1], lambda)
     }
 
-    fn lame_mu(&self) -> ArrayD<f64> {
+    fn lame_mu(&self) -> Array3<f64> {
         let (_, mu, _) = self.current_parameters();
         let nx = self.domain.resolution[0];
         let ny = self.domain.resolution[1];
-        ArrayD::from_elem(IxDyn(&[nx, ny]), mu)
+        Array3::from_elem([nx, ny, 1], mu)
     }
 
-    fn density(&self) -> ArrayD<f64> {
+    fn density(&self) -> Array3<f64> {
         let (_, _, rho) = self.current_parameters();
         let nx = self.domain.resolution[0];
         let ny = self.domain.resolution[1];
-        ArrayD::from_elem(IxDyn(&[nx, ny]), rho)
+        Array3::from_elem([nx, ny, 1], rho)
     }
 
-    fn stress_from_displacement(&self, displacement: &ArrayD<f64>) -> ArrayD<f64> {
+    fn stress_from_displacement(&self, displacement: &Array3<f64>) -> Array3<f64> {
         // Compute stress tensor from displacement field
         // displacement: [nx, ny, 2] → stress: [nx, ny, 3] (σₓₓ, σᵧᵧ, σₓᵧ)
         //
@@ -134,9 +130,7 @@ where
         // σᵧᵧ = λ·∂uₓ/∂x + (λ + 2μ)·∂uᵧ/∂y
         // σₓᵧ = μ·(∂uₓ/∂y + ∂uᵧ/∂x)
 
-        let shape = displacement.shape();
-        let nx = shape[0];
-        let ny = shape[1];
+        let [nx, ny, _] = displacement.shape();
 
         let (lambda, mu, _) = self.current_parameters();
         let lambda_2mu = lambda + 2.0 * mu;
@@ -145,7 +139,7 @@ where
         let dx = spacing[0];
         let dy = spacing[1];
 
-        let mut stress = ArrayD::zeros(IxDyn(&[nx, ny, 3]));
+        let mut stress = Array3::zeros([nx, ny, 3]);
 
         // Compute spatial derivatives via finite differences
         for j in 1..ny - 1 {
@@ -170,7 +164,7 @@ where
         stress
     }
 
-    fn strain_from_displacement(&self, displacement: &ArrayD<f64>) -> ArrayD<f64> {
+    fn strain_from_displacement(&self, displacement: &Array3<f64>) -> Array3<f64> {
         // Compute strain tensor from displacement field
         // displacement: [nx, ny, 2] → strain: [nx, ny, 3] (εₓₓ, εᵧᵧ, εₓᵧ)
         //
@@ -178,15 +172,13 @@ where
         // εᵧᵧ = ∂uᵧ/∂y
         // εₓᵧ = ½(∂uₓ/∂y + ∂uᵧ/∂x)
 
-        let shape = displacement.shape();
-        let nx = shape[0];
-        let ny = shape[1];
+        let [nx, ny, _] = displacement.shape();
 
         let spacing = self.domain.spacing();
         let dx = spacing[0];
         let dy = spacing[1];
 
-        let mut strain = ArrayD::zeros(IxDyn(&[nx, ny, 3]));
+        let mut strain = Array3::zeros([nx, ny, 3]);
 
         for j in 1..ny - 1 {
             for i in 1..nx - 1 {
@@ -208,7 +200,7 @@ where
         strain
     }
 
-    fn elastic_energy(&self, displacement: &ArrayD<f64>, velocity: &ArrayD<f64>) -> f64 {
+    fn elastic_energy(&self, displacement: &Array3<f64>, velocity: &Array3<f64>) -> f64 {
         // Compute total elastic energy: E = ∫ (½ρ|v|² + ½σ:ε) dV
         //
         // Kinetic energy: Eₖ = ½ρ|v|²
@@ -222,9 +214,7 @@ where
         let mut kinetic_energy = 0.0;
         let mut strain_energy = 0.0;
 
-        let shape = displacement.shape();
-        let nx = shape[0];
-        let ny = shape[1];
+        let [nx, ny, _] = displacement.shape();
 
         let spacing = self.domain.spacing();
         let dx = spacing[0];

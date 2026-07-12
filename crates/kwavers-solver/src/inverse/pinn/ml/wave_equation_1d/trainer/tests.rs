@@ -9,6 +9,17 @@ use leto::{
 
 type TestBackend = MoiraiBackend;
 
+fn linspace(start: f64, end: f64, n: usize) -> Array1<f64> {
+    if n == 0 {
+        return Array1::zeros(0);
+    }
+    if n == 1 {
+        return Array1::from_elem(1, start);
+    }
+    let step = (end - start) / (n as f64 - 1.0);
+    Array1::from_shape_fn(n, |[i]| start + step * i as f64)
+}
+
 #[test]
 fn test_trainer_creation() {
     let config = PinnConfig {
@@ -39,8 +50,8 @@ fn test_train_basic() {
     };
     let mut trainer = PinnTrainer::<TestBackend>::new(config).unwrap();
     let n = 20;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
     let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 10);
     let metrics = result.unwrap();
@@ -56,8 +67,8 @@ fn test_train_mismatched_dimensions() {
         ..Default::default()
     };
     let mut trainer = PinnTrainer::<TestBackend>::new(config).unwrap();
-    let x_data = Array1::linspace(-1.0, 1.0, 20);
-    let t_data = Array1::linspace(0.0, 0.1, 30);
+    let x_data = linspace(-1.0, 1.0, 20);
+    let t_data = linspace(0.0, 0.1, 30);
     let u_data = Array2::zeros((20, 1));
     let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 10);
     assert!(result.is_err());
@@ -71,8 +82,8 @@ fn test_train_invalid_u_shape() {
     };
     let mut trainer = PinnTrainer::<TestBackend>::new(config).unwrap();
     let n = 20;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 2));
     let result = trainer.train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 10);
     assert!(result.is_err());
@@ -88,8 +99,8 @@ fn test_train_metrics_recording() {
     };
     let mut trainer = PinnTrainer::<TestBackend>::new(config).unwrap();
     let n = 10;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
     let metrics = trainer
         .train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 5)
@@ -161,8 +172,8 @@ fn test_multiple_training_runs() {
     };
     let mut trainer = PinnTrainer::<TestBackend>::new(config).unwrap();
     let n = 10;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
     let metrics1 = trainer
         .train(&x_data, &t_data, &u_data, SOUND_SPEED_AIR, 5)

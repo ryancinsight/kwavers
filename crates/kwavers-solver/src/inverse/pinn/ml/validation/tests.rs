@@ -4,8 +4,8 @@ use leto::Array2;
 
 #[test]
 fn test_compute_validation_metrics() {
-    let reference = Array2::from_shape_fn((10, 10), |(i, j)| (i + j) as f64);
-    let prediction = Array2::from_shape_fn((10, 10), |(i, j)| (i + j) as f64 + 0.1);
+    let reference = Array2::from_shape_fn((10, 10), |[i, j]| (i + j) as f64);
+    let prediction = Array2::from_shape_fn((10, 10), |[i, j]| (i + j) as f64 + 0.1);
 
     let metrics = compute_validation_metrics(&reference, &prediction).unwrap();
 
@@ -16,8 +16,8 @@ fn test_compute_validation_metrics() {
 
 #[test]
 fn test_compute_correlation() {
-    let reference = Array2::from_shape_fn((10, 10), |(i, j)| (i + j) as f64);
-    let prediction = Array2::from_shape_fn((10, 10), |(i, j)| (i + j) as f64 * 1.1);
+    let reference = Array2::from_shape_fn((10, 10), |[i, j]| (i + j) as f64);
+    let prediction = Array2::from_shape_fn((10, 10), |[i, j]| (i + j) as f64 * 1.1);
 
     let corr = compute_correlation(&reference, &prediction).unwrap();
 

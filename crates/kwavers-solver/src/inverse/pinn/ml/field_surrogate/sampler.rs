@@ -170,7 +170,7 @@ impl KernelCubeSampler {
         let coord_halves = coord_halves_override.unwrap_or_else(|| {
             let (mut hx, mut hy, mut hz) = (0.0_f32, 0.0_f32, 0.0_f32);
             for k in kernels {
-                let (nx, ny, nz) = k.shape();
+                let [nx, ny, nz] = k.shape();
                 let dx = k.dx_m as f32;
                 hx = hx.max((nx as f32) * dx * 0.5);
                 hy = hy.max((ny as f32) * dx * 0.5);
@@ -187,7 +187,7 @@ impl KernelCubeSampler {
         let total_voxels: usize = kernels
             .iter()
             .map(|k| {
-                let (nx, ny, nz) = k.shape();
+                let [nx, ny, nz] = k.shape();
                 if nx < 3 || ny < 3 || nz < 3 {
                     0
                 } else {
@@ -204,7 +204,7 @@ impl KernelCubeSampler {
         let mut group_ids: Vec<f32> = Vec::with_capacity(total_voxels);
         let mut active_kernel_count: usize = 0;
         for kernel in kernels.iter() {
-            let (nx, ny, nz) = kernel.shape();
+            let [nx, ny, nz] = kernel.shape();
             if nx < 3 || ny < 3 || nz < 3 {
                 continue;
             }

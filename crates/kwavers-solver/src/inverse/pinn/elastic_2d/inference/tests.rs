@@ -3,6 +3,17 @@ use crate::inverse::pinn::elastic_2d::Config;
 
 type TestBackend = coeus_core::MoiraiBackend;
 
+fn linspace(start: f64, end: f64, n: usize) -> Array1<f64> {
+    if n == 0 {
+        return Array1::zeros(0);
+    }
+    if n == 1 {
+        return Array1::from_elem(1, start);
+    }
+    let step = (end - start) / (n as f64 - 1.0);
+    Array1::from_shape_fn(n, |[i]| start + step * i as f64)
+}
+
 #[test]
 fn test_predictor_creation() {
     let config = Config::default();
@@ -54,8 +65,8 @@ fn test_field_evaluation() {
     let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
-    let x_grid = Array1::linspace(0.0, 1.0, 5);
-    let y_grid = Array1::linspace(0.0, 1.0, 5);
+    let x_grid = linspace(0.0, 1.0, 5);
+    let y_grid = linspace(0.0, 1.0, 5);
     let t = 0.1;
 
     let result = predictor.evaluate_field(&x_grid, &y_grid, t);
@@ -70,7 +81,7 @@ fn test_time_series() {
     let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
-    let times = Array1::linspace(0.0, 1.0, 10);
+    let times = linspace(0.0, 1.0, 10);
     let result = predictor.time_series(0.5, 0.5, &times);
 
     let time_series = result.unwrap();
@@ -83,8 +94,8 @@ fn test_magnitude_field() {
     let model = ElasticPINN2D::<TestBackend>::new(&config).unwrap();
     let predictor = ElasticPinnPredictor::new(model);
 
-    let x_grid = Array1::linspace(0.0, 1.0, 5);
-    let y_grid = Array1::linspace(0.0, 1.0, 5);
+    let x_grid = linspace(0.0, 1.0, 5);
+    let y_grid = linspace(0.0, 1.0, 5);
     let t = 0.1;
 
     let result = predictor.magnitude_field(&x_grid, &y_grid, t);

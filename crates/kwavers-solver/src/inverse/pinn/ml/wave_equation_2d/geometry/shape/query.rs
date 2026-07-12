@@ -176,6 +176,11 @@ impl WaveGeometry2D {
             }
         }
 
-        (Array1::from_vec(x_points), Array1::from_vec(y_points))
+        (
+            Array1::from_vec([x_points.len()], x_points)
+                .expect("sample_points x-shape must match x values"),
+            Array1::from_vec([y_points.len()], y_points)
+                .expect("sample_points y-shape must match y values"),
+        )
     }
 }

@@ -12,7 +12,7 @@
 //!
 //! **Phase 2 — parallel RHS combination** (embarrassingly parallel):
 //! Combine laplacian, pressure history, and the cached property arrays using
-//! `Zip::indexed(...).par_for_each()`.  All inputs are `Array3<f64>` borrows
+//! `moirai_parallel` chunked dispatch.  All inputs are `Array3<f64>` borrows
 //! (`Sync` by construction), so Rayon parallelism is race-free.
 //!
 //! This pattern achieves full multi-core utilisation for the arithmetic-heavy

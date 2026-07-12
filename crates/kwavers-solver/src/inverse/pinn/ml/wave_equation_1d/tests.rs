@@ -8,6 +8,17 @@ use leto::{
 
 type TestBackend = MoiraiBackend;
 
+fn linspace(start: f64, end: f64, n: usize) -> Array1<f64> {
+    if n == 0 {
+        return Array1::zeros(0);
+    }
+    if n == 1 {
+        return Array1::from_elem(1, start);
+    }
+    let step = (end - start) / (n as f64 - 1.0);
+    Array1::from_shape_fn(n, |[i]| start + step * i as f64)
+}
+
 #[test]
 fn test_public_api_types_available() {
     // Ensure all public types are accessible
@@ -30,8 +41,8 @@ fn test_end_to_end_cpu_training() {
 
     // Synthetic training data
     let n = 20;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
 
     // Train
@@ -48,11 +59,11 @@ fn test_end_to_end_cpu_training() {
     }
 
     // Predict after training
-    let x_test = Array1::linspace(-1.0, 1.0, 5);
-    let t_test = Array1::linspace(0.0, 0.1, 5);
+    let x_test = linspace(-1.0, 1.0, 5);
+    let t_test = linspace(0.0, 0.1, 5);
     let u_pred = trainer.pinn().predict(&x_test, &t_test).unwrap();
 
-    assert_eq!(u_pred.shape(), &[5, 1]);
+    assert_eq!(u_pred.shape(), [5, 1]);
     for &val in u_pred.iter() {
         assert!(val.is_finite());
     }
@@ -144,8 +155,8 @@ fn test_multi_epoch_convergence() {
     let mut trainer = PinnTrainer::<TestBackend>::new(config).unwrap();
 
     let n = 15;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
 
     // Train for more epochs
@@ -172,8 +183,8 @@ fn test_different_wave_speeds() {
     };
 
     let n = 10;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
 
     // Train with air speed of sound
@@ -198,12 +209,12 @@ fn test_pinn_predict_interface() {
     let pinn = PinnWave1D::<TestBackend>::new(config).unwrap();
 
     // Test prediction
-    let x = Array1::linspace(-1.0, 1.0, 10);
-    let t = Array1::linspace(0.0, 0.1, 10);
+    let x = linspace(-1.0, 1.0, 10);
+    let t = linspace(0.0, 0.1, 10);
 
     let u = pinn.predict(&x, &t).unwrap();
 
-    assert_eq!(u.shape(), &[10, 1]);
+    assert_eq!(u.shape(), [10, 1]);
     for &val in u.iter() {
         assert!(val.is_finite());
     }
@@ -227,8 +238,8 @@ fn test_complete_workflow() {
 
     // 4. Prepare data
     let n = 15;
-    let x_data = Array1::linspace(-1.0, 1.0, n);
-    let t_data = Array1::linspace(0.0, 0.1, n);
+    let x_data = linspace(-1.0, 1.0, n);
+    let t_data = linspace(0.0, 0.1, n);
     let u_data = Array2::zeros((n, 1));
 
     // 5. Train
@@ -239,12 +250,12 @@ fn test_complete_workflow() {
     assert!(!metrics.has_numerical_issues());
 
     // 7. Make predictions
-    let x_test = Array1::linspace(-1.0, 1.0, 5);
-    let t_test = Array1::linspace(0.0, 0.1, 5);
+    let x_test = linspace(-1.0, 1.0, 5);
+    let t_test = linspace(0.0, 0.1, 5);
     let u_pred = trainer.pinn().predict(&x_test, &t_test).unwrap();
 
     // 8. Verify predictions
-    assert_eq!(u_pred.shape(), &[5, 1]);
+    assert_eq!(u_pred.shape(), [5, 1]);
     for &val in u_pred.iter() {
         assert!(val.is_finite());
     }

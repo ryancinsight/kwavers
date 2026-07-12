@@ -222,9 +222,9 @@ where
                 "Expected input to be [x, y, t]".into(),
             ));
         }
-        let x = Array1::from_elem((1,), input[0] as f64);
-        let y = Array1::from_elem((1,), input[1] as f64);
-        let t = Array1::from_elem((1,), input[2] as f64);
+        let x = Array1::from_elem([1], input[0] as f64);
+        let y = Array1::from_elem([1], input[1] as f64);
+        let t = Array1::from_elem([1], input[2] as f64);
 
         let output = model
             .predict(&x, &y, &t)

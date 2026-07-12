@@ -248,10 +248,12 @@ where
             }
         }
 
-        let n = (x_vals.len());
-        let x_data = Array1::from_vec(x_vals);
-        let t_data = Array1::from_vec(t_vals);
-        let u_data = Array2::from_shape_vec((n, 1), u_vals)
+        let n = x_vals.len();
+        let x_data = Array1::from_vec([x_vals.len()], x_vals)
+            .map_err(|e| KwaversError::InvalidInput(format!("x_data reshape: {e}")))?;
+        let t_data = Array1::from_vec([t_vals.len()], t_vals)
+            .map_err(|e| KwaversError::InvalidInput(format!("t_data reshape: {e}")))?;
+        let u_data = Array2::from_shape_vec([n, 1], u_vals)
             .map_err(|e| KwaversError::InvalidInput(format!("u_data reshape: {e}")))?;
 
         // 1000 epochs by default; wave speed 1500 m/s (soft tissue).

@@ -9,6 +9,9 @@ use super::super::types::{ElasticBodyForceConfig, ElasticWaveField};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use leto::Array1;
+use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
+
+const INTEGRATOR_CHUNK: usize = 4096;
 
 /// Time integration engine for elastic waves.
 ///
@@ -113,12 +116,6 @@ impl<'a> TimeIntegrator<'a> {
         let dt_half = 0.5 * dt;
 
         // --- Half-step v(t+Δt/2) = v(t) + (Δt/2)·a(t) ---
-        //
-        // Slice 8 site 1 (cluster A): migrated Zip::indexed 3-mut chain
-        // to verbose is_standard_layout + flat-slice pattern. 6 verbose
-        // asserts (3 mut on field.{vx,vy,vz} + 3 immut scratch.{ax,ay,az}).
-        // The Zip chain is dropped entirely: each worker task writes to
-        // disjoint vx_slice[idx] / vy_slice[idx] / vz_slice[idx] elements.
         {
             let vx_slice = field
                 .vx
@@ -144,21 +141,24 @@ impl<'a> TimeIntegrator<'a> {
                 .az
                 .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            for (idx, vx) in vx_slice.iter_mut().enumerate() {
-                *vx += dt_half * ax_slice[idx];
-                vy_slice[idx] += dt_half * ay_slice[idx];
-                vz_slice[idx] += dt_half * az_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                vx_slice,
+                vy_slice,
+                vz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, vx_chunk, vy_chunk, vz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..vx_chunk.len() {
+                        let idx = start + offset;
+                        vx_chunk[offset] += dt_half * ax_slice[idx];
+                        vy_chunk[offset] += dt_half * ay_slice[idx];
+                        vz_chunk[offset] += dt_half * az_slice[idx];
+                    }
+                },
+            );
         }
 
         // --- Full displacement step u(t+Δt) = u(t) + Δt·v(t+Δt/2) ---
-        //
-        // Slice 8 site 2 (cluster B): migrated Zip::from 6-element chain
-        // (3 mut + 3 immut, at the ndarray producer limit) to verbose
-        // is_standard_layout + flat-slice pattern. 6 verbose asserts (3 mut
-        // on field.{ux,uy,uz} + 3 immut field.{vx,vy,vz}). The Zip chain is
-        // dropped entirely: each worker task writes to disjoint
-        // ux_slice[idx] / uy_slice[idx] / uz_slice[idx] elements.
         {
             let ux_slice = field
                 .ux
@@ -184,11 +184,21 @@ impl<'a> TimeIntegrator<'a> {
                 .vz
                 .as_slice()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            for (idx, ux) in ux_slice.iter_mut().enumerate() {
-                *ux += dt * vx_slice[idx];
-                uy_slice[idx] += dt * vy_slice[idx];
-                uz_slice[idx] += dt * vz_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                ux_slice,
+                uy_slice,
+                uz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, ux_chunk, uy_chunk, uz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..ux_chunk.len() {
+                        let idx = start + offset;
+                        ux_chunk[offset] += dt * vx_slice[idx];
+                        uy_chunk[offset] += dt * vy_slice[idx];
+                        uz_chunk[offset] += dt * vz_slice[idx];
+                    }
+                },
+            );
         }
 
         // a(t+Δt): acceleration at updated displacement (reuses scratch)
@@ -196,9 +206,6 @@ impl<'a> TimeIntegrator<'a> {
         self.compute_acceleration(field, scratch, body_force, new_time)?;
 
         // --- Second half-step v(t+Δt) = v(t+Δt/2) + (Δt/2)·a(t+Δt) ---
-        //
-        // Slice 8 site 3 (cluster A): identical migration to site 1 (6
-        // verbose asserts removed, Zip chain dropped).
         {
             let vx_slice = field
                 .vx
@@ -224,11 +231,21 @@ impl<'a> TimeIntegrator<'a> {
                 .az
                 .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            for (idx, vx) in vx_slice.iter_mut().enumerate() {
-                *vx += dt_half * ax_slice[idx];
-                vy_slice[idx] += dt_half * ay_slice[idx];
-                vz_slice[idx] += dt_half * az_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                vx_slice,
+                vy_slice,
+                vz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, vx_chunk, vy_chunk, vz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..vx_chunk.len() {
+                        let idx = start + offset;
+                        vx_chunk[offset] += dt_half * ax_slice[idx];
+                        vy_chunk[offset] += dt_half * ay_slice[idx];
+                        vz_chunk[offset] += dt_half * az_slice[idx];
+                    }
+                },
+            );
         }
 
         self.apply_pml_damping(field, dt);
@@ -256,8 +273,6 @@ impl<'a> TimeIntegrator<'a> {
         let dt_half = 0.5 * dt;
 
         // --- Half-step v(t+Δt/2) = v(t) + (Δt/2)·a(t) ---
-        //
-        // Slice 8 site 4 (cluster A): identical migration to step() site 1.
         {
             let vx_slice = field
                 .vx
@@ -283,16 +298,24 @@ impl<'a> TimeIntegrator<'a> {
                 .az
                 .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            for (idx, vx) in vx_slice.iter_mut().enumerate() {
-                *vx += dt_half * ax_slice[idx];
-                vy_slice[idx] += dt_half * ay_slice[idx];
-                vz_slice[idx] += dt_half * az_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                vx_slice,
+                vy_slice,
+                vz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, vx_chunk, vy_chunk, vz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..vx_chunk.len() {
+                        let idx = start + offset;
+                        vx_chunk[offset] += dt_half * ax_slice[idx];
+                        vy_chunk[offset] += dt_half * ay_slice[idx];
+                        vz_chunk[offset] += dt_half * az_slice[idx];
+                    }
+                },
+            );
         }
 
         // --- Full displacement step u(t+Δt) = u(t) + Δt·v(t+Δt/2) ---
-        //
-        // Slice 8 site 5 (cluster B): identical migration to step() site 2.
         {
             let ux_slice = field
                 .ux
@@ -318,11 +341,21 @@ impl<'a> TimeIntegrator<'a> {
                 .vz
                 .as_slice()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            for (idx, ux) in ux_slice.iter_mut().enumerate() {
-                *ux += dt * vx_slice[idx];
-                uy_slice[idx] += dt * vy_slice[idx];
-                uz_slice[idx] += dt * vz_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                ux_slice,
+                uy_slice,
+                uz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, ux_chunk, uy_chunk, uz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..ux_chunk.len() {
+                        let idx = start + offset;
+                        ux_chunk[offset] += dt * vx_slice[idx];
+                        uy_chunk[offset] += dt * vy_slice[idx];
+                        uz_chunk[offset] += dt * vz_slice[idx];
+                    }
+                },
+            );
         }
 
         // a(t+Δt)
@@ -330,8 +363,6 @@ impl<'a> TimeIntegrator<'a> {
         self.compute_acceleration_with_body_forces(field, scratch, body_forces, new_time)?;
 
         // --- Second half-step v(t+Δt) = v(t+Δt/2) + (Δt/2)·a(t+Δt) ---
-        //
-        // Slice 8 site 6 (cluster A): identical migration to step() site 3.
         {
             let vx_slice = field
                 .vx
@@ -357,11 +388,21 @@ impl<'a> TimeIntegrator<'a> {
                 .az
                 .as_slice()
                 .expect("scratch.az: standard-layout asserted just above; layout matched");
-            for (idx, vx) in vx_slice.iter_mut().enumerate() {
-                *vx += dt_half * ax_slice[idx];
-                vy_slice[idx] += dt_half * ay_slice[idx];
-                vz_slice[idx] += dt_half * az_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                vx_slice,
+                vy_slice,
+                vz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, vx_chunk, vy_chunk, vz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..vx_chunk.len() {
+                        let idx = start + offset;
+                        vx_chunk[offset] += dt_half * ax_slice[idx];
+                        vy_chunk[offset] += dt_half * ay_slice[idx];
+                        vz_chunk[offset] += dt_half * az_slice[idx];
+                    }
+                },
+            );
         }
 
         self.apply_pml_damping(field, dt);
@@ -373,7 +414,7 @@ impl<'a> TimeIntegrator<'a> {
     ///
     /// Calls [`stress_divergence_into`] which fills `scratch.{sxx,…,div_z}`,
     /// then divides by ρ and adds body force per grid point.  All writes are
-    /// to disjoint `scratch` fields → race-free under Rayon `par_for_each`.
+    /// to disjoint `scratch` fields → race-free under moirai parallel dispatch.
     ///
     /// ## Theorem (race-freedom)
     ///
@@ -395,13 +436,8 @@ impl<'a> TimeIntegrator<'a> {
     ) -> KwaversResult<()> {
         stress_divergence_into(self.grid, self.lambda, self.mu, field, scratch);
 
-        // Slice 8 site 7 (cluster C): 3-mut Zip::indexed chain with
-        // body_force::evaluate requiring (i,j,k). Migrated to verbose
-        // is_standard_layout + flat-slice pattern with idx-to-(i,j,k)
-        // decomposition inline (i = idx/(ny*nz); j = (idx/nz)%ny;
-        // k = idx%nz). 7 verbose asserts (3 mut on scratch.{ax,ay,az}
-        // + 3 immut scratch.{div_x,div_y,div_z} + 1 immut self.density).
         {
+            let grid = self.grid;
             let ax_slice = scratch
                 .ax
                 .as_slice_mut()
@@ -431,19 +467,29 @@ impl<'a> TimeIntegrator<'a> {
                 .as_slice()
                 .expect("self.density: standard-layout asserted just above; layout matched");
             let (_nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
-            for (idx, o_ax) in ax_slice.iter_mut().enumerate() {
-                let i = idx / (ny * nz);
-                let j = (idx / nz) % ny;
-                let k = idx % nz;
-                let force = body_force
-                    .map(|bf| {
-                        body_force::evaluate(self.grid, bf, i, j, k, time).unwrap_or([0.0; 3])
-                    })
-                    .unwrap_or([0.0; 3]);
-                ay_slice[idx] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
-                az_slice[idx] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
-                *o_ax = (div_x_slice[idx] + force[0]) / rho_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                ax_slice,
+                ay_slice,
+                az_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..ax_chunk.len() {
+                        let idx = start + offset;
+                        let i = idx / (ny * nz);
+                        let j = (idx / nz) % ny;
+                        let k = idx % nz;
+                        let force = body_force
+                            .map(|bf| {
+                                body_force::evaluate(grid, bf, i, j, k, time).unwrap_or([0.0; 3])
+                            })
+                            .unwrap_or([0.0; 3]);
+                        ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
+                        az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
+                        ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
+                    }
+                },
+            );
         }
 
         Ok(())
@@ -465,11 +511,8 @@ impl<'a> TimeIntegrator<'a> {
     ) -> KwaversResult<()> {
         stress_divergence_into(self.grid, self.lambda, self.mu, field, scratch);
 
-        // Slice 8 site 8 (cluster C): identical migration to
-        // compute_acceleration (7 verbose asserts, flat-slice pattern,
-        // idx-to-(i,j,k) inline). Body force accumulation loops over
-        // `body_forces` slice — preserved.
         {
+            let grid = self.grid;
             let ax_slice = scratch
                 .ax
                 .as_slice_mut()
@@ -499,21 +542,32 @@ impl<'a> TimeIntegrator<'a> {
                 .as_slice()
                 .expect("self.density: standard-layout asserted just above; layout matched");
             let (_nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
-            for (idx, o_ax) in ax_slice.iter_mut().enumerate() {
-                let i = idx / (ny * nz);
-                let j = (idx / nz) % ny;
-                let k = idx % nz;
-                let mut force = [0.0_f64; 3];
-                for bf in body_forces {
-                    let f = body_force::evaluate(self.grid, bf, i, j, k, time).unwrap_or([0.0; 3]);
-                    force[0] += f[0];
-                    force[1] += f[1];
-                    force[2] += f[2];
-                }
-                ay_slice[idx] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
-                az_slice[idx] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
-                *o_ax = (div_x_slice[idx] + force[0]) / rho_slice[idx];
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                ax_slice,
+                ay_slice,
+                az_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, ax_chunk, ay_chunk, az_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..ax_chunk.len() {
+                        let idx = start + offset;
+                        let i = idx / (ny * nz);
+                        let j = (idx / nz) % ny;
+                        let k = idx % nz;
+                        let mut force = [0.0_f64; 3];
+                        for bf in body_forces {
+                            let f =
+                                body_force::evaluate(grid, bf, i, j, k, time).unwrap_or([0.0; 3]);
+                            force[0] += f[0];
+                            force[1] += f[1];
+                            force[2] += f[2];
+                        }
+                        ay_chunk[offset] = (div_y_slice[idx] + force[1]) / rho_slice[idx];
+                        az_chunk[offset] = (div_z_slice[idx] + force[2]) / rho_slice[idx];
+                        ax_chunk[offset] = (div_x_slice[idx] + force[0]) / rho_slice[idx];
+                    }
+                },
+            );
         }
 
         Ok(())
@@ -545,9 +599,8 @@ impl<'a> TimeIntegrator<'a> {
     /// Per-thread closure computes `d` on the fly from the per-axis σ slices,
     /// avoiding a temporary damping array.
     ///
-    /// Split into two `Zip::indexed` passes (velocity, then displacement)
-    /// because leto `Zip::indexed` supports ≤ 5 arrays (6 tuple
-    /// elements including the index).
+    /// Split into two passes (velocity, then displacement) to keep each
+    /// parallel dispatch handling a 3-mut slice pattern.
     pub(crate) fn apply_pml_damping(&self, field: &mut ElasticWaveField, dt: f64) {
         let [nx, ny, nz] = field.vx.shape();
         let sx = self.sigma_x.as_slice().expect("sigma_x contiguous");
@@ -558,12 +611,6 @@ impl<'a> TimeIntegrator<'a> {
         debug_assert_eq!((sy.len()), ny);
         debug_assert_eq!((sz.len()), nz);
 
-        // Slice 8 site 9 (cluster D, velocity pass): 3-mut Zip::indexed
-        // chain with per-axis sigma_x[i]/sigma_y[j]/sigma_z[k] lookup
-        // requiring (i,j,k). Migrated to verbose is_standard_layout +
-        // flat-slice pattern with idx-to-(i,j,k) decomposition inline.
-        // 3 verbose asserts on the 3 mut outs (sigma_* slices are
-        // unconditionally C-contiguous Array1, asserted via debug_assert!).
         {
             let vx_slice = field
                 .vx
@@ -577,21 +624,29 @@ impl<'a> TimeIntegrator<'a> {
                 .vz
                 .as_slice_mut()
                 .expect("field.vz: standard-layout asserted just above; layout matched");
-            for (idx, vx) in vx_slice.iter_mut().enumerate() {
-                let i = idx / (ny * nz);
-                let j = (idx / nz) % ny;
-                let k = idx % nz;
-                let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
-                if d < 1.0 {
-                    *vx *= d;
-                    vy_slice[idx] *= d;
-                    vz_slice[idx] *= d;
-                }
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                vx_slice,
+                vy_slice,
+                vz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, vx_chunk, vy_chunk, vz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..vx_chunk.len() {
+                        let idx = start + offset;
+                        let i = idx / (ny * nz);
+                        let j = (idx / nz) % ny;
+                        let k = idx % nz;
+                        let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
+                        if d < 1.0 {
+                            vx_chunk[offset] *= d;
+                            vy_chunk[offset] *= d;
+                            vz_chunk[offset] *= d;
+                        }
+                    }
+                },
+            );
         }
 
-        // Slice 8 site 10 (cluster D, displacement pass): identical
-        // migration pattern to the velocity pass, on field.{ux,uy,uz}.
         {
             let ux_slice = field
                 .ux
@@ -605,17 +660,27 @@ impl<'a> TimeIntegrator<'a> {
                 .uz
                 .as_slice_mut()
                 .expect("field.uz: standard-layout asserted just above; layout matched");
-            for (idx, ux) in ux_slice.iter_mut().enumerate() {
-                let i = idx / (ny * nz);
-                let j = (idx / nz) % ny;
-                let k = idx % nz;
-                let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
-                if d < 1.0 {
-                    *ux *= d;
-                    uy_slice[idx] *= d;
-                    uz_slice[idx] *= d;
-                }
-            }
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                ux_slice,
+                uy_slice,
+                uz_slice,
+                INTEGRATOR_CHUNK,
+                |chunk_idx, ux_chunk, uy_chunk, uz_chunk| {
+                    let start = chunk_idx * INTEGRATOR_CHUNK;
+                    for offset in 0..ux_chunk.len() {
+                        let idx = start + offset;
+                        let i = idx / (ny * nz);
+                        let j = (idx / nz) % ny;
+                        let k = idx % nz;
+                        let d = (-sx[i] * dt).exp() * (-sy[j] * dt).exp() * (-sz[k] * dt).exp();
+                        if d < 1.0 {
+                            ux_chunk[offset] *= d;
+                            uy_chunk[offset] *= d;
+                            uz_chunk[offset] *= d;
+                        }
+                    }
+                },
+            );
         }
     }
 

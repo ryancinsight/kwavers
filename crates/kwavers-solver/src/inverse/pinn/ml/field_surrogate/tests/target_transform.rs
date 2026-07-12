@@ -22,7 +22,7 @@ fn gaussian_kernel(f0: f64, pnp: f64) -> FocalKernel {
     let (nx, ny, nz) = (12usize, 8usize, 8usize);
     let focus = (nx / 2, ny / 2, nz / 2);
     let mut field = Array3::<f64>::zeros((nx, ny, nz));
-    for ((i, j, k), v) in field.indexed_iter_mut() {
+    for ([i, j, k], v) in field.indexed_iter_mut().unwrap() {
         let dx = (i as f64 - focus.0 as f64) / (nx as f64 / 4.0);
         let dy = (j as f64 - focus.1 as f64) / (ny as f64 / 4.0);
         let dz = (k as f64 - focus.2 as f64) / (nz as f64 / 4.0);

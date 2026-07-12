@@ -49,8 +49,8 @@ where
         )
     })?;
 
-    let dx_grad = grad_tensor.slice(&[(0, batch), (1, 2)]).unwrap().to_contiguous();
-    let dy_grad = grad_tensor.slice(&[(0, batch), (2, 3)]).unwrap().to_contiguous();
+    let dx_grad = grad_tensor.slice(&[(0, batch), (1, 2)]).to_contiguous();
+    let dy_grad = grad_tensor.slice(&[(0, batch), (2, 3)]).to_contiguous();
 
     Ok((dx_grad, dy_grad))
 }

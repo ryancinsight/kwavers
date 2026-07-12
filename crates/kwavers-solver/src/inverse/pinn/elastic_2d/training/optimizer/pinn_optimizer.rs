@@ -8,7 +8,7 @@
 //! have no built-in weight-decay parameter (unlike `AdamW`, which is
 //! decoupled and passes `weight_decay` natively to `AdamW::new`).
 
-use coeus_autograd::Var;
+use coeus_autograd::{Parameter, Var};
 use coeus_optim::{Adam, AdamW, Optimizer as CoeusOptimizer, SGD};
 
 use super::types::OptimizerAlgorithm;
@@ -55,7 +55,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::
 /// Add `weight_decay * param` to each parameter's accumulated gradient
 /// (coupled L2 regularization) before an optimizer step.
 fn apply_coupled_weight_decay<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
-    params: &[Var<f32, B>],
+    params: &[Parameter<f32, B>],
     weight_decay: f64,
 ) {
     if weight_decay <= 0.0 {
@@ -63,14 +63,33 @@ fn apply_coupled_weight_decay<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBack
     }
     let wd = weight_decay as f32;
     for p in params {
-        if let Some(grad) = p.grad() {
+        if let Some(grad) = p.var.grad() {
             let decayed = coeus_autograd::add(
                 &Var::new(grad, false),
-                &coeus_autograd::scalar_mul(&Var::new(p.tensor.clone(), false), wd),
+                &coeus_autograd::scalar_mul(&Var::new(p.var.tensor.clone(), false), wd),
             );
-            p.set_grad(decayed.tensor);
+            p.var.set_grad(decayed.tensor);
         }
     }
+}
+
+fn to_named_parameters<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    params: Vec<Var<f32, B>>,
+) -> Vec<Parameter<f32, B>> {
+    params
+        .into_iter()
+        .enumerate()
+        .map(|(index, var)| Parameter::new(var, format!("p{index}")))
+        .collect()
+}
+
+fn vars_from_parameters<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    params: &[Parameter<f32, B>],
+) -> Vec<Var<f32, B>> {
+    params
+        .iter()
+        .map(|parameter| parameter.var.clone())
+        .collect()
 }
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PINNOptimizer<B>
@@ -84,7 +103,11 @@ where
             algorithm: OptimizerAlgorithm::SGD,
             learning_rate,
             weight_decay,
-            backend: Backend::Sgd(SGD::new(model.parameters(), learning_rate as f32, 0.0)),
+            backend: Backend::Sgd(SGD::new(
+                to_named_parameters(model.parameters()),
+                learning_rate as f32,
+                0.0,
+            )),
         }
     }
 
@@ -100,7 +123,7 @@ where
             learning_rate,
             weight_decay,
             backend: Backend::Sgd(SGD::new(
-                model.parameters(),
+                to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 momentum as f32,
             )),
@@ -124,7 +147,7 @@ where
             learning_rate,
             weight_decay,
             backend: Backend::Adam(Adam::new(
-                model.parameters(),
+                to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 beta1 as f32,
                 beta2 as f32,
@@ -147,7 +170,7 @@ where
             learning_rate,
             weight_decay,
             backend: Backend::AdamW(AdamW::new(
-                model.parameters(),
+                to_named_parameters(model.parameters()),
                 learning_rate as f32,
                 beta1 as f32,
                 beta2 as f32,
@@ -165,16 +188,19 @@ where
             Backend::Sgd(opt) => {
                 apply_coupled_weight_decay(&opt.params, self.weight_decay);
                 opt.step();
-                model.load_parameters(&opt.params);
+                let updated = vars_from_parameters(&opt.params);
+                model.load_parameters(&updated);
             }
             Backend::Adam(opt) => {
                 apply_coupled_weight_decay(&opt.params, self.weight_decay);
                 opt.step();
-                model.load_parameters(&opt.params);
+                let updated = vars_from_parameters(&opt.params);
+                model.load_parameters(&updated);
             }
             Backend::AdamW(opt) => {
                 opt.step();
-                model.load_parameters(&opt.params);
+                let updated = vars_from_parameters(&opt.params);
+                model.load_parameters(&updated);
             }
         }
     }

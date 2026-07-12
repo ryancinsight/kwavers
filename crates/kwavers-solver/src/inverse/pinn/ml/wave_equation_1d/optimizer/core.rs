@@ -10,6 +10,7 @@
 //! - Kingma & Ba (2014): "Adam: A Method for Stochastic Optimization"
 
 use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
+use coeus_autograd::Parameter;
 
 use super::super::network::PinnWave1D;
 
@@ -48,9 +49,20 @@ impl SimpleOptimizer {
         B::DeviceBuffer<f32>:
             coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
     {
-        let mut opt = SGD::new(pinn.parameters(), self.learning_rate, 0.0);
+        let parameters = pinn
+            .parameters()
+            .into_iter()
+            .enumerate()
+            .map(|(index, var)| Parameter::new(var, format!("p{index}")))
+            .collect();
+        let mut opt = SGD::new(parameters, self.learning_rate, 0.0);
         opt.step();
-        pinn.load_parameters(&opt.params);
+        let updated_parameters = opt
+            .params
+            .iter()
+            .map(|parameter| parameter.var.clone())
+            .collect::<Vec<_>>();
+        pinn.load_parameters(&updated_parameters);
         pinn
     }
 }
