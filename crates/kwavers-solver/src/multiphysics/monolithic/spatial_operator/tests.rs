@@ -18,7 +18,7 @@ fn laplacian_3d(
 
 #[test]
 fn test_laplacian_uniform_field() {
-    let field = Array3::from_elem((8, 8, 8), 5.0);
+    let field = Array3::from_elem([8, 8, 8], 5.0);
     let dx = 1e-3;
     let lap = laplacian_3d(&field.view(), (8, 8, 8), dx, dx, dx);
 
@@ -38,7 +38,7 @@ fn test_laplacian_uniform_field() {
 /// Spacing of 1 m vs 1 mm on identical fields gives a 10^6 Laplacian ratio.
 #[test]
 fn test_laplacian_unit_vs_nonunit_spacing() {
-    let mut field = Array3::from_elem((5, 5, 5), 1.0);
+    let mut field = Array3::from_elem([5, 5, 5], 1.0);
     field[[2, 2, 2]] = 2.0;
 
     let lap_1m = laplacian_3d(&field.view(), (5, 5, 5), 1.0, 1.0, 1.0);

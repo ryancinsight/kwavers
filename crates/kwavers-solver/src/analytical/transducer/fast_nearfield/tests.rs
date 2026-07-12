@@ -72,7 +72,7 @@ fn test_field_computation() {
     solver.precompute_factors(25e-3).unwrap();
 
     // Uniform velocity distribution
-    let velocity = Array2::<Complex64>::from_elem((16, 16), Complex64::new(1.0, 0.0));
+    let velocity = Array2::<Complex64>::from_elem([16, 16], Complex64::new(1.0, 0.0));
 
     let pressure_field = solver.compute_field(&velocity, 25e-3).unwrap();
     assert_eq!(pressure_field.shape(), [16, 16]);

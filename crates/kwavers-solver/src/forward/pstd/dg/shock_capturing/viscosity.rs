@@ -187,8 +187,8 @@ mod tests {
 
         // Create test data with compression
         let mut velocity = Array4::<f64>::zeros((3, 10, 10, 10));
-        let density = Array3::from_elem((10, 10, 10), 1.0);
-        let sound_speed = Array3::from_elem((10, 10, 10), SOUND_SPEED_AIR);
+        let density = Array3::from_elem([10, 10, 10], 1.0);
+        let sound_speed = Array3::from_elem([10, 10, 10], SOUND_SPEED_AIR);
         let mut shock_indicator = Array3::zeros((10, 10, 10));
 
         // Add converging velocity field (compression)

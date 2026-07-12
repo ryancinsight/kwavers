@@ -101,8 +101,8 @@ fn test_stress_divergence_uniform_displacement() {
     let n = 10;
     let dx = 0.001;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let lambda = Array3::from_elem((n, n, n), 1e9_f64);
-    let mu = Array3::from_elem((n, n, n), 5e8_f64);
+    let lambda = Array3::from_elem([n, n, n], 1e9_f64);
+    let mu = Array3::from_elem([n, n, n], 5e8_f64);
     use super::super::types::ElasticWaveField;
     let mut field = ElasticWaveField::new(n, n, n);
     // Use exact binary fractions: 0.5=2⁻¹, 0.25=2⁻², 0.125=2⁻³.
@@ -150,7 +150,7 @@ fn test_stress_divergence_linear_ux_fluid() {
     let dx = 1e-3;
     let grid = Grid::new(n, 1, 1, dx, dx, dx).unwrap();
     let la_val = 2.25e9_f64; // water-like λ
-    let lambda = Array3::from_elem((n, 1, 1), la_val);
+    let lambda = Array3::from_elem([n, 1, 1], la_val);
     let mu = Array3::zeros((n, 1, 1)); // fluid: μ=0
     use super::super::types::ElasticWaveField;
     let mut field = ElasticWaveField::new(n, 1, 1);
@@ -184,7 +184,7 @@ fn test_stress_divergence_quadratic_ux_fluid() {
     let dx = 1e-3;
     let grid = Grid::new(n, 1, 1, dx, dx, dx).unwrap();
     let la_val = 2.25e9_f64;
-    let lambda = Array3::from_elem((n, 1, 1), la_val);
+    let lambda = Array3::from_elem([n, 1, 1], la_val);
     let mu = Array3::zeros((n, 1, 1));
     use super::super::types::ElasticWaveField;
     let mut field = ElasticWaveField::new(n, 1, 1);

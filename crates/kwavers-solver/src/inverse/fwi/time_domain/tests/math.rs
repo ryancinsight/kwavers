@@ -12,7 +12,7 @@ fn test_gradient_calculation() {
     let processor = FwiProcessor::default();
 
     let forward_field = Array3::ones((10, 10, 10));
-    let adjoint_field = Array3::from_elem((10, 10, 10), 2.0);
+    let adjoint_field = Array3::from_elem([10, 10, 10], 2.0);
 
     let gradient = processor.calculate_interaction(&forward_field, &adjoint_field);
 
@@ -23,16 +23,16 @@ fn test_gradient_calculation() {
 #[test]
 fn test_l2_adjoint_source_computation() {
     let processor = FwiProcessor::default();
-    let observed = Array2::from_shape_vec((2, 3), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
+    let observed = Array2::from_shape_vec([2, 3], vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0])
         .expect("shape must be valid");
-    let synthetic = Array2::from_shape_vec((2, 3), vec![1.0, 0.5, 3.0, 1.0, 7.0, 9.0])
+    let synthetic = Array2::from_shape_vec([2, 3], vec![1.0, 0.5, 3.0, 1.0, 7.0, 9.0])
         .expect("shape must be valid");
 
     let adjoint_source = processor
         .compute_adjoint_source(&observed, &synthetic)
         .expect("adjoint source computation must succeed");
 
-    let expected = Array2::from_shape_vec((2, 3), vec![1.0, -0.5, 1.0, -2.0, 3.0, 4.0])
+    let expected = Array2::from_shape_vec([2, 3], vec![1.0, -0.5, 1.0, -2.0, 3.0, 4.0])
         .expect("shape must be valid");
     assert_eq!(adjoint_source, expected);
 }
@@ -48,9 +48,9 @@ fn test_l2_objective_matches_definition() {
     });
 
     let observed =
-        Array2::from_shape_vec((2, 2), vec![1.0, 1.0, 1.0, 1.0]).expect("shape must be valid");
+        Array2::from_shape_vec([2, 2], vec![1.0, 1.0, 1.0, 1.0]).expect("shape must be valid");
     let synthetic =
-        Array2::from_shape_vec((2, 2), vec![2.0, 4.0, 6.0, 8.0]).expect("shape must be valid");
+        Array2::from_shape_vec([2, 2], vec![2.0, 4.0, 6.0, 8.0]).expect("shape must be valid");
 
     let objective = processor
         .compute_l2_objective(&observed, &synthetic)
@@ -70,7 +70,7 @@ fn test_adjoint_source_reorders_and_time_reverses() {
         ..FwiParameters::default()
     });
 
-    let sensor_mask = Array3::from_shape_vec((2, 2, 1), vec![true, true, true, true])
+    let sensor_mask = Array3::from_shape_vec([2, 2, 1], vec![true, true, true, true])
         .expect("shape must be valid");
     let geometry = FwiGeometry::new(GridSource::default(), sensor_mask);
 

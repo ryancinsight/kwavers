@@ -238,7 +238,7 @@ impl FourierReconstructor {
         let mut result_leto = LetoArray3::<f64>::zeros([nx, ny, nz]);
         let mut scratch = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
         fft.inverse_into(k_space, &mut result_leto, &mut scratch);
-        let mut result = Array3::from_shape_vec((nx, ny, nz), result_leto.into_vec())
+        let mut result = Array3::from_shape_vec([nx, ny, nz], result_leto.into_vec())
             .expect("photoacoustic inverse FFT output shape must match reconstruction grid");
 
         // Apply positivity constraint (pressure should be non-negative)

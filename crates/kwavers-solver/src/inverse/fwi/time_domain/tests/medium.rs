@@ -12,8 +12,8 @@ fn test_fwi_medium_density_not_water() {
     use kwavers_medium::CoreMedium;
 
     let (nx, ny, nz) = (8usize, 8, 8);
-    let sound_speed = Array3::from_elem((nx, ny, nz), 2000.0_f64);
-    let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+    let sound_speed = Array3::from_elem([nx, ny, nz], 2000.0_f64);
+    let density = Array3::from_elem([nx, ny, nz], RHO_SEISMIC_REF);
 
     let medium = HeterogeneousFactory::from_arrays(sound_speed, density, None, None, None, 20.0)
         .expect("medium construction must succeed");
@@ -39,10 +39,10 @@ fn test_fwi_forward_medium_sound_speed_matches_model() {
     use kwavers_medium::CoreMedium;
 
     let (nx, ny, nz) = (6usize, 6, 6);
-    let mut model = Array3::from_elem((nx, ny, nz), 1800.0_f64);
+    let mut model = Array3::from_elem([nx, ny, nz], 1800.0_f64);
     model[[3, 3, 3]] = 3200.0;
 
-    let density = Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF);
+    let density = Array3::from_elem([nx, ny, nz], RHO_SEISMIC_REF);
     let medium = HeterogeneousFactory::from_arrays(model.clone(), density, None, None, None, 20.0)
         .expect("medium construction must succeed");
 
@@ -91,7 +91,7 @@ fn test_fwi_resolved_density_heterogeneous_and_default() {
     );
 
     // Shape mismatch must be rejected.
-    let wrong_shape = Array3::from_elem((4, 4, 4), 1500.0_f64);
+    let wrong_shape = Array3::from_elem([4, 4, 4], 1500.0_f64);
     let mismatched_processor = FwiProcessor::default()
         .with_density(wrong_shape)
         .expect("validation only rejects non-finite / non-positive entries");

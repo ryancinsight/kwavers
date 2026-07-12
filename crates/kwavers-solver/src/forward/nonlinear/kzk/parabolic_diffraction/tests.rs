@@ -205,7 +205,7 @@ fn test_fft_round_trip() {
     }
 
     // Convert to complex
-    let mut complex_data = Array2::from_elem((64, 64), Complex64::new(0.0, 0.0));
+    let mut complex_data = Array2::from_elem([64, 64], Complex64::new(0.0, 0.0));
     for i in 0..64 {
         for j in 0..64 {
             complex_data[[i, j]] = Complex64::new(original[[i, j]], 0.0);
@@ -214,7 +214,7 @@ fn test_fft_round_trip() {
 
     // Forward then inverse FFT
     let scratch_ptr = op.scratch.as_ptr();
-    let mut recovered = Array2::from_elem((64, 64), Complex64::new(0.0, 0.0));
+    let mut recovered = Array2::from_elem([64, 64], Complex64::new(0.0, 0.0));
     op.fft_round_trip_into(&complex_data, &mut recovered);
     assert_eq!(op.scratch.as_ptr(), scratch_ptr);
 

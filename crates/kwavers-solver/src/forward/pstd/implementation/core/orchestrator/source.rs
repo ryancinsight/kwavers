@@ -48,6 +48,6 @@ impl PSTDSolver {
 
 fn ndarray_mask(mask: &leto::Array3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = mask.shape();
-    leto::Array3::from_shape_vec((nx, ny, nz), mask.iter().copied().collect())
+    leto::Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
         .expect("PSTD source mask shape must match contiguous ndarray storage")
 }

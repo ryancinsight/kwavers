@@ -344,7 +344,7 @@ mod tests {
     fn post_process_normalizes_reconstruction_by_max_abs_value() {
         let reconstructor = TimeReversalReconstructor::new(TimeReversalConfig::default()).unwrap();
         let grid = Grid::new(2, 2, 1, 1.0, 1.0, 1.0).unwrap();
-        let reconstruction = Array3::from_shape_vec((2, 2, 1), vec![-2.0, 1.0, 4.0, 0.0]).unwrap();
+        let reconstruction = Array3::from_shape_vec([2, 2, 1], vec![-2.0, 1.0, 4.0, 0.0]).unwrap();
 
         let normalized = reconstructor.post_process(reconstruction, &grid).unwrap();
 

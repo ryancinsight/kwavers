@@ -68,7 +68,7 @@ fn engine_trace(c: &[f64], src_cell: usize, recv_cell: usize, nt: usize) -> Vec<
         u_signal: None,
         u_mode: SourceMode::default(),
     };
-    let mut sensor_mask = Array3::from_elem((nx, 1, 1), false);
+    let mut sensor_mask = Array3::from_elem([nx, 1, 1], false);
     sensor_mask[[recv_cell, 0, 0]] = true;
     let geometry = FwiGeometry::new(source, sensor_mask);
     let params = FwiParameters {

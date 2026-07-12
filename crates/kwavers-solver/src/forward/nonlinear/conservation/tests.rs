@@ -114,7 +114,7 @@ fn test_field_integration() {
 #[test]
 fn test_field_rms() {
     use leto::Array3;
-    let field = Array3::<f64>::from_elem((5, 5, 5), 2.0);
+    let field = Array3::<f64>::from_elem([5, 5, 5], 2.0);
     let rms = helpers::field_rms(&field);
     assert!((rms - 2.0).abs() < 1e-10);
 }

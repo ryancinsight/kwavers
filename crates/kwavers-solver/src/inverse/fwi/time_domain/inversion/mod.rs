@@ -13,7 +13,7 @@ use leto::{
 
 fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec((nx, ny, nz), field.iter().copied().collect())
+    Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
         .expect("FWI source mask shape must match contiguous ndarray storage")
 }
 

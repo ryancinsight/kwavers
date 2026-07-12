@@ -77,7 +77,7 @@ mod tests {
     #[test]
     fn threshold_zeroes_only_coefficients_below_threshold() {
         let wavelet = WaveletTransform::new(WaveletBasis::Haar, 1);
-        let mut coeffs = Array3::from_shape_vec((2, 2, 1), vec![-0.2, -0.05, 0.0, 0.3])
+        let mut coeffs = Array3::from_shape_vec([2, 2, 1], vec![-0.2, -0.05, 0.0, 0.3])
             .expect("invariant: shape matches coefficient count");
 
         wavelet.threshold(&mut coeffs, 0.1);

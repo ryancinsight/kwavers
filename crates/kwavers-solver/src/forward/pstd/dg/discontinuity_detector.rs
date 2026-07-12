@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn detector_marks_embedded_1d_jump() {
         let grid = Grid::new(4, 1, 1, 1.0, 1.0, 1.0).unwrap();
-        let field = Array3::from_shape_vec((4, 1, 1), vec![0.0, 0.0, 2.0, 2.0]).unwrap();
+        let field = Array3::from_shape_vec([4, 1, 1], vec![0.0, 0.0, 2.0, 2.0]).unwrap();
         let detector = DiscontinuityDetector::new(0.5);
 
         let mask = detector.detect(&field, &grid).unwrap();

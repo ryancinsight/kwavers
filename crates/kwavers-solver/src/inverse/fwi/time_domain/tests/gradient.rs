@@ -103,7 +103,7 @@ fn test_fwi_velocity_gradient_scaling_rejects_non_physical_inputs() {
     let density = Array3::from_elem(dims, 2000.0_f64);
 
     // Shape mismatch.
-    let bad_density = Array3::from_elem((3, 3, 3), 2000.0_f64);
+    let bad_density = Array3::from_elem([3, 3, 3], 2000.0_f64);
     assert!(apply_velocity_gradient_scaling(
         correlation.view_mut(),
         model.view(),
@@ -526,7 +526,7 @@ fn directional_tv_test_model(dims: (usize, usize, usize)) -> Array3<f64> {
 fn test_directional_tv_gradient_is_zero_for_constant_field() {
     use super::super::gradient::{directional_tv_gradient, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS};
 
-    let model = Array3::from_elem((6, 5, 4), 1537.0_f64);
+    let model = Array3::from_elem([6, 5, 4], 1537.0_f64);
     for dirs in [&AXIS_TV_DIRECTIONS[..], &FDTV_DIRECTIONS[..]] {
         let g = directional_tv_gradient(&model, dirs);
         let max_abs = g.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));

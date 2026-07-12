@@ -78,7 +78,7 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
-    solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+    solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
     let mut source = Array3::zeros((3, 3, 1));
     source[[1, 1, 0]] = 5.0;
 
@@ -96,7 +96,7 @@ fn standard_update_consumes_noncontiguous_source_view() {
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
-    solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+    solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
     let mut source = Array3::zeros((3, 3, 1));
     source[[1, 1, 0]] = 5.0;
     let source_view = source
@@ -118,7 +118,7 @@ fn standard_update_rejects_mismatched_source_shape_without_mutation() {
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
-    solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+    solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
     let source = Array3::zeros((2, 3, 1));
 
     let err = solver

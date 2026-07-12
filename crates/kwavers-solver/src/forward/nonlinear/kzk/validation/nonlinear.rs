@@ -33,7 +33,7 @@ mod tests {
 
         let amplitude = MPA_TO_PA; // 1 MPa source pressure
         let frequency = 2.0 * MHZ_TO_HZ;
-        let source = Array2::from_elem((config.nx, config.ny), amplitude);
+        let source = Array2::from_elem([config.nx, config.ny], amplitude);
 
         solver.set_source(source, frequency);
 
@@ -152,7 +152,7 @@ mod tests {
 
             let mut solver = KZKSolver::new(config.clone()).unwrap();
 
-            let source = Array2::from_elem((config.nx, config.ny), p0);
+            let source = Array2::from_elem([config.nx, config.ny], p0);
             solver.set_source(source, frequency);
 
             solver.solve(n_steps).expect("KZK solve failed");

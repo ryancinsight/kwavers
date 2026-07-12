@@ -105,7 +105,7 @@ pub(super) fn transform_template(
 ) -> Array3<f64> {
     let [nx, ny, nz] = template.shape();
     let (s, c) = phi.theta_rad.sin_cos();
-    let mut out = Array3::from_elem((nx, ny, nz), background);
+    let mut out = Array3::from_elem([nx, ny, nz], background);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -151,7 +151,7 @@ pub(super) fn transform_with_jacobian(
 ) -> TransformWithJacobian {
     let [nx, ny, nz] = template.shape();
     let (s, c) = phi.theta_rad.sin_cos();
-    let mut model = Array3::from_elem((nx, ny, nz), background);
+    let mut model = Array3::from_elem([nx, ny, nz], background);
     let mut d_theta = Array3::zeros((nx, ny, nz));
     let mut d_delta_x = Array3::zeros((nx, ny, nz));
     let mut d_delta_y = Array3::zeros((nx, ny, nz));
@@ -204,7 +204,7 @@ mod transform_tests {
     #[test]
     fn jacobian_matches_finite_difference() {
         let (nx, ny) = (24usize, 24);
-        let mut template = Array3::from_elem((nx, ny, 1), 1500.0_f64);
+        let mut template = Array3::from_elem([nx, ny, 1], 1500.0_f64);
         // Asymmetric smooth feature so all three parameters move c_φ.
         for j in 0..ny {
             for i in 0..nx {

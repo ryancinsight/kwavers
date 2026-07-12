@@ -340,7 +340,7 @@ mod tests {
             sensor_mask[[6, iy, 4]] = true;
         }
         let geometry = FwiGeometry::new(source, sensor_mask);
-        let observed = Array2::from_elem((4, nt), observed_level);
+        let observed = Array2::from_elem([4, nt], observed_level);
         (geometry, observed)
     }
 

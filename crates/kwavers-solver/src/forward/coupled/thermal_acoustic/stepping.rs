@@ -77,10 +77,10 @@ impl ThermalAcousticCoupler {
         let velocity_x = Array3::zeros((nx, ny, nz));
         let velocity_y = Array3::zeros((nx, ny, nz));
         let velocity_z = Array3::zeros((nx, ny, nz));
-        let temperature = Array3::from_elem((nx, ny, nz), config.t_ref);
+        let temperature = Array3::from_elem([nx, ny, nz], config.t_ref);
 
-        let density = Array3::from_elem((nx, ny, nz), config.rho_ref);
-        let sound_speed = Array3::from_elem((nx, ny, nz), config.c_ref);
+        let density = Array3::from_elem([nx, ny, nz], config.rho_ref);
+        let sound_speed = Array3::from_elem([nx, ny, nz], config.c_ref);
 
         Ok(Self {
             config,

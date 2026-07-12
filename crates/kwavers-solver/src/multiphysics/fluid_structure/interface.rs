@@ -100,7 +100,7 @@ impl FsiInterface {
         let normal = [normal[0] / len, normal[1] / len, normal[2] / len];
 
         // Initialize interface mask (false = no interface)
-        let interface_mask = Array3::from_elem((nx, ny, nz), false);
+        let interface_mask = Array3::from_elem([nx, ny, nz], false);
 
         Ok(Self {
             fluid_density,

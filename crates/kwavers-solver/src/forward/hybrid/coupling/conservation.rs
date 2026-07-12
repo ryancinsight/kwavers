@@ -129,8 +129,8 @@ mod tests {
     #[test]
     fn enforcement_matches_target_integral_and_energy() {
         let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
-        let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, 2.0, 4.0, 8.0]).unwrap();
-        let target = Array3::from_shape_vec((2, 2, 1), vec![3.0, 5.0, 6.0, 10.0]).unwrap();
+        let interpolated = Array3::from_shape_vec([2, 2, 1], vec![1.0, 2.0, 4.0, 8.0]).unwrap();
+        let target = Array3::from_shape_vec([2, 2, 1], vec![3.0, 5.0, 6.0, 10.0]).unwrap();
 
         let conserved = enforcer.enforce(&interpolated, &target).unwrap();
 
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn enforcement_preserves_identical_interface() {
         let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
-        let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, -2.0, 4.0, 8.0]).unwrap();
+        let interpolated = Array3::from_shape_vec([2, 2, 1], vec![1.0, -2.0, 4.0, 8.0]).unwrap();
 
         let conserved = enforcer.enforce(&interpolated, &interpolated).unwrap();
 

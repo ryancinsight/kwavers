@@ -169,7 +169,7 @@ mod tests {
 
         let magnitude = field.displacement_magnitude();
 
-        let expected = Array3::from_shape_vec((2, 1, 1), vec![13.0, 17.0])
+        let expected = Array3::from_shape_vec([2, 1, 1], vec![13.0, 17.0])
             .expect("invariant: shape matches two scalar norms");
         assert_eq!(magnitude, expected);
     }

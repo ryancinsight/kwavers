@@ -334,8 +334,8 @@ mod tests {
     #[test]
     fn constant_acoustic_state_has_zero_rhs() {
         let solver = make_solver();
-        let pressure = Array3::from_elem((4, 3, 1), 2.0);
-        let velocity = Array3::from_elem((4, 3, 1), -0.25);
+        let pressure = Array3::from_elem([4, 3, 1], 2.0);
+        let velocity = Array3::from_elem([4, 3, 1], -0.25);
         let mut pressure_rhs = Array3::zeros((4, 3, 1));
         let mut velocity_rhs = Array3::zeros((4, 3, 1));
 

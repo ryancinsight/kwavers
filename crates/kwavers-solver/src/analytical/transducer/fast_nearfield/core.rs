@@ -127,7 +127,7 @@ impl FastNearfieldSolver {
 
         // Compute angular spectrum of Green's function
         // Based on McGough (2004) and Kelly & McGough (2006)
-        let mut green_spectrum = Array2::<Complex64>::from_elem((n_kx, n_ky), Complex64::default());
+        let mut green_spectrum = Array2::<Complex64>::from_elem([n_kx, n_ky], Complex64::default());
 
         for (i, &kx_val) in self.kx.iter().enumerate() {
             for (j, &ky_val) in self.ky.iter().enumerate() {
@@ -243,7 +243,7 @@ impl FastNearfieldSolver {
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
 
-        let mut result = Array2::<Complex64>::from_elem((n_elem_x, n_elem_y), Complex64::default());
+        let mut result = Array2::<Complex64>::from_elem([n_elem_x, n_elem_y], Complex64::default());
         for i in 0..n_elem_x {
             for j in 0..n_elem_y {
                 let value = pressure_field[[start_x + i, start_y + j]];
@@ -287,7 +287,7 @@ impl FastNearfieldSolver {
         let [n_elem_x, n_elem_y] = velocity.shape();
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
 
-        let mut padded = Array2::<Complex64>::from_elem((n_kx, n_ky), Complex64::default());
+        let mut padded = Array2::<Complex64>::from_elem([n_kx, n_ky], Complex64::default());
 
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;

@@ -26,9 +26,9 @@ fn test_fwi_pstd_solver_type_accepted_and_produces_nonzero_data() {
     let dx = 1.5e-3_f64; // 1.5 mm — enough resolution for 500 kHz
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("grid");
 
-    let model = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
+    let model = Array3::from_elem([nx, ny, nz], SOUND_SPEED_WATER_SIM);
 
-    let mut sensor_mask = Array3::from_elem((nx, ny, nz), false);
+    let mut sensor_mask = Array3::from_elem([nx, ny, nz], false);
     for iy in 2..6 {
         for iz in 2..6 {
             sensor_mask[[6, iy, iz]] = true;
@@ -39,7 +39,7 @@ fn test_fwi_pstd_solver_type_accepted_and_produces_nonzero_data() {
     // dt satisfying CFL for PSTD: dt ≤ dx / (c * √3) * CFL.  Here CFL = 0.3.
     let dt = 1.7e-7_f64;
 
-    let mut p_mask = Array3::from_elem((nx, ny, nz), 0.0_f64);
+    let mut p_mask = Array3::from_elem([nx, ny, nz], 0.0_f64);
     p_mask[[2, 4, 4]] = 1.0;
     let mut p_signal = Array2::zeros((1, nt));
     for t in 0..8 {
@@ -98,9 +98,9 @@ fn test_fwi_unsupported_solver_type_returns_error() {
     let (nx, ny, nz) = (8usize, 8, 8);
     let dx = 1e-3_f64;
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).expect("grid");
-    let model = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
+    let model = Array3::from_elem([nx, ny, nz], SOUND_SPEED_WATER_SIM);
 
-    let mut sensor_mask = Array3::from_elem((nx, ny, nz), false);
+    let mut sensor_mask = Array3::from_elem([nx, ny, nz], false);
     sensor_mask[[6, 4, 4]] = true;
 
     let nt = 10usize;

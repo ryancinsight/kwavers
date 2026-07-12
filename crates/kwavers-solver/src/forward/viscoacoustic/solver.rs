@@ -498,7 +498,7 @@ impl ViscoacousticMemorySolver {
         let arms: Vec<(Array3<f64>, Array3<f64>)> = (0..n_arms)
             .map(|l| {
                 let dm = scale.mapv(|s| (s * base[l]).max(f64::MIN_POSITIVE));
-                let tau = Array3::from_elem((nx, ny, nz), taus[l]);
+                let tau = Array3::from_elem([nx, ny, nz], taus[l]);
                 (dm, tau)
             })
             .collect();

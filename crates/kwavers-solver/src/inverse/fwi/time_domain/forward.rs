@@ -28,7 +28,7 @@ use leto::{Array2, Array3, Array4};
 
 fn ndarray_from_leto2(field: &leto::Array2<f64>) -> Array2<f64> {
     let [nrows, ncols] = field.shape();
-    Array2::from_shape_vec((nrows, ncols), field.iter().copied().collect())
+    Array2::from_shape_vec([nrows, ncols], field.iter().copied().collect())
         .expect("FWI source signal shape must match contiguous ndarray storage")
 }
 

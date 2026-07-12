@@ -22,7 +22,7 @@ use super::performance::PluginPerformanceMonitor;
 
 fn ndarray_mask(mask: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = mask.shape();
-    Array3::from_shape_vec((nx, ny, nz), mask.iter().copied().collect())
+    Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
         .expect("plugin source mask shape must match contiguous ndarray storage")
 }
 

@@ -201,8 +201,8 @@ mod tests {
     /// A uniform exponent field yields no strata (caller uses the uniform path).
     #[test]
     fn uniform_exponent_returns_none() {
-        let y = Array3::from_elem((4, 4, 4), 1.5);
-        let k = Array3::from_elem((4, 4, 4), 1.0);
+        let y = Array3::from_elem([4, 4, 4], 1.5);
+        let k = Array3::from_elem([4, 4, 4], 1.0);
         assert!(build_exponent_strata(&y, &k).is_none());
     }
 
@@ -211,7 +211,7 @@ mod tests {
     #[test]
     fn two_tissue_field_reconstructs_exponents_exactly() {
         let (ya, yb) = (1.1_f64, 1.5_f64);
-        let mut y = Array3::from_elem((4, 4, 4), ya);
+        let mut y = Array3::from_elem([4, 4, 4], ya);
         for i in 2..4 {
             for j in 0..4 {
                 for k in 0..4 {

@@ -79,7 +79,7 @@ pub fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
         }
     }
 
-    Array3::from_shape_vec((nx, ny, nz), fft.inverse(&field_hat).into_vec())
+    Array3::from_shape_vec([nx, ny, nz], fft.inverse(&field_hat).into_vec())
         .expect("Kuznetsov Laplacian output shape must match the solver grid")
 }
 
@@ -130,11 +130,11 @@ pub fn compute_gradient(
     }
 
     // Transform back to real space
-    let grad_x_real = Array3::from_shape_vec((nx, ny, nz), fft.inverse(&grad_x_hat).into_vec())
+    let grad_x_real = Array3::from_shape_vec([nx, ny, nz], fft.inverse(&grad_x_hat).into_vec())
         .expect("Kuznetsov x-gradient output shape must match the solver grid");
-    let grad_y_real = Array3::from_shape_vec((nx, ny, nz), fft.inverse(&grad_y_hat).into_vec())
+    let grad_y_real = Array3::from_shape_vec([nx, ny, nz], fft.inverse(&grad_y_hat).into_vec())
         .expect("Kuznetsov y-gradient output shape must match the solver grid");
-    let grad_z_real = Array3::from_shape_vec((nx, ny, nz), fft.inverse(&grad_z_hat).into_vec())
+    let grad_z_real = Array3::from_shape_vec([nx, ny, nz], fft.inverse(&grad_z_hat).into_vec())
         .expect("Kuznetsov z-gradient output shape must match the solver grid");
 
     (grad_x_real, grad_y_real, grad_z_real)

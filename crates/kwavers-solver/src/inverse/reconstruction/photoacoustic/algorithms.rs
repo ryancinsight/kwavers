@@ -85,7 +85,7 @@ impl PhotoacousticReconstructor {
             sampling_frequency,
         )?;
         let mut reconstruction =
-            Array3::from_shape_vec((grid_size[0], grid_size[1], grid_size[2]), values)
+            Array3::from_shape_vec([grid_size[0], grid_size[1], grid_size[2]], values)
                 .expect("invariant: back-projection value count equals grid_size product");
 
         // Apply reconstruction filter if configured

@@ -379,7 +379,7 @@ impl AsContext {
 
         let ze = || Array2::<f64>::zeros((nx, nr_exp));
         let zn = || Array2::<f64>::zeros((nx, nr));
-        let zc = || Array2::<Complex64>::from_elem((nx, nr_exp), Complex64::default());
+        let zc = || Array2::<Complex64>::from_elem([nx, nr_exp], Complex64::default());
 
         Ok(Self {
             nx,

@@ -78,7 +78,7 @@ mod tests {
 
         let mut solver = KZKSolver::new(config.clone()).unwrap();
 
-        let source = Array2::from_elem((config.nx, config.ny), 1.0_f64);
+        let source = Array2::from_elem([config.nx, config.ny], 1.0_f64);
         solver.set_source(source, frequency);
 
         let initial_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);

@@ -193,7 +193,7 @@ mod tests {
         let dz = 0.01; // 1 cm
         let expected_factor = (-10.0_f64 * dz).exp(); // exp(-0.1)
 
-        let pressure = Array3::from_elem((3, 3, 3), 1.0_f64);
+        let pressure = Array3::from_elem([3, 3, 3], 1.0_f64);
         let result = op.apply(&pressure, dz).unwrap();
 
         assert_abs_diff_eq!(result[[1, 1, 1]], expected_factor, epsilon = 1e-12);
@@ -215,12 +215,12 @@ mod tests {
         let dz = 0.005;
 
         // CW path: apply() uses reference_frequency
-        let p3d = Array3::from_elem((4, 4, 1), 2.0_f64);
+        let p3d = Array3::from_elem([4, 4, 1], 2.0_f64);
         let cw_result = op.apply(&p3d, dz).unwrap();
         let cw_val = cw_result[[1, 1, 0]];
 
         // Broadband path with a single fundamental harmonic (n=1)
-        let mut harmonics = vec![Array2::from_elem((4, 4), 2.0_f64)];
+        let mut harmonics = vec![Array2::from_elem([4, 4], 2.0_f64)];
         op.apply_broadband(&mut harmonics, dz, f0);
         let bb_val = harmonics[0][[1, 1]];
 
@@ -243,8 +243,8 @@ mod tests {
         let f0 = config.reference_frequency;
 
         let mut harmonics = vec![
-            Array2::from_elem((2, 2), 1.0_f64), // fundamental (n=1)
-            Array2::from_elem((2, 2), 1.0_f64), // 2nd harmonic (n=2)
+            Array2::from_elem([2, 2], 1.0_f64), // fundamental (n=1)
+            Array2::from_elem([2, 2], 1.0_f64), // 2nd harmonic (n=2)
         ];
         op.apply_broadband(&mut harmonics, dz, f0);
 

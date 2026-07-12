@@ -66,9 +66,9 @@ fn pml_damping_applies_same_exponential_to_velocity_components() {
         reflection_target: 1e-5,
     };
     let pml = ElasticSwePMLBoundary::new(&grid, config);
-    let mut vx = Array3::<f64>::from_elem((3, 3, 3), 2.0);
-    let mut vy = Array3::<f64>::from_elem((3, 3, 3), 3.0);
-    let mut vz = Array3::<f64>::from_elem((3, 3, 3), 5.0);
+    let mut vx = Array3::<f64>::from_elem([3, 3, 3], 2.0);
+    let mut vy = Array3::<f64>::from_elem([3, 3, 3], 3.0);
+    let mut vz = Array3::<f64>::from_elem([3, 3, 3], 5.0);
     let dt = 0.25;
 
     pml.apply_damping(&mut vx, &mut vy, &mut vz, dt);

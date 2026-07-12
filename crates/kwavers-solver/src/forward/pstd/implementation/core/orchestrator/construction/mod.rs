@@ -28,7 +28,7 @@ const DENSE_CONSTRUCTION_CHUNK: usize = 4096;
 
 fn leto_to_ndarray(input: &Array3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = input.shape();
-    leto::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
+    leto::Array3::from_shape_vec([nx, ny, nz], input.iter().copied().collect())
         .expect("Leto PSTD field shape must match ndarray boundary shape")
 }
 

@@ -169,7 +169,7 @@ fn test_conservation_check_interval() {
         ..Default::default()
     });
 
-    let source = Array2::from_elem((config.nx, config.ny), 1000.0);
+    let source = Array2::from_elem([config.nx, config.ny], 1000.0);
     solver.set_source(source, MHZ_TO_HZ);
 
     for _ in 0..5 {

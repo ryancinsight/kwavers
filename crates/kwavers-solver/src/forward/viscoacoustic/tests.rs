@@ -242,7 +242,7 @@ fn heterogeneous_interface_reflects_with_analytical_coefficient() {
     let interface = 256usize;
     let (m_a, m_b) = (M_INF, 4.0 * M_INF); // Z_B/Z_A = 2 ⇒ R = 1/3
 
-    let rho = Array3::from_elem((n, 1, 1), RHO);
+    let rho = Array3::from_elem([n, 1, 1], RHO);
     let m_inf = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| if i < interface { m_a } else { m_b });
     let mut s =
         ViscoacousticMemorySolver::new_heterogeneous(n, 1, 1, dx, 1.0, 1.0, dt, &rho, &m_inf, &[])
@@ -296,9 +296,9 @@ fn power_law_medium_reproduces_target_absorption() {
     let f_ref = 5.0e5_f64;
     let alpha_target = 5.0_f64; // Np/m at f_ref
 
-    let rho_f = Array3::from_elem((n, 1, 1), rho);
-    let c_f = Array3::from_elem((n, 1, 1), c);
-    let alpha_f = Array3::from_elem((n, 1, 1), alpha_target);
+    let rho_f = Array3::from_elem([n, 1, 1], rho);
+    let c_f = Array3::from_elem([n, 1, 1], c);
+    let alpha_f = Array3::from_elem([n, 1, 1], alpha_target);
     let mut s = ViscoacousticMemorySolver::from_power_law_fields(
         n, 1, 1, dx, 1.0, 1.0, dt, &rho_f, &c_f, &alpha_f, y, 1.0e5, 2.0e6, 6, f_ref,
     )

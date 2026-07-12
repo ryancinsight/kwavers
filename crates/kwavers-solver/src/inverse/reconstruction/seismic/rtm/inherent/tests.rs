@@ -17,7 +17,7 @@ mod tests {
     fn rtm_with_condition(condition: RtmImagingCondition) -> ReverseTimeMigration {
         let mut config = SeismicImagingConfig::default();
         config.rtm_imaging_condition = condition;
-        ReverseTimeMigration::new(config, Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM))
+        ReverseTimeMigration::new(config, Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM))
     }
 
     /// The derivative-based Laplacian imaging condition must return a typed error
@@ -55,8 +55,8 @@ mod tests {
     #[test]
     fn energy_normalized_condition_matches_cross_correlation_over_source_energy() {
         let mut rtm = rtm_with_condition(RtmImagingCondition::EnergyNormalized);
-        let source = Array4::from_elem((2, 3, 3, 3), 2.0);
-        let receiver = Array4::from_elem((2, 3, 3, 3), 3.0);
+        let source = Array4::from_elem([2, 3, 3, 3], 2.0);
+        let receiver = Array4::from_elem([2, 3, 3, 3], 3.0);
 
         rtm.apply_imaging_condition(&source, &receiver).unwrap();
 
@@ -84,7 +84,7 @@ mod tests {
                 .unwrap()
                 .fill(t as f64);
         }
-        let receiver = Array4::from_elem((3, 3, 3, 3), 3.0);
+        let receiver = Array4::from_elem([3, 3, 3, 3], 3.0);
 
         rtm.apply_imaging_condition(&source, &receiver).unwrap();
 
@@ -170,7 +170,7 @@ mod tests {
             rtm_imaging_condition: RtmImagingCondition::ZeroLag,
             ..SeismicImagingConfig::default()
         };
-        let velocity = Array3::from_elem((NX, NY, NZ), C);
+        let velocity = Array3::from_elem([NX, NY, NZ], C);
         let mut rtm = ReverseTimeMigration::new(config, velocity);
 
         // Single source / single receiver placed inside the interior so the

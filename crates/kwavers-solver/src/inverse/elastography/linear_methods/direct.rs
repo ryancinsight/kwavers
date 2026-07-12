@@ -48,7 +48,7 @@ pub(super) fn direct_inversion(
     let initial_k = omega / 3.0;
     let initial_theta = initial_k * initial_k;
 
-    let mut theta = Array3::from_elem((nx, ny, nz), initial_theta);
+    let mut theta = Array3::from_elem([nx, ny, nz], initial_theta);
 
     // 3. Optimization parameters
     let max_iterations = 50;

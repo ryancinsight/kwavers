@@ -45,9 +45,9 @@ fn test_ghost_cell_traction_balance() {
     }
 
     let p0 = 1.0e5_f64;
-    let fluid_pressure = Array3::from_elem((nx, nx, nx), p0);
+    let fluid_pressure = Array3::from_elem([nx, nx, nx], p0);
     let solid_stress: [Array3<f64>; 6] = [
-        Array3::from_elem((nx, nx, nx), p0),
+        Array3::from_elem([nx, nx, nx], p0),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
@@ -104,9 +104,9 @@ fn test_exchange_ghost_cells_reuses_workspace_buffers() {
     let i_face = nx / 2;
     solver.interface.interface_mask[[i_face, 2, 2]] = true;
 
-    let pressure_a = Array3::from_elem((nx, nx, nx), 10.0);
+    let pressure_a = Array3::from_elem([nx, nx, nx], 10.0);
     let stress_a: [Array3<f64>; 6] = [
-        Array3::from_elem((nx, nx, nx), 20.0),
+        Array3::from_elem([nx, nx, nx], 20.0),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
@@ -124,9 +124,9 @@ fn test_exchange_ghost_cells_reuses_workspace_buffers() {
     assert_eq!(solver.p_fluid_ghost[[i_face, 2, 2]], 20.0);
     assert_eq!(solver.t_solid_ghost[0][[i_face, 2, 2]], -10.0);
 
-    let pressure_b = Array3::from_elem((nx, nx, nx), 30.0);
+    let pressure_b = Array3::from_elem([nx, nx, nx], 30.0);
     let stress_b: [Array3<f64>; 6] = [
-        Array3::from_elem((nx, nx, nx), 40.0),
+        Array3::from_elem([nx, nx, nx], 40.0),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
@@ -162,12 +162,12 @@ fn test_ghost_cell_velocity_continuity() {
 
     let v_normal = 0.1_f64;
     let fluid_velocity: [Array3<f64>; 3] = [
-        Array3::from_elem((nx, nx, nx), v_normal),
+        Array3::from_elem([nx, nx, nx], v_normal),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
     ];
     let solid_velocity: [Array3<f64>; 3] = [
-        Array3::from_elem((nx, nx, nx), v_normal),
+        Array3::from_elem([nx, nx, nx], v_normal),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
     ];
@@ -181,7 +181,7 @@ fn test_ghost_cell_velocity_continuity() {
     );
 
     let solid_velocity_bad: [Array3<f64>; 3] = [
-        Array3::from_elem((nx, nx, nx), v_normal + 1.0),
+        Array3::from_elem([nx, nx, nx], v_normal + 1.0),
         Array3::zeros((nx, nx, nx)),
         Array3::zeros((nx, nx, nx)),
     ];

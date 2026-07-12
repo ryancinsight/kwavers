@@ -72,7 +72,7 @@ impl PennesSolver {
             ));
         }
 
-        let temperature = Array3::from_elem((nx, ny, nz), arterial_temperature);
+        let temperature = Array3::from_elem([nx, ny, nz], arterial_temperature);
         let temperature_prev = temperature.clone();
 
         Ok(Self {

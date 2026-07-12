@@ -189,7 +189,7 @@ pub(super) fn warp_template(
     background: f64,
 ) -> Array3<f64> {
     let [nx, ny, nz] = template.shape();
-    let mut out = Array3::from_elem((nx, ny, nz), background);
+    let mut out = Array3::from_elem([nx, ny, nz], background);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {

@@ -102,7 +102,7 @@ mod tests {
     use super::*;
 
     fn field(v: Complex64) -> Array2<Complex64> {
-        Array2::from_elem((2, 3), v)
+        Array2::from_elem([2, 3], v)
     }
 
     #[test]

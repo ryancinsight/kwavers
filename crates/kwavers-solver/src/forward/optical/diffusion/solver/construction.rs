@@ -99,7 +99,7 @@ impl DiffusionSolver {
         config: DiffusionSolverConfig,
     ) -> Result<Self> {
         let (nx, ny, nz) = grid.dimensions();
-        let optical_map = Array3::from_elem((nx, ny, nz), optical_properties);
+        let optical_map = Array3::from_elem([nx, ny, nz], optical_properties);
         Self::new(grid, optical_map, config)
     }
 }

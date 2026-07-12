@@ -17,7 +17,7 @@ fn test_gmres_identity_matrix() {
 
     let mut solver = GMRESSolver::new(config);
 
-    let b = Array3::from_elem((2, 2, 2), 1.0);
+    let b = Array3::from_elem([2, 2, 2], 1.0);
     let mut x0 = Array3::zeros((2, 2, 2));
 
     let matvec = |v: &Array3<f64>| Ok(v.clone());
@@ -54,7 +54,7 @@ fn test_gmres_diagonal_matrix() {
     let config = GMRESConfig::default();
     let mut solver = GMRESSolver::new(config);
 
-    let b = Array3::from_elem((4, 4, 4), 4.0);
+    let b = Array3::from_elem([4, 4, 4], 4.0);
     let mut x0 = Array3::zeros((4, 4, 4));
 
     let matvec = |v: &Array3<f64>| Ok(v * 2.0);
@@ -81,7 +81,7 @@ fn test_gmres_residual_decrease() {
 
     let mut solver = GMRESSolver::new(config);
 
-    let b = Array3::from_elem((4, 4, 4), 1.0);
+    let b = Array3::from_elem([4, 4, 4], 1.0);
     let mut x0 = Array3::zeros((4, 4, 4));
 
     let matvec = |v: &Array3<f64>| Ok(v * 1.5);

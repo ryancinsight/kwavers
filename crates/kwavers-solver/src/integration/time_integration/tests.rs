@@ -19,7 +19,7 @@ use std::collections::HashMap;
 fn rk4_matches_fourth_order_stability_polynomial_for_linear_growth() -> KwaversResult<()> {
     let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?;
     let mut stepper = RungeKutta4::new(RK4Config::default());
-    let mut field = Array3::from_elem((1, 1, 1), 1.0);
+    let mut field = Array3::from_elem([1, 1, 1], 1.0);
     let lambda = -2.0_f64;
     let dt = 0.1_f64;
 
@@ -48,7 +48,7 @@ fn adams_bashforth2_is_exact_for_constant_derivative_after_startup() -> KwaversR
         order: 2,
         startup_steps: 1,
     });
-    let mut field = Array3::from_elem((1, 1, 1), 3.0);
+    let mut field = Array3::from_elem([1, 1, 1], 3.0);
     let derivative = 2.5_f64;
     let dt = 0.2_f64;
 
@@ -78,7 +78,7 @@ fn adams_bashforth3_is_exact_for_constant_derivative_after_startup() -> KwaversR
         order: 3,
         startup_steps: 2,
     });
-    let mut field = Array3::from_elem((2, 2, 2), 3.0);
+    let mut field = Array3::from_elem([2, 2, 2], 3.0);
     let derivative = -1.25_f64;
     let dt = 0.2_f64;
 
@@ -103,7 +103,7 @@ fn adams_bashforth3_is_exact_for_constant_derivative_after_startup() -> KwaversR
 fn stability_analyzer_uses_acoustic_and_diffusion_bounds() -> KwaversResult<()> {
     let grid = Grid::new(4, 4, 4, 0.002, 0.001, 0.004)?;
     let analyzer = StabilityAnalyzer::new(0.5);
-    let field = Array3::from_elem((4, 4, 4), 1.0);
+    let field = Array3::from_elem([4, 4, 4], 1.0);
     let constraints = HashMap::from([
         ("max_wave_speed".to_string(), 2_000.0),
         ("diffusion_coefficient".to_string(), 1.25e-3),
@@ -198,7 +198,7 @@ fn time_scale_separator_matches_quadratic_closed_form() -> KwaversResult<()> {
 #[test]
 fn time_scale_separator_handles_domains_without_central_stencil() -> KwaversResult<()> {
     let grid = Grid::new(2, 3, 3, 1.0, 1.0, 1.0)?;
-    let fields = Array4::from_elem((2, 2, 3, 3), 7.0);
+    let fields = Array4::from_elem([2, 2, 3, 3], 7.0);
     let mut separator = TimeScaleSeparator::new(&grid);
 
     let scales = separator.analyze(&fields, 1e-12)?;

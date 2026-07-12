@@ -107,7 +107,7 @@ fn solve_step_reuses_rk_workspace_and_preserves_constant_state() {
         ..Default::default()
     };
     let mut solver = DGSolver::new(config, grid).unwrap();
-    let mut field = Array3::from_elem((6, 3, 3), 2.0);
+    let mut field = Array3::from_elem([6, 3, 3], 2.0);
 
     solver.solve_step(&mut field, 0.01).unwrap();
     let coeff_ptr = solver.modal_coefficients.as_ref().unwrap().as_ptr();

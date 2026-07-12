@@ -172,8 +172,8 @@ mod tests {
     /// the plain difference.
     #[test]
     fn uniform_weighting_matches_plain_l2() {
-        let obs = Array2::from_shape_vec((2, 3), vec![1.0, 2.0, 3.0, -1.0, 0.0, 4.0]).unwrap();
-        let syn = Array2::from_shape_vec((2, 3), vec![1.5, 2.0, 2.0, -1.0, 1.0, 4.5]).unwrap();
+        let obs = Array2::from_shape_vec([2, 3], vec![1.0, 2.0, 3.0, -1.0, 0.0, 4.0]).unwrap();
+        let syn = Array2::from_shape_vec([2, 3], vec![1.5, 2.0, 2.0, -1.0, 1.0, 4.5]).unwrap();
         let w = trace_weights(&obs, DataWeighting::Uniform);
         assert!(w.iter().all(|&x| (x - 1.0).abs() < 1e-15));
 

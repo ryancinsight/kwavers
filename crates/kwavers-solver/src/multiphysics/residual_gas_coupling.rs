@@ -281,9 +281,9 @@ mod tests {
     use leto::Array3;
 
     fn base(nx: usize) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        let c = Array3::from_elem((nx, 1, 1), 1481.0); // water
-        let a = Array3::from_elem((nx, 1, 1), 2.5); // base absorption [Np/m]
-        let rho = Array3::from_elem((nx, 1, 1), 998.0);
+        let c = Array3::from_elem([nx, 1, 1], 1481.0); // water
+        let a = Array3::from_elem([nx, 1, 1], 2.5); // base absorption [Np/m]
+        let rho = Array3::from_elem([nx, 1, 1], 998.0);
         (c, a, rho)
     }
 

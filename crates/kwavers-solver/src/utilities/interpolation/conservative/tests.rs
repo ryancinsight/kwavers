@@ -42,7 +42,7 @@ fn test_conservative_interpolator_coarsening() {
         UtilConservativeInterpolator::new(&source_grid, &target_grid, ConservationMode::Mass)
             .unwrap();
 
-    let source = Array3::from_elem((32, 32, 32), 1.0);
+    let source = Array3::from_elem([32, 32, 32], 1.0);
     let mut target = Array3::zeros((16, 16, 16));
     interpolator.transfer(&source, &mut target).unwrap();
 

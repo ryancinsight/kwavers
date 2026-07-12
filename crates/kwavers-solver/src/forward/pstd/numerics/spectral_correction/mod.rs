@@ -100,7 +100,7 @@ pub fn compute_spectral_correction(
     c_ref: f64,
 ) -> Array3<f64> {
     if !config.enabled {
-        return Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+        return Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     }
 
     corrections::compute_spectral_correction_dispatch(

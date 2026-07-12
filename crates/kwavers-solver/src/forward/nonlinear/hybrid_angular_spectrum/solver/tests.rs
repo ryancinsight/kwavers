@@ -55,7 +55,7 @@ fn test_absorption_reduces_field_energy() {
     };
     let solver_absorbing = HybridAngularSpectrumSolver::new(&grid, &config_absorbing).unwrap();
 
-    let initial = Array3::from_elem((8, 8, 4), 1000.0_f64);
+    let initial = Array3::from_elem([8, 8, 4], 1000.0_f64);
     let n_steps = 20;
 
     let p_lossless = solver_lossless
@@ -106,7 +106,7 @@ fn test_lossless_linear_energy_conservation() {
     let solver = HybridAngularSpectrumSolver::new(&grid, &config).unwrap();
 
     // DC field (constant in x,y → single propagating DC mode, no evanescent loss)
-    let initial = Array3::from_elem((8, 8, 4), 500.0_f64);
+    let initial = Array3::from_elem([8, 8, 4], 500.0_f64);
     let e0: f64 = initial.iter().map(|v| v * v).sum();
 
     let result = solver.propagate_steps(&initial, 20, dz).unwrap();

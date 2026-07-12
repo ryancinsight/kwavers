@@ -213,7 +213,7 @@ impl ElasticWaveSolver {
         history: &[ElasticWaveField],
     ) -> WaveFrontTracker {
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut arrival_times = Array3::<f64>::from_elem((nx, ny, nz), f64::NAN);
+        let mut arrival_times = Array3::<f64>::from_elem([nx, ny, nz], f64::NAN);
         let mut amplitudes = Array3::<f64>::zeros((nx, ny, nz));
         let mut tracking_quality = Array3::<f64>::zeros((nx, ny, nz));
 

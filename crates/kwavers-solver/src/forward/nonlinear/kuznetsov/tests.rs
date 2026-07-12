@@ -57,7 +57,7 @@ fn spectral_laplacian_of_constant_is_zero() {
     let n = 16usize;
     let dx = 0.001_f64;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let field = leto::Array3::from_elem((n, n, n), 7.5_f64);
+    let field = leto::Array3::from_elem([n, n, n], 7.5_f64);
 
     let laplacian = numerical::compute_laplacian(&field, &grid);
 
@@ -76,7 +76,7 @@ fn spectral_gradient_of_constant_is_zero() {
     let n = 16usize;
     let dx = 0.001_f64;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let field = leto::Array3::from_elem((n, n, n), 3.14_f64);
+    let field = leto::Array3::from_elem([n, n, n], 3.14_f64);
 
     let (gx, gy, gz) = numerical::compute_gradient(&field, &grid);
 
@@ -180,9 +180,9 @@ fn diffusive_term_matches_stokes_kirchhoff_coefficient() {
     const P0: f64 = 1.0; // coefficient in p(t) = P0·t³
 
     // p(t) = P0·t³ at t = 3Δt, 2Δt, Δt, 0
-    let pressure = leto::Array3::from_elem((N, N, N), P0 * (3.0 * DT).powi(3));
-    let p_prev = leto::Array3::from_elem((N, N, N), P0 * (2.0 * DT).powi(3));
-    let p_prev2 = leto::Array3::from_elem((N, N, N), P0 * DT.powi(3));
+    let pressure = leto::Array3::from_elem([N, N, N], P0 * (3.0 * DT).powi(3));
+    let p_prev = leto::Array3::from_elem([N, N, N], P0 * (2.0 * DT).powi(3));
+    let p_prev2 = leto::Array3::from_elem([N, N, N], P0 * DT.powi(3));
     let p_prev3 = leto::Array3::zeros((N, N, N));
     let mut out = leto::Array3::zeros((N, N, N));
 
@@ -231,7 +231,7 @@ fn nonlinear_term_explicit_form_coefficient_is_positive_with_c_squared() {
     const B_OVER_A: f64 = 5.0; // water
     const P: f64 = 1e5; // 100 kPa
 
-    let pressure = leto::Array3::from_elem((N, N, N), P);
+    let pressure = leto::Array3::from_elem([N, N, N], P);
     let p_prev = leto::Array3::zeros((N, N, N));
     let p_prev2 = leto::Array3::zeros((N, N, N));
     let mut out = leto::Array3::zeros((N, N, N));

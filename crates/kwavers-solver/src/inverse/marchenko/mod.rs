@@ -198,8 +198,8 @@ pub fn marchenko_wasserstein_misfit(
     let g_obs = redatum(reflection_obs, cfg).green_minus;
     let g_mod = redatum(reflection_mod, cfg).green_minus;
     let l = g_obs.len();
-    let obs = Array2::from_shape_vec((1, l), g_obs).expect("row vector shape");
-    let modeled = Array2::from_shape_vec((1, (g_mod.len())), g_mod).expect("row vector shape");
+    let obs = Array2::from_shape_vec([1, l], g_obs).expect("row vector shape");
+    let modeled = Array2::from_shape_vec([1, (g_mod.len())], g_mod).expect("row vector shape");
     MisfitFunction::new(MisfitType::Wasserstein).compute(&obs, &modeled)
 }
 

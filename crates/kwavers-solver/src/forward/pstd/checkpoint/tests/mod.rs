@@ -40,7 +40,7 @@ pub(super) fn build_solver_with_sensor(
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 
-    let mut mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     mask[[nx / 2, ny / 2, nz / 2]] = true;
     solver.sensor_recorder = SensorRecorder::new(Some(&mask), (nx, ny, nz), nt + 1).unwrap();
     solver

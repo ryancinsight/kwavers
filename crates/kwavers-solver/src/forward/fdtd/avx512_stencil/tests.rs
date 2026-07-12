@@ -61,8 +61,8 @@ fn pressure_update_keeps_interior_constant_for_uniform_field() {
         return; // AVX-512 unavailable on this host
     };
     let constant = 7.5_f64;
-    let p_curr = Array3::from_elem((16, 16, 16), constant);
-    let p_prev = Array3::from_elem((16, 16, 16), constant);
+    let p_curr = Array3::from_elem([16, 16, 16], constant);
+    let p_prev = Array3::from_elem([16, 16, 16], constant);
     let u_div = Array3::zeros((16, 16, 16));
 
     let p_new = processor

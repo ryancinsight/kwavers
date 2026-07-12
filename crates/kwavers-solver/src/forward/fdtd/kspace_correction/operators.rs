@@ -83,7 +83,7 @@ fn apply_shifted_spectral_gradient(
 
 fn ndarray_real_field(field: LetoArray3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec((nx, ny, nz), field.into_vec())
+    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
         .expect("Leto real field length must match FDTD field shape")
 }
 

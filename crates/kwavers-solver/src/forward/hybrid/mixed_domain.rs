@@ -146,7 +146,7 @@ impl MixedDomainPropagationPlugin {
         let mut out = LetoArray3::<f64>::zeros([nx, ny, nz]);
         let mut scratch = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
         fft.inverse_into(field, &mut out, &mut scratch);
-        Ok(Array3::from_shape_vec((nx, ny, nz), out.into_vec())
+        Ok(Array3::from_shape_vec([nx, ny, nz], out.into_vec())
             .expect("mixed-domain inverse FFT output shape must match its grid"))
     }
 

@@ -6,11 +6,8 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
+use leto::{ArrayView3, ArrayViewMut3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    ArrayView3,
-    ArrayViewMut3,
-};
 
 use super::solver::FdtdSolver;
 
@@ -70,18 +67,21 @@ fn compute_forward_gradient(
         "invariant: FDTD forward-gradient lower slice shape matches output"
     );
 
-    if let (Some(output_values), Some(high_values), Some(low_values)) = (
-        output.as_mut_slice(),
-        high.as_slice(),
-        low.as_slice(),
-    ) {
+    if let (Some(output_values), Some(high_values), Some(low_values)) =
+        (output.as_mut_slice(), high.as_slice(), low.as_slice())
+    {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |idx, output_value| {
             *output_value = (high_values[idx] - low_values[idx]) / spacing;
         });
     } else {
-        leto_ops::zip2_mut_with(&mut output, &high, &low, |output_value, high_value, low_value| {
-            *output_value = (*high_value - *low_value) / spacing;
-        })
+        leto_ops::zip2_mut_with(
+            &mut output,
+            &high,
+            &low,
+            |output_value, high_value, low_value| {
+                *output_value = (*high_value - *low_value) / spacing;
+            },
+        )
         .expect("invariant: FDTD forward-gradient shapes asserted equal above");
     }
 }
@@ -182,7 +182,9 @@ impl FdtdSolver {
             );
             {
                 let ux = self.fields.ux.view_mut();
-                let mut boundary = ux.slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+                let mut boundary = ux
+                    .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
+                    .unwrap();
                 boundary.fill(0.0);
             }
 
@@ -194,7 +196,9 @@ impl FdtdSolver {
             );
             {
                 let uy = self.fields.uy.view_mut();
-                let mut boundary = uy.slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
+                let mut boundary = uy
+                    .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
+                    .unwrap();
                 boundary.fill(0.0);
             }
 
@@ -206,7 +210,9 @@ impl FdtdSolver {
             );
             {
                 let uz = self.fields.uz.view_mut();
-                let mut boundary = uz.slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
+                let mut boundary = uz
+                    .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
+                    .unwrap();
                 boundary.fill(0.0);
             }
         }
@@ -302,22 +308,34 @@ impl FdtdSolver {
 
         if nx > 1 {
             if let Some(ref mut dp_dx) = self.dp_dx_scratch {
-                let hi = pressure.slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-                let lo = pressure.slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+                let hi = pressure
+                    .slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
+                    .unwrap();
+                let lo = pressure
+                    .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+                    .unwrap();
                 compute_forward_gradient(dp_dx.view_mut(), hi, lo, dx);
             }
         }
         if ny > 1 {
             if let Some(ref mut dp_dy) = self.dp_dy_scratch {
-                let hi = pressure.slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)]).unwrap();
-                let lo = pressure.slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap();
+                let hi = pressure
+                    .slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
+                    .unwrap();
+                let lo = pressure
+                    .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
+                    .unwrap();
                 compute_forward_gradient(dp_dy.view_mut(), hi, lo, dy);
             }
         }
         if nz > 1 {
             if let Some(ref mut dp_dz) = self.dp_dz_scratch {
-                let hi = pressure.slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)]).unwrap();
-                let lo = pressure.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap();
+                let hi = pressure
+                    .slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
+                    .unwrap();
+                let lo = pressure
+                    .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
+                    .unwrap();
                 compute_forward_gradient(dp_dz.view_mut(), hi, lo, dz);
             }
         }
@@ -335,44 +353,95 @@ impl FdtdSolver {
         }
 
         if let Some(ref dp_dx) = self.dp_dx_scratch {
-            let rho_left = self.materials.rho0.slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-            let rho_right = self.materials.rho0.slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+            let rho_left = self
+                .materials
+                .rho0
+                .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+                .unwrap();
+            let rho_right = self
+                .materials
+                .rho0
+                .slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
+                .unwrap();
             update_staggered_velocity(
-                self.fields.ux.view_mut().slice_mut(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap(),
+                self.fields
+                    .ux
+                    .view_mut()
+                    .slice_mut(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+                    .unwrap(),
                 rho_left,
                 rho_right,
                 dp_dx.view(),
                 dt,
             );
-            let mut boundary = self.fields.ux.view_mut().slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+            let mut boundary = self
+                .fields
+                .ux
+                .view_mut()
+                .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
+                .unwrap();
             boundary.fill(0.0);
         }
 
         if let Some(ref dp_dy) = self.dp_dy_scratch {
-            let rho_front = self.materials.rho0.slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap();
-            let rho_back = self.materials.rho0.slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)]).unwrap();
+            let rho_front = self
+                .materials
+                .rho0
+                .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
+                .unwrap();
+            let rho_back = self
+                .materials
+                .rho0
+                .slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
+                .unwrap();
             update_staggered_velocity(
-                self.fields.uy.view_mut().slice_mut(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap(),
+                self.fields
+                    .uy
+                    .view_mut()
+                    .slice_mut(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
+                    .unwrap(),
                 rho_front,
                 rho_back,
                 dp_dy.view(),
                 dt,
             );
-            let mut boundary = self.fields.uy.view_mut().slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
+            let mut boundary = self
+                .fields
+                .uy
+                .view_mut()
+                .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
+                .unwrap();
             boundary.fill(0.0);
         }
 
         if let Some(ref dp_dz) = self.dp_dz_scratch {
-            let rho_near = self.materials.rho0.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap();
-            let rho_far = self.materials.rho0.slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)]).unwrap();
+            let rho_near = self
+                .materials
+                .rho0
+                .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
+                .unwrap();
+            let rho_far = self
+                .materials
+                .rho0
+                .slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
+                .unwrap();
             update_staggered_velocity(
-                self.fields.uz.view_mut().slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap(),
+                self.fields
+                    .uz
+                    .view_mut()
+                    .slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
+                    .unwrap(),
                 rho_near,
                 rho_far,
                 dp_dz.view(),
                 dt,
             );
-            let mut boundary = self.fields.uz.view_mut().slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
+            let mut boundary = self
+                .fields
+                .uz
+                .view_mut()
+                .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
+                .unwrap();
             boundary.fill(0.0);
         }
 

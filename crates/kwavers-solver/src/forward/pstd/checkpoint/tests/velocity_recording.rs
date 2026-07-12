@@ -39,7 +39,7 @@ fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> P
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 
-    let mut mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     mask[[nx / 2, ny / 2, nz / 2]] = true;
 
     let spec = SensorRecordSpec::from_fields(&[

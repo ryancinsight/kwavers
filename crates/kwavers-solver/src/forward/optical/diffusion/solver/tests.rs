@@ -176,7 +176,7 @@ fn test_heterogeneous_medium() -> Result<()> {
     let tissue = OpticalPropertyData::soft_tissue();
     let tumor = OpticalPropertyData::tumor();
 
-    let mut optical_map = Array3::from_elem((nx, ny, nz), tissue);
+    let mut optical_map = Array3::from_elem([nx, ny, nz], tissue);
 
     let center = (nx / 2, ny / 2, nz / 2);
     let radius = 5;

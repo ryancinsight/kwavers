@@ -335,7 +335,7 @@ impl FwiProcessor {
                 }
                 Ok(density.clone())
             }
-            None => Ok(Array3::from_elem((nx, ny, nz), RHO_SEISMIC_REF)),
+            None => Ok(Array3::from_elem([nx, ny, nz], RHO_SEISMIC_REF)),
         }
     }
 }

@@ -101,7 +101,7 @@ fn compute_exact_dispersion_correction(
     c_ref: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    let mut kappa = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
@@ -166,7 +166,7 @@ fn compute_treeby2010_correction(
     _cfl: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    let mut kappa = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
@@ -214,7 +214,7 @@ fn compute_liu_pstd_correction(
     c_ref: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    let mut kappa = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
     let dx_min = dx.min(dy).min(dz);
@@ -262,7 +262,7 @@ fn compute_low_dispersion_pstd_correction(
     c_ref: f64,
     max_correction: f64,
 ) -> Array3<f64> {
-    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    let mut kappa = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 
@@ -302,7 +302,7 @@ fn compute_low_dispersion_pstd_correction(
 /// three independent 1D sinc corrections applied sequentially.  The dense
 /// Moirai traversal is therefore correct by independence of axes.
 fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
-    let mut kappa = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+    let mut kappa = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let (dx, dy, dz) = (grid.dx, grid.dy, grid.dz);
 

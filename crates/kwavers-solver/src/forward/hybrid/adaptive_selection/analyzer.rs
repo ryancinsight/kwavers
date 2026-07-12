@@ -46,7 +46,7 @@ impl FieldAnalyzer {
     /// Detect discontinuities
     pub fn detect_discontinuities(&self, field: ArrayView3<f64>, threshold: f64) -> Array3<bool> {
         let [nx, ny, nz] = field.shape();
-        let mut discontinuities = Array3::from_elem((nx, ny, nz), false);
+        let mut discontinuities = Array3::from_elem([nx, ny, nz], false);
 
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {

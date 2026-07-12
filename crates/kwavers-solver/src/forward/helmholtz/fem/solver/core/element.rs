@@ -72,7 +72,7 @@ impl FemHelmholtzSolver {
             }
 
             // Stiffness: K_ij = V (∇φᵢ · ∇φⱼ)
-            let mut k_elem = Array2::<Complex64>::from_elem((4, 4), Complex64::default());
+            let mut k_elem = Array2::<Complex64>::from_elem([4, 4], Complex64::default());
             for r in 0..4 {
                 for c in 0..4 {
                     k_elem[[r, c]] =
@@ -81,7 +81,7 @@ impl FemHelmholtzSolver {
             }
 
             // Consistent mass: M_ii = V/10, M_ij = V/20 (i≠j)
-            let mut m_elem = Array2::<Complex64>::from_elem((4, 4), Complex64::default());
+            let mut m_elem = Array2::<Complex64>::from_elem([4, 4], Complex64::default());
             let v_over_20 = Complex64::from(volume / 20.0);
             for r in 0..4 {
                 for c in 0..4 {

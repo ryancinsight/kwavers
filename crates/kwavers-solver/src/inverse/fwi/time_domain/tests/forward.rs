@@ -19,17 +19,17 @@ fn test_forward_model_objective_vanishes_for_self_data() {
     });
 
     let grid = Grid::new(3, 3, 3, 1.0, 1.0, 1.0).expect("grid must be valid");
-    let model = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
+    let model = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
 
     let mut p_mask = Array3::zeros((3, 3, 3));
     p_mask[[1, 1, 1]] = 1.0;
     let mut source = GridSource::default();
     source.p_mask = Some(p_mask);
     source.p_signal =
-        Some(Array2::from_shape_vec((1, 3), vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
+        Some(Array2::from_shape_vec([1, 3], vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
     source.p_mode = SourceMode::Dirichlet;
 
-    let mut sensor_mask = Array3::from_elem((3, 3, 3), false);
+    let mut sensor_mask = Array3::from_elem([3, 3, 3], false);
     sensor_mask[[2, 2, 2]] = true;
     let geometry = FwiGeometry::new(source, sensor_mask);
 
@@ -54,17 +54,17 @@ fn test_generate_synthetic_data_matches_canonical_forward_model() {
     });
 
     let grid = Grid::new(3, 3, 3, 1.0, 1.0, 1.0).expect("grid must be valid");
-    let model = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
+    let model = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
 
     let mut p_mask = Array3::zeros((3, 3, 3));
     p_mask[[1, 1, 1]] = 1.0;
     let mut source = GridSource::default();
     source.p_mask = Some(p_mask);
     source.p_signal =
-        Some(Array2::from_shape_vec((1, 3), vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
+        Some(Array2::from_shape_vec([1, 3], vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
     source.p_mode = SourceMode::Dirichlet;
 
-    let mut sensor_mask = Array3::from_elem((3, 3, 3), false);
+    let mut sensor_mask = Array3::from_elem([3, 3, 3], false);
     sensor_mask[[2, 2, 2]] = true;
     let geometry = FwiGeometry::new(source, sensor_mask);
 
@@ -82,7 +82,7 @@ fn test_generate_synthetic_data_matches_canonical_forward_model() {
 #[test]
 fn test_model_constraints() {
     let processor = FwiProcessor::default();
-    let mut model = Array3::from_elem((5, 5, 5), 10000.0);
+    let mut model = Array3::from_elem([5, 5, 5], 10000.0);
 
     processor.apply_model_constraints(&mut model);
 

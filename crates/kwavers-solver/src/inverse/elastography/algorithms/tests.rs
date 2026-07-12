@@ -12,7 +12,7 @@ use super::{
 
 #[test]
 fn test_spatial_smoothing() {
-    let mut field = Array3::from_elem((10, 10, 10), 3.0);
+    let mut field = Array3::from_elem([10, 10, 10], 3.0);
     field[[5, 5, 5]] = 10.0;
 
     spatial_smoothing(&mut field);
@@ -24,7 +24,7 @@ fn test_spatial_smoothing() {
 
 #[test]
 fn test_volumetric_smoothing_preserves_uniform() {
-    let mut field = Array3::from_elem((10, 10, 10), 5.0);
+    let mut field = Array3::from_elem([10, 10, 10], 5.0);
     let original = field.clone();
 
     volumetric_smoothing(&mut field);
@@ -40,7 +40,7 @@ fn test_volumetric_smoothing_preserves_uniform() {
 
 #[test]
 fn test_directional_smoothing() {
-    let mut field = Array3::from_elem((10, 10, 10), 3.0);
+    let mut field = Array3::from_elem([10, 10, 10], 3.0);
     field[[5, 5, 5]] = 8.0;
 
     directional_smoothing(&mut field);
@@ -95,7 +95,7 @@ fn test_find_push_locations_single_peak() {
 
 #[test]
 fn test_smoothing_preserves_positivity() {
-    let mut field = Array3::from_elem((10, 10, 10), 2.0);
+    let mut field = Array3::from_elem([10, 10, 10], 2.0);
     field[[5, 5, 5]] = 5.0;
 
     spatial_smoothing(&mut field);

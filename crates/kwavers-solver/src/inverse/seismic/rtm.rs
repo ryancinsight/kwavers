@@ -285,8 +285,8 @@ mod tests {
         let processor = RtmProcessor::new(settings);
         let grid = Grid::new(5, 5, 5, 1e-3, 1e-3, 1e-3).unwrap();
 
-        let source_field = Array3::from_elem((5, 5, 5), 3.0_f64);
-        let receiver_field = Array3::from_elem((5, 5, 5), 6.0_f64);
+        let source_field = Array3::from_elem([5, 5, 5], 3.0_f64);
+        let receiver_field = Array3::from_elem([5, 5, 5], 6.0_f64);
 
         let image = processor
             .migrate(&source_field, &receiver_field, &grid)

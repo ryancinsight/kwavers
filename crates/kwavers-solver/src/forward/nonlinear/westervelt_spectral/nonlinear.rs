@@ -234,9 +234,9 @@ mod tests {
 
         let grid = Grid::new(3, 3, 3, 1.0, 1.0, 1.0).unwrap();
         let medium = HomogeneousMedium::from_minimal(RHO, C, &grid);
-        let pressure = Array3::from_elem((3, 3, 3), P_CURR);
+        let pressure = Array3::from_elem([3, 3, 3], P_CURR);
         let prev_pressure = Array3::zeros((3, 3, 3));
-        let mut output = Array3::from_elem((3, 3, 3), 7.0);
+        let mut output = Array3::from_elem([3, 3, 3], 7.0);
 
         compute_nonlinear_term_into(
             &mut output,
@@ -311,7 +311,7 @@ mod tests {
             }
         }
         let prev_pressure = Array3::zeros((5, 5, 5));
-        let mut output = Array3::from_elem((5, 5, 5), 3.0);
+        let mut output = Array3::from_elem([5, 5, 5], 3.0);
 
         compute_viscoelastic_term_into(&mut output, &pressure, &prev_pressure, &medium, &grid, DT);
 

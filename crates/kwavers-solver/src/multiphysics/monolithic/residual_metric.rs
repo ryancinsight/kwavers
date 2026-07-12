@@ -22,7 +22,7 @@ mod tests {
 
     #[test]
     fn test_norm_squared_matches_l2_norm_contract() {
-        let field = Array3::from_shape_vec((2, 2, 1), vec![3.0, 4.0, 12.0, 0.0]).unwrap();
+        let field = Array3::from_shape_vec([2, 2, 1], vec![3.0, 4.0, 12.0, 0.0]).unwrap();
 
         assert_eq!(norm_squared(&field), 169.0);
         assert_eq!(norm(&field), 13.0);

@@ -24,7 +24,7 @@ use leto::{
 /// Asymmetric two-blob sound-speed template on a water background. Asymmetry is
 /// required for the rotation to be identifiable from the data.
 fn phantom(nx: usize, ny: usize, c0: f64) -> Array3<f64> {
-    let mut t = Array3::from_elem((nx, ny, 1), c0);
+    let mut t = Array3::from_elem([nx, ny, 1], c0);
     for j in 0..ny {
         for i in 0..nx {
             let r1 = (i as f64 - 11.0).powi(2) + (j as f64 - 13.0).powi(2);
@@ -52,7 +52,7 @@ fn mofi_recovers_known_rigid_misalignment() {
     let dt = 2e-7; // 2-D CFL c·dt/dx = 0.3 < 1/√2.
                    // Two simultaneous sources from orthogonal sides (left + top) give the
                    // wavefield two propagation directions, sharpening rotation sensitivity.
-    let mut p_mask = Array3::from_elem((nx, ny, 1), 0.0_f64);
+    let mut p_mask = Array3::from_elem([nx, ny, 1], 0.0_f64);
     p_mask[[2, 16, 0]] = 1.0;
     p_mask[[16, 2, 0]] = 1.0;
     let mut p_signal = Array2::zeros((1, nt));
@@ -70,7 +70,7 @@ fn mofi_recovers_known_rigid_misalignment() {
         u_signal: None,
         u_mode: SourceMode::default(),
     };
-    let mut sensor_mask = Array3::from_elem((nx, ny, 1), false);
+    let mut sensor_mask = Array3::from_elem([nx, ny, 1], false);
     for i in 3..nx - 3 {
         sensor_mask[[i, 3, 0]] = true;
         sensor_mask[[i, ny - 4, 0]] = true;
@@ -157,7 +157,7 @@ fn ring_problem() -> (Grid, FwiGeometry, FwiProcessor, Array3<f64>, f64) {
     let c0 = SOUND_SPEED_WATER_SIM;
     let template = phantom(nx, ny, c0);
     let nt = 200usize;
-    let mut p_mask = Array3::from_elem((nx, ny, 1), 0.0_f64);
+    let mut p_mask = Array3::from_elem([nx, ny, 1], 0.0_f64);
     p_mask[[2, 16, 0]] = 1.0;
     p_mask[[16, 2, 0]] = 1.0;
     let mut p_signal = Array2::zeros((1, nt));
@@ -175,7 +175,7 @@ fn ring_problem() -> (Grid, FwiGeometry, FwiProcessor, Array3<f64>, f64) {
         u_signal: None,
         u_mode: SourceMode::default(),
     };
-    let mut sensor_mask = Array3::from_elem((nx, ny, 1), false);
+    let mut sensor_mask = Array3::from_elem([nx, ny, 1], false);
     for i in 3..nx - 3 {
         sensor_mask[[i, 3, 0]] = true;
         sensor_mask[[i, ny - 4, 0]] = true;
@@ -666,7 +666,7 @@ fn mofi_is_stationary_when_already_aligned() {
     let template = phantom(nx, ny, c0);
 
     let nt = 200usize;
-    let mut p_mask = Array3::from_elem((nx, ny, 1), 0.0_f64);
+    let mut p_mask = Array3::from_elem([nx, ny, 1], 0.0_f64);
     p_mask[[2, 16, 0]] = 1.0;
     let mut p_signal = Array2::zeros((1, nt));
     for t in 0..24 {
@@ -683,7 +683,7 @@ fn mofi_is_stationary_when_already_aligned() {
         u_signal: None,
         u_mode: SourceMode::default(),
     };
-    let mut sensor_mask = Array3::from_elem((nx, ny, 1), false);
+    let mut sensor_mask = Array3::from_elem([nx, ny, 1], false);
     for j in 3..ny - 3 {
         sensor_mask[[nx - 4, j, 0]] = true;
     }

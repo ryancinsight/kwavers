@@ -105,7 +105,7 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
     }
 
     // Transform back to real space
-    Array3::from_shape_vec((nx, ny, nz), ifft_3d_array(&laplacian_k).into_vec())
+    Array3::from_shape_vec([nx, ny, nz], ifft_3d_array(&laplacian_k).into_vec())
         .expect("Westervelt Laplacian output shape must match the solver grid")
 }
 
@@ -277,7 +277,7 @@ mod tests {
         let grid = make_grid(n, dx);
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
-        let field = leto::Array3::from_elem((n, n, n), 7.5_f64);
+        let field = leto::Array3::from_elem([n, n, n], 7.5_f64);
         let lap = compute_laplacian_spectral(&field, &k_sq);
 
         let max_abs = lap.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);

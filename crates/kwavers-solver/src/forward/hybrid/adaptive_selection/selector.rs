@@ -49,7 +49,7 @@ impl AdaptiveMethodSelector {
         dt: f64,
     ) -> KwaversResult<Array3<SelectedMethod>> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let mut selection = Array3::from_elem((nx, ny, nz), SelectedMethod::Spectral);
+        let mut selection = Array3::from_elem([nx, ny, nz], SelectedMethod::Spectral);
 
         // Analyze field properties
         let pressure_field = fields

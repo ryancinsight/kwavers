@@ -193,7 +193,7 @@ fn numerical_solver_solve_reconstructs_updated_modal_state_to_grid() {
             }
         }
     }
-    let mask = Array3::from_elem((grid.nx, grid.ny, grid.nz), true);
+    let mask = Array3::from_elem([grid.nx, grid.ny, grid.nz], true);
     let dt = 0.01;
 
     let mut solver = DGSolver::new(config, Arc::clone(&grid)).expect("solver");

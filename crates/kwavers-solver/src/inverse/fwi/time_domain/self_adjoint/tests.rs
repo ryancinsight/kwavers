@@ -36,8 +36,8 @@ fn wavelet(nt: usize) -> Array2<f64> {
 fn self_adjoint_objective_vanishes_for_self_data() {
     let (nx, ny, nz) = (10usize, 10, 10);
     let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).expect("grid");
-    let model = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
-    let density = Array3::from_elem((nx, ny, nz), RHO);
+    let model = Array3::from_elem([nx, ny, nz], SOUND_SPEED_WATER_SIM);
+    let density = Array3::from_elem([nx, ny, nz], RHO);
     let cfg = SelfAdjointConfig { nt: 60, dt: 1e-7 };
     let src = wavelet(cfg.nt);
     let source_voxels = [(2usize, 5usize, 5usize)];
@@ -270,7 +270,7 @@ fn self_adjoint_sponge_absorbs_outgoing_waves() {
     let dx = 1e-3;
     let grid = Grid::new(nx, ny, 1, dx, dx, dx).expect("grid");
     let c0 = SOUND_SPEED_WATER_SIM;
-    let density = Array3::from_elem((nx, ny, 1), RHO);
+    let density = Array3::from_elem([nx, ny, 1], RHO);
     let cfg = SelfAdjointConfig { nt: 220, dt: 2e-7 };
     let src = wavelet(cfg.nt);
     let source_voxels = [(24usize, 24usize, 0usize)];
@@ -280,7 +280,7 @@ fn self_adjoint_sponge_absorbs_outgoing_waves() {
         source_signal: src.view(),
         receiver_voxels: &receiver_voxels,
     };
-    let model = Array3::from_elem((nx, ny, 1), c0);
+    let model = Array3::from_elem([nx, ny, 1], c0);
 
     let final_energy = |damp: Option<leto::ArrayView3<f64>>| -> f64 {
         let (_, history) =

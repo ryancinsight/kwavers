@@ -5,7 +5,7 @@ use leto::Array2;
 
 fn leto_to_ndarray(input: &LetoArray3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = input.shape();
-    leto::Array3::from_shape_vec((nx, ny, nz), input.iter().copied().collect())
+    leto::Array3::from_shape_vec([nx, ny, nz], input.iter().copied().collect())
         .expect("Leto checkpoint field shape must match ndarray storage")
 }
 

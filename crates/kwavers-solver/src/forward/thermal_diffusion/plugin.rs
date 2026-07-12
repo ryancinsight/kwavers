@@ -142,7 +142,7 @@ mod tests {
 
         let mut solver = ThermalDiffusionSolver::new(config, &grid);
 
-        let mut initial_temp = Array3::from_elem((16, 16, 16), BODY_TEMPERATURE_K);
+        let mut initial_temp = Array3::from_elem([16, 16, 16], BODY_TEMPERATURE_K);
         initial_temp[[8, 8, 8]] = 320.0;
         solver.set_temperature(initial_temp);
 

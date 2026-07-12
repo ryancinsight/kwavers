@@ -242,7 +242,7 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::<Complex64>::from_elem((config.nx, config.ny), Complex64::default());
+        let mut field = Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
 
         for i in 0..config.nx {
             for j in 0..config.ny {
@@ -286,7 +286,7 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::<Complex64>::from_elem((config.nx, config.ny), Complex64::default());
+        let mut field = Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
 
         for i in 0..config.nx {
             for j in 0..config.ny {

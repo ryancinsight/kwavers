@@ -81,7 +81,7 @@ impl ShockDetector {
     /// Detect shocks in the field using multiple indicators
     pub fn detect_shocks(&self, field: &Array3<f64>, grid: &Grid) -> Array3<bool> {
         let [nx, ny, nz] = field.shape();
-        let mut shock_mask = Array3::from_elem((nx, ny, nz), false);
+        let mut shock_mask = Array3::from_elem([nx, ny, nz], false);
 
         // Modal decay indicator
         if self.use_modal_decay {

@@ -14,7 +14,7 @@ use kwavers_source::{Source, SourceField, SourceInjectionMode};
 
 fn ndarray_mask(mask: &LetoArray3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = mask.shape();
-    Array3::from_shape_vec((nx, ny, nz), mask.iter().copied().collect())
+    Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
         .expect("FDTD source mask shape must match contiguous ndarray storage")
 }
 

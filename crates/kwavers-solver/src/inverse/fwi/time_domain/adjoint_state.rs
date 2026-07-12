@@ -146,20 +146,20 @@ mod tests {
 
     #[test]
     fn test_l2_residual_is_synthetic_minus_observed() {
-        let observed = Array2::from_shape_vec((1, 3), vec![1.0, 2.0, 3.0]).expect("shape");
-        let synthetic = Array2::from_shape_vec((1, 3), vec![4.0, 5.0, 6.0]).expect("shape");
+        let observed = Array2::from_shape_vec([1, 3], vec![1.0, 2.0, 3.0]).expect("shape");
+        let synthetic = Array2::from_shape_vec([1, 3], vec![4.0, 5.0, 6.0]).expect("shape");
 
         let residual = l2_residual(&observed, &synthetic).expect("residual");
         assert_eq!(
             residual,
-            Array2::from_shape_vec((1, 3), vec![3.0, 3.0, 3.0]).expect("shape")
+            Array2::from_shape_vec([1, 3], vec![3.0, 3.0, 3.0]).expect("shape")
         );
     }
 
     #[test]
     fn test_l2_objective_scales_with_dt() {
-        let observed = Array2::from_shape_vec((1, 2), vec![1.0, 1.0]).expect("shape");
-        let synthetic = Array2::from_shape_vec((1, 2), vec![3.0, 5.0]).expect("shape");
+        let observed = Array2::from_shape_vec([1, 2], vec![1.0, 1.0]).expect("shape");
+        let synthetic = Array2::from_shape_vec([1, 2], vec![3.0, 5.0]).expect("shape");
 
         let objective = l2_objective(0.5, &observed, &synthetic).expect("objective");
         assert!((objective - 5.0).abs() < f64::EPSILON);
@@ -168,19 +168,19 @@ mod tests {
     #[test]
     fn test_reverse_time_axis() {
         let data =
-            Array2::from_shape_vec((2, 3), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).expect("shape");
+            Array2::from_shape_vec([2, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).expect("shape");
         let reversed = reverse_time_axis(&data);
         assert_eq!(
             reversed,
-            Array2::from_shape_vec((2, 3), vec![3.0, 2.0, 1.0, 6.0, 5.0, 4.0]).expect("shape")
+            Array2::from_shape_vec([2, 3], vec![3.0, 2.0, 1.0, 6.0, 5.0, 4.0]).expect("shape")
         );
     }
 
     #[test]
     fn test_accumulate_signed_correlation_matches_manual_sum() {
         let mut gradient = Array3::zeros((2, 2, 2));
-        let forward = Array3::from_elem((2, 2, 2), 2.0);
-        let adjoint = Array3::from_elem((2, 2, 2), 3.0);
+        let forward = Array3::from_elem([2, 2, 2], 2.0);
+        let adjoint = Array3::from_elem([2, 2, 2], 3.0);
 
         accumulate_signed_correlation(&mut gradient, forward.view(), adjoint.view(), -0.5)
             .expect("accumulation");
@@ -191,8 +191,8 @@ mod tests {
     #[test]
     fn test_accumulate_signed_correlation_rejects_shape_mismatch() {
         let mut gradient = Array3::zeros((2, 2, 2));
-        let forward = Array3::from_elem((2, 2, 2), 2.0);
-        let adjoint = Array3::from_elem((3, 2, 2), 3.0);
+        let forward = Array3::from_elem([2, 2, 2], 2.0);
+        let adjoint = Array3::from_elem([3, 2, 2], 3.0);
 
         let err = accumulate_signed_correlation(&mut gradient, forward.view(), adjoint.view(), 1.0)
             .expect_err("shape mismatch must fail");

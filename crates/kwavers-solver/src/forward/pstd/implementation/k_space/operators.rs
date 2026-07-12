@@ -101,13 +101,13 @@ fn leto_complex_field(field: &Array3<Complex64>) -> LetoArray3<Complex64> {
 
 fn ndarray_real_field(field: LetoArray3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec((nx, ny, nz), field.into_vec())
+    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
         .expect("Leto real field length must match PSTD field shape")
 }
 
 fn ndarray_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
     let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec((nx, ny, nz), field.into_vec())
+    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
         .expect("Leto complex field length must match PSTD field shape")
 }
 

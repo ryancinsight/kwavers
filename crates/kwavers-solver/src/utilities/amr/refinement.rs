@@ -265,17 +265,17 @@ mod tests {
     #[test]
     fn mark_cells_marks_uniform_coarsening_region() {
         let manager = RefinementManager::new(1);
-        let error = Array3::from_elem((4, 4, 4), 0.05);
+        let error = Array3::from_elem([4, 4, 4], 0.05);
 
         let markers = manager.mark_cells(&error, 1.0).unwrap();
 
-        assert_eq!(markers, Array3::from_elem((4, 4, 4), -1));
+        assert_eq!(markers, Array3::from_elem([4, 4, 4], -1));
     }
 
     #[test]
     fn mark_cells_preserves_threshold_band_as_no_change() {
         let manager = RefinementManager::new(1);
-        let error = Array3::from_elem((4, 4, 4), 0.5);
+        let error = Array3::from_elem([4, 4, 4], 0.5);
 
         let markers = manager.mark_cells(&error, 0.5).unwrap();
 
@@ -285,11 +285,11 @@ mod tests {
     #[test]
     fn mark_cells_expands_refinement_buffer() {
         let manager = RefinementManager::new(1);
-        let mut error = Array3::from_elem((5, 5, 5), 0.5);
+        let mut error = Array3::from_elem([5, 5, 5], 0.5);
         error[[2, 2, 2]] = 1.0;
 
         let markers = manager.mark_cells(&error, 0.75).unwrap();
 
-        assert_eq!(markers, Array3::from_elem((5, 5, 5), 1));
+        assert_eq!(markers, Array3::from_elem([5, 5, 5], 1));
     }
 }

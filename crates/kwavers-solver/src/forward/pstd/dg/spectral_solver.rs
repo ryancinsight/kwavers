@@ -332,7 +332,7 @@ mod tests {
         let field = Array3::from_shape_fn((4, 4, 4), |[i, j, k]| {
             (i as f64 + 0.25 * j as f64 - 0.5 * k as f64).sin()
         });
-        let mask = Array3::from_elem((4, 4, 4), true);
+        let mask = Array3::from_elem([4, 4, 4], true);
         let mut output = Array3::zeros((4, 4, 4));
 
         solver

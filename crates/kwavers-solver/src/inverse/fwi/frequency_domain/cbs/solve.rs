@@ -486,7 +486,7 @@ fn dense_free_space_operator_matrix(
             );
         }
     }
-    Array2::from_shape_vec((n, n), values).expect("dense CBS operator shape must match grid length")
+    Array2::from_shape_vec([n, n], values).expect("dense CBS operator shape must match grid length")
 }
 
 #[inline]
@@ -515,7 +515,7 @@ fn hermitian_transpose(matrix: &Array2<Complex64>) -> Array2<Complex64> {
             values.push(matrix[[col, row]].conj());
         }
     }
-    Array2::from_shape_vec((rows, cols), values)
+    Array2::from_shape_vec([rows, cols], values)
         .expect("hermitian transpose must preserve matrix shape")
 }
 

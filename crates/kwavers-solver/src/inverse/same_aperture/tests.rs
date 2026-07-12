@@ -8,7 +8,7 @@ use super::{
 
 #[test]
 fn graph_laplacian_matches_edge_energy_identity() {
-    let mask = Array2::from_elem((2, 2), true);
+    let mask = Array2::from_elem([2, 2], true);
     let active = active_grid(&mask, 1.0);
     let values = [1.0_f32, 2.0, 4.0, 8.0];
     let mut laplacian = [0.0_f32; 4];
@@ -45,7 +45,7 @@ fn row_matrix_products_match_manual_linear_algebra() {
 
 #[test]
 fn finite_frequency_rows_are_normalized_and_input_sensitive() {
-    let mask = Array2::from_elem((3, 3), true);
+    let mask = Array2::from_elem([3, 3], true);
     let active = active_grid(&mask, 0.001);
     let attenuation = Array2::from_shape_fn((3, 3), |[ix, iy]| 0.1 + 0.01 * (ix + iy) as f64);
     let medium = SameApertureMedium {
@@ -89,9 +89,9 @@ fn finite_frequency_rows_are_normalized_and_input_sensitive() {
 
 #[test]
 fn phase_speed_changes_pitch_catch_phase_without_changing_row_normalization() {
-    let mask = Array2::from_elem((4, 4), true);
+    let mask = Array2::from_elem([4, 4], true);
     let active = active_grid(&mask, 0.001);
-    let attenuation = Array2::from_elem((4, 4), 0.06);
+    let attenuation = Array2::from_elem([4, 4], 0.06);
     let medium = SameApertureMedium {
         attenuation_np_per_m_mhz: &attenuation,
         spacing_m: 0.001,
@@ -146,7 +146,7 @@ fn phase_speed_changes_pitch_catch_phase_without_changing_row_normalization() {
 
 #[test]
 fn matrix_free_operator_matches_materialized_rows() {
-    let mask = Array2::from_elem((4, 4), true);
+    let mask = Array2::from_elem([4, 4], true);
     let active = active_grid(&mask, 0.001);
     let attenuation = Array2::from_shape_fn((4, 4), |[ix, iy]| 0.08 + 0.02 * (ix + iy) as f64);
     let medium = SameApertureMedium {
@@ -199,7 +199,7 @@ fn matrix_free_operator_matches_materialized_rows() {
 
 #[test]
 fn encoded_operator_matches_materialized_source_encoding() {
-    let mask = Array2::from_elem((4, 4), true);
+    let mask = Array2::from_elem([4, 4], true);
     let active = active_grid(&mask, 0.001);
     let attenuation = Array2::from_shape_fn((4, 4), |[ix, iy]| 0.06 + 0.015 * (ix + iy) as f64);
     let medium = SameApertureMedium {
@@ -270,7 +270,7 @@ fn encoded_operator_matches_materialized_source_encoding() {
 
 #[test]
 fn pcg_solves_regularized_identity_normal_equations() {
-    let mask = Array2::from_elem((1, 2), true);
+    let mask = Array2::from_elem([1, 2], true);
     let active = active_grid(&mask, 1.0);
     let mut matrix = RowMatrix::zeros(2, 2);
     matrix.row_mut(0).copy_from_slice(&[1.0, 0.0]);

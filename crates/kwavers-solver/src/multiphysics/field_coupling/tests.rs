@@ -25,8 +25,8 @@ fn test_convergence_relative_not_absolute() {
     };
 
     // Field magnitude: 1 MPa; absolute change: 1 Pa → relative change: 1e-6
-    let prev = vec![Array3::from_elem((4, 4, 4), MPA_TO_PA)];
-    let curr = vec![Array3::from_elem((4, 4, 4), MPA_TO_PA + 1.0)];
+    let prev = vec![Array3::from_elem([4, 4, 4], MPA_TO_PA)];
+    let curr = vec![Array3::from_elem([4, 4, 4], MPA_TO_PA + 1.0)];
 
     assert!(
         coupler.check_convergence(&prev, &curr),
@@ -41,7 +41,7 @@ fn test_convergence_relative_not_absolute() {
 #[test]
 fn test_convergence_identical_fields() {
     let coupler = MultiphysicsFieldCoupler::new(FieldCouplingStrategy::Strong);
-    let field = vec![Array3::from_elem((4, 4, 4), 42.0_f64)];
+    let field = vec![Array3::from_elem([4, 4, 4], 42.0_f64)];
     assert!(coupler.check_convergence(&field, &field));
 }
 
@@ -58,8 +58,8 @@ fn test_convergence_large_relative_change_not_converged() {
         tolerance: 1e-6,
     };
 
-    let prev = vec![Array3::from_elem((4, 4, 4), 1.0_f64)];
-    let curr = vec![Array3::from_elem((4, 4, 4), 1.1_f64)];
+    let prev = vec![Array3::from_elem([4, 4, 4], 1.0_f64)];
+    let curr = vec![Array3::from_elem([4, 4, 4], 1.1_f64)];
 
     assert!(
         !coupler.check_convergence(&prev, &curr),
@@ -111,9 +111,9 @@ fn weak_coupling_updates_targets_from_source_fields() {
     let light = 4.0_f64;
     let dt = 0.5_f64;
     let mut fields = vec![
-        Array3::from_elem((2, 2, 2), pressure),
-        Array3::from_elem((2, 2, 2), temperature),
-        Array3::from_elem((2, 2, 2), light),
+        Array3::from_elem([2, 2, 2], pressure),
+        Array3::from_elem([2, 2, 2], temperature),
+        Array3::from_elem([2, 2, 2], light),
     ];
 
     coupler
@@ -151,9 +151,9 @@ fn weak_coupling_updates_targets_from_source_fields() {
 fn weak_coupling_rejects_mismatched_shapes_before_mutation() {
     let coupler = MultiphysicsFieldCoupler::new(FieldCouplingStrategy::Weak);
     let mut fields = vec![
-        Array3::from_elem((2, 2, 2), 1.0),
-        Array3::from_elem((2, 2, 2), 2.0),
-        Array3::from_elem((1, 2, 2), 3.0),
+        Array3::from_elem([2, 2, 2], 1.0),
+        Array3::from_elem([2, 2, 2], 2.0),
+        Array3::from_elem([1, 2, 2], 3.0),
     ];
 
     let err = coupler

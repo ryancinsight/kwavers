@@ -117,7 +117,7 @@ pub fn kspace_line_recon(
     spectrum = from_apollo_array2(leto_spectrum, "FFT output");
     fft_shift_2d(&mut spectrum);
 
-    let mut scaled = Array2::<Complex64>::from_elem((nt, ny), Complex64::default());
+    let mut scaled = Array2::<Complex64>::from_elem([nt, ny], Complex64::default());
     for j in 0..ny {
         let ky = ky_axis[j];
         for i in 0..nt {
@@ -138,7 +138,7 @@ pub fn kspace_line_recon(
         }
     }
 
-    let mut interpolated = Array2::<Complex64>::from_elem((nt, ny), Complex64::default());
+    let mut interpolated = Array2::<Complex64>::from_elem([nt, ny], Complex64::default());
     for j in 0..ny {
         let column = scaled
             .index_axis::<1>(1, j)

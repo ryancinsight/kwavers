@@ -50,7 +50,7 @@ fn pressure_buffer_permutation_returns_disjoint_step_roles() {
 #[test]
 fn fd_laplacian_of_constant_is_exactly_zero() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let field = leto::Array3::from_elem((8, 8, 8), 42.0_f64);
+    let field = leto::Array3::from_elem([8, 8, 8], 42.0_f64);
     let lap = compute_laplacian_fd(&field, &grid);
     // Interior points must be exactly 0.0; boundary stencil is not computed (left 0)
     for i in 1..7usize {

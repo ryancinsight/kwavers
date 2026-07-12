@@ -70,7 +70,7 @@ fn test_energy_computation() {
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
 
     // Create test fields
-    let pressure = Array3::from_elem((10, 10, 10), 1e5); // Pa
+    let pressure = Array3::from_elem([10, 10, 10], 1e5); // Pa
     let velocity_x = Array3::zeros((10, 10, 10));
     let velocity_y = Array3::zeros((10, 10, 10));
     let velocity_z = Array3::zeros((10, 10, 10));

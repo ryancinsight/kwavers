@@ -34,9 +34,16 @@ impl FdtdSolver {
                 let r_center = k as f64 * dz;
                 // Borrow disjoint slices from `fields.uz` and `divergence_scratch` without
                 // intermediate Vec allocation; split_at avoids overlapping borrows.
-                let uz_k = uz_view.slice(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)]).unwrap();
-                let uz_km1 = uz_view.slice(&[(0, nx, 1), (0, 1, 1), (k - 1, k, 1)]).unwrap();
-                let mut dvz_k = self.divergence_scratch.slice_mut(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)]).unwrap();
+                let uz_k = uz_view
+                    .slice(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)])
+                    .unwrap();
+                let uz_km1 = uz_view
+                    .slice(&[(0, nx, 1), (0, 1, 1), (k - 1, k, 1)])
+                    .unwrap();
+                let mut dvz_k = self
+                    .divergence_scratch
+                    .slice_mut(&[(0, nx, 1), (0, 1, 1), (k, k + 1, 1)])
+                    .unwrap();
                 leto_ops::zip2_mut_with(&mut dvz_k, &uz_k, &uz_km1, |d, uk, ukm1| {
                     *d += (*uk + *ukm1) / (2.0 * r_center);
                 })

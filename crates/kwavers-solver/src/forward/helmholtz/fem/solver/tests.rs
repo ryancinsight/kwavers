@@ -312,7 +312,7 @@ fn fem_p1_interpolation_error_converges_as_h_squared() {
             raw[idx * 3 + 1] = pt[1];
             raw[idx * 3 + 2] = pt[2];
         }
-        let query = Array2::from_shape_vec((npts, 3), raw).unwrap();
+        let query = Array2::from_shape_vec([npts, 3], raw).unwrap();
         let results = solver.interpolate_solution(query.view()).unwrap();
 
         let mut max_err = 0.0f64;

@@ -110,7 +110,7 @@ pub struct MofiResult {
 /// use kwavers_grid::Grid;
 /// use leto::Array3;
 /// let grid = Grid::new(32, 32, 1, 1e-3, 1e-3, 1e-3).unwrap();
-/// let template = Array3::from_elem((32, 32, 1), 1500.0);
+/// let template = Array3::from_elem([32, 32, 1], 1500.0);
 /// let phi = RigidTransform { theta_rad: 6_f64.to_radians(), delta_x_m: 2e-3, delta_y_m: -1e-3 };
 /// let misaligned = mofi_transform(&template, &phi, &grid, 1500.0);
 /// assert_eq!(misaligned.shape(), template.shape());
