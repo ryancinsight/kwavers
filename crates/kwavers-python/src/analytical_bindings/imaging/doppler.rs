@@ -1,6 +1,5 @@
 //! PyO3 wrappers for Doppler and vector-flow imaging helpers.
 
-use crate::breast_fwi_bindings::complex_compat::leto1_to_nd1;
 use kwavers_analysis::signal_processing::doppler::{
     continuous_wave_vector_flow_fixture as core_continuous_wave_vector_flow_fixture, VectorVelocity,
 };
@@ -146,8 +145,14 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
         .iter()
         .flat_map(|direction| direction.iter().copied())
         .collect();
-    let cw_velocity_m_s = leto1_to_nd1(fixture.cw_velocity_m_s);
-    let cw_power = leto1_to_nd1(fixture.cw_power);
+    let cw_velocity_m_s: numpy::ndarray::Array1<f64> = fixture
+        .cw_velocity_m_s
+        .try_into()
+        .expect("invariant: contiguous Doppler velocity");
+    let cw_power: numpy::ndarray::Array1<f64> = fixture
+        .cw_power
+        .try_into()
+        .expect("invariant: contiguous Doppler power");
     let beam_angles_rad = numpy::ndarray::Array1::from_vec(fixture.beam_angles_rad);
     let projected_velocity_m_s = numpy::ndarray::Array1::from_vec(fixture.projected_velocity_m_s);
     let out = PyDict::new(py);

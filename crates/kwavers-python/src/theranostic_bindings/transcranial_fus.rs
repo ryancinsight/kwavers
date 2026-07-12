@@ -19,14 +19,14 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
-use numpy::{ToPyArray, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
 use super::helpers::kwavers_to_py;
 use crate::breast_fwi_bindings::complex_compat::{
-    leto1_to_nd1, leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3,
+    leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3,
 };
 use crate::ritk_image::load_ritk_nifti;
 
@@ -328,8 +328,14 @@ pub fn bbb_opening_from_subspots_py<'py>(
     let out = PyDict::new(py);
     out.set_item("dose", leto3_to_nd3(dose).to_pyarray(py))?;
     out.set_item("permeability", leto3_to_nd3(permeability).to_pyarray(py))?;
-    out.set_item("stable_cavitation_probability", leto3_to_nd3(stable).to_pyarray(py))?;
-    out.set_item("inertial_cavitation_risk", leto3_to_nd3(inertial).to_pyarray(py))?;
+    out.set_item(
+        "stable_cavitation_probability",
+        leto3_to_nd3(stable).to_pyarray(py),
+    )?;
+    out.set_item(
+        "inertial_cavitation_risk",
+        leto3_to_nd3(inertial).to_pyarray(py),
+    )?;
     out.set_item("opened_mask", leto3_to_nd3(opened_mask).to_pyarray(py))?;
     Ok(out)
 }
@@ -420,7 +426,10 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
         leto3_to_nd3(result.final_temperature_c).to_pyarray(py),
     )?;
     out.set_item("cem43_min", leto3_to_nd3(result.cem43_min).to_pyarray(py))?;
-    out.set_item("lesion_mask", leto3_to_nd3(result.lesion_mask).to_pyarray(py))?;
+    out.set_item(
+        "lesion_mask",
+        leto3_to_nd3(result.lesion_mask).to_pyarray(py),
+    )?;
     Ok(out)
 }
 
@@ -433,7 +442,10 @@ fn plan_to_pydict<'py>(
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
-    out.set_item("pressure_pa", leto3_to_nd3(plan.pressure_pa.clone()).to_pyarray(py))?;
+    out.set_item(
+        "pressure_pa",
+        leto3_to_nd3(plan.pressure_pa.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "intensity_w_m2",
         leto3_to_nd3(plan.intensity_w_m2.clone()).to_pyarray(py),
@@ -446,15 +458,29 @@ fn plan_to_pydict<'py>(
         "cavitation_probability",
         leto3_to_nd3(plan.cavitation_probability.clone()).to_pyarray(py),
     )?;
-    out.set_item("phases_rad", leto1_to_nd1(plan.phases_rad.clone()).to_pyarray(py))?;
-    out.set_item("delays_s", leto1_to_nd1(plan.delays_s.clone()).to_pyarray(py))?;
+    let phases_rad: numpy::ndarray::Array1<_> = plan
+        .phases_rad
+        .clone()
+        .try_into()
+        .expect("invariant: contiguous phases");
+    let delays_s: numpy::ndarray::Array1<_> = plan
+        .delays_s
+        .clone()
+        .try_into()
+        .expect("invariant: contiguous delays");
+    out.set_item("phases_rad", phases_rad.to_pyarray(py))?;
+    out.set_item("delays_s", delays_s.to_pyarray(py))?;
     out.set_item(
         "skull_lengths_m",
-        leto1_to_nd1(plan.skull_lengths_m.clone()).to_pyarray(py),
+        numpy::ndarray::Array1::try_from(plan.skull_lengths_m.clone())
+            .expect("invariant: contiguous skull lengths")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "amplitude_weights",
-        leto1_to_nd1(plan.amplitude_weights.clone()).to_pyarray(py),
+        numpy::ndarray::Array1::try_from(plan.amplitude_weights.clone())
+            .expect("invariant: contiguous amplitude weights")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "element_positions_m",
@@ -464,7 +490,10 @@ fn plan_to_pydict<'py>(
         "subspot_indices",
         leto2_to_nd2(plan.subspot_indices.clone()).to_pyarray(py),
     )?;
-    out.set_item("bbb_dose", leto3_to_nd3(plan.bbb_dose.clone()).to_pyarray(py))?;
+    out.set_item(
+        "bbb_dose",
+        leto3_to_nd3(plan.bbb_dose.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "bbb_permeability",
         leto3_to_nd3(plan.bbb_permeability.clone()).to_pyarray(py),
@@ -518,4 +547,3 @@ fn brain_centroid(brain_mask: &leto::Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
-

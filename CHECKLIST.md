@@ -1,5 +1,11 @@
 # Project Checklist
 
+- [x] [patch] Delete the remaining rank-1 Leto/NumPy compatibility wrappers
+      and migrate all ten PyO3 consumers to Leto's owned `From`/`TryFrom`
+      provider implementations. Completion evidence: both wrapper names have
+      zero residuals, package compile passes, warning-denied all-target package
+      Clippy passes with dependency lints capped, and package nextest passes.
+
 - [x] [patch] Remove six rank-specific complex-array identity converters from
       the PyO3 boundary and unwrap all 24 FFT/breast-FWI call sites. Kwavers,
       Apollo, and Eunomia already share Eunomia's `Complex64`, so the removed

@@ -1,5 +1,11 @@
 # Gap Audit
 
+- Closed 2026-07-12: `nd_to_leto1` and `leto1_to_nd1` duplicated Leto's owned
+  rank-1 ndarray conversions and coupled ten PyO3 consumers to a local
+  compatibility module. All consumers now invoke the provider conversions
+  directly. Evidence tier: compile-time integration, warning-denied package
+  Clippy, focused package tests, and exact static residual audit.
+
 - Closed 2026-07-11: six rank-specific PyO3 complex converters copied complete
   arrays between identical `eunomia::Complex64` aliases. The converters and all
   24 runtime call sites are deleted; the Leto/NumPy boundary remains explicit.

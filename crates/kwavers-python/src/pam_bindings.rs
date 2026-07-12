@@ -4,7 +4,7 @@
 //! read-only ndarray views and the authoritative validation/beamforming contract
 //! lives in `kwavers_analysis::signal_processing::pam`.
 
-use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, nd_to_leto2};
+use crate::breast_fwi_bindings::complex_compat::nd_to_leto2;
 use kwavers_analysis::signal_processing::beamforming::adaptive::subspace::MUSIC;
 use kwavers_analysis::signal_processing::beamforming::{
     beamform_image_das, ImagingDasApodization, ImagingDasConfig,
@@ -16,10 +16,7 @@ use kwavers_analysis::signal_processing::pam::{
 };
 use kwavers_math::fft::Complex64 as KwComplex;
 use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -84,7 +81,13 @@ fn hermitian_eigenvalues_complex(
     let mut v = result.eigenvalues.into_vec();
     v.sort_by(|a, b| b.total_cmp(a));
     let eigenvalues = Array1::from(v);
-    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(eigenvalues)).into())
+    Ok(PyArray1::from_owned_array(
+        py,
+        eigenvalues
+            .try_into()
+            .expect("invariant: contiguous eigenvalues"),
+    )
+    .into())
 }
 
 /// Deterministic Theorem 22.2 eigenspace PAM covariance eigenvalues.
@@ -202,7 +205,13 @@ fn passive_acoustic_map_das<'py>(
         .beamform_view(passive_leto.view(), grid_leto.view())
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers PAM error: {err}")))?;
 
-    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(intensity)).into())
+    Ok(PyArray1::from_owned_array(
+        py,
+        intensity
+            .try_into()
+            .expect("invariant: contiguous intensity"),
+    )
+    .into())
 }
 
 /// Active-imaging delay-and-sum reconstruction.
@@ -248,7 +257,10 @@ fn beamform_image_delay_and_sum<'py>(
     )
     .map_err(|err| PyRuntimeError::new_err(format!("kwavers imaging_das error: {err}")))?;
 
-    Ok(PyArray1::from_owned_array(py, leto1_to_nd1(image)).into())
+    Ok(
+        PyArray1::from_owned_array(py, image.try_into().expect("invariant: contiguous image"))
+            .into(),
+    )
 }
 
 fn parse_imaging_apodization(value: &str) -> PyResult<ImagingDasApodization> {

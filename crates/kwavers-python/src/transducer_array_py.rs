@@ -211,8 +211,7 @@ impl TransducerArray2D {
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        self.input_signal =
-            Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto1(signal_arr));
+        self.input_signal = Some(signal_arr.into());
         Ok(())
     }
 

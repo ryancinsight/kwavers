@@ -4,7 +4,7 @@ use pyo3::prelude::*;
 
 use numpy::ndarray::Array1;
 
-use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, leto2_to_nd2, leto3_to_nd3};
+use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 use crate::simulation_result_py::{SimulationResult, SimulationRunResult};
 
 use super::super::Simulation;
@@ -49,7 +49,13 @@ impl Simulation {
             };
 
         let to_py_array1 = |arr: &leto::Array1<f64>| {
-            PyArray1::from_owned_array(py, leto1_to_nd1(arr.clone())).into()
+            PyArray1::from_owned_array(
+                py,
+                arr.clone()
+                    .try_into()
+                    .expect("invariant: contiguous simulation statistic"),
+            )
+            .into()
         };
         let p_max = stats.as_ref().map(|s| to_py_array1(&s.p_max));
         let p_min = stats.as_ref().map(|s| to_py_array1(&s.p_min));
@@ -62,9 +68,18 @@ impl Simulation {
         let ix = ix_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
         let iy = iy_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
         let iz = iz_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
-        let i_avg_x = i_avg_x.map(|d| PyArray1::from_owned_array(py, leto1_to_nd1(d)).into());
-        let i_avg_y = i_avg_y.map(|d| PyArray1::from_owned_array(py, leto1_to_nd1(d)).into());
-        let i_avg_z = i_avg_z.map(|d| PyArray1::from_owned_array(py, leto1_to_nd1(d)).into());
+        let i_avg_x = i_avg_x.map(|d| {
+            PyArray1::from_owned_array(py, d.try_into().expect("invariant: contiguous x intensity"))
+                .into()
+        });
+        let i_avg_y = i_avg_y.map(|d| {
+            PyArray1::from_owned_array(py, d.try_into().expect("invariant: contiguous y intensity"))
+                .into()
+        });
+        let i_avg_z = i_avg_z.map(|d| {
+            PyArray1::from_owned_array(py, d.try_into().expect("invariant: contiguous z intensity"))
+                .into()
+        });
 
         let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
             if let Some(vs) = velocity_stats {
@@ -90,19 +105,20 @@ impl Simulation {
         .into();
 
         // K → °C conversion for thermal outputs at the Python boundary.
-        let thermal_temp_py = thermal_temperature
-            .map(|t| PyArray3::from_owned_array(py, leto3_to_nd3(t.mapv(|v| v - KELVIN_OFFSET_C))).into());
+        let thermal_temp_py = thermal_temperature.map(|t| {
+            PyArray3::from_owned_array(py, leto3_to_nd3(t.mapv(|v| v - KELVIN_OFFSET_C))).into()
+        });
         let thermal_dose_py =
             thermal_dose.map(|d| PyArray3::from_owned_array(py, leto3_to_nd3(d)).into());
 
         let n_sensors = sensor_data.shape()[0];
         if n_sensors <= 1 {
-            let sensor_1d = leto1_to_nd1(
-                sensor_data
-                    .index_axis::<1>(0, 0)
-                    .expect("sensor row 0 must exist")
-                    .to_contiguous(),
-            );
+            let sensor_1d = sensor_data
+                .index_axis::<1>(0, 0)
+                .expect("sensor row 0 must exist")
+                .to_contiguous()
+                .try_into()
+                .expect("invariant: contiguous sensor row");
             Ok(SimulationResult {
                 sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
                 sensor_data_2d: None,
@@ -152,7 +168,9 @@ impl Simulation {
         } else {
             Ok(SimulationResult {
                 sensor_data_1d: None,
-                sensor_data_2d: Some(PyArray2::from_owned_array(py, leto2_to_nd2(sensor_data)).into()),
+                sensor_data_2d: Some(
+                    PyArray2::from_owned_array(py, leto2_to_nd2(sensor_data)).into(),
+                ),
                 time: time_arr,
                 shape,
                 sensor_data_shape: (n_sensors, time_steps),

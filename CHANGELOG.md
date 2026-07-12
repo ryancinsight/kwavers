@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Removed the rank-1 Leto/NumPy compatibility wrapper pair and routed ten PyO3
+  consumers directly through Leto's owned conversions.
+
 - Removed 24 redundant complex-array copies from FFT and breast-FWI PyO3
   bindings now that Kwavers, Apollo, and Eunomia share one complex type, plus
   29 stale same-type conversions across Python simulation construction and

@@ -1,5 +1,8 @@
 # Backlog / Strategy
 
+- [x] [patch] Remove the rank-1 Leto/NumPy shim pair and its 44 name
+  occurrences across ten Python-boundary consumers.
+
 - [x] [patch] Delete the PyO3 complex-array identity conversion family and
   remove 24 redundant allocation/traversal sites while preserving the real
   Leto-to-NumPy ownership boundary.

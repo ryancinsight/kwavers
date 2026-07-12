@@ -1,5 +1,6 @@
 //! PyO3 binding for the skull-adaptive transcranial benchmark.
 
+use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     resample_head_volume, select_head_slice,
 };
@@ -7,7 +8,6 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_skull_adaptive_transcranial_benchmark, target_index_from_mask_fraction_3d,
     SkullAdaptiveBenchmarkConfig, TranscranialFusPlanConfig,
 };
-use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, leto2_to_nd2, leto3_to_nd3};
 use leto::Array3;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
@@ -121,15 +121,29 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
         "baseline_pressure_pa",
         leto3_to_nd3(result.baseline_pressure_pa).to_pyarray(py),
     )?;
-    out.set_item("phases_rad", leto1_to_nd1(result.phases_rad).to_pyarray(py))?;
-    out.set_item("delays_s", leto1_to_nd1(result.delays_s).to_pyarray(py))?;
+    out.set_item(
+        "phases_rad",
+        numpy::ndarray::Array1::try_from(result.phases_rad)
+            .expect("invariant: contiguous phases")
+            .to_pyarray(py),
+    )?;
+    out.set_item(
+        "delays_s",
+        numpy::ndarray::Array1::try_from(result.delays_s)
+            .expect("invariant: contiguous delays")
+            .to_pyarray(py),
+    )?;
     out.set_item(
         "skull_lengths_m",
-        leto1_to_nd1(result.skull_lengths_m).to_pyarray(py),
+        numpy::ndarray::Array1::try_from(result.skull_lengths_m)
+            .expect("invariant: contiguous skull lengths")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "amplitude_weights",
-        leto1_to_nd1(result.amplitude_weights).to_pyarray(py),
+        numpy::ndarray::Array1::try_from(result.amplitude_weights)
+            .expect("invariant: contiguous amplitude weights")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "element_positions_m",
@@ -137,7 +151,9 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     )?;
     out.set_item(
         "active_elements",
-        leto1_to_nd1(placement_result.active_elements).to_pyarray(py),
+        numpy::ndarray::Array1::try_from(placement_result.active_elements)
+            .expect("invariant: contiguous active elements")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "focus_index",
@@ -268,4 +284,3 @@ fn brain_centroid(brain_mask: &Array3<bool>) -> [usize; 3] {
         (sz / n as f64).round() as usize,
     ]
 }
-
