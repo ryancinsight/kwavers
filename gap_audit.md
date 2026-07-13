@@ -1,5 +1,13 @@
 # Gap Audit
 
+- Closed 2026-07-13: the workspace-wide Leto `ndarray-compat` feature concealed
+  21 same-type conversions across beamforming, PAM, BEM, FEM, FDTD, PSTD, and
+  thermal coupling. The feature and conversions are deleted; matrix inversion
+  uses `leto-ops` while Kwavers retains its eigendecomposition and complex-solve
+  contracts. Evidence tier: compile-time integration, warning-denied locked
+  package Clippy, and 908/908 value-semantic package tests with one existing
+  skip and no test reaching the 30-second threshold.
+
 - Closed 2026-07-12: `nd_to_leto1` and `leto1_to_nd1` duplicated Leto's owned
   rank-1 ndarray conversions and coupled ten PyO3 consumers to a local
   compatibility module. All consumers now invoke the provider conversions

@@ -203,8 +203,6 @@ impl PSTDSolver {
                     &self.materials.c0,
                     &alpha_leto,
                 )
-                .try_into()
-                .expect("thermal heat source must convert to ndarray")
             }
         }
     }
@@ -267,9 +265,6 @@ impl PSTDSolver {
             }
         }
 
-        Ok(self
-            .sensor_recorder
-            .extract_pressure_data()
-            .and_then(|data| data.try_into().ok()))
+        Ok(self.sensor_recorder.extract_pressure_data())
     }
 }

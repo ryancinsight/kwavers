@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed (2026-07-13) - native Leto beamforming closure [patch]
+
+- Removed the workspace-wide Leto `ndarray-compat` feature and routed
+  transducer matrix inversion through `leto-ops` while retaining Kwavers'
+  canonical eigendecomposition and complex linear-system contracts. Adaptive
+  MVDR/ESMV and narrowband Capon consumers now compile directly against the
+  native Leto/Eunomia provider graph used by LeoNeuro. The gate also deleted
+  21 same-type conversions exposed across PAM and solver consumers.
+
 - Removed the rank-1 Leto/NumPy compatibility wrapper pair and routed ten PyO3
   consumers directly through Leto's owned conversions.
 

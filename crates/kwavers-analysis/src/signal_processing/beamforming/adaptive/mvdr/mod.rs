@@ -33,7 +33,7 @@
 //!
 //! # Architectural Intent (SSOT)
 //!
-//! - **NO local matrix inversion** - uses `math::linear_algebra::LinearAlgebra::solve_linear_system_complex`
+//! - **NO local matrix inversion** - uses `math::linear_algebra::ComplexLinearAlgebra::solve_linear_system_complex`
 //! - **NO silent fallbacks** - returns `Err(...)` on numerical failure
 //! - **NO error masking** - all failures are explicit and surfaced to caller
 //! - **NO dummy weights** - never returns steering vector as disguised fallback

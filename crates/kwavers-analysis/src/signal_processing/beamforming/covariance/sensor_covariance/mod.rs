@@ -100,7 +100,7 @@ impl CovarianceEstimator {
         }
 
         for v in covariance.iter_mut() {
-            *v = *v / num_snapshots as f64;
+            *v /= num_snapshots as f64;
         }
 
         if self.forward_backward_averaging {
@@ -144,7 +144,7 @@ impl CovarianceEstimator {
 
         let inv_n = 1.0 / (num_snapshots as f64);
         for v in covariance.iter_mut() {
-            *v = *v * inv_n;
+            *v *= inv_n;
         }
 
         if self.forward_backward_averaging {

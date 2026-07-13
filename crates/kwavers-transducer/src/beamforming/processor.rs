@@ -5,6 +5,7 @@ use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::LinearAlgebraExt;
 use leto::{Array1, Array2, Array3};
+use leto_ops::inv;
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -59,7 +60,7 @@ impl BeamformingProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        matrix.inv()
+        Ok(inv(&matrix.view())?)
     }
 
     /// Compute geometric **propagation delays / time-of-flight (TOF)** (seconds) from each sensor

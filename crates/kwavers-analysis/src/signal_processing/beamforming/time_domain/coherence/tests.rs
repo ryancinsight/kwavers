@@ -459,12 +459,7 @@ fn pcf_via_weights_is_low_for_a_quadrature_spread_aperture() {
     let n = 64usize;
     let omega = 2.0 * PI * 2.0 / n as f64; // 2 cycles
     let mut aligned = Array2::<f64>::zeros((4, n));
-    for (i, mut r) in aligned
-        .rows_mut()
-        .expect("rows_mut")
-        .into_iter()
-        .enumerate()
-    {
+    for (i, mut r) in aligned.rows_mut().expect("rows_mut").enumerate() {
         let slots = r.as_mut_slice().expect("contiguous row");
         for (t, slot) in slots.iter_mut().enumerate() {
             *slot = (omega * t as f64 - i as f64 * PI / 2.0).cos();

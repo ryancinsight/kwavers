@@ -54,7 +54,7 @@
 //!
 //! This module enforces **Single Source of Truth** for numerical operations:
 //!
-//! - ❌ **NO local matrix inversion** - use `math::linear_algebra::LinearAlgebra`
+//! - ❌ **NO local matrix inversion** - use `math::linear_algebra::ComplexLinearAlgebra`
 //! - ❌ **NO silent fallbacks** - return `Err(...)` on numerical failure
 //! - ❌ **NO error masking** - all failures are explicit
 //! - ❌ **NO dummy weights** - never return steering vector as disguised fallback

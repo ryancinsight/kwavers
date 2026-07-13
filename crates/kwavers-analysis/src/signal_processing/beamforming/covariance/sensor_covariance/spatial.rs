@@ -55,7 +55,7 @@ impl SpatialSmoothing {
         }
 
         for x in smoothed.iter_mut() {
-            *x = *x / num_subarrays as f64;
+            *x /= num_subarrays as f64;
         }
         Ok(smoothed)
     }
@@ -129,7 +129,7 @@ impl SpatialSmoothingComplex {
 
         let inv = 1.0 / (num_subarrays as f64);
         for v in smoothed.iter_mut() {
-            *v = *v * inv;
+            *v *= inv;
         }
         Ok(smoothed)
     }

@@ -12,7 +12,7 @@ pub(super) fn shrinkage_to_identity_real(covariance: &Array2<f64>, alpha: f64) -
     let mu = trace / (m as f64);
 
     for v in out.iter_mut() {
-        *v = (1.0 - alpha) * *v;
+        *v *= 1.0 - alpha;
     }
     for i in 0..m {
         out[[i, i]] += alpha * mu;
@@ -34,7 +34,7 @@ pub(super) fn shrinkage_to_identity_complex(
     let mu = trace_re / (m as f64);
 
     for v in out.iter_mut() {
-        *v = *v * (1.0 - alpha);
+        *v *= 1.0 - alpha;
     }
     for i in 0..m {
         out[[i, i]] += Complex64::new(alpha * mu, 0.0);

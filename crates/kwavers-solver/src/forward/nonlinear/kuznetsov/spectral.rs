@@ -116,11 +116,10 @@ impl KuznetsovSpectralOperator {
         let kx_s = self.kx_vec.as_slice().expect("kx_vec contiguous");
         let ky_s = self.ky_vec.as_slice().expect("ky_vec contiguous");
         let kz_s = self.kz_vec.as_slice().expect("kz_vec contiguous");
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let k_sq =
-                        kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+        for (i, &kx) in kx_s.iter().enumerate().take(nx) {
+            for (j, &ky) in ky_s.iter().enumerate().take(ny) {
+                for (k, &kz) in kz_s.iter().enumerate().take(nz) {
+                    let k_sq = kz.mul_add(kz, kx.mul_add(kx, ky * ky));
                     self.field_hat[[i, j, k]] *= -k_sq;
                 }
             }
@@ -155,13 +154,13 @@ impl KuznetsovSpectralOperator {
         let kx_s = self.kx_vec.as_slice().expect("kx_vec contiguous");
         let ky_s = self.ky_vec.as_slice().expect("ky_vec contiguous");
         let kz_s = self.kz_vec.as_slice().expect("kz_vec contiguous");
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
+        for (i, &kx) in kx_s.iter().enumerate().take(nx) {
+            for (j, &ky) in ky_s.iter().enumerate().take(ny) {
+                for (k, &kz) in kz_s.iter().enumerate().take(nz) {
                     let f = self.field_hat[[i, j, k]];
-                    self.grad_x_hat[[i, j, k]] = Complex64::new(0.0, kx_s[i]) * f;
-                    self.grad_y_hat[[i, j, k]] = Complex64::new(0.0, ky_s[j]) * f;
-                    self.grad_z_hat[[i, j, k]] = Complex64::new(0.0, kz_s[k]) * f;
+                    self.grad_x_hat[[i, j, k]] = Complex64::new(0.0, kx) * f;
+                    self.grad_y_hat[[i, j, k]] = Complex64::new(0.0, ky) * f;
+                    self.grad_z_hat[[i, j, k]] = Complex64::new(0.0, kz) * f;
                 }
             }
         }

@@ -30,9 +30,7 @@ impl FemHelmholtzSolver {
                 &mut rhs_boundary,
                 self.config.wavenumber,
             )?;
-            rhs_global = rhs_boundary.try_into().map_err(|e| {
-                KwaversError::InternalError(format!("FEM RHS conversion failed: {e}"))
-            })?;
+            rhs_global = rhs_boundary;
 
             self.system_matrix = k_global;
             self.rhs = rhs_global;
@@ -73,9 +71,7 @@ impl FemHelmholtzSolver {
             &mut rhs_boundary,
             self.config.wavenumber,
         )?;
-        self.rhs = rhs_boundary
-            .try_into()
-            .map_err(|e| KwaversError::InternalError(format!("FEM RHS conversion failed: {e}")))?;
+        self.rhs = rhs_boundary;
 
         Ok(())
     }

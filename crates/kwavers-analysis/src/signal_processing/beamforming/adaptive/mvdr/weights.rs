@@ -1,6 +1,5 @@
 use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use leto::{Array1, Array2};
 
 use super::{validate_real_positive_denominator, MinimumVariance};
@@ -25,7 +24,9 @@ impl MinimumVariance {
     ) -> KwaversResult<Array1<Complex64>> {
         let r_loaded = self.loaded_covariance(covariance, steering.len())?;
 
-        let y = ComplexLinearAlgebra::solve_linear_system_complex(&r_loaded, steering)?;
+        let y = kwavers_math::linear_algebra::ComplexLinearAlgebra::solve_linear_system_complex(
+            &r_loaded, steering,
+        )?;
 
         let denom: Complex64 = steering
             .iter()

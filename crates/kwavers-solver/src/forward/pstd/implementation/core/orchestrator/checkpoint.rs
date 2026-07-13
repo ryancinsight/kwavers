@@ -151,9 +151,6 @@ impl PSTDSolver {
         for _ in 0..remaining_steps {
             self.step_forward()?;
         }
-        Ok(self
-            .sensor_recorder
-            .extract_pressure_data()
-            .and_then(|data| data.try_into().ok()))
+        Ok(self.sensor_recorder.extract_pressure_data())
     }
 }

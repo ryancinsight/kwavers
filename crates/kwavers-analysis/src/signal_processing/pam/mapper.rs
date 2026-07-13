@@ -51,21 +51,21 @@ impl PassiveAcousticMapper {
         let delays = self
             .beamformer
             .compute_delays(config.beamforming.focal_point);
-        let sensor_data_leto: leto::Array3<f64> = sensor_data.clone().into();
+        let sensor_data_leto = sensor_data.clone();
 
         let beamformed = match config.beamforming.method {
             PamBeamformingMethod::DelayAndSum => {
                 let weights = vec![1.0; self.beamformer.num_sensors()];
-                self.beamformer
-                    .delay_and_sum_with(&sensor_data_leto, sample_rate, &delays, &weights)?
-                    .try_into()
-                    .expect("delay-and-sum output must convert to ndarray")
+                self.beamformer.delay_and_sum_with(
+                    &sensor_data_leto,
+                    sample_rate,
+                    &delays,
+                    &weights,
+                )?
             }
             PamBeamformingMethod::CaponDiagonalLoading { diagonal_loading } => self
                 .beamformer
-                .mvdr_unsteered_weights_time_series(&sensor_data_leto, diagonal_loading)?
-                .try_into()
-                .expect("MVDR output must convert to ndarray"),
+                .mvdr_unsteered_weights_time_series(&sensor_data_leto, diagonal_loading)?,
             // Subspace localizers (Theorem 22.2) produce a per-focal-point
             // localization power, not a beamformed time series, so they bypass the
             // time-series cavitation-spectrum processor and return the map directly.

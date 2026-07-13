@@ -36,9 +36,7 @@ impl crate::interface::Solver for PSTDSolver {
     }
 
     fn recorded_sensor_pressure(&self) -> Option<leto::Array2<f64>> {
-        self.sensor_recorder
-            .extract_pressure_data()
-            .and_then(|data| data.try_into().ok())
+        self.sensor_recorder.extract_pressure_data()
     }
 
     fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {

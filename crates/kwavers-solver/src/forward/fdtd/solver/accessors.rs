@@ -89,9 +89,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// Extract recorded sensor data as `Array2<f64>`
     /// Returns None if no sensors are configured or no data has been recorded
     pub fn extract_recorded_sensor_data(&self) -> Option<leto::Array2<f64>> {
-        self.sensor_recorder
-            .extract_pressure_data()
-            .and_then(|data| data.try_into().ok())
+        self.sensor_recorder.extract_pressure_data()
     }
 
     /// Borrow the full allocated recorded sensor buffer without cloning.
@@ -100,9 +98,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     ///
     #[must_use]
     pub fn recorded_sensor_data_view(&self) -> Option<ArrayView2<'_, f64>> {
-        self.sensor_recorder
-            .pressure_data_view()
-            .and_then(|view| view.try_into().ok())
+        self.sensor_recorder.pressure_data_view()
     }
 
     /// Borrow only populated recorded sensor samples without cloning.
@@ -111,9 +107,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     ///
     #[must_use]
     pub fn recorded_sensor_prefix_view(&self) -> Option<ArrayView2<'_, f64>> {
-        self.sensor_recorder
-            .recorded_pressure_view()
-            .and_then(|view| view.try_into().ok())
+        self.sensor_recorder.recorded_pressure_view()
     }
     /// Run orchestrated.
     /// # Errors
@@ -127,10 +121,7 @@ impl GenericFdtdSolver<Array3<f64>> {
         for _ in 0..steps {
             self.step_forward()?;
         }
-        Ok(self
-            .sensor_recorder
-            .extract_pressure_data()
-            .and_then(|data| data.try_into().ok()))
+        Ok(self.sensor_recorder.extract_pressure_data())
     }
 }
 

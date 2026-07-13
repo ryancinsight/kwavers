@@ -1,5 +1,11 @@
 # Backlog / Strategy
 
+- [x] [patch] Close the native Leto beamforming provider graph.
+  Owner: Codex. Scope: workspace Leto features, adaptive/Capon linear solves,
+  transducer inversion, solver identity-conversion residue, lockfile, and
+  matching PM records. Acceptance met by warning-denied locked package Clippy
+  and locked package Nextest 908/908 without `ndarray-compat`.
+
 - [x] [patch] Remove the rank-1 Leto/NumPy shim pair and its 44 name
   occurrences across ten Python-boundary consumers.
 

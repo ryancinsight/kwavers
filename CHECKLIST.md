@@ -1,5 +1,12 @@
 # Project Checklist
 
+- [x] [patch] Native Leto beamforming provider closure: remove the workspace
+      `ndarray-compat` feature, route transducer inversion through `leto-ops`,
+      retain Kwavers-owned eig/complex-solve contracts, and delete the 21
+      identity conversions exposed in analysis/solver consumers. Evidence:
+      warning-denied locked package Clippy and locked Nextest 908/908, with one
+      existing skipped test and no test reaching the 30-second threshold.
+
 - [x] [patch] Delete the remaining rank-1 Leto/NumPy compatibility wrappers
       and migrate all ten PyO3 consumers to Leto's owned `From`/`TryFrom`
       provider implementations. Completion evidence: both wrapper names have

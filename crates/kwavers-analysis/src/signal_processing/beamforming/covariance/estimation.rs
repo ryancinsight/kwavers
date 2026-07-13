@@ -70,7 +70,7 @@ pub fn estimate_sample_covariance(
 
     let scale = 1.0 / (n_snapshots as f64);
     for x in covariance.iter_mut() {
-        *x = *x * scale;
+        *x *= scale;
     }
 
     if diagonal_loading > 0.0 {
