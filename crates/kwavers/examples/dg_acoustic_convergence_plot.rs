@@ -20,10 +20,7 @@ use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDg1DWorkspace;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 use plotters::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
@@ -98,7 +95,10 @@ fn run_dg_order(polynomial_order: usize) -> Result<DgConvergenceRow> {
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, grid)?;
-    let mut workspace = AcousticDg1DWorkspace::new({ let s = pressure.shape(); (s[0], s[1], s[2]) });
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     for _ in 0..STEPS {
         solver.step_acoustic_1d_ssp_rk3(
             &mut pressure,

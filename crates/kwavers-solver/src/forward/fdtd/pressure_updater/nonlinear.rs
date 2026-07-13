@@ -16,7 +16,7 @@ impl FdtdSolver {
     /// Discretization (Hamilton & Blackstock 1998, Eq. 3.43a):
     /// ```text
     /// S_nl^n = (β/(ρ₀c₀²)) · [2pⁿ(pⁿ−2pⁿ⁻¹+pⁿ⁻²)/Δt² + 2((pⁿ−pⁿ⁻¹)/Δt)²]  [Pa/s²]
-    /// Δpⁿ    = Δt² · S_nl^n                                                        [Pa]
+    /// Δpⁿ    = Δt² · S_nl^n                                                        \[Pa\]
     /// ```
     /// Note: nl_coeff = β/(ρ₀c₀²), so Δp = Δt² · nl_coeff · d²(p²)/dt².
     pub(crate) fn apply_westervelt_nonlinear_correction(&mut self, dt: f64) {

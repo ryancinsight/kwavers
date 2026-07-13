@@ -1,7 +1,7 @@
 //! Blood-brain-barrier permeability and closure bindings.
 
 use kwavers_physics::analytical::bbb as bbb_mod;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -128,4 +128,3 @@ pub fn bbb_closure_permeability(
         .collect();
     Ok(result.to_pyarray(py).unbind())
 }
-

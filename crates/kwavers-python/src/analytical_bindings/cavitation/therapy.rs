@@ -1,6 +1,6 @@
 //! Histotripsy therapy-delivery PyO3 wrappers.
 
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -340,4 +340,3 @@ pub fn cloud_erosion_validation_metrics(
             }),
     )
 }
-

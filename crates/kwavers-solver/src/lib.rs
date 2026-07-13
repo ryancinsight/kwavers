@@ -67,6 +67,10 @@ pub mod safety;
 // Re-export ScratchArena trait for ergonomic use across solver crates
 pub use workspace::ScratchArena;
 
+// Re-export canonical error types for doc-link resolution across the solver crate
+pub use kwavers_core::error::KwaversError;
+pub use kwavers_core::error::KwaversResult;
+
 // Re-export field indices from the single source of truth
 pub use kwavers_field::indices::{
     PRESSURE_IDX as P_IDX, STRESS_XX_IDX as SXX_IDX, STRESS_XY_IDX as SXY_IDX,

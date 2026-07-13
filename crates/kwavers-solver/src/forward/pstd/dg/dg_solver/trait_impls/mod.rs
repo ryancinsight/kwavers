@@ -32,10 +32,7 @@ use super::super::traits::{DGOperations, NumericalSolver};
 use super::core::DGSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 impl NumericalSolver for DGSolver {
     fn solve(
@@ -94,7 +91,7 @@ impl DGOperations for DGSolver {
     ///
     /// Hesthaven & Warburton (2008). §3.1, eq. (3.4).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn project_to_basis(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let n_elements = field.shape()[0];
@@ -138,7 +135,7 @@ impl DGOperations for DGSolver {
     ///
     /// Hesthaven & Warburton (2008). §3.1, eq. (3.3).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn reconstruct_from_basis(&self, coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let n_elements = coefficients.shape()[0];

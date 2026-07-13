@@ -21,7 +21,7 @@ use leto::Array1;
 ///
 /// Returns (nodes, weights) for N points on [-1, 1]
 /// # Errors
-/// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+/// - Returns [`crate::KwaversError::Config`] if the precondition for a Config-class constraint is violated.
 ///
 pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<f64>)> {
     if n < 2 {
@@ -92,7 +92,7 @@ pub fn gauss_lobatto_quadrature(n: usize) -> KwaversResult<(Array1<f64>, Array1<
 /// satisfying the Fourier basis periodicity constraint (Hesthaven & Warburton 2008, §5.3).
 ///
 /// # Errors
-/// Returns [`KwaversError::Config`] when `n < 2`.
+/// Returns [`crate::KwaversError::Config`] when `n < 2`.
 pub fn fourier_periodic_nodes(n: usize) -> KwaversResult<(Array1<f64>, Array1<f64>)> {
     if n < 2 {
         return Err(KwaversError::Config(ConfigError::InvalidValue {

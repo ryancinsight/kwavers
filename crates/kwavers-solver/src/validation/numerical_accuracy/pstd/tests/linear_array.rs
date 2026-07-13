@@ -5,10 +5,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 #[test]
 fn test_linear_array_phase_accuracy() {

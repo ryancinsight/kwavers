@@ -149,8 +149,8 @@ impl PowerLawModel {
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use leto::Array3;
     use eunomia::Complex;
+    use leto::Array3;
 
     #[test]
     fn apply_frequency_domain_scales_frequency_planes() {
@@ -187,4 +187,3 @@ mod tests {
         model.apply_frequency_domain(&mut spectrum, &[MHZ_TO_HZ], 1.0);
     }
 }
-

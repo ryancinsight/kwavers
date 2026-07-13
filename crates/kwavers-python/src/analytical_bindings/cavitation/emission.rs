@@ -1,7 +1,7 @@
 //! Bubble and population emission simulation PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -534,4 +534,3 @@ pub fn volume_emission_sweep(
         sweep.n_active.to_pyarray(py).unbind(),
     ))
 }
-

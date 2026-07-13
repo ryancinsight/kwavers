@@ -38,7 +38,7 @@ impl WaveQuantizer2D {
 
     /// Quantize network weights and biases
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn quantize_network<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         pinn: &PinnWave2D<B>,

@@ -73,7 +73,7 @@ fn map_real_field(input: &Array3<f64>, mut map: impl FnMut(f64) -> f64) -> Array
 /// ## References
 /// Treeby & Cox (2010) Eqs. 19–21 for τ and η; Eq. 10 for nabla operators.
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 ///
 pub(crate) fn initialize_absorption_operators(
     config: &PSTDConfig,

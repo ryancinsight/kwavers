@@ -31,8 +31,8 @@ where
 {
     /// Try new.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn try_new(grid: coeus_tensor::Tensor<f32, B>, bbox: [f32; 6]) -> KwaversResult<Self> {
         let shape = grid.shape();
         let dims = match shape {

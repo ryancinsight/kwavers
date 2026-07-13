@@ -41,7 +41,7 @@ pub struct ElasticPinnLoopConfig {
 /// Material parameters are fixed at typical soft-tissue values
 /// (ρ = 1000 kg/m³, λ = 2.25 GPa, μ = 0 Pa) for the forward problem.
 /// # Errors
-/// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+/// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -204,7 +204,7 @@ where
 /// for production runs.
 ///
 /// # Errors
-/// Propagates any [`KwaversError`] returned by [`train_pinn`] (e.g. a tensor /
+/// Propagates any [`crate::KwaversError`] returned by [`train_pinn`] (e.g. a tensor /
 /// autodiff backend failure during an epoch).
 pub fn train_simple<B>(
     model: &mut ElasticPINN2D<B>,

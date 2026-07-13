@@ -3,8 +3,8 @@
 //! Geometry-neutral: consumes any [`VolumeOperator`] over an active voxel set,
 //! with regularization parameters drawn from [`LinearBornInversionConfig`].
 
-use moirai_parallel::{for_each_chunk_mut_with_state, Adaptive};
 use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_with_state, Adaptive};
 
 use super::regularization::{
     build_active_index, edge_preserving_penalty, edge_preserving_projection,

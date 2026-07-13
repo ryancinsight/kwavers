@@ -31,7 +31,7 @@ where
 
     /// Configure training for a specific physics domain
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn configure_domain(
         &mut self,
@@ -68,7 +68,7 @@ where
 
     /// Train a specific physics domain with default geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn train_domain(
         &mut self,
@@ -84,7 +84,7 @@ where
 
     /// Train all registered physics domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn train_all_domains(
         &mut self,

@@ -1,8 +1,8 @@
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
-use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

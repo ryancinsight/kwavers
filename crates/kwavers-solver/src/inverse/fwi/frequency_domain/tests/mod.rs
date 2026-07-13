@@ -8,11 +8,11 @@ use super::{
     FrequencyObservation, PstdFiniteWindowBornOperator, PstdSpectralConvergentBornOperator,
     SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,
 };
 use leto::{Array2, Array3};
-use kwavers_math::fft::Complex64;
 
 mod forward;
 mod gradient_fd;

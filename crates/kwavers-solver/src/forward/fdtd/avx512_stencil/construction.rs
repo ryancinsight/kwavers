@@ -17,8 +17,8 @@ impl FdtdAvx512StencilProcessor {
     /// # Returns
     /// `Err` if dimensions are < 4 or `tile_size` is not a power of two.
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(nx: usize, ny: usize, nz: usize, config: FdtdAvx512Config) -> KwaversResult<Self> {
         if nx < 4 || ny < 4 || nz < 4 {

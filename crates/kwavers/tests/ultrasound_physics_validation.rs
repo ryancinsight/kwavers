@@ -11,10 +11,7 @@ use kwavers_analysis::signal_processing::beamforming::utils::{
 };
 use kwavers_analysis::signal_processing::beamforming::MinimumVariance;
 use kwavers_math::fft::Complex64;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Convert a `eunomia::Complex64` steering vector to `eunomia::Complex64`.
 fn nc_to_ec(v: Array1<eunomia::Complex64>) -> Array1<Complex64> {
@@ -272,7 +269,11 @@ fn validate_spatial_smoothing() {
 
     // Create fully coherent covariance matrix (rank 1)
     let mut covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
-    let coherent_vector = Array1::from_vec(num_sensors, (0..num_sensors).map(|i| (i as f64).sin()).collect()).unwrap();
+    let coherent_vector = Array1::from_vec(
+        num_sensors,
+        (0..num_sensors).map(|i| (i as f64).sin()).collect(),
+    )
+    .unwrap();
 
     // R = v * vᴴ (rank 1 matrix)
     for i in 0..num_sensors {
@@ -755,10 +756,10 @@ fn validate_mie_scattering_theory() {
 
     // Test Mie parameters creation
     let params = MieParameters::new(
-        100e-9,                                 // 100 nm radius particle
+        100e-9,                             // 100 nm radius particle
         eunomia::Complex64::new(1.5, 0.01), // Glass-like refractive index
-        1.0,                                    // Air medium
-        500e-9,                                 // 500 nm wavelength
+        1.0,                                // Air medium
+        500e-9,                             // 500 nm wavelength
     );
 
     // Validate basic parameter calculations
@@ -791,9 +792,9 @@ fn validate_mie_scattering_theory() {
 
     // Mie parameters can be created for various particle sizes
     let _small_params = MieParameters::new(
-        10e-9,                                  // Very small particle
+        10e-9,                              // Very small particle
         eunomia::Complex64::new(1.33, 0.0), // Water
-        1.0,                                    // Air
+        1.0,                                // Air
         500e-9,
     );
 
@@ -1249,4 +1250,3 @@ fn validate_temporal_synchronization_multi_modal() {
     assert!(quality.sync_success_rate >= 0.0);
     assert!(quality.sync_success_rate <= 1.0);
 }
-

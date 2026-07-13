@@ -246,3 +246,43 @@ jobs:
 
       - name: Run validation integration tests
         run: cargo test --test validation_integration_test -- --test-threads=1
+
+  validation:
+    name: Solver Validation Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: k-Wave analytical comparison tests
+        run: cargo test -p kwavers-solver --lib validation::kwave_comparison -- --test-threads=1
+
+      - name: Literature validation tests
+        run: cargo test -p kwavers-solver --lib validation::literature -- --test-threads=1
+
+      - name: Numerical accuracy tests
+        run: cargo test -p kwavers-solver --lib validation::numerical_accuracy -- --test-threads=1
+
+      - name: Physics benchmarks
+        run: cargo test -p kwavers-solver --lib validation::physics_benchmarks -- --test-threads=1
+
+      - name: GPU/CPU equivalence build check
+        run: cargo check -p kwavers-gpu --features gpu --lib

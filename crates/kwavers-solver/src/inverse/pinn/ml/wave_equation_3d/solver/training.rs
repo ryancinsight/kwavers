@@ -15,8 +15,8 @@ where
     ///
     /// Returns training metrics including loss history and training time.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     // Independent training data slices and hyperparameters with no cohesive
     // sub-grouping; bundling would not clarify the call site.
     #[allow(clippy::too_many_arguments)]

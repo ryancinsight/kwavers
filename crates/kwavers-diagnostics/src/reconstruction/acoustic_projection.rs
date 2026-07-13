@@ -36,10 +36,7 @@
 
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 /// Acoustic forward-projection geometry for pulse-echo ultrasound SIRT.
 #[derive(Debug, Clone)]

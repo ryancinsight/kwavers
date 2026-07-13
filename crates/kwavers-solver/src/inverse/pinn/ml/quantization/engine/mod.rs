@@ -32,8 +32,8 @@ impl MlQuantizer {
 
     /// Quantize a model, validating that accuracy loss stays within tolerance.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if accuracy loss exceeds tolerance.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::System`] if accuracy loss exceeds tolerance.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn quantize_model<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,

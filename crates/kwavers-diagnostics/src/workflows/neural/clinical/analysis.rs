@@ -1,10 +1,7 @@
 use super::super::types::{ClinicalAnalysis, FeatureMap, LesionDetection, TissueClassification};
 use super::NeuralClinicalDecisionSupport;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 use std::collections::HashMap;
 
 impl NeuralClinicalDecisionSupport {

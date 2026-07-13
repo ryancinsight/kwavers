@@ -1,12 +1,8 @@
 use super::SlscConfig;
-use kwavers_core::error::{KwaversError, KwaversResult};
-use moirai_parallel::{map_collect_index_with, Adaptive};
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::{Array1, Array2, Array3};
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 /// Short-Lag Spatial Coherence beamformer
 #[derive(Debug, Clone)]
@@ -281,4 +277,3 @@ pub(super) fn compute_lag_coherence(signals: &[Complex64], lag: usize) -> f64 {
         0.0
     }
 }
-

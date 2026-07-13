@@ -1,5 +1,5 @@
-use numpy::PyArray3;
 use numpy::ndarray::Array3;
+use numpy::PyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 

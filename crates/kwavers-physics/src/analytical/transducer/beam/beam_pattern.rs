@@ -1,5 +1,5 @@
-use kwavers_core::constants::numerical::TWO_PI;
 use eunomia::Complex64;
+use kwavers_core::constants::numerical::TWO_PI;
 
 // ─── Beam pattern ─────────────────────────────────────────────────────────────
 
@@ -201,4 +201,3 @@ pub fn multi_focus_field_magnitude_2d(
     }
     mag
 }
-

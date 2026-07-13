@@ -41,8 +41,8 @@ use kwavers_solver::forward::optical::diffusion::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
 use leto::Array3 as LetoArray3;
-use moirai_parallel::{map_collect_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{map_collect_with, Adaptive};
 
 /// Initialize optical properties based on tissue type and geometry
 ///

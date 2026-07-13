@@ -1,7 +1,7 @@
 //! Cavitation probability and threshold PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -130,4 +130,3 @@ pub fn prf_efficacy_factor(
         cavitation::prf_efficacy_factor(prf_s, bubble_dissolution_time_s, shielding_coefficient);
     Ok(result.to_pyarray(py).unbind())
 }
-

@@ -15,10 +15,7 @@
 use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, integrate_dissolution, wood_sound_speed, DissolutionModel,
 };
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// Per-voxel residual cavitation-gas void-fraction field with dissolution
 /// kinetics and acoustic-property coupling.

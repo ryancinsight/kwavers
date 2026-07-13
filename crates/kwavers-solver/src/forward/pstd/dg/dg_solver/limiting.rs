@@ -5,10 +5,7 @@ use super::super::flux::apply_limiter;
 use super::topology::DgTopology;
 use kwavers_core::constants::numerical::EPSILON;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 pub(super) fn apply_shock_capture_to_coeffs(
     config: DGConfig,

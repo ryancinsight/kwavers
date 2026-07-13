@@ -52,7 +52,7 @@ impl CoupledMultiPhysicsSolver {
 
     /// Step the multi-physics simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self, dt: f64) -> KwaversResult<()> {
         // Apply field coupling

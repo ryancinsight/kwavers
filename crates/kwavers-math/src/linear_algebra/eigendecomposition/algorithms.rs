@@ -1,10 +1,7 @@
 use super::{EigenResult, EigenSolver, EigenSolverConfig};
-use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    Array2,
-};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use leto::{Array1, Array2};
 
 fn matmul_complex(lhs: &Array2<Complex64>, rhs: &Array2<Complex64>) -> Array2<Complex64> {
     let [rows, inner] = lhs.shape();
@@ -42,7 +39,7 @@ impl EigenSolver {
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-pub fn qr_algorithm(
+    pub fn qr_algorithm(
         matrix: &Array2<Complex64>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
@@ -63,7 +60,7 @@ pub fn qr_algorithm(
         }
 
         let mut h = matrix.clone();
-    let mut q = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
+        let mut q = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
         let mut eigenvalues = Array1::zeros([n]);
         let mut iterations = 0;
 
@@ -149,7 +146,7 @@ pub fn qr_algorithm(
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-pub fn jacobi_hermitian(
+    pub fn jacobi_hermitian(
         matrix: &Array2<Complex64>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {

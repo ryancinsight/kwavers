@@ -16,7 +16,7 @@ use log::info;
 impl HybridSolver {
     /// Create a new hybrid solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: HybridConfig, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Self> {
         info!("Initializing hybrid Spectral/FDTD solver");

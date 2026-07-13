@@ -3,7 +3,7 @@
 use kwavers_physics::acoustics::therapy::neuromodulation::{
     bls_capacitance, quasistatic_deflection, rest_gap,
 };
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -47,4 +47,3 @@ pub fn bilayer_capacitance_curve(
         .collect();
     Ok(out.to_pyarray(py).unbind())
 }
-

@@ -1,7 +1,4 @@
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Compute BBB opening dose and derived fields for a set of sonication subspots.
 ///
@@ -33,7 +30,10 @@ pub fn bbb_opening_dose(
         let cx = subspot_indices[[si, 0]];
         let cy = subspot_indices[[si, 1]];
         let cz = subspot_indices[[si, 2]];
-        for ([ix, iy, iz], d) in dose.indexed_iter_mut().expect("invariant: dense layout iterable") {
+        for ([ix, iy, iz], d) in dose
+            .indexed_iter_mut()
+            .expect("invariant: dense layout iterable")
+        {
             let dx = (ix as f64 - cx as f64) * spacing_m[0];
             let dy = (iy as f64 - cy as f64) * spacing_m[1];
             let dz = (iz as f64 - cz as f64) * spacing_m[2];

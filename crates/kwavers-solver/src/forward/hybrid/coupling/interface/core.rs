@@ -23,7 +23,7 @@ pub struct CouplingInterface {
 impl CouplingInterface {
     /// Create a new coupling interface
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         source_grid: &Grid,
@@ -47,7 +47,7 @@ impl CouplingInterface {
 
     /// Transfer fields from source to target domain
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn transfer_fields(
         &mut self,
@@ -73,7 +73,7 @@ impl CouplingInterface {
 
     /// Apply coupling between domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_coupling(
         &mut self,
@@ -164,7 +164,11 @@ impl CouplingInterface {
                     interface_data
                         .slice_with_mut::<2>(&s![0, .., ..])
                         .unwrap()
-                        .assign(&pressure.slice_with::<2>(&s![sx, sy..ey, sz..ez]).expect("invariant: source plane slice is valid"));
+                        .assign(
+                            &pressure
+                                .slice_with::<2>(&s![sx, sy..ey, sz..ez])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             1 => {
@@ -172,7 +176,11 @@ impl CouplingInterface {
                     interface_data
                         .slice_with_mut::<2>(&s![.., 0, ..])
                         .unwrap()
-                        .assign(&pressure.slice_with::<2>(&s![sx..ex, sy, sz..ez]).expect("invariant: source plane slice is valid"));
+                        .assign(
+                            &pressure
+                                .slice_with::<2>(&s![sx..ex, sy, sz..ez])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             2 => {
@@ -180,7 +188,11 @@ impl CouplingInterface {
                     interface_data
                         .slice_with_mut::<2>(&s![.., .., 0])
                         .unwrap()
-                        .assign(&pressure.slice_with::<2>(&s![sx..ex, sy..ey, sz]).expect("invariant: source plane slice is valid"));
+                        .assign(
+                            &pressure
+                                .slice_with::<2>(&s![sx..ex, sy..ey, sz])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             _ => {
@@ -226,7 +238,11 @@ impl CouplingInterface {
                     pressure
                         .slice_with_mut::<2>(&s![sx, sy..ey, sz..ez])
                         .unwrap()
-                        .assign(&data.slice_with::<2>(&s![0, .., ..]).expect("invariant: source plane slice is valid"));
+                        .assign(
+                            &data
+                                .slice_with::<2>(&s![0, .., ..])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             1 => {
@@ -234,7 +250,11 @@ impl CouplingInterface {
                     pressure
                         .slice_with_mut::<2>(&s![sx..ex, sy, sz..ez])
                         .unwrap()
-                        .assign(&data.slice_with::<2>(&s![.., 0, ..]).expect("invariant: source plane slice is valid"));
+                        .assign(
+                            &data
+                                .slice_with::<2>(&s![.., 0, ..])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             2 => {
@@ -242,7 +262,11 @@ impl CouplingInterface {
                     pressure
                         .slice_with_mut::<2>(&s![sx..ex, sy..ey, sz])
                         .unwrap()
-                        .assign(&data.slice_with::<2>(&s![.., .., 0]).expect("invariant: source plane slice is valid"));
+                        .assign(
+                            &data
+                                .slice_with::<2>(&s![.., .., 0])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             _ => {
@@ -269,14 +293,23 @@ impl CouplingInterface {
     /// identical.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the active plane is empty or the
+    /// - Returns [`crate::KwaversError::Config`] if the active plane is empty or the
     ///   normal direction is invalid.
     fn extract_active_plane(&self, data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = data.shape();
         match self.geometry.normal_direction {
-            0 if nx > 0 => Ok(data.slice_with::<3>(&s![0..1, .., ..]).unwrap().to_contiguous()),
-            1 if ny > 0 => Ok(data.slice_with::<3>(&s![.., 0..1, ..]).unwrap().to_contiguous()),
-            2 if nz > 0 => Ok(data.slice_with::<3>(&s![.., .., 0..1]).unwrap().to_contiguous()),
+            0 if nx > 0 => Ok(data
+                .slice_with::<3>(&s![0..1, .., ..])
+                .unwrap()
+                .to_contiguous()),
+            1 if ny > 0 => Ok(data
+                .slice_with::<3>(&s![.., 0..1, ..])
+                .unwrap()
+                .to_contiguous()),
+            2 if nz > 0 => Ok(data
+                .slice_with::<3>(&s![.., .., 0..1])
+                .unwrap()
+                .to_contiguous()),
             0..=2 => Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "interface_plane".to_owned(),
                 value: format!("{:?}", data.shape()),

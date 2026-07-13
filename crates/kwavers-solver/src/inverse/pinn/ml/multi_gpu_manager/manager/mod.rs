@@ -35,8 +35,8 @@ pub struct MultiGpuManager {
 impl MultiGpuManager {
     /// Create a new multi-GPU manager.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         decomposition: MultiGpuDecompositionStrategy,

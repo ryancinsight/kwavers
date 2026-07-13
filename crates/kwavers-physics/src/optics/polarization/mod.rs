@@ -31,13 +31,10 @@ pub mod linear;
 #[cfg(test)]
 mod tests;
 
+use eunomia::Complex64;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use leto::{
-    Array3,
-    Array4,
-};
-use eunomia::Complex64;
+use leto::{Array3, Array4};
 use std::fmt::Debug;
 
 // Re-exports for backward compatibility
@@ -56,4 +53,3 @@ pub trait PolarizationModel: Debug + Send + Sync {
         medium: &dyn Medium,
     );
 }
-

@@ -19,6 +19,7 @@ fn test_intensity_tracker_integration() {
             duty_cycle: 0.02,
             focal_depth: 0.03,
             treatment_volume: 0.5,
+            use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: TI_LIMIT_SOFT_TISSUE,

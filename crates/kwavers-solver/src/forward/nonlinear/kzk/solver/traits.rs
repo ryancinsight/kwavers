@@ -21,8 +21,8 @@
 //! This is the most physically relevant single-slice summary for HIFU
 //! intensity calculations, where I ∝ p_rms².
 
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array2;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::KZKSolver;
 use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;

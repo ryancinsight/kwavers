@@ -10,8 +10,8 @@
 //!   on `domain::field::mapping::UnifiedFieldType`.
 //!
 //! State-based accessors (`PluginFieldAccess`, `PluginFieldAccessMut`) operate on
-//! [`crate::physics::acoustics::state::PhysicsState`] and live alongside that type
-//! at [`crate::physics::acoustics::state::access`] to preserve the `domain → physics`
+//! `kwavers_physics::acoustics::state::PhysicsState` and live alongside that type
+//! at `kwavers_physics::acoustics::state::access` to preserve the `domain → physics`
 //! dependency direction (DIP).
 //!
 //! [`Plugin::required_fields`]: super::Plugin::required_fields

@@ -85,7 +85,7 @@ pub struct ElasticWaveConfig {
     pub sensor_mask: Option<Array3<bool>>,
     /// Optional particle-velocity source. When present, at each step
     /// `n`, the integrator's post-step velocity field is assigned at
-    /// every masked grid point with `signal[n]` for any provided
+    /// every masked grid point with `signal\[n\]` for any provided
     /// component. Phase A.3 of ADR 007.
     pub velocity_source: Option<ElasticVelocitySource>,
 }

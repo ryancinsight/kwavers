@@ -217,7 +217,7 @@ fn diffusive_term_matches_stokes_kirchhoff_coefficient() {
 /// ```
 /// The function returns `+(β/ρ₀c₀²)∂²(p²)/∂t²` (positive, c² not c⁴).
 ///
-/// For p[n]=p, p[n−1]=p_prev=0, p[n−2]=0:
+/// For p\[n\]=p, p[n−1]=p_prev=0, p[n−2]=0:
 /// - `∂²(p²)/∂t² ≈ (p²−0+0)/Δt² = p²/Δt²`
 /// - `expected = (β/ρ₀c₀²)·p²/Δt²`  [positive]
 #[test]

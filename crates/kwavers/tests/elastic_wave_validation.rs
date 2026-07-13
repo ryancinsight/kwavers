@@ -297,11 +297,7 @@ impl BubbleState for TestElasticMedium {
         &self.bubble_velocity_field
     }
 
-    fn update_bubble_state(
-        &mut self,
-        radius: &leto::Array3<f64>,
-        velocity: &leto::Array3<f64>,
-    ) {
+    fn update_bubble_state(&mut self, radius: &leto::Array3<f64>, velocity: &leto::Array3<f64>) {
         self.bubble_radius_field = radius.clone();
         self.bubble_velocity_field = velocity.clone();
     }

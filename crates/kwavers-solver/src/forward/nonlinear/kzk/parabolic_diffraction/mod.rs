@@ -55,11 +55,8 @@
 
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
 use leto::Array2 as LetoArray2;
+use leto::{Array2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array2,
-    ArrayViewMut2,
-};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -109,11 +106,19 @@ impl std::fmt::Debug for KzkParabolicDiffractionOperator {
             .field("config", &self.config)
             .field(
                 "kx2",
-                &format!("Array2<f64> {}x{}", self.kx2.shape()[0], self.kx2.shape()[1]),
+                &format!(
+                    "Array2<f64> {}x{}",
+                    self.kx2.shape()[0],
+                    self.kx2.shape()[1]
+                ),
             )
             .field(
                 "ky2",
-                &format!("Array2<f64> {}x{}", self.ky2.shape()[0], self.ky2.shape()[1]),
+                &format!(
+                    "Array2<f64> {}x{}",
+                    self.ky2.shape()[0],
+                    self.ky2.shape()[1]
+                ),
             )
             .finish()
     }

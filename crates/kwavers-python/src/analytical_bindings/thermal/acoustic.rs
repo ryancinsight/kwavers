@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::thermal;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -209,4 +209,3 @@ pub fn acoustic_heat_source_density(
     let result = thermal::acoustic_heat_source_density(p_s, alpha_np_m, rho, c);
     Ok(result.to_pyarray(py).unbind())
 }
-

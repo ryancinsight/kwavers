@@ -4,10 +4,7 @@
 //! against analytical solutions and performance benchmarks.
 
 use kwavers_math::fft::Complex64;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 use kwavers_analysis::signal_processing::beamforming::adaptive::MinimumVariance;

@@ -9,7 +9,6 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemPreconditionerType};
 use leto::Array2;
 
-
 fn medium_for(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)
 }
@@ -51,8 +50,7 @@ fn fem_helmholtz_backend_interpolates_solved_pressure() {
     backend.add_nodal_load(0, Complex64::new(1.0, 0.0)).unwrap();
     backend.solve().unwrap();
 
-    let points =
-        Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 2.0, 2.0, 2.0]).unwrap();
+    let points = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 2.0, 2.0, 2.0]).unwrap();
     let values = backend.interpolate_pressure(points.view()).unwrap();
 
     assert_eq!(values.len(), 2);

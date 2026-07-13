@@ -1,12 +1,7 @@
 //! NeuralBeamformingProcessor core implementation.
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array3,
-    Array4,
-    ArrayView3,
-    ArrayView4,
-};
+use leto::{Array3, Array4, ArrayView3, ArrayView4};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]

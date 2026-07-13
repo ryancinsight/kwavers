@@ -1,9 +1,6 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Adaptive clutter filter using eigendecomposition.
 ///

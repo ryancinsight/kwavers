@@ -1,11 +1,8 @@
 //! SaftProcessor struct and reconstruction logic.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::{Array3, Array4};
 use log::info;
-use leto::{
-    Array3,
-    Array4,
-};
 use std::f64::consts::PI;
 
 use super::super::{BeamformingAlgorithm3D, BeamformingConfig3D};

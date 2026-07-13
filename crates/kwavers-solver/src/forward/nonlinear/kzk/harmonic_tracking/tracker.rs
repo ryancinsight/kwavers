@@ -28,8 +28,8 @@ impl HarmonicTracker {
 
     /// Analyze harmonics from pressure time series.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn analyze_harmonics(&self, pressure: &Array1<f64>) -> KwaversResult<HarmonicAnalysis> {
         if pressure.is_empty() {

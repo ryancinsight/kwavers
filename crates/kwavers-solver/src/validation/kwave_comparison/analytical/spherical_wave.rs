@@ -27,7 +27,7 @@ pub struct SphericalWave {
 impl SphericalWave {
     /// Create new spherical wave. Validates f > 0 and c₀ > 0.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn new(
         source_strength: f64,

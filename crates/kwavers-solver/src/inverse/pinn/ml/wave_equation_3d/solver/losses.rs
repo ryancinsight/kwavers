@@ -53,7 +53,7 @@ where
     ///
     /// Returns `(total_loss, data_loss, pde_loss, bc_loss, ic_loss)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     // Independent data/collocation/initial tensors plus weights and mutable
     // loss-scale state with no cohesive sub-grouping; bundling would not clarify
     // the call site.

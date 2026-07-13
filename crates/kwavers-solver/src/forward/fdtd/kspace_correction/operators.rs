@@ -6,11 +6,8 @@ use kwavers_math::fft::shift_operators::{
 };
 use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
+use leto::{Array1, Array3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array1,
-    Array3,
-};
 use std::sync::Arc;
 
 #[derive(Clone, Copy)]
@@ -93,9 +90,7 @@ fn add_assign_ndarray(dst: &mut Array3<f64>, src: &Array3<f64>) {
         src.shape(),
         "invariant: FDTD accumulation field shapes must match"
     );
-    if let (Some(dst_values), Some(src_values)) =
-        (dst.as_slice_mut(), src.as_slice())
-    {
+    if let (Some(dst_values), Some(src_values)) = (dst.as_slice_mut(), src.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
             *value += src_values[index];
         });
@@ -230,7 +225,7 @@ impl KSpaceFdtdOperators {
     /// supplied, the compatible leapfrog start is obtained by applying the
     /// k-space pressure→velocity operator at `t = -Δt/2`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize_ivp_velocity(
         &mut self,

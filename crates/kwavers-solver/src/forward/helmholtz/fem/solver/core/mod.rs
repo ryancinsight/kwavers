@@ -27,10 +27,10 @@ use super::config::FemHelmholtzConfig;
 use kwavers_boundary::FemBoundaryManager;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use kwavers_mesh::TetrahedralMesh;
 use leto::Array1;
-use kwavers_math::fft::Complex64;
 
 /// Finite Element Helmholtz solver for complex geometries.
 #[derive(Debug)]
@@ -65,7 +65,7 @@ impl FemHelmholtzSolver {
     /// `TetrahedralMesh::from_grid_vertices`, preserving exact domain volume
     /// through the six-tetrahedra-per-cell split.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn from_grid(config: FemHelmholtzConfig, grid: &Grid) -> KwaversResult<Self> {
         let mesh = TetrahedralMesh::from_grid_vertices(grid)?;

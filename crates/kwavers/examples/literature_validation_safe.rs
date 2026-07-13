@@ -34,10 +34,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -408,15 +405,18 @@ fn validate_rayleigh_sommerfeld_diffraction() -> KwaversResult<ValidationResult>
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
 
     // Apply aperture function using safe vectorization
-    pressure.indexed_iter_mut().expect("indexed_iter_mut").for_each(|([i, j, _], value)| {
-        let dx_from_center = (i as f64 - aperture_center_x as f64) * dx;
-        let dy_from_center = (j as f64 - aperture_center_y as f64) * dx;
-        let r = (dx_from_center * dx_from_center + dy_from_center * dy_from_center).sqrt();
+    pressure
+        .indexed_iter_mut()
+        .expect("indexed_iter_mut")
+        .for_each(|([i, j, _], value)| {
+            let dx_from_center = (i as f64 - aperture_center_x as f64) * dx;
+            let dy_from_center = (j as f64 - aperture_center_y as f64) * dx;
+            let r = (dx_from_center * dx_from_center + dy_from_center * dy_from_center).sqrt();
 
-        if r <= aperture_radius {
-            *value = 1.0; // Unit amplitude within aperture
-        }
-    });
+            if r <= aperture_radius {
+                *value = 1.0; // Unit amplitude within aperture
+            }
+        });
 
     // Propagate to far field using Fresnel propagation
     let propagation_distance = 20.0 * wavelength; // Far field
@@ -724,11 +724,14 @@ fn validate_absorption_attenuation() -> KwaversResult<ValidationResult> {
     let amplitude0 = 1e5; // 100 kPa
 
     // Apply analytical absorption solution using safe vectorization
-    pressure.indexed_iter_mut().expect("indexed_iter_mut").for_each(|([i, _, _], value)| {
-        let x = i as f64 * dx;
-        let amplitude = amplitude0 * (-alpha_theoretical * x).exp();
-        *value = amplitude * (k * x).sin();
-    });
+    pressure
+        .indexed_iter_mut()
+        .expect("indexed_iter_mut")
+        .for_each(|([i, _, _], value)| {
+            let x = i as f64 * dx;
+            let amplitude = amplitude0 * (-alpha_theoretical * x).exp();
+            *value = amplitude * (k * x).sin();
+        });
 
     // Store initial amplitude profile
     let mut amplitudes_analytical = Vec::new();
@@ -833,10 +836,13 @@ fn validate_burgers_equation() -> KwaversResult<ValidationResult> {
     let mut pressure = Array3::<f64>::zeros((nx, ny, nz));
     let k = omega / c0;
 
-    pressure.indexed_iter_mut().expect("indexed_iter_mut").for_each(|([i, _, _], value)| {
-        let x = i as f64 * dx;
-        *value = amplitude * (k * x).sin();
-    });
+    pressure
+        .indexed_iter_mut()
+        .expect("indexed_iter_mut")
+        .for_each(|([i, _, _], value)| {
+            let x = i as f64 * dx;
+            *value = amplitude * (k * x).sin();
+        });
 
     // Track waveform steepening using safe vectorization
     let mut steepness_factor = Vec::new();

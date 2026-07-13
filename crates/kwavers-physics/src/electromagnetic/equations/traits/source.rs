@@ -18,11 +18,7 @@ pub trait PhysicsEMSource: Send + Sync {
     fn electric_field_at_time(&self, time: f64, position: &[f64]) -> [f64; 3];
 
     /// Compute frequency-domain electric field at given frequency
-    fn electric_field_at_frequency(
-        &self,
-        frequency: f64,
-        position: &[f64],
-    ) -> eunomia::Complex64;
+    fn electric_field_at_frequency(&self, frequency: f64, position: &[f64]) -> eunomia::Complex64;
 
     /// Check if source is active at given time
     fn is_active(&self, time: f64) -> bool;
@@ -30,4 +26,3 @@ pub trait PhysicsEMSource: Send + Sync {
     /// Get source directivity pattern (radiation pattern)
     fn directivity(&self, direction: &[f64]) -> f64;
 }
-

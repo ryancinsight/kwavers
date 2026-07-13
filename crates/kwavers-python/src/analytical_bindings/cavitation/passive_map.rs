@@ -1,7 +1,7 @@
 //! Passive acoustic map and receiver-array PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -58,4 +58,3 @@ pub fn emission_energy_in_volume(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(cavitation::emission_energy_in_volume(s, m, dv_m3))
 }
-

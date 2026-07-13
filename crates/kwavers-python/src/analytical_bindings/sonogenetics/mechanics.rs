@@ -1,7 +1,7 @@
 //! Acoustic force and streaming bindings for sonogenetics.
 
 use kwavers_physics::analytical::sonogenetics;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -112,4 +112,3 @@ pub fn acoustic_streaming_velocity(
         i_w_m2, mu_pa_s, alpha_np_m, c, l_m,
     ))
 }
-

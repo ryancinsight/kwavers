@@ -1,7 +1,7 @@
 //! Arrhenius damage and combined kill-probability safety bindings.
 
 use kwavers_physics::analytical::safety;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -158,4 +158,3 @@ pub fn combined_kill_probability(
     let result = safety::combined_kill_probability(m, t);
     Ok(result.to_pyarray(py).unbind())
 }
-

@@ -5,10 +5,7 @@ mod velocity;
 
 pub(crate) use helpers::pressure_signal_to_matrix;
 
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;

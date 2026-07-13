@@ -4,8 +4,8 @@
 //! viscoelastic complex moduli, Voigt dispersion relation, and a synthetic
 //! 2-D MRE displacement field.
 
-use kwavers_core::constants::numerical::TWO_PI;
 use eunomia::Complex64;
+use kwavers_core::constants::numerical::TWO_PI;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
@@ -507,4 +507,3 @@ mod tests {
         assert!(thermal_strain_rf_fixture(1, 24, -1.0e-3, 6.0, 0.0, 1).is_err());
     }
 }
-

@@ -11,7 +11,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(network: &QuantizedNetwork) -> KwaversResult<Self> {
         let backend = B::default();
@@ -57,7 +57,7 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
     }
     /// Predict.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict(&self, x: &[f32], y: &[f32], t: &[f32]) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
         let batch_size = (x.len());

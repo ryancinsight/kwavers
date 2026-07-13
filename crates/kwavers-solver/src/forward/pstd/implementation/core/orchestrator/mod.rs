@@ -14,13 +14,8 @@ use kwavers_medium::MaterialFields;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::{Source, SourceInjectionMode};
 use leto::Array3 as LetoArray3;
+use leto::{Array1, Array2, Array3, ArrayView2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-    ArrayView2,
-};
 use std::env;
 use std::sync::Arc;
 
@@ -287,7 +282,7 @@ impl PSTDSolver {
     }
     /// Run orchestrated.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_orchestrated(&mut self, steps: usize) -> KwaversResult<Option<Array2<f64>>> {
         // Record the initial state only for IVP (p0) sources, matching k-Wave's convention:

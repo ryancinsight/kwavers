@@ -1,10 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array3,
-    ArrayView1,
-    SliceArg,
-};
 use kwavers_math::fft::Complex64;
+use leto::{Array3, ArrayView1, SliceArg};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum BreastUstReceiverChannelPolicy {
@@ -382,7 +378,13 @@ fn validated_receiver_mask(
     observation_shape: (usize, usize, usize),
     receiver_mask: &Array3<bool>,
 ) -> KwaversResult<Array3<bool>> {
-    if receiver_mask.shape() != [observation_shape.0, observation_shape.1, observation_shape.2] {
+    if receiver_mask.shape()
+        != [
+            observation_shape.0,
+            observation_shape.1,
+            observation_shape.2,
+        ]
+    {
         return Err(KwaversError::DimensionMismatch(format!(
             "receiver_mask shape mismatch: expected {:?}, got {:?}",
             observation_shape,

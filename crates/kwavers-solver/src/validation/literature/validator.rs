@@ -20,7 +20,7 @@ impl LiteratureValidator {
 
     /// Validate against Treeby (2010) plane wave propagation.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_treeby_plane_wave(
         &self,

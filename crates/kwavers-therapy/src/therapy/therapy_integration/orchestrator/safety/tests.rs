@@ -19,6 +19,7 @@ fn test_thermal_index_calculation() {
         duty_cycle: 0.1,       // 10%
         focal_depth: 0.05,     // 5 cm
         treatment_volume: 1.0, // 1 cm³
+        use_nonlinear_field: false,
     };
 
     let mut safety_metrics = SafetyMetrics {
@@ -60,6 +61,7 @@ fn test_mechanical_index_calculation() {
         duty_cycle: 0.1,
         focal_depth: 0.03,
         treatment_volume: 0.5,
+        use_nonlinear_field: false,
     };
 
     let mut safety_metrics = SafetyMetrics {
@@ -99,6 +101,7 @@ fn test_cavitation_dose_accumulation() {
         duty_cycle: 0.1,
         focal_depth: 0.05,
         treatment_volume: 1.0,
+        use_nonlinear_field: false,
     };
 
     let mut safety_metrics = SafetyMetrics {

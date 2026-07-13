@@ -1,8 +1,8 @@
 use super::compound::PlaneWaveCompound;
 use super::config::PlaneWaveCompoundingConfig;
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use leto::Array2;
-use eunomia::Complex;
 
 #[test]
 fn test_plane_wave_config_default() {
@@ -149,4 +149,3 @@ fn test_thermal_acoustic_config_uses_plane_wave_geometry() {
         0.3 * plane_wave.element_spacing / plane_wave.sound_speed
     );
 }
-

@@ -58,10 +58,7 @@
 //! ```
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Benchmark configuration for a specific problem size
 #[derive(Debug, Clone)]
@@ -193,7 +190,9 @@ fn beamform_cpu(
         let mut sum = 0.0;
 
         for ch in 0..num_channels {
-            let elem_pos = element_positions.index_axis::<1>(0, ch).expect("index_axis");
+            let elem_pos = element_positions
+                .index_axis::<1>(0, ch)
+                .expect("index_axis");
             let dx = focal_point[0] - elem_pos[0];
             let dy = focal_point[1] - elem_pos[1];
             let dz = focal_point[2] - elem_pos[2];
@@ -380,7 +379,9 @@ fn bench_distance_computation(c: &mut Criterion) {
             for fp_idx in 0..config.num_focal_points() as usize {
                 let focal_point = focal_grid.index_axis::<1>(0, fp_idx).expect("index_axis");
                 for ch in 0..config.num_channels {
-                    let elem_pos = element_positions.index_axis::<1>(0, ch).expect("index_axis");
+                    let elem_pos = element_positions
+                        .index_axis::<1>(0, ch)
+                        .expect("index_axis");
                     let dx = focal_point[0] - elem_pos[0];
                     let dy = focal_point[1] - elem_pos[1];
                     let dz = focal_point[2] - elem_pos[2];

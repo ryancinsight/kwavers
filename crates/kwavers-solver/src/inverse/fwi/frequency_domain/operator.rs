@@ -15,17 +15,17 @@
 //!
 //! # T17a scope (this commit)
 //!
-//! Trait + three impls landed as a new module. [`Config::propagation_model`]
+//! Trait + three impls landed as a new module. `Config::propagation_model`
 //! (enum) is preserved temporarily so the existing match-based dispatch in
-//! [`super::forward`] and [`super::gradient`] continues to compile unchanged.
+//! `super::forward` and `super::gradient` continues to compile unchanged.
 //! T17b will replace the enum field with `forward_operator: Arc<dyn
 //! HelmholtzForwardOperator>` and convert the match blocks to virtual
 //! dispatch, removing the enum.
 
 use std::fmt::Debug;
 
-use leto::{Array2, Array3};
 use kwavers_math::fft::Complex64;
+use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
@@ -58,7 +58,7 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
 
     /// Whether this operator drives the volume-field adjoint gradient kernel
     /// (CBS-style) instead of the explicit single-scatter sensitivity formula.
-    /// Used by [`super::gradient`] to pick the matching gradient accumulator.
+    /// Used by `super::gradient` to pick the matching gradient accumulator.
     fn uses_volume_field_adjoint(&self) -> bool;
 
     /// CBS solver descriptor — `Some((cbs_config, kernel))` for CBS impls,
@@ -113,7 +113,7 @@ pub trait HelmholtzForwardOperator: Debug + Send + Sync {
 
 /// First Born approximation. Forward operator is the discrete single-scatter
 /// Helmholtz sensitivity used by the analytical gradient in
-/// [`super::gradient`].
+/// `super::gradient`.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct SingleScatterBornOperator;
 
@@ -409,9 +409,9 @@ impl PstdSpectralConvergentBornOperator {
 /// window.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PstdFiniteWindowBornOperator {
-    /// PSTD leapfrog time step [s] — must match the dataset generator.
+    /// PSTD leapfrog time step \[s\] — must match the dataset generator.
     pub time_step_s: f64,
-    /// Scalar pressure-source amplitude [Pa] — must match the dataset generator.
+    /// Scalar pressure-source amplitude \[Pa\] — must match the dataset generator.
     pub source_amplitude_pa: f64,
     /// Number of drive cycles — must match the dataset generator.
     pub cycles_per_frequency: usize,
@@ -519,9 +519,9 @@ impl PstdFiniteWindowBornOperator {
 /// additional backward-pass storage for `ps1` acceleration history).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PstdFiniteWindowBornSecondOrderOperator {
-    /// PSTD leapfrog time step [s] — must match the dataset generator.
+    /// PSTD leapfrog time step \[s\] — must match the dataset generator.
     pub time_step_s: f64,
-    /// Scalar pressure-source amplitude [Pa] — must match the dataset generator.
+    /// Scalar pressure-source amplitude \[Pa\] — must match the dataset generator.
     pub source_amplitude_pa: f64,
     /// Number of drive cycles — must match the dataset generator.
     pub cycles_per_frequency: usize,

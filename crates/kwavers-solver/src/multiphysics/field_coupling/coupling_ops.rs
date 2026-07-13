@@ -8,7 +8,7 @@ use leto::Array3;
 impl MultiphysicsFieldCoupler {
     /// Apply weak coupling (single pass)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_weak_coupling(
         &self,
@@ -24,7 +24,7 @@ impl MultiphysicsFieldCoupler {
 
     /// Apply strong coupling (iterative)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_strong_coupling(
         &self,
@@ -200,9 +200,9 @@ impl MultiphysicsFieldCoupler {
 }
 
 fn validate_coupled_field_set(fields: &[Array3<f64>]) -> KwaversResult<()> {
-    validate_field_index::<PRESSURE_IDX>(fields.len() )?;
-    validate_field_index::<TEMPERATURE_IDX>(fields.len() )?;
-    validate_field_index::<LIGHT_IDX>(fields.len() )?;
+    validate_field_index::<PRESSURE_IDX>(fields.len())?;
+    validate_field_index::<TEMPERATURE_IDX>(fields.len())?;
+    validate_field_index::<LIGHT_IDX>(fields.len())?;
     validate_coupled_shapes::<PRESSURE_IDX, TEMPERATURE_IDX>(
         &fields[PRESSURE_IDX],
         &fields[TEMPERATURE_IDX],
@@ -229,8 +229,8 @@ fn copy_fields_into(target: &mut [Array3<f64>], source: &[Array3<f64>]) {
 fn read_write_fields<const READ: usize, const WRITE: usize>(
     fields: &mut [Array3<f64>],
 ) -> KwaversResult<(&Array3<f64>, &mut Array3<f64>)> {
-    validate_field_index::<READ>(fields.len() )?;
-    validate_field_index::<WRITE>(fields.len() )?;
+    validate_field_index::<READ>(fields.len())?;
+    validate_field_index::<WRITE>(fields.len())?;
     if READ == WRITE {
         return Err(KwaversError::InvalidInput(format!(
             "MultiphysicsFieldCoupler requires distinct read/write indices, got {READ}"

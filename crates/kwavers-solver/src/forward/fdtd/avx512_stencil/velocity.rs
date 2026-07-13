@@ -26,9 +26,9 @@ impl FdtdAvx512StencilProcessor {
     /// * `p`   — current pressure field
     /// * `dim` — spatial dimension: 0 (x), 1 (y), 2 (z)
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update_velocity_avx512(
         &self,
@@ -78,7 +78,7 @@ impl FdtdAvx512StencilProcessor {
     /// allocated region (same argument as for the pressure kernel).
     /// `u_ptr` is an exclusive mutable pointer; `p_ptr` is immutable read-only.
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.

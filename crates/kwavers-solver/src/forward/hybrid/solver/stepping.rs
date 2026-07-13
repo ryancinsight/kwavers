@@ -5,7 +5,7 @@ use kwavers_core::error::KwaversResult;
 impl HybridSolver {
     /// Perform a single time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         self.pstd_solver.fields.p.assign(&self.fields.p);

@@ -139,7 +139,7 @@ fn test_skull_properties_analysis() {
     let planner = TreatmentPlanner::new(&grid, &ct_data).unwrap();
 
     let props = planner.analyze_skull_properties().unwrap();
-    assert_eq!(props.sound_speed.shape(),  [16, 16, 16]);
-    assert_eq!(props.density.shape(),  [16, 16, 16]);
-    assert_eq!(props.attenuation.shape(),  [16, 16, 16]);
+    assert_eq!(props.sound_speed.shape(), [16, 16, 16]);
+    assert_eq!(props.density.shape(), [16, 16, 16]);
+    assert_eq!(props.attenuation.shape(), [16, 16, 16]);
 }

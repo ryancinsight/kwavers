@@ -24,7 +24,7 @@ impl<B: BackendOps<f32> + Default> WaveSpeedFn<B> {
 
     /// Create a new wave speed function from a device-resident grid.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn from_grid(grid: coeus_tensor::Tensor<f32, B>) -> KwaversResult<Self>
     where

@@ -8,12 +8,12 @@ use super::cbs::{
 use super::types::{Config, FREQUENCY_DOMAIN_FWI_SOLVER_MODEL};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     sound_speed_to_slowness, MultiRowRingArray,
 };
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
-use kwavers_math::fft::Complex64;
 
 /// Simulate complex receiver pressure for all cylindrical-wave transmits.
 ///

@@ -5,7 +5,7 @@
 //! solver's per-voxel medium arrays: the Wood (1930) sound-speed collapse and
 //! the Commander–Prosperetti (1989) excess attenuation, both as functions of the
 //! local gas void fraction `β(x)` (from a
-//! [`ResidualGasField`](kwavers_simulation-style field) or any β map). The
+//! `ResidualGasField`(kwavers_simulation-style field) or any β map). The
 //! returned arrays feed the heterogeneous-medium update path
 //! (`ArrayAccess::sound_speed_array_mut` / `absorption_array_mut`) and the PSTD
 //! absorption-operator re-initialisation, so the subsequent pulse is physically
@@ -27,13 +27,13 @@ pub struct BubblyMediumProps {
     pub rho_gas: f64,
     /// Liquid dynamic viscosity [Pa·s] (damping in the attenuation model).
     pub mu_liquid: f64,
-    /// Ambient pressure [Pa].
+    /// Ambient pressure \[Pa\].
     pub p0: f64,
     /// Gas polytropic exponent.
     pub polytropic: f64,
-    /// Representative residual-bubble radius [m].
+    /// Representative residual-bubble radius \[m\].
     pub bubble_radius: f64,
-    /// Drive frequency [Hz] for the attenuation model.
+    /// Drive frequency \[Hz\] for the attenuation model.
     pub frequency: f64,
 }
 
@@ -83,9 +83,7 @@ pub fn apply_residual_gas_shielding(
     let dim = base_sound_speed.shape();
     let mut sound_speed = base_sound_speed.to_contiguous();
     let mut absorption = base_absorption.to_contiguous();
-    if base_absorption.shape() != dim
-        || base_density.shape() != dim
-        || void_fraction.shape() != dim
+    if base_absorption.shape() != dim || base_density.shape() != dim || void_fraction.shape() != dim
     {
         return ShieldedMedium {
             sound_speed,

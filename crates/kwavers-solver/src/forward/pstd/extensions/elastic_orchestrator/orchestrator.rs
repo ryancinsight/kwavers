@@ -339,7 +339,7 @@ impl ElasticPstdOrchestrator {
     }
 
     /// Mutable access to the real-space velocity field, for source injection
-    /// or initial-condition seeding prior to [`step`](Self::step).
+    /// or initial-condition seeding prior to [`Self::step`].
     pub fn velocity_mut(&mut self) -> &mut VelocityFields {
         &mut self.velocity
     }
@@ -352,7 +352,7 @@ impl ElasticPstdOrchestrator {
 
     /// Mutable access to the real-space stress field, for initial-condition
     /// seeding (e.g. an isotropic compressional perturbation `σxx=σyy=σzz=-p₀`)
-    /// prior to [`step`](Self::step).
+    /// prior to [`Self::step`].
     pub fn stress_mut(&mut self) -> &mut StressFields {
         &mut self.stress
     }
@@ -394,7 +394,7 @@ impl ElasticPstdOrchestrator {
     /// (used to set σ_max). `r0` is the target theoretical reflection
     /// coefficient (Roden & Gedney 2000); `1e-4` is a standard choice.
     ///
-    /// See [`super::pml`] for the full PML theorem and σ_max derivation.
+    /// See `super::pml` for the full PML theorem and σ_max derivation.
     /// Calling this method REPLACES any previously-attached PML.
     pub fn set_pml(&mut self, thickness_cells: (usize, usize, usize), c_max: f64, r0: f64) {
         let (nx, ny, nz) = self.grid_shape;
@@ -424,7 +424,7 @@ impl ElasticPstdOrchestrator {
     /// `pml` or `split_pml`. The split-field path takes precedence over the
     /// scalar PML in `propagate`.
     ///
-    /// See [`super::split_field_pml`] for the exact discrete integrator and
+    /// See `super::split_field_pml` for the exact discrete integrator and
     /// memory layout of the 24 persistent sub-fields.
     pub fn set_split_field_pml(
         &mut self,

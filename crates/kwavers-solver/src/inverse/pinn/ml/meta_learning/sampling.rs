@@ -56,7 +56,7 @@ impl TaskSampler {
 
     /// Sample a batch of tasks
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn sample_batch(&mut self, batch_size: usize) -> KwaversResult<Vec<PhysicsTask>> {
         if self.task_pool.is_empty() {

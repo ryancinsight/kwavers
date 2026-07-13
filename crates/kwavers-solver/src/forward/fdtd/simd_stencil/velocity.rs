@@ -13,7 +13,7 @@ impl FdtdSimdStencilProcessor {
     /// via `std::mem::swap` — zero copies, zero allocation.
     /// Loop is cache-tiled identically to `update_pressure` (Kamil et al. 2010).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update_velocity(
         &mut self,

@@ -1,7 +1,7 @@
 //! BEM system solve, FEM matrix assembly, and linear solver.
 
-use leto::Array1;
 use kwavers_math::fft::Complex64;
+use leto::Array1;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::linear_algebra::sparse::solver::SparsePreconditioner;
@@ -37,7 +37,8 @@ impl BemFemCoupler {
         let f = wavenumber * c / (TWO_PI);
         self.bem_solver.config.frequency = f;
         self.bem_solver.config.wavenumber = wavenumber;
-        self.bem_solver.config.coupling_alpha = kwavers_math::fft::Complex64::new(0.0, 1.0 / wavenumber);
+        self.bem_solver.config.coupling_alpha =
+            kwavers_math::fft::Complex64::new(0.0, 1.0 / wavenumber);
         self.bem_solver.invalidate_matrix();
 
         let normals = compute_vertex_normals(&self.bem_solver.vertices, &self.bem_solver.triangles);

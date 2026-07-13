@@ -1,7 +1,7 @@
 //! Shared Hermes/Moirai-backed dense array operations for SIMD dispatch.
 
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 use crate::parallel::zip_mut_two_refs;
 

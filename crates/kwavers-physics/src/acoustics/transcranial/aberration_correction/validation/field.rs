@@ -1,8 +1,8 @@
 use super::super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
-use eunomia::Complex;
 
 impl TranscranialAberrationCorrection {
     /// Simulate acoustic field with phase correction applied.
@@ -51,4 +51,3 @@ impl TranscranialAberrationCorrection {
         Ok(field)
     }
 }
-

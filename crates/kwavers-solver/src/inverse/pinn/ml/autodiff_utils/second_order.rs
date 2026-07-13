@@ -121,7 +121,7 @@ where
 /// ∇²u = ∂²u/∂x² + ∂²u/∂y²
 /// ```
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_laplacian_2d<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
@@ -163,7 +163,7 @@ where
 /// ```
 /// Truncation error O(ε²), matching [`compute_second_derivative_2d`].
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_gradient_of_divergence_2d<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,

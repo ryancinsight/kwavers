@@ -17,7 +17,7 @@ where
 {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: DistributedTrainingConfig,
@@ -90,7 +90,7 @@ where
 
     /// Train.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn train(
         &mut self,

@@ -277,4 +277,3 @@ mod tests {
         assert!(m.quality_factor(w).is_infinite());
     }
 }
-

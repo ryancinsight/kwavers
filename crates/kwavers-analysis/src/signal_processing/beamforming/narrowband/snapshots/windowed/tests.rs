@@ -135,7 +135,9 @@ fn stft_bin_picks_correct_bin_for_exact_tone() {
     let snaps = extract_stft_bin_snapshots(&data, &cfg).expect("snaps");
     let bin = cfg.bin_index();
 
-    let mags: Vec<f64> = (0..snaps.shape()[1]).map(|i| snaps[[0, i]].norm()).collect();
+    let mags: Vec<f64> = (0..snaps.shape()[1])
+        .map(|i| snaps[[0, i]].norm())
+        .collect();
     let mean = mags.iter().copied().sum::<f64>() / mags.len().max(1) as f64;
 
     assert!(mean > 1.0, "expected non-trivial bin magnitude at k={bin}");

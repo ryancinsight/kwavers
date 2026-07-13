@@ -96,7 +96,11 @@ impl UlmSvdClutterFilter {
             let u_k = u
                 .slice_with::<2>(&[
                     SliceArg::All,
-                    SliceArg::Range { start: Some(0), end: Some(k as isize), step: 1 },
+                    SliceArg::Range {
+                        start: Some(0),
+                        end: Some(k as isize),
+                        step: 1,
+                    },
                 ])
                 .expect("invariant: SVD U column slice within bounds")
                 .to_contiguous();
@@ -111,7 +115,11 @@ impl UlmSvdClutterFilter {
             let v_k = vt
                 .slice_with::<2>(&[
                     SliceArg::All,
-                    SliceArg::Range { start: Some(0), end: Some(k as isize), step: 1 },
+                    SliceArg::Range {
+                        start: Some(0),
+                        end: Some(k as isize),
+                        step: 1,
+                    },
                 ])
                 .expect("invariant: SVD V column slice within bounds")
                 .to_contiguous();

@@ -22,11 +22,8 @@ use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
+use leto::{Array2, Array3};
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use leto::{
-    Array2,
-    Array3,
-};
 use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
 use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
 use ritk_io::ImageReader;
@@ -316,7 +313,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
                     }
                 }
             }
-            for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
+            for h in hu.iter_mut() {
+                *h = (*h).clamp(-1024.0, 3071.0);
+            }
             return Ok(CtVolume {
                 hu,
                 spacing_mm: [0.5, 0.5, 4.0],
@@ -374,7 +373,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             }
         }
     }
-    for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
+    for h in hu.iter_mut() {
+        *h = (*h).clamp(-1024.0, 3071.0);
+    }
     Ok(CtVolume {
         hu,
         spacing_mm: [spacing[0], spacing[1], spacing[2]],
@@ -727,7 +728,9 @@ fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
         nonzero[idx.min(nonzero.len() - 1)].max(1.0)
     };
 
-    for v in vol.iter_mut() { *v = (*v / p99).clamp(0.0, 1.0); }
+    for v in vol.iter_mut() {
+        *v = (*v / p99).clamp(0.0, 1.0);
+    }
 
     Ok((vol, [spacing[0], spacing[1], spacing[2]]))
 }

@@ -213,7 +213,7 @@ impl MlQuantizer {
 
     /// Validate quantization accuracy by comparing original and dequantized tensors.
     /// # Errors
-    /// - Returns [`KwaversError::System`] on parameter count mismatch.
+    /// - Returns [`crate::KwaversError::System`] on parameter count mismatch.
     ///
     pub(super) fn validate_quantization<
         B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,

@@ -34,9 +34,9 @@ impl MonolithicCoupler {
         u_plus.assign(u);
         for (candidate, direction) in u_plus.iter_mut().zip(v.iter()) {
             {
-            *candidate += eps * direction;
-        };
-        };
+                *candidate += eps * direction;
+            };
+        }
 
         let mut f_u_plus = match self.compute_residual(&u_plus, u_prev, dt, dims, field_order) {
             Ok(residual) => residual,

@@ -10,10 +10,7 @@ use super::super::{
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 impl FwiProcessor {
     /// Multi-source FWI inversion.
@@ -26,8 +23,8 @@ impl FwiProcessor {
     /// - Marquet et al. (2013). *Phys. Med. Biol.* 58, 2937.
     /// - Guasch et al. (2020). *npj Digital Medicine* 3, 28.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn invert_multi_source(
         &self,
@@ -122,8 +119,8 @@ impl FwiProcessor {
     ///
     /// Reference: Guasch (2020) §Methods "Brain FWI".
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn invert_multi_source_masked(

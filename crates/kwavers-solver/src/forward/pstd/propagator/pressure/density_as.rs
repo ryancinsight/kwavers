@@ -170,8 +170,8 @@ impl PSTDSolver {
     /// (which fuses div_u* into `dpx` via a single Zip — Opt-7 + Opt-12).
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    /// - Returns [`KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
     ///   for `CylindricalAS` geometry.
     ///
     pub(crate) fn update_density_as(&mut self, dt: f64) -> KwaversResult<()> {
@@ -288,12 +288,14 @@ impl PSTDSolver {
         // Write divergences into div_ux/div_uz (the divergence cache).
         // apply_absorption_to_pressure fuses div_ux/div_uy/div_uz → dpx at Step 1 (Opt-7+12).
         // Writing to div_u* here (not dpx) ensures absorption receives the correct AS values.
-        self.div_ux.view_mut()
+        self.div_ux
+            .view_mut()
             .slice_with_mut(&s![.., 0, ..])
             .unwrap()
             .assign(&ctx.duxdx);
         self.div_uy.fill(0.0);
-        self.div_uz.view_mut()
+        self.div_uz
+            .view_mut()
             .slice_with_mut(&s![.., 0, ..])
             .unwrap()
             .assign(&ctx.duzdr);

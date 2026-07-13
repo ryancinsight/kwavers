@@ -8,15 +8,12 @@ use super::ErrorEstimator;
 use super::RefinementCriterion;
 use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 impl ErrorEstimator {
     /// Gradient-based error estimation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn gradient_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
@@ -78,7 +75,7 @@ impl ErrorEstimator {
     /// - Richardson (1911): "The approximate arithmetical solution by finite differences"
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn richardson_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use crate::utilities::amr::interpolation::AmrConservativeInterpolator;
@@ -119,7 +116,7 @@ impl ErrorEstimator {
     /// - Harten (1995): "Multiresolution algorithms for the numerical solution of hyperbolic conservation laws"
     /// - Cohen et al. (2003): "Wavelet methods in numerical analysis"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn wavelet_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use crate::utilities::amr::wavelet::{WaveletBasis, WaveletTransform};
@@ -169,7 +166,7 @@ impl ErrorEstimator {
     /// - Lohner (1987): "An adaptive finite element scheme for transient problems"
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn physics_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();

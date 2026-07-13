@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use moirai_parallel::{for_each_chunk_pair_mut_enumerated_with, Adaptive};
-use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// 2-D focused Gaussian beam field in the presence of a skull layer and
@@ -84,4 +84,3 @@ pub fn focused_gaussian_beam_2d(
     );
     (real_out, imag_out)
 }
-

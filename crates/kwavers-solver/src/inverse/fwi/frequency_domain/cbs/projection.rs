@@ -6,12 +6,12 @@ use super::temporal::{
     pstd_leapfrog_symbol, pstd_modal_frequency_bin_response, pstd_modal_theta_squared,
     pstd_source_kappa_symbol, PstdTemporalBinConfig,
 };
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
-use eunomia::Complex64;
 use std::f64::consts::TAU;
 
 /// Project point-source strengths onto cell-centered source density.

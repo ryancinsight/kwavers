@@ -33,8 +33,8 @@
 //! - Saleh, B. E. A., & Teich, M. C. (2007). *Fundamentals of Photonics*, §20.
 
 use core::f64::consts::{PI, TAU};
-use kwavers_math::special::bessel::jn;
 use eunomia::Complex64;
+use kwavers_math::special::bessel::jn;
 
 /// Acousto-optic diffraction regime selected by the Klein–Cook parameter `Q`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -429,4 +429,3 @@ mod tests {
         assert!(bragg_angle_rad(633e-9, 1.0, 100e-9).is_none());
     }
 }
-

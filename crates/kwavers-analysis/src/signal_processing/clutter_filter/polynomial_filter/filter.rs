@@ -1,11 +1,7 @@
 //! `PolynomialFilter`: polynomial regression clutter filter implementation.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-    SliceArg,
-};
+use leto::{Array1, Array2, SliceArg};
 
 use super::config::PolynomialFilterConfig;
 
@@ -107,8 +103,12 @@ impl PolynomialFilter {
                 .expect("pixel row slice valid")
                 .to_contiguous();
             let mut coefficients = Array1::<f64>::zeros(k);
-            leto_ops::matvec(&projection.view(), &signal.view(), &mut coefficients.view_mut())
-                .expect("coefficients matvec shapes conform");
+            leto_ops::matvec(
+                &projection.view(),
+                &signal.view(),
+                &mut coefficients.view_mut(),
+            )
+            .expect("coefficients matvec shapes conform");
             let mut polynomial_fit = Array1::<f64>::zeros(n_frames);
             leto_ops::matvec(
                 &vandermonde.view(),

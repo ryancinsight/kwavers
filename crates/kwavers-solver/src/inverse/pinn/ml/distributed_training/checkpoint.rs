@@ -21,7 +21,7 @@ impl CheckpointManager {
     }
     /// Ensure checkpoint dir.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn ensure_checkpoint_dir(&self) -> KwaversResult<()> {
         if !self.checkpoint_dir.exists() {
@@ -31,7 +31,7 @@ impl CheckpointManager {
     }
     /// List checkpoints.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn list_checkpoints(&self) -> KwaversResult<Vec<usize>> {
         let mut checkpoints = Vec::new();
@@ -61,7 +61,7 @@ impl CheckpointManager {
     }
     /// Cleanup old checkpoints.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn cleanup_old_checkpoints(&self) -> KwaversResult<()> {
         let checkpoints = self.list_checkpoints()?;

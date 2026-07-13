@@ -26,7 +26,7 @@ impl DiffusionSolver {
     /// 3. Apply extrapolated boundary conditions at domain boundaries via
     ///    `DiffusionSolver::apply_operator`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn solve(&self, source: &Array3<f64>) -> Result<Array3<f64>> {
         self.solve_volume(source)

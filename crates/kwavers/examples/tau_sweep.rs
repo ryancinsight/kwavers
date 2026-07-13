@@ -73,4 +73,3 @@ fn main() {
         println!("tau={:.3}: max rel err = {:.3e}", tau, max_rel_err);
     }
 }
-

@@ -50,7 +50,7 @@ impl AmrConservativeInterpolator {
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn interpolate_to_refined(
         &self,
@@ -71,7 +71,7 @@ impl AmrConservativeInterpolator {
 
     /// Recursively interpolate field values for octree nodes
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn interpolate_node(
         &self,
@@ -117,11 +117,7 @@ impl AmrConservativeInterpolator {
                 {
                     // Get coarse subregion
                     let coarse_region = coarse_field
-                        .slice(&[
-                            (i_min, i_max, 1),
-                            (j_min, j_max, 1),
-                            (k_min, k_max, 1),
-                        ])
+                        .slice(&[(i_min, i_max, 1), (j_min, j_max, 1), (k_min, k_max, 1)])
                         .expect("invariant: coarse subregion within field bounds")
                         .to_contiguous();
 
@@ -253,7 +249,10 @@ impl AmrConservativeInterpolator {
                                 let fj = 2 * j + dj;
                                 let fk = 2 * k + dk;
 
-                                if fi < fine.shape()[0] && fj < fine.shape()[1] && fk < fine.shape()[2] {
+                                if fi < fine.shape()[0]
+                                    && fj < fine.shape()[1]
+                                    && fk < fine.shape()[2]
+                                {
                                     fine[[fi, fj, fk]] = val;
                                 }
                             }
@@ -295,7 +294,10 @@ impl AmrConservativeInterpolator {
                                 let fj = 2 * j + dj;
                                 let fk = 2 * k + dk;
 
-                                if fi < fine.shape()[0] && fj < fine.shape()[1] && fk < fine.shape()[2] {
+                                if fi < fine.shape()[0]
+                                    && fj < fine.shape()[1]
+                                    && fk < fine.shape()[2]
+                                {
                                     sum += fine[[fi, fj, fk]];
                                     count += 1;
                                 }

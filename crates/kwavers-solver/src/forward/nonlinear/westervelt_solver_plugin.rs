@@ -2,7 +2,7 @@
 //!
 //! Wraps the validated [`WesterveltWave`] full-wave solver (Chapter 3,
 //! `forward::nonlinear::westervelt_spectral`) behind the
-//! [`Plugin`](crate::plugin::Plugin) contract so the `PhysicsCatalog` can build
+//! [`Plugin`] contract so the `PhysicsCatalog` can build
 //! it for `NonlinearAcoustics { equation_type: Westervelt }`. The adapter holds
 //! no physics: it forwards `Plugin::update` to the solver's
 //! [`AcousticWaveModel::update_wave`], exactly as `KzkSolverPlugin` does for KZK.
@@ -15,10 +15,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::traits::AcousticWaveModel;
 use kwavers_source::NullSource;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 /// Catalog plugin wrapping the spectral Westervelt solver.
 #[derive(Debug)]

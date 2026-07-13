@@ -1,6 +1,7 @@
 //! Comprehensive validation suite and report generation.
 
 use super::{TheoremValidation, TheoremValidator};
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
@@ -8,7 +9,6 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::{HEAT_CAPACITY_RATIO_DIATOMIC, ROOM_TEMPERATURE_K};
 use leto::Array1;
-use eunomia::Complex64;
 use std::f64::consts::PI;
 
 impl TheoremValidator {
@@ -177,4 +177,3 @@ impl TheoremValidator {
         report
     }
 }
-

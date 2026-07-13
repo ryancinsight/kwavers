@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::f64::consts::PI;
 
 use super::SpectralCorrectionMethod;
@@ -342,8 +342,8 @@ fn compute_sinc_spatial_correction(grid: &Grid) -> Array3<f64> {
 /// ## Formula (standard DFT wavenumber layout)
 ///
 /// ```text
-/// k[n]  = 2π·n / (N·dx)          for n = 0, 1, …, N/2
-/// k[n]  = 2π·(n − N) / (N·dx)    for n = N/2+1, …, N−1
+/// k\[n\]  = 2π·n / (N·dx)          for n = 0, 1, …, N/2
+/// k\[n\]  = 2π·(n − N) / (N·dx)    for n = N/2+1, …, N−1
 /// ```
 ///
 /// This is the standard FFT wavenumber ordering where bins 0..N/2 are
@@ -373,10 +373,8 @@ pub fn apply_correction(field_k: &mut Array3<eunomia::Complex<f64>>, kappa: &Arr
     );
 
     if field_k.view().is_contiguous() && kappa.view().is_contiguous() {
-        if let (Some(field_values), Some(kappa_values)) = (
-            field_k.as_slice_mut(),
-            kappa.as_slice(),
-        ) {
+        if let (Some(field_values), Some(kappa_values)) = (field_k.as_slice_mut(), kappa.as_slice())
+        {
             enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
                 *value *= kappa_values[index];
             });

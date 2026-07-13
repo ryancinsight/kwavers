@@ -71,7 +71,7 @@ where
 {
     /// Construct a PINN from `config`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if `lambda_init required`.
@@ -277,7 +277,7 @@ where
     /// native binary format (zero-copy `bytemuck` casts on CPU-addressable
     /// storage), keyed by parameter index in `parameters()` order.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn save_checkpoint<P: AsRef<std::path::Path>>(&self, path: P) -> KwaversResult<()> {
         let mut state = coeus_tensor::StateDict::<f32, B>::new();
         for (i, param) in self.parameters().iter().enumerate() {
@@ -292,7 +292,7 @@ where
 
     /// Placeholder: use `Trainer::load_checkpoint` for loading (requires `Config`).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     pub fn load_checkpoint<P: AsRef<std::path::Path>>(_path: P) -> KwaversResult<Self> {
         Err(KwaversError::InvalidInput(
             "Use Trainer::load_checkpoint instead — direct model loading requires config"

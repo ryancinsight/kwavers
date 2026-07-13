@@ -6,10 +6,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array3,
-    ArrayView2,
-};
+use leto::{Array3, ArrayView2};
 
 use super::config::ReconstructionPhotoacousticConfig;
 use super::filters::Filters;
@@ -67,7 +64,7 @@ impl PhotoacousticReconstructor {
     ///
     /// Reference: Xu & Wang (2005) Physical Review E 71, 016706
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn universal_back_projection(
         &self,
@@ -102,7 +99,7 @@ impl PhotoacousticReconstructor {
     /// their volume surface to Leto.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn universal_back_projection_leto(
         &self,
         sensor_data: ArrayView2<f64>,
@@ -204,7 +201,7 @@ impl PhotoacousticReconstructor {
 
     /// Filtered back-projection algorithm
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn filtered_back_projection(
         &self,
@@ -212,7 +209,9 @@ impl PhotoacousticReconstructor {
         sensor_positions: &[[f64; 3]],
     ) -> KwaversResult<Array3<f64>> {
         // Apply FBP filter
-        let filtered_data = self.filters.apply_fbp_filter(&sensor_data.to_contiguous())?;
+        let filtered_data = self
+            .filters
+            .apply_fbp_filter(&sensor_data.to_contiguous())?;
 
         // Perform back-projection with filtered data
         self.universal_back_projection(
@@ -279,7 +278,7 @@ impl PhotoacousticReconstructor {
 
     /// Model-based reconstruction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

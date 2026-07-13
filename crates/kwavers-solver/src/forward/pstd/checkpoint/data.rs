@@ -39,10 +39,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
@@ -92,10 +89,10 @@ pub struct PSTDCheckpoint {
 impl PSTDCheckpoint {
     /// Serialize to a binary file at `path`.
     ///
-    /// Prefer [`save_borrowed`] in hot paths — it writes directly from borrowed
+    /// Prefer [`Self::save_borrowed`] in hot paths — it writes directly from borrowed
     /// field slices without cloning the arrays into a `PSTDCheckpoint` struct first.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn save(&self, path: &Path) -> KwaversResult<()> {
         Self::save_borrowed(
@@ -130,7 +127,7 @@ impl PSTDCheckpoint {
     /// For a 256³ grid, this avoids 7 × 256³ × 8 = 896 MiB of intermediate
     /// allocations and copies per checkpoint vs. the struct-based `save()` path.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn save_borrowed(
@@ -194,8 +191,8 @@ impl PSTDCheckpoint {
 
     /// Deserialize from a binary file at `path`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn load(path: &Path) -> KwaversResult<Self> {
         let file = std::fs::File::open(path)?;
@@ -273,9 +270,9 @@ impl PSTDCheckpoint {
     ///
     /// Returns `Err` if any dimension, step count, or `dt` diverges from expectations.
     /// # Errors
-    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn validate_restore_contract(
         &self,

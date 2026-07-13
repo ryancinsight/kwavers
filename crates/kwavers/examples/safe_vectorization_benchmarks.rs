@@ -35,10 +35,7 @@
 use kwavers_analysis::performance::SafeVectorOps;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 use std::time::Instant;
 
 /// Benchmark result for a single test
@@ -344,9 +341,11 @@ fn benchmark_linear_algebra(suite: &mut BenchmarkSuite, size: usize) -> KwaversR
 
     // Create test vectors for dot product
     let vec_size = size * size;
-    let a_vec = Array1::<f64>::from_vec(vec_size, (0..vec_size).map(|i| i as f64).collect()).unwrap();
+    let a_vec =
+        Array1::<f64>::from_vec(vec_size, (0..vec_size).map(|i| i as f64).collect()).unwrap();
     let b_vec =
-        Array1::<f64>::from_vec(vec_size, (0..vec_size).map(|i| (i as f64).sin()).collect()).unwrap();
+        Array1::<f64>::from_vec(vec_size, (0..vec_size).map(|i| (i as f64).sin()).collect())
+            .unwrap();
 
     // Test: Dot Product
     {
@@ -613,8 +612,7 @@ fn benchmark_physics_operations(suite: &mut BenchmarkSuite, size: usize) -> Kwav
                             / (2.0 * dx)
                             + (velocity_y[[i, j + 1, k]] - velocity_y[[i, j - 1, k]]) / (2.0 * dx)
                             + (velocity_z[[i, j, k + 1]] - velocity_z[[i, j, k - 1]]) / (2.0 * dx);
-                        new_pressure[[i, j, k]] =
-                            pressure[[i, j, k]] - dt * rho0 * c0 * c0 * div_v;
+                        new_pressure[[i, j, k]] = pressure[[i, j, k]] - dt * rho0 * c0 * c0 * div_v;
                     }
                 }
             }

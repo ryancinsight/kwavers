@@ -14,7 +14,7 @@ fn polynomial_absorbing_boundary_has_unit_interior_and_edge_decay() {
 #[test]
 fn spectral_absorbing_boundary_damps_edge_source_response() {
     let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
-    let mut source = vec![Complex64::new(0.0, 0.0); grid.len() ];
+    let mut source = vec![Complex64::new(0.0, 0.0); grid.len()];
     source[grid.linear_index(0, 2, 2)] = Complex64::new(1.0, 0.0);
     let periodic = apply_shifted_green_spectral(grid, 11.0, 0.25, &source);
     let absorbed = apply_shifted_green_spectral_with_boundary(

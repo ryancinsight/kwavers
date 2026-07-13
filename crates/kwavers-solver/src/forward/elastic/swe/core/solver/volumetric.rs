@@ -13,7 +13,7 @@ use leto::Array3;
 impl ElasticWaveSolver {
     /// Propagate volumetric waves with body forces.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_volumetric_waves_with_body_forces(
         &self,
@@ -90,7 +90,7 @@ impl ElasticWaveSolver {
     }
     /// Propagate volumetric waves with sources.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_volumetric_waves_with_sources(
         &self,

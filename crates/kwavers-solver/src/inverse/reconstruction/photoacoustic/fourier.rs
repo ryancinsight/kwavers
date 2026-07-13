@@ -14,13 +14,8 @@ use kwavers_core::utils::iterators::apply_inplace;
 use kwavers_math::fft::{Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_signal::window_value;
 use kwavers_signal::SignalWindowType;
+use leto::{Array1, Array2, Array3, ArrayView2};
 use leto::{Array1 as LetoArray1, Array3 as LetoArray3};
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-    ArrayView2,
-};
 use std::f64::consts::PI;
 
 /// Fourier domain reconstruction algorithm
@@ -48,7 +43,7 @@ impl FourierReconstructor {
     /// the Fourier transform of a projection equals a slice through
     /// the Fourier transform of the object.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn reconstruct(
         &self,
@@ -91,8 +86,9 @@ impl FourierReconstructor {
     ///
     fn apply_ramp_filter(&self, signal: Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = signal.len();
-        let leto_signal = LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
-            .expect("photoacoustic ramp-filter signal length must match its Leto shape");
+        let leto_signal =
+            LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
+                .expect("photoacoustic ramp-filter signal length must match its Leto shape");
         let mut complex_signal = fft_1d_leto(leto_signal.view());
 
         // Apply ramp filter: H(ω) = iω
@@ -129,8 +125,11 @@ impl FourierReconstructor {
         let n_time = filtered_signal.len();
         let n_freq = n_time / 2 + 1;
 
-        let signal = LetoArray1::from_shape_vec([n_time], filtered_signal.iter().cloned().collect::<Vec<_>>())
-            .expect("photoacoustic angular-spectrum signal length must match its Leto shape");
+        let signal = LetoArray1::from_shape_vec(
+            [n_time],
+            filtered_signal.iter().cloned().collect::<Vec<_>>(),
+        )
+        .expect("photoacoustic angular-spectrum signal length must match its Leto shape");
         let complex_signal = fft_1d_leto(signal.view());
 
         // Create angular spectrum (frequency vs angle)

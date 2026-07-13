@@ -1,7 +1,7 @@
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::Array3 as LetoArray3;
 use leto::Array2;
+use leto::Array3 as LetoArray3;
 
 fn leto_to_ndarray(input: &LetoArray3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = input.shape();
@@ -23,7 +23,7 @@ fn assign_ndarray_to_leto(dst: &mut LetoArray3<f64>, src: &leto::Array3<f64>) {
 impl PSTDSolver {
     /// Run `checkpoint_steps` steps then persist full solver state to `path`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_to_checkpoint(
         &mut self,
@@ -57,7 +57,9 @@ impl PSTDSolver {
             .as_ref()
             .map(|data| leto::Array2::try_from(data.clone()))
             .transpose()
-            .map_err(|e| KwaversError::InternalError(format!("checkpoint sensor conversion failed: {e}")))?;
+            .map_err(|e| {
+                KwaversError::InternalError(format!("checkpoint sensor conversion failed: {e}"))
+            })?;
         PSTDCheckpoint::save_borrowed(
             path,
             self.grid.nx,
@@ -81,7 +83,7 @@ impl PSTDSolver {
 
     /// Restore state from `path` and run `remaining_steps` steps to completion.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_from_checkpoint(
         &mut self,
@@ -96,8 +98,8 @@ impl PSTDSolver {
 
     /// Restore state from an already loaded checkpoint and continue the run.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_from_checkpoint_loaded(
         &mut self,

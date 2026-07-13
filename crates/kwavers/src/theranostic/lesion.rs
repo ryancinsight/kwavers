@@ -98,7 +98,10 @@ pub fn thermal_perturbed_sound_speed(
         "invariant: thermal lesion perturbation requires matching base and temperature shapes"
     );
     let mut out = base_c.clone();
-    for ([i, j, k], c) in out.indexed_iter_mut().expect("invariant: contiguous lesion field") {
+    for ([i, j, k], c) in out
+        .indexed_iter_mut()
+        .expect("invariant: contiguous lesion field")
+    {
         *c = coeff.sound_speed(*c, temperature_c[[i, j, k]], reference_c);
     }
     out

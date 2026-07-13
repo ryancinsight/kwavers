@@ -37,7 +37,7 @@ impl Iterator for BatchIterator {
 
 /// Extract subset of collocation data by indices.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 pub fn extract_batch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     data: &CollocationData<B>,
     indices: &[usize],

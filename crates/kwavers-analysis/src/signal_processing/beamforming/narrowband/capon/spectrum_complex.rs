@@ -6,10 +6,10 @@ use crate::signal_processing::beamforming::narrowband::snapshots::{
     SnapshotSelection,
 };
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use leto::Array3;
-use eunomia::Complex64;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum using complex snapshots and Hermitian covariance.
 ///

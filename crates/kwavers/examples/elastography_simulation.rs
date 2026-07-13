@@ -2,8 +2,8 @@ use kwavers::init_logging;
 use kwavers_grid::Grid;
 use kwavers_medium::heterogeneous::tissue::HeterogeneousTissueMedium;
 use kwavers_medium::AbsorptionTissueType;
-use log::info;
 use leto::Array3;
+use log::info;
 use std::io::Write;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

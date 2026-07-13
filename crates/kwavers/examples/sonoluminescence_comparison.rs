@@ -79,8 +79,14 @@ fn run_bremsstrahlung_dominant_scenario(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new({ let d = grid.dimensions(); [d.0, d.1, d.2] }, bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());
@@ -196,8 +202,14 @@ fn run_cherenkov_dominant_scenario(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new({ let d = grid.dimensions(); [d.0, d.1, d.2] }, bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());
@@ -321,8 +333,14 @@ fn run_combined_emission_scenario(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new({ let d = grid.dimensions(); [d.0, d.1, d.2] }, bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());

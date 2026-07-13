@@ -16,10 +16,7 @@
 //! (producing unit-length direction vectors — useful as logit pre-processing).
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Single affine-layer inference engine.
 ///
@@ -133,9 +130,7 @@ impl InferenceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use leto::{
-    Array2,
-};
+    use leto::Array2;
 
     // Identity weight matrix: Y = X · I = X (no bias).
     // Expected output == input, verifiable analytically.
@@ -144,8 +139,7 @@ mod tests {
         let weights = Array2::eye(3); // (3, 3) identity
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 
-        let input =
-            Array2::from_shape_vec((2, 3), vec![1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap();
+        let input = Array2::from_shape_vec((2, 3), vec![1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap();
         let output = engine.forward(&input).unwrap();
 
         assert_eq!(output.shape(), [2, 3]);

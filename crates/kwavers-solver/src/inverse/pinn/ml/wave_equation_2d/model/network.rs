@@ -5,10 +5,7 @@ use super::wave_speed::WaveSpeedFn;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use std::sync::Arc;
 
 /// Decomposed physics-informed loss components returned by
@@ -57,7 +54,7 @@ where
 {
     /// Create a new homogeneous PINN model.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(config: PinnConfig2D) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
@@ -91,7 +88,7 @@ where
 
     /// Create a heterogeneous PINN model with spatially varying wave speed.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new_heterogeneous<F>(config: PinnConfig2D, wave_speed_fn: F) -> KwaversResult<Self>
     where
@@ -173,7 +170,7 @@ where
 
     /// Predict field values at given spatial and temporal coordinates.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict(
         &self,

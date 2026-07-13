@@ -2,10 +2,7 @@ use super::MinimumVariance;
 use crate::signal_processing::beamforming::test_utilities;
 use approx::assert_relative_eq;
 use eunomia::Complex64;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 #[test]

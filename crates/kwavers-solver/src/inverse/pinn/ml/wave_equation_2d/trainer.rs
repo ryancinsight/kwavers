@@ -4,10 +4,7 @@ use super::model::PinnWave2D;
 use super::optimizer::SimpleOptimizer2D;
 use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 /// Training state for the 2D PINN.
@@ -39,7 +36,7 @@ where
 {
     /// New trainer.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new_trainer(config: PinnConfig2D, geometry: WaveGeometry2D) -> KwaversResult<Self> {
         let pinn = PinnWave2D::new(config.clone())?;
@@ -85,8 +82,8 @@ where
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn train_with_callback<F>(

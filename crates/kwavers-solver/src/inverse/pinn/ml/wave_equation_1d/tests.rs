@@ -1,10 +1,7 @@
 use super::{LossWeights, PinnConfig, PinnTrainer, PinnWave1D, SimpleOptimizer, TrainingMetrics};
 use coeus_core::MoiraiBackend;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 type TestBackend = MoiraiBackend;
 

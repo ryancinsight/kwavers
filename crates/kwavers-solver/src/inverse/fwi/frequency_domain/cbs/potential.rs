@@ -17,9 +17,9 @@
 //! component, so pointwise CBS preconditioners remain finite.
 
 use super::green::GreenOperatorKind;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
-use eunomia::Complex64;
 
 /// Compute the real Helmholtz scattering potential.
 ///

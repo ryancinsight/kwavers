@@ -10,9 +10,7 @@
 //! `B^T B = A^T C^T C A` exactly for the selected encoding; it is a compressed
 //! linear inverse, not nonlinear full-waveform inversion.
 
-use moirai_parallel::{
-    fold_reduce_with, for_each_chunk_mut_enumerated_with, Adaptive,
-};
+use moirai_parallel::{fold_reduce_with, for_each_chunk_mut_enumerated_with, Adaptive};
 
 use super::linear_operator::LinearOperator;
 use super::row_matrix::RowMatrix;

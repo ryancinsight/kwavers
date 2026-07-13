@@ -148,8 +148,7 @@ pub fn reconstruct(
     let background = background.clone().into();
     let mut observations = Vec::with_capacity(cfg.frequencies_hz.len());
     for &frequency_hz in &cfg.frequencies_hz {
-        let pressure =
-            simulate_frequency_observation(&medium_slice, array, frequency_hz, &config)?;
+        let pressure = simulate_frequency_observation(&medium_slice, array, frequency_hz, &config)?;
         observations.push(FrequencyObservation::new(frequency_hz, pressure));
     }
     let result = if cfg.use_gauss_newton {
@@ -164,17 +163,15 @@ pub fn reconstruct(
         invert(&observations, array, &background, &config)?
     };
     let [nx, ny, nz] = result.sound_speed_m_s.shape();
-    Ok(
-        Array3::from_shape_vec(
-            (nx, ny, nz),
-            result
-                .sound_speed_m_s
-                .as_slice()
-                .expect("FD monitor reconstruction must be densely stored")
-                .to_vec(),
-        )
-        .expect("FD monitor reconstruction shape must match its flattened length"),
+    Ok(Array3::from_shape_vec(
+        (nx, ny, nz),
+        result
+            .sound_speed_m_s
+            .as_slice()
+            .expect("FD monitor reconstruction must be densely stored")
+            .to_vec(),
     )
+    .expect("FD monitor reconstruction shape must match its flattened length"))
 }
 
 /// Differential lesion map: reconstruct the perturbed and the background media

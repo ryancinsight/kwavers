@@ -23,10 +23,7 @@
 //! are excluded from both the sum and `N_active(p)`. When `N_active(p) = 0` the
 //! pixel value is zero.
 
-use leto::{
-    Array1,
-    ArrayView2,
-};
+use leto::{Array1, ArrayView2};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -205,9 +202,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use leto::{
-    Array2,
-};
+    use leto::Array2;
 
     /// Analytical sanity check: a single Gaussian pulse emitted from a point
     /// scatterer arrives at every sensor with a TOF equal to the source–sensor

@@ -1,7 +1,7 @@
 //! Passive cavitation receive and coherence PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -128,4 +128,3 @@ pub fn van_cittert_zernike_coherence(
             .map_err(PyValueError::new_err)?;
     Ok(coherence.to_pyarray(py).unbind())
 }
-

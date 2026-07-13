@@ -123,7 +123,7 @@ pub struct TransmissionFwiParams {
     pub n_steps: usize,
     /// Descent iterations.
     pub iterations: usize,
-    /// Source centre frequency \[Hz].
+    /// Source centre frequency \\[Hz\].
     pub f0: f64,
     /// Source force-density amplitude \[N/m³].
     pub amp: f64,

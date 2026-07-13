@@ -3,9 +3,9 @@
 use super::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
+use leto::Array1;
 use leto::Array3 as LetoArray3;
 use moirai_parallel::{enumerate_mut_with, for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use leto::Array1;
 
 const DENSE_IVP_CHUNK: usize = 4096;
 
@@ -288,7 +288,7 @@ impl PSTDSolver {
     /// mismatch in element count (`div_u` has nz elements vs the half-spectrum nz_c).
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn initialize_ivp_velocity(&mut self) -> KwaversResult<()> {
         let dt = self.config.dt;

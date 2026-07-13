@@ -1,7 +1,7 @@
 use kwavers_physics::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::factory::models::BubbleModel;
 
-/// Construction-time configuration for [`BubbleDynamicsPlugin`].
+/// Construction-time configuration for `BubbleDynamicsPlugin`.
 #[derive(Debug, Clone)]
 pub struct BubbleDynamicsConfig {
     /// Which ODE model to use for the bubble-wall motion.

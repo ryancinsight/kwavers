@@ -93,7 +93,7 @@ impl FastNearfieldSolver {
 
     /// Precompute angular spectrum factors for a given z-distance
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn precompute_factors(&mut self, z: f64) -> Result<(), String> {
         let transducer = self
@@ -171,7 +171,7 @@ impl FastNearfieldSolver {
 
     /// Compute pressure field from transducer velocity distribution
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_field(
         &self,
@@ -256,7 +256,7 @@ impl FastNearfieldSolver {
 
     /// Compute field at multiple z-distances (efficient batch computation)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_field_stack(
         &self,
@@ -324,8 +324,7 @@ impl FastNearfieldSolver {
 
         // Cache memory
         for factors in self.cached_factors.values() {
-            total += (factors.green_spectrum.len())
-                * std::mem::size_of::<Complex64>();
+            total += (factors.green_spectrum.len()) * std::mem::size_of::<Complex64>();
             total += factors.kx.len() * std::mem::size_of::<f64>();
             total += factors.ky.len() * std::mem::size_of::<f64>();
         }

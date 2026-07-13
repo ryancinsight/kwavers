@@ -155,7 +155,7 @@ impl FdtdSolver {
     /// # Reference
     /// Treeby & Cox (2010), §II.A (k-space corrected FDTD velocity update).
     /// # Errors
-    /// - Returns [`KwaversError::InternalError`] if `kspace_ops` is unexpectedly `None`
+    /// - Returns [`crate::KwaversError::InternalError`] if `kspace_ops` is unexpectedly `None`
     ///   despite the caller having confirmed its presence.
     ///
     fn update_velocity_kspace(&mut self, dt: f64) -> KwaversResult<()> {
@@ -232,7 +232,7 @@ impl FdtdSolver {
     /// 3. **Collocated FD** (`staggered_grid = false`): central-difference gradient,
     ///    CPML applied if present.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub fn update_velocity(&mut self, dt: f64) -> KwaversResult<()> {

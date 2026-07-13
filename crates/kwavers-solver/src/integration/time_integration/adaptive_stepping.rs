@@ -74,7 +74,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
 
     /// Perform adaptive time step with error control
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn adaptive_step<F>(
         &mut self,
@@ -271,9 +271,7 @@ pub type ErrorEstimator = RichardsonErrorEstimator;
 
 #[cfg(test)]
 mod tests {
-    use leto::{
-    Array3,
-};
+    use leto::Array3;
 
     use super::{
         EmbeddedRKErrorEstimator, ErrorEstimatorTrait, ErrorNorm, RichardsonErrorEstimator,

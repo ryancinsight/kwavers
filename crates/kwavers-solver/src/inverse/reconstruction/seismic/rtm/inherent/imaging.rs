@@ -43,7 +43,7 @@ impl ReverseTimeMigration {
     /// to `self.config.rtm_imaging_condition` and accumulate into
     /// `self.image`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_imaging_condition(
         &mut self,
@@ -56,8 +56,12 @@ impl ReverseTimeMigration {
             // ── ZeroLag ───────────────────────────────────────────────────
             RtmImagingCondition::ZeroLag => {
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
-                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let src = source_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
                         let s = src[idx];
@@ -74,8 +78,12 @@ impl ReverseTimeMigration {
                 let mut rcv_energy = Array3::<f64>::zeros(self.image.shape());
 
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
-                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let src = source_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
                         *img += src[idx] * rcv[idx];
@@ -105,8 +113,12 @@ impl ReverseTimeMigration {
             // ── Laplacian ─────────────────────────────────────────────────
             RtmImagingCondition::Laplacian => {
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
-                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let src = source_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
 
                     let src_lap = self.compute_laplacian(&src)?;
 
@@ -122,8 +134,12 @@ impl ReverseTimeMigration {
                 let mut src_energy = Array3::<f64>::zeros(self.image.shape());
 
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
-                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let src = source_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
 
                     for_each_view_mut(self.image.view_mut(), |idx, img| {
                         *img += src[idx] * rcv[idx];
@@ -148,7 +164,9 @@ impl ReverseTimeMigration {
             // I(x) = Σ_t (∂S/∂t)·R   via centred differences
             RtmImagingCondition::SourceNormalized => {
                 for t in 0..n_time_steps {
-                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
                     // Centred temporal derivative ∂S/∂t: forward diff at t=0,
                     // backward diff at the final step, centred (×0.5) in the interior.
                     let src_dt: Array3<f64> = if n_time_steps > 1 {
@@ -198,35 +216,78 @@ impl ReverseTimeMigration {
                 let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];
 
                 for t in 0..n_time_steps {
-                    let src = source_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
-                    let rcv = receiver_wavefield.slice_with::<3>(&s![t, .., .., ..]).expect("invariant: RTM slice indices in range");
+                    let src = source_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
+                    let rcv = receiver_wavefield
+                        .slice_with::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM slice indices in range");
 
                     // x: 0.25·(S[i+1]−S[i-1])·(R[i+1]−R[i-1])
-                    let sxp = src.slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    let sxm = src.slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    let rxp = rcv.slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    let rxm = rcv.slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    for_each_view_mut(self.image.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, img| {
-                        *img += 0.25 * (sxp[idx] - sxm[idx]) * (rxp[idx] - rxm[idx]);
-                    });
+                    let sxp = src
+                        .slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    let sxm = src
+                        .slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    let rxp = rcv
+                        .slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    let rxm = rcv
+                        .slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    for_each_view_mut(
+                        self.image
+                            .slice_with_mut::<3>(&inn)
+                            .expect("invariant: RTM interior slice in range"),
+                        |idx, img| {
+                            *img += 0.25 * (sxp[idx] - sxm[idx]) * (rxp[idx] - rxm[idx]);
+                        },
+                    );
 
                     // y
-                    let syp = src.slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    let sym = src.slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    let ryp = rcv.slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    let rym = rcv.slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1]).expect("invariant: RTM slice indices in range");
-                    for_each_view_mut(self.image.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, img| {
-                        *img += 0.25 * (syp[idx] - sym[idx]) * (ryp[idx] - rym[idx]);
-                    });
+                    let syp = src
+                        .slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    let sym = src
+                        .slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    let ryp = rcv
+                        .slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    let rym = rcv
+                        .slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1])
+                        .expect("invariant: RTM slice indices in range");
+                    for_each_view_mut(
+                        self.image
+                            .slice_with_mut::<3>(&inn)
+                            .expect("invariant: RTM interior slice in range"),
+                        |idx, img| {
+                            *img += 0.25 * (syp[idx] - sym[idx]) * (ryp[idx] - rym[idx]);
+                        },
+                    );
 
                     // z
-                    let szp = src.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz]).expect("invariant: RTM slice indices in range");
-                    let szm = src.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2]).expect("invariant: RTM slice indices in range");
-                    let rzp = rcv.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz]).expect("invariant: RTM slice indices in range");
-                    let rzm = rcv.slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2]).expect("invariant: RTM slice indices in range");
-                    for_each_view_mut(self.image.slice_with_mut::<3>(&inn).expect("invariant: RTM interior slice in range"), |idx, img| {
-                        *img += 0.25 * (szp[idx] - szm[idx]) * (rzp[idx] - rzm[idx]);
-                    });
+                    let szp = src
+                        .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz])
+                        .expect("invariant: RTM slice indices in range");
+                    let szm = src
+                        .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2])
+                        .expect("invariant: RTM slice indices in range");
+                    let rzp = rcv
+                        .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz])
+                        .expect("invariant: RTM slice indices in range");
+                    let rzm = rcv
+                        .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2])
+                        .expect("invariant: RTM slice indices in range");
+                    for_each_view_mut(
+                        self.image
+                            .slice_with_mut::<3>(&inn)
+                            .expect("invariant: RTM interior slice in range"),
+                        |idx, img| {
+                            *img += 0.25 * (szp[idx] - szm[idx]) * (rzp[idx] - rzm[idx]);
+                        },
+                    );
                 }
             }
         }

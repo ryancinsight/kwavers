@@ -97,7 +97,7 @@ impl TrainingMetrics {
 
     /// Check if training has converged based on relative loss change
     ///
-    /// Relative change = |L[n] - L[n-1]| / |L[n-1]|
+    /// Relative change = |L\[n\] - L[n-1]| / |L[n-1]|
     pub fn is_converged(&self, tolerance: f64) -> bool {
         if (self.total_loss.len()) < 2 {
             return false;

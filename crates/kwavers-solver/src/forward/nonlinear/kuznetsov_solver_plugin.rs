@@ -1,7 +1,7 @@
 //! `Plugin` adapter for the full Kuznetsov nonlinear solver.
 //!
 //! Wraps the validated [`KuznetsovWave`] solver (Chapter 3,
-//! `forward::nonlinear::kuznetsov`) behind the [`Plugin`](crate::plugin::Plugin)
+//! `forward::nonlinear::kuznetsov`) behind the [`Plugin`]
 //! contract so the `PhysicsCatalog` can build it for
 //! `NonlinearAcoustics { equation_type: Kuznetsov }`. The adapter holds no
 //! physics: it forwards `Plugin::update` to the solver's
@@ -15,10 +15,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::traits::AcousticWaveModel;
 use kwavers_source::NullSource;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 /// Catalog plugin wrapping the full Kuznetsov solver.
 #[derive(Debug)]

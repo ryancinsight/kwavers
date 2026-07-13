@@ -1,8 +1,8 @@
 use super::FemHelmholtzSolver;
 use kwavers_boundary::FemBoundaryManager;
+use kwavers_math::fft::Complex64;
 use kwavers_mesh::TetrahedralMesh;
 use leto::Array1;
-use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {
     /// Borrow the assembled right-hand side vector.

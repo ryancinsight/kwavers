@@ -23,7 +23,7 @@ use coeus_autograd::Var;
 /// du_dt = input_grad.grad()[:, 0]   // column 0 = time
 /// ```
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_time_derivative<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,

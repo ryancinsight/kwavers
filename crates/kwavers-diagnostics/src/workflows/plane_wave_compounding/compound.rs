@@ -15,10 +15,10 @@
 //!   *IEEE UFFC*, 56(3), 489–506.
 
 use super::config::PlaneWaveCompoundingConfig;
+use eunomia::Complex;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array2;
-use eunomia::Complex;
 
 /// Plane wave compounding processor.
 #[derive(Debug, Clone)]
@@ -347,4 +347,3 @@ impl PlaneWaveCompound {
         (speedup, focused_fps * speedup)
     }
 }
-

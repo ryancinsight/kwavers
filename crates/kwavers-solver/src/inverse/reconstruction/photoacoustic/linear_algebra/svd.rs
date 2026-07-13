@@ -1,10 +1,6 @@
 //! Truncated SVD solver via power iteration.
 
-use leto::{
-    Array1,
-    Array2,
-    ArrayView1,
-};
+use leto::{Array1, Array2, ArrayView1};
 
 use kwavers_core::error::KwaversResult;
 
@@ -66,8 +62,7 @@ impl PhotoacousticLinearSolver {
         // AᵀA  (n×n dense)
         let at = a.transpose([1, 0]).expect("invariant: SVD transpose valid");
         let mut ata = Array2::<f64>::zeros((n, n));
-        leto_ops::matmul(&at, &a.view(), &mut ata.view_mut())
-            .expect("invariant: SVD AᵀA conforms");
+        leto_ops::matmul(&at, &a.view(), &mut ata.view_mut()).expect("invariant: SVD AᵀA conforms");
 
         let mut v = Array2::eye(n);
         let mut s = vec![0.0; k];

@@ -7,8 +7,8 @@
 //! outside that treatment window, including skin/source boundary cells, emit no
 //! passive cavitation source even if their source-injection pressure is high.
 
-use moirai_parallel::{fold_reduce_with, map_collect_index_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{fold_reduce_with, map_collect_index_with, Adaptive};
 
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
 use kwavers_physics::acoustics::bubble_dynamics::{

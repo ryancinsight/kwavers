@@ -11,7 +11,7 @@
 //! - Rayleigh (1917) Phil. Mag. 34:94; Plesset (1949) J. Appl. Mech. 16:277.
 
 use numpy::ndarray::Array1;
-use numpy::{ToPyArray, PyArray1};
+use numpy::{PyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -90,4 +90,3 @@ pub fn solve_rayleigh_plesset(
         Array1::from(rdot).to_pyarray(py).into(),
     ))
 }
-

@@ -67,10 +67,7 @@ mod fwi_demo {
     use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
     use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
     use kwavers_source::{GridSource, SourceMode};
-    use leto::{
-    Array2,
-    Array3,
-};
+    use leto::{Array2, Array3};
     use std::f64::consts::PI;
     use std::path::PathBuf;
     use std::time::Instant;

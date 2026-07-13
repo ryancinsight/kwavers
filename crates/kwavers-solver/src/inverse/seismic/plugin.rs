@@ -13,10 +13,7 @@ use kwavers_core::error::KwaversResult;
 // Yes, Plugin implementation in Solver is fine.
 
 use kwavers_grid::Grid;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use super::parameters::{FwiParameters, MigrationAperture, RtmSettings};
 use super::rtm::RtmProcessor;
@@ -81,7 +78,7 @@ impl SeismicImagingPlugin {
     /// Perform Reverse Time Migration
     /// Based on Baysal et al. (1983): "Reverse time migration"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn reverse_time_migration(
         &mut self,
@@ -109,7 +106,7 @@ impl SeismicImagingPlugin {
     /// Based on Tarantola (1984): "Inversion of seismic reflection data in the acoustic approximation"
     /// Reference: Geophysics, 49(8), 1259-1266
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn full_waveform_inversion(
         &mut self,

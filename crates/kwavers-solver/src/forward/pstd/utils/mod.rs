@@ -5,10 +5,10 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_3d_array_into, ifft_3d_complex_inplace, KSpaceCalculator};
 use leto::{Array3, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use kwavers_math::fft::Complex64;
 
 #[cfg(test)]
 mod tests;

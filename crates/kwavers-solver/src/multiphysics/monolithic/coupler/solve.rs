@@ -7,8 +7,8 @@ use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
-use log::{debug, warn};
 use leto::Array3;
+use log::{debug, warn};
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -147,10 +147,10 @@ impl MonolithicCoupler {
             };
 
             for (u_value, delta) in u_current.iter_mut().zip(du.iter()) {
-            {
-                *u_value += step_size * delta;
-            };
-        };
+                {
+                    *u_value += step_size * delta;
+                };
+            }
 
             if self.newton_config.verbose {
                 debug!("  Step size: {:.4}", step_size);

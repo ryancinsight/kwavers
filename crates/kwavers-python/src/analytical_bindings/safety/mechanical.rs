@@ -1,7 +1,7 @@
 //! Mechanical-index and cavitation-risk safety bindings.
 
 use kwavers_physics::analytical::safety;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -95,4 +95,3 @@ pub fn mechanical_index_cavitation_risk(
     let result = safety::mechanical_index_cavitation_risk(mi_s, threshold_mi, slope);
     Ok(result.to_pyarray(py).unbind())
 }
-

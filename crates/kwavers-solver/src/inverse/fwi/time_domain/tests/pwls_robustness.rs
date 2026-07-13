@@ -18,10 +18,7 @@ use crate::inverse::seismic::parameters::{FwiParameters, RegularizationParameter
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Single-shot problem with a long quiet pre-arrival window (source at `ix=1`,
 /// receivers at `ix=6`) so the per-trace noise variance is estimable.
@@ -33,7 +30,10 @@ fn build_problem() -> (Grid, FwiGeometry, FwiParameters, Array3<f64>, Array3<f64
     let c0 = SOUND_SPEED_WATER_SIM;
     let initial = Array3::from_elem(dims, c0);
     let mut truth = initial.clone();
-    for ([ix, iy, iz], value) in truth.indexed_iter_mut().expect("invariant: owned array yields indexed iterator") {
+    for ([ix, iy, iz], value) in truth
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
         *value += 60.0 * (-r2 / 3.0).exp();
     }

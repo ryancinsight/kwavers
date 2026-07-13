@@ -5,10 +5,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array3,
-};
-
+use leto::Array3;
 
 fn leto_to_ndarray3(field: &LetoArray3<f64>) -> Array3<f64> {
     let shape = field.shape();

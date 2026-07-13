@@ -1,7 +1,4 @@
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 use coeus_autograd::Var;
 
@@ -26,7 +23,7 @@ where
 {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: PinnConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -58,8 +55,8 @@ where
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
     // Independent training data arrays, hyperparameters, and a callback with no
     // cohesive sub-grouping; bundling would not clarify the call site.
@@ -80,7 +77,8 @@ where
 
         if (x_data.len()) != (t_data.len()) || (x_data.len()) != u_data.shape()[0] {
             return Err(KwaversError::InvalidInput(
-                "Data dimensions must match: (x_data.len()) == (t_data.len()) == u_data.shape()[0]".into(),
+                "Data dimensions must match: (x_data.len()) == (t_data.len()) == u_data.shape()[0]"
+                    .into(),
             ));
         }
 

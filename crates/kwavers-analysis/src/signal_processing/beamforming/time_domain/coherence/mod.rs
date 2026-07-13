@@ -41,14 +41,10 @@
 
 use super::das::{align_channels, sum_aligned};
 use super::delay_reference::DelayReference;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_signal::analytic::hilbert_transform;
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
-use eunomia::Complex64;
+use leto::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
 /// Amplitude coherence factor from pre-accumulated aperture sums
@@ -412,4 +408,3 @@ pub fn delay_and_sum_coherence(
 
 #[cfg(test)]
 mod tests;
-

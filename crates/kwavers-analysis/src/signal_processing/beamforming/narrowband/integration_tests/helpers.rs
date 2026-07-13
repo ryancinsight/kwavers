@@ -1,8 +1,8 @@
 //! Shared helper functions for narrowband integration tests.
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
-use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Parameters for deterministic plane-wave fixture generation.
@@ -80,7 +80,8 @@ pub(super) fn compute_sample_covariance(
 ) -> leto::Array2<Complex64> {
     let n_sensors = snapshots.shape()[0];
     let n_snapshots = snapshots.shape()[1];
-    let mut cov = leto::Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
+    let mut cov =
+        leto::Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
 
     for k in 0..n_snapshots {
         let snapshot = snapshots.index_axis::<1>(1, k).unwrap();

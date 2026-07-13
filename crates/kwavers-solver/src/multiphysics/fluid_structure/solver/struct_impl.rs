@@ -28,7 +28,7 @@ fn primary_normal_step(n0: f64, n1: f64, n2: f64) -> (i64, i64, i64) {
 ///
 /// For each interface cell (i,j,k) with outward normal n̂:
 /// - `p_fluid_ghost[i,j,k]` = σ_nn (solid normal stress → fluid pressure BC)
-/// - `t_solid_ghost[d][i,j,k]` = −p · n̂[d] (fluid pressure → solid traction BC)
+/// - `t_solid_ghost\[d\][i,j,k]` = −p · n̂\[d\] (fluid pressure → solid traction BC)
 ///
 /// Reference: Farhat, C. & Roux, F.X. (1991). Int J Numer Methods Eng 32(6), 1205–1227.
 /// DOI: 10.1002/nme.1620320604
@@ -44,7 +44,7 @@ pub struct FluidStructureSolver {
     tolerance: f64,
     /// Ghost pressure values (fluid domain): p_ghost = σ_nn at interface + extrapolated layers
     pub p_fluid_ghost: Array3<f64>,
-    /// Ghost traction values (solid domain): t_ghost[d] = −p · n̂[d]
+    /// Ghost traction values (solid domain): t_ghost\[d\] = −p · n̂\[d\]
     pub t_solid_ghost: [Array3<f64>; 3],
     /// Previous ghost pressure workspace for relaxation.
     ///
@@ -54,7 +54,7 @@ pub struct FluidStructureSolver {
     p_fluid_ghost_prev: Array3<f64>,
     /// Previous ghost traction workspace for relaxation.
     ///
-    /// Each component shares the exact dimensions of `t_solid_ghost[d]`.
+    /// Each component shares the exact dimensions of `t_solid_ghost\[d\]`.
     /// The fixed array keeps the three Cartesian components statically routed
     /// without heap-dispatched trait objects or per-iteration `Vec` allocation.
     t_solid_ghost_prev: [Array3<f64>; 3],
@@ -87,8 +87,8 @@ impl FluidStructureSolver {
 
     /// Apply interface conditions with coupling.
     /// # Errors
-    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_interface_conditions(
         &mut self,

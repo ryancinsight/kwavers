@@ -48,15 +48,16 @@ fn weighted_rate(solver: &DGSolver, rhs: &Array3<f64>, var: usize) -> f64 {
 #[test]
 fn constant_2d_acoustic_state_has_zero_rhs() {
     let solver = make_solver(4, 4, 1);
-    let state = Array3::from_shape_fn(
-        solver.acoustic_tensor_state_shape().unwrap(),
-        |[_, _, v]| match v {
-            ACOUSTIC_PRESSURE_VAR => 2.0,
-            ACOUSTIC_VELOCITY_X_VAR => 0.25,
-            ACOUSTIC_VELOCITY_Y_VAR => -0.5,
-            _ => 0.0,
-        },
-    );
+    let state =
+        Array3::from_shape_fn(
+            solver.acoustic_tensor_state_shape().unwrap(),
+            |[_, _, v]| match v {
+                ACOUSTIC_PRESSURE_VAR => 2.0,
+                ACOUSTIC_VELOCITY_X_VAR => 0.25,
+                ACOUSTIC_VELOCITY_Y_VAR => -0.5,
+                _ => 0.0,
+            },
+        );
     let mut rhs = Array3::zeros(state.shape());
 
     solver
@@ -71,10 +72,9 @@ fn constant_2d_acoustic_state_has_zero_rhs() {
 #[test]
 fn tensor_2d_acoustic_rhs_preserves_component_masses() {
     let solver = make_solver(4, 4, 1);
-    let state = Array3::from_shape_fn(
-        solver.acoustic_tensor_state_shape().unwrap(),
-        |[e, n, v]| (0.3 * e as f64 + 0.7 * n as f64 + 0.2 * v as f64).sin(),
-    );
+    let state = Array3::from_shape_fn(solver.acoustic_tensor_state_shape().unwrap(), |[e, n, v]| {
+        (0.3 * e as f64 + 0.7 * n as f64 + 0.2 * v as f64).sin()
+    });
     let mut rhs = Array3::zeros(state.shape());
 
     solver
@@ -97,10 +97,9 @@ fn tensor_2d_acoustic_rhs_preserves_component_masses() {
 #[test]
 fn tensor_3d_acoustic_rhs_preserves_component_masses() {
     let solver = make_solver(4, 4, 4);
-    let state = Array3::from_shape_fn(
-        solver.acoustic_tensor_state_shape().unwrap(),
-        |[e, n, v]| (0.2 * e as f64 + 0.5 * n as f64 + 0.11 * v as f64).cos(),
-    );
+    let state = Array3::from_shape_fn(solver.acoustic_tensor_state_shape().unwrap(), |[e, n, v]| {
+        (0.2 * e as f64 + 0.5 * n as f64 + 0.11 * v as f64).cos()
+    });
     let mut rhs = Array3::zeros(state.shape());
 
     solver

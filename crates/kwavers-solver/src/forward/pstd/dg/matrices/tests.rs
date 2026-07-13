@@ -36,7 +36,7 @@ fn differentiation_matrix_exactly_differentiates_linear_polynomial() {
     let vandermonde = build_vandermonde(&nodes, 2, BasisType::Legendre).unwrap();
     let diff = compute_diff_matrix(&vandermonde, &nodes, BasisType::Legendre).unwrap();
 
-    let constant_values = Array1::ones(nodes.len() );
+    let constant_values = Array1::ones(nodes.len());
     let mut constant_derivative = Array1::<f64>::zeros(nodes.len());
     leto_ops::matvec(
         &diff.view(),
@@ -49,7 +49,12 @@ fn differentiation_matrix_exactly_differentiates_linear_polynomial() {
         .all(|value: &f64| value.abs() <= 1e-12));
 
     let mut linear_derivative = Array1::<f64>::zeros(nodes.len());
-    leto_ops::matvec(&diff.view(), &nodes.view(), &mut linear_derivative.view_mut()).unwrap();
+    leto_ops::matvec(
+        &diff.view(),
+        &nodes.view(),
+        &mut linear_derivative.view_mut(),
+    )
+    .unwrap();
     for value in linear_derivative.iter() {
         assert!((value - 1.0).abs() <= 1e-12);
     }
@@ -93,7 +98,12 @@ fn fourier_differentiation_matrix_exactly_differentiates_first_sine_mode() {
 
     let sine_values = nodes.mapv(|x| (std::f64::consts::PI * (x + 1.0)).sin());
     let mut derivative = Array1::<f64>::zeros(nodes.len());
-    leto_ops::matvec(&diff.view(), &sine_values.view(), &mut derivative.view_mut()).unwrap();
+    leto_ops::matvec(
+        &diff.view(),
+        &sine_values.view(),
+        &mut derivative.view_mut(),
+    )
+    .unwrap();
 
     for (actual, node) in derivative.iter().zip(nodes.iter()) {
         let expected = std::f64::consts::PI * (std::f64::consts::PI * (node + 1.0)).cos();

@@ -34,7 +34,7 @@ use crate::pstd::utils::{compute_anti_aliasing_filter, compute_wavenumbers};
 ///
 /// Kappa is computed via [`compute_spectral_correction`] — the single canonical
 /// dispatch path in `numerics::spectral_correction`. This ensures every
-/// [`SpectralCorrectionMethod`] variant reaches its distinct mathematical
+/// `SpectralCorrectionMethod` variant reaches its distinct mathematical
 /// formula and the dispatch is non-lossy.
 ///
 /// # Errors

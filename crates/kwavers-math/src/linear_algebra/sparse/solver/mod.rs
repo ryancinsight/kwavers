@@ -9,12 +9,9 @@ mod bicgstab;
 mod tests;
 
 use super::csr::CompressedSparseRowMatrix;
-use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    ArrayView1,
-};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use leto::{Array1, ArrayView1};
 
 pub(super) fn dot_real(a: &Array1<f64>, b: &Array1<f64>) -> f64 {
     a.iter().zip(b.iter()).map(|(x, y)| x * y).sum()

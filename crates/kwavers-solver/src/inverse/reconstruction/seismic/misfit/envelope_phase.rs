@@ -10,15 +10,15 @@
 use super::types::MisfitFunction;
 use apollo::{fft_1d_leto, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_signal::analytic::hilbert_transform;
 use leto::Array1 as LetoArray1;
 use leto::Array2;
-use kwavers_math::fft::Complex64;
 
 impl MisfitFunction {
     /// Envelope misfit: 0.5 * ||E_syn − E_obs||² (cycle-skipping mitigation).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn envelope_misfit(
         &self,
@@ -32,7 +32,7 @@ impl MisfitFunction {
 
     /// Instantaneous phase misfit.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn phase_misfit(
         &self,
@@ -150,8 +150,9 @@ impl MisfitFunction {
 
         for i in 0..ntraces {
             let trace = signal.index_axis::<1>(0, i).unwrap();
-            let trace_buffer = LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
-                .expect("seismic envelope trace length must match its Leto shape");
+            let trace_buffer =
+                LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
+                    .expect("seismic envelope trace length must match its Leto shape");
             let mut buffer = fft_1d_leto(trace_buffer.view());
 
             // Double positive frequencies, zero negative frequencies
@@ -191,8 +192,9 @@ impl MisfitFunction {
 
         for i in 0..ntraces {
             let trace = signal.index_axis::<1>(0, i).unwrap();
-            let trace_buffer = LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
-                .expect("seismic phase trace length must match its Leto shape");
+            let trace_buffer =
+                LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
+                    .expect("seismic phase trace length must match its Leto shape");
             let mut buffer = fft_1d_leto(trace_buffer.view());
 
             let spectrum = buffer

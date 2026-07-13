@@ -22,11 +22,8 @@
 //! `ThermalDiffusionSolver::update` expects for its `external_source` argument.
 
 use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto3};
-use leto::{
-    Array2,
-    Array3,
-};
-use numpy::{ToPyArray, PyArray1, PyArray2, PyArray3, PyReadonlyArray3};
+use leto::{Array2, Array3};
+use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -354,8 +351,7 @@ impl ThermalSimulation {
         // Convert final temperature field K → °C.
         let temp_celsius: Array3<f64> = solver.temperature().mapv(|t| t - KELVIN_OFFSET_C);
 
-        let time_vec =
-            numpy::ndarray::Array1::linspace(dt, dt * time_steps as f64, time_steps);
+        let time_vec = numpy::ndarray::Array1::linspace(dt, dt * time_steps as f64, time_steps);
 
         let temperature_at_sensors: Option<Py<PyArray2<f64>>> = if n_sensors > 0 {
             let selected = sensor_data
@@ -402,4 +398,3 @@ pub fn register_thermal(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<ThermalResult>()?;
     Ok(())
 }
-

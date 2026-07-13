@@ -21,11 +21,7 @@ use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    Array3,
-    SliceArg,
-};
+use leto::{Array2, Array3, SliceArg};
 
 use crate::parallel::{zip_three_mut_two_refs, zip_two_mut_four_refs};
 
@@ -124,11 +120,19 @@ pub fn prepare_abdominal_slice(
     }
     let slice_index = largest_target_slice(label_volume)?;
     let ct_slice = ct_volume_hu
-        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
         .expect("invariant: axis index in bounds")
         .to_contiguous();
     let label_slice = label_volume
-        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
         .expect("invariant: axis index in bounds")
         .to_contiguous();
     let treatment_target = largest_connected_target_component(&label_slice)?;
@@ -137,33 +141,68 @@ pub fn prepare_abdominal_slice(
     let bbox = square_bbox_from_mask(&body_component, 6)?;
     let ct_crop = ct_slice
         .slice_with::<2>(&[
-            SliceArg::Range { start: Some(bbox.0 as isize), end: Some((bbox.1 + 1) as isize), step: 1 },
-            SliceArg::Range { start: Some(bbox.2 as isize), end: Some((bbox.3 + 1) as isize), step: 1 },
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
         ])
         .expect("invariant: bbox within slice")
         .to_contiguous();
     let body_crop = body_component
         .slice_with::<2>(&[
-            SliceArg::Range { start: Some(bbox.0 as isize), end: Some((bbox.1 + 1) as isize), step: 1 },
-            SliceArg::Range { start: Some(bbox.2 as isize), end: Some((bbox.3 + 1) as isize), step: 1 },
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
         ])
         .expect("invariant: bbox within slice")
         .to_contiguous();
     let mut label_crop = label_slice
         .slice_with::<2>(&[
-            SliceArg::Range { start: Some(bbox.0 as isize), end: Some((bbox.1 + 1) as isize), step: 1 },
-            SliceArg::Range { start: Some(bbox.2 as isize), end: Some((bbox.3 + 1) as isize), step: 1 },
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
         ])
         .expect("invariant: bbox within slice")
         .to_contiguous();
     let target_crop = treatment_target
         .slice_with::<2>(&[
-            SliceArg::Range { start: Some(bbox.0 as isize), end: Some((bbox.1 + 1) as isize), step: 1 },
-            SliceArg::Range { start: Some(bbox.2 as isize), end: Some((bbox.3 + 1) as isize), step: 1 },
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
         ])
         .expect("invariant: bbox within slice")
         .to_contiguous();
-    for ([ix, iy], label) in label_crop.indexed_iter_mut().expect("invariant: label crop layout iterable") {
+    for ([ix, iy], label) in label_crop
+        .indexed_iter_mut()
+        .expect("invariant: label crop layout iterable")
+    {
         if *label == 2 && !target_crop[[ix, iy]] {
             *label = 1;
         }

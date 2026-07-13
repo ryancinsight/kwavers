@@ -1,10 +1,7 @@
 //! Spatial geometry helpers: coordinate mapping, masking, and distance.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use super::super::geometry::Point2;
 

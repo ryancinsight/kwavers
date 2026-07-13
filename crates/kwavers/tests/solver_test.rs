@@ -8,10 +8,7 @@ use kwavers_solver::plugin::PluginManager;
 use kwavers_solver::pstd::config::BoundaryConfig;
 use kwavers_solver::pstd::{PSTDConfig, PSTDPlugin};
 use kwavers_source::Source;
-use leto::{
-    /* s -- no leto equivalent */,
-    Array4,
-};
+use leto::Array4;
 
 // Named constants for test configuration
 const TEST_GRID_SIZE: usize = 32;
@@ -97,7 +94,9 @@ fn test_fdtd_solver() {
     }
 
     // Check that wave has propagated with proper validation
-    let pressure_field = fields.slice(s![0, .., .., ..]);
+    let pressure_field = fields
+        .index_axis::<3>(0, 0)
+        .expect("invariant: pressure component at axis-0 index 0");
     let max_pressure = pressure_field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
 
     // Comprehensive edge case validation per SRS requirements
@@ -192,7 +191,9 @@ fn test_pstd_solver() {
     }
 
     // Check that wave has propagated with proper validation
-    let pressure_field = fields.slice(s![0, .., .., ..]);
+    let pressure_field = fields
+        .index_axis::<3>(0, 0)
+        .expect("invariant: pressure component at axis-0 index 0");
     let max_pressure = pressure_field.iter().fold(0.0f64, |a, &b| a.max(b.abs()));
 
     // Comprehensive edge case validation per SRS requirements
@@ -249,16 +250,21 @@ fn test_wave_propagation() {
     let center = GAUSSIAN_CENTER;
     let sigma: f64 = GAUSSIAN_SIGMA;
 
-    // Set Gaussian pulse in pressure field
+    // Set Gaussian pulse in pressure field (leto indexed_iter_mut; ndarray Zip retired)
     {
-        let mut pressure_slice = initial_fields.slice_mut(s![0, .., .., ..]);
-        Zip::indexed(&mut pressure_slice).for_each(|(i, j, k), p| {
-            let di = i as f64 - center as f64;
-            let dj = j as f64 - center as f64;
-            let dk = k as f64 - center as f64;
+        let mut pressure_slice = initial_fields
+            .index_axis_mut::<3>(0, 0)
+            .expect("invariant: pressure component at axis-0 index 0");
+        for (idx, p) in pressure_slice
+            .indexed_iter_mut()
+            .expect("invariant: pressure field layout is non-aliasing")
+        {
+            let di = idx[0] as f64 - center as f64;
+            let dj = idx[1] as f64 - center as f64;
+            let dk = idx[2] as f64 - center as f64;
             let r2 = di * di + dj * dj + dk * dk;
             *p = TEST_PRESSURE_AMPLITUDE * (-r2 / (2.0 * sigma * sigma)).exp();
-        });
+        }
     }
 
     let _initial_center = initial_fields[[0, center, center, center]]; // Kept for reference

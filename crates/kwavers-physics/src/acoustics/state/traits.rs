@@ -2,11 +2,7 @@
 
 use super::container::PhysicsState;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array3,
-    ArrayView3,
-    ArrayViewMut3,
-};
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Direct field view for zero-copy read access
 pub type FieldView<'a> = ArrayView3<'a, f64>;

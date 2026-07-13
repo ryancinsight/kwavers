@@ -25,7 +25,7 @@ use kwavers_physics::acoustics::therapy::sonogenetics::{
     yoo_thermal_neural_response, ThermalNeuralParams,
 };
 use numpy::ndarray::Array1;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -96,4 +96,3 @@ pub fn solve_hodgkin_huxley_like(
         Array1::from(response).to_pyarray(py).into(),
     ))
 }
-

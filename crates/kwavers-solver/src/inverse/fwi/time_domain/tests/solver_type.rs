@@ -4,10 +4,7 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Verify that `SolverType::PSTD` is accepted by `build_solver_for_forward` and
 /// produces a non-trivial synthetic receiver trace.
@@ -77,7 +74,11 @@ fn test_fwi_pstd_solver_type_accepted_and_produces_nonzero_data() {
         geometry.receiver_count(),
         "synthetic receiver count must match geometry"
     );
-    assert_eq!(synthetic.shape()[1], nt, "synthetic time length must match nt");
+    assert_eq!(
+        synthetic.shape()[1],
+        nt,
+        "synthetic time length must match nt"
+    );
 
     // At least one non-zero receiver sample — any constant-zero output fails.
     let max_abs = synthetic

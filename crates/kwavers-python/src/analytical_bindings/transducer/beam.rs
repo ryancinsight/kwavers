@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::transducer;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -186,4 +186,3 @@ pub fn beam_pattern_2d_magnitude(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr.to_pyarray(py).unbind())
 }
-

@@ -100,7 +100,7 @@ impl KernelCubeSampler {
     /// can apply the matching inverse.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the dataset is
+    /// Returns [`crate::KwaversError::InvalidInput`] when the dataset is
     /// empty (no kernels with shape ≥ 3 on every axis).
     pub fn with_transforms(
         kernels: &[FocalKernel],

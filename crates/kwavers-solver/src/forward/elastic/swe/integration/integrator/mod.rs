@@ -102,7 +102,7 @@ impl<'a> TimeIntegrator<'a> {
     /// before the time loop.  No `Array3` is allocated inside this method.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn step(
         &self,
         field: &mut ElasticWaveField,
@@ -255,11 +255,11 @@ impl<'a> TimeIntegrator<'a> {
 
     /// Perform single time step with multiple simultaneous body forces.
     ///
-    /// Semantics identical to [`step`]; the body-force accumulation loop
+    /// Semantics identical to [`Self::step`]; the body-force accumulation loop
     /// sums contributions from all `body_forces` slices per grid point.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn step_with_body_forces(
         &self,
         field: &mut ElasticWaveField,
@@ -426,7 +426,7 @@ impl<'a> TimeIntegrator<'a> {
     /// borrows guarantee no aliasing.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     fn compute_acceleration(
         &self,
         field: &ElasticWaveField,
@@ -501,7 +501,7 @@ impl<'a> TimeIntegrator<'a> {
     /// sums over `body_forces` slice inside the parallel closure.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     fn compute_acceleration_with_body_forces(
         &self,
         field: &ElasticWaveField,

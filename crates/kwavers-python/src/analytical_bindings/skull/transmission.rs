@@ -1,8 +1,8 @@
 //! Layered skull transmission bindings.
 
-use kwavers_physics::analytical::skull as skull_mod;
 use eunomia::Complex64;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use kwavers_physics::analytical::skull as skull_mod;
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -66,10 +66,5 @@ pub fn skull_transmission_spectrum(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (mag, phase) =
         skull_mod::skull_transmission_spectrum(f_s, z_water, z_skull, z_brain, c_skull, d_skull_m);
-    Ok((
-        mag.to_pyarray(py).unbind(),
-        phase.to_pyarray(py).unbind(),
-    ))
+    Ok((mag.to_pyarray(py).unbind(), phase.to_pyarray(py).unbind()))
 }
-
-

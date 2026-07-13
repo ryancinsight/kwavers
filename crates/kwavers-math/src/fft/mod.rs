@@ -10,11 +10,11 @@ pub mod kspace;
 pub mod shift_operators;
 pub mod utils;
 
+use apollo::Complex64 as ApolloComplex64;
 pub use apollo::{
     fftfreq, fftshift, ifftshift, rfftfreq, FftPlan1D, FftPlan2D, FftPlan3D, Normalization,
     PlanCacheProvider, Shape1D, Shape2D, Shape3D,
 };
-use apollo::Complex64 as ApolloComplex64;
 pub use eunomia::{Complex32, Complex64};
 use std::sync::Arc;
 
@@ -739,8 +739,8 @@ fn assign_complex_slice_real(complex_values: &[Complex64], real_values: &mut [f6
 #[cfg(test)]
 mod r2c_optimized_tests {
     use super::{fft_3d_complex_inplace, get_fft_for_grid, Fft3dInOutExt};
-    use leto::Array3;
     use eunomia::Complex64;
+    use leto::Array3;
 
     fn check_shape(nx: usize, ny: usize, nz: usize) {
         let nz_c = nz / 2 + 1;

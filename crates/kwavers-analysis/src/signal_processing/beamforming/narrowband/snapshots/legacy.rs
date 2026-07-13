@@ -7,10 +7,7 @@ use apollo::{fft_1d_array, ifft_1d_complex};
 use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Convert a real-valued time series into its analytic signal via Hilbert transform.
 ///

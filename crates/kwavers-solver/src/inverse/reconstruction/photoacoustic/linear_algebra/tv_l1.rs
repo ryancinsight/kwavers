@@ -1,10 +1,6 @@
 //! Total Variation (ISTA) and L1/Lasso (FISTA) regularized solvers.
 
-use leto::{
-    Array1,
-    Array2,
-    ArrayView1,
-};
+use leto::{Array1, Array2, ArrayView1};
 
 use kwavers_core::error::KwaversResult;
 
@@ -106,8 +102,8 @@ impl PhotoacousticLinearSolver {
             let mut av = Array1::<f64>::zeros(n);
             leto_ops::matvec(&a.view(), &v.view(), &mut av.view_mut())
                 .expect("invariant: power-method A·v conforms");
-            eigenvalue =
-                leto_ops::dot(&v.view(), &av.view()).expect("invariant: power-method vᵀAv conforms");
+            eigenvalue = leto_ops::dot(&v.view(), &av.view())
+                .expect("invariant: power-method vᵀAv conforms");
             let av_norm = leto_ops::dot(&av.view(), &av.view())
                 .expect("invariant: power-method ‖Av‖ conforms")
                 .sqrt();

@@ -63,10 +63,7 @@ use kwavers_math::fft::Complex64;
 use kwavers_mesh::MeshBoundaryType;
 use kwavers_source::Source;
 use leto::Array3;
-use leto::{
-    Array1,
-    ArrayView2,
-};
+use leto::{Array1, ArrayView2};
 use std::fmt::Debug;
 use std::sync::Arc;
 

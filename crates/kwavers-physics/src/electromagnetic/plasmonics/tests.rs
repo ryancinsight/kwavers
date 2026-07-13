@@ -117,4 +117,3 @@ fn test_bruggeman_endpoint_and_residual() {
         "Bruggeman effective dielectric must satisfy implicit mixture equation; residual={residual:?}"
     );
 }
-

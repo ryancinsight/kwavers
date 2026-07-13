@@ -58,8 +58,8 @@ impl Modulation for FrequencyModulation {
         }
 
         // Convert to ndarray for signal processing
-        let signal_array = Array1::from_vec([signal.len()], signal.to_vec())
-            .expect("signal shape must match");
+        let signal_array =
+            Array1::from_vec([signal.len()], signal.to_vec()).expect("signal shape must match");
 
         // Compute sample rate from time array
         let dt = if t.len() > 1 {

@@ -15,14 +15,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
-use leto::{
-    Array2,
-    Array3,
-    Array4,
-    ArrayView3,
-    ArrayViewMut3,
-};
-
+use leto::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3};
 
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
 /// `g_c(x) ← -(2 / (ρ(x) · c(x)³)) · g_correlation(x)` in place.
@@ -36,7 +29,7 @@ use leto::{
 /// unit-testable for the local ρ-dependence.
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] if any sound-speed or density entry
+/// Returns [`crate::KwaversError::Validation`] if any sound-speed or density entry
 /// is non-finite or non-positive (avoids silent NaN production from a 1/0
 /// or 1/NaN multiplication).
 pub(super) fn apply_velocity_gradient_scaling(
@@ -112,7 +105,7 @@ impl FwiProcessor {
     /// search, so the objective the driver minimises always matches the gradient
     /// produced by [`Self::compute_adjoint_source`].
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by the misfit evaluation.
+    /// - Propagates any [`crate::KwaversError`] returned by the misfit evaluation.
     ///
     pub(super) fn compute_misfit_objective(
         &self,
@@ -153,7 +146,7 @@ impl FwiProcessor {
     /// an arbitrary receiver-side forcing, so the same injection path is valid
     /// for every misfit type.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by the adjoint-source evaluation.
+    /// - Propagates any [`crate::KwaversError`] returned by the adjoint-source evaluation.
     ///
     pub(super) fn compute_adjoint_source(
         &self,
@@ -216,7 +209,7 @@ impl FwiProcessor {
     ///
     /// Reference: Plessix (2006), GFJI 167(2), 495–503, eq. (2)–(6).
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn build_adjoint_source(
         &self,
@@ -326,7 +319,7 @@ impl FwiProcessor {
     /// heterogeneous field via [`FwiProcessor::with_density`], `ρ(x)` is
     /// used both in the forward / adjoint medium and in the per-voxel
     /// scaling below; otherwise the constant
-    /// [`RHO_SEISMIC_REF`](super::RHO_SEISMIC_REF) (2000 kg/m³) is used
+    /// [`RHO_SEISMIC_REF`] (2000 kg/m³) is used
     /// uniformly. Because the forward and adjoint media share the same
     /// resolved density, the discrete adjoint operator is exactly the
     /// time-reverse of the forward operator in both cases.
@@ -335,8 +328,8 @@ impl FwiProcessor {
     /// * Tromp et al. (2005): "Seismic tomography, adjoint methods"
     /// * Plessix (2006), GFJI 167(2), eq. (5)–(6) and (12)
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn adjoint_model(
         &self,

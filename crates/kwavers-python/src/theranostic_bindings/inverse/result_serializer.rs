@@ -101,20 +101,38 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("device_model", layout.model_name.clone())?;
     out.set_item("ct_hu", leto2_to_nd2(prepared.ct_hu.clone()).to_pyarray(py))?;
     out.set_item("label", leto2_to_nd2(prepared.label.clone()).to_pyarray(py))?;
-    out.set_item("sound_speed_m_s", leto2_to_nd2(prepared.sound_speed_m_s.clone()).to_pyarray(py))?;
+    out.set_item(
+        "sound_speed_m_s",
+        leto2_to_nd2(prepared.sound_speed_m_s.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "attenuation_np_per_m_mhz",
         leto2_to_nd2(prepared.attenuation_np_per_m_mhz.clone()).to_pyarray(py),
     )?;
-    out.set_item("body_mask", leto2_to_nd2(prepared.body_mask.clone()).to_pyarray(py))?;
-    out.set_item("organ_mask", leto2_to_nd2(prepared.organ_mask.clone()).to_pyarray(py))?;
-    out.set_item("target_mask", leto2_to_nd2(prepared.target_mask.clone()).to_pyarray(py))?;
-    out.set_item("exposure", leto2_to_nd2(result.exposure.clone()).to_pyarray(py))?;
+    out.set_item(
+        "body_mask",
+        leto2_to_nd2(prepared.body_mask.clone()).to_pyarray(py),
+    )?;
+    out.set_item(
+        "organ_mask",
+        leto2_to_nd2(prepared.organ_mask.clone()).to_pyarray(py),
+    )?;
+    out.set_item(
+        "target_mask",
+        leto2_to_nd2(prepared.target_mask.clone()).to_pyarray(py),
+    )?;
+    out.set_item(
+        "exposure",
+        leto2_to_nd2(result.exposure.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "exposure_raw_peak_pressure",
         leto2_to_nd2(result.exposure_raw_peak_pressure.clone()).to_pyarray(py),
     )?;
-    out.set_item("lesion_target", leto2_to_nd2(result.lesion_target.clone()).to_pyarray(py))?;
+    out.set_item(
+        "lesion_target",
+        leto2_to_nd2(result.lesion_target.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "anatomy_reconstruction",
         leto2_to_nd2(result.anatomy_reconstruction.clone()).to_pyarray(py),
@@ -210,7 +228,10 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("geometry_model", layout.model_name.clone())?;
     out.set_item("placement_metrics", placement_dict(py, &placement)?)?;
     out.set_item("placement_context_model", placement_context_model)?;
-    out.set_item("placement_ct_hu", leto2_to_nd2(placement_context.ct_hu.clone()).to_pyarray(py))?;
+    out.set_item(
+        "placement_ct_hu",
+        leto2_to_nd2(placement_context.ct_hu.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "placement_body_mask",
         leto2_to_nd2(placement_context.body_mask.clone()).to_pyarray(py),
@@ -335,4 +356,3 @@ pub(super) fn result_to_dict<'py>(
     out.set_item("metrics", metrics)?;
     Ok(out)
 }
-

@@ -1,7 +1,7 @@
 //! Point-spread and resolution imaging bindings.
 
 use kwavers_physics::analytical::imaging;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -94,4 +94,3 @@ pub fn pw_compounding_lateral_psf(
 pub fn lateral_resolution_m(f_number: f64, wavelength_m: f64) -> PyResult<f64> {
     Ok(imaging::lateral_resolution_m(f_number, wavelength_m))
 }
-

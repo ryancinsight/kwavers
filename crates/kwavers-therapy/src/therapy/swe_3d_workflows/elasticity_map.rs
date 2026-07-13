@@ -1,9 +1,7 @@
 use super::roi::VolumetricROI;
 use super::statistics::VolumetricStatistics;
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 #[derive(Debug, Clone)]
 pub struct ElasticityMap3D {
@@ -38,10 +36,26 @@ impl ElasticityMap3D {
     /// Extract 2D slice at given z-index
     pub fn axial_slice(&self, z_index: usize) -> ElasticityMap2D {
         ElasticityMap2D {
-            young_modulus: self.young_modulus.index_axis::<2>(2, z_index).expect("invariant: axis in bounds").to_contiguous(),
-            shear_speed: self.shear_speed.index_axis::<2>(2, z_index).expect("invariant: axis in bounds").to_contiguous(),
-            confidence: self.confidence.index_axis::<2>(2, z_index).expect("invariant: axis in bounds").to_contiguous(),
-            quality: self.quality.index_axis::<2>(2, z_index).expect("invariant: axis in bounds").to_contiguous(),
+            young_modulus: self
+                .young_modulus
+                .index_axis::<2>(2, z_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            shear_speed: self
+                .shear_speed
+                .index_axis::<2>(2, z_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            confidence: self
+                .confidence
+                .index_axis::<2>(2, z_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            quality: self
+                .quality
+                .index_axis::<2>(2, z_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
             reliability_mask: self
                 .reliability_mask
                 .index_axis::<2>(2, z_index)
@@ -53,10 +67,26 @@ impl ElasticityMap3D {
     /// Extract sagittal slice (YZ plane) at given x-index
     pub fn sagittal_slice(&self, x_index: usize) -> ElasticityMap2D {
         ElasticityMap2D {
-            young_modulus: self.young_modulus.index_axis::<2>(0, x_index).expect("invariant: axis in bounds").to_contiguous(),
-            shear_speed: self.shear_speed.index_axis::<2>(0, x_index).expect("invariant: axis in bounds").to_contiguous(),
-            confidence: self.confidence.index_axis::<2>(0, x_index).expect("invariant: axis in bounds").to_contiguous(),
-            quality: self.quality.index_axis::<2>(0, x_index).expect("invariant: axis in bounds").to_contiguous(),
+            young_modulus: self
+                .young_modulus
+                .index_axis::<2>(0, x_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            shear_speed: self
+                .shear_speed
+                .index_axis::<2>(0, x_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            confidence: self
+                .confidence
+                .index_axis::<2>(0, x_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            quality: self
+                .quality
+                .index_axis::<2>(0, x_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
             reliability_mask: self
                 .reliability_mask
                 .index_axis::<2>(0, x_index)
@@ -68,10 +98,26 @@ impl ElasticityMap3D {
     /// Extract coronal slice (XZ plane) at given y-index
     pub fn coronal_slice(&self, y_index: usize) -> ElasticityMap2D {
         ElasticityMap2D {
-            young_modulus: self.young_modulus.index_axis::<2>(1, y_index).expect("invariant: axis in bounds").to_contiguous(),
-            shear_speed: self.shear_speed.index_axis::<2>(1, y_index).expect("invariant: axis in bounds").to_contiguous(),
-            confidence: self.confidence.index_axis::<2>(1, y_index).expect("invariant: axis in bounds").to_contiguous(),
-            quality: self.quality.index_axis::<2>(1, y_index).expect("invariant: axis in bounds").to_contiguous(),
+            young_modulus: self
+                .young_modulus
+                .index_axis::<2>(1, y_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            shear_speed: self
+                .shear_speed
+                .index_axis::<2>(1, y_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            confidence: self
+                .confidence
+                .index_axis::<2>(1, y_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
+            quality: self
+                .quality
+                .index_axis::<2>(1, y_index)
+                .expect("invariant: axis in bounds")
+                .to_contiguous(),
             reliability_mask: self
                 .reliability_mask
                 .index_axis::<2>(1, y_index)

@@ -1,10 +1,7 @@
 use super::beamformer::compute_lag_coherence;
 use super::*;
-use leto::{
-    Array2,
-    Array3,
-};
 use eunomia::Complex64;
+use leto::{Array2, Array3};
 
 #[test]
 fn test_slsc_default_config() {
@@ -398,4 +395,3 @@ fn adaptive_slsc_output_bounded_in_zero_one() {
         );
     }
 }
-

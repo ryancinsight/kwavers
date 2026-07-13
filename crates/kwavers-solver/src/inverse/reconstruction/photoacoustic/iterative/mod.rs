@@ -7,11 +7,7 @@ mod iterations;
 mod system;
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array1,
-    Array3,
-    ArrayView2,
-};
+use leto::{Array1, Array3, ArrayView2};
 
 use super::algorithms::PhotoacousticAlgorithm;
 use super::config::ReconstructionPhotoacousticConfig;
@@ -69,7 +65,7 @@ impl IterativeMethods {
     /// Builds the system matrix, then runs the selected algorithm for
     /// `self.iterations` steps, applying regularization after each step.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

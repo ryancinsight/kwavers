@@ -14,12 +14,7 @@
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    Array3,
-    ArrayView1,
-    ArrayView3,
-};
+use leto::{Array1, Array3, ArrayView1, ArrayView3};
 
 /// Piecewise linear interpolator (C⁰, order 1, monotonicity-preserving).
 #[derive(Debug, Clone)]

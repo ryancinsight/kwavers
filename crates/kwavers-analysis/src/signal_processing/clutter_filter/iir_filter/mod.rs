@@ -257,8 +257,7 @@ impl IirFilter {
                 .expect("row index within pixel bounds");
 
             // Apply forward filter
-            let mut filtered =
-                self.apply_iir_filter(&signal.iter().copied().collect::<Vec<f64>>());
+            let mut filtered = self.apply_iir_filter(&signal.iter().copied().collect::<Vec<f64>>());
 
             // Apply backward filter if zero-phase requested
             if self.config.zero_phase {

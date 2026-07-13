@@ -21,7 +21,7 @@ impl DomainAnalyzer {
 
     /// Analyze the domain and compute quality metrics
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn analyze(
         &self,

@@ -48,4 +48,3 @@ impl MieParameters {
         self.refractive_index / self.medium_index
     }
 }
-

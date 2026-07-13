@@ -15,13 +15,10 @@
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
-use leto::Array2 as LetoArray2;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array2,
-    ArrayViewMut2,
-};
 use kwavers_math::fft::Complex64;
+use leto::Array2 as LetoArray2;
+use leto::{Array2, ArrayViewMut2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -242,7 +239,8 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
+        let mut field =
+            Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
 
         for i in 0..config.nx {
             for j in 0..config.ny {
@@ -286,7 +284,8 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
+        let mut field =
+            Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
 
         for i in 0..config.nx {
             for j in 0..config.ny {

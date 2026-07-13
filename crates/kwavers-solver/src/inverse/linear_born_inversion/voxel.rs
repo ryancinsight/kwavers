@@ -26,11 +26,11 @@ pub struct VolumeVoxel {
     pub iy: usize,
     /// Z grid index.
     pub iz: usize,
-    /// Cartesian X position [m].
+    /// Cartesian X position \[m\].
     pub x_m: f64,
-    /// Cartesian Y position [m].
+    /// Cartesian Y position \[m\].
     pub y_m: f64,
-    /// Cartesian Z position [m].
+    /// Cartesian Z position \[m\].
     pub z_m: f64,
     /// Slowness contrast (clinical-adapter supplied).
     pub target_contrast: f64,

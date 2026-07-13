@@ -23,7 +23,7 @@
 //! - Henriques & Moritz (1947) Am. J. Pathol. 23:695
 
 use numpy::ndarray::Array1;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -80,4 +80,3 @@ pub fn compute_arrhenius_damage(
     );
     Ok(Array1::from(omega).to_pyarray(py).into())
 }
-

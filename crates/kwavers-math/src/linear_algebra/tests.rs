@@ -16,9 +16,7 @@ fn test_linear_algebra_re_exports() {
 
 #[test]
 fn test_norm_l2_convenience_function() {
-    let array =
-        Array3::from_vec([2, 2, 2], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
-            .unwrap();
+    let array = Array3::from_vec([2, 2, 2], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).unwrap();
     let norm = norm_l2(&array);
     let expected = (1..=8).map(|x| (x * x) as f64).sum::<f64>().sqrt();
     assert!((norm - expected).abs() < 1e-10);

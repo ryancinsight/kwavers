@@ -13,7 +13,7 @@ impl FdtdSolver {
     /// For `CylindricalAS` geometry the cylindrical `ur/r` correction is added.
     /// CPML gradient corrections are applied per-direction when enabled.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn compute_divergence_staggered(&mut self) -> KwaversResult<()> {
         self.staggered_operator

@@ -38,11 +38,8 @@ mod helpers;
 #[cfg(test)]
 mod tests;
 
-use leto::{
-    Array1,
-    Array2,
-};
 use eunomia::Complex64;
+use leto::{Array1, Array2};
 
 /// Advanced eigenvalue decomposition with multiple algorithms
 #[derive(Debug)]

@@ -85,7 +85,7 @@ impl SourceHandler {
         let dx = grid.dx;
         let dy = grid.dy;
         let dz = grid.dz;
-        let n = self.u_indices.len() ;
+        let n = self.u_indices.len();
         self.u_scale_x = Vec::with_capacity(n);
         self.u_scale_y = Vec::with_capacity(n);
         self.u_scale_z = Vec::with_capacity(n);
@@ -139,8 +139,8 @@ impl SourceHandler {
 
         let dx = grid.dx;
 
-        self.p_scale_rho = Vec::with_capacity(self.p_indices.len() );
-        self.p_scale_p = Vec::with_capacity(self.p_indices.len() );
+        self.p_scale_rho = Vec::with_capacity(self.p_indices.len());
+        self.p_scale_p = Vec::with_capacity(self.p_indices.len());
 
         for &(i, j, k, _weight) in &self.p_indices {
             let c0_val = c0.at(i, j, k);

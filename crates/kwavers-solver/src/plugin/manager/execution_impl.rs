@@ -13,8 +13,8 @@ use std::time::Instant;
 impl PluginManager {
     /// Add a plugin, checking for duplicate IDs and resolving dependency order.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if a duplicate plugin ID is detected.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if a duplicate plugin ID is detected.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         let new_id = plugin.metadata().id.clone();
@@ -35,8 +35,8 @@ impl PluginManager {
 
     /// Execute all plugins for one time step in dependency order.
     /// # Errors
-    /// - Returns [`KwaversError::Physics`] if a plugin index is out of bounds.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Physics`] if a plugin index is out of bounds.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn execute(
@@ -75,8 +75,8 @@ impl PluginManager {
 
     /// Execute plugins with per-plugin timing collection.
     /// # Errors
-    /// - Returns [`KwaversError::Physics`] if a plugin index is out of bounds.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Physics`] if a plugin index is out of bounds.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn execute_with_metrics(

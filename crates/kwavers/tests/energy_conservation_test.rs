@@ -8,9 +8,7 @@
 use eunomia::{FloatElement, NumericElement};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 /// Parameters for acoustic energy calculation
 struct EnergyParams<T> {

@@ -71,10 +71,10 @@ pub(super) fn inject_velocity_source(
 ///
 /// ```text
 ///   Phase 4: vx^{n+1} = vxx^{n+1} + vxy^{n+1} + vxz^{n+1}
-///          = (α_x·vxx^n + β_x·∂_x·σ_{xx}^{n+1} + s[n])
+///          = (α_x·vxx^n + β_x·∂_x·σ_{xx}^{n+1} + s\[n\])
 ///            + (α_x·vxy^n + β_x·∂_y·σ_{xy}^{n+1})
 ///            + (α_x·vxz^n + β_x·∂_z·σ_{xz}^{n+1})
-///          = α_x·vx^n + β_x·(∇·σ)_x^{n+1} + s[n]    ✓
+///          = α_x·vx^n + β_x·(∇·σ)_x^{n+1} + s\[n\]    ✓
 /// ```
 ///
 /// Without this injection Phase 4 clobbers the source injected into

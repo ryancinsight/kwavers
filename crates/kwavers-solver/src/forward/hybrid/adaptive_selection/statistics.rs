@@ -1,8 +1,8 @@
 // adaptive_selection/statistics.rs - Selection statistics tracking
 
 use super::selector::SelectedMethod;
-use log::info;
 use leto::Array3;
+use log::info;
 
 /// Statistics for method selection
 #[derive(Debug, Clone, Default)]

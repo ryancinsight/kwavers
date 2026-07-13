@@ -4,7 +4,7 @@ use kwavers_grid::Grid;
 impl NumericalValidator {
     /// Validate boundaries.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn validate_boundaries(
         &self,

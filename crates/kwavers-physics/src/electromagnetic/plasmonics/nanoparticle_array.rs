@@ -112,4 +112,3 @@ impl NanoparticleArray {
         TWO_PI * refractive_index / wavelength
     }
 }
-

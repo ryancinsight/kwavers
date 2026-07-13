@@ -12,11 +12,11 @@
 //! - Karaman et al. (1995), "Synthetic aperture imaging for small scale systems"
 //! - Jensen et al. (2006), "Synthetic aperture ultrasound imaging"
 
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::{Array2, Array3};
-use eunomia::Complex64;
 
 /// Synthetic Aperture (SA) imaging configuration
 #[derive(Debug, Clone)]
@@ -117,4 +117,3 @@ impl SyntheticApertureReconstruction {
         distance / self.config.sound_speed
     }
 }
-

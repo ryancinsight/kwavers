@@ -8,8 +8,8 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult, ValidationError},
 };
 use kwavers_grid::Grid;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
 use super::validation::{

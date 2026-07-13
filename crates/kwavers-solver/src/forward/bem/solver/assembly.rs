@@ -1,12 +1,12 @@
 use super::BemSolver;
 use crate::forward::bem::integrals::{compute_nonsingular_integrals, compute_singular_integrals};
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::{
     solver::{IterativeSolver, SolverConfig, SparsePreconditioner},
     CompressedSparseRowMatrix,
 };
 use leto::Array1;
-use kwavers_math::fft::Complex64;
 
 impl BemSolver {
     /// Assemble BEM system matrices
@@ -18,7 +18,7 @@ impl BemSolver {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn assemble_system(&mut self) -> KwaversResult<()> {
-        let n = self.vertices.len() ;
+        let n = self.vertices.len();
         if n == 0 {
             return Ok(());
         }

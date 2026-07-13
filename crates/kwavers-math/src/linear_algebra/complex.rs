@@ -144,7 +144,8 @@ mod tests {
         )
         .unwrap();
 
-        let b = Array1::from_vec(2, vec![Complex64::new(3.0, 1.0), Complex64::new(2.0, -1.0)]).unwrap();
+        let b =
+            Array1::from_vec(2, vec![Complex64::new(3.0, 1.0), Complex64::new(2.0, -1.0)]).unwrap();
 
         let x = ComplexLinearAlgebra::solve_linear_system_complex(&a, &b).unwrap();
 

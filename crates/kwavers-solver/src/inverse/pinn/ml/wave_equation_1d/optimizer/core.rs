@@ -9,8 +9,8 @@
 //! - Rumelhart et al. (1986): "Learning representations by back-propagating errors"
 //! - Kingma & Ba (2014): "Adam: A Method for Stochastic Optimization"
 
-use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 use coeus_autograd::Parameter;
+use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 
 use super::super::network::PinnWave1D;
 

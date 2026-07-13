@@ -44,7 +44,7 @@ where
 {
     /// Create a new 3D PINN solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn new<F>(
         config: PinnConfig3D,
         geometry: Geometry3D,
@@ -68,8 +68,8 @@ where
 
     /// Get wave speed at a specific location
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn get_wave_speed(&self, x: f32, y: f32, z: f32) -> KwaversResult<f32> {
         let wave_speed = self
             .wave_speed_fn
@@ -88,8 +88,8 @@ where
 
     /// Make predictions at new points
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn predict(&self, x: &[f32], y: &[f32], z: &[f32], t: &[f32]) -> KwaversResult<Vec<f32>> {
         let n = (x.len());
         if n == 0 {
@@ -127,7 +127,7 @@ where
 
     /// Scalar f32.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     pub(crate) fn extract_scalar(v: &Var<f32, B>) -> KwaversResult<f32> {
         let slice = v.tensor.as_slice();
         if (slice.len()) != 1 {
@@ -148,7 +148,7 @@ where
 
     /// Tensor column vec f32.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     pub(crate) fn extract_column_vec(v: &Var<f32, B>) -> KwaversResult<Vec<f32>> {
         let shape = v.tensor.shape();
         let [n, m] = shape else {

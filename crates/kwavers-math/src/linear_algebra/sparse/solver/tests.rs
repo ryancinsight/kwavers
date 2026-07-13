@@ -2,8 +2,8 @@
 
 use super::{IterativeSolver, SolverConfig};
 use crate::linear_algebra::sparse::CompressedSparseRowMatrix;
-use leto::Array1;
 use eunomia::Complex64;
+use leto::Array1;
 
 #[test]
 fn test_bicgstab_complex_identity() {

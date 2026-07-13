@@ -1,7 +1,4 @@
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
 use kwavers_transducer::transducers::focused::BowlAngularBounds;

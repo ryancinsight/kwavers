@@ -5,12 +5,9 @@ use super::grid::distance_m;
 use super::BreastUstDirectFieldDiagnostics;
 use crate::reconstruction::breast_ust_fwi::BreastUstPstdDatasetConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use leto::{
-    Array3,
-    SliceArg,
-};
 use kwavers_math::fft::Complex64;
+use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
+use leto::{Array3, SliceArg};
 
 pub(super) fn diagnostics_for_prediction(
     predicted: &Array3<Complex64>,

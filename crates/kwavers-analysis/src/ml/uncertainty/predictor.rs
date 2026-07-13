@@ -1,10 +1,7 @@
 //! Solver-agnostic prediction contract for PINN uncertainty estimation.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// PINN prediction surface consumed by analysis-side uncertainty estimators.
 pub trait PinnUncertaintyPredictor {

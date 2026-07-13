@@ -17,10 +17,7 @@ use kwavers_solver::forward::pstd::dg::{
 use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_solver::interface::solver::Solver;
 use leto::Array1;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -53,7 +50,10 @@ pub fn run_dg_axial_field() -> Result<AxialField> {
     let solver = DGSolver::new(config, grid)?;
     let mut pressure = Array3::<f64>::zeros((DG_ELEMENTS, n_nodes, 1));
     let mut velocity = Array3::<f64>::zeros((DG_ELEMENTS, n_nodes, 1));
-    let mut workspace = AcousticDg1DWorkspace::new({ let s = pressure.shape(); (s[0], s[1], s[2]) });
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     let source_weights = dg_source_weights(&xi_nodes, &weights);
     let density = physics::RHO0 * physics::DX;
     let dt_sub = physics::DT / DG_SUBSTEPS_PER_STEP as f64;
@@ -171,7 +171,10 @@ fn run_dg_tensor_field(name: &'static str, nz: usize) -> Result<SolverField> {
     };
     let solver = DGSolver::new(config, Arc::clone(&grid))?;
     let mut state = Array3::<f64>::zeros(solver.acoustic_tensor_state_shape()?);
-    let mut workspace = AcousticDgTensorWorkspace::new({ let s = state.shape(); (s[0], s[1], s[2]) });
+    let mut workspace = AcousticDgTensorWorkspace::new({
+        let s = state.shape();
+        (s[0], s[1], s[2])
+    });
     let sources = dg_tensor_sources(&solver, nz)?;
     let dt_sub = physics::DT / DG_TENSOR_SUBSTEPS_PER_STEP as f64;
     let mut pressure = Array3::<f64>::zeros((physics::NX, physics::NY, nz));
@@ -300,8 +303,12 @@ trait PressureGrid3 {
 }
 
 impl PressureGrid3 for leto::Array3<f64> {
-    fn nz(&self) -> usize { self.shape()[2] }
-    fn at(&self, i: usize, j: usize, k: usize) -> f64 { self[[i, j, k]] }
+    fn nz(&self) -> usize {
+        self.shape()[2]
+    }
+    fn at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
 }
 
 fn update_peak<P: PressureGrid3>(name: &'static str, peak: &mut Array2<f64>, pressure: &P) {

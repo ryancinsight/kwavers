@@ -1,11 +1,11 @@
 use super::FemHelmholtzSolver;
 use crate::forward::helmholtz::fem::assembly::FemAssembly;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::csr::CompressedSparseRowMatrix;
 use kwavers_medium::Medium;
 use kwavers_mesh::MeshBoundaryType;
 use leto::Array1;
-use kwavers_math::fft::Complex64;
 
 impl FemHelmholtzSolver {
     /// Assemble the global system matrix A = K − k²M and apply boundary conditions.
@@ -13,12 +13,12 @@ impl FemHelmholtzSolver {
     /// The `medium` parameter is reserved for future heterogeneous-k support;
     /// currently the uniform `config.wavenumber` is used.
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn assemble_system<M: Medium + ?Sized>(&mut self, _medium: &M) -> KwaversResult<()> {
         if self.mesh.elements.is_empty() {
-            let num_nodes = self.mesh.nodes.len() ;
+            let num_nodes = self.mesh.nodes.len();
             let mut k_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut m_global = CompressedSparseRowMatrix::create(num_nodes, num_nodes);
             let mut rhs_global = Array1::<Complex64>::from_elem(num_nodes, Complex64::default());
@@ -73,9 +73,9 @@ impl FemHelmholtzSolver {
             &mut rhs_boundary,
             self.config.wavenumber,
         )?;
-        self.rhs = rhs_boundary.try_into().map_err(|e| {
-            KwaversError::InternalError(format!("FEM RHS conversion failed: {e}"))
-        })?;
+        self.rhs = rhs_boundary
+            .try_into()
+            .map_err(|e| KwaversError::InternalError(format!("FEM RHS conversion failed: {e}")))?;
 
         Ok(())
     }
@@ -89,8 +89,8 @@ impl FemHelmholtzSolver {
     /// point to the nearest node; callers must provide the FEM degree of freedom
     /// explicitly so no hidden spatial approximation is introduced.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_nodal_load(&mut self, node_idx: usize, value: Complex64) -> KwaversResult<()> {
         self.validate_node_index(node_idx)?;
@@ -110,7 +110,7 @@ impl FemHelmholtzSolver {
     /// Boundary conditions are queued in the solver's boundary manager and take
     /// effect on the next `assemble_system` call.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn add_dirichlet_on_boundary_type(
         &mut self,
@@ -135,7 +135,7 @@ impl FemHelmholtzSolver {
             return Ok(0);
         }
 
-        let count = nodes.len() ;
+        let count = nodes.len();
         self.boundary_manager.add_dirichlet(nodes);
         Ok(count)
     }

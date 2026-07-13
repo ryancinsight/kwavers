@@ -1,5 +1,5 @@
-use leto::Array2;
 use kwavers_math::fft::Complex64;
+use leto::Array2;
 
 use super::config::BurtonMillerConfig;
 use kwavers_core::error::KwaversResult;
@@ -20,7 +20,7 @@ impl BurtonMillerAssembler {
 
     /// Compute area-weighted vertex normals for a triangular mesh (Gouraud shading).
     fn compute_vertex_normals(&self, nodes: &[[f64; 3]], elements: &[[usize; 3]]) -> Vec<[f64; 3]> {
-        let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len() ];
+        let mut normals: Vec<[f64; 3]> = vec![[0.0, 0.0, 0.0]; nodes.len()];
 
         for &elem in elements {
             let (n1, n2, n3) = (elem[0], elem[1], elem[2]);
@@ -49,7 +49,7 @@ impl BurtonMillerAssembler {
 
     /// Assemble Burton-Miller H matrix (CBIE + α·HBIE).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn assemble_h_matrix(
         &self,
@@ -93,7 +93,7 @@ impl BurtonMillerAssembler {
 
     /// Assemble Burton-Miller G matrix (Neumann data RHS).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn assemble_g_matrix(
         &self,

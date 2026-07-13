@@ -12,9 +12,7 @@ use kwavers_math::fft::{
 };
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 use std::sync::Arc;
 
 /// One relaxation arm with its precomputed per-voxel exponential-integrator
@@ -63,9 +61,9 @@ pub struct ViscoacousticMemorySolver {
     dt: f64,
     /// Per-voxel `1/ρ(x)` \[m³·kg⁻¹] for the velocity update.
     inv_rho: Array3<f64>,
-    /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \[Pa].
+    /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \\[Pa\].
     m_u: Array3<f64>,
-    /// Per-voxel equilibrium (relaxed) modulus `M_∞(x)` \[Pa] — potential-energy norm.
+    /// Per-voxel equilibrium (relaxed) modulus `M_∞(x)` \\[Pa\] — potential-energy norm.
     m_inf: Array3<f64>,
     /// Maximum unrelaxed sound speed over the grid \[m·s⁻¹] — the CFL reference.
     max_unrelaxed_speed: f64,
@@ -285,13 +283,11 @@ impl ViscoacousticMemorySolver {
             )
             .expect("invariant: viscoacoustic modulus fields share grid shape");
         }
-        let max_unrelaxed_speed = leto_ops::zip_fold(
-            &m_u.view(),
-            &inv_rho.view(),
-            0.0_f64,
-            |acc, &mu, &ir| acc.max((mu * ir).sqrt()),
-        )
-        .expect("invariant: modulus and inv_rho fields share grid shape");
+        let max_unrelaxed_speed =
+            leto_ops::zip_fold(&m_u.view(), &inv_rho.view(), 0.0_f64, |acc, &mu, &ir| {
+                acc.max((mu * ir).sqrt())
+            })
+            .expect("invariant: modulus and inv_rho fields share grid shape");
 
         Self {
             nx,
@@ -513,7 +509,7 @@ impl ViscoacousticMemorySolver {
         self.max_unrelaxed_speed
     }
 
-    /// Pressure field \[Pa].
+    /// Pressure field \\[Pa\].
     #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.p
@@ -851,7 +847,7 @@ fn relaxation_attenuation(omega: f64, rho: f64, m_inf: f64, weights: &[f64], tau
     k.im.abs()
 }
 
-/// FFT-order signed wavenumbers `k[m] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`
+/// FFT-order signed wavenumbers `k\[m\] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`
 /// and `m' = m − n` otherwise. For `n = 1` this is `[0]` (derivative along a
 /// singleton axis is zero).
 ///

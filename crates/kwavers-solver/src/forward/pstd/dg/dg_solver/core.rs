@@ -15,11 +15,7 @@ use super::topology::CoefficientLayout;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
 use kwavers_grid::Grid;
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 use std::sync::Arc;
 
 /// DG solver for hyperbolic conservation laws
@@ -65,8 +61,8 @@ pub struct DGSolver {
 impl DGSolver {
     /// Create a new DG solver with proper matrix initialization
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: DGConfig, grid: Arc<Grid>) -> KwaversResult<Self> {
         if config.basis_type == BasisType::Fourier {
@@ -143,7 +139,7 @@ impl DGSolver {
     /// `config.basis_type` is overridden to `BasisType::Fourier`; all other fields apply.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Config`] when `polynomial_order + 1 < 2`.
+    /// Returns [`crate::KwaversError::Config`] when `polynomial_order + 1 < 2`.
     /// Propagates matrix construction errors.
     pub fn new_fourier(mut config: DGConfig, grid: Arc<Grid>) -> KwaversResult<Self> {
         config.basis_type = BasisType::Fourier;

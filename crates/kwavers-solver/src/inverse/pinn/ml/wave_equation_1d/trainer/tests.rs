@@ -2,10 +2,7 @@ use super::super::config::PinnConfig;
 use super::trainer_impl::PinnTrainer;
 use coeus_core::MoiraiBackend;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 type TestBackend = MoiraiBackend;
 

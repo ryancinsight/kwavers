@@ -92,7 +92,7 @@ impl PluginManager {
 
     /// Initialize all plugins.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize_all(
         &mut self,
@@ -107,7 +107,7 @@ impl PluginManager {
 
     /// Initialize all plugins (alias for `initialize_all`).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         for plugin in &mut self.plugins {
@@ -118,7 +118,7 @@ impl PluginManager {
 
     /// Finalize all plugins.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn finalize(&mut self) -> KwaversResult<()> {
         for plugin in &mut self.plugins {

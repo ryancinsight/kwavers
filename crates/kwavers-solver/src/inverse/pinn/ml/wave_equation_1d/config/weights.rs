@@ -24,7 +24,7 @@ impl Default for LossWeights {
 impl LossWeights {
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.data < 0.0 || !self.data.is_finite() {

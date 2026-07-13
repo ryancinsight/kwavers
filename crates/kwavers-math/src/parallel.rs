@@ -1,8 +1,8 @@
 //! Provider-owned traversal adapters for math kernels.
 
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use leto::{ArrayView, ArrayViewMut};
-use leto_ops::{zip_mut_with, zip2_mut_with};
+use leto_ops::{zip2_mut_with, zip_mut_with};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 const MATH_CHUNK_SIZE: usize = 4096;
 

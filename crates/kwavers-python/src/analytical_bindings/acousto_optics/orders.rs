@@ -1,7 +1,7 @@
 //! Acousto-optic diffraction-order intensity bindings.
 
 use kwavers_physics::analytical::acousto_optics;
-use numpy::{ToPyArray, PyArray1};
+use numpy::{PyArray1, ToPyArray};
 use pyo3::prelude::*;
 
 /// Raman–Nath (thin-grating) order intensities Iₘ = Jₘ²(ν) for
@@ -31,4 +31,3 @@ pub fn solve_coupled_orders(
         .to_pyarray(py)
         .unbind()
 }
-

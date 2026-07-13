@@ -30,10 +30,10 @@
 //! finite difference (LeVeque 2007, §2.2). The backward stencil requires no
 //! future values, keeping the scheme fully explicit. Taylor expansion shows
 //! the truncation error is O(Δt), not O(Δt²) — the centered stencil
-//! `(p²[n+1] − 2p²[n] + p²[n-1])/Δt²` achieves O(Δt²) but is implicit:
+//! `(p²[n+1] − 2p²\[n\] + p²[n-1])/Δt²` achieves O(Δt²) but is implicit:
 //!
 //! ```text
-//! ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt)
+//! ∂²(p²)/∂t² ≈ (p²\[n\] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt)
 //! ```
 //!
 //! For weakly nonlinear acoustics (Ma ≪ 1) this is acceptable: the nonlinear
@@ -73,11 +73,11 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 ///
 /// Discrete ∂²(p²)/∂t² — backward stencil (LeVeque 2007, §2.2), O(Δt):
 /// ```text
-/// ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt)
+/// ∂²(p²)/∂t² ≈ (p²\[n\] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt)
 /// ```
 ///
 /// # Arguments
-/// * `pressure` - Current pressure field p[n]
+/// * `pressure` - Current pressure field p\[n\]
 /// * `pressure_prev` - Previous pressure field p[n−1]
 /// * `pressure_prev2` - Two steps back p[n−2]
 /// * `dt` - Time step size Δt

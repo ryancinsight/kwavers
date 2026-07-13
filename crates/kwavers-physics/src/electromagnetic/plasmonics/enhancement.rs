@@ -51,9 +51,9 @@
 
 use super::mie_theory::MieTheory;
 use super::types::CouplingModel;
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 use kwavers_core::constants::numerical::FOUR_PI;
-use eunomia::Complex;
 use std::f64::consts::PI;
 
 /// Plasmonic enhancement calculator for homogeneous nanoparticle dispersions
@@ -190,4 +190,3 @@ pub(crate) fn bruggeman_effective_dielectric(
     let c = (2.0 * eps_host - eps_particle) + 3.0 * f * (eps_particle - eps_host);
     (c + (c * c + 8.0 * eps_particle * eps_host).sqrt()) / 4.0
 }
-

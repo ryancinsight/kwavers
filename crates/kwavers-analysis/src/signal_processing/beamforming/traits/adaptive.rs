@@ -1,11 +1,8 @@
 //! Adaptive beamforming trait — data-driven weight optimization with
 //! diagonal loading and pseudospectrum.
 
-use leto::{
-    Array1,
-    Array2,
-};
 use eunomia::Complex64;
+use leto::{Array1, Array2};
 
 use kwavers_core::error::KwaversResult;
 
@@ -149,4 +146,3 @@ pub trait AdaptiveFrequencyBeamformer: FrequencyDomainBeamformer {
         steering: &Array1<Complex64>,
     ) -> KwaversResult<f64>;
 }
-

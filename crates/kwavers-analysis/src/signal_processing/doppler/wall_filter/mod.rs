@@ -3,12 +3,9 @@
 //! Removes slow-moving clutter from vessel walls and tissue while preserving
 //! blood flow signals. Essential for clean Doppler velocity estimation.
 
-use kwavers_core::error::KwaversResult;
-use leto::{
-    Array3,
-    ArrayView3,
-};
 use eunomia::Complex64;
+use kwavers_core::error::KwaversResult;
+use leto::{Array3, ArrayView3};
 
 /// Wall filter types
 #[derive(Debug, Clone, Copy)]
@@ -260,4 +257,3 @@ fn project_out(signal: &[Complex64], basis: &[Vec<f64>], projector: &[Vec<f64>])
 
 #[cfg(test)]
 mod tests;
-

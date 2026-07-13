@@ -1,8 +1,8 @@
 //! Dispersion correction models
 
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
-use eunomia::Complex;
 
 use crate::parallel::zip_mut_ref;
 
@@ -135,4 +135,3 @@ impl AbsorptionDispersionCorrection {
         TWO_PI * frequency / c_phase
     }
 }
-

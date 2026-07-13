@@ -127,11 +127,11 @@ mod tests {
     //!   bit-exact under IEEE 754, the strongest possible detector.
     //! - `approx::assert_relative_eq!` (epsilon 1e-12) only for the
     //!   transcendental case `l2_norm([1, 2]) = sqrt(5)`.
-//!
-//! # Test scope (Phase-1A regression — not exhaustive)
-//!
-//! Pinned: dot_product, l2_norm, max_abs, plus f32 parity subset.
-//! Not pinned: safe_divide, add_arrays, scale_array, normalize.
+    //!
+    //! # Test scope (Phase-1A regression — not exhaustive)
+    //!
+    //! Pinned: dot_product, l2_norm, max_abs, plus f32 parity subset.
+    //! Not pinned: safe_divide, add_arrays, scale_array, normalize.
 
     use super::NumericOps;
     use approx::assert_relative_eq;
@@ -216,7 +216,8 @@ mod tests {
         // 1² + 2² = 5; sqrt(5) is irrational — the only non-bit-exact case.
         // Epsilon 1e-12 catches real drift, not 64-bit round-off.
         let v = [1.0_f64, 2.0];
-        assert_relative_eq!(f64::l2_norm(&v), 2.23606797749979_f64, epsilon = 1e-12);  // sqrt(5) exact to ~16 digits
+        assert_relative_eq!(f64::l2_norm(&v), 2.23606797749979_f64, epsilon = 1e-12);
+        // sqrt(5) exact to ~16 digits
     }
 
     // ───── max_abs ────────────────────────────────────────────────

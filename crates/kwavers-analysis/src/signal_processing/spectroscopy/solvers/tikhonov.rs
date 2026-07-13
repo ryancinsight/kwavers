@@ -4,10 +4,7 @@
 //! linear systems in spectroscopic unmixing.
 
 use anyhow::{Context, Result};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Solve Tikhonov-regularized least squares: (EᵀE + λI)C = Eᵀμ
 ///
@@ -32,8 +29,7 @@ pub fn tikhonov_solve(e: &Array2<f64>, mu: &Array1<f64>, lambda: f64) -> Result<
         .transpose([1, 0])
         .expect("invariant: 2-D transpose axes valid");
     let mut ete = Array2::<f64>::zeros((n_chromophores, n_chromophores));
-    leto_ops::matmul(&et, &e.view(), &mut ete.view_mut())
-        .expect("invariant: EᵀE dimensions match");
+    leto_ops::matmul(&et, &e.view(), &mut ete.view_mut()).expect("invariant: EᵀE dimensions match");
 
     // Add regularization: EᵀE + λI
     // This ensures the matrix is positive-definite even if E is rank-deficient
@@ -131,8 +127,7 @@ pub fn estimate_condition_number(A: &Array2<f64>) -> Result<f64> {
         .transpose([1, 0])
         .expect("invariant: 2-D transpose axes valid");
     let mut ata = Array2::<f64>::zeros((n, n));
-    leto_ops::matmul(&at, &A.view(), &mut ata.view_mut())
-        .expect("invariant: AᵀA dimensions match");
+    leto_ops::matmul(&at, &A.view(), &mut ata.view_mut()).expect("invariant: AᵀA dimensions match");
 
     // Power iteration for largest eigenvalue λ_max
     let mut v = Array1::from_elem(n, 1.0 / (n as f64).sqrt());
@@ -149,8 +144,8 @@ pub fn estimate_condition_number(A: &Array2<f64>) -> Result<f64> {
     let mut ata_v = Array1::<f64>::zeros(n);
     leto_ops::matvec(&ata.view(), &v.view(), &mut ata_v.view_mut())
         .expect("invariant: AᵀA·v dimensions match");
-    let lambda_max = leto_ops::dot(&v.view(), &ata_v.view())
-        .expect("invariant: dot dimensions match");
+    let lambda_max =
+        leto_ops::dot(&v.view(), &ata_v.view()).expect("invariant: dot dimensions match");
 
     // Approximate smallest eigenvalue λ_min via Trace(AᵀA) - λ_max (rough heuristic for small n)
     // For n=2,3 this is acceptable. For larger n, we would need inverse power iteration.

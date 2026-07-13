@@ -1,10 +1,7 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    Array2,
-};
 use kwavers_math::fft::Complex64;
+use leto::{Array1, Array2};
 
 /// Per-element FEM assembly arrays: stiffness `K_e`, consistent mass `M_e`, and
 /// RHS `f_e`, one entry per mesh element.
@@ -23,13 +20,13 @@ impl FemHelmholtzSolver {
     /// ∇φᵢ = J^{−T} ∇ξᵢ
     /// ```
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_element_matrices(&self) -> KwaversResult<ElementMatrices> {
-        let mut element_stiffness = Vec::with_capacity(self.mesh.elements.len() );
-        let mut element_mass = Vec::with_capacity(self.mesh.elements.len() );
-        let mut element_rhs = Vec::with_capacity(self.mesh.elements.len() );
+        let mut element_stiffness = Vec::with_capacity(self.mesh.elements.len());
+        let mut element_mass = Vec::with_capacity(self.mesh.elements.len());
+        let mut element_rhs = Vec::with_capacity(self.mesh.elements.len());
 
         for element in &self.mesh.elements {
             let p0 = self.mesh.nodes[element.nodes[0]].coordinates;

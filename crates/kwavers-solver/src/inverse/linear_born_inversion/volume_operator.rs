@@ -46,7 +46,7 @@ pub struct VolumeOperator<'a> {
     /// Flat element-to-voxel Euclidean distances.
     ///
     /// `elem_dist[elem_idx * n_active + col]` = distance from element `elem_idx` to
-    /// active voxel `col` [m]. Populated once in `new()` via Moirai chunk
+    /// active voxel `col` \[m\]. Populated once in `new()` via Moirai chunk
     /// dispatch.
     elem_dist: Vec<f64>,
     /// Element-wise square roots of `elem_dist`.

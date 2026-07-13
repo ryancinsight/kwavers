@@ -93,8 +93,7 @@ impl MultiPhysicsFieldCoupler {
 
         // Apply relaxation for stability
         let current_target = target_solver.get_field(field_name)?.to_contiguous();
-        let relaxed_field =
-            &(&interpolated * relaxation) + &(&current_target * (1.0 - relaxation));
+        let relaxed_field = &(&interpolated * relaxation) + &(&current_target * (1.0 - relaxation));
 
         // Update target field
         target_solver.set_field(field_name, relaxed_field.view())?;
@@ -144,8 +143,7 @@ impl MultiPhysicsFieldCoupler {
         };
 
         let current_target = target_solver.get_field(field_name)?.to_contiguous();
-        let relaxed_field =
-            &(&interpolated * relaxation) + &(&current_target * (1.0 - relaxation));
+        let relaxed_field = &(&interpolated * relaxation) + &(&current_target * (1.0 - relaxation));
         target_solver.set_field(field_name, relaxed_field.view())?;
 
         let residual = max_abs_difference(relaxed_field.view(), current_target.view())?;

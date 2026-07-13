@@ -2,7 +2,7 @@
 
 use super::arrays::as_slices;
 use kwavers_math::statistics;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -40,4 +40,3 @@ pub fn phase_shift_correlation_curve(
 pub fn phase_error_degrees_for_correlation(correlation: f64) -> PyResult<f64> {
     statistics::phase_error_degrees_for_correlation(correlation).map_err(PyValueError::new_err)
 }
-

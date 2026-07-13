@@ -44,7 +44,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Distribute
 
     /// Load checkpoint.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the checkpoint file is not found.
+    /// - Returns [`crate::KwaversError::System`] if the checkpoint file is not found.
     ///
     pub fn load_checkpoint(&mut self, epoch: usize) -> KwaversResult<()> {
         let path = self

@@ -172,7 +172,8 @@ impl UltrafastPlaneWave {
             })
             .collect();
 
-        Array1::from_vec([weights.len()], weights).map_err(|err| KwaversError::Shape(err.to_string()))
+        Array1::from_vec([weights.len()], weights)
+            .map_err(|err| KwaversError::Shape(err.to_string()))
     }
 
     /// Number of compounding angles.

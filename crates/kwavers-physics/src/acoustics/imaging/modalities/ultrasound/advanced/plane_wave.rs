@@ -11,11 +11,11 @@
 //!
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::{Array2, Array3};
-use eunomia::Complex64;
 
 /// Plane wave imaging configuration
 #[derive(Debug, Clone)]
@@ -104,4 +104,3 @@ impl PlaneWaveReconstruction {
         distance / self.config.sound_speed
     }
 }
-

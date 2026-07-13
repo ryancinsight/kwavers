@@ -6,12 +6,12 @@ use crate::forward::bem::{
 };
 use kwavers_boundary::BemBoundaryManager;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::{
     solver::SparsePreconditioner, CompressedSparseRowMatrix,
 };
-use moirai_parallel::{map_collect_with, Adaptive};
 use leto::Array1;
-use kwavers_math::fft::Complex64;
+use moirai_parallel::{map_collect_with, Adaptive};
 
 impl BemSolver {
     /// Invalidate cached system matrices (called when wavenumber changes).
@@ -46,7 +46,7 @@ impl BemSolver {
     /// Solves the Burton–Miller CFIE:
     ///   (H + α·D)·p = (G + α·(0.5I + H'))·∂p/∂n_inc
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -56,7 +56,7 @@ impl BemSolver {
         p_inc: Vec<Complex64>,
         dp_inc_dn: Vec<Complex64>,
     ) -> KwaversResult<Vec<Complex64>> {
-        let n = self.vertices.len() ;
+        let n = self.vertices.len();
         if n == 0 {
             return Ok(Vec::new());
         }
@@ -104,8 +104,8 @@ impl BemSolver {
             nnz: h_mat.nnz,
         };
 
-        let rhs_arr = Array1::from_vec(rhs.len(), rhs)
-            .expect("invariant: BEM RHS vector length well-formed");
+        let rhs_arr =
+            Array1::from_vec(rhs.len(), rhs).expect("invariant: BEM RHS vector length well-formed");
         let solver_config = kwavers_math::linear_algebra::sparse::solver::SolverConfig {
             max_iterations: self.config.max_iterations,
             tolerance: self.config.tolerance,
@@ -126,7 +126,7 @@ impl BemSolver {
 
     /// Solve the BEM system applying boundary conditions.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -160,8 +160,9 @@ impl BemSolver {
         let x = self.solve_bem_system(&a_matrix, &b_vector_nd)?;
         let x_leto = x.clone();
 
-        let (boundary_pressure, boundary_velocity) =
-            self.boundary_manager.reconstruct_solution(&x_leto, wavenumber);
+        let (boundary_pressure, boundary_velocity) = self
+            .boundary_manager
+            .reconstruct_solution(&x_leto, wavenumber);
 
         Ok(BemSolution {
             boundary_pressure: boundary_pressure.try_into().map_err(|e| {
@@ -176,7 +177,7 @@ impl BemSolver {
 
     /// Compute scattered field at evaluation points using the BEM representation formula.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_scattered_field(
         &self,

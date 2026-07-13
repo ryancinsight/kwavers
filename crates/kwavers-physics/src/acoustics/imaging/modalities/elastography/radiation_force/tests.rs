@@ -60,7 +60,7 @@ mod tests {
         let displacement = arf.push_pulse_pseudo_displacement(push_location).unwrap();
 
         // Check displacement field properties
-        assert_eq!(displacement.shape(),  [50, 50, 50]);
+        assert_eq!(displacement.shape(), [50, 50, 50]);
 
         // Maximum displacement should be at or near focal point
         let max_disp = displacement

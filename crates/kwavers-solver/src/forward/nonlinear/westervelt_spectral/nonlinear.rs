@@ -2,9 +2,7 @@
 
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 /// Compute the nonlinear term for the Westervelt equation
 ///

@@ -1,7 +1,7 @@
 //! Passive cavitation spectrum and dose PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -27,10 +27,7 @@ pub fn bubble_power_spectrum(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (freqs, psd) = cavitation::bubble_power_spectrum(r_s, dt_s, n_fft);
-    Ok((
-        freqs.to_pyarray(py).unbind(),
-        psd.to_pyarray(py).unbind(),
-    ))
+    Ok((freqs.to_pyarray(py).unbind(), psd.to_pyarray(py).unbind()))
 }
 
 /// Hann-windowed single-sided power spectral density of an emission series.
@@ -61,10 +58,7 @@ pub fn hann_windowed_power_spectrum(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (freqs, psd) = cavitation::hann_windowed_power_spectrum(s, dt_s, n_fft);
-    Ok((
-        freqs.to_pyarray(py).unbind(),
-        psd.to_pyarray(py).unbind(),
-    ))
+    Ok((freqs.to_pyarray(py).unbind(), psd.to_pyarray(py).unbind()))
 }
 
 /// Compute a normalized Keller-Miksis PCD spectrum and SC/IC band ratios.
@@ -450,4 +444,3 @@ pub fn passive_cavitation_dose_fixture<'py>(
     )?;
     Ok(out)
 }
-

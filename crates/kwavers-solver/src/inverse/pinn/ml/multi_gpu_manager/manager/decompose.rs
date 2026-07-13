@@ -109,7 +109,7 @@ impl MultiGpuManager {
     }
     /// Decompose hybrid.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn decompose_hybrid(
         &self,

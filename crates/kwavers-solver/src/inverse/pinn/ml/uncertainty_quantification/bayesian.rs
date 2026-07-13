@@ -66,7 +66,7 @@ where
 
     /// Calibrate uncertainty estimates using validation data.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn calibrate(
         &mut self,
@@ -93,7 +93,7 @@ where
 
     /// Predict with uncertainty quantification.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict_with_uncertainty(
         &mut self,
@@ -109,7 +109,7 @@ where
 
     /// Deep ensemble prediction.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn ensemble_prediction(
         &mut self,
@@ -136,7 +136,7 @@ where
 
     /// Compute uncertainty statistics from predictions.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     fn compute_uncertainty_stats(
         &mut self,
@@ -209,8 +209,8 @@ where
 
     /// Get model prediction for ensemble member.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn model_prediction(
         &self,
@@ -253,7 +253,7 @@ where
 
     /// Update calibration metrics.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn _update_calibration_metrics(
         &mut self,

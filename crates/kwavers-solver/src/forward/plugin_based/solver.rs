@@ -13,8 +13,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::traits::RecorderTrait;
 use kwavers_source::{Source, SourceField};
-use log::{debug, info};
 use leto::Array3;
+use log::{debug, info};
 use std::sync::Arc;
 
 use super::field_registry::FieldRegistry;
@@ -101,7 +101,7 @@ impl PluginBasedSolver {
 
     /// Add a physics plugin
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         // Register required fields
@@ -115,7 +115,7 @@ impl PluginBasedSolver {
 
     /// Add an acoustic source
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
         let required_field = match source.source_type() {
@@ -142,7 +142,7 @@ impl PluginBasedSolver {
 
     /// Initialize the solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
@@ -205,7 +205,7 @@ impl PluginBasedSolver {
 
     /// Run the simulation for a specified number of steps
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_for_steps(&mut self, steps: usize) -> KwaversResult<()> {
         info!("Running simulation for {} steps", steps);
@@ -236,7 +236,7 @@ impl PluginBasedSolver {
 
     /// Perform a single time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self) -> KwaversResult<()> {
         let t = self.current_step as f64 * self.time.dt;
@@ -335,13 +335,10 @@ impl PluginBasedSolver {
 
     /// Get field by type
     pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<leto::Array3<f64>> {
-        self.field_registry
-            .get_field(field_type)
-            .ok()
-            .map(|view| {
-                leto::Array3::from_shape_vec(view.shape(), view.iter().copied().collect())
-                    .expect("invariant: field view shape yields valid owned array")
-            })
+        self.field_registry.get_field(field_type).ok().map(|view| {
+            leto::Array3::from_shape_vec(view.shape(), view.iter().copied().collect())
+                .expect("invariant: field view shape yields valid owned array")
+        })
     }
 }
 

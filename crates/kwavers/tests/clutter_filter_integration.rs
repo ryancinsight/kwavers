@@ -151,7 +151,11 @@ fn test_output_dimensions_match() -> KwaversResult<()> {
     let svd_filter = SignalSvdClutterFilter::new(svd_config)?;
     let result = svd_filter.filter(&data)?;
 
-    assert_eq!(result.shape(), data.shape(), "Output shape must match input");
+    assert_eq!(
+        result.shape(),
+        data.shape(),
+        "Output shape must match input"
+    );
 
     Ok(())
 }

@@ -68,7 +68,7 @@ const LM_MIN: f64 = 1.0e-12;
 /// `config.iterations` bounds the outer Newton steps.
 ///
 /// # Errors
-/// Propagates forward/adjoint evaluation errors from [`objective_and_gradient`].
+/// Propagates forward/adjoint evaluation errors from `objective_and_gradient`.
 pub fn invert_gauss_newton(
     observations: &[FrequencyObservation],
     array: &MultiRowRingArray,

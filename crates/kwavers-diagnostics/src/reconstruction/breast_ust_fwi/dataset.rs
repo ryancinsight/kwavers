@@ -7,6 +7,7 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_receiver::recorder::simple::SensorRecorder;
@@ -15,12 +16,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
 #[cfg(feature = "gpu")]
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array2,
-    Array3,
-    SliceArg,
-};
-use kwavers_math::fft::Complex64;
+use leto::{Array2, Array3, SliceArg};
 
 mod signal;
 mod validation;

@@ -21,10 +21,7 @@ use super::transform::{bilinear_with_gradient, PlaneGeometry};
 use crate::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Control-lattice interpolation basis for the FFD displacement field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -48,7 +45,7 @@ pub struct FfdConfig {
     pub basis: FfdBasis,
     /// Maximum gradient-descent iterations.
     pub max_iterations: usize,
-    /// Initial line-search step [m] (displacement magnitude).
+    /// Initial line-search step \[m\] (displacement magnitude).
     pub initial_step_m: f64,
     /// Armijo sufficient-decrease constant.
     pub armijo_c1: f64,
@@ -283,7 +280,7 @@ fn smoothness(field: &FfdField, weight: f64) -> (f64, Vec<f64>, Vec<f64>) {
 /// recovered control-lattice deformation. Typically run *after* rigid MOFI, with
 /// `template` already rigidly aligned, to capture the residual non-rigid mismatch.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] off the self-adjoint engine;
+/// - Returns [`crate::KwaversError::InvalidInput`] off the self-adjoint engine;
 ///   propagates solve errors.
 pub fn align_nonrigid(
     processor: &FwiProcessor,
@@ -383,7 +380,7 @@ pub fn align_nonrigid(
     })
 }
 
-/// Evaluate the dense displacement field `(u_x, u_y)` [m] at pixel `(i, j)` — for
+/// Evaluate the dense displacement field `(u_x, u_y)` \[m\] at pixel `(i, j)` — for
 /// inspecting / applying a recovered FFD.
 #[must_use]
 pub fn sample_displacement(

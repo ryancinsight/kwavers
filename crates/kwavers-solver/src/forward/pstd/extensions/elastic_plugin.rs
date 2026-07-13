@@ -1,5 +1,5 @@
 //! `MechanicalStressPlugin` — elastic stress–velocity propagation as a
-//! [`Plugin`](crate::plugin::Plugin) for the capability-driven solver loop.
+//! [`Plugin`] for the capability-driven solver loop.
 //!
 //! # Why a dedicated plugin (and not the deleted `ElasticWavePlugin`)
 //!
@@ -27,9 +27,7 @@
 //! consumed: an acoustic pressure source is not an elastic velocity source, and
 //! conflating them would misrepresent the excitation.
 
-use leto::{
-    Array4,
-};
+use leto::Array4;
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -56,7 +54,7 @@ pub struct MechanicalStressPlugin {
 }
 
 impl MechanicalStressPlugin {
-    /// Create a new elastic-stress plugin for integrator timestep `dt` [s].
+    /// Create a new elastic-stress plugin for integrator timestep `dt` \[s\].
     ///
     /// The orchestrator is not built until [`Plugin::initialize`] supplies the
     /// grid and medium.
@@ -179,9 +177,7 @@ mod tests {
     use kwavers_grid::Grid;
     use kwavers_medium::elastic::lame_from_speeds;
     use kwavers_medium::HomogeneousMedium;
-    use leto::{
-    Array4,
-};
+    use leto::Array4;
 
     fn grid() -> Grid {
         Grid::new(24, 24, 1, 1e-3, 1e-3, 1e-3).expect("grid")

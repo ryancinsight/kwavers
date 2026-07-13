@@ -6,8 +6,8 @@
 use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Reverse Time Migration processor
 /// Follows Single Responsibility Principle - only handles RTM computations
@@ -38,12 +38,12 @@ impl RtmProcessor {
     /// desired correlation lag.
     ///
     /// For full time-domain multi-shot RTM with internally driven propagation,
-    /// use [`ReverseTimeMigration::migrate_shot`] from the
+    /// use [`crate::inverse::reconstruction::seismic::ReverseTimeMigration::migrate_shot`] from the
     /// `reconstruction::seismic::rtm` module, which performs 4th-order FD
     /// propagation and time-step accumulation internally.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// Reference: Baysal et al. (1983), *Geophysics* **48**(11), 1514–1524.
     pub fn migrate(

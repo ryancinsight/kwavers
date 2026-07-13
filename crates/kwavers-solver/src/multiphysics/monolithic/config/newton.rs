@@ -45,7 +45,7 @@ impl NewtonKrylovConfig {
     /// line-search step domains before any full-state residual work is done.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] for invalid iteration count,
+    /// - Returns [`crate::KwaversError::Validation`] for invalid iteration count,
     ///   Newton tolerance, or line-search alpha bound.
     pub(in crate::multiphysics::monolithic) fn validate(&self) -> KwaversResult<()> {
         if self.max_newton_iterations == 0 {

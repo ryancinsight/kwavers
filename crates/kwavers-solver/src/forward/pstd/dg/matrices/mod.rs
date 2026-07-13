@@ -50,10 +50,7 @@ use super::basis::{fourier_theta, validate_fourier_nodes, BasisType};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
 use kwavers_math::special::legendre::legendre_poly_and_deriv;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Compute mass matrix using quadrature
 /// M_ij = integral(phi_i * phi_j)
@@ -79,7 +76,7 @@ pub fn compute_mass_matrix(
 /// Compute stiffness matrix
 /// S_ij = integral(phi_i * phi'_j)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn compute_stiffness_matrix(
     vandermonde: &Array2<f64>,
@@ -109,7 +106,7 @@ pub fn compute_stiffness_matrix(
 
 /// Compute differentiation matrix D_ij = l'_j(x_i)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn compute_diff_matrix(
     vandermonde: &Array2<f64>,
@@ -194,8 +191,8 @@ pub fn compute_lift_matrix(
 
 /// Simple matrix inversion using Gauss-Jordan elimination
 /// # Errors
-/// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-/// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+/// - Returns [`crate::KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+/// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
 ///
 pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     let n = a.shape()[0];

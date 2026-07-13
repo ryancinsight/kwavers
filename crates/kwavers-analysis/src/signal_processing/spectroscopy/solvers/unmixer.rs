@@ -5,11 +5,7 @@ use crate::signal_processing::spectroscopy::types::{
     SpectralUnmixingConfig, UnmixingResult, VolumetricUnmixingResult,
 };
 use anyhow::Result;
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 
 /// Spectral unmixing solver
 #[derive(Debug)]
@@ -229,8 +225,7 @@ mod tests {
         let e = Array2::from_shape_vec(
             (5, 2),
             vec![
-                1.160, 7.177_12, 2.072, 5.620_96, 3.264, 3.046_88, 4.232, 2.765_28, 4.792,
-                3.047_36,
+                1.160, 7.177_12, 2.072, 5.620_96, 3.264, 3.046_88, 4.232, 2.765_28, 4.792, 3.047_36,
             ],
         )
         .unwrap();

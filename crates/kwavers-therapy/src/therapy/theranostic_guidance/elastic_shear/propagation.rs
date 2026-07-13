@@ -5,10 +5,7 @@ use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::extensions::{
     ElasticPstdMedium, ElasticPstdOrchestrator, ElasticPstdVelocitySource,
 };
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 const ELASTIC_CFL: f64 = 0.30;
 
@@ -29,13 +26,11 @@ pub(super) fn propagate_traces(
         KwaversError::InvalidInput("elastic shear receiver mask produced no traces".to_owned())
     })?;
     let [receivers, steps] = vz.shape();
-    Ok(
-        Array2::from_shape_vec(
-            (receivers, steps),
-            vz.as_slice()
-                .expect("elastic sensor output must be densely stored")
-                .to_vec(),
-        )
-        .expect("elastic sensor output shape must match its flattened length"),
+    Ok(Array2::from_shape_vec(
+        (receivers, steps),
+        vz.as_slice()
+            .expect("elastic sensor output must be densely stored")
+            .to_vec(),
     )
+    .expect("elastic sensor output shape must match its flattened length"))
 }

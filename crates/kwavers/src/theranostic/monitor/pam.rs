@@ -18,10 +18,7 @@
 //! propagation delay so the emission stacks coherently at the true source.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Geometry of the monitored 2-D coronal (x–z) PAM image slice.
 #[derive(Clone, Debug)]

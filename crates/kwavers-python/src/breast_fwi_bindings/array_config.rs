@@ -1,7 +1,7 @@
 //! PyO3 binding: `MultiRowRingArray` Python class.
 
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use numpy::{ToPyArray, PyArray2};
+use numpy::{PyArray2, ToPyArray};
 use pyo3::prelude::*;
 
 use super::helpers::{kwavers_to_py, points_to_array};
@@ -65,9 +65,7 @@ impl PyMultiRowRingArray {
     }
 
     pub fn elements<'py>(&self, py: Python<'py>) -> Py<PyArray2<f64>> {
-        points_to_array(self.inner.elements())
-            .to_pyarray(py)
-            .into()
+        points_to_array(self.inner.elements()).to_pyarray(py).into()
     }
 
     pub fn cylindrical_source<'py>(
@@ -80,4 +78,3 @@ impl PyMultiRowRingArray {
             .into()
     }
 }
-

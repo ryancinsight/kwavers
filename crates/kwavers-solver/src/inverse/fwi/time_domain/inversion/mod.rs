@@ -7,9 +7,7 @@ mod shot_gradient;
 use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
@@ -22,14 +20,14 @@ impl FwiProcessor {
     ///
     /// Minimizes the configured data misfit `J(d_syn, d_obs)` (default L2
     /// least-squares `J = (dt/2) Σ_{r,t} (d_syn − d_obs)²`; see
-    /// [`FwiProcessor::with_misfit`](super::super::FwiProcessor::with_misfit) for
+    /// [`Self::with_misfit`] for
     /// the cycle-skipping-robust envelope / phase / Wasserstein alternatives) by
     /// gradient descent with max-norm normalization and Armijo line search. The
     /// objective, convergence test, line search, and adjoint source all use the
     /// same selected functional.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn invert(
         &self,
@@ -119,7 +117,7 @@ impl FwiProcessor {
     /// [`Self::invert`], [`Self::invert_multiscale`](super::FwiProcessor), and
     /// [`Self::invert_encoded`](super::FwiProcessor).
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve, the
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, regularization, or the line search.
     pub(in crate::inverse::fwi::time_domain) fn descent_update(
         &self,
@@ -169,7 +167,7 @@ impl FwiProcessor {
     /// requires the true gradient so the stored curvature pairs
     /// `(s, y = Δg)` retain their physical scaling.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve, the
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, or regularization.
     pub(in crate::inverse::fwi::time_domain) fn misfit_and_gradient(
         &self,
@@ -198,7 +196,7 @@ impl FwiProcessor {
     /// self-adjoint engine and the FDTD/PSTD `Solver` engine both require the full
     /// stored forward history and use it.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve or misfit.
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve or misfit.
     pub(in crate::inverse::fwi::time_domain) fn forward_misfit_raw_gradient(
         &self,
         current_model: &Array3<f64>,

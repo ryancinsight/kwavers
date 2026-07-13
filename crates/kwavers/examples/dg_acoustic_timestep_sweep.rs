@@ -26,10 +26,7 @@ use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use std::fs::{self, File};
@@ -133,7 +130,10 @@ fn run_dg_uniform(dt: f64, steps: usize) -> Result<(Array1<f64>, f64)> {
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, grid)?;
-    let mut workspace = AcousticDg1DWorkspace::new({ let s = pressure.shape(); (s[0], s[1], s[2]) });
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     for _ in 0..steps {
         solver.step_acoustic_1d_ssp_rk3(
             &mut pressure,

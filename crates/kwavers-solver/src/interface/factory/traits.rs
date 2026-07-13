@@ -5,10 +5,7 @@ use crate::config::{SolverConfiguration, SolverType};
 use crate::interface::Solver;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array, Complex64, Normalization};
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Abstract factory for creating solver instances
 pub trait SolverFactoryTrait {

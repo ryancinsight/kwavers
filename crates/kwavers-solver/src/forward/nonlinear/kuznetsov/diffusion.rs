@@ -27,7 +27,7 @@
 //! **Third-order finite-difference approximation**: The term `∂³p/∂t³` is
 //! approximated by the four-point backward difference (LeVeque 2007, §2.14):
 //! ```text
-//! ∂³p/∂t³ ≈ (p[n] − 3p[n-1] + 3p[n-2] − p[n-3]) / Δt³   + O(Δt)
+//! ∂³p/∂t³ ≈ (p\[n\] − 3p[n-1] + 3p[n-2] − p[n-3]) / Δt³   + O(Δt)
 //! ```
 //! This is the forward-most stable 4-point stencil; the truncation error is
 //! O(Δt), sufficient when Δt ≪ T_period (resolved time scale).
@@ -59,7 +59,7 @@ use moirai_parallel::{enumerate_mut_with, Adaptive};
 /// (positive, c² not c⁴).
 ///
 /// # Arguments
-/// * `pressure` - Current pressure p[n]
+/// * `pressure` - Current pressure p\[n\]
 /// * `pressure_prev` - p[n−1]
 /// * `pressure_prev2` - p[n−2]
 /// * `pressure_prev3` - p[n−3]

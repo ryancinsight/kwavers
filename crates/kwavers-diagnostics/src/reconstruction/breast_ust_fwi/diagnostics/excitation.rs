@@ -3,11 +3,8 @@ use super::residual::{
     BreastUstReceiverChannelPolicy,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array3,
-    SliceArg,
-};
 use kwavers_math::fft::Complex64;
+use leto::{Array3, SliceArg};
 use std::f64::consts::{PI, TAU};
 
 #[derive(Clone, Copy, Debug, PartialEq)]

@@ -1,11 +1,7 @@
 //! Velocity source waveform construction for elastic shear propagation.
 
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdSourceMode, ElasticPstdVelocitySource};
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 
 const LINEAR_STRAIN_SOURCE_AMPLITUDE: f64 = 1.0e-5;
 const TONE_BURST_CYCLES: f64 = 2.0;

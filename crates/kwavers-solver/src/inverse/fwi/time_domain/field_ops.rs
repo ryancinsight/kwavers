@@ -1,12 +1,8 @@
 //! Moirai-backed element-wise field operations for time-domain FWI.
 
 use super::FWI_FIELD_CHUNK;
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use leto::{
-    Array3,
-    ArrayView3,
-    ArrayViewMut3,
-};
 
 pub(in crate::inverse::fwi::time_domain) fn write_negative_product(
     dst: &mut Array3<f64>,
@@ -135,7 +131,10 @@ pub(in crate::inverse::fwi::time_domain) fn subtract_scaled_field(
     gradient: &Array3<f64>,
     scale: f64,
 ) {
-    if dst.shape() == gradient.shape() && dst.view().is_c_contiguous() && gradient.view().is_c_contiguous() {
+    if dst.shape() == gradient.shape()
+        && dst.view().is_c_contiguous()
+        && gradient.view().is_c_contiguous()
+    {
         let gradient = gradient
             .as_slice()
             .expect("invariant: standard-layout gradient exposes memory-order slice");
@@ -205,7 +204,10 @@ pub(in crate::inverse::fwi::time_domain) fn zero_masked_by_threshold(
     mask: &Array3<f64>,
     threshold: f64,
 ) {
-    if field.shape() == mask.shape() && field.view().is_c_contiguous() && mask.view().is_c_contiguous() {
+    if field.shape() == mask.shape()
+        && field.view().is_c_contiguous()
+        && mask.view().is_c_contiguous()
+    {
         let mask = mask
             .as_slice()
             .expect("invariant: standard-layout mask exposes memory-order slice");

@@ -97,10 +97,7 @@ use kwavers_solver::inverse::seismic::{
     rtm::RtmProcessor,
 };
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
@@ -817,7 +814,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
             // −4048 outside the reconstructed circle).  Values above 3071 are outside the
             // 12-bit DICOM signed range.  Neither appears in real tissue.
-            for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
+            for h in hu.iter_mut() {
+                *h = (*h).clamp(-1024.0, 3071.0);
+            }
 
             // Assumed spacing: 0.5 mm in-plane, 4.0 mm slice (256mm FOV / 512 px)
             return Ok(CtVolume {
@@ -888,7 +887,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
     // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
     // −4048 outside the reconstructed circle).  Values above 3071 are outside the
     // 12-bit DICOM signed range.  Neither appears in real tissue.
-    for h in hu.iter_mut() { *h = (*h).clamp(-1024.0, 3071.0); }
+    for h in hu.iter_mut() {
+        *h = (*h).clamp(-1024.0, 3071.0);
+    }
 
     // spacing[0..2] = [x_spacing, y_spacing, z_spacing] in mm for both
     // DICOM (pixel_spacing + slice_thickness) and NIfTI (affine column norms).

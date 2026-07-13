@@ -18,7 +18,7 @@ pub struct StencilWeights {
 
 /// Compute derivative stencils for given order and accuracy
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 ///
 pub fn compute_derivative_stencils(
     order: usize,

@@ -47,8 +47,8 @@ impl GMRESSolver {
 
     /// Solve A·x = b using GMRES with implicit matrix-vector product.
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(non_snake_case)]
     pub fn solve<F>(

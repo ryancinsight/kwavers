@@ -239,8 +239,11 @@ pub fn run_theranostic_inverse(
     let anatomy_vec = vector_from_image(&anatomy_target, &active);
     let anatomy_result = solve_tikhonov_h1(&fundamental, &anatomy_vec, &active, inverse_settings);
     let mut history = anatomy_result.objective_history;
-    let anatomy_reconstruction =
-        image_from_vector(&anatomy_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1]));
+    let anatomy_reconstruction = image_from_vector(
+        &anatomy_result.model,
+        &active,
+        (active_mask.shape()[0], active_mask.shape()[1]),
+    );
 
     let mut lesion_speed = lesion_target.clone();
     for v in lesion_speed.iter_mut() {
@@ -251,7 +254,11 @@ pub fn run_theranostic_inverse(
         solve_tikhonov_h1(&fundamental, &lesion_speed_vec, &active, inverse_settings);
     history.extend(active_result.objective_history);
     let active_lesion_reconstruction = normalize_positive(
-        &image_from_vector(&negated(&active_result.model), &active, (active_mask.shape()[0], active_mask.shape()[1])),
+        &image_from_vector(
+            &negated(&active_result.model),
+            &active,
+            (active_mask.shape()[0], active_mask.shape()[1]),
+        ),
         active_mask,
     );
     let waveform_rtm_reconstruction = waveform.reconstruction.clone();
@@ -265,7 +272,11 @@ pub fn run_theranostic_inverse(
     let harmonic_result = solve_tikhonov_h1(&harmonic, &harmonic_vec, &active, inverse_settings);
     history.extend(harmonic_result.objective_history);
     let harmonic_reconstruction = normalize_positive(
-        &image_from_vector(&harmonic_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1])),
+        &image_from_vector(
+            &harmonic_result.model,
+            &active,
+            (active_mask.shape()[0], active_mask.shape()[1]),
+        ),
         active_mask,
     );
 
@@ -285,7 +296,11 @@ pub fn run_theranostic_inverse(
                     solve_tikhonov_h1(&passive, &sub_target_vec, &active, inverse_settings);
                 history.extend(sub_result.objective_history);
                 let subharmonic = normalize_positive(
-                    &image_from_vector(&sub_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1])),
+                    &image_from_vector(
+                        &sub_result.model,
+                        &active,
+                        (active_mask.shape()[0], active_mask.shape()[1]),
+                    ),
                     active_mask,
                 );
 
@@ -298,7 +313,11 @@ pub fn run_theranostic_inverse(
                 );
                 history.extend(ultra_result.objective_history);
                 let ultraharmonic = normalize_positive(
-                    &image_from_vector(&ultra_result.model, &active, (active_mask.shape()[0], active_mask.shape()[1])),
+                    &image_from_vector(
+                        &ultra_result.model,
+                        &active,
+                        (active_mask.shape()[0], active_mask.shape()[1]),
+                    ),
                     active_mask,
                 );
                 (subharmonic, ultraharmonic)
@@ -512,7 +531,11 @@ fn passive_pam_channels(
     let to_image = |intensity: &[f64]| -> Array2<f64> {
         let model: Vec<f32> = intensity.iter().map(|&v| v as f32).collect();
         normalize_positive(
-            &image_from_vector(&model, active, (active_mask.shape()[0], active_mask.shape()[1])),
+            &image_from_vector(
+                &model,
+                active,
+                (active_mask.shape()[0], active_mask.shape()[1]),
+            ),
             active_mask,
         )
     };

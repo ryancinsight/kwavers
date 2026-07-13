@@ -159,11 +159,7 @@ fn interpolate_var(
     value
 }
 
-fn validate_grid_shape(
-    solver: &DGSolver,
-    name: &str,
-    dim: [usize; 3],
-) -> KwaversResult<()> {
+fn validate_grid_shape(solver: &DGSolver, name: &str, dim: [usize; 3]) -> KwaversResult<()> {
     let expected = [solver.grid.nx, solver.grid.ny, solver.grid.nz];
     if dim != expected {
         return Err(KwaversError::InvalidInput(format!(

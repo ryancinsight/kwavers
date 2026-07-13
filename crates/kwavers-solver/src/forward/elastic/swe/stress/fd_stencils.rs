@@ -43,21 +43,21 @@ fn fd1_axis(f: ArrayView3<f64>, base: [usize; 3], axis: usize, n: usize, d: f64)
     }
 }
 
-/// Centered finite-difference ∂f/∂x (see [`fd1_axis`]).
+/// Centered finite-difference ∂f/∂x (see `fd1_axis`).
 #[inline]
 #[must_use]
 pub fn fd1_x(f: ArrayView3<f64>, i: usize, j: usize, k: usize, nx: usize, dx: f64) -> f64 {
     fd1_axis(f, [i, j, k], 0, nx, dx)
 }
 
-/// Centered finite-difference ∂f/∂y (see [`fd1_axis`]).
+/// Centered finite-difference ∂f/∂y (see `fd1_axis`).
 #[inline]
 #[must_use]
 pub fn fd1_y(f: ArrayView3<f64>, i: usize, j: usize, k: usize, ny: usize, dy: f64) -> f64 {
     fd1_axis(f, [i, j, k], 1, ny, dy)
 }
 
-/// Centered finite-difference ∂f/∂z (see [`fd1_axis`]).
+/// Centered finite-difference ∂f/∂z (see `fd1_axis`).
 #[inline]
 #[must_use]
 pub fn fd1_z(f: ArrayView3<f64>, i: usize, j: usize, k: usize, nz: usize, dz: f64) -> f64 {

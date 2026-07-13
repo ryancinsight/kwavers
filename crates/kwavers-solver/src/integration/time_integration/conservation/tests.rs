@@ -2,9 +2,7 @@ use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 /// Build an owned f-contiguous (column-major) `Array3`, the leto-native
 /// analogue of ndarray's `from_shape_fn(shape.f(), …)`: logical element
@@ -81,13 +79,13 @@ fn test_energy_computation() {
 
     let dv = grid.dx * grid.dy * grid.dz;
     let expected_energy = 1000.0 * 1e5 / 0.1 * dv;
-    assert_relative_roundoff_eq(energy, expected_energy, pressure.len() );
+    assert_relative_roundoff_eq(energy, expected_energy, pressure.len());
 
     // Compute acoustic energy
     let acoustic_energy = monitor.compute_acoustic_energy(&pressure, &medium);
     let expected_acoustic_energy =
         1000.0 * 1e10 / (2.0 * DENSITY_WATER_NOMINAL * SOUND_SPEED_WATER_SIM.powi(2)) * dv;
-    assert_relative_roundoff_eq(acoustic_energy, expected_acoustic_energy, pressure.len() );
+    assert_relative_roundoff_eq(acoustic_energy, expected_acoustic_energy, pressure.len());
 }
 
 #[test]
@@ -101,8 +99,9 @@ fn energy_computation_preserves_logical_order_for_nonstandard_layouts() {
         10.0 * (1 + i) as f64 + 2.0 * j as f64 + k as f64
     });
     let velocity_x = Array3::from_shape_fn(shape, |[i, j, k]| 0.1 * (1 + i + j + k) as f64);
-    let velocity_y =
-        from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| 0.2 * (1 + 2 * i + j + k) as f64);
+    let velocity_y = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+        0.2 * (1 + 2 * i + j + k) as f64
+    });
     let velocity_z = Array3::from_shape_fn(shape, |[i, j, k]| 0.3 * (1 + i + 2 * j + k) as f64);
 
     assert!(pressure.as_slice().is_none());

@@ -4,10 +4,7 @@
 
 use super::super::DifferentialOperator;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// Staggered grid finite difference operator (Yee scheme).
 ///

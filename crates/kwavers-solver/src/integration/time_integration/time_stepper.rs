@@ -540,9 +540,13 @@ mod tests {
     fn combine_rk4_inplace_preserves_logical_order_for_nonstandard_stages() {
         let shape = (2, 3, 4);
         let mut field = Array3::from_shape_fn(shape, |[i, j, k]| (100 * i + 10 * j + k) as f64);
-        let k1 = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| (1 + i + j + k) as f64);
+        let k1 = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (1 + i + j + k) as f64
+        });
         let k2 = Array3::from_shape_fn(shape, |[i, j, k]| (2 + i + j + k) as f64);
-        let k3 = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| (3 + i + j + k) as f64);
+        let k3 = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (3 + i + j + k) as f64
+        });
         let k4 = Array3::from_shape_fn(shape, |[i, j, k]| (4 + i + j + k) as f64);
         let dt = 0.5;
 
@@ -562,7 +566,9 @@ mod tests {
     fn adams_bashforth_inplace_preserves_logical_order_for_nonstandard_history() {
         let shape = (2, 3, 4);
         let mut ab2_field = Array3::from_shape_fn(shape, |[i, j, k]| (100 * i + 10 * j + k) as f64);
-        let f_n = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| (1 + i + j + k) as f64);
+        let f_n = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (1 + i + j + k) as f64
+        });
         let f_nm1 = Array3::from_shape_fn(shape, |[i, j, k]| (2 + i + j + k) as f64);
         let dt = 0.25;
 
@@ -577,7 +583,9 @@ mod tests {
         );
 
         let mut ab3_field = Array3::from_shape_fn(shape, |[i, j, k]| (100 * i + 10 * j + k) as f64);
-        let f_nm2 = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| (3 + i + j + k) as f64);
+        let f_nm2 = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (3 + i + j + k) as f64
+        });
         adams_bashforth3_inplace(&mut ab3_field, &f_n, &f_nm1, &f_nm2, dt);
         assert_eq!(
             ab3_field,

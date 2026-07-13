@@ -18,15 +18,12 @@
 //! - Loupas, T. et al. (1995). "An axial velocity estimator for ultrasound blood flow imaging".
 //!   *IEEE Transactions on Ultrasonics, Ferroelectrics and Frequency Control*, 42(4), 672-688.
 
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    ArrayView3,
-};
-use eunomia::Complex64;
+use leto::{Array2, ArrayView3};
 
 /// Configuration for autocorrelation velocity estimation
 #[derive(Debug, Clone)]
@@ -393,4 +390,3 @@ mod tests {
         assert_eq!(filtered[[2, 3]], 0.0);
     }
 }
-

@@ -113,7 +113,7 @@ impl Default for PinnConfig3D {
 impl PinnConfig3D {
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.hidden_layers.is_empty() {
@@ -242,7 +242,7 @@ impl Default for LossWeights3D {
 impl LossWeights3D {
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         for (name, v) in [

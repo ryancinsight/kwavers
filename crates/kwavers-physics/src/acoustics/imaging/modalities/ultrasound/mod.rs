@@ -2,11 +2,11 @@
 //!
 //! Implements B-mode, Doppler, elastography, synthetic aperture, plane wave, and coded excitation imaging
 
+use eunomia::Complex;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, TWO_PI};
 use leto::Array2;
-use eunomia::Complex;
 
 pub mod advanced;
 pub mod frequency_domain_fwi;
@@ -115,4 +115,3 @@ pub fn compute_strain(displacement: &Array2<f64>, spatial_resolution: f64) -> Ar
     }
     strain
 }
-

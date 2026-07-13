@@ -127,8 +127,7 @@ mod tests {
         assert_eq!(c.project_value(1800.0), 1650.0); // above → upper
         assert_eq!(c.project_value(1540.0), 1540.0); // inside → unchanged
 
-        let mut field =
-            Array3::from_vec([2, 1, 2], vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
+        let mut field = Array3::from_vec([2, 1, 2], vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
         c.project(&mut field);
         assert_eq!(
             field.iter().cloned().collect::<Vec<_>>(),

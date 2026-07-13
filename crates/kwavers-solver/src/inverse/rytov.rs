@@ -26,8 +26,8 @@
 //!   Imaging*, Ch. 6. IEEE Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::Array2;
 use kwavers_math::fft::Complex64;
+use leto::Array2;
 
 /// Minimum incident-field magnitude below which the Rytov phase (a logarithm /
 /// division by `u_inc`) is undefined.
@@ -45,8 +45,8 @@ pub fn born_total_field(
 /// Rytov-approximation total field: `u = u_inc · exp(u_B / u_inc)`.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on a shape mismatch or where the
-/// incident field magnitude falls below [`MIN_INCIDENT`].
+/// Returns [`crate::KwaversError::InvalidInput`] on a shape mismatch or where the
+/// incident field magnitude falls below `MIN_INCIDENT`.
 pub fn rytov_total_field(
     incident: &Array2<Complex64>,
     born_scattered: &Array2<Complex64>,
@@ -74,8 +74,8 @@ pub fn rytov_total_field(
 /// approximation; feeding it to a Born forward operator yields Rytov inversion.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on a shape mismatch, or where the
-/// incident or total field magnitude falls below [`MIN_INCIDENT`].
+/// Returns [`crate::KwaversError::InvalidInput`] on a shape mismatch, or where the
+/// incident or total field magnitude falls below `MIN_INCIDENT`.
 pub fn rytov_phase(
     incident: &Array2<Complex64>,
     total: &Array2<Complex64>,

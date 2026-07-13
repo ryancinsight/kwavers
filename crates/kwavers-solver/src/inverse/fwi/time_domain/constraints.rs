@@ -3,12 +3,8 @@
 use super::FwiProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
+use leto::{Array3, Array4, ArrayView3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with, Adaptive};
-use leto::{
-    Array3,
-    Array4,
-    ArrayView3,
-};
 
 fn pressure_second_derivative_views_into(
     dst: &mut Array3<f64>,
@@ -78,8 +74,8 @@ impl FwiProcessor {
 
     /// Validate timestep and model compatibility with the grid.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn validate_time_step(
         &self,
@@ -146,7 +142,7 @@ impl FwiProcessor {
     ///
     /// Reference: Courant et al. (1928). *Math. Ann.* 100(1), 32–74.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn calculate_stable_timestep(
         &self,
@@ -179,7 +175,7 @@ impl FwiProcessor {
     /// Adding the two expansions and subtracting `2p_i` yields
     /// `(p_{i-1} - 2p_i + p_{i+1}) / dt² = p''_i + O(dt²)`.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn pressure_second_derivative_into(
         &self,

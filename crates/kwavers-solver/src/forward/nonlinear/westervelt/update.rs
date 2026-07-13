@@ -58,7 +58,7 @@ impl WesterveltFdtd {
     /// ```
     ///
     /// # Errors
-    /// Propagates any [`KwaversError`] from the Laplacian stencil.
+    /// Propagates any [`crate::KwaversError`] from the Laplacian stencil.
     pub fn update(
         &mut self,
         medium: &dyn Medium,

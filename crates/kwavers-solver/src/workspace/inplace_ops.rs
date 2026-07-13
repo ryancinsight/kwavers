@@ -1,12 +1,16 @@
 //! In-place array operations for memory-efficient solver computations.
 
-use moirai_parallel::{enumerate_mut_with, for_each_mut_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, for_each_mut_with, Adaptive};
 
 /// Add two arrays in-place: `a += b`.
 #[inline]
 pub fn add_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {
-    assert_eq!(a.shape(), b.shape(), "invariant: add_inplace shape mismatch");
+    assert_eq!(
+        a.shape(),
+        b.shape(),
+        "invariant: add_inplace shape mismatch"
+    );
     match (a.as_slice_mut(), b.as_slice()) {
         (Some(a_slice), Some(b_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(a_slice, |idx, a| {
@@ -20,7 +24,11 @@ pub fn add_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {
 /// Subtract two arrays in-place: `a -= b`.
 #[inline]
 pub fn sub_inplace(a: &mut Array3<f64>, b: &Array3<f64>) {
-    assert_eq!(a.shape(), b.shape(), "invariant: sub_inplace shape mismatch");
+    assert_eq!(
+        a.shape(),
+        b.shape(),
+        "invariant: sub_inplace shape mismatch"
+    );
     match (a.as_slice_mut(), b.as_slice()) {
         (Some(a_slice), Some(b_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(a_slice, |idx, a| {
@@ -46,8 +54,16 @@ pub fn scale_inplace(a: &mut Array3<f64>, scalar: f64) {
 /// Compute `a = a * b + c` in-place (fused multiply-add).
 #[inline]
 pub fn fma_inplace(a: &mut Array3<f64>, b: &Array3<f64>, c: &Array3<f64>) {
-    assert_eq!(a.shape(), b.shape(), "invariant: fma_inplace b shape mismatch");
-    assert_eq!(a.shape(), c.shape(), "invariant: fma_inplace c shape mismatch");
+    assert_eq!(
+        a.shape(),
+        b.shape(),
+        "invariant: fma_inplace b shape mismatch"
+    );
+    assert_eq!(
+        a.shape(),
+        c.shape(),
+        "invariant: fma_inplace c shape mismatch"
+    );
     match (a.as_slice_mut(), b.as_slice(), c.as_slice()) {
         (Some(a_slice), Some(b_slice), Some(c_slice)) => {
             enumerate_mut_with::<Adaptive, _, _>(a_slice, |idx, a| {

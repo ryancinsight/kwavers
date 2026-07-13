@@ -322,4 +322,3 @@ mod tests {
         assert!(p > 0.0);
     }
 }
-

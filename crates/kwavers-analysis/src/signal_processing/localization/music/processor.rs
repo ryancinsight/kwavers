@@ -1,9 +1,6 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 use super::MUSICConfig;
 use kwavers_core::constants::numerical::TWO_PI;

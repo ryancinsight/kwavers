@@ -15,9 +15,7 @@
 //! prox_{λ TV}(f) = argmin_u  ½‖u − f‖² + λ·TV(u).
 //! ```
 
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 /// Edge-preserving TV denoiser (Chambolle 2004), applied in-plane to every
 /// `z`-slice of a 3-D field. This is the proximal operator of `λ·TV` and the
@@ -41,7 +39,11 @@ pub fn tv_denoise_chambolle(
     frozen: Option<&leto::Array3<bool>>,
 ) -> Array3<f64> {
     if let Some(m) = frozen {
-        assert_eq!(m.shape(), image.shape(), "frozen mask must match image shape");
+        assert_eq!(
+            m.shape(),
+            image.shape(),
+            "frozen mask must match image shape"
+        );
     }
     if weight <= 0.0 {
         return image.clone();

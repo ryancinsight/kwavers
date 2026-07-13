@@ -1,7 +1,7 @@
 //! Thermal-index and CEM43 safety bindings.
 
 use kwavers_physics::analytical::safety;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -117,4 +117,3 @@ pub fn closed_loop_cem43_fixture<'py>(
     )?;
     Ok(out)
 }
-

@@ -1,8 +1,8 @@
 use super::*;
 use crate::forward::bem::field::BemSolution;
+use kwavers_math::fft::Complex64;
 use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
 use leto::Array1;
-use kwavers_math::fft::Complex64;
 
 fn create_test_mesh() -> TetrahedralMesh {
     let mut mesh = TetrahedralMesh::new();
@@ -76,7 +76,7 @@ fn test_compute_scattered_field() {
     let mesh = create_test_mesh();
     let solver = BemSolver::from_mesh(config, &mesh).unwrap();
 
-    let n = solver.vertices.len() ;
+    let n = solver.vertices.len();
     let boundary_pressure = Array1::from_elem(n, Complex64::new(1.0, 0.0));
     let boundary_velocity = Array1::from_elem(n, Complex64::new(0.0, 0.0));
 

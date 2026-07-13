@@ -80,10 +80,8 @@ fn multiply_spectral_shape(
         "invariant: residual-gas spectral field shape matches spectral shape"
     );
 
-    if let (Some(spectrum_values), Some(shape_values)) = (
-        spectrum.as_slice_mut(),
-        shape.as_slice(),
-    ) {
+    if let (Some(spectrum_values), Some(shape_values)) = (spectrum.as_slice_mut(), shape.as_slice())
+    {
         enumerate_mut_with::<Adaptive, _, _>(spectrum_values, |index, spectrum| {
             *spectrum *= shape_values[index];
         });
@@ -233,7 +231,7 @@ pub fn cp_spectral_shape(
 
 /// Dimensionless bubble-cloud dispersion stiffness deviation at the reference
 /// void fraction: `ĥ(f) = (c_p(f)² − c_liquid²)/c_liquid²`, evaluated at
-/// [`SHAPE_REFERENCE_VOID_FRACTION`]. Negative below resonance (slowdown, the
+/// `SHAPE_REFERENCE_VOID_FRACTION`. Negative below resonance (slowdown, the
 /// Wood regime at low `f`), positive above resonance (anomalous dispersion).
 /// Returns `0.0` for non-positive frequencies (the DC bin carries no dispersion).
 #[must_use]
@@ -355,7 +353,7 @@ impl ResidualGasAbsorption {
 impl PSTDSolver {
     /// Install (or refresh) the broadband residual-gas absorption operator from a
     /// void-fraction field. Call between pulses; the operator is then applied
-    /// every step inside [`Self::update_pressure`]. Returns `true` when gas was
+    /// every step inside `Self::update_pressure`. Returns `true` when gas was
     /// present and the operator was installed, `false` when it was cleared.
     ///
     /// `c_liquid`/`rho_liquid` are the host-liquid sound speed and density of the

@@ -3,7 +3,7 @@ use super::*;
 #[test]
 fn spectral_green_constant_source_matches_zero_mode_symbol() {
     let grid = GridSpec::new((4, 4, 2), 0.01).unwrap();
-    let source = vec![Complex64::new(2.0, -0.5); grid.len() ];
+    let source = vec![Complex64::new(2.0, -0.5); grid.len()];
     let reference_wavenumber = 11.0;
     let epsilon = 0.25;
     let field = apply_shifted_green_spectral(grid, reference_wavenumber, epsilon, &source);
@@ -20,7 +20,7 @@ fn spectral_green_constant_source_matches_zero_mode_symbol() {
 #[test]
 fn pstd_spectral_green_constant_source_matches_leapfrog_zero_mode_symbol() {
     let grid = GridSpec::new((4, 4, 2), 0.01).unwrap();
-    let source = vec![Complex64::new(2.0, -0.5); grid.len() ];
+    let source = vec![Complex64::new(2.0, -0.5); grid.len()];
     let reference_sound_speed = SOUND_SPEED_WATER_SIM;
     let time_step = 1.0e-7;
     let reference_wavenumber = 11.0;

@@ -3,8 +3,8 @@
 use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
-use log::{debug, info};
 use leto::Array3;
+use log::{debug, info};
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::Arc;

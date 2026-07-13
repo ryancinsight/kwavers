@@ -181,24 +181,25 @@ impl ThermalAcousticCoupler {
                     if i == 0 || i >= nx - 1 || j == 0 || j >= ny - 1 || k == 0 || k >= nz - 1 {
                         return;
                     }
-                let t = temperature_prev[[i, j, k]];
-                let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[[i + 1, j, k]])
-                    + temperature_prev[[i - 1, j, k]])
-                    / (dx * dx);
-                let d2_t_dy2 = (2.0f64.mul_add(-t, temperature_prev[[i, j + 1, k]])
-                    + temperature_prev[[i, j - 1, k]])
-                    / (dy * dy);
-                let d2_t_dz2 = (2.0f64.mul_add(-t, temperature_prev[[i, j, k + 1]])
-                    + temperature_prev[[i, j, k - 1]])
-                    / (dz * dz);
-                let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
-                let perfusion_term = w_b * (t_arterial - t);
-                let metabolic_term = q_met / rho_c;
-                let acoustic_term = acoustic_heating[[i, j, k]] / rho_c;
-                let d_t_dt =
-                    k_thermal.mul_add(laplacian_t, perfusion_term) + metabolic_term + acoustic_term;
-                *t_new = dt.mul_add(d_t_dt, t);
-            });
+                    let t = temperature_prev[[i, j, k]];
+                    let d2_t_dx2 = (2.0f64.mul_add(-t, temperature_prev[[i + 1, j, k]])
+                        + temperature_prev[[i - 1, j, k]])
+                        / (dx * dx);
+                    let d2_t_dy2 = (2.0f64.mul_add(-t, temperature_prev[[i, j + 1, k]])
+                        + temperature_prev[[i, j - 1, k]])
+                        / (dy * dy);
+                    let d2_t_dz2 = (2.0f64.mul_add(-t, temperature_prev[[i, j, k + 1]])
+                        + temperature_prev[[i, j, k - 1]])
+                        / (dz * dz);
+                    let laplacian_t = d2_t_dx2 + d2_t_dy2 + d2_t_dz2;
+                    let perfusion_term = w_b * (t_arterial - t);
+                    let metabolic_term = q_met / rho_c;
+                    let acoustic_term = acoustic_heating[[i, j, k]] / rho_c;
+                    let d_t_dt = k_thermal.mul_add(laplacian_t, perfusion_term)
+                        + metabolic_term
+                        + acoustic_term;
+                    *t_new = dt.mul_add(d_t_dt, t);
+                });
         }
 
         self.apply_boundary_conditions();
@@ -265,7 +266,7 @@ impl ThermalAcousticCoupler {
     ///
     /// Returns error if pressure or temperature exceed physical bounds
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
     pub(super) fn check_stability(&self) -> KwaversResult<()> {
         let max_pressure = self

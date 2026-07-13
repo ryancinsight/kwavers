@@ -64,7 +64,7 @@ fn test_photoacoustic_source_scales_with_gruneisen() {
     let dims = (4, 4, 4);
     let nx = dims.0;
     let field_order = vec![UnifiedFieldType::Pressure, UnifiedFieldType::LightFluence];
-    let n_blocks = field_order.len() ;
+    let n_blocks = field_order.len();
 
     let mut u = Array3::zeros((n_blocks * nx, dims.1, dims.2));
     u[[nx + 1, 1, 1]] = 1.0;

@@ -40,7 +40,7 @@ impl WesterveltFdtd {
     /// concurrently by Moirai; all workers share read-only access to `pressure`.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Validation`] if `spatial_order` is not 2, 4, or 6.
+    /// Returns [`crate::KwaversError::Validation`] if `spatial_order` is not 2, 4, or 6.
     pub(super) fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
         let nx = grid.nx;
         let ny = grid.ny;

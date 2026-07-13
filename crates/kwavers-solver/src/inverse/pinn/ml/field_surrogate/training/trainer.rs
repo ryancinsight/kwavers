@@ -1,6 +1,6 @@
+use coeus_autograd::Parameter;
 use coeus_optim::scheduler::{CosineAnneal, SchedulerStrategy};
 use coeus_optim::{Adam, Optimizer as CoeusOptimizer};
-use coeus_autograd::Parameter;
 
 use super::super::network::ParamFieldPINNNetwork;
 use super::helmholtz::helmholtz_residual_tensor;

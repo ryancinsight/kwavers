@@ -39,11 +39,7 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::fft::apply_spectral_response_1d;
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 
 /// Butterworth magnitude order for the zero-phase multiscale low-pass.
 ///
@@ -90,7 +86,7 @@ pub(super) fn lowpass_band_limit(data: &Array2<f64>, dt: f64, corner_hz: f64) ->
 /// [`FwiProcessor::invert_multiscale`].
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] when any condition is violated.
+/// Returns [`crate::KwaversError::Validation`] when any condition is violated.
 pub(super) fn validate_corner_schedule(corner_hz_ascending: &[f64]) -> KwaversResult<()> {
     if corner_hz_ascending.is_empty() {
         return Err(KwaversError::Validation(
@@ -144,9 +140,9 @@ impl FwiProcessor {
     /// the exact discrete adjoint of the band-limited objective.
     ///
     /// # Errors
-    /// - [`KwaversError::Validation`] if `corner_hz_ascending` is empty, contains
+    /// - [`crate::KwaversError::Validation`] if `corner_hz_ascending` is empty, contains
     ///   a non-finite or non-positive corner, or is not strictly ascending.
-    /// - Propagates any [`KwaversError`] from the underlying [`Self::invert`].
+    /// - Propagates any [`crate::KwaversError`] from the underlying [`Self::invert`].
     pub fn invert_multiscale(
         &self,
         observed_data: &Array2<f64>,
@@ -239,16 +235,18 @@ mod tests {
         }
         let filtered = lowpass_band_limit(&bump, DT, 0.05);
         // Peak stays at the centre sample.
-        let (peak_idx, _) = filtered.index_axis::<1>(0, 0).unwrap().iter().enumerate().fold(
-            (0usize, f64::NEG_INFINITY),
-            |(bi, bv), (i, &v)| {
+        let (peak_idx, _) = filtered
+            .index_axis::<1>(0, 0)
+            .unwrap()
+            .iter()
+            .enumerate()
+            .fold((0usize, f64::NEG_INFINITY), |(bi, bv), (i, &v)| {
                 if v > bv {
                     (i, v)
                 } else {
                     (bi, bv)
                 }
-            },
-        );
+            });
         assert_eq!(
             peak_idx,
             N / 2,

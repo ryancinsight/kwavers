@@ -1,10 +1,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::f64::consts::PI;
 
 pub const NX: usize = 64;

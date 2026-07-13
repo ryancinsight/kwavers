@@ -6,7 +6,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     prepare_reduced_breast_ust_phantom, BreastUstReducedArrayGeometry, BreastUstReducedArrayPlan,
     BreastUstReducedArrayRowPolicy, BreastUstReducedPhantom,
 };
-use numpy::{ToPyArray, PyReadonlyArray3};
+use numpy::{PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyModule};
@@ -145,4 +145,3 @@ fn row_policy_name(policy: BreastUstReducedArrayRowPolicy) -> &'static str {
 fn kwavers_to_value_py(err: kwavers_core::error::KwaversError) -> PyErr {
     PyValueError::new_err(err.to_string())
 }
-

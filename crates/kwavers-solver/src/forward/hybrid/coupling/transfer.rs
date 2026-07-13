@@ -29,7 +29,7 @@ pub struct TransferOperator {
 impl TransferOperators {
     /// Create new transfer operators
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(geometry: &InterfaceGeometry) -> KwaversResult<Self> {
         let mut operators = HashMap::new();
@@ -57,7 +57,7 @@ impl TransferOperators {
 
     /// Create a transfer operator for a specific field
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn create_operator(
         geometry: &InterfaceGeometry,
@@ -135,7 +135,7 @@ impl TransferOperators {
 
     /// Apply transfer operators to fields
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply(&self, source: &Array3<f64>, target: &mut Array3<f64>) -> KwaversResult<()> {
         // Apply pressure transfer operator

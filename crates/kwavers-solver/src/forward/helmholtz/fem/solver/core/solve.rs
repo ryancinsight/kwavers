@@ -8,8 +8,8 @@ use kwavers_math::linear_algebra::sparse::solver::{
 impl FemHelmholtzSolver {
     /// Solve the assembled system via BiCGSTAB with the configured preconditioner.
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn solve_system(&mut self) -> KwaversResult<()> {
         let preconditioner = match self.config.preconditioner {

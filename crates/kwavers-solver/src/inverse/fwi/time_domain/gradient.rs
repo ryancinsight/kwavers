@@ -85,27 +85,51 @@ impl FwiProcessor {
         smoothed
             .slice_with_mut::<2>(&s![0, .., ..])
             .unwrap()
-            .assign(&gradient.slice_with::<2>(&s![0, .., ..]).expect("invariant: boundary face slice is valid"));
+            .assign(
+                &gradient
+                    .slice_with::<2>(&s![0, .., ..])
+                    .expect("invariant: boundary face slice is valid"),
+            );
         smoothed
             .slice_with_mut::<2>(&s![nx - 1, .., ..])
             .unwrap()
-            .assign(&gradient.slice_with::<2>(&s![nx - 1, .., ..]).expect("invariant: boundary face slice is valid"));
+            .assign(
+                &gradient
+                    .slice_with::<2>(&s![nx - 1, .., ..])
+                    .expect("invariant: boundary face slice is valid"),
+            );
         smoothed
             .slice_with_mut::<2>(&s![.., 0, ..])
             .unwrap()
-            .assign(&gradient.slice_with::<2>(&s![.., 0, ..]).expect("invariant: boundary face slice is valid"));
+            .assign(
+                &gradient
+                    .slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: boundary face slice is valid"),
+            );
         smoothed
             .slice_with_mut::<2>(&s![.., ny - 1, ..])
             .unwrap()
-            .assign(&gradient.slice_with::<2>(&s![.., ny - 1, ..]).expect("invariant: boundary face slice is valid"));
+            .assign(
+                &gradient
+                    .slice_with::<2>(&s![.., ny - 1, ..])
+                    .expect("invariant: boundary face slice is valid"),
+            );
         smoothed
             .slice_with_mut::<2>(&s![.., .., 0])
             .unwrap()
-            .assign(&gradient.slice_with::<2>(&s![.., .., 0]).expect("invariant: boundary face slice is valid"));
+            .assign(
+                &gradient
+                    .slice_with::<2>(&s![.., .., 0])
+                    .expect("invariant: boundary face slice is valid"),
+            );
         smoothed
             .slice_with_mut::<2>(&s![.., .., nz - 1])
             .unwrap()
-            .assign(&gradient.slice_with::<2>(&s![.., .., nz - 1]).expect("invariant: boundary face slice is valid"));
+            .assign(
+                &gradient
+                    .slice_with::<2>(&s![.., .., nz - 1])
+                    .expect("invariant: boundary face slice is valid"),
+            );
 
         if ny <= 2 {
             for i in 1..nx - 1 {

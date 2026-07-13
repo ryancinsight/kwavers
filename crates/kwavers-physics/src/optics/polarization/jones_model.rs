@@ -5,14 +5,11 @@
 use super::jones_matrix::JonesMatrix;
 use super::jones_vector::JonesVector;
 use super::PolarizationModel;
+use eunomia::Complex64;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::{Array3, Array4};
 use log::debug;
-use leto::{
-    Array3,
-    Array4,
-};
-use eunomia::Complex64;
 
 /// Physically accurate polarization model using Jones calculus
 #[derive(Debug)]
@@ -116,4 +113,3 @@ impl PolarizationModel for JonesPolarizationModel {
         }
     }
 }
-

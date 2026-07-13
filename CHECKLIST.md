@@ -5723,8 +5723,10 @@ Verify each gap is real first.
       7.1.26 `erf` copies hoisted to canonical `math::statistics::erf` (named consts,
       cite, error bound, 3 tests); both sites delegate. Other flagged numbers were
       already named/cited.
-  - [ ] SOL-10/11 — Rustdoc sweep (~30% public fns); CI-wire k-wave validators.
-- **Open [minor]:** CLD-2 wire `kzk_solver_plugin` into HIFU path.
+  - [x] SOL-10/11 — Rustdoc sweep (187→0 warnings); CI-wire k-wave validators (53 validation tests, 9 kwave, 2 literature, 17 numerical accuracy, 25 physics benchmarks).
+- [x] CLD-2 — wire `kzk_solver_plugin` into HIFU path: `propagate_volume()` on solver,
+      `generate_kzk_acoustic_field()` adapter in `execution.rs`, conditional dispatch
+      in `execute_therapy_step()`, `use_nonlinear_field` config flag.
 
 ## Phase 1: Foundation (0-10%)
 - [ ] 100% Audit/Planning/Gap Analysis

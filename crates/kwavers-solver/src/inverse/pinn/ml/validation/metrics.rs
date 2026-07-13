@@ -6,7 +6,7 @@ use leto::Array2;
 
 /// Compute MAE, RMSE, relative L2 error, and max pointwise error.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if reference and prediction have different shapes.
+/// - Returns [`crate::KwaversError::InvalidInput`] if reference and prediction have different shapes.
 ///
 pub fn compute_validation_metrics(
     reference: &Array2<f64>,

@@ -238,7 +238,11 @@ impl SonochemistryModel {
             self.ros_concentrations.get(ROSSpecies::HydrogenPeroxide),
             self.ros_concentrations.get(ROSSpecies::HydroxylRadical),
         ) {
-            for ([i, j, k], ph) in self.ph_field.indexed_iter_mut().expect("ph_field indexed_iter_mut failed") {
+            for ([i, j, k], ph) in self
+                .ph_field
+                .indexed_iter_mut()
+                .expect("ph_field indexed_iter_mut failed")
+            {
                 let h2o2_effect = -0.1 * h2o2[[i, j, k]] / 1e-3;
                 let oh_effect = 0.5 * oh[[i, j, k]] / 1e-6;
                 *ph = (h2o2_effect + oh_effect).mul_add(dt, *ph).clamp(2.0, 12.0);

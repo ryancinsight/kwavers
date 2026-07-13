@@ -10,11 +10,7 @@ use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::Solver;
 use kwavers_source::GridSource;
-use leto::{
-    Array2,
-    Array3,
-    ArrayView3,
-};
+use leto::{Array2, Array3, ArrayView3};
 
 fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
     field.view()

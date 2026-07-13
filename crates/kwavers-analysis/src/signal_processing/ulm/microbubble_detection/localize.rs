@@ -19,10 +19,7 @@
 
 use super::types::{BubbleDetection, GaussianLocalizationConfig};
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    SliceArg,
-};
+use leto::{Array2, SliceArg};
 
 /// Sub-pixel microbubble localizer using Gauss-Newton least squares.
 #[derive(Debug)]
@@ -82,8 +79,16 @@ impl GaussianLocalizer {
                 let ix1 = (ix + hw + 1).min(n_x);
                 let patch = envelope
                     .slice_with::<2>(&[
-                        SliceArg::Range { start: Some(iz0 as isize), end: Some(iz1 as isize), step: 1 },
-                        SliceArg::Range { start: Some(ix0 as isize), end: Some(ix1 as isize), step: 1 },
+                        SliceArg::Range {
+                            start: Some(iz0 as isize),
+                            end: Some(iz1 as isize),
+                            step: 1,
+                        },
+                        SliceArg::Range {
+                            start: Some(ix0 as isize),
+                            end: Some(ix1 as isize),
+                            step: 1,
+                        },
                     ])
                     .expect("invariant: fit-window slice within bounds")
                     .to_contiguous();

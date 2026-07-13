@@ -7,10 +7,7 @@
 //! - Paige CC, Saunders MA (1982). "LSQR: An algorithm for sparse linear equations
 //!   and sparse least squares." *ACM Trans Math Software* 8(1):43–71.
 
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 use super::types::{LsqrConfig, LsqrResult, StopReason};
 

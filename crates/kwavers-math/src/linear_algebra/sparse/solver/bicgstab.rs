@@ -6,12 +6,9 @@
 
 use super::super::csr::CompressedSparseRowMatrix;
 use super::IterativeSolver;
-use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    ArrayView1,
-};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
+use leto::{Array1, ArrayView1};
 
 impl IterativeSolver {
     fn dot_real(a: &Array1<f64>, b: &Array1<f64>) -> f64 {

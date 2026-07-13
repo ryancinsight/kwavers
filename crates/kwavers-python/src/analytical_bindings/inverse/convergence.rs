@@ -1,7 +1,7 @@
 //! Convergence-curve bindings for inverse-problem examples.
 
 use kwavers_physics::analytical::inverse as inverse_mod;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -44,4 +44,3 @@ pub fn exponential_convergence_curve(
             .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
-

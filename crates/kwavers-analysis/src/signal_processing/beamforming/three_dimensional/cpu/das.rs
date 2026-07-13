@@ -35,11 +35,8 @@
 //! - Jeong M.K., Kwon S. (2013): "A comparison study of beamforming techniques
 //!   for 3D ultrasound." *J. Med. Ultrason.* 40, 395–408.
 
+use leto::{Array3, Array4};
 use moirai_parallel::{map_collect_index_with, Adaptive};
-use leto::{
-    Array3,
-    Array4,
-};
 
 use crate::signal_processing::beamforming::three_dimensional::apodization::create_apodization_weights;
 use crate::signal_processing::beamforming::three_dimensional::config::{

@@ -9,11 +9,7 @@ use apollo::{fft_1d_leto, ifft_1d_leto};
 use kwavers_core::error::KwaversResult;
 use kwavers_signal::{analytic, window_value, SignalWindowType};
 use leto::Array1 as LetoArray1;
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
 use crate::reconstruction::photoacoustic::config::ReconstructionPhotoacousticConfig;
@@ -47,7 +43,7 @@ impl Filters {
 
     /// Apply bandpass filter to sensor data
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_bandpass_filter(
         &self,
@@ -59,7 +55,9 @@ impl Filters {
         let mut filtered = Array2::zeros((n_samples, n_sensors));
 
         for sensor_idx in 0..n_sensors {
-            let sensor_signal = data.index_axis::<1>(1, sensor_idx).expect("invariant: sensor column index in range");
+            let sensor_signal = data
+                .index_axis::<1>(1, sensor_idx)
+                .expect("invariant: sensor column index in range");
             let filtered_signal = self.bandpass_filter_1d(
                 sensor_signal.to_contiguous(),
                 bandpass[0],
@@ -116,7 +114,9 @@ impl Filters {
         let mut envelope = Array2::zeros((n_samples, n_sensors));
 
         for sensor_idx in 0..n_sensors {
-            let signal = data.index_axis::<1>(1, sensor_idx).expect("invariant: sensor column index in range");
+            let signal = data
+                .index_axis::<1>(1, sensor_idx)
+                .expect("invariant: sensor column index in range");
             let analytic_signal = analytic::hilbert_transform(
                 &LetoArray1::from_vec([n_samples], signal.iter().copied().collect())
                     .expect("photoacoustic signal length must match its Leto shape"),
@@ -132,7 +132,7 @@ impl Filters {
 
     /// Apply FBP filter to data
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_fbp_filter(&self, data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let mut filtered = data.clone();
@@ -151,13 +151,16 @@ impl Filters {
 
     /// Apply Ram-Lak filter
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_ram_lak_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
         let filter = self.create_ram_lak_filter(n_samples);
 
-        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+        for mut col in data
+            .columns_mut()
+            .expect("invariant: column iteration over 2-D array")
+        {
             let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
@@ -167,13 +170,16 @@ impl Filters {
 
     /// Apply Shepp-Logan filter
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_shepp_logan_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
         let filter = self.create_shepp_logan_filter(n_samples);
 
-        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+        for mut col in data
+            .columns_mut()
+            .expect("invariant: column iteration over 2-D array")
+        {
             let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
@@ -183,13 +189,16 @@ impl Filters {
 
     /// Apply Cosine filter
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_cosine_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
         let filter = self.create_cosine_filter(n_samples);
 
-        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+        for mut col in data
+            .columns_mut()
+            .expect("invariant: column iteration over 2-D array")
+        {
             let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
@@ -248,13 +257,16 @@ impl Filters {
     /// Hamming window: w(n) = 0.54 - 0.46*cos(2πn/(N-1))
     /// Applied to Ram-Lak filter for improved noise reduction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_hamming_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
         let filter = self.create_hamming_filter(n_samples);
 
-        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+        for mut col in data
+            .columns_mut()
+            .expect("invariant: column iteration over 2-D array")
+        {
             let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
@@ -267,13 +279,16 @@ impl Filters {
     /// Hann window: w(n) = 0.5 * (1 - cos(2πn/(N-1)))
     /// Applied to Ram-Lak filter for smooth frequency response
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_hann_filter(&self, data: &mut Array2<f64>) -> KwaversResult<()> {
         let [n_samples, _] = data.shape();
         let filter = self.create_hann_filter(n_samples);
 
-        for mut col in data.columns_mut().expect("invariant: column iteration over 2-D array") {
+        for mut col in data
+            .columns_mut()
+            .expect("invariant: column iteration over 2-D array")
+        {
             let filtered = self.apply_filter_1d(col.to_contiguous(), &filter)?;
             col.assign(&filtered);
         }
@@ -339,8 +354,9 @@ impl Filters {
         filter: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
         let n = signal.len();
-        let leto_signal = LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
-            .expect("photoacoustic filter signal length must match its Leto shape");
+        let leto_signal =
+            LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
+                .expect("photoacoustic filter signal length must match its Leto shape");
         let mut complex_signal = fft_1d_leto(leto_signal.view());
 
         // Apply filter
@@ -358,7 +374,7 @@ impl Filters {
 
     /// Apply reconstruction filter for regularization and denoising
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_reconstruction_filter(&self, image: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         // Apply 3D Gaussian filter for noise reduction

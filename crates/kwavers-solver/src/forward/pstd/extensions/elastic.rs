@@ -12,14 +12,14 @@
 //!
 //! ## Proof
 //!
-//! Inspect [`apply_stress_update_in_place`]. The shear-stress pass writes
+//! Inspect [`PstdElasticPlugin::apply_stress_update_in_place`]. The shear-stress pass writes
 //!
 //! ```text
 //! σ̃ₐᵦ = dt · μ · (i·k_β · ṽ_α + i·k_α · ṽ_β)     (α ≠ β)
 //! ```
 //!
 //! With `μ = 0` every shear component is identically zero, so the velocity
-//! update in [`apply_velocity_update_in_place`] reads only the divergences
+//! update in [`PstdElasticPlugin::apply_velocity_update_in_place`] reads only the divergences
 //! of the normal stresses
 //!
 //! ```text

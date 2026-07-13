@@ -1,13 +1,13 @@
 //! Thermal-strain elastography bindings.
 
+use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 use kwavers_physics::acoustics::imaging::modalities::elastography::thermal_strain::TrackingParams;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     ThermalStrainConfig, ThermalStrainImager,
 };
 use kwavers_physics::analytical::elastography;
-use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 use numpy::ndarray::Array3;
-use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -140,7 +140,8 @@ pub fn thermal_strain_reconstruct(
     Ok((
         leto3_to_nd3(result.displacement).to_pyarray(py).unbind(),
         leto3_to_nd3(result.strain).to_pyarray(py).unbind(),
-        leto3_to_nd3(result.temperature_change).to_pyarray(py).unbind(),
+        leto3_to_nd3(result.temperature_change)
+            .to_pyarray(py)
+            .unbind(),
     ))
 }
-

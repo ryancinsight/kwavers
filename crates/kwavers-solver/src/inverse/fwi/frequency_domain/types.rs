@@ -2,8 +2,8 @@
 
 use std::sync::Arc;
 
-use leto::{Array2, Array3};
 use kwavers_math::fft::Complex64;
+use leto::{Array2, Array3};
 
 use super::operator::{HelmholtzForwardOperator, SingleScatterBornOperator};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
@@ -14,7 +14,7 @@ pub const FREQUENCY_DOMAIN_FWI_SOLVER_MODEL: &str = "frequency_domain_fwi";
 /// Observed complex pressure for one frequency.
 #[derive(Clone, Debug)]
 pub struct FrequencyObservation {
-    /// Frequency [Hz].
+    /// Frequency \[Hz\].
     pub frequency_hz: f64,
     /// Complex receiver data with shape `(transmit, receiver)`.
     pub observed_pressure: Array2<Complex64>,
@@ -42,7 +42,7 @@ impl FrequencyObservation {
 pub struct Config {
     /// Reference homogeneous sound speed [m/s].
     pub reference_sound_speed_m_s: f64,
-    /// Uniform reconstruction voxel spacing [m].
+    /// Uniform reconstruction voxel spacing \[m\].
     pub spacing_m: f64,
     /// Nonlinear conjugate-gradient iterations.
     pub iterations: usize,

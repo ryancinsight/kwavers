@@ -5,7 +5,7 @@
 //! stationary Helmholtz CBS algebra.  For reference slowness `s0` and
 //! contrast `chi = (s^2 - s0^2) / s0^2`, the first-order scattered PSTD field
 //! satisfies the same homogeneous leapfrog recurrence as the direct field with
-//! source term `-chi * (p0[n+1] - 2 p0[n] + p0[n-1])`.
+//! source term `-chi * (p0[n+1] - 2 p0\[n\] + p0[n-1])`.
 //! The acceleration term is the full reference-field second difference,
 //! including pressure-source injection. This is the discrete Frechet derivative
 //! of the production PSTD acquisition equation because the slowness perturbation
@@ -18,8 +18,8 @@
 //! where each order sources the next via the same scattering potential:
 //!
 //! ```text
-//! ps1[n+1] − (2−θ)ps1[n] + ps1[n−1] = −χ · (p0[n+1] − 2p0[n] + p0[n−1])
-//! ps2[n+1] − (2−θ)ps2[n] + ps2[n−1] = −χ · (ps1[n+1] − 2ps1[n] + ps1[n−1])
+//! ps1[n+1] − (2−θ)ps1\[n\] + ps1[n−1] = −χ · (p0[n+1] − 2p0\[n\] + p0[n−1])
+//! ps2[n+1] − (2−θ)ps2\[n\] + ps2[n−1] = −χ · (ps1[n+1] − 2ps1\[n\] + ps1[n−1])
 //! ```
 //!
 //! The second-order functions below add `ps2` to the receivers alongside
@@ -38,13 +38,13 @@ use super::cbs::{
     pstd_modal_theta_squared, pstd_source_kappa_symbol, GridSpec, PstdTemporalTransferConfig,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, sound_speed_to_slowness, MultiRowRingArray,
 };
 use kwavers_transducer::transducers::ElementPosition;
 use leto::{Array2, Array3};
-use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 
 /// Acquisition parameters for finite-window PSTD Born prediction.
@@ -52,11 +52,11 @@ use std::f64::consts::TAU;
 pub struct PstdFiniteWindowBornConfig {
     /// Homogeneous reference sound speed [m/s].
     pub reference_sound_speed_m_s: f64,
-    /// Isotropic voxel spacing [m].
+    /// Isotropic voxel spacing \[m\].
     pub spacing_m: f64,
-    /// PSTD leapfrog time step [s].
+    /// PSTD leapfrog time step \[s\].
     pub time_step_s: f64,
-    /// Scalar pressure-source amplitude [Pa].
+    /// Scalar pressure-source amplitude \[Pa\].
     pub source_amplitude_pa: f64,
     /// Number of drive cycles simulated for each frequency.
     pub cycles_per_frequency: usize,
@@ -170,30 +170,54 @@ fn simulate_transmit(
     receiver_indices: &[(usize, usize, usize)],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> Vec<Complex64> {
-    let mut direct_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_prev =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_curr =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_source =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_source_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut direct_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_prev = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_curr = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_source = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_source_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
     let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
     let mut previous_signal = 0.0;
@@ -389,30 +413,54 @@ fn simulate_transmit_with_accel(
     receiver_indices: &[(usize, usize, usize)],
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> (Vec<Complex64>, Vec<Array3<Complex64>>) {
-    let mut direct_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_prev =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_curr =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_source =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scatter_source_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut direct_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_prev = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_curr = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_source = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scatter_source_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
     let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
     let mut accel_history: Vec<Array3<Complex64>> = Vec::with_capacity(bin_config.total_steps);
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
@@ -433,8 +481,10 @@ fn simulate_transmit_with_accel(
         ifft_3d_complex_inplace(&mut direct_next);
 
         // accel[step] = p0[step+1] − 2·p0[step] + p0[step−1] (spatial domain).
-        let mut accel =
-            Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+        let mut accel = Array3::<Complex64>::from_elem(
+            [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+            Complex64::default(),
+        );
         for (((a, &pn), &pc), &pp) in accel
             .iter_mut()
             .zip(direct_next.iter())
@@ -515,20 +565,34 @@ fn adjoint_backward_pass(
 
     // pa_next_hat corresponds to pa[step+2], pa_curr_hat to pa[step+1]
     // (both zero at the start since we work backward from step = total_steps-1).
-    let mut pa_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut pa_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut pa_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut pa_curr =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut pa_prev =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut pa_source_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut pa_source_spatial =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut pa_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut pa_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut pa_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut pa_curr = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut pa_prev = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut pa_source_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut pa_source_spatial = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
 
     // The forward measurement at step `step` used p0[step+1] (= direct_next
     // after the leapfrog) and ps[step+1].  The adjoint of "sample ps[step+1]
@@ -658,9 +722,9 @@ pub fn simulate_pstd_finite_window_born_second_order_observation(
 ///
 /// At each time step this computes:
 /// 1. `p0[n+1]` — homogeneous reference field (leapfrog + source).
-/// 2. `ps1_source = −χ · (p0[n+1] − 2·p0[n] + p0[n−1])`.
+/// 2. `ps1_source = −χ · (p0[n+1] − 2·p0\[n\] + p0[n−1])`.
 /// 3. `ps1[n+1]` — first-order scattered field (leapfrog + ps1_source).
-/// 4. `ps2_source = −χ · (ps1[n+1] − 2·ps1[n] + ps1[n−1])`.
+/// 4. `ps2_source = −χ · (ps1[n+1] − 2·ps1\[n\] + ps1[n−1])`.
 /// 5. `ps2[n+1]` — second-order scattered field (leapfrog + ps2_source).
 /// 6. Record `p0[n+1] + ps1[n+1] + ps2[n+1]` at receiver positions during the
 ///    frequency-bin window, demodulated by `exp(−i·ω·n·Δt)`.
@@ -673,53 +737,93 @@ fn simulate_transmit_second_order(
     bin_config: super::cbs::PstdTemporalBinConfig,
 ) -> Vec<Complex64> {
     // --- direct (p0) fields in spectral and spatial domain ---
-    let mut direct_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_prev =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_curr =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut direct_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut direct_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_prev = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_curr = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut direct_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
 
     // --- first-order scattered (ps1) fields ---
-    let mut scat1_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat1_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat1_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat1_prev =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat1_curr =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat1_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut scat1_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat1_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat1_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat1_prev = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat1_curr = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat1_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
 
     // --- second-order scattered (ps2) fields (spectral only; spatial domain
     //     only needed for receiver sampling via scat2_next) ---
-    let mut scat2_prev_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat2_curr_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat2_next_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat2_next =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut scat2_prev_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat2_curr_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat2_next_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat2_next = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
 
     // --- work buffers ---
-    let mut scat1_source =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat1_source_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat2_source =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
-    let mut scat2_source_hat =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut scat1_source = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat1_source_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat2_source = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
+    let mut scat2_source_hat = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
 
     let mut receivers = vec![Complex64::new(0.0, 0.0); receiver_indices.len()];
     let angular_step = TAU * bin_config.frequency_hz * bin_config.time_step_s;
@@ -848,14 +952,18 @@ fn source_spectrum_on_grid(
     sources: &[ElementPosition],
     source_kappa: &Array3<f64>,
 ) -> KwaversResult<Array3<Complex64>> {
-    let mut mask =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut mask = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
     for &source in sources {
         let index = exact_grid_index(grid, source, "source")?;
         mask[[index.0, index.1, index.2]] += Complex64::new(1.0, 0.0);
     }
-    let mut spectrum =
-        Array3::<Complex64>::from_elem([grid.dimensions.0, grid.dimensions.1, grid.dimensions.2], Complex64::default());
+    let mut spectrum = Array3::<Complex64>::from_elem(
+        [grid.dimensions.0, grid.dimensions.1, grid.dimensions.2],
+        Complex64::default(),
+    );
     fft_3d_complex_into(&mask, &mut spectrum);
     for (value, &kappa) in spectrum.iter_mut().zip(source_kappa.iter()) {
         *value *= kappa;

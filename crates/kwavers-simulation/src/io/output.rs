@@ -3,10 +3,8 @@ use kwavers_core::time::Time;
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_receiver::recorder::Recorder;
+use leto::Array3;
 use log::info;
-use leto::{
-    Array3,
-};
 use std::fs::File;
 use std::io::{self, Write};
 
@@ -118,8 +116,7 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
         let max_light = light
             .iter()
             .fold(f64::NEG_INFINITY, |acc, &val| f64::max(acc, val));
-        let avg_light =
-            light.iter().sum::<f64>() / light.shape().iter().product::<usize>() as f64;
+        let avg_light = light.iter().sum::<f64>() / light.shape().iter().product::<usize>() as f64;
         writeln!(file, "Last Light Step,{step}")?;
         writeln!(file, "Max Light Fluence,{max_light:.6e}")?;
         writeln!(file, "Avg Light Fluence,{avg_light:.6e}")?;

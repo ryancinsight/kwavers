@@ -1,6 +1,6 @@
+use eunomia::Complex;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
-use eunomia::Complex;
 
 use crate::parallel::{zip_mut_ref, zip_mut_three_refs, zip_mut_two_refs};
 
@@ -143,4 +143,3 @@ impl SpatiallyVaryingAbsorption {
         Ok(c_field)
     }
 }
-

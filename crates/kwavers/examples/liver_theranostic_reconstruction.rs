@@ -83,11 +83,8 @@ use kwavers_solver::inverse::seismic::{
     rtm::RtmProcessor,
 };
 use kwavers_source::{GridSource, SourceMode};
+use leto::{Array2, Array3};
 use moirai_parallel::{map_collect_index_with, map_collect_with, Adaptive};
-use leto::{
-    Array2,
-    Array3,
-};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::BufWriter;

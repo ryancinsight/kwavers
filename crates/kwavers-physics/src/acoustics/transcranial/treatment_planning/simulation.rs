@@ -2,6 +2,7 @@
 
 use super::planner::TreatmentPlanner;
 use super::types::{TranscranialTargetVolume, TransducerSetup};
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::medical::{
     BLOOD_PERFUSION_RATE_BRAIN, BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_THRESHOLD,
@@ -12,7 +13,6 @@ use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN, SO
 use kwavers_core::constants::{BODY_TEMPERATURE_C, NP_TO_DB};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use leto::Array3;
-use eunomia::Complex;
 
 const MILLIMETERS_TO_METERS: f64 = 1.0e-3;
 // SSOT: SOUND_SPEED_BRAIN and DENSITY_BRAIN imported from core::constants::tissue_acoustics
@@ -367,4 +367,3 @@ mod tests {
         assert!(estimate_treatment_time_from_intensity_field(&negative).is_infinite());
     }
 }
-

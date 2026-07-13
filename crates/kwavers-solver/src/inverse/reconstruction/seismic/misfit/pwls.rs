@@ -131,7 +131,7 @@ fn validate_triple(
 ///
 /// With all-ones `weights` this equals the unweighted `l2_objective` exactly.
 /// # Errors
-/// Returns [`KwaversError::Validation`] if the three arrays differ in shape.
+/// Returns [`crate::KwaversError::Validation`] if the three arrays differ in shape.
 pub fn weighted_l2_objective(
     dt: f64,
     observed: &Array2<f64>,
@@ -152,7 +152,7 @@ pub fn weighted_l2_objective(
 ///
 /// With all-ones `weights` this equals the unweighted residual `d_syn − d_obs`.
 /// # Errors
-/// Returns [`KwaversError::Validation`] if the three arrays differ in shape.
+/// Returns [`crate::KwaversError::Validation`] if the three arrays differ in shape.
 pub fn weighted_l2_residual(
     observed: &Array2<f64>,
     synthetic: &Array2<f64>,
@@ -216,7 +216,9 @@ mod tests {
         );
         let mean_w = {
             let col = w.index_axis::<1>(1, 0).unwrap();
-            let (sum, count) = col.iter().fold((0.0_f64, 0usize), |(s, c), &v| (s + v, c + 1));
+            let (sum, count) = col
+                .iter()
+                .fold((0.0_f64, 0usize), |(s, c), &v| (s + v, c + 1));
             sum / count as f64
         };
         assert!(

@@ -2,10 +2,7 @@ use super::{coupler::PstdSemCoupler, PstdSemCouplingConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// PSTD-SEM Coupled Solver
 #[derive(Debug)]
@@ -21,7 +18,7 @@ pub struct PstdSemSolver {
 impl PstdSemSolver {
     /// Create new coupled PSTD-SEM solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: PstdSemCouplingConfig,
@@ -30,7 +27,7 @@ impl PstdSemSolver {
     ) -> KwaversResult<Self> {
         let coupler = PstdSemCoupler::new(config.clone(), &pstd_grid, &sem_mesh)?;
         let pstd_field = Array3::zeros((pstd_grid.nx, pstd_grid.ny, pstd_grid.nz));
-        let sem_field = vec![0.0; sem_mesh.nodes.len() ];
+        let sem_field = vec![0.0; sem_mesh.nodes.len()];
 
         Ok(Self {
             config,
@@ -44,7 +41,7 @@ impl PstdSemSolver {
 
     /// Perform coupled time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self) -> KwaversResult<f64> {
         self.coupler.reset_convergence();

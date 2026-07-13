@@ -1,7 +1,7 @@
 //! Lesion-state and histotripsy-dose PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -253,4 +253,3 @@ pub fn inertial_cavitation_dose(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(cavitation::inertial_cavitation_dose(r, rd, r0_m))
 }
-

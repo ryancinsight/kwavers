@@ -1,8 +1,6 @@
 use super::*;
 use crate::multiphysics::monolithic::state_vector::field_block_view;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 fn laplacian_3d(
     field: &leto::ArrayView<'_, f64, 3>,

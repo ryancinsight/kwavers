@@ -3,8 +3,8 @@
 //!
 //! Uses leto view types for efficient physics simulations.
 
-use moirai_parallel::{enumerate_mut_with, for_each_index_with, for_each_mut_with, Adaptive};
 use leto::{ArrayView3, ArrayViewMut3};
+use moirai_parallel::{enumerate_mut_with, for_each_index_with, for_each_mut_with, Adaptive};
 
 /// Apply an indexed mutation over a 3-D leto view.
 pub fn for_each_indexed_mut<T, F>(mut values: ArrayViewMut3<'_, T>, f: F)
@@ -231,9 +231,12 @@ impl<'a> IteratorGradientComputer<'a> {
     }
 
     #[must_use]
-    pub fn collect_gradients(&self, dx: f64, dy: f64, dz: f64)
-        -> (leto::Array3<f64>, leto::Array3<f64>, leto::Array3<f64>)
-    {
+    pub fn collect_gradients(
+        &self,
+        dx: f64,
+        dy: f64,
+        dz: f64,
+    ) -> (leto::Array3<f64>, leto::Array3<f64>, leto::Array3<f64>) {
         let mut gx = leto::Array3::zeros([self.nx, self.ny, self.nz]);
         let mut gy = leto::Array3::zeros([self.nx, self.ny, self.nz]);
         let mut gz = leto::Array3::zeros([self.nx, self.ny, self.nz]);

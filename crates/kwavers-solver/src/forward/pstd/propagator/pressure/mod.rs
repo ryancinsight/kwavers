@@ -66,8 +66,8 @@ use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
 use leto::Array3 as NdArray3;
+use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
 
 const PRESSURE_UPDATE_CHUNK: usize = 4096;
 
@@ -270,7 +270,7 @@ impl PSTDSolver {
     /// `p += c² · (τ · L1 − η · L2)` is added algebraically (no Δt) via
     /// [`Self::apply_absorption_to_pressure`].
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub(crate) fn update_pressure(&mut self, _dt: f64) -> KwaversResult<()> {
@@ -342,7 +342,7 @@ impl PSTDSolver {
     /// Each density component is damped only by its corresponding directional sigma,
     /// matching k-Wave's formulation: `rho_x *= pml_x`, `rho_y *= pml_y`, `rho_z *= pml_z`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn apply_pml_to_density(&mut self) -> KwaversResult<()> {
         let Some(mut boundary) = self.boundary.take() else {

@@ -21,8 +21,8 @@
 
 use super::parameters::MieParameters;
 use super::result::MieResult;
-use kwavers_core::error::{KwaversError, KwaversResult};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Mie scattering calculator
 #[derive(Debug)]
@@ -264,4 +264,3 @@ impl MieCalculator {
         0.25 * sum.norm_sqr()
     }
 }
-

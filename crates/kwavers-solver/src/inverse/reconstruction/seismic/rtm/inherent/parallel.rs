@@ -1,7 +1,7 @@
 //! Moirai-backed iteration for strided RTM 3-D views.
 
-use moirai_parallel::{for_each_index_with, Adaptive};
 use leto::ArrayViewMut3;
+use moirai_parallel::{for_each_index_with, Adaptive};
 
 #[derive(Clone, Copy)]
 struct StridedMutView {

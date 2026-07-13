@@ -5,10 +5,7 @@
 //! fraction against its own body or brain mask, so figure and solver paths use
 //! the same anatomical target without sharing grid-specific voxel indices.
 
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

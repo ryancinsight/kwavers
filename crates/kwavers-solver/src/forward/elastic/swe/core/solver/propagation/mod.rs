@@ -13,7 +13,7 @@ mod sensors;
 impl ElasticWaveSolver {
     /// Propagate.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate(
         &mut self,
@@ -209,7 +209,7 @@ impl ElasticWaveSolver {
 
     /// Propagate history.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn propagate_history(
         &self,

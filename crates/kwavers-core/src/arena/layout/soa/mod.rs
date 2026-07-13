@@ -1,5 +1,5 @@
-use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
 use leto::{ArrayView3, ArrayViewMut3, Layout as LetoLayout};
+use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr::NonNull;
 

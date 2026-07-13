@@ -1,18 +1,18 @@
 //! Plugin adapter for bubble dynamics.
 //!
-//! Bridges the [`Plugin`] contract to the four production bubble-equation
+//! Bridges the [`crate::plugin::Plugin`] contract to the four production bubble-equation
 //! implementations:
 //!
-//! | [`BubbleModel`] variant | ODE / integrator used |
+//! | `BubbleModel` variant | ODE / integrator used |
 //! |-------------------------|-----------------------|
-//! | `KellerMiksis`          | [`BubbleField`] (adaptive KM, `use_compressibility = true`) |
-//! | `KellerHerring`         | [`BubbleField`] (adaptive KM wrapper, dedicated contract type) |
-//! | `RayleighPlesset`       | [`BubbleField`] (adaptive KM, `use_compressibility = false` → O(Mach⁰) limit) |
-//! | `Gilmore`               | [`GilmoreSolver`] with per-voxel classical RK4, Tait liquid EOS |
+//! | `KellerMiksis`          | `BubbleField` (adaptive KM, `use_compressibility = true`) |
+//! | `KellerHerring`         | `BubbleField` (adaptive KM wrapper, dedicated contract type) |
+//! | `RayleighPlesset`       | `BubbleField` (adaptive KM, `use_compressibility = false` → O(Mach⁰) limit) |
+//! | `Gilmore`               | `GilmoreSolver` with per-voxel classical RK4, Tait liquid EOS |
 //!
 //! ## Field contract
 //!
-//! | Direction | [`UnifiedFieldType`] | Physical meaning |
+//! | Direction | `UnifiedFieldType` | Physical meaning |
 //! |-----------|----------------------|-----------------|
 //! | reads     | `Pressure`           | far-field acoustic driving pressure (Pa) |
 //! | writes    | `BubbleRadius`       | instantaneous bubble radius R(t) (m) |
@@ -27,7 +27,7 @@
 //!
 //! ## dp/dt computation
 //!
-//! The [`BubbleField`] update requires `dp_dt_field` (the time derivative of
+//! The `BubbleField` update requires `dp_dt_field` (the time derivative of
 //! acoustic pressure) for the Keller-Miksis radiation-damping term.  This
 //! plugin stores the previous-step pressure and computes a first-order
 //! backward-difference estimate:

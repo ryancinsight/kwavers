@@ -1,11 +1,8 @@
 //! DistributedNeuralBeamformingProcessor and FaultToleranceState.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::{Array3, Array4};
 use moirai_parallel::{map_collect_mut_with, Adaptive};
-use leto::{
-    Array3,
-    Array4,
-};
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::interface::pinn_beamforming::{

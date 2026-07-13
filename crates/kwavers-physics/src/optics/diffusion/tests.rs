@@ -103,6 +103,6 @@ fn test_light_diffusion_solver_initialization() {
 
     let solver = LightDiffusion::new(&grid, props, false, false);
 
-    assert_eq!(solver.fluence_rate.shape(),  [1, 10, 10, 10]);
-    assert_eq!(solver.emission_spectrum.shape(),  [10, 10, 10]);
+    assert_eq!(solver.fluence_rate.shape(), [1, 10, 10, 10]);
+    assert_eq!(solver.emission_spectrum.shape(), [10, 10, 10]);
 }

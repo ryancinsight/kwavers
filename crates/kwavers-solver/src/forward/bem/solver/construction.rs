@@ -10,14 +10,14 @@ impl BemSolver {
     /// Use this constructor when the boundary surface has already been extracted.
     /// Triangles must follow CCW outward-normal winding convention.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(
         config: BemConfig,
         vertices: Vec<[f64; 3]>,
         triangles: Vec<[usize; 3]>,
     ) -> KwaversResult<Self> {
-        let n = vertices.len() ;
+        let n = vertices.len();
         for tri in &triangles {
             for &idx in tri {
                 if idx >= n {
@@ -44,7 +44,7 @@ impl BemSolver {
     /// Only faces shared by exactly one element (boundary faces) are included.
     /// Outward normal orientation is determined by the position of the interior node.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn from_mesh(config: BemConfig, mesh: &TetrahedralMesh) -> KwaversResult<Self> {
         let mut nodes: Vec<[f64; 3]> = Vec::new();
@@ -105,7 +105,7 @@ impl BemSolver {
                 if let Some(&local_idx) = global_to_local_node.get(&global_idx) {
                     local_face[i] = local_idx;
                 } else {
-                    let new_idx = nodes.len() ;
+                    let new_idx = nodes.len();
                     nodes.push(mesh.nodes[global_idx].coordinates);
                     global_to_local_node.insert(global_idx, new_idx);
                     local_face[i] = new_idx;

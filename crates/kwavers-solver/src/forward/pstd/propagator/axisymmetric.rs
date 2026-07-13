@@ -313,7 +313,7 @@ impl AsContext {
     /// Construct AsContext from grid and solver parameters.
     /// Pre-allocates all expansion and k-space scratch buffers.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn new(

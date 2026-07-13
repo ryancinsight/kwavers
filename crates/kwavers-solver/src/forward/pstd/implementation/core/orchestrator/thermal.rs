@@ -43,11 +43,8 @@ use kwavers_core::error::KwaversResult;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
+use leto::{Array2, Array3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array2,
-    Array3,
-};
 use std::{fmt, sync::Arc};
 
 fn copy_scaled_absorption_field(dst: &mut Array3<f64>, alpha_si: &Array3<f64>, factor: f64) {
@@ -57,10 +54,7 @@ fn copy_scaled_absorption_field(dst: &mut Array3<f64>, alpha_si: &Array3<f64>, f
         "invariant: PSTD absorption destination shape matches alpha_si shape"
     );
 
-    if let (Some(dst_values), Some(alpha_values)) = (
-        dst.as_slice_mut(),
-        alpha_si.as_slice(),
-    ) {
+    if let (Some(dst_values), Some(alpha_values)) = (dst.as_slice_mut(), alpha_si.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
             *value = alpha_values[index] * factor;
         });
@@ -92,7 +86,7 @@ pub struct ThermalOrchestrationInput<'a> {
     pub thermal_medium: &'a dyn Medium,
     /// Center angular frequency [rad/s] used once to populate `alpha_np_m`.
     pub omega_c: f64,
-    /// Thermal time step [s].
+    /// Thermal time step \[s\].
     pub dt_thermal: f64,
     /// Acoustic steps between thermal updates. Must be at least one.
     pub n_acoustic_per_thermal: usize,
@@ -224,7 +218,7 @@ impl PSTDSolver {
     ///   `n_acoustic_per_thermal` acoustic steps.
     /// - `thermal_medium`: medium supplying `thermal_diffusivity` to the thermal solver.
     /// - `omega_c`: center angular frequency [rad/s]; used once to populate `alpha_np_m`.
-    /// - `dt_thermal`: thermal time step [s].  Typically
+    /// - `dt_thermal`: thermal time step \[s\].  Typically
     ///   `n_acoustic_per_thermal * dt_acoustic`.
     /// - `n_acoustic_per_thermal`: number of acoustic steps between thermal updates.
     ///   Must be ≥ 1.

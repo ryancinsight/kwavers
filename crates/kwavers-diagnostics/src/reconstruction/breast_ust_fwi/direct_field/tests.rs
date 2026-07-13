@@ -10,13 +10,13 @@ use crate::reconstruction::breast_ust_fwi::{
 };
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_frequency_observation, AbsorbingBoundary, Config as FrequencyDomainFwiConfig,
     PstdSpectralConvergentBornOperator, PstdTemporalTransferConfig,
 };
 use leto::Array3;
-use kwavers_math::fft::Complex64;
 use std::f64::consts::PI;
 use std::sync::Arc;
 

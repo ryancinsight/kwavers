@@ -1,9 +1,6 @@
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    SliceArg,
-};
+use leto::{Array2, SliceArg};
 
 /// Spatial smoothing for coherent source decorrelation (real-valued)
 #[derive(Debug, Clone)]

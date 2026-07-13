@@ -1,17 +1,14 @@
 use super::FemHelmholtzSolver;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use leto::{
-    Array1,
-    ArrayView2,
-};
 use kwavers_math::fft::Complex64;
+use leto::{Array1, ArrayView2};
 
 impl FemHelmholtzSolver {
     /// Interpolate the nodal solution at arbitrary query points via barycentric coordinates.
     ///
     /// Returns zero for query points outside the mesh domain.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn interpolate_solution(
         &self,
@@ -57,7 +54,7 @@ impl FemHelmholtzSolver {
     /// [u, v, w]ᵀ = J^{-1} (point − p₀),  t = 1 − u − v − w
     /// ```
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn compute_shape_functions(
         &self,

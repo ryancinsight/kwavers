@@ -23,7 +23,12 @@ use leto::Array3 as LetoArray3;
 // ============================================================================
 
 /// Full-grid pressure statistics bundle: (p_max, p_min, p_rms, p_final).
-pub type FullGridStats = Option<(LetoArray3<f64>, LetoArray3<f64>, LetoArray3<f64>, LetoArray3<f64>)>;
+pub type FullGridStats = Option<(
+    LetoArray3<f64>,
+    LetoArray3<f64>,
+    LetoArray3<f64>,
+    LetoArray3<f64>,
+)>;
 
 /// Extract full-grid `(p_max, p_min, p_rms, p_final)` from a recorder.
 pub fn extract_full_grid_stats(recorder: &SensorRecorder) -> FullGridStats {

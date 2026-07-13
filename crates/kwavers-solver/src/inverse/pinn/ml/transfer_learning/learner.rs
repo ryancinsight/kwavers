@@ -25,7 +25,7 @@ where
 
     /// Transfer model to target geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn transfer_to_geometry(
         &mut self,
@@ -144,7 +144,7 @@ where
 
     /// Fine-tune model on target geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn fine_tune_model(
         &mut self,
@@ -183,7 +183,7 @@ where
 
     /// Generate training data for target geometry
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn generate_training_data(
         &self,

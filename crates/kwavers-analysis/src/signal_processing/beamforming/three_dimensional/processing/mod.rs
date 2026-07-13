@@ -9,10 +9,7 @@ mod tests;
 mod validation;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 use super::config::BeamformingAlgorithm3D;
 use super::processor::BeamformingProcessor3D;

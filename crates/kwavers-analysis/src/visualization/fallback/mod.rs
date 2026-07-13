@@ -5,8 +5,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use log::{info, warn};
 use leto::Array3;
+use log::{info, warn};
 
 /// Fallback renderer for CPU-based visualization
 #[derive(Debug)]

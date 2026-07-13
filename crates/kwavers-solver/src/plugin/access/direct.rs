@@ -1,10 +1,6 @@
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
-use leto::{
-    Array4,
-    ArrayView3,
-    ArrayViewMut3,
-};
+use leto::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 
 /// This provides direct access to the fields array but with compile-time

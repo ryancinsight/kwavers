@@ -6,8 +6,8 @@
 //! The inverse solves the nonnegative Tikhonov problem by projected gradient
 //! descent with a fixed step bounded by the Frobenius norm of the operator.
 
-use moirai_parallel::{enumerate_mut_with, fold_reduce_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, fold_reduce_with, Adaptive};
 
 use kwavers_core::constants::SOUND_SPEED_TISSUE;
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;

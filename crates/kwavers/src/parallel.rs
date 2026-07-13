@@ -1,9 +1,9 @@
 //! Provider-owned traversal adapters for application arrays.
 
+use leto::{ArrayView, ArrayViewMut};
 use moirai_parallel::{
     for_each_chunk_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with, Adaptive,
 };
-use leto::{ArrayView, ArrayViewMut};
 
 const FIELD_CHUNK_SIZE: usize = 4096;
 
@@ -120,8 +120,12 @@ pub(crate) fn zip_two_mut_two_refs<T, U, V, W, const N: usize, F>(
             let shape = first_out.shape();
             let mut index = [0usize; N];
             for _ in 0..first_out.size() {
-                let first_value = first_out.get_mut(index).expect("invariant: index in bounds");
-                let second_value = second_out.get_mut(index).expect("invariant: index in bounds");
+                let first_value = first_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let second_value = second_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
                 f(
                     first_value,
                     second_value,

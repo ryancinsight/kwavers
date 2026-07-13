@@ -2,10 +2,7 @@
 
 use std::collections::VecDeque;
 
-use leto::{
-    Array3,
-    SliceArg,
-};
+use leto::{Array3, SliceArg};
 
 use kwavers_core::constants::ct_acoustics::{
     HU_ABDOMEN_BODY_THRESHOLD, HU_BONE_THRESHOLD, HU_BRAIN_BODY_THRESHOLD,

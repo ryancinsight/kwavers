@@ -5,12 +5,12 @@ use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
-use kwavers_math::fft::Complex64;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance
@@ -46,7 +46,7 @@ impl MixedDomainPropagationPlugin {
     /// Propagate field using optimal domain selection
     /// Based on Huijssen & Verweij (2010): "An iterative method for the computation"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate(
         &mut self,
@@ -103,7 +103,8 @@ impl MixedDomainPropagationPlugin {
         } else {
             field.iter().sum::<f64>() / n as f64
         };
-        let variance = field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (field.len()) as f64;
+        let variance =
+            field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (field.len()) as f64;
 
         // Estimate nonlinearity strength from field variance
         let nonlinearity_metric = variance.sqrt() / (mean.abs() + 1e-10);

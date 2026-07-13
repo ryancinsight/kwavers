@@ -1,7 +1,7 @@
 //! NumPy conversion helpers for inverse-problem bindings.
 
 use numpy::ndarray::{Array2, ArrayView2};
-use numpy::{ToPyArray, PyArray2};
+use numpy::{PyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -21,4 +21,3 @@ pub(super) fn array2_from_flat(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr2d.to_pyarray(py).unbind())
 }
-

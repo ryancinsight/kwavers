@@ -57,7 +57,7 @@ pub struct AMRSolver {
 impl AMRSolver {
     /// Create a new AMR solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(grid: &Grid, max_level: usize) -> KwaversResult<Self> {
         let octree = Octree::new(grid.bounds(), max_level)?;
@@ -75,7 +75,7 @@ impl AMRSolver {
 
     /// Adapt the mesh based on error estimates
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn adapt_mesh(&mut self, field: &Array3<f64>, threshold: f64) -> KwaversResult<()> {
         // Estimate error using wavelets

@@ -14,12 +14,9 @@
 //! # No error masking
 //! Validation is strict (no silent clamp/ceil that would produce partially filled snapshots).
 
-use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    Array3,
-};
 use eunomia::Complex64;
+use kwavers_core::error::KwaversResult;
+use leto::{Array2, Array3};
 
 pub mod config;
 pub mod legacy;

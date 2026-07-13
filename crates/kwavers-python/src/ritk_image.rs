@@ -2,7 +2,7 @@
 
 use coeus_core::SequentialBackend;
 use leto::Array3;
-use numpy::{ToPyArray, PyArray3};
+use numpy::{PyArray3, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 use ritk_io::ImageReader;
@@ -60,4 +60,3 @@ pub fn load_ritk_nifti(path: &Path) -> PyResult<(Array3<f64>, [f64; 3])> {
     }
     Ok((volume, [spacing[2], spacing[1], spacing[0]]))
 }
-

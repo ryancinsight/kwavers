@@ -1,7 +1,7 @@
 //! IVUS B-mode RF, scan-conversion, and display bindings.
 
 use kwavers_physics::analytical::imaging;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -189,4 +189,3 @@ pub fn ivus_bmode_image<'py>(
     out.set_item("cartesian", image.cartesian.to_pyarray(py))?;
     Ok(out)
 }
-

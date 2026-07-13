@@ -95,7 +95,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     ///
     /// Fluence array of the same shape as `evaluation_points`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_fluence_diffusion(
         &self,

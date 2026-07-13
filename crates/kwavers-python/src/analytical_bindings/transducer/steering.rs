@@ -1,7 +1,7 @@
 //! PyO3 wrappers for electronic steering and sparse-aperture helpers.
 
 use kwavers_physics::analytical::transducer;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -253,4 +253,3 @@ pub fn electronic_steering_efficiency(
         dr_lat_m, dr_ax_m, f0_hz, c_m_s, apodized,
     ))
 }
-

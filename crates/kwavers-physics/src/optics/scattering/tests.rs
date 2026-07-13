@@ -8,8 +8,8 @@
 //! machine precision.
 
 use super::*;
-use kwavers_core::constants::numerical::TWO_PI;
 use eunomia::Complex64;
+use kwavers_core::constants::numerical::TWO_PI;
 
 fn params_for(x: f64, m: Complex64) -> MieParameters {
     let wavelength = 1.0_f64;
@@ -200,4 +200,3 @@ fn mie_rayleigh_limit_consistency() {
         rel_err
     );
 }
-

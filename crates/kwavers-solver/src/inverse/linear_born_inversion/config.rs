@@ -2,7 +2,7 @@
 //!
 //! Anatomy- and transducer-neutral knobs only. The number and physical layout
 //! of array elements live on the
-//! [`TransducerGeometry`](kwavers_transducer::transducers::TransducerGeometry)
+//! `TransducerGeometry`
 //! impl passed alongside this config; clinical adapters
 //! (`clinical::imaging::reconstruction::*`) compose this struct with
 //! anatomy-specific parameters into their own configs.
@@ -22,7 +22,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// Generic linear Born + PCG inversion settings.
 #[derive(Clone, Debug)]
 pub struct LinearBornInversionConfig {
-    /// Frequencies used by the encoded finite-frequency sensitivity [Hz].
+    /// Frequencies used by the encoded finite-frequency sensitivity \[Hz\].
     pub frequencies_hz: Vec<f64>,
     /// Receiver offsets from each emitting element. Semantics depend on the
     /// transducer geometry (cyclic for rings; azimuthal for bowls); see
@@ -55,7 +55,7 @@ pub struct LinearBornInversionConfig {
     pub attenuation_model: bool,
     /// Include weak-Westervelt second-harmonic encoded rows.
     pub nonlinear_harmonic_model: bool,
-    /// Source pressure used for weak-nonlinear harmonic scaling [MPa].
+    /// Source pressure used for weak-nonlinear harmonic scaling \[MPa\].
     pub source_pressure_mpa: f64,
     /// Acoustic nonlinearity coefficient `β = 1 + B/(2A)`.
     pub nonlinear_beta: f64,

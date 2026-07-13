@@ -1,7 +1,7 @@
 //! Dense Runge-Kutta coefficient update helpers for DG states.
 
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 pub(super) fn update_euler(
     stage: &mut Array3<f64>,
@@ -20,11 +20,9 @@ pub(super) fn update_euler(
         "invariant: DG RK stage shape matches RHS"
     );
 
-    if let (Some(stage_values), Some(original_values), Some(rhs_values)) = (
-        stage.as_slice_mut(),
-        original.as_slice(),
-        rhs.as_slice(),
-    ) {
+    if let (Some(stage_values), Some(original_values), Some(rhs_values)) =
+        (stage.as_slice_mut(), original.as_slice(), rhs.as_slice())
+    {
         enumerate_mut_with::<Adaptive, _, _>(stage_values, |index, value| {
             *value = original_values[index] + dt * rhs_values[index];
         });
@@ -53,11 +51,9 @@ pub(super) fn update_ssp_second(
         "invariant: DG RK stage shape matches RHS"
     );
 
-    if let (Some(stage_values), Some(original_values), Some(rhs_values)) = (
-        stage.as_slice_mut(),
-        original.as_slice(),
-        rhs.as_slice(),
-    ) {
+    if let (Some(stage_values), Some(original_values), Some(rhs_values)) =
+        (stage.as_slice_mut(), original.as_slice(), rhs.as_slice())
+    {
         enumerate_mut_with::<Adaptive, _, _>(stage_values, |index, value| {
             let stage_first = *value;
             *value = 0.75 * original_values[index] + 0.25 * (stage_first + dt * rhs_values[index]);
@@ -124,10 +120,7 @@ pub(super) fn update_forward_euler(target: &mut Array3<f64>, rhs: &Array3<f64>, 
         "invariant: DG forward-Euler target shape matches RHS"
     );
 
-    if let (Some(target_values), Some(rhs_values)) = (
-        target.as_slice_mut(),
-        rhs.as_slice(),
-    ) {
+    if let (Some(target_values), Some(rhs_values)) = (target.as_slice_mut(), rhs.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(target_values, |index, value| {
             *value += dt * rhs_values[index];
         });

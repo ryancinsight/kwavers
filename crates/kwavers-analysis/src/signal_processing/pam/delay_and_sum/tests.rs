@@ -240,13 +240,7 @@ fn beamform_with_delays_aligns_on_supplied_delays() {
         data[[sensor, arrival]] = 1.0;
     }
 
-    let delays = Array2::from_shape_vec(
-        (2, 3),
-        vec![
-            10.0, 12.0, 14.0, 0.0, 0.0, 0.0,
-        ],
-    )
-    .unwrap();
+    let delays = Array2::from_shape_vec((2, 3), vec![10.0, 12.0, 14.0, 0.0, 0.0, 0.0]).unwrap();
     let signals = pam
         .beamform_signals_with_delays(data.view(), delays.view())
         .unwrap();

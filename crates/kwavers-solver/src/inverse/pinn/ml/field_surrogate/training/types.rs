@@ -65,7 +65,7 @@ impl Default for FieldSurrogateTrainingConfig {
 
 impl FieldSurrogateTrainingConfig {
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when any field is
+    /// Returns [`crate::KwaversError::InvalidInput`] when any field is
     /// non-positive (or negative loss weights).
     pub fn validate(&self) -> KwaversResult<()> {
         if self.learning_rate <= 0.0 {

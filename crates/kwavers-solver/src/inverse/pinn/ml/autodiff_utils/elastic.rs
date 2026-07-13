@@ -47,7 +47,7 @@ type ElasticResidual2D<B> = (Var<f32, B>, Var<f32, B>);
 /// ε_xy = ½(∂u_x/∂y + ∂u_y/∂x)
 /// ```
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_strain_tensor_2d<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
@@ -95,7 +95,7 @@ where
 /// ```
 /// `R = 0` ⟺ u satisfies the governing equation.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_elastic_wave_residual_2d<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,

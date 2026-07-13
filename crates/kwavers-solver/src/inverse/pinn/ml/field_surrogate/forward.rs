@@ -27,11 +27,11 @@ pub struct GridQueryParams {
     pub shape: (usize, usize, usize),
     /// Index of the focal voxel within the output grid.
     pub focus_idx: (usize, usize, usize),
-    /// Isotropic grid spacing [m].
+    /// Isotropic grid spacing \[m\].
     pub dx_m: f64,
-    /// Source centre frequency [Hz].
+    /// Source centre frequency \[Hz\].
     pub f0: f64,
-    /// Target peak rarefactional pressure [Pa].
+    /// Target peak rarefactional pressure \[Pa\].
     pub pnp: f64,
     /// Per-axis half-extent used to normalise spatial coordinates to
     /// `[-1, 1]`. Should match the training-time bounding box; for

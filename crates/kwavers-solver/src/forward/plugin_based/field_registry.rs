@@ -6,13 +6,8 @@
 use kwavers_core::error::{FieldError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
+use leto::{Array3, Array4, ArrayView3, ArrayViewMut3};
 use log::{debug, info};
-use leto::{
-    Array3,
-    Array4,
-    ArrayView3,
-    ArrayViewMut3,
-};
 
 #[derive(Clone, Debug)]
 struct FieldMetadata {
@@ -77,7 +72,7 @@ impl FieldRegistry {
 
     /// Register a new field dynamically
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn register_field(&mut self, field_type: UnifiedFieldType) -> KwaversResult<()> {
         let idx = field_type as usize;
@@ -109,7 +104,7 @@ impl FieldRegistry {
 
     /// Register multiple fields at once
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn register_fields(&mut self, fields: &[UnifiedFieldType]) -> KwaversResult<()> {
         for field_type in fields {
@@ -120,7 +115,7 @@ impl FieldRegistry {
 
     /// Get a field view (zero-copy, read-only)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn get_field(
         &self,
@@ -141,7 +136,7 @@ impl FieldRegistry {
 
     /// Get a mutable field view (zero-copy)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn get_field_mut(
         &mut self,
@@ -169,7 +164,7 @@ impl FieldRegistry {
 
     /// Set a specific field with dimension validation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn set_field(
         &mut self,

@@ -3,7 +3,7 @@
 mod acoustic;
 
 use kwavers_physics::analytical::thermal;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -190,4 +190,3 @@ pub fn adiabatic_temperature_rise_kelvin(
     let result = thermal::adiabatic_temperature_rise_kelvin(q_s, tau_s, density, specific_heat);
     Ok(result.to_pyarray(py).unbind())
 }
-

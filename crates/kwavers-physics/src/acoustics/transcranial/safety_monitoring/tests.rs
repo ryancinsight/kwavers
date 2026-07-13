@@ -6,7 +6,7 @@ use leto::Array3;
 #[test]
 fn test_safety_monitor_creation() {
     let monitor = TranscranialSafetyMonitor::new((16, 16, 16), 0.01, 650e3);
-    assert_eq!(monitor.temperature.shape(),  [16, 16, 16]);
+    assert_eq!(monitor.temperature.shape(), [16, 16, 16]);
 }
 
 #[test]

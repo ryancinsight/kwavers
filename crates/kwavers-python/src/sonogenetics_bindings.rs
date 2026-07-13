@@ -31,15 +31,15 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
     pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
-use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use leto::Array3;
 use numpy::ndarray::Array1;
-use numpy::{ToPyArray, PyReadonlyArray1};
+use numpy::{PyReadonlyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -452,4 +452,3 @@ pub fn register_sonogenetics(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<(
     m.add_function(pyo3::wrap_pyfunction!(lif_response_probability_py, m)?)?;
     Ok(())
 }
-

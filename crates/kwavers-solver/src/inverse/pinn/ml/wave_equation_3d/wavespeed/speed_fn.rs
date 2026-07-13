@@ -17,7 +17,7 @@ where
     }
     /// From grid with bbox.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn from_grid_with_bbox(
         grid: coeus_tensor::Tensor<f32, B>,
         bbox: [f32; 6],

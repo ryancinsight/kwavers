@@ -1,8 +1,8 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::Array3;
 use log::warn;
 use moirai_parallel::{for_each_mut_with, Adaptive};
-use leto::Array3;
 use std::f64;
 
 use super::super::wave_model::NonlinearWave;

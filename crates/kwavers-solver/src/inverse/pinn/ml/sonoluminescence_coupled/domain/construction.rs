@@ -18,7 +18,11 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         config: SonoluminescenceCouplingConfig,
         coupling_type: SonoluminescenceCouplingType,
     ) -> Self {
-        let grid_shape = [config.grid_shape.0, config.grid_shape.1, config.grid_shape.2];
+        let grid_shape = [
+            config.grid_shape.0,
+            config.grid_shape.1,
+            config.grid_shape.2,
+        ];
         let emission_calculator =
             SonoluminescenceEmission::new(grid_shape, config.emission_params.clone());
 

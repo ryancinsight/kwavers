@@ -9,10 +9,7 @@ use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationTyp
 use kwavers_physics::acoustics::bubble_dynamics::{
     BubbleParameters, EpsteinPlessetStabilitySolver, KellerMiksisModel,
 };
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 
 #[cfg(test)]

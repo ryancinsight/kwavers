@@ -49,11 +49,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 
 use coeus_autograd::Var;
 
@@ -97,7 +93,7 @@ where
     ///
     /// Displacement vector [u_x, u_y]
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn predict_point(&self, x: f64, y: f64, t: f64) -> KwaversResult<[f64; 2]> {
         let backend = B::default();
         let mk = |v: f64| {
@@ -121,8 +117,8 @@ where
     ///
     /// Array of displacement vectors [N, 2]
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn predict_batch(&self, points: &[(f64, f64, f64)]) -> KwaversResult<Array2<f64>> {
         if points.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -167,7 +163,7 @@ where
     ///
     /// Displacement field [Nx, Ny, 2] where last dimension is (u_x, u_y)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn evaluate_field(
         &self,
         x_grid: &Array1<f64>,
@@ -231,7 +227,7 @@ where
     ///
     /// Magnitude field [Nx, Ny] where magnitude = sqrt(u_x^2 + u_y^2)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn magnitude_field(
         &self,
         x_grid: &Array1<f64>,

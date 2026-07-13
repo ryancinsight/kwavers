@@ -97,7 +97,7 @@ impl PinnValidationReport {
 ///
 /// Returns a comprehensive report including timing, metrics, and correlation.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn validate_pinn_vs_fdtd<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     pinn: &PinnWave1D<B>,

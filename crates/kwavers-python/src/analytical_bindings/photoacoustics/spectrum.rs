@@ -1,7 +1,7 @@
 //! Spectral absorption and Gruneisen photoacoustic bindings.
 
 use kwavers_physics::analytical::photoacoustics;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -85,4 +85,3 @@ pub fn gruneisen_parameter_soft_tissue(
     let result = photoacoustics::gruneisen_parameter_soft_tissue(t_s);
     Ok(result.to_pyarray(py).unbind())
 }
-

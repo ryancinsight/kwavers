@@ -1,7 +1,7 @@
 //! IVUS therapy field and response bindings.
 
 use kwavers_physics::analytical::imaging;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -332,4 +332,3 @@ pub fn ivus_therapy_fields<'py>(
     out.set_item("peak_delta_t_k", fields.peak_delta_t_k)?;
     Ok(out)
 }
-

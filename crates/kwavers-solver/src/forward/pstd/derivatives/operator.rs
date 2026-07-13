@@ -2,7 +2,7 @@
 //!
 //! ## Theorem (Spectral Derivative via DFT)
 //!
-//! **Statement** (Trefethen 2000, Thm. 3.1): Let `u[n]` be a real N-periodic
+//! **Statement** (Trefethen 2000, Thm. 3.1): Let `u\[n\]` be a real N-periodic
 //! grid function sampled at `xₙ = n·Δx`, `n = 0, …, N−1`. Define the DFT and
 //! IDFT pair in the usual convention. The **spectral derivative** is:
 //!
@@ -17,8 +17,8 @@
 //! ω[N/2] = 0           (Nyquist mode zeroed — no alias-free derivative exists)
 //! ```
 //!
-//! **Exactness:** For a DFT-representable mode `u[n] = A·sin(2πm·n/N)`,
-//! `m ∈ {1, …, N/2−1}`, the spectral derivative recovers `A·ω[m]·cos(2πm·n/N)`
+//! **Exactness:** For a DFT-representable mode `u\[n\] = A·sin(2πm·n/N)`,
+//! `m ∈ {1, …, N/2−1}`, the spectral derivative recovers `A·ω\[m\]·cos(2πm·n/N)`
 //! to within floating-point rounding (~O(N·log₂(N)·ε_mach) ≈ 10⁻¹³ for N=32).
 //! No aliasing occurs because m < N/2.
 //!
@@ -39,7 +39,7 @@
 //! multiplied, their product has bandwidth `4π/(3Δx) < 2π/Δx = kₙᵧq`, so
 //! no aliases enter the retained band.
 //!
-//! For N=32 and mode m=1: ω[1] = 2π/(32·Δx) ≪ 2π/(3Δx), so the fundamental
+//! For N=32 and mode m=1: ω\[1\] = 2π/(32·Δx) ≪ 2π/(3Δx), so the fundamental
 //! mode passes trivially.
 //!
 //! ## References
@@ -55,12 +55,8 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use leto::Array1 as LetoArray1;
+use leto::{Array1, Array3, ArrayView3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_index_with, Adaptive};
-use leto::{
-    Array1,
-    Array3,
-    ArrayView3,
-};
 
 /// Spectral derivative operator for 3D fields.
 ///
@@ -139,7 +135,7 @@ impl SpectralDerivativeOperator {
         }
     }
 
-    /// Compute wavenumber array: k[n] = 2π·n/(N·Δx) for n < N/2, 2π·(n-N)/(N·Δx) otherwise.
+    /// Compute wavenumber array: k\[n\] = 2π·n/(N·Δx) for n < N/2, 2π·(n-N)/(N·Δx) otherwise.
     fn compute_wavenumbers(n: usize, dx: f64) -> Array1<f64> {
         let mut k = Array1::zeros(n);
         let norm = TWO_PI / (n as f64 * dx);
@@ -170,7 +166,7 @@ impl SpectralDerivativeOperator {
 
     /// Compute x-derivative via spectral method (FFT along x pencils).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn derivative_x(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.validate_field(field)?;
@@ -182,7 +178,7 @@ impl SpectralDerivativeOperator {
 
     /// Compute y-derivative via spectral method (FFT along y pencils).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn derivative_y(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.validate_field(field)?;
@@ -194,7 +190,7 @@ impl SpectralDerivativeOperator {
 
     /// Compute z-derivative via spectral method (FFT along z pencils).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn derivative_z(&self, field: &ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         self.validate_field(field)?;

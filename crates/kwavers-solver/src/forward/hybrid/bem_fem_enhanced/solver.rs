@@ -63,7 +63,7 @@ impl EnhancedBemFemSolver {
     /// 3. Interface continuity satisfied
     /// 4. Solution converges with refinement
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -115,7 +115,7 @@ impl EnhancedBemFemSolver {
 
     /// Check for explicitly configured standard-BEM characteristic frequencies.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn check_spurious_resonance(&self, frequency: f64) -> KwaversResult<bool> {
         self.validate_frequency(frequency)?;
@@ -133,7 +133,7 @@ impl EnhancedBemFemSolver {
 
     /// Estimate error on coupling interface at the current mesh level.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn estimate_interface_error_at_level(
         &self,
@@ -155,7 +155,7 @@ impl EnhancedBemFemSolver {
 
     /// Refine interface mesh at specified level.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn refine_interface(&mut self, frequency: f64, level: usize) -> KwaversResult<()> {
         let h = self.element_size_at_level(level);

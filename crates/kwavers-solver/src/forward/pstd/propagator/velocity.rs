@@ -51,8 +51,8 @@ use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::{Complex64, Fft3dInOutExt};
 use leto::Array3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::{Array1, Array2, ArrayView2, ArrayView3, ArrayViewMut2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 #[derive(Clone, Copy)]
 enum VelocityAxis {
@@ -346,7 +346,7 @@ impl PSTDSolver {
     /// original `apply_pml_to_velocity()` call structure for correctness.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub(crate) fn update_velocity_cartesian(&mut self, dt: f64) -> KwaversResult<()> {
@@ -465,7 +465,12 @@ impl PSTDSolver {
             );
             self.fft
                 .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
-            update_velocity_unfused(&mut self.fields.ux, &self.dpx, self.materials.rho0.view(), dt);
+            update_velocity_unfused(
+                &mut self.fields.ux,
+                &self.dpx,
+                self.materials.rho0.view(),
+                dt,
+            );
 
             // Y-direction
             if has_y {
@@ -537,8 +542,8 @@ impl PSTDSolver {
     /// **Fallback path**: original pre-PML → update → post-PML call structure preserved.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    /// - Returns [`KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
     ///   for `CylindricalAS` geometry.
     ///
     pub(crate) fn update_velocity_as(&mut self, dt: f64) -> KwaversResult<()> {
@@ -644,7 +649,7 @@ impl PSTDSolver {
     /// The staggered sigma is smaller at PML boundary cells (~70% of σ_max at deepest cell),
     /// so using non-staggered sigma for velocity over-damps it by ≈ 20%.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_pml_to_velocity(&mut self) -> KwaversResult<()> {
         let Some(mut boundary) = self.boundary.take() else {

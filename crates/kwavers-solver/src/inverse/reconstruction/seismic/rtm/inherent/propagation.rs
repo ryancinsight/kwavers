@@ -29,7 +29,7 @@ impl ReverseTimeMigration {
     /// decimated-then-reconstructed) `Array4<f64>` of shape
     /// `(n_time_steps, nx, ny, nz)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn forward_propagation(
         &self,
@@ -71,7 +71,7 @@ impl ReverseTimeMigration {
     ///
     /// Returns `Array4<f64>` of shape `(n_time_steps, nx, ny, nz)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn backward_propagation(
         &self,
@@ -130,8 +130,12 @@ impl ReverseTimeMigration {
                     );
             } else if t_dec + 1 < decimated.shape()[0] {
                 let weight = t_rem as f64 / RTM_STORAGE_DECIMATION as f64;
-                let snap1 = decimated.slice_with::<3>(&s![t_dec, .., .., ..]).expect("invariant: RTM stencil slice in range");
-                let snap2 = decimated.slice_with::<3>(&s![t_dec + 1, .., .., ..]).expect("invariant: RTM stencil slice in range");
+                let snap1 = decimated
+                    .slice_with::<3>(&s![t_dec, .., .., ..])
+                    .expect("invariant: RTM stencil slice in range");
+                let snap2 = decimated
+                    .slice_with::<3>(&s![t_dec + 1, .., .., ..])
+                    .expect("invariant: RTM stencil slice in range");
 
                 for_each_view_mut(
                     full.slice_with_mut::<3>(&s![t, .., .., ..])

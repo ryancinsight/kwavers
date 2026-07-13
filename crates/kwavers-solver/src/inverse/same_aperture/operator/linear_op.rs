@@ -17,7 +17,7 @@ impl LinearOperator for FiniteFrequencyOperator<'_> {
     }
 
     fn cols(&self) -> usize {
-self.active.len()
+        self.active.len()
     }
 
     fn matvec(&self, x: &[f32], out: &mut [f32]) {

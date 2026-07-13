@@ -6,10 +6,7 @@ use super::super::{
 use super::core::SimulationMultiPhysicsSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 struct MockSolver {
     domain: SimulationPhysicsDomain,

@@ -54,10 +54,7 @@ pub use solver::SimulationMultiPhysicsSolver;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// Physics domain types for coupling
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

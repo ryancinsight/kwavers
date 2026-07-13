@@ -72,11 +72,19 @@ impl SonoluminescenceEmission {
             .map(|field| SpectralStatistics {
                 mean_peak_wavelength: {
                     let n = field.peak_wavelength.len();
-                    if n > 0 { field.peak_wavelength.iter().copied().sum::<f64>() / n as f64 } else { 0.0 }
+                    if n > 0 {
+                        field.peak_wavelength.iter().copied().sum::<f64>() / n as f64
+                    } else {
+                        0.0
+                    }
                 },
                 mean_color_temperature: {
                     let n = field.color_temperature.len();
-                    if n > 0 { field.color_temperature.iter().copied().sum::<f64>() / n as f64 } else { 0.0 }
+                    if n > 0 {
+                        field.color_temperature.iter().copied().sum::<f64>() / n as f64
+                    } else {
+                        0.0
+                    }
                 },
                 max_total_intensity: field.total_intensity.iter().copied().fold(0.0, f64::max),
                 peak_location: self.peak_emission_location(),

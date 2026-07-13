@@ -1,9 +1,6 @@
 //! Time reversal utilities for acoustic focusing
 
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Time reversal processing utilities
 #[derive(Debug)]
@@ -45,7 +42,11 @@ mod tests {
     #[test]
     fn time_reverse_signals_reverses_each_sensor_row() {
         let signals = Array2::from_shape_fn((2, 4), |[s, t]| {
-            if s == 0 { (t + 1) as f64 } else { ((t + 1) * 10) as f64 }
+            if s == 0 {
+                (t + 1) as f64
+            } else {
+                ((t + 1) * 10) as f64
+            }
         });
 
         let reversed = TimeReversalUtils::time_reverse_signals(&signals);

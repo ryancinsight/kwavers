@@ -122,7 +122,7 @@ pub(super) const FWI_FIELD_CHUNK: usize = 16 * 1024;
 /// **approximate** adjoint (global scale offset + ~20% shape error; the Armijo
 /// line search absorbs both). [`FwiEngine::SecondOrderSelfAdjoint`] uses the
 /// dedicated self-adjoint second-order acoustic engine
-/// ([`self_adjoint`]) whose discrete adjoint is the literal algebraic gradient
+/// (`self_adjoint`) whose discrete adjoint is the literal algebraic gradient
 /// of the discrete objective, so the finite-difference gradient test returns
 /// `κ ≈ 1`. Choose it when the absolute gradient magnitude matters
 /// (Gauss-Newton, Hessian-vector products, fixed-step updates, gradient-norm
@@ -150,7 +150,7 @@ pub enum FwiEngine {
 /// ```
 ///
 /// When `density_model` is `None`, the processor falls back to the constant
-/// [`RHO_SEISMIC_REF`] for both media and the gradient scaling — a global
+/// `RHO_SEISMIC_REF` for both media and the gradient scaling — a global
 /// scalar that is absorbed into the line-search step-size and therefore
 /// produces a descent direction identical to the heterogeneous formulation
 /// up to a uniform rescaling.
@@ -177,7 +177,7 @@ pub enum FwiEngine {
 /// - [`MisfitType::Correlation`], [`MisfitType::L1Norm`] — auxiliary norms.
 ///
 /// All adjoint sources are computed by the canonical
-/// [`MisfitFunction`](crate::inverse::reconstruction::seismic::MisfitFunction)
+/// [`crate::inverse::reconstruction::seismic::MisfitFunction`]
 /// dispatcher (SSOT); the time-domain FWI driver only routes the selected
 /// functional into the objective evaluation and the adjoint-source construction.
 #[derive(Debug, Clone)]
@@ -185,7 +185,7 @@ pub struct FwiProcessor {
     pub(super) parameters: FwiParameters,
     pub(super) density_model: Option<Array3<f64>>,
     pub(super) misfit_type: MisfitType,
-    /// Optional zero-phase low-pass corner [Hz] applied to both observed and
+    /// Optional zero-phase low-pass corner \[Hz\] applied to both observed and
     /// synthetic traces before the misfit/adjoint evaluation. `None` (default)
     /// uses the full recorded bandwidth. Set by the frequency-continuation
     /// driver per multiscale stage; see [`Self::with_band_limit`] and
@@ -241,7 +241,7 @@ impl FwiProcessor {
     /// solver engine). Must match the grid shape and be finite and non-negative.
     ///
     /// ## Errors
-    /// Returns [`KwaversError::Validation`] if any value is negative or non-finite.
+    /// Returns [`crate::KwaversError::Validation`] if any value is negative or non-finite.
     pub fn with_self_adjoint_damping(mut self, damping: Array3<f64>) -> KwaversResult<Self> {
         for &b in damping.iter() {
             if !b.is_finite() || b < 0.0 {
@@ -279,7 +279,7 @@ impl FwiProcessor {
         self
     }
 
-    /// Apply a zero-phase low-pass with the given corner frequency [Hz] to the
+    /// Apply a zero-phase low-pass with the given corner frequency \[Hz\] to the
     /// data before every misfit and adjoint-source evaluation.
     ///
     /// `None` restores full-bandwidth inversion. This is the primitive the
@@ -296,7 +296,7 @@ impl FwiProcessor {
     /// factor in the velocity-model gradient.
     ///
     /// ## Errors
-    /// Returns [`KwaversError::Validation`] if any density value is non-finite
+    /// Returns [`crate::KwaversError::Validation`] if any density value is non-finite
     /// or non-positive.
     pub fn with_density(mut self, density: Array3<f64>) -> KwaversResult<Self> {
         for &value in density.iter() {

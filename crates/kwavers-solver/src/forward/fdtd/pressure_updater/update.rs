@@ -2,18 +2,14 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
-
 
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
@@ -48,7 +44,7 @@ impl FdtdSolver {
     /// 2. Staggered backward-difference when `staggered_grid = true`.
     /// 3. Central-difference otherwise.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
         if let Some(kops) = self.kspace_ops.as_mut() {

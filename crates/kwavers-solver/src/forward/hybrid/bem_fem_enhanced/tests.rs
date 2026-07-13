@@ -15,7 +15,7 @@ fn test_enhanced_config_sphere_validation() {
     assert!(config.burton_miller_config.as_ref().unwrap().frequency > 0.0);
     assert!(config.adaptive_refinement);
     assert_eq!(
-        config.validation_frequencies.as_ref().map(|f| f.len() ),
+        config.validation_frequencies.as_ref().map(|f| f.len()),
         Some(1)
     );
 }

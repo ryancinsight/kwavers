@@ -276,10 +276,7 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
     );
 }
 
-fn peak_index(
-    image: &leto::Array2<f64>,
-    mask: &leto::Array2<bool>,
-) -> Option<[usize; 2]> {
+fn peak_index(image: &leto::Array2<f64>, mask: &leto::Array2<bool>) -> Option<[usize; 2]> {
     image
         .indexed_iter()
         .filter(|(idx, _)| mask[*idx])

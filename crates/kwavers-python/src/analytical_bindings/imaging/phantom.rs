@@ -47,10 +47,7 @@ pub fn ivus_vessel_phantom<'py>(
         "backscatter",
         array2(n, phantom.backscatter)?.to_pyarray(py),
     )?;
-    out.set_item(
-        "lumen_mask",
-        array2(n, phantom.lumen_mask)?.to_pyarray(py),
-    )?;
+    out.set_item("lumen_mask", array2(n, phantom.lumen_mask)?.to_pyarray(py))?;
     out.set_item("eel_mask", array2(n, phantom.eel_mask)?.to_pyarray(py))?;
     out.set_item(
         "plaque_mask",
@@ -60,10 +57,7 @@ pub fn ivus_vessel_phantom<'py>(
         "fibrous_cap_mask",
         array2(n, phantom.fibrous_cap_mask)?.to_pyarray(py),
     )?;
-    out.set_item(
-        "lipid_mask",
-        array2(n, phantom.lipid_mask)?.to_pyarray(py),
-    )?;
+    out.set_item("lipid_mask", array2(n, phantom.lipid_mask)?.to_pyarray(py))?;
     out.set_item(
         "calcium_mask",
         array2(n, phantom.calcium_mask)?.to_pyarray(py),
@@ -74,4 +68,3 @@ pub fn ivus_vessel_phantom<'py>(
 fn array2<T>(n: usize, values: Vec<T>) -> PyResult<Array2<T>> {
     Array2::from_shape_vec((n, n), values).map_err(|e| PyRuntimeError::new_err(e.to_string()))
 }
-

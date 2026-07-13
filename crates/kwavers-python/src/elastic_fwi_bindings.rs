@@ -13,7 +13,7 @@ use kwavers_solver::inverse::elastography::elastic_fwi::{
 };
 use leto::Array3;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray2, PyReadonlyArray2};
+use numpy::{PyArray2, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -94,4 +94,3 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(elastic_shear_fwi_reconstruct, m)?)?;
     Ok(())
 }
-

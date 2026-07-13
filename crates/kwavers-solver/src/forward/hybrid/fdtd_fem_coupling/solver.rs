@@ -3,10 +3,7 @@ use super::coupler::FdtdFemCoupler;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// FDTD-FEM Coupled Solver
 #[derive(Debug)]
@@ -23,7 +20,7 @@ pub struct FdtdFemSolver {
 impl FdtdFemSolver {
     /// Create new coupled FDTD-FEM solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: FdtdFemCouplingConfig,
@@ -32,7 +29,7 @@ impl FdtdFemSolver {
     ) -> KwaversResult<Self> {
         let coupler = FdtdFemCoupler::new(config.clone(), &fdtd_grid, &fem_mesh)?;
         let fdtd_field = Array3::zeros((fdtd_grid.nx, fdtd_grid.ny, fdtd_grid.nz));
-        let fem_field = vec![0.0; fem_mesh.nodes.len() ];
+        let fem_field = vec![0.0; fem_mesh.nodes.len()];
 
         Ok(Self {
             config,
@@ -47,7 +44,7 @@ impl FdtdFemSolver {
 
     /// Perform coupled time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self) -> KwaversResult<()> {
         self.coupler.reset_convergence();

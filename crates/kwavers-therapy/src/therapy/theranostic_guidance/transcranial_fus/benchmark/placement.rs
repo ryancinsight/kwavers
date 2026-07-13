@@ -1,7 +1,4 @@
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

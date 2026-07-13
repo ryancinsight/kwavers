@@ -5412,11 +5412,11 @@ gap_audit ID.
   (finite-speed) test.
 
 ### Sprint C — approximation validity bounds [minor, doc + guarded option]
-- **[open]** PHY-2/4/8, CLD-2/3/6: for each documented approximation (adiabatic
-  Gilmore, Marmottant shell-viscosity omission, parametric-array averaging,
-  linear-only HIFU, O'Neil FWHM, Pennes-free Thermal Index) add: (a) quantitative
-  validity regime in Rustdoc with reference, (b) where feasible a config flag to
-  select the fuller model, (c) a test at the regime boundary.
+- **[~CLD-2 resolved~]** PHY-2/4/8, CLD-3/6: ~~CLD-2 (linear-only HIFU → KZK wiring,
+  config flag, adapter, dispatch complete)~~. Remaining: for each documented
+  approximation add: (a) quantitative validity regime in Rustdoc with reference,
+  (b) where feasible a config flag to select the fuller model, (c) a test at
+  the regime boundary.
 
 ### Sprint D — missing literature validation [minor]
 - **[open]** PHY-9/10/11/13, CLD-9/10/11, SOL-7: add value-semantic tests against

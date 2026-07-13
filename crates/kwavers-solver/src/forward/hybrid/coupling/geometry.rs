@@ -23,7 +23,7 @@ pub struct InterfaceGeometry {
 impl InterfaceGeometry {
     /// Create interface geometry from two grids
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn from_grids(source: &Grid, target: &Grid) -> KwaversResult<Self> {
         // Detect interface direction and position

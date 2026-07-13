@@ -4,10 +4,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_transducer::transducers::ElementPosition;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 #[test]
 fn pstd_dataset_preserves_shape_and_is_input_sensitive() {

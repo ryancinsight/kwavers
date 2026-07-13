@@ -1,9 +1,9 @@
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Apodization, Source};
+use leto::Array3;
 use log::debug;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;
 

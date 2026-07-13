@@ -1,7 +1,7 @@
 //! Hounsfield-unit skull material conversion bindings.
 
 use kwavers_physics::analytical::skull as skull_mod;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -44,4 +44,3 @@ pub fn hu_to_density_schneider(
     let result = skull_mod::hu_to_density_schneider(h_s);
     Ok(result.to_pyarray(py).unbind())
 }
-

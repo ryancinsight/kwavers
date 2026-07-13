@@ -25,9 +25,9 @@
 //! golden-angle phase consistent with the bowl for bowl+annulus composition.
 
 use super::math::{DISC_SAMPLE_UPSAMPLING_RATE, GOLDEN_ANGLE};
-use leto::Array3;
 use super::KWaveArray;
 use kwavers_core::constants::numerical::TWO_PI;
+use leto::Array3;
 
 impl KWaveArray {
     // ─── Arc ───────────────────────────────────────────────────────────────

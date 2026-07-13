@@ -1,9 +1,6 @@
 //! Result and summary types for conformal prediction
 
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use std::collections::HashMap;
 
 /// Conformal prediction result

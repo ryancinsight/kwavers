@@ -2,13 +2,9 @@
 
 use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use kwavers_math::linear_algebra::ComplexLinearAlgebra;
 use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
-use leto::{
-    Array1,
-    Array2,
-    SliceArg,
-};
+use kwavers_math::linear_algebra::ComplexLinearAlgebra;
+use leto::{Array1, Array2, SliceArg};
 
 /// Eigenspace Minimum Variance (ESMV) Beamformer
 ///

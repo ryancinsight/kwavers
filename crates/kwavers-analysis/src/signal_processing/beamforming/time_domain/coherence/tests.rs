@@ -9,12 +9,8 @@ use super::{
 };
 use crate::signal_processing::beamforming::time_domain::das::delay_and_sum;
 use crate::signal_processing::beamforming::time_domain::delay_reference::DelayReference;
-use leto::{
-    Array2,
-    Array3,
-    SliceArg,
-};
 use eunomia::Complex64;
+use leto::{Array2, Array3, SliceArg};
 use std::f64::consts::PI;
 
 /// Build a single-sample aligned aperture column `(n_elements, 1)`.
@@ -463,7 +459,12 @@ fn pcf_via_weights_is_low_for_a_quadrature_spread_aperture() {
     let n = 64usize;
     let omega = 2.0 * PI * 2.0 / n as f64; // 2 cycles
     let mut aligned = Array2::<f64>::zeros((4, n));
-    for (i, mut r) in aligned.rows_mut().expect("rows_mut").into_iter().enumerate() {
+    for (i, mut r) in aligned
+        .rows_mut()
+        .expect("rows_mut")
+        .into_iter()
+        .enumerate()
+    {
         let slots = r.as_mut_slice().expect("contiguous row");
         for (t, slot) in slots.iter_mut().enumerate() {
             *slot = (omega * t as f64 - i as f64 * PI / 2.0).cos();
@@ -550,4 +551,3 @@ fn pcf_iq_rejects_empty_aperture_and_bad_sensitivity() {
     assert!(phase_coherence_from_iq_aperture(&ok, -1.0).is_err());
     assert!(phase_coherence_from_iq_aperture(&ok, f64::NAN).is_err());
 }
-

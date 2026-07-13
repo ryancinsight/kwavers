@@ -1,10 +1,7 @@
 //! BEM solver dispatch.
 
 use kwavers_math::fft::Complex64;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 use std::f64::consts::TAU;
 
 use crate::dispatch::shared::trim_initial_recorder_sample;
@@ -124,8 +121,8 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         .collect();
 
     if !eval_points.is_empty() {
-        let points_arr =
-            Array1::from_vec(eval_points.len(), eval_points).expect("invariant: 1-D length matches");
+        let points_arr = Array1::from_vec(eval_points.len(), eval_points)
+            .expect("invariant: 1-D length matches");
         let scattered = solver.compute_scattered_field(&points_arr, &bemsol)?;
         for (idx, &val) in scattered.iter().enumerate() {
             sensor_data[[idx, 0]] = val.norm();

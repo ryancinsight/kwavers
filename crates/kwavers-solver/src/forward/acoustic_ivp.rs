@@ -31,7 +31,7 @@ use leto::Array3;
 /// limit handled analytically. This is the scalar multiplier used by the exact
 /// initial-pressure velocity start in the PSTD and k-space FDTD solvers.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn spectral_velocity_scale_from_source_kappa(
     source_kappa: &Array3<f64>,

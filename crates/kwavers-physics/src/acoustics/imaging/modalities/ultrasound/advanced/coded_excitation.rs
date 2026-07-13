@@ -11,9 +11,9 @@
 //! - O'Donnell (1992), "Coded excitation system for improving penetration"
 //! - Misaridis & Jensen (2005), "Use of modulated excitation signals"
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array1;
-use eunomia::Complex64;
 use std::f64::consts::PI;
 
 /// Coded excitation configuration
@@ -159,4 +159,3 @@ impl CodedExcitationProcessor {
         }
     }
 }
-

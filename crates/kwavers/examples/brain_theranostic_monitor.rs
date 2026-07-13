@@ -57,10 +57,7 @@ use kwavers_solver::inverse::seismic::parameters::{FwiParameters, Regularization
 use kwavers_source::{GridSource, Source, SourceMode};
 use kwavers_transducer::HemisphericalArray;
 use leto::Array3 as LetoArray3;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::f64::consts::PI;
 use std::time::Instant;
 

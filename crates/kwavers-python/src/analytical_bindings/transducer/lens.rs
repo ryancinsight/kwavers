@@ -1,6 +1,6 @@
 //! PyO3 wrappers for static acoustic-lens helpers.
 
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -130,4 +130,3 @@ pub fn corrective_lens_thickness(
     let p = clt(phase, frequency_hz, c_water, c_lens, min_thickness_m);
     Ok(numpy::ndarray::Array1::from(p).to_pyarray(py).unbind())
 }
-

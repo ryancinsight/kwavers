@@ -71,4 +71,3 @@ pub fn recover_complex_modulus(
     let ratio = Complex64::new(omega, 0.0) / k;
     Complex64::new(density, 0.0) * ratio * ratio
 }
-

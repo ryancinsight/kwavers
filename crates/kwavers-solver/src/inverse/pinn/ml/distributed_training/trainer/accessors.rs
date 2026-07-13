@@ -15,7 +15,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Distribute
 
     /// Handle gpu failure.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn handle_gpu_failure(&mut self, failed_gpu_id: usize) -> KwaversResult<()> {
         if let Some(ref mut manager) = self.multi_gpu_manager {

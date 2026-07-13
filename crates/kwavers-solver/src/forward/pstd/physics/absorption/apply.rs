@@ -285,7 +285,7 @@ impl PSTDSolver {
     /// - Treeby & Cox (2010) Eqs. 19–21.
     /// - GPU shader equivalent: `pstd.wgsl::absorb_pressure_correction`.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(crate) fn apply_absorption_to_pressure(&mut self) -> KwaversResult<()> {
         match self.config.absorption_mode {

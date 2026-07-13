@@ -21,9 +21,9 @@
 //! discrete mass equals `A / dx²` up to round-off.
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
-use leto::Array3;
 use super::{DiscSourceProfile, ElementShape, KWaveArray};
 use kwavers_core::constants::numerical::TWO_PI;
+use leto::Array3;
 
 impl KWaveArray {
     // ─── Rect ──────────────────────────────────────────────────────────────

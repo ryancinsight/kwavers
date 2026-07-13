@@ -25,7 +25,7 @@ impl JitCompiler {
     }
     /// Compile pinn model.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compile_pinn_model(
         &mut self,

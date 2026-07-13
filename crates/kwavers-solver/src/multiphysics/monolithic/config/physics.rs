@@ -70,7 +70,7 @@ impl PhysicsCoefficients {
     /// coefficient must be positive so diffusion has a finite denominator.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if a coefficient is nonfinite or
+    /// - Returns [`crate::KwaversError::Validation`] if a coefficient is nonfinite or
     ///   outside the physical domain required by the PDE residual.
     pub(in crate::multiphysics::monolithic) fn validate(&self) -> KwaversResult<()> {
         validate_positive("PhysicsCoefficients::sound_speed", self.sound_speed)?;

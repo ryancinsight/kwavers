@@ -39,7 +39,7 @@ where
 
     /// Extract velocity initial condition tensor from training data
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     pub(crate) fn extract_velocity_initial_condition_tensor(
         _x_data: &[f32],
         _y_data: &[f32],
@@ -85,7 +85,7 @@ where
 
     /// Extract initial condition tensors.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     pub(crate) fn extract_initial_condition_tensors(
         x_data: &[f32],
         y_data: &[f32],

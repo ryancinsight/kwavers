@@ -1,10 +1,7 @@
 use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
 use leto::Array2 as LetoArray2;
+use leto::{Array2, ArrayViewMut2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array2,
-    ArrayViewMut2,
-};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;

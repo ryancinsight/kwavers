@@ -39,8 +39,8 @@
 use super::types::ElasticPstdMedium;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::shift_operators::generate_kappa as canonical_generate_kappa;
-use leto::Array3;
 use kwavers_math::fft::Complex64;
+use leto::Array3;
 
 /// Maximum P-wave speed `c_p = sqrt((λ + 2μ)/ρ)` across the medium.
 ///

@@ -46,11 +46,8 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::Medium;
 use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 use log::warn;
-use leto::{
-    Array3,
-    ArrayView3,
-};
 use std::sync::{Arc, Mutex};
 
 use super::metrics::WesterveltStepMetrics;
@@ -104,7 +101,10 @@ impl WesterveltWave {
         let (k_squared, _kx, _ky, _kz) = initialize_kspace_grids(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
 
-        let fft_scratch = Some(LetoArray3::<Complex64>::from_elem([grid.nx, grid.ny, grid.nz], Complex64::default()));
+        let fft_scratch = Some(LetoArray3::<Complex64>::from_elem(
+            [grid.nx, grid.ny, grid.nz],
+            Complex64::default(),
+        ));
         let laplacian_scratch = Some(Array3::<f64>::zeros(shape));
 
         Self {
@@ -200,7 +200,7 @@ impl WesterveltWave {
     /// satisfy the XOR ownership rule: exactly one mutable next buffer and two
     /// immutable history buffers. This keeps pressure history rotation
     /// allocation-free while preserving the three-level recurrence
-    /// `p[n+1] = 2p[n] - p[n-1] + dt^2 rhs(p[n], p[n-1])`.
+    /// `p[n+1] = 2p\[n\] - p[n-1] + dt^2 rhs(p\[n\], p[n-1])`.
     pub(super) fn pressure_buffers_for_step(
         pressure_buffers: &mut [Array3<f64>; 3],
         buffer_indices: [usize; 3],

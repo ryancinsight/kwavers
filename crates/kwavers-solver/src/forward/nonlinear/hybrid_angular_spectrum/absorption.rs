@@ -33,10 +33,7 @@ use super::HASConfig;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Absorption operator implementing power-law frequency-dependent attenuation.
 #[derive(Debug)]
@@ -58,7 +55,7 @@ impl HasAbsorptionOperator {
     /// non-positive reference frequency or a negative attenuation coefficient.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `config` fails [`HASConfig::validate`].
+    /// - [`crate::KwaversError::InvalidInput`] if `config` fails [`HASConfig::validate`].
     pub fn new(config: &HASConfig) -> KwaversResult<Self> {
         config.validate()?;
         Ok(Self {

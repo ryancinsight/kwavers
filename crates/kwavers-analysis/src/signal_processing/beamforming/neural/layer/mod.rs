@@ -51,11 +51,7 @@
 //! - LeCun et al. (1998): "Efficient BackProp"
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 use rand::distributions::{Distribution, Uniform};
 
 #[cfg(test)]

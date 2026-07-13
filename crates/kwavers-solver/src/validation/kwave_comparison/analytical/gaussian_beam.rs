@@ -28,7 +28,7 @@ pub struct GaussianBeam {
 impl GaussianBeam {
     /// Create new Gaussian beam. Validates f > 0, c₀ > 0, w₀ > 3λ.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn new(
         amplitude: f64,

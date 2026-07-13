@@ -42,7 +42,7 @@ fn copy_leto_slice_into_ndarray(
 impl HybridSolver {
     /// Update fields for one time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update(
         &mut self,
@@ -191,7 +191,7 @@ impl HybridSolver {
 
     /// Apply hybrid processing to transition region
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_hybrid_region_blended(
         &mut self,
@@ -256,7 +256,7 @@ impl HybridSolver {
 
     /// Update domain decomposition based on current fields
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn update_decomposition(
         &mut self,
@@ -288,7 +288,7 @@ impl HybridSolver {
 
     /// Validate solution quality
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;

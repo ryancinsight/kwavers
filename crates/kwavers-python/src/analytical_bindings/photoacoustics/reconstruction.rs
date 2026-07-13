@@ -1,7 +1,7 @@
 //! Axial-resolution and spectroscopic-unmixing photoacoustic bindings.
 
 use kwavers_physics::analytical::photoacoustics;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -83,4 +83,3 @@ pub fn spectroscopic_unmixing_so2_sweep<'py>(
     out.set_item("estimated_so2_by_perturbation", estimates)?;
     Ok(out)
 }
-

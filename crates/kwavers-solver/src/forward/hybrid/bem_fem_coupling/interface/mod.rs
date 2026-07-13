@@ -24,7 +24,7 @@ pub struct BemFemInterface {
 impl BemFemInterface {
     /// Create BEM-FEM interface from FEM mesh and BEM boundary
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(fem_mesh: &TetrahedralMesh, bem_boundary: &[usize]) -> KwaversResult<Self> {
         // Find FEM nodes that lie on the BEM boundary

@@ -5,10 +5,7 @@
 use super::operator::StaggeredGridOperator;
 use crate::numerics::operators::differential::traversal;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 use leto_ops::zip2_mut_with;
 
 impl StaggeredGridOperator {
@@ -61,14 +58,24 @@ impl StaggeredGridOperator {
                 }
             }
         }
-        let mut dst_slice = dst.slice_mut(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
         let field_hi = field.slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) / dx).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) / dx
+        })
+        .unwrap();
         let mut dst_slice = dst.slice_mut(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
         let field_hi = field.slice(&[(1, 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
         let field_lo = field.slice(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) / dx).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) / dx
+        })
+        .unwrap();
         Ok(())
     }
 
@@ -120,14 +127,24 @@ impl StaggeredGridOperator {
                 }
             }
         }
-        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)]).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
+            .unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) / dy).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) / dy
+        })
+        .unwrap();
         let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (1, 2, 1), (0, nz, 1)]).unwrap();
         let field_lo = field.slice(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) / dy).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) / dy
+        })
+        .unwrap();
         Ok(())
     }
 
@@ -179,14 +196,24 @@ impl StaggeredGridOperator {
                 }
             }
         }
-        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)]).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
+            .unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) / dz).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) / dz
+        })
+        .unwrap();
         let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (1, 2, 1)]).unwrap();
         let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) / dz).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) / dz
+        })
+        .unwrap();
         Ok(())
     }
 

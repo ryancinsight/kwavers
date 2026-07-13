@@ -3,8 +3,8 @@
 use super::types::{AdaptiveSolution, AdaptiveSolutionStep};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use log::info;
 use leto::Array3;
+use log::info;
 
 /// Adaptive resolution techniques for large volumes
 #[derive(Debug)]
@@ -65,7 +65,7 @@ impl AdaptiveResolution {
 
     /// Adaptively solve 3D SWE with resolution levels
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn adaptive_solve(
         &self,

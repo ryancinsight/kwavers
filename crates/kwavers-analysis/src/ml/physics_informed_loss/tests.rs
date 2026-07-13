@@ -3,10 +3,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 #[test]
 fn test_physics_loss_config_default() {

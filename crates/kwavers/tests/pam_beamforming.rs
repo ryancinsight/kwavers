@@ -11,9 +11,7 @@ use kwavers_analysis::signal_processing::pam::{
 use kwavers_core::constants::SOUND_SPEED_WATER;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_transducer::passive_acoustic_mapping::PamArrayGeometry as ArrayGeometry;
-use leto::{
-    Array3,
-};
+use leto::Array3;
 
 fn linear_array_positions(elements: usize, pitch_m: f64) -> ArrayGeometry {
     ArrayGeometry::Linear {

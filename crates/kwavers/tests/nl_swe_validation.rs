@@ -22,10 +22,7 @@ pub use kwavers_solver::forward::elastic::{
 pub use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt,
 };
-pub use leto::{
-    Array3,
-    Array4,
-};
+pub use leto::{Array3, Array4};
 pub use std::f64::consts::PI;
 
 /// Test hyperelastic constitutive models
@@ -552,7 +549,8 @@ mod convergence_tests {
 
             // Add noise
             let mut noisy_series = time_series.clone();
-            for ([i, j, k, t], value) in noisy_series.indexed_iter_mut().expect("indexed_iter_mut") {
+            for ([i, j, k, t], value) in noisy_series.indexed_iter_mut().expect("indexed_iter_mut")
+            {
                 let phase =
                     (i as f64) * 0.37 + (j as f64) * 0.61 + (k as f64) * 0.89 + (t as f64) * 0.13;
                 let noise = noise_level * (2.0 * PI * phase).sin();

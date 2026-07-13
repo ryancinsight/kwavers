@@ -61,7 +61,7 @@ impl DGSolver {
 
     /// Project modal coefficients back to grid
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn project_to_grid(&self, field: &mut Array3<f64>) -> KwaversResult<()> {
         let coeffs = self.modal_coefficients.as_ref().ok_or_else(|| {

@@ -186,4 +186,3 @@ impl ModelOrderEstimator {
         self.estimate(eigenvalues)
     }
 }
-

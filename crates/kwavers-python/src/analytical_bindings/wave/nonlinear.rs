@@ -4,7 +4,7 @@
 
 use kwavers_physics::analytical::wave;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -431,4 +431,3 @@ pub fn westervelt_harmonic_evolution(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr2d.to_pyarray(py).unbind())
 }
-

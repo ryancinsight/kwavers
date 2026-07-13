@@ -12,8 +12,8 @@
 //!
 //! where the wavenumber components follow the standard DFT convention:
 //! ```text
-//! kₓ[m] = 2πm/(Nₓ·Δx)   for m = 0, …, Nₓ/2
-//! kₓ[m] = 2π(m−Nₓ)/(Nₓ·Δx) for m = Nₓ/2+1, …, Nₓ−1
+//! kₓ\[m\] = 2πm/(Nₓ·Δx)   for m = 0, …, Nₓ/2
+//! kₓ\[m\] = 2π(m−Nₓ)/(Nₓ·Δx) for m = Nₓ/2+1, …, Nₓ−1
 //! ```
 //! (same for y and z dimensions).
 //!
@@ -33,10 +33,10 @@
 //!   Springer.
 
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
 use leto::Array3 as LetoArray3;
 use leto::Array3;
-use kwavers_math::fft::Complex64;
 use std::f64::consts::PI;
 
 /// Compute Laplacian using spectral methods

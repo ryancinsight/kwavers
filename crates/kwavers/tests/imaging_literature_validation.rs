@@ -1580,4 +1580,3 @@ mod elastography_shear_modulus_tests {
         }
     }
 }
-

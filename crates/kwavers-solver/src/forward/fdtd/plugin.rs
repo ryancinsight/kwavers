@@ -152,30 +152,36 @@ impl crate::plugin::Plugin for FdtdPlugin {
         // This allows the plugin chain to modify fields before FDTD step.
         copy_view_into_field(
             &mut solver.fields.p,
-            fields.index_axis(0, pressure_idx).expect("invariant: pressure field axis index in range"),
+            fields
+                .index_axis(0, pressure_idx)
+                .expect("invariant: pressure field axis index in range"),
         );
         copy_view_into_field(
             &mut solver.fields.ux,
-            fields.index_axis(0, vx_idx).expect("invariant: velocity-x field axis index in range"),
+            fields
+                .index_axis(0, vx_idx)
+                .expect("invariant: velocity-x field axis index in range"),
         );
         copy_view_into_field(
             &mut solver.fields.uy,
-            fields.index_axis(0, vy_idx).expect("invariant: velocity-y field axis index in range"),
+            fields
+                .index_axis(0, vy_idx)
+                .expect("invariant: velocity-y field axis index in range"),
         );
         copy_view_into_field(
             &mut solver.fields.uz,
-            fields.index_axis(0, vz_idx).expect("invariant: velocity-z field axis index in range"),
+            fields
+                .index_axis(0, vz_idx)
+                .expect("invariant: velocity-z field axis index in range"),
         );
 
         // Perform time step
         solver.step_forward()?;
 
         let [nx, ny, nz] = solver.fields.p.shape();
-        let mut pressure = leto::Array3::from_shape_vec(
-            (nx, ny, nz),
-            solver.fields.p.iter().copied().collect(),
-        )
-        .expect("leto pressure field shape must map to ndarray");
+        let mut pressure =
+            leto::Array3::from_shape_vec((nx, ny, nz), solver.fields.p.iter().copied().collect())
+                .expect("leto pressure field shape must map to ndarray");
         context
             .boundary
             .apply_acoustic(pressure.view_mut(), grid, solver.time_step_index)?;
@@ -192,19 +198,27 @@ impl crate::plugin::Plugin for FdtdPlugin {
 
         // Sync output fields from solver state
         copy_field_into_view(
-            fields.index_axis_mut(0, pressure_idx).expect("invariant: pressure field axis index in range"),
+            fields
+                .index_axis_mut(0, pressure_idx)
+                .expect("invariant: pressure field axis index in range"),
             &solver.fields.p,
         );
         copy_field_into_view(
-            fields.index_axis_mut(0, vx_idx).expect("invariant: velocity-x field axis index in range"),
+            fields
+                .index_axis_mut(0, vx_idx)
+                .expect("invariant: velocity-x field axis index in range"),
             &solver.fields.ux,
         );
         copy_field_into_view(
-            fields.index_axis_mut(0, vy_idx).expect("invariant: velocity-y field axis index in range"),
+            fields
+                .index_axis_mut(0, vy_idx)
+                .expect("invariant: velocity-y field axis index in range"),
             &solver.fields.uy,
         );
         copy_field_into_view(
-            fields.index_axis_mut(0, vz_idx).expect("invariant: velocity-z field axis index in range"),
+            fields
+                .index_axis_mut(0, vz_idx)
+                .expect("invariant: velocity-z field axis index in range"),
             &solver.fields.uz,
         );
 

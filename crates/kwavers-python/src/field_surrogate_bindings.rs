@@ -9,7 +9,7 @@ use kwavers_physics::field_surrogate::{
     place_kernel_at_focus as kwavers_place_kernel_at_focus, resample_trilinear,
     FocalKernel as KwaversFocalKernel, KernelCube as KwaversKernelCube,
 };
-use numpy::{ToPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
@@ -302,4 +302,3 @@ pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(place_kernel_at_focus, m)?)?;
     Ok(())
 }
-

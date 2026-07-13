@@ -2,10 +2,7 @@
 
 use std::collections::VecDeque;
 
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use crate::therapy::theranostic_guidance::geometry::IndexBounds3;
 use kwavers_core::error::{KwaversError, KwaversResult};

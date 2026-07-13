@@ -1,9 +1,6 @@
 //! Boundary extraction helpers for placement visualization.
 
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use super::super::geometry::{is_boundary_2d, is_boundary_3d};
 use super::{centered_origin_2d, distance_3d, Point3};

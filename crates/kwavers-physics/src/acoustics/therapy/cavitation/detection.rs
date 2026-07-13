@@ -1,7 +1,7 @@
 use super::constants::{BUBBLE_Q_FACTOR, DEFAULT_NUCLEUS_RADIUS};
 use super::{CavitationDetectionMethod, TherapyCavitationDetector};
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 impl TherapyCavitationDetector {
     /// Detect cavitation in a snapshot pressure field.

@@ -4,12 +4,9 @@ use super::CaponSpectrumConfig;
 use crate::signal_processing::beamforming::utils::steering::{
     SteeringVector, SteeringVectorMethod,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    Array3,
-};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::{Array2, Array3};
 use leto_ops::inv;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum value `P_Capon(p)` for a candidate point.
@@ -119,4 +116,3 @@ pub fn capon_spatial_spectrum_point(
 
     Ok(1.0 / denom_re)
 }
-

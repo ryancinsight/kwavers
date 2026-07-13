@@ -24,7 +24,7 @@ pub struct ElasticWaveSolver {
 impl ElasticWaveSolver {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(grid: &Grid, medium: &dyn Medium, config: ElasticWaveConfig) -> KwaversResult<Self> {
         let (nx, ny, nz) = grid.dimensions();
@@ -82,13 +82,13 @@ impl ElasticWaveSolver {
         self.volumetric_config = volumetric_config;
     }
 
-    /// Per-voxel shear modulus `μ` \[Pa] — the elastic-FWI inversion parameter.
+    /// Per-voxel shear modulus `μ` \\[Pa\] — the elastic-FWI inversion parameter.
     #[must_use]
     pub fn mu(&self) -> &Array3<f64> {
         &self.mu
     }
 
-    /// Per-voxel first Lamé parameter `λ` \[Pa].
+    /// Per-voxel first Lamé parameter `λ` \\[Pa\].
     #[must_use]
     pub fn lambda(&self) -> &Array3<f64> {
         &self.lambda
@@ -106,7 +106,7 @@ impl ElasticWaveSolver {
     /// per-iteration `μ` changes do not require re-tuning it.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Validation`] when `new_mu` does not match the grid shape.
+    /// Returns [`crate::KwaversError::Validation`] when `new_mu` does not match the grid shape.
     pub fn set_mu(&mut self, new_mu: &Array3<f64>) -> KwaversResult<()> {
         if new_mu.shape() != self.mu.shape() {
             return Err(kwavers_core::error::ValidationError::DimensionMismatch {

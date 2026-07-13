@@ -20,11 +20,7 @@ use crate::interface::pinn_beamforming::{
     PinnBeamformingProvider, PinnBeamformingUncertaintyConfig,
 };
 use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 use std::sync::{Arc, Mutex};
 
 #[cfg(test)]
@@ -106,14 +102,15 @@ where
         }
 
         // Last hidden to output
-        params += config.hidden_layers[(config.hidden_layers.len()) - 1] * output_size + output_size;
+        params +=
+            config.hidden_layers[(config.hidden_layers.len()) - 1] * output_size + output_size;
 
         params
     }
 
     /// Initialize the PINN model if not already created.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn ensure_model_initialized(&self) -> KwaversResult<()> {
         let mut model_lock = self
@@ -316,7 +313,7 @@ where
 
 /// Factory function to create a PINN beamforming provider.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 #[cfg(feature = "pinn")]
 pub fn create_pinn_beamforming_provider() -> KwaversResult<Box<dyn PinnBeamformingProvider>> {

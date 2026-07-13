@@ -4,10 +4,7 @@
 //! zero-allocation single-axis derivative calls (`apply_x/y/z_into`) into
 //! pre-allocated destination buffers.
 
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::{
@@ -24,8 +21,8 @@ pub(crate) enum CentralDifferenceOperator {
 impl CentralDifferenceOperator {
     /// New.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn new(order: usize, dx: f64, dy: f64, dz: f64) -> KwaversResult<Self> {
         match order {

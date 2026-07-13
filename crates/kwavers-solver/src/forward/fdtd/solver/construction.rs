@@ -6,9 +6,9 @@
 //! correction operators, applies initial pressure/velocity conditions,
 //! and pre-allocates Westervelt and divergence/gradient scratch buffers.
 
+use leto::Array3;
 use log::info;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::Array3;
 
 use super::central_diff::CentralDifferenceOperator;
 use super::{FdtdMetrics, GenericFdtdSolver};
@@ -38,11 +38,9 @@ fn fill_rho_c_squared(output: &mut Array3<f64>, rho0: &Array3<f64>, c0: &Array3<
         "invariant: FDTD rho*c^2 output shape matches sound-speed field"
     );
 
-    if let (Some(output_values), Some(rho_values), Some(c_values)) = (
-        output.as_slice_mut(),
-        rho0.as_slice(),
-        c0.as_slice(),
-    ) {
+    if let (Some(output_values), Some(rho_values), Some(c_values)) =
+        (output.as_slice_mut(), rho0.as_slice(), c0.as_slice())
+    {
         enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
             let c = c_values[index];
             *value = rho_values[index] * c * c;
@@ -106,8 +104,8 @@ fn fill_nonlinear_coeff(
 impl GenericFdtdSolver<Array3<f64>> {
     /// Create a new FDTD solver
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: FdtdConfig,

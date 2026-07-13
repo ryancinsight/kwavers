@@ -2,9 +2,9 @@ use super::core::FastNearfieldSolver;
 use super::types::FNMConfig;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
 use leto::Array2;
-use kwavers_math::fft::Complex64;
 
 #[test]
 fn test_fnm_solver_creation() {

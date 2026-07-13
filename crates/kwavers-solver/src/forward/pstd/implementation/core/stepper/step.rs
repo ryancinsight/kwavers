@@ -12,7 +12,7 @@ use tracing::{enabled, trace, warn, Level};
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
@@ -98,7 +98,7 @@ impl PSTDSolver {
 
     /// Time step using full k-space pseudospectral method (dispersion-free)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn step_forward_kspace(&mut self, dt: f64, time_index: usize) -> KwaversResult<()> {
         self.dpx.fill(0.0);
@@ -214,7 +214,7 @@ impl PSTDSolver {
     /// must use `StandardPSTD`, whose first-order split-field system carries `c(x)`
     /// in the equation of state.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn propagate_kspace(
         &mut self,

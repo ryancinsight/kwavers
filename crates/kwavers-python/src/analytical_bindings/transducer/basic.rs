@@ -1,7 +1,7 @@
 //! PyO3 wrappers for basic transducer directivity and apodization helpers.
 
 use kwavers_physics::analytical::transducer;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -184,4 +184,3 @@ pub fn focused_bowl_onaxis(
         transducer::focused_bowl_onaxis(z_s, bowl_radius_m, focal_length_m, freq_hz, p0_pa, c);
     Ok(result.to_pyarray(py).unbind())
 }
-

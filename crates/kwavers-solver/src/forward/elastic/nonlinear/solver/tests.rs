@@ -8,7 +8,7 @@ use leto::Array3;
 
 /// CFL stability factor used internally by [`NonlinearElasticWaveSolver::calculate_time_step_for_amplitude`].
 const CFL: f64 = 0.45;
-/// Reference displacement scale used in the nonlinear CFL formula [m].
+/// Reference displacement scale used in the nonlinear CFL formula \[m\].
 const U_REF: f64 = 1e-3;
 
 /// Verify construction invariants for `NonlinearElasticWaveSolver`.

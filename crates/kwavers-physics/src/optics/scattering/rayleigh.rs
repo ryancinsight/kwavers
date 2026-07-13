@@ -60,4 +60,3 @@ impl RayleighScattering {
         0.0
     }
 }
-

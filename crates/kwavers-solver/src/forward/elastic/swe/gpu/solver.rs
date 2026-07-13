@@ -86,8 +86,8 @@ impl GPUElasticWaveSolver3D {
 
     /// Execute GPU-accelerated 3D wave propagation
     /// # Errors
-    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_waves_gpu(
         &mut self,
@@ -218,8 +218,8 @@ impl GPUElasticWaveSolver3D {
 
     /// Execute GPU-accelerated multi-directional inversion
     /// # Errors
-    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn multidirectional_inversion_gpu(
         &mut self,

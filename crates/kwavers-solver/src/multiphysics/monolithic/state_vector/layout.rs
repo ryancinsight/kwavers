@@ -26,7 +26,7 @@ pub(in crate::multiphysics::monolithic) fn flatten_fields(
 
     let first = &fields[&field_order[0]];
     let [nx, ny, nz] = first.shape();
-    let n_fields = field_order.len() ;
+    let n_fields = field_order.len();
 
     let mut stacked = Array3::zeros((n_fields * nx, ny, nz));
     for (i, ft) in field_order.iter().enumerate() {
@@ -53,8 +53,7 @@ pub(in crate::multiphysics::monolithic) fn unflatten_fields(
     }
 
     let total_rows = u.shape()[0];
-    let nx =
-        total_rows / (field_order.len());
+    let nx = total_rows / (field_order.len());
 
     for (i, ft) in field_order.iter().enumerate() {
         if let Some(field) = fields.get_mut(ft) {

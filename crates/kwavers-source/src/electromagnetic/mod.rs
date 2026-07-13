@@ -4,9 +4,9 @@
 //! in simulation domains.
 
 use super::types::{SourceEMWaveType, SourcePolarization};
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
 use kwavers_core::constants::numerical::TWO_PI;
-use eunomia::Complex;
 
 /// Basic electromagnetic source trait
 ///
@@ -289,4 +289,3 @@ mod tests {
         assert!(backward_dir < forward_dir);
     }
 }
-

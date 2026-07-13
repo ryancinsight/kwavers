@@ -1,10 +1,7 @@
 //! Beamforming: delay computation, apodization, and DAS accumulation.
 
 use leto::Array1;
-use leto::{
-    Array2,
-    ArrayView2,
-};
+use leto::{Array2, ArrayView2};
 
 use apollo::fft_1d_array;
 use kwavers_core::error::{KwaversError, KwaversResult};

@@ -3,11 +3,8 @@
 use super::IterativeAlgorithm;
 use super::IterativeMethods;
 use kwavers_core::error::KwaversResult;
+use leto::{Array1, Array2};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array1,
-    Array2,
-};
 
 impl IterativeMethods {
     /// One SIRT step: x ← x + λ · Aᵀ(y − Ax).
@@ -31,7 +28,9 @@ impl IterativeMethods {
             residual[i] = y[i] - ax[i];
         }
         // update = Aᵀ·residual  (transposed view; matvec handles the strides)
-        let at = a.transpose([1, 0]).expect("invariant: SIRT transpose valid");
+        let at = a
+            .transpose([1, 0])
+            .expect("invariant: SIRT transpose valid");
         let mut update = Array1::<f64>::zeros(at.shape()[0]);
         leto_ops::matvec(&at, &residual.view(), &mut update.view_mut())
             .expect("invariant: SIRT Aᵀ·residual conforms");
@@ -206,8 +205,8 @@ impl IterativeMethods {
 
         if matches!(self.algorithm, IterativeAlgorithm::OSEM { .. }) {
             for value in x.iter_mut() {
-            *value = value.max(0.0);
-        }
+                *value = value.max(0.0);
+            }
         }
 
         Ok(())

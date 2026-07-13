@@ -1,6 +1,6 @@
 use super::*;
-use leto::Array2;
 use eunomia::Complex64;
+use leto::Array2;
 
 fn create_hermitian_2x2() -> Array2<Complex64> {
     Array2::from_shape_vec(
@@ -45,7 +45,11 @@ fn test_jacobi_2x2_hermitian() {
 
     for k in 0..2 {
         let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.index_axis::<1>(1, k).unwrap().to_contiguous();
+        let v = result
+            .eigenvectors
+            .index_axis::<1>(1, k)
+            .unwrap()
+            .to_contiguous();
 
         for i in 0..2 {
             let av_i = (0..2).map(|j| matrix[[i, j]] * v[j]).sum::<Complex64>();
@@ -73,7 +77,11 @@ fn test_qr_algorithm_3x3_hermitian() {
 
     for k in 0..3 {
         let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.index_axis::<1>(1, k).unwrap().to_contiguous();
+        let v = result
+            .eigenvectors
+            .index_axis::<1>(1, k)
+            .unwrap()
+            .to_contiguous();
 
         for i in 0..3 {
             let av_i = (0..3).map(|j| matrix[[i, j]] * v[j]).sum::<Complex64>();

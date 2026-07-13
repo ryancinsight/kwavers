@@ -74,8 +74,8 @@ pub enum LineReconInterpolation {
 /// * `interp` - interpolation mode on the k-space frequency axis
 /// * `pos_cond` - if true, clamp negative output values to zero
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn kspace_line_recon(
     sensor_data: ArrayView2<'_, f64>,
@@ -331,7 +331,9 @@ mod tests {
     fn line_reconstruction_positive_condition_clamps_negative_values() {
         let sensor = Array2::from_shape_vec(
             (4, 3),
-            vec![0.0, 1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0, 9.0, -10.0, 11.0],
+            vec![
+                0.0, 1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0, 9.0, -10.0, 11.0,
+            ],
         )
         .unwrap();
         let unclamped = kspace_line_recon(

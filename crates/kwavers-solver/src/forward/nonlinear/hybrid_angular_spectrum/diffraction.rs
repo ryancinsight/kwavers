@@ -53,7 +53,7 @@ impl HybridAsDiffractionOperator {
     ///
     /// Propagates field by distance dz using angular spectrum
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply(&self, pressure: &Array3<f64>, dz: f64) -> KwaversResult<Array3<f64>> {
         let nz = pressure.shape()[2];

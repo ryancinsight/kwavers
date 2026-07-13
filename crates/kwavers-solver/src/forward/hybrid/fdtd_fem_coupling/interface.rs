@@ -25,7 +25,7 @@ pub struct FdtdFemInterface {
 impl FdtdFemInterface {
     /// Create coupling interface from FDTD grid and FEM mesh
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(fdtd_grid: &Grid, fem_mesh: &TetrahedralMesh) -> KwaversResult<Self> {
         let (fdtd_indices, fem_indices) = Self::find_interface_nodes(fdtd_grid, fem_mesh)?;
@@ -44,7 +44,7 @@ impl FdtdFemInterface {
 
     /// Find nodes at FDTD-FEM interface
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn find_interface_nodes(
         fdtd_grid: &Grid,
@@ -93,7 +93,7 @@ impl FdtdFemInterface {
         fdtd_grid: &Grid,
         fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<Vec<f64>> {
-        let mut weights = Vec::with_capacity(fdtd_indices.len() );
+        let mut weights = Vec::with_capacity(fdtd_indices.len());
 
         for (&fdtd_idx, &fem_idx) in fdtd_indices.iter().zip(fem_indices.iter()) {
             let (fdtd_x, fdtd_y, fdtd_z) =

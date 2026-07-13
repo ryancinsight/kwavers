@@ -53,10 +53,7 @@
 //!   DOI: 10.1137/0908025
 
 use kwavers_core::error::{KwaversResult, NumericalError};
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 use super::DifferentialOperator;
 

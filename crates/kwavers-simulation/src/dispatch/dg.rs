@@ -68,12 +68,15 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                     .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b))),
             )
             .into(),
-            p_rms: leto::Array1::from_iter(sensor_data.rows().expect("invariant: rank-2 rows").map(
-                |row| {
-                    let sq: f64 = row.iter().map(|v| v * v).sum();
-                    (sq / n_cols as f64).sqrt()
-                },
-            ))
+            p_rms: leto::Array1::from_iter(
+                sensor_data
+                    .rows()
+                    .expect("invariant: rank-2 rows")
+                    .map(|row| {
+                        let sq: f64 = row.iter().map(|v| v * v).sum();
+                        (sq / n_cols as f64).sqrt()
+                    }),
+            )
             .into(),
             p_final: leto::Array1::from_iter(
                 sensor_data

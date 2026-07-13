@@ -21,10 +21,7 @@
 //!   *IEEE Trans. Medical Imaging*, 37(7), 1574-1586. DOI: 10.1109/TMI.2018.2789499
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 use leto_ops::svd_rank_revealing;
 
 #[cfg(test)]
@@ -174,8 +171,8 @@ impl SignalSvdClutterFilter {
         }
 
         // Step 1: Center the data (remove temporal mean from each pixel)
-        let temporal_means = leto_ops::mean_axis(&slow_time_data.view(), 1)
-            .expect("mean over the frames axis");
+        let temporal_means =
+            leto_ops::mean_axis(&slow_time_data.view(), 1).expect("mean over the frames axis");
         let mut centered_data = slow_time_data.clone();
         for (i, mean) in temporal_means.iter().enumerate() {
             for j in 0..n_frames {

@@ -3,6 +3,7 @@ use super::grid::{
     wavenumber_magnitude, GridShape,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_solver::inverse::fwi::frequency_domain::cbs::{
@@ -10,7 +11,6 @@ use kwavers_solver::inverse::fwi::frequency_domain::cbs::{
     PstdTemporalBinConfig,
 };
 use leto::Array3;
-use kwavers_math::fft::Complex64;
 use std::f64::consts::TAU;
 
 pub(super) fn point_source_observation_cube(
@@ -185,16 +185,14 @@ pub(super) fn source_kappa_filtered_source_weights(
     }
     ifft_3d_complex_inplace(&mut spectrum);
     let [nx, ny, nz] = spectrum.shape();
-    Ok(
-        Array3::from_shape_vec(
-            (nx, ny, nz),
-            spectrum
-                .as_slice()
-                .expect("FFT spectrum must be densely stored")
-                .to_vec(),
-        )
-        .expect("FFT spectrum shape must match its flattened length"),
+    Ok(Array3::from_shape_vec(
+        (nx, ny, nz),
+        spectrum
+            .as_slice()
+            .expect("FFT spectrum must be densely stored")
+            .to_vec(),
     )
+    .expect("FFT spectrum shape must match its flattened length"))
 }
 
 #[allow(clippy::too_many_arguments)]

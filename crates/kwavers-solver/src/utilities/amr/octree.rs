@@ -49,7 +49,7 @@ impl OctreeNode {
 
     /// Refine this node by creating children
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn refine(&mut self) -> KwaversResult<()> {
         if self.children.is_some() {

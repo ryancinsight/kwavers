@@ -13,7 +13,7 @@ pub struct InputValidator;
 impl InputValidator {
     /// Validate sensor data for time-reversal
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_sensor_data(
         pressure_data: &Array2<f64>,
@@ -62,7 +62,7 @@ impl InputValidator {
 
     /// Validate signal length consistency
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_signal_lengths(
         signals: &[Vec<f64>],
@@ -105,7 +105,7 @@ impl InputValidator {
 
     /// Validate grid dimensions
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_grid_dimensions(grid: &Grid) -> KwaversResult<()> {
         if grid.nx == 0 || grid.ny == 0 || grid.nz == 0 {

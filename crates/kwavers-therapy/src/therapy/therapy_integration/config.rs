@@ -188,6 +188,16 @@ pub struct AcousticTherapyParams {
     /// Volume of tissue to be treated.
     /// Used for dose calculations and treatment time estimation.
     pub treatment_volume: f64,
+
+    /// Enable nonlinear acoustic field solver (KZK)
+    ///
+    /// When `true`, the orchestration path uses the KZK nonlinear solver
+    /// ([`crate::therapy::therapy_integration::orchestrator::execution::generate_kzk_acoustic_field`])
+    /// instead of the linear Gaussian-beam estimator.
+    ///
+    /// By default this is `false` and the linear Gaussian beam is used.
+    /// Currently only supported for [`TherapyIntegrationModality::HIFU`].
+    pub use_nonlinear_field: bool,
 }
 
 /// Safety limits for therapy

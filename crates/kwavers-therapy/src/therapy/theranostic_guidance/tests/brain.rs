@@ -1,7 +1,4 @@
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use super::super::{
     placement_metrics, plan_transcranial_focused_bowl_placement, prepare_brain_slice,

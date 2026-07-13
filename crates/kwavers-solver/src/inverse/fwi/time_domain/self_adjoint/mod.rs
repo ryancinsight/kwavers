@@ -30,21 +30,14 @@ mod tests;
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use leto::{
-    Array2,
-    Array3,
-    Array4,
-    ArrayView2,
-    ArrayView3,
-    ArrayView4,
-};
+use leto::{Array2, Array3, Array4, ArrayView2, ArrayView3, ArrayView4};
 
 /// Time-stepping parameters for the self-adjoint engine.
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct SelfAdjointConfig {
     /// Number of time samples (`N`).
     pub nt: usize,
-    /// Time step [s].
+    /// Time step \[s\].
     pub dt: f64,
 }
 
@@ -144,8 +137,7 @@ fn validate(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "self-adjoint engine: source_signal rows {} must be 1 or n_sources {}",
-                    rows,
-                    source_count
+                    rows, source_count
                 ),
             },
         ));
@@ -622,10 +614,13 @@ pub(crate) fn gradient(
                 for k in 0..dims.2 {
                     let pm = history[[m, i, j, k]];
                     let pm1 = history[[m - 1, i, j, k]];
-                    let pm2 = if m >= 2 { history[[m - 2, i, j, k]] } else { 0.0 };
-                    gradient[[i, j, k]] += coeff[[i, j, k]]
-                        * xi_prev[[i, j, k]]
-                        * (pm - 2.0 * pm1 + pm2);
+                    let pm2 = if m >= 2 {
+                        history[[m - 2, i, j, k]]
+                    } else {
+                        0.0
+                    };
+                    gradient[[i, j, k]] +=
+                        coeff[[i, j, k]] * xi_prev[[i, j, k]] * (pm - 2.0 * pm1 + pm2);
                 }
             }
         }

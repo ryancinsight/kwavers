@@ -135,10 +135,7 @@ impl KWaveArray {
 
     /// Find the index of the coordinate value nearest to `value` in `coords`,
     /// returning `(index, coords[index])`.
-    pub(super) fn nearest_coordinate_index(
-        coords: &leto::Array1<f64>,
-        value: f64,
-    ) -> (usize, f64) {
+    pub(super) fn nearest_coordinate_index(coords: &leto::Array1<f64>, value: f64) -> (usize, f64) {
         let mut best_index = 0usize;
         let mut best_value = coords[0];
         let mut best_distance = (best_value - value).abs();

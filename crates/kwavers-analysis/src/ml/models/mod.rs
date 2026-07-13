@@ -70,10 +70,7 @@ pub mod constants {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use leto::{
-    Array1,
-    Array2,
-};
+    use leto::{Array1, Array2};
 
     // ── AnomalyDetectorModel ─────────────────────────────────────────────────
 

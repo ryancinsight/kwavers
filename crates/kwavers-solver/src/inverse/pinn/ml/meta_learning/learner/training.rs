@@ -13,7 +13,7 @@ where
 {
     /// Perform one meta-training step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn meta_train_step(&mut self) -> KwaversResult<MetaLoss> {
         let tasks = self
@@ -106,7 +106,7 @@ where
 
     /// Adapt to a specific physics task using learned meta-parameters
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn adapt_to_task(&self, task: &PhysicsTask) -> KwaversResult<(f64, f64)> {
         let (loss, physics_loss, _) = self.adapt_to_task_internal(task)?;
@@ -115,7 +115,7 @@ where
 
     /// Internal adaptation method returning the adapted model
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn adapt_to_task_internal(
         &self,

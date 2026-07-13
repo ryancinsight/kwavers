@@ -5,12 +5,9 @@
 use crate::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, DopplerResult, WallFilter, WallFilterConfig,
 };
-use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    ArrayView3,
-};
 use eunomia::Complex64;
+use kwavers_core::error::KwaversResult;
+use leto::{Array2, ArrayView3};
 
 /// Color flow imaging configuration
 #[derive(Debug, Clone)]
@@ -129,11 +126,8 @@ mod tests {
     use crate::signal_processing::doppler::{
         AutocorrelationConfig, WallFilterConfig, WallFilterType,
     };
-    use leto::{
-    Array2,
-    Array3,
-};
     use eunomia::Complex64;
+    use leto::{Array2, Array3};
 
     // Helper: config with HighPass wall filter and no spatial averaging.
     // Uses default AutocorrelationConfig (ensemble_size=10, f₀=5 MHz, PRF=4 kHz).
@@ -278,4 +272,3 @@ mod tests {
         );
     }
 }
-

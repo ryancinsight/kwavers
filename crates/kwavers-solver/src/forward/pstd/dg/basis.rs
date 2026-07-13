@@ -62,10 +62,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::special::legendre::legendre_poly;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasisType {
@@ -77,7 +74,7 @@ pub enum BasisType {
 /// Build Vandermonde matrix for given nodes and basis
 /// V_ij = phi_j(xi_i)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn build_vandermonde(
     nodes: &Array1<f64>,
@@ -229,7 +226,6 @@ pub(super) fn fourier_vandermonde_entry(n_modes: usize, mode: usize, theta: f64)
 #[cfg(test)]
 mod tests {
     use super::*;
-    
 
     #[test]
     fn fourier_vandermonde_evaluates_real_trigonometric_basis() {

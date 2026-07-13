@@ -9,10 +9,7 @@ use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// Pennes bioheat equation parameters
 #[derive(Debug, Clone)]

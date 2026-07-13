@@ -119,8 +119,8 @@ fn apply_window(x: &mut [f64], center: usize, half: usize) {
 /// the symmetric time axis.
 ///
 /// # ⚠ Experimental — quantitative focusing not yet validated
-/// The signal-processing operators ([`conv_causal`], [`corr_causal`],
-/// [`apply_window`]) are unit-tested and correct. The iterative *structure* here
+/// The signal-processing operators (`conv_causal`, `corr_causal`,
+/// `apply_window`) are unit-tested and correct. The iterative *structure* here
 /// follows Wapenaar et al. (2014) / Thorbecke et al. (2017), but the focusing
 /// **amplitudes/window convention are NOT yet validated against an independent
 /// layered-medium reference** (the truncation-window geometry is convention-
@@ -186,7 +186,7 @@ pub fn redatum(reflection: &[f64], cfg: &MarchenkoConfig) -> MarchenkoResult {
 /// must share the same length and focal configuration.
 ///
 /// # Errors
-/// - Propagates any [`KwaversError`] from the Wasserstein evaluation.
+/// - Propagates any [`crate::KwaversError`] from the Wasserstein evaluation.
 pub fn marchenko_wasserstein_misfit(
     reflection_obs: &[f64],
     reflection_mod: &[f64],

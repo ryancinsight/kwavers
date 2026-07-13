@@ -4,11 +4,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
+use leto::{Array3, Array4};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array3,
-    Array4,
-};
 use std::time::Instant;
 
 use super::super::nonlinear::{compute_nonlinear_term_into, compute_viscoelastic_term_into};
@@ -17,7 +14,7 @@ use super::{compute_laplacian_fd, WesterveltWave};
 
 /// Advance the spectral Westervelt model with borrowed pressure history.
 ///
-/// The leapfrog recurrence requires `p[n]`, `p[n-1]`, and one writable
+/// The leapfrog recurrence requires `p\[n\]`, `p[n-1]`, and one writable
 /// `p[n+1]` buffer. `WesterveltWave::pressure_buffers_for_step` proves these
 /// buffers are disjoint by matching the ring-buffer permutation, so the hot
 /// path does not clone pressure volumes before evaluating the RHS.

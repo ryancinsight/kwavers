@@ -75,8 +75,8 @@ impl MultiRateTimeIntegrator {
 
     /// Advance the solution using multi-rate time integration
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn advance(
         &mut self,
@@ -135,7 +135,7 @@ impl MultiRateTimeIntegrator {
 
     /// Compute stable time steps for each physics component
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn compute_component_time_steps(
         &self,

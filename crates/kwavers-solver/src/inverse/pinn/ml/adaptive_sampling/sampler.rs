@@ -8,7 +8,7 @@ where
 {
     /// Create a new adaptive sampler
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         total_points: usize,
@@ -49,7 +49,7 @@ where
 
     /// Resample collocation points based on current model
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn resample(
         &mut self,

@@ -56,10 +56,10 @@ use super::KZKConfig;
 use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
-use leto::Array1 as LetoArray1;
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use leto::Array3;
 use kwavers_math::fft::Complex64;
+use leto::Array1 as LetoArray1;
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Power-law absorption operator for the KZK equation.
 ///

@@ -44,7 +44,7 @@ impl DiffusionSolver {
 
     /// Create solver from spatially-varying optical property map.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         grid: Grid,

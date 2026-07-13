@@ -1,9 +1,9 @@
 //! `run_standing_wave_suppression` pyfunction and result serialisation.
 
+use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 use kwavers_therapy::therapy::theranostic_guidance::{
     run_standing_wave_suppression, StandingWaveOptConfig,
 };
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -129,11 +129,17 @@ pub fn run_standing_wave_suppression_py<'py>(
     dict.set_item("pml_cells", result.pml_cells)?;
 
     // Medium
-    dict.set_item("sound_speed_map", leto2_to_nd2(result.sound_speed_map).to_pyarray(py))?;
+    dict.set_item(
+        "sound_speed_map",
+        leto2_to_nd2(result.sound_speed_map).to_pyarray(py),
+    )?;
 
     // Element positions
     let eys: Vec<i64> = result.element_ys.iter().map(|&v| v as i64).collect();
-    dict.set_item("element_ys", numpy::ndarray::Array1::from(eys).to_pyarray(py))?;
+    dict.set_item(
+        "element_ys",
+        numpy::ndarray::Array1::from(eys).to_pyarray(py),
+    )?;
 
     // Time series
     dict.set_item(
@@ -179,10 +185,22 @@ pub fn run_standing_wave_suppression_py<'py>(
     )?;
 
     // Initial and final fields
-    dict.set_item("initial_field_re", leto2_to_nd2(result.initial_field_re).to_pyarray(py))?;
-    dict.set_item("initial_field_im", leto2_to_nd2(result.initial_field_im).to_pyarray(py))?;
-    dict.set_item("final_field_re", leto2_to_nd2(result.final_field_re).to_pyarray(py))?;
-    dict.set_item("final_field_im", leto2_to_nd2(result.final_field_im).to_pyarray(py))?;
+    dict.set_item(
+        "initial_field_re",
+        leto2_to_nd2(result.initial_field_re).to_pyarray(py),
+    )?;
+    dict.set_item(
+        "initial_field_im",
+        leto2_to_nd2(result.initial_field_im).to_pyarray(py),
+    )?;
+    dict.set_item(
+        "final_field_re",
+        leto2_to_nd2(result.final_field_re).to_pyarray(py),
+    )?;
+    dict.set_item(
+        "final_field_im",
+        leto2_to_nd2(result.final_field_im).to_pyarray(py),
+    )?;
 
     // Diagnostics
     dict.set_item("swi_weight", result.swi_weight)?;
@@ -191,4 +209,3 @@ pub fn run_standing_wave_suppression_py<'py>(
 
     Ok(dict)
 }
-

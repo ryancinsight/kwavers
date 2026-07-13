@@ -27,10 +27,7 @@ use kwavers_solver::inverse::pinn::ml::wave_equation_2d::{
     LossWeights2D, PinnConfig2D, PinnTrainer2D, WaveGeometry2D,
 };
 #[cfg(feature = "pinn")]
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 

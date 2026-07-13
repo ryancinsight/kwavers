@@ -1,10 +1,7 @@
 // adaptive_selection/analyzer.rs - Field analysis for method selection
 
 use kwavers_grid::Grid;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 /// Field analyzer for adaptive selection
 #[derive(Debug)]

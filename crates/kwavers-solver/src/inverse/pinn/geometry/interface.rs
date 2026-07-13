@@ -143,7 +143,7 @@ impl MultiRegionDomain {
             }
         }
 
-        let n_found = all_points.len() ;
+        let n_found = all_points.len();
         let dim = if n_found > 0 { all_points[0].len() } else { 2 };
         let mut result = Array2::zeros([n_found, dim]);
         for (i, point) in all_points.iter().enumerate() {

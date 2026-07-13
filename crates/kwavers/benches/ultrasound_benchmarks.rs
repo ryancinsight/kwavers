@@ -32,10 +32,7 @@ fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>
     derivative[0] = (field[1] - field[0]) / dx;
     derivative[field.len() - 1] = (field[field.len() - 1] - field[field.len() - 2]) / dx;
 }
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 
 /// Benchmark 1D wave equation accuracy and performance
@@ -54,7 +51,9 @@ fn bench_1d_wave_equation(c: &mut Criterion) {
                 let dt = dx / wave_speed * 0.9; // Slightly below CFL
 
                 // Create spatial grid
-                let x: Array1<f64> = Array1::from_shape_fn(grid_size, |[i]| 0.0 + i as f64 * ((grid_size - 1) as f64 * dx - 0.0) / (grid_size - 1) as f64);
+                let x: Array1<f64> = Array1::from_shape_fn(grid_size, |[i]| {
+                    0.0 + i as f64 * ((grid_size - 1) as f64 * dx - 0.0) / (grid_size - 1) as f64
+                });
 
                 // Initial conditions
                 let mut u_current: Array1<f64> =
@@ -160,7 +159,9 @@ fn bench_derivative_computation(c: &mut Criterion) {
         group.bench_function(format!("finite_diff_{}", grid_size), |b| {
             b.iter(|| {
                 // Create test field with known derivative
-                let x: Array1<f64> = Array1::from_shape_fn(grid_size, |[i]| 0.0 + i as f64 * (10.0 - 0.0) / (grid_size - 1) as f64);
+                let x: Array1<f64> = Array1::from_shape_fn(grid_size, |[i]| {
+                    0.0 + i as f64 * (10.0 - 0.0) / (grid_size - 1) as f64
+                });
                 let field: Array1<f64> = (&x * &x).mapv(f64::sin); // sin(x²)
 
                 // Analytical derivative: 2x * cos(x²)
@@ -272,7 +273,9 @@ fn bench_physics_validation(c: &mut Criterion) {
                 };
 
                 // Numerical solution
-                let x: Array1<f64> = Array1::from_shape_fn(size, |[i]| 0.0 + i as f64 * (wavelength - 0.0) / (size - 1) as f64);
+                let x: Array1<f64> = Array1::from_shape_fn(size, |[i]| {
+                    0.0 + i as f64 * (wavelength - 0.0) / (size - 1) as f64
+                });
                 let mut u_current: Array1<f64> = (&(&(&x * 2.0) * PI) / wavelength).mapv(f64::sin);
                 let mut u_previous: Array1<f64> = u_current.clone();
 

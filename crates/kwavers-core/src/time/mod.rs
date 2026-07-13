@@ -1,6 +1,6 @@
 // time/mod.rs
-use log::debug;
 use leto::Array1;
+use log::debug;
 
 #[derive(Debug, Clone)]
 pub struct Time {

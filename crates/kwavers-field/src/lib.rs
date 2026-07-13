@@ -12,4 +12,4 @@ pub mod mapping;
 pub mod wave;
 
 // Re-export leto array types used by field modules.
-pub use leto::{Array3, Array4, ArrayView3, ArrayViewMut3, ArrayD, VecStorage};
+pub use leto::{Array3, Array4, ArrayD, ArrayView3, ArrayViewMut3, VecStorage};

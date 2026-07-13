@@ -24,8 +24,8 @@
 //!   Processing*, §1.3 (thickness-mode transducers).
 
 use core::f64::consts::PI;
-use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 use eunomia::Complex64;
+use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 
 /// A bulk piezoelectric thickness-mode resonator.
 #[derive(Debug, Clone, Copy)]
@@ -464,4 +464,3 @@ mod tests {
         );
     }
 }
-

@@ -11,12 +11,12 @@ use super::forward::{incident_field, outgoing_green, validate_forward_inputs, vo
 use super::types::{Config, FrequencyObservation};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     complex_l2_objective, complex_source_scale, helmholtz_slowness_derivative, MultiRowRingArray,
 };
 use kwavers_transducer::transducers::ElementPosition;
 use leto::Array3;
-use kwavers_math::fft::Complex64;
 
 pub(super) fn objective_and_gradient(
     slowness_s_per_m: &Array3<f64>,

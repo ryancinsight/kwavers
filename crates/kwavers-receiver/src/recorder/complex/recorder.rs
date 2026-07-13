@@ -4,12 +4,12 @@ use crate::sonoluminescence::{SonoluminescenceDetector, SonoluminescenceEvent};
 use crate::GridSensorSet;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::time::Time;
-use kwavers_field::Array3 as FieldArray3;
 use kwavers_field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+use kwavers_field::Array3 as FieldArray3;
 use kwavers_field::BubbleStateFields;
 use kwavers_grid::Grid;
-use log::info;
 use leto::{Array2, Array3, Array4};
+use log::info;
 use std::fs::File;
 use std::io::Write;
 
@@ -155,9 +155,9 @@ impl Recorder {
         time: f64,
     ) -> KwaversResult<()> {
         if self.record_pressure {
-            let pressure_field = fields
-                .index_axis::<3>(0, PRESSURE_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("pressure axis slice failed: {e}")))?;
+            let pressure_field = fields.index_axis::<3>(0, PRESSURE_IDX).map_err(|e| {
+                KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
+            })?;
             let max_p = pressure_field
                 .iter()
                 .copied()
@@ -168,17 +168,17 @@ impl Recorder {
         }
 
         if self.record_temperature {
-            let temp_field = fields
-                .index_axis::<3>(0, TEMPERATURE_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("temperature axis slice failed: {e}")))?;
+            let temp_field = fields.index_axis::<3>(0, TEMPERATURE_IDX).map_err(|e| {
+                KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
+            })?;
             let max_t = temp_field.iter().copied().fold(f64::NEG_INFINITY, f64::max);
             self.statistics.update_temperature(max_t);
         }
 
         if self.record_light {
-            let light_field = fields
-                .index_axis::<3>(0, LIGHT_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("light axis slice failed: {e}")))?;
+            let light_field = fields.index_axis::<3>(0, LIGHT_IDX).map_err(|e| {
+                KwaversError::InternalError(format!("light axis slice failed: {e}"))
+            })?;
             let max_l = light_field.iter().copied().fold(0.0, f64::max);
             self.statistics.update_light_intensity(max_l);
         }
@@ -249,7 +249,9 @@ impl Recorder {
         if let Some(ref mut detector) = self.sl_detector {
             let pressure_field = fields
                 .index_axis::<3>(0, PRESSURE_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("pressure axis slice failed: {e}")))?
+                .map_err(|e| {
+                    KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
+                })?
                 .to_contiguous();
             let bubble_radius = fields
                 .index_axis::<3>(0, BUBBLE_RADIUS_IDX)
@@ -293,9 +295,9 @@ impl Recorder {
         step: usize,
         time: f64,
     ) -> KwaversResult<()> {
-        let temp_field = fields
-            .index_axis::<3>(0, TEMPERATURE_IDX)
-            .map_err(|e| KwaversError::InternalError(format!("temperature axis slice failed: {e}")))?;
+        let temp_field = fields.index_axis::<3>(0, TEMPERATURE_IDX).map_err(|e| {
+            KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
+        })?;
         const THERMAL_THRESHOLD: f64 = 343.15; // 70°C
 
         for ([i, j, k], &temperature) in temp_field.indexed_iter() {

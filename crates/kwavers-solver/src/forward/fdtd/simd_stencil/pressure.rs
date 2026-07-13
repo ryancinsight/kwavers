@@ -15,7 +15,7 @@ impl FdtdSimdStencilProcessor {
     /// fits in L1/L2 cache before eviction. Writes into pre-allocated `pres_scratch`
     /// then copies out; boundary values use zero-gradient Neumann conditions.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update_pressure(
         &mut self,

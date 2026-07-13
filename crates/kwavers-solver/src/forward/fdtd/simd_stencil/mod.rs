@@ -69,7 +69,7 @@ pub struct FdtdSimdStencilProcessor {
 impl FdtdSimdStencilProcessor {
     /// New.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(
         nx: usize,

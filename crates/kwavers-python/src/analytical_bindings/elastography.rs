@@ -4,7 +4,7 @@ mod thermal_strain;
 
 use kwavers_physics::analytical::elastography;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -68,10 +68,7 @@ pub fn voigt_complex_modulus(
     let result = elastography::voigt_complex_modulus(om_s, mu_pa, eta_pa_s);
     let real: Vec<f64> = result.iter().map(|c| c.re).collect();
     let imag: Vec<f64> = result.iter().map(|c| c.im).collect();
-    Ok((
-        real.to_pyarray(py).unbind(),
-        imag.to_pyarray(py).unbind(),
-    ))
+    Ok((real.to_pyarray(py).unbind(), imag.to_pyarray(py).unbind()))
 }
 
 /// Compute the springpot (fractional Kelvin) complex shear modulus.
@@ -99,10 +96,7 @@ pub fn springpot_complex_modulus(
     let result = elastography::springpot_complex_modulus(om_s, g0, alpha_exp);
     let real: Vec<f64> = result.iter().map(|c| c.re).collect();
     let imag: Vec<f64> = result.iter().map(|c| c.im).collect();
-    Ok((
-        real.to_pyarray(py).unbind(),
-        imag.to_pyarray(py).unbind(),
-    ))
+    Ok((real.to_pyarray(py).unbind(), imag.to_pyarray(py).unbind()))
 }
 
 /// Compute the Voigt shear-wave phase velocity dispersion curve.
@@ -191,4 +185,3 @@ pub fn mre_displacement_envelope(
         .map_err(PyValueError::new_err)?;
     Ok(envelope.to_pyarray(py).unbind())
 }
-

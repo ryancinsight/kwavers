@@ -59,10 +59,15 @@ fn finite_frequency_entries_conserve_segment_length_on_full_mask() {
         ..Default::default()
     };
 
-    let entries = row_entries(&sample, &active_lookup, {
-        let [rows, cols] = mask.shape();
-        (rows, cols)
-    }, config);
+    let entries = row_entries(
+        &sample,
+        &active_lookup,
+        {
+            let [rows, cols] = mask.shape();
+            (rows, cols)
+        },
+        config,
+    );
     let total = entries.iter().map(|(_, weight)| *weight).sum::<f64>();
 
     assert!((total - 0.004).abs() <= 1.0e-14);

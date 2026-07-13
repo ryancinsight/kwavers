@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::transducer;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -172,4 +172,3 @@ pub fn focused_bowl_steered_pressure_profile(
     });
     Ok(result.to_pyarray(py).unbind())
 }
-

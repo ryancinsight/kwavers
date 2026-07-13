@@ -1,10 +1,8 @@
 //! Refinement management and level control
 
 use kwavers_core::error::KwaversResult;
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array3,
-};
 
 /// Refinement level information
 #[derive(Debug, Clone)]
@@ -82,28 +80,23 @@ impl RefinementManager {
 
     /// Mark cells for refinement/coarsening
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
         let mut markers = Array3::zeros(error.shape());
 
-        match (
-            markers.as_slice_mut(),
-            error.as_slice(),
-        ) {
+        match (markers.as_slice_mut(), error.as_slice()) {
             (Some(marker_slice), Some(error_slice)) => {
                 enumerate_mut_with::<Adaptive, _, _>(marker_slice, |idx, marker| {
                     mark_cell(marker, error_slice[idx], threshold);
                 });
             }
-            _ => leto_ops::zip_mut_with(
-                &mut markers.view_mut(),
-                &error.view(),
-                |marker, &value| {
+            _ => {
+                leto_ops::zip_mut_with(&mut markers.view_mut(), &error.view(), |marker, &value| {
                     mark_cell(marker, value, threshold);
-                },
-            )
-            .expect("invariant: markers and error fields share grid shape"),
+                })
+                .expect("invariant: markers and error fields share grid shape")
+            }
         }
 
         // Add buffer zones around refinement regions

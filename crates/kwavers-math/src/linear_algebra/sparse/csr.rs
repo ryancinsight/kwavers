@@ -1,11 +1,7 @@
 //! Compressed Sparse Row (CSR) matrix format
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array1,
-    ArrayView1,
-    ArrayView2,
-};
+use leto::{Array1, ArrayView1, ArrayView2};
 use std::ops::{AddAssign, Mul};
 
 /// Compressed Sparse Row matrix format
@@ -431,7 +427,10 @@ mod tests {
     #[test]
     fn complex_field_modulus_eunomia_complex_3_4_5() {
         let z = eunomia::Complex64::new(3.0, 4.0);
-        assert_eq!(<eunomia::Complex64 as eunomia::ComplexField>::modulus(z), 5.0);
+        assert_eq!(
+            <eunomia::Complex64 as eunomia::ComplexField>::modulus(z),
+            5.0
+        );
         assert_eq!(
             <eunomia::Complex64 as eunomia::ComplexField>::modulus_squared(z),
             25.0,

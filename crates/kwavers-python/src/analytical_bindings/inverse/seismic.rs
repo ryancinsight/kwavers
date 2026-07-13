@@ -4,7 +4,7 @@ use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::seismic::{EikonalSolver, KirchhoffMigrator, Trace};
 use leto::Array3;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -173,4 +173,3 @@ fn add_ricker(samples: &mut [f64], arrival_s: f64, dt_s: f64, center_frequency_h
         *sample += (1.0 - 2.0 * squared) * (-squared).exp();
     }
 }
-

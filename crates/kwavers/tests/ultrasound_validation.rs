@@ -143,7 +143,9 @@ pub mod acoustic_wave_validation {
         // Create spatial grid
         let dx = wavelength / 20.0; // 20 points per wavelength
         let x_max = (grid_points - 1) as f64 * dx;
-        let x: Array1<f64> = Array1::from_shape_fn(grid_points, |[i]| 0.0 + i as f64 * (x_max - 0.0) / (grid_points - 1) as f64);
+        let x: Array1<f64> = Array1::from_shape_fn(grid_points, |[i]| {
+            0.0 + i as f64 * (x_max - 0.0) / (grid_points - 1) as f64
+        });
 
         // Time stepping parameters
         let dt = dx / wave_speed * 0.9; // CFL condition

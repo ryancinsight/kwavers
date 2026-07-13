@@ -3,8 +3,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use log::warn;
 use leto::Array3;
+use log::warn;
 
 use super::types::{ConservationError, ConservationHistory, ConservedQuantities};
 
@@ -56,7 +56,7 @@ impl ConservationMonitor {
 
     /// Check conservation at current time
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn check_conservation(
         &mut self,

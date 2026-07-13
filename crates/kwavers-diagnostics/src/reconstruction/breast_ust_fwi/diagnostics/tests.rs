@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use leto::Array3;
 use kwavers_math::fft::Complex64;
+use leto::Array3;
 
 #[test]
 fn residual_metrics_recover_row_source_scale() {

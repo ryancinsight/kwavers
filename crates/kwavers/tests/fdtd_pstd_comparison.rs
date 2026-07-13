@@ -20,10 +20,7 @@ use kwavers_solver::pstd::numerics::spectral_correction::SpectralCorrectionMetho
 use kwavers_solver::pstd::PSTDConfig;
 use kwavers_solver::pstd::PSTDPlugin;
 use kwavers_source::NullSource;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 use plotters::prelude::*;
 use std::fs;
 
@@ -57,13 +54,7 @@ impl kwavers_boundary::Boundary for NullBoundary {
     ) -> KwaversResult<()> {
         Ok(())
     }
-    fn apply_light(
-        &mut self,
-        _field: leto::ArrayViewMut3<f64>,
-        _grid: &Grid,
-        _time_step: usize,
-    ) {
-    }
+    fn apply_light(&mut self, _field: leto::ArrayViewMut3<f64>, _grid: &Grid, _time_step: usize) {}
 }
 
 // ─── Color palette ───────────────────────────────────────────────────────────
@@ -474,7 +465,9 @@ fn run_fdtd_simulation_with_time(
 
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
     fields
-        .index_axis_mut::<3>(0, 0).expect("index_axis").assign(initial_pressure);
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(initial_pressure);
 
     plugin_manager.initialize(grid, medium)?;
 
@@ -486,7 +479,10 @@ fn run_fdtd_simulation_with_time(
         plugin_manager.execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)?;
     }
 
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 fn run_pstd_simulation(
@@ -542,7 +538,9 @@ fn run_pstd_simulation_with_time(
 
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
     fields
-        .index_axis_mut::<3>(0, 0).expect("index_axis").assign(initial_pressure);
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(initial_pressure);
 
     plugin_manager.initialize(grid, medium)?;
 
@@ -554,7 +552,10 @@ fn run_pstd_simulation_with_time(
         plugin_manager.execute(&mut fields, grid, medium, &sources, &mut boundary, dt, t)?;
     }
 
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// Run the Kuznetsov solver in linear mode (AcousticEquationMode::Linear).
@@ -579,7 +580,9 @@ fn run_kuznetsov_simulation_with_time(
     // Array4 with 1 slot: pressure lives at axis-0 index 0.
     let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
     fields
-        .index_axis_mut::<3>(0, 0).expect("index_axis").assign(initial_pressure);
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(initial_pressure);
 
     let source = NullSource::new();
     let prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -589,7 +592,10 @@ fn run_kuznetsov_simulation_with_time(
         solver.update_wave(&mut fields, &prev, &source, grid, medium, dt, t)?;
     }
 
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// Run the Westervelt solver in the linear limit (nonlinearity_scaling = 0.0).
@@ -616,7 +622,9 @@ fn run_westervelt_simulation_with_time(
     // Array4 with 1 pressure slot (index 0 = UnifiedFieldType::Pressure).
     let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
     fields
-        .index_axis_mut::<3>(0, 0).expect("index_axis").assign(initial_pressure);
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(initial_pressure);
 
     let source = NullSource::new();
     let prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
@@ -626,7 +634,10 @@ fn run_westervelt_simulation_with_time(
         solver.update_wave(&mut fields, &prev, &source, grid, medium, dt, t)?;
     }
 
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// Exact solution of the 3-D wave equation for a spherically-symmetric Gaussian
@@ -989,7 +1000,10 @@ fn run_westervelt_lossless(
     solver.set_nonlinearity_scaling(0.0);
     solver.set_damping_scaling(0.0);
     let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-    fields.index_axis_mut::<3>(0, 0).expect("index_axis").assign(ic);
+    fields
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(ic);
     let source = NullSource::new();
     let prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
     for step in 0..n_steps {
@@ -1006,7 +1020,10 @@ fn run_westervelt_lossless(
             a.push(max_abs(fields.index_axis::<3>(0, 0).expect("index_axis")));
         }
     }
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// As [`run_westervelt_lossless`] for the linear Kuznetsov solver.
@@ -1020,7 +1037,10 @@ fn run_kuznetsov_lossless(
 ) -> KwaversResult<Array3<f64>> {
     let mut solver = KuznetsovWave::new(KuznetsovConfig::linear(), grid)?;
     let mut fields = Array4::zeros((1, grid.nx, grid.ny, grid.nz));
-    fields.index_axis_mut::<3>(0, 0).expect("index_axis").assign(ic);
+    fields
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(ic);
     let source = NullSource::new();
     let prev = Array3::zeros((grid.nx, grid.ny, grid.nz));
     for step in 0..n_steps {
@@ -1037,7 +1057,10 @@ fn run_kuznetsov_lossless(
             a.push(max_abs(fields.index_axis::<3>(0, 0).expect("index_axis")));
         }
     }
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// As [`run_westervelt_lossless`] for the PSTD solver run with a transparent
@@ -1059,7 +1082,10 @@ fn run_pstd_lossless(
     let mut plugin_manager = PluginManager::new();
     plugin_manager.add_plugin(Box::new(PSTDPlugin::new(config, grid)?))?;
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
-    fields.index_axis_mut::<3>(0, 0).expect("index_axis").assign(ic);
+    fields
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(ic);
     plugin_manager.initialize(grid, medium)?;
     let sources = Vec::new();
     let mut boundary = NullBoundary;
@@ -1077,7 +1103,10 @@ fn run_pstd_lossless(
             a.push(max_abs(fields.index_axis::<3>(0, 0).expect("index_axis")));
         }
     }
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// As [`run_pstd_lossless`] for the 4th-order staggered FDTD solver with a
@@ -1104,7 +1133,10 @@ fn run_fdtd_lossless(
     let mut plugin_manager = PluginManager::new();
     plugin_manager.add_plugin(Box::new(FdtdPlugin::new(config, grid)?))?;
     let mut fields = Array4::zeros((17, grid.nx, grid.ny, grid.nz));
-    fields.index_axis_mut::<3>(0, 0).expect("index_axis").assign(ic);
+    fields
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(ic);
     plugin_manager.initialize(grid, medium)?;
     let sources = Vec::new();
     let mut boundary = NullBoundary;
@@ -1122,7 +1154,10 @@ fn run_fdtd_lossless(
             a.push(max_abs(fields.index_axis::<3>(0, 0).expect("index_axis")));
         }
     }
-    Ok(fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous())
+    Ok(fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous())
 }
 
 /// Isolate the standing-wave "collapse": is it (a) the absorbing PML, (b) a
@@ -1357,7 +1392,10 @@ fn pstd_gaussian_propagation_matches_analytical() -> KwaversResult<()> {
         let mut pm = PluginManager::new();
         pm.add_plugin(Box::new(PSTDPlugin::new(config, &grid)?))?;
         let mut fields = Array4::<f64>::zeros((17, n, n, n));
-        fields.index_axis_mut::<3>(0, 0).expect("index_axis").assign(&ic);
+        fields
+            .index_axis_mut::<3>(0, 0)
+            .expect("index_axis")
+            .assign(&ic);
         pm.initialize(&grid, &medium)?;
         let sources = Vec::new();
         let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
@@ -1372,7 +1410,12 @@ fn pstd_gaussian_propagation_matches_analytical() -> KwaversResult<()> {
                 step as f64 * solver_dt,
             )?;
         }
-        Ok(rel_l2(&fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous()))
+        Ok(rel_l2(
+            &fields
+                .index_axis::<3>(0, 0)
+                .expect("index_axis")
+                .to_contiguous(),
+        ))
     };
 
     // (a) synced dt → faithful propagation.
@@ -1440,7 +1483,10 @@ fn pstd_fullkspace_gaussian_ivp_matches_analytical() -> KwaversResult<()> {
     let mut pm = PluginManager::new();
     pm.add_plugin(Box::new(PSTDPlugin::new(config, &grid)?))?;
     let mut fields = Array4::<f64>::zeros((17, n, n, n));
-    fields.index_axis_mut::<3>(0, 0).expect("index_axis").assign(&ic);
+    fields
+        .index_axis_mut::<3>(0, 0)
+        .expect("index_axis")
+        .assign(&ic);
     pm.initialize(&grid, &medium)?;
     let sources = Vec::new();
     let mut boundary = DomainPMLBoundary::new(DomainPmlConfig::default().with_thickness(8))?;
@@ -1455,7 +1501,10 @@ fn pstd_fullkspace_gaussian_ivp_matches_analytical() -> KwaversResult<()> {
             step as f64 * cfl_dt,
         )?;
     }
-    let out = fields.index_axis::<3>(0, 0).expect("index_axis").to_contiguous();
+    let out = fields
+        .index_axis::<3>(0, 0)
+        .expect("index_axis")
+        .to_contiguous();
 
     assert!(
         out.iter().all(|v| v.is_finite()),

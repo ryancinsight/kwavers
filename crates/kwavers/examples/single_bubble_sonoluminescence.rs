@@ -188,8 +188,14 @@ fn run_comprehensive_simulation(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new({ let d = grid.dimensions(); [d.0, d.1, d.2] }, bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());

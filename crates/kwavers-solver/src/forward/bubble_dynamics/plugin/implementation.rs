@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
@@ -223,9 +220,11 @@ impl Plugin for BubbleDynamicsPlugin {
         let pressure_view = fields
             .index_axis::<3>(0, pressure_idx)
             .expect("invariant: pressure field axis index in range");
-        let current_pressure =
-            Array3::from_shape_vec(pressure_view.shape(), pressure_view.iter().copied().collect())
-                .expect("invariant: axis view shape yields valid owned array");
+        let current_pressure = Array3::from_shape_vec(
+            pressure_view.shape(),
+            pressure_view.iter().copied().collect(),
+        )
+        .expect("invariant: axis view shape yields valid owned array");
 
         match self.engine.as_mut() {
             None => {} // initialize() not yet called; skip silently.

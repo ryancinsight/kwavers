@@ -1,7 +1,7 @@
 //! FNM configuration and supporting types.
 
-use leto::Array2;
 use kwavers_math::fft::Complex64;
+use leto::Array2;
 
 /// Configuration for Fast Nearfield Method
 #[derive(Debug, Clone)]

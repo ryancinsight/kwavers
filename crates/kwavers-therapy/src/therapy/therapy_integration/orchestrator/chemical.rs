@@ -227,6 +227,7 @@ mod tests {
             duty_cycle: 0.1,
             focal_depth: 0.005, // 5mm
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         let temperature =
@@ -259,6 +260,7 @@ mod tests {
             duty_cycle: 0.1,
             focal_depth: 0.01, // 10mm (center of grid)
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         let temperature =

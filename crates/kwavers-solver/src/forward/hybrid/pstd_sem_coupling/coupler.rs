@@ -16,7 +16,7 @@ pub struct PstdSemCoupler {
 impl PstdSemCoupler {
     /// Create new PSTD-SEM spectral coupler
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: PstdSemCouplingConfig,
@@ -35,7 +35,7 @@ impl PstdSemCoupler {
 
     /// Perform spectral coupling between PSTD and SEM fields
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn couple_fields(
         &mut self,
@@ -68,7 +68,7 @@ impl PstdSemCoupler {
     }
 
     fn extract_pstd_interface(&self, pstd_field: &Array3<f64>) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity(self.interface.pstd_interface_points.len() );
+        let mut interface_values = Vec::with_capacity(self.interface.pstd_interface_points.len());
         for &(i, j, k) in &self.interface.pstd_interface_points {
             interface_values.push(pstd_field[[i, j, k]]);
         }
@@ -76,7 +76,7 @@ impl PstdSemCoupler {
     }
 
     fn extract_sem_interface(&self, sem_field: &[f64]) -> KwaversResult<Vec<f64>> {
-        let mut interface_values = Vec::with_capacity(self.interface.sem_interface_nodes.len() );
+        let mut interface_values = Vec::with_capacity(self.interface.sem_interface_nodes.len());
         for &node_idx in &self.interface.sem_interface_nodes {
             let value = sem_field.get(node_idx).ok_or_else(|| {
                 KwaversError::InvalidInput(format!(

@@ -5,8 +5,8 @@ use kwavers_imaging::photoacoustic::{InitialPressure, PhotoacousticResult, Press
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     PhotoacousticAlgorithm, PhotoacousticReconstructor, ReconstructionPhotoacousticConfig,
 };
-use leto::Array3;
 use leto::Array2;
+use leto::Array3;
 
 use super::super::acoustics;
 use super::super::reconstruction;

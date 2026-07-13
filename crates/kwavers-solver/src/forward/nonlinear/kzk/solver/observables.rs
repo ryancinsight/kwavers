@@ -2,11 +2,8 @@
 //! pressure field: full pressure volume, on-axis time signal, time-averaged
 //! intensity, and peak positive pressure.
 
+use leto::{Array2, Array3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array2,
-    Array3,
-};
 
 use super::KZKSolver;
 

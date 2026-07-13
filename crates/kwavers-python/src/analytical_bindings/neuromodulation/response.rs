@@ -4,7 +4,7 @@ use kwavers_physics::acoustics::therapy::neuromodulation::{
     simulate_hh, simulate_nice, simulate_sonic, BilayerSonophore, BilayerSonophoreDynamic,
     BilayerSonophoreQuasistatic, CorticalNeuron, HhParams, NiceConfig, SonicConfig,
 };
-use numpy::{ToPyArray, PyArray1};
+use numpy::{PyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -287,4 +287,3 @@ pub fn cortical_sonic_response(
         trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }
-

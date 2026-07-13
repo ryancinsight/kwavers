@@ -81,10 +81,9 @@ fn inplace_operations_preserve_logical_order_for_nonstandard_layouts() {
 
     let shape = (2, 3, 4);
     let mut add_target = Array3::from_shape_fn(shape, |[i, j, k]| (100 * i + 10 * j + k) as f64);
-    let add_input =
-        from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
-            (1000 + 100 * i + 10 * j + k) as f64
-        });
+    let add_input = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+        (1000 + 100 * i + 10 * j + k) as f64
+    });
 
     assert!(
         add_input.as_slice().is_none(),
@@ -110,8 +109,9 @@ fn inplace_operations_preserve_logical_order_for_nonstandard_layouts() {
 
     let mut fma_target =
         Array3::from_shape_fn(shape, |[i, j, k]| 1.0 + (100 * i + 10 * j + k) as f64);
-    let multiplier =
-        from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| 2.0 + (i + j + k) as f64);
+    let multiplier = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+        2.0 + (i + j + k) as f64
+    });
     let addend = Array3::from_shape_fn(shape, |[i, j, k]| (i * j + k) as f64);
     fma_inplace(&mut fma_target, &multiplier, &addend);
     assert_eq!(

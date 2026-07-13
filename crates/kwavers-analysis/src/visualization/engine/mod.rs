@@ -6,11 +6,8 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
+use leto::{Array3, Array4};
 use log::{debug, info, warn};
-use leto::{
-    Array3,
-    Array4,
-};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;

@@ -56,7 +56,11 @@ impl Simulation {
         let skip = start.saturating_sub(1);
         let nrows = recorded_data.shape()[0];
         let ncols = recorded_data.shape()[1];
-        let end = if ncols > time_steps { time_steps } else { ncols };
+        let end = if ncols > time_steps {
+            time_steps
+        } else {
+            ncols
+        };
         recorded_data
             .slice(&[(0, nrows, 1), (skip, end, 1)])
             .expect("recorder trim slice bounds")
@@ -73,7 +77,11 @@ impl Simulation {
         let skip = start.saturating_sub(1);
         let nrows = recorded_data.shape()[0];
         let ncols = recorded_data.shape()[1];
-        let end = if ncols > time_steps { time_steps } else { ncols };
+        let end = if ncols > time_steps {
+            time_steps
+        } else {
+            ncols
+        };
         recorded_data
             .slice(&[(0, nrows, 1), (skip, end, 1)])
             .expect("recorder trim slice bounds")

@@ -8,8 +8,8 @@
 //!
 //! θ_{t+1} = θ_t - η ∇L(θ_t)
 
-use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 use coeus_autograd::Parameter;
+use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 
 use super::network::PINN3DNetwork;
 

@@ -108,8 +108,8 @@ impl NonlinearElasticWaveField {
     /// 3D array of total displacement magnitudes in meters
     #[must_use]
     pub fn total_displacement_magnitude(&self) -> Array3<f64> {
-        let mut total = &(&self.u_fundamental * &self.u_fundamental)
-            + &(&self.u_second * &self.u_second);
+        let mut total =
+            &(&self.u_fundamental * &self.u_fundamental) + &(&self.u_second * &self.u_second);
 
         for harmonic in &self.u_harmonics {
             total = &total + &(harmonic * harmonic);
@@ -171,11 +171,11 @@ impl NonlinearElasticWaveField {
         }
     }
 
-    /// Fallible version of [`get_harmonic`](Self::get_harmonic).
+    /// Fallible version of [`Self::get_harmonic`].
     ///
     /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn try_get_harmonic(&self, harmonic_index: usize) -> KwaversResult<&Array3<f64>> {
         match harmonic_index {
@@ -190,11 +190,11 @@ impl NonlinearElasticWaveField {
         }
     }
 
-    /// Fallible version of [`get_harmonic_mut`](Self::get_harmonic_mut).
+    /// Fallible version of [`Self::get_harmonic_mut`].
     ///
     /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn try_get_harmonic_mut(
         &mut self,

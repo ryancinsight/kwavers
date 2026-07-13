@@ -2,8 +2,8 @@
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use log::debug;
 use leto::Array3;
+use log::debug;
 
 use crate::parallel::for_each_indexed_mut_three_refs;
 

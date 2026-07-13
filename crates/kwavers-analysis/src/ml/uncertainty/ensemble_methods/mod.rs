@@ -10,11 +10,11 @@ mod tests;
 #[cfg(feature = "pinn")]
 use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
-use model::EnsembleModel;
 #[cfg(not(feature = "pinn"))]
 use leto::Array2;
 #[cfg(feature = "pinn")]
 use leto::Array2;
+use model::EnsembleModel;
 use std::collections::HashMap;
 
 /// Configuration for ensemble methods

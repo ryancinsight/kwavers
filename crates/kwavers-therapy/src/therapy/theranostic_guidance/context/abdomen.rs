@@ -4,11 +4,7 @@ use std::collections::VecDeque;
 
 use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    Array3,
-    SliceArg,
-};
+use leto::{Array2, Array3, SliceArg};
 
 use super::super::aperture::{
     abdominal_aperture_frame, abdominal_arc_point_2d, abdominal_arc_spec,
@@ -39,11 +35,19 @@ pub fn build_abdominal_placement_context(
     validate_spacing(spacing_mm)?;
     let slice_index = largest_target_slice(label_volume)?;
     let ct_slice = ct_volume_hu
-        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
         .expect("invariant: axis index in bounds")
         .to_contiguous();
     let label_slice = label_volume
-        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
         .expect("invariant: axis index in bounds")
         .to_contiguous();
     let target_mask = largest_connected_target_component(&label_slice)?;

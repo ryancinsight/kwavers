@@ -2,7 +2,7 @@
 
 use super::arrays::{array2_from_flat, flatten_array2};
 use kwavers_physics::analytical::inverse as inverse_mod;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -62,4 +62,3 @@ pub fn born_inversion_regularized(
     );
     Ok((re.to_pyarray(py).unbind(), im.to_pyarray(py).unbind()))
 }
-

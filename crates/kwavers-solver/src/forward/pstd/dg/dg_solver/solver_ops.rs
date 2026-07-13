@@ -54,7 +54,7 @@ impl DGSolver {
     /// Projects `field` to the DG basis on the first call.  Subsequent calls
     /// operate on the stored modal coefficients, then back-project to `field`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn solve_step(&mut self, field: &mut Array3<f64>, dt: f64) -> KwaversResult<()> {
         if self.modal_coefficients.is_none() {
@@ -88,7 +88,7 @@ impl DGSolver {
     ///   Stage 3: u^{n+1} = (1/3) u^n + (2/3) [u⁽²⁾ + dt · L(u⁽²⁾)]
     /// ```
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn step_ssp_rk3(&mut self, dt: f64, wave_speed: f64) -> KwaversResult<()> {
         let diff_matrix = self.diff_matrix.clone();
@@ -195,7 +195,7 @@ impl DGSolver {
     /// **Warning**: conditionally stable for p=0, unconditionally unstable for p ≥ 1
     /// under the DG operator (Cockburn & Shu 2001 §4). Use only for baseline p=0 tests.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn step_forward_euler(&mut self, dt: f64, wave_speed: f64) -> KwaversResult<()> {
         let diff_matrix = self.diff_matrix.clone();

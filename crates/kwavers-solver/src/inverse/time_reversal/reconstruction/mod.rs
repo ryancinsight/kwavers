@@ -9,11 +9,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::Recorder;
 use kwavers_source::{Source, TimeVaryingSource};
+use leto::{Array2, Array3};
 use log::{debug, info};
-use leto::{
-    Array2,
-    Array3,
-};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -34,7 +31,7 @@ pub struct TimeReversalReconstructor {
 impl TimeReversalReconstructor {
     /// Create a new time-reversal reconstructor
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: TimeReversalConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -48,7 +45,7 @@ impl TimeReversalReconstructor {
 
     /// Perform time-reversal reconstruction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn reconstruct(
         &mut self,
@@ -121,7 +118,7 @@ impl TimeReversalReconstructor {
 
     /// Prepare time-reversed signals
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn prepare_reversed_signals(
         &mut self,
@@ -203,7 +200,7 @@ impl TimeReversalReconstructor {
 
     /// Apply reversed sources to the solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_reversed_sources(
         &self,
@@ -245,7 +242,7 @@ impl TimeReversalReconstructor {
 
     /// Propagate backwards in time
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn propagate_backwards(
         &self,
@@ -313,7 +310,7 @@ impl TimeReversalReconstructor {
 
     /// Post-process the reconstruction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn post_process(
         &self,

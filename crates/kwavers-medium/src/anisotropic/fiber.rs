@@ -76,7 +76,8 @@ impl MuscleFiberModel {
 
     /// Create helical fiber arrangement (e.g., cardiac muscle)
     pub fn helical(grid: &Grid, pitch: f64, radius: f64) -> Self {
-        let mut fiber_field = Array3::from_elem([grid.nx, grid.ny, grid.nz], FiberOrientation::default());
+        let mut fiber_field =
+            Array3::from_elem([grid.nx, grid.ny, grid.nz], FiberOrientation::default());
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {

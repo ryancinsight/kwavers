@@ -60,10 +60,10 @@
 //!   therapy." IEEE Trans. UFFC 43(6):1122–1129.
 
 use super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
-use kwavers_core::error::KwaversResult;
-use log::info;
-use leto::Array3;
 use eunomia::Complex;
+use kwavers_core::error::KwaversResult;
+use leto::Array3;
+use log::info;
 
 impl TranscranialAberrationCorrection {
     /// Apply CW time-reversal (phase conjugation) aberration correction.
@@ -179,4 +179,3 @@ impl TranscranialAberrationCorrection {
         fxy0 * (1.0 - tz) + fxy1 * tz
     }
 }
-

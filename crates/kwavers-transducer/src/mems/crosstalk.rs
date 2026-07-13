@@ -41,8 +41,8 @@
 //!   infinite rigid plane." *J. Acoust. Soc. Am.* 32(6), 730–737.
 //! - Kinsler, Frey, Coppens & Sanders, *Fundamentals of Acoustics* (4th ed.), §7.
 
-use leto::Array2;
 use eunomia::Complex;
+use leto::Array2;
 use std::f64::consts::{FRAC_PI_2, TAU};
 
 /// Mutual radiation impedance `Z_ij = jωρ A_i A_j /(2π d) · e^{-jkd}` [kg/s]
@@ -231,4 +231,3 @@ mod tests {
         assert_eq!(z.shape(), [0, 0]);
     }
 }
-

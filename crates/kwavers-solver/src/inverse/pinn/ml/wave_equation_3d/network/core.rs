@@ -67,7 +67,7 @@ where
     /// Create a new PINN network with the specified architecture
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn new(config: &PinnConfig3D) -> KwaversResult<Self> {
         config.validate()?;
         let input_size = 4; // (x, y, z, t)
@@ -162,7 +162,7 @@ where
     ///
     /// Second-order central finite differences with adaptive ε = sqrt(f32::EPSILON) × 0.01.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     pub fn compute_pde_residual(
         &self,
         x: &Var<f32, B>,

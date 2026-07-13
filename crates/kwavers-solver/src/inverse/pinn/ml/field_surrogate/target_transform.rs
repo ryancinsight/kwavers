@@ -56,7 +56,7 @@ pub enum TargetTransform {
 impl TargetTransform {
     /// Build a linear transform.
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `scale_pa <= 0`.
+    /// Returns [`crate::KwaversError::InvalidInput`] when `scale_pa <= 0`.
     pub fn linear(scale_pa: f32) -> KwaversResult<Self> {
         // Reject non-positive *and* NaN inputs: `partial_cmp` returns `None`
         // for NaN, which is correctly excluded by the `!= Some(Greater)` test.
@@ -71,7 +71,7 @@ impl TargetTransform {
     /// Build a signed-log1p transform from a per-channel maximum
     /// pressure and a positive ε floor.
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when either input is
+    /// Returns [`crate::KwaversError::InvalidInput`] when either input is
     /// non-positive.
     pub fn signed_log1p(p_max_pa: f32, p_eps_pa: f32) -> KwaversResult<Self> {
         // Reject non-positive *and* NaN inputs: `partial_cmp` returns `None`

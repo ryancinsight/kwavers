@@ -7,7 +7,7 @@ use leto::Array3;
 impl WENOLimiter {
     /// WENO5 limiting implementation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn weno5_limit(
         &self,

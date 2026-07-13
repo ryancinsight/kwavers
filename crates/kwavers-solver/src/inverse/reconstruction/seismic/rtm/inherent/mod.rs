@@ -36,7 +36,7 @@ impl ReverseTimeMigration {
     /// Reference: Baysal et al. (1983), "Reverse time migration",
     /// *Geophysics* **48**(11), 1514–1524.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn migrate_shot(
         &mut self,
@@ -64,7 +64,7 @@ impl ReverseTimeMigration {
     /// Normalises by source illumination (`√illumination`) and optionally
     /// applies a mild Laplacian filter to suppress migration artefacts.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn post_process_image(&mut self) -> KwaversResult<()> {
         use super::super::constants::RTM_AMPLITUDE_THRESHOLD;
@@ -87,7 +87,7 @@ impl ReverseTimeMigration {
 
     /// Thin wrapper: calls [`laplacian::apply_laplacian_filter_inplace`].
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_laplacian_filter_inplace(
         &self,

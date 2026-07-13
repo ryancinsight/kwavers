@@ -10,7 +10,7 @@ type PstdSemRegion = (Vec<(usize, usize, usize)>, Vec<usize>);
 impl SpectralCouplingInterface {
     /// Create spectral coupling interface
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         pstd_grid: &Grid,
@@ -92,8 +92,8 @@ impl SpectralCouplingInterface {
         sem_mesh: &TetrahedralMesh,
         config: &PstdSemCouplingConfig,
     ) -> KwaversResult<Array2<f64>> {
-        let n_pstd = pstd_points.len() ;
-        let n_sem = sem_nodes.len() ;
+        let n_pstd = pstd_points.len();
+        let n_sem = sem_nodes.len();
         let mut transform = Array2::<f64>::zeros((n_pstd, n_sem));
 
         for (i, &(pi, pj, pk)) in pstd_points.iter().enumerate() {
@@ -116,8 +116,8 @@ impl SpectralCouplingInterface {
         sem_mesh: &TetrahedralMesh,
         config: &PstdSemCouplingConfig,
     ) -> KwaversResult<Array2<f64>> {
-        let n_pstd = pstd_points.len() ;
-        let n_sem = sem_nodes.len() ;
+        let n_pstd = pstd_points.len();
+        let n_sem = sem_nodes.len();
         let mut projection = Array2::<f64>::zeros((n_sem, n_pstd));
 
         for (i, &sem_node_idx) in sem_nodes.iter().enumerate() {

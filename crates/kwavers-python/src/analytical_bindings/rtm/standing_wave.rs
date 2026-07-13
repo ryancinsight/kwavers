@@ -1,7 +1,7 @@
 //! Standing-wave suppression and modulation bindings.
 
 use kwavers_physics::analytical::rtm as rtm_mod;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -125,4 +125,3 @@ pub fn standing_wave_field_1d(
 pub fn standing_wave_intensity_statistics(r_back: f64) -> PyResult<(f64, f64, f64)> {
     Ok(rtm_mod::standing_wave_intensity_statistics(r_back))
 }
-

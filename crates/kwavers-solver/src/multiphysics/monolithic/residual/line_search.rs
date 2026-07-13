@@ -16,7 +16,7 @@ impl MonolithicCoupler {
     /// alpha so the caller never applies an untested Newton step.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if `alpha_max` is outside `(0, 1]`.
+    /// - Returns [`crate::KwaversError::Validation`] if `alpha_max` is outside `(0, 1]`.
     /// - Propagates any residual-evaluation error from candidate states.
     #[allow(clippy::too_many_arguments)]
     pub(in crate::multiphysics::monolithic) fn line_search(
@@ -52,10 +52,10 @@ impl MonolithicCoupler {
             last_alpha = alpha;
             trial_state.assign(u);
             for (candidate, delta) in trial_state.iter_mut().zip(du.iter()) {
-            {
-                *candidate += alpha * delta;
-            };
-        };
+                {
+                    *candidate += alpha * delta;
+                };
+            }
             let f_new = match self.compute_residual(&trial_state, u_prev, dt, dims, field_order) {
                 Ok(residual) => residual,
                 Err(error) => {

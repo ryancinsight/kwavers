@@ -63,10 +63,7 @@ pub use stream::{FrameMetadata, VizFrame, VizStream};
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use leto::{
-    Array3,
-    Array4,
-};
+    use leto::{Array3, Array4};
 
     fn create_test_grid() -> Grid {
         Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).expect("Failed to create test grid")

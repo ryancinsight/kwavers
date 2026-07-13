@@ -1,7 +1,7 @@
 //! Frequency-swept cavitation and shielding-control PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{ToPyArray, PyArray1};
+use numpy::{PyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -612,4 +612,3 @@ pub fn compare_shielding_control(
     out.extend_from_slice(&row(&c.pulsed_swept));
     Ok(out)
 }
-

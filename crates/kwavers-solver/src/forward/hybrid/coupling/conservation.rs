@@ -23,7 +23,7 @@ impl HybridCouplingConservationEnforcer {
 
     /// Enforce conservation laws on transferred fields
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn enforce(
         &self,

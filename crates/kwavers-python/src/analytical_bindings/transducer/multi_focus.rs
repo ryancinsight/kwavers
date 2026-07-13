@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::transducer;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray2, PyReadonlyArray1};
+use numpy::{PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -116,4 +116,3 @@ pub fn multi_focus_field_magnitude_2d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok(arr.to_pyarray(py).unbind())
 }
-

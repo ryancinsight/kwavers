@@ -12,7 +12,7 @@ type B = coeus_core::MoiraiBackend;
 /// - Panics if an internal precondition is violated.
 ///
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 #[test]
 fn test_time_derivative_matches_analytic() -> kwavers_core::error::KwaversResult<()> {
     let backend = B::default();

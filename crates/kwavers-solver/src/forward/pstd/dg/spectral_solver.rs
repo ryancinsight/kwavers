@@ -8,11 +8,11 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
 use leto::Array3 as LetoArray3;
-use moirai_parallel::{enumerate_mut_with, Adaptive};
 use leto::Array3;
-use kwavers_math::fft::Complex64;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::sync::Arc;
 
 /// Spectral solver using FFT-based methods
@@ -203,8 +203,8 @@ impl RegionPSTDSolver {
     /// ## Precondition
     /// `output` must have the same shape as `field`.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -250,7 +250,8 @@ impl RegionPSTDSolver {
         .expect("DG spectral field shape must match its Leto FFT shape");
         self.fft.forward_into(&field_leto, &mut self.field_hat);
         apply_laplacian_symbol(&mut self.lap_hat, &self.field_hat, &self.k2, &self.filter);
-        let mut laplacian = LetoArray3::<f64>::zeros([field.shape()[0], field.shape()[1], field.shape()[2]]);
+        let mut laplacian =
+            LetoArray3::<f64>::zeros([field.shape()[0], field.shape()[1], field.shape()[2]]);
         self.fft
             .inverse_into(&self.lap_hat, &mut laplacian, &mut self.scratch_hat);
         for i in 0..field.shape()[0] {
@@ -301,7 +302,7 @@ impl RegionPSTDSolver {
     /// Convenience wrapper — allocates and returns the next field.
     /// Prefer [`Self::spectral_wave_step_into`] in time-step loops.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn spectral_wave_step(
         &mut self,

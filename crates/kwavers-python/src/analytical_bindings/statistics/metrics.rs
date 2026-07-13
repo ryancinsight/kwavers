@@ -2,7 +2,7 @@
 
 use super::arrays::as_slices;
 use kwavers_math::statistics;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -39,4 +39,3 @@ pub fn psnr(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64>
     let (a_s, b_s) = as_slices(&a, &b)?;
     Ok(statistics::psnr(a_s, b_s))
 }
-

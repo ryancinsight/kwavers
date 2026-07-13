@@ -154,95 +154,94 @@ pub(crate) fn prepare_solver(
         pml.effective_thickness(req.grid.nx, req.grid.ny, req.grid.nz);
     let thickness = pml.size.unwrap_or(default_thickness).min(max_allowed);
 
-    let (sim_grid, grid_source, sensor_mask, effective_pml_inside) =
-        if !pml.inside && thickness > 0 {
-            if req.transducer_ordered_indices.is_some() {
-                return Err(KwaversError::Validation(ValidationError::FieldValidation {
-                    field: "pml_inside".to_string(),
-                    value: "false".to_string(),
-                    constraint: "pml_inside=false is not supported with transducer sensors".into(),
-                }));
-            }
-            let (nx, ny, nz) = (req.grid.nx, req.grid.ny, req.grid.nz);
-            let p = thickness;
-            let pad_x = nx > 1;
-            let pad_y = !req.axisymmetric && ny > 1;
-            let pad_z_two_sided = !req.axisymmetric && nz > 1;
-            let pad_z_one_sided = req.axisymmetric && nz > 1;
+    let (sim_grid, grid_source, sensor_mask, effective_pml_inside) = if !pml.inside && thickness > 0
+    {
+        if req.transducer_ordered_indices.is_some() {
+            return Err(KwaversError::Validation(ValidationError::FieldValidation {
+                field: "pml_inside".to_string(),
+                value: "false".to_string(),
+                constraint: "pml_inside=false is not supported with transducer sensors".into(),
+            }));
+        }
+        let (nx, ny, nz) = (req.grid.nx, req.grid.ny, req.grid.nz);
+        let p = thickness;
+        let pad_x = nx > 1;
+        let pad_y = !req.axisymmetric && ny > 1;
+        let pad_z_two_sided = !req.axisymmetric && nz > 1;
+        let pad_z_one_sided = req.axisymmetric && nz > 1;
 
-            let pnx = if pad_x { nx + 2 * p } else { nx };
-            let pny = if pad_y { ny + 2 * p } else { ny };
-            let pnz = if pad_z_two_sided {
-                nz + 2 * p
-            } else if pad_z_one_sided {
-                nz + p
-            } else {
-                nz
-            };
-            let padded_grid = Grid::new(pnx, pny, pnz, req.grid.dx, req.grid.dy, req.grid.dz)?;
-
-            let px_embed = if pad_x { p } else { 0 };
-            let py = if pad_y { p } else { 0 };
-            let pz_embed = if pad_z_two_sided { p } else { 0 };
-            let p = px_embed;
-
-            let mut padded_mask = Array3::<bool>::from_elem((pnx, pny, pnz), false);
-            padded_mask
-                .slice_with_mut::<3>(&[
-                    SliceArg::Range {
-                        start: Some(p as isize),
-                        end: Some((nx + p) as isize),
-                        step: 1,
-                    },
-                    SliceArg::Range {
-                        start: Some(py as isize),
-                        end: Some((ny + py) as isize),
-                        step: 1,
-                    },
-                    SliceArg::Range {
-                        start: Some(pz_embed as isize),
-                        end: Some((nz + pz_embed) as isize),
-                        step: 1,
-                    },
-                ])
-                .expect("invariant: padded-mask embed slice bounds")
-                .assign(&sensor_mask);
-
-            let padded_source =
-                GridSource {
-                    p0: req
-                        .grid_source
-                        .p0
-                        .as_ref()
-                        .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
-                    u0: req.grid_source.u0.as_ref().map(|(ux, uy, uz)| {
-                        (
-                            embed_leto3(ux, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
-                            embed_leto3(uy, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
-                            embed_leto3(uz, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
-                        )
-                    }),
-                    p_mask: req
-                        .grid_source
-                        .p_mask
-                        .as_ref()
-                        .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
-                    p_signal: req.grid_source.p_signal.clone(),
-                    p_mode: req.grid_source.p_mode,
-                    u_mask: req
-                        .grid_source
-                        .u_mask
-                        .as_ref()
-                        .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
-                    u_signal: req.grid_source.u_signal.clone(),
-                    u_mode: req.grid_source.u_mode,
-                };
-
-            (padded_grid, padded_source, padded_mask, true)
+        let pnx = if pad_x { nx + 2 * p } else { nx };
+        let pny = if pad_y { ny + 2 * p } else { ny };
+        let pnz = if pad_z_two_sided {
+            nz + 2 * p
+        } else if pad_z_one_sided {
+            nz + p
         } else {
-            let source = req.grid_source.clone();
-            (req.grid.clone(), source, sensor_mask, pml.inside)
+            nz
         };
+        let padded_grid = Grid::new(pnx, pny, pnz, req.grid.dx, req.grid.dy, req.grid.dz)?;
+
+        let px_embed = if pad_x { p } else { 0 };
+        let py = if pad_y { p } else { 0 };
+        let pz_embed = if pad_z_two_sided { p } else { 0 };
+        let p = px_embed;
+
+        let mut padded_mask = Array3::<bool>::from_elem((pnx, pny, pnz), false);
+        padded_mask
+            .slice_with_mut::<3>(&[
+                SliceArg::Range {
+                    start: Some(p as isize),
+                    end: Some((nx + p) as isize),
+                    step: 1,
+                },
+                SliceArg::Range {
+                    start: Some(py as isize),
+                    end: Some((ny + py) as isize),
+                    step: 1,
+                },
+                SliceArg::Range {
+                    start: Some(pz_embed as isize),
+                    end: Some((nz + pz_embed) as isize),
+                    step: 1,
+                },
+            ])
+            .expect("invariant: padded-mask embed slice bounds")
+            .assign(&sensor_mask);
+
+        let padded_source = GridSource {
+            p0: req
+                .grid_source
+                .p0
+                .as_ref()
+                .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
+            u0: req.grid_source.u0.as_ref().map(|(ux, uy, uz)| {
+                (
+                    embed_leto3(ux, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                    embed_leto3(uy, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                    embed_leto3(uz, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                )
+            }),
+            p_mask: req
+                .grid_source
+                .p_mask
+                .as_ref()
+                .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
+            p_signal: req.grid_source.p_signal.clone(),
+            p_mode: req.grid_source.p_mode,
+            u_mask: req
+                .grid_source
+                .u_mask
+                .as_ref()
+                .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
+            u_signal: req.grid_source.u_signal.clone(),
+            u_mode: req.grid_source.u_mode,
+        };
+
+        (padded_grid, padded_source, padded_mask, true)
+    } else {
+        let source = req.grid_source.clone();
+        (req.grid.clone(), source, sensor_mask, pml.inside)
+    };
 
     let boundary = if thickness > 0 && max_allowed > 0 && !pml.alpha_is_zero() {
         let mut cpml_config = if let Some((px, py, pz)) = pml.size_xyz {
@@ -370,9 +369,18 @@ pub(crate) fn extract_result(
         .recorded_iz_view()
         .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let i_avg_x = solver.sensor_recorder.extract_i_avg_x().and_then(|d| d.try_into().ok());
-    let i_avg_y = solver.sensor_recorder.extract_i_avg_y().and_then(|d| d.try_into().ok());
-    let i_avg_z = solver.sensor_recorder.extract_i_avg_z().and_then(|d| d.try_into().ok());
+    let i_avg_x = solver
+        .sensor_recorder
+        .extract_i_avg_x()
+        .and_then(|d| d.try_into().ok());
+    let i_avg_y = solver
+        .sensor_recorder
+        .extract_i_avg_y()
+        .and_then(|d| d.try_into().ok());
+    let i_avg_z = solver
+        .sensor_recorder
+        .extract_i_avg_z()
+        .and_then(|d| d.try_into().ok());
     let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
     let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 

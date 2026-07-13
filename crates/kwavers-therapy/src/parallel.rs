@@ -1,12 +1,9 @@
 //! Provider-owned traversal adapters for therapy kernels.
 
+use leto::{ArrayView, ArrayViewMut};
 use moirai_parallel::{
     for_each_chunk_mut_enumerated_with, for_each_chunk_pair_mut_enumerated_with,
     for_each_chunk_triple_mut_enumerated_with, Adaptive,
-};
-use leto::{
-    ArrayView,
-    ArrayViewMut,
 };
 
 const THERAPY_CHUNK_SIZE: usize = 4096;
@@ -353,9 +350,12 @@ pub(crate) fn zip_two_mut_ref<T, U, V, const N: usize, F>(
             let shape = first_out.shape();
             let mut index = [0usize; N];
             for _ in 0..first_out.size() {
-                let first_value = first_out.get_mut(index).expect("invariant: index in bounds");
-                let second_value =
-                    second_out.get_mut(index).expect("invariant: index in bounds");
+                let first_value = first_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let second_value = second_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
                 f(
                     first_value,
                     second_value,
@@ -425,9 +425,12 @@ pub(crate) fn zip_two_mut_two_refs<T, U, V, W, const N: usize, F>(
             let shape = first_out.shape();
             let mut index = [0usize; N];
             for _ in 0..first_out.size() {
-                let first_value = first_out.get_mut(index).expect("invariant: index in bounds");
-                let second_value =
-                    second_out.get_mut(index).expect("invariant: index in bounds");
+                let first_value = first_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let second_value = second_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
                 f(
                     first_value,
                     second_value,
@@ -514,10 +517,15 @@ pub(crate) fn zip_three_mut_two_refs<T, U, V, W, X, const N: usize, F>(
             let shape = first_out.shape();
             let mut index = [0usize; N];
             for _ in 0..first_out.size() {
-                let first_value = first_out.get_mut(index).expect("invariant: index in bounds");
-                let second_value =
-                    second_out.get_mut(index).expect("invariant: index in bounds");
-                let third_value = third_out.get_mut(index).expect("invariant: index in bounds");
+                let first_value = first_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let second_value = second_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let third_value = third_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
                 f(
                     first_value,
                     second_value,
@@ -621,10 +629,15 @@ pub(crate) fn zip_three_mut_three_refs<T, U, V, W, X, Y, const N: usize, F>(
             let shape = first_out.shape();
             let mut index = [0usize; N];
             for _ in 0..first_out.size() {
-                let first_value = first_out.get_mut(index).expect("invariant: index in bounds");
-                let second_value =
-                    second_out.get_mut(index).expect("invariant: index in bounds");
-                let third_value = third_out.get_mut(index).expect("invariant: index in bounds");
+                let first_value = first_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let second_value = second_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let third_value = third_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
                 f(
                     first_value,
                     second_value,
@@ -727,9 +740,12 @@ pub(crate) fn zip_two_mut_four_refs<T, U, V, W, X, Y, const N: usize, F>(
             let shape = first_out.shape();
             let mut index = [0usize; N];
             for _ in 0..first_out.size() {
-                let first_value = first_out.get_mut(index).expect("invariant: index in bounds");
-                let second_value =
-                    second_out.get_mut(index).expect("invariant: index in bounds");
+                let first_value = first_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
+                let second_value = second_out
+                    .get_mut(index)
+                    .expect("invariant: index in bounds");
                 f(
                     first_value,
                     second_value,
@@ -813,7 +829,9 @@ mod tests {
         );
 
         assert_eq!(
-            out.slice_with::<2>(&every_other_row()).unwrap().to_contiguous(),
+            out.slice_with::<2>(&every_other_row())
+                .unwrap()
+                .to_contiguous(),
             Array2::from_shape_fn((2, 3), |[i, j]| {
                 let source_i = i * 2;
                 (source_i + j) as i32

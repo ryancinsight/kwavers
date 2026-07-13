@@ -7,11 +7,8 @@ use super::types::{
 #[cfg(feature = "pinn")]
 use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
+use leto::{Array1, Array2};
 use log::info;
-use leto::{
-    Array1,
-    Array2,
-};
 use std::collections::HashMap;
 
 /// Conformal predictor for uncertainty quantification

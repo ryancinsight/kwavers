@@ -1,15 +1,12 @@
 //! Legacy linear polarization model (deprecated — use JonesPolarizationModel)
 
 use super::PolarizationModel;
+use eunomia::Complex64;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::{Array3, Array4};
 use log::debug;
 use moirai_parallel::{for_each_mut_with, Adaptive};
-use leto::{
-    Array3,
-    Array4,
-};
-use eunomia::Complex64;
 
 /// Legacy linear polarization model (deprecated — use JonesPolarizationModel)
 #[derive(Debug)]
@@ -43,4 +40,3 @@ impl PolarizationModel for LinearPolarization {
         });
     }
 }
-

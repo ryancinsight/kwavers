@@ -41,7 +41,8 @@ fn wrap_to_pi(d: f64) -> f64 {
 pub fn phase_residues(wrapped: &Array2<f64>) -> Array2<i32> {
     let [nr, nc] = wrapped.shape();
     if nr < 2 || nc < 2 {
-        return Array2::zeros([nr.saturating_sub(1), nc.saturating_sub(1)]);    }
+        return Array2::zeros([nr.saturating_sub(1), nc.saturating_sub(1)]);
+    }
     let mut res = Array2::zeros([nr - 1, nc - 1]);
     for r in 0..nr - 1 {
         for c in 0..nc - 1 {
@@ -322,7 +323,10 @@ mod tests {
 
     #[test]
     fn degenerate_inputs() {
-        assert_eq!(phase_residues(&Array2::<f64>::zeros([1, 5])).shape(), [0, 4]);
+        assert_eq!(
+            phase_residues(&Array2::<f64>::zeros([1, 5])).shape(),
+            [0, 4]
+        );
         let w = Array2::<f64>::zeros([3, 3]);
         let m = Array2::from_elem([3, 3], false);
         assert!(masked_unwrap_2d(&w, &m).iter().all(|v| v.is_nan()));

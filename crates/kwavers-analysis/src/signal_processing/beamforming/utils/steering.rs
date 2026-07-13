@@ -377,4 +377,3 @@ mod tests {
         assert!(result.is_err(), "non-unit direction must be rejected");
     }
 }
-

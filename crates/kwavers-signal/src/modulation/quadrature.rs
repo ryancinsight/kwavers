@@ -46,8 +46,8 @@ impl Modulation for QuadratureAmplitudeModulation {
         let omega_c = TWO_PI * self.params.carrier_freq;
 
         // Convert I component to ndarray
-        let i_signal = Array1::from_vec([carrier.len()], carrier.to_vec())
-            .expect("carrier shape must match");
+        let i_signal =
+            Array1::from_vec([carrier.len()], carrier.to_vec()).expect("carrier shape must match");
 
         // Generate Q component using Hilbert transform (90° phase shift)
         let q_signal_complex = hilbert_transform(&i_signal);

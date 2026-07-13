@@ -1,6 +1,6 @@
 use super::*;
-use leto::Array3;
 use eunomia::Complex64;
+use leto::Array3;
 
 // ─── HighPass: exact mathematical properties ─────────────────────────────
 
@@ -264,4 +264,3 @@ fn wall_filter_iir_alternating_input_is_passed() {
         "IIR should pass Nyquist input: in={dc_input_energy:.3}, out={out_energy:.3}"
     );
 }
-

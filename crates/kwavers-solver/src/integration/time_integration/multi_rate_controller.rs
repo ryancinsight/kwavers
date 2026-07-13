@@ -44,7 +44,7 @@ impl MultiRateController {
     /// components (i.e., the slowest component's time step). Faster components
     /// then take multiple sub-steps within each global step.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn determine_time_steps(
         &mut self,

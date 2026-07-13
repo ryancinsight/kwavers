@@ -54,7 +54,7 @@ impl BasisFunction {
 
     /// Evaluate all basis functions at local coordinates ξ ∈ \[0,1\]³
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn evaluate(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         match self.degree {
@@ -69,7 +69,7 @@ impl BasisFunction {
 
     /// Evaluate derivatives of all basis functions
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn evaluate_derivatives(&self, xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         match self.degree {
@@ -88,7 +88,7 @@ impl BasisFunction {
     /// φ₃ = η
     /// φ₄ = ζ
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn evaluate_linear(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
@@ -144,7 +144,7 @@ impl BasisFunction {
     /// Quadratic (P2) tetrahedral basis functions
     /// 10-node tetrahedron with edge and face nodes
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn evaluate_quadratic(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;

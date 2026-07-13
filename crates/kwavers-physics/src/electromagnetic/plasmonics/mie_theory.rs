@@ -33,9 +33,9 @@
 //! - Polyanskiy, M.N. (2024). Refractiveindex.info database of optical
 //!   constants. *Scientific Data*, 11, 94.
 
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use eunomia::Complex;
 use std::f64::consts::PI;
 
 /// Johnson-Christy gold optical constants `(wavelength_um, n, k)`.
@@ -221,4 +221,3 @@ fn interpolate_gold_nk(wavelength_um: f64) -> (f64, f64) {
     let last = JOHNSON_CHRISTY_GOLD[JOHNSON_CHRISTY_GOLD.len() - 1];
     (last.1, last.2)
 }
-

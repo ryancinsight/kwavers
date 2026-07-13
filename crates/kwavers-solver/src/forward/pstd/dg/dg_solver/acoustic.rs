@@ -87,7 +87,11 @@ impl DGSolver {
         workspace: &mut AcousticDg1DWorkspace,
     ) -> KwaversResult<()> {
         validate_acoustic_inputs(self.n_nodes, pressure, velocity, density)?;
-        workspace.ensure_dim((pressure.shape()[0], pressure.shape()[1], pressure.shape()[2]));
+        workspace.ensure_dim((
+            pressure.shape()[0],
+            pressure.shape()[1],
+            pressure.shape()[2],
+        ));
         workspace.p_original.assign(pressure);
         workspace.u_original.assign(velocity);
 

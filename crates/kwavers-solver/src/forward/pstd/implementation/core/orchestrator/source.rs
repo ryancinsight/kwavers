@@ -7,7 +7,7 @@ use std::sync::Arc;
 impl PSTDSolver {
     /// Add source arc.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
         let mask_leto = source.create_mask(&self.grid);

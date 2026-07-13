@@ -65,7 +65,7 @@ impl ElasticWaveSolver {
         )
     }
 
-    /// Back-compat alias for [`extract_recorded_velocity_components`].
+    /// Back-compat alias for [`Self::extract_recorded_velocity_components`].
     ///
     /// This method does **not** return displacement, despite the legacy
     /// name; it has always returned particle velocity (m/s). The shim

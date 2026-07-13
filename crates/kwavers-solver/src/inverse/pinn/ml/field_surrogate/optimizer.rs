@@ -6,8 +6,8 @@
 //! production trainer ([`super::training::ParamFieldPINNTrainer`])
 //! uses `coeus_optim::Adam` instead.
 
-use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 use coeus_autograd::Parameter;
+use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 
 use super::network::ParamFieldPINNNetwork;
 

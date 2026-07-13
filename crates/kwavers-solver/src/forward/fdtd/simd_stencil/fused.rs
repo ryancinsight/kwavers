@@ -12,7 +12,7 @@ impl FdtdSimdStencilProcessor {
     ///
     /// Updated pressure field; `velocity` is updated in-place.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn fused_update(
         &mut self,

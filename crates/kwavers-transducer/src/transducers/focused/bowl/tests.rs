@@ -477,8 +477,8 @@ fn assert_validation_error(config: BowlConfig) {
 /// and no cross-crate call is needed.)
 #[test]
 fn bowl_focal_gain_matches_oneil_via_rayleigh_sommerfeld() {
-    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER;
     use eunomia::Complex64;
+    use kwavers_core::constants::fundamental::SOUND_SPEED_WATER;
 
     let f0 = MHZ_TO_HZ; // 1 MHz
     let c = SOUND_SPEED_WATER;
@@ -520,4 +520,3 @@ fn bowl_focal_gain_matches_oneil_via_rayleigh_sommerfeld() {
         "discrete RS focal gain {gain} vs O'Neil k·h {expected}"
     );
 }
-

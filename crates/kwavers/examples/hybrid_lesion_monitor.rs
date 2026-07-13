@@ -26,10 +26,7 @@ use kwavers::theranostic::monitor::{
     PamMonitorConfig,
 };
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 const N: usize = 12; // slice pixels per side
 const SPACING_M: f64 = 1.0e-3;

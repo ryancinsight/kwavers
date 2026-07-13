@@ -42,10 +42,10 @@
 use super::KZKConfig;
 use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
-use leto::Array1 as LetoArray1;
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use leto::Array3;
 use kwavers_math::fft::Complex64;
+use leto::Array1 as LetoArray1;
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Nonlinear operator for the KZK equation.
 ///

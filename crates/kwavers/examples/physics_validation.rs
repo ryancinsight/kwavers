@@ -165,7 +165,11 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
         // Use iterator approach for initialization
         p_curr
-            .slice_with_mut::<1>(&[SliceArg::All, SliceArg::Index(0 as isize), SliceArg::Index(0 as isize)])
+            .slice_with_mut::<1>(&[
+                SliceArg::All,
+                SliceArg::Index(0 as isize),
+                SliceArg::Index(0 as isize),
+            ])
             .expect("slice_with_mut")
             .indexed_iter_mut()
             .expect("indexed_iter_mut")
@@ -175,7 +179,11 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
             });
 
         p_prev
-            .slice_with_mut::<1>(&[SliceArg::All, SliceArg::Index(0 as isize), SliceArg::Index(0 as isize)])
+            .slice_with_mut::<1>(&[
+                SliceArg::All,
+                SliceArg::Index(0 as isize),
+                SliceArg::Index(0 as isize),
+            ])
             .expect("slice_with_mut")
             .indexed_iter_mut()
             .expect("indexed_iter_mut")
@@ -214,7 +222,11 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
         // Use iterator with enumerate for index access
         p_curr
-            .slice_with::<1>(&[SliceArg::All, SliceArg::Index(0 as isize), SliceArg::Index(0 as isize)])
+            .slice_with::<1>(&[
+                SliceArg::All,
+                SliceArg::Index(0 as isize),
+                SliceArg::Index(0 as isize),
+            ])
             .expect("slice_with")
             .iter()
             .enumerate()

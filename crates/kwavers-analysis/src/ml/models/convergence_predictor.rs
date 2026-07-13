@@ -2,10 +2,7 @@
 
 use super::{MLModel, MlModelMetadata};
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Convergence prediction model
 #[derive(Debug)]

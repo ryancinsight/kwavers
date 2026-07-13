@@ -2,10 +2,7 @@ use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;
 use approx::assert_abs_diff_eq;
-use leto::{
-    Array1,
-    Array3,
-};
+use leto::{Array1, Array3};
 
 #[test]
 fn test_linear_interpolator_simple() {
@@ -98,8 +95,7 @@ fn test_trilinear_3d_batch() {
     let dx = 1.0;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let data =
-        Array3::from_vec([2, 2, 2], vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
+    let data = Array3::from_vec([2, 2, 2], vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
 
     let target_x = Array1::from_vec(1, vec![0.5]).unwrap();
     let target_y = Array1::from_vec(1, vec![0.5]).unwrap();

@@ -1,7 +1,7 @@
 //! Monolithic residual subsystem.
 //!
 //! This directory is the internal Newton-Krylov physics layer for
-//! [`MonolithicCoupler`](super::coupler::MonolithicCoupler).  It separates the
+//! [`super::MonolithicCoupler`].  It separates the
 //! three mathematical responsibilities that were previously co-located in one
 //! file:
 //!

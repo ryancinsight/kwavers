@@ -20,10 +20,7 @@
 //!   §10.4 (scan conversion). Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array2,
-    ArrayView2,
-};
+use leto::{Array2, ArrayView2};
 
 /// Polar acquisition geometry: uniformly-spaced beams, uniform range sampling.
 #[derive(Debug, Clone, Copy)]

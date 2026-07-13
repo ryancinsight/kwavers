@@ -23,7 +23,7 @@ type GradientPair2D<B> = (coeus_tensor::Tensor<f32, B>, coeus_tensor::Tensor<f32
 /// output component, columns 1 and 2 of `input_grad.grad()` yield ∂/∂x and
 /// ∂/∂y respectively.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_spatial_gradient_2d<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,
@@ -71,7 +71,7 @@ where
 /// Two separate backward passes are required because each component's gradient
 /// is computed from a distinct scalar reduction of its corresponding output slice.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_divergence_2d<B, F>(
     forward_fn: F,
     input: &coeus_tensor::Tensor<f32, B>,

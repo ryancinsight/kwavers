@@ -142,8 +142,14 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("ct_hu", leto3_to_nd3(result.ct_hu).to_pyarray(py))?;
     out.set_item("label", leto3_to_nd3(result.label).to_pyarray(py))?;
     out.set_item("body_mask", leto3_to_nd3(result.body_mask).to_pyarray(py))?;
-    out.set_item("target_mask", leto3_to_nd3(result.target_mask).to_pyarray(py))?;
-    out.set_item("inversion_mask", leto3_to_nd3(result.inversion_mask).to_pyarray(py))?;
+    out.set_item(
+        "target_mask",
+        leto3_to_nd3(result.target_mask).to_pyarray(py),
+    )?;
+    out.set_item(
+        "inversion_mask",
+        leto3_to_nd3(result.inversion_mask).to_pyarray(py),
+    )?;
     out.set_item(
         "background_sound_speed_m_s",
         leto3_to_nd3(result.background_sound_speed_m_s).to_pyarray(py),
@@ -160,7 +166,10 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
         "reconstructed_delta_c_m_s",
         leto3_to_nd3(result.reconstructed_delta_c_m_s).to_pyarray(py),
     )?;
-    out.set_item("background_beta", leto3_to_nd3(result.background_beta).to_pyarray(py))?;
+    out.set_item(
+        "background_beta",
+        leto3_to_nd3(result.background_beta).to_pyarray(py),
+    )?;
     out.set_item("true_beta", leto3_to_nd3(result.true_beta).to_pyarray(py))?;
     out.set_item(
         "reconstructed_beta",
@@ -366,4 +375,3 @@ pub(super) fn nonlinear3d_result_to_dict<'py>(
     out.set_item("metrics", metrics)?;
     Ok(out)
 }
-

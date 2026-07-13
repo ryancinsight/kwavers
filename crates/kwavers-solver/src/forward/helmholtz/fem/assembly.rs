@@ -4,11 +4,11 @@
 //! Provides efficient sparse matrix construction and boundary condition application.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
 use kwavers_mesh::Tetrahedron;
-use moirai_parallel::{map_collect_index_with, Adaptive};
 use leto::Array1;
-use kwavers_math::fft::Complex64;
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 /// FEM matrix assembly utilities
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl FemAssembly {
 
     /// Assemble global matrices from element contributions (parallel version)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn assemble_global_matrices_parallel(
         &self,

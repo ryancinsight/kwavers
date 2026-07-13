@@ -33,10 +33,7 @@ pub use line_reconstruction::{kspace_line_recon, LineReconDataOrder, LineReconIn
 
 use crate::reconstruction::Reconstructor;
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 impl Reconstructor for PhotoacousticReconstructor {
     fn reconstruct(

@@ -16,6 +16,7 @@ fn test_therapy_orchestrator_creation() {
             duty_cycle: 0.01,
             focal_depth: 0.05,
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: TI_LIMIT_SOFT_TISSUE,

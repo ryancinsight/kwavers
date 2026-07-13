@@ -1,10 +1,7 @@
 //! Test covariance matrix generators.
 
 use eunomia::Complex64;
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Create a well-conditioned Hermitian covariance matrix for testing.
 ///

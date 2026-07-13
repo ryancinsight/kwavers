@@ -3,11 +3,8 @@
 use super::config::SwePmlConfig;
 use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_pair_mut};
 use kwavers_grid::Grid;
+use leto::{Array1, Array3};
 use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
-use leto::{
-    Array1,
-    Array3,
-};
 
 const PML_CHUNK: usize = 4096;
 
@@ -258,8 +255,16 @@ fn apply_velocity_damping(
         sigma.shape(),
         "invariant: PML vx/sigma shape mismatch"
     );
-    assert_eq!(vx.shape(), vy.shape(), "invariant: PML vx/vy shape mismatch");
-    assert_eq!(vx.shape(), vz.shape(), "invariant: PML vx/vz shape mismatch");
+    assert_eq!(
+        vx.shape(),
+        vy.shape(),
+        "invariant: PML vx/vy shape mismatch"
+    );
+    assert_eq!(
+        vx.shape(),
+        vz.shape(),
+        "invariant: PML vx/vz shape mismatch"
+    );
 
     match (
         vx.as_slice_mut(),

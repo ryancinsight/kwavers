@@ -2,8 +2,8 @@ use super::models::PermeabilityModels;
 use super::types::{BBBParameters, PermeabilityEnhancement};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
-use log::info;
 use leto::Array3;
+use log::info;
 
 /// BBB opening simulation
 #[derive(Debug)]

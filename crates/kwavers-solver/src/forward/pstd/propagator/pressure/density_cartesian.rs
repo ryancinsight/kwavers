@@ -275,7 +275,7 @@ impl PSTDSolver {
     /// saving 2 × N element writes per axis per step (6 passes eliminated for 3D).
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub(crate) fn update_density_cartesian(&mut self, dt: f64) -> KwaversResult<()> {

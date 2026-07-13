@@ -126,8 +126,8 @@ fn truncate_z_half(input: &Array3<f64>, nz_c: usize) -> Array3<f64> {
 impl PSTDSolver {
     /// New.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         mut config: PSTDConfig,
@@ -175,8 +175,16 @@ impl PSTDSolver {
         // nabla1 = |k|^(y-2) and nabla2 = |k|^(y-1) are symmetric under kz sign flip,
         // so the first nz_c z-values are the complete independent set for real-input fields.
         if let Some(ref mut abs) = absorption {
-            abs.nabla1 = abs.nabla1.slice_with(&s![.., .., ..nz_c]).unwrap().to_contiguous();
-            abs.nabla2 = abs.nabla2.slice_with(&s![.., .., ..nz_c]).unwrap().to_contiguous();
+            abs.nabla1 = abs
+                .nabla1
+                .slice_with(&s![.., .., ..nz_c])
+                .unwrap()
+                .to_contiguous();
+            abs.nabla2 = abs
+                .nabla2
+                .slice_with(&s![.., .., ..nz_c])
+                .unwrap()
+                .to_contiguous();
         }
         // Capture the raw |k| half-spectrum (r2c z-axis: nz_c = nz/2+1) BEFORE the
         // kappa cosine transform overwrites k_mag. Needed to build the broadband
@@ -211,8 +219,14 @@ impl PSTDSolver {
         // generate_shift_1d produces i·k·exp(±i·k·ds/2) for k in rfftfreq order
         // (indices [0, nz_c) cover non-negative kz exactly), so prefix truncation is exact.
         let (ddz_full_pos, ddz_full_neg) = generate_shift_1d(grid.nz, dk_z, grid.dz);
-        let ddz_k_shift_pos = ddz_full_pos.slice_with(&s![..nz_c]).unwrap().to_contiguous();
-        let ddz_k_shift_neg = ddz_full_neg.slice_with(&s![..nz_c]).unwrap().to_contiguous();
+        let ddz_k_shift_pos = ddz_full_pos
+            .slice_with(&s![..nz_c])
+            .unwrap()
+            .to_contiguous();
+        let ddz_k_shift_neg = ddz_full_neg
+            .slice_with(&s![..nz_c])
+            .unwrap()
+            .to_contiguous();
 
         let shape = (grid.nx, grid.ny, grid.nz);
         let shape3 = [grid.nx, grid.ny, grid.nz];
@@ -312,10 +326,7 @@ impl PSTDSolver {
             // (Opt-8) — all three axes are processed sequentially, one buffer suffices.
             ux_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
             grad_k: leto::Array3::zeros([grid.nx, grid.ny, nz_c]),
-            materials: MaterialFields {
-                rho0,
-                c0,
-            },
+            materials: MaterialFields { rho0, c0 },
             bon,
             absorption,
             k_mag_half,

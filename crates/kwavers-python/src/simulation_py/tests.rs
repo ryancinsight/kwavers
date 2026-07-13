@@ -71,8 +71,11 @@ mod simulation_contract_tests {
     fn time_reversal_reconstruction_impl_preserves_zero_field_with_pml_crop() {
         let grid = Grid::new(6, 6, 1, 0.1e-3, 0.1e-3, 0.1e-3).unwrap();
         let sensor_data = nd_to_leto2(Array2::zeros((3, 8)));
-        let sensor_positions =
-            nd_to_leto2(array![[0.0, 0.0, 0.0], [0.0, 0.1e-3, 0.0], [0.0, 0.2e-3, 0.0]]);
+        let sensor_positions = nd_to_leto2(array![
+            [0.0, 0.0, 0.0],
+            [0.0, 0.1e-3, 0.0],
+            [0.0, 0.2e-3, 0.0]
+        ]);
 
         let reconstruction = time_reversal_reconstruction_impl(
             sensor_data,

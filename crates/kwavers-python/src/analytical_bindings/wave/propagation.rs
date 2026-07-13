@@ -2,7 +2,7 @@
 //! reflection/transmission, power-law attenuation, Stokes–Kirchhoff absorption).
 
 use kwavers_physics::analytical::wave;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -285,4 +285,3 @@ pub fn stokes_kirchhoff_absorption_np_m(
     let result = wave::stokes_kirchhoff_absorption_np_m(f_slice, delta_m2_s, c0);
     Ok(result.to_pyarray(py).unbind())
 }
-

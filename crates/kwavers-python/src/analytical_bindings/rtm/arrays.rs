@@ -1,7 +1,7 @@
 //! NumPy conversion helpers for RTM bindings.
 
 use numpy::ndarray::{Array2, ArrayView2};
-use numpy::{ToPyArray, PyArray2};
+use numpy::{PyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -34,4 +34,3 @@ pub(super) fn complex_field_arrays(
         array2_from_flat(py, nx, nz, imag_flat)?,
     ))
 }
-

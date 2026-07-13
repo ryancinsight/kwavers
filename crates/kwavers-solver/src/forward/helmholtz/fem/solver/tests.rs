@@ -4,9 +4,9 @@ use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_mesh::{MeshBoundaryType, TetrahedralMesh};
 use leto::Array2;
-use kwavers_math::fft::Complex64;
 
 fn unit_tet() -> (TetrahedralMesh, [usize; 4]) {
     let mut mesh = TetrahedralMesh::new();
@@ -82,11 +82,9 @@ fn test_interpolate_solution_basic() {
     solver.solution[n2] = Complex64::new(2.0, 0.0);
     solver.solution[n3] = Complex64::new(3.0, 0.0);
 
-    let query_points = Array2::from_shape_vec(
-        (3, 3),
-        vec![0.25, 0.25, 0.25, 1.0, 0.0, 0.0, 2.0, 2.0, 2.0],
-    )
-    .expect("invariant: 3x3 query points shape matches data length");
+    let query_points =
+        Array2::from_shape_vec((3, 3), vec![0.25, 0.25, 0.25, 1.0, 0.0, 0.0, 2.0, 2.0, 2.0])
+            .expect("invariant: 3x3 query points shape matches data length");
     let result = solver
         .interpolate_solution(query_points.view())
         .expect("Interpolation failed");
@@ -305,7 +303,7 @@ fn fem_p1_interpolation_error_converges_as_h_squared() {
                 }
             }
         }
-        let npts = test_pts.len() ;
+        let npts = test_pts.len();
         let mut raw = vec![0.0f64; npts * 3];
         for (idx, pt) in test_pts.iter().enumerate() {
             raw[idx * 3] = pt[0];

@@ -1,8 +1,8 @@
 //! Acoustic adjoint-state primitives.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use leto::{Array2, Array3, ArrayView3};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 fn validate_pair_shapes(
     observed: &Array2<f64>,
@@ -28,7 +28,7 @@ fn validate_pair_shapes(
 /// The residual is defined as `d_syn - d_obs`, which is the gradient of
 /// `1/2 ||d_syn - d_obs||²` with respect to the synthetic data.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn l2_residual(observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversResult<Array2<f64>> {
     validate_pair_shapes(observed, synthetic)?;
@@ -41,8 +41,8 @@ pub fn l2_residual(observed: &Array2<f64>, synthetic: &Array2<f64>) -> KwaversRe
 /// For `J = (dt / 2) ||d_syn - d_obs||²`, the objective is non-negative and
 /// vanishes if and only if `d_syn = d_obs` pointwise.
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn l2_objective(
     dt: f64,
@@ -81,8 +81,8 @@ pub fn reverse_time_axis(data: &Array2<f64>) -> Array2<f64> {
 /// matching time slices, then `G += scale * forward ⊙ adjoint` is the exact
 /// discrete imaging-condition update.
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn accumulate_signed_correlation(
     gradient: &mut Array3<f64>,
@@ -103,8 +103,7 @@ pub fn accumulate_signed_correlation(
         ));
     }
 
-    if gradient.view().is_c_contiguous() && forward.is_c_contiguous() && adjoint.is_c_contiguous()
-    {
+    if gradient.view().is_c_contiguous() && forward.is_c_contiguous() && adjoint.is_c_contiguous() {
         let forward = forward
             .as_slice()
             .expect("invariant: standard-layout forward view exposes memory-order slice");
@@ -139,10 +138,7 @@ pub fn accumulate_signed_correlation(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use leto::{
-    Array2,
-    Array3,
-};
+    use leto::{Array2, Array3};
 
     #[test]
     fn test_l2_residual_is_synthetic_minus_observed() {

@@ -3,11 +3,8 @@
 use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use leto::{Array2, Array3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, map_collect_with, Adaptive};
-use leto::{
-    Array2,
-    Array3,
-};
 
 const TRIAL_MODEL_CHUNK_LEN: usize = 4096;
 
@@ -46,7 +43,7 @@ impl FwiProcessor {
     /// allocated.  Peak memory ~55 MB per call; safe to call from the Atlas
     /// execution provider.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_objective(
         &self,
@@ -64,7 +61,7 @@ impl FwiProcessor {
     /// Shots are independent: each forward model reads `model` and `grid`
     /// immutably, so the loop runs through the Atlas execution provider.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_joint_objective(
         &self,
@@ -90,7 +87,7 @@ impl FwiProcessor {
     ///
     /// Reference: Nocedal & Wright (2006) §3.1, Condition (3.6a) with c₁ → 0.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn line_search(
         &self,
@@ -133,7 +130,7 @@ impl FwiProcessor {
     /// `c + |α|·g`.  Returns `0.0` when neither direction satisfies sufficient
     /// decrease.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn line_search_multi(
         &self,

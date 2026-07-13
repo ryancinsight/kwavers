@@ -1,7 +1,4 @@
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -115,11 +112,11 @@ pub fn gbm_subspot_covered_fraction(
                     .rows()
                     .expect("invariant: subspot_indices is rank-2")
                     .any(|spot| {
-                    let dx = (ix as f64 - spot[0] as f64) * spacing_m[0];
-                    let dy = (iy as f64 - spot[1] as f64) * spacing_m[1];
-                    let dz = (iz as f64 - spot[2] as f64) * spacing_m[2];
-                    dx * dx + dy * dy + dz * dz <= radius2
-                })
+                        let dx = (ix as f64 - spot[0] as f64) * spacing_m[0];
+                        let dy = (iy as f64 - spot[1] as f64) * spacing_m[1];
+                        let dz = (iz as f64 - spot[2] as f64) * spacing_m[2];
+                        dx * dx + dy * dy + dz * dz <= radius2
+                    })
         })
         .count();
     covered_count as f64 / tumor_count as f64

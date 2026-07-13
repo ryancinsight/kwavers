@@ -50,7 +50,7 @@ where
 {
     /// Create a new meta-learner
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: MetaLearningConfig) -> KwaversResult<Self> {
         let pinn_config = PinnConfig2D {

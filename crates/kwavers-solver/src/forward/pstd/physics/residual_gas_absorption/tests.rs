@@ -20,7 +20,7 @@ use kwavers_source::GridSource;
 use leto::Array3;
 use std::f64::consts::PI;
 
-/// Minnaert resonance frequency [Hz] of an air bubble of radius `r` in a liquid
+/// Minnaert resonance frequency \[Hz\] of an air bubble of radius `r` in a liquid
 /// at ambient pressure `p0`: f_M = (1/2πr)·√(3γp0/ρ).
 fn minnaert_freq(r: f64, p0: f64, gamma: f64, rho: f64) -> f64 {
     (3.0 * gamma * p0 / rho).sqrt() / (2.0 * PI * r)

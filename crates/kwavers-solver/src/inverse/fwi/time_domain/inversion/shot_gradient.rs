@@ -3,10 +3,7 @@
 use super::super::{geometry::FwiGeometry, gradient::mute_gradient_near_sources, FwiProcessor};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
@@ -20,7 +17,7 @@ impl FwiProcessor {
     /// Returns `(Jᵢ, ∂Jᵢ/∂c)`.  Applies near-source gradient mute when
     /// `FwiParameters::source_mute_radius > 0`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_shot_gradient(
         &self,

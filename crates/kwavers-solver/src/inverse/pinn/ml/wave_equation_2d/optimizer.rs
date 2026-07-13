@@ -1,5 +1,5 @@
-use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 use coeus_autograd::Parameter;
+use coeus_optim::{Optimizer as CoeusOptimizer, SGD};
 
 use super::model::PinnWave2D;
 

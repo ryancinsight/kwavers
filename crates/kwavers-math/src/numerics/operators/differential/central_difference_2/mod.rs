@@ -51,10 +51,7 @@
 //!   DOI: 10.1090/S0025-5718-1988-0935077-0
 
 use kwavers_core::error::{KwaversResult, NumericalError};
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 use leto_ops::zip2_mut_with;
 
 use super::{traversal, DifferentialOperator};
@@ -146,7 +143,11 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.shape(), [nx, ny, nz], "dst shape must match field shape");
+        debug_assert_eq!(
+            dst.shape(),
+            [nx, ny, nz],
+            "dst shape must match field shape"
+        );
         let inv2dx = 0.5 / self.dx;
         let inv_dx = 1.0 / self.dx;
 
@@ -174,22 +175,41 @@ impl CentralDifference2 {
         }
 
         // Interior: central difference via contiguous slice pairs
-        let mut dst_slice = dst.slice_mut(&[(1, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(1, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
         let field_hi = field.slice(&[(2, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx - 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv2dx).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx - 2, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv2dx
+        })
+        .unwrap();
 
         // Left boundary (i=0): forward difference
         let mut dst_slice = dst.slice_mut(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
         let field_hi = field.slice(&[(1, 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
         let field_lo = field.slice(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dx).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dx
+        })
+        .unwrap();
 
         // Right boundary (i=nx−1): backward difference
-        let mut dst_slice = dst.slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        let field_hi = field.slice(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(nx - 2, nx - 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dx).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_hi = field
+            .slice(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_lo = field
+            .slice(&[(nx - 2, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dx
+        })
+        .unwrap();
 
         Ok(())
     }
@@ -214,7 +234,11 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.shape(), [nx, ny, nz], "dst shape must match field shape");
+        debug_assert_eq!(
+            dst.shape(),
+            [nx, ny, nz],
+            "dst shape must match field shape"
+        );
         let inv2dy = 0.5 / self.dy;
         let inv_dy = 1.0 / self.dy;
 
@@ -242,22 +266,41 @@ impl CentralDifference2 {
         }
 
         // Interior
-        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (1, ny - 1, 1), (0, nz, 1)]).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (1, ny - 1, 1), (0, nz, 1)])
+            .unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (2, ny, 1), (0, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx, 1), (0, ny - 2, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv2dy).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny - 2, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv2dy
+        })
+        .unwrap();
 
         // Bottom boundary (j=0)
         let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (1, 2, 1), (0, nz, 1)]).unwrap();
         let field_lo = field.slice(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dy).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dy
+        })
+        .unwrap();
 
         // Top boundary (j=ny−1)
-        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
-        let field_hi = field.slice(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx, 1), (ny - 2, ny - 1, 1), (0, nz, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dy).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_hi = field
+            .slice(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (ny - 2, ny - 1, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dy
+        })
+        .unwrap();
 
         Ok(())
     }
@@ -283,7 +326,11 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.shape(), [nx, ny, nz], "dst shape must match field shape");
+        debug_assert_eq!(
+            dst.shape(),
+            [nx, ny, nz],
+            "dst shape must match field shape"
+        );
         let inv2dz = 0.5 / self.dz;
         let inv_dz = 1.0 / self.dz;
 
@@ -311,22 +358,41 @@ impl CentralDifference2 {
         }
 
         // Interior (innermost dimension — highest SIMD throughput)
-        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (1, nz - 1, 1)]).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (0, ny, 1), (1, nz - 1, 1)])
+            .unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (2, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 2, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv2dz).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 2, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv2dz
+        })
+        .unwrap();
 
         // Near boundary (k=0)
         let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
         let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (1, 2, 1)]).unwrap();
         let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dz).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dz
+        })
+        .unwrap();
 
         // Far boundary (k=nz−1)
-        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
-        let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)]).unwrap();
-        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (nz - 2, nz - 1, 1)]).unwrap();
-        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| *r = (hi - lo) * inv_dz).unwrap();
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
+            .unwrap();
+        let field_hi = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
+            .unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (nz - 2, nz - 1, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dz
+        })
+        .unwrap();
 
         Ok(())
     }

@@ -6,10 +6,7 @@
 //! adapters supply the mask, the reference (e.g. brain reference speed,
 //! soft-tissue reference speed), and the gain.
 
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// 2-D high-pass image enhancement (slice analogue of [`high_pass_enhance_volume`]).
 ///

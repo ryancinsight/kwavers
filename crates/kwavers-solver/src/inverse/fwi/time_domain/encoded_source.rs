@@ -52,10 +52,7 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Generate the `n × n` Sylvester–Hadamard code matrix (`n` a power of two).
 ///
@@ -64,7 +61,7 @@ use leto::{
 /// averaged encoded gradient.
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] if `n` is zero or not a power of two.
+/// Returns [`crate::KwaversError::Validation`] if `n` is zero or not a power of two.
 pub fn hadamard_codes(n: usize) -> KwaversResult<Vec<Vec<f64>>> {
     if n == 0 || !n.is_power_of_two() {
         return Err(KwaversError::Validation(
@@ -100,7 +97,7 @@ pub fn hadamard_codes(n: usize) -> KwaversResult<Vec<Vec<f64>>> {
 /// `Σᵢ cᵢ sᵢ` and the encoded data is `Σᵢ cᵢ dᵢ`, both formed row-wise.
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] if the gather is empty, the code count
+/// Returns [`crate::KwaversError::Validation`] if the gather is empty, the code count
 /// differs from the shot count, a shot lacks a pressure source signal/mask, or
 /// the shots do not share an identical receiver mask, source mask, source-signal
 /// shape, and data shape.
@@ -214,10 +211,10 @@ impl FwiProcessor {
     /// random ±1 schedule produces the classical stochastic encoded FWI.
     ///
     /// # Errors
-    /// - [`KwaversError::Validation`] if the gather or schedule is empty, a code
+    /// - [`crate::KwaversError::Validation`] if the gather or schedule is empty, a code
     ///   vector length differs from the shot count, or a shot fails geometry
     ///   validation.
-    /// - Propagates any [`KwaversError`] from encoding or the descent step.
+    /// - Propagates any [`crate::KwaversError`] from encoding or the descent step.
     pub fn invert_encoded(
         &self,
         shots: &[(FwiGeometry, Array2<f64>)],

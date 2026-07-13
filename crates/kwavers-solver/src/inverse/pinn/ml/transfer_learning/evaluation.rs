@@ -8,7 +8,7 @@ where
 {
     /// Evaluate model accuracy on geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn evaluate_accuracy(
         &self,
@@ -35,7 +35,8 @@ where
         }
 
         let pde_accuracy = 1.0 / (1.0 + total_residual.sqrt() / (test_points.len()) as f64);
-        let boundary_accuracy = 1.0 / (1.0 + total_boundary_error.sqrt() / (conditions.len()) as f64);
+        let boundary_accuracy =
+            1.0 / (1.0 + total_boundary_error.sqrt() / (conditions.len()) as f64);
 
         let overall_accuracy = 0.7 * pde_accuracy + 0.3 * boundary_accuracy;
 
@@ -68,7 +69,7 @@ where
 
     /// Compute PDE residual at a point (simplified wave equation: ∂²u/∂t² = c²∇²u)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_pde_residual(
         &self,
@@ -112,7 +113,7 @@ where
     /// For Neumann (∂u/∂n = 0): ε_BC = (1/N) Σ |∂u_model/∂n|²
     /// For Periodic/Absorbing: Returns 0.0 (no simple pointwise residual)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn evaluate_boundary_condition(
         &self,

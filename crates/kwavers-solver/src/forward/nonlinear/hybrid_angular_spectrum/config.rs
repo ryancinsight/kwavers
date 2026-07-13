@@ -45,7 +45,7 @@ impl Default for HASConfig {
 impl HASConfig {
     /// Create configuration with validation.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if any parameter is out of range.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if any parameter is out of range.
     pub fn new(
         sound_speed: f64,
         density: f64,
@@ -77,7 +77,7 @@ impl HASConfig {
     /// (`f^y → NaN`) or a negative attenuation coefficient.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if any parameter is out of its physical range.
+    /// - [`crate::KwaversError::InvalidInput`] if any parameter is out of its physical range.
     pub fn validate(&self) -> KwaversResult<()> {
         if self.sound_speed <= 0.0 {
             return Err(KwaversError::InvalidInput(

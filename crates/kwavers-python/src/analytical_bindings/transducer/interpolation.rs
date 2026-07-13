@@ -2,7 +2,7 @@
 
 use kwavers_physics::analytical::transducer;
 use numpy::ndarray::Array2;
-use numpy::{ToPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -75,9 +75,5 @@ pub fn bli_interpolation_error_curves(
         return Err(PyValueError::new_err("delta entries must be finite"));
     }
     let (nearest, bli) = transducer::bli_interpolation_error_curves(ppw_s, delta_s, n_stencil);
-    Ok((
-        nearest.to_pyarray(py).unbind(),
-        bli.to_pyarray(py).unbind(),
-    ))
+    Ok((nearest.to_pyarray(py).unbind(), bli.to_pyarray(py).unbind()))
 }
-

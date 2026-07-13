@@ -285,7 +285,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PhysicsDom
 
     /// Remove a domain
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn remove_domain(&mut self, name: &str) -> KwaversResult<()> {
         if self.domains.remove(name).is_some() {

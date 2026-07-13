@@ -20,10 +20,7 @@ use kwavers_math::inverse_problems::tv_denoise_chambolle;
 use kwavers_solver::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 use std::io::Write;
 
 const NX: usize = 64;

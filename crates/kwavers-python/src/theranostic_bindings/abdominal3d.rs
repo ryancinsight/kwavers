@@ -145,4 +145,3 @@ pub fn plan_abdominal_array_placement_from_ritk_ct<'py>(
     out.set_item("synthetic_phantom", synthetic)?;
     Ok(out)
 }
-

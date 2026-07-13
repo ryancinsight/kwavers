@@ -1,7 +1,7 @@
 //! Skull attenuation and aberration bindings.
 
 use kwavers_physics::analytical::skull as skull_mod;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -64,4 +64,3 @@ pub fn skull_phase_screen(
 pub fn strehl_ratio(sigma_phi_rad: f64) -> PyResult<f64> {
     Ok(skull_mod::strehl_ratio(sigma_phi_rad))
 }
-

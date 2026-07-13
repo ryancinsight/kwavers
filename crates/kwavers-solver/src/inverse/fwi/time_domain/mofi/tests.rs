@@ -16,10 +16,7 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use leto::{
-    Array2,
-    Array3,
-};
+use leto::{Array2, Array3};
 
 /// Asymmetric two-blob sound-speed template on a water background. Asymmetry is
 /// required for the rotation to be identifiable from the data.

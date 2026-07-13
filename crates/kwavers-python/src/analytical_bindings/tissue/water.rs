@@ -1,7 +1,7 @@
 //! Water-property analytical bindings.
 
 use kwavers_physics::analytical::tissue;
-use numpy::{ToPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -44,4 +44,3 @@ pub fn water_density_temperature(
     let result = tissue::water_density_temperature(t_s);
     Ok(result.to_pyarray(py).unbind())
 }
-

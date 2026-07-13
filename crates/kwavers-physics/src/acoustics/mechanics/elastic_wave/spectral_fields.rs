@@ -53,8 +53,8 @@
 //! - Kreiss H.O., Oliger J. (1972). SIAM J. Numer. Anal. 9(1), 112–128.
 //!   (spectral accuracy for periodic problems)
 
-use leto::Array3 as LetoArray3;
 use kwavers_math::fft::Complex64;
+use leto::Array3 as LetoArray3;
 
 /// Complex-valued stress field components for spectral methods
 #[derive(Debug, Clone)]

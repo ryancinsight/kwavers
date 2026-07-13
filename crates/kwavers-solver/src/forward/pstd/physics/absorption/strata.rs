@@ -32,8 +32,8 @@
 //! - Treeby & Cox (2010). J. Biomed. Opt. 15(2), 021314, Eqs. 9–10, 19–21.
 
 use kwavers_core::constants::ABSORPTION_SINGULARITY_THRESHOLD;
-use moirai_parallel::{map_collect_index_with, Adaptive};
 use leto::Array3;
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 /// Maximum number of exponent strata. Caps the per-step inverse-FFT count and
 /// the symbol memory; a CT body model spans y ∈ [1.0, 1.1], so an 8-point
@@ -121,10 +121,10 @@ pub(crate) struct ExponentStrata {
     /// Per-stratum spectral symbol `|k|^(y_m − 1)`, half-spectrum.
     pub nabla2: Vec<Array3<f64>>,
     /// Per-voxel lower-bracket stratum index `m` with
-    /// `exponents[m] ≤ y(voxel) ≤ exponents[m+1]`.
+    /// `exponents\[m\] ≤ y(voxel) ≤ exponents[m+1]`.
     pub bracket_lo: Array3<u32>,
     /// Per-voxel blend weight `t` toward the upper bracket, so
-    /// `y(voxel) = (1−t)·exponents[m] + t·exponents[m+1]`.
+    /// `y(voxel) = (1−t)·exponents\[m\] + t·exponents[m+1]`.
     pub weight_hi: Array3<f64>,
 }
 

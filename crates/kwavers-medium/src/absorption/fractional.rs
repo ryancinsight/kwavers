@@ -1,8 +1,8 @@
 //! Fractional Laplacian absorption model
 
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;
-use eunomia::Complex;
 
 use crate::parallel::zip_mut_ref;
 
@@ -128,4 +128,3 @@ impl FractionalDerivative {
         }
     }
 }
-

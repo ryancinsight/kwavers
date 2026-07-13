@@ -3,8 +3,8 @@ use super::{
     validate_covariance_matrix,
 };
 use approx::assert_relative_eq;
-use leto::Array2;
 use eunomia::Complex64;
+use leto::Array2;
 
 #[test]
 fn test_sample_covariance_basic() {
@@ -46,7 +46,8 @@ fn test_sample_covariance_insufficient_snapshots() {
 
     let cov = estimate_sample_covariance(&data, 1e-4).unwrap();
     assert_eq!(
-        cov.shape(), [8, 8],
+        cov.shape(),
+        [8, 8],
         "covariance matrix must be 8×8 (n_sensors)"
     );
 }

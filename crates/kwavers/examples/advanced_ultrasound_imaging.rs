@@ -13,11 +13,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::advanced::{
     PlaneWaveReconstruction, SyntheticApertureConfig, SyntheticApertureReconstruction,
     UltrasoundPlaneWaveConfig,
 };
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
+use leto::{Array1, Array2, Array3};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🩺 Advanced Ultrasound Imaging Demonstration");
@@ -164,7 +160,11 @@ fn demonstrate_plane_wave_imaging() -> Result<(), Box<dyn std::error::Error>> {
 
     let pw_compounding = PlaneWaveCompounding::new(&angles, base_config);
     let compounded_images = Array3::from_shape_vec(
-        (pw_images.len(), pw_images[0].shape()[0], pw_images[0].shape()[1]),
+        (
+            pw_images.len(),
+            pw_images[0].shape()[0],
+            pw_images[0].shape()[1],
+        ),
         pw_images.iter().flat_map(|a| a.iter().copied()).collect(),
     )?;
 
@@ -453,4 +453,3 @@ fn analyze_pulse_compression(original: &Array1<f64>, compressed: &Array1<f64>) -
         main_lobe_width,
     }
 }
-

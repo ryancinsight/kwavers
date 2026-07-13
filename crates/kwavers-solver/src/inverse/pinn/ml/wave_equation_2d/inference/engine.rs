@@ -41,7 +41,7 @@ where
 {
     /// Create a new real-time PINN inference engine
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(pinn: PinnWave2D<B>) -> KwaversResult<Self> {
         let layer_sizes = WaveQuantizer2D::extract_layer_sizes(&pinn);
@@ -172,7 +172,7 @@ where
     }
     /// Validate performance.
     /// # Errors
-    /// - Returns [`KwaversError::PerformanceError`] if the precondition for a PerformanceError-class constraint is violated.
+    /// - Returns [`crate::KwaversError::PerformanceError`] if the precondition for a PerformanceError-class constraint is violated.
     ///
     pub fn validate_performance(&mut self, test_samples: usize) -> KwaversResult<f64> {
         use std::time::Instant;

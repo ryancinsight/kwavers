@@ -16,11 +16,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::{Array3, ArrayView3};
 use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
-use leto::{
-    Array3,
-    ArrayView3,
-};
 
 use kwavers_physics::thermal::diffusion::{
     BioheatParameters, CattaneoVernotte, HyperbolicParameters, PennesBioheat,
@@ -87,7 +84,7 @@ impl ThermalDiffusionSolver {
     /// Compute `∇²T` into the pre-allocated Laplacian workspace.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Validation`] if `spatial_order` is not 2 or 4.
+    /// Returns [`crate::KwaversError::Validation`] if `spatial_order` is not 2 or 4.
     /// Invalid orders are rejected rather than downgraded because changing the
     /// stencil order changes the truncation-error and stability contract.
     fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
@@ -255,7 +252,7 @@ impl ThermalDiffusionSolver {
 
     /// Update.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update(
         &mut self,

@@ -25,7 +25,7 @@ impl WaveletTransform {
 
     /// Forward wavelet transform
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn forward(&self, data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut result = data.clone();
@@ -41,7 +41,7 @@ impl WaveletTransform {
 
     /// Inverse wavelet transform
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn inverse(&self, coeffs: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let mut result = coeffs.clone();

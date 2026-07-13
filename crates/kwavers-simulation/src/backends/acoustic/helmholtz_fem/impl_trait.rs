@@ -5,10 +5,7 @@ use crate::backends::acoustic::backend::FrequencyDomainAcousticBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
 use kwavers_mesh::MeshBoundaryType;
-use leto::{
-    Array1,
-    ArrayView2,
-};
+use leto::{Array1, ArrayView2};
 
 impl FrequencyDomainAcousticBackend for FemHelmholtzBackend<'_> {
     fn add_nodal_load(&mut self, node_idx: usize, value: Complex64) -> KwaversResult<()> {

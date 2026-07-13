@@ -2,10 +2,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
-use leto::{
-    Array3,
-    Array4,
-};
+use leto::{Array3, Array4};
 use std::fmt::Debug;
 
 /// Trait for acoustic wave propagation models.

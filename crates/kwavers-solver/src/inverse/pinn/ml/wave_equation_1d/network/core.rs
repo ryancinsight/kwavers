@@ -23,10 +23,7 @@ use super::super::config::PinnConfig;
 use coeus_autograd::Var;
 use coeus_nn::{Linear, Module};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use leto::{
-    Array1,
-    Array2,
-};
+use leto::{Array1, Array2};
 
 /// Coeus-backed Physics-Informed Neural Network for 1D Wave Equation.
 ///
@@ -64,7 +61,7 @@ where
 {
     /// Create a new PINN for the 1D wave equation.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(config: PinnConfig) -> KwaversResult<Self> {
         if config.hidden_layers.is_empty() {
@@ -165,7 +162,7 @@ where
     /// - `Ok(u)` with predicted field values [n_points, 1]
     /// - `Err(KwaversError::InvalidInput)` if x and t have different lengths
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict(&self, x: &Array1<f64>, t: &Array1<f64>) -> KwaversResult<Array2<f64>> {
         if (x.len()) != (t.len()) {

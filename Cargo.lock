@@ -5051,6 +5051,7 @@ dependencies = [
  "log",
  "moirai-parallel",
  "serde",
+ "tracing",
 ]
 
 [[package]]

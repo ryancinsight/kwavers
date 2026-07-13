@@ -10,12 +10,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::inverse_problems::ModelRegularizer3D;
+use leto::{Array1, Array2, Array3};
 use log::debug;
-use leto::{
-    Array1,
-    Array2,
-    Array3,
-};
 
 use super::config::{SirtAlgorithm, SirtConfig, SirtResult};
 
@@ -39,7 +35,7 @@ impl SirtReconstructor {
     /// - `sensor_data` — Measured data b (m).
     /// - `grid_size` — 3D grid dimensions `(nx, ny, nz)` where n = nx·ny·nz.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -254,7 +250,13 @@ impl SirtReconstructor {
         let [m, _n] = a.shape();
         let mut norms = Array1::zeros(m);
         for i in 0..m {
-            norms[i] = a.index_axis::<1>(0, i).unwrap().iter().map(|x| x * x).sum::<f64>().sqrt();
+            norms[i] = a
+                .index_axis::<1>(0, i)
+                .unwrap()
+                .iter()
+                .map(|x| x * x)
+                .sum::<f64>()
+                .sqrt();
         }
         norms
     }
@@ -263,7 +265,13 @@ impl SirtReconstructor {
         let [_m, n] = a.shape();
         let mut norms = Array1::zeros(n);
         for j in 0..n {
-            norms[j] = a.index_axis::<1>(1, j).unwrap().iter().map(|x| x * x).sum::<f64>().sqrt();
+            norms[j] = a
+                .index_axis::<1>(1, j)
+                .unwrap()
+                .iter()
+                .map(|x| x * x)
+                .sum::<f64>()
+                .sqrt();
         }
         norms
     }

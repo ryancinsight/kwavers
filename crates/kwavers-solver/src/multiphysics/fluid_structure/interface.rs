@@ -57,7 +57,7 @@ impl FsiInterface {
     ///
     /// This ensures physically valid wave propagation modes.
     /// # Errors
-    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
     ///
     pub fn new(spec: FsiInterfaceSpec) -> KwaversResult<Self> {
         let FsiInterfaceSpec {

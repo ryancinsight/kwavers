@@ -5,16 +5,16 @@
 //! the same modal symbols, while clinical diagnostics use the finite-window
 //! source/bin transfer to compare against time-domain acquisition data.
 
-use kwavers_core::error::{KwaversError, KwaversResult};
 use eunomia::Complex64;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use std::f64::consts::TAU;
 
 /// Finite-window PSTD source/bin transfer configuration for one frequency.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PstdTemporalBinConfig {
-    /// Continuous-wave drive frequency [Hz].
+    /// Continuous-wave drive frequency \[Hz\].
     pub frequency_hz: f64,
-    /// PSTD time step [s].
+    /// PSTD time step \[s\].
     pub time_step_s: f64,
     /// Total simulated PSTD steps.
     pub total_steps: usize,
@@ -37,7 +37,7 @@ impl PstdTemporalBinConfig {
 /// Frequency-independent PSTD acquisition timing/source parameters.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PstdTemporalTransferConfig {
-    /// Scalar pressure-source amplitude [Pa].
+    /// Scalar pressure-source amplitude \[Pa\].
     pub source_amplitude_pa: f64,
     /// Number of continuous-wave cycles simulated for each frequency.
     pub cycles_per_frequency: usize,
@@ -191,8 +191,8 @@ pub fn pstd_leapfrog_symbol(
 /// Exact finite-window frequency bin for one PSTD modal unit source.
 ///
 /// The scalar recurrence is
-/// `p[n+1] = (2 - θ²) p[n] - p[n-1] + g (s[n] - s[n-1])`,
-/// with zero initial state and `s[n] = sin(2π f n Δt)`.  The returned value is
+/// `p[n+1] = (2 - θ²) p\[n\] - p[n-1] + g (s\[n\] - s[n-1])`,
+/// with zero initial state and `s\[n\] = sin(2π f n Δt)`.  The returned value is
 /// `2 / M * Σ p[n+1] exp(-i 2π f n Δt)` over `n >= bin_start_step`.
 ///
 /// # Errors

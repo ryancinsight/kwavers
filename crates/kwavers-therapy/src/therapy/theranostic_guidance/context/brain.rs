@@ -7,11 +7,7 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult},
 };
 use kwavers_transducer::transducers::focused::BowlAngularBounds;
-use leto::{
-    Array2,
-    Array3,
-    SliceArg,
-};
+use leto::{Array2, Array3, SliceArg};
 
 use super::super::geometry::{
     focused_bowl_cap_points, FocusedBowlCapSpec, FocusedBowlVertexDirection,
@@ -89,11 +85,19 @@ pub fn build_brain_placement_context(
         surface_points_3d(&body, sx, sy, sz, Some(calvarium_range), surface_stride);
 
     let slice = ct_volume_hu
-        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
         .expect("invariant: axis index in bounds")
         .to_contiguous();
     let body_slice = body
-        .slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(slice_index as isize)])
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
         .expect("invariant: axis index in bounds")
         .to_contiguous();
     let target_mask = synthetic_focus_mask(&body_slice, sx.max(sy), (center.x_m, center.y_m));

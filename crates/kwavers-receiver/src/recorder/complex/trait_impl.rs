@@ -3,8 +3,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
 use kwavers_grid::Grid;
-use log::info;
 use leto::Array4;
+use log::info;
 
 use super::super::traits::RecorderTrait;
 use super::recorder::Recorder;
@@ -55,7 +55,9 @@ impl RecorderTrait for Recorder {
         if self.record_pressure {
             let pressure_field = fields
                 .index_axis::<3>(0, PRESSURE_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("pressure axis slice failed: {e}")))?
+                .map_err(|e| {
+                    KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
+                })?
                 .to_contiguous();
             let sensor_data = self.sensor.sample(&pressure_field);
             let sensor_data: Vec<f64> = sensor_data
@@ -99,7 +101,9 @@ impl RecorderTrait for Recorder {
         if self.record_temperature {
             let temp_field = fields
                 .index_axis::<3>(0, TEMPERATURE_IDX)
-                .map_err(|e| KwaversError::InternalError(format!("temperature axis slice failed: {e}")))?
+                .map_err(|e| {
+                    KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
+                })?
                 .to_contiguous();
             let sensor_data = self.sensor.sample(&temp_field);
             let sensor_data: Vec<f64> = sensor_data

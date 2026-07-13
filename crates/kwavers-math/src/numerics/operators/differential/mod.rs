@@ -64,10 +64,7 @@
 //!   DOI: 10.1109/TAP.1966.1138693
 
 use kwavers_core::error::KwaversResult;
-use leto::{
-    Array3,
-    ArrayView3,
-};
+use leto::{Array3, ArrayView3};
 
 // Implementation modules
 mod central_difference_2;

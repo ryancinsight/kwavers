@@ -3,9 +3,9 @@
 use super::grid::PSTDKSGrid;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
+use leto::Array3;
 use leto::{Array1, Array3 as LetoArray3};
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::Array3;
 
 #[derive(Clone, Copy)]
 enum SpectralAxis {
@@ -31,10 +31,7 @@ fn apply_helmholtz_multiplier(field: &mut Array3<Complex64>, k_mag: &Array3<f64>
         "invariant: PSTD Helmholtz field shape matches k-space magnitude grid"
     );
 
-    if let (Some(field_values), Some(k_values)) = (
-        field.as_slice_mut(),
-        k_mag.as_slice(),
-    ) {
+    if let (Some(field_values), Some(k_values)) = (field.as_slice_mut(), k_mag.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
             let k = k_values[index];
             *value *= k.mul_add(-k, k0_sq);
@@ -69,10 +66,7 @@ fn apply_spectral_axis_multiplier(
         "invariant: PSTD spectral axis vector length matches selected field dimension"
     );
 
-    if let (Some(field_values), Some(axis_slice)) = (
-        field.as_slice_mut(),
-        axis_values.as_slice(),
-    ) {
+    if let (Some(field_values), Some(axis_slice)) = (field.as_slice_mut(), axis_values.as_slice()) {
         enumerate_mut_with::<Adaptive, _, _>(field_values, |linear_index, value| {
             let axis_index = axis.index(linear_index, ny, nz);
             *value *= Complex64::new(0.0, axis_slice[axis_index]);
@@ -157,7 +151,7 @@ impl PSTDKSOperators {
 
     /// Apply Helmholtz operator: (∇² + k₀²)p in wavenumber domain
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_helmholtz(
         &self,
@@ -195,7 +189,7 @@ impl PSTDKSOperators {
     /// Used to convert a velocity-source mask into its pressure-equivalent
     /// contribution for the FullKSpace pressure-only wave equation.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn spectral_grad_x(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
@@ -205,7 +199,7 @@ impl PSTDKSOperators {
 
     /// Spectral y-derivative: `IFFT(i·ky · FFT(field))`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn spectral_grad_y(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
@@ -215,7 +209,7 @@ impl PSTDKSOperators {
 
     /// Spectral z-derivative: `IFFT(i·kz · FFT(field))`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn spectral_grad_z(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;

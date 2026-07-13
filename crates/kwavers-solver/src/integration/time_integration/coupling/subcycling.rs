@@ -85,7 +85,7 @@ impl SubcyclingStrategy {
     /// k4 = f(t_n + dt, y_n + dt*k3)
     /// y_{n+1} = y_n + dt/6*(k1 + 2*k2 + 2*k3 + k4)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn rk4_step(
         field: &mut Array3<f64>,

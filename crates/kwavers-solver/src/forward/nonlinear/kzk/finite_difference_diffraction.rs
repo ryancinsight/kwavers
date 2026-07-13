@@ -5,10 +5,7 @@
 
 use apollo::{fft_1d_complex, ifft_1d_complex, Complex64};
 use leto::Array1 as LetoArray1;
-use leto::{
-    Array2,
-    ArrayViewMut2,
-};
+use leto::{Array2, ArrayViewMut2};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -28,11 +25,19 @@ impl std::fmt::Debug for KzkDiffractionOperator {
         f.debug_struct("KzkDiffractionOperator")
             .field(
                 "kx2",
-                &format!("Array2<f64> {}x{}", self.kx2.shape()[0], self.kx2.shape()[1]),
+                &format!(
+                    "Array2<f64> {}x{}",
+                    self.kx2.shape()[0],
+                    self.kx2.shape()[1]
+                ),
             )
             .field(
                 "ky2",
-                &format!("Array2<f64> {}x{}", self.ky2.shape()[0], self.ky2.shape()[1]),
+                &format!(
+                    "Array2<f64> {}x{}",
+                    self.ky2.shape()[0],
+                    self.ky2.shape()[1]
+                ),
             )
             .field("fft_plan", &"<Apollo FFT plan>")
             .field("config", &self.config)

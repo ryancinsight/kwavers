@@ -1,9 +1,7 @@
 use super::{ThermalAcousticConfig, ThermalAcousticCoupler};
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
-use leto::{
-    Array3,
-};
 
 impl ThermalAcousticCoupler {
     /// Create new thermal-acoustic coupler with default configuration
@@ -117,7 +115,7 @@ impl ThermalAcousticCoupler {
     ///
     /// Ok on success, error if divergence detected
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self) -> KwaversResult<()> {
         self.pressure_prev.assign(&self.pressure);

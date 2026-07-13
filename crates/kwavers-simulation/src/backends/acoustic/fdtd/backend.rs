@@ -120,7 +120,6 @@ impl FdtdBackend {
                     if c > c_max {
                         c_max = c;
                     }
-
                 }
             }
         }

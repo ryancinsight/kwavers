@@ -44,11 +44,8 @@
 
 use std::collections::HashMap;
 
+use leto::{Array1, Array2};
 use moirai_parallel::{map_collect_with, Adaptive};
-use leto::{
-    Array1,
-    Array2,
-};
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::geometry::{DeviceLayout, Point2};

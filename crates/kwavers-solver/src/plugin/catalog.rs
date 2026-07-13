@@ -30,15 +30,15 @@
 //! | `NonlinearAcoustics { Westervelt }`      | [`WesterveltSolverPlugin`]          |
 //! | `NonlinearAcoustics { Kuznetsov }`       | [`KuznetsovSolverPlugin`]           |
 //! | `ThermalDiffusion`                       | [`ThermalDiffusionPlugin`]           |
-//! | `BubbleDynamics { KellerMiksis }`       | [`BubbleDynamicsPlugin`] (adaptive KM ODE) |
-//! | `BubbleDynamics { KellerHerring }`      | [`BubbleDynamicsPlugin`] (KM wrapper path) |
-//! | `BubbleDynamics { RayleighPlesset }`   | [`BubbleDynamicsPlugin`] (KM, compressibility off) |
-//! | `BubbleDynamics { Gilmore }`           | [`BubbleDynamicsPlugin`] (Gilmore/Tait RK4) |
+//! | `BubbleDynamics { KellerMiksis }`       | `BubbleDynamicsPlugin` (adaptive KM ODE) |
+//! | `BubbleDynamics { KellerHerring }`      | `BubbleDynamicsPlugin` (KM wrapper path) |
+//! | `BubbleDynamics { RayleighPlesset }`   | `BubbleDynamicsPlugin` (KM, compressibility off) |
+//! | `BubbleDynamics { Gilmore }`           | `BubbleDynamicsPlugin` (Gilmore/Tait RK4) |
 //! | `OpticalPropagation`                     | not yet wired                        |
 //! | `MechanicalStress { Isotropic }`         | [`MechanicalStressPlugin`] (elastic PSTD, λ/μ) |
 //!
 //! [`HybridSpectralDGSolver`]: crate::pstd::dg::HybridSpectralDGSolver
-//! [`BubbleDynamicsPlugin`]: crate::forward::bubble_dynamics::plugin::BubbleDynamicsPlugin
+//! `BubbleDynamicsPlugin`: crate::forward::bubble_dynamics::plugin::BubbleDynamicsPlugin
 //! [`MechanicalStressPlugin`]: crate::forward::pstd::extensions::elastic_plugin::MechanicalStressPlugin
 
 use crate::fdtd::FdtdConfig;
@@ -79,7 +79,7 @@ impl PhysicsCatalog {
     /// `medium` is borrowed only during construction to extract material
     /// constants; the plugins do not retain the reference.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn build(
         config: &PhysicsConfig,
@@ -106,7 +106,7 @@ impl PhysicsCatalog {
     /// for diagnostic error messages so the caller can locate the offending
     /// entry without re-walking the config.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn build_plugin(
         idx: usize,

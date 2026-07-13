@@ -4442,7 +4442,10 @@ Net: 3 false-positive "production panics" closed, 1 real dead-field removed.
   term present at `marmottant.rs:107` (audit had wrong path + wrong claim). Closed.
 - **PHY-8** parametric averaging — correctly scoped; added `Δf/f̄≪1` bound. Done.
 - **CLD-2** HIFU linear-only — real; `generate_acoustic_field` already self-documents,
-  added orchestrator-level note. **Open [minor]:** wire KZK into HIFU path. Partial.
+  added orchestrator-level note. **RESOLVED [minor] (2026-07-12):** wire KZK — added
+  `propagate_volume()` to `KzkSolverPlugin`, `generate_kzk_acoustic_field()` adapter,
+  conditional dispatch in `execute_therapy_step()`, `use_nonlinear_field` config flag.
+  Evidence tier: compile-time integration. Residual: collimated only (no focusing phase).
 - **CLD-3** O'Neil "Theorem" — real; →"approximation" + validity regime + refs;
   named/flagged the 0.7 fill factor (value preserved). Done.
 - **CLD-6** Thermal Index Pennes omission — real; documented + conservative-bias
@@ -4594,7 +4597,7 @@ Standing facts (do NOT re-flag):
 | ID | Sev | file:line | Gap | Revision |
 |----|-----|-----------|-----|----------|
 | CLD-1 | C → **PARTIALLY ADDRESSED (2026-06-19)** | `kwavers-therapy/.../lithotripsy/cavitation_cloud.rs` | **Single-bubble dynamics now real:** the cloud erosion is driven by the actual **Gilmore (1952) compressible single-bubble collapse** (`representative_max_radius`/`inertial_collapse_energy`), capturing inertial growth `R_max ≫ R0` under rarefaction — replacing the static-R0 linear proxy. Tests: `R_max(12 MPa) > 3·R0`, deeper rarefaction erodes more. This implements the "Gilmore + Mach corrections" the code comment listed as absent. **Still open (collective / research-frontier):** multi-bubble acoustic coupling + emission back-reaction, cloud-scale energy focusing (Maeda & Colonius 2018), shock-bubble Richtmyer-Meshkov / Rayleigh-Taylor cloud instabilities, inter-phase mass transfer. Erosion carries an empirical `erosion_efficiency` (Sapozhnikov 2002) — collective cloud erosion is not a closed, "100%-accurate" problem in any library. **UPDATE (ADR 027): snapshot→time-resolved coupling DONE** — each cell now carries a real `(R,Ṙ)` state integrated by the canonical adaptive Keller-Miksis solver under the local instantaneous pressure across calls; keystone test proves a cloud cell == the standalone integrator bit-for-bit. Remaining open = the *collective* effects above. **UPDATE (ADR 028): inter-bubble acoustic coupling DONE** — `bubble_radiated_pressure = (ρ/d)(R²R̈+2RṘ²)` couples each cell to its neighbours (two-pass explicit scheme), opt-in (`coupling_enabled`, default off for cost). Tests: closed-form radiated pressure, 1/d scaling, coupling alters a two-bubble trajectory, lone bubble unaffected. **UPDATE (ADR 029): cloud-scale shielding DONE** — the incident field is screened by the cloud's void fraction (`commander_prosperetti_attenuation`, reused) via Beer-Lambert along the incident axis (`shielded_pressure`), opt-in (`shielding_enabled`, default off). Tests: closed-form exponential decay, no-nuclei pass-through, denser-screens-more. **UPDATE (ADR 030): self-consistent (implicit) coupling DONE** — fixed-point iteration of the coupling field (`coupling_pressure_field`), reusing the KM acceleration each iterate; opt-in (`implicit_coupling`, default off). Tests: returned field satisfies its own fixed-point equation, implicit differs from explicit under close coupling. **UPDATE (ADR 031): strong-regime solver DONE** — `CouplingScheme::ImplicitDirect` exactly solves the affine coupling system `(I−D·G)S=e` (robust where fixed-point diverges; self-consistent to ~1e-9 at 20 µm coupling), plus `ImplicitFixedPoint{under_relaxation}`. **UPDATE (ADR 032): four frontier refinements DONE** — (1) `dp/dt` coupling (`couple_pressure_rate`: lagged FD rate `(driving−prev_total)/dt` fed into the affine source acceleration; system stays exact since R̈ is affine in dp/dt); (2) `R(t)`-dependent shielding (`shielding_radius_dependent`: instantaneous per-cell R in the CP resonance, quasi-static); (3) cloud-interface RT/RM linear growth-rate **diagnostic** (`interface_instability`: σ_RT=√(A·k·a), ȧ_RM=k·Δv·a₀·A, A=β/(2−β)); (4) sparse/matrix-free solver (`CouplingScheme::ImplicitIterative`: `solve_lsqr_matfree` + on-the-fly `G_ab`, O(active) memory, matches dense to 1e-6). All opt-in; defaults reduce to ADR 027-031. **Now remaining (deepest frontier):** nonlinear RT/RM interface *evolution* (not just growth rates), fully implicit `dp/dt`, nonlinear large-amplitude cloud scattering, multi-directional screening, and a k-wave/experimental erosion comparison. | open: k-wave/experimental validation |
-| CLD-2 | C → **M DOC'D (2026-06-01)** | `orchestrator/{execution.rs:61,methods.rs:execute_therapy_step}` | `generate_acoustic_field` already documented its linear limitation; added orchestrator-level note (used by ALL modalities incl. HIFU; KZK exists, unwired). **Open follow-up:** wire `kzk_solver_plugin` into the HIFU therapy path [minor]. | partial |
+| CLD-2 | C → **RESOLVED (2026-07-12)** | `orchestrator/{execution.rs,methods.rs}`, `config.rs`, `kzk_solver_plugin/solver.rs` | Wired KZK: `propagate_volume()` on solver, `generate_kzk_acoustic_field()` adapter in execution, conditional dispatch in `execute_therapy_step()`, `use_nonlinear_field` in `AcousticTherapyParams`. Residual: collimated only (no focusing phase). | resolved |
 | CLD-3 | ~~H~~ DOC'D (2026-06-01) | `clinical/therapy/hifu_planning/types.rs:60` | Rewrote "Theorem"→"closed-form approximation" w/ validity regime (linear/paraxial F#≳1/homogeneous) + refs (O'Neil 1949, Cobbold 2007); named the magic 0.7 `MINUS6DB_ELLIPSOID_FILL_FACTOR` + flagged unvalidated (value preserved). | done |
 | CLD-4 | ~~H~~ RESOLVED (2026-06-01) | `domain/source/transducers/physics/mod.rs:47,50` | Category mismatch: `TISSUE_IMPEDANCE` is the nominal *matching-layer design load* (fixed manufactured hardware, `Z_match=√(Z_pzt·Z_load)`, Szabo/Cobbold), NOT a per-voxel sim medium — CT-derivation does not apply; documented to prevent re-flag. `BACKING_IMPEDANCE` was DEAD (no refs) — removed. | done |
 | CLD-5 | ~~H~~ RESOLVED (2026-06-01) | `domain/source/transducers/phased_array/config.rs:34` | "Ignores user freq" is false — `Default` is correctly nominal; no constructor drops a passed freq; `satisfies_nyquist` already takes `sound_speed`. Real defect was SSOT dup of `2.5` (geometry + freq field) → single `DEFAULT_CENTER_FREQUENCY_HZ` const. | done |
@@ -4685,9 +4688,10 @@ adequate or false positives.
   sweep, not a single increment (won't silently mass-stub docs).
 - **SOL-11** — wiring the k-Wave validators into CI is infra (workflow + runtime
   budget); own change.
-- **CLD-2 (KZK wiring)** — routing the KZK plugin into the HIFU therapy path is a
-  ~50–100 LOC [minor] with a return-type adapter; documented limitation already
-  in place.
+- **CLD-2 (KZK wiring)** — **RESOLVED (2026-07-12).** Wired `kzk_solver_plugin` into
+  HIFU therapy path via `propagate_volume()`, `generate_kzk_acoustic_field()`, and
+  conditional `execute_therapy_step()` dispatch. Residual: collimated beam only
+  (no focusing phase).
 - **PHY-11**, **COV-5 de Jong/Herring** — need an external experimental baseline
   (Lauterborn collapse) or a paywalled convention PDF (de Jong S_p/S_f prefactor);
   deferred until a real oracle is available rather than asserting a fabricated one.
@@ -4733,7 +4737,7 @@ existed; closed the rest without fabricating.
    false positives (test-only panics, no change); PHY-5 fixed (dead-field removal).
 3. ~~Documented-approximation bounds~~ — **DONE (Sprint C, 2026-06-01):** PHY-2/4
    already-handled/false-positive; PHY-8/CLD-2/3/6 validity regimes + refs added.
-   Open follow-up: CLD-2 KZK wiring [minor].
+    CLD-2 KZK wiring resolved [minor] (2026-07-12).
 4. ~~Missing literature validation~~ — **DONE (Sprint D, 2026-06-01):** PHY-10/SOL-7
    added external/property tests; CLD-11 reflection-decay test added; PHY-9 closed
    (false positive — tol already FP-tight); PHY-11 adequate (analytical check

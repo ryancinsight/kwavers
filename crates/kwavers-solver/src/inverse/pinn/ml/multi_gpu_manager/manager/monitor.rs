@@ -72,7 +72,7 @@ impl MultiGpuManager {
 
     /// Handle a GPU failure by marking it unhealthy and redistributing its work.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn handle_gpu_failure(&mut self, failed_gpu_id: usize) -> KwaversResult<()> {
         if failed_gpu_id >= (self.devices.len()) {
