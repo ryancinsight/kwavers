@@ -40,7 +40,7 @@ image.
 ### Why these pieces are new vs. reused
 
 Reused as-is (verified real APIs):
-- CT → medium: `kwavers_physics::...::CtMediumBuilder` + `HuAcousticModel`.
+- CT → medium: `kwavers_medium::CtMediumBuilder` + `HuAcousticModel`.
 - Array: `kwavers_transducer::HemisphericalArray::new(radius, 1024, f0)`,
   `set_focus(FocalPoint)`.
 - Full-brain inversion: `FwiProcessor` (`invert_multi_source`,

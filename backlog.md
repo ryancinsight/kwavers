@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## KW-MEDIUM-CT-001 — Own complete CT medium assembly [arch] — review
+
+- Owner: Codex; scope: `kwavers-medium::heterogeneous` CT builder,
+  removal of the former `kwavers-physics` skull-owned builder, and affected
+  documentation/tests.
+- Acceptance: `CtMediumBuilder` is exported only by `kwavers-medium`, maps all
+  five acoustic fields through `HuAcousticModel`, rejects shape mismatch, and
+  focused package gates pass.
+- Driver: private Atlas consumer `leoneuro-rs` requires the provider-owned
+  standard-HU medium contract.
+- Evidence: warning-denied all-target/all-feature `kwavers-medium` Clippy and
+  Nextest 187/187 pass on the aligned Atlas provider graph.
+
 - [x] [patch] Close the native Leto beamforming provider graph.
   Owner: Codex. Scope: workspace Leto features, adaptive/Capon linear solves,
   transducer inversion, solver identity-conversion residue, lockfile, and

@@ -1,11 +1,9 @@
 //! Build a complete, tissue-varying simulation medium from a CT volume.
 //!
-//! [`HeterogeneousSkull`](super::HeterogeneousSkull) is a three-field property
-//! container (ρ, c, α) consumed by the aberration phase-screen. A *full* forward
-//! simulation needs more: the power-law absorption **exponent** y and the
-//! **nonlinearity** B/A also vary by tissue, and the medium must satisfy the
-//! solver's [`Medium`](kwavers_medium::Medium) trait. This builder produces a
-//! [`HeterogeneousMedium`] whose every acoustic field — density, sound speed,
+//! A full forward simulation needs the power-law absorption **exponent** y and
+//! the **nonlinearity** B/A to vary by tissue as well as density, sound speed,
+//! and absorption. This builder produces a [`HeterogeneousMedium`] whose every
+//! acoustic field — density, sound speed,
 //! absorption prefactor α₀, exponent y, and B/A — is mapped per-voxel from
 //! Hounsfield units via [`HuAcousticModel`], with the non-acoustic fields
 //! (thermal, optical, bubble, elastic, viscous) broadcast from a homogeneous
@@ -16,11 +14,11 @@
 //! - Duck FA (1990). *Physical Properties of Tissue.* (y, B/A)
 //! - Connor CW, Hynynen K (2002). *Phys. Med. Biol.* 47(12), 2213–2231. (skull y)
 
+use crate::heterogeneous::HeterogeneousMedium;
+use crate::HomogeneousMedium;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use kwavers_medium::heterogeneous::HeterogeneousMedium;
-use kwavers_medium::HomogeneousMedium;
 use leto::Array3;
 
 /// Builder turning a Hounsfield-unit CT volume into a fully-specified,
@@ -69,13 +67,13 @@ impl<'a> CtMediumBuilder<'a> {
     /// the result is validated against the grid before return.
     /// # Errors
     /// - Returns [`Err`] if the CT volume shape does not match the grid, or if
-    ///   the assembled medium fails [`Medium`](kwavers_medium::Medium) validation.
+    ///   the assembled medium fails [`Medium`](crate::Medium) validation.
     pub fn build(self) -> KwaversResult<HeterogeneousMedium> {
-        use kwavers_medium::CoreMedium;
+        use crate::CoreMedium;
 
         let dims = self.grid.dimensions();
         if self.ct.shape() != [dims.0, dims.1, dims.2] {
-            return Err(KwaversError::InvalidInput(format!(
+            return Err(KwaversError::DimensionMismatch(format!(
                 "CT volume shape {:?} does not match grid {:?}",
                 self.ct.shape(),
                 dims
@@ -105,9 +103,10 @@ impl<'a> CtMediumBuilder<'a> {
 #[cfg(test)]
 mod tests {
     use super::CtMediumBuilder;
+    use crate::{AcousticProperties, CoreMedium};
     use kwavers_core::constants::hu_mapping::HuAcousticModel;
+    use kwavers_core::error::KwaversError;
     use kwavers_grid::Grid;
-    use kwavers_medium::{AcousticProperties, CoreMedium};
     use leto::Array3;
 
     fn grid_4x4x4() -> Grid {
@@ -132,8 +131,8 @@ mod tests {
         let m = HuAcousticModel::default();
 
         // Soft-tissue voxel (HU=0) vs bone voxel (HU=1000), point access.
-        assert!((medium.density(0, 0, 0) - m.density(0.0)).abs() < 1e-9);
-        assert!((medium.density(3, 0, 0) - m.density(1000.0)).abs() < 1e-9);
+        assert_eq!(medium.density(0, 0, 0), m.density(0.0));
+        assert_eq!(medium.density(3, 0, 0), m.density(1000.0));
         assert!(medium.sound_speed(3, 0, 0) > medium.sound_speed(0, 0, 0));
         assert!(medium.absorption(3, 0, 0) > medium.absorption(0, 0, 0));
         assert!(medium.nonlinearity(3, 0, 0) > medium.nonlinearity(0, 0, 0));
@@ -143,8 +142,8 @@ mod tests {
         // soft tissue ≈ 1.1, bone ≈ 1.0. The bone half maps to the bone exponent.
         let y_soft = medium.alpha_power(0.0, 0.0, 0.0, &grid);
         let y_bone = medium.alpha_power(3.0e-3, 0.0, 0.0, &grid);
-        assert!((y_soft - m.exponent_soft).abs() < 1e-9, "soft y={y_soft}");
-        assert!((y_bone - m.exponent_bone).abs() < 1e-9, "bone y={y_bone}");
+        assert_eq!(y_soft, m.exponent_soft);
+        assert_eq!(y_bone, m.exponent_bone);
     }
 
     // Mismatched CT/grid shapes are rejected, not silently truncated.
@@ -152,7 +151,16 @@ mod tests {
     fn ct_grid_shape_mismatch_is_rejected() {
         let grid = grid_4x4x4();
         let ct = Array3::<f64>::zeros((4, 4, 3));
-        assert!(CtMediumBuilder::new(&ct, &grid).build().is_err());
+        let error = CtMediumBuilder::new(&ct, &grid)
+            .build()
+            .expect_err("mismatched CT and grid dimensions must fail");
+        match error {
+            KwaversError::DimensionMismatch(message) => assert_eq!(
+                message,
+                "CT volume shape [4, 4, 3] does not match grid (4, 4, 4)"
+            ),
+            other => panic!("expected dimension mismatch, got {other}"),
+        }
     }
 
     // Frequency-resolved absorption uses the per-voxel (α₀, y): bone absorbs far

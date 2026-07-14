@@ -38,6 +38,7 @@ pub use anisotropic::{
 };
 pub use config::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
+pub use heterogeneous::CtMediumBuilder;
 pub use homogeneous::HomogeneousMedium;
 pub use material_fields::MaterialFields;
 pub use optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region};

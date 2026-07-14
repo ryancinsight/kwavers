@@ -469,13 +469,13 @@ $f^{1.1}$ (Duck 1990) while skull absorbs roughly as $f^{1.0}$ (Connor & Hynynen
 rises from ≈ 6.5 (soft tissue) to ≈ 8 (bone). `HuAcousticModel` therefore also exposes
 `power_law_exponent(HU)` and `nonlinearity(HU)`, both blended soft → cortical by bone fraction.
 
-`kwavers_physics::acoustics::skull::heterogeneous::CtMediumBuilder` assembles all of this into a
+`kwavers_medium::CtMediumBuilder` assembles all of this into a
 solver-ready `HeterogeneousMedium`: it maps **every** acoustic field — density, sound speed,
 absorption prefactor α₀, exponent $y$, and $B/A$ — per voxel from HU, and broadcasts the
 non-acoustic fields (thermal, optical, bubble, elastic, viscous) from a homogeneous background.
 
 ```rust
-use kwavers_physics::acoustics::skull::heterogeneous::CtMediumBuilder;
+use kwavers_medium::CtMediumBuilder;
 
 // ct: Array3<f64> of standard-HU voxels, grid: simulation Grid
 let medium = CtMediumBuilder::new(&ct, &grid).build()?;   // -> HeterogeneousMedium (impl Medium)

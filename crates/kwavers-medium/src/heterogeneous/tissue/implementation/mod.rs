@@ -95,7 +95,7 @@ impl HeterogeneousTissueMedium {
 
     /// Set tissue type for a region
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_tissue_region(&mut self, region: &DomainTissueRegion) -> KwaversResult<()> {
         region.validate()?;

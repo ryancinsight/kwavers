@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Changed (2026-07-13) - CT medium ownership [arch]
+
+- Moved `CtMediumBuilder` from the skull-specific `kwavers-physics` namespace
+  to `kwavers-medium`, which owns `HeterogeneousMedium`. The old export is
+  removed; consumers import `kwavers_medium::CtMediumBuilder`.
+
 ### Fixed (2026-07-13) - native Leto beamforming closure [patch]
 
 - Removed the workspace-wide Leto `ndarray-compat` feature and routed

@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — CT medium ownership [arch]
+
+- [x] Verify the existing builder and dependency direction.
+- [x] Move the builder into `kwavers-medium` without a compatibility export.
+- [x] Update documentation and value-semantic tests.
+- [x] Run focused formatting, Clippy, and Nextest gates.
+- [x] Commit and push the provider increment before consumer integration.
+
+**Current evidence:** warning-denied all-target/all-feature Clippy passes and
+Nextest passes 187/187 `kwavers-medium` tests, including exact water/bone ρ, c,
+α0, y, and B/A values plus shape rejection. Doctests pass 3/3 with one
+intentionally ignored example, and package documentation is warning-clean.
+The resolved graph contains
+Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
+
 - [x] [patch] Native Leto beamforming provider closure: remove the workspace
       `ndarray-compat` feature, route transducer inversion through `leto-ops`,
       retain Kwavers-owned eig/complex-solve contracts, and delete the 21
