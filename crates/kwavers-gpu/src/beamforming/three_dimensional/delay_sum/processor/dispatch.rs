@@ -232,7 +232,7 @@ impl<'a> DelaySumGPU<'a> {
         let buffer_slice = staging_buffer.slice(..);
         buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
 
-        let _ = self.device.poll(wgpu::PollType::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
 
         // Scope the mapped view so it is dropped before `unmap` (wgpu rejects
         // unmapping a buffer that still has an accessible mapped view).

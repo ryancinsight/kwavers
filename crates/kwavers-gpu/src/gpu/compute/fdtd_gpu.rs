@@ -270,7 +270,7 @@ impl WgpuFdtdPressureDispatcher {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = sender.send(r);
         });
-        let _ = device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         receiver
             .recv()
             .map_err(|e| KwaversError::GpuError(format!("GPU map_async failed: {e}")))?

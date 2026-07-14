@@ -183,7 +183,7 @@ impl PstdCommandProvider for WgpuPstdCommandProvider<'_> {
     }
 
     fn poll_wait(&self) {
-        let _ = self.device.poll(wgpu::PollType::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
     }
 }
 

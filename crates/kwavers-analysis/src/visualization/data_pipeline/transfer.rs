@@ -226,7 +226,7 @@ impl DataPipeline {
             .write_buffer(buffer, 0, bytemuck::cast_slice(&data_f32));
 
         if self.transfer_options.mode == TransferMode::Blocking {
-            let _ = self.device.poll(PollType::Wait);
+            let _ = self.device.poll(PollType::wait_indefinitely());
         }
 
         let elapsed = start.elapsed();

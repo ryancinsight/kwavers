@@ -307,7 +307,7 @@ impl WgpuFdtd {
         slice.map_async(wgpu::MapMode::Read, move |r| {
             let _ = tx.send(r);
         });
-        let _ = device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
         rx.recv_async()
             .await
             .map_err(|e| KwaversError::GpuError(format!("readback channel: {e}")))?

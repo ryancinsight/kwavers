@@ -295,7 +295,7 @@ impl<'a> DynamicFocusGPU<'a> {
 
         let slice = staging.slice(..);
         slice.map_async(wgpu::MapMode::Read, |_| {});
-        let _ = self.device.poll(wgpu::PollType::Wait);
+        let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
 
         let mapped = slice.get_mapped_range();
         let result_f32: &[f32] = bytemuck::cast_slice(&mapped);

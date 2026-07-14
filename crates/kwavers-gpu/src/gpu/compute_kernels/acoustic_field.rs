@@ -371,7 +371,7 @@ impl AcousticFieldProvider for WgpuAcousticFieldProvider {
             let _ = sender.send(result);
         });
 
-        let _ = device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
 
         receiver
             .recv()

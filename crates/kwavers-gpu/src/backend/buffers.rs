@@ -273,7 +273,7 @@ impl WgpuBackendBufferManager {
             tx.send(result).unwrap();
         });
 
-        let _ = device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
 
         rx.recv()
             .map_err(|e| {

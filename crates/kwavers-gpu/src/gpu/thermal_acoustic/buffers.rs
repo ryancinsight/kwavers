@@ -280,7 +280,7 @@ impl WgpuThermalAcousticBuffers {
             slice.map_async(wgpu::MapMode::Read, move |result| {
                 let _ = tx.send(result);
             });
-            let _ = device.poll(wgpu::PollType::Wait);
+            let _ = device.poll(wgpu::PollType::wait_indefinitely());
             let result = rx
                 .recv_async()
                 .await
