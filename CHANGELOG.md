@@ -10,6 +10,19 @@
   sampling and area-conserving BLI normalization, retaining independent drive
   signals for every aperture.
 
+### Breaking (2026-07-14) - clinical-imaging feature boundary [major]
+
+- Made `kwavers-imaging` and RITK registration opt-in behind the matching
+  `clinical-imaging` features of `kwavers-physics` and `kwavers-solver`.
+  Forward PSTD and non-clinical inverse kernels no longer resolve clinical image
+  I/O. Clinical consumers enable the feature explicitly.
+
+### Fixed (2026-07-14) - finite BLI source support [patch]
+
+- Prevented distant off-grid apertures from becoming boundary sources through
+  nearest-index clamping of nonzero sinc tails. Nearby apertures remain valid
+  whenever their finite BLI window overlaps the simulation grid.
+
 ### Breaking (2026-07-14) - planar aperture propagation [major]
 
 - Replaced `CircularPiston::new` with `PlanarAperture::disk` and the generic

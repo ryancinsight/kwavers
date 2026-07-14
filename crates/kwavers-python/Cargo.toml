@@ -26,8 +26,8 @@ kwavers-source = { path = "../kwavers-source" }
 kwavers-boundary = { path = "../kwavers-boundary" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics" }
-kwavers-solver = { path = "../kwavers-solver" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
 kwavers-analysis = { path = "../kwavers-analysis" }
 kwavers-simulation = { path = "../kwavers-simulation" }
 kwavers-diagnostics = { path = "../kwavers-diagnostics" }

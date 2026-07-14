@@ -1,5 +1,27 @@
 # Project Checklist
 
+## Owner: Codex — clinical-imaging dependency boundary [major]
+
+- [x] Trace the LeoNeuro PSTD dependency path and identify unconditional RITK
+      edges in Physics and Solver.
+- [x] Record the feature boundary, ownership consequence, and rejected fallback
+      in ADR-036.
+- [x] Gate complete clinical image physics and clinical inverse surfaces while
+      retaining forward PSTD and non-clinical inverse kernels.
+- [x] Update every in-workspace clinical consumer to enable the feature.
+- [x] Prove the LeoNeuro active graph excludes `ritk-filter`, run the finite
+      aperture regression, and verify both RITK feature states.
+
+**Current phase:** Closure. **Target:** Kwavers 4.0.0 / LeoNeuro 0.3.x.
+**Evidence:** locked offline Physics Nextest passes 1,554/1,554 without
+`clinical-imaging` and 1,710/1,710 with it. Locked Leo Nextest passes 29/29;
+its active graph has no `ritk-filter` package. The finite-window BLI regression
+proves a clipped aperture remains realizable while an arbitrarily distant source
+does not become a boundary source. Warning-denied all-target/all-feature Physics
+Clippy passes; the Solver default all-target build and its feature-enabled
+clinical example compile. The pre-existing Physics Rustdoc warning baseline is
+tracked as KW-DOC-038.
+
 ## Owner: Codex — planar sector BLI rasterization [minor]
 
 - [x] Consolidate validated planar geometry for Rayleigh and grid sources.

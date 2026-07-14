@@ -19,8 +19,8 @@ kwavers-receiver = { path = "../kwavers-receiver" }
 kwavers-source = { path = "../kwavers-source" }
 kwavers-boundary = { path = "../kwavers-boundary" }
 kwavers-medium = { path = "../kwavers-medium" }
-kwavers-physics = { path = "../kwavers-physics" }
-kwavers-solver = { path = "../kwavers-solver" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
 leto = { workspace = true }
 # Concrete GPU backend (the breast-UST FWI adapter's GPU path routes through it).
 kwavers-gpu = { path = "../kwavers-gpu", optional = true }

@@ -13,5 +13,6 @@
 //!   forward solver becomes selectable as FDTD / PSTD / Hybrid via
 //!   `SolverType` and `SimulationSolverFactory`) tracked in backlog T15.
 
+#[cfg(feature = "clinical-imaging")]
 pub mod frequency_domain;
 pub mod time_domain;

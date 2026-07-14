@@ -31,8 +31,8 @@ kwavers-phantom = { path = "../kwavers-phantom" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics" }
-kwavers-solver = { path = "../kwavers-solver" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
 kwavers-analysis = { path = "../kwavers-analysis" }
 kwavers-simulation = { path = "../kwavers-simulation" }
 kwavers-diagnostics = { path = "../kwavers-diagnostics" }

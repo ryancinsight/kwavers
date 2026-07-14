@@ -18,6 +18,7 @@
 //! - Traditional methods: Optimization, adjoint methods, iterative reconstruction
 //! - PINN methods: Neural network approximation with physics-informed loss
 
+#[cfg(feature = "clinical-imaging")]
 pub mod elastography;
 pub mod fwi;
 pub mod linear_born_inversion;

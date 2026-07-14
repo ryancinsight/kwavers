@@ -12,7 +12,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
-kwavers-imaging = { path = "../kwavers-imaging" }
+kwavers-imaging = { path = "../kwavers-imaging", optional = true }
 kwavers-transducer = { path = "../kwavers-transducer" }
 kwavers-receiver = { path = "../kwavers-receiver" }
 kwavers-source = { path = "../kwavers-source" }
@@ -64,11 +64,16 @@ pinn = [
     "dep:coeus-ops",
 ]
 async-runtime = []
+clinical-imaging = ["dep:kwavers-imaging", "kwavers-physics/clinical-imaging"]
 # Nightly-only code paths (portable `std::simd`); WIP, off by default.
 nightly = []
 # SIMD-accelerated PINN inference (WIP, nightly-only — implies `nightly` so the
 # engine and `SimdExecutor` cfg-gates activate together).
 simd = ["nightly"]
+
+[[example]]
+name = "elastic_shear_fwi_lesion"
+required-features = ["clinical-imaging"]
 
 [dev-dependencies]
 approx = "0.5"

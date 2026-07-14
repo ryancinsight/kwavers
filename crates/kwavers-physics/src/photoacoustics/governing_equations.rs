@@ -1,5 +1,4 @@
-use super::thermoelasticity::GrueneisenModel;
-use super::ThermoelasticReport;
+use super::{GrueneisenModel, ThermoelasticReport};
 use kwavers_core::error::KwaversResult;
 use kwavers_imaging::photoacoustic::ThermoelasticProperties;
 

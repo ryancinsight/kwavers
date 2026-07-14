@@ -174,6 +174,36 @@ fn test_profiled_disc_enters_per_element_source_weights() {
 }
 
 #[test]
+fn profiled_disc_clips_at_the_domain_boundary_without_distant_tail_sources() {
+    // A clipped aperture keeps finite BLI support; an aperture beyond that BLI
+    // window must not be projected onto a boundary cell by the sinc tail.
+    use kwavers_grid::Grid;
+
+    let spacing = 0.25e-3;
+    let grid = Grid::new(17, 17, 1, spacing, spacing, spacing).expect("grid");
+    let mut array = KWaveArray::new();
+    array.add_profiled_disc_element(
+        (-0.10e-3, 1.0e-3, 0.0),
+        0.80e-3,
+        Some((-0.10e-3, 1.0e-3, 1.0)),
+        DiscSourceProfile::uniform(),
+    );
+    array.add_profiled_disc_element(
+        (100.0e-3, 1.0e-3, 0.0),
+        0.20e-3,
+        Some((100.0e-3, 1.0e-3, 1.0)),
+        DiscSourceProfile::uniform(),
+    );
+
+    let mut has_support = [false; 2];
+    array.for_each_element_weighted_cell(&grid, |element, _, _, _, weight| {
+        has_support[element] |= weight != 0.0;
+    });
+
+    assert_eq!(has_support, [true, false]);
+}
+
+#[test]
 fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
     // Regression: per-element source assembly must preserve the weighted-mask
     // superposition contract without requiring one dense 3-D mask per element.

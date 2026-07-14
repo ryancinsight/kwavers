@@ -1,13 +1,23 @@
-// Canonical photoacoustic physics layer.
+//! Canonical photoacoustic physics layer.
 
+#[cfg(feature = "clinical-imaging")]
 mod confinement;
+#[cfg(feature = "clinical-imaging")]
 mod governing_equations;
+mod grueneisen;
 mod references;
-pub mod thermoelasticity;
+#[cfg(feature = "clinical-imaging")]
+mod thermoelasticity;
+#[cfg(feature = "clinical-imaging")]
 mod validity;
 
+#[cfg(feature = "clinical-imaging")]
 pub use confinement::ConfinementAssessment;
+#[cfg(feature = "clinical-imaging")]
 pub use governing_equations::PhotoacousticGoverningEquations;
+pub use grueneisen::GrueneisenModel;
 pub use references::PHOTOACOUSTIC_PHYSICS_REFERENCES;
-pub use thermoelasticity::{GrueneisenModel, ThermoelasticReport};
+#[cfg(feature = "clinical-imaging")]
+pub use thermoelasticity::ThermoelasticReport;
+#[cfg(feature = "clinical-imaging")]
 pub use validity::PhotoacousticValidityReport;

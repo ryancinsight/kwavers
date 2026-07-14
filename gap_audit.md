@@ -1,5 +1,28 @@
 # Gap Audit
 
+- Closed 2026-07-14: forward PSTD consumers unconditionally compiled clinical
+  image I/O and registration because both `kwavers-physics` and
+  `kwavers-solver` declared `kwavers-imaging` unconditionally. ADR-036 makes
+  the clinical surface explicit, retains only pure thermoelastic material laws
+  outside it, and updates in-workspace clinical consumers. Locked Nextest passes
+  1,554/1,554 without `clinical-imaging`, 1,710/1,710 with it, and 29/29 in
+  LeoNeuro; reverse dependency resolution finds no `ritk-filter` package in
+  Leo's active graph. Evidence tier: manifest/source audit, value-semantic
+  regressions, locked feature-matrix integration, and active graph proof.
+
+- Closed 2026-07-14: KWaveArray clamped arbitrarily distant source samples to
+  the nearest grid boundary before evaluating sinc, creating false source
+  support. The BLI mapper now accepts a sample only when its finite stencil
+  window overlaps the grid. Evidence tier: exact clipped-versus-distant source
+  regression, Leo focus-delay integration, and locked package execution.
+
+- Open documentation baseline 2026-07-14: `cargo doc -p kwavers-physics
+  --all-features --no-deps` emits 575 unresolved intra-doc-link warnings in
+  pre-existing Physics modules. The clinical-imaging boundary files emit none;
+  the package documentation gate is therefore not warning-clean. Evidence tier:
+  all-feature Rustdoc execution. Re-open trigger: a focused Rustdoc correction
+  increment that rewrites the unresolved links and bracketed unit annotations.
+
 - Closed 2026-07-14: KWaveArray could rasterize finite discs but not the
   independently driven planar annular sectors already accepted by the Rayleigh
   provider. `PlanarApertureGeometry` is now the shared validated geometry;

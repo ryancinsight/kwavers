@@ -1,5 +1,38 @@
 # Backlog / Strategy
 
+## KW-ARCH-036 — Clinical-imaging dependency boundary [major] — review
+
+- Owner: Codex; scope: `kwavers-physics`, `kwavers-solver`, direct clinical
+  consumers, and ADR-036.
+- Driver: LeoNeuro's forward PSTD package reaches `ritk-filter` through
+  unconditional clinical image I/O and registration dependencies.
+- Acceptance: `leoneuro-sim` no longer reaches `ritk-filter`; PSTD builds and
+  its finite-aperture boundary regression runs through the native Kwavers path;
+  every in-workspace user of gated clinical APIs opts in explicitly.
+- Design: [`ADR-036`](docs/ADR/036-clinical-imaging-feature-boundary.md).
+- Evidence: locked offline Physics Nextest passes 1,554/1,554 without the
+  feature and 1,710/1,710 with it; locked Leo Nextest passes 29/29 and reverse
+  dependency resolution reports no `ritk-filter` package. The feature-enabled
+  path compiles RITK only when explicitly selected.
+
+## KW-DIAG-037 — Promote multimodal fusion to Diagnostics [major] — todo
+
+- Owner: unclaimed; blocked by KW-ARCH-036 verification.
+- Move the complete `kwavers-physics::acoustics::imaging::fusion` ownership into
+  `kwavers-diagnostics` with every call site rewritten directly. Delete the old
+  physics path and retain no re-export. Acceptance: Physics has no registration
+  dependency and Diagnostics owns all fusion and registration contracts.
+
+## KW-DOC-038 — Resolve Physics Rustdoc links [patch] — todo
+
+- Owner: unclaimed; scope: unresolved intra-doc links and bracketed unit
+  annotations in `kwavers-physics` Rustdoc.
+- Driver: the all-feature package documentation build emits 575 unresolved-link
+  warnings; the clinical-imaging boundary change introduces none.
+- Acceptance: `cargo doc -p kwavers-physics --all-features --no-deps` is
+  warning-clean without disabling Rustdoc diagnostics.
+- Evidence: `gap_audit.md` documentation baseline entry.
+
 ## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — review
 
 - Owner: Codex; scope: `kwavers-transducer::kwave_array`, canonical planar
@@ -12,6 +45,9 @@
 - Evidence: warning-denied all-target/all-feature Clippy; Nextest 215/215 with
   one existing skip; doctests 1/1 with six existing ignored; warning-clean
   Rustdoc; exact per-quadrant analytical area and independent-signal regression.
+  A subsequent value regression proves BLI rejects only sources beyond its
+  finite window, preserving clipped apertures while preventing distant sinc-tail
+  boundary injection.
 
 ## KW-APERTURE-002 — General planar aperture propagation [major] — review
 
