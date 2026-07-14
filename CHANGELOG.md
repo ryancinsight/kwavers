@@ -9,7 +9,8 @@
   attenuation, and rigid-baffle half-space suppression. The surface integral
   owns aperture diffraction; consumers no longer need a separate piston
   directivity multiplier. Quadrature construction rejects work requests above
-  a fixed surface-sample budget.
+  a fixed surface-sample budget. Ordered straight-ray layers integrate phase
+  and attenuation per segment while preserving one finite-aperture kernel.
 
 ### Fixed (2026-07-13) - transducer documentation links [patch]
 
