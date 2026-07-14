@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## KW-APERTURE-002 — General planar aperture propagation [major] — review
+
+- Owner: Codex; scope: `kwavers-transducer` Rayleigh aperture types, kernel,
+  tests, ADR-035, version, and private LeoNeuro consumer migration.
+- Driver: hybrid Fresnel-zone pMUT cells require independently driven central
+  and annular electrode sectors without circular-piston tessellation.
+- Acceptance: one bounded provider kernel integrates disks and oriented annular
+  sectors, preserves existing circular-piston oracles, and proves coherent
+  sector superposition before the consumer adds electrode control topology.
+- Evidence: warning-denied all-target/all-feature Clippy; Nextest 214/214 with
+  one existing skip; doctests 1/1 with six existing ignored examples; and
+  warning-clean package documentation.
+
 ## KW-APERTURE-001 — Own finite circular-piston propagation [minor] — review
 
 - Owner: Codex; scope: `kwavers-transducer::transducers::physics`, its public

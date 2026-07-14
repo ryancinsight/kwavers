@@ -29,7 +29,9 @@ pub use materials::{
     corrective_lens_thickness, isoplanatic_steering_pose, AcousticLens, BackingLayer,
     BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer, PiezoMaterial, PiezoType,
 };
-pub use rayleigh::{rayleigh_pressure, CircularPiston, RayleighIntegralSpec, RayleighLayer};
+pub use rayleigh::{
+    rayleigh_pressure, PlanarAperture, PlanarApertureShape, RayleighIntegralSpec, RayleighLayer,
+};
 pub use sensitivity::TransducerSensitivity;
 
 // Design constants based on literature

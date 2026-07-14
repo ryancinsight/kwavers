@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — planar aperture propagation [major]
+
+- [x] Record the breaking aperture-boundary decision in ADR-035.
+- [x] Replace the disk-only public type with disk and annular-sector geometry.
+- [x] Generalize the canonical quadrature over radial and angular bounds.
+- [x] Add exact area and independently driven sector-superposition tests.
+- [x] Run package gates and synchronize release evidence.
+- [ ] Commit and push the provider before migrating LeoNeuro.
+
+**Current phase:** Closure. **Target:** `kwavers-transducer` 4.0.0.
+**Evidence:** warning-denied all-target/all-feature Clippy; Nextest 214/214
+with one existing skip; doctests 1/1 with six existing ignored examples; and
+warning-clean package documentation.
+
 ## Owner: Codex — finite circular-aperture propagation [minor]
 
 - [x] Verify the Rayleigh first-integral pressure convention against a primary

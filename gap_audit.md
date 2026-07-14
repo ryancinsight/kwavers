@@ -1,5 +1,13 @@
 # Gap Audit
 
+- Closed 2026-07-14: the finite-aperture provider exposed only complete
+  circular pistons, forcing hybrid C/D Fresnel cells either to collapse
+  independently driven electrodes or approximate annular sectors downstream.
+  ADR-035 replaces that boundary with one oriented planar-aperture kernel over
+  disk and annular-sector bounds. Evidence tier: analytical area equality,
+  coherent sector-superposition differential equality, retained disk oracles,
+  warning-denied Clippy, 214/214 Nextest, doctests, and warning-clean Rustdoc.
+
 - Closed 2026-07-13: downstream finite-aperture propagation duplicated the
   circular-piston diffraction factor at each surface point and used equal
   point weights that did not integrate disk area. `kwavers-transducer` now owns

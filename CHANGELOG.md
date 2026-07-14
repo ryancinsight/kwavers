@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Breaking (2026-07-14) - planar aperture propagation [major]
+
+- Replaced `CircularPiston::new` with `PlanarAperture::disk` and the generic
+  `PlanarAperture::oriented` shape constructor. `rayleigh_pressure` now accepts one
+  heterogeneous planar-aperture slice, enabling independently driven annular
+  electrode sectors without downstream tessellation.
+
+### Migration
+
+- Construct complete circular sources with `PlanarAperture::disk`. Annular
+  sectors additionally provide an in-plane first axis, inner/outer radii, and
+  angular start/span. The complex surface-pressure convention is unchanged.
+
 ### Added (2026-07-13) - finite piston propagation [minor]
 
 - Added a validated oriented circular-piston Rayleigh first-integral provider

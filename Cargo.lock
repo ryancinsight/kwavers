@@ -5151,7 +5151,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-transducer"
-version = "3.1.0"
+version = "4.0.0"
 dependencies = [
  "approx",
  "eunomia",
@@ -5549,7 +5549,7 @@ dependencies = [
  "eunomia",
  "mnemosyne-backend",
  "mnemosyne-core",
- "themis 0.9.17",
+ "themis 0.10.0",
 ]
 
 [[package]]
@@ -5593,7 +5593,7 @@ dependencies = [
  "mnemosyne-core",
  "mnemosyne-local",
  "mnemosyne-prof",
- "themis 0.9.17",
+ "themis 0.10.0",
 ]
 
 [[package]]
@@ -5607,7 +5607,7 @@ dependencies = [
  "mnemosyne-core",
  "mnemosyne-decay",
  "mnemosyne-prof",
- "themis 0.9.17",
+ "themis 0.10.0",
 ]
 
 [[package]]
@@ -5648,12 +5648,22 @@ version = "0.2.0"
 dependencies = [
  "futures",
  "libc",
+ "moirai-async-macros",
  "moirai-core",
  "moirai-executor",
  "moirai-pal",
  "moirai-transport",
  "moirai-utils",
  "socket2 0.5.10",
+]
+
+[[package]]
+name = "moirai-async-macros"
+version = "0.2.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.118",
 ]
 
 [[package]]

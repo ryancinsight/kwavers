@@ -1,11 +1,11 @@
-//! Frequency-domain radiation from oriented, rigidly baffled circular pistons.
+//! Frequency-domain radiation from oriented, rigidly baffled planar apertures.
 //!
 //! For prescribed normal surface velocity, the Rayleigh first integral is
 //!
 //! `p(x,ω) = -i ωρ/(2π) ∫_S v_n(s) exp(i k R)/R dS`.
 //!
 //! This module accepts the equivalent surface-pressure phasor
-//! `p_s = ρ c v_n`, so its prefactor is `-i k/(2π)`. Each finite piston face is
+//! `p_s = ρ c v_n`, so its prefactor is `-i k/(2π)`. Each finite aperture is
 //! integrated directly; applying a separate piston-directivity factor would
 //! count the same aperture diffraction twice. The convention follows Qin et
 //! al., *Ultrasonics* 51 (2011), Eq. 1,
@@ -19,30 +19,154 @@ const LEGENDRE_ROOT_STEPS: usize = 64;
 const LEGENDRE_ROOT_TOLERANCE: f64 = 8.0 * f64::EPSILON;
 const MAX_SURFACE_SAMPLES: usize = 1 << 16;
 
-/// Uniformly driven circular piston embedded in an infinite rigid baffle.
+/// Radial bounds and angular span of a planar aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct CircularPiston {
+pub enum PlanarApertureShape {
+    /// Complete disk from the origin to `radius_m`.
+    Disk { radius_m: f64 },
+    /// Annular sector measured counter-clockwise from the aperture's first axis.
+    AnnularSector {
+        inner_radius_m: f64,
+        outer_radius_m: f64,
+        start_angle_rad: f64,
+        span_angle_rad: f64,
+    },
+}
+
+impl PlanarApertureShape {
+    fn radial_and_angular_bounds(self) -> (f64, f64, f64, f64) {
+        match self {
+            Self::Disk { radius_m } => (0.0, radius_m, 0.0, TAU),
+            Self::AnnularSector {
+                inner_radius_m,
+                outer_radius_m,
+                start_angle_rad,
+                span_angle_rad,
+            } => (
+                inner_radius_m,
+                outer_radius_m,
+                start_angle_rad,
+                span_angle_rad,
+            ),
+        }
+    }
+
+    /// Exact planar area in square metres.
+    #[must_use]
+    pub fn area_m2(self) -> f64 {
+        let (inner, outer, _, span) = self.radial_and_angular_bounds();
+        0.5 * (outer * outer - inner * inner) * span
+    }
+}
+
+/// Uniformly driven planar aperture embedded in an infinite rigid baffle.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlanarAperture {
     center_m: [f64; 3],
     normal: [f64; 3],
-    radius_m: f64,
+    first_axis: [f64; 3],
+    shape: PlanarApertureShape,
     surface_pressure_pa: Complex64,
 }
 
-impl CircularPiston {
-    /// Construct a piston, normalizing its radiating-face normal.
+impl PlanarAperture {
+    /// Construct a complete circular aperture.
     ///
     /// # Errors
     ///
     /// Returns [`KwaversError::Config`] for non-finite geometry or pressure,
     /// a non-positive radius, or a zero normal.
-    pub fn new(
+    pub fn disk(
         center_m: [f64; 3],
         normal: [f64; 3],
         radius_m: f64,
         surface_pressure_pa: Complex64,
     ) -> KwaversResult<Self> {
+        let normal = normalized_normal(normal)?;
+        let (first_axis, _) = plane_basis(normal);
+        Self::from_validated(
+            center_m,
+            normal,
+            first_axis,
+            PlanarApertureShape::Disk { radius_m },
+            surface_pressure_pa,
+        )
+    }
+
+    /// Construct a planar aperture with an explicit in-plane angular origin.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] unless the shape bounds are valid and
+    /// the first axis has a nonzero projection into the aperture plane.
+    pub fn oriented(
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+        shape: PlanarApertureShape,
+        surface_pressure_pa: Complex64,
+    ) -> KwaversResult<Self> {
+        let normal = normalized_normal(normal)?;
+        validate_point("first_axis", first_axis)?;
+        let planar_axis = subtract(first_axis, scale(normal, dot(first_axis, normal)));
+        let axis_norm = norm(planar_axis);
+        validate_positive("first_axis_planar_norm", axis_norm)?;
+        Self::from_validated(
+            center_m,
+            normal,
+            scale(planar_axis, 1.0 / axis_norm),
+            shape,
+            surface_pressure_pa,
+        )
+    }
+
+    fn from_validated(
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+        shape: PlanarApertureShape,
+        surface_pressure_pa: Complex64,
+    ) -> KwaversResult<Self> {
         validate_point("center_m", center_m)?;
-        validate_positive("radius_m", radius_m)?;
+        match shape {
+            PlanarApertureShape::Disk { radius_m } => validate_positive("radius_m", radius_m)?,
+            PlanarApertureShape::AnnularSector {
+                inner_radius_m,
+                outer_radius_m,
+                start_angle_rad,
+                span_angle_rad,
+            } => {
+                if !inner_radius_m.is_finite() || inner_radius_m < 0.0 {
+                    return Err(invalid(
+                        "inner_radius_m",
+                        inner_radius_m.to_string(),
+                        "finite and >= 0",
+                    ));
+                }
+                validate_positive("outer_radius_m", outer_radius_m)?;
+                if inner_radius_m >= outer_radius_m {
+                    return Err(invalid(
+                        "annular_radii_m",
+                        format!("{inner_radius_m}..{outer_radius_m}"),
+                        "inner < outer",
+                    ));
+                }
+                if !start_angle_rad.is_finite() {
+                    return Err(invalid(
+                        "start_angle_rad",
+                        start_angle_rad.to_string(),
+                        "finite",
+                    ));
+                }
+                if !(span_angle_rad.is_finite() && span_angle_rad > 0.0 && span_angle_rad <= TAU) {
+                    return Err(invalid(
+                        "span_angle_rad",
+                        span_angle_rad.to_string(),
+                        "0 < span <= 2*pi",
+                    ));
+                }
+            }
+        }
         if !surface_pressure_pa.re.is_finite() || !surface_pressure_pa.im.is_finite() {
             return Err(invalid(
                 "surface_pressure_pa",
@@ -50,16 +174,11 @@ impl CircularPiston {
                 "finite",
             ));
         }
-        let norm = normal
-            .iter()
-            .map(|component| component * component)
-            .sum::<f64>()
-            .sqrt();
-        validate_positive("normal_norm", norm)?;
         Ok(Self {
             center_m,
-            normal: normal.map(|component| component / norm),
-            radius_m,
+            normal,
+            first_axis,
+            shape,
             surface_pressure_pa,
         })
     }
@@ -76,10 +195,16 @@ impl CircularPiston {
         self.normal
     }
 
-    /// Piston radius in metres.
+    /// Aperture shape and bounds.
     #[must_use]
-    pub const fn radius_m(&self) -> f64 {
-        self.radius_m
+    pub const fn shape(&self) -> PlanarApertureShape {
+        self.shape
+    }
+
+    /// Outer aperture radius in metres.
+    #[must_use]
+    pub fn outer_radius_m(&self) -> f64 {
+        self.shape.radial_and_angular_bounds().1
     }
 
     /// Complex surface-pressure phasor in pascals.
@@ -270,7 +395,7 @@ impl RayleighIntegralSpec {
 /// or the quadrature root solver fails to converge.
 pub fn rayleigh_pressure(
     points_m: &[[f64; 3]],
-    pistons: &[CircularPiston],
+    apertures: &[PlanarAperture],
     spec: &RayleighIntegralSpec,
 ) -> KwaversResult<Vec<Complex64>> {
     for &point in points_m {
@@ -280,28 +405,33 @@ pub fn rayleigh_pressure(
     let prefactor = Complex64::new(0.0, -spec.wavenumber_rad_m() / TAU);
     let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];
 
-    for piston in pistons {
-        if piston.surface_pressure_pa == Complex64::new(0.0, 0.0) {
+    for aperture in apertures {
+        if aperture.surface_pressure_pa == Complex64::new(0.0, 0.0) {
             continue;
         }
-        let (tangent, bitangent) = plane_basis(piston.normal);
-        let azimuthal_weight = PI * piston.radius_m * piston.radius_m / spec.azimuthal_order as f64;
+        let bitangent = cross(aperture.normal, aperture.first_axis);
+        let (inner_radius, outer_radius, start_angle, span_angle) =
+            aperture.shape.radial_and_angular_bounds();
+        let squared_radius_span = outer_radius * outer_radius - inner_radius * inner_radius;
+        let azimuthal_weight = 0.5 * squared_radius_span * span_angle / spec.azimuthal_order as f64;
         for (&point, total) in points_m.iter().zip(&mut pressure) {
-            let center_offset = subtract(point, piston.center_m);
-            if dot(center_offset, piston.normal) <= 0.0 {
+            let center_offset = subtract(point, aperture.center_m);
+            if dot(center_offset, aperture.normal) <= 0.0 {
                 continue;
             }
             let mut integral = Complex64::new(0.0, 0.0);
-            for &(squared_radius, radial_weight) in &radial_rule {
-                let radius = piston.radius_m * squared_radius.sqrt();
+            for &(radial_fraction, radial_weight) in &radial_rule {
+                let radius =
+                    (inner_radius * inner_radius + radial_fraction * squared_radius_span).sqrt();
                 let area_weight = azimuthal_weight * radial_weight;
                 for azimuth_index in 0..spec.azimuthal_order {
-                    let azimuth = TAU * azimuth_index as f64 / spec.azimuthal_order as f64;
+                    let azimuth = start_angle
+                        + span_angle * (azimuth_index as f64 + 0.5) / spec.azimuthal_order as f64;
                     let surface_point = add(
-                        piston.center_m,
+                        aperture.center_m,
                         scale(
                             add(
-                                scale(tangent, azimuth.cos()),
+                                scale(aperture.first_axis, azimuth.cos()),
                                 scale(bitangent, azimuth.sin()),
                             ),
                             radius,
@@ -313,7 +443,7 @@ pub fn rayleigh_pressure(
                     integral += Complex64::from_polar(amplitude, phase);
                 }
             }
-            *total += prefactor * piston.surface_pressure_pa * integral;
+            *total += prefactor * aperture.surface_pressure_pa * integral;
         }
     }
     Ok(pressure)
@@ -379,6 +509,13 @@ fn plane_basis(normal: [f64; 3]) -> ([f64; 3], [f64; 3]) {
     (tangent, cross(normal, tangent))
 }
 
+fn normalized_normal(normal: [f64; 3]) -> KwaversResult<[f64; 3]> {
+    validate_point("normal", normal)?;
+    let normal_norm = norm(normal);
+    validate_positive("normal_norm", normal_norm)?;
+    Ok(scale(normal, 1.0 / normal_norm))
+}
+
 fn validate_positive(parameter: &str, value: f64) -> KwaversResult<()> {
     if value.is_finite() && value > 0.0 {
         Ok(())
@@ -438,8 +575,8 @@ mod tests {
     use super::*;
     use kwavers_math::special::bessel::j1;
 
-    fn piston(radius_m: f64) -> CircularPiston {
-        CircularPiston::new(
+    fn piston(radius_m: f64) -> PlanarAperture {
+        PlanarAperture::disk(
             [0.0; 3],
             [0.0, 0.0, 1.0],
             radius_m,
@@ -458,13 +595,63 @@ mod tests {
     }
 
     #[test]
+    fn annular_sector_area_matches_radial_angular_measure() {
+        let shape = PlanarApertureShape::AnnularSector {
+            inner_radius_m: 1.0e-3,
+            outer_radius_m: 3.0e-3,
+            start_angle_rad: 0.3,
+            span_angle_rad: std::f64::consts::FRAC_PI_2,
+        };
+        let expected = std::f64::consts::FRAC_PI_2 * (9.0e-6 - 1.0e-6) / 2.0;
+        assert!((shape.area_m2() - expected).abs() <= 4.0 * f64::EPSILON * expected);
+    }
+
+    #[test]
+    fn independently_driven_sectors_superpose_to_complete_annulus_on_axis() {
+        let pressure = Complex64::from_polar(1.7e5, 0.4);
+        let aperture = |start_angle_rad, span_angle_rad| {
+            PlanarAperture::oriented(
+                [0.0; 3],
+                [0.0, 0.0, 1.0],
+                [1.0, 0.0, 0.0],
+                PlanarApertureShape::AnnularSector {
+                    inner_radius_m: 0.4e-3,
+                    outer_radius_m: 1.2e-3,
+                    start_angle_rad,
+                    span_angle_rad,
+                },
+                pressure,
+            )
+            .unwrap()
+        };
+        let complete = aperture(0.0, TAU);
+        let sectors: Vec<_> = (0..4)
+            .map(|sector| {
+                aperture(
+                    sector as f64 * std::f64::consts::FRAC_PI_2,
+                    std::f64::consts::FRAC_PI_2,
+                )
+            })
+            .collect();
+        let spec = RayleighIntegralSpec::new(TAU / 0.7e-3, 0.0, 12, 32).unwrap();
+        let point = [[0.0, 0.0, 20.0e-3]];
+        let complete_pressure = rayleigh_pressure(&point, &[complete], &spec).unwrap()[0];
+        let sector_pressure = rayleigh_pressure(&point, &sectors, &spec).unwrap()[0];
+        assert!(
+            (complete_pressure - sector_pressure).norm()
+                <= 32.0 * f64::EPSILON * complete_pressure.norm(),
+            "complete={complete_pressure:?}, sectors={sector_pressure:?}"
+        );
+    }
+
+    #[test]
     fn on_axis_pressure_matches_closed_form() {
         let piston = piston(1.2e-3);
         let k = TAU / 0.75e-3;
         let axial_range = 14.0e-3;
         let spec = RayleighIntegralSpec::new(k, 0.0, 24, 24).unwrap();
         let actual = rayleigh_pressure(&[[0.0, 0.0, axial_range]], &[piston], &spec).unwrap()[0];
-        let rim_range = axial_range.hypot(piston.radius_m());
+        let rim_range = axial_range.hypot(piston.outer_radius_m());
         let expected = piston.surface_pressure_pa()
             * (Complex64::from_polar(1.0, k * axial_range)
                 - Complex64::from_polar(1.0, k * rim_range));
@@ -488,7 +675,7 @@ mod tests {
             &RayleighIntegralSpec::new(k, 0.0, 20, 96).unwrap(),
         )
         .unwrap();
-        let argument = k * piston.radius_m() * angle.sin();
+        let argument = k * piston.outer_radius_m() * angle.sin();
         let expected_ratio = (2.0 * j1(argument) / argument).abs();
         let actual_ratio = pressure[1].norm() / pressure[0].norm();
         assert!(
@@ -500,10 +687,10 @@ mod tests {
     #[test]
     fn rotation_preserves_complex_pressure() {
         let base = piston(0.7e-3);
-        let rotated = CircularPiston::new(
+        let rotated = PlanarAperture::disk(
             [0.0; 3],
             [1.0, 0.0, 0.0],
-            base.radius_m(),
+            base.outer_radius_m(),
             base.surface_pressure_pa(),
         )
         .unwrap();

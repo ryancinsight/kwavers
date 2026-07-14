@@ -73,7 +73,9 @@ pub use transducers::{
         BeamformingMode, ElementSensitivity, PhasedArrayConfig, PhasedArrayTransducer,
         TransducerElement,
     },
-    physics::{rayleigh_pressure, CircularPiston, RayleighIntegralSpec, RayleighLayer},
+    physics::{
+        rayleigh_pressure, PlanarAperture, PlanarApertureShape, RayleighIntegralSpec, RayleighLayer,
+    },
     rectangular::RectangularTransducer,
 };
 
