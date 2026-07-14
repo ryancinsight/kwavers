@@ -17,6 +17,7 @@ use std::f64::consts::{PI, TAU};
 
 const LEGENDRE_ROOT_STEPS: usize = 64;
 const LEGENDRE_ROOT_TOLERANCE: f64 = 8.0 * f64::EPSILON;
+const MAX_SURFACE_SAMPLES: usize = 1 << 16;
 
 /// Uniformly driven circular piston embedded in an infinite rigid baffle.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -130,6 +131,20 @@ impl RayleighIntegralSpec {
                 "azimuthal_order",
                 azimuthal_order.to_string(),
                 ">= 3",
+            ));
+        }
+        let surface_samples = radial_order.checked_mul(azimuthal_order).ok_or_else(|| {
+            invalid(
+                "quadrature_surface_samples",
+                format!("{radial_order} * {azimuthal_order}"),
+                "product representable as usize",
+            )
+        })?;
+        if surface_samples > MAX_SURFACE_SAMPLES {
+            return Err(invalid(
+                "quadrature_surface_samples",
+                surface_samples.to_string(),
+                &format!("<= {MAX_SURFACE_SAMPLES}"),
             ));
         }
         Ok(Self {
@@ -415,5 +430,12 @@ mod tests {
         )
         .unwrap();
         assert_eq!(pressure, vec![Complex64::new(0.0, 0.0)]);
+    }
+
+    #[test]
+    fn quadrature_work_is_bounded() {
+        let error = RayleighIntegralSpec::new(1.0, 0.0, MAX_SURFACE_SAMPLES, 3)
+            .expect_err("surface sample count exceeds the provider budget");
+        assert!(error.to_string().contains("quadrature_surface_samples"));
     }
 }

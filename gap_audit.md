@@ -6,7 +6,8 @@
   the baffled Rayleigh first integral with Gauss-Legendre squared-radius and
   periodic azimuth quadrature. Evidence tier: analytical on-axis and disk-area
   equalities, Bessel far-field differential validation, geometric invariance
-  tests, warning-denied package diagnostics, and 209/209 package tests.
+  tests, bounded-work rejection, warning-denied package diagnostics, and
+  210/210 package tests.
 - Residual evidence limit: `cargo-semver-checks` cannot compare
   `kwavers-transducer` because no registry release exists. The additive public
   surface is classified [minor] by source review; no machine semver proof is

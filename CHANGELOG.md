@@ -8,7 +8,8 @@
   with area-consistent disk quadrature, coherent complex pressure, per-path
   attenuation, and rigid-baffle half-space suppression. The surface integral
   owns aperture diffraction; consumers no longer need a separate piston
-  directivity multiplier.
+  directivity multiplier. Quadrature construction rejects work requests above
+  a fixed surface-sample budget.
 
 ### Fixed (2026-07-13) - transducer documentation links [patch]
 
