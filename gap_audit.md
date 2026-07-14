@@ -1,5 +1,17 @@
 # Gap Audit
 
+- Closed 2026-07-13: downstream finite-aperture propagation duplicated the
+  circular-piston diffraction factor at each surface point and used equal
+  point weights that did not integrate disk area. `kwavers-transducer` now owns
+  the baffled Rayleigh first integral with Gauss-Legendre squared-radius and
+  periodic azimuth quadrature. Evidence tier: analytical on-axis and disk-area
+  equalities, Bessel far-field differential validation, geometric invariance
+  tests, warning-denied package diagnostics, and 209/209 package tests.
+- Residual evidence limit: `cargo-semver-checks` cannot compare
+  `kwavers-transducer` because no registry release exists. The additive public
+  surface is classified [minor] by source review; no machine semver proof is
+  claimed.
+
 - Closed 2026-07-13: the workspace-wide Leto `ndarray-compat` feature concealed
   21 same-type conversions across beamforming, PAM, BEM, FEM, FDTD, PSTD, and
   thermal coupling. The feature and conversions are deleted; matrix inversion

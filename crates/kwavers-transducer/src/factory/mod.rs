@@ -31,7 +31,7 @@ impl SourceFactory {
     /// Create a source from configuration.
     ///
     /// # Errors
-    /// Propagates any [`KwaversError`] returned by called functions.
+    /// Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     pub fn create_source(
         config: &DomainSourceParameters,
         grid: &Grid,

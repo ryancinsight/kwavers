@@ -155,7 +155,7 @@ impl BowlTransducer {
         })
     }
 
-    /// Borrow the generated element center positions [m].
+    /// Borrow the generated element center positions \[m\].
     #[must_use]
     pub fn element_positions(&self) -> &[[f64; 3]] {
         &self.element_positions
@@ -167,7 +167,7 @@ impl BowlTransducer {
         &self.element_normals
     }
 
-    /// Borrow equal surface-area weights [m²] represented by each element.
+    /// Borrow equal surface-area weights \[m²\] represented by each element.
     #[must_use]
     pub fn element_areas(&self) -> &[f64] {
         &self.element_areas

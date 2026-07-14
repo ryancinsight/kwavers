@@ -48,8 +48,8 @@ use std::f64::consts::{FRAC_PI_2, TAU};
 /// Mutual radiation impedance `Z_ij = jωρ A_i A_j /(2π d) · e^{-jkd}` [kg/s]
 /// between two baffled membrane elements (baffled monopole approximation).
 ///
-/// `area_i`, `area_j` are the element face areas [m²], `separation` the
-/// centre-to-centre distance `d > 0` [m], `omega` the angular frequency [rad/s],
+/// `area_i`, `area_j` are the element face areas \[m²\], `separation` the
+/// centre-to-centre distance `d > 0` \[m\], `omega` the angular frequency \[rad/s\],
 /// `rho`/`c` the fluid density [kg/m³] and sound speed [m/s].
 ///
 /// Returns `0` for a non-positive separation (degenerate / coincident elements;
@@ -75,8 +75,8 @@ pub fn mutual_radiation_impedance(
 
 /// Build the inter-element crosstalk coupling matrix `Z` for an array.
 ///
-/// `positions` are the element centres [m] (3-D, for conformal arrays); `areas`
-/// the per-element face areas [m²] (must match `positions` in length). Entry
+/// `positions` are the element centres \[m\] (3-D, for conformal arrays); `areas`
+/// the per-element face areas \[m²\] (must match `positions` in length). Entry
 /// `Z[i][j]` (`i≠j`) is [`mutual_radiation_impedance`]; the **diagonal is zero**
 /// — this is the *cross*-coupling matrix, the self radiation impedance is a
 /// separate single-element property. The matrix is complex-symmetric

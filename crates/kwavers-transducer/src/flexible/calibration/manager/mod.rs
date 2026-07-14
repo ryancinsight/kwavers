@@ -46,7 +46,7 @@ impl CalibrationManager {
 
     /// Perform self-calibration using acoustic reflections.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn self_calibrate(
         &mut self,
@@ -71,7 +71,7 @@ impl CalibrationManager {
     /// Triangulate position from multiple measurements using least-squares.
     /// # Errors
     /// - Returns [`kwavers_core::error::KwaversError::InvalidInput`] if fewer than 4 reflectors.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn triangulate_position(
         &self,
@@ -137,7 +137,7 @@ impl CalibrationManager {
 
     /// Process external tracking data with Kalman filtering.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn process_external_tracking(
         &mut self,

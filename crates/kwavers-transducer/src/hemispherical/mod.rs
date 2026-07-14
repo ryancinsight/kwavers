@@ -49,7 +49,7 @@ pub struct HemisphericalArray {
 impl HemisphericalArray {
     /// Create new hemispherical array
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new(radius: f64, num_elements: usize, frequency: f64) -> KwaversResult<Self> {
         let geometry = HemisphereGeometry::new(radius)?;
@@ -67,7 +67,7 @@ impl HemisphericalArray {
 
     /// Enable sparse array optimization
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn with_sparse_optimization(mut self, density_factor: f64) -> KwaversResult<Self> {
         self.sparse_optimizer = Some(SparseArrayOptimizer::new(density_factor)?);

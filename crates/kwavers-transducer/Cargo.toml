@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-transducer"
-version = "3.0.0"
+version = "3.1.0"
 edition = "2021"
 authors = ["Ryan Clanton PhD <ryanclanton@outlook.com>"]
 description = "High-level transducer devices for kwavers: focused bowls, phased/linear/matrix/2-D/hemispherical arrays, k-Wave arrays, calibration, factories, beamforming, PAM, ultrafast"

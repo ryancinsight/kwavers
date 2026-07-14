@@ -179,7 +179,7 @@ impl SensorBeamformer {
     /// # References
     /// - Van Trees, H. L. (2002): *Optimum Array Processing*, §2.4. Wiley.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn calculate_steering(
         &self,

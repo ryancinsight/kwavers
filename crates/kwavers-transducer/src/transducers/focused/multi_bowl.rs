@@ -24,7 +24,7 @@ pub struct MultiBowlArray {
 impl MultiBowlArray {
     /// Create a new multi-bowl array
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new(configs: Vec<BowlConfig>) -> KwaversResult<Self> {
         let mut bowls = Vec::with_capacity(configs.len());
@@ -70,7 +70,7 @@ impl MultiBowlArray {
     /// applying both amplitude scaling and phase shifts. The phase shifts
     /// are crucial for beam steering and complex field synthesis.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
         let mut combined_source = Array3::zeros([grid.nx, grid.ny, grid.nz]);

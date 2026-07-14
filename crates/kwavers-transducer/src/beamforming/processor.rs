@@ -171,7 +171,7 @@ impl BeamformingProcessor {
     /// - Applies diagonal loading `δI` for robustness.
     /// - Applies the resulting weights across time to produce `(1, 1, n_samples)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn mvdr_unsteered_weights_time_series(
         &self,

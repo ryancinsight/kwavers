@@ -1,5 +1,23 @@
 # Project Checklist
 
+## Owner: Codex — finite circular-aperture propagation [minor]
+
+- [x] Verify the Rayleigh first-integral pressure convention against a primary
+  reference and locate the canonical Kwavers transducer-physics owner.
+- [x] Add validated oriented circular-piston and propagation-spec types.
+- [x] Implement one area-consistent disk quadrature without a separate
+  directivity multiplier.
+- [x] Verify the complex on-axis closed form, far-field circular-piston
+  directivity, rigid-baffle back suppression, and rotation invariance.
+- [x] Run package gates, synchronize PM artifacts, commit, and push before
+  migrating the LeoNeuro consumer.
+
+**Current phase:** Closure. **Target:** `kwavers-transducer` 3.1.0.
+**Evidence:** warning-denied all-target/all-feature Clippy; Nextest 209/209
+with one existing skip; doctests 1/1 with six existing ignored examples; and
+warning-denied package documentation. Semver comparison is unavailable because
+the crate has no published registry baseline.
+
 ## Owner: Codex — CT medium ownership [arch]
 
 - [x] Verify the existing builder and dependency direction.

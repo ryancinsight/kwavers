@@ -2,6 +2,19 @@
 
 ## Unreleased
 
+### Added (2026-07-13) - finite piston propagation [minor]
+
+- Added a validated oriented circular-piston Rayleigh first-integral provider
+  with area-consistent disk quadrature, coherent complex pressure, per-path
+  attenuation, and rigid-baffle half-space suppression. The surface integral
+  owns aperture diffraction; consumers no longer need a separate piston
+  directivity multiplier.
+
+### Fixed (2026-07-13) - transducer documentation links [patch]
+
+- Corrected broken intra-doc links and unit annotations exposed by the
+  warning-denied `kwavers-transducer` documentation gate.
+
 ### Changed (2026-07-13) - CT medium ownership [arch]
 
 - Moved `CtMediumBuilder` from the skull-specific `kwavers-physics` namespace

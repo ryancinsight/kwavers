@@ -36,7 +36,7 @@ pub struct PhasedArrayTransducer {
 impl PhasedArrayTransducer {
     /// Create phased array transducer
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn create(
         config: PhasedArrayConfig,

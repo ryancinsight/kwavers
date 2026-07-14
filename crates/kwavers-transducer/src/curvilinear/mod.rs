@@ -43,7 +43,7 @@ pub struct ConvexArrayGeometry {
 }
 
 impl ConvexArrayGeometry {
-    /// Build from an explicit angular pitch `Δθ` [rad] between adjacent elements.
+    /// Build from an explicit angular pitch `Δθ` \[rad\] between adjacent elements.
     ///
     /// # Errors
     /// - [`KwaversError::InvalidInput`] if `radius_of_curvature ≤ 0`,
@@ -75,7 +75,7 @@ impl ConvexArrayGeometry {
         })
     }
 
-    /// Build from an arc-length pitch (centre-to-centre along the arc) [m].
+    /// Build from an arc-length pitch (centre-to-centre along the arc) \[m\].
     ///
     /// The angular pitch is `Δθ = arc_pitch / R_c`.
     ///
@@ -99,7 +99,7 @@ impl ConvexArrayGeometry {
         )
     }
 
-    /// Build from the total angular span `Θ` [rad] of the aperture.
+    /// Build from the total angular span `Θ` \[rad\] of the aperture.
     ///
     /// Distributes `num_elements` over `[−Θ/2, +Θ/2]`, so `Δθ = Θ / (N−1)`. For a
     /// single element the angular pitch is unused; a sentinel `Θ` is required `> 0`.
@@ -129,7 +129,7 @@ impl ConvexArrayGeometry {
         )
     }
 
-    /// Radius of curvature `R_c` [m].
+    /// Radius of curvature `R_c` \[m\].
     #[must_use]
     pub fn radius_of_curvature(&self) -> f64 {
         self.radius_of_curvature
@@ -141,7 +141,7 @@ impl ConvexArrayGeometry {
         self.num_elements
     }
 
-    /// Angular pitch `Δθ` [rad].
+    /// Angular pitch `Δθ` \[rad\].
     #[must_use]
     pub fn angular_pitch(&self) -> f64 {
         self.angular_pitch
@@ -153,14 +153,14 @@ impl ConvexArrayGeometry {
         [0.0, 0.0, -self.radius_of_curvature]
     }
 
-    /// Subtended angle `θ_i` [rad] of element `i` about the centre of curvature
+    /// Subtended angle `θ_i` \[rad\] of element `i` about the centre of curvature
     /// (symmetric about the apex: `θ = 0` at the centre element).
     #[must_use]
     pub fn element_angle(&self, i: usize) -> f64 {
         (i as f64 - (self.num_elements as f64 - 1.0) / 2.0) * self.angular_pitch
     }
 
-    /// Centre position of element `i` [m].
+    /// Centre position of element `i` \[m\].
     #[must_use]
     pub fn element_position(&self, i: usize) -> [f64; 3] {
         let theta = self.element_angle(i);
@@ -198,25 +198,25 @@ impl ConvexArrayGeometry {
             .collect()
     }
 
-    /// Arc-length pitch (centre-to-centre along the arc) `R_c·Δθ` [m].
+    /// Arc-length pitch (centre-to-centre along the arc) `R_c·Δθ` \[m\].
     #[must_use]
     pub fn arc_pitch(&self) -> f64 {
         self.radius_of_curvature * self.angular_pitch
     }
 
-    /// Total angular span `(N−1)·Δθ` [rad].
+    /// Total angular span `(N−1)·Δθ` \[rad\].
     #[must_use]
     pub fn total_angular_span(&self) -> f64 {
         (self.num_elements.saturating_sub(1)) as f64 * self.angular_pitch
     }
 
-    /// Lateral aperture width (chord across the array) `2 R_c·sin(span/2)` [m].
+    /// Lateral aperture width (chord across the array) `2 R_c·sin(span/2)` \[m\].
     #[must_use]
     pub fn aperture_width(&self) -> f64 {
         2.0 * self.radius_of_curvature * (self.total_angular_span() / 2.0).sin()
     }
 
-    /// Transmit-focusing time delays [s] for a focal point.
+    /// Transmit-focusing time delays \[s\] for a focal point.
     ///
     /// Returns `delay_i = (d_max − d_i) / c`, where `d_i = ‖position(i) − focal‖`
     /// and `d_max = maxᵢ d_i`. The farthest element fires first (delay 0) and the

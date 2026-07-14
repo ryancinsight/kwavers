@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KW-APERTURE-001 — Own finite circular-piston propagation [minor] — review
+
+- Owner: Codex; scope: `kwavers-transducer::transducers::physics`, its public
+  exports, analytical/differential tests, version, and synchronized PM records.
+- Driver: private Atlas consumer `leoneuro-rs` currently duplicates and
+  double-counts finite-aperture diffraction.
+- Acceptance: the provider evaluates the baffled Rayleigh first integral with
+  the `k/(2π)` surface-pressure prefactor, area-consistent disk quadrature,
+  oriented half-space suppression, and complex coherent summation; analytical
+  and far-field reference tests plus package gates pass.
+- Evidence: exact on-axis and disk-area oracles, far-field Bessel differential
+  oracle, rotation and baffle invariants, warning-denied Clippy/docs, and
+  Nextest 209/209. Registry-baseline semver analysis is externally unavailable.
+
 ## KW-MEDIUM-CT-001 — Own complete CT medium assembly [arch] — review
 
 - Owner: Codex; scope: `kwavers-medium::heterogeneous` CT builder,

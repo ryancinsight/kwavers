@@ -5151,7 +5151,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-transducer"
-version = "3.0.0"
+version = "3.1.0"
 dependencies = [
  "approx",
  "eunomia",
