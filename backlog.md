@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — in-progress
+
+- Owner: Codex; scope: `kwavers-transducer::kwave_array`, canonical planar
+  aperture geometry, tests, and PM artifacts.
+- Driver: private LeoNeuro hybrid C/D sectors require full-wave PSTD sources
+  without finite-disc substitution.
+- Acceptance: validated oriented disk/annular-sector geometry rasterizes through
+  the existing BLI per-element source path, conserves analytical aperture area,
+  preserves independent element signals, and passes package gates.
+
 ## KW-APERTURE-002 — General planar aperture propagation [major] — review
 
 - Owner: Codex; scope: `kwavers-transducer` Rayleigh aperture types, kernel,
