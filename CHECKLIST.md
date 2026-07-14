@@ -1,5 +1,14 @@
 # Project Checklist
 
+## Owner: Codex — planar sector BLI rasterization [minor]
+
+- [ ] Consolidate validated planar geometry for Rayleigh and grid sources.
+- [ ] Add oriented annular-sector sampling to `KWaveArray`.
+- [ ] Prove analytical area conservation and independent signal propagation.
+- [ ] Run package gates, synchronize artifacts, commit, and push.
+
+**Current phase:** Execution. **Target:** `kwavers-transducer` 4.1.0.
+
 ## Owner: Codex — planar aperture propagation [major]
 
 - [x] Record the breaking aperture-boundary decision in ADR-035.
@@ -7,7 +16,7 @@
 - [x] Generalize the canonical quadrature over radial and angular bounds.
 - [x] Add exact area and independently driven sector-superposition tests.
 - [x] Run package gates and synchronize release evidence.
-- [ ] Commit and push the provider before migrating LeoNeuro.
+- [x] Commit and push the provider before migrating LeoNeuro.
 
 **Current phase:** Closure. **Target:** `kwavers-transducer` 4.0.0.
 **Evidence:** warning-denied all-target/all-feature Clippy; Nextest 214/214
