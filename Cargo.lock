@@ -3766,7 +3766,7 @@ version = "0.13.0"
 dependencies = [
  "bytemuck",
  "leto",
- "themis 0.10.0",
+ "themis",
  "thiserror 2.0.18",
 ]
 
@@ -3785,7 +3785,7 @@ dependencies = [
  "moirai-gpu",
  "moirai-sync",
  "num-complex",
- "themis 0.10.0",
+ "themis",
 ]
 
 [[package]]
@@ -3801,7 +3801,7 @@ dependencies = [
  "moirai-gpu",
  "moirai-sync",
  "num-complex",
- "themis 0.10.0",
+ "themis",
  "wgpu 30.0.0",
  "windows 0.62.2",
 ]
@@ -3816,7 +3816,7 @@ dependencies = [
  "hermes-simd-intrinsics",
  "hermes-simd-macros",
  "hermes-simd-types",
- "themis 0.9.17",
+ "themis",
 ]
 
 [[package]]
@@ -3828,7 +3828,7 @@ dependencies = [
  "half",
  "mnemosyne",
  "rkyv 0.7.45",
- "themis 0.9.17",
+ "themis",
 ]
 
 [[package]]
@@ -5151,7 +5151,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-transducer"
-version = "4.0.0"
+version = "4.1.0"
 dependencies = [
  "approx",
  "eunomia",
@@ -5211,7 +5211,7 @@ dependencies = [
  "hermes-simd",
  "leto",
  "moirai",
- "themis 0.10.0",
+ "themis",
  "thiserror 2.0.18",
 ]
 
@@ -5549,7 +5549,7 @@ dependencies = [
  "eunomia",
  "mnemosyne-backend",
  "mnemosyne-core",
- "themis 0.10.0",
+ "themis",
 ]
 
 [[package]]
@@ -5593,7 +5593,7 @@ dependencies = [
  "mnemosyne-core",
  "mnemosyne-local",
  "mnemosyne-prof",
- "themis 0.10.0",
+ "themis",
 ]
 
 [[package]]
@@ -5607,7 +5607,7 @@ dependencies = [
  "mnemosyne-core",
  "mnemosyne-decay",
  "mnemosyne-prof",
- "themis 0.10.0",
+ "themis",
 ]
 
 [[package]]
@@ -5695,7 +5695,7 @@ dependencies = [
  "mnemosyne-core",
  "moirai-core",
  "moirai-utils",
- "themis 0.10.0",
+ "themis",
 ]
 
 [[package]]
@@ -5709,7 +5709,7 @@ dependencies = [
  "moirai-scheduler",
  "moirai-utils",
  "num_cpus",
- "themis 0.10.0",
+ "themis",
  "thiserror 1.0.69",
 ]
 
@@ -5743,7 +5743,7 @@ dependencies = [
  "moirai-core",
  "moirai-utils",
  "num_cpus",
- "themis 0.10.0",
+ "themis",
 ]
 
 [[package]]
@@ -8800,14 +8800,6 @@ name = "textwrap"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c13547615a44dc9c452a8a534638acdf07120d4b6847c8178705da06306a3057"
-
-[[package]]
-name = "themis"
-version = "0.9.17"
-source = "git+https://github.com/ryancinsight/themis?rev=6140468c79279ec8f112641ea7422cef4688c7f6#6140468c79279ec8f112641ea7422cef4688c7f6"
-dependencies = [
- "melinoe",
-]
 
 [[package]]
 name = "themis"

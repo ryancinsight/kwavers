@@ -34,7 +34,7 @@ pub enum PlanarApertureShape {
 }
 
 impl PlanarApertureShape {
-    fn radial_and_angular_bounds(self) -> (f64, f64, f64, f64) {
+    pub(crate) fn radial_and_angular_bounds(self) -> (f64, f64, f64, f64) {
         match self {
             Self::Disk { radius_m } => (0.0, radius_m, 0.0, TAU),
             Self::AnnularSector {
@@ -59,29 +59,23 @@ impl PlanarApertureShape {
     }
 }
 
-/// Uniformly driven planar aperture embedded in an infinite rigid baffle.
+/// Validated position, orientation, and radial/angular bounds of a planar aperture.
 #[derive(Debug, Clone, Copy, PartialEq)]
-pub struct PlanarAperture {
+pub struct PlanarApertureGeometry {
     center_m: [f64; 3],
     normal: [f64; 3],
     first_axis: [f64; 3],
     shape: PlanarApertureShape,
-    surface_pressure_pa: Complex64,
 }
 
-impl PlanarAperture {
-    /// Construct a complete circular aperture.
+impl PlanarApertureGeometry {
+    /// Construct complete circular geometry.
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for non-finite geometry or pressure,
-    /// a non-positive radius, or a zero normal.
-    pub fn disk(
-        center_m: [f64; 3],
-        normal: [f64; 3],
-        radius_m: f64,
-        surface_pressure_pa: Complex64,
-    ) -> KwaversResult<Self> {
+    /// Returns [`KwaversError::Config`] for non-finite geometry, a non-positive
+    /// radius, or a zero normal.
+    pub fn disk(center_m: [f64; 3], normal: [f64; 3], radius_m: f64) -> KwaversResult<Self> {
         let normal = normalized_normal(normal)?;
         let (first_axis, _) = plane_basis(normal);
         Self::from_validated(
@@ -89,7 +83,6 @@ impl PlanarAperture {
             normal,
             first_axis,
             PlanarApertureShape::Disk { radius_m },
-            surface_pressure_pa,
         )
     }
 
@@ -104,20 +97,13 @@ impl PlanarAperture {
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
-        surface_pressure_pa: Complex64,
     ) -> KwaversResult<Self> {
         let normal = normalized_normal(normal)?;
         validate_point("first_axis", first_axis)?;
         let planar_axis = subtract(first_axis, scale(normal, dot(first_axis, normal)));
         let axis_norm = norm(planar_axis);
         validate_positive("first_axis_planar_norm", axis_norm)?;
-        Self::from_validated(
-            center_m,
-            normal,
-            scale(planar_axis, 1.0 / axis_norm),
-            shape,
-            surface_pressure_pa,
-        )
+        Self::from_validated(center_m, normal, scale(planar_axis, 1.0 / axis_norm), shape)
     }
 
     fn from_validated(
@@ -125,7 +111,6 @@ impl PlanarAperture {
         normal: [f64; 3],
         first_axis: [f64; 3],
         shape: PlanarApertureShape,
-        surface_pressure_pa: Complex64,
     ) -> KwaversResult<Self> {
         validate_point("center_m", center_m)?;
         match shape {
@@ -167,19 +152,11 @@ impl PlanarAperture {
                 }
             }
         }
-        if !surface_pressure_pa.re.is_finite() || !surface_pressure_pa.im.is_finite() {
-            return Err(invalid(
-                "surface_pressure_pa",
-                format!("{surface_pressure_pa:?}"),
-                "finite",
-            ));
-        }
         Ok(Self {
             center_m,
             normal,
             first_axis,
             shape,
-            surface_pressure_pa,
         })
     }
 
@@ -195,6 +172,12 @@ impl PlanarAperture {
         self.normal
     }
 
+    /// Unit in-plane axis from which positive aperture angles are measured.
+    #[must_use]
+    pub const fn first_axis(&self) -> [f64; 3] {
+        self.first_axis
+    }
+
     /// Aperture shape and bounds.
     #[must_use]
     pub const fn shape(&self) -> PlanarApertureShape {
@@ -205,6 +188,102 @@ impl PlanarAperture {
     #[must_use]
     pub fn outer_radius_m(&self) -> f64 {
         self.shape.radial_and_angular_bounds().1
+    }
+}
+
+/// Uniformly driven planar aperture embedded in an infinite rigid baffle.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PlanarAperture {
+    geometry: PlanarApertureGeometry,
+    surface_pressure_pa: Complex64,
+}
+
+impl PlanarAperture {
+    /// Construct a complete circular aperture.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] for invalid geometry or pressure.
+    pub fn disk(
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        radius_m: f64,
+        surface_pressure_pa: Complex64,
+    ) -> KwaversResult<Self> {
+        Self::new(
+            PlanarApertureGeometry::disk(center_m, normal, radius_m)?,
+            surface_pressure_pa,
+        )
+    }
+
+    /// Construct an oriented aperture with an explicit angular origin.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] for invalid geometry or pressure.
+    pub fn oriented(
+        center_m: [f64; 3],
+        normal: [f64; 3],
+        first_axis: [f64; 3],
+        shape: PlanarApertureShape,
+        surface_pressure_pa: Complex64,
+    ) -> KwaversResult<Self> {
+        Self::new(
+            PlanarApertureGeometry::oriented(center_m, normal, first_axis, shape)?,
+            surface_pressure_pa,
+        )
+    }
+
+    /// Attach a prescribed pressure phasor to validated geometry.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] when either phasor component is non-finite.
+    pub fn new(
+        geometry: PlanarApertureGeometry,
+        surface_pressure_pa: Complex64,
+    ) -> KwaversResult<Self> {
+        if !surface_pressure_pa.re.is_finite() || !surface_pressure_pa.im.is_finite() {
+            return Err(invalid(
+                "surface_pressure_pa",
+                format!("{surface_pressure_pa:?}"),
+                "finite",
+            ));
+        }
+        Ok(Self {
+            geometry,
+            surface_pressure_pa,
+        })
+    }
+
+    /// Validated aperture geometry.
+    #[must_use]
+    pub const fn geometry(&self) -> PlanarApertureGeometry {
+        self.geometry
+    }
+
+    /// Piston centre in metres.
+    #[must_use]
+    pub const fn center_m(&self) -> [f64; 3] {
+        self.geometry.center_m()
+    }
+
+    /// Unit normal pointing into the radiating half-space.
+    #[must_use]
+    pub const fn normal(&self) -> [f64; 3] {
+        self.geometry.normal()
+    }
+
+    /// Aperture shape and bounds.
+    #[must_use]
+    pub const fn shape(&self) -> PlanarApertureShape {
+        self.geometry.shape()
+    }
+
+    /// Outer aperture radius in metres.
+    #[must_use]
+    pub fn outer_radius_m(&self) -> f64 {
+        self.geometry.outer_radius_m()
     }
 
     /// Complex surface-pressure phasor in pascals.
@@ -406,17 +485,18 @@ pub fn rayleigh_pressure(
     let mut pressure = vec![Complex64::new(0.0, 0.0); points_m.len()];
 
     for aperture in apertures {
-        if aperture.surface_pressure_pa == Complex64::new(0.0, 0.0) {
+        if aperture.surface_pressure_pa() == Complex64::new(0.0, 0.0) {
             continue;
         }
-        let bitangent = cross(aperture.normal, aperture.first_axis);
+        let geometry = aperture.geometry();
+        let bitangent = cross(geometry.normal(), geometry.first_axis());
         let (inner_radius, outer_radius, start_angle, span_angle) =
-            aperture.shape.radial_and_angular_bounds();
+            geometry.shape().radial_and_angular_bounds();
         let squared_radius_span = outer_radius * outer_radius - inner_radius * inner_radius;
         let azimuthal_weight = 0.5 * squared_radius_span * span_angle / spec.azimuthal_order as f64;
         for (&point, total) in points_m.iter().zip(&mut pressure) {
-            let center_offset = subtract(point, aperture.center_m);
-            if dot(center_offset, aperture.normal) <= 0.0 {
+            let center_offset = subtract(point, geometry.center_m());
+            if dot(center_offset, geometry.normal()) <= 0.0 {
                 continue;
             }
             let mut integral = Complex64::new(0.0, 0.0);
@@ -428,10 +508,10 @@ pub fn rayleigh_pressure(
                     let azimuth = start_angle
                         + span_angle * (azimuth_index as f64 + 0.5) / spec.azimuthal_order as f64;
                     let surface_point = add(
-                        aperture.center_m,
+                        geometry.center_m(),
                         scale(
                             add(
-                                scale(aperture.first_axis, azimuth.cos()),
+                                scale(geometry.first_axis(), azimuth.cos()),
                                 scale(bitangent, azimuth.sin()),
                             ),
                             radius,
@@ -443,7 +523,7 @@ pub fn rayleigh_pressure(
                     integral += Complex64::from_polar(amplitude, phase);
                 }
             }
-            *total += prefactor * aperture.surface_pressure_pa * integral;
+            *total += prefactor * aperture.surface_pressure_pa() * integral;
         }
     }
     Ok(pressure)

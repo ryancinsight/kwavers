@@ -1,5 +1,13 @@
 # Gap Audit
 
+- Closed 2026-07-14: KWaveArray could rasterize finite discs but not the
+  independently driven planar annular sectors already accepted by the Rayleigh
+  provider. `PlanarApertureGeometry` is now the shared validated geometry;
+  equal-area sector sampling and normalized BLI stencils preserve analytical
+  source area and per-sector signals. Evidence tier: type-level geometry reuse,
+  analytical area equality, value-semantic source-matrix regression, Clippy,
+  215/215 Nextest, doctests, and Rustdoc.
+
 - Closed 2026-07-14: the finite-aperture provider exposed only complete
   circular pistons, forcing hybrid C/D Fresnel cells either to collapse
   independently driven electrodes or approximate annular sectors downstream.

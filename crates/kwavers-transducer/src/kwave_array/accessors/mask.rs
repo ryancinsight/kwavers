@@ -1,6 +1,6 @@
 use leto::Array3;
 
-use super::super::{ElementShape, KWaveArray};
+use super::super::{ElementShape, KWaveArray, KWaveElement};
 
 impl KWaveArray {
     /// Generate a binary mask on the computational grid.
@@ -10,6 +10,13 @@ impl KWaveArray {
     pub fn get_array_binary_mask(&self, grid: &kwavers_grid::Grid) -> Array3<bool> {
         let mut mask = Array3::from_elem([grid.nx, grid.ny, grid.nz], false);
         for element in &self.elements {
+            if let KWaveElement::PlanarAperture(geometry) = element {
+                self.rasterize_planar_aperture(&mut mask, grid, *geometry);
+                continue;
+            }
+            let KWaveElement::Shape(element) = element else {
+                unreachable!("invariant: planar aperture handled before shape dispatch")
+            };
             match element {
                 ElementShape::Arc {
                     position,
@@ -90,6 +97,13 @@ impl KWaveArray {
     pub fn get_array_weighted_mask(&self, grid: &kwavers_grid::Grid) -> Array3<f64> {
         let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         for element in &self.elements {
+            if let KWaveElement::PlanarAperture(geometry) = element {
+                self.rasterize_planar_aperture_weighted(&mut mask, grid, *geometry);
+                continue;
+            }
+            let KWaveElement::Shape(element) = element else {
+                unreachable!("invariant: planar aperture handled before shape dispatch")
+            };
             match element {
                 ElementShape::Bowl {
                     position,

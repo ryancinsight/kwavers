@@ -2,12 +2,16 @@
 
 ## Owner: Codex — planar sector BLI rasterization [minor]
 
-- [ ] Consolidate validated planar geometry for Rayleigh and grid sources.
-- [ ] Add oriented annular-sector sampling to `KWaveArray`.
-- [ ] Prove analytical area conservation and independent signal propagation.
-- [ ] Run package gates, synchronize artifacts, commit, and push.
+- [x] Consolidate validated planar geometry for Rayleigh and grid sources.
+- [x] Add oriented annular-sector sampling to `KWaveArray`.
+- [x] Prove analytical area conservation and independent signal propagation.
+- [x] Run package gates, synchronize artifacts, commit, and push.
 
-**Current phase:** Execution. **Target:** `kwavers-transducer` 4.1.0.
+**Current phase:** Closure. **Target:** `kwavers-transducer` 4.1.0.
+**Evidence:** warning-denied all-target/all-feature Clippy; Nextest 215/215
+with one existing skip; doctests 1/1 with six existing ignored; warning-clean
+Rustdoc. Equal-area polar sampling plus per-sample BLI normalization preserves
+each quadrant's analytical area and separate signal column.
 
 ## Owner: Codex — planar aperture propagation [major]
 

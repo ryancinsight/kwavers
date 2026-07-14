@@ -30,7 +30,8 @@ pub use materials::{
     BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer, PiezoMaterial, PiezoType,
 };
 pub use rayleigh::{
-    rayleigh_pressure, PlanarAperture, PlanarApertureShape, RayleighIntegralSpec, RayleighLayer,
+    rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
+    RayleighIntegralSpec, RayleighLayer,
 };
 pub use sensitivity::TransducerSensitivity;
 

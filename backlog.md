@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — in-progress
+## KW-APERTURE-003 — Planar sector BLI rasterization [minor] — review
 
 - Owner: Codex; scope: `kwavers-transducer::kwave_array`, canonical planar
   aperture geometry, tests, and PM artifacts.
@@ -9,6 +9,9 @@
 - Acceptance: validated oriented disk/annular-sector geometry rasterizes through
   the existing BLI per-element source path, conserves analytical aperture area,
   preserves independent element signals, and passes package gates.
+- Evidence: warning-denied all-target/all-feature Clippy; Nextest 215/215 with
+  one existing skip; doctests 1/1 with six existing ignored; warning-clean
+  Rustdoc; exact per-quadrant analytical area and independent-signal regression.
 
 ## KW-APERTURE-002 — General planar aperture propagation [major] — review
 

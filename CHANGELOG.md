@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added (2026-07-14) - planar sector BLI rasterization [minor]
+
+- Added one validated `PlanarApertureGeometry` contract shared by frequency-domain
+  Rayleigh propagation and KWaveArray grid sources. Oriented disks and annular
+  sectors now enter per-element PSTD source assembly with equal-area polar
+  sampling and area-conserving BLI normalization, retaining independent drive
+  signals for every aperture.
+
 ### Breaking (2026-07-14) - planar aperture propagation [major]
 
 - Replaced `CircularPiston::new` with `PlanarAperture::disk` and the generic

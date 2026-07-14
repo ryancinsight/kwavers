@@ -74,7 +74,8 @@ pub use transducers::{
         TransducerElement,
     },
     physics::{
-        rayleigh_pressure, PlanarAperture, PlanarApertureShape, RayleighIntegralSpec, RayleighLayer,
+        rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
+        RayleighIntegralSpec, RayleighLayer,
     },
     rectangular::RectangularTransducer,
 };
