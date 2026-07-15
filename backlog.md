@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — in-progress
+
+- Owner: Codex; scope: workspace manifest, dependency records, and LeoNeuro
+  SemVer integration.
+- Driver: Cargo ignores Kwavers' root `[patch]` tables when LeoNeuro's SemVer
+  checker packages `leoneuro-sim`; its transitive Gaia Git source therefore
+  resolves a historical revision that lacks the Eunomia dependency.
+- Acceptance: Kwavers declares the live Atlas Gaia checkout directly, deletes
+  the redundant Gaia source patch, and LeoNeuro's historical SemVer comparison
+  resolves through the local Gaia-to-Eunomia graph.
+
 ## KW-ARCH-036 — Clinical-imaging dependency boundary [major] — review
 
 - Owner: Codex; scope: `kwavers-physics`, `kwavers-solver`, direct clinical

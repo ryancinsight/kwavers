@@ -1,5 +1,13 @@
 # Project Checklist
 
+## Owner: Codex — Atlas-local Gaia dependency [patch]
+
+- [ ] Replace the transitive Gaia Git declaration with the live Atlas path.
+- [ ] Delete the redundant Gaia source patch and verify the resolved graph.
+- [ ] Run the affected Kwavers and LeoNeuro SemVer gates; record exact results.
+
+**Current phase:** Execution. **Target:** Kwavers 4.0.0 / LeoNeuro 0.4.0.
+
 ## Owner: Codex — clinical-imaging dependency boundary [major]
 
 - [x] Trace the LeoNeuro PSTD dependency path and identify unconditional RITK
