@@ -1,6 +1,6 @@
 //! Sparse sampling and L1 proximal localization tests.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     attach_time_shifts, horizontal_sample, predict_sound_speed_time_shifts,

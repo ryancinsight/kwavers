@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -62,13 +62,13 @@ pub fn run_transcranial_fus_planning(
 
     let active = Array1::from_elem(config.element_count, true);
 
-    let shape = ct_hu.dim();
+    let shape = ct_hu.shape();
     let pressure_pa = rayleigh_pressure_field(
         &element_positions,
         &phases_rad,
         &amplitude_weights,
         &active,
-        [shape.0, shape.1, shape.2],
+        shape,
         spacing_m,
         target_index,
         config.frequency_hz,
@@ -88,7 +88,7 @@ pub fn run_transcranial_fus_planning(
     let subspot_indices = if tumor_mask.iter().any(|&v| v) {
         gbm_subspot_raster(tumor_mask, spacing_m, config.pitch_m)?
     } else {
-        Array2::from_shape_fn((1, 3), |(_, col)| target_index[col])
+        Array2::from_shape_fn((1, 3), |[_, col]| target_index[col])
     };
 
     let (bbb_dose, bbb_permeability, bbb_stable_cavitation, bbb_inertial_risk) = bbb_opening_dose(

@@ -8,7 +8,7 @@ use crate::forward::hybrid::domain_decomposition::DomainRegion;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
-use ndarray::{s, Array3, Array4};
+use leto::{Array3, Array4};
 
 /// Main coupling interface between PSTD and FDTD domains
 #[derive(Debug)]
@@ -23,7 +23,7 @@ pub struct CouplingInterface {
 impl CouplingInterface {
     /// Create a new coupling interface
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         source_grid: &Grid,
@@ -47,7 +47,7 @@ impl CouplingInterface {
 
     /// Transfer fields from source to target domain
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn transfer_fields(
         &mut self,
@@ -73,7 +73,7 @@ impl CouplingInterface {
 
     /// Apply coupling between domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_coupling(
         &mut self,
@@ -81,7 +81,7 @@ impl CouplingInterface {
         regions: &[DomainRegion],
         _grid: &Grid,
     ) -> KwaversResult<()> {
-        if regions.len() < 2 {
+        if (regions.len()) < 2 {
             return Ok(());
         }
 
@@ -134,7 +134,7 @@ impl CouplingInterface {
         fields: &Array4<f64>,
         region: &DomainRegion,
     ) -> KwaversResult<Array3<f64>> {
-        let (n_fields, nx, ny, nz) = fields.dim();
+        let [n_fields, nx, ny, nz] = fields.shape();
         let p_idx = UnifiedFieldType::Pressure.index();
         if p_idx >= n_fields {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -154,28 +154,45 @@ impl CouplingInterface {
         // populated. This preserves the existing interpolation/conservation
         // contract while enforcing the component-first field layout.
         let mut interface_data = Array3::zeros((ex - sx, ey - sy, ez - sz));
-        let pressure = fields.index_axis(ndarray::Axis(0), p_idx);
+        let pressure = fields
+            .index_axis::<3>(0, p_idx)
+            .expect("invariant: pressure component index within field stack");
 
         match self.geometry.normal_direction {
             0 => {
                 if sx < nx {
                     interface_data
-                        .slice_mut(s![0, .., ..])
-                        .assign(&pressure.slice(s![sx, sy..ey, sz..ez]));
+                        .slice_with_mut::<2>(&s![0, .., ..])
+                        .unwrap()
+                        .assign(
+                            &pressure
+                                .slice_with::<2>(&s![sx, sy..ey, sz..ez])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             1 => {
                 if sy < ny {
                     interface_data
-                        .slice_mut(s![.., 0, ..])
-                        .assign(&pressure.slice(s![sx..ex, sy, sz..ez]));
+                        .slice_with_mut::<2>(&s![.., 0, ..])
+                        .unwrap()
+                        .assign(
+                            &pressure
+                                .slice_with::<2>(&s![sx..ex, sy, sz..ez])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             2 => {
                 if sz < nz {
                     interface_data
-                        .slice_mut(s![.., .., 0])
-                        .assign(&pressure.slice(s![sx..ex, sy..ey, sz]));
+                        .slice_with_mut::<2>(&s![.., .., 0])
+                        .unwrap()
+                        .assign(
+                            &pressure
+                                .slice_with::<2>(&s![sx..ex, sy..ey, sz])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             _ => {
@@ -196,7 +213,7 @@ impl CouplingInterface {
         data: &Array3<f64>,
         region: &DomainRegion,
     ) -> KwaversResult<()> {
-        let (n_fields, nx, ny, nz) = fields.dim();
+        let [n_fields, nx, ny, nz] = fields.shape();
         let p_idx = UnifiedFieldType::Pressure.index();
         if p_idx >= n_fields {
             return Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -211,28 +228,45 @@ impl CouplingInterface {
         let ex = ex.min(nx);
         let ey = ey.min(ny);
         let ez = ez.min(nz);
-        let mut pressure = fields.index_axis_mut(ndarray::Axis(0), p_idx);
+        let pressure = fields
+            .index_axis_mut::<3>(0, p_idx)
+            .expect("invariant: pressure component index within field stack");
 
         match self.geometry.normal_direction {
             0 => {
                 if sx < nx && sx < ex {
                     pressure
-                        .slice_mut(s![sx, sy..ey, sz..ez])
-                        .assign(&data.slice(s![0, .., ..]));
+                        .slice_with_mut::<2>(&s![sx, sy..ey, sz..ez])
+                        .unwrap()
+                        .assign(
+                            &data
+                                .slice_with::<2>(&s![0, .., ..])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             1 => {
                 if sy < ny && sy < ey {
                     pressure
-                        .slice_mut(s![sx..ex, sy, sz..ez])
-                        .assign(&data.slice(s![.., 0, ..]));
+                        .slice_with_mut::<2>(&s![sx..ex, sy, sz..ez])
+                        .unwrap()
+                        .assign(
+                            &data
+                                .slice_with::<2>(&s![.., 0, ..])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             2 => {
                 if sz < nz && sz < ez {
                     pressure
-                        .slice_mut(s![sx..ex, sy..ey, sz])
-                        .assign(&data.slice(s![.., .., 0]));
+                        .slice_with_mut::<2>(&s![sx..ex, sy..ey, sz])
+                        .unwrap()
+                        .assign(
+                            &data
+                                .slice_with::<2>(&s![.., .., 0])
+                                .expect("invariant: source plane slice is valid"),
+                        );
                 }
             }
             _ => {
@@ -259,17 +293,26 @@ impl CouplingInterface {
     /// identical.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the active plane is empty or the
+    /// - Returns [`crate::KwaversError::Config`] if the active plane is empty or the
     ///   normal direction is invalid.
     fn extract_active_plane(&self, data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
         match self.geometry.normal_direction {
-            0 if nx > 0 => Ok(data.slice(s![0..1, .., ..]).to_owned()),
-            1 if ny > 0 => Ok(data.slice(s![.., 0..1, ..]).to_owned()),
-            2 if nz > 0 => Ok(data.slice(s![.., .., 0..1]).to_owned()),
+            0 if nx > 0 => Ok(data
+                .slice_with::<3>(&s![0..1, .., ..])
+                .unwrap()
+                .to_contiguous()),
+            1 if ny > 0 => Ok(data
+                .slice_with::<3>(&s![.., 0..1, ..])
+                .unwrap()
+                .to_contiguous()),
+            2 if nz > 0 => Ok(data
+                .slice_with::<3>(&s![.., .., 0..1])
+                .unwrap()
+                .to_contiguous()),
             0..=2 => Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "interface_plane".to_owned(),
-                value: format!("{:?}", data.dim()),
+                value: format!("{:?}", data.shape()),
                 constraint: "active interface axis must be nonempty".to_owned(),
             })),
             _ => Err(KwaversError::Config(ConfigError::InvalidValue {
@@ -329,7 +372,7 @@ mod tests {
     use super::*;
     use crate::forward::hybrid::domain_decomposition::DomainType;
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    use ndarray::Array4;
+    use leto::Array4;
 
     fn test_interface() -> CouplingInterface {
         let grid = Grid::new(4, 3, 2, 1.0, 1.0, 1.0).unwrap();
@@ -368,7 +411,7 @@ mod tests {
         let region = DomainRegion::new((1, 0, 0), (4, 3, 2), DomainType::PSTD, 1.0);
         let data = interface.extract_interface_data(&fields, &region).unwrap();
 
-        assert_eq!(data.dim(), (3, 3, 2));
+        assert_eq!(data.shape(), [3, 3, 2]);
         assert_eq!(data[[0, 2, 1]], fields[[p_idx, 1, 2, 1]]);
         assert_eq!(data[[1, 2, 1]], 0.0);
         assert_eq!(fields[[t_idx, 1, 2, 1]], -10_000.0);
@@ -380,7 +423,7 @@ mod tests {
         let p_idx = UnifiedFieldType::Pressure.index();
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
-        fields.index_axis_mut(ndarray::Axis(0), t_idx).fill(25.0);
+        fields.index_axis_mut::<3>(0, t_idx).unwrap().fill(25.0);
         let mut data = Array3::<f64>::zeros((2, 3, 2));
         for j in 0..3 {
             for k in 0..2 {
@@ -411,7 +454,8 @@ mod tests {
         let t_idx = UnifiedFieldType::Temperature.index();
         let mut fields = Array4::<f64>::zeros((UnifiedFieldType::COUNT, 4, 3, 2));
         fields
-            .index_axis_mut(ndarray::Axis(0), t_idx)
+            .index_axis_mut::<3>(0, t_idx)
+            .expect("invariant: axis 0 in range for Array4")
             .fill(BODY_TEMPERATURE_C);
 
         let mut value = 1.0;

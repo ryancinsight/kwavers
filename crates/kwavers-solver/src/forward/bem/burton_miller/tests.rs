@@ -2,7 +2,7 @@ use super::assembler::BurtonMillerAssembler;
 use super::config::BurtonMillerConfig;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::FOUR_PI;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 #[test]
 fn test_burton_miller_config_creation() {

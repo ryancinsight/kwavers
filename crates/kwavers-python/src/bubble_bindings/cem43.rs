@@ -21,8 +21,8 @@
 //! - Sapareto & Dewey (1984) Int. J. Radiat. Oncol. Biol. Phys. 10(6):787
 
 use kwavers_physics::analytical::safety::cem43_cumulative;
-use ndarray::Array1;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::ndarray::Array1;
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -85,5 +85,5 @@ pub fn cem43_at_temperatures<'py>(
             .copied()
             .unwrap_or(0.0)
     });
-    Ok(result.into_pyarray(py).into())
+    Ok(result.to_pyarray(py).into())
 }

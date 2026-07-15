@@ -15,7 +15,7 @@ pub use builder::{
     TumorDetectionPhantomBuilder, VascularPhantomBuilder,
 };
 pub use presets::ClinicalPhantoms;
-pub use scatterers::{PointScatterer, RfSynthesisConfig, ScattererCloud};
+pub use scatterers::{PointScatterer, RfSynthesisConfig, ScattererCloud, TransmitWavefront};
 pub use shepp_logan::{Ellipse, SheppLogan, SheppLoganVariant};
 pub use types::{LayerSpec, PhantomTissueType, PhantomType, TumorSpec, VesselSpec};
 

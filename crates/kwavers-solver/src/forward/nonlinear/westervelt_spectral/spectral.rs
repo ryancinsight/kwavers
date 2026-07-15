@@ -2,11 +2,9 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use kwavers_math::fft::{
-    fft_3d_array, fft_3d_array_into, ifft_3d_array, ifft_3d_array_into, Complex64,
-};
-use ndarray::{Array3, Zip};
-use num_complex::Complex;
+use kwavers_math::fft::{fft_3d_array, fft_3d_array_into, ifft_3d_array, Complex64};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
 
 /// Initialize k-space grids for spectral operations
 pub fn initialize_kspace_grids(
@@ -52,19 +50,25 @@ pub fn initialize_kspace_grids(
     let mut kz = Array3::<f64>::zeros((nx, ny, nz));
     let mut k_squared = Array3::<f64>::zeros((nx, ny, nz));
 
-    Zip::indexed(&mut kx)
-        .and(&mut ky)
-        .and(&mut kz)
-        .and(&mut k_squared)
-        .par_for_each(|(i, j, k), kx_v, ky_v, kz_v, k2| {
-            let kx_val = kx_axis[i];
-            let ky_val = ky_axis[j];
-            let kz_val = kz_axis[k];
-            *kx_v = kx_val;
-            *ky_v = ky_val;
-            *kz_v = kz_val;
-            *k2 = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
-        });
+    // Separable wavenumber fill: each cell reads its precomputed per-axis value
+    // and writes the four output grids at the collocated index. Each iteration is
+    // independent, so the loop order is immaterial to the result.
+    debug_assert_eq!(kx_axis.len(), nx, "kx_axis length must equal nx");
+    debug_assert_eq!(ky_axis.len(), ny, "ky_axis length must equal ny");
+    debug_assert_eq!(kz_axis.len(), nz, "kz_axis length must equal nz");
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let kx_val = kx_axis[i];
+                let ky_val = ky_axis[j];
+                let kz_val = kz_axis[k];
+                kx[[i, j, k]] = kx_val;
+                ky[[i, j, k]] = ky_val;
+                kz[[i, j, k]] = kz_val;
+                k_squared[[i, j, k]] = kx_val * kx_val + ky_val * ky_val + kz_val * kz_val;
+            }
+        }
+    }
 
     (k_squared, kx, ky, kz)
 }
@@ -83,17 +87,29 @@ pub fn initialize_kspace_grids(
 /// [`compute_laplacian_spectral_into`] which reuses caller-supplied scratch.
 #[must_use]
 pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("Westervelt field shape must match its Leto FFT shape");
     // Transform to k-space
-    let field_k = fft_3d_array(field);
+    let field_k = fft_3d_array(&field_leto);
 
     // Apply Laplacian in k-space: ∇²f = -k²f
-    let laplacian_k = &field_k * &k_squared.mapv(|k2| Complex::new(-k2, 0.0));
+    let mut laplacian_k = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                laplacian_k[[i, j, k]] =
+                    field_k[[i, j, k]] * Complex64::new(-k_squared[[i, j, k]], 0.0);
+            }
+        }
+    }
 
     // Transform back to real space
-    ifft_3d_array(&laplacian_k)
+    Array3::from_shape_vec([nx, ny, nz], ifft_3d_array(&laplacian_k).into_vec())
+        .expect("Westervelt Laplacian output shape must match the solver grid")
 }
 
-/// Zero-allocation spectral Laplacian via caller-supplied scratch buffers.
+/// Scratch-reusing spectral Laplacian via caller-supplied FFT buffer.
 ///
 /// # Theorem: Spectral Laplacian (same as [`compute_laplacian_spectral`])
 /// ```text
@@ -101,40 +117,62 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
 /// ```
 ///
 /// # Algorithm
-/// 1. `fft_3d_array_into(field, fft_scratch)` — real→complex DFT in-place into scratch
+/// 1. Copy the real field into Leto storage and run Apollo real→complex DFT into `fft_scratch`
 /// 2. `fft_scratch[i] *= −k_squared[i]` — element-wise Laplacian multiply (parallel)
-/// 3. `ifft_3d_array_into(fft_scratch, out)` — complex→real IDFT, real part → `out`
+/// 3. Apollo complex→real IDFT, real part → `out`
 ///
 /// After return, `fft_scratch` contains the complex IDFT result (overwritten); only
 /// `out` carries the valid real Laplacian. `fft_scratch` is safe to reuse.
 ///
 /// # Preconditions
-/// - `fft_scratch.dim() == field.dim()`
-/// - `out.dim() == field.dim()`
-/// - `k_squared.dim() == field.dim()`
+/// - `fft_scratch.shape() == field.shape()`
+/// - `out.shape() == field.shape()`
+/// - `k_squared.shape() == field.shape()`
 /// # Panics
 /// - Panics if an internal precondition is violated.
 ///
 pub fn compute_laplacian_spectral_into(
     field: &Array3<f64>,
     k_squared: &Array3<f64>,
-    fft_scratch: &mut Array3<Complex64>,
+    fft_scratch: &mut LetoArray3<Complex64>,
     out: &mut Array3<f64>,
 ) {
-    debug_assert_eq!(fft_scratch.dim(), field.dim(), "fft_scratch shape mismatch");
-    debug_assert_eq!(out.dim(), field.dim(), "laplacian output shape mismatch");
-    debug_assert_eq!(k_squared.dim(), field.dim(), "k_squared shape mismatch");
+    let [nx, ny, nz] = field.shape();
+    debug_assert_eq!(
+        fft_scratch.shape(),
+        [nx, ny, nz],
+        "fft_scratch shape mismatch"
+    );
+    debug_assert_eq!(
+        out.shape(),
+        field.shape(),
+        "laplacian output shape mismatch"
+    );
+    debug_assert_eq!(k_squared.shape(), field.shape(), "k_squared shape mismatch");
 
     // Step 1: real→complex DFT into scratch (no allocation)
-    fft_3d_array_into(field, fft_scratch);
+    let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("Westervelt field shape must match its Leto FFT shape");
+    fft_3d_array_into(&field_leto, fft_scratch);
 
     // Step 2: multiply by −|k|² in-place (Laplacian operator in spectral domain)
-    Zip::from(fft_scratch.view_mut())
-        .and(k_squared.view())
-        .par_for_each(|c, &k2| *c *= Complex64::new(-k2, 0.0));
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                fft_scratch[[i, j, k]] *= Complex64::new(-k_squared[[i, j, k]], 0.0);
+            }
+        }
+    }
 
     // Step 3: IDFT + extract real part into `out` (no allocation)
-    ifft_3d_array_into(fft_scratch, out);
+    let laplacian = ifft_3d_array(fft_scratch);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                out[[i, j, k]] = laplacian[[i, j, k]];
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -239,7 +277,7 @@ mod tests {
         let grid = make_grid(n, dx);
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
-        let field = ndarray::Array3::from_elem((n, n, n), 7.5_f64);
+        let field = leto::Array3::from_elem([n, n, n], 7.5_f64);
         let lap = compute_laplacian_spectral(&field, &k_sq);
 
         let max_abs = lap.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
@@ -268,7 +306,7 @@ mod tests {
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
         let k1 = 2.0 * PI / (n as f64 * dx); // fundamental wavenumber
-        let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+        let mut field = leto::Array3::<f64>::zeros((n, n, n));
         for i in 0..n {
             let x = i as f64 * dx;
             let val = (k1 * x).sin();
@@ -299,10 +337,10 @@ mod tests {
         );
     }
 
-    /// **Theorem (zero-allocation path bit-identical to allocating path)**:
+    /// **Theorem (scratch-reusing path bit-identical to allocating path)**:
     ///
     /// `compute_laplacian_spectral_into` must produce results bitwise identical to
-    /// `compute_laplacian_spectral` on the same input, confirming the in-place
+    /// `compute_laplacian_spectral` on the same input, confirming the scratch-reusing
     /// scratch buffer path does not alter the computation.
     #[test]
     fn spectral_laplacian_into_is_bitwise_identical_to_allocating() {
@@ -312,7 +350,7 @@ mod tests {
         let (k_sq, _, _, _) = initialize_kspace_grids(&grid);
 
         let k1 = 2.0 * PI / (n as f64 * dx);
-        let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+        let mut field = leto::Array3::<f64>::zeros((n, n, n));
         for i in 0..n {
             let x = i as f64 * dx;
             for j in 0..n {
@@ -327,8 +365,8 @@ mod tests {
 
         // Zero-allocation path
         let shape = (n, n, n);
-        let mut fft_scratch = ndarray::Array3::<Complex64>::zeros(shape);
-        let mut lap_into = ndarray::Array3::<f64>::zeros(shape);
+        let mut fft_scratch = LetoArray3::<Complex64>::from_elem([n, n, n], Complex64::default());
+        let mut lap_into = leto::Array3::<f64>::zeros(shape);
         compute_laplacian_spectral_into(&field, &k_sq, &mut fft_scratch, &mut lap_into);
 
         // Results must be bitwise identical

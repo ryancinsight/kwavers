@@ -23,18 +23,16 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 
 use anyhow::{bail, Context, Result};
-use burn::backend::NdArray;
+use coeus_core::MoiraiBackend;
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::skull::{AberrationCorrection, HeterogeneousSkull};
 use kwavers_physics::skull::heterogeneous::SkullLayer;
 use kwavers_transducer::transducers::focused::{BowlConfig, BowlTransducer};
-use ndarray::{Array1, Array2, Array3};
-use ritk_io::{load_dicom_series, scan_dicom_directory};
+use leto::{Array1, Array2, Array3};
+use ritk_io::{load_native_dicom_series, scan_dicom_directory};
 
 #[path = "skull_ct_phase_correction/diagnostics_3d.rs"]
 mod diagnostics_3d;
-
-type Backend = NdArray<f32>;
 
 const FREQUENCY_HZ: f64 = 650_000.0;
 const TRANSCRANIAL_FOCUSED_BOWL_ELEMENT_COUNT: usize = 1024;
@@ -99,7 +97,7 @@ fn main() -> Result<()> {
 
     let ct = load_ct_with_ritk(&dicom_dir, series_uid)?;
     let skull = skull_from_hu(&ct);
-    let (nx, ny, nz) = skull.sound_speed.dim();
+    let [nx, ny, nz] = skull.sound_speed.shape();
     let grid = Grid::new(
         nx,
         ny,
@@ -130,14 +128,18 @@ fn main() -> Result<()> {
         &skull,
     );
     let projections = element_projection_records(
-        &element_x,
-        &element_y,
-        &element_z,
-        &element_corrections,
-        &grid,
-        &ct,
-        &skull,
-        focus,
+        ElementProjectionInputs {
+            xs: &element_x,
+            ys: &element_y,
+            zs: &element_z,
+            corrections: &element_corrections,
+        },
+        ElementProjectionContext {
+            grid: &grid,
+            ct: &ct,
+            skull: &skull,
+            focus,
+        },
     );
 
     write_three_plane_ppm(
@@ -207,7 +209,7 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
     let selected = match selected_uid {
         Some(uid) => series
             .iter()
-            .find(|candidate| candidate.series_instance_uid.as_str() == uid)
+            .find(|candidate| candidate.series_instance_uid() == uid)
             .with_context(|| format!("series UID '{uid}' was not found"))?,
         None if series.len() == 1 => &series[0],
         None => {
@@ -215,8 +217,8 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
             for item in &series {
                 eprintln!(
                     "  UID={} modality={} description={} files={}",
-                    item.series_instance_uid,
-                    item.modality,
+                    item.series_instance_uid(),
+                    item.modality(),
                     item.series_description,
                     item.file_paths.len()
                 );
@@ -225,27 +227,20 @@ fn load_ct_with_ritk(path: &Path, selected_uid: Option<&str>) -> Result<CtVolume
         }
     };
 
-    let device = Default::default();
-    let image = load_dicom_series::<Backend>(selected, &device).with_context(|| {
+    let backend = MoiraiBackend;
+    let image = load_native_dicom_series(selected, &backend).with_context(|| {
         format!(
             "RITK failed to load series '{}'",
-            selected.series_instance_uid
+            selected.series_instance_uid()
         )
     })?;
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
-    if spacing.len() != 3 {
-        bail!("RITK returned invalid spacing rank {}", spacing.len());
-    }
-    let origin_vec = image.origin().to_vec();
-    if origin_vec.len() != 3 {
-        bail!("RITK returned invalid origin rank {}", origin_vec.len());
-    }
+    let spacing = image.spacing().into_vector().to_array();
+    let origin_vec = image.origin().to_array();
     let direction_matrix = image.direction().0;
 
-    let tensor_data = image.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
+    let values = image
+        .data_slice()
         .map_err(|err| anyhow::anyhow!("RITK tensor data is not f32 contiguous: {err:?}"))?;
     if values.len() != depth * rows * cols {
         bail!(
@@ -414,23 +409,42 @@ fn compute_focused_element_corrections(
     corrections
 }
 
-fn element_projection_records(
-    xs: &[f64],
-    ys: &[f64],
-    zs: &[f64],
-    corrections: &Array1<f64>,
-    grid: &Grid,
-    ct: &CtVolume,
-    skull: &HeterogeneousSkull,
+struct ElementProjectionInputs<'a> {
+    xs: &'a [f64],
+    ys: &'a [f64],
+    zs: &'a [f64],
+    corrections: &'a Array1<f64>,
+}
+
+#[derive(Clone, Copy)]
+struct ElementProjectionContext<'a> {
+    grid: &'a Grid,
+    ct: &'a CtVolume,
+    skull: &'a HeterogeneousSkull,
     focus: Point3Meters,
+}
+
+fn element_projection_records(
+    inputs: ElementProjectionInputs<'_>,
+    context: ElementProjectionContext<'_>,
 ) -> Vec<ElementProjection> {
-    xs.iter()
-        .zip(ys)
-        .zip(zs)
-        .zip(corrections)
+    inputs
+        .xs
+        .iter()
+        .zip(inputs.ys.iter())
+        .zip(inputs.zs.iter())
+        .zip(inputs.corrections.iter())
         .enumerate()
         .map(|(element, (((&x_m, &y_m), &bowl_z_m), &correction_rad))| {
-            let metrics = element_path_metrics(x_m, y_m, bowl_z_m, focus, grid, ct, skull);
+            let metrics = element_path_metrics(
+                x_m,
+                y_m,
+                bowl_z_m,
+                context.focus,
+                context.grid,
+                context.ct,
+                context.skull,
+            );
             ElementProjection {
                 element,
                 x_m,
@@ -626,7 +640,7 @@ fn write_three_plane_ppm(
     let width = PANEL * 3;
     let height = PANEL;
     let mut rgb = vec![0_u8; width * height * 3];
-    let (nx, ny, nz) = hu.dim();
+    let [nx, ny, nz] = hu.shape();
     let mid_x = nx / 2;
     let mid_y = ny / 2;
     let mid_z = nz / 2;
@@ -726,14 +740,15 @@ fn draw_pressure_transducer_overlay(
         if idx % 32 == 0 && px >= 0 && (px as usize) < width {
             draw_line_blend(
                 rgb,
-                width,
-                height,
-                px,
-                py,
-                focus_px,
-                focus_py,
-                [125, 211, 252],
-                0.20,
+                RasterDims { width, height },
+                LineSegment {
+                    start: (px, py),
+                    end: (focus_px, focus_py),
+                },
+                LineStyle {
+                    color: [125, 211, 252],
+                    alpha: 0.20,
+                },
             );
         }
     }
@@ -870,7 +885,7 @@ fn draw_elements_on_axial(
 }
 
 fn draw_aperture_phase_strip(rgb: &mut [u8], width: usize, height: usize, aperture: &Array2<f64>) {
-    let (nx, ny) = aperture.dim();
+    let [nx, ny] = aperture.shape();
     let strip_h = 20;
     for px in 0..PANEL {
         let ix = px * nx / PANEL;
@@ -886,10 +901,10 @@ fn write_element_map_ppm(path: &Path, elements: &[ElementProjection], grid: &Gri
     let width = 2 * MAP_PANEL;
     let height = 2 * MAP_PANEL;
     let mut rgb = vec![248_u8; width * height * 3];
+    let dims = RasterDims { width, height };
     draw_element_scalar_panel(
         &mut rgb,
-        width,
-        height,
+        dims,
         (0, 0),
         elements,
         grid,
@@ -898,8 +913,7 @@ fn write_element_map_ppm(path: &Path, elements: &[ElementProjection], grid: &Gri
     );
     draw_element_scalar_panel(
         &mut rgb,
-        width,
-        height,
+        dims,
         (1, 0),
         elements,
         grid,
@@ -916,8 +930,7 @@ fn write_element_map_ppm(path: &Path, elements: &[ElementProjection], grid: &Gri
     );
     draw_element_scalar_panel(
         &mut rgb,
-        width,
-        height,
+        dims,
         (0, 1),
         elements,
         grid,
@@ -926,8 +939,7 @@ fn write_element_map_ppm(path: &Path, elements: &[ElementProjection], grid: &Gri
     );
     draw_element_scalar_panel(
         &mut rgb,
-        width,
-        height,
+        dims,
         (1, 1),
         elements,
         grid,
@@ -983,8 +995,7 @@ fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Gri
     )?;
     write_element_svg_panel(
         &mut out,
-        (margin, margin + 28.0),
-        panel,
+        SvgPanelFrame::new((margin, margin + 28.0), panel),
         "phase correction [rad]",
         elements,
         grid,
@@ -993,8 +1004,7 @@ fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Gri
     )?;
     write_element_svg_panel(
         &mut out,
-        (margin + panel + gutter, margin + 28.0),
-        panel,
+        SvgPanelFrame::new((margin + panel + gutter, margin + 28.0), panel),
         "skull thickness [mm]",
         elements,
         grid,
@@ -1006,8 +1016,7 @@ fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Gri
     )?;
     write_element_svg_panel(
         &mut out,
-        (margin, margin + panel + gutter + 28.0),
-        panel,
+        SvgPanelFrame::new((margin, margin + panel + gutter + 28.0), panel),
         "trabecular/cortical SDR",
         elements,
         grid,
@@ -1016,8 +1025,10 @@ fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Gri
     )?;
     write_element_svg_panel(
         &mut out,
-        (margin + panel + gutter, margin + panel + gutter + 28.0),
-        panel,
+        SvgPanelFrame::new(
+            (margin + panel + gutter, margin + panel + gutter + 28.0),
+            panel,
+        ),
         "cortical/trabecular density ratio",
         elements,
         grid,
@@ -1036,10 +1047,21 @@ fn write_element_map_svg(path: &Path, elements: &[ElementProjection], grid: &Gri
     Ok(())
 }
 
+#[derive(Clone, Copy)]
+struct SvgPanelFrame {
+    origin: (f64, f64),
+    size: f64,
+}
+
+impl SvgPanelFrame {
+    fn new(origin: (f64, f64), size: f64) -> Self {
+        Self { origin, size }
+    }
+}
+
 fn write_element_svg_panel<W, F>(
     out: &mut W,
-    origin: (f64, f64),
-    panel: f64,
+    frame: SvgPanelFrame,
     title: &str,
     elements: &[ElementProjection],
     grid: &Grid,
@@ -1053,17 +1075,18 @@ where
     writeln!(
         out,
         r##"<text x="{:.2}" y="{:.2}" font-family="Arial" font-size="15" fill="#0f172a">{title}</text>"##,
-        origin.0,
-        origin.1 - 10.0
+        frame.origin.0,
+        frame.origin.1 - 10.0
     )?;
     writeln!(
         out,
-        r##"<rect x="{:.2}" y="{:.2}" width="{panel:.2}" height="{panel:.2}" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>"##,
-        origin.0, origin.1
+        r##"<rect x="{:.2}" y="{:.2}" width="{:.2}" height="{:.2}" fill="#ffffff" stroke="#0f172a" stroke-width="1"/>"##,
+        frame.origin.0, frame.origin.1, frame.size, frame.size
     )?;
     for element in elements {
-        let x = origin.0 + (element.x_m / (grid.nx as f64 * grid.dx)) * panel;
-        let y = origin.1 + panel - (element.y_m / (grid.ny as f64 * grid.dy)) * panel;
+        let x = frame.origin.0 + (element.x_m / (grid.nx as f64 * grid.dx)) * frame.size;
+        let y =
+            frame.origin.1 + frame.size - (element.y_m / (grid.ny as f64 * grid.dy)) * frame.size;
         let pixel = value(element)
             .filter(|value| value.is_finite())
             .map(|value| scalar_color(value, color))
@@ -1083,10 +1106,15 @@ enum ScalarColor {
     Sequential { min: f64, max: f64 },
 }
 
-fn draw_element_scalar_panel<F>(
-    rgb: &mut [u8],
+#[derive(Clone, Copy)]
+struct RasterDims {
     width: usize,
     height: usize,
+}
+
+fn draw_element_scalar_panel<F>(
+    rgb: &mut [u8],
+    dims: RasterDims,
     panel: (usize, usize),
     elements: &[ElementProjection],
     grid: &Grid,
@@ -1097,7 +1125,7 @@ fn draw_element_scalar_panel<F>(
 {
     let x0 = panel.0 * MAP_PANEL;
     let y0 = panel.1 * MAP_PANEL;
-    draw_panel_border(rgb, width, height, x0, y0);
+    draw_panel_border(rgb, dims.width, dims.height, x0, y0);
     for element in elements {
         let px = x0 as isize
             + ((element.x_m / (grid.nx as f64 * grid.dx)) * MAP_PANEL as f64).round() as isize;
@@ -1107,7 +1135,7 @@ fn draw_element_scalar_panel<F>(
             .filter(|value| value.is_finite())
             .map(|value| scalar_color(value, color))
             .unwrap_or([148, 163, 184]);
-        draw_disc(rgb, width, height, px, py, 2, pixel);
+        draw_disc(rgb, dims.width, dims.height, px, py, 2, pixel);
     }
 }
 
@@ -1181,17 +1209,21 @@ fn draw_cross(
     }
 }
 
-fn draw_line_blend(
-    rgb: &mut [u8],
-    width: usize,
-    height: usize,
-    x0: isize,
-    y0: isize,
-    x1: isize,
-    y1: isize,
+#[derive(Clone, Copy)]
+struct LineSegment {
+    start: (isize, isize),
+    end: (isize, isize),
+}
+
+#[derive(Clone, Copy)]
+struct LineStyle {
     color: [u8; 3],
     alpha: f64,
-) {
+}
+
+fn draw_line_blend(rgb: &mut [u8], dims: RasterDims, line: LineSegment, style: LineStyle) {
+    let (x0, y0) = line.start;
+    let (x1, y1) = line.end;
     let dx = (x1 - x0).abs();
     let dy = -(y1 - y0).abs();
     let sx = if x0 < x1 { 1 } else { -1 };
@@ -1200,10 +1232,10 @@ fn draw_line_blend(
     let (mut x, mut y) = (x0, y0);
 
     loop {
-        if x >= 0 && y >= 0 && (x as usize) < width && (y as usize) < height {
-            let idx = 3 * (y as usize * width + x as usize);
+        if x >= 0 && y >= 0 && (x as usize) < dims.width && (y as usize) < dims.height {
+            let idx = 3 * (y as usize * dims.width + x as usize);
             let base = [rgb[idx], rgb[idx + 1], rgb[idx + 2]];
-            let blended = blend_rgb(base, color, alpha);
+            let blended = blend_rgb(base, style.color, style.alpha);
             rgb[idx..idx + 3].copy_from_slice(&blended);
         }
         if x == x1 && y == y1 {

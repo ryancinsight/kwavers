@@ -12,7 +12,7 @@ use crate::acoustics::mechanics::elastic_wave::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array4;
+use leto::Array4;
 use std::time::Duration;
 
 // ── ElasticWave::new / wavenumber axes ────────────────────────────────────────
@@ -23,9 +23,9 @@ use std::time::Duration;
 fn test_elastic_wave_constructor_initialises_wavenumber_axes() {
     let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap();
     let ew = ElasticWave::new(&grid).unwrap();
-    assert_eq!(ew.kx.dim(), (32, 1, 1));
-    assert_eq!(ew.ky.dim(), (32, 1, 1));
-    assert_eq!(ew.kz.dim(), (32, 1, 1));
+    assert_eq!(ew.kx.shape(), [32, 1, 1]);
+    assert_eq!(ew.ky.shape(), [32, 1, 1]);
+    assert_eq!(ew.kz.shape(), [32, 1, 1]);
 }
 
 /// Wavenumber axis satisfies the FFT-frequency layout:
@@ -129,11 +129,11 @@ fn elastic_wave_set_stiffness_tensors_stores_array() {
     let mut ew = ElasticWave::new(&grid).unwrap();
     assert!(ew.stiffness_tensors.is_none());
 
-    let tensors = Array4::from_elem((6, nx, ny, nz), 1.5e9_f64);
+    let tensors = Array4::from_elem([6, nx, ny, nz], 1.5e9_f64);
     ew.set_stiffness_tensors(tensors);
 
     let stored = ew.stiffness_tensors.as_ref().unwrap();
-    assert_eq!(stored.dim(), (6, nx, ny, nz));
+    assert_eq!(stored.shape(), [6, nx, ny, nz]);
     assert_eq!(stored[[0, 0, 0, 0]], 1.5e9);
 }
 
@@ -163,7 +163,7 @@ fn elastic_wave_detect_interfaces_marks_density_jump() {
     ew.detect_interfaces(&medium, &grid, 0.5);
 
     let mask = ew.interface_mask.as_ref().unwrap();
-    assert_eq!(mask.dim(), (nx, ny, nz));
+    assert_eq!(mask.shape(), [nx, ny, nz]);
     assert!(
         mask[[jump_i - 1, 1, 1]],
         "cell left of jump must be flagged"

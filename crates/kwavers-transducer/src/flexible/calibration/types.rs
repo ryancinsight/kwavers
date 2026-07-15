@@ -1,7 +1,7 @@
 //! Data types for flexible array calibration.
 
-use nalgebra::{DMatrix, DVector};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
+use leto::{Array1 as NdArray1, Array2 as NdArray2};
 
 /// Calibration data storage
 #[derive(Debug, Clone)]
@@ -20,9 +20,9 @@ pub struct GeometrySnapshot {
     /// Timestamp
     pub timestamp: f64,
     /// Element positions [`n_elements` x 3]
-    pub positions: Array2<f64>,
+    pub positions: NdArray2<f64>,
     /// Confidence scores per element
-    pub confidence: Array1<f64>,
+    pub confidence: NdArray1<f64>,
 }
 
 /// Calibration quality metrics
@@ -40,11 +40,11 @@ pub struct CalibrationQualityMetrics {
 #[derive(Debug, Clone)]
 pub(super) struct KalmanState {
     /// State estimate (positions and velocities)
-    pub(super) state: DVector<f64>,
+    pub(super) state: Array1<f64>,
     /// Error covariance matrix
-    pub(super) covariance: DMatrix<f64>,
+    pub(super) covariance: Array2<f64>,
     /// Process noise covariance
-    pub(super) process_noise: DMatrix<f64>,
+    pub(super) process_noise: Array2<f64>,
     /// Measurement noise covariance
-    pub(super) measurement_noise: DMatrix<f64>,
+    pub(super) measurement_noise: Array2<f64>,
 }

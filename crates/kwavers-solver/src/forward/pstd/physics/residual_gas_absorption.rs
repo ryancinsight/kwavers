@@ -62,12 +62,134 @@ use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, commander_prosperetti_phase_velocity,
 };
-use ndarray::{Array3, ArrayView3, Zip};
+use leto::{Array3, ArrayView3};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::f64::consts::TAU;
 
 /// Reference void fraction used to evaluate the (β-independent) spectral *shape*
 /// ratio. It cancels in `α_cp(ω)/α_cp(ω_drive)`, so any dilute value works.
 const SHAPE_REFERENCE_VOID_FRACTION: f64 = 1.0e-4;
+
+fn multiply_spectral_shape(
+    spectrum: &mut Array3<kwavers_math::fft::Complex64>,
+    shape: &Array3<f64>,
+) {
+    assert_eq!(
+        spectrum.shape(),
+        shape.shape(),
+        "invariant: residual-gas spectral field shape matches spectral shape"
+    );
+
+    if let (Some(spectrum_values), Some(shape_values)) = (spectrum.as_slice_mut(), shape.as_slice())
+    {
+        enumerate_mut_with::<Adaptive, _, _>(spectrum_values, |index, spectrum| {
+            *spectrum *= shape_values[index];
+        });
+        return;
+    }
+
+    let [nx, ny, nz] = spectrum.shape();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                spectrum[[i, j, k]] *= shape[[i, j, k]];
+            }
+        }
+    }
+}
+
+fn apply_residual_gas_loss(
+    pressure: &mut Array3<f64>,
+    c0: &Array3<f64>,
+    magnitude: &Array3<f64>,
+    loss: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(
+        pressure.shape(),
+        c0.shape(),
+        "invariant: residual-gas pressure shape matches sound speed"
+    );
+    assert_eq!(
+        pressure.shape(),
+        magnitude.shape(),
+        "invariant: residual-gas pressure shape matches loss magnitude"
+    );
+    assert_eq!(
+        pressure.shape(),
+        loss.shape(),
+        "invariant: residual-gas pressure shape matches loss field"
+    );
+
+    if let (Some(pressure_values), Some(c0_values), Some(magnitude_values), Some(loss_values)) = (
+        pressure.as_slice_mut(),
+        c0.as_slice(),
+        magnitude.as_slice(),
+        loss.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
+            *pressure -= dt * c0_values[index] * magnitude_values[index] * loss_values[index];
+        });
+        return;
+    }
+
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                pressure[[i, j, k]] -= dt * c0[[i, j, k]] * magnitude[[i, j, k]] * loss[[i, j, k]];
+            }
+        }
+    }
+}
+
+fn apply_residual_gas_dispersion(
+    pressure: &mut Array3<f64>,
+    c0: &Array3<f64>,
+    scale: &Array3<f64>,
+    dispersion: &Array3<f64>,
+) {
+    assert_eq!(
+        pressure.shape(),
+        c0.shape(),
+        "invariant: residual-gas pressure shape matches sound speed"
+    );
+    assert_eq!(
+        pressure.shape(),
+        scale.shape(),
+        "invariant: residual-gas pressure shape matches dispersion scale"
+    );
+    assert_eq!(
+        pressure.shape(),
+        dispersion.shape(),
+        "invariant: residual-gas pressure shape matches dispersion field"
+    );
+
+    if let (Some(pressure_values), Some(c0_values), Some(scale_values), Some(dispersion_values)) = (
+        pressure.as_slice_mut(),
+        c0.as_slice(),
+        scale.as_slice(),
+        dispersion.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
+            let c0 = c0_values[index];
+            *pressure += c0 * c0 * scale_values[index] * dispersion_values[index];
+        });
+        return;
+    }
+
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let c0 = c0[[i, j, k]];
+                pressure[[i, j, k]] += c0 * c0 * scale[[i, j, k]] * dispersion[[i, j, k]];
+            }
+        }
+    }
+}
 
 /// True broadband bubble-cloud attenuation spectral shape `ĝ(f)` at the
 /// representative radius: the Commander–Prosperetti attenuation at frequency
@@ -109,7 +231,7 @@ pub fn cp_spectral_shape(
 
 /// Dimensionless bubble-cloud dispersion stiffness deviation at the reference
 /// void fraction: `ĥ(f) = (c_p(f)² − c_liquid²)/c_liquid²`, evaluated at
-/// [`SHAPE_REFERENCE_VOID_FRACTION`]. Negative below resonance (slowdown, the
+/// `SHAPE_REFERENCE_VOID_FRACTION`. Negative below resonance (slowdown, the
 /// Wood regime at low `f`), positive above resonance (anomalous dispersion).
 /// Returns `0.0` for non-positive frequencies (the DC bin carries no dispersion).
 #[must_use]
@@ -171,22 +293,30 @@ impl ResidualGasAbsorption {
         rho_liquid: f64,
         props: &BubblyMediumProps,
     ) -> Option<Self> {
-        let magnitude = void_fraction.mapv(|beta| {
-            if beta > 0.0 {
-                commander_prosperetti_attenuation(
-                    props.frequency,
-                    beta,
-                    props.bubble_radius,
-                    c_liquid,
-                    rho_liquid,
-                    props.mu_liquid,
-                    props.p0,
-                    props.polytropic,
-                )
-            } else {
-                0.0
-            }
-        });
+        let vf_shape = void_fraction.shape();
+        let magnitude = Array3::from_shape_vec(
+            [vf_shape[0], vf_shape[1], vf_shape[2]],
+            void_fraction
+                .iter()
+                .map(|&beta| {
+                    if beta > 0.0 {
+                        commander_prosperetti_attenuation(
+                            props.frequency,
+                            beta,
+                            props.bubble_radius,
+                            c_liquid,
+                            rho_liquid,
+                            props.mu_liquid,
+                            props.p0,
+                            props.polytropic,
+                        )
+                    } else {
+                        0.0
+                    }
+                })
+                .collect(),
+        )
+        .expect("residual-gas magnitude length must match void-fraction shape");
         if !magnitude.iter().any(|&m| m > 0.0) {
             return None;
         }
@@ -198,7 +328,14 @@ impl ResidualGasAbsorption {
         });
 
         // Dispersion: ĥ(|k|) = (c_p(f)²−c₀²)/c₀² at β_ref; scale s(x)=β(x)/β_ref.
-        let disp_scale = void_fraction.mapv(|beta| beta.max(0.0) / SHAPE_REFERENCE_VOID_FRACTION);
+        let disp_scale = Array3::from_shape_vec(
+            [vf_shape[0], vf_shape[1], vf_shape[2]],
+            void_fraction
+                .iter()
+                .map(|&beta| beta.max(0.0) / SHAPE_REFERENCE_VOID_FRACTION)
+                .collect(),
+        )
+        .expect("residual-gas dispersion scale length must match void-fraction shape");
         let disp_shape_k = k_mag_half.mapv(|k| {
             let freq = c_liquid * k / TAU;
             cp_dispersion_stiffness(freq, c_liquid, rho_liquid, props)
@@ -216,7 +353,7 @@ impl ResidualGasAbsorption {
 impl PSTDSolver {
     /// Install (or refresh) the broadband residual-gas absorption operator from a
     /// void-fraction field. Call between pulses; the operator is then applied
-    /// every step inside [`Self::update_pressure`]. Returns `true` when gas was
+    /// every step inside `Self::update_pressure`. Returns `true` when gas was
     /// present and the operator was installed, `false` when it was cleared.
     ///
     /// `c_liquid`/`rho_liquid` are the host-liquid sound speed and density of the
@@ -271,41 +408,32 @@ impl PSTDSolver {
 
         // ── Attenuation: grad_k ← FFT(p); grad_k *= ĝ(|k|); dpx ← IFFT(grad_k).
         self.fft.forward_r2c_into(&self.fields.p, &mut self.grad_k);
-        Zip::from(&mut self.grad_k)
-            .and(&op.shape_k)
-            .par_for_each(|gk, &s| {
-                *gk *= s; // s: f64 spectral shape; grad_k is the half-spectrum
-            });
+        multiply_spectral_shape(&mut self.grad_k, &op.shape_k);
         self.fft
             .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
         // p -= dt · c₀ · m(x) · IFFT(ĝ·FFT(p)).
-        Zip::from(&mut self.fields.p)
-            .and(&self.materials.c0)
-            .and(&op.magnitude)
-            .and(&self.dpx)
-            .par_for_each(|p, &c0, &m, &loss| {
-                *p -= dt * c0 * m * loss;
-            });
+        apply_residual_gas_loss(
+            &mut self.fields.p,
+            &self.materials.c0,
+            &op.magnitude,
+            &self.dpx,
+            dt,
+        );
 
         // ── Dispersion: grad_k ← FFT(ρ_total); grad_k *= ĥ(|k|); dpx ← IFFT.
         // ρ_total is held in div_u by the EOS step (same source the power-law
         // dispersion term reads).
         self.fft.forward_r2c_into(&self.div_u, &mut self.grad_k);
-        Zip::from(&mut self.grad_k)
-            .and(&op.disp_shape_k)
-            .par_for_each(|gk, &h| {
-                *gk *= h; // h: f64 stiffness deviation at β_ref
-            });
+        multiply_spectral_shape(&mut self.grad_k, &op.disp_shape_k);
         self.fft
             .inverse_c2r_into(&self.grad_k, &mut self.dpx, &mut self.ux_k);
         // p += c₀² · s(x) · IFFT(ĥ·FFT(ρ_total))  ⇒  effective p = c_p(ω)²·ρ_total.
-        Zip::from(&mut self.fields.p)
-            .and(&self.materials.c0)
-            .and(&op.disp_scale)
-            .and(&self.dpx)
-            .par_for_each(|p, &c0, &s, &disp| {
-                *p += c0 * c0 * s * disp;
-            });
+        apply_residual_gas_dispersion(
+            &mut self.fields.p,
+            &self.materials.c0,
+            &op.disp_scale,
+            &self.dpx,
+        );
         Ok(())
     }
 }

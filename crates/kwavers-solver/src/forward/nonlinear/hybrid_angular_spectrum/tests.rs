@@ -3,7 +3,7 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::config::HASConfig;
 use super::facade::HybridAngularSpectrum;
@@ -94,7 +94,7 @@ fn test_hybrid_angular_spectrum_creation() {
 fn test_propagate_zero_distance_returns_input_unchanged() {
     let grid = Grid::new(8, 8, 4, 0.001, 0.001, 0.001).unwrap();
     let has = HybridAngularSpectrum::new(&grid, HASConfig::default()).unwrap();
-    let pressure = Array3::from_shape_fn((8, 8, 4), |(i, j, k)| {
+    let pressure = Array3::from_shape_fn((8, 8, 4), |[i, j, k]| {
         (i as f64 + 2.0 * j as f64 + 3.0 * k as f64) * 1.0e3
     });
 

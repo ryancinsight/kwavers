@@ -2,7 +2,7 @@ use super::*;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_SOFT_TISSUE;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Construct a minimal grid suitable for HAS tests.
 /// # Panics
@@ -55,7 +55,7 @@ fn test_absorption_reduces_field_energy() {
     };
     let solver_absorbing = HybridAngularSpectrumSolver::new(&grid, &config_absorbing).unwrap();
 
-    let initial = Array3::from_elem((8, 8, 4), 1000.0_f64);
+    let initial = Array3::from_elem([8, 8, 4], 1000.0_f64);
     let n_steps = 20;
 
     let p_lossless = solver_lossless
@@ -106,7 +106,7 @@ fn test_lossless_linear_energy_conservation() {
     let solver = HybridAngularSpectrumSolver::new(&grid, &config).unwrap();
 
     // DC field (constant in x,y → single propagating DC mode, no evanescent loss)
-    let initial = Array3::from_elem((8, 8, 4), 500.0_f64);
+    let initial = Array3::from_elem([8, 8, 4], 500.0_f64);
     let e0: f64 = initial.iter().map(|v| v * v).sum();
 
     let result = solver.propagate_steps(&initial, 20, dz).unwrap();
@@ -162,7 +162,7 @@ fn test_strang_splitting_second_order_convergence() {
         ..HASConfig::default()
     };
     let solver_ref = HybridAngularSpectrumSolver::new(&grid, &config_ref).unwrap();
-    let initial = Array3::from_shape_fn((8, 8, 4), |(i, _j, k)| {
+    let initial = Array3::from_shape_fn((8, 8, 4), |[i, _j, k]| {
         ((i + 1) as f64 * 100.0) * (1.0 + 0.1 * (k as f64))
     });
     let u_ref = solver_ref.propagate_steps(&initial, 200, dz_ref).unwrap();
@@ -259,7 +259,7 @@ fn test_harmonic_generation_by_nonlinearity() {
 
     // Sinusoidal initial field in z (uniform in x,y)
     let amplitude = 0.5 * MPA_TO_PA; // 0.5 MPa — large amplitude to drive nonlinearity
-    let initial = Array3::from_shape_fn((4, 4, nz), |(_, _, k)| {
+    let initial = Array3::from_shape_fn((4, 4, nz), |[_, _, k]| {
         amplitude * (TWO_PI * k as f64 / nz as f64).sin()
     });
 

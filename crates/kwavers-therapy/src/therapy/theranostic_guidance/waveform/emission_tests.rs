@@ -1,7 +1,7 @@
 use super::*;
 use crate::therapy::theranostic_guidance::config::AnatomyKind;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array2;
+use leto::Array2;
 
 /// A point cavitation source in a homogeneous water domain must localize to
 /// within one wavelength of its true position under the genuine PAM
@@ -101,7 +101,7 @@ fn water_fixture(n: usize, spacing: f64, speed: f64) -> PreparedTheranosticSlice
 }
 
 fn fixture_with_speed(speed: Array2<f64>, spacing: f64) -> PreparedTheranosticSlice {
-    let (nx, ny) = speed.dim();
+    let [nx, ny] = speed.shape();
     let mut target_mask = Array2::from_elem((nx, ny), false);
     target_mask[[nx / 2, ny / 2]] = true;
     PreparedTheranosticSlice {
@@ -193,7 +193,7 @@ fn eikonal_delays_account_for_aberration_and_localize() {
     let run = propagate(&sim.grid, &sim.speed_baseline, false);
     let n_recv = sim.grid.receiver_cells.len();
     let n_samp = sim.grid.time_steps;
-    let passive_data = Array2::from_shape_fn((n_recv, n_samp), |(r, s)| {
+    let passive_data = Array2::from_shape_fn((n_recv, n_samp), |[r, s]| {
         f64::from(run.traces[s * n_recv + r])
     });
     let sensors: Vec<[f64; 3]> = layout

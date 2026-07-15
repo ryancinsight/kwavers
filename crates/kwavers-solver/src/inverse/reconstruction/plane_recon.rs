@@ -8,7 +8,7 @@ use crate::reconstruction::{
 };
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Planar array reconstruction
 #[derive(Debug)]

@@ -1,7 +1,7 @@
 use super::config::PAMConfig;
+use apollo::fft_1d_array;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::fft_1d_array;
-use ndarray::Array3;
+use leto::Array3;
 
 pub struct PAMProcessor {
     pub(super) config: PAMConfig,
@@ -58,10 +58,13 @@ impl PAMProcessor {
     }
 
     fn compute_spectrum(&mut self, time_series: &[f64]) -> KwaversResult<Vec<f64>> {
-        let spectrum = fft_1d_array(&ndarray::Array1::from_vec(time_series.to_vec()))
-            .iter()
-            .map(|c| c.re.hypot(c.im))
-            .collect();
+        let spectrum = fft_1d_array(
+            &leto::Array1::from_vec([time_series.len()], time_series.to_vec())
+                .expect("processor fft array"),
+        )
+        .iter()
+        .map(|c| c.re.hypot(c.im))
+        .collect();
         Ok(spectrum)
     }
 

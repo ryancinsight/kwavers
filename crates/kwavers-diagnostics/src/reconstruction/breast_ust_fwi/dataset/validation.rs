@@ -2,7 +2,7 @@
 
 use super::{BreastUstPstdDatasetConfig, PSTD_DATASET_CFL_LIMIT};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn validate_config(config: &BreastUstPstdDatasetConfig) -> KwaversResult<()> {
     if !config.spacing_m.is_finite() || config.spacing_m <= 0.0 {
@@ -50,7 +50,7 @@ pub(super) fn validate_sound_speed(sound_speed_m_s: &Array3<f64>) -> KwaversResu
             "sound_speed_m_s volume must not be empty".to_owned(),
         ));
     }
-    for &speed in sound_speed_m_s {
+    for &speed in sound_speed_m_s.iter() {
         if !speed.is_finite() || speed <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "sound speed must be positive and finite, got {speed}"

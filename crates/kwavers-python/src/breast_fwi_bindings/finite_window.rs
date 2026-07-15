@@ -1,13 +1,14 @@
 //! PyO3 conversion surface for finite-window PSTD Born prediction.
 
+use super::complex_compat::{leto2_to_nd2, nd_to_leto3};
 use super::helpers::kwavers_to_py;
 use super::PyMultiRowRingArray;
+use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     simulate_pstd_finite_window_born_observation,
     simulate_pstd_finite_window_born_second_order_observation, PstdFiniteWindowBornConfig,
 };
-use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray2, PyReadonlyArray3};
+use numpy::{PyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyModule;
 
@@ -38,7 +39,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_observation<'py>(
     frequency_bin_cycles: usize,
     transmissions: Option<usize>,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
-    let sound_speed = sound_speed_m_s.as_array().to_owned();
+    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
     let transmissions = transmissions.unwrap_or_else(|| array.inner.circumferential_elements());
     let config = PstdFiniteWindowBornConfig {
         reference_sound_speed_m_s,
@@ -59,7 +60,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_observation<'py>(
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(pressure.into_pyarray(py).into())
+    Ok(leto2_to_nd2(pressure).to_pyarray(py).into())
 }
 
 #[pyfunction]
@@ -89,7 +90,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_second_order_observation<'py>
     frequency_bin_cycles: usize,
     transmissions: Option<usize>,
 ) -> PyResult<Py<PyArray2<Complex64>>> {
-    let sound_speed = sound_speed_m_s.as_array().to_owned();
+    let sound_speed = nd_to_leto3(sound_speed_m_s.as_array().to_owned());
     let transmissions = transmissions.unwrap_or_else(|| array.inner.circumferential_elements());
     let config = PstdFiniteWindowBornConfig {
         reference_sound_speed_m_s,
@@ -110,7 +111,7 @@ pub fn simulate_breast_fwi_pstd_finite_window_born_second_order_observation<'py>
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(pressure.into_pyarray(py).into())
+    Ok(leto2_to_nd2(pressure).to_pyarray(py).into())
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

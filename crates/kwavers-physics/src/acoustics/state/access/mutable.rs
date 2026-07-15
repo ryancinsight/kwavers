@@ -1,7 +1,7 @@
 use crate::acoustics::state::{FieldView, PhysicsState};
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
-use ndarray::{ArrayView3, ArrayViewMut3};
+use leto::{ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 
 /// Mutable field accessor for plugins

@@ -1,17 +1,16 @@
-use crate::linear_algebra::{
-    ComplexLinearAlgebra, EigenDecomposition, LinearAlgebra, VectorOperations,
-};
+use crate::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use crate::linear_algebra::{ComplexLinearAlgebra, VectorOperations};
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use leto::{Array1, Array2};
 
 /// Compute L2 norm of a 3D array.
 #[must_use]
-pub fn norm_l2(array: &ndarray::Array3<f64>) -> f64 {
+pub fn norm_l2(array: &leto::Array3<f64>) -> f64 {
     VectorOperations::norm_l2(array)
 }
 
-/// Extension trait providing fluent ndarray linear-algebra operations.
+/// Extension trait providing fluent leto linear-algebra operations.
 pub trait LinearAlgebraExt<T> {
     /// Solve linear system `self x = b`.
     /// # Errors
@@ -31,20 +30,38 @@ pub trait LinearAlgebraExt<T> {
 
 impl LinearAlgebraExt<f64> for Array2<f64> {
     fn solve_into(&self, b: Array1<f64>) -> KwaversResult<Array1<f64>> {
-        LinearAlgebra::solve_linear_system(self, &b)
+        Ok(leto_ops::solve(&self.view(), &b.view())?)
     }
 
     fn inv(&self) -> KwaversResult<Self> {
-        LinearAlgebra::matrix_inverse(self)
+        Ok(leto_ops::inv(&self.view())?)
     }
 
     fn eig(&self) -> KwaversResult<(Array1<f64>, Self)> {
-        EigenDecomposition::eigendecomposition(self)
+        // The Hermitian eigensolver operates on complex matrices; a real matrix
+        // is promoted with zero imaginary part. For symmetric real inputs the
+        // eigenvectors are real (imaginary part ~0), so projecting to the real
+        // part preserves the original real-valued contract of this method.
+        let n = self.shape()[0];
+        let mut complex = Array2::<Complex64>::zeros([n, n]);
+        for i in 0..n {
+            for j in 0..n {
+                complex[[i, j]] = Complex64::new(self[[i, j]], 0.0);
+            }
+        }
+        let result = EigenSolver::qr_algorithm(&complex, EigenSolverConfig::default())?;
+        let mut eigenvectors = Array2::<f64>::zeros([n, n]);
+        for i in 0..n {
+            for j in 0..n {
+                eigenvectors[[i, j]] = result.eigenvectors[[i, j]].re;
+            }
+        }
+        Ok((result.eigenvalues, eigenvectors))
     }
 }
 
-impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
-    fn solve_into(&self, b: Array1<Complex<f64>>) -> KwaversResult<Array1<Complex<f64>>> {
+impl LinearAlgebraExt<Complex64> for Array2<Complex64> {
+    fn solve_into(&self, b: Array1<Complex64>) -> KwaversResult<Array1<Complex64>> {
         ComplexLinearAlgebra::solve_linear_system_complex(self, &b)
     }
 
@@ -52,12 +69,13 @@ impl LinearAlgebraExt<Complex<f64>> for Array2<Complex<f64>> {
         ComplexLinearAlgebra::matrix_inverse_complex(self)
     }
 
-    fn eig(&self) -> KwaversResult<(Array1<Complex<f64>>, Self)> {
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(self)?;
-        Ok((
-            eigenvalues.mapv(|lambda| Complex::new(lambda, 0.0)),
-            eigenvectors,
-        ))
+    fn eig(&self) -> KwaversResult<(Array1<Complex64>, Self)> {
+        let result = EigenSolver::jacobi_hermitian(self, EigenSolverConfig::default())?;
+        let n = result.eigenvalues.shape()[0];
+        let mut eig_complex = Array1::<Complex64>::zeros([n]);
+        for i in 0..n {
+            eig_complex[i] = Complex64::new(result.eigenvalues[i], 0.0);
+        }
+        Ok((eig_complex, result.eigenvectors))
     }
 }

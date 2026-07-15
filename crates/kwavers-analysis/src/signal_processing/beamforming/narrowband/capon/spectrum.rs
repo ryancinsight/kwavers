@@ -4,10 +4,10 @@ use super::CaponSpectrumConfig;
 use crate::signal_processing::beamforming::utils::steering::{
     SteeringVector, SteeringVectorMethod,
 };
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
+use leto_ops::inv;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum value `P_Capon(p)` for a candidate point.
 ///
@@ -32,7 +32,7 @@ pub fn capon_spatial_spectrum_point(
 ) -> KwaversResult<f64> {
     cfg.validate()?;
 
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "capon_spatial_spectrum_point expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"
@@ -59,7 +59,7 @@ pub fn capon_spatial_spectrum_point(
     let mut snapshots = Array2::<f64>::zeros((n_sensors, n_samples));
     for i in 0..n_sensors {
         for t in 0..n_samples {
-            snapshots[(i, t)] = sensor_data[(i, 0, t)];
+            snapshots[[i, t]] = sensor_data[[i, 0, t]];
         }
     }
 
@@ -68,7 +68,7 @@ pub fn capon_spatial_spectrum_point(
 
     if cfg.diagonal_loading > 0.0 {
         for i in 0..n_sensors {
-            r[(i, i)] += cfg.diagonal_loading;
+            r[[i, i]] += cfg.diagonal_loading;
         }
     }
 
@@ -92,14 +92,14 @@ pub fn capon_spatial_spectrum_point(
     )?;
 
     // Invert the real covariance matrix.
-    let r_inv = LinearAlgebra::matrix_inverse(&r)?;
+    let r_inv = inv(&r.view())?;
 
     // Compute denominator a^H R^{-1} a.
     let mut denom = Complex64::new(0.0, 0.0);
     for i in 0..n_sensors {
         let mut tmp = Complex64::new(0.0, 0.0);
         for j in 0..n_sensors {
-            tmp += Complex64::new(r_inv[(i, j)], 0.0) * a[j];
+            tmp += Complex64::new(r_inv[[i, j]], 0.0) * a[j];
         }
         denom += a[i].conj() * tmp;
     }

@@ -11,7 +11,7 @@
 
 use super::types::MisfitFunction;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 impl MisfitFunction {
     /// Wasserstein distance misfit (1-Wasserstein via CDF L1 distance).
@@ -27,8 +27,8 @@ impl MisfitFunction {
         let ntraces = observed.shape()[0];
 
         for i in 0..ntraces {
-            let obs_trace = observed.row(i).to_owned();
-            let syn_trace = synthetic.row(i).to_owned();
+            let obs_trace = observed.index_axis(0, i).unwrap().to_contiguous();
+            let syn_trace = synthetic.index_axis(0, i).unwrap().to_contiguous();
 
             // Shift to non-negative and normalize to probability distributions
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
@@ -37,8 +37,8 @@ impl MisfitFunction {
             let obs_shifted = obs_trace.mapv(|x| (x - obs_min).max(0.0));
             let syn_shifted = syn_trace.mapv(|x| (x - syn_min).max(0.0));
 
-            let obs_sum = obs_shifted.sum();
-            let syn_sum = syn_shifted.sum();
+            let obs_sum = obs_shifted.iter().sum::<f64>();
+            let syn_sum = syn_shifted.iter().sum::<f64>();
 
             if obs_sum < 1e-10 || syn_sum < 1e-10 {
                 continue;
@@ -71,12 +71,12 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let (ntraces, nsamples) = observed.dim();
+        let [ntraces, nsamples] = observed.shape();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let obs_trace = observed.row(i).to_owned();
-            let syn_trace = synthetic.row(i).to_owned();
+            let obs_trace = observed.index_axis(0, i).unwrap().to_contiguous();
+            let syn_trace = synthetic.index_axis(0, i).unwrap().to_contiguous();
 
             let obs_min = obs_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
             let syn_min = syn_trace.iter().fold(f64::INFINITY, |min, &x| min.min(x));
@@ -84,8 +84,8 @@ impl MisfitFunction {
             let obs_shifted = obs_trace.mapv(|x| (x - obs_min).max(0.0));
             let syn_shifted = syn_trace.mapv(|x| (x - syn_min).max(0.0));
 
-            let obs_sum = obs_shifted.sum();
-            let syn_sum = syn_shifted.sum();
+            let obs_sum = obs_shifted.iter().sum::<f64>();
+            let syn_sum = syn_shifted.iter().sum::<f64>();
 
             if obs_sum < 1e-10 || syn_sum < 1e-10 {
                 continue;
@@ -108,8 +108,8 @@ impl MisfitFunction {
 }
 
 fn cumulative_distributions(
-    obs_prob: &ndarray::Array1<f64>,
-    syn_prob: &ndarray::Array1<f64>,
+    obs_prob: &leto::Array1<f64>,
+    syn_prob: &leto::Array1<f64>,
     n: usize,
 ) -> (Vec<f64>, Vec<f64>) {
     let mut obs_cdf = Vec::with_capacity(n);

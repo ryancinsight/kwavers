@@ -97,7 +97,7 @@
 //!     delay_and_sum, DelayReference, DEFAULT_DELAY_REFERENCE
 //! };
 //! use kwavers_receiver::GridSensorSet;
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! // 1. Define sensor geometry (domain layer)
 //! let sensor_positions = vec![[0.0, 0.0, 0.0], [0.001, 0.0, 0.0]]; // 1mm spacing

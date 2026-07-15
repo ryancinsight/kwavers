@@ -7,20 +7,22 @@
 //! - [`laplacian`]     – 2nd-order spatial Laplacian and Laplacian filter
 //! - [`illumination`]  – source illumination accumulation
 //!
-//! All triple-nested-for-loop stencils have been replaced with
-//! `Zip::par_for_each` slice-view passes (see individual submodules).
+//! All triple-nested-for-loop stencils are routed through Moirai-backed
+//! strided view passes (see individual submodules).
 
 mod illumination;
 mod imaging;
 mod laplacian;
+mod parallel;
 mod propagation;
 pub(super) mod tests;
 mod wavefield;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 use super::types::ReverseTimeMigration;
+use parallel::for_each_view_mut;
 
 impl ReverseTimeMigration {
     /// Perform RTM for a single shot gather.
@@ -34,11 +36,11 @@ impl ReverseTimeMigration {
     /// Reference: Baysal et al. (1983), "Reverse time migration",
     /// *Geophysics* **48**(11), 1514–1524.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn migrate_shot(
         &mut self,
-        shot_data: &ndarray::Array2<f64>,
+        shot_data: &leto::Array2<f64>,
         source_position: (usize, usize, usize),
         receiver_positions: &[(usize, usize, usize)],
         grid: &kwavers_grid::Grid,
@@ -62,18 +64,18 @@ impl ReverseTimeMigration {
     /// Normalises by source illumination (`√illumination`) and optionally
     /// applies a mild Laplacian filter to suppress migration artefacts.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn post_process_image(&mut self) -> KwaversResult<()> {
         use super::super::constants::RTM_AMPLITUDE_THRESHOLD;
 
-        Zip::from(&mut self.image)
-            .and(&self.source_illumination)
-            .par_for_each(|img, &illum| {
-                if illum > RTM_AMPLITUDE_THRESHOLD {
-                    *img /= illum.sqrt();
-                }
-            });
+        let illumination = self.source_illumination.view();
+        for_each_view_mut(self.image.view_mut(), |idx, img| {
+            let illum = illumination[idx];
+            if illum > RTM_AMPLITUDE_THRESHOLD {
+                *img /= illum.sqrt();
+            }
+        });
 
         if self.config.base_config.filter != crate::reconstruction::ReconstructionFilterType::None {
             let filtered = self.apply_laplacian_filter_inplace(&self.image.clone())?;
@@ -85,13 +87,22 @@ impl ReverseTimeMigration {
 
     /// Thin wrapper: calls [`laplacian::apply_laplacian_filter_inplace`].
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_laplacian_filter_inplace(
         &self,
         image: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let laplacian = self.compute_laplacian(image)?;
-        Ok(image - &(0.1_f64 * laplacian))
+        let laplacian = self.compute_laplacian(&image.view())?;
+        // result = image − 0.1·∇²image, single native pass (leto has no array operators)
+        let mut result = Array3::<f64>::zeros(image.shape());
+        leto_ops::zip2_mut_with(
+            &mut result.view_mut(),
+            &image.view(),
+            &laplacian.view(),
+            |r, img, lap| *r = *img - 0.1_f64 * *lap,
+        )
+        .expect("invariant: laplacian-filter shapes match image");
+        Ok(result)
     }
 }

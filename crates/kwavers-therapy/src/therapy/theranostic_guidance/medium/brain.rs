@@ -23,7 +23,7 @@ use kwavers_core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::scene::target_index_from_mask_fraction_2d;
 use super::{validate_masks, AnatomyKind, PreparedTheranosticSlice};
@@ -41,7 +41,7 @@ pub fn prepare_brain_slice(
     source_slice_index: usize,
     target_selection: BrainTargetSelection,
 ) -> KwaversResult<PreparedTheranosticSlice> {
-    let (nx, ny) = ct_hu.dim();
+    let [nx, ny] = ct_hu.shape();
     let mut label = Array2::<i16>::zeros((nx, ny));
     let mut sound_speed = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_WATER);
     let mut attenuation = Array2::<f64>::from_elem((nx, ny), soft_attenuation());
@@ -98,7 +98,7 @@ pub fn prepare_brain_slice(
 /// active, avoiding a degenerate output for empty masks.
 fn centroid_from_active(
     positions: impl Iterator<Item = (usize, usize)>,
-    (nx, ny): (usize, usize),
+    [nx, ny]: [usize; 2],
 ) -> (f64, f64) {
     let mut sx = 0.0_f64;
     let mut sy = 0.0_f64;
@@ -119,16 +119,16 @@ fn head_centroid(ct_hu: &Array2<f64>) -> (f64, f64) {
     centroid_from_active(
         ct_hu
             .indexed_iter()
-            .filter_map(|((ix, iy), &hu)| (hu > -300.0).then_some((ix, iy))),
-        ct_hu.dim(),
+            .filter_map(|([ix, iy], &hu)| (hu > -300.0).then_some((ix, iy))),
+        ct_hu.shape(),
     )
 }
 
 fn head_centroid_bool(mask: &Array2<bool>) -> (f64, f64) {
     centroid_from_active(
         mask.indexed_iter()
-            .filter_map(|((ix, iy), &active)| active.then_some((ix, iy))),
-        mask.dim(),
+            .filter_map(|([ix, iy], &active)| active.then_some((ix, iy))),
+        mask.shape(),
     )
 }
 
@@ -141,7 +141,7 @@ fn synthetic_deep_target(
     spacing_m: f64,
     target_selection: BrainTargetSelection,
 ) -> KwaversResult<Array2<bool>> {
-    let (nx, ny) = organ.dim();
+    let [nx, ny] = organ.shape();
     let center = match target_selection {
         BrainTargetSelection::OrganCentroid => head_centroid_bool(organ),
         BrainTargetSelection::SliceFraction(fraction) => {
@@ -155,7 +155,7 @@ fn synthetic_deep_target(
     };
     let rx = 6.0e-3 / spacing_m;
     let ry = 8.0e-3 / spacing_m;
-    Ok(Array2::from_shape_fn((nx, ny), |(ix, iy)| {
+    Ok(Array2::from_shape_fn((nx, ny), |[ix, iy]| {
         organ[[ix, iy]]
             && ((ix as f64 - center.0) / rx).powi(2) + ((iy as f64 - center.1) / ry).powi(2) <= 1.0
     }))

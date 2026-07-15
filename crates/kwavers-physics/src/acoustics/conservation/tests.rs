@@ -2,7 +2,7 @@ use super::*;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 fn make_grid() -> Grid {
     Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()
@@ -10,6 +10,12 @@ fn make_grid() -> Grid {
 
 fn uniform_array(shape: (usize, usize, usize), val: f64) -> Array3<f64> {
     Array3::from_elem(shape, val)
+}
+
+fn uniform_leto(shape: (usize, usize, usize), val: f64) -> leto::Array3<f64> {
+    let mut arr = leto::Array3::<f64>::zeros([shape.0, shape.1, shape.2]);
+    arr.fill(val);
+    arr
 }
 
 #[test]
@@ -130,8 +136,8 @@ fn test_acoustic_intensity_pointwise() {
 fn test_heat_source_zero_absorption() {
     let grid = make_grid();
     let shape = (grid.nx, grid.ny, grid.nz);
-    let p = uniform_array(shape, 5000.0);
-    let v = uniform_array(shape, 1.0);
+    let p = uniform_leto(shape, 5000.0);
+    let v = uniform_leto(shape, 1.0);
     let rho = uniform_array(shape, DENSITY_WATER_NOMINAL);
     let c = uniform_array(shape, SOUND_SPEED_WATER_SIM);
     let alpha = uniform_array(shape, 0.0);

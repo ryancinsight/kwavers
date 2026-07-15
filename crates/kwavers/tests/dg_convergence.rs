@@ -32,7 +32,7 @@ use kwavers_solver::forward::pstd::dg::config::{
 };
 use kwavers_solver::forward::pstd::dg::dg_solver::core::DGSolver;
 use kwavers_solver::forward::pstd::dg::{BasisType, FluxType, LimiterType};
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 use std::sync::Arc;
 
@@ -62,7 +62,7 @@ fn sinusoidal_field(grid: &Grid) -> Array3<f64> {
         let val = (2.0 * PI * x / lx).sin();
         for iy in 0..grid.ny {
             for iz in 0..grid.nz {
-                field[(ix, iy, iz)] = val;
+                field[[ix, iy, iz]] = val;
             }
         }
     }

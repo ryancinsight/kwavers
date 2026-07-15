@@ -31,7 +31,7 @@
 //! - Hamilton, M. F., & Blackstock, D. T. (1998). "Nonlinear Acoustics", Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Nonlinear elastic wave field with harmonic components
 ///
@@ -108,7 +108,8 @@ impl NonlinearElasticWaveField {
     /// 3D array of total displacement magnitudes in meters
     #[must_use]
     pub fn total_displacement_magnitude(&self) -> Array3<f64> {
-        let mut total = &self.u_fundamental * &self.u_fundamental + &self.u_second * &self.u_second;
+        let mut total =
+            &(&self.u_fundamental * &self.u_fundamental) + &(&self.u_second * &self.u_second);
 
         for harmonic in &self.u_harmonics {
             total = &total + &(harmonic * harmonic);
@@ -123,7 +124,7 @@ impl NonlinearElasticWaveField {
     /// Total number of harmonics including fundamental (1 + 1 + n_higher)
     #[must_use]
     pub fn num_harmonics(&self) -> usize {
-        2 + self.u_harmonics.len() // fundamental + second + higher
+        2 + (self.u_harmonics.len()) // fundamental + second + higher
     }
 
     /// Get the displacement at a specific harmonic
@@ -170,11 +171,11 @@ impl NonlinearElasticWaveField {
         }
     }
 
-    /// Fallible version of [`get_harmonic`](Self::get_harmonic).
+    /// Fallible version of [`Self::get_harmonic`].
     ///
     /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn try_get_harmonic(&self, harmonic_index: usize) -> KwaversResult<&Array3<f64>> {
         match harmonic_index {
@@ -189,11 +190,11 @@ impl NonlinearElasticWaveField {
         }
     }
 
-    /// Fallible version of [`get_harmonic_mut`](Self::get_harmonic_mut).
+    /// Fallible version of [`Self::get_harmonic_mut`].
     ///
     /// Returns `Err(InvalidInput)` instead of panicking when the index is out of range.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn try_get_harmonic_mut(
         &mut self,

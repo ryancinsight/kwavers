@@ -460,57 +460,6 @@ pub fn centered_hann_tone_burst_waveform(
     out
 }
 
-#[cfg(test)]
-mod centered_hann_tone_burst_tests {
-    use super::centered_hann_tone_burst_waveform;
-    use kwavers_math::signal::window::hann;
-
-    #[test]
-    fn centered_hann_tone_burst_matches_discrete_window_contract() {
-        let sample_rate_hz = 40.0e6;
-        let freq_hz = 5.0e6;
-        let n_cycles = 2.0;
-        let dt_s = 1.0 / sample_rate_hz;
-        let times: Vec<f64> = (0..241).map(|idx| -3.0e-6 + idx as f64 * dt_s).collect();
-
-        let pulse = centered_hann_tone_burst_waveform(&times, 1.0, freq_hz, n_cycles);
-
-        let half_duration_s = 0.5 * n_cycles / freq_hz;
-        let active: Vec<usize> = times
-            .iter()
-            .enumerate()
-            .filter_map(|(idx, &time_s)| (time_s.abs() < half_duration_s).then_some(idx))
-            .collect();
-        let mut expected = vec![0.0; times.len()];
-        let denominator = active.len() as f64 - 1.0;
-        for (window_idx, signal_idx) in active.into_iter().enumerate() {
-            expected[signal_idx] = hann(window_idx as f64 / denominator)
-                * (std::f64::consts::TAU * freq_hz * times[signal_idx]).sin();
-        }
-
-        for (observed, expected) in pulse.iter().zip(expected.iter()) {
-            assert!(
-                (observed - expected).abs() <= 1.0e-14,
-                "observed={observed:e}, expected={expected:e}"
-            );
-        }
-    }
-
-    #[test]
-    fn centered_hann_tone_burst_rejects_invalid_inputs_with_zero_trace() {
-        let times = [0.0, 1.0e-6];
-
-        assert_eq!(
-            centered_hann_tone_burst_waveform(&times, 1.0, 0.0, 2.0),
-            vec![0.0, 0.0]
-        );
-        assert_eq!(
-            centered_hann_tone_burst_waveform(&[0.0, f64::NAN], 1.0, 1.0e6, 2.0),
-            vec![0.0, 0.0]
-        );
-    }
-}
-
 /// Superimpose Hann-windowed tone bursts at arbitrary start times (pulse train).
 ///
 /// For each start time `t_start_k` in `t_starts`, a tone burst
@@ -560,4 +509,55 @@ pub fn pulse_train_waveform(
         }
     }
     out
+}
+
+#[cfg(test)]
+mod centered_hann_tone_burst_tests {
+    use super::centered_hann_tone_burst_waveform;
+    use kwavers_math::signal::window::hann;
+
+    #[test]
+    fn centered_hann_tone_burst_matches_discrete_window_contract() {
+        let sample_rate_hz = 40.0e6;
+        let freq_hz = 5.0e6;
+        let n_cycles = 2.0;
+        let dt_s = 1.0 / sample_rate_hz;
+        let times: Vec<f64> = (0..241).map(|idx| -3.0e-6 + idx as f64 * dt_s).collect();
+
+        let pulse = centered_hann_tone_burst_waveform(&times, 1.0, freq_hz, n_cycles);
+
+        let half_duration_s = 0.5 * n_cycles / freq_hz;
+        let active: Vec<usize> = times
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, &time_s)| (time_s.abs() < half_duration_s).then_some(idx))
+            .collect();
+        let mut expected = vec![0.0; times.len()];
+        let denominator = active.len() as f64 - 1.0;
+        for (window_idx, signal_idx) in active.into_iter().enumerate() {
+            expected[signal_idx] = hann(window_idx as f64 / denominator)
+                * (std::f64::consts::TAU * freq_hz * times[signal_idx]).sin();
+        }
+
+        for (observed, expected) in pulse.iter().zip(expected.iter()) {
+            assert!(
+                (observed - expected).abs() <= 1.0e-14,
+                "observed={observed:e}, expected={expected:e}"
+            );
+        }
+    }
+
+    #[test]
+    fn centered_hann_tone_burst_rejects_invalid_inputs_with_zero_trace() {
+        let times = [0.0, 1.0e-6];
+
+        assert_eq!(
+            centered_hann_tone_burst_waveform(&times, 1.0, 0.0, 2.0),
+            vec![0.0, 0.0]
+        );
+        assert_eq!(
+            centered_hann_tone_burst_waveform(&[0.0, f64::NAN], 1.0, 1.0e6, 2.0),
+            vec![0.0, 0.0]
+        );
+    }
 }

@@ -23,9 +23,10 @@
 //! expected standing-wave bin, avoiding a full FFT dependency for a single
 //! frequency component.
 
-use ndarray::{Array2, Zip};
+use leto::Array2;
 
 use super::config::StandingWaveOptConfig;
+use crate::parallel::zip_two_mut_two_refs;
 use kwavers_core::constants::numerical::TWO_PI;
 
 // ---------------------------------------------------------------------------
@@ -43,21 +44,23 @@ pub(super) fn superpose(
     g_im: &[Array2<f64>],
     phases: &[f64],
 ) -> (Array2<f64>, Array2<f64>) {
-    let nx = g_re[0].nrows();
-    let ny = g_re[0].ncols();
+    let nx = g_re[0].shape()[0];
+    let ny = g_re[0].shape()[1];
     let mut p_re = Array2::<f64>::zeros((nx, ny));
     let mut p_im = Array2::<f64>::zeros((nx, ny));
     for ((&phi, gre), gim) in phases.iter().zip(g_re).zip(g_im) {
         let c = phi.cos();
         let s = phi.sin();
-        Zip::from(&mut p_re)
-            .and(&mut p_im)
-            .and(gre)
-            .and(gim)
-            .for_each(|pr, pi, &gr, &gi| {
+        zip_two_mut_two_refs(
+            p_re.view_mut(),
+            p_im.view_mut(),
+            gre.view(),
+            gim.view(),
+            |pr, pi, &gr, &gi| {
                 *pr += c * gr - s * gi;
                 *pi += s * gr + c * gi;
-            });
+            },
+        );
     }
     (p_re, p_im)
 }

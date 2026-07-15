@@ -1,6 +1,13 @@
 use super::{CheckpointManager, DistributedTrainingConfig};
 use kwavers_core::error::KwaversResult;
 
+const CHECKPOINT_PREFIX: &str = "checkpoint_epoch_";
+const CHECKPOINT_SUFFIX: &str = ".json";
+
+pub(crate) fn checkpoint_filename(epoch: usize) -> String {
+    format!("{CHECKPOINT_PREFIX}{epoch}{CHECKPOINT_SUFFIX}")
+}
+
 impl CheckpointManager {
     /// From config.
     /// # Errors
@@ -14,7 +21,7 @@ impl CheckpointManager {
     }
     /// Ensure checkpoint dir.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn ensure_checkpoint_dir(&self) -> KwaversResult<()> {
         if !self.checkpoint_dir.exists() {
@@ -24,7 +31,7 @@ impl CheckpointManager {
     }
     /// List checkpoints.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn list_checkpoints(&self) -> KwaversResult<Vec<usize>> {
         let mut checkpoints = Vec::new();
@@ -34,12 +41,12 @@ impl CheckpointManager {
                 let entry = entry?;
                 let filename_owned = entry.file_name().to_string_lossy().to_string();
 
-                if filename_owned.starts_with("checkpoint_epoch_")
-                    && filename_owned.ends_with(".bin")
+                if filename_owned.starts_with(CHECKPOINT_PREFIX)
+                    && filename_owned.ends_with(CHECKPOINT_SUFFIX)
                 {
                     if let Some(epoch_str) = filename_owned
-                        .strip_prefix("checkpoint_epoch_")
-                        .and_then(|s| s.strip_suffix(".bin"))
+                        .strip_prefix(CHECKPOINT_PREFIX)
+                        .and_then(|s| s.strip_suffix(CHECKPOINT_SUFFIX))
                     {
                         if let Ok(epoch) = epoch_str.parse::<usize>() {
                             checkpoints.push(epoch);
@@ -54,15 +61,14 @@ impl CheckpointManager {
     }
     /// Cleanup old checkpoints.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn cleanup_old_checkpoints(&self) -> KwaversResult<()> {
         let checkpoints = self.list_checkpoints()?;
-        let to_remove = checkpoints.len().saturating_sub(self.max_checkpoints);
+        let to_remove = (checkpoints.len()).saturating_sub(self.max_checkpoints);
 
         for &epoch in checkpoints.iter().take(to_remove) {
-            let filename = format!("checkpoint_epoch_{}.bin", epoch);
-            let path = self.checkpoint_dir.join(filename);
+            let path = self.checkpoint_dir.join(checkpoint_filename(epoch));
             if path.exists() {
                 std::fs::remove_file(path)?;
             }

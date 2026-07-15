@@ -25,7 +25,7 @@
 //! estimator in seismic/ultrasound practice.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Data-fidelity weighting strategy for the L2 misfit (the PWLS / MBIR lesson).
 ///
@@ -59,7 +59,7 @@ const VARIANCE_FLOOR_FRACTION: f64 = 1.0e-3;
 /// 1, where `σ_r²` is the sample variance of the leading `noise_window` samples.
 #[must_use]
 pub fn trace_weights(observed: &Array2<f64>, weighting: DataWeighting) -> Array2<f64> {
-    let (n_tr, nt) = observed.dim();
+    let [n_tr, nt] = observed.shape();
     let noise_window = match weighting {
         DataWeighting::Uniform => return Array2::ones((n_tr, nt)),
         DataWeighting::InverseNoiseVariance { noise_window } => noise_window.clamp(1, nt.max(1)),
@@ -90,7 +90,7 @@ pub fn trace_weights(observed: &Array2<f64>, weighting: DataWeighting) -> Array2
         1.0
     } else {
         positive.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
-        VARIANCE_FLOOR_FRACTION * positive[positive.len() / 2]
+        VARIANCE_FLOOR_FRACTION * positive[(positive.len()) / 2]
     };
 
     let inv: Vec<f64> = var.iter().map(|v| 1.0 / v.max(floor)).collect();
@@ -112,14 +112,14 @@ fn validate_triple(
     synthetic: &Array2<f64>,
     weights: &Array2<f64>,
 ) -> KwaversResult<()> {
-    if observed.dim() != synthetic.dim() || observed.dim() != weights.dim() {
+    if observed.shape() != synthetic.shape() || observed.shape() != weights.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "PWLS shape mismatch: observed {:?}, synthetic {:?}, weights {:?}",
-                    observed.dim(),
-                    synthetic.dim(),
-                    weights.dim()
+                    observed.shape(),
+                    synthetic.shape(),
+                    weights.shape()
                 ),
             },
         ));
@@ -131,7 +131,7 @@ fn validate_triple(
 ///
 /// With all-ones `weights` this equals the unweighted `l2_objective` exactly.
 /// # Errors
-/// Returns [`KwaversError::Validation`] if the three arrays differ in shape.
+/// Returns [`crate::KwaversError::Validation`] if the three arrays differ in shape.
 pub fn weighted_l2_objective(
     dt: f64,
     observed: &Array2<f64>,
@@ -152,34 +152,34 @@ pub fn weighted_l2_objective(
 ///
 /// With all-ones `weights` this equals the unweighted residual `d_syn − d_obs`.
 /// # Errors
-/// Returns [`KwaversError::Validation`] if the three arrays differ in shape.
+/// Returns [`crate::KwaversError::Validation`] if the three arrays differ in shape.
 pub fn weighted_l2_residual(
     observed: &Array2<f64>,
     synthetic: &Array2<f64>,
     weights: &Array2<f64>,
 ) -> KwaversResult<Array2<f64>> {
     validate_triple(observed, synthetic, weights)?;
-    Ok((synthetic - observed) * weights)
+    Ok(&(synthetic - observed) * weights)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Uniform weighting reproduces plain L2 bit-for-bit: all-ones weights, the
     /// weighted objective equals `(dt/2)‖r‖²`, and the weighted residual equals
     /// the plain difference.
     #[test]
     fn uniform_weighting_matches_plain_l2() {
-        let obs = Array2::from_shape_vec((2, 3), vec![1.0, 2.0, 3.0, -1.0, 0.0, 4.0]).unwrap();
-        let syn = Array2::from_shape_vec((2, 3), vec![1.5, 2.0, 2.0, -1.0, 1.0, 4.5]).unwrap();
+        let obs = Array2::from_shape_vec([2, 3], vec![1.0, 2.0, 3.0, -1.0, 0.0, 4.0]).unwrap();
+        let syn = Array2::from_shape_vec([2, 3], vec![1.5, 2.0, 2.0, -1.0, 1.0, 4.5]).unwrap();
         let w = trace_weights(&obs, DataWeighting::Uniform);
         assert!(w.iter().all(|&x| (x - 1.0).abs() < 1e-15));
 
         let dt = 0.5;
         let j_w = weighted_l2_objective(dt, &obs, &syn, &w).unwrap();
-        let plain: f64 = (&syn - &obs).mapv(|x| x * x).sum();
+        let plain: f64 = (&syn - &obs).mapv(|x| x * x).iter().sum::<f64>();
         assert!(
             (j_w - 0.5 * dt * plain).abs() < 1e-12,
             "weighted == plain L2"
@@ -214,7 +214,13 @@ mod tests {
             (w0 / w1 - 100.0).abs() / 100.0 < 0.05,
             "weight ratio tracks 1/σ²"
         );
-        let mean_w = w.column(0).mean().unwrap();
+        let mean_w = {
+            let col = w.index_axis::<1>(1, 0).unwrap();
+            let (sum, count) = col
+                .iter()
+                .fold((0.0_f64, 0usize), |(s, c), &v| (s + v, c + 1));
+            sum / count as f64
+        };
         assert!(
             (mean_w - 1.0).abs() < 1e-9,
             "weights mean-normalised to 1; got {mean_w}"

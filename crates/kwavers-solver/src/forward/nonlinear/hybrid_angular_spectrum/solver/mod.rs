@@ -40,7 +40,7 @@
 //!
 //! **Statement.** In the inner pair `U_{N+A}(Δz) ≈ U_N(Δz) · U_A(Δz)`, the
 //! Lie-Trotter split places N before A. The reverse order A·N introduces a
-//! systematic error of O(Δz²·[A,N]) per step.
+//! systematic error of O(Δz²·\[A,N\]) per step.
 //!
 //! **Physical justification.** The commutator `[A, N]` is non-zero when
 //! absorption α is frequency-dependent (as in power-law models `α ∝ f^y`).
@@ -71,7 +71,7 @@ mod tests;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     HASConfig, HasAbsorptionOperator, HybridAsDiffractionOperator, HybridAsNonlinearOperator,
@@ -88,7 +88,7 @@ pub struct HybridAngularSpectrumSolver {
 impl HybridAngularSpectrumSolver {
     /// Construct from grid and configuration.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(grid: &Grid, config: &HASConfig) -> KwaversResult<Self> {
         let diffraction = HybridAsDiffractionOperator::new(grid, config)?;
@@ -126,7 +126,7 @@ impl HybridAngularSpectrumSolver {
     /// - Zemp RJ et al. (2003). J. Acoust. Soc. Am. 113(1), 139–152.
     ///   DOI: 10.1121/1.1528928
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_steps(
         &self,

@@ -18,6 +18,7 @@ pub mod flexible;
 pub mod hemispherical;
 pub mod kwave_array;
 pub mod mems;
+mod parallel;
 pub mod passive_acoustic_mapping;
 pub mod transducers;
 pub mod ultrafast;
@@ -71,6 +72,10 @@ pub use transducers::{
     phased_array::{
         BeamformingMode, ElementSensitivity, PhasedArrayConfig, PhasedArrayTransducer,
         TransducerElement,
+    },
+    physics::{
+        rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
+        RayleighIntegralSpec, RayleighLayer, RayleighPropagationPath,
     },
     rectangular::RectangularTransducer,
 };

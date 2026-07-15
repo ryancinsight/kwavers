@@ -2,7 +2,7 @@ use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Apodization, Source};
 use log::debug;
-use rayon::prelude::*;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -137,22 +137,19 @@ impl MatrixArray {
         let start_x = self.x_pos - self.width / 2.0;
         let start_y = self.y_pos - self.height / 2.0;
 
-        self.time_delays
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(idx, delay)| {
-                let ix = idx % self.num_x;
-                let iy = idx / self.num_x;
-                let x_elem = (ix as f64).mul_add(dx, start_x);
-                let y_elem = (iy as f64).mul_add(dy, start_y);
-                let distance = (self.z_pos - focus_z)
-                    .mul_add(
-                        self.z_pos - focus_z,
-                        (y_elem - focus_y).mul_add(y_elem - focus_y, (x_elem - focus_x).powi(2)),
-                    )
-                    .sqrt();
-                *delay = distance / c;
-            });
+        enumerate_mut_with::<Adaptive, _, _>(&mut self.time_delays, |idx, delay| {
+            let ix = idx % self.num_x;
+            let iy = idx / self.num_x;
+            let x_elem = (ix as f64).mul_add(dx, start_x);
+            let y_elem = (iy as f64).mul_add(dy, start_y);
+            let distance = (self.z_pos - focus_z)
+                .mul_add(
+                    self.z_pos - focus_z,
+                    (y_elem - focus_y).mul_add(y_elem - focus_y, (x_elem - focus_x).powi(2)),
+                )
+                .sqrt();
+            *delay = distance / c;
+        });
         debug!("Adjusted focus to ({}, {}, {})", focus_x, focus_y, focus_z);
     }
 
@@ -165,14 +162,14 @@ impl MatrixArray {
 }
 
 impl Source for MatrixArray {
-    fn create_mask(&self, grid: &Grid) -> ndarray::Array3<f64> {
-        let mut mask = ndarray::Array3::zeros((grid.nx, grid.ny, grid.nz));
+    fn create_mask(&self, grid: &Grid) -> leto::Array3<f64> {
+        let mut mask = leto::Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
-    fn create_mask_into(&self, grid: &Grid, mask: &mut ndarray::Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+    fn create_mask_into(&self, grid: &Grid, mask: &mut leto::Array3<f64>) {
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
         let dx = self.element_spacing_x();
         let dy = self.element_spacing_y();
@@ -186,7 +183,7 @@ impl Source for MatrixArray {
                 let idx = iy * self.num_x + ix;
 
                 if let Some((gx, gy, gz)) = grid.position_to_indices(x_elem, y_elem, self.z_pos) {
-                    mask[(gx, gy, gz)] = self.apodization_weights[idx];
+                    mask[[gx, gy, gz]] = self.apodization_weights[idx];
                 }
             }
         }

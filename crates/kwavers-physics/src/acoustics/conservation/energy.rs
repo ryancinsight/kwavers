@@ -1,7 +1,8 @@
 //! Acoustic energy conservation checks.
 
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use moirai_parallel::{reduce_index_with, Sequential};
 
 /// Compute total acoustic energy and relative error against `initial_energy`.
 #[allow(clippy::too_many_arguments)]
@@ -16,24 +17,89 @@ pub fn validate_energy_conservation(
     initial_energy: f64,
     grid: &Grid,
 ) -> f64 {
-    let mut total_energy = 0.0_f64;
+    let shape = pressure.shape();
+    assert_eq!(
+        velocity_x.shape(),
+        shape,
+        "invariant: acoustic energy velocity_x shape mismatch"
+    );
+    assert_eq!(
+        velocity_y.shape(),
+        shape,
+        "invariant: acoustic energy velocity_y shape mismatch"
+    );
+    assert_eq!(
+        velocity_z.shape(),
+        shape,
+        "invariant: acoustic energy velocity_z shape mismatch"
+    );
+    assert_eq!(
+        density.shape(),
+        shape,
+        "invariant: acoustic energy density shape mismatch"
+    );
+    assert_eq!(
+        sound_speed.shape(),
+        shape,
+        "invariant: acoustic energy sound_speed shape mismatch"
+    );
+
     let dv = grid.dx * grid.dy * grid.dz;
 
-    Zip::from(pressure)
-        .and(velocity_x)
-        .and(velocity_y)
-        .and(velocity_z)
-        .and(density)
-        .and(sound_speed)
-        .for_each(|&p, &vx, &vy, &vz, &rho, &c| {
-            if rho > 0.0 && c > 0.0 {
-                let kinetic = 0.5 * rho * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
-                let potential = super::acoustic_potential_energy_density(p, rho, c);
-                total_energy += (kinetic + potential) * dv;
-            }
-        });
+    let total_energy = match (
+        pressure.as_slice_memory_order(),
+        velocity_x.as_slice_memory_order(),
+        velocity_y.as_slice_memory_order(),
+        velocity_z.as_slice_memory_order(),
+        density.as_slice_memory_order(),
+        sound_speed.as_slice_memory_order(),
+    ) {
+        (
+            Some(pressure),
+            Some(velocity_x),
+            Some(velocity_y),
+            Some(velocity_z),
+            Some(density),
+            Some(sound_speed),
+        ) => reduce_index_with::<Sequential, _, _, _>(
+            pressure.len(),
+            0.0_f64,
+            |idx| {
+                acoustic_cell_energy(
+                    pressure[idx],
+                    [velocity_x[idx], velocity_y[idx], velocity_z[idx]],
+                    density[idx],
+                    sound_speed[idx],
+                    dv,
+                )
+            },
+            |left, right| left + right,
+        ),
+        _ => pressure
+            .iter()
+            .zip(velocity_x.iter())
+            .zip(velocity_y.iter())
+            .zip(velocity_z.iter())
+            .zip(density.iter())
+            .zip(sound_speed.iter())
+            .fold(0.0_f64, |acc, (((((p, vx), vy), vz), rho), c)| {
+                acc + acoustic_cell_energy(*p, [*vx, *vy, *vz], *rho, *c, dv)
+            }),
+    };
 
     (total_energy - initial_energy).abs() / initial_energy.max(1e-10)
+}
+
+#[inline]
+fn acoustic_cell_energy(p: f64, velocity: [f64; 3], rho: f64, c: f64, dv: f64) -> f64 {
+    if rho > 0.0 && c > 0.0 {
+        let [vx, vy, vz] = velocity;
+        let kinetic = 0.5 * rho * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
+        let potential = super::acoustic_potential_energy_density(p, rho, c);
+        (kinetic + potential) * dv
+    } else {
+        0.0
+    }
 }
 
 #[cfg(test)]
@@ -41,7 +107,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     type AcousticFields = (
         Array3<f64>,
@@ -57,7 +123,7 @@ mod tests {
     }
 
     fn make_fields(p: f64, v: f64, rho: f64, c: f64) -> AcousticFields {
-        let s = (4, 4, 4);
+        let s: [usize; 3] = [4, 4, 4];
         let pressure = Array3::from_elem(s, p);
         let velocity_x = Array3::from_elem(s, v);
         let velocity_y = Array3::zeros(s);

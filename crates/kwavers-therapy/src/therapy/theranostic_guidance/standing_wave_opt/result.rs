@@ -1,4 +1,4 @@
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Full output of one standing-wave suppression run.
 ///

@@ -2,7 +2,7 @@ use super::{PstdSemCouplingConfig, SpectralCouplingInterface};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Paired interface region: PSTD grid points and the matching SEM node indices.
 type PstdSemRegion = (Vec<(usize, usize, usize)>, Vec<usize>);
@@ -10,7 +10,7 @@ type PstdSemRegion = (Vec<(usize, usize, usize)>, Vec<usize>);
 impl SpectralCouplingInterface {
     /// Create spectral coupling interface
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         pstd_grid: &Grid,
@@ -149,7 +149,7 @@ impl SpectralCouplingInterface {
         let mut total_weight = 0.0;
 
         for &node_idx in sem_nodes {
-            if node_idx >= sem_mesh.nodes.len() {
+            if node_idx >= (sem_mesh.nodes.len()) {
                 continue;
             }
             let node = &sem_mesh.nodes[node_idx];

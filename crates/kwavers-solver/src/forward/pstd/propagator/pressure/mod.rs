@@ -65,7 +65,199 @@ mod density_cartesian;
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Zip;
+use leto::Array3 as LetoArray3;
+use leto::Array3 as NdArray3;
+use moirai_parallel::{enumerate_mut_with, for_each_chunk_pair_mut_enumerated_with, Adaptive};
+
+const PRESSURE_UPDATE_CHUNK: usize = 4096;
+
+fn accumulate_split_density(
+    div_u: &mut LetoArray3<f64>,
+    rhox: &LetoArray3<f64>,
+    rhoy: &LetoArray3<f64>,
+    rhoz: &LetoArray3<f64>,
+) {
+    assert_eq!(
+        div_u.shape(),
+        rhox.shape(),
+        "invariant: PSTD density accumulator shape matches rhox"
+    );
+    assert_eq!(
+        div_u.shape(),
+        rhoy.shape(),
+        "invariant: PSTD density accumulator shape matches rhoy"
+    );
+    assert_eq!(
+        div_u.shape(),
+        rhoz.shape(),
+        "invariant: PSTD density accumulator shape matches rhoz"
+    );
+
+    if let (Some(div_values), Some(rx_values), Some(ry_values), Some(rz_values)) = (
+        div_u.as_slice_mut(),
+        rhox.as_slice(),
+        rhoy.as_slice(),
+        rhoz.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(div_values, |index, rho_sum| {
+            *rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
+        });
+        return;
+    }
+
+    let [nx, ny, nz] = div_u.shape();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                div_u[[i, j, k]] = rhox[[i, j, k]] + rhoy[[i, j, k]] + rhoz[[i, j, k]];
+            }
+        }
+    }
+}
+
+fn apply_nonlinear_eos(
+    pressure: &mut LetoArray3<f64>,
+    div_u: &LetoArray3<f64>,
+    c0: &LetoArray3<f64>,
+    bon: &NdArray3<f64>,
+    rho0: &LetoArray3<f64>,
+) {
+    assert_eq!(
+        pressure.shape(),
+        div_u.shape(),
+        "invariant: PSTD pressure shape matches density accumulator"
+    );
+    assert_eq!(
+        pressure.shape(),
+        c0.shape(),
+        "invariant: PSTD pressure shape matches sound-speed field"
+    );
+    assert_eq!(
+        pressure.shape(),
+        bon.shape(),
+        "invariant: PSTD pressure shape matches nonlinearity field"
+    );
+    assert_eq!(
+        pressure.shape(),
+        rho0.shape(),
+        "invariant: PSTD pressure shape matches density field"
+    );
+
+    if let (
+        Some(pressure_values),
+        Some(div_values),
+        Some(c0_values),
+        Some(bon_values),
+        Some(rho0_values),
+    ) = (
+        pressure.as_slice_mut(),
+        div_u.as_slice(),
+        c0.as_slice(),
+        bon.as_slice(),
+        rho0.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |index, pressure| {
+            let rho_sum = div_values[index];
+            let nonlinear = (bon_values[index] / (2.0 * rho0_values[index])) * rho_sum * rho_sum;
+            let c = c0_values[index];
+            *pressure = c * c * (rho_sum + nonlinear);
+        });
+        return;
+    }
+
+    let shape = pressure.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let rho_sum = div_u[[i, j, k]];
+                let nonlinear = (bon[[i, j, k]] / (2.0 * rho0[[i, j, k]])) * rho_sum * rho_sum;
+                let c = c0[[i, j, k]];
+                pressure[[i, j, k]] = c * c * (rho_sum + nonlinear);
+            }
+        }
+    }
+}
+
+fn apply_linear_eos(
+    div_u: &mut LetoArray3<f64>,
+    pressure: &mut LetoArray3<f64>,
+    rhox: &LetoArray3<f64>,
+    rhoy: &LetoArray3<f64>,
+    rhoz: &LetoArray3<f64>,
+    c0: &LetoArray3<f64>,
+) {
+    assert_eq!(
+        div_u.shape(),
+        pressure.shape(),
+        "invariant: PSTD density accumulator shape matches pressure"
+    );
+    assert_eq!(
+        div_u.shape(),
+        rhox.shape(),
+        "invariant: PSTD density accumulator shape matches rhox"
+    );
+    assert_eq!(
+        div_u.shape(),
+        rhoy.shape(),
+        "invariant: PSTD density accumulator shape matches rhoy"
+    );
+    assert_eq!(
+        div_u.shape(),
+        rhoz.shape(),
+        "invariant: PSTD density accumulator shape matches rhoz"
+    );
+    assert_eq!(
+        div_u.shape(),
+        c0.shape(),
+        "invariant: PSTD density accumulator shape matches sound-speed field"
+    );
+
+    if let (
+        Some(div_values),
+        Some(pressure_values),
+        Some(rx_values),
+        Some(ry_values),
+        Some(rz_values),
+        Some(c0_values),
+    ) = (
+        div_u.as_slice_mut(),
+        pressure.as_slice_mut(),
+        rhox.as_slice(),
+        rhoy.as_slice(),
+        rhoz.as_slice(),
+        c0.as_slice(),
+    ) {
+        for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+            div_values,
+            pressure_values,
+            PRESSURE_UPDATE_CHUNK,
+            |chunk_index, div_chunk, pressure_chunk| {
+                let start = chunk_index * PRESSURE_UPDATE_CHUNK;
+                for (offset, div) in div_chunk.iter_mut().enumerate() {
+                    let index = start + offset;
+                    let rho_sum = rx_values[index] + ry_values[index] + rz_values[index];
+                    let c = c0_values[index];
+                    *div = rho_sum;
+                    pressure_chunk[offset] = c * c * rho_sum;
+                }
+            },
+        );
+        return;
+    }
+
+    let [nx, ny, nz] = div_u.shape();
+    for k in 0..nz {
+        for j in 0..ny {
+            for i in 0..nx {
+                let rho_sum = rhox[[i, j, k]] + rhoy[[i, j, k]] + rhoz[[i, j, k]];
+                let c = c0[[i, j, k]];
+                div_u[[i, j, k]] = rho_sum;
+                pressure[[i, j, k]] = c * c * rho_sum;
+            }
+        }
+    }
+}
 
 impl PSTDSolver {
     /// Update pressure field from density perturbation (Equation of State)
@@ -78,21 +270,21 @@ impl PSTDSolver {
     /// `p += c² · (τ · L1 − η · L2)` is added algebraically (no Δt) via
     /// [`Self::apply_absorption_to_pressure`].
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub(crate) fn update_pressure(&mut self, _dt: f64) -> KwaversResult<()> {
         // ── EOS: populate div_u = ρ_total (needed by absorption L2,
         // Treeby & Cox 2010 Eq. 21) and set pressure simultaneously.
         //
-        // Linear path (most common): single fused Zip — 6 arrays, within ndarray arity.
+        // Linear path (most common): single fused dense traversal.
         //   OLD: Pass 1 writes div_u (3 reads+1 write), Pass 2 reads div_u→writes p (2+1)
         //   NEW: 1 pass writes div_u AND p (4 reads+2 writes) — saves 1 div_u read/write pair.
         //
-        // Nonlinear path: 2 passes (8 arrays total exceed ndarray Zip arity=6).
+        // Nonlinear path: 2 passes.
         //   Pass 1: div_u = ρ_total  (4 arrays)
         //   Pass 2: p = c²·(ρ_total + bon/(2·ρ₀)·ρ_total²)  (5 arrays)
-        //   Both passes use par_for_each (Rayon parallelism preserved).
+        //   Both passes use Moirai for dense standard-layout arrays.
         if self.config.nonlinearity {
             // SAFETY: `bon.is_some() ↔ config.nonlinearity` — enforced at construction.
             let bon = self.bon.as_ref().ok_or_else(|| {
@@ -101,36 +293,25 @@ impl PSTDSolver {
                 )
             })?;
             // Pass 1: accumulate split densities → ρ_total.
-            Zip::from(&mut self.div_u)
-                .and(&self.rhox)
-                .and(&self.rhoy)
-                .and(&self.rhoz)
-                .par_for_each(|rho_sum, &rx, &ry, &rz| {
-                    *rho_sum = rx + ry + rz;
-                });
+            accumulate_split_density(&mut self.div_u, &self.rhox, &self.rhoy, &self.rhoz);
             // Pass 2: nonlinear EOS — p = c²·(ρ_total + bon/(2·ρ₀)·ρ_total²).
-            Zip::from(&mut self.fields.p)
-                .and(&self.div_u)
-                .and(&self.materials.c0)
-                .and(bon)
-                .and(&self.materials.rho0)
-                .par_for_each(|p, &rho_sum, &c, &bon_val, &rho0| {
-                    let nonlinear = (bon_val / (2.0 * rho0)) * rho_sum * rho_sum;
-                    *p = c * c * (rho_sum + nonlinear);
-                });
+            apply_nonlinear_eos(
+                &mut self.fields.p,
+                &self.div_u,
+                &self.materials.c0,
+                bon,
+                &self.materials.rho0,
+            );
         } else {
             // Fused single pass: div_u = ρ_total AND p = c²·ρ_total.
-            Zip::from(&mut self.div_u)
-                .and(&mut self.fields.p)
-                .and(&self.rhox)
-                .and(&self.rhoy)
-                .and(&self.rhoz)
-                .and(&self.materials.c0)
-                .par_for_each(|div, p, &rx, &ry, &rz, &c| {
-                    let rho_sum = rx + ry + rz;
-                    *div = rho_sum;
-                    *p = c * c * rho_sum;
-                });
+            apply_linear_eos(
+                &mut self.div_u,
+                &mut self.fields.p,
+                &self.rhox,
+                &self.rhoy,
+                &self.rhoz,
+                &self.materials.c0,
+            );
         }
 
         self.apply_absorption_to_pressure()?;
@@ -161,7 +342,7 @@ impl PSTDSolver {
     /// Each density component is damped only by its corresponding directional sigma,
     /// matching k-Wave's formulation: `rho_x *= pml_x`, `rho_y *= pml_y`, `rho_z *= pml_z`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn apply_pml_to_density(&mut self) -> KwaversResult<()> {
         let Some(mut boundary) = self.boundary.take() else {
@@ -194,19 +375,19 @@ impl PSTDSolver {
                 let grid = self.grid.as_ref();
                 let step = self.time_step_index;
 
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhox,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
                     |field| boundary.apply_acoustic_directional(field, grid, step, 0),
                 )?;
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhoy,
                     rows,
                     &mut self.pml_bypass_plane_scratch,
                     |field| boundary.apply_acoustic_directional(field, grid, step, 1),
                 )?;
-                Self::apply_x_plane_pml_bypass(
+                Self::apply_x_plane_pml_bypass_leto(
                     &mut self.rhoz,
                     rows,
                     &mut self.pml_bypass_plane_scratch,

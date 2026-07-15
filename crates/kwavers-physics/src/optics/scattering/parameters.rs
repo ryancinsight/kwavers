@@ -12,7 +12,7 @@ pub struct MieParameters {
     /// Particle radius \[m\]
     pub radius: f64,
     /// Particle refractive index (complex)
-    pub refractive_index: num_complex::Complex64,
+    pub refractive_index: eunomia::Complex64,
     /// Medium refractive index (real)
     pub medium_index: f64,
     /// Wavelength in medium \[m\]
@@ -24,7 +24,7 @@ impl MieParameters {
     #[must_use]
     pub fn new(
         radius: f64,
-        refractive_index: num_complex::Complex64,
+        refractive_index: eunomia::Complex64,
         medium_index: f64,
         wavelength: f64,
     ) -> Self {
@@ -44,7 +44,7 @@ impl MieParameters {
 
     /// Calculate relative refractive index m = n_particle / n_medium
     #[must_use]
-    pub fn relative_index(&self) -> num_complex::Complex64 {
+    pub fn relative_index(&self) -> eunomia::Complex64 {
         self.refractive_index / self.medium_index
     }
 }

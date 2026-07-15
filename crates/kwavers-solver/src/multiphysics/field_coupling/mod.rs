@@ -8,7 +8,7 @@ mod coupling_ops;
 mod tests;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Field coupling strategy
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -50,7 +50,7 @@ impl MultiphysicsFieldCoupler {
 
     /// Couple fields according to the selected strategy
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn couple_fields(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         match self.strategy {

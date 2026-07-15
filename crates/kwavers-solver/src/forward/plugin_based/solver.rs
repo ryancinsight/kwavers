@@ -13,12 +13,18 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::traits::RecorderTrait;
 use kwavers_source::{Source, SourceField};
+use leto::Array3;
 use log::{debug, info};
-use ndarray::Array3;
 use std::sync::Arc;
 
 use super::field_registry::FieldRegistry;
 use super::performance::PluginPerformanceMonitor;
+
+fn ndarray_mask(mask: &leto::Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = mask.shape();
+    Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
+        .expect("plugin source mask shape must match contiguous ndarray storage")
+}
 
 /// Plugin-based solver for acoustic simulations
 pub struct PluginBasedSolver {
@@ -54,7 +60,7 @@ impl std::fmt::Debug for PluginBasedSolver {
         f.debug_struct("PluginBasedSolver")
             .field("grid", &self.grid)
             .field("time", &self.time)
-            .field("sources_count", &self.sources.len())
+            .field("sources_count", &(self.sources.len()))
             .field("field_registry", &self.field_registry)
             .field("plugin_manager", &self.plugin_manager)
             .field("performance", &self.performance)
@@ -73,7 +79,7 @@ impl PluginBasedSolver {
         boundary: Box<dyn Boundary>,
         source: Box<dyn Source>,
     ) -> Self {
-        let source_mask = source.create_mask(&grid);
+        let source_mask = ndarray_mask(&source.create_mask(&grid));
         let sources = vec![source];
         let source_masks = vec![source_mask];
 
@@ -95,7 +101,7 @@ impl PluginBasedSolver {
 
     /// Add a physics plugin
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_plugin(&mut self, plugin: Box<dyn Plugin>) -> KwaversResult<()> {
         // Register required fields
@@ -109,7 +115,7 @@ impl PluginBasedSolver {
 
     /// Add an acoustic source
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
         let required_field = match source.source_type() {
@@ -120,7 +126,7 @@ impl PluginBasedSolver {
         };
         self.field_registry.register_field(required_field)?;
 
-        let mask = source.create_mask(&self.grid);
+        let mask = ndarray_mask(&source.create_mask(&self.grid));
         self.sources.push(source);
         self.source_masks.push(mask);
         Ok(())
@@ -136,7 +142,7 @@ impl PluginBasedSolver {
 
     /// Initialize the solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize(&mut self) -> KwaversResult<()> {
         info!("Initializing plugin-based solver");
@@ -174,7 +180,10 @@ impl PluginBasedSolver {
             };
 
             if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
-                field.scaled_add(init_amp, mask);
+                leto_ops::zip_mut_with(&mut field, &mask.view(), |d, s| {
+                    *d += init_amp * *s;
+                })
+                .expect("invariant: source mask and field shapes asserted equal");
             }
         }
 
@@ -196,7 +205,7 @@ impl PluginBasedSolver {
 
     /// Run the simulation for a specified number of steps
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_for_steps(&mut self, steps: usize) -> KwaversResult<()> {
         info!("Running simulation for {} steps", steps);
@@ -209,7 +218,8 @@ impl PluginBasedSolver {
             if step % 10 == 0 {
                 if let Some(ref mut recorder) = self.recorder {
                     if let Some(data) = self.field_registry.data() {
-                        recorder.record(data, step)?;
+                        let fields = data.clone();
+                        recorder.record(&fields, step)?;
                     }
                 }
             }
@@ -226,7 +236,7 @@ impl PluginBasedSolver {
 
     /// Perform a single time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self) -> KwaversResult<()> {
         let t = self.current_step as f64 * self.time.dt;
@@ -242,7 +252,10 @@ impl PluginBasedSolver {
 
             if let Ok(mut field) = self.field_registry.get_field_mut(field_type) {
                 let amplitude = source.amplitude(t);
-                field.scaled_add(amplitude, mask);
+                leto_ops::zip_mut_with(&mut field, &mask.view(), |d, s| {
+                    *d += amplitude * *s;
+                })
+                .expect("invariant: source mask and field shapes asserted equal");
             }
         }
 
@@ -321,11 +334,11 @@ impl PluginBasedSolver {
     }
 
     /// Get field by type
-    pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<ndarray::Array3<f64>> {
-        self.field_registry
-            .get_field(field_type)
-            .ok()
-            .map(|view| view.to_owned())
+    pub fn get_field(&self, field_type: UnifiedFieldType) -> Option<leto::Array3<f64>> {
+        self.field_registry.get_field(field_type).ok().map(|view| {
+            leto::Array3::from_shape_vec(view.shape(), view.iter().copied().collect())
+                .expect("invariant: field view shape yields valid owned array")
+        })
     }
 }
 

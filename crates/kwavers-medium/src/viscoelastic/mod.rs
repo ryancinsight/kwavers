@@ -36,7 +36,7 @@ pub use generalized_maxwell::GeneralizedMaxwellModel;
 pub use kelvin_voigt::KelvinVoigtModel;
 pub use zener::ZenerModel;
 
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// A measured shear-wave dispersion sample for the `fit_dispersion` inversions.
 #[derive(Debug, Clone, Copy)]

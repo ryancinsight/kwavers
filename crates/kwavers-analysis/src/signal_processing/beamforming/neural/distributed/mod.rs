@@ -189,7 +189,7 @@
 //! ).await?;
 //!
 //! // Process volume
-//! let result = processor.process_volume_distributed(&rf_data).await?;
+//! let result = processor.process_volume_distributed(&rf_data)?;
 //!
 //! println!("Used {} GPUs", result.num_gpus_used);
 //! println!("Load balance efficiency: {:.2}", result.load_balance_efficiency);

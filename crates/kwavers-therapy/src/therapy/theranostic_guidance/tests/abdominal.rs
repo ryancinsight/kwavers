@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::{
     build_abdominal_placement_context, placement_metrics, prepare_abdominal_slice,
@@ -106,8 +106,8 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
     );
     assert_eq!(result.elastic_shear_model, THERANOSTIC_ELASTIC_SHEAR_MODEL);
     assert_eq!(
-        result.elastic_shear_reconstruction.dim(),
-        result.lesion_target.dim()
+        result.elastic_shear_reconstruction.shape(),
+        result.lesion_target.shape()
     );
     let elastic_peak = peak_index(
         &result.elastic_shear_reconstruction,
@@ -276,10 +276,7 @@ fn abdominal_theranostic_inverse_recovers_lesion_support() {
     );
 }
 
-fn peak_index(
-    image: &ndarray::Array2<f64>,
-    mask: &ndarray::Array2<bool>,
-) -> Option<(usize, usize)> {
+fn peak_index(image: &leto::Array2<f64>, mask: &leto::Array2<bool>) -> Option<[usize; 2]> {
     image
         .indexed_iter()
         .filter(|(idx, _)| mask[*idx])
@@ -452,7 +449,7 @@ fn abdominal_placement_context_uses_uncropped_patient_slice() {
         .map(|point| skin_normal_projection_3d(*point, context.skin_contact_m, context.focus_m))
         .fold(f64::NEG_INFINITY, f64::max);
 
-    assert_eq!(context.ct_hu.dim(), (96, 96));
+    assert_eq!(context.ct_hu.shape(), [96, 96]);
     assert_eq!(context.therapy_points_m.len(), 32);
     assert_eq!(context.imaging_points_m.len(), 64);
     assert!(

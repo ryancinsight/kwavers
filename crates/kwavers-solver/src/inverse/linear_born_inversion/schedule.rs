@@ -49,7 +49,7 @@ mod tests {
 
         let rows = continuation_rows(&config, 12);
 
-        assert_eq!(rows.len(), 3);
+        assert_eq!((rows.len()), 3);
         assert_eq!(rows[0], vec![0, 1, 6, 7]);
         assert_eq!(rows[1], vec![0, 1, 2, 3, 6, 7, 8, 9]);
         assert_eq!(rows[2], (0..12).collect::<Vec<_>>());

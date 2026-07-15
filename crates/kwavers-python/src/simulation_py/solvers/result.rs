@@ -2,8 +2,9 @@ use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 
-use ndarray::Array1;
+use numpy::ndarray::Array1;
 
+use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 use crate::simulation_result_py::{SimulationResult, SimulationRunResult};
 
 use super::super::Simulation;
@@ -38,50 +39,60 @@ impl Simulation {
         let (p_max_3d, p_min_3d, p_rms_3d, p_final_3d) =
             if let Some((mx, mn, rm, fn_)) = full_grid_stats {
                 (
-                    Some(PyArray3::from_owned_array(py, mx).into()),
-                    Some(PyArray3::from_owned_array(py, mn).into()),
-                    Some(PyArray3::from_owned_array(py, rm).into()),
-                    Some(PyArray3::from_owned_array(py, fn_).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(mx)).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(mn)).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(rm)).into()),
+                    Some(PyArray3::from_owned_array(py, leto3_to_nd3(fn_)).into()),
                 )
             } else {
                 (None, None, None, None)
             };
 
-        let p_max = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_max.clone()).into());
-        let p_min = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_min.clone()).into());
-        let p_rms = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_rms.clone()).into());
-        let p_final = stats
-            .as_ref()
-            .map(|s| PyArray1::from_owned_array(py, s.p_final.clone()).into());
+        let to_py_array1 = |arr: &leto::Array1<f64>| {
+            PyArray1::from_owned_array(
+                py,
+                arr.clone()
+                    .try_into()
+                    .expect("invariant: contiguous simulation statistic"),
+            )
+            .into()
+        };
+        let p_max = stats.as_ref().map(|s| to_py_array1(&s.p_max));
+        let p_min = stats.as_ref().map(|s| to_py_array1(&s.p_min));
+        let p_rms = stats.as_ref().map(|s| to_py_array1(&s.p_rms));
+        let p_final = stats.as_ref().map(|s| to_py_array1(&s.p_final));
 
-        let ux = ux_data.map(|d| PyArray2::from_owned_array(py, d).into());
-        let uy = uy_data.map(|d| PyArray2::from_owned_array(py, d).into());
-        let uz = uz_data.map(|d| PyArray2::from_owned_array(py, d).into());
-        let ix = ix_data.map(|d| PyArray2::from_owned_array(py, d).into());
-        let iy = iy_data.map(|d| PyArray2::from_owned_array(py, d).into());
-        let iz = iz_data.map(|d| PyArray2::from_owned_array(py, d).into());
-        let i_avg_x = i_avg_x.map(|d| PyArray1::from_owned_array(py, d).into());
-        let i_avg_y = i_avg_y.map(|d| PyArray1::from_owned_array(py, d).into());
-        let i_avg_z = i_avg_z.map(|d| PyArray1::from_owned_array(py, d).into());
+        let ux = ux_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
+        let uy = uy_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
+        let uz = uz_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
+        let ix = ix_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
+        let iy = iy_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
+        let iz = iz_data.map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d)).into());
+        let i_avg_x = i_avg_x.map(|d| {
+            PyArray1::from_owned_array(py, d.try_into().expect("invariant: contiguous x intensity"))
+                .into()
+        });
+        let i_avg_y = i_avg_y.map(|d| {
+            PyArray1::from_owned_array(py, d.try_into().expect("invariant: contiguous y intensity"))
+                .into()
+        });
+        let i_avg_z = i_avg_z.map(|d| {
+            PyArray1::from_owned_array(py, d.try_into().expect("invariant: contiguous z intensity"))
+                .into()
+        });
 
         let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
             if let Some(vs) = velocity_stats {
                 (
-                    Some(PyArray1::from_owned_array(py, vs.ux_max).into()),
-                    Some(PyArray1::from_owned_array(py, vs.ux_min).into()),
-                    Some(PyArray1::from_owned_array(py, vs.ux_rms).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uy_max).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uy_min).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uy_rms).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uz_max).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uz_min).into()),
-                    Some(PyArray1::from_owned_array(py, vs.uz_rms).into()),
+                    Some(to_py_array1(&vs.ux_max)),
+                    Some(to_py_array1(&vs.ux_min)),
+                    Some(to_py_array1(&vs.ux_rms)),
+                    Some(to_py_array1(&vs.uy_max)),
+                    Some(to_py_array1(&vs.uy_min)),
+                    Some(to_py_array1(&vs.uy_rms)),
+                    Some(to_py_array1(&vs.uz_max)),
+                    Some(to_py_array1(&vs.uz_min)),
+                    Some(to_py_array1(&vs.uz_rms)),
                 )
             } else {
                 (None, None, None, None, None, None, None, None, None)
@@ -94,13 +105,20 @@ impl Simulation {
         .into();
 
         // K → °C conversion for thermal outputs at the Python boundary.
-        let thermal_temp_py = thermal_temperature
-            .map(|t| PyArray3::from_owned_array(py, t.mapv(|v| v - KELVIN_OFFSET_C)).into());
-        let thermal_dose_py = thermal_dose.map(|d| PyArray3::from_owned_array(py, d).into());
+        let thermal_temp_py = thermal_temperature.map(|t| {
+            PyArray3::from_owned_array(py, leto3_to_nd3(t.mapv(|v| v - KELVIN_OFFSET_C))).into()
+        });
+        let thermal_dose_py =
+            thermal_dose.map(|d| PyArray3::from_owned_array(py, leto3_to_nd3(d)).into());
 
-        let n_sensors = sensor_data.nrows();
+        let n_sensors = sensor_data.shape()[0];
         if n_sensors <= 1 {
-            let sensor_1d = sensor_data.row(0).to_owned();
+            let sensor_1d = sensor_data
+                .index_axis::<1>(0, 0)
+                .expect("sensor row 0 must exist")
+                .to_contiguous()
+                .try_into()
+                .expect("invariant: contiguous sensor row");
             Ok(SimulationResult {
                 sensor_data_1d: Some(PyArray1::from_owned_array(py, sensor_1d).into()),
                 sensor_data_2d: None,
@@ -150,7 +168,9 @@ impl Simulation {
         } else {
             Ok(SimulationResult {
                 sensor_data_1d: None,
-                sensor_data_2d: Some(PyArray2::from_owned_array(py, sensor_data).into()),
+                sensor_data_2d: Some(
+                    PyArray2::from_owned_array(py, leto2_to_nd2(sensor_data)).into(),
+                ),
                 time: time_arr,
                 shape,
                 sensor_data_shape: (n_sensors, time_steps),

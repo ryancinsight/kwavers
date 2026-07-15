@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct BreastUstReconstructionMetrics {
@@ -132,11 +132,11 @@ pub fn table1_parity(
 fn validate_pair(reference_m_s: &Array3<f64>, estimate_m_s: &Array3<f64>) -> KwaversResult<()> {
     validate_volume(reference_m_s)?;
     validate_volume(estimate_m_s)?;
-    if reference_m_s.dim() != estimate_m_s.dim() {
+    if reference_m_s.shape() != estimate_m_s.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "shape mismatch: reference {:?}, estimate {:?}",
-            reference_m_s.dim(),
-            estimate_m_s.dim()
+            reference_m_s.shape(),
+            estimate_m_s.shape()
         )));
     }
     Ok(())
@@ -148,7 +148,7 @@ fn validate_volume(volume: &Array3<f64>) -> KwaversResult<()> {
             "volume must not be empty".into(),
         ));
     }
-    for &value in volume {
+    for &value in volume.iter() {
         if !value.is_finite() {
             return Err(KwaversError::InvalidInput(
                 "volume contains nonfinite sound-speed values".into(),

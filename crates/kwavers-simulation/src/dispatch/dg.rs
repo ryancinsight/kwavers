@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::dispatch::shared::trim_initial_recorder_sample;
 use crate::types::{SimulationRunRequest, SimulationRunResult};
@@ -24,17 +24,18 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let mut field = req
         .grid_source
         .p0
-        .clone()
+        .as_ref()
+        .map(|a| a.to_contiguous())
         .unwrap_or_else(|| Array3::zeros((req.grid.nx, req.grid.ny, req.grid.nz)));
     let mut output = Array3::<f64>::zeros((req.grid.nx, req.grid.ny, req.grid.nz));
 
     let sensor_indices: Vec<(usize, usize, usize)> = sensor_mask
         .indexed_iter()
         .filter(|(_, &active)| active)
-        .map(|((i, j, k), _)| (i, j, k))
+        .map(|([i, j, k], _)| (i, j, k))
         .collect();
     let n_sensors = sensor_indices.len().max(1);
-    let mut sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
+    let mut sensor_data = leto::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
 
     for (idx, &(i, j, k)) in sensor_indices.iter().enumerate() {
         sensor_data[[idx, 0]] = field[[i, j, k]];
@@ -51,30 +52,39 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let sensor_data =
         trim_initial_recorder_sample(sensor_data, req.time_steps, req.record_start_index);
     let stats = if !sensor_indices.is_empty() {
-        let n_cols = sensor_data.ncols();
+        let n_cols = sensor_data.shape()[1];
         Some(SampledStatistics {
-            p_max: ndarray::Array1::from_iter(
+            p_max: leto::Array1::from_iter(
                 sensor_data
                     .rows()
-                    .into_iter()
+                    .expect("invariant: rank-2 rows")
                     .map(|row| row.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b))),
-            ),
-            p_min: ndarray::Array1::from_iter(
+            )
+            .into(),
+            p_min: leto::Array1::from_iter(
                 sensor_data
                     .rows()
-                    .into_iter()
+                    .expect("invariant: rank-2 rows")
                     .map(|row| row.iter().fold(f64::INFINITY, |a, &b| a.min(b))),
-            ),
-            p_rms: ndarray::Array1::from_iter(sensor_data.rows().into_iter().map(|row| {
-                let sq: f64 = row.iter().map(|v| v * v).sum();
-                (sq / n_cols as f64).sqrt()
-            })),
-            p_final: ndarray::Array1::from_iter(
+            )
+            .into(),
+            p_rms: leto::Array1::from_iter(
                 sensor_data
                     .rows()
-                    .into_iter()
+                    .expect("invariant: rank-2 rows")
+                    .map(|row| {
+                        let sq: f64 = row.iter().map(|v| v * v).sum();
+                        (sq / n_cols as f64).sqrt()
+                    }),
+            )
+            .into(),
+            p_final: leto::Array1::from_iter(
+                sensor_data
+                    .rows()
+                    .expect("invariant: rank-2 rows")
                     .map(|row| row[n_cols.saturating_sub(1)]),
-            ),
+            )
+            .into(),
         })
     } else {
         None

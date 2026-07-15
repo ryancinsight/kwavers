@@ -3,10 +3,10 @@ use super::interface::FdtdFemInterface;
 use crate::forward::helmholtz::fem::solver::{FemHelmholtzConfig, FemHelmholtzSolver};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
 
 /// FDTD-FEM Schwarz Coupler
 #[derive(Debug)]
@@ -20,7 +20,7 @@ pub struct FdtdFemCoupler {
 impl FdtdFemCoupler {
     /// Create new FDTD-FEM coupler
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: FdtdFemCouplingConfig,
@@ -41,7 +41,7 @@ impl FdtdFemCoupler {
 
     /// Perform Schwarz iteration between FDTD and FEM domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn schwarz_iteration(
         &mut self,
@@ -63,7 +63,7 @@ impl FdtdFemCoupler {
 
     /// Solve FEM domain using coupled values
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn solve_fem_domain(
         &mut self,
@@ -75,7 +75,7 @@ impl FdtdFemCoupler {
 
         let mut dirichlet_bcs = Vec::new();
         for &fem_idx in &self.interface.fem_indices {
-            if fem_idx < fem_field.len() {
+            if fem_idx < (fem_field.len()) {
                 let value = Complex64::new(fem_field[fem_idx], 0.0);
                 dirichlet_bcs.push((fem_idx, value));
             }
@@ -90,7 +90,7 @@ impl FdtdFemCoupler {
 
         let solution = self.fem_solver.solution();
         for (i, val) in solution.iter().enumerate() {
-            if i < fem_field.len() {
+            if i < (fem_field.len()) {
                 fem_field[i] = val.re;
             }
         }
@@ -121,7 +121,7 @@ impl FdtdFemCoupler {
         _fem_mesh: &TetrahedralMesh,
     ) -> KwaversResult<()> {
         for (&fem_idx, &fdtd_value) in self.interface.fem_indices.iter().zip(fdtd_values.iter()) {
-            if fem_idx < fem_field.len() {
+            if fem_idx < (fem_field.len()) {
                 let current_value = fem_field[fem_idx];
                 fem_field[fem_idx] = self.config.relaxation_factor.mul_add(
                     fdtd_value,
@@ -134,7 +134,7 @@ impl FdtdFemCoupler {
 
     /// Extract FEM field values at interface
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn extract_fem_interface(&self, fem_field: &[f64]) -> KwaversResult<Vec<f64>> {
         let mut interface_values = Vec::with_capacity(self.interface.fem_indices.len());
@@ -143,7 +143,7 @@ impl FdtdFemCoupler {
                 kwavers_core::error::KwaversError::InvalidInput(format!(
                     "FEM interface node index {} is out of bounds (fem_field len {})",
                     fem_idx,
-                    fem_field.len()
+                    (fem_field.len())
                 ))
             })?;
             interface_values.push(*value);
@@ -153,7 +153,7 @@ impl FdtdFemCoupler {
 
     /// Update FDTD boundary conditions with FEM interface values
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn update_fdtd_boundary(
         &self,
@@ -214,7 +214,7 @@ impl FdtdFemCoupler {
     ///
     #[must_use]
     pub fn check_convergence(&self) -> bool {
-        if self.convergence_history.len() < 2 {
+        if (self.convergence_history.len()) < 2 {
             return false;
         }
         let recent_residual = *self.convergence_history.last().unwrap();

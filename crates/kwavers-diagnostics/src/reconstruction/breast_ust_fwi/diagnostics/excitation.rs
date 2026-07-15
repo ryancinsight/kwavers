@@ -3,8 +3,8 @@ use super::residual::{
     BreastUstReceiverChannelPolicy,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array3};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::{Array3, SliceArg};
 use std::f64::consts::{PI, TAU};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -63,7 +63,7 @@ pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
 ) -> KwaversResult<BreastUstSourceExcitationDiagnostics> {
     validate_observation_pair(predicted, observed)?;
     validate_frequency_metadata(
-        predicted.dim().0,
+        predicted.shape()[0],
         frequencies_hz,
         time_steps_per_frequency,
         frequency_bin_start_steps_per_frequency,
@@ -79,10 +79,10 @@ pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
         )));
     }
 
-    let transmission_count = predicted.dim().1;
+    let transmission_count = predicted.shape()[1];
     validate_ring_channel_policy_shape(
         transmission_count,
-        predicted.dim().2,
+        predicted.shape()[2],
         receiver_channel_policy,
     )?;
     let mut per_frequency = Vec::with_capacity(frequencies_hz.len());
@@ -97,8 +97,20 @@ pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
         let mut magnitudes = Vec::with_capacity(transmission_count);
         let mut phases = Vec::with_capacity(transmission_count);
         for transmit_index in 0..transmission_count {
-            let predicted_row = predicted.slice(s![frequency_index, transmit_index, ..]);
-            let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
+            let predicted_row = predicted
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
+            let observed_row = observed
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
             let scale = row_scale_selected(predicted_row, observed_row, |receiver_index| {
                 receiver_channel_policy.selects(transmit_index, receiver_index, transmission_count)
             })? / normalization;
@@ -120,7 +132,7 @@ pub(crate) fn source_excitation_diagnostics_with_receiver_policy(
     }
 
     Ok(BreastUstSourceExcitationDiagnostics {
-        frequency_count: predicted.dim().0,
+        frequency_count: predicted.shape()[0],
         transmission_count,
         source_amplitude_pa,
         max_source_scale_magnitude_coefficient_of_variation: per_frequency

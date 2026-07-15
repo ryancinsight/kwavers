@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_simd_config_detection() {
@@ -41,8 +41,8 @@ fn test_pressure_update_scalar() {
         FdtdStencilDispatcher::with_strategy(16, 16, 16, -1.0, -1.0, StencilStrategy::Scalar)
             .unwrap();
 
-    let p_curr = Array3::from_elem((16, 16, 16), 1.0_f64);
-    let p_prev = Array3::from_elem((16, 16, 16), 0.5_f64);
+    let p_curr = Array3::from_elem([16, 16, 16], 1.0_f64);
+    let p_prev = Array3::from_elem([16, 16, 16], 0.5_f64);
     let u_div = Array3::zeros((16, 16, 16));
 
     let result = dispatcher.update_pressure(&p_curr, &p_prev, &u_div);

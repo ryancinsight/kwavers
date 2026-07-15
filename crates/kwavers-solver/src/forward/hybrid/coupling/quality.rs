@@ -1,6 +1,6 @@
 //! Quality monitoring for interface coupling
 
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::VecDeque;
 
 const MAX_HISTORY_SIZE: usize = 100;
@@ -76,7 +76,7 @@ impl QualityMonitor {
         let metrics = self.calculate_metrics(interpolated, target, time);
 
         // Add to history
-        if self.history.len() >= MAX_HISTORY_SIZE {
+        if (self.history.len()) >= MAX_HISTORY_SIZE {
             self.history.pop_front();
         }
         self.history.push_back(metrics);
@@ -119,7 +119,7 @@ impl QualityMonitor {
         target: &Array3<f64>,
     ) -> f64 {
         let diff = interpolated - target;
-        (diff.iter().map(|x| x * x).sum::<f64>() / diff.len() as f64).sqrt()
+        (diff.iter().map(|x| x * x).sum::<f64>() / (diff.len()) as f64).sqrt()
     }
 
     fn calculate_conservation_error(

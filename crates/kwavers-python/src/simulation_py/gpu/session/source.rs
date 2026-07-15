@@ -6,7 +6,7 @@ use super::GpuPstdSession;
 impl GpuPstdSession {
     pub(crate) fn rebuild_source_sensor_indices(
         &mut self,
-        mask_arr: ndarray::ArrayView3<'_, f64>,
+        mask_arr: leto::ArrayView3<'_, f64>,
     ) -> PyResult<()> {
         if mask_arr.shape() != [self.nx, self.ny, self.nz] {
             return Err(PyValueError::new_err(format!(
@@ -47,7 +47,7 @@ impl GpuPstdSession {
 
     pub(crate) fn update_velocity_signal_rows(
         &mut self,
-        sig_arr: ndarray::ArrayView2<'_, f64>,
+        sig_arr: leto::ArrayView2<'_, f64>,
     ) -> PyResult<()> {
         let time_steps = self.time_steps;
         let signal_shape = sig_arr.shape();

@@ -82,7 +82,7 @@
 //! let result = simulator.simulate(&initial_pressure)?;
 //!
 //! println!("SNR: {:.2} dB", result.snr);
-//! println!("Reconstructed image: {:?}", result.reconstructed_image.dim());
+//! println!("Reconstructed image: {:?}", result.reconstructed_image.shape());
 //! # Ok(())
 //! # }
 //! ```

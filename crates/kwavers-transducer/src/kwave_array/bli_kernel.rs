@@ -39,9 +39,9 @@ impl KWaveArray {
     pub(super) fn map_surface_sample<F>(
         &self,
         grid: &kwavers_grid::Grid,
-        x_vec: &ndarray::Array1<f64>,
-        y_vec: &ndarray::Array1<f64>,
-        z_vec: &ndarray::Array1<f64>,
+        x_vec: &leto::Array1<f64>,
+        y_vec: &leto::Array1<f64>,
+        z_vec: &leto::Array1<f64>,
         point: [f64; 3],
         scale: f64,
         mask_only: bool,
@@ -50,6 +50,23 @@ impl KWaveArray {
         F: FnMut(usize, usize, usize, f64),
     {
         let decay_subs = (1.0 / (std::f64::consts::PI * DISC_BLI_TOLERANCE)).ceil() as isize;
+
+        // The truncated BLI stencil admits a surface sample whose finite window
+        // overlaps the domain. Without this explicit horizon, nearest-index
+        // clamping maps an arbitrarily distant aperture to a boundary cell merely
+        // because sinc is nonzero away from its root.
+        let within_bli_window = |coordinates: &leto::Array1<f64>, spacing: f64, value: f64| {
+            let horizon = decay_subs as f64 * spacing;
+            value >= coordinates[0] - horizon
+                && value <= coordinates[coordinates.len() - 1] + horizon
+        };
+        if !within_bli_window(x_vec, grid.dx, point[0])
+            || !within_bli_window(y_vec, grid.dy, point[1])
+            || !within_bli_window(z_vec, grid.dz, point[2])
+        {
+            return;
+        }
+
         let ongrid_threshold = grid.dx * 1.0e-3;
 
         let (ix0, x_closest) = Self::nearest_coordinate_index(x_vec, point[0]);
@@ -135,10 +152,7 @@ impl KWaveArray {
 
     /// Find the index of the coordinate value nearest to `value` in `coords`,
     /// returning `(index, coords[index])`.
-    pub(super) fn nearest_coordinate_index(
-        coords: &ndarray::Array1<f64>,
-        value: f64,
-    ) -> (usize, f64) {
+    pub(super) fn nearest_coordinate_index(coords: &leto::Array1<f64>, value: f64) -> (usize, f64) {
         let mut best_index = 0usize;
         let mut best_value = coords[0];
         let mut best_distance = (best_value - value).abs();

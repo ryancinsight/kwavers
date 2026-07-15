@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array1;
+use leto::Array1;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(super) enum CoefficientLayout {

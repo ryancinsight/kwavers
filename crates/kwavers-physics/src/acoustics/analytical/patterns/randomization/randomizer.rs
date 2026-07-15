@@ -4,7 +4,7 @@ use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
 use super::distribution::PhaseDistribution;
 use super::scheme::RandomizationScheme;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array2, ArrayView1};
+use leto::{Array1, Array2, ArrayView1};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;
@@ -30,7 +30,7 @@ impl PhaseRandomizer {
     ) -> Self {
         let rng = ChaCha8Rng::seed_from_u64(DEFAULT_SEED);
         let phase_states = Self::generate_phase_states(&distribution);
-        let current_phases = Array1::zeros(num_elements);
+        let current_phases = Array1::zeros([num_elements]);
 
         Self {
             scheme,
@@ -114,7 +114,7 @@ impl PhaseRandomizer {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_to_field(&self, field: &mut Array2<f64>) {
-        let (n_elements, n_time) = field.dim();
+        let [n_elements, n_time] = field.shape();
         assert_eq!(n_elements, self.current_phases.len());
 
         for i in 0..n_elements {
@@ -208,7 +208,7 @@ mod tests {
             16,
         );
         r.update(period); // exactly at period → should trigger
-        let phases: Vec<f64> = r.phases().to_vec();
+        let phases: Vec<f64> = r.phases().iter().copied().collect();
         assert!(
             phases
                 .iter()
@@ -220,14 +220,15 @@ mod tests {
     /// After apply_to_field with zero phases, field is unchanged.
     #[test]
     fn apply_to_field_with_zero_phases_leaves_field_unchanged() {
-        use ndarray::arr2;
         let r = PhaseRandomizer::new(
             RandomizationScheme::Temporal { period: 1e-3 },
             PhaseDistribution::Uniform,
             3,
         );
         // phases are all zero → cos(0)=1 → no change
-        let mut field = arr2(&[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0], [7.0, 8.0, 9.0]]);
+        let mut field =
+            Array2::from_shape_vec([3, 3], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0])
+                .expect("phase-randomization fixture matches the 3 by 3 shape");
         let original = field.clone();
         r.apply_to_field(&mut field);
         for (a, b) in field.iter().zip(original.iter()) {

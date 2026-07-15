@@ -17,7 +17,7 @@ use super::absorbing::{absorbing_weights, AbsorbingBoundary};
 use super::grid::GridSpec;
 use super::temporal::pstd_leapfrog_symbol;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace, Complex64};
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::TAU;
 
 #[cfg(test)]
@@ -160,12 +160,13 @@ fn apply_spectral_multiplier(
 ) -> Vec<Complex64> {
     let weights =
         absorbing_weights(grid, absorbing_boundary).expect("validated absorbing boundary");
+    let (nx, ny, nz) = grid.dimensions;
     let mut real_space =
-        Array3::from_shape_vec(grid.dimensions, values.to_vec()).expect("validated CBS shape");
+        Array3::from_shape_vec([nx, ny, nz], values.to_vec()).expect("validated CBS shape");
     for (value, &weight) in real_space.iter_mut().zip(weights.iter()) {
         *value *= weight;
     }
-    let mut spectrum = Array3::zeros(grid.dimensions);
+    let mut spectrum = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
     fft_3d_complex_into(&real_space, &mut spectrum);
 
     let (nx, ny, nz) = grid.dimensions;

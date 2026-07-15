@@ -1,7 +1,8 @@
 use super::helpers::{autodiff_gradient_x, autodiff_gradient_y};
-use super::TestAutodiffBackend;
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
+
+type B = super::TestBackend;
 
 #[test]
 fn test_analytic_sine_wave_gradient_x() {
@@ -9,8 +10,7 @@ fn test_analytic_sine_wave_gradient_x() {
     // Known derivative: ∂u/∂x = π·cos(πx)
 
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestAutodiffBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<B>::new(&config).unwrap();
 
     let test_points = vec![
         (0.0, 0.5, 0.5, 1.0 * std::f64::consts::PI),
@@ -47,8 +47,7 @@ fn test_analytic_plane_wave_gradient() {
     // Known derivative: ∂u/∂x = A·k·cos(kx - ωt)
 
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestAutodiffBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<B>::new(&config).unwrap();
 
     let x = 0.3;
     let y = 0.5;

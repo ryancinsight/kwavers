@@ -10,9 +10,11 @@
 
 use kwavers_physics::acoustics::bubble_dynamics::{EpsteinPlessetDissolution, GasDiffusionParams};
 use kwavers_simulation::multi_physics::residual_gas::ResidualGasField;
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
+
+use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 
 /// 3-D residual cavitation-gas (lacuna) void-fraction field `β(x)` [-].
 ///
@@ -51,7 +53,8 @@ impl PyResidualGasField {
                 self.shape
             )));
         }
-        self.inner.deposit(a);
+        let a_leto = nd_to_leto3(a.to_owned());
+        self.inner.deposit(a_leto.view());
         Ok(())
     }
 
@@ -66,10 +69,8 @@ impl PyResidualGasField {
 
     /// Current void-fraction field `β(x)` as an (nx, ny, nz) array.
     fn void_fraction(&self, py: Python<'_>) -> Py<PyArray3<f64>> {
-        self.inner
-            .void_fraction()
-            .to_owned()
-            .into_pyarray(py)
+        leto3_to_nd3(self.inner.void_fraction().to_contiguous())
+            .to_pyarray(py)
             .into()
     }
 
@@ -83,10 +84,12 @@ impl PyResidualGasField {
         c_gas: f64,
         rho_gas: f64,
     ) -> Py<PyArray3<f64>> {
-        self.inner
-            .sound_speed_field(c_liquid, rho_liquid, c_gas, rho_gas)
-            .into_pyarray(py)
-            .into()
+        leto3_to_nd3(
+            self.inner
+                .sound_speed_field(c_liquid, rho_liquid, c_gas, rho_gas),
+        )
+        .to_pyarray(py)
+        .into()
     }
 
     /// Commander–Prosperetti excess-attenuation field [Np/m] at `freq_hz`.
@@ -102,10 +105,12 @@ impl PyResidualGasField {
         p0_pa: f64,
         polytropic: f64,
     ) -> Py<PyArray3<f64>> {
-        self.inner
-            .attenuation_field(freq_hz, c_liquid, rho_liquid, mu_liquid, p0_pa, polytropic)
-            .into_pyarray(py)
-            .into()
+        leto3_to_nd3(
+            self.inner
+                .attenuation_field(freq_hz, c_liquid, rho_liquid, mu_liquid, p0_pa, polytropic),
+        )
+        .to_pyarray(py)
+        .into()
     }
 
     /// Representative residual-bubble radius [m] (shrinks with dissolution).

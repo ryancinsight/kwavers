@@ -32,7 +32,7 @@ use crate::constants::{CONSERVATION_TOLERANCE, DEFAULT_POLYNOMIAL_ORDER, DISCONT
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 
-use ndarray::Array3;
+use leto::Array3;
 use spectral_solver::RegionPSTDSolver;
 use std::sync::Arc;
 
@@ -169,12 +169,12 @@ impl HybridSpectralDGSolver {
         c: f64,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let shape = (self.grid.nx, self.grid.ny, self.grid.nz);
-        if field.dim() != shape || output.dim() != shape {
+        let shape = [self.grid.nx, self.grid.ny, self.grid.nz];
+        if field.shape() != shape || output.shape() != shape {
             return Err(KwaversError::InvalidInput(format!(
                 "HybridSpectralDGSolver dimension mismatch: field={:?}, output={:?}, grid={shape:?}",
-                field.dim(),
-                output.dim()
+                field.shape(),
+                output.shape()
             )));
         }
 
@@ -217,7 +217,7 @@ impl HybridSpectralDGSolver {
         dt: f64,
         c: f64,
     ) -> KwaversResult<Array3<f64>> {
-        let mut output = Array3::zeros(field.dim());
+        let mut output = Array3::zeros(field.shape());
         self.solve_step_into(field, dt, c, &mut output)?;
         Ok(output)
     }
@@ -230,14 +230,14 @@ impl NumericalSolver for HybridSpectralDGSolver {
         dt: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        if field.dim() != mask.dim() {
+        if field.shape() != mask.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "HybridSpectralDGSolver mask shape {:?} does not match field {:?}",
-                mask.dim(),
-                field.dim()
+                mask.shape(),
+                field.shape()
             )));
         }
-        let mut output = Array3::zeros(field.dim());
+        let mut output = Array3::zeros(field.shape());
         self.solve_step_into(field, dt, self.dg_solver.config().sound_speed, &mut output)?;
         for ((out, &active), &input) in output.iter_mut().zip(mask.iter()).zip(field.iter()) {
             if !active {
@@ -262,7 +262,7 @@ impl NumericalSolver for HybridSpectralDGSolver {
 mod tests {
     use super::{HybridSpectralDGConfig, HybridSpectralDGSolver};
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::sync::Arc;
 
     #[test]
@@ -277,7 +277,7 @@ mod tests {
                 conservation_tolerance: 1.0e-12,
             };
             let mut solver = HybridSpectralDGSolver::new(config, Arc::clone(&grid));
-            let field = Array3::from_shape_fn(dims, |(i, j, k)| {
+            let field = Array3::from_shape_fn(dims, |[i, j, k]| {
                 (i as f64 + 0.5 * j as f64 + 0.25 * k as f64).sin()
             });
             let mut output = Array3::zeros(dims);

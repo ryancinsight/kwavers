@@ -6,7 +6,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Stability analyzer for time integration
 #[derive(Debug)]

@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Canonical mutable state bundle for the retained photoacoustic vertical.
 #[derive(Debug, Clone, Default)]

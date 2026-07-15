@@ -25,7 +25,7 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
-use ndarray::Array4;
+use leto::Array4;
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -179,7 +179,7 @@ pub mod test_support {
     use kwavers_boundary::Boundary;
     use kwavers_core::error::KwaversResult;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// No-op boundary condition for plugin unit tests.
     #[derive(Debug)]
@@ -192,7 +192,7 @@ pub mod test_support {
 
         fn apply_acoustic(
             &mut self,
-            _field: ndarray::ArrayViewMut3<f64>,
+            _field: leto::ArrayViewMut3<f64>,
             _grid: &Grid,
             _time_step: usize,
         ) -> KwaversResult<()> {
@@ -210,7 +210,7 @@ pub mod test_support {
 
         fn apply_light(
             &mut self,
-            _field: ndarray::ArrayViewMut3<f64>,
+            _field: leto::ArrayViewMut3<f64>,
             _grid: &Grid,
             _time_step: usize,
         ) {

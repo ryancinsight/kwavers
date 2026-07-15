@@ -1,9 +1,12 @@
 use super::projection::axis_map_for_index;
 use super::{validate_tensor_state, AcousticDgTensorSourceWeight, AcousticDgTensorWorkspace};
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
+use crate::forward::pstd::dg::dg_solver::rk_update::{
+    update_euler, update_ssp_final, update_ssp_second,
+};
 use crate::forward::pstd::dg::dg_solver::topology::DgTopology;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 impl DGSolver {
     /// Advance a tensor-product acoustic state by one SSP-RK3 step with a
@@ -26,35 +29,36 @@ impl DGSolver {
         F: FnMut(f64, &mut Array3<f64>),
     {
         validate_tensor_state(self, state, density)?;
-        workspace.ensure_dim(state.dim());
+        workspace.ensure_dim((state.shape()[0], state.shape()[1], state.shape()[2]));
         workspace.original.assign(state);
 
         self.compute_acoustic_tensor_rhs_into(&workspace.original, density, &mut workspace.rhs)?;
         add_source_rhs(t, &mut workspace.rhs);
-        Zip::from(&mut workspace.stage)
-            .and(&workspace.original)
-            .and(&workspace.rhs)
-            .for_each(|stage, &q0, &rhs| *stage = q0 + dt * rhs);
+        update_euler(
+            &mut workspace.stage,
+            &workspace.original,
+            &workspace.rhs,
+            dt,
+        );
 
         self.compute_acoustic_tensor_rhs_into(&workspace.stage, density, &mut workspace.rhs)?;
         add_source_rhs(t + dt, &mut workspace.rhs);
-        Zip::from(&mut workspace.stage)
-            .and(&workspace.original)
-            .and(&workspace.rhs)
-            .for_each(|stage, &q0, &rhs| {
-                let q1 = *stage;
-                *stage = 0.75 * q0 + 0.25 * (q1 + dt * rhs);
-            });
+        update_ssp_second(
+            &mut workspace.stage,
+            &workspace.original,
+            &workspace.rhs,
+            dt,
+        );
 
         self.compute_acoustic_tensor_rhs_into(&workspace.stage, density, &mut workspace.rhs)?;
         add_source_rhs(t + 0.5 * dt, &mut workspace.rhs);
-        Zip::from(state)
-            .and(&workspace.original)
-            .and(&workspace.stage)
-            .and(&workspace.rhs)
-            .for_each(|q_new, &q0, &q2, &rhs| {
-                *q_new = (1.0 / 3.0) * q0 + (2.0 / 3.0) * (q2 + dt * rhs);
-            });
+        update_ssp_final(
+            state,
+            &workspace.original,
+            &workspace.stage,
+            &workspace.rhs,
+            dt,
+        );
         Ok(())
     }
 

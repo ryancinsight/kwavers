@@ -4,9 +4,9 @@ use super::super::coefficients::FdAccuracyOrder;
 use super::cache::GradientCache;
 use super::functions::{gradient_optimized, gradient_with_strategy};
 use crate::Grid;
+use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
-use num_traits::Float;
+use leto::{Array3, ArrayView3};
 
 /// Boundary handling strategy
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -118,7 +118,7 @@ impl GradientOperator {
         cache: Option<&GradientCache<T>>,
     ) -> KwaversResult<(Array3<T>, Array3<T>, Array3<T>)>
     where
-        T: Float + Clone + Send + Sync,
+        T: FloatElement + Clone + Send + Sync + Default,
     {
         let _chunk_size = self.chunk_size.max(1);
         if self.parallel {

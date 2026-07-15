@@ -3,11 +3,11 @@ use crate::numerics::operators::spectral::derivative::PseudospectralDerivative;
 use crate::numerics::operators::spectral::trait_def::SpectralOperatorTrait;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use ndarray::Array3;
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 
 fn assert_arrays_close(actual: &Array3<f64>, expected: &Array3<f64>, epsilon: f64) {
-    assert_eq!(actual.dim(), expected.dim());
+    assert_eq!(actual.shape(), expected.shape());
     for (actual, expected) in actual.iter().zip(expected.iter()) {
         assert_abs_diff_eq!(*actual, *expected, epsilon = epsilon);
     }
@@ -19,7 +19,7 @@ fn test_wavenumber_vector() {
     let d = 0.1;
     let k = PseudospectralDerivative::wavenumber_vector(n, d);
 
-    assert_eq!(k.len(), n);
+    assert_eq!(k.size(), n);
     assert_abs_diff_eq!(k[0], 0.0, epsilon = 1e-15);
     assert_abs_diff_eq!(k[1], -k[n - 1], epsilon = 1e-10);
 }
@@ -29,9 +29,9 @@ fn test_pseudospectral_creation() {
     let op = PseudospectralDerivative::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
 
     let (kx, ky, kz) = op.wavenumber_grid();
-    assert_eq!(kx.len(), 64);
-    assert_eq!(ky.len(), 64);
-    assert_eq!(kz.len(), 64);
+    assert_eq!(kx.size(), 64);
+    assert_eq!(ky.size(), 64);
+    assert_eq!(kz.size(), 64);
 }
 
 #[test]
@@ -63,7 +63,7 @@ fn test_derivative_x_sine_wave() {
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
     let k = TWO_PI / (nx as f64 * dx);
 
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         let val = (k * i as f64 * dx).sin();
         for j in 0..ny {
@@ -93,7 +93,7 @@ fn test_derivative_y_sine_wave() {
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
     let k = TWO_PI / (ny as f64 * dy);
 
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
     for j in 0..ny {
         let val = (k * j as f64 * dy).sin();
         for i in 0..nx {
@@ -123,7 +123,7 @@ fn test_derivative_z_sine_wave() {
     let op = PseudospectralDerivative::new(nx, ny, nz, dx, dy, dz).unwrap();
     let k = TWO_PI / (nz as f64 * dz);
 
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
     for l in 0..nz {
         let val = (k * l as f64 * dz).sin();
         for i in 0..nx {
@@ -147,7 +147,7 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
     let ny = 8;
     let nz = 4;
     let op = PseudospectralDerivative::new(nx, ny, nz, 0.1, 0.2, 0.3).unwrap();
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
 
     for i in 0..nx {
         for j in 0..ny {
@@ -160,53 +160,53 @@ fn spectral_derivative_into_reuses_workspace_and_matches_allocating() {
     }
 
     let expected_x = op.derivative_x(field.view()).unwrap();
-    let mut line_x = ndarray::Array1::<Complex64>::zeros(nx);
-    let mut out_x = Array3::<f64>::zeros((nx, ny, nz));
-    let line_x_ptr = line_x.as_ptr();
-    let out_x_ptr = out_x.as_ptr();
+    let mut line_x = Array1::<Complex64>::zeros([nx]);
+    let mut out_x = Array3::<f64>::zeros([nx, ny, nz]);
+    let line_x_ptr = line_x.as_slice().unwrap().as_ptr();
+    let out_x_ptr = out_x.as_slice().unwrap().as_ptr();
     op.derivative_x_into(field.view(), &mut line_x, &mut out_x)
         .unwrap();
-    assert_eq!(line_x.as_ptr(), line_x_ptr);
-    assert_eq!(out_x.as_ptr(), out_x_ptr);
+    assert_eq!(line_x.as_slice().unwrap().as_ptr(), line_x_ptr);
+    assert_eq!(out_x.as_slice().unwrap().as_ptr(), out_x_ptr);
     assert_arrays_close(&out_x, &expected_x, 1e-12);
 
     let expected_y = op.derivative_y(field.view()).unwrap();
-    let mut line_y = ndarray::Array1::<Complex64>::zeros(ny);
-    let mut out_y = Array3::<f64>::zeros((nx, ny, nz));
-    let line_y_ptr = line_y.as_ptr();
-    let out_y_ptr = out_y.as_ptr();
+    let mut line_y = Array1::<Complex64>::zeros([ny]);
+    let mut out_y = Array3::<f64>::zeros([nx, ny, nz]);
+    let line_y_ptr = line_y.as_slice().unwrap().as_ptr();
+    let out_y_ptr = out_y.as_slice().unwrap().as_ptr();
     op.derivative_y_into(field.view(), &mut line_y, &mut out_y)
         .unwrap();
-    assert_eq!(line_y.as_ptr(), line_y_ptr);
-    assert_eq!(out_y.as_ptr(), out_y_ptr);
+    assert_eq!(line_y.as_slice().unwrap().as_ptr(), line_y_ptr);
+    assert_eq!(out_y.as_slice().unwrap().as_ptr(), out_y_ptr);
     assert_arrays_close(&out_y, &expected_y, 1e-12);
 
     let expected_z = op.derivative_z(field.view()).unwrap();
-    let mut line_z = ndarray::Array1::<Complex64>::zeros(nz);
-    let mut out_z = Array3::<f64>::zeros((nx, ny, nz));
-    let line_z_ptr = line_z.as_ptr();
-    let out_z_ptr = out_z.as_ptr();
+    let mut line_z = Array1::<Complex64>::zeros([nz]);
+    let mut out_z = Array3::<f64>::zeros([nx, ny, nz]);
+    let line_z_ptr = line_z.as_slice().unwrap().as_ptr();
+    let out_z_ptr = out_z.as_slice().unwrap().as_ptr();
     op.derivative_z_into(field.view(), &mut line_z, &mut out_z)
         .unwrap();
-    assert_eq!(line_z.as_ptr(), line_z_ptr);
-    assert_eq!(out_z.as_ptr(), out_z_ptr);
+    assert_eq!(line_z.as_slice().unwrap().as_ptr(), line_z_ptr);
+    assert_eq!(out_z.as_slice().unwrap().as_ptr(), out_z_ptr);
     assert_arrays_close(&out_z, &expected_z, 1e-12);
 }
 
 #[test]
 fn spectral_derivative_into_rejects_mismatched_workspaces() {
     let op = PseudospectralDerivative::new(4, 4, 4, 0.1, 0.1, 0.1).unwrap();
-    let field = Array3::<f64>::zeros((4, 4, 4));
-    let mut line = ndarray::Array1::<Complex64>::zeros(3);
-    let mut output = Array3::<f64>::zeros((4, 4, 4));
+    let field = Array3::<f64>::zeros([4, 4, 4]);
+    let mut line = Array1::<Complex64>::zeros([3]);
+    let mut output = Array3::<f64>::zeros([4, 4, 4]);
 
     let error = op
         .derivative_x_into(field.view(), &mut line, &mut output)
         .unwrap_err();
     assert!(format!("{error}").contains("line workspace length"));
 
-    line = ndarray::Array1::<Complex64>::zeros(4);
-    output = Array3::<f64>::zeros((4, 4, 3));
+    line = Array1::<Complex64>::zeros([4]);
+    output = Array3::<f64>::zeros([4, 4, 3]);
     let error = op
         .derivative_x_into(field.view(), &mut line, &mut output)
         .unwrap_err();
@@ -220,7 +220,7 @@ fn test_derivative_of_constant_is_zero() {
     let nz = 32;
 
     let op = PseudospectralDerivative::new(nx, ny, nz, 0.1, 0.1, 0.1).unwrap();
-    let field = Array3::from_elem((nx, ny, nz), 5.0);
+    let field = Array3::from_elem([nx, ny, nz], 5.0);
 
     let deriv_x = op.derivative_x(field.view()).unwrap();
     let deriv_y = op.derivative_y(field.view()).unwrap();
@@ -251,7 +251,7 @@ fn test_spectral_accuracy_exponential() {
     let k1 = TWO_PI / (nx as f64 * dx);
     let k2 = FOUR_PI / (nx as f64 * dx);
 
-    let mut field = Array3::zeros((nx, ny, nz));
+    let mut field = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         let x = i as f64 * dx;
         let val = (k1 * x).sin() + 0.5 * (k2 * x).cos();

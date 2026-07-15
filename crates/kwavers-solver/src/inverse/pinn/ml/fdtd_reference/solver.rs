@@ -3,13 +3,13 @@
 use super::{config::FDTDConfig, InitialCondition};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// 1D FDTD solver for wave equation.
 ///
 /// Central difference scheme:
 /// - Spatial: `∂²u/∂x² ≈ (u[i+1] - 2u[i] + u[i-1]) / dx²`
-/// - Temporal: `∂²u/∂t² ≈ (u[n+1] - 2u[n] + u[n-1]) / dt²`
+/// - Temporal: `∂²u/∂t² ≈ (u[n+1] - 2u\[n\] + u[n-1]) / dt²`
 #[derive(Debug)]
 pub struct FDTD1DWaveSolver {
     pub(super) config: FDTDConfig,
@@ -24,7 +24,7 @@ pub struct FDTD1DWaveSolver {
 impl FDTD1DWaveSolver {
     /// Create new FDTD solver with validated configuration.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by `FDTDConfig::validate`.
+    /// - Propagates any [`crate::KwaversError`] returned by `FDTDConfig::validate`.
     ///
     pub fn new(config: FDTDConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -93,7 +93,7 @@ impl FDTD1DWaveSolver {
 
     /// Solve for all time steps, returning field history of shape `(nx, nt)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by `step`.
+    /// - Propagates any [`crate::KwaversError`] returned by `step`.
     ///
     pub fn solve(&mut self) -> KwaversResult<Array2<f64>> {
         let nx = self.config.nx;

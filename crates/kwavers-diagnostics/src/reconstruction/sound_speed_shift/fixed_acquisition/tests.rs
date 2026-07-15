@@ -1,6 +1,6 @@
 use std::f64::consts::TAU;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::SoundSpeedShiftPlan;
 use crate::reconstruction::sound_speed_shift::{
@@ -274,7 +274,7 @@ fn attach_time_shifts(
 }
 
 fn assert_image_close(actual: &Array2<f64>, expected: &Array2<f64>, tolerance: f64) {
-    assert_eq!(actual.dim(), expected.dim());
+    assert_eq!(actual.shape(), expected.shape());
     for ((idx, actual), expected) in actual.indexed_iter().zip(expected.iter()) {
         assert!(
             (*actual - *expected).abs() <= tolerance,

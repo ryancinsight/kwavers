@@ -11,16 +11,21 @@
 //!   §10.4. Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::analytic_signal_1d;
-use ndarray::Array1;
+use kwavers_signal::analytic::hilbert_transform;
+use leto::Array1;
 
 /// Envelope of an RF line: the magnitude of its analytic (Hilbert) signal.
 ///
-/// Reuses the workspace analytic-signal SSOT (`kwavers_math::fft`), so the
+/// Reuses the Apollo-backed analytic-signal SSOT in `kwavers-signal`, so the
 /// carrier is removed exactly once, consistently with beamforming snapshot code.
 #[must_use]
 pub fn envelope(rf: &Array1<f64>) -> Array1<f64> {
-    analytic_signal_1d(rf).mapv(|z| z.norm())
+    let analytic = hilbert_transform(
+        &leto::Array1::from_vec([rf.len()], rf.iter().copied().collect())
+            .expect("RF line length must match its Leto shape"),
+    );
+    let mags: Vec<f64> = analytic.iter().map(|z| z.norm()).collect();
+    Array1::from_vec([mags.len()], mags).expect("envelope magnitudes must match Leto shape")
 }
 
 /// Log-compress an envelope to a normalized display image in `[0, 1]`.

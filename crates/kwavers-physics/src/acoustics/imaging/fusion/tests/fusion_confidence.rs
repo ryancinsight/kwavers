@@ -1,14 +1,14 @@
 //! Confidence-map and uncertainty-quantification tests.
 
 use super::super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_confidence_map_generation() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
 
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))
@@ -51,7 +51,7 @@ fn test_uncertainty_quantification_enabled() {
     };
 
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))
@@ -67,7 +67,7 @@ fn test_uncertainty_quantification_enabled() {
     let result = fusion.fuse().unwrap();
 
     let uncertainty = result.uncertainty_map.unwrap();
-    assert_eq!(uncertainty.dim(), shape);
+    assert_eq!(uncertainty.shape(), shape);
 
     // All values should be non-negative
     for value in uncertainty.iter() {
@@ -83,7 +83,7 @@ fn test_uncertainty_quantification_disabled() {
     };
 
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))

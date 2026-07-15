@@ -29,14 +29,14 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 
-use ndarray::{Array1, Array3};
-use ndarray_npy::NpzReader;
+use consus_npy::NpzReader;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::kernel::FocalKernel;
 
-/// Map an `ndarray-npy` read error into a `KwaversError::InvalidInput`
+/// Map a Consus NPZ read error into a `KwaversError::InvalidInput`
 /// that names the missing/incompatible array and the source path.
 fn map_read_err<E: std::fmt::Debug>(name: &str, path: &Path, err: E) -> KwaversError {
     KwaversError::InvalidInput(format!(
@@ -49,10 +49,18 @@ fn read_field<R: std::io::Read + std::io::Seek>(
     npz: &mut NpzReader<R>,
     path: &Path,
 ) -> KwaversResult<Array3<f64>> {
-    let arr: Array3<f64> = npz
-        .by_name("p_min")
+    let arr = npz
+        .by_name::<f64>("p_min")
         .map_err(|e| map_read_err("p_min", path, e))?;
-    Ok(arr)
+    let shape: [usize; 3] = arr.shape().try_into().map_err(|_| {
+        map_read_err(
+            "p_min",
+            path,
+            format!("expected rank 3, got shape {:?}", arr.shape()),
+        )
+    })?;
+    Array3::from_vec(shape, arr.into_values().into_vec())
+        .map_err(|e| map_read_err("p_min", path, e))
 }
 
 fn read_scalar<R: std::io::Read + std::io::Seek>(
@@ -60,15 +68,17 @@ fn read_scalar<R: std::io::Read + std::io::Seek>(
     name: &str,
     path: &Path,
 ) -> KwaversResult<f64> {
-    let arr: Array1<f64> = npz.by_name(name).map_err(|e| map_read_err(name, path, e))?;
-    if arr.len() != 1 {
+    let arr = npz
+        .by_name::<f64>(name)
+        .map_err(|e| map_read_err(name, path, e))?;
+    if arr.values().len() != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "FocalKernel npz `{}`: expected scalar `{name}`, got shape {:?}",
             path.display(),
             arr.shape()
         )));
     }
-    Ok(arr[0])
+    Ok(arr.values()[0])
 }
 
 fn read_focus_idx<R: std::io::Read + std::io::Seek>(
@@ -78,13 +88,18 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
     // Python's `np.array((i, j, k), dtype=np.int64)` round-trips as
     // either i64 or i32 depending on the writer; try i64 first, then
     // fall back to i32 for older fixtures.
-    let arr: Vec<i64> = match npz.by_name::<ndarray::OwnedRepr<i64>, ndarray::Ix1>("focus_idx") {
-        Ok(a) => a.iter().copied().collect(),
+    let arr: Vec<i64> = match npz.by_name::<i64>("focus_idx") {
+        Ok(array) => array.into_values().into_vec(),
         Err(_) => {
-            let a: Array1<i32> = npz
-                .by_name("focus_idx")
+            let array = npz
+                .by_name::<i32>("focus_idx")
                 .map_err(|e| map_read_err("focus_idx", path, e))?;
-            a.iter().map(|&v| i64::from(v)).collect()
+            array
+                .into_values()
+                .into_vec()
+                .into_iter()
+                .map(i64::from)
+                .collect()
         }
     };
     if arr.len() != 3 {
@@ -156,7 +171,7 @@ pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResu
             path.display()
         )));
     }
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     if focus_idx.0 >= nx || focus_idx.1 >= ny || focus_idx.2 >= nz {
         return Err(KwaversError::InvalidInput(format!(
             "FocalKernel npz `{}`: focus_idx {:?} out of bounds for shape ({nx}, {ny}, {nz})",
@@ -174,7 +189,9 @@ pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResu
             )));
         }
         let scale = target / pnp_realised;
-        field.mapv_inplace(|p| p * scale);
+        for p in field.iter_mut() {
+            *p *= scale;
+        }
         source_pa *= scale;
         pnp_realised = target;
     }
@@ -228,33 +245,43 @@ pub fn discover_focal_kernels(dir: &Path) -> KwaversResult<Vec<FocalKernel>> {
 mod tests {
     use super::*;
 
+    use consus_npy::{NpyArray, NpzWriter};
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-    use ndarray::array;
-    use ndarray_npy::NpzWriter;
     use std::io::Cursor;
 
     fn write_fixture_npz() -> Vec<u8> {
         // Build a tiny 4×3×3 kernel with the focal voxel at (2, 1, 1)
         // carrying p_min = -10 MPa. Off-focus voxels carry small
         // values so the round-trip can verify shape preservation.
-        let mut p_min = ndarray::Array3::<f64>::from_elem((4, 3, 3), -1.0e3);
-        p_min[[2, 1, 1]] = -1.0e7;
+        let mut p_min = vec![-1.0e3; 4 * 3 * 3];
+        p_min[2 * 3 * 3 + 3 + 1] = -1.0e7;
 
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            w.add_array("p_min", &p_min).unwrap();
-            w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+            w.add_array("p_min", &NpyArray::new([4, 3, 3], p_min).unwrap())
                 .unwrap();
-            w.add_array("source_pa", &array![1.5 * MPA_TO_PA]).unwrap();
-            w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
-            w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
-            w.add_array("focus_idx", &array![2_i64, 1, 1]).unwrap();
-            w.finish().unwrap();
+            add_scalar(&mut w, "dx", 5.0e-4);
+            add_scalar(&mut w, "f0", MHZ_TO_HZ);
+            add_scalar(&mut w, "pnp_realised", 10.0 * MPA_TO_PA);
+            add_scalar(&mut w, "source_pa", 1.5 * MPA_TO_PA);
+            add_scalar(&mut w, "fwhm_lat_m", 2.0e-3);
+            add_scalar(&mut w, "fwhm_ax_m", 6.0e-3);
+            w.add_array("focus_idx", &NpyArray::new([3], [2_i64, 1, 1]).unwrap())
+                .unwrap();
+            let _ = w.finish().unwrap();
         }
         buf.into_inner()
+    }
+
+    fn add_scalar<W: std::io::Write + std::io::Seek>(
+        writer: &mut NpzWriter<W>,
+        name: &str,
+        value: f64,
+    ) {
+        writer
+            .add_array(name, &NpyArray::new([], [value]).unwrap())
+            .unwrap();
     }
 
     fn write_to_tempfile(bytes: &[u8], name: &str) -> PathBuf {
@@ -270,7 +297,7 @@ mod tests {
         let bytes = write_fixture_npz();
         let path = write_to_tempfile(&bytes, "kernel_roundtrip.npz");
         let kernel = load_focal_kernel(&path, None).expect("load");
-        assert_eq!(kernel.shape(), (4, 3, 3));
+        assert_eq!(kernel.shape(), [4, 3, 3]);
         // The loader negates p_min, so the focal magnitude must be +1e7.
         assert!((kernel.focal_pressure() - 10.0 * MPA_TO_PA).abs() < 1e-3);
         assert!((kernel.dx_m - 5.0e-4).abs() < 1e-12);
@@ -302,16 +329,16 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
-            w.add_array("p_min", &p_min).unwrap();
-            w.add_array("dx", &array![5.0e-4_f64]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+            w.add_array("p_min", &NpyArray::new([2, 2, 2], [0.0; 8]).unwrap())
                 .unwrap();
-            w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
-            w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
-            w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
-            w.add_array("focus_idx", &array![1_i64, 1, 1]).unwrap();
-            w.finish().unwrap();
+            add_scalar(&mut w, "dx", 5.0e-4);
+            add_scalar(&mut w, "pnp_realised", 10.0 * MPA_TO_PA);
+            add_scalar(&mut w, "source_pa", MPA_TO_PA);
+            add_scalar(&mut w, "fwhm_lat_m", 2.0e-3);
+            add_scalar(&mut w, "fwhm_ax_m", 6.0e-3);
+            w.add_array("focus_idx", &NpyArray::new([3], [1_i64, 1, 1]).unwrap())
+                .unwrap();
+            let _ = w.finish().unwrap();
         }
         let bytes = buf.into_inner();
         let path = write_to_tempfile(&bytes, "kernel_missing_f0.npz");
@@ -325,17 +352,17 @@ mod tests {
         let mut buf = Cursor::new(Vec::<u8>::new());
         {
             let mut w = NpzWriter::new(&mut buf);
-            let p_min = ndarray::Array3::<f64>::zeros((2, 2, 2));
-            w.add_array("p_min", &p_min).unwrap();
-            w.add_array("dx", &array![1.0e-3_f64]).unwrap();
-            w.add_array("f0", &array![MHZ_TO_HZ]).unwrap();
-            w.add_array("pnp_realised", &array![10.0 * MPA_TO_PA])
+            w.add_array("p_min", &NpyArray::new([2, 2, 2], [0.0; 8]).unwrap())
                 .unwrap();
-            w.add_array("source_pa", &array![MPA_TO_PA]).unwrap();
-            w.add_array("fwhm_lat_m", &array![2.0e-3_f64]).unwrap();
-            w.add_array("fwhm_ax_m", &array![6.0e-3_f64]).unwrap();
-            w.add_array("focus_idx", &array![5_i64, 0, 0]).unwrap(); // 5 ≥ nx=2
-            w.finish().unwrap();
+            add_scalar(&mut w, "dx", 1.0e-3);
+            add_scalar(&mut w, "f0", MHZ_TO_HZ);
+            add_scalar(&mut w, "pnp_realised", 10.0 * MPA_TO_PA);
+            add_scalar(&mut w, "source_pa", MPA_TO_PA);
+            add_scalar(&mut w, "fwhm_lat_m", 2.0e-3);
+            add_scalar(&mut w, "fwhm_ax_m", 6.0e-3);
+            w.add_array("focus_idx", &NpyArray::new([3], [5_i64, 0, 0]).unwrap())
+                .unwrap();
+            let _ = w.finish().unwrap();
         }
         let path = write_to_tempfile(&buf.into_inner(), "kernel_oob.npz");
         let err = load_focal_kernel(&path, None).expect_err("must fail");

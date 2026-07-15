@@ -4,7 +4,7 @@ use super::memory::GPUMemoryPool;
 use super::metrics::SweGpuStepMetrics;
 use super::solver::GPUElasticWaveSolver3D;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_gpu_device_capabilities() {
@@ -65,7 +65,7 @@ fn test_adaptive_resolution() {
     let base_grid = Grid::new(64, 64, 64, 0.001, 0.001, 0.001).unwrap();
     let adaptive = AdaptiveResolution::new(&base_grid, 3);
 
-    assert_eq!(adaptive.resolution_levels.len(), 3);
+    assert_eq!((adaptive.resolution_levels.len()), 3);
     assert!(
         adaptive.resolution_levels[0].scale_factor <= adaptive.resolution_levels[1].scale_factor
     );

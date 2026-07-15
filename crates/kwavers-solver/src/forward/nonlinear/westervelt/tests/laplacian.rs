@@ -52,7 +52,7 @@ fn test_westervelt_fdtd_creation() {
     let config = WesterveltFdtdConfig::default();
     let solver = WesterveltFdtd::new(config, &grid, &medium);
 
-    assert_eq!(solver.pressure.shape(), &[32, 32, 32]);
+    assert_eq!(solver.pressure.shape(), [32, 32, 32]);
 }
 
 #[test]

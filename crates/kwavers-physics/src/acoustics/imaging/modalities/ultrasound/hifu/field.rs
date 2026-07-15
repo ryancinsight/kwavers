@@ -19,7 +19,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::hifu::DomainHIFUTransducer;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 const RADIAL_APERTURE_SAMPLES: usize = 4;
@@ -56,7 +56,7 @@ pub fn compute_pressure_field(
     let scale = validate_field_inputs(transducer, grid, medium)?;
     let aperture = aperture_samples(transducer.aperture_radius, transducer.focal_length);
     let (nx, ny, nz) = grid.dimensions();
-    let mut pressure = Array3::zeros((nx, ny, nz));
+    let mut pressure = Array3::zeros([nx, ny, nz]);
     let min_distance = 0.5 * grid.dx.min(grid.dy).min(grid.dz);
 
     for k in 0..nz {
@@ -89,7 +89,19 @@ pub fn compute_intensity_field(
     let c = medium.sound_speed(grid.nx / 2, grid.ny / 2, 0);
     let impedance = rho * c;
 
-    Ok(pressure.mapv(|p| p * p / (2.0 * impedance)))
+    {
+        let [nx, ny, nz] = pressure.shape();
+        let mut result = Array3::from_elem([nx, ny, nz], 0.0);
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let p = pressure[[i, j, k]];
+                    result[[i, j, k]] = p * p / (2.0 * impedance);
+                }
+            }
+        }
+        Ok(result)
+    }
 }
 
 fn validate_field_inputs(

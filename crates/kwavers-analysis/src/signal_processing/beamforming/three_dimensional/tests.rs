@@ -8,6 +8,29 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
 use super::*;
 
+#[cfg(feature = "gpu")]
+#[derive(Debug)]
+struct TestBeamformingProvider;
+
+#[cfg(feature = "gpu")]
+impl BeamformingGpuProvider for TestBeamformingProvider {
+    fn provider_kind(&self) -> kwavers_solver::backend::traits::GpuProvider {
+        kwavers_solver::backend::traits::GpuProvider::Wgpu
+    }
+
+    fn process_delay_and_sum(
+        &self,
+        config: &BeamformingConfig3D,
+        rf_data: &leto::Array4<f32>,
+        _dynamic_focusing: bool,
+        apodization_window: &Beamforming3dApodizationWindow,
+        _apodization_weights: &leto::Array3<f32>,
+        _sub_volume_size: Option<(usize, usize, usize)>,
+    ) -> kwavers_core::error::KwaversResult<leto::Array3<f32>> {
+        delay_and_sum_cpu_reference(rf_data, config, apodization_window)
+    }
+}
+
 #[test]
 fn test_beamforming_config_3d_default() {
     let config = BeamformingConfig3D::default();
@@ -84,45 +107,32 @@ fn test_apodization_window_types() {
 }
 
 #[cfg(feature = "gpu")]
-#[tokio::test]
-async fn test_processor_creation() {
+#[test]
+fn test_processor_creation() {
     let config = BeamformingConfig3D::default();
-    let result = BeamformingProcessor3D::new(config).await;
-
-    // May fail if no GPU is available - that's okay for CI
-    match result {
-        Ok(processor) => {
-            let metrics = processor.metrics();
-            assert_eq!(metrics.processing_time_ms, 0.0);
-        }
-        Err(e) => {
-            // Expected error when no GPU is available
-            println!("GPU initialization failed (expected in CI): {:?}", e);
-        }
-    }
+    let processor = BeamformingProcessor3D::with_provider(config, TestBeamformingProvider)
+        .expect("test provider construction is infallible");
+    let metrics = processor.metrics();
+    assert_eq!(metrics.processing_time_ms, 0.0);
 }
 
 #[cfg(not(feature = "gpu"))]
-#[tokio::test]
-async fn test_processor_creation_cpu_only() {
+#[test]
+fn test_processor_creation_cpu_only() {
     let config = BeamformingConfig3D::default();
-    let result = BeamformingProcessor3D::new(config).await;
+    let result = BeamformingProcessor3D::new_wgpu(config);
 
     // Should fail with FeatureNotAvailable error
     assert!(result.is_err());
 }
 
-/// Differential validation: the static-DAS GPU shader (`beamforming_3d.wgsl`)
-/// must agree with the analytically-specified CPU reference
-/// (`cpu::delay_and_sum_cpu`) within a mixed absolute/relative tolerance.
-///
-/// Skips when no GPU adapter is present (the shader still compiles via
-/// `create_shader_module` inside `BeamformingProcessor3D::new`, and this test
-/// runs the value-semantic comparison wherever a GPU exists).
+/// Contract validation: provider-injected static DAS must agree with the
+/// analytically-specified CPU reference. The real WGPU differential test lives
+/// in `kwavers-gpu`, where the concrete provider is linked.
 #[cfg(feature = "gpu")]
-#[tokio::test]
-async fn das_gpu_matches_cpu_reference() {
-    use ndarray::Array4;
+#[test]
+fn das_provider_contract_matches_cpu_reference() {
+    use leto::Array4;
 
     let config = BeamformingConfig3D {
         num_elements_3d: (2, 1, 2),
@@ -143,13 +153,12 @@ async fn das_gpu_matches_cpu_reference() {
     }
 
     let cpu =
-        super::cpu::delay_and_sum_cpu(&rf, &config, &Beamforming3dApodizationWindow::Rectangular)
+        delay_and_sum_cpu_reference(&rf, &config, &Beamforming3dApodizationWindow::Rectangular)
             .expect("CPU DAS reference");
 
-    let mut processor = match BeamformingProcessor3D::new(config.clone()).await {
-        Ok(p) => p,
-        Err(_) => return, // no GPU adapter in this environment — skip
-    };
+    let mut processor =
+        BeamformingProcessor3D::with_provider(config.clone(), TestBeamformingProvider)
+            .expect("test provider construction is infallible");
 
     let gpu = processor
         .process_volume(
@@ -162,12 +171,12 @@ async fn das_gpu_matches_cpu_reference() {
         )
         .expect("GPU DAS reconstruction");
 
-    assert_eq!(cpu.dim(), gpu.dim(), "CPU/GPU volume dimensions differ");
+    assert_eq!(cpu.shape(), gpu.shape(), "CPU/GPU volume dimensions differ");
     for (c, g) in cpu.iter().zip(gpu.iter()) {
         let tol = 1.0e-3f32.mul_add(c.abs(), 1.0e-2);
         assert!(
             (c - g).abs() <= tol,
-            "GPU DAS diverges from CPU reference: cpu={c}, gpu={g}, tol={tol}"
+            "provider DAS diverges from CPU reference: cpu={c}, provider={g}, tol={tol}"
         );
     }
 }

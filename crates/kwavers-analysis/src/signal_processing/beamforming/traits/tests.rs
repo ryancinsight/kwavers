@@ -1,6 +1,6 @@
 //! Trait-conformance tests using a mock beamformer.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{Beamformer, TimeDomainBeamformer};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
@@ -25,7 +25,7 @@ impl Beamformer for MockBeamformer {
                 "Focal point contains non-finite values".into(),
             ));
         }
-        Ok(data.sum())
+        Ok(data.iter().sum::<f64>())
     }
 
     fn expected_sensor_count(&self) -> usize {

@@ -5,7 +5,7 @@
 //! and time step. This keeps x/y/z variation data-driven and prevents cloned
 //! axis-specific implementations.
 
-use ndarray::Array1;
+use leto::Array1;
 
 pub(super) struct CollocatedProfileMut<'a> {
     sigma: &'a mut Array1<f64>,

@@ -1,7 +1,7 @@
 use kwavers_core::error::KwaversError;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug)]
 pub struct DiscontinuityDetector {
@@ -28,11 +28,11 @@ impl DiscontinuityDetector {
         grid: &Grid,
         output: &mut Array3<bool>,
     ) -> KwaversResult<()> {
-        if field.dim() != (grid.nx, grid.ny, grid.nz) || output.dim() != field.dim() {
+        if field.shape() != [grid.nx, grid.ny, grid.nz] || output.shape() != field.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "DiscontinuityDetector dimension mismatch: field={:?}, output={:?}, grid=({}, {}, {})",
-                field.dim(),
-                output.dim(),
+                field.shape(),
+                output.shape(),
                 grid.nx,
                 grid.ny,
                 grid.nz
@@ -65,7 +65,7 @@ impl DiscontinuityDetector {
 
 impl super::traits::DiscontinuityDetection for DiscontinuityDetector {
     fn detect(&self, field: &Array3<f64>, grid: &Grid) -> KwaversResult<Array3<bool>> {
-        let mut mask = Array3::from_elem(field.dim(), false);
+        let mut mask = Array3::from_elem(field.shape(), false);
         self.detect_into(field, grid, &mut mask)?;
         Ok(mask)
     }
@@ -110,12 +110,12 @@ mod tests {
     use super::DiscontinuityDetector;
     use crate::forward::pstd::dg::traits::DiscontinuityDetection;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn detector_marks_embedded_1d_jump() {
         let grid = Grid::new(4, 1, 1, 1.0, 1.0, 1.0).unwrap();
-        let field = Array3::from_shape_vec((4, 1, 1), vec![0.0, 0.0, 2.0, 2.0]).unwrap();
+        let field = Array3::from_shape_vec([4, 1, 1], vec![0.0, 0.0, 2.0, 2.0]).unwrap();
         let detector = DiscontinuityDetector::new(0.5);
 
         let mask = detector.detect(&field, &grid).unwrap();
@@ -128,7 +128,7 @@ mod tests {
         let grid = Grid::new(4, 4, 1, 1.0, 1.0, 1.0).unwrap();
         let field = Array3::from_shape_fn(
             (4, 4, 1),
-            |(i, j, _)| {
+            |[i, j, _]| {
                 if i >= 2 || j >= 2 {
                     3.0
                 } else {

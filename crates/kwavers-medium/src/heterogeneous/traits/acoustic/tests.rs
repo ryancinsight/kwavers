@@ -9,7 +9,7 @@ use crate::acoustic::AcousticProperties;
 use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Construct a minimal 4×4×4 grid for point-query tests.
 /// # Panics
@@ -22,8 +22,8 @@ fn small_grid() -> Grid {
 /// Construct a uniform HeterogeneousMedium with scalar α₀, y, and f_ref.
 fn uniform_medium(alpha0: f64, alpha_power: f64, f_ref: f64) -> HeterogeneousMedium {
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
-    m.absorption = Array3::from_elem((4, 4, 4), alpha0);
-    m.alpha_power = Array3::from_elem((4, 4, 4), alpha_power);
+    m.absorption = Array3::from_elem([4, 4, 4], alpha0);
+    m.alpha_power = Array3::from_elem([4, 4, 4], alpha_power);
     m.reference_frequency = f_ref;
     m
 }
@@ -145,8 +145,8 @@ fn test_spatially_varying_alpha_power() {
     let f_ref = MHZ_TO_HZ;
     let alpha0 = 1.0_f64;
     let mut m = HeterogeneousMedium::new(4, 4, 4, false);
-    m.absorption = Array3::from_elem((4, 4, 4), alpha0);
-    m.alpha_power = Array3::from_elem((4, 4, 4), 1.5);
+    m.absorption = Array3::from_elem([4, 4, 4], alpha0);
+    m.alpha_power = Array3::from_elem([4, 4, 4], 1.5);
     m.alpha_power[[0, 0, 0]] = 1.0;
     m.alpha_power[[3, 3, 3]] = 2.0;
     m.reference_frequency = f_ref;

@@ -65,7 +65,7 @@ impl TranscranialSafetyMonitor {
     ///   default `max_thermal_dose = 240` threshold from Sapareto & Dewey).
     pub(crate) fn update_thermal_dose(&mut self, dt: f64) {
         let dt_min = dt / SECONDS_PER_MINUTE;
-        let (nx, ny, nz) = self.temperature.dim();
+        let [nx, ny, nz] = self.temperature.shape();
 
         for k in 0..nz {
             for j in 0..ny {
@@ -114,7 +114,7 @@ impl TranscranialSafetyMonitor {
 mod tests {
     use super::*;
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// **Test: CEM43 dose rate at body temperature (37 °C)**
     ///
@@ -127,7 +127,7 @@ mod tests {
     fn test_cem43_dose_rate_at_body_temperature() {
         let mut monitor = TranscranialSafetyMonitor::new((1, 1, 1), 0.01, 650e3);
         let temperature = Array3::from_elem((1, 1, 1), BODY_TEMPERATURE_C);
-        let pressure = Array3::zeros((1, 1, 1));
+        let pressure = Array3::zeros([1, 1, 1]);
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
@@ -152,7 +152,7 @@ mod tests {
         // Allow 43°C (default max_temperature = 43.0 so this is exactly at limit — use 44 limit)
         monitor.thresholds.max_temperature = 44.0;
         let temperature = Array3::from_elem((1, 1, 1), 43.0_f64);
-        let pressure = Array3::zeros((1, 1, 1));
+        let pressure = Array3::zeros([1, 1, 1]);
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
@@ -177,7 +177,7 @@ mod tests {
         monitor.thresholds.max_thermal_dose = 1e9;
 
         let temperature = Array3::from_elem((1, 1, 1), 50.0_f64);
-        let pressure = Array3::zeros((1, 1, 1));
+        let pressure = Array3::zeros([1, 1, 1]);
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
@@ -203,7 +203,7 @@ mod tests {
         monitor.thresholds.max_thermal_dose = 1e9;
 
         let temperature = Array3::from_elem((1, 1, 1), 43.0_f64);
-        let pressure = Array3::zeros((1, 1, 1));
+        let pressure = Array3::zeros([1, 1, 1]);
 
         let n_steps = 600usize;
         let dt = 1.0_f64;

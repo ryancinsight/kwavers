@@ -4,7 +4,7 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
-use ndarray::Array4;
+use leto::Array4;
 
 use super::solver::ThermalDiffusionSolver;
 
@@ -72,7 +72,9 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
         if let Some(ref mut solver) = self.solver {
             let heat_source = if fields.shape()[0] > UnifiedFieldType::Temperature as usize + 1 {
                 Some(
-                    fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Temperature as usize + 1),
+                    fields
+                        .index_axis::<3>(0, UnifiedFieldType::Temperature as usize + 1)
+                        .expect("invariant: heat source field axis index in range"),
                 )
             } else {
                 None
@@ -82,7 +84,9 @@ impl crate::plugin::Plugin for ThermalDiffusionPlugin {
 
             let temp_idx = UnifiedFieldType::Temperature as usize;
             if fields.shape()[0] > temp_idx {
-                let mut temp_field = fields.index_axis_mut(ndarray::Axis(0), temp_idx);
+                let mut temp_field = fields
+                    .index_axis_mut::<3>(0, temp_idx)
+                    .expect("invariant: temperature field axis index in range");
                 temp_field.assign(solver.temperature());
             }
         }
@@ -114,14 +118,14 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_thermal_diffusion_creation() {
         let grid = Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap();
         let config = ThermalDiffusionConfig::default();
         let solver = ThermalDiffusionSolver::new(config, &grid);
-        assert_eq!(solver.temperature().shape(), &[32, 32, 32]);
+        assert_eq!(solver.temperature().shape(), [32, 32, 32]);
     }
 
     #[test]
@@ -138,7 +142,7 @@ mod tests {
 
         let mut solver = ThermalDiffusionSolver::new(config, &grid);
 
-        let mut initial_temp = Array3::from_elem((16, 16, 16), BODY_TEMPERATURE_K);
+        let mut initial_temp = Array3::from_elem([16, 16, 16], BODY_TEMPERATURE_K);
         initial_temp[[8, 8, 8]] = 320.0;
         solver.set_temperature(initial_temp);
 

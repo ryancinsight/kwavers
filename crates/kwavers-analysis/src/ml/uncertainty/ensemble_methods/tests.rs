@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_ensemble_quantifier_creation() {
@@ -47,8 +47,8 @@ fn test_ensemble_statistics() {
         .compute_ensemble_statistics(&predictions, &weights)
         .unwrap();
 
-    assert_eq!(result.mean_prediction.dim(), (5, 5));
-    assert_eq!(result.uncertainty.dim(), (5, 5));
+    assert_eq!(result.mean_prediction.shape(), [5, 5]);
+    assert_eq!(result.uncertainty.shape(), [5, 5]);
 
     let mean_err = (result.mean_prediction[[0, 0]] - 1.0_f32).abs();
     assert!(

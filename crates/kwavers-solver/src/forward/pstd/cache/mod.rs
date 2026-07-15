@@ -37,7 +37,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_math::fft::Complex64;
-use ndarray::Array1;
+use leto::Array1;
 use std::cell::RefCell;
 use std::sync::Arc;
 
@@ -106,13 +106,13 @@ pub struct ShiftOperators {
 /// Complete k-space operator set for a given geometry
 #[derive(Debug, Clone)]
 pub struct KSpaceOperators {
-    pub kappa: ndarray::Array3<f64>,
+    pub kappa: leto::Array3<f64>,
     pub k_vec: (
-        ndarray::Array3<f64>,
-        ndarray::Array3<f64>,
-        ndarray::Array3<f64>,
+        leto::Array3<f64>,
+        leto::Array3<f64>,
+        leto::Array3<f64>,
     ),
-    pub k_magnitude: ndarray::Array3<f64>,
+    pub k_magnitude: leto::Array3<f64>,
     pub shift_ops: ShiftOperators,
 }
 
@@ -318,20 +318,20 @@ mod tests {
         let ops = cache.get_operators(key, || {
             compute_count.set(compute_count.get() + 1);
             KSpaceOperators {
-                kappa: ndarray::Array3::zeros((32, 32, 32)),
+                kappa: leto::Array3::zeros((32, 32, 32)),
                 k_vec: (
-                    ndarray::Array3::zeros((32, 32, 32)),
-                    ndarray::Array3::zeros((32, 32, 32)),
-                    ndarray::Array3::zeros((32, 32, 32)),
+                    leto::Array3::zeros((32, 32, 32)),
+                    leto::Array3::zeros((32, 32, 32)),
+                    leto::Array3::zeros((32, 32, 32)),
                 ),
-                k_magnitude: ndarray::Array3::zeros((32, 32, 32)),
+                k_magnitude: leto::Array3::zeros((32, 32, 32)),
                 shift_ops: ShiftOperators {
-                    ddx_k_shift_pos: ndarray::Array1::zeros(32),
-                    ddy_k_shift_pos: ndarray::Array1::zeros(32),
-                    ddz_k_shift_pos: ndarray::Array1::zeros(32),
-                    ddx_k_shift_neg: ndarray::Array1::zeros(32),
-                    ddy_k_shift_neg: ndarray::Array1::zeros(32),
-                    ddz_k_shift_neg: ndarray::Array1::zeros(32),
+                    ddx_k_shift_pos: leto::Array1::zeros(32),
+                    ddy_k_shift_pos: leto::Array1::zeros(32),
+                    ddz_k_shift_pos: leto::Array1::zeros(32),
+                    ddx_k_shift_neg: leto::Array1::zeros(32),
+                    ddy_k_shift_neg: leto::Array1::zeros(32),
+                    ddz_k_shift_neg: leto::Array1::zeros(32),
                 },
             }
         });

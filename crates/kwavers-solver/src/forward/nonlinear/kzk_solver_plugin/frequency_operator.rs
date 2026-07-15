@@ -1,6 +1,6 @@
 //! `FrequencyOperator`: frequency-domain absorption and diffraction operators for KZK.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Frequency domain operator for the KZK equation.
 #[derive(Debug, Clone)]

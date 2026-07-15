@@ -5,8 +5,8 @@ impl QuantizedModel {
         self.quantized_weights
             .iter()
             .map(|tensor| match &tensor.data {
-                QuantizedData::F32(v) => v.len() * 4,
-                QuantizedData::I8(v) => v.len(),
+                QuantizedData::F32(v) => (v.len()) * 4,
+                QuantizedData::I8(v) => (v.len()),
             })
             .sum::<usize>()
     }
@@ -26,7 +26,7 @@ impl QuantizedModel {
     pub fn dequantize_layer(&self, _layer_name: &str) -> Option<Vec<f32>> {
         self.quantized_weights
             .iter()
-            .find(|tensor| tensor.shape.len() > 1)
+            .find(|tensor| (tensor.shape.len()) > 1)
             .map(|tensor| tensor.dequantize())
     }
 }

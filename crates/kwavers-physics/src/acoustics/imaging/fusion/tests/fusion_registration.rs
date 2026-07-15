@@ -1,18 +1,18 @@
 //! Registration, coordinate, quality, and affine-transform tests.
 
 use super::super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_coordinate_array_generation() {
-    let dims = (10, 8, 5);
+    let dims = [10, 8, 5];
     let resolution = [1e-4, 2e-4, 3e-4];
 
     let coords = registration::generate_coordinate_arrays(dims, resolution);
 
-    assert_eq!(coords[0].len(), dims.0);
-    assert_eq!(coords[1].len(), dims.1);
-    assert_eq!(coords[2].len(), dims.2);
+    assert_eq!(coords[0].len(), dims[0]);
+    assert_eq!(coords[1].len(), dims[1]);
+    assert_eq!(coords[2].len(), dims[2]);
 
     // Verify spacing
     assert_eq!(coords[0][0], 0.0);
@@ -24,10 +24,10 @@ fn test_coordinate_array_generation() {
 #[test]
 fn test_registration_compatibility_validation() {
     // Compatible dimensions
-    registration::validate_registration_compatibility((10, 10, 10), (20, 20, 20)).unwrap();
+    registration::validate_registration_compatibility([10, 10, 10], [20, 20, 20]).unwrap();
 
     // Incompatible dimensions (ratio > 10)
-    let result = registration::validate_registration_compatibility((10, 10, 10), (200, 200, 200));
+    let result = registration::validate_registration_compatibility([10, 10, 10], [200, 200, 200]);
     assert!(result.is_err());
 }
 
@@ -48,7 +48,7 @@ fn test_bayesian_fusion_single_voxel() {
 
 #[test]
 fn test_optical_quality_visible_vs_infrared() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 100.0);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 100.0);
 
     let quality_visible = quality::compute_optical_quality(&intensity, 550e-9);
     let quality_infrared = quality::compute_optical_quality(&intensity, 1000e-9);
@@ -76,7 +76,7 @@ fn test_affine_transform_composition() {
 fn test_registration_transforms_stored() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))

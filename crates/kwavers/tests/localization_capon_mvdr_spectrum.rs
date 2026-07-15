@@ -38,7 +38,7 @@ use kwavers_analysis::signal_processing::beamforming::narrowband::capon::{
 };
 use kwavers_analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use kwavers_receiver::Position;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Construct a small 2D array (xy-plane, z=0) with modest aperture.
 ///
@@ -116,7 +116,7 @@ fn synth_narrowband_sensor_data(
         for t in 0..n_samples {
             let time_s = (t as f64) / sampling_frequency_hz;
             let phase = omega * (time_s - tau);
-            data[(i, 0, t)] = phase.cos() + (phase + std::f64::consts::FRAC_PI_2).cos();
+            data[[i, 0, t]] = phase.cos() + (phase + std::f64::consts::FRAC_PI_2).cos();
         }
     }
 

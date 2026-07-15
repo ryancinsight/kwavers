@@ -17,8 +17,8 @@ use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 
+use leto::{Array3, Array4};
 use metrics::ElasticWaveMetrics;
-use ndarray::{Array3, Array4};
 use properties::AnisotropicElasticProperties;
 
 #[derive(Debug, Clone)]
@@ -103,7 +103,7 @@ impl ElasticWave {
 
     /// Create wavenumber array for spectral methods
     fn create_wavenumber_array(n: usize, dx: f64) -> Array3<f64> {
-        let mut k = Array3::zeros((n, 1, 1));
+        let mut k = Array3::zeros([n, 1, 1]);
         let dk = TWO_PI / (n as f64 * dx);
 
         for i in 0..n / 2 {
@@ -140,7 +140,7 @@ impl ElasticWave {
     /// Detect interfaces based on material property jumps
     pub fn detect_interfaces(&mut self, medium: &dyn Medium, grid: &Grid, threshold: f64) {
         let (nx, ny, nz) = grid.dimensions();
-        let mut mask = Array3::from_elem((nx, ny, nz), false);
+        let mut mask = Array3::from_elem([nx, ny, nz], false);
 
         // Detect interfaces based on density jumps
         for k in 1..nz - 1 {

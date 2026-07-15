@@ -191,7 +191,7 @@ fn analyze_simulation_results(
         .iter()
         .filter(|&&x| x > mean + 2.0 * std_dev)
         .count();
-    let total_pixels = reconstructed.len();
+    let total_pixels = reconstructed.size();
     let high_contrast_ratio = high_contrast_pixels as f64 / total_pixels as f64;
 
     println!(

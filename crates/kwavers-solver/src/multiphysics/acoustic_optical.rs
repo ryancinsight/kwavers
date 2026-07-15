@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Acoustic-optical solver for coupled simulations
 #[derive(Debug)]
@@ -39,7 +39,7 @@ impl AcousticOpticalSolver {
     ) -> KwaversResult<()> {
         // Photoelastic effect: pressure changes refractive index
         // which affects optical intensity
-        for ((i, j, k), &p) in pressure.indexed_iter() {
+        for ([i, j, k], &p) in pressure.indexed_iter() {
             let delta_n = self.photoelastic_coefficient * p;
             let modulation = delta_n.mul_add(dt, 1.0);
             intensity[[i, j, k]] *= modulation;
@@ -120,7 +120,7 @@ mod tests {
         // λ₀=633nm, L=1mm, Λ=300µm, n=1.33 → Q≈0.01 (thin grating); a weak
         // 0.1 MPa wave gives ν≈0.1 (Δn=1e-5), so most light stays undeviated.
         let orders = s.diffraction_orders(1.0e5, 1e-3, 633e-9, 1.33, 300e-6, 0.0, max, 2000);
-        assert_eq!(orders.len(), 2 * max as usize + 1);
+        assert_eq!((orders.len()), 2 * max as usize + 1);
         let total: f64 = orders.iter().sum();
         assert!((total - 1.0).abs() < 1e-5, "energy = {total}");
         // Symmetric about the zeroth order (normal incidence, thin grating).

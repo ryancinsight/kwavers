@@ -2,7 +2,7 @@
 
 use super::constants::DEFAULT_SEED;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array1;
+use leto::Array1;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -61,7 +61,7 @@ impl PhaseShiftKeying {
 
     /// Generate phase sequence
     pub fn generate_sequence(&mut self, length: usize) -> Array1<f64> {
-        Array1::from_shape_fn(length, |_| {
+        Array1::from_shape_fn([length], |_| {
             let symbol = self.rng.gen_range(0..self.modulation_order);
             self.phase_states[symbol]
         })

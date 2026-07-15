@@ -1,11 +1,14 @@
 //! Pressure and velocity source injection for `PSTDSolver`.
 
 use super::super::orchestrator::PSTDSolver;
+use super::ops::{
+    add_density_source_components, add_masked_source_term, multiply_complex_by_real_field,
+    scale_real_field,
+};
 use crate::geometry::SolverGeometry;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::Fft3dInOutExt;
 use kwavers_source::{SourceField, SourceInjectionMode};
-use ndarray::Zip;
 
 impl PSTDSolver {
     /// Apply pressure sources.
@@ -35,7 +38,7 @@ impl PSTDSolver {
             self.source_handler
                 .add_pressure_source_into_density(shifted_time_index, &mut self.dpx);
             if source_gain != 1.0 {
-                self.dpx.mapv_inplace(|v| v * source_gain);
+                scale_real_field(&mut self.dpx, source_gain);
             }
             has_sources = true;
         }
@@ -57,11 +60,11 @@ impl PSTDSolver {
                     SourceInjectionMode::Boundary => 1.0,
                 };
 
-                Zip::from(&mut self.dpx).and(mask).par_for_each(|p, &m| {
-                    if m.abs() > 1e-12 {
-                        *p += m * amp * scale * mass_source_scale * source_gain;
-                    }
-                });
+                add_masked_source_term(
+                    &mut self.dpx,
+                    mask,
+                    amp * scale * mass_source_scale * source_gain,
+                );
                 has_sources = true;
             }
         }
@@ -90,9 +93,6 @@ impl PSTDSolver {
         // Special case — CylindricalAS: only ρₓ (axial) and ρ_z (radial) are updated by the
         // propagator; ρᵧ must NOT receive injection.
         let is_axisymmetric = self.config.geometry == SolverGeometry::CylindricalAS;
-        // density_scale = 1.0 for all geometries; dimension-awareness is expressed by which
-        // arrays receive injection, not by a fractional multiplier across all three arrays.
-        let density_scale = 1.0_f64;
 
         // Active-dimension flags for the Cartesian non-axisymmetric path.
         let has_y = self.grid.ny > 1;
@@ -109,116 +109,92 @@ impl PSTDSolver {
             kwavers_source::SourceMode::Additive => {
                 // R2C: dpx (nx,ny,nz) → p_k (nx,ny,nz_c); source_kappa pre-truncated to nz_c.
                 self.fft.forward_r2c_into(&self.dpx, &mut self.p_k);
-                Zip::from(&mut self.p_k)
-                    .and(self.source_kappa.view())
-                    .par_for_each(|val, &k| {
-                        *val *= k; // source_kappa is real-valued; scalar multiply
-                    });
+                multiply_complex_by_real_field(&mut self.p_k, &self.source_kappa);
                 self.fft
                     .inverse_c2r_into(&self.p_k, &mut self.dpx, &mut self.ux_k);
 
                 if is_axisymmetric {
-                    Zip::from(&mut self.rhox)
-                        .and(&mut self.rhoz)
-                        .and(&self.dpx)
-                        .par_for_each(|rx, rz, &s| {
-                            *rx += s * density_scale;
-                            *rz += s * density_scale;
-                        });
+                    add_density_source_components(
+                        &mut self.rhox,
+                        None,
+                        Some(&mut self.rhoz),
+                        &self.dpx,
+                    );
                 } else {
                     match (has_y, has_z) {
                         (true, true) => {
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoy)
-                                .and(&mut self.rhoz)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, ry, rz, &s| {
-                                    *rx += s;
-                                    *ry += s;
-                                    *rz += s;
-                                });
+                            add_density_source_components(
+                                &mut self.rhox,
+                                Some(&mut self.rhoy),
+                                Some(&mut self.rhoz),
+                                &self.dpx,
+                            );
                         }
                         (true, false) => {
                             // Quasi-2D (NZ=1): ρ_z never receives z-divergence update;
                             // injecting here causes unbounded accumulation → must be skipped.
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoy)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, ry, &s| {
-                                    *rx += s;
-                                    *ry += s;
-                                });
+                            add_density_source_components(
+                                &mut self.rhox,
+                                Some(&mut self.rhoy),
+                                None,
+                                &self.dpx,
+                            );
                         }
                         (false, true) => {
                             // XZ plane (NY=1): ρᵧ has no y-divergence update.
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoz)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, rz, &s| {
-                                    *rx += s;
-                                    *rz += s;
-                                });
+                            add_density_source_components(
+                                &mut self.rhox,
+                                None,
+                                Some(&mut self.rhoz),
+                                &self.dpx,
+                            );
                         }
                         (false, false) => {
                             // 1D (NY=1, NZ=1): only ρₓ participates.
-                            Zip::from(&mut self.rhox)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, &s| {
-                                    *rx += s;
-                                });
+                            add_density_source_components(&mut self.rhox, None, None, &self.dpx);
                         }
                     }
                 }
             }
             kwavers_source::SourceMode::AdditiveNoCorrection => {
                 if is_axisymmetric {
-                    Zip::from(&mut self.rhox)
-                        .and(&mut self.rhoz)
-                        .and(&self.dpx)
-                        .par_for_each(|rx, rz, &s| {
-                            *rx += s * density_scale;
-                            *rz += s * density_scale;
-                        });
+                    add_density_source_components(
+                        &mut self.rhox,
+                        None,
+                        Some(&mut self.rhoz),
+                        &self.dpx,
+                    );
                 } else {
                     match (has_y, has_z) {
                         (true, true) => {
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoy)
-                                .and(&mut self.rhoz)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, ry, rz, &s| {
-                                    *rx += s;
-                                    *ry += s;
-                                    *rz += s;
-                                });
+                            add_density_source_components(
+                                &mut self.rhox,
+                                Some(&mut self.rhoy),
+                                Some(&mut self.rhoz),
+                                &self.dpx,
+                            );
                         }
                         (true, false) => {
                             // Quasi-2D (NZ=1): ρ_z must not receive injection.
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoy)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, ry, &s| {
-                                    *rx += s;
-                                    *ry += s;
-                                });
+                            add_density_source_components(
+                                &mut self.rhox,
+                                Some(&mut self.rhoy),
+                                None,
+                                &self.dpx,
+                            );
                         }
                         (false, true) => {
                             // XZ plane (NY=1): ρᵧ must not receive injection.
-                            Zip::from(&mut self.rhox)
-                                .and(&mut self.rhoz)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, rz, &s| {
-                                    *rx += s;
-                                    *rz += s;
-                                });
+                            add_density_source_components(
+                                &mut self.rhox,
+                                None,
+                                Some(&mut self.rhoz),
+                                &self.dpx,
+                            );
                         }
                         (false, false) => {
                             // 1D (NY=1, NZ=1): only ρₓ participates.
-                            Zip::from(&mut self.rhox)
-                                .and(&self.dpx)
-                                .par_for_each(|rx, &s| {
-                                    *rx += s;
-                                });
+                            add_density_source_components(&mut self.rhox, None, None, &self.dpx);
                         }
                     }
                 }
@@ -232,7 +208,7 @@ impl PSTDSolver {
     /// API (e.g. elastic mode-isolation tests).
     ///
     /// **Note on scaling.** The k-Wave additive scaling
-    /// `2·c₀·Δt/Δα` for velocity sources is applied in the parallel
+    /// `2·c₀·Δt/Δα` for velocity sources is applied in the
     /// [`SourceHandler::inject_force_source`] path (used by
     /// `Source.from_velocity_mask` / k-Wave-style `u_mask + u_signal`).
     /// The dynamic-source path here is reserved for the elastic
@@ -252,31 +228,13 @@ impl PSTDSolver {
 
             match source.source_type() {
                 SourceField::VelocityX => {
-                    Zip::from(&mut self.fields.ux)
-                        .and(mask)
-                        .par_for_each(|u, &m| {
-                            if m.abs() > 1e-12 {
-                                *u += m * amp;
-                            }
-                        });
+                    add_masked_source_term(&mut self.fields.ux, mask, amp);
                 }
                 SourceField::VelocityY => {
-                    Zip::from(&mut self.fields.uy)
-                        .and(mask)
-                        .par_for_each(|u, &m| {
-                            if m.abs() > 1e-12 {
-                                *u += m * amp;
-                            }
-                        });
+                    add_masked_source_term(&mut self.fields.uy, mask, amp);
                 }
                 SourceField::VelocityZ => {
-                    Zip::from(&mut self.fields.uz)
-                        .and(mask)
-                        .par_for_each(|u, &m| {
-                            if m.abs() > 1e-12 {
-                                *u += m * amp;
-                            }
-                        });
+                    add_masked_source_term(&mut self.fields.uz, mask, amp);
                 }
                 SourceField::Pressure => {}
             }

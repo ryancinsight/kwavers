@@ -20,7 +20,7 @@ pub use types::{ElasticShearReconstructionResult, THERANOSTIC_ELASTIC_SHEAR_MODE
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::same_aperture::C_REF_M_S;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::config::TheranosticInverseConfig;
 use super::exposure::normalize_positive;
@@ -51,12 +51,12 @@ pub fn reconstruct_elastic_shear(
     let receiver_points = receiver_indices
         .iter()
         .map(|(ix, iy, _)| {
-            geometry::index_point_m(*ix, *iy, prepared.ct_hu.dim(), prepared.spacing_m)
+            geometry::index_point_m(*ix, *iy, prepared.ct_hu.shape(), prepared.spacing_m)
         })
         .collect::<Vec<_>>();
 
     let lesion_fraction = config.lesion_delta_c_m_s / C_REF_M_S;
-    let zero_model = Array2::<f64>::zeros(prepared.ct_hu.dim());
+    let zero_model = Array2::<f64>::zeros(prepared.ct_hu.shape());
     let baseline = elastic_medium(prepared, &zero_model, config.elastic_shear_speed_m_s, 0.0);
     let observed_medium = elastic_medium(
         prepared,
@@ -75,15 +75,15 @@ pub fn reconstruct_elastic_shear(
     );
     let source = velocity_source(
         &source_mask_2d,
-        prepared.ct_hu.dim(),
+        prepared.ct_hu.shape(),
         n_time,
         dt_s,
         center_frequency_hz,
         config.elastic_shear_speed_m_s,
     );
     let grid = Grid::new(
-        prepared.ct_hu.dim().0,
-        prepared.ct_hu.dim().1,
+        prepared.ct_hu.shape()[0],
+        prepared.ct_hu.shape()[1],
         1,
         prepared.spacing_m,
         prepared.spacing_m,

@@ -19,7 +19,7 @@ pub struct RayleighScattering {
 impl RayleighScattering {
     /// Create Rayleigh scattering calculator
     #[must_use]
-    pub fn new(wavelength: f64, radius: f64, refractive_index: num_complex::Complex64) -> Self {
+    pub fn new(wavelength: f64, radius: f64, refractive_index: eunomia::Complex64) -> Self {
         // Polarizability volume α = r³ (m²−1)/(m²+2)  [m³]
         // (Bohren & Huffman 1983, eq. 4.53 / van de Hulst convention — no 4πε₀ factor)
         let m = refractive_index;

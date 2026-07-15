@@ -5,9 +5,9 @@
 use crate::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, DopplerResult, WallFilter, WallFilterConfig,
 };
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, ArrayView3};
-use num_complex::Complex64;
+use leto::{Array2, ArrayView3};
 
 /// Color flow imaging configuration
 #[derive(Debug, Clone)]
@@ -92,7 +92,7 @@ impl ColorFlowImaging {
     }
 
     fn spatial_average(&self, data: &Array2<f64>, axial: usize, lateral: usize) -> Array2<f64> {
-        let (n_depths, n_beams) = data.dim();
+        let [n_depths, n_beams] = data.shape();
         let mut averaged = data.clone();
 
         let axial_half = axial / 2;
@@ -126,8 +126,8 @@ mod tests {
     use crate::signal_processing::doppler::{
         AutocorrelationConfig, WallFilterConfig, WallFilterType,
     };
-    use ndarray::{Array2, Array3};
-    use num_complex::Complex64;
+    use eunomia::Complex64;
+    use leto::{Array2, Array3};
 
     // Helper: config with HighPass wall filter and no spatial averaging.
     // Uses default AutocorrelationConfig (ensemble_size=10, f₀=5 MHz, PRF=4 kHz).
@@ -155,7 +155,7 @@ mod tests {
         let cfi = ColorFlowImaging::new(cfg_no_avg());
         let iq = Array3::<Complex64>::zeros((10, 8, 4));
         let result = cfi.process(&iq.view()).unwrap();
-        assert_eq!(result.velocity.dim(), (8, 4));
+        assert_eq!(result.velocity.shape(), [8, 4]);
         for &val in result.velocity.iter() {
             assert_eq!(val, 0.0, "zero IQ must yield zero velocity, got {val}");
         }
@@ -194,8 +194,8 @@ mod tests {
         let cfi = ColorFlowImaging::new(cfg_no_avg());
         let iq = Array3::<Complex64>::zeros((10, 16, 8));
         let result = cfi.process(&iq.view()).unwrap();
-        assert_eq!(result.velocity.dim(), (16, 8), "velocity shape wrong");
-        assert_eq!(result.variance.dim(), (16, 8), "variance shape wrong");
+        assert_eq!(result.velocity.shape(), [16, 8], "velocity shape wrong");
+        assert_eq!(result.variance.shape(), [16, 8], "variance shape wrong");
     }
 
     // ─── process: spatial averaging ───────────────────────────────────────────

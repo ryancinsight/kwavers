@@ -4,10 +4,10 @@ use super::backend::FemHelmholtzBackend;
 use crate::backends::acoustic::FrequencyDomainAcousticBackend;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::helmholtz::fem::{FemHelmholtzConfig, FemPreconditionerType};
-use ndarray::arr2;
-use num_complex::Complex64;
+use leto::Array2;
 
 fn medium_for(grid: &Grid) -> HomogeneousMedium {
     HomogeneousMedium::new(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.0, 0.0, grid)
@@ -50,7 +50,7 @@ fn fem_helmholtz_backend_interpolates_solved_pressure() {
     backend.add_nodal_load(0, Complex64::new(1.0, 0.0)).unwrap();
     backend.solve().unwrap();
 
-    let points = arr2(&[[0.0, 0.0, 0.0], [2.0, 2.0, 2.0]]);
+    let points = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 2.0, 2.0, 2.0]).unwrap();
     let values = backend.interpolate_pressure(points.view()).unwrap();
 
     assert_eq!(values.len(), 2);

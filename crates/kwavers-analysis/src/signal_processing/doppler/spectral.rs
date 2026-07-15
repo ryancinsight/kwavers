@@ -42,10 +42,10 @@
 //! - Evans DH, McDicken WN (2000). *Doppler Ultrasound: Physics, Instrumentation and
 //!   Signal Processing* (2nd ed.). Wiley.
 
+use apollo::{fft_1d_array, Complex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{fft_1d_array, Complex64};
-use ndarray::{Array1, ArrayView1};
+use leto::{Array1, ArrayView1};
 
 /// Spectral analysis configuration
 #[derive(Debug, Clone)]
@@ -114,12 +114,13 @@ impl SpectralAnalysis {
             ));
         }
 
-        let n_signal = signal.len();
+        let n_signal = signal.size();
         let out_len = m / 2 + 1; // one-sided spectrum length
 
         // ── Hann window ────────────────────────────────────────────────────────
         // w[n] = ½·(1 − cos(2πn/(M−1)))   for n = 0,…,M−1
-        let window: Array1<f64> = Array1::from_shape_fn(m, |n| {
+        let window: Array1<f64> = Array1::from_shape_fn([m], |idx| {
+            let n = idx[0];
             0.5 * (1.0 - (TWO_PI * n as f64 / (m - 1) as f64).cos())
         });
 
@@ -134,13 +135,13 @@ impl SpectralAnalysis {
         let hop =
             ((m as f64 * (1.0 - self.config.overlap.clamp(0.0, 0.99))).round() as usize).max(1);
 
-        let mut psd_sum = Array1::<f64>::zeros(out_len);
+        let mut psd_sum = Array1::<f64>::zeros([out_len]);
         let mut n_segments = 0usize;
 
         let mut start = 0usize;
         loop {
             // Zero-pad the last segment if it doesn't fill the window
-            let mut segment = Array1::<f64>::zeros(m);
+            let mut segment = Array1::<f64>::zeros([m]);
             let copy_len = (n_signal.saturating_sub(start)).min(m);
             if copy_len == 0 {
                 break;
@@ -150,7 +151,10 @@ impl SpectralAnalysis {
             }
 
             // Apply Hann window
-            let windowed: Array1<f64> = Array1::from_shape_fn(m, |i| segment[i] * window[i]);
+            let windowed: Array1<f64> = Array1::from_shape_fn([m], |idx| {
+                let i = idx[0];
+                segment[i] * window[i]
+            });
 
             // FFT and compute one-sided periodogram P[k] = |X[k]|² / (f_s · M · U)
             let spectrum: Array1<Complex64> = fft_1d_array(&windowed);
@@ -170,11 +174,11 @@ impl SpectralAnalysis {
         }
 
         if n_segments == 0 {
-            return Ok(Array1::zeros(out_len));
+            return Ok(Array1::<f64>::zeros([out_len]));
         }
 
         // Average over all segments
-        Ok(psd_sum / n_segments as f64)
+        Ok(psd_sum.mapv(|x| x / n_segments as f64))
     }
 
     /// Frequency axis for the PSD output (Hz).
@@ -183,7 +187,8 @@ impl SpectralAnalysis {
     #[must_use]
     pub fn frequency_axis(&self, sample_rate: f64) -> Array1<f64> {
         let out_len = self.config.fft_size / 2 + 1;
-        Array1::from_shape_fn(out_len, |k| {
+        Array1::from_shape_fn([out_len], |idx| {
+            let k = idx[0];
             k as f64 * sample_rate / self.config.fft_size as f64
         })
     }
@@ -213,7 +218,8 @@ mod tests {
         let f0 = 1_000.0_f64; // 1 kHz tone — exactly at bin k=25 for fft_size=256, fs=10kHz
         let n_samples = 1024usize;
 
-        let signal: Array1<f64> = Array1::from_shape_fn(n_samples, |n| {
+        let signal: Array1<f64> = Array1::from_shape_fn([n_samples], |idx_n| {
+            let n = idx_n[0];
             (2.0 * PI * f0 * n as f64 / sample_rate).sin()
         });
 
@@ -241,7 +247,7 @@ mod tests {
     #[test]
     fn test_psd_zero_signal() {
         let spectral = SpectralAnalysis::new(SpectralConfig::default());
-        let signal = Array1::<f64>::zeros(512);
+        let signal = Array1::<f64>::zeros([512]);
         let psd = spectral.compute_psd(signal.view(), 8000.0).unwrap();
         assert!(
             psd.iter().all(|&v| v == 0.0),
@@ -260,7 +266,8 @@ mod tests {
         let spectral = SpectralAnalysis::new(SpectralConfig::default());
         let sample_rate = 44100.0_f64;
         // White-noise-like signal: sum of two incommensurate frequencies
-        let signal: Array1<f64> = Array1::from_shape_fn(2048, |n| {
+        let signal: Array1<f64> = Array1::from_shape_fn([2048], |idx_n| {
+            let n = idx_n[0];
             (2.0 * PI * 1234.5 * n as f64 / sample_rate).sin()
                 + 0.5 * (2.0 * PI * 5678.9 * n as f64 / sample_rate).sin()
         });
@@ -284,7 +291,7 @@ mod tests {
         let fs = 10_000.0_f64;
         let freq = spectral.frequency_axis(fs);
 
-        assert_eq!(freq.len(), 129); // fft_size/2 + 1 = 129
+        assert_eq!(freq.size(), 129); // fft_size/2 + 1 = 129
         assert!((freq[0]).abs() < 1e-10); // DC = 0
         assert!(
             (freq[128] - fs / 2.0).abs() < 1e-6,
@@ -311,8 +318,10 @@ mod tests {
         let fs = 16_000.0_f64;
         let f0 = 2_000.0_f64;
 
-        let signal: Array1<f64> =
-            Array1::from_shape_fn(m, |n| (2.0 * PI * f0 * n as f64 / fs).sin());
+        let signal: Array1<f64> = Array1::from_shape_fn([m], |idx| {
+            let n = idx[0];
+            (2.0 * PI * f0 * n as f64 / fs).sin()
+        });
 
         let signal_power = signal.iter().map(|&x| x * x).sum::<f64>() / m as f64;
         let psd = spectral.compute_psd(signal.view(), fs).unwrap();

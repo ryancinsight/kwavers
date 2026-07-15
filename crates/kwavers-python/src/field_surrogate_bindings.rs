@@ -9,10 +9,12 @@ use kwavers_physics::field_surrogate::{
     place_kernel_at_focus as kwavers_place_kernel_at_focus, resample_trilinear,
     FocalKernel as KwaversFocalKernel, KernelCube as KwaversKernelCube,
 };
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::wrap_pyfunction;
+
+use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 
 /// A cached focal-pressure kernel from a single PSTD pulse.
 ///
@@ -77,7 +79,7 @@ impl FocalKernel {
         }
         Ok(FocalKernel {
             inner: KwaversFocalKernel::new(
-                arr,
+                nd_to_leto3(arr),
                 dx_m,
                 focus_idx,
                 f0,
@@ -126,7 +128,8 @@ impl FocalKernel {
 
     #[getter]
     fn shape(&self) -> (usize, usize, usize) {
-        self.inner.shape()
+        let [nx, ny, nz] = self.inner.shape();
+        (nx, ny, nz)
     }
 
     /// Peak rarefactional pressure at the focal voxel [Pa].
@@ -136,11 +139,11 @@ impl FocalKernel {
 
     /// Return a copy of the field array as a numpy array.
     fn field<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray3<f64>> {
-        self.inner.field.clone().into_pyarray(py)
+        leto3_to_nd3(self.inner.field.clone()).to_pyarray(py)
     }
 
     fn __repr__(&self) -> String {
-        let (nx, ny, nz) = self.inner.shape();
+        let [nx, ny, nz] = self.inner.shape();
         format!(
             "FocalKernel(shape=({nx}, {ny}, {nz}), dx_m={:.3e}, f0={:.2e}, pnp={:.2e})",
             self.inner.dx_m, self.inner.f0, self.inner.pnp_realised
@@ -245,7 +248,7 @@ impl KernelCube {
             self.inner
                 .query(f0, pnp, target_shape, target_focus_idx, target_dx_m)
         });
-        Ok(env.into_pyarray(py))
+        Ok(leto3_to_nd3(env).to_pyarray(py))
     }
 
     fn __repr__(&self) -> String {
@@ -290,7 +293,7 @@ fn place_kernel_at_focus<'py>(
         };
         kwavers_place_kernel_at_focus(&resampled, target_shape, target_focus_idx)
     });
-    Ok(placed.into_pyarray(py))
+    Ok(leto3_to_nd3(placed).to_pyarray(py))
 }
 
 pub fn register(m: &Bound<'_, PyModule>) -> PyResult<()> {

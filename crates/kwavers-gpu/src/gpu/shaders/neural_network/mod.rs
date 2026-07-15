@@ -64,16 +64,17 @@ impl NeuralNetworkShader {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub async fn new(device: &GpuDevice) -> KwaversResult<Self> {
-        let shader_module = device
-            .device()
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Neural Network Shader"),
-                source: wgpu::ShaderSource::Wgsl(NEURAL_NETWORK_SHADER.into()),
-            });
+        let shader_module =
+            device
+                .wgpu_device()
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Neural Network Shader"),
+                    source: wgpu::ShaderSource::Wgsl(NEURAL_NETWORK_SHADER.into()),
+                });
 
         let bind_group_layout =
             device
-                .device()
+                .wgpu_device()
                 .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("Neural Network Bind Group Layout"),
                     entries: &[
@@ -132,7 +133,7 @@ impl NeuralNetworkShader {
 
         let pipeline_layout =
             device
-                .device()
+                .wgpu_device()
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("Neural Network Pipeline Layout"),
                     bind_group_layouts: &[&bind_group_layout],
@@ -141,7 +142,7 @@ impl NeuralNetworkShader {
 
         let matmul_pipeline =
             device
-                .device()
+                .wgpu_device()
                 .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                     label: Some("Matrix Multiplication Pipeline"),
                     layout: Some(&pipeline_layout),
@@ -153,7 +154,7 @@ impl NeuralNetworkShader {
 
         let activation_pipeline =
             device
-                .device()
+                .wgpu_device()
                 .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
                     label: Some("Activation Pipeline"),
                     layout: Some(&pipeline_layout),

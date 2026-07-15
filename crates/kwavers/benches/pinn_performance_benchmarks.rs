@@ -13,9 +13,9 @@
 //! - **Large-Scale Problems**: 10K-100K collocation point scaling
 
 #[cfg(feature = "pinn")]
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
+use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::BurnPINN2DConfig;
+use kwavers_solver::inverse::pinn::ml::PinnConfig2D;
 #[cfg(feature = "pinn")]
 use std::time::Duration;
 
@@ -157,14 +157,14 @@ fn run_pinn_training_benchmark(
     config: PinnBenchmarkConfig,
 ) -> Result<f64, Box<dyn std::error::Error>> {
     // Create model
-    let _model_config = BurnPINN2DConfig {
+    let _model_config = PinnConfig2D {
         hidden_layers: vec![64, 64, 64],
         learning_rate: 0.001,
         num_collocation_points: config.collocation_points,
         ..Default::default()
     };
 
-    // In practice, this would create actual Burn model
+    // In practice, this would create actual PINN model
     // For benchmarking, simulate training time
     let base_time_per_point = if config.use_gpu { 0.0001 } else { 0.001 }; // seconds
     let adaptive_factor = if config.use_adaptive_sampling {

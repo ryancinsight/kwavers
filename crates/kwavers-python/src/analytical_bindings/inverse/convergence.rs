@@ -1,7 +1,7 @@
 //! Convergence-curve bindings for inverse-problem examples.
 
 use kwavers_physics::analytical::inverse as inverse_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -23,7 +23,7 @@ pub fn adjoint_gradient_convergence(
     decay: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = inverse_mod::adjoint_gradient_convergence(n_iter, initial_error, decay);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Exponential convergence curve with additive floor.
@@ -42,5 +42,5 @@ pub fn exponential_convergence_curve(
     let result =
         inverse_mod::exponential_convergence_curve(epochs, initial_value, time_constant, floor)
             .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

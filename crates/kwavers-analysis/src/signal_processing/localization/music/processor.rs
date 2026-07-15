@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use leto::{Array1, Array2};
 
 use super::MUSICConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -69,9 +69,9 @@ impl MUSICProcessor {
     ///
     pub fn estimate_covariance(
         &self,
-        snapshots: &Array2<Complex<f64>>,
-    ) -> KwaversResult<Array2<Complex<f64>>> {
-        let (num_sensors, num_snapshots) = snapshots.dim();
+        snapshots: &Array2<Complex64>,
+    ) -> KwaversResult<Array2<Complex64>> {
+        let [num_sensors, num_snapshots] = snapshots.shape();
 
         if num_snapshots == 0 {
             return Err(KwaversError::InvalidInput(
@@ -83,7 +83,7 @@ impl MUSICProcessor {
 
         for i in 0..num_sensors {
             for j in 0..num_sensors {
-                let mut sum = Complex::new(0.0, 0.0);
+                let mut sum = Complex64::new(0.0, 0.0);
                 for k in 0..num_snapshots {
                     sum += snapshots[[i, k]] * snapshots[[j, k]].conj();
                 }
@@ -92,11 +92,11 @@ impl MUSICProcessor {
         }
 
         if self.config.diagonal_loading > 0.0 {
-            let trace: Complex<f64> = (0..num_sensors).map(|i| covariance[[i, i]]).sum();
+            let trace: Complex64 = (0..num_sensors).map(|i| covariance[[i, i]]).sum();
             let loading = self.config.diagonal_loading * (trace / num_sensors as f64).re;
 
             for i in 0..num_sensors {
-                covariance[[i, i]] += Complex::new(loading, 0.0);
+                covariance[[i, i]] += Complex64::new(loading, 0.0);
             }
         }
 
@@ -109,7 +109,7 @@ impl MUSICProcessor {
         sensor_positions: &[[f64; 3]],
         frequency: f64,
         speed_of_sound: f64,
-    ) -> Array1<Complex<f64>> {
+    ) -> Array1<Complex64> {
         let num_sensors = sensor_positions.len();
         let mut steering = Array1::zeros(num_sensors);
 
@@ -122,7 +122,7 @@ impl MUSICProcessor {
             let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let phase = -k * distance;
-            steering[m] = Complex::new(phase.cos(), phase.sin());
+            steering[m] = Complex64::new(phase.cos(), phase.sin());
         }
 
         steering

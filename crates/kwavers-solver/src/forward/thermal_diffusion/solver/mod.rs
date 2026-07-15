@@ -16,7 +16,8 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::{Array3, ArrayView3, Zip};
+use leto::{Array3, ArrayView3};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 use kwavers_physics::thermal::diffusion::{
     BioheatParameters, CattaneoVernotte, HyperbolicParameters, PennesBioheat,
@@ -83,7 +84,7 @@ impl ThermalDiffusionSolver {
     /// Compute `∇²T` into the pre-allocated Laplacian workspace.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Validation`] if `spatial_order` is not 2 or 4.
+    /// Returns [`crate::KwaversError::Validation`] if `spatial_order` is not 2 or 4.
     /// Invalid orders are rejected rather than downgraded because changing the
     /// stencil order changes the truncation-error and stability contract.
     fn calculate_laplacian(&mut self, grid: &Grid) -> KwaversResult<()> {
@@ -251,7 +252,7 @@ impl ThermalDiffusionSolver {
 
     /// Update.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update(
         &mut self,
@@ -261,7 +262,7 @@ impl ThermalDiffusionSolver {
         external_source: Option<ArrayView3<'_, f64>>,
     ) -> KwaversResult<()> {
         if self.temperature_prev.is_none() {
-            self.temperature_prev = Some(Array3::zeros(self.temperature.raw_dim()));
+            self.temperature_prev = Some(Array3::zeros(self.temperature.shape()));
         }
         if let Some(ref mut prev) = self.temperature_prev {
             prev.assign(&self.temperature);
@@ -305,18 +306,64 @@ impl ThermalDiffusionSolver {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        Zip::indexed(&mut self.temperature)
-            .and(&self.laplacian_workspace)
-            .par_for_each(|(i, j, k), temp, &lap| {
-                let x = i as f64 * grid.dx;
-                let y = j as f64 * grid.dy;
-                let z = k as f64 * grid.dz;
+        let shape = self.temperature.shape();
+        if let Some(source) = external_source.as_ref() {
+            if source.shape() != shape {
+                return Err(KwaversError::DimensionMismatch(format!(
+                    "thermal diffusion source shape {:?} does not match temperature shape {:?}",
+                    source.shape(),
+                    shape
+                )));
+            }
+        }
 
-                let alpha = medium.thermal_diffusivity(x, y, z, grid);
-                let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
+        let [_, ny, nz] = shape;
+        let slab_len = ny * nz;
+        let source_slice = external_source
+            .as_ref()
+            .and_then(|source| source.as_slice());
 
-                *temp += dt * alpha.mul_add(lap, source);
-            });
+        let update_cell = |i: usize, j: usize, k: usize, temp: &mut f64, lap: f64, source: f64| {
+            let x = i as f64 * grid.dx;
+            let y = j as f64 * grid.dy;
+            let z = k as f64 * grid.dz;
+
+            let alpha = medium.thermal_diffusivity(x, y, z, grid);
+
+            *temp += dt * alpha.mul_add(lap, source);
+        };
+
+        let source_is_contiguous = external_source.is_none() || source_slice.is_some();
+
+        if let (Some(temperature), Some(laplacian), true) = (
+            self.temperature.as_slice_mut(),
+            self.laplacian_workspace.as_slice(),
+            source_is_contiguous,
+        ) {
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                temperature,
+                slab_len,
+                |i, slab| {
+                    let base = i * slab_len;
+                    for (offset, temp) in slab.iter_mut().enumerate() {
+                        let j = offset / nz;
+                        let k = offset % nz;
+                        let source = source_slice.map_or(0.0, |source| source[base + offset]);
+                        update_cell(i, j, k, temp, laplacian[base + offset], source);
+                    }
+                },
+            );
+        } else {
+            let laplacian_workspace = &self.laplacian_workspace;
+            self.temperature
+                .indexed_iter_mut()
+                .expect("invariant: contiguous owned temperature array")
+                .for_each(|([i, j, k], temp)| {
+                    let lap = laplacian_workspace[[i, j, k]];
+                    let source = external_source.as_ref().map_or(0.0, |s| s[[i, j, k]]);
+                    update_cell(i, j, k, temp, lap, source);
+                });
+        }
 
         Ok(())
     }

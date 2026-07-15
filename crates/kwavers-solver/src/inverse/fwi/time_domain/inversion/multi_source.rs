@@ -1,9 +1,16 @@
 //! Multi-source FWI inversion variants: standard and skull-masked brain imaging.
 
-use super::super::{geometry::FwiGeometry, FwiProcessor};
+use super::super::{
+    field_ops::{
+        add_assign_field, apply_frozen_reference_or_clamp, divide_field_in_place,
+        subtract_scaled_field, zero_masked_field,
+    },
+    geometry::FwiGeometry,
+    FwiProcessor,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3, Zip};
+use leto::{Array2, Array3};
 
 impl FwiProcessor {
     /// Multi-source FWI inversion.
@@ -16,8 +23,8 @@ impl FwiProcessor {
     /// - Marquet et al. (2013). *Phys. Med. Biol.* 58, 2937.
     /// - Guasch et al. (2020). *npj Digital Medicine* 3, 28.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn invert_multi_source(
         &self,
@@ -47,9 +54,7 @@ impl FwiProcessor {
                 let (obj, grad) =
                     self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
                 total_objective += obj;
-                Zip::from(&mut total_gradient)
-                    .and(&grad)
-                    .par_for_each(|a, &b| *a += b);
+                add_assign_field(&mut total_gradient, &grad);
             }
 
             let smoothed = self.smooth_gradient(&total_gradient);
@@ -68,7 +73,7 @@ impl FwiProcessor {
 
             let mut normalized = regularized;
             if grad_max > f64::EPSILON {
-                normalized.par_mapv_inplace(|g| g / grad_max);
+                divide_field_in_place(&mut normalized, grad_max);
             }
 
             let step_size = self.line_search_multi(&current_model, &normalized, shots, grid)?;
@@ -87,9 +92,7 @@ impl FwiProcessor {
                 break;
             }
 
-            Zip::from(&mut current_model)
-                .and(&normalized)
-                .par_for_each(|c, &g| *c -= g * step_size);
+            subtract_scaled_field(&mut current_model, &normalized, step_size);
             self.apply_model_constraints(&mut current_model);
 
             let c_max = current_model
@@ -116,8 +119,8 @@ impl FwiProcessor {
     ///
     /// Reference: Guasch (2020) §Methods "Brain FWI".
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn invert_multi_source_masked(
@@ -144,16 +147,13 @@ impl FwiProcessor {
         let (nx, ny, nz) = grid.dimensions();
         let mut current_model = initial_model.clone();
 
-        Zip::from(&mut current_model)
-            .and(frozen_mask)
-            .and(reference_model)
-            .par_for_each(|c, &frozen, &r| {
-                if frozen {
-                    *c = r;
-                } else {
-                    *c = c.clamp(c_min, c_max);
-                }
-            });
+        apply_frozen_reference_or_clamp(
+            &mut current_model,
+            frozen_mask,
+            reference_model,
+            c_min,
+            c_max,
+        );
 
         for iteration in 0..self.parameters.max_iterations {
             let mut total_objective = 0.0_f64;
@@ -162,31 +162,17 @@ impl FwiProcessor {
                 let (obj, grad) =
                     self.compute_shot_gradient(&current_model, geometry, observed_data, grid)?;
                 total_objective += obj;
-                Zip::from(&mut total_gradient)
-                    .and(&grad)
-                    .par_for_each(|a, &b| *a += b);
+                add_assign_field(&mut total_gradient, &grad);
             }
 
-            Zip::from(&mut total_gradient)
-                .and(frozen_mask)
-                .par_for_each(|g, &frozen| {
-                    if frozen {
-                        *g = 0.0;
-                    }
-                });
+            zero_masked_field(&mut total_gradient, frozen_mask);
 
             let smoothed = self.smooth_gradient(&total_gradient);
             let mut regularized = self.apply_regularization(&smoothed, &current_model, 1.0)?;
 
             // Re-zero skull voxels after smoothing to prevent smooth-gradient leakage
             // from triggering spurious CFL violations in the line search.
-            Zip::from(&mut regularized)
-                .and(frozen_mask)
-                .par_for_each(|g, &frozen| {
-                    if frozen {
-                        *g = 0.0;
-                    }
-                });
+            zero_masked_field(&mut regularized, frozen_mask);
 
             let grad_max = regularized
                 .iter()
@@ -201,7 +187,7 @@ impl FwiProcessor {
 
             let mut normalized = regularized;
             if grad_max > f64::EPSILON {
-                normalized.par_mapv_inplace(|g| g / grad_max);
+                divide_field_in_place(&mut normalized, grad_max);
             }
 
             let step_size = self.line_search_multi(&current_model, &normalized, shots, grid)?;
@@ -216,20 +202,15 @@ impl FwiProcessor {
                 break;
             }
 
-            Zip::from(&mut current_model)
-                .and(&normalized)
-                .par_for_each(|c, &g| *c -= g * step_size);
+            subtract_scaled_field(&mut current_model, &normalized, step_size);
 
-            Zip::from(&mut current_model)
-                .and(frozen_mask)
-                .and(reference_model)
-                .par_for_each(|c, &frozen, &r| {
-                    if frozen {
-                        *c = r;
-                    } else {
-                        *c = c.clamp(c_min, c_max);
-                    }
-                });
+            apply_frozen_reference_or_clamp(
+                &mut current_model,
+                frozen_mask,
+                reference_model,
+                c_min,
+                c_max,
+            );
 
             let c_max_model = current_model
                 .iter()

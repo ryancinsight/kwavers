@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_fnm_solver_creation() {
@@ -72,10 +72,10 @@ fn test_field_computation() {
     solver.precompute_factors(25e-3).unwrap();
 
     // Uniform velocity distribution
-    let velocity = Array2::<Complex64>::from_elem((16, 16), Complex64::new(1.0, 0.0));
+    let velocity = Array2::<Complex64>::from_elem([16, 16], Complex64::new(1.0, 0.0));
 
     let pressure_field = solver.compute_field(&velocity, 25e-3).unwrap();
-    assert_eq!(pressure_field.dim(), (16, 16));
+    assert_eq!(pressure_field.shape(), [16, 16]);
 
     // Check that result is not zero (basic sanity check)
     let sum: Complex64 = pressure_field.iter().sum();

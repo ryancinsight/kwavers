@@ -14,6 +14,7 @@ pub mod io;
 pub mod manager;
 pub mod modalities;
 pub mod multi_physics;
+mod parallel;
 pub mod parameters;
 pub mod runner;
 pub mod setup;

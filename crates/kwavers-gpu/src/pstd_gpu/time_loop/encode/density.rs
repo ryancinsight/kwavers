@@ -1,9 +1,9 @@
 //! `encode_nonlinear_snapshot` and `encode_density_update`: density phase dispatches.
 
-use super::super::super::GpuPstdSolver;
+use super::super::super::state::WgpuPstdState;
 use super::StepCtx;
 
-impl GpuPstdSolver {
+impl WgpuPstdState {
     /// Encode the nonlinear mass-conservation density snapshot (no-op when linear).
     ///
     /// Pre-computes `2*(rhox+rhoy+rhoz)+rho0` into `field_p` before the density
@@ -24,7 +24,7 @@ impl GpuPstdSolver {
             self.dispatch(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_snapshot_rho0_plus_rho,
+                &self.pipelines.snapshot_rho0_plus_rho,
                 bg,
                 ctx.elem_wg,
                 "snap_rho",
@@ -64,25 +64,25 @@ impl GpuPstdSolver {
             self.dispatch(
                 cpass,
                 &ctx.params(step, ax + 1),
-                &self.pipeline_copy_field_to_k,
+                &self.pipelines.copy_field_to_k,
                 bg,
                 ew,
                 "cp_u",
             );
-            self.fft_3d(cpass, bg, step, ctx.n_sensors);
+            self.fft_3d(cpass, bg, ctx, step);
             self.dispatch(
                 cpass,
                 &ctx.params(step, ax + 3),
-                &self.pipeline_kspace_shift,
+                &self.pipelines.kspace_shift,
                 bg,
                 ew,
                 "kshift_d",
             );
-            self.ifft_3d(cpass, bg, step, ctx.n_sensors);
+            self.ifft_3d(cpass, bg, ctx, step);
             self.dispatch(
                 cpass,
                 &ctx.params(step, ax),
-                &self.pipeline_dens_update,
+                &self.pipelines.dens_update,
                 bg,
                 ew,
                 "dens_upd",
@@ -91,7 +91,7 @@ impl GpuPstdSolver {
                 self.dispatch_absorb(
                     cpass,
                     &ctx.params(step, ax),
-                    &self.pipeline_absorb_accum_div_u,
+                    &self.pipelines.absorb_accum_div_u,
                     bg,
                     ew,
                     "abs_accum",
@@ -104,25 +104,25 @@ impl GpuPstdSolver {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_absorb_prep_l1_kspace,
+                &self.pipelines.absorb_prep_l1_kspace,
                 bg,
                 ew,
                 "abs_prep_l1",
             );
-            self.fft_3d(cpass, bg, step, ctx.n_sensors);
+            self.fft_3d(cpass, bg, ctx, step);
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_absorb_mul_nabla,
+                &self.pipelines.absorb_mul_nabla,
                 bg,
                 ew,
                 "abs_n1",
             );
-            self.ifft_3d(cpass, bg, step, ctx.n_sensors);
+            self.ifft_3d(cpass, bg, ctx, step);
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_absorb_copy_to_scratch,
+                &self.pipelines.absorb_copy_to_scratch,
                 bg,
                 ew,
                 "abs_cp_l1",
@@ -132,25 +132,25 @@ impl GpuPstdSolver {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 1),
-                &self.pipeline_absorb_prep_l2_kspace,
+                &self.pipelines.absorb_prep_l2_kspace,
                 bg,
                 ew,
                 "abs_prep_l2",
             );
-            self.fft_3d(cpass, bg, step, ctx.n_sensors);
+            self.fft_3d(cpass, bg, ctx, step);
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 1),
-                &self.pipeline_absorb_mul_nabla,
+                &self.pipelines.absorb_mul_nabla,
                 bg,
                 ew,
                 "abs_n2",
             );
-            self.ifft_3d(cpass, bg, step, ctx.n_sensors);
+            self.ifft_3d(cpass, bg, ctx, step);
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 1),
-                &self.pipeline_absorb_copy_to_scratch,
+                &self.pipelines.absorb_copy_to_scratch,
                 bg,
                 ew,
                 "abs_cp_l2",

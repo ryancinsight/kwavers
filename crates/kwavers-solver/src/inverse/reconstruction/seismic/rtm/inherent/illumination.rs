@@ -12,9 +12,10 @@
 //! scattering-based inversion", SEG Technical Program Expanded Abstracts.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array4, Zip};
+use leto::Array4;
 
 use super::super::types::ReverseTimeMigration;
+use super::parallel::for_each_view_mut;
 
 impl ReverseTimeMigration {
     /// Accumulate `Σ_t S²(x,t)` into `self.source_illumination`.
@@ -28,10 +29,13 @@ impl ReverseTimeMigration {
         let n_time_steps = source_wavefield.shape()[0];
 
         for t in 0..n_time_steps {
-            let src = source_wavefield.slice(s![t, .., .., ..]);
-            Zip::from(&mut self.source_illumination)
-                .and(&src)
-                .par_for_each(|illum, &s| *illum += s * s);
+            let src = source_wavefield
+                .slice_with::<3>(&s![t, .., .., ..])
+                .expect("invariant: RTM stencil slice in range");
+            for_each_view_mut(self.source_illumination.view_mut(), |idx, illum| {
+                let s = src[idx];
+                *illum += s * s;
+            });
         }
 
         Ok(())

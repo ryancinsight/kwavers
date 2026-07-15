@@ -1,8 +1,8 @@
 //! Public solver accessors: GPU accelerator hookup, CPML enable, CFL helpers,
 //! metrics access/merge, sensor data extraction, orchestrated run loop.
 
+use leto::{Array3, ArrayView2};
 use log::info;
-use ndarray::{Array3, ArrayView2};
 use std::sync::Arc;
 
 use super::{FdtdGpuAccelerator, FdtdMetrics, GenericFdtdSolver};
@@ -19,7 +19,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when `kspace_correction =
+    /// Returns [`crate::KwaversError::InvalidInput`] when `kspace_correction =
     /// Spectral` is active. C-PML's convolutional memory update requires
     /// finite-difference gradients; spectral mode computes gradients entirely
     /// in k-space and never calls the CPML update, so enabling CPML with
@@ -88,7 +88,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
     /// Extract recorded sensor data as `Array2<f64>`
     /// Returns None if no sensors are configured or no data has been recorded
-    pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
+    pub fn extract_recorded_sensor_data(&self) -> Option<leto::Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
 
@@ -111,12 +111,9 @@ impl GenericFdtdSolver<Array3<f64>> {
     }
     /// Run orchestrated.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub fn run_orchestrated(
-        &mut self,
-        steps: usize,
-    ) -> KwaversResult<Option<ndarray::Array2<f64>>> {
+    pub fn run_orchestrated(&mut self, steps: usize) -> KwaversResult<Option<leto::Array2<f64>>> {
         // Record initial state t=0 to match k-Wave's convention (returning Nt+1 points)
         if self.time_step_index == 0 {
             self.sensor_recorder.record_step(&self.fields.p)?;

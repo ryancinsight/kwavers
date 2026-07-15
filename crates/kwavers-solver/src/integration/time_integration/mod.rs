@@ -36,7 +36,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Multi-Rate Time Integration System
@@ -75,8 +75,8 @@ impl MultiRateTimeIntegrator {
 
     /// Advance the solution using multi-rate time integration
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn advance(
         &mut self,
@@ -135,7 +135,7 @@ impl MultiRateTimeIntegrator {
 
     /// Compute stable time steps for each physics component
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn compute_component_time_steps(
         &self,
@@ -213,7 +213,7 @@ impl MultiRateTimeIntegrator {
                 let avg = if history.is_empty() {
                     0.0
                 } else {
-                    history.iter().sum::<f64>() / history.len() as f64
+                    history.iter().sum::<f64>() / (history.len()) as f64
                 };
                 (name.clone(), avg)
             })

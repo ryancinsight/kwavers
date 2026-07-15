@@ -19,7 +19,7 @@ fn test_feature_extractor_creation() {
     let extractor = FeatureExtractor::new(config);
 
     // Test with dummy data
-    let volume = ndarray::Array3::<f32>::from_elem((32, 32, 16), 1.0);
+    let volume = leto::Array3::<f32>::from_elem((32, 32, 16), 1.0);
     let features = extractor.extract_features(volume.view()).unwrap();
 
     assert!(features.morphological.contains_key("gradient_magnitude"));
@@ -38,13 +38,13 @@ fn test_clinical_decision_support() {
     let mut morphological = std::collections::HashMap::new();
     morphological.insert(
         "gradient_magnitude".to_string(),
-        ndarray::Array3::from_elem((32, 32, 16), 0.5),
+        leto::Array3::from_elem((32, 32, 16), 0.5),
     );
 
     let mut texture = std::collections::HashMap::new();
     texture.insert(
         "speckle_variance".to_string(),
-        ndarray::Array3::from_elem((32, 32, 16), 0.8),
+        leto::Array3::from_elem((32, 32, 16), 0.8),
     );
 
     let features = FeatureMap {
@@ -53,9 +53,9 @@ fn test_clinical_decision_support() {
         texture,
     };
 
-    let volume = ndarray::Array3::<f32>::from_elem((32, 32, 16), 1.0);
-    let uncertainty = ndarray::Array3::<f32>::from_elem((32, 32, 16), 0.1);
-    let confidence = ndarray::Array3::<f32>::from_elem((32, 32, 16), 0.9);
+    let volume = leto::Array3::<f32>::from_elem((32, 32, 16), 1.0);
+    let uncertainty = leto::Array3::<f32>::from_elem((32, 32, 16), 0.1);
+    let confidence = leto::Array3::<f32>::from_elem((32, 32, 16), 0.9);
 
     let analysis = support
         .analyze_clinical(
@@ -81,8 +81,8 @@ fn test_diagnosis_algorithm() {
         tissue_classification:
             kwavers_transducer::beamforming::ai_integration::TissueClassification {
                 probabilities: std::collections::HashMap::new(),
-                dominant_tissue: ndarray::Array3::from_elem((32, 32, 16), "Muscle".to_string()),
-                boundary_confidence: ndarray::Array3::from_elem((32, 32, 16), 0.8),
+                dominant_tissue: leto::Array3::from_elem((32, 32, 16), "Muscle".to_string()),
+                boundary_confidence: leto::Array3::from_elem((32, 32, 16), 0.8),
             },
         recommendations: vec!["Test recommendation".to_string()],
         diagnostic_confidence: 0.85,
@@ -137,7 +137,7 @@ fn test_feature_extraction_comprehensive() {
     let extractor = FeatureExtractor::new(config);
 
     // Create test volume with some structure
-    let mut volume = ndarray::Array3::<f32>::zeros((16, 16, 8));
+    let mut volume = leto::Array3::<f32>::zeros((16, 16, 8));
 
     // Add some test patterns
     for z in 0..8 {

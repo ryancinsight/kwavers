@@ -43,7 +43,7 @@ pub fn solve_tikhonov_h1<O: LinearOperator>(
     active: &ActiveGrid,
     settings: PcgSettings,
 ) -> PcgResult {
-    debug_assert_eq!(target.len(), operator.cols());
+    debug_assert_eq!((target.len()), operator.cols());
     let mut data = vec![0.0; operator.rows()];
     operator.matvec(target, &mut data);
     let (model, objective_history) = solve_regularized_system(operator, &data, active, settings);
@@ -60,7 +60,7 @@ fn solve_regularized_system<O: LinearOperator>(
     active: &ActiveGrid,
     settings: PcgSettings,
 ) -> (Vec<f32>, Vec<f64>) {
-    debug_assert_eq!(data.len(), operator.rows());
+    debug_assert_eq!((data.len()), operator.rows());
     let cols = operator.cols();
     let rows = operator.rows();
 
@@ -227,7 +227,7 @@ fn add_deterministic_noise(data: &mut [f32], fraction: f64) {
     if fraction <= 0.0 || data.is_empty() {
         return;
     }
-    let rms = (data.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / data.len() as f64).sqrt();
+    let rms = (data.iter().map(|v| (*v as f64).powi(2)).sum::<f64>() / (data.len()) as f64).sqrt();
     let sigma = (fraction * rms) as f32;
     for (idx, value) in data.iter_mut().enumerate() {
         *value += sigma * splitmix_unit(idx);

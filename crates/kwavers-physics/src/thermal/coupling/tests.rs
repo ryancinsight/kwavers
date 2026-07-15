@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_acoustic_heating_source() {

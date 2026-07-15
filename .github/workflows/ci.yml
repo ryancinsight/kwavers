@@ -19,6 +19,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
+
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -39,14 +42,19 @@ jobs:
       - name: Check PINN feature compilation
         run: cargo check --features pinn --lib
 
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
       - name: Run PINN tests
-        run: cargo test --features pinn --lib
+        run: cargo nextest run --features pinn --lib
 
       - name: Run PINN validation framework tests
-        run: cargo test --test validation_integration_test
+        run: cargo nextest run --test validation_integration_test
 
       - name: Run PINN convergence studies
-        run: cargo test --test pinn_convergence_studies
+        run: cargo nextest run --test pinn_convergence_studies
 
       - name: Run clippy on PINN code
         run: cargo clippy --features pinn --lib -- -D warnings
@@ -59,6 +67,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -96,6 +107,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -136,6 +150,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
+
       - name: Install cargo-deny
         run: cargo install cargo-deny
 
@@ -149,6 +166,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@nightly
@@ -173,6 +193,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -200,6 +223,9 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
+
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
@@ -226,11 +252,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
+
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
 
       - name: Cache cargo dependencies
         uses: actions/cache@v3
@@ -242,7 +276,55 @@ jobs:
           key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run convergence studies
-        run: cargo test --test pinn_convergence_studies --features pinn -- --test-threads=1
+        run: cargo nextest run --test pinn_convergence_studies --features pinn
 
       - name: Run validation integration tests
-        run: cargo test --test validation_integration_test -- --test-threads=1
+        run: cargo nextest run --test validation_integration_test
+
+  validation:
+    name: Solver Validation Suite
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: nextest
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: k-Wave analytical comparison tests
+        run: cargo nextest run -p kwavers-solver --lib validation::kwave_comparison
+
+      - name: Literature validation tests
+        run: cargo nextest run -p kwavers-solver --lib validation::literature
+
+      - name: Numerical accuracy tests
+        run: cargo nextest run -p kwavers-solver --lib validation::numerical_accuracy
+
+      - name: Physics benchmarks
+        run: cargo nextest run -p kwavers-solver --lib validation::physics_benchmarks
+
+      - name: GPU/CPU equivalence build check
+        run: cargo check -p kwavers-gpu --features gpu --lib

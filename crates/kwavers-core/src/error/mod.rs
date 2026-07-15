@@ -212,13 +212,23 @@ pub enum KwaversError {
         message: String,
     },
 
-    /// NdArray shape errors
+    /// Array shape errors
     #[error("Shape error: {0}")]
-    Shape(#[from] ndarray::ShapeError),
+    Shape(String),
 
     /// Anyhow errors
     #[error(transparent)]
     Other(#[from] anyhow::Error),
+
+    /// Leto (array/layout) errors
+    #[error("Leto error: {0}")]
+    Leto(String),
+}
+
+impl From<leto::LetoError> for KwaversError {
+    fn from(err: leto::LetoError) -> Self {
+        Self::Leto(err.to_string())
+    }
 }
 
 /// Result type alias for operations that may return a `KwaversError`
@@ -234,13 +244,6 @@ impl From<String> for KwaversError {
 impl From<&str> for KwaversError {
     fn from(s: &str) -> Self {
         Self::InvalidInput(s.to_owned())
-    }
-}
-
-#[cfg(feature = "gpu")]
-impl From<wgpu::BufferAsyncError> for KwaversError {
-    fn from(err: wgpu::BufferAsyncError) -> Self {
-        Self::GpuError(format!("Buffer async error: {:?}", err))
     }
 }
 

@@ -9,19 +9,19 @@ repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
 kwavers-core = { path = "../kwavers-core" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-nalgebra = { version = "0.32" }
-num-complex = "0.4"
-num-traits = "0.2"
+moirai-parallel = { workspace = true }
+hermes-simd = { workspace = true }
+leto = { workspace = true, features = ["std"] }
+# see gap_audit.md Bulk-Migration priority #2 for the per-site ndarray->leto migration plan.
+leto-ops = { workspace = true }
+eunomia = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 rand = "0.8"
 apollo = { workspace = true }
-# Optional GPU FFT backend (the `apollofft_wgpu`-backed path is `gpu`-gated).
-apollofft-wgpu = { workspace = true, optional = true }
 
 [features]
-gpu = ["dep:apollofft-wgpu"]
+gpu = ["apollo/wgpu"]
 
 [dev-dependencies]
 approx = "0.5"

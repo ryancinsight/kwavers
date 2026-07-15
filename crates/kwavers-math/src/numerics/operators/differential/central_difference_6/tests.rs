@@ -2,7 +2,7 @@ use super::super::DifferentialOperator;
 use super::core::CentralDifference6;
 use approx::assert_abs_diff_eq;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 fn assert_invalid_grid_spacing(
     result: KwaversResult<CentralDifference6>,
@@ -69,7 +69,7 @@ fn test_apply_x_linear_function() {
     let dx = 0.1;
     let op = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((12, 5, 5));
+    let mut field = Array3::zeros([12, 5, 5]);
     for i in 0..12 {
         for j in 0..5 {
             for k in 0..5 {
@@ -102,7 +102,7 @@ fn test_all_directions_linear_function() {
     let dx = 0.1;
     let op = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((12, 12, 12));
+    let mut field = Array3::zeros([12, 12, 12]);
     for i in 0..12 {
         for j in 0..12 {
             for k in 0..12 {
@@ -151,9 +151,9 @@ fn test_constant_field_has_zero_derivative() {
 fn test_insufficient_grid_points() {
     let op = CentralDifference6::new(0.1, 0.1, 0.1).unwrap();
 
-    let field_x = Array3::zeros((6, 10, 10));
-    let field_y = Array3::zeros((10, 6, 10));
-    let field_z = Array3::zeros((10, 10, 6));
+    let field_x = Array3::zeros([6, 10, 10]);
+    let field_y = Array3::zeros([10, 6, 10]);
+    let field_z = Array3::zeros([10, 10, 6]);
 
     assert_insufficient_grid_points(op.apply_x(field_x.view()), 7, 6, "X");
     assert_insufficient_grid_points(op.apply_y(field_y.view()), 7, 6, "Y");
@@ -175,7 +175,7 @@ fn test_cubic_polynomial() {
     let dx = 0.1;
     let op = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 5, 5));
+    let mut field = Array3::zeros([20, 5, 5]);
     for i in 0..20 {
         let x = (i as f64) * dx;
         for j in 0..5 {

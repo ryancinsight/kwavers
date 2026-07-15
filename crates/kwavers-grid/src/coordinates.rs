@@ -3,7 +3,7 @@
 //! This module handles physical coordinate generation and position-to-index conversions.
 
 use crate::structure::{Grid, GridDimension};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 /// Coordinate system operations
 #[derive(Debug)]
@@ -23,27 +23,27 @@ impl CoordinateSystem {
     /// Generate x-coordinate vector
     #[must_use]
     pub fn generate_x_vector(grid: &Grid) -> Array1<f64> {
-        Array1::from_shape_fn(grid.nx, |i| (i as f64).mul_add(grid.dx, grid.origin[0]))
+        Array1::from_shape_fn([grid.nx], |[i]| (i as f64).mul_add(grid.dx, grid.origin[0]))
     }
 
     /// Generate y-coordinate vector
     #[must_use]
     pub fn generate_y_vector(grid: &Grid) -> Array1<f64> {
-        Array1::from_shape_fn(grid.ny, |j| (j as f64).mul_add(grid.dy, grid.origin[1]))
+        Array1::from_shape_fn([grid.ny], |[j]| (j as f64).mul_add(grid.dy, grid.origin[1]))
     }
 
     /// Generate z-coordinate vector
     #[must_use]
     pub fn generate_z_vector(grid: &Grid) -> Array1<f64> {
-        Array1::from_shape_fn(grid.nz, |k| (k as f64).mul_add(grid.dz, grid.origin[2]))
+        Array1::from_shape_fn([grid.nz], |[k]| (k as f64).mul_add(grid.dz, grid.origin[2]))
     }
 
     /// Generate 3D coordinate arrays
     #[must_use]
     pub fn generate_coordinate_arrays(grid: &Grid) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        let mut x_coords = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut y_coords = Array3::zeros((grid.nx, grid.ny, grid.nz));
-        let mut z_coords = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut x_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut y_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
+        let mut z_coords = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {
@@ -144,7 +144,7 @@ impl CoordinateSystem {
             GridDimension::Z => (grid.nz, grid.dz, grid.origin[2]),
         };
         let length = n as f64 * d;
-        Array1::from_shape_fn(n, |i| (i as f64).mul_add(d, o) - length / 2.0 + d / 2.0)
+        Array1::from_shape_fn([n], |[i]| (i as f64).mul_add(d, o) - length / 2.0 + d / 2.0)
     }
 
     /// Generate 3D centered coordinate arrays
@@ -160,9 +160,9 @@ impl CoordinateSystem {
         let ly = ny as f64 * dy;
         let lz = nz as f64 * dz;
 
-        let mut x_coords = Array3::zeros((nx, ny, nz));
-        let mut y_coords = Array3::zeros((nx, ny, nz));
-        let mut z_coords = Array3::zeros((nx, ny, nz));
+        let mut x_coords = Array3::zeros([nx, ny, nz]);
+        let mut y_coords = Array3::zeros([nx, ny, nz]);
+        let mut z_coords = Array3::zeros([nx, ny, nz]);
 
         for i in 0..nx {
             for j in 0..ny {

@@ -33,7 +33,7 @@ fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
     // Create mask
     let mask = source.create_mask(&grid);
 
-    println!("Mask shape: {:?}", mask.dim());
+    println!("Mask shape: {:?}", mask.shape());
     println!("Mask sum: {}", mask.iter().sum::<f64>());
 
     // Analyze mask structure
@@ -43,7 +43,7 @@ fn test_boundary_plane_mask_detection() -> KwaversResult<()> {
     let mut j_values = std::collections::HashSet::new();
     let mut k_values = std::collections::HashSet::new();
 
-    for ((i, j, k), &val) in mask.indexed_iter() {
+    for ([i, j, k], &val) in mask.indexed_iter() {
         if val.abs() > 1e-12 {
             num_nonzero += 1;
             if indices.len() < 10 {
@@ -134,13 +134,13 @@ fn test_fullgrid_mask_detection() -> KwaversResult<()> {
     // Create mask
     let mask = source.create_mask(&grid);
 
-    println!("Mask shape: {:?}", mask.dim());
+    println!("Mask shape: {:?}", mask.shape());
 
     // Analyze mask structure
     let mut num_nonzero = 0;
     let mut k_values = std::collections::HashSet::new();
 
-    for ((_i, _j, k), &val) in mask.indexed_iter() {
+    for ([_i, _j, k], &val) in mask.indexed_iter() {
         if val.abs() > 1e-12 {
             num_nonzero += 1;
             k_values.insert(k);

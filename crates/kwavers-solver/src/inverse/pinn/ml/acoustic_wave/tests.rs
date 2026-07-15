@@ -1,11 +1,10 @@
 use super::domain::AcousticWaveDomain;
 use super::types::{AcousticBoundarySpec, AcousticProblemType, PinnAcousticBoundaryType};
 use crate::inverse::pinn::ml::physics::{BoundaryPosition, SimulationPhysicsDomain};
-use burn::backend::NdArray;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use std::collections::HashMap;
 
-type B = burn::backend::Autodiff<NdArray<f32>>;
+type B = coeus_core::MoiraiBackend;
 
 #[test]
 fn test_acoustic_wave_domain_creation() {
@@ -55,7 +54,7 @@ fn test_boundary_conditions() {
     });
 
     let bcs = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::boundary_conditions(&domain);
-    assert_eq!(bcs.len(), 1);
+    assert_eq!((bcs.len()), 1);
     assert!(!bcs.is_empty());
 }
 
@@ -69,7 +68,7 @@ fn test_validation_metrics() {
     );
 
     let metrics = <AcousticWaveDomain as SimulationPhysicsDomain<B>>::validation_metrics(&domain);
-    assert_eq!(metrics.len(), 3);
+    assert_eq!((metrics.len()), 3);
     assert_eq!(metrics[0].name, "wave_speed_accuracy");
     assert_eq!(metrics[1].name, "energy_conservation");
     assert_eq!(metrics[2].name, "nonlinearity_error");
@@ -86,7 +85,7 @@ fn test_coupling_interfaces() {
 
     let interfaces =
         <AcousticWaveDomain as SimulationPhysicsDomain<B>>::coupling_interfaces(&domain);
-    assert_eq!(interfaces.len(), 2);
+    assert_eq!((interfaces.len()), 2);
     assert_eq!(interfaces[0].name, "acoustic_solid");
     assert_eq!(interfaces[1].name, "acoustic_thermal");
 }

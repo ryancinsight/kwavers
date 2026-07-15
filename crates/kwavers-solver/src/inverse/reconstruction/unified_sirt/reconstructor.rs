@@ -10,8 +10,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::inverse_problems::ModelRegularizer3D;
+use leto::{Array1, Array2, Array3};
 use log::debug;
-use ndarray::{Array1, Array2, Array3};
 
 use super::config::{SirtAlgorithm, SirtConfig, SirtResult};
 
@@ -35,7 +35,7 @@ impl SirtReconstructor {
     /// - `sensor_data` — Measured data b (m).
     /// - `grid_size` — 3D grid dimensions `(nx, ny, nz)` where n = nx·ny·nz.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -48,9 +48,9 @@ impl SirtReconstructor {
     ) -> KwaversResult<SirtResult> {
         let start_time = std::time::Instant::now();
 
-        let (m, n) = system_matrix.dim();
+        let [m, n] = system_matrix.shape();
         assert_eq!(n, grid_size.0 * grid_size.1 * grid_size.2);
-        assert_eq!(m, sensor_data.len());
+        assert_eq!(m, (sensor_data.len()));
 
         let mut x = Array1::zeros(n);
         let mut residual_history = Vec::new();
@@ -91,7 +91,10 @@ impl SirtReconstructor {
                 x = self.reshape_to_1d(&image_3d);
             }
 
-            let residual = system_matrix.dot(&x) - sensor_data;
+            let mut ax = Array1::<f64>::zeros(m);
+            leto_ops::matvec(&system_matrix.view(), &x.view(), &mut ax.view_mut())
+                .expect("invariant: system matrix columns match model length");
+            let residual = &ax - sensor_data;
             let residual_norm = residual.iter().map(|r| r * r).sum::<f64>().sqrt();
             residual_history.push(residual_norm);
 
@@ -152,8 +155,14 @@ impl SirtReconstructor {
         col_norms: &Array1<f64>,
     ) -> KwaversResult<Array1<f64>> {
         let mut x_new = x.clone();
-        let residual = b - &a.dot(x);
-        let backproj = a.t().dot(&residual);
+        let mut ax = Array1::<f64>::zeros(a.shape()[0]);
+        leto_ops::matvec(&a.view(), &x.view(), &mut ax.view_mut())
+            .expect("invariant: system matrix columns match model length");
+        let residual = b - &ax;
+        let at = a.transpose([1, 0]).unwrap();
+        let mut backproj = Array1::<f64>::zeros(a.shape()[1]);
+        leto_ops::matvec(&at, &residual.view(), &mut backproj.view_mut())
+            .expect("invariant: transposed matrix columns match residual length");
 
         for (j, &col_norm) in col_norms.iter().enumerate() {
             if col_norm > 1e-12 {
@@ -175,14 +184,16 @@ impl SirtReconstructor {
         b: &Array1<f64>,
         row_norms: &Array1<f64>,
     ) -> KwaversResult<()> {
-        let (m, _n) = a.dim();
+        let [m, _n] = a.shape();
 
         for i in 0..m {
-            let row = a.row(i);
+            let row = a.index_axis(0, i).unwrap();
             let row_norm_sq = row_norms[i] * row_norms[i];
 
             if row_norm_sq > 1e-12 {
-                let residual = b[i] - row.dot(x);
+                let residual = b[i]
+                    - leto_ops::dot(&row, &x.view())
+                        .expect("invariant: matrix row and model share length n");
                 let update = self.config.relaxation_factor * residual / row_norm_sq;
 
                 for (j, &a_ij) in row.iter().enumerate() {
@@ -206,7 +217,7 @@ impl SirtReconstructor {
         num_subsets: usize,
         row_norms: &Array1<f64>,
     ) -> KwaversResult<()> {
-        let (m, _n) = a.dim();
+        let [m, _n] = a.shape();
         let subset_size = m.div_ceil(num_subsets);
 
         for subset_idx in 0..num_subsets {
@@ -214,11 +225,13 @@ impl SirtReconstructor {
             let end_row = ((subset_idx + 1) * subset_size).min(m);
 
             for i in start_row..end_row {
-                let row = a.row(i);
+                let row = a.index_axis(0, i).unwrap();
                 let row_norm_sq = row_norms[i] * row_norms[i];
 
                 if row_norm_sq > 1e-12 {
-                    let residual = b[i] - row.dot(x);
+                    let residual = b[i]
+                        - leto_ops::dot(&row, &x.view())
+                            .expect("invariant: matrix row and model share length n");
                     let update = self.config.relaxation_factor * residual / row_norm_sq;
 
                     for (j, &a_ij) in row.iter().enumerate() {
@@ -234,19 +247,31 @@ impl SirtReconstructor {
     // ==================== Helper Functions ====================
 
     fn compute_row_norms(&self, a: &Array2<f64>) -> Array1<f64> {
-        let (m, _n) = a.dim();
+        let [m, _n] = a.shape();
         let mut norms = Array1::zeros(m);
         for i in 0..m {
-            norms[i] = a.row(i).iter().map(|x| x * x).sum::<f64>().sqrt();
+            norms[i] = a
+                .index_axis::<1>(0, i)
+                .unwrap()
+                .iter()
+                .map(|x| x * x)
+                .sum::<f64>()
+                .sqrt();
         }
         norms
     }
 
     fn compute_col_norms(&self, a: &Array2<f64>) -> Array1<f64> {
-        let (_m, n) = a.dim();
+        let [_m, n] = a.shape();
         let mut norms = Array1::zeros(n);
         for j in 0..n {
-            norms[j] = a.column(j).iter().map(|x| x * x).sum::<f64>().sqrt();
+            norms[j] = a
+                .index_axis::<1>(1, j)
+                .unwrap()
+                .iter()
+                .map(|x| x * x)
+                .sum::<f64>()
+                .sqrt();
         }
         norms
     }
@@ -261,7 +286,7 @@ impl SirtReconstructor {
     }
 
     fn reshape_to_1d(&self, img: &Array3<f64>) -> Array1<f64> {
-        let (nx, ny, nz) = img.dim();
+        let [nx, ny, nz] = img.shape();
         let mut x = Array1::zeros(nx * ny * nz);
         for i in 0..nx {
             for j in 0..ny {

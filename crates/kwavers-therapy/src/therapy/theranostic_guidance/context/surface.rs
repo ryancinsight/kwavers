@@ -1,6 +1,6 @@
 //! Boundary extraction helpers for placement visualization.
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use super::super::geometry::{is_boundary_2d, is_boundary_3d};
 use super::{centered_origin_2d, distance_3d, Point3};
@@ -13,7 +13,7 @@ pub(super) fn surface_points_3d(
     z_range: Option<std::ops::RangeInclusive<usize>>,
     stride: usize,
 ) -> Vec<Point3> {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     let mut points = Vec::new();
     for ix in (0..nx).step_by(stride) {
         for iy in (0..ny).step_by(stride) {
@@ -57,7 +57,7 @@ pub(super) fn boundary_points_2d(
     sy: f64,
     stride: usize,
 ) -> Vec<Point3> {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     let center = centered_origin_2d(nx, ny);
     let mut points = Vec::new();
     for ix in (0..nx).step_by(stride) {

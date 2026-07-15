@@ -16,7 +16,7 @@
 //! - Kendall & Gal (2017): "What Uncertainties Do We Need in Bayesian Deep Learning?"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Uncertainty estimator for neural beamforming using dropout-based methods.
 #[derive(Debug, Clone)]
@@ -78,12 +78,12 @@ impl UncertaintyEstimator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn estimate(&self, image: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        let mut uncertainty = Array3::zeros(image.dim());
+        let mut uncertainty = Array3::zeros(image.shape());
 
         // Compute local uncertainty for each voxel
-        for i in 0..image.dim().0 {
-            for j in 0..image.dim().1 {
-                for k in 0..image.dim().2 {
+        for i in 0..image.shape()[0] {
+            for j in 0..image.shape()[1] {
+                for k in 0..image.shape()[2] {
                     let local_var = self.compute_local_variance(image, i, j, k);
                     uncertainty[[i, j, k]] = local_var.sqrt(); // Standard deviation
                 }
@@ -116,8 +116,8 @@ impl UncertaintyEstimator {
         // Sample 5×5 spatial neighborhood
         for di in -range..=range {
             for dj in -range..=range {
-                let ni = (i as i32 + di).max(0).min(image.dim().0 as i32 - 1) as usize;
-                let nj = (j as i32 + dj).max(0).min(image.dim().1 as i32 - 1) as usize;
+                let ni = (i as i32 + di).max(0).min(image.shape()[0] as i32 - 1) as usize;
+                let nj = (j as i32 + dj).max(0).min(image.shape()[1] as i32 - 1) as usize;
 
                 values.push(image[[ni, nj, k]]);
             }
@@ -145,7 +145,6 @@ impl Default for UncertaintyEstimator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array;
 
     #[test]
     fn test_uncertainty_estimator_creation() {
@@ -194,7 +193,7 @@ mod tests {
     #[test]
     fn test_local_variance_computation() {
         let estimator = UncertaintyEstimator::new(0.1);
-        let image = Array::from_shape_fn((5, 5, 5), |(i, j, k)| (i + j + k) as f32);
+        let image = Array3::from_shape_fn((5, 5, 5), |[i, j, k]| (i + j + k) as f32);
 
         // Test center pixel
         let variance = estimator.compute_local_variance(&image, 2, 2, 2);

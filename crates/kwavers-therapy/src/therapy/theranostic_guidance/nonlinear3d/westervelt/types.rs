@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::types::{
     FwiIterationDiagnostics, SourcePlanMetrics, VolumeReconstructionMetrics,

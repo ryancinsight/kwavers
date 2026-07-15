@@ -3,8 +3,8 @@
 use super::{ProcessingOperation, ProcessingStage, TransferStatistics};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::UnifiedFieldType;
+use leto::Array3;
 use log::{debug, info};
-use ndarray::Array3;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -226,7 +226,7 @@ impl DataPipeline {
             .write_buffer(buffer, 0, bytemuck::cast_slice(&data_f32));
 
         if self.transfer_options.mode == TransferMode::Blocking {
-            let _ = self.device.poll(PollType::Wait);
+            let _ = self.device.poll(PollType::wait_indefinitely());
         }
 
         let elapsed = start.elapsed();

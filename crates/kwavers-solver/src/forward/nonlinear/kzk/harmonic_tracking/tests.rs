@@ -2,7 +2,7 @@ use super::tracker::HarmonicTracker;
 use super::types::{HarmonicAnalysis, HarmonicConfig};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
-use ndarray::Array1;
+use leto::Array1;
 
 #[test]
 fn test_harmonic_tracker_creation() {
@@ -17,7 +17,7 @@ fn test_pure_sinusoid_analysis() {
 
     let n = 1000;
     let dt = 1.0 / config.sampling_rate;
-    let mut pressure = Array1::zeros(n);
+    let mut pressure = Array1::zeros([n]);
 
     for i in 0..n {
         let phase = TWO_PI * config.frequency * (i as f64) * dt;
@@ -37,7 +37,7 @@ fn test_harmonic_content_distorted_wave() {
 
     let n = 1000;
     let dt = 1.0 / config.sampling_rate;
-    let mut pressure = Array1::zeros(n);
+    let mut pressure = Array1::zeros([n]);
 
     for i in 0..n {
         let phase = TWO_PI * config.frequency * (i as f64) * dt;
@@ -111,7 +111,7 @@ fn test_config_validation() {
 fn test_empty_pressure_handling() {
     let config = HarmonicConfig::default();
     let tracker = HarmonicTracker::new(config);
-    let empty_pressure = Array1::zeros(0);
+    let empty_pressure = Array1::zeros([0]);
 
     let result = tracker.analyze_harmonics(&empty_pressure);
     assert!(result.is_err());

@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_math::special::bessel::j1;
-use num_complex::Complex64;
-use rayon::prelude::*;
+use moirai_parallel::{map_collect_with, Adaptive};
 
 // ─── Steering envelope (grating-lobe limited) ──────────────────────────────────
 
@@ -166,23 +166,20 @@ pub fn steering_grating_lobe_ratio_1d(
     ka_elem: f64,
     mainlobe_halfwidth_rad: f64,
 ) -> Vec<f64> {
-    steer_theta
-        .par_iter()
-        .map(|&ts| {
-            let pat = steered_beam_pattern_1d(elem_x, obs_theta, k, ts, ka_elem);
-            let main = piston_directivity(ts, ka_elem).max(1e-300);
-            let mut secondary = 0.0_f64;
-            for (i, &th) in obs_theta.iter().enumerate() {
-                if (th - ts).abs() <= mainlobe_halfwidth_rad {
-                    continue; // inside the main lobe
-                }
-                if pat[i] > secondary {
-                    secondary = pat[i];
-                }
+    map_collect_with::<Adaptive, _, _, _>(steer_theta, |&ts| {
+        let pat = steered_beam_pattern_1d(elem_x, obs_theta, k, ts, ka_elem);
+        let main = piston_directivity(ts, ka_elem).max(1e-300);
+        let mut secondary = 0.0_f64;
+        for (i, &th) in obs_theta.iter().enumerate() {
+            if (th - ts).abs() <= mainlobe_halfwidth_rad {
+                continue; // inside the main lobe
             }
-            secondary / main
-        })
-        .collect()
+            if pat[i] > secondary {
+                secondary = pat[i];
+            }
+        }
+        secondary / main
+    })
 }
 
 /// Safe steering half-angle — the largest steering excursion from broadside

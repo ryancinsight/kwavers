@@ -43,6 +43,7 @@
 //!   IEEE Trans. UFFC 39(5):555–566.
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
@@ -94,7 +95,7 @@ impl TranscranialAberrationCorrection {
         Ok(Self {
             grid: grid.clone(),
             frequency: 650e3,
-            reference_speed: SOUND_SPEED_WATER_SIM, // matches CTImageLoader::hu_to_sound_speed soft-tissue baseline
+            reference_speed: SOUND_SPEED_WATER_SIM,
             _num_elements: 1024,
         })
     }
@@ -116,7 +117,7 @@ impl TranscranialAberrationCorrection {
     ///
     pub fn calculate_correction(
         &self,
-        skull_ct_data: &ndarray::Array3<f64>,
+        skull_ct_data: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<PhaseCorrection> {
@@ -163,11 +164,12 @@ impl TranscranialAberrationCorrection {
     ///
     pub(crate) fn calculate_aberration_phases(
         &self,
-        skull_ct_data: &ndarray::Array3<f64>,
+        skull_ct_data: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         target_point: &[f64; 3],
     ) -> KwaversResult<Vec<f64>> {
         let mut aberration_phases = Vec::with_capacity(transducer_positions.len());
+        let hu_acoustic_model = HuAcousticModel::default();
 
         for &transducer_pos in transducer_positions {
             let path_vector = [
@@ -200,7 +202,7 @@ impl TranscranialAberrationCorrection {
                 let iz = ((point[2] / self.grid.dz) as usize).min(self.grid.nz - 1);
 
                 let hu = skull_ct_data[[ix, iy, iz]];
-                let local_speed = kwavers_imaging::medical::CTImageLoader::hu_to_sound_speed(hu);
+                let local_speed = hu_acoustic_model.sound_speed(hu);
 
                 let k_local = TWO_PI * self.frequency / local_speed;
                 total_aberration += (k_local - k_water) * ds;

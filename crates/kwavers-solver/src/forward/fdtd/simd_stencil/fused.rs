@@ -1,6 +1,6 @@
 use super::FdtdSimdStencilProcessor;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl FdtdSimdStencilProcessor {
     /// Fused pressure-and-velocity update (single pass, cache-tiled).
@@ -12,7 +12,7 @@ impl FdtdSimdStencilProcessor {
     ///
     /// Updated pressure field; `velocity` is updated in-place.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn fused_update(
         &mut self,

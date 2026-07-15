@@ -2,7 +2,7 @@ use super::*;
 use crate::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array4;
+use leto::Array4;
 
 fn make_config(
     nel: (usize, usize, usize),

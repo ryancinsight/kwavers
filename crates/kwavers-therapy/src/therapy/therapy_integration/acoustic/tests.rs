@@ -66,15 +66,15 @@ fn test_acoustic_solver_field_access() {
     let solver = AcousticWaveSolver::new(&grid, &medium).unwrap();
 
     let p = solver.pressure_field();
-    assert_eq!(p.shape(), &[32, 32, 32]);
+    assert_eq!(p.shape(), [32, 32, 32]);
 
     let (vx, vy, vz) = solver.velocity_fields();
-    assert_eq!(vx.shape(), &[32, 32, 32]);
-    assert_eq!(vy.shape(), &[32, 32, 32]);
-    assert_eq!(vz.shape(), &[32, 32, 32]);
+    assert_eq!(vx.shape(), [32, 32, 32]);
+    assert_eq!(vy.shape(), [32, 32, 32]);
+    assert_eq!(vz.shape(), [32, 32, 32]);
 
     let intensity = solver.intensity_field().expect("Intensity failed");
-    assert_eq!(intensity.shape(), &[32, 32, 32]);
+    assert_eq!(intensity.shape(), [32, 32, 32]);
 }
 
 #[test]

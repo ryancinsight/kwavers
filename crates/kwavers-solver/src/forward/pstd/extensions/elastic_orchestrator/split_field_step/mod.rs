@@ -30,12 +30,12 @@ mod velocity;
 use super::split_field_pml::{ElasticSplitFieldPml, SplitFieldState};
 use super::types::ElasticPstdMedium;
 use kwavers_math::fft::fft_3d_array_into;
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::mechanics::elastic_wave::{
     fields::VelocityFields,
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
-use ndarray::{Array3, Zip};
-use num_complex::Complex;
+use leto::Array3;
 
 /// Mutable spectral scratch buffers for one split-field PML step.
 ///
@@ -57,17 +57,17 @@ pub(super) struct SpectralScratch<'a> {
 #[derive(Debug, Clone, Copy)]
 pub(super) struct SpectralOperators<'a> {
     /// Negative-staggered x derivative operator.
-    pub dkx_neg: &'a Array3<Complex<f64>>,
+    pub dkx_neg: &'a Array3<Complex64>,
     /// Negative-staggered y derivative operator.
-    pub dky_neg: &'a Array3<Complex<f64>>,
+    pub dky_neg: &'a Array3<Complex64>,
     /// Negative-staggered z derivative operator.
-    pub dkz_neg: &'a Array3<Complex<f64>>,
+    pub dkz_neg: &'a Array3<Complex64>,
     /// Positive-staggered x derivative operator.
-    pub dkx_pos: &'a Array3<Complex<f64>>,
+    pub dkx_pos: &'a Array3<Complex64>,
     /// Positive-staggered y derivative operator.
-    pub dky_pos: &'a Array3<Complex<f64>>,
+    pub dky_pos: &'a Array3<Complex64>,
     /// Positive-staggered z derivative operator.
-    pub dkz_pos: &'a Array3<Complex<f64>>,
+    pub dkz_pos: &'a Array3<Complex64>,
     /// K-space correction factor κ.
     pub kappa: &'a Array3<f64>,
 }
@@ -124,48 +124,67 @@ pub(super) fn propagate_split_field_step(
     // spectral_stress.{txx,...} are used as scratch FFT output buffers.
 
     // txx = txx_x + txx_y + txx_z
-    Zip::from(scratch_r.view_mut())
-        .and(&state.txx_x)
-        .and(&state.txx_y)
-        .and(&state.txx_z)
-        .for_each(|out, &a, &b, &c| *out = a + b + c);
+    let [nx, ny, nz] = scratch_r.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch_r[[i, j, k]] =
+                    state.txx_x[[i, j, k]] + state.txx_y[[i, j, k]] + state.txx_z[[i, j, k]];
+            }
+        }
+    }
     fft_3d_array_into(scratch_r, &mut spectral_stress.txx);
 
     // tyy = tyy_x + tyy_y + tyy_z
-    Zip::from(scratch_r.view_mut())
-        .and(&state.tyy_x)
-        .and(&state.tyy_y)
-        .and(&state.tyy_z)
-        .for_each(|out, &a, &b, &c| *out = a + b + c);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch_r[[i, j, k]] =
+                    state.tyy_x[[i, j, k]] + state.tyy_y[[i, j, k]] + state.tyy_z[[i, j, k]];
+            }
+        }
+    }
     fft_3d_array_into(scratch_r, &mut spectral_stress.tyy);
 
     // tzz = tzz_x + tzz_y + tzz_z
-    Zip::from(scratch_r.view_mut())
-        .and(&state.tzz_x)
-        .and(&state.tzz_y)
-        .and(&state.tzz_z)
-        .for_each(|out, &a, &b, &c| *out = a + b + c);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch_r[[i, j, k]] =
+                    state.tzz_x[[i, j, k]] + state.tzz_y[[i, j, k]] + state.tzz_z[[i, j, k]];
+            }
+        }
+    }
     fft_3d_array_into(scratch_r, &mut spectral_stress.tzz);
 
     // txy = txy_x + txy_y
-    Zip::from(scratch_r.view_mut())
-        .and(&state.txy_x)
-        .and(&state.txy_y)
-        .for_each(|out, &a, &b| *out = a + b);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch_r[[i, j, k]] = state.txy_x[[i, j, k]] + state.txy_y[[i, j, k]];
+            }
+        }
+    }
     fft_3d_array_into(scratch_r, &mut spectral_stress.txy);
 
     // txz = txz_x + txz_z
-    Zip::from(scratch_r.view_mut())
-        .and(&state.txz_x)
-        .and(&state.txz_z)
-        .for_each(|out, &a, &b| *out = a + b);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch_r[[i, j, k]] = state.txz_x[[i, j, k]] + state.txz_z[[i, j, k]];
+            }
+        }
+    }
     fft_3d_array_into(scratch_r, &mut spectral_stress.txz);
 
     // tyz = tyz_y + tyz_z
-    Zip::from(scratch_r.view_mut())
-        .and(&state.tyz_y)
-        .and(&state.tyz_z)
-        .for_each(|out, &a, &b| *out = a + b);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                scratch_r[[i, j, k]] = state.tyz_y[[i, j, k]] + state.tyz_z[[i, j, k]];
+            }
+        }
+    }
     fft_3d_array_into(scratch_r, &mut spectral_stress.tyz);
 
     // PHASE 3 — Velocity sub-field updates.
@@ -188,19 +207,16 @@ pub(super) fn propagate_split_field_step(
     );
 
     // PHASE 4 — Sum velocity sub-fields → real-space total velocity.
-    Zip::from(velocity.vx.view_mut())
-        .and(&state.vxx)
-        .and(&state.vxy)
-        .and(&state.vxz)
-        .for_each(|out, &a, &b, &c| *out = a + b + c);
-    Zip::from(velocity.vy.view_mut())
-        .and(&state.vyx)
-        .and(&state.vyy)
-        .and(&state.vyz)
-        .for_each(|out, &a, &b, &c| *out = a + b + c);
-    Zip::from(velocity.vz.view_mut())
-        .and(&state.vzx)
-        .and(&state.vzy)
-        .and(&state.vzz)
-        .for_each(|out, &a, &b, &c| *out = a + b + c);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                velocity.vx[[i, j, k]] =
+                    state.vxx[[i, j, k]] + state.vxy[[i, j, k]] + state.vxz[[i, j, k]];
+                velocity.vy[[i, j, k]] =
+                    state.vyx[[i, j, k]] + state.vyy[[i, j, k]] + state.vyz[[i, j, k]];
+                velocity.vz[[i, j, k]] =
+                    state.vzx[[i, j, k]] + state.vzy[[i, j, k]] + state.vzz[[i, j, k]];
+            }
+        }
+    }
 }

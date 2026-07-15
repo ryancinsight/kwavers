@@ -1,11 +1,12 @@
 //! Legacy linear polarization model (deprecated — use JonesPolarizationModel)
 
 use super::PolarizationModel;
+use eunomia::Complex64;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::{Array3, Array4};
 use log::debug;
-use ndarray::{Array3, Array4, Zip};
-use num_complex::Complex64;
+use moirai_parallel::{for_each_mut_with, Adaptive};
 
 /// Legacy linear polarization model (deprecated — use JonesPolarizationModel)
 #[derive(Debug)]
@@ -31,7 +32,10 @@ impl PolarizationModel for LinearPolarization {
         _medium: &dyn Medium,
     ) {
         debug!("WARNING: Using deprecated LinearPolarization model. Consider using JonesPolarizationModel for mathematical accuracy.");
-        Zip::from(fluence).par_for_each(|f| {
+        let values = fluence
+            .as_slice_memory_order_mut()
+            .expect("invariant: linear-polarization fluence field must be contiguous");
+        for_each_mut_with::<Adaptive, _, _>(values, |f| {
             *f *= self.polarization_factor.mul_add(f.abs(), 1.0);
         });
     }

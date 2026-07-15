@@ -2,13 +2,14 @@
 
 use crate::sonoluminescence::{SonoluminescenceDetector, SonoluminescenceEvent};
 use crate::GridSensorSet;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_core::time::Time;
 use kwavers_field::indices::{BUBBLE_RADIUS_IDX, LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
+use kwavers_field::Array3 as FieldArray3;
 use kwavers_field::BubbleStateFields;
 use kwavers_grid::Grid;
+use leto::{Array2, Array3, Array4};
 use log::info;
-use ndarray::{Array2, Array3, Array4, Axis};
 use std::fs::File;
 use std::io::Write;
 
@@ -69,7 +70,7 @@ impl Recorder {
 
         let n_time = self.pressure_sensor_data.len();
         let n_sensors = self.pressure_sensor_data[0].len();
-        let mut data = Array2::zeros((n_sensors, n_time));
+        let mut data = Array2::zeros([n_sensors, n_time]);
 
         for (t, sensor_data) in self.pressure_sensor_data.iter().enumerate() {
             for (s, &value) in sensor_data.iter().enumerate() {
@@ -89,7 +90,7 @@ impl Recorder {
 
         let n_time = self.light_sensor_data.len();
         let n_sensors = self.light_sensor_data[0].len();
-        let mut data = Array2::zeros((n_sensors, n_time));
+        let mut data = Array2::zeros([n_sensors, n_time]);
 
         for (t, sensor_data) in self.light_sensor_data.iter().enumerate() {
             for (s, &value) in sensor_data.iter().enumerate() {
@@ -154,7 +155,9 @@ impl Recorder {
         time: f64,
     ) -> KwaversResult<()> {
         if self.record_pressure {
-            let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX);
+            let pressure_field = fields.index_axis::<3>(0, PRESSURE_IDX).map_err(|e| {
+                KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
+            })?;
             let max_p = pressure_field
                 .iter()
                 .copied()
@@ -165,13 +168,17 @@ impl Recorder {
         }
 
         if self.record_temperature {
-            let temp_field = fields.index_axis(Axis(0), TEMPERATURE_IDX);
+            let temp_field = fields.index_axis::<3>(0, TEMPERATURE_IDX).map_err(|e| {
+                KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
+            })?;
             let max_t = temp_field.iter().copied().fold(f64::NEG_INFINITY, f64::max);
             self.statistics.update_temperature(max_t);
         }
 
         if self.record_light {
-            let light_field = fields.index_axis(Axis(0), LIGHT_IDX);
+            let light_field = fields.index_axis::<3>(0, LIGHT_IDX).map_err(|e| {
+                KwaversError::InternalError(format!("light axis slice failed: {e}"))
+            })?;
             let max_l = light_field.iter().copied().fold(0.0, f64::max);
             self.statistics.update_light_intensity(max_l);
         }
@@ -205,10 +212,14 @@ impl Recorder {
         step: usize,
         time: f64,
     ) -> KwaversResult<()> {
-        let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX);
-        let bubble_field = fields.index_axis(Axis(0), BUBBLE_RADIUS_IDX);
+        let pressure_field = fields
+            .index_axis::<3>(0, PRESSURE_IDX)
+            .map_err(|e| KwaversError::InternalError(format!("pressure axis slice failed: {e}")))?;
+        let bubble_field = fields
+            .index_axis::<3>(0, BUBBLE_RADIUS_IDX)
+            .map_err(|e| KwaversError::InternalError(format!("bubble axis slice failed: {e}")))?;
 
-        for ((i, j, k), &pressure) in pressure_field.indexed_iter() {
+        for ([i, j, k], &pressure) in pressure_field.indexed_iter() {
             if pressure < self.cavitation_threshold {
                 let radius = bubble_field[[i, j, k]];
                 self.cavitation_events.push(RecorderCavitationEvent {
@@ -236,22 +247,35 @@ impl Recorder {
         _time: f64,
     ) -> KwaversResult<()> {
         if let Some(ref mut detector) = self.sl_detector {
-            let pressure_field = fields.index_axis(Axis(0), PRESSURE_IDX).to_owned();
-            let bubble_radius = fields.index_axis(Axis(0), BUBBLE_RADIUS_IDX).to_owned();
+            let pressure_field = fields
+                .index_axis::<3>(0, PRESSURE_IDX)
+                .map_err(|e| {
+                    KwaversError::InternalError(format!("pressure axis slice failed: {e}"))
+                })?
+                .to_contiguous();
+            let bubble_radius = fields
+                .index_axis::<3>(0, BUBBLE_RADIUS_IDX)
+                .map_err(|e| KwaversError::InternalError(format!("bubble axis slice failed: {e}")))?
+                .to_contiguous();
+            let field_shape = pressure_field.shape();
 
             let bubble_states = BubbleStateFields {
-                radius: bubble_radius,
-                velocity: Array3::zeros(pressure_field.dim()),
-                temperature: Array3::zeros(pressure_field.dim()),
+                radius: bubble_radius.clone(),
+                velocity: FieldArray3::zeros(field_shape),
+                temperature: FieldArray3::zeros(field_shape),
                 pressure: pressure_field.clone(),
-                is_collapsing: Array3::zeros(pressure_field.dim()),
-                compression_ratio: Array3::from_elem(pressure_field.dim(), 1.0),
+                is_collapsing: FieldArray3::zeros(field_shape),
+                compression_ratio: FieldArray3::from_elem(field_shape, 1.0),
             };
 
             let initial_radius = bubble_states.radius.clone();
             let dt = self.time.dt;
-            let events =
-                detector.detect_events(&bubble_states, &pressure_field, &initial_radius, dt);
+            let events = detector.detect_events(
+                &bubble_states,
+                &bubble_states.pressure,
+                &initial_radius,
+                dt,
+            );
             for event in events {
                 self.sl_events.push(event.clone());
                 let (i, j, k) = event.position;
@@ -271,10 +295,12 @@ impl Recorder {
         step: usize,
         time: f64,
     ) -> KwaversResult<()> {
-        let temp_field = fields.index_axis(Axis(0), TEMPERATURE_IDX);
+        let temp_field = fields.index_axis::<3>(0, TEMPERATURE_IDX).map_err(|e| {
+            KwaversError::InternalError(format!("temperature axis slice failed: {e}"))
+        })?;
         const THERMAL_THRESHOLD: f64 = 343.15; // 70°C
 
-        for ((i, j, k), &temperature) in temp_field.indexed_iter() {
+        for ([i, j, k], &temperature) in temp_field.indexed_iter() {
             if temperature > THERMAL_THRESHOLD {
                 self.thermal_events.push(ThermalEvent {
                     time_step: step,

@@ -3,7 +3,7 @@
 use kwavers_field::EMFields;
 use kwavers_grid::Grid;
 use kwavers_physics::electromagnetic::equations::EMMaterialDistribution;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Electromagnetic FDTD solver using Yee's algorithm
 ///

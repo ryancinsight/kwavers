@@ -3,7 +3,7 @@
 //! This module provides vector norms and basic vector operations
 //! commonly used in numerical algorithms and signal processing.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Vector norms and basic operations
 #[derive(Debug)]
@@ -19,8 +19,8 @@ impl VectorOperations {
     /// L2 norm (square root of sum of squares)
     #[must_use]
     pub fn norm_l2(array: &Array3<f64>) -> f64 {
-        let mut sum_sq = 0.0;
-        for &val in array {
+        let mut sum_sq: f64 = 0.0;
+        for &val in array.iter() {
             sum_sq += val * val;
         }
         sum_sq.sqrt()
@@ -115,12 +115,12 @@ impl VectorOperations {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_norm_l2() {
-        let array = Array3::from_shape_vec((2, 2, 2), vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
-            .unwrap();
+        let array =
+            Array3::from_vec([2, 2, 2], vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0]).unwrap();
         let norm = VectorOperations::norm_l2(&array);
 
         // Expected: sqrt(1² + 2² + ... + 8²) = sqrt(204) ≈ 14.282856857

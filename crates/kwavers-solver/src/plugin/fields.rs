@@ -2,7 +2,7 @@
 //!
 //! Holds field data for plugins.
 
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 /// Plugin field data container
 #[derive(Debug, Clone)]

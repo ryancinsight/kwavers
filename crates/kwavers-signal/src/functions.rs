@@ -4,7 +4,7 @@ use super::traits::Signal;
 use super::window::{get_win, SignalWindowType};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};
@@ -312,7 +312,8 @@ pub fn create_cw_signals(
         )));
     }
 
-    let mut out = Array2::<f64>::zeros((n_signals, t.len()));
+    let n_cols = t.len();
+    let mut out = Array2::<f64>::zeros([n_signals, n_cols]);
     for s in 0..n_signals {
         let a = if amplitudes.len() == 1 {
             amplitudes[0]
@@ -325,7 +326,9 @@ pub fn create_cw_signals(
             phases[s]
         };
         let row = create_cw_signal(t, frequency_hz, a, p)?;
-        out.row_mut(s).assign(&ndarray::Array1::from_vec(row));
+        for (c, &val) in row.iter().enumerate() {
+            out[[s, c]] = val;
+        }
     }
     Ok(out)
 }

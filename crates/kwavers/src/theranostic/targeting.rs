@@ -12,7 +12,7 @@
 //! lives upstream in the ROI mask; this module only resolves the mask + score to
 //! a single focal voxel and its coordinates.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Result of resolving a target from a reconstructed volume.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -53,11 +53,11 @@ impl TargetSelection {
         origin_m: [f64; 3],
         spacing_m: [f64; 3],
     ) -> Option<Self> {
-        if score.dim() != mask.dim() {
+        if score.shape() != mask.shape() {
             return None;
         }
         let mut best: Option<((usize, usize, usize), f64)> = None;
-        for ((i, j, k), &s) in score.indexed_iter() {
+        for ([i, j, k], &s) in score.indexed_iter() {
             if !mask[[i, j, k]] {
                 continue;
             }
@@ -77,7 +77,7 @@ impl TargetSelection {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn voxel_to_position_is_affine() {

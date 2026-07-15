@@ -1,6 +1,6 @@
 //! Read-only accessors for the cached grid and material-property fields.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::DiffusionSolver;
 use kwavers_grid::Grid;

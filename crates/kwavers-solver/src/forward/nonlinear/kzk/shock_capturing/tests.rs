@@ -18,7 +18,7 @@ fn test_no_shock_detection_smooth_field() {
     };
     let capture = ShockCapture::new(config);
 
-    let mut pressure = ndarray::Array2::zeros((64, 64));
+    let mut pressure = leto::Array2::zeros((64, 64));
     for i in 0..64 {
         for j in 0..64 {
             let x = (i as f64 - 32.0) / 10.0;
@@ -41,7 +41,7 @@ fn test_shock_detection_steep_gradient() {
     };
     let capture = ShockCapture::new(config);
 
-    let mut pressure = ndarray::Array2::zeros((64, 64));
+    let mut pressure = leto::Array2::zeros((64, 64));
     for i in 0..64 {
         for j in 0..64 {
             pressure[[i, j]] = if j < 32 { 1000.0 } else { -1000.0 };
@@ -60,7 +60,7 @@ fn test_artificial_viscosity_generation() {
     let config = ShockCapturingConfig::default();
     let capture = ShockCapture::new(config);
 
-    let mut pressure = ndarray::Array2::zeros((64, 64));
+    let mut pressure = leto::Array2::zeros((64, 64));
     for i in 0..64 {
         for j in 0..64 {
             pressure[[i, j]] = ((i as f64) * (j as f64)).sin() * 100.0;
@@ -70,7 +70,7 @@ fn test_artificial_viscosity_generation() {
     let q_av = capture
         .artificial_viscosity(&pressure, 0.001, 0.001, 1000.0, SOUND_SPEED_TISSUE)
         .unwrap();
-    assert_eq!(q_av.dim(), (64, 64));
+    assert_eq!(q_av.shape(), [64, 64]);
 }
 
 #[test]
@@ -78,7 +78,7 @@ fn test_shock_filter_application() {
     let config = ShockCapturingConfig::default();
     let capture = ShockCapture::new(config);
 
-    let mut pressure = ndarray::Array2::zeros((64, 64));
+    let mut pressure = leto::Array2::zeros((64, 64));
     for i in 0..64 {
         for j in 0..64 {
             pressure[[i, j]] = if j < 32 { 1000.0 } else { -1000.0 };
@@ -136,7 +136,7 @@ fn test_harmonic_ratios_pure_sine_is_zero() {
     let nx = 5;
     let dz = 1.0 / 1000.0;
     let f0 = 100.0_f64;
-    let mut pressure = ndarray::Array2::zeros((nx, nz));
+    let mut pressure = leto::Array2::zeros((nx, nz));
     for z in 0..nz {
         let val = (TWO_PI * f0 * z as f64 * dz).sin() * 1000.0;
         for x in 0..nx {
@@ -175,7 +175,7 @@ fn test_harmonic_ratios_known_second_harmonic() {
     let a1 = 1000.0_f64;
     let a2 = 200.0_f64;
 
-    let mut pressure = ndarray::Array2::zeros((nx, nz));
+    let mut pressure = leto::Array2::zeros((nx, nz));
     for z in 0..nz {
         let t = z as f64 * dz;
         let val = a1 * (TWO_PI * f0 * t).sin() + a2 * (TWO_PI * 2.0 * f0 * t).sin();
@@ -208,7 +208,7 @@ fn test_harmonic_ratios_zero_field_returns_empty() {
     let config = ShockCapturingConfig::default();
     let capture = ShockCapture::new(config);
 
-    let pressure = ndarray::Array2::zeros((8, 128));
+    let pressure = leto::Array2::zeros((8, 128));
     let ratios = capture
         .compute_harmonic_ratios(&pressure, 100.0, 1e-4)
         .unwrap();
@@ -224,7 +224,7 @@ fn test_harmonic_ratios_invalid_frequency_returns_empty() {
     let config = ShockCapturingConfig::default();
     let capture = ShockCapture::new(config);
 
-    let mut pressure = ndarray::Array2::zeros((8, 64));
+    let mut pressure = leto::Array2::zeros((8, 64));
     pressure[[4, 10]] = 1.0;
     let ratios = capture
         .compute_harmonic_ratios(&pressure, 0.0, 1e-4)

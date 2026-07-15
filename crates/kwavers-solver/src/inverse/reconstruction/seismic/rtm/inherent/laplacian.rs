@@ -1,6 +1,6 @@
 //! 2nd-order isotropic Laplacian operator for RTM image filtering.
 //!
-//! # Theorem: parallel Zip-slice Laplacian (2nd-order, unit stencil)
+//! # Theorem: Moirai strided-view Laplacian (2nd-order, unit stencil)
 //!
 //! For an interior point `(i,j,k)` of an array `field` with uniform spacing:
 //! ```text
@@ -13,18 +13,19 @@
 //!
 //! ## Implementation
 //!
-//! Three sequential `Zip::par_for_each` passes accumulate into the interior
+//! Three sequential Moirai strided-view passes accumulate into the interior
 //! laplacian slice:
 //! 1. x-neighbours: `+= field[i+1] + field[i-1]`
 //! 2. y-neighbours: `+= field[j+1] + field[j-1]`
 //! 3. z-neighbours and centre: `+= field[k+1] + field[k-1] − 6·field[c]`
 //!
-//! Each pass uses 3 or 4 arrays (well within ndarray Zip's limit).
+//! Each pass uses same-shape strided views over the interior stencil.
 
 use kwavers_core::error::{KwaversResult, ValidationError};
-use ndarray::{s, Array3, Zip};
+use leto::Array3;
 
 use super::super::types::ReverseTimeMigration;
+use super::parallel::for_each_view_mut;
 
 impl ReverseTimeMigration {
     /// Validate that a grid has a 3-D interior for the centred second-difference
@@ -55,30 +56,62 @@ impl ReverseTimeMigration {
     /// # Errors
     /// - [`ValidationError::DimensionMismatch`] when the grid lacks a 3-D interior
     ///   (see [`Self::ensure_3d_interior`]).
-    pub(super) fn compute_laplacian(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+    pub(super) fn compute_laplacian(
+        &self,
+        field: &leto::ArrayView<'_, f64, 3>,
+    ) -> KwaversResult<Array3<f64>> {
+        let [nx, ny, nz] = field.shape();
         Self::ensure_3d_interior((nx, ny, nz))?;
         let mut laplacian = Array3::<f64>::zeros((nx, ny, nz));
         let inn = s![1..nx - 1, 1..ny - 1, 1..nz - 1];
 
-        // x-neighbours
-        Zip::from(laplacian.slice_mut(inn))
-            .and(&field.slice(s![2..nx, 1..ny - 1, 1..nz - 1]))
-            .and(&field.slice(s![..nx - 2, 1..ny - 1, 1..nz - 1]))
-            .par_for_each(|lap, &xp, &xm| *lap += xp + xm);
+        let xp = field
+            .slice_with::<3>(&s![2..nx, 1..ny - 1, 1..nz - 1])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        let xm = field
+            .slice_with::<3>(&s![..nx - 2, 1..ny - 1, 1..nz - 1])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        for_each_view_mut(
+            laplacian
+                .slice_with_mut::<3>(&inn)
+                .expect("invariant: RTM laplacian interior slice in range"),
+            |idx, lap| {
+                *lap += xp[idx] + xm[idx];
+            },
+        );
 
-        // y-neighbours
-        Zip::from(laplacian.slice_mut(inn))
-            .and(&field.slice(s![1..nx - 1, 2..ny, 1..nz - 1]))
-            .and(&field.slice(s![1..nx - 1, ..ny - 2, 1..nz - 1]))
-            .par_for_each(|lap, &yp, &ym| *lap += yp + ym);
+        let yp = field
+            .slice_with::<3>(&s![1..nx - 1, 2..ny, 1..nz - 1])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        let ym = field
+            .slice_with::<3>(&s![1..nx - 1, ..ny - 2, 1..nz - 1])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        for_each_view_mut(
+            laplacian
+                .slice_with_mut::<3>(&inn)
+                .expect("invariant: RTM laplacian interior slice in range"),
+            |idx, lap| {
+                *lap += yp[idx] + ym[idx];
+            },
+        );
 
-        // z-neighbours and subtract 6×centre
-        Zip::from(laplacian.slice_mut(inn))
-            .and(&field.slice(s![1..nx - 1, 1..ny - 1, 2..nz]))
-            .and(&field.slice(s![1..nx - 1, 1..ny - 1, ..nz - 2]))
-            .and(&field.slice(s![1..nx - 1, 1..ny - 1, 1..nz - 1]))
-            .par_for_each(|lap, &zp, &zm, &c| *lap += 6.0f64.mul_add(-c, zp + zm));
+        let zp = field
+            .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 2..nz])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        let zm = field
+            .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, ..nz - 2])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        let center = field
+            .slice_with::<3>(&s![1..nx - 1, 1..ny - 1, 1..nz - 1])
+            .expect("invariant: RTM laplacian stencil slice in range");
+        for_each_view_mut(
+            laplacian
+                .slice_with_mut::<3>(&inn)
+                .expect("invariant: RTM laplacian interior slice in range"),
+            |idx, lap| {
+                *lap += 6.0f64.mul_add(-center[idx], zp[idx] + zm[idx]);
+            },
+        );
 
         Ok(laplacian)
     }

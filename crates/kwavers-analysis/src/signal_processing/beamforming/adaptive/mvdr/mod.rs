@@ -33,7 +33,7 @@
 //!
 //! # Architectural Intent (SSOT)
 //!
-//! - **NO local matrix inversion** - uses `math::linear_algebra::LinearAlgebra::solve_linear_system_complex`
+//! - **NO local matrix inversion** - uses `math::linear_algebra::ComplexLinearAlgebra::solve_linear_system_complex`
 //! - **NO silent fallbacks** - returns `Err(...)` on numerical failure
 //! - **NO error masking** - all failures are explicit and surfaced to caller
 //! - **NO dummy weights** - never returns steering vector as disguised fallback
@@ -44,9 +44,9 @@
 //! - Van Trees, H. L. (2002). *Optimum Array Processing*. Wiley. Chapter 6.
 //! - Li, J., Stoica, P., & Wang, Z. (2003). "On robust Capon beamforming." *IEEE TSP*, 51(7).
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::DEFAULT_DIAGONAL_LOADING;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use num_complex::Complex64;
 
 /// Minimum Variance Distortionless Response (MVDR / Capon) beamformer.
 ///
@@ -95,18 +95,18 @@ impl MinimumVariance {
     ///
     pub(super) fn loaded_covariance(
         &self,
-        covariance: &ndarray::Array2<Complex64>,
+        covariance: &leto::Array2<Complex64>,
         steering_len: usize,
-    ) -> kwavers_core::error::KwaversResult<ndarray::Array2<Complex64>> {
+    ) -> kwavers_core::error::KwaversResult<leto::Array2<Complex64>> {
         use kwavers_core::error::KwaversError;
 
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
 
-        if n == 0 || covariance.ncols() != n {
+        if n == 0 || covariance.shape()[1] != n {
             return Err(KwaversError::InvalidInput(format!(
                 "MVDR: covariance must be non-empty and square; got {}×{}",
-                covariance.nrows(),
-                covariance.ncols()
+                covariance.shape()[0],
+                covariance.shape()[1]
             )));
         }
         if steering_len != n {
@@ -126,7 +126,7 @@ impl MinimumVariance {
         if self.diagonal_loading > 0.0 {
             let loading = Complex64::new(self.diagonal_loading, 0.0);
             for i in 0..n {
-                r_loaded[(i, i)] += loading;
+                r_loaded[[i, i]] += loading;
             }
         }
 

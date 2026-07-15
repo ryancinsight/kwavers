@@ -1,9 +1,9 @@
 //! `encode_source_injection`: pressure-source and velocity-source injection.
 
-use super::super::super::{GpuPstdSolver, PstdParams};
+use super::super::super::{state::WgpuPstdState, PstdParams};
 use super::StepCtx;
 
-impl GpuPstdSolver {
+impl WgpuPstdState {
     /// Encode pressure-source and velocity-source injection.
     ///
     /// Pressure injection: scatter `source_signals[step]` to `field_p[source_indices]`.
@@ -29,7 +29,7 @@ impl GpuPstdSolver {
             self.dispatch(
                 cpass,
                 &src_params,
-                &self.pipeline_inject_src,
+                &self.pipelines.inject_src,
                 bg,
                 StepCtx::ceil_div(ctx.n_src, 256),
                 "inject",
@@ -41,7 +41,7 @@ impl GpuPstdSolver {
             self.dispatch(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_zero_kspace,
+                &self.pipelines.zero_kspace,
                 bg,
                 ew,
                 "zero_ksp",
@@ -53,25 +53,25 @@ impl GpuPstdSolver {
             self.dispatch(
                 cpass,
                 &vel_params,
-                &self.pipeline_inject_vel_x,
+                &self.pipelines.inject_vel_x,
                 bg_vel,
                 StepCtx::ceil_div(ctx.n_vel_x, 256),
                 "inject_vx",
             );
-            self.fft_3d(cpass, bg, step, ctx.n_sensors);
+            self.fft_3d(cpass, bg, ctx, step);
             self.dispatch(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_apply_source_kappa,
+                &self.pipelines.apply_source_kappa,
                 bg,
                 ew,
                 "src_kappa",
             );
-            self.ifft_3d(cpass, bg, step, ctx.n_sensors);
+            self.ifft_3d(cpass, bg, ctx, step);
             self.dispatch(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipeline_add_kspace_to_field_ux,
+                &self.pipelines.add_kspace_to_field_ux,
                 bg,
                 ew,
                 "add_ux",

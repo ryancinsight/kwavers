@@ -12,8 +12,8 @@ use kwavers_core::constants::optical::{
 use kwavers_field::indices::LIGHT_IDX;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::{Array3, Array4};
 use log::debug;
-use ndarray::{Array3, Array4, Axis};
 use std::time::Instant;
 
 /// Time-domain light diffusion solver
@@ -90,8 +90,8 @@ impl LightDiffusion {
         }
 
         Self {
-            fluence_rate: Array4::zeros((1, nx, ny, nz)),
-            emission_spectrum: Array3::zeros((nx, ny, nz)),
+            fluence_rate: Array4::zeros([1, nx, ny, nz]),
+            emission_spectrum: Array3::zeros([nx, ny, nz]),
             optical_properties,
             _polarization: if enable_polarization {
                 Some(Box::new(LinearPolarization::new(
@@ -130,10 +130,10 @@ impl LightDiffusionModelTrait for LightDiffusion {
         let start_time = Instant::now();
 
         // Update the light field in the fields array
-        let mut light_field = fields.index_axis_mut(Axis(0), LIGHT_IDX);
+        let mut light_field = fields.index_axis_mut(0, LIGHT_IDX).unwrap();
 
         // Get dimensions
-        let (nx, ny, nz) = light_field.dim();
+        let [nx, ny, nz] = light_field.shape();
 
         // Time-dependent photon diffusion equation under the P1 approximation:
         //
@@ -149,7 +149,7 @@ impl LightDiffusionModelTrait for LightDiffusion {
         let c_medium = SPEED_OF_LIGHT / self.optical_properties.refractive_index;
 
         // Create a temporary array to store the updated values
-        let mut updated_field = light_field.to_owned();
+        let mut updated_field = light_field.to_contiguous();
 
         let dx2_inv = 1.0 / (grid.dx * grid.dx);
         let dy2_inv = 1.0 / (grid.dy * grid.dy);
@@ -206,8 +206,9 @@ impl LightDiffusionModelTrait for LightDiffusion {
         // The snapshot is sized (1, nx, ny, nz); copying the full
         // multi-channel `fields` array would broadcast-fail at runtime.
         self.fluence_rate
-            .index_axis_mut(Axis(0), 0)
-            .assign(&light_field);
+            .index_axis_mut(0, 0)
+            .unwrap()
+            .assign(&light_field.to_contiguous());
 
         self.update_time = start_time.elapsed().as_secs_f64();
         self.call_count += 1;

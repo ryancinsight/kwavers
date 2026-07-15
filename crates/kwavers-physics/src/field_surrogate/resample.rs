@@ -23,7 +23,7 @@
 //! Cubic can be added behind a separate function if a future use case
 //! requires it.
 
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 use super::kernel::FocalKernel;
 
@@ -47,21 +47,18 @@ pub fn resample_trilinear(kernel: &FocalKernel, target_dx_m: f64) -> FocalKernel
         return kernel.clone();
     }
     let zoom = kernel.dx_m / target_dx_m;
-    let (nxi, nyi, nzi) = kernel.field.dim();
+    let [nxi, nyi, nzi] = kernel.field.shape();
     let nxo = ((nxi as f64) * zoom).round().max(1.0) as usize;
     let nyo = ((nyi as f64) * zoom).round().max(1.0) as usize;
     let nzo = ((nzi as f64) * zoom).round().max(1.0) as usize;
 
-    let mut out = Array3::<f64>::zeros((nxo, nyo, nzo));
+    let mut out = Array3::<f64>::zeros([nxo, nyo, nzo]);
     let inv_zoom = 1.0 / zoom;
     let inp = &kernel.field;
 
-    // Parallelise the per-voxel trilinear sum over the output array
-    // via `ndarray::Zip::indexed` + rayon. Each output voxel reads 8
-    // distinct input voxels with no write contention, so the work
-    // partitions cleanly across cores. ~4–8× speedup on multicore for
-    // the typical 100k–1M-voxel kernel sizes.
-    Zip::indexed(&mut out).par_for_each(|(io, jo, ko), out_val| {
+    // Each output voxel reads eight immutable input voxels and writes one
+    // disjoint output voxel, so the traversal is race-free under Moirai.
+    crate::parallel::for_each_indexed_mut(out.view_mut(), |(io, jo, ko), out_val| {
         let xi = (io as f64) * inv_zoom;
         let x0 = xi.floor() as isize;
         let fx = xi - (x0 as f64);

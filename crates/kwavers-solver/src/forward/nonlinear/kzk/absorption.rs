@@ -40,9 +40,9 @@
 //! as `h_mask_half` (dz/2) and `h_mask_full` (dz).  The per-call `Vec`
 //! allocation and `powf` re-computation are eliminated on the hot path.
 //!
-//! `waveform` (`Array1<Complex64>`, length nt) is likewise pre-allocated and
-//! reused across all spatial-point iterations, replacing one 16 KB allocation
-//! per (i,j) pair.
+//! Each scheduled slab owns a local `waveform` (`Array1<Complex64>`, length
+//! nt) scratch buffer reused across the slab's spatial-point iterations,
+//! replacing one 16 KB allocation per (i,j) pair.
 //!
 //! # References
 //!
@@ -53,11 +53,13 @@
 //! - Aanonsen SI et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
 use super::KZKConfig;
+use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
-use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
-use ndarray::{s, Array1, Array3};
-use rayon::prelude::*;
+use kwavers_math::fft::Complex64;
+use leto::Array1 as LetoArray1;
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Power-law absorption operator for the KZK equation.
 ///
@@ -67,8 +69,8 @@ use rayon::prelude::*;
 /// `h_mask_half` and `h_mask_full` are pre-computed in `new()` for the two
 /// step-size variants used by Strang splitting (dz/2 and dz respectively),
 /// eliminating per-call `powf` recomputation and `Vec` allocation.
-/// The parallel `apply()` allocates one per-Rayon-thread scratch buffer of
-/// `nt × 16` bytes; no shared mutable scratch is needed.
+/// The parallel `apply()` allocates one scratch buffer of `nt × 16` bytes per
+/// scheduled slab; no shared mutable scratch is needed.
 #[derive(Debug)]
 pub struct KzkAbsorptionOperator {
     /// Attenuation coefficient at 1 Hz in Np/(m·Hz^y).
@@ -229,36 +231,39 @@ impl KzkAbsorptionOperator {
                 &self.h_mask_full
             };
 
-        // Parallelise over i-rows: each row slice [i, :, :] is disjoint,
-        // so `axis_iter_mut(Axis(0)).into_par_iter()` is race-free.
-        // A per-thread `waveform` scratch replaces the shared `self.waveform`
-        // (one allocation of `nt × 16` bytes per Rayon thread, not per call).
+        // Parallelise over i-slabs: each slab [i, :, :] is disjoint, so Moirai
+        // can schedule slab chunks without shared mutable aliases. A slab-local
+        // `waveform` scratch replaces the former shared `self.waveform`.
         let nt = self.config.nt;
-        pressure
-            .axis_iter_mut(ndarray::Axis(0))
-            .into_par_iter()
-            .for_each(|mut row_i| {
-                // Thread-local scratch: avoids the shared `self.waveform` hazard.
-                let mut waveform = Array1::<Complex64>::zeros(nt);
-                for j in 0..row_i.shape()[0] {
-                    // 1. Copy complex waveform into thread-local scratch.
-                    waveform.assign(&row_i.slice(s![j, ..]));
+        let ny = self.config.ny;
+        let slab_len = ny * nt;
+        let pressure_values = pressure
+            .as_slice_mut()
+            .expect("invariant: KZK absorption pressure is standard-layout");
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            pressure_values,
+            slab_len,
+            |_i, slab| {
+                let mut waveform = LetoArray1::<ApolloComplex64>::zeros([nt]);
+                for row in slab.chunks_exact_mut(nt) {
+                    for (w, &p) in waveform.iter_mut().zip(row.iter()) {
+                        *w = ApolloComplex64::new(p.re, p.im);
+                    }
 
-                    // 2. Forward DFT in-place (no normalisation).
                     fft_1d_complex_inplace(&mut waveform);
 
-                    // 3. Apply per-frequency attenuation mask.
                     for (w, &h) in waveform.iter_mut().zip(h_mask.iter()) {
                         *w *= h;
                     }
 
-                    // 4. Inverse DFT in-place (includes 1/nt normalisation).
                     ifft_1d_complex_inplace(&mut waveform);
 
-                    // 5. Write complex waveform back.
-                    row_i.slice_mut(s![j, ..]).assign(&waveform);
+                    for (p, &w) in row.iter_mut().zip(waveform.iter()) {
+                        *p = Complex64::new(w.re, w.im);
+                    }
                 }
-            });
+            },
+        );
     }
 
     /// Return the plane-wave attenuation coefficient α(f) in Np/m.

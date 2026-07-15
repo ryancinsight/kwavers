@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -30,7 +30,7 @@ pub struct KwaveAnalyticalPlaneWave {
 impl KwaveAnalyticalPlaneWave {
     /// Create new plane wave. Validates f > 0, c₀ > 0, normalizes direction.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn new(
         amplitude: f64,

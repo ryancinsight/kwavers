@@ -4,7 +4,8 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::Source;
-use ndarray::{Array3, Array4, Axis};
+use leto::{Array3, Array4};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::time::Instant;
 
 use super::super::nonlinear::{compute_nonlinear_term_into, compute_viscoelastic_term_into};
@@ -13,7 +14,7 @@ use super::{compute_laplacian_fd, WesterveltWave};
 
 /// Advance the spectral Westervelt model with borrowed pressure history.
 ///
-/// The leapfrog recurrence requires `p[n]`, `p[n-1]`, and one writable
+/// The leapfrog recurrence requires `p\[n\]`, `p[n-1]`, and one writable
 /// `p[n+1]` buffer. `WesterveltWave::pressure_buffers_for_step` proves these
 /// buffers are disjoint by matching the ring-buffer permutation, so the hot
 /// path does not clone pressure volumes before evaluating the RHS.
@@ -42,7 +43,9 @@ impl AcousticWaveModel for WesterveltWave {
         // (zero initial velocity, the standard IVP start). Without this the
         // previous buffer is zero on step 0, injecting a spurious velocity kick.
         if self.current_step == 0 {
-            let initial_pressure = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
+            let initial_pressure = fields
+                .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+                .expect("invariant: pressure field index within field stack");
             self.initialize_buffers(initial_pressure);
         }
 
@@ -50,7 +53,9 @@ impl AcousticWaveModel for WesterveltWave {
             log::debug!("WesterveltWave: Potential instability at t={}", t);
         }
 
-        let pressure_field = fields.index_axis(Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure_field = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
         self.pressure_buffers[self.buffer_indices[1]].assign(&pressure_field);
 
         let (next_idx, curr_idx, prev_idx) = (
@@ -108,7 +113,10 @@ impl AcousticWaveModel for WesterveltWave {
             grid,
             dt,
         );
-        self.nonlinear_scratch *= self.nonlinearity_scaling;
+        let nonlinearity_scaling = self.nonlinearity_scaling;
+        self.nonlinear_scratch
+            .iter_mut()
+            .for_each(|v| *v *= nonlinearity_scaling);
         {
             let mut metrics = self.metrics.lock().unwrap();
             metrics.record_nonlinear(start.elapsed());
@@ -125,7 +133,10 @@ impl AcousticWaveModel for WesterveltWave {
             dt,
         );
         if self.damping_scaling != 1.0 {
-            self.damping_scratch *= self.damping_scaling;
+            let damping_scaling = self.damping_scaling;
+            self.damping_scratch
+                .iter_mut()
+                .for_each(|v| *v *= damping_scaling);
         }
         {
             let mut metrics = self.metrics.lock().unwrap();
@@ -141,7 +152,7 @@ impl AcousticWaveModel for WesterveltWave {
             metrics.record_source(start.elapsed());
         }
 
-        // Leapfrog update via rayon parallel iteration.
+        // Leapfrog update via Moirai parallel iteration.
         // Disjoint field borrows: laplacian_scratch vs pressure_buffers[next_idx].
         let start = Instant::now();
         let laplacian_slice: &[f64] = if has_spectral_scratch {
@@ -175,29 +186,36 @@ impl AcousticWaveModel for WesterveltWave {
             .source_mask_scratch
             .as_slice()
             .expect("source_mask_scratch must be contiguous");
-        use rayon::prelude::*;
+        let pressure_current_slice = pressure_current
+            .as_slice()
+            .expect("pressure_current must be contiguous");
+        let pressure_previous_slice = pressure_previous
+            .as_slice()
+            .expect("pressure_previous must be contiguous");
+        let sound_speed_slice = c_arr
+            .as_slice()
+            .expect("sound_speed_array must be contiguous");
         let dt2 = dt * dt;
-        pressure_next
+        let pressure_next_slice = pressure_next
             .as_slice_mut()
-            .unwrap()
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(idx, p_next)| {
-                let p_curr = pressure_current.as_slice().unwrap()[idx];
-                let p_prev = pressure_previous.as_slice().unwrap()[idx];
-                let c = c_arr.as_slice().unwrap()[idx];
-                let lap = laplacian_slice[idx];
-                let nl = nonlinear_slice[idx];
-                let damp = damping_slice[idx];
-                let src = source_slice[idx] * src_amplitude;
+            .expect("pressure_next must be contiguous");
+        enumerate_mut_with::<Adaptive, _, _>(pressure_next_slice, |idx, p_next| {
+            let p_curr = pressure_current_slice[idx];
+            let p_prev = pressure_previous_slice[idx];
+            let c = sound_speed_slice[idx];
+            let lap = laplacian_slice[idx];
+            let nl = nonlinear_slice[idx];
+            let damp = damping_slice[idx];
+            let src = source_slice[idx] * src_amplitude;
 
-                let c2 = c * c;
-                let update = dt2 * (c2.mul_add(lap, nl) + damp + src);
-                *p_next = 2.0f64.mul_add(p_curr, -p_prev) + update;
-            });
+            let c2 = c * c;
+            let update = dt2 * (c2.mul_add(lap, nl) + damp + src);
+            *p_next = 2.0f64.mul_add(p_curr, -p_prev) + update;
+        });
 
         fields
-            .index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())
+            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack")
             .assign(pressure_next);
         {
             let mut metrics = self.metrics.lock().unwrap();

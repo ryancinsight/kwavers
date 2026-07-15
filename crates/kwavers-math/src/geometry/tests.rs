@@ -9,7 +9,7 @@ fn test_make_disc_basic() {
 
     let mask = make_disc(grid, spacing, center, radius).unwrap();
 
-    assert_eq!(mask.dim(), (32, 32, 1));
+    assert_eq!(mask.shape(), [32, 32, 1]);
     assert!(mask[[16, 16, 0]]);
 
     let count = mask.iter().filter(|&&x| x).count();
@@ -42,7 +42,7 @@ fn test_make_ball_basic() {
 
     let mask = make_ball(grid, spacing, center, radius).unwrap();
 
-    assert_eq!(mask.dim(), (32, 32, 32));
+    assert_eq!(mask.shape(), [32, 32, 32]);
     assert!(mask[[16, 16, 16]]);
 
     let count = mask.iter().filter(|&&x| x).count();
@@ -85,7 +85,7 @@ fn test_make_line_diagonal() {
 
     let mask = make_line(grid, spacing, start, end).unwrap();
 
-    assert_eq!(mask.dim(), (32, 32, 32));
+    assert_eq!(mask.shape(), [32, 32, 32]);
     assert!(mask[[0, 0, 0]]);
     assert!(mask[[31, 31, 31]]);
 

@@ -1,49 +1,72 @@
 //! GPU PSTD solver construction tests.
 
-use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use super::super::pipeline::{
+    PstdBindGroupLayoutProvider, PstdBindGroupProvider, PstdBufferProvider, PstdPipelineProvider,
+    WgpuPstdBindGroupFactory, WgpuPstdBindGroupLayoutFactory, WgpuPstdBufferFactory,
+    WgpuPstdPipelineFactory,
+};
+use super::super::{
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+};
+use super::helpers::pstd_test_provider;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use std::sync::Arc;
+
+#[test]
+fn pstd_buffer_factory_is_generic_over_provider_trait() {
+    fn assert_provider<P>()
+    where
+        P: PstdBufferProvider,
+    {
+        let _ = core::mem::size_of::<P::Buffer>();
+    }
+
+    assert_provider::<WgpuPstdBufferFactory<'static>>();
+}
+
+#[test]
+fn pstd_pipeline_factory_is_generic_over_provider_trait() {
+    fn assert_provider<P>()
+    where
+        P: PstdPipelineProvider,
+    {
+        let _ = core::mem::size_of::<P::Pipeline>();
+    }
+
+    assert_provider::<WgpuPstdPipelineFactory<'static>>();
+}
+
+#[test]
+fn pstd_bind_group_layout_factory_is_generic_over_provider_trait() {
+    fn assert_provider<P>()
+    where
+        P: PstdBindGroupLayoutProvider,
+    {
+        let _ = core::mem::size_of::<P::BindGroupLayout>();
+    }
+
+    assert_provider::<WgpuPstdBindGroupLayoutFactory<'static>>();
+}
+
+#[test]
+fn pstd_bind_group_factory_is_generic_over_provider_trait() {
+    fn assert_provider<P>()
+    where
+        P: PstdBindGroupProvider,
+    {
+        let _ = core::mem::size_of::<P::BindGroup>();
+    }
+
+    assert_provider::<WgpuPstdBindGroupFactory<'static>>();
+}
 
 /// Verify GpuPstdSolver can be constructed and runs without error.
 /// Skipped if no GPU adapter is available (headless CI).
-/// # Panics
-/// - Panics if `device creation`.
-///
 #[test]
 fn test_gpu_pstd_solver_new() {
-    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
-
-    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        compatible_surface: None,
-        force_fallback_adapter: false,
-    }));
-
-    let Ok(adapter) = adapter else {
-        eprintln!("No GPU adapter — skipping GpuPstdSolver test");
+    let Some(provider) = pstd_test_provider("test_pstd") else {
+        eprintln!("No GPU adapter - skipping GpuPstdSolver test");
         return;
     };
-
-    let native_limits = adapter.limits();
-    let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-        label: Some("test_pstd"),
-        required_features: wgpu::Features::PUSH_CONSTANTS,
-        required_limits: wgpu::Limits {
-            max_push_constant_size: 128,
-            max_storage_buffers_per_shader_stage:
-                native_limits.max_storage_buffers_per_shader_stage,
-            ..wgpu::Limits::default()
-        },
-        memory_hints: wgpu::MemoryHints::default(),
-        trace: wgpu::Trace::Off,
-    }))
-    .expect("device creation");
-
-    let device = Arc::new(device);
-    let queue = Arc::new(queue);
 
     let n = 32usize;
     let dx = 1e-3_f64;
@@ -58,9 +81,8 @@ fn test_gpu_pstd_solver_new() {
     let ones: Vec<f32> = vec![1.0f32; n * n * n];
     let zeros: Vec<f32> = vec![0.0f32; n * n * n];
 
-    let solver = GpuPstdSolver::new(
-        device,
-        queue,
+    let solver = GpuPstdSolver::<WgpuPstdStateProvider>::new(
+        provider,
         &grid,
         MediumArrays {
             c0_flat: &c0v,

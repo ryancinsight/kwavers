@@ -1,6 +1,6 @@
 //! Physics-informed loss components and optimizer types.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Physics loss component
 ///
@@ -35,7 +35,7 @@ impl PhysicsLoss {
     /// Violation = ||forward - reverse||²
     #[must_use]
     pub fn reciprocity_violation(forward: &Array2<f64>, reverse: &Array2<f64>) -> f64 {
-        if forward.dim() != reverse.dim() {
+        if forward.shape() != reverse.shape() {
             return f64::INFINITY;
         }
         if forward.is_empty() {
@@ -51,15 +51,15 @@ impl PhysicsLoss {
     /// Violation = sum_i |phase(i+1) - phase(i)|
     #[must_use]
     pub fn coherence_violation(phases: &Array2<f64>) -> f64 {
-        if phases.is_empty() || phases.dim().0 < 2 {
+        if phases.is_empty() || phases.shape()[0] < 2 {
             return 0.0;
         }
         // Shortest-arc magnitude of each adjacent-element phase difference
         // (SSOT wrap; see `math::signal::wrap_to_pi`). Correct for any gradient
         // magnitude, unlike a single π-fold of |Δφ|.
         let mut violation = 0.0;
-        for i in 0..phases.dim().0 - 1 {
-            for j in 0..phases.dim().1 {
+        for i in 0..phases.shape()[0] - 1 {
+            for j in 0..phases.shape()[1] {
                 let normalized =
                     kwavers_math::signal::wrap_to_pi(phases[[i + 1, j]] - phases[[i, j]]).abs();
                 violation += normalized;

@@ -5,7 +5,7 @@ use kwavers_core::constants::SOUND_SPEED_TISSUE;
 impl NumericalValidator {
     /// Validate stability.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn validate_stability(
         &self,

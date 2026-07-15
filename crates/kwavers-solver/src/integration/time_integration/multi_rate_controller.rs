@@ -44,7 +44,7 @@ impl MultiRateController {
     /// components (i.e., the slowest component's time step). Faster components
     /// then take multiple sub-steps within each global step.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn determine_time_steps(
         &mut self,
@@ -140,7 +140,7 @@ impl MultiRateController {
         // Compute work if single-rate was used (everyone at fastest rate)
         // This would be: total_steps * max_subcycles_per_component * n_components
         let max_subcycles = self.subcycle_counts.values().max().copied().unwrap_or(1);
-        let single_rate_work = self.total_steps * max_subcycles * self.subcycle_counts.len();
+        let single_rate_work = self.total_steps * max_subcycles * (self.subcycle_counts.len());
 
         single_rate_work as f64 / actual_work.max(1) as f64
     }

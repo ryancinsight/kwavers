@@ -16,6 +16,7 @@ fn test_safety_limit_checking() {
             duty_cycle: 0.1,
             focal_depth: 0.05,
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 0.5,
@@ -61,6 +62,7 @@ fn test_safety_controller_integration() {
             duty_cycle: 0.05,
             focal_depth: 0.04,
             treatment_volume: 0.8,
+            use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: 2.0,

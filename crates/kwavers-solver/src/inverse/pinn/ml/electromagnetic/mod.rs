@@ -18,7 +18,7 @@ pub use types::{EMProblemType, ElectromagneticBoundarySpec};
 mod tests {
     use super::*;
 
-    type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
+    type TestBackend = coeus_core::MoiraiBackend;
 
     // We need to bring variants into scope or use full path
     use crate::inverse::pinn::ml::physics::BoundaryPosition;
@@ -60,7 +60,7 @@ mod tests {
             .add_pec_boundary(BoundaryPosition::Left)
             .add_pmc_boundary(BoundaryPosition::Right);
 
-        assert_eq!(domain.boundary_specs.len(), 2);
+        assert_eq!((domain.boundary_specs.len()), 2);
 
         match &domain.boundary_specs[0] {
             ElectromagneticBoundarySpec::PerfectElectricConductor { .. } => {

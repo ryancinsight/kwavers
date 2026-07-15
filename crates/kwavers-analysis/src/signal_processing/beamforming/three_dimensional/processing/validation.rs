@@ -1,8 +1,14 @@
 use super::super::processor::BeamformingProcessor3D;
+#[cfg(feature = "gpu")]
+use super::super::provider::BeamformingGpuProvider;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array4;
+use leto::Array4;
 
-impl BeamformingProcessor3D {
+#[cfg(feature = "gpu")]
+impl<P> BeamformingProcessor3D<P>
+where
+    P: BeamformingGpuProvider,
+{
     /// Validate input RF data dimensions (GPU path).
     ///
     /// Invariants checked:
@@ -12,12 +18,11 @@ impl BeamformingProcessor3D {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    #[cfg(feature = "gpu")]
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
-        let rf_dims = rf_data.dim();
-        let _frames = rf_dims.0;
-        let channels = rf_dims.1;
-        let samples = rf_dims.2;
+        let rf_dims = rf_data.shape();
+        let _frames = rf_dims[0];
+        let channels = rf_dims[1];
+        let samples = rf_dims[2];
 
         if rf_data.is_empty() {
             return Err(KwaversError::InvalidInput(
@@ -44,19 +49,21 @@ impl BeamformingProcessor3D {
 
         Ok(())
     }
+}
 
+#[cfg(not(feature = "gpu"))]
+impl BeamformingProcessor3D {
     /// Validate input RF data dimensions (CPU path — identical contract to GPU version).
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    #[cfg(not(feature = "gpu"))]
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
         if rf_data.is_empty() {
             return Err(KwaversError::InvalidInput(
                 "RF data array is empty".to_owned(),
             ));
         }
-        let (_, channels, samples, _) = rf_data.dim();
+        let [_, channels, samples, _] = rf_data.shape();
         let expected_channels = self.config.num_elements_3d.0
             * self.config.num_elements_3d.1
             * self.config.num_elements_3d.2;

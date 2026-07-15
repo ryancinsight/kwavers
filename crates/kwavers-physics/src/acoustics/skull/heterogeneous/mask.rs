@@ -1,7 +1,8 @@
 use crate::acoustics::skull::AcousticSkullProperties;
+use crate::parallel::zip_mut_ref;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 use super::constants::ALPHA_WATER;
 use super::model::HeterogeneousSkull;
@@ -25,21 +26,27 @@ impl HeterogeneousSkull {
         let water_c = WaterProperties::sound_speed(ROOM_TEMPERATURE_C);
         let water_rho = WaterProperties::density(ROOM_TEMPERATURE_C);
 
-        let mut sound_speed = Array3::from_elem(mask.dim(), water_c);
-        let mut density = Array3::from_elem(mask.dim(), water_rho);
-        let mut attenuation = Array3::from_elem(mask.dim(), ALPHA_WATER);
+        let mut sound_speed = Array3::from_elem(mask.shape(), water_c);
+        let mut density = Array3::from_elem(mask.shape(), water_rho);
+        let mut attenuation = Array3::from_elem(mask.shape(), ALPHA_WATER);
 
-        Zip::from(&mut sound_speed)
-            .and(&mut density)
-            .and(&mut attenuation)
-            .and(mask)
-            .par_for_each(|c, rho, atten, &m| {
-                if m > 0.5 {
-                    *c = props.sound_speed;
-                    *rho = props.density;
-                    *atten = props.attenuation_coeff;
-                }
-            });
+        zip_mut_ref(sound_speed.view_mut(), mask.view(), |c, &m| {
+            if m > 0.5 {
+                *c = props.sound_speed;
+            }
+        });
+
+        zip_mut_ref(density.view_mut(), mask.view(), |rho, &m| {
+            if m > 0.5 {
+                *rho = props.density;
+            }
+        });
+
+        zip_mut_ref(attenuation.view_mut(), mask.view(), |atten, &m| {
+            if m > 0.5 {
+                *atten = props.attenuation_coeff;
+            }
+        });
 
         Ok(Self {
             sound_speed,

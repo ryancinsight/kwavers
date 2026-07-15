@@ -7,7 +7,7 @@
 use kwavers_therapy::therapy::theranostic_guidance::{
     plan_transcranial_focused_bowl_placement, synthetic::synthetic_brain_phantom,
 };
-use numpy::IntoPyArray;
+use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -46,7 +46,9 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
         synthetic_brain_phantom()
     } else {
         let (mut ct, spacing_mm) = load_ritk_nifti(ct_path)?;
-        ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+        for hu in ct.iter_mut() {
+            *hu = hu.clamp(-1024.0, 3071.0);
+        }
         (ct, spacing_mm)
     };
 
@@ -70,27 +72,27 @@ pub fn plan_transcranial_focused_bowl_placement_from_ritk_ct<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "head_surface_points_m",
-        points3_to_array(&placement.head_surface_points_m).into_pyarray(py),
+        points3_to_array(&placement.head_surface_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "skull_surface_points_m",
-        points3_to_array(&placement.skull_surface_points_m).into_pyarray(py),
+        points3_to_array(&placement.skull_surface_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "therapy_elements_m",
-        points3_to_array(&placement.therapy_elements_m).into_pyarray(py),
+        points3_to_array(&placement.therapy_elements_m).to_pyarray(py),
     )?;
     out.set_item(
         "beam_start_points_m",
-        points3_to_array(&placement.beam_start_points_m).into_pyarray(py),
+        points3_to_array(&placement.beam_start_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "beam_end_points_m",
-        points3_to_array(&placement.beam_end_points_m).into_pyarray(py),
+        points3_to_array(&placement.beam_end_points_m).to_pyarray(py),
     )?;
     out.set_item(
         "skull_intersections_m",
-        points3_to_array(&placement.skull_intersections_m).into_pyarray(py),
+        points3_to_array(&placement.skull_intersections_m).to_pyarray(py),
     )?;
     out.set_item(
         "focus_m",

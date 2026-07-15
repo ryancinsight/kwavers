@@ -3,8 +3,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
-use ndarray::Array4;
+use leto::Array3;
+use leto::Array4;
 
 // Domain imports
 use kwavers_imaging::ultrasound::ceus::MicrobubblePopulation;
@@ -180,7 +180,7 @@ impl ContrastEnhancedUltrasound {
 
                         concentration = concentration.mul_add(decay, inj_rate * dt);
                         let s = baseline as f64 + local_gain * concentration;
-                        signal[(t, i, j, k)] = (s as f32).max(1.0e-6);
+                        signal[[t, i, j, k]] = (s as f32).max(1.0e-6);
                     }
                 }
             }
@@ -197,7 +197,7 @@ impl ContrastEnhancedUltrasound {
         contrast_signal: &Array4<f32>,
         perfusion_model: &FlowKinetics,
     ) -> KwaversResult<Array3<f32>> {
-        let (nt, nx, ny, nz) = contrast_signal.dim();
+        let [nt, nx, ny, nz] = contrast_signal.shape();
         if nt == 0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(
                 "estimate_perfusion: contrast_signal must have nt > 0".to_owned(),
@@ -217,14 +217,14 @@ impl ContrastEnhancedUltrasound {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    let baseline = contrast_signal[(0, i, j, k)].max(eps);
+                    let baseline = contrast_signal[[0, i, j, k]].max(eps);
                     let mut peak = baseline;
                     for t in 1..nt {
-                        peak = peak.max(contrast_signal[(t, i, j, k)]);
+                        peak = peak.max(contrast_signal[[t, i, j, k]]);
                     }
 
                     let enhancement_ratio = (peak / baseline).max(eps);
-                    perfusion_map[(i, j, k)] = enhancement_ratio;
+                    perfusion_map[[i, j, k]] = enhancement_ratio;
                 }
             }
         }
@@ -286,7 +286,11 @@ impl ContrastEnhancedUltrasound {
 
 // Implement domain CEUS orchestration interface
 impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
-    fn update(&mut self, pressure_field: &Array3<f64>, _time: f64) -> KwaversResult<Array3<f64>> {
+    fn update(
+        &mut self,
+        pressure_field: &leto::Array3<f64>,
+        _time: f64,
+    ) -> KwaversResult<leto::Array3<f64>> {
         // Simplified: use max pressure as representative
         let max_pressure = pressure_field
             .iter()
@@ -296,12 +300,13 @@ impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
 
         let frequency = kwavers_core::constants::numerical::MHZ_TO_HZ; // Default 1 MHz
         self.simulate_acoustic_response(max_pressure, frequency, _time)
+            .map(Into::into)
     }
 
-    fn get_perfusion_data(&self) -> KwaversResult<Array3<f64>> {
+    fn get_perfusion_data(&self) -> KwaversResult<leto::Array3<f64>> {
         // Return perfusion field as 3D concentration map
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut perfusion_map = Array3::zeros((nx, ny, nz));
+        let mut perfusion_map = leto::Array3::zeros([nx, ny, nz]);
 
         for i in 0..nx {
             for j in 0..ny {
@@ -314,11 +319,11 @@ impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
         Ok(perfusion_map)
     }
 
-    fn get_concentration_map(&self) -> KwaversResult<Array3<f64>> {
+    fn get_concentration_map(&self) -> KwaversResult<leto::Array3<f64>> {
         // Return microbubble concentration map
         let (nx, ny, nz) = self.grid.dimensions();
         let concentration = self.get_concentration();
-        Ok(Array3::from_elem((nx, ny, nz), concentration))
+        Ok(leto::Array3::from_elem([nx, ny, nz], concentration))
     }
 
     fn name(&self) -> &str {

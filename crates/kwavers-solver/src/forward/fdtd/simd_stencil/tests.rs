@@ -1,5 +1,5 @@
 use super::{FdtdSimdStencilConfig, FdtdSimdStencilProcessor};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_stencil_creation() {
@@ -40,7 +40,7 @@ fn test_velocity_update() {
 
     let result = processor.update_velocity(&mut velocity, &pressure);
     result.unwrap();
-    assert_eq!(velocity.shape(), &[16, 16, 16]);
+    assert_eq!(velocity.shape(), [16, 16, 16]);
 }
 
 #[test]
@@ -51,14 +51,14 @@ fn test_fused_update() {
     let pressure = Array3::ones((16, 16, 16));
     let pressure_prev = Array3::ones((16, 16, 16));
     let mut velocity = Array3::zeros((16, 16, 16));
-    let velocity_dim = velocity.dim();
+    let velocity_dim = velocity.shape();
     let velocity_div = Array3::zeros((16, 16, 16));
 
     let result = processor.fused_update(&pressure, &pressure_prev, &mut velocity, &velocity_div);
 
     let p_new = result.unwrap();
     assert_eq!(p_new.shape(), pressure.shape());
-    assert_eq!(velocity.dim(), velocity_dim);
+    assert_eq!(velocity.shape(), velocity_dim);
 }
 
 /// Tiled and non-tiled (tile=256) results must be bitwise identical on a 17³ grid.
@@ -77,9 +77,9 @@ fn test_tiling_matches_naive() {
     config_naive.tile_size = 256;
     let mut processor_naive = FdtdSimdStencilProcessor::new(n, n, n, config_naive).unwrap();
 
-    let pressure = Array3::from_elem((n, n, n), 1000.0_f64);
-    let pressure_prev = Array3::from_elem((n, n, n), 990.0_f64);
-    let velocity_div = Array3::from_elem((n, n, n), 0.1_f64);
+    let pressure = Array3::from_elem([n, n, n], 1000.0_f64);
+    let pressure_prev = Array3::from_elem([n, n, n], 990.0_f64);
+    let velocity_div = Array3::from_elem([n, n, n], 0.1_f64);
 
     let p_tiled = processor_tiled
         .update_pressure(&pressure, &pressure_prev, &velocity_div)
@@ -109,8 +109,8 @@ fn test_velocity_inplace_no_regression() {
     let config = FdtdSimdStencilConfig::default();
     let mut processor = FdtdSimdStencilProcessor::new(n, n, n, config).unwrap();
 
-    let pressure = Array3::from_elem((n, n, n), 500.0_f64);
-    let mut vel_inplace = Array3::from_elem((n, n, n), 0.1_f64);
+    let pressure = Array3::from_elem([n, n, n], 500.0_f64);
+    let mut vel_inplace = Array3::from_elem([n, n, n], 0.1_f64);
     processor
         .update_velocity(&mut vel_inplace, &pressure)
         .unwrap();
@@ -155,8 +155,8 @@ fn pressure_update_keeps_uniform_field_constant() {
     let config = FdtdSimdStencilConfig::default();
     let mut processor = FdtdSimdStencilProcessor::new(16, 16, 16, config).unwrap();
     let constant = 12.5_f64;
-    let pressure = Array3::from_elem((16, 16, 16), constant);
-    let pressure_prev = Array3::from_elem((16, 16, 16), constant);
+    let pressure = Array3::from_elem([16, 16, 16], constant);
+    let pressure_prev = Array3::from_elem([16, 16, 16], constant);
     let velocity_div = Array3::zeros((16, 16, 16));
 
     let p_new = processor

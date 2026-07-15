@@ -1,7 +1,7 @@
 //! `ModelRegularizer3D` — regularization on 3D spatial model arrays.
 
-use super::config::RegularizationConfig;
-use ndarray::{Array3, Zip};
+use super::{config::RegularizationConfig, ops::for_each_pair_mut};
+use leto::Array3;
 
 /// 3D Model Regularizer
 ///
@@ -42,18 +42,15 @@ impl ModelRegularizer3D {
         }
     }
 
-    /// Apply Tikhonov (L2) regularization
-    /// Penalizes large model values: grad_reg = λ·m
     fn apply_tikhonov(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.tikhonov_weight * m;
-        });
+        let weight = self.config.tikhonov_weight;
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| *g += weight * m);
     }
 
     /// Apply Total Variation regularization
     /// Edge-preserving penalty: grad_reg = λ·∇·(∇m/|∇m|)
     fn apply_total_variation(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        let (nx, ny, nz) = model.dim();
+        let [nx, ny, nz] = model.shape();
         let eps = self.config.tv_epsilon;
 
         for i in 1..nx - 1 {
@@ -79,8 +76,8 @@ impl ModelRegularizer3D {
     /// Apply smoothness regularization using Laplacian
     /// Penalizes second derivatives: grad_reg = λ·∇²m
     fn apply_smoothness(&self, gradient: &mut Array3<f64>) {
-        let (nx, ny, nz) = gradient.dim();
-        let mut laplacian = Array3::zeros(gradient.dim());
+        let [nx, ny, nz] = gradient.shape();
+        let mut laplacian = Array3::zeros(gradient.shape());
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -98,16 +95,16 @@ impl ModelRegularizer3D {
             }
         }
 
-        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
-            *g += self.config.smoothness_weight * lap;
+        let weight = self.config.smoothness_weight;
+        for_each_pair_mut(gradient.view_mut(), laplacian.view(), |g, lap| {
+            *g += weight * lap
         });
     }
 
-    /// Apply L1 (Lasso) regularization
-    /// Sparsity-promoting penalty: grad_reg = λ·sign(m)
     fn apply_l1(&self, gradient: &mut Array3<f64>, model: &Array3<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.l1_weight * m.signum();
+        let weight = self.config.l1_weight;
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| {
+            *g += weight * m.signum()
         });
     }
 }

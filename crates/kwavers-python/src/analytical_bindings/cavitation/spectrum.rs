@@ -1,7 +1,7 @@
 //! Passive cavitation spectrum and dose PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -27,10 +27,7 @@ pub fn bubble_power_spectrum(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (freqs, psd) = cavitation::bubble_power_spectrum(r_s, dt_s, n_fft);
-    Ok((
-        freqs.into_pyarray(py).unbind(),
-        psd.into_pyarray(py).unbind(),
-    ))
+    Ok((freqs.to_pyarray(py).unbind(), psd.to_pyarray(py).unbind()))
 }
 
 /// Hann-windowed single-sided power spectral density of an emission series.
@@ -61,10 +58,7 @@ pub fn hann_windowed_power_spectrum(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let (freqs, psd) = cavitation::hann_windowed_power_spectrum(s, dt_s, n_fft);
-    Ok((
-        freqs.into_pyarray(py).unbind(),
-        psd.into_pyarray(py).unbind(),
-    ))
+    Ok((freqs.to_pyarray(py).unbind(), psd.to_pyarray(py).unbind()))
 }
 
 /// Compute a normalized Keller-Miksis PCD spectrum and SC/IC band ratios.
@@ -119,10 +113,10 @@ pub fn keller_miksis_pcd_spectrum<'py>(
     .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("frequency_hz", spectrum.frequency_hz.into_pyarray(py))?;
+    out.set_item("frequency_hz", spectrum.frequency_hz.to_pyarray(py))?;
     out.set_item(
         "normalized_psd_db",
-        spectrum.normalized_psd_db.into_pyarray(py),
+        spectrum.normalized_psd_db.to_pyarray(py),
     )?;
     out.set_item("stable_signal", spectrum.stable_signal)?;
     out.set_item("inertial_signal", spectrum.inertial_signal)?;
@@ -202,17 +196,17 @@ pub fn keller_miksis_pcd_controller_trace<'py>(
     .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("pulse_index", trace.pulse_index.into_pyarray(py))?;
-    out.set_item("pressure_kpa", trace.pressure_kpa.into_pyarray(py))?;
-    out.set_item("stable_signal", trace.stable_signal.into_pyarray(py))?;
-    out.set_item("inertial_signal", trace.inertial_signal.into_pyarray(py))?;
+    out.set_item("pulse_index", trace.pulse_index.to_pyarray(py))?;
+    out.set_item("pressure_kpa", trace.pressure_kpa.to_pyarray(py))?;
+    out.set_item("stable_signal", trace.stable_signal.to_pyarray(py))?;
+    out.set_item("inertial_signal", trace.inertial_signal.to_pyarray(py))?;
     out.set_item(
         "stable_signal_normalized",
-        trace.stable_signal_normalized.into_pyarray(py),
+        trace.stable_signal_normalized.to_pyarray(py),
     )?;
     out.set_item(
         "inertial_signal_normalized",
-        trace.inertial_signal_normalized.into_pyarray(py),
+        trace.inertial_signal_normalized.to_pyarray(py),
     )?;
     Ok(out)
 }
@@ -254,7 +248,7 @@ pub fn bubble_acoustic_emission_pressure(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = cavitation::bubble_acoustic_emission_pressure(r_s, rd_s, dt_s, rho, r_obs_m);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Coherently superpose a microbubble population's emission series into one
@@ -303,7 +297,7 @@ pub fn ensemble_emission_superposition(
     let result = cavitation::ensemble_emission_superposition(
         &flat, n_bubbles, n_samples, &delays, g, out_len,
     );
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Decompose a passive-cavitation emission spectrum into cavitation bands.
@@ -378,7 +372,7 @@ pub fn normalized_cavitation_emission_spectrum(
         }
     };
     let result = cavitation::normalized_cavitation_emission_spectrum(freqs, f0_hz, regime, snr_db);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Cumulative cavitation dose: trapezoidal time-integral of an emission-power series.
@@ -408,7 +402,7 @@ pub fn cumulative_cavitation_dose(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = cavitation::cumulative_cavitation_dose(p_s, dt_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Chapter 23 passive-cavitation dose traces.
@@ -438,15 +432,15 @@ pub fn passive_cavitation_dose_fixture<'py>(
     .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("time_s", trace.time_s.into_pyarray(py))?;
-    out.set_item("stable_dose", trace.stable_dose.into_pyarray(py))?;
+    out.set_item("time_s", trace.time_s.to_pyarray(py))?;
+    out.set_item("stable_dose", trace.stable_dose.to_pyarray(py))?;
     out.set_item(
         "inertial_trial1_dose",
-        trace.inertial_trial1_dose.into_pyarray(py),
+        trace.inertial_trial1_dose.to_pyarray(py),
     )?;
     out.set_item(
         "inertial_trial2_dose",
-        trace.inertial_trial2_dose.into_pyarray(py),
+        trace.inertial_trial2_dose.to_pyarray(py),
     )?;
     Ok(out)
 }

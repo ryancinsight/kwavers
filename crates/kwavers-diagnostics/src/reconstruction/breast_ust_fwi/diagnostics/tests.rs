@@ -1,7 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array3;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::Array3;
 
 #[test]
 fn residual_metrics_recover_row_source_scale() {
@@ -45,7 +45,15 @@ fn source_channel_diagnostics_isolate_passive_mask() {
     .expect("shape");
     let scale = Complex64::new(2.0, 0.5);
     let mut observed = predicted.mapv(|value| scale * value);
-    let active = source_receiver_mask(predicted.dim(), 2, 2).expect("mask");
+    let active = source_receiver_mask(
+        {
+            let [f, t, r] = predicted.shape();
+            (f, t, r)
+        },
+        2,
+        2,
+    )
+    .expect("mask");
     for (value, &is_active) in observed.iter_mut().zip(active.iter()) {
         if is_active {
             *value += Complex64::new(10.0, -3.0);
@@ -271,7 +279,7 @@ fn scattering_increment_diagnostics_identify_exact_increment_model() {
     )
     .expect("shape");
     let scale = Complex64::new(2.0, -0.5);
-    let observed = baseline.mapv(|value| scale * value) + &increment;
+    let observed = &baseline.mapv(|value| scale * value) + &increment;
     let exact = &baseline + &increment.mapv(|value| value / scale);
     let half = &baseline + &increment.mapv(|value| value / (2.0 * scale));
     let predictions = [
@@ -344,7 +352,8 @@ fn scattering_increment_diagnostics_respect_passive_receiver_policy() {
     )
     .expect("shape");
     let scale = Complex64::new(3.0, 0.0);
-    let observed = baseline.mapv(|value| scale * value) + &passive_increment + &active_increment;
+    let observed =
+        &(&baseline.mapv(|value| scale * value) + &passive_increment) + &active_increment;
     let passive_exact = &baseline + &passive_increment.mapv(|value| value / scale);
     let active_only = &baseline + &active_increment.mapv(|value| value / scale);
     let predictions = [

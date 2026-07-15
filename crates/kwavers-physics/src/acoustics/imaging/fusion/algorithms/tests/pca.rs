@@ -8,7 +8,7 @@ fn test_pca_fusion_uses_first_principal_component_for_correlated_modalities() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (2, 2, 1);
+    let shape = [2, 2, 1];
 
     fusion.registered_data.insert(
         "a".to_string(),
@@ -46,7 +46,7 @@ fn test_pca_fusion_selects_dominant_variance_modality() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 1, 1);
+    let shape = [4, 1, 1];
 
     fusion.registered_data.insert(
         "constant".to_string(),
@@ -81,7 +81,7 @@ fn test_pca_fusion_rejects_nonfinite_data() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (1, 2, 1);
+    let shape = [1, 2, 1];
 
     fusion.registered_data.insert(
         "finite".to_string(),

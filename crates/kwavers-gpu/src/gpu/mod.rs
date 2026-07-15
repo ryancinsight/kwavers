@@ -1,10 +1,12 @@
 //! GPU acceleration module for acoustic simulations
 //!
 //! This module provides GPU-accelerated implementations of core algorithms
-//! using wgpu-rs for cross-platform GPU compute.
+//! through provider-generic Hephaestus device seams. The current production
+//! kernels use WGSL over WGPU; CUDA and future providers enter through the
+//! provider traits before they implement real kernel dispatch.
 //! ## Not yet implemented
 //!
-//! - **Bubble dynamics kernels**: CUDA/OpenCL/wgsl compute shaders for Keller-Miksis
+//! - **Bubble dynamics kernels**: CUDA/OpenCL/WGSL compute shaders for Keller-Miksis
 //!   equation integration on-device.
 //! - **GPU-accelerated PINN training**: Automatic differentiation for physics-informed
 //!   networks without CPU round-trips.
@@ -15,8 +17,6 @@
 pub mod backend;
 pub mod buffer;
 pub mod buffers;
-#[cfg(feature = "pinn")]
-pub mod burn_accelerator;
 pub mod compute;
 pub mod compute_kernels;
 pub mod compute_manager;
@@ -33,20 +33,29 @@ pub use backend::GpuBackend;
 // `gpu/buffers.rs` exposes only GpuBufferManager (the named-pool layer).
 pub use buffer::{BufferUsage, GpuBufferData};
 pub use buffers::GpuBufferManager;
-#[cfg(feature = "pinn")]
-pub use burn_accelerator::BurnGpuAccelerator;
-pub use compute::{FdtdGpuDispatcher, GpuCompute};
+pub use compute::{FdtdCpuReferenceDispatcher, WgpuComputeCommands};
 pub use compute_kernels::{AcousticFieldKernel, WaveEquationGpu};
-pub use device::{GpuDevice, GpuDeviceInfo};
-pub use fdtd::FdtdGpu;
+pub use device::{GpuDevice, GpuDeviceInfo, GpuDeviceProvider};
+pub use fdtd::{FdtdGpuProvider, WgpuFdtd};
 pub use memory::{GpuMemoryPoolType, UnifiedMemoryManager};
 pub use multi_gpu::{GpuAffinity, MultiGpuContext};
 pub use shaders::neural_network::NeuralNetworkShader;
 pub use thermal_acoustic::{
     GpuThermalAcousticBuffers, GpuThermalAcousticConfig, GpuThermalAcousticSolver,
+    ThermalAcousticBufferProvider, ThermalAcousticSolverProvider, WgpuThermalAcousticBuffers,
+    WgpuThermalAcousticSolverProvider,
 };
 
+use hephaestus_core::{DeviceFeature, DeviceLimits, DevicePreference};
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::{KwaversError, KwaversResult};
+
+pub(crate) fn map_buffer_async_error(
+    context: &'static str,
+    err: wgpu::BufferAsyncError,
+) -> KwaversError {
+    KwaversError::GpuError(format!("{context}: {err}"))
+}
 
 /// GPU device capabilities
 #[derive(Debug, Clone)]
@@ -65,76 +74,49 @@ pub struct CoreGpuCapabilities {
 
 /// Main GPU context for acoustic simulations
 #[derive(Debug)]
-pub struct CoreGpuContext {
-    device: wgpu::Device,
-    queue: wgpu::Queue,
+pub struct CoreGpuContext<P = WgpuDevice>
+where
+    P: GpuDeviceProvider,
+{
+    device: GpuDevice<P>,
     capabilities: CoreGpuCapabilities,
 }
 
-impl CoreGpuContext {
-    /// Create a new GPU context
-    /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+impl<P> CoreGpuContext<P>
+where
+    P: GpuDeviceProvider,
+{
+    /// Acquire a provider-backed GPU context with explicit requirements.
     ///
-    pub async fn new() -> KwaversResult<Self> {
-        // Create instance with all backends
-        let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-            backends: wgpu::Backends::all(),
-            ..Default::default()
-        });
+    /// # Errors
+    ///
+    /// Returns a system resource error when the provider cannot satisfy the
+    /// requested device preference, optional features, or limits.
+    pub fn acquire_with_requirements(
+        label: &str,
+        device_preference: DevicePreference,
+        optional_features: &[DeviceFeature],
+        required_limits: DeviceLimits,
+    ) -> KwaversResult<Self> {
+        let provider =
+            P::try_acquire_device(label, device_preference, optional_features, required_limits)
+                .map_err(|e| {
+                    KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
+                        resource: format!("GPU device: {e}"),
+                    })
+                })?;
 
-        // Request adapter
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: wgpu::PowerPreference::HighPerformance,
-                compatible_surface: None,
-                force_fallback_adapter: false,
-            })
-            .await
-            .map_err(|_| {
-                KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: "GPU adapter".to_string(),
-                })
-            })?;
+        Ok(Self::from_provider(provider))
+    }
 
-        // Get adapter info and limits
-        let info = adapter.get_info();
-        let limits = adapter.limits();
+    /// Build a context from an already-acquired Hephaestus provider.
+    #[must_use]
+    pub fn from_provider(provider: P) -> Self {
+        let device = GpuDevice::from_provider(provider);
+        let info = device.info();
+        log::info!("GPU: {} ({})", info.name, info.backend);
 
-        log::info!(
-            "GPU: {} ({:?}) - Driver: {}",
-            info.name,
-            info.backend,
-            info.driver
-        );
-
-        // Request device with required features
-        let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor {
-                label: Some("Kwavers GPU Device"),
-                required_features: wgpu::Features::MAPPABLE_PRIMARY_BUFFERS
-                    | wgpu::Features::PUSH_CONSTANTS,
-                required_limits: wgpu::Limits {
-                    max_buffer_size: limits.max_buffer_size,
-                    max_storage_buffer_binding_size: limits.max_storage_buffer_binding_size,
-                    max_compute_workgroup_storage_size: 16384,
-                    max_compute_invocations_per_workgroup: 256,
-                    max_compute_workgroup_size_x: 256,
-                    max_compute_workgroup_size_y: 256,
-                    max_compute_workgroup_size_z: 64,
-                    max_push_constant_size: 128,
-                    ..Default::default()
-                },
-                memory_hints: wgpu::MemoryHints::default(),
-                trace: wgpu::Trace::Off,
-            })
-            .await
-            .map_err(|e| {
-                KwaversError::System(kwavers_core::error::SystemError::ResourceUnavailable {
-                    resource: format!("GPU device: {}", e),
-                })
-            })?;
-
+        let limits = device.limits();
         let capabilities = CoreGpuCapabilities {
             max_buffer_size: limits.max_buffer_size,
             max_workgroup_size: [
@@ -143,34 +125,79 @@ impl CoreGpuContext {
                 limits.max_compute_workgroup_size_z,
             ],
             max_compute_invocations: limits.max_compute_invocations_per_workgroup,
-            supports_f64: adapter.features().contains(wgpu::Features::SHADER_F64),
-            supports_atomics: true, // Most modern GPUs support this
+            supports_f64: device.supports_feature(DeviceFeature::ShaderF64),
+            supports_atomics: P::supports_core_atomics(),
         };
 
-        Ok(Self {
+        Self {
             device,
-            queue,
             capabilities,
-        })
+        }
     }
 
-    /// Get device reference
-    pub fn device(&self) -> &wgpu::Device {
-        &self.device
-    }
-
-    /// Get queue reference
-    pub fn queue(&self) -> &wgpu::Queue {
-        &self.queue
+    /// Borrow the concrete provider device.
+    #[must_use]
+    pub fn provider(&self) -> &P {
+        self.device.provider()
     }
 
     /// Get capabilities
     pub fn capabilities(&self) -> &CoreGpuCapabilities {
         &self.capabilities
     }
+}
+
+impl CoreGpuContext<WgpuDevice> {
+    /// Create a new WGPU context for the current WGSL kernels.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    ///
+    pub async fn new() -> KwaversResult<Self> {
+        Self::try_new()
+    }
+
+    /// Create a new WGPU context synchronously for the current WGSL kernels.
+    ///
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    pub fn try_new() -> KwaversResult<Self> {
+        Self::acquire_with_requirements(
+            "Kwavers GPU Device",
+            DevicePreference::HighPerformance,
+            &[
+                DeviceFeature::MappablePrimaryBuffers,
+                DeviceFeature::PushConstants,
+            ],
+            Self::required_limits(),
+        )
+    }
+
+    pub(crate) fn required_limits() -> DeviceLimits {
+        let baseline = device::minimal_compute_limits();
+        DeviceLimits {
+            max_buffer_size: baseline.max_buffer_size,
+            max_storage_buffers_per_shader_stage: baseline.max_storage_buffers_per_shader_stage,
+            max_compute_workgroup_storage_size: 16384,
+            max_compute_invocations_per_workgroup: 256,
+            max_compute_workgroup_size_x: 256,
+            max_compute_workgroup_size_y: 256,
+            max_compute_workgroup_size_z: 64,
+            max_push_constant_size: 128,
+        }
+    }
+
+    /// Get device reference
+    pub fn device(&self) -> &wgpu::Device {
+        self.device.wgpu_device()
+    }
+
+    /// Get queue reference
+    pub fn queue(&self) -> &wgpu::Queue {
+        self.device.wgpu_queue()
+    }
 
     /// Submit command buffer
     pub fn submit(&self, commands: wgpu::CommandBuffer) {
-        self.queue.submit(std::iter::once(commands));
+        self.queue().submit(std::iter::once(commands));
     }
 }

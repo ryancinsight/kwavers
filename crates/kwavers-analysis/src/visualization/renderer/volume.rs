@@ -4,7 +4,7 @@ use crate::visualization::{ColorScheme, VisualizationConfig};
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Volume renderer for 3D fields
 #[derive(Debug)]

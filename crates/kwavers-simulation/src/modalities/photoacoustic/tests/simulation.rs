@@ -27,11 +27,11 @@ fn test_simulation() {
         sim_result.pressure_fields.len() >= 2,
         "Should have multiple time snapshots"
     );
-    assert_eq!(sim_result.reconstructed_image.dim(), (16, 16, 8));
+    assert_eq!(sim_result.reconstructed_image.shape(), [16, 16, 8]);
     assert!(sim_result.snr > 0.0);
 
     for field in sim_result.pressure_fields.iter() {
-        assert_eq!(field.dim(), (16, 16, 8));
+        assert_eq!(field.shape(), [16, 16, 8]);
         for &val in field.iter() {
             assert!(val.is_finite(), "Pressure field values must be finite");
         }
@@ -63,8 +63,8 @@ fn test_multi_wavelength_simulation() {
     assert_eq!(multi_results.len(), 2, "Should simulate all wavelengths");
 
     for (fluence, pressure) in &multi_results {
-        assert_eq!(fluence.dim(), (8, 8, 4));
-        assert_eq!(pressure.pressure.dim(), (8, 8, 4));
+        assert_eq!(fluence.shape(), [8, 8, 4]);
+        assert_eq!(pressure.pressure.shape(), [8, 8, 4]);
         assert!(pressure.max_pressure > 0.0);
     }
 }

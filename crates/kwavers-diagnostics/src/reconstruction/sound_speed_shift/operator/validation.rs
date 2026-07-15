@@ -1,6 +1,6 @@
 //! Input-domain validation for speed-shift operator construction.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

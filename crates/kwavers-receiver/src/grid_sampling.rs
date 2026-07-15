@@ -20,7 +20,7 @@
 //! the equivalent (a list of grid indices or a derived mask) while being usable
 //! for multi-physics (acoustic + optical) sampling.
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// A point on the solver grid (integer indices).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
@@ -136,7 +136,7 @@ impl GridSensorSet {
     #[must_use]
     pub fn to_mask(&self, shape: (usize, usize, usize)) -> Array3<bool> {
         let (nx, ny, nz) = shape;
-        let mut mask = Array3::from_elem((nx, ny, nz), false);
+        let mut mask = Array3::from_elem([nx, ny, nz], false);
 
         for &p in &self.points {
             if p.i < nx && p.j < ny && p.k < nz {
@@ -158,7 +158,7 @@ impl GridSensorSet {
     /// to a sentinel if they *explicitly* want that behavior.
     #[must_use]
     pub fn sample_scalar(&self, field: &Array3<f64>) -> Vec<Option<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut out = Vec::with_capacity(self.points.len());
 
         for p in &self.points {
@@ -218,7 +218,7 @@ mod tests {
 
     #[test]
     fn sample_returns_none_for_out_of_bounds() {
-        let field = Array3::from_shape_fn((2, 2, 1), |(i, j, _k)| (10 * i + j) as f64);
+        let field = Array3::from_shape_fn([2, 2, 1], |[i, j, _k]| (10 * i + j) as f64);
 
         let set = GridSensorSet::from_points(vec![
             GridPoint::new(0, 0, 0),

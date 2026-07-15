@@ -4,7 +4,7 @@
 //! Per TSE 2025 "Modular Scientific Computing Architecture"
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Trilinear interpolation implementation
 ///

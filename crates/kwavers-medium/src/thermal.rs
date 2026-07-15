@@ -6,7 +6,7 @@
 use crate::core::CoreMedium;
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER_37C;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Trait for thermal medium properties
 pub trait ThermalProperties: CoreMedium {

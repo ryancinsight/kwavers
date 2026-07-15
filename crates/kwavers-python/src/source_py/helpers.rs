@@ -1,5 +1,8 @@
-use ndarray::{Array2, Axis};
+use leto::Array2;
+use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray1, PyReadonlyArray2};
+
+use crate::breast_fwi_bindings::complex_compat::nd_to_leto2;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -12,7 +15,7 @@ pub(crate) fn pressure_signal_to_matrix(signal: &Bound<'_, PyAny>) -> PyResult<A
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        return Ok(signal_arr.insert_axis(Axis(0)).to_owned());
+        return Ok(nd_to_leto2(signal_arr.insert_axis(Axis(0)).to_owned()));
     }
 
     if let Ok(signal_2d) = signal.extract::<PyReadonlyArray2<f64>>() {
@@ -20,7 +23,7 @@ pub(crate) fn pressure_signal_to_matrix(signal: &Bound<'_, PyAny>) -> PyResult<A
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        return Ok(signal_arr);
+        return Ok(nd_to_leto2(signal_arr));
     }
 
     Err(PyValueError::new_err(

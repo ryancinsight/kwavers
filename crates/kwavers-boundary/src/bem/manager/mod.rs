@@ -17,9 +17,9 @@ mod assembly;
 
 use super::types::BemBoundaryCondition;
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 
 /// BEM boundary condition manager for boundary element solvers.
 #[derive(Debug)]
@@ -66,7 +66,7 @@ impl BemBoundaryManager {
 
     /// Apply all boundary conditions to the BEM system.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn apply_all(
         &self,

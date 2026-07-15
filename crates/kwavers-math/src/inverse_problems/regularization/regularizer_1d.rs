@@ -1,7 +1,7 @@
 //! `ModelRegularizer1D` — regularization on 1D vector models.
 
-use super::config::RegularizationConfig;
-use ndarray::{Array1, Zip};
+use super::{config::RegularizationConfig, ops::for_each_pair_mut};
+use leto::Array1;
 
 /// 1D Regularizer for vector models
 #[derive(Debug)]
@@ -36,9 +36,8 @@ impl ModelRegularizer1D {
     }
 
     fn apply_tikhonov(&self, gradient: &mut Array1<f64>, model: &Array1<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.tikhonov_weight * m;
-        });
+        let weight = self.config.tikhonov_weight;
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| *g += weight * m);
     }
 
     fn apply_smoothness(&self, gradient: &mut Array1<f64>) {
@@ -47,19 +46,21 @@ impl ModelRegularizer1D {
             return;
         }
 
-        let mut laplacian = Array1::zeros(n);
+        let mut laplacian = Array1::zeros([n]);
         for i in 1..n - 1 {
             laplacian[i] = 2.0f64.mul_add(-gradient[i], gradient[i + 1] + gradient[i - 1]);
         }
 
-        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
-            *g += self.config.smoothness_weight * lap;
+        let weight = self.config.smoothness_weight;
+        for_each_pair_mut(gradient.view_mut(), laplacian.view(), |g, lap| {
+            *g += weight * lap
         });
     }
 
     fn apply_l1(&self, gradient: &mut Array1<f64>, model: &Array1<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.l1_weight * m.signum();
+        let weight = self.config.l1_weight;
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| {
+            *g += weight * m.signum()
         });
     }
 }

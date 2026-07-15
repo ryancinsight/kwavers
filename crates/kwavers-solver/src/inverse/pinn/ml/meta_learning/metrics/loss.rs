@@ -76,7 +76,7 @@ impl MetaLoss {
     /// Create a new meta-loss with computed generalization score
     pub fn new(task_losses: Vec<f64>, physics_loss: f64) -> Self {
         let total_loss = if !task_losses.is_empty() {
-            task_losses.iter().sum::<f64>() / task_losses.len() as f64
+            task_losses.iter().sum::<f64>() / (task_losses.len()) as f64
         } else {
             0.0
         };
@@ -104,7 +104,7 @@ impl MetaLoss {
             return 0.0;
         }
 
-        let mean = task_losses.iter().sum::<f64>() / task_losses.len() as f64;
+        let mean = task_losses.iter().sum::<f64>() / (task_losses.len()) as f64;
 
         if mean.abs() < 1e-10 {
             // If mean is near zero, return perfect score if all losses are near zero
@@ -119,7 +119,7 @@ impl MetaLoss {
             .iter()
             .map(|loss| (loss - mean).powi(2))
             .sum::<f64>()
-            / task_losses.len() as f64;
+            / (task_losses.len()) as f64;
 
         let std_dev = variance.sqrt();
         let cv = std_dev / mean.abs(); // Coefficient of variation
@@ -156,7 +156,7 @@ impl MetaLoss {
             .iter()
             .map(|loss| (loss - mean).powi(2))
             .sum::<f64>()
-            / self.task_losses.len() as f64;
+            / (self.task_losses.len()) as f64;
 
         variance.sqrt()
     }

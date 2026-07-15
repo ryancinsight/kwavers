@@ -29,12 +29,12 @@ fn test_kwave_array_disc_focus_mask_is_planar_and_matches_kwave_python_reference
     // Reference from radial-Fibonacci BLI rasterization (commit a24cdfcb).
     let expected = 28.339_929_259_209_097_f64;
     assert!(
-        (weights.sum() - expected).abs() < 5.0e-6,
+        (weights.iter().sum::<f64>() - expected).abs() < 5.0e-6,
         "disc mass got {}, expected {expected}",
-        weights.sum()
+        weights.iter().sum::<f64>()
     );
     let mut active_plane: Option<usize> = None;
-    for ((_, _, k), &value) in weights.indexed_iter() {
+    for ([_, _, k], &value) in weights.indexed_iter() {
         if value > 0.0 {
             match active_plane {
                 Some(plane) => assert_eq!(plane, k, "disc weights must remain planar"),

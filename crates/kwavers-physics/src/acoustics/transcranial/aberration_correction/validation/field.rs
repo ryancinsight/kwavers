@@ -1,8 +1,8 @@
 use super::super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
-use num_complex::Complex;
+use leto::Array3;
 
 impl TranscranialAberrationCorrection {
     /// Simulate acoustic field with phase correction applied.
@@ -12,12 +12,12 @@ impl TranscranialAberrationCorrection {
     pub(super) fn simulate_corrected_field(
         &self,
         correction: &PhaseCorrection,
-        _skull_model: &ndarray::Array3<f64>,
+        _skull_model: &leto::Array3<f64>,
         transducer_positions: &[[f64; 3]],
         _target_point: &[f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut field = Array3::zeros((nx, ny, nz));
+        let mut field = Array3::zeros([nx, ny, nz]);
         let k_wave = TWO_PI * self.frequency / self.reference_speed;
 
         for k in 0..nz {

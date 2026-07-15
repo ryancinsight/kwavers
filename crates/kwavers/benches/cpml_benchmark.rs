@@ -13,7 +13,7 @@ use kwavers_boundary::cpml::{CPMLBoundary, CPMLConfig};
 use kwavers_boundary::pml::{DomainPMLBoundary, DomainPmlConfig};
 use kwavers_boundary::Boundary;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Benchmark CPML gradient correction for various grid sizes
 fn cpml_gradient_correction_benchmark(c: &mut Criterion) {

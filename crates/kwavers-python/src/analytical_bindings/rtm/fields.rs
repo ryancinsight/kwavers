@@ -1,8 +1,8 @@
 //! RTM field synthesis and back-propagation bindings.
 
 use super::arrays::complex_field_arrays;
+use eunomia::Complex64;
 use kwavers_physics::analytical::rtm as rtm_mod;
-use num_complex::Complex64;
 use numpy::{PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;

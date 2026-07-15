@@ -127,7 +127,7 @@ fn add_noise_achieves_target_snr_reasonably() {
 fn create_cw_signals_broadcasts_phase() {
     let t = [0.0, 0.25, 0.5, 0.75];
     let out = create_cw_signals(&t, 1.0, &[1.0, 2.0], &[0.0]).unwrap();
-    assert_eq!(out.dim(), (2, 4));
+    assert_eq!(out.shape(), [2, 4]);
     assert!((out[[0, 1]] - 1.0).abs() < 1e-12);
     assert!((out[[1, 1]] - 2.0).abs() < 1e-12);
 }

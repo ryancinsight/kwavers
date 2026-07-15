@@ -16,7 +16,7 @@
 //! (producing unit-length direction vectors — useful as logit pre-processing).
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Single affine-layer inference engine.
 ///
@@ -63,35 +63,44 @@ impl InferenceEngine {
     /// Run the affine transform on `input`.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Validation`] when `input.ncols() != weights.nrows()`.
+    /// Returns [`KwaversError::Validation`] when `input.shape()[1] != weights.shape()[0]`.
     pub fn forward(&self, input: &Array2<f32>) -> KwaversResult<Array2<f32>> {
-        let (_, input_dim) = input.dim();
-        let (weight_in, _output_dim) = self.weights.dim();
+        let [n_samples, input_dim] = input.shape();
+        let [weight_in, out_dim] = self.weights.shape();
 
         if input_dim != weight_in {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "input".to_owned(),
                 value: format!("ncols={input_dim}"),
-                constraint: format!("must equal weights.nrows()={weight_in}"),
+                constraint: format!("must equal weights.shape()[0]={weight_in}"),
             }));
         }
 
         // Y = X · W
-        let mut output = input.dot(&self.weights);
+        let mut output = Array2::<f32>::zeros((n_samples, out_dim));
+        leto_ops::matmul(&input.view(), &self.weights.view(), &mut output.view_mut())
+            .expect("invariant: matmul dims validated above");
 
         // Y += b  (broadcast)
         if let Some(ref b) = self.bias {
-            for mut row in output.rows_mut() {
-                row += b;
+            for i in 0..n_samples {
+                for j in 0..out_dim {
+                    output[[i, j]] += b[j];
+                }
             }
         }
 
         // Optional row-wise L2 normalisation
         if self.normalize_output {
-            for mut row in output.rows_mut() {
-                let norm = row.mapv(|x| x * x).sum().sqrt();
+            for i in 0..n_samples {
+                let norm = (0..out_dim)
+                    .map(|j| output[[i, j]] * output[[i, j]])
+                    .sum::<f32>()
+                    .sqrt();
                 if norm > f32::EPSILON {
-                    row /= norm;
+                    for j in 0..out_dim {
+                        output[[i, j]] /= norm;
+                    }
                 }
             }
         }
@@ -99,16 +108,16 @@ impl InferenceEngine {
         Ok(output)
     }
 
-    /// Returns the expected number of input features (`weights.nrows()`).
+    /// Returns the expected number of input features (`weights.shape()[0]`).
     #[must_use]
     pub fn input_dim(&self) -> usize {
-        self.weights.nrows()
+        self.weights.shape()[0]
     }
 
-    /// Returns the number of output units (`weights.ncols()`).
+    /// Returns the number of output units (`weights.shape()[1]`).
     #[must_use]
     pub fn output_dim(&self) -> usize {
-        self.weights.ncols()
+        self.weights.shape()[1]
     }
 
     /// Returns the preferred mini-batch size.
@@ -121,7 +130,7 @@ impl InferenceEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{array, Array2};
+    use leto::Array2;
 
     // Identity weight matrix: Y = X · I = X (no bias).
     // Expected output == input, verifiable analytically.
@@ -130,10 +139,10 @@ mod tests {
         let weights = Array2::eye(3); // (3, 3) identity
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 
-        let input = array![[1.0_f32, 2.0, 3.0], [4.0, 5.0, 6.0]];
+        let input = Array2::from_shape_vec((2, 3), vec![1.0_f32, 2.0, 3.0, 4.0, 5.0, 6.0]).unwrap();
         let output = engine.forward(&input).unwrap();
 
-        assert_eq!(output.shape(), &[2, 3]);
+        assert_eq!(output.shape(), [2, 3]);
         // Each output row must equal the corresponding input row exactly.
         assert!((output[[0, 0]] - 1.0).abs() < 1e-6);
         assert!((output[[0, 1]] - 2.0).abs() < 1e-6);
@@ -146,10 +155,10 @@ mod tests {
     #[test]
     fn test_forward_with_bias() {
         let weights = Array2::eye(3);
-        let bias = ndarray::array![10.0_f32, 20.0, 30.0];
+        let bias = Array1::from_vec(3, vec![10.0_f32, 20.0, 30.0]).unwrap();
         let engine = InferenceEngine::from_weights(weights, Some(bias), 32, false);
 
-        let input = array![[1.0_f32, 1.0, 1.0]];
+        let input = Array2::from_shape_vec((1, 3), vec![1.0_f32, 1.0, 1.0]).unwrap();
         let output = engine.forward(&input).unwrap();
 
         assert!((output[[0, 0]] - 11.0).abs() < 1e-6);
@@ -163,7 +172,7 @@ mod tests {
         let weights = Array2::<f32>::eye(4); // expects 4-column input
         let engine = InferenceEngine::from_weights(weights, None, 32, false);
 
-        let input = array![[1.0_f32, 2.0, 3.0]]; // 3 columns — wrong
+        let input = Array2::from_shape_vec((1, 3), vec![1.0_f32, 2.0, 3.0]).unwrap(); // 3 columns — wrong
         let result = engine.forward(&input);
 
         assert!(
@@ -178,10 +187,16 @@ mod tests {
         let weights = Array2::eye(3);
         let engine = InferenceEngine::from_weights(weights, None, 32, true);
 
-        let input = array![[3.0_f32, 4.0, 0.0]]; // norm = 5.0
+        let input = Array2::from_shape_vec((1, 3), vec![3.0_f32, 4.0, 0.0]).unwrap(); // norm = 5.0
         let output = engine.forward(&input).unwrap();
 
-        let norm: f32 = output.row(0).mapv(|x| x * x).sum().sqrt();
+        let norm: f32 = output
+            .index_axis::<1>(0, 0)
+            .expect("invariant: row 0 exists")
+            .iter()
+            .map(|&x| x * x)
+            .sum::<f32>()
+            .sqrt();
         assert!((norm - 1.0).abs() < 1e-5, "expected unit norm, got {norm}");
         // Values must be 3/5, 4/5, 0
         assert!((output[[0, 0]] - 0.6).abs() < 1e-5);

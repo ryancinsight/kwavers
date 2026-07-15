@@ -107,18 +107,22 @@ mod tests {
         let elements = physics::elements();
         let expected_rows = elements.len() * physics::NZ;
 
-        assert_eq!(mask.sum(), expected_rows as f64);
-        assert_eq!(signal.dim(), (expected_rows, physics::NT));
+        let mask_sum: f64 = mask.iter().sum();
+        assert_eq!(mask_sum, expected_rows as f64);
+        assert_eq!(signal.shape(), [expected_rows, physics::NT]);
 
         for z in 0..physics::NZ {
             for (element_index, element) in elements.iter().enumerate() {
                 assert_eq!(mask[[element.x, element.y, z]], 1.0);
                 let row = z * elements.len() + element_index;
                 let reference_row = element_index;
-                let row_error = signal
-                    .row(row)
+                let row_view = signal.index_axis::<1>(0, row).expect("signal row");
+                let reference_row_view = signal
+                    .index_axis::<1>(0, reference_row)
+                    .expect("reference row");
+                let row_error = row_view
                     .iter()
-                    .zip(signal.row(reference_row).iter())
+                    .zip(reference_row_view.iter())
                     .map(|(&lhs, &rhs)| (lhs - rhs).abs())
                     .fold(0.0, f64::max);
                 assert!(
@@ -132,8 +136,8 @@ mod tests {
     #[test]
     fn water_tank_comparison_writes_nonempty_artifacts() {
         let output = run_comparison().unwrap();
-        assert_eq!(output.solver_fields.len(), 5);
-        assert_eq!(output.axial_fields.len(), 6);
+        assert_eq!(output.solver_fields.len(), 6);
+        assert_eq!(output.axial_fields.len(), 7);
         assert!(output
             .solver_metrics
             .iter()
@@ -159,7 +163,7 @@ mod tests {
                 .iter()
                 .find(|field| field.name == name)
                 .expect("tensor DG field must be present");
-            assert_eq!(field.normalized_peak.dim(), (physics::NX, physics::NY));
+            assert_eq!(field.normalized_peak.shape(), [physics::NX, physics::NY]);
             assert!(field.normalized_peak.iter().all(|value| value.is_finite()));
             assert!(field.normalized_peak.iter().any(|&value| value > 0.0));
         }

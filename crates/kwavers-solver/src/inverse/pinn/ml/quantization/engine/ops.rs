@@ -1,8 +1,6 @@
 //! Per-layer and per-tensor quantization operations for [`MlQuantizer`].
 
-use burn::tensor::{backend::Backend, Tensor};
-
-use crate::inverse::pinn::ml::BurnPINN2DWave;
+use crate::inverse::pinn::ml::PinnWave2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use crate::inverse::pinn::ml::quantization::{
@@ -13,35 +11,38 @@ use super::QuantizationValidationResult;
 
 impl MlQuantizer {
     /// Enumerate model layer shapes and activation types.
-    pub(super) fn analyze_model_layers<B: Backend>(
+    pub(super) fn analyze_model_layers<
+        B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    >(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
     ) -> KwaversResult<Vec<LayerInfo>> {
         let mut layers = Vec::new();
 
-        let input_shape = model.input_layer.weight.val().shape();
+        // coeus Linear weight layout is `[out_features, in_features]`.
+        let input_shape = model.input_layer.weight.tensor.shape();
         layers.push(LayerInfo {
             name: "input_layer".to_string(),
-            input_size: input_shape.dims[1],
-            output_size: input_shape.dims[0],
+            input_size: input_shape[1],
+            output_size: input_shape[0],
             activation: "tanh".to_string(),
         });
 
         for (i, layer) in model.hidden_layers.iter().enumerate() {
-            let shape = layer.weight.val().shape();
+            let shape = layer.weight.tensor.shape();
             layers.push(LayerInfo {
                 name: format!("hidden_{}", i),
-                input_size: shape.dims[1],
-                output_size: shape.dims[0],
+                input_size: shape[1],
+                output_size: shape[0],
                 activation: "tanh".to_string(),
             });
         }
 
-        let output_shape = model.output_layer.weight.val().shape();
+        let output_shape = model.output_layer.weight.tensor.shape();
         layers.push(LayerInfo {
             name: "output_layer".to_string(),
-            input_size: output_shape.dims[1],
-            output_size: output_shape.dims[0],
+            input_size: output_shape[1],
+            output_size: output_shape[0],
             activation: "linear".to_string(),
         });
 
@@ -49,9 +50,11 @@ impl MlQuantizer {
     }
 
     /// Collect calibration inputs by uniform random sampling.
-    pub(super) fn collect_calibration_data<B: Backend>(
+    pub(super) fn collect_calibration_data<
+        B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    >(
         &self,
-        _model: &BurnPINN2DWave<B>,
+        _model: &PinnWave2D<B>,
     ) -> KwaversResult<Vec<Vec<f32>>> {
         let mut calibration_data = Vec::new();
 
@@ -66,46 +69,49 @@ impl MlQuantizer {
     }
 
     /// Quantize all weight and bias tensors in model order.
-    pub(super) fn quantize_weights<B: Backend>(
+    pub(super) fn quantize_weights<
+        B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    >(
         &self,
-        model: &BurnPINN2DWave<B>,
-    ) -> KwaversResult<Vec<QuantizedTensor>> {
+        model: &PinnWave2D<B>,
+    ) -> KwaversResult<Vec<QuantizedTensor>>
+    where
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    {
         let mut quantized_weights = Vec::new();
 
-        quantized_weights.push(self.quantize_burn_tensor(&model.input_layer.weight.val())?);
+        quantized_weights.push(self.quantize_coeus_tensor(&model.input_layer.weight.tensor)?);
         if let Some(bias) = &model.input_layer.bias {
-            quantized_weights.push(self.quantize_burn_tensor(&bias.val())?);
+            quantized_weights.push(self.quantize_coeus_tensor(&bias.tensor)?);
         }
 
         for layer in &model.hidden_layers {
-            quantized_weights.push(self.quantize_burn_tensor(&layer.weight.val())?);
+            quantized_weights.push(self.quantize_coeus_tensor(&layer.weight.tensor)?);
             if let Some(bias) = &layer.bias {
-                quantized_weights.push(self.quantize_burn_tensor(&bias.val())?);
+                quantized_weights.push(self.quantize_coeus_tensor(&bias.tensor)?);
             }
         }
 
-        quantized_weights.push(self.quantize_burn_tensor(&model.output_layer.weight.val())?);
+        quantized_weights.push(self.quantize_coeus_tensor(&model.output_layer.weight.tensor)?);
         if let Some(bias) = &model.output_layer.bias {
-            quantized_weights.push(self.quantize_burn_tensor(&bias.val())?);
+            quantized_weights.push(self.quantize_coeus_tensor(&bias.tensor)?);
         }
 
         Ok(quantized_weights)
     }
 
-    /// Convert a Burn tensor to a `QuantizedTensor` by extracting f32 data.
-    pub(super) fn quantize_burn_tensor<B: Backend, const D: usize>(
+    /// Convert a coeus tensor to a `QuantizedTensor` by extracting f32 data.
+    pub(super) fn quantize_coeus_tensor<
+        B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    >(
         &self,
-        tensor: &Tensor<B, D>,
-    ) -> KwaversResult<QuantizedTensor> {
-        let data = tensor.to_data();
-        let floats = data.as_slice::<f32>().map_err(|e| {
-            KwaversError::System(kwavers_core::error::SystemError::InvalidConfiguration {
-                parameter: "tensor_data".to_string(),
-                reason: format!("Expected f32 tensor data: {:?}", e),
-            })
-        })?;
-
-        let shape = tensor.shape().dims.to_vec();
+        tensor: &coeus_tensor::Tensor<f32, B>,
+    ) -> KwaversResult<QuantizedTensor>
+    where
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    {
+        let floats = tensor.as_slice();
+        let shape = tensor.shape().to_vec();
         self.quantize_tensor(floats, &shape)
     }
 
@@ -120,10 +126,10 @@ impl MlQuantizer {
     ) -> KwaversResult<QuantizedTensor> {
         match &self.scheme {
             QuantizationScheme::None => Ok(QuantizedTensor {
-                data: QuantizedData::F32(data.to_vec()),
+                data: QuantizedData::F32(data.iter().cloned().collect::<Vec<_>>()),
                 scale: 1.0,
                 zero_point: 0,
-                shape: shape.to_vec(),
+                shape: shape.iter().cloned().collect::<Vec<_>>(),
             }),
             QuantizationScheme::Dynamic8Bit | QuantizationScheme::Static8Bit { .. } => {
                 let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
@@ -136,7 +142,7 @@ impl MlQuantizer {
                     data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: shape.to_vec(),
+                    shape: shape.iter().cloned().collect::<Vec<_>>(),
                 })
             }
             QuantizationScheme::MixedPrecision { weight_bits, .. } => {
@@ -156,7 +162,7 @@ impl MlQuantizer {
                     data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: shape.to_vec(),
+                    shape: shape.iter().cloned().collect::<Vec<_>>(),
                 })
             }
             QuantizationScheme::Adaptive {
@@ -184,19 +190,19 @@ impl MlQuantizer {
                             (orig - dequant).powi(2)
                         })
                         .sum();
-                    let rmse = (error / data.len() as f32).sqrt();
+                    let rmse = (error / (data.len()) as f32).sqrt();
                     let sum_abs = data.iter().map(|x| x.abs()).sum::<f32>();
                     let relative_error = if sum_abs == 0.0 {
                         0.0
                     } else {
-                        rmse / (sum_abs / data.len() as f32)
+                        rmse / (sum_abs / (data.len()) as f32)
                     };
                     if relative_error <= *accuracy_threshold || current_bits <= 4 {
                         return Ok(QuantizedTensor {
                             data: QuantizedData::I8(test_quantized),
                             scale: test_scale,
                             zero_point: 0,
-                            shape: shape.to_vec(),
+                            shape: shape.iter().cloned().collect::<Vec<_>>(),
                         });
                     }
                     current_bits -= 1;
@@ -207,23 +213,29 @@ impl MlQuantizer {
 
     /// Validate quantization accuracy by comparing original and dequantized tensors.
     /// # Errors
-    /// - Returns [`KwaversError::System`] on parameter count mismatch.
+    /// - Returns [`crate::KwaversError::System`] on parameter count mismatch.
     ///
-    pub(super) fn validate_quantization<B: Backend>(
+    pub(super) fn validate_quantization<
+        B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    >(
         &self,
-        model: &BurnPINN2DWave<B>,
+        model: &PinnWave2D<B>,
         quantized_weights: &[QuantizedTensor],
-    ) -> KwaversResult<QuantizationValidationResult> {
+    ) -> KwaversResult<QuantizationValidationResult>
+    where
+        B::DeviceBuffer<f32>:
+            coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+    {
         let original_params = model.parameters();
 
-        if original_params.len() != quantized_weights.len() {
+        if (original_params.len()) != (quantized_weights.len()) {
             return Err(KwaversError::System(
                 kwavers_core::error::SystemError::InvalidConfiguration {
                     parameter: "quantized_weights".to_string(),
                     reason: format!(
                         "Parameter count mismatch: original={}, quantized={}",
-                        original_params.len(),
-                        quantized_weights.len()
+                        (original_params.len()),
+                        (quantized_weights.len())
                     ),
                 },
             ));
@@ -235,20 +247,14 @@ impl MlQuantizer {
         let mut quantized_bytes = 0usize;
 
         for (orig, quant) in original_params.iter().zip(quantized_weights) {
-            let orig_data = orig.to_data();
-            let orig_floats = orig_data.as_slice::<f32>().map_err(|e| {
-                KwaversError::System(kwavers_core::error::SystemError::InvalidConfiguration {
-                    parameter: "original_params".to_string(),
-                    reason: format!("Failed to get f32 slice: {:?}", e),
-                })
-            })?;
+            let orig_floats = orig.tensor.as_slice();
 
             let dequant_floats = quant.dequantize();
-            original_bytes += orig_floats.len() * 4;
+            original_bytes += (orig_floats.len()) * 4;
 
             match &quant.data {
-                QuantizedData::F32(v) => quantized_bytes += v.len() * 4,
-                QuantizedData::I8(v) => quantized_bytes += v.len(),
+                QuantizedData::F32(v) => quantized_bytes += (v.len()) * 4,
+                QuantizedData::I8(v) => quantized_bytes += (v.len()),
             }
 
             for (o, q) in orig_floats.iter().zip(&dequant_floats) {

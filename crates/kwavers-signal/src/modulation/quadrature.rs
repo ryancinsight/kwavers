@@ -35,7 +35,7 @@ impl Modulation for QuadratureAmplitudeModulation {
         // - Proakis & Salehi (2008): "Digital Communications" Chapter 4
         // - Haykin (2001): "Communication Systems" Chapter 6
         use crate::analytic::hilbert_transform;
-        use ndarray::Array1;
+        use leto::Array1;
 
         if carrier.len() != t.len() {
             return Err(kwavers_core::error::KwaversError::InvalidInput(
@@ -46,7 +46,8 @@ impl Modulation for QuadratureAmplitudeModulation {
         let omega_c = TWO_PI * self.params.carrier_freq;
 
         // Convert I component to ndarray
-        let i_signal = Array1::from_vec(carrier.to_vec());
+        let i_signal =
+            Array1::from_vec([carrier.len()], carrier.to_vec()).expect("carrier shape must match");
 
         // Generate Q component using Hilbert transform (90° phase shift)
         let q_signal_complex = hilbert_transform(&i_signal);

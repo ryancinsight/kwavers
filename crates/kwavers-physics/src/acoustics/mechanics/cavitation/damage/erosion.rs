@@ -2,7 +2,7 @@
 
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
 use kwavers_core::constants::cavitation::IMPACT_ENERGY_COEFFICIENT;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 /// Empirical flow-velocity enhancement coefficient for erosion potential.
 ///
@@ -19,20 +19,21 @@ const FLOW_INFLUENCE_COEFFICIENT: f64 = 0.1;
 /// Calculate cavitation intensity parameter
 #[must_use]
 pub fn cavitation_intensity(bubble_states: &BubbleStateFields, liquid_density: f64) -> Array3<f64> {
-    let shape = bubble_states.radius.dim();
+    let shape = bubble_states.radius.shape();
     let mut intensity = Array3::zeros(shape);
 
-    Zip::from(&mut intensity)
-        .and(&bubble_states.radius)
-        .and(&bubble_states.velocity)
-        .and(&bubble_states.compression_ratio)
-        .par_for_each(|out, &r, &v, &compression| {
-            *out = IMPACT_ENERGY_COEFFICIENT
-                * liquid_density
-                * v.powi(2)
-                * r.powi(3)
-                * compression.powi(2);
-        });
+    for (((out, &r), &v), &compression) in intensity
+        .iter_mut()
+        .zip(bubble_states.radius.iter())
+        .zip(bubble_states.velocity.iter())
+        .zip(bubble_states.compression_ratio.iter())
+    {
+        *out = IMPACT_ENERGY_COEFFICIENT
+            * liquid_density
+            * v.powi(2)
+            * r.powi(3)
+            * compression.powi(2);
+    }
 
     intensity
 }
@@ -49,16 +50,17 @@ impl ErosionPattern {
         flow_velocity: &Array3<f64>,
         surface_normal: &Array3<f64>,
     ) -> Array3<f64> {
-        let shape = damage_field.dim();
+        let shape = damage_field.shape();
         let mut potential = Array3::zeros(shape);
 
-        Zip::from(&mut potential)
-            .and(damage_field)
-            .and(flow_velocity)
-            .and(surface_normal)
-            .par_for_each(|out, &damage, &v, &n| {
-                *out = damage * FLOW_INFLUENCE_COEFFICIENT.mul_add(v, 1.0) * n.abs();
-            });
+        for (((out, &damage), &v), &n) in potential
+            .iter_mut()
+            .zip(damage_field.iter())
+            .zip(flow_velocity.iter())
+            .zip(surface_normal.iter())
+        {
+            *out = damage * FLOW_INFLUENCE_COEFFICIENT.mul_add(v, 1.0) * n.abs();
+        }
 
         potential
     }
@@ -73,7 +75,7 @@ impl ErosionPattern {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// `risk_map` marks cells strictly above the threshold as high-risk.
     ///

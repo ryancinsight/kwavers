@@ -458,7 +458,7 @@ proptest! {
         let kx = grid.compute_kx();
 
         // K-space frequencies must be properly ordered
-        prop_assert!(kx.len() == nx, "K-space array length must match grid");
+        prop_assert!(kx.shape()[0] == nx, "K-space array length must match grid");
 
         // DC component (k=0) should be at index 0
         prop_assert!((kx[0]).abs() < 1e-10, "DC component should be at index 0");

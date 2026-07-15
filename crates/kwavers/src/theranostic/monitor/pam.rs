@@ -18,7 +18,7 @@
 //! propagation delay so the emission stacks coherently at the true source.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Geometry of the monitored 2-D coronal (x–z) PAM image slice.
 #[derive(Clone, Debug)]
@@ -73,7 +73,7 @@ pub fn passive_acoustic_map(
     sample_rate: f64,
     cfg: &PamMonitorConfig,
 ) -> KwaversResult<Array2<f64>> {
-    let (n_elements, _channels, n_samples) = sensor_data.dim();
+    let [n_elements, _channels, n_samples] = sensor_data.shape();
     if n_elements != element_positions.len() {
         return Err(KwaversError::InvalidInput(format!(
             "PAM: sensor_data has {n_elements} elements but {} positions given",
@@ -217,7 +217,7 @@ mod tests {
             "PAM peak ({pk_i},{pk_k}) must localize the emitter ({sx},{sz})"
         );
         // Peak must dominate the off-source background.
-        let mean = map.sum() / (nx * nz) as f64;
+        let mean = map.iter().sum::<f64>() / (nx * nz) as f64;
         assert!(
             pk_v > 3.0 * mean,
             "PAM peak {pk_v} must exceed 3× mean {mean}"

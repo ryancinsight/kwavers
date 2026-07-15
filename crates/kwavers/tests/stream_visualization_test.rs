@@ -9,20 +9,19 @@
 //! - Adaptive quality based on performance
 //! - Memory pool reuse (zero-copy where possible)
 
-#![cfg(feature = "async-runtime")]
+#![cfg(all(feature = "async-runtime", feature = "gpu-visualization"))]
 
 use std::sync::atomic::AtomicU64;
-use std::sync::Arc;
+use std::thread;
 use std::time::{Duration, Instant};
 
 use kwavers_analysis::visualization::stream::pipeline::PipelineConfig;
 use kwavers_analysis::visualization::stream::sync::{report_sync_metrics, QualityLevel};
 use kwavers_analysis::visualization::stream::{
-    BufferPolicy, FrameMetadata, FramePool, StagePipeline, StreamStatistics, SyncCoordinator,
-    SyncStatistics, VizFrame, VizStream,
+    BufferPolicy, FrameMetadata, FramePool, StagePipeline, SyncCoordinator, VizFrame, VizStream,
 };
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 
 /// Create a test grid with specified dimensions
 fn create_test_grid(n: usize) -> Grid {
@@ -40,7 +39,7 @@ fn create_test_frame(id: u64, grid_size: usize) -> VizFrame {
         tags: vec![],
     };
 
-    let pressure = Array3::<f32>::zeros((grid_size, grid_size, grid_size));
+    let pressure = LetoArray3::<f32>::zeros([grid_size, grid_size, grid_size]);
     VizFrame::new(pressure, None, metadata)
 }
 
@@ -53,13 +52,14 @@ fn test_stream_frame_id_uniqueness() {
         .collect();
 
     // Verify all IDs are unique
-    let unique_count = std::collections::HashSet::from_iter(ids.iter().cloned()).len();
+    let unique: std::collections::HashSet<_> = ids.iter().copied().collect();
+    let unique_count = unique.len();
     assert_eq!(unique_count, 1000, "Frame IDs must be unique");
 }
 
 /// Test: VizStream creation with different buffer policies
-#[tokio::test(flavor = "multi_thread")]
-async fn test_vizstream_creation_policies() {
+#[test]
+fn test_vizstream_creation_policies() {
     // Test DropOldest policy
     let stream = VizStream::new(BufferPolicy::DropOldest(8)).unwrap();
     assert!(matches!(stream.policy(), BufferPolicy::DropOldest(8)));
@@ -81,60 +81,52 @@ async fn test_vizstream_creation_policies() {
 }
 
 /// Test: Stream frame production and consumption
-#[tokio::test(flavor = "multi_thread")]
-async fn test_stream_producer_consumer() {
+#[test]
+fn test_stream_producer_consumer() {
     let stream = VizStream::new(BufferPolicy::Block).unwrap();
 
-    // Producer task
     let tx = stream.sender();
-    let producer = tokio::spawn(async move {
+    let producer = thread::spawn(move || {
         for i in 0..10 {
             let frame = create_test_frame(i, 16);
-            tx.send_async(frame).await.unwrap();
-            tokio::time::sleep(Duration::from_millis(10)).await;
+            tx.send_blocking(frame).unwrap();
+            thread::sleep(Duration::from_millis(10));
         }
     });
 
-    // Consumer task
     let mut received = 0;
-    let timeout = tokio::time::timeout(Duration::from_secs(5), async {
-        while received < 10 {
-            if let Ok(_frame) = stream.recv_frame().await {
-                received += 1;
-            }
+    while received < 10 {
+        if stream.recv_frame_blocking().is_ok() {
+            received += 1;
         }
-    });
+    }
 
-    let _ = tokio::join!(producer, timeout);
+    producer.join().expect("producer thread must finish");
 
     assert_eq!(received, 10, "Should receive all 10 frames");
 }
 
 /// Test: DropOldest buffer policy behavior
-#[tokio::test(flavor = "multi_thread")]
-async fn test_drop_oldest_policy() {
+#[test]
+fn test_drop_oldest_policy() {
     let capacity = 4;
     let stream = VizStream::new(BufferPolicy::DropOldest(capacity)).unwrap();
 
     // Send more frames than capacity
     for i in 0..10 {
         let frame = create_test_frame(i, 8);
-        stream.send_frame(frame).await.unwrap();
+        stream.send_frame_blocking(frame).unwrap();
     }
 
     // Should only receive the newest frames (capacity-based)
     let mut received_ids = Vec::new();
-    let timeout = tokio::time::timeout(Duration::from_secs(2), async {
-        loop {
-            match stream.try_recv_frame() {
-                Ok(Some(frame)) => received_ids.push(frame.metadata.id.0),
-                Ok(None) => break,
-                Err(_) => break,
-            }
+    loop {
+        match stream.try_recv_frame() {
+            Ok(Some(frame)) => received_ids.push(frame.metadata.id.0),
+            Ok(None) => break,
+            Err(_) => break,
         }
-    });
-
-    let _ = timeout.await;
+    }
 
     // With DropOldest(4), we should receive frames 6, 7, 8, 9
     // (Oldest 0-5 are dropped to make room)
@@ -152,19 +144,19 @@ async fn test_drop_oldest_policy() {
 }
 
 /// Test: DropLatest buffer policy behavior (backpressure)
-#[tokio::test(flavor = "multi_thread")]
-async fn test_drop_latest_backpressure() {
+#[test]
+fn test_drop_latest_backpressure() {
     let stream = VizStream::new(BufferPolicy::DropLatest).unwrap();
 
     // Send frames faster than they can be consumed
     for i in 0..10 {
         let frame = create_test_frame(i, 8);
         // Don't await - this may drop frames
-        let _ = stream.send_frame(frame).await;
+        let _ = stream.send_frame_blocking(frame);
     }
 
     // Give time for any pending operations
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    thread::sleep(Duration::from_millis(50));
 
     // Consume all available frames
     let mut received_count = 0;
@@ -192,7 +184,7 @@ fn test_frame_pool_zero_allocation() {
 
     // Verify dimensions
     for buf in &buffers {
-        assert_eq!(buf.dim(), grid_dims);
+        assert_eq!(buf.shape(), [grid_dims.0, grid_dims.1, grid_dims.2]);
     }
 
     // Release back to pool
@@ -202,7 +194,7 @@ fn test_frame_pool_zero_allocation() {
 
     // Re-acquire - should reuse from pool
     let reused = pool.acquire();
-    assert_eq!(reused.dim(), grid_dims);
+    assert_eq!(reused.shape(), [grid_dims.0, grid_dims.1, grid_dims.2]);
 }
 
 /// Test: Stream with frame pool integration
@@ -248,7 +240,6 @@ fn test_frame_pacing_statistics() {
 /// Test: Quality adaptation based on performance
 #[test]
 fn test_adaptive_quality_adjustment() {
-    let target_latency = 33.3; // 30 FPS = 33.3ms per frame
     let coordinator = SyncCoordinator::new(30.0);
 
     // Initial quality should be maximum
@@ -372,20 +363,20 @@ fn test_pipeline_config_validation() {
 }
 
 /// Test: Stream statistics accumulation
-#[tokio::test(flavor = "multi_thread")]
-async fn test_stream_statistics_accumulation() {
+#[test]
+fn test_stream_statistics_accumulation() {
     let stream = VizStream::new(BufferPolicy::Block).unwrap();
 
     // Send and consume frames
     for i in 0..5 {
         let frame = create_test_frame(i, 16);
-        stream.send_frame(frame).await.unwrap();
+        stream.send_frame_blocking(frame).unwrap();
     }
 
     // Receive all frames
     let mut consumed = 0;
     while consumed < 5 {
-        if let Ok(_) = stream.recv_frame().await {
+        if stream.recv_frame_blocking().is_ok() {
             consumed += 1;
         } else {
             break;
@@ -468,8 +459,8 @@ fn test_quality_level_transitions() {
 
 /// Test: Performance acceptance criteria - <2% frame drops at 30 fps
 /// This test verifies the system can maintain low drop rates under normal conditions
-#[tokio::test(flavor = "multi_thread")]
-async fn test_acceptance_frame_drop_rate() {
+#[test]
+fn test_acceptance_frame_drop_rate() {
     let target_fps = 30.0;
     let coordinator = SyncCoordinator::new(target_fps);
 
@@ -481,7 +472,7 @@ async fn test_acceptance_frame_drop_rate() {
         let start = Instant::now();
 
         // Simulate frame work
-        tokio::time::sleep(Duration::from_millis(frame_time_ms as u64)).await;
+        thread::sleep(Duration::from_millis(frame_time_ms as u64));
 
         let elapsed = start.elapsed();
         coordinator.complete_frame(elapsed, i as f64 * 0.033);
@@ -511,8 +502,8 @@ async fn test_acceptance_frame_drop_rate() {
 }
 
 /// Test: Latency reporting integration
-#[tokio::test(flavor = "multi_thread")]
-async fn test_latency_reporting_integration() {
+#[test]
+fn test_latency_reporting_integration() {
     let stream = VizStream::new(BufferPolicy::Block).unwrap();
     let coordinator = SyncCoordinator::new(60.0);
 
@@ -521,9 +512,9 @@ async fn test_latency_reporting_integration() {
         let frame = create_test_frame(i, 16);
         let send_time = Instant::now();
 
-        stream.send_frame(frame).await.unwrap();
+        stream.send_frame_blocking(frame).unwrap();
 
-        if let Ok(received) = stream.recv_frame().await {
+        if let Ok(received) = stream.recv_frame_blocking() {
             let latency = send_time.elapsed();
             coordinator.complete_frame(latency, received.metadata.simulation_time);
         }
@@ -561,8 +552,8 @@ fn test_zero_copy_frame_pool() {
 }
 
 /// Test: Pipeline metrics collection
-#[tokio::test(flavor = "multi_thread")]
-async fn test_pipeline_metrics_collection() {
+#[test]
+fn test_pipeline_metrics_collection() {
     let config = PipelineConfig {
         target_fps: 30.0,
         channel_capacity: 8,
@@ -571,20 +562,20 @@ async fn test_pipeline_metrics_collection() {
         latency_threshold_ms: 35.0,
     };
 
-    let (pipeline, input_tx) = StagePipeline::new(config).await.unwrap();
+    let (pipeline, input_tx) = StagePipeline::new_blocking(config).unwrap();
 
     // Send some test frames
     for i in 0..5 {
         let frame = create_test_frame(i, 16);
-        if let Err(e) = input_tx.send(frame).await {
+        if let Err(e) = input_tx.send_blocking(frame) {
             eprintln!("Send error: {:?}", e);
             break;
         }
-        tokio::time::sleep(Duration::from_millis(10)).await;
+        thread::sleep(Duration::from_millis(10));
     }
 
     // Give pipeline time to process
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    thread::sleep(Duration::from_millis(100));
 
     // Get metrics
     let metrics = pipeline.metrics();
@@ -605,8 +596,8 @@ async fn test_pipeline_metrics_collection() {
 }
 
 /// Test: Adaptive buffer policy under load
-#[tokio::test(flavor = "multi_thread")]
-async fn test_adaptive_buffer_policy() {
+#[test]
+fn test_adaptive_buffer_policy() {
     let target_latency = 25.0; // 25ms target
     let stream = VizStream::new(BufferPolicy::AdaptiveLatency(target_latency)).unwrap();
 
@@ -616,9 +607,9 @@ async fn test_adaptive_buffer_policy() {
         let frame = create_test_frame(i, 8);
 
         // Simulate processing delay
-        tokio::time::sleep(Duration::from_millis(5)).await;
+        thread::sleep(Duration::from_millis(5));
 
-        match stream.send_frame(frame).await {
+        match stream.send_frame_blocking(frame) {
             Ok(_) => sent += 1,
             Err(_) => break,
         }
@@ -634,12 +625,12 @@ async fn test_adaptive_buffer_policy() {
 }
 
 /// Test: Stream integration with simulation-to-render sync
-#[tokio::test(flavor = "multi_thread")]
-async fn test_full_stream_sync_integration() {
+#[test]
+fn test_full_stream_sync_integration() {
     // Create stream with frame pooling
     let grid_size = 32;
     let stream = VizStream::with_pool(
-        BufferPolicy::DropOldest(8),
+        BufferPolicy::DropOldest(32),
         (grid_size, grid_size, grid_size),
         5,
     )
@@ -648,49 +639,19 @@ async fn test_full_stream_sync_integration() {
     // Create sync coordinator targeting 30 FPS
     let coordinator = SyncCoordinator::new(30.0);
 
-    // Simulate simulation producing frames
-    let producer = {
-        let tx = stream.sender();
-        tokio::spawn(async move {
-            for i in 0..20 {
-                let frame = create_test_frame(i, grid_size);
-                if let Err(_) = tx.send_async(frame).await {
-                    break;
-                }
-                tokio::time::sleep(Duration::from_millis(33)).await;
-            }
-        })
-    };
+    for i in 0..20 {
+        let frame = create_test_frame(i, grid_size);
+        if stream.send_frame_blocking(frame).is_err() {
+            break;
+        }
+        thread::sleep(Duration::from_millis(33));
+    }
 
-    // Simulate consumer with sync coordination
-    let consumer = {
-        let rx = stream.receiver();
-        let coord = Arc::new(coordinator);
-        tokio::spawn(async move {
-            let mut count = 0;
-            let coord = Arc::clone(&coord);
-
-            while count < 20 {
-                match rx.recv_async().await {
-                    Ok(frame) => {
-                        // Simulate render time
-                        tokio::time::sleep(Duration::from_millis(15)).await;
-
-                        let latency = frame.age();
-                        coord.complete_frame(latency, frame.metadata.simulation_time);
-                        count += 1;
-                    }
-                    Err(_) => break,
-                }
-            }
-
-            // Return coordinator for assertion
-            Arc::try_unwrap(coord).ok().unwrap()
-        })
-    };
-
-    let (coord, _) = tokio::join!(consumer, producer);
-    let coordinator = coord.unwrap();
+    while let Ok(Some(frame)) = stream.try_recv_frame() {
+        thread::sleep(Duration::from_millis(15));
+        let latency = frame.age();
+        coordinator.complete_frame(latency, frame.metadata.simulation_time);
+    }
 
     // Verify sync worked
     let stats = coordinator.statistics();

@@ -318,19 +318,21 @@ mod tests {
 
     #[test]
     fn test_dc_dt_within_literature_range() {
-        assert!(
-            DC_DT_SOFT_TISSUE >= 1.0 && DC_DT_SOFT_TISSUE <= 2.5,
-            "DC_DT_SOFT_TISSUE ({}) must lie within the measured range [1.0, 2.5] m/s/°C",
-            DC_DT_SOFT_TISSUE
-        );
+        const {
+            assert!(
+                DC_DT_SOFT_TISSUE >= 1.0 && DC_DT_SOFT_TISSUE <= 2.5,
+                "DC_DT_SOFT_TISSUE must lie within the measured range [1.0, 2.5] m/s/°C"
+            );
+        }
     }
 
     #[test]
     fn test_drho_dt_negative() {
-        assert!(
-            DRHO_DT_SOFT_TISSUE < 0.0,
-            "DRHO_DT_SOFT_TISSUE ({}) must be negative (density decreases with temperature)",
-            DRHO_DT_SOFT_TISSUE
-        );
+        const {
+            assert!(
+                DRHO_DT_SOFT_TISSUE < 0.0,
+                "DRHO_DT_SOFT_TISSUE must be negative (density decreases with temperature)"
+            );
+        }
     }
 }

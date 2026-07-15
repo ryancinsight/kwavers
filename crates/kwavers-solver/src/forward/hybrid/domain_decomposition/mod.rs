@@ -62,7 +62,7 @@ impl DomainDecomposer {
 
     /// Decompose the domain based on medium properties, grid, and strategy
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn decompose(
         &self,

@@ -43,7 +43,7 @@ pub use immersed_interface::{IIMConfig, ImmersedInterfaceMethod, JumpConditionTy
 pub use subgrid::{SubgridAveraging, SubgridConfig};
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Boundary smoothing method
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -146,7 +146,7 @@ impl BoundarySmoothing {
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_no_smoothing() {
@@ -157,8 +157,8 @@ mod tests {
 
         let smoother = BoundarySmoothing::new(config);
 
-        let property = Array3::from_elem((10, 10, 10), SOUND_SPEED_TISSUE);
-        let geometry = Array3::from_elem((10, 10, 10), 1.0);
+        let property = Array3::from_elem([10, 10, 10], SOUND_SPEED_TISSUE);
+        let geometry = Array3::from_elem([10, 10, 10], 1.0);
 
         let smoothed = smoother.smooth(&property, &geometry).unwrap();
         assert_eq!(smoothed, property);

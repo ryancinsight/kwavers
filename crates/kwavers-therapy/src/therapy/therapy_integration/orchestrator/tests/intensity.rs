@@ -19,6 +19,7 @@ fn test_intensity_tracker_integration() {
             duty_cycle: 0.02,
             focal_depth: 0.03,
             treatment_volume: 0.5,
+            use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: TI_LIMIT_SOFT_TISSUE,
@@ -78,8 +79,8 @@ fn test_intensity_tracker_integration() {
 
         let t_field = &state.safety_metrics.temperature_rise;
         assert_eq!(
-            t_field.dim(),
-            (12, 12, 12),
+            t_field.shape(),
+            [12, 12, 12],
             "step {step}: temperature_rise shape mismatch"
         );
         let t_min = t_field.iter().cloned().fold(f64::INFINITY, f64::min);

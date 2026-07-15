@@ -8,7 +8,7 @@ fn test_deep_fusion_attention_is_input_sensitive_and_convex() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (2, 1, 1);
+    let shape = [2, 1, 1];
 
     fusion.registered_data.insert(
         "a".to_string(),
@@ -55,7 +55,7 @@ fn test_deep_fusion_quality_prior_changes_attention_weights() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (2, 1, 1);
+    let shape = [2, 1, 1];
 
     fusion.registered_data.insert(
         "low_quality".to_string(),
@@ -86,7 +86,7 @@ fn test_deep_fusion_rejects_nonfinite_data() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (1, 2, 1);
+    let shape = [1, 2, 1];
 
     fusion.registered_data.insert(
         "finite".to_string(),

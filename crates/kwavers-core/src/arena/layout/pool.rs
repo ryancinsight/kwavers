@@ -1,4 +1,4 @@
-use ndarray::{ArrayView3, ArrayViewMut3};
+use leto::{ArrayView3, ArrayViewMut3, Layout as LetoLayout};
 use std::alloc::{alloc, dealloc, Layout};
 use std::ptr::NonNull;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -235,7 +235,10 @@ impl<'a> FieldBufferGuard<'a> {
     #[inline]
     #[must_use]
     pub fn as_view3(&self, nx: usize, ny: usize, nz: usize) -> Option<ArrayView3<'_, f64>> {
-        ArrayView3::from_shape((nx, ny, nz), self.data).ok()
+        LetoLayout::<3>::c_contiguous([nx, ny, nz])
+            .ok()
+            .filter(|l| l.size() == self.data.len())
+            .map(|layout| ArrayView3::new(layout, self.data))
     }
 
     /// Convert to mutable 3D view
@@ -246,7 +249,10 @@ impl<'a> FieldBufferGuard<'a> {
         ny: usize,
         nz: usize,
     ) -> Option<ArrayViewMut3<'_, f64>> {
-        ArrayViewMut3::from_shape((nx, ny, nz), self.data).ok()
+        LetoLayout::<3>::c_contiguous([nx, ny, nz])
+            .ok()
+            .filter(|l| l.size() == self.data.len())
+            .map(|layout| ArrayViewMut3::new(layout, self.data))
     }
 }
 

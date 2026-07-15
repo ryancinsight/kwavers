@@ -42,7 +42,7 @@ impl HybridValidationSuite {
 
     /// Run all validation tests
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn run_all_tests(&self) -> KwaversResult<super::ValidationSummary> {
         let mut summary = super::ValidationSummary {
@@ -92,7 +92,7 @@ impl HybridValidationSuite {
 
     /// Run convergence test
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn run_convergence_test(&self) -> KwaversResult<bool> {
         // Test that error decreases with grid refinement
@@ -105,7 +105,7 @@ impl HybridValidationSuite {
         }
 
         // Check if errors decrease monotonically
-        for i in 1..errors.len() {
+        for i in 1..(errors.len()) {
             if errors[i] >= errors[i - 1] {
                 return Ok(false);
             }
@@ -116,7 +116,7 @@ impl HybridValidationSuite {
 
     /// Run accuracy test
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn run_accuracy_test(&self) -> KwaversResult<bool> {
         // Test against analytical solution or reference
@@ -129,7 +129,7 @@ impl HybridValidationSuite {
 
     /// Run stability test
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn run_stability_test(&self) -> KwaversResult<bool> {
         // Test CFL condition and numerical stability

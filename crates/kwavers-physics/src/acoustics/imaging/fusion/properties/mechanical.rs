@@ -28,7 +28,7 @@
 //! - Ophir, J., et al. (1991). "Elastography: A quantitative method for imaging the elasticity of biological tissues." Ultrasonic Imaging, 13(2), 111-134.
 //! - Sarvazyan, A. P., et al. (1998). "Shear wave elasticity imaging: a new ultrasonic technology of medical diagnostics." Ultrasound in Medicine & Biology.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute composite tissue stiffness from multi-modal correlation
 ///

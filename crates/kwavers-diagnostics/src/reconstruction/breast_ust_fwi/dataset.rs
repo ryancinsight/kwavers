@@ -7,14 +7,16 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::inverse::fwi::frequency_domain::FrequencyObservation;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{s, Array2, Array3};
-use num_complex::Complex64;
+#[cfg(feature = "gpu")]
+use leto::Array3 as LetoArray3;
+use leto::{Array2, Array3, SliceArg};
 
 mod signal;
 mod validation;
@@ -91,7 +93,15 @@ impl BreastUstPstdDataset {
             .map(|(index, &frequency_hz)| {
                 FrequencyObservation::new(
                     frequency_hz,
-                    self.observed_pressure.slice(s![index, .., ..]).to_owned(),
+                    self.observed_pressure
+                        .slice_with::<2>(&[
+                            SliceArg::Index(index as isize),
+                            SliceArg::All,
+                            SliceArg::All,
+                        ])
+                        .expect("frequency index within observation cube")
+                        .to_contiguous()
+                        .into(),
                 )
             })
             .collect()
@@ -121,8 +131,9 @@ pub fn generate_breast_ust_pstd_frequency_dataset(
     validate_frequencies(frequencies_hz, config.time_step_s)?;
     validate_cfl(sound_speed_m_s, config)?;
 
+    let [ss_nx, ss_ny, ss_nz] = sound_speed_m_s.shape();
     let receiver_indices =
-        map_ring_points_to_grid(sound_speed_m_s.dim(), config, array.elements())?;
+        map_ring_points_to_grid((ss_nx, ss_ny, ss_nz), config, array.elements())?;
     let transmissions = array.circumferential_elements();
     let receivers = receiver_indices.len();
     let mut observed = Array3::<Complex64>::zeros((frequencies_hz.len(), transmissions, receivers));
@@ -137,8 +148,9 @@ pub fn generate_breast_ust_pstd_frequency_dataset(
 
         for transmit_index in 0..transmissions {
             let source_points = array.cylindrical_source(transmit_index);
+            let [src_nx, src_ny, src_nz] = sound_speed_m_s.shape();
             let source_indices =
-                map_ring_points_to_grid(sound_speed_m_s.dim(), config, &source_points)?;
+                map_ring_points_to_grid((src_nx, src_ny, src_nz), config, &source_points)?;
             let traces = run_pstd_transmit(
                 sound_speed_m_s,
                 &receiver_indices,
@@ -150,7 +162,9 @@ pub fn generate_breast_ust_pstd_frequency_dataset(
 
             for receiver in 0..receivers {
                 observed[[frequency_index, transmit_index, receiver]] = frequency_bin(
-                    traces.row(receiver),
+                    traces
+                        .index_axis::<1>(0, receiver)
+                        .expect("receiver index within trace rows"),
                     frequency_hz,
                     config.time_step_s,
                     bin_start,
@@ -207,7 +221,7 @@ fn run_pstd_transmit(
     steps: usize,
     config: BreastUstPstdDatasetConfig,
 ) -> KwaversResult<Array2<f64>> {
-    let (nx, ny, nz) = sound_speed_m_s.dim();
+    let [nx, ny, nz] = sound_speed_m_s.shape();
     let grid = Grid::new(
         nx,
         ny,
@@ -218,8 +232,8 @@ fn run_pstd_transmit(
     )?;
     let density = Array3::from_elem((nx, ny, nz), config.density_kg_m3);
     let medium = HeterogeneousFactory::from_arrays(
-        sound_speed_m_s.clone(),
-        density,
+        sound_speed_m_s.clone().into(),
+        density.into(),
         None,
         None,
         None,
@@ -232,8 +246,8 @@ fn run_pstd_transmit(
         p_mask[[i, j, k]] += 1.0;
     }
     let source = GridSource {
-        p_mask: Some(p_mask),
-        p_signal: Some(tone_signal(frequency_hz, steps, config)),
+        p_mask: Some(p_mask.into()),
+        p_signal: Some(tone_signal(frequency_hz, steps, config).into()),
         p_mode: SourceMode::Additive,
         ..GridSource::new_empty()
     };
@@ -284,7 +298,7 @@ fn try_run_gpu_pstd_transmit(
 ) -> Option<Array2<f64>> {
     use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-    let mut sensor_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut sensor_mask = LetoArray3::<bool>::from_elem([nx, ny, nz], false);
     for &(i, j, k) in receiver_indices {
         sensor_mask[[i, j, k]] = true;
     }
@@ -305,7 +319,9 @@ fn try_run_gpu_pstd_transmit(
         pml_inside: config.cpml_thickness_cells > 0,
         pml_alpha_xyz: None,
     };
-    run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config).ok()
+    let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config).ok()?;
+    let [rows, cols] = traces.shape();
+    Array2::from_shape_vec((rows, cols), traces.into_vec()).ok()
 }
 
 #[cfg(test)]

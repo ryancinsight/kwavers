@@ -14,9 +14,10 @@
 use super::state::{CavitationDose, CavitationMechanicsState};
 use super::thresholds::{blake_threshold, flynn_threshold, neppiras_threshold, ThresholdModel};
 use crate::acoustics::analysis::calculate_mechanical_index;
-use crate::acoustics::bubble_dynamics::bubble_state::BubbleParameters;
+use crate::acoustics::bubble_dynamics::BubbleParameters;
+use crate::parallel::zip_mut_ref;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 /// Mechanical Index (MI) threshold for the onset of inertial cavitation in water
 /// at 1 MHz, based on the Apfel-Holland theoretical framework.
@@ -69,11 +70,11 @@ pub struct CavitationModel {
 impl CavitationModel {
     /// Create new cavitation model with default water/air bubble parameters
     #[must_use]
-    pub fn new(grid_shape: (usize, usize, usize)) -> Self {
+    pub fn new(grid_shape: [usize; 3]) -> Self {
         Self {
             threshold_model: ThresholdModel::MechanicalIndex,
             params: BubbleParameters::default(),
-            states: Array3::default(grid_shape),
+            states: Array3::from_elem(grid_shape, CavitationMechanicsState::default()),
             dose: CavitationDose::new(),
         }
     }
@@ -127,10 +128,20 @@ impl CavitationModel {
         (peak_negative_pressure.abs() / ambient_pressure).min(1.0)
     }
 
-    /// Update cavitation state based on pressure field (vectorized)
-    ///
-    /// Uses `ndarray::Zip` for cache-friendly vectorized iteration instead of
-    /// scalar `indexed_iter`.
+    #[must_use]
+    fn cavitating_average_intensity(&self) -> Option<f64> {
+        let (intensity_sum, count) = self
+            .states
+            .iter()
+            .filter(|state| state.is_cavitating)
+            .fold((0.0_f64, 0_u64), |(sum, count), state| {
+                (sum + state.intensity, count + 1)
+            });
+
+        (count > 0).then(|| intensity_sum / count as f64)
+    }
+
+    /// Update cavitation state based on pressure field.
     pub fn update_states(
         &mut self,
         pressure_field: &Array3<f64>,
@@ -141,13 +152,10 @@ impl CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        // Accumulate dose updates in a local variable to avoid borrow conflict
-        let mut dose_intensity_sum = 0.0;
-        let mut dose_count = 0u64;
-
-        Zip::from(&mut self.states)
-            .and(pressure_field)
-            .for_each(|state, &p| {
+        zip_mut_ref(
+            self.states.view_mut(),
+            pressure_field.view(),
+            |state, &p| {
                 // Check for cavitation
                 let was_cavitating = state.is_cavitating;
                 state.is_cavitating = p < -threshold;
@@ -158,19 +166,16 @@ impl CavitationModel {
                     state.mechanical_index = calculate_mechanical_index(p, frequency);
                     state.intensity =
                         Self::compute_intensity(state.peak_negative_pressure, ambient_pressure);
-
-                    dose_intensity_sum += state.intensity;
-                    dose_count += 1;
                 } else if was_cavitating {
                     // Just stopped cavitating
                     state.duration = 0.0;
                     state.intensity = 0.0;
                 }
-            });
+            },
+        );
 
         // Update dose with average intensity across cavitating points
-        if dose_count > 0 {
-            let avg_intensity = dose_intensity_sum / dose_count as f64;
+        if let Some(avg_intensity) = self.cavitating_average_intensity() {
             self.dose.update(avg_intensity, dt, time);
         }
     }
@@ -193,13 +198,10 @@ impl CavitationCore for CavitationModel {
         let threshold = self.compute_threshold();
         let ambient_pressure = self.params.p0;
 
-        // Accumulate dose in local variables to avoid borrow conflict
-        let mut dose_intensity_sum = 0.0;
-        let mut dose_count = 0u64;
-
-        Zip::from(&mut self.states)
-            .and(pressure_field)
-            .for_each(|state, &pressure| {
+        zip_mut_ref(
+            self.states.view_mut(),
+            pressure_field.view(),
+            |state, &pressure| {
                 if pressure < -threshold {
                     if !state.is_cavitating {
                         state.is_cavitating = true;
@@ -210,18 +212,15 @@ impl CavitationCore for CavitationModel {
                     // SSOT: delegate to the single authoritative intensity formula
                     state.intensity =
                         Self::compute_intensity(state.peak_negative_pressure, ambient_pressure);
-
-                    dose_intensity_sum += state.intensity;
-                    dose_count += 1;
                 } else {
                     state.is_cavitating = false;
                     state.intensity = 0.0;
                 }
-            });
+            },
+        );
 
         // Fix: divide by cavitating count, not total grid size
-        if dose_count > 0 {
-            let avg_intensity = dose_intensity_sum / dose_count as f64;
+        if let Some(avg_intensity) = self.cavitating_average_intensity() {
             self.dose.update(avg_intensity, dt, dt);
         }
 
@@ -233,20 +232,20 @@ impl CavitationCore for CavitationModel {
 mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MPA_TO_PA;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// `CavitationModel::new` defaults to the MechanicalIndex threshold model.
     #[test]
     fn new_defaults_to_mechanical_index_model() {
-        let m = CavitationModel::new((4, 4, 4));
+        let m = CavitationModel::new([4, 4, 4]);
         assert_eq!(m.threshold_model, ThresholdModel::MechanicalIndex);
-        assert_eq!(m.states.dim(), (4, 4, 4));
+        assert_eq!(m.states.shape(), [4, 4, 4]);
     }
 
     /// `detect_cavitation` returns true when pressure is more negative than -threshold.
     #[test]
     fn detect_cavitation_true_when_pressure_below_negative_threshold() {
-        let m = CavitationModel::new((2, 2, 2));
+        let m = CavitationModel::new([2, 2, 2]);
         assert!(
             m.detect_cavitation(-200.0, 100.0),
             "p=-200 < -100 → cavitation"
@@ -266,7 +265,7 @@ mod tests {
     /// Analytical: (P₀ + 0 − Pᵥ) / (P₀ − Pᵥ) = 1.0.
     #[test]
     fn cavitation_index_unity_at_zero_pressure_perturbation() {
-        let m = CavitationModel::new((2, 2, 2));
+        let m = CavitationModel::new([2, 2, 2]);
         let p0 = m.params.p0;
         let pv = m.params.pv;
         let ci = m.cavitation_index(0.0, pv, p0);
@@ -279,7 +278,7 @@ mod tests {
     /// `cavitation_index` at p = Pᵥ − P₀ (cavitation onset) equals 0.0.
     #[test]
     fn cavitation_index_zero_at_cavitation_onset() {
-        let m = CavitationModel::new((2, 2, 2));
+        let m = CavitationModel::new([2, 2, 2]);
         let p0 = m.params.p0;
         let pv = m.params.pv;
         let p_onset = pv - p0; // (P₀ + (Pᵥ-P₀) - Pᵥ) = 0
@@ -293,10 +292,10 @@ mod tests {
     /// `CavitationCore::update` marks cells with pressure below -threshold as cavitating.
     #[test]
     fn update_marks_cavitating_cells_and_leaves_others_clear() {
-        let mut m = CavitationModel::new((2, 2, 2));
+        let mut m = CavitationModel::new([2, 2, 2]);
         // MechanicalIndex threshold = APFEL_HOLLAND_CAVITATION_THRESHOLD_1MHZ_PA = 0.7e6 Pa
         // Any pressure < -0.7e6 triggers cavitation.
-        let mut field = Array3::<f64>::zeros((2, 2, 2));
+        let mut field = Array3::<f64>::zeros([2, 2, 2]);
         field[[0, 0, 0]] = -MPA_TO_PA; // below -0.7MPa → cavitating
         field[[1, 1, 1]] = 0.0; // not below threshold
 

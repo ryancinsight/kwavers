@@ -8,12 +8,16 @@ use super::types::{
     UniversalTrainingConfig,
 };
 use crate::inverse::pinn::ml::physics::{PinnDomainPhysicsParameters, SimulationPhysicsDomain};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 use std::time::Instant;
 
-impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default + 'static>
+    UniversalPINNSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Register a physics domain
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -27,7 +31,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
 
     /// Configure training for a specific physics domain
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn configure_domain(
         &mut self,
@@ -64,7 +68,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
 
     /// Train a specific physics domain with default geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn train_domain(
         &mut self,
@@ -80,7 +84,7 @@ impl<B: AutodiffBackend + 'static> UniversalPINNSolver<B> {
 
     /// Train all registered physics domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn train_all_domains(
         &mut self,

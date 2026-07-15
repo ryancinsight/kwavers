@@ -10,7 +10,7 @@
 use super::*;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 const DX: f64 = 1.0e-3;
 const RHO: f64 = 1000.0;
@@ -99,13 +99,13 @@ fn fwi_outperforms_linear_inversion() {
     };
     let mu_fwi = reconstruct_lesion_transmission(&g, &m, &mu_true, &params).expect("fwi");
 
-    let stat = |mask_in: bool, arr: &Array3<f64>| {
+    let stat = |mask_in: bool, value_at: &dyn Fn(usize, usize) -> f64| {
         let (mut sum, mut peak, mut cnt) = (0.0, 0.0_f64, 0);
         for i in 8..28 {
             for j in 8..28 {
                 let inside = (i as f64 - c).hypot(j as f64 - c) <= 5.0;
                 if inside == mask_in {
-                    let v = arr[[i, j, 0]];
+                    let v = value_at(i, j);
                     sum += v;
                     peak = peak.max(v);
                     cnt += 1;
@@ -114,10 +114,12 @@ fn fwi_outperforms_linear_inversion() {
         }
         (sum / cnt as f64, peak)
     };
-    let (lin_bg, _) = stat(false, &mu_lin);
-    let (_, lin_peak) = stat(true, &mu_lin);
-    let (fwi_bg, _) = stat(false, &mu_fwi);
-    let (_, fwi_peak) = stat(true, &mu_fwi);
+    let sample_lin = |i: usize, j: usize| mu_lin[[i, j, 0]];
+    let sample_fwi = |i: usize, j: usize| mu_fwi[[i, j, 0]];
+    let (lin_bg, _) = stat(false, &sample_lin);
+    let (_, lin_peak) = stat(true, &sample_lin);
+    let (fwi_bg, _) = stat(false, &sample_fwi);
+    let (_, fwi_peak) = stat(true, &sample_fwi);
 
     // FWI is accurate in absolute terms.
     assert!(
@@ -279,12 +281,10 @@ fn k_mu_gradient_is_valid_descent_direction() {
         }
         let mut mu_p = mu0.clone();
         let mut mu_m = mu0.clone();
-        ndarray::Zip::from(&mut mu_p)
-            .and(&delta)
-            .for_each(|m, &d| *m += eps * d);
-        ndarray::Zip::from(&mut mu_m)
-            .and(&delta)
-            .for_each(|m, &d| *m -= eps * d);
+        leto_ops::zip_mut_with(&mut mu_p.view_mut(), &delta.view(), |m, d| *m += eps * *d)
+            .expect("invariant: mu and delta field shapes asserted equal");
+        leto_ops::zip_mut_with(&mut mu_m.view_mut(), &delta.view(), |m, d| *m -= eps * *d)
+            .expect("invariant: mu and delta field shapes asserted equal");
         let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))
             / (2.0 * eps);
         kappas.push(analytic / fd);
@@ -428,7 +428,7 @@ fn recovers_stiff_inclusion() {
 }
 
 fn pearson(a: &[f64], b: &[f64]) -> f64 {
-    let n = a.len() as f64;
+    let n = (a.len()) as f64;
     let ma = a.iter().sum::<f64>() / n;
     let mb = b.iter().sum::<f64>() / n;
     let mut cov = 0.0;
@@ -551,12 +551,10 @@ fn k_mu_gradient_3d_is_valid_descent_direction() {
         }
         let mut mu_p = mu0.clone();
         let mut mu_m = mu0.clone();
-        ndarray::Zip::from(&mut mu_p)
-            .and(&delta)
-            .for_each(|mm, &d| *mm += eps * d);
-        ndarray::Zip::from(&mut mu_m)
-            .and(&delta)
-            .for_each(|mm, &d| *mm -= eps * d);
+        leto_ops::zip_mut_with(&mut mu_p.view_mut(), &delta.view(), |mm, d| *mm += eps * *d)
+            .expect("invariant: mu and delta field shapes asserted equal");
+        leto_ops::zip_mut_with(&mut mu_m.view_mut(), &delta.view(), |mm, d| *mm -= eps * *d)
+            .expect("invariant: mu and delta field shapes asserted equal");
         let fd = (fwi.forward_misfit(&mu_p).expect("J+") - fwi.forward_misfit(&mu_m).expect("J-"))
             / (2.0 * eps);
         kappas.push(analytic / fd);

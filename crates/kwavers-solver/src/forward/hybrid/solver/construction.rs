@@ -16,7 +16,7 @@ use log::info;
 impl HybridSolver {
     /// Create a new hybrid solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: HybridConfig, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Self> {
         info!("Initializing hybrid Spectral/FDTD solver");
@@ -46,7 +46,7 @@ impl HybridSolver {
         let regions =
             decomposer.decompose(grid, &default_medium, config.decomposition_strategy.clone())?;
 
-        info!("Hybrid solver initialized with {} regions", regions.len());
+        info!("Hybrid solver initialized with {} regions", (regions.len()));
 
         let shape = (grid.nx, grid.ny, grid.nz);
 
@@ -63,7 +63,7 @@ impl HybridSolver {
             validation_results: HybridValidationResults::default(),
             time_step: 0,
             fields: WaveFields::new(shape),
-            source_mask_scratch: ndarray::Array3::zeros(shape),
+            source_mask_scratch: leto::Array3::zeros([grid.nx, grid.ny, grid.nz]),
         })
     }
 }

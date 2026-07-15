@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::fundamental::BOLTZMANN as K_B;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 use super::{
     boltzmann_p_open, compute_membrane_tension, BoltzmannGatingParams, CellMembraneParams,
@@ -89,16 +89,16 @@ pub fn pressure_to_membrane_tension_mn_m(
             .map(|&p| p * p / (2.0 * density_kg_m3 * sound_speed_m_s)),
     );
     let intensity_3d = intensity_1d
-        .into_shape_with_order((n, 1, 1))
+        .into_shape::<3>([n, 1, 1])
         .expect("1-D-to-(N,1,1) reshape is infallible");
-    let sound_speed_3d = Array3::from_elem((n, 1, 1), sound_speed_m_s);
+    let sound_speed_3d = Array3::from_elem([n, 1, 1], sound_speed_m_s);
     let params = CellMembraneParams {
         radius_m: cell_radius_m,
         thickness_m: DEFAULT_MEMBRANE_THICKNESS_M,
     };
     Ok(
         compute_membrane_tension(&intensity_3d, &sound_speed_3d, &params)
-            .into_shape_with_order(n)
+            .into_shape::<1>([n])
             .expect("(N,1,1)-to-1-D reshape is infallible")
             .iter()
             .map(|&t| t * MEMBRANE_TENSION_N_PER_M_TO_MN_PER_M)
@@ -134,12 +134,12 @@ pub fn boltzmann_open_probability_from_tension_mn_m(
             .iter()
             .map(|&t| t * MEMBRANE_TENSION_MN_PER_M_TO_N_PER_M),
     )
-    .into_shape_with_order((n, 1, 1))
+    .into_shape::<3>([n, 1, 1])
     .expect("1-D-to-(N,1,1) reshape is infallible");
     Ok(boltzmann_p_open(&tension_3d, &params, temperature_k)?
-        .into_shape_with_order(n)
+        .into_shape::<1>([n])
         .expect("(N,1,1)-to-1-D reshape is infallible")
-        .to_vec())
+        .into_vec())
 }
 
 /// Compute normalized coupled mechanochemical channel drive from acoustic pressure.
@@ -224,10 +224,10 @@ pub fn gaussian_beam_pressure_field(
     let cy = (ny as f64 - 1.0) / 2.0;
     let cz = (nz as f64 - 1.0) / 2.0;
 
-    let mut x_m = Array3::<f64>::zeros((nx, ny, nz));
-    let mut y_m = Array3::<f64>::zeros((nx, ny, nz));
-    let mut z_m = Array3::<f64>::zeros((nx, ny, nz));
-    let mut pressure_pa = Array3::<f64>::zeros((nx, ny, nz));
+    let mut x_m = Array3::<f64>::zeros([nx, ny, nz]);
+    let mut y_m = Array3::<f64>::zeros([nx, ny, nz]);
+    let mut z_m = Array3::<f64>::zeros([nx, ny, nz]);
+    let mut pressure_pa = Array3::<f64>::zeros([nx, ny, nz]);
     for i in 0..nx {
         let xi = (i as f64 - cx) * dx_m;
         for j in 0..ny {

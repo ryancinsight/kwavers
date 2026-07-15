@@ -78,7 +78,7 @@ pub fn update_safety_metrics(
     acoustic_field: &AcousticField,
     acoustic_params: &AcousticTherapyParams,
     dt: f64,
-    cavitation_activity: Option<&ndarray::Array3<f64>>,
+    cavitation_activity: Option<&leto::Array3<f64>>,
 ) -> KwaversResult<()> {
     // Calculate thermal index (IEC 62359 compliant).
     // RMS pressure: P_rms = sqrt( mean(p²) ) = sqrt( Σp² / N )

@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 use serde::{Deserialize, Serialize};
 
 /// Reconstruction configuration

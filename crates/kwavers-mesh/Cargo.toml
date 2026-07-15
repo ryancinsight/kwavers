@@ -10,7 +10,7 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 kwavers-core = { path = "../kwavers-core" }
 kwavers-grid = { path = "../kwavers-grid" }
-nalgebra = { version = "0.32" }
+leto = { workspace = true }
 gaia = { workspace = true }
 
 [dev-dependencies]

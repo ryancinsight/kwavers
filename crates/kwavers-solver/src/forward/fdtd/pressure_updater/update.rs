@@ -1,14 +1,15 @@
 //! Pressure field update dispatch and CPU/GPU implementations.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, ArrayView3, Zip};
+use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 
 use super::super::solver::{FdtdGpuAccelerator, FdtdSolver};
 
 impl FdtdSolver {
     /// Dispatch pressure update to GPU or CPU; apply nonlinear correction if enabled.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub fn update_pressure(&mut self, dt: f64) -> KwaversResult<()> {
@@ -43,7 +44,7 @@ impl FdtdSolver {
     /// 2. Staggered backward-difference when `staggered_grid = true`.
     /// 3. Central-difference otherwise.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(crate) fn update_pressure_cpu(&mut self, dt: f64) -> KwaversResult<()> {
         if let Some(kops) = self.kspace_ops.as_mut() {
@@ -75,10 +76,11 @@ impl FdtdSolver {
                 cpml.update_and_apply_v_gradient_correction(&mut self.divergence_scratch, 2);
             }
 
-            Zip::from(&mut self.divergence_scratch)
-                .and(&self.dvx_scratch)
-                .and(&self.dvy_scratch)
-                .par_for_each(|d, &dx, &dy| *d += dx + dy);
+            super::accumulate_two_fields(
+                &mut self.divergence_scratch,
+                &self.dvx_scratch,
+                &self.dvy_scratch,
+            );
 
             Self::update_pressure_simd(
                 &mut self.fields.p,
@@ -93,17 +95,15 @@ impl FdtdSolver {
     /// Element-wise pressure update: p -= dt · ρc² · div(v).
     ///
     /// Accepts `ArrayView3<f64>` to avoid O(N³) `.to_owned()` at call sites.
-    /// Rayon parallel Zip; LLVM auto-vectorizes each worker lane.
+    /// Dense standard-layout arrays dispatch through Moirai; non-standard
+    /// ndarray views keep sequential Zip semantics.
     pub(crate) fn update_pressure_simd(
-        pressure: &mut Array3<f64>,
+        pressure: &mut LetoArray3<f64>,
         divergence: ArrayView3<f64>,
         rho_c_squared: &Array3<f64>,
         dt: f64,
     ) {
-        Zip::from(pressure)
-            .and(divergence)
-            .and(rho_c_squared)
-            .par_for_each(|p, &div, &rc2| *p -= dt * rc2 * div);
+        super::apply_pressure_update(pressure, divergence, rho_c_squared, dt);
     }
 
     /// GPU-accelerated pressure update via external accelerator trait.
@@ -114,7 +114,7 @@ impl FdtdSolver {
         &self,
         accelerator: &dyn FdtdGpuAccelerator,
         dt: f64,
-    ) -> KwaversResult<Array3<f64>> {
+    ) -> KwaversResult<LetoArray3<f64>> {
         accelerator.propagate_acoustic_wave(
             &self.fields.p,
             &self.fields.ux,

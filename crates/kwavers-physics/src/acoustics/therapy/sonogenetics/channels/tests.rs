@@ -1,7 +1,7 @@
 use super::*;
 use approx::assert_relative_eq;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
-use ndarray::Array3;
+use leto::Array3;
 
 /// At Delta T = T_half, P_open must equal exactly 0.5.
 /// # Panics
@@ -15,7 +15,7 @@ fn test_boltzmann_half_activation() {
     };
     let tension = Array3::from_elem((2, 2, 2), bp.half_tension_n_per_m);
     let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
-    for &v in &p_open {
+    for &v in p_open.iter() {
         assert_relative_eq!(v, 0.5, max_relative = 1e-12);
     }
 }
@@ -30,9 +30,9 @@ fn test_boltzmann_deep_closed() {
     let GatingModel::Boltzmann(ref bp) = params else {
         panic!("expected Boltzmann");
     };
-    let tension = Array3::zeros((2, 2, 2));
+    let tension = Array3::zeros([2, 2, 2]);
     let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
-    for &v in &p_open {
+    for &v in p_open.iter() {
         assert!(
             v < 0.01,
             "P_open at zero tension should be < 1%, got {v:.3e}"
@@ -52,7 +52,7 @@ fn test_boltzmann_deep_open() {
     };
     let tension = Array3::from_elem((2, 2, 2), 10.0 * bp.half_tension_n_per_m);
     let p_open = boltzmann_p_open(&tension, bp, BODY_TEMPERATURE_K).unwrap();
-    for &v in &p_open {
+    for &v in p_open.iter() {
         assert!(
             v > 1.0 - 1e-10,
             "P_open at 10*T_half should approach 1, got {v:.6}"
@@ -95,7 +95,7 @@ fn test_boltzmann_zero_temperature_is_error() {
     let GatingModel::Boltzmann(ref bp) = params else {
         panic!("expected Boltzmann");
     };
-    let tension = Array3::zeros((2, 2, 2));
+    let tension = Array3::zeros([2, 2, 2]);
     assert!(boltzmann_p_open(&tension, bp, 0.0).is_err());
     assert!(boltzmann_p_open(&tension, bp, -1.0).is_err());
 }
@@ -112,7 +112,7 @@ fn test_pressure_threshold_half_activation() {
     };
     let p_rad = Array3::from_elem((2, 2, 2), pp.half_pressure_pa);
     let p_open = pressure_threshold_p_open(&p_rad, pp).unwrap();
-    for &v in &p_open {
+    for &v in p_open.iter() {
         assert_relative_eq!(v, 0.5, max_relative = 1e-12);
     }
 }
@@ -129,7 +129,7 @@ fn test_pressure_threshold_zero_steepness_is_error() {
         single_channel_conductance_s: 60.0e-12,
         reversal_potential_v: 0.0,
     };
-    let p_rad = Array3::zeros((2, 2, 2));
+    let p_rad = Array3::zeros([2, 2, 2]);
     assert!(pressure_threshold_p_open(&p_rad, &pp).is_err());
     pp.steepness_pa = -1.0;
     assert!(pressure_threshold_p_open(&p_rad, &pp).is_err());
@@ -141,7 +141,7 @@ fn test_ion_current_analytical() {
     let p_open = Array3::from_elem((2, 2, 2), 0.5_f64);
     let current = ion_current(&p_open, 3.0e-9, 1000.0, -60.0e-3, 0.0);
     let expected = 3.0e-9 * 1000.0 * 0.5 * (0.0 - (-60.0e-3));
-    for &v in &current {
+    for &v in current.iter() {
         assert_relative_eq!(v, expected, max_relative = 1e-12);
     }
 }
@@ -152,9 +152,9 @@ fn test_ion_current_analytical() {
 ///
 #[test]
 fn test_ion_current_zero_when_closed() {
-    let p_open = Array3::zeros((2, 2, 2));
+    let p_open = Array3::zeros([2, 2, 2]);
     let current = ion_current(&p_open, 3.0e-9, 1000.0, -60.0e-3, 0.0);
-    for &v in &current {
+    for &v in current.iter() {
         assert_eq!(v, 0.0);
     }
 }
@@ -168,7 +168,7 @@ fn test_ion_current_zero_at_reversal() {
     let p_open = Array3::from_elem((2, 2, 2), 0.8_f64);
     let e_rev = -10.0e-3_f64;
     let current = ion_current(&p_open, 35.0e-12, 5000.0, e_rev, e_rev);
-    for &v in &current {
+    for &v in current.iter() {
         assert_eq!(v, 0.0);
     }
 }

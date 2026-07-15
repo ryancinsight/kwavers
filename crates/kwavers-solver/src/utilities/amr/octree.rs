@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Bounds;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Octree node for spatial subdivision
 #[derive(Debug, Clone)]
@@ -49,7 +49,7 @@ impl OctreeNode {
 
     /// Refine this node by creating children
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn refine(&mut self) -> KwaversResult<()> {
         if self.children.is_some() {
@@ -203,7 +203,7 @@ impl Octree {
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     /// - Lohner (1987): "Adaptive remeshing for transient problems"
     fn check_refinement_marker(node: &OctreeNode, markers: &Array3<i8>) -> bool {
-        let (mx, my, mz) = markers.dim();
+        let [mx, my, mz] = markers.shape();
         let bounds = &node.bounds;
 
         // Extract bounds components
@@ -250,7 +250,7 @@ impl Octree {
     /// References:
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     fn check_coarsening(node: &OctreeNode, markers: &Array3<i8>) -> bool {
-        let (mx, my, mz) = markers.dim();
+        let [mx, my, mz] = markers.shape();
         let bounds = &node.bounds;
 
         // Extract bounds components

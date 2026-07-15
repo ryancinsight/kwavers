@@ -76,7 +76,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let stable_dt = solver.compute_stable_timestep()?;
 
     let n_sensors: usize = 1;
-    let sensor_data = ndarray::Array2::from_elem((n_sensors, 1), stable_dt);
+    let sensor_data = leto::Array2::from_elem((n_sensors, 1), stable_dt);
 
     Ok(SimulationRunResult {
         sensor_data,
@@ -147,8 +147,8 @@ mod tests {
 
         let result = run(&req).expect("default dispatch should succeed");
 
-        assert!(result.sensor_data.nrows() == 1);
-        assert!(result.sensor_data.ncols() == 1);
+        assert!(result.sensor_data.shape()[0] == 1);
+        assert!(result.sensor_data.shape()[1] == 1);
         let dt = result.sensor_data[[0, 0]];
         assert!(dt > 0.0, "stable dt must be positive, got {dt}");
         assert!(dt.is_finite(), "stable dt must be finite");
@@ -168,7 +168,7 @@ mod tests {
 
         let result = run(&req).expect("config dispatch should succeed");
 
-        assert!(result.sensor_data.nrows() == 1);
+        assert!(result.sensor_data.shape()[0] == 1);
         let dt = result.sensor_data[[0, 0]];
         assert!(dt > 0.0, "stable dt with config must be positive");
         assert!(dt.is_finite());

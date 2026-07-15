@@ -5,7 +5,7 @@
 //! field update so distributed sources contribute additively and Dirichlet
 //! masks override the staggered solve.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::GenericFdtdSolver;
 use kwavers_core::error::KwaversResult;
@@ -17,7 +17,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// to catch numerical instabilities early. In release builds, these scans
     /// are elided for performance (O(N) per scan × 4 scans per step).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
@@ -77,7 +77,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// upstream callers to handle instabilities gracefully (e.g., reduce dt,
     /// log diagnostics, or return partial results).
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
     #[cfg(debug_assertions)]
     pub(super) fn check_nan_velocity(&self, step: usize, phase: &str) -> KwaversResult<()> {
@@ -99,7 +99,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
     /// Check pressure field for NaN values (debug-only).
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
     #[cfg(debug_assertions)]
     pub(super) fn check_nan_pressure(&self, step: usize, phase: &str) -> KwaversResult<()> {

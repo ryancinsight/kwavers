@@ -1,6 +1,6 @@
 //! Operator geometry, sensitivity model, and invalid configuration rejection tests.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     horizontal_sample, predict_sound_speed_time_shifts, reconstruct_sound_speed_shift,

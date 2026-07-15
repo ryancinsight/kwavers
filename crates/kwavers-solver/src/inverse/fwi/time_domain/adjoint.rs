@@ -1,6 +1,9 @@
 //! Adjoint simulation run, adjoint-source construction, L2 residual and objective.
 
 use super::{geometry::FwiGeometry, FwiProcessor};
+use crate::inverse::fwi::time_domain::field_ops::{
+    scale_velocity_gradient, zero_masked_by_threshold,
+};
 use crate::inverse::fwi::time_domain::{
     accumulate_signed_correlation, l2_objective, l2_residual, reverse_time_axis,
 };
@@ -11,7 +14,8 @@ use crate::inverse::reconstruction::seismic::{
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
+use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
+use leto::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3};
 
 /// Apply the Plessix (2006) eq. (12) per-voxel scaling
 /// `g_c(x) ← -(2 / (ρ(x) · c(x)³)) · g_correlation(x)` in place.
@@ -25,22 +29,22 @@ use ndarray::{Array2, Array3, Array4, ArrayView3, ArrayViewMut3, Axis, Zip};
 /// unit-testable for the local ρ-dependence.
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] if any sound-speed or density entry
+/// Returns [`crate::KwaversError::Validation`] if any sound-speed or density entry
 /// is non-finite or non-positive (avoids silent NaN production from a 1/0
 /// or 1/NaN multiplication).
 pub(super) fn apply_velocity_gradient_scaling(
-    mut gradient: ArrayViewMut3<'_, f64>,
+    gradient: ArrayViewMut3<'_, f64>,
     model: ArrayView3<'_, f64>,
     density: ArrayView3<'_, f64>,
 ) -> KwaversResult<()> {
-    if gradient.dim() != model.dim() || gradient.dim() != density.dim() {
+    if gradient.shape() != model.shape() || gradient.shape() != density.shape() {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "FWI gradient scaling shape mismatch: gradient {:?}, model {:?}, density {:?}",
-                    gradient.dim(),
-                    model.dim(),
-                    density.dim()
+                    gradient.shape(),
+                    model.shape(),
+                    density.shape()
                 ),
             },
         ));
@@ -56,12 +60,7 @@ pub(super) fn apply_velocity_gradient_scaling(
             ));
         }
     }
-    Zip::from(&mut gradient)
-        .and(model)
-        .and(density)
-        .par_for_each(|g, &c, &rho| {
-            *g *= -2.0 / (rho * c.powi(3));
-        });
+    scale_velocity_gradient(gradient, model, density);
     Ok(())
 }
 
@@ -106,7 +105,7 @@ impl FwiProcessor {
     /// search, so the objective the driver minimises always matches the gradient
     /// produced by [`Self::compute_adjoint_source`].
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by the misfit evaluation.
+    /// - Propagates any [`crate::KwaversError`] returned by the misfit evaluation.
     ///
     pub(super) fn compute_misfit_objective(
         &self,
@@ -147,7 +146,7 @@ impl FwiProcessor {
     /// an arbitrary receiver-side forcing, so the same injection path is valid
     /// for every misfit type.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by the adjoint-source evaluation.
+    /// - Propagates any [`crate::KwaversError`] returned by the adjoint-source evaluation.
     ///
     pub(super) fn compute_adjoint_source(
         &self,
@@ -210,7 +209,7 @@ impl FwiProcessor {
     ///
     /// Reference: Plessix (2006), GFJI 167(2), 495–503, eq. (2)–(6).
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn build_adjoint_source(
         &self,
@@ -218,31 +217,31 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
     ) -> KwaversResult<GridSource> {
         let expected_rows = geometry.receiver_count();
-        if residual.nrows() != expected_rows {
+        if residual.shape()[0] != expected_rows {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Residual receiver count mismatch: expected {}, got {}",
                         expected_rows,
-                        residual.nrows()
+                        residual.shape()[0]
                     ),
                 },
             ));
         }
-        if residual.ncols() != self.parameters.nt {
+        if residual.shape()[1] != self.parameters.nt {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Residual time length mismatch: expected {}, got {}",
                         self.parameters.nt,
-                        residual.ncols()
+                        residual.shape()[1]
                     ),
                 },
             ));
         }
 
         let reversed_residual = reverse_time_axis(residual);
-        let mut p_signal = Array2::zeros((expected_rows, self.parameters.nt));
+        let mut p_signal = LetoArray2::zeros([expected_rows, self.parameters.nt]);
         for source_row in 0..expected_rows {
             let sensor_row = geometry.receiver_row_to_sensor_row[source_row];
             for t in 0..self.parameters.nt {
@@ -250,9 +249,18 @@ impl FwiProcessor {
             }
         }
 
-        let p_mask = geometry
-            .sensor_mask
-            .mapv(|active| if active { 1.0 } else { 0.0 });
+        let p_mask = {
+            let [nx, ny, nz] = geometry.sensor_mask.shape();
+            LetoArray3::from_shape_vec(
+                [nx, ny, nz],
+                geometry
+                    .sensor_mask
+                    .iter()
+                    .map(|&active| if active { 1.0 } else { 0.0 })
+                    .collect(),
+            )
+            .expect("adjoint source mask shape must match its Leto storage")
+        };
 
         Ok(GridSource {
             p0: None,
@@ -311,7 +319,7 @@ impl FwiProcessor {
     /// heterogeneous field via [`FwiProcessor::with_density`], `ρ(x)` is
     /// used both in the forward / adjoint medium and in the per-voxel
     /// scaling below; otherwise the constant
-    /// [`RHO_SEISMIC_REF`](super::RHO_SEISMIC_REF) (2000 kg/m³) is used
+    /// [`RHO_SEISMIC_REF`] (2000 kg/m³) is used
     /// uniformly. Because the forward and adjoint media share the same
     /// resolved density, the discrete adjoint operator is exactly the
     /// time-reverse of the forward operator in both cases.
@@ -320,8 +328,8 @@ impl FwiProcessor {
     /// * Tromp et al. (2005): "Seismic tomography, adjoint methods"
     /// * Plessix (2006), GFJI 167(2), eq. (5)–(6) and (12)
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn adjoint_model(
         &self,
@@ -333,13 +341,13 @@ impl FwiProcessor {
     ) -> KwaversResult<Array3<f64>> {
         use crate::config::SolverType;
 
-        if forward_history.len_of(Axis(0)) != self.parameters.nt {
+        if forward_history.shape()[0] != self.parameters.nt {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Forward history length mismatch: expected {}, got {}",
                         self.parameters.nt,
-                        forward_history.len_of(Axis(0))
+                        forward_history.shape()[0]
                     ),
                 },
             ));
@@ -393,11 +401,7 @@ impl FwiProcessor {
             // Exclude Dirichlet-source voxels from the gradient kernel.
             // Reference: Sun & Symes (1991), SEG Expanded Abstracts.
             if let Some(mask) = source_mask {
-                Zip::from(&mut p_tt).and(mask).par_for_each(|pt, &m| {
-                    if m > 0.5 {
-                        *pt = 0.0;
-                    }
-                });
+                zero_masked_by_threshold(&mut p_tt, mask, 0.5);
             }
 
             // pressure_field() via Box<dyn Solver> dynamic dispatch — replaces
@@ -416,7 +420,7 @@ impl FwiProcessor {
         apply_velocity_gradient_scaling(gradient_m.view_mut(), model.view(), density_adj.view())?;
 
         let (gmax, gmax_idx) = gradient_m.indexed_iter().fold(
-            (0.0_f64, (0usize, 0usize, 0usize)),
+            (0.0_f64, [0usize, 0usize, 0usize]),
             |(best, bi), (idx, &v)| {
                 if v.abs() > best {
                     (v.abs(), idx)
@@ -428,9 +432,9 @@ impl FwiProcessor {
         log::info!(
             "adjoint gradient peak {:.4e} at ({},{},{})",
             gmax,
-            gmax_idx.0,
-            gmax_idx.1,
-            gmax_idx.2
+            gmax_idx[0],
+            gmax_idx[1],
+            gmax_idx[2]
         );
 
         Ok(gradient_m)

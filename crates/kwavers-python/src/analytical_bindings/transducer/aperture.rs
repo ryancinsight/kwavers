@@ -1,8 +1,8 @@
 //! PyO3 wrappers for aperture geometry and 3-D pressure helpers.
 
 use kwavers_physics::analytical::transducer;
-use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::ndarray::Array2;
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -24,7 +24,7 @@ pub fn linear_array_positions(
     pitch_m: f64,
 ) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
     let (x, z) = transducer::linear_array_positions(n, pitch_m);
-    Ok((x.into_pyarray(py).unbind(), z.into_pyarray(py).unbind()))
+    Ok((x.to_pyarray(py).unbind(), z.to_pyarray(py).unbind()))
 }
 
 /// Generate focused spherical-bowl element coordinates for a beam axis aligned
@@ -49,7 +49,7 @@ pub fn focused_bowl_element_positions_3d(
     let rows = flat.len() / 3;
     let arr = Array2::from_shape_vec((rows, 3), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr.into_pyarray(py).unbind())
+    Ok(arr.to_pyarray(py).unbind())
 }
 
 /// 3-D focusing delay law for arbitrary element and focus positions.
@@ -72,7 +72,7 @@ pub fn delay_law_focus_3d(
     }
     let flat: Vec<f64> = ep.iter().copied().collect();
     let result = py.detach(|| transducer::delay_law_focus_3d(&flat, [f[0], f[1], f[2]], c));
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Steered 3-D aperture pressure magnitude at sample points.
@@ -122,7 +122,7 @@ pub fn steered_aperture_pressure_3d(
             focus_pressure_pa,
         )
     });
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Focused-bowl steered transverse pressure profile assembled in Rust.
@@ -170,5 +170,5 @@ pub fn focused_bowl_steered_pressure_profile(
             alpha_np_m,
         )
     });
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

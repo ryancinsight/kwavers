@@ -13,11 +13,11 @@ kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
+moirai-parallel = { workspace = true }
+leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 log = "0.4"
-rayon = "1.10"
 
 [dev-dependencies]
 approx = "0.5"

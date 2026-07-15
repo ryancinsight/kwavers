@@ -1,8 +1,10 @@
 // physics/chemistry/photochemistry/mod.rs
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::Array3;
 use log::debug;
-use ndarray::{Array3, Zip};
+
+use crate::parallel::for_each_indexed_mut_four_refs;
 
 #[derive(Debug, Clone)]
 pub struct PhotochemicalEffects {
@@ -13,7 +15,7 @@ impl PhotochemicalEffects {
     pub fn new(grid: &Grid) -> Self {
         debug!("Initializing PhotochemicalEffects");
         Self {
-            reactive_oxygen_species: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+            reactive_oxygen_species: Array3::zeros([grid.nx, grid.ny, grid.nz]),
         }
     }
 
@@ -30,12 +32,13 @@ impl PhotochemicalEffects {
     ) {
         debug!("Updating photochemical effects");
 
-        Zip::indexed(&mut self.reactive_oxygen_species)
-            .and(light)
-            .and(emission_spectrum)
-            .and(bubble_radius)
-            .and(temperature)
-            .for_each(|(i, j, k), ros, &light_val, &spec_val, &r_val, &t| {
+        for_each_indexed_mut_four_refs(
+            self.reactive_oxygen_species.view_mut(),
+            light.view(),
+            emission_spectrum.view(),
+            bubble_radius.view(),
+            temperature.view(),
+            |(i, j, k), ros, &light_val, &spec_val, &r_val, &t| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -49,7 +52,8 @@ impl PhotochemicalEffects {
                 let ros_rate = k_photo * light_intensity * spec_val / 1e-9; // Normalize spectrum (nm)
                 *ros += ros_rate * dt * (1.0 + r_val / 1e-6); // Bubble amplification
                 *ros = ros.max(0.0);
-            });
+            },
+        );
     }
 
     #[must_use]

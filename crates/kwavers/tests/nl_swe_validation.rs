@@ -22,7 +22,7 @@ pub use kwavers_solver::forward::elastic::{
 pub use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, NonlinearParameterMapExt,
 };
-pub use ndarray::{Array3, Array4};
+pub use leto::{Array3, Array4};
 pub use std::f64::consts::PI;
 
 /// Test hyperelastic constitutive models
@@ -143,7 +143,7 @@ mod hyperelastic_tests {
 #[cfg(test)]
 mod harmonic_detection_tests {
     use super::*;
-    use ndarray::Array4;
+    use leto::Array4;
 
     #[test]
     fn test_harmonic_detector_creation() {
@@ -158,7 +158,7 @@ mod harmonic_detection_tests {
     fn test_harmonic_displacement_field() {
         let mut field = HarmonicDisplacementField::new(10, 10, 10, 3, 100);
 
-        assert_eq!(field.fundamental_magnitude.dim(), (10, 10, 10));
+        assert_eq!(field.fundamental_magnitude.shape(), [10, 10, 10]);
         assert_eq!(field.harmonic_magnitudes.len(), 3);
         assert_eq!(field.time.len(), 100);
 
@@ -167,7 +167,7 @@ mod harmonic_detection_tests {
         field.harmonic_magnitudes[0].fill(0.1); // Second harmonic
 
         let ratio = field.harmonic_ratio(2);
-        assert_eq!(ratio.dim(), (10, 10, 10));
+        assert_eq!(ratio.shape(), [10, 10, 10]);
 
         for &val in ratio.iter() {
             assert!((val - 0.1).abs() < 1e-10);
@@ -339,7 +339,12 @@ mod nonlinear_inversion_tests {
         let param_map = result.unwrap();
 
         // Bayesian method should provide uncertainty estimates
-        let avg_uncertainty = param_map.nonlinearity_uncertainty.mean().unwrap_or(0.0);
+        let avg_uncertainty = param_map
+            .nonlinearity_uncertainty
+            .iter()
+            .copied()
+            .sum::<f64>()
+            / param_map.nonlinearity_uncertainty.size() as f64;
         assert!(
             avg_uncertainty > 0.0,
             "Should have non-zero uncertainty estimates"
@@ -348,16 +353,18 @@ mod nonlinear_inversion_tests {
 
     #[test]
     fn test_nonlinear_parameter_statistics() {
+        use leto::Array3 as LetoArray3;
+
         let param_map = NonlinearParameterMap {
-            nonlinearity_parameter: Array3::from_elem((5, 5, 5), 5.0),
+            nonlinearity_parameter: LetoArray3::from_elem([5, 5, 5], 5.0),
             elastic_constants: vec![
-                Array3::from_elem((5, 5, 5), 1000.0),
-                Array3::from_elem((5, 5, 5), 500.0),
-                Array3::from_elem((5, 5, 5), 200.0),
-                Array3::from_elem((5, 5, 5), 100.0),
+                LetoArray3::from_elem([5, 5, 5], 1000.0),
+                LetoArray3::from_elem([5, 5, 5], 500.0),
+                LetoArray3::from_elem([5, 5, 5], 200.0),
+                LetoArray3::from_elem([5, 5, 5], 100.0),
             ],
-            nonlinearity_uncertainty: Array3::from_elem((5, 5, 5), 0.5),
-            estimation_quality: Array3::from_elem((5, 5, 5), 0.8),
+            nonlinearity_uncertainty: LetoArray3::from_elem([5, 5, 5], 0.5),
+            estimation_quality: LetoArray3::from_elem([5, 5, 5], 0.8),
         };
 
         let (min, max, mean) = param_map.nonlinearity_statistics();
@@ -368,7 +375,12 @@ mod nonlinear_inversion_tests {
         let (q_min, q_max, q_mean) = param_map.quality_statistics();
         assert_eq!(q_min, 0.8);
         assert_eq!(q_max, 0.8);
-        assert_eq!(q_mean, 0.8);
+        let mean_roundoff_bound =
+            param_map.estimation_quality.size() as f64 * f64::EPSILON * q_mean.abs();
+        assert!(
+            (q_mean - 0.8).abs() <= mean_roundoff_bound,
+            "quality mean {q_mean} differs from 0.8 by more than the {mean_roundoff_bound} reduction bound"
+        );
     }
 }
 
@@ -537,7 +549,8 @@ mod convergence_tests {
 
             // Add noise
             let mut noisy_series = time_series.clone();
-            for ((i, j, k, t), value) in noisy_series.indexed_iter_mut() {
+            for ([i, j, k, t], value) in noisy_series.indexed_iter_mut().expect("indexed_iter_mut")
+            {
                 let phase =
                     (i as f64) * 0.37 + (j as f64) * 0.61 + (k as f64) * 0.89 + (t as f64) * 0.13;
                 let noise = noise_level * (2.0 * PI * phase).sin();

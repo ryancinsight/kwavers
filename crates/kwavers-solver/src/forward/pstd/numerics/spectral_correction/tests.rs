@@ -213,7 +213,7 @@ fn kspace_correction_eliminates_numerical_dispersion() {
     use crate::pstd::PSTDSolver;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_source::GridSource;
-    use ndarray::Array3;
+    use leto::Array3;
 
     // ── Grid and time step ────────────────────────────────────────────────────
     let nx: usize = 256;

@@ -10,8 +10,13 @@ use kwavers_analysis::signal_processing::beamforming::utils::{
     SteeringVector, SteeringVectorMethod,
 };
 use kwavers_analysis::signal_processing::beamforming::MinimumVariance;
-use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::{Array1, Array2};
+
+/// Convert a `eunomia::Complex64` steering vector to `eunomia::Complex64`.
+fn nc_to_ec(v: Array1<eunomia::Complex64>) -> Array1<Complex64> {
+    v.mapv(|c| Complex64::new(c.re, c.im))
+}
 
 // ============================================================================
 // MVDR BEAMFORMING ALGORITHMS VALIDATION
@@ -35,14 +40,16 @@ fn validate_mvdr_beamforming_basic() {
         covariance[[i, i]] = Complex64::new(1.0, 0.0);
     }
 
-    let steering_vector = SteeringVector::compute(
-        &SteeringVectorMethod::PlaneWave,
-        [0.0, 0.0, 1.0],
-        1e6,
-        &sensor_positions,
-        1500.0,
-    )
-    .unwrap();
+    let steering_vector = nc_to_ec(
+        SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [0.0, 0.0, 1.0],
+            1e6,
+            &sensor_positions,
+            1500.0,
+        )
+        .unwrap(),
+    );
 
     let weights = mvdr
         .compute_weights(&covariance, &steering_vector)
@@ -51,7 +58,7 @@ fn validate_mvdr_beamforming_basic() {
     let gain: Complex64 = weights
         .iter()
         .zip(steering_vector.iter())
-        .map(|(w, a): (&Complex64, &Complex64)| w.conj() * *a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
     assert!(
         (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
@@ -91,12 +98,12 @@ fn validate_covariance_estimation() {
 
     // Validate matrix properties
     assert_eq!(
-        covariance.nrows(),
+        covariance.shape()[0],
         num_sensors,
         "Covariance matrix should be N×N"
     );
     assert_eq!(
-        covariance.ncols(),
+        covariance.shape()[1],
         num_sensors,
         "Covariance matrix should be square"
     );
@@ -244,7 +251,7 @@ fn validate_mvdr_numerical_stability() {
     let gain: Complex64 = weights_with_loading
         .iter()
         .zip(steering_vector.iter())
-        .map(|(w, a): (&Complex64, &Complex64)| w.conj() * *a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
     assert!(
         (gain - Complex64::new(1.0, 0.0)).norm() <= 1e-6,
@@ -262,7 +269,11 @@ fn validate_spatial_smoothing() {
 
     // Create fully coherent covariance matrix (rank 1)
     let mut covariance = Array2::<f64>::zeros((num_sensors, num_sensors));
-    let coherent_vector = Array1::from_vec((0..num_sensors).map(|i| (i as f64).sin()).collect());
+    let coherent_vector = Array1::from_vec(
+        num_sensors,
+        (0..num_sensors).map(|i| (i as f64).sin()).collect(),
+    )
+    .unwrap();
 
     // R = v * vᴴ (rank 1 matrix)
     for i in 0..num_sensors {
@@ -276,12 +287,12 @@ fn validate_spatial_smoothing() {
 
     // Smoothed matrix should be smaller
     assert_eq!(
-        smoothed.nrows(),
+        smoothed.shape()[0],
         subarray_size,
         "Smoothed matrix should match subarray size"
     );
     assert_eq!(
-        smoothed.ncols(),
+        smoothed.shape()[1],
         subarray_size,
         "Smoothed matrix should be square"
     );
@@ -328,14 +339,16 @@ fn validate_mvdr_performance() {
     for i in 0..num_sensors {
         covariance[[i, i]] = Complex64::new(1.0, 0.0);
     }
-    let steering_vector = SteeringVector::compute(
-        &SteeringVectorMethod::PlaneWave,
-        [0.0, 0.0, 1.0],
-        1e6,
-        &sensor_positions,
-        1500.0,
-    )
-    .unwrap();
+    let steering_vector = nc_to_ec(
+        SteeringVector::compute(
+            &SteeringVectorMethod::PlaneWave,
+            [0.0, 0.0, 1.0],
+            1e6,
+            &sensor_positions,
+            1500.0,
+        )
+        .unwrap(),
+    );
 
     let start = std::time::Instant::now();
     for _ in 0..100 {
@@ -364,7 +377,7 @@ fn validate_blackbody_radiation_planck_law() {
     use kwavers_physics::optics::sonoluminescence::blackbody::{
         calculate_blackbody_emission, BlackbodyModel,
     };
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Create simple test fields
     let temperature_field = Array3::from_elem((2, 2, 2), 6000.0); // 6000 K (typical sonoluminescence)
@@ -403,7 +416,7 @@ fn validate_bremsstrahlung_kramers_law() {
     use kwavers_physics::optics::sonoluminescence::bremsstrahlung::{
         calculate_bremsstrahlung_emission, BremsstrahlungModel,
     };
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Create test fields
     let temperature_field = Array3::from_elem((2, 2, 2), 10000.0); // 10000 K plasma
@@ -536,10 +549,10 @@ fn validate_sonoluminescence_spectral_analysis() {
     // Theorem: Broadband emission from multiple mechanisms
 
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Create test fields
-    let grid_shape = (4, 4, 4);
+    let grid_shape = [4, 4, 4];
     let temperature_field = Array3::from_elem(grid_shape, 8000.0); // Hot plasma
     let pressure_field = Array3::from_elem(grid_shape, 1e9); // High pressure
     let radius_field = Array3::from_elem(grid_shape, 1e-7); // Small radius
@@ -598,7 +611,7 @@ fn validate_acoustic_to_optic_energy_conversion() {
 
     use kwavers_physics::bubble_dynamics::BubbleParameters;
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Step 1: Ultrasound excitation (acoustic energy input)
     let _acoustic_pressure = 2e5; // 2 bar ultrasound pressure
@@ -624,7 +637,7 @@ fn validate_acoustic_to_optic_energy_conversion() {
     );
 
     // Step 4: Sonoluminescence emission (optic output)
-    let grid_shape = (2, 2, 2);
+    let grid_shape = [2, 2, 2];
     let temperature_field = Array3::from_elem(grid_shape, 10000.0); // Post-collapse temperature
     let pressure_field = Array3::from_elem(grid_shape, 1e9); // Post-collapse pressure
     let radius_field = Array3::from_elem(grid_shape, 1e-7); // Post-collapse radius
@@ -671,7 +684,7 @@ fn validate_interdisciplinary_coupling_efficiency() {
 
     use kwavers_physics::bubble_dynamics::BubbleParameters;
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3;
 
     // Acoustic input energy (simplified)
     let _acoustic_energy_density = 1000.0; // J/m³ (typical ultrasound intensity)
@@ -689,7 +702,7 @@ fn validate_interdisciplinary_coupling_efficiency() {
     let _collapse_energy = 0.5 * collapse_pressure * initial_volume; // Simplified
 
     // Optical output via sonoluminescence
-    let grid_shape = (2, 2, 2);
+    let grid_shape = [2, 2, 2];
     let temperature_field = Array3::from_elem(grid_shape, 15000.0); // Very hot plasma
     let pressure_field = Array3::from_elem(grid_shape, 1e10); // Extreme pressure
     let radius_field = Array3::from_elem(grid_shape, 5e-8); // Very small radius
@@ -743,10 +756,10 @@ fn validate_mie_scattering_theory() {
 
     // Test Mie parameters creation
     let params = MieParameters::new(
-        100e-9,                                 // 100 nm radius particle
-        num_complex::Complex64::new(1.5, 0.01), // Glass-like refractive index
-        1.0,                                    // Air medium
-        500e-9,                                 // 500 nm wavelength
+        100e-9,                             // 100 nm radius particle
+        eunomia::Complex64::new(1.5, 0.01), // Glass-like refractive index
+        1.0,                                // Air medium
+        500e-9,                             // 500 nm wavelength
     );
 
     // Validate basic parameter calculations
@@ -760,7 +773,7 @@ fn validate_mie_scattering_theory() {
     );
 
     // Test Rayleigh scattering framework (basic validation)
-    let rayleigh = RayleighScattering::new(500e-9, 50e-9, num_complex::Complex64::new(1.33, 0.0));
+    let rayleigh = RayleighScattering::new(500e-9, 50e-9, eunomia::Complex64::new(1.33, 0.0));
 
     // Basic framework validation
     assert!(
@@ -779,9 +792,9 @@ fn validate_mie_scattering_theory() {
 
     // Mie parameters can be created for various particle sizes
     let _small_params = MieParameters::new(
-        10e-9,                                  // Very small particle
-        num_complex::Complex64::new(1.33, 0.0), // Water
-        1.0,                                    // Air
+        10e-9,                              // Very small particle
+        eunomia::Complex64::new(1.33, 0.0), // Water
+        1.0,                                // Air
         500e-9,
     );
 
@@ -797,7 +810,8 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
     use kwavers_physics::optics::sonoluminescence::{EmissionParameters, SonoluminescenceEmission};
-    use ndarray::Array3;
+    use leto::Array3 as LetoArray3;
+    use leto::Array3;
     use std::collections::HashMap;
 
     // Create fusion configuration
@@ -818,9 +832,10 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     let mut fusion = MultiModalFusion::new(fusion_config.clone());
 
     // Create mock ultrasound data (B-mode image)
-    let grid_shape = (8, 8, 8);
-    let mut ultrasound_data = Array3::from_elem(grid_shape, 0.8); // High echogenicity
-                                                                  // Add some spatial variation
+    let grid_shape = [8, 8, 8];
+    let leto_shape = grid_shape;
+    let mut ultrasound_data = LetoArray3::from_elem(leto_shape, 0.8); // High echogenicity
+                                                                      // Add some spatial variation
     for i in 4..8 {
         for j in 4..8 {
             for k in 4..8 {
@@ -848,13 +863,18 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
         &compression_field,
         0.0,
     );
+    let optical_data = LetoArray3::from_shape_vec(
+        leto_shape,
+        emission.emission_field.iter().copied().collect(),
+    )
+    .unwrap();
 
     let optical_wavelength = 500e-9; // 500 nm (green light)
 
     // Register modalities
     fusion.register_ultrasound(&ultrasound_data).unwrap();
     fusion
-        .register_optical(&emission.emission_field, optical_wavelength)
+        .register_optical(&optical_data, optical_wavelength)
         .unwrap();
 
     // Verify registration
@@ -878,16 +898,15 @@ fn validate_multi_modal_fusion_ultrasound_optical() {
     // Validate fusion result
     assert_eq!(
         fused_result.intensity_image.shape(),
-        &[grid_shape.0, grid_shape.1, grid_shape.2],
+        leto_shape,
         "Fused image should match input shape"
     );
 
     // Check that fusion produces reasonable combined information
     let fused_mean: f64 = fused_result.intensity_image.iter().sum::<f64>()
-        / fused_result.intensity_image.len() as f64;
-    let us_mean: f64 = ultrasound_data.iter().sum::<f64>() / ultrasound_data.len() as f64;
-    let opt_mean: f64 =
-        emission.emission_field.iter().sum::<f64>() / emission.emission_field.len() as f64;
+        / fused_result.intensity_image.size() as f64;
+    let us_mean: f64 = ultrasound_data.iter().sum::<f64>() / ultrasound_data.size() as f64;
+    let opt_mean: f64 = optical_data.iter().sum::<f64>() / optical_data.size() as f64;
 
     // Fused result should be between the individual modality means
     assert!(
@@ -922,7 +941,7 @@ fn validate_fusion_registration_validation() {
     use kwavers_physics::acoustics::imaging::fusion::{
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
-    use ndarray::Array3;
+    use leto::Array3;
     use std::collections::HashMap;
 
     // Test registration validation
@@ -943,7 +962,7 @@ fn validate_fusion_registration_validation() {
     let mut fusion = MultiModalFusion::new(fusion_config.clone());
 
     // Test single modality (should fail)
-    let grid_shape = (4, 4, 4);
+    let grid_shape = [4, 4, 4];
     let ultrasound_data = Array3::from_elem(grid_shape, 0.6);
 
     fusion.register_ultrasound(&ultrasound_data).unwrap();
@@ -1010,11 +1029,11 @@ fn validate_interdisciplinary_fusion_quality() {
     use kwavers_physics::acoustics::imaging::fusion::{
         FusionConfig, ImagingFusionMethod, MultiModalFusion, RegistrationMethod,
     };
-    use ndarray::Array3;
+    use leto::Array3;
     use std::collections::HashMap;
 
     // Create high-quality complementary data
-    let grid_shape = (6, 6, 6);
+    let grid_shape = [6, 6, 6];
     let mut ultrasound_data = Array3::from_elem(grid_shape, 0.2); // Low echogenicity background
     let mut optical_data = Array3::from_elem(grid_shape, 0.1); // Low optical absorption background
 
@@ -1113,14 +1132,14 @@ fn validate_multi_modal_spatial_registration() {
     // Test spatial registration for multi-modal imaging alignment
     // Theorem: Accurate spatial registration enables meaningful multi-modal fusion
 
-    use ndarray::Array2;
+    use leto::Array2;
     use ritk_registration::{ImageRegistration, SpatialTransform};
 
     let registration = ImageRegistration::default();
 
     // Create corresponding landmark points between ultrasound and optical images
     let ultrasound_landmarks = Array2::from_shape_vec(
-        (4, 3),
+        [4, 3],
         vec![
             10.0, 20.0, 5.0, // Landmark 1
             30.0, 15.0, 8.0, // Landmark 2
@@ -1131,7 +1150,7 @@ fn validate_multi_modal_spatial_registration() {
     .unwrap();
 
     let optical_landmarks = Array2::from_shape_vec(
-        (4, 3),
+        [4, 3],
         vec![
             14.8, 16.9, 7.0, // Landmark 1 + transform
             34.8, 11.9, 10.0, // Landmark 2 + transform
@@ -1158,7 +1177,7 @@ fn validate_multi_modal_spatial_registration() {
 
     // Verify transform matrix is valid (homogeneous)
     assert!(
-        (result.transform[15] - 1.0).abs() < 1e-6,
+        (result.transform[(3, 3)] - 1.0).abs() < 1e-6,
         "Homogeneous matrix should have [3,3] = 1"
     );
 
@@ -1188,7 +1207,7 @@ fn validate_multi_modal_spatial_registration() {
 fn validate_temporal_synchronization_multi_modal() {
     // Test temporal synchronization for real-time multi-modal acquisition
 
-    use ndarray::Array1;
+    use leto::Array1;
     use ritk_registration::ImageRegistration;
 
     let registration = ImageRegistration::default();
@@ -1196,19 +1215,23 @@ fn validate_temporal_synchronization_multi_modal() {
     let n_samples = 1000;
 
     // Generate reference and target signals with known phase offset
-    let ref_signal = Array1::from_vec(
+    let ref_signal = Array1::from_shape_vec(
+        [n_samples],
         (0..n_samples)
             .map(|i| (2.0 * std::f64::consts::PI * i as f64 / 100.0).sin())
             .collect(),
-    );
+    )
+    .unwrap();
 
-    let target_signal = Array1::from_vec(
+    let target_signal = Array1::from_shape_vec(
+        [n_samples],
         (0..n_samples)
             .map(|i| {
                 (2.0 * std::f64::consts::PI * i as f64 / 100.0 + std::f64::consts::PI / 4.0).sin()
             })
             .collect(),
-    );
+    )
+    .unwrap();
 
     let (phase_offset, quality) = registration
         .temporal_synchronization(&ref_signal, &target_signal)

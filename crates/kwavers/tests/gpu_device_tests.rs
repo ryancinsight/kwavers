@@ -5,15 +5,19 @@
 #![cfg(feature = "gpu")]
 
 use kwavers_core::error::KwaversResult;
-use kwavers_gpu::gpu::device::{DeviceInfo, GpuDevice};
+use kwavers_gpu::gpu::device::{DeviceFeature, DevicePreference, GpuDevice, GpuDeviceInfo};
+use kwavers_gpu::gpu::{BufferUsage, GpuBufferData};
 
-#[tokio::test]
-async fn test_device_creation_high_performance() {
-    match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
+fn create_device(preference: DevicePreference) -> KwaversResult<GpuDevice> {
+    GpuDevice::try_create(preference)
+}
+
+#[test]
+fn test_device_creation_high_performance() {
+    match create_device(DevicePreference::HighPerformance) {
         Ok(device) => {
-            // Verify device is created successfully
-            assert!(device.device().limits().max_buffer_size > 0);
-            assert!(device.queue().get_timestamp_period() > 0.0);
+            assert!(device.limits().max_buffer_size > 0);
+            assert!(device.wgpu_queue().get_timestamp_period() > 0.0);
         }
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -21,12 +25,11 @@ async fn test_device_creation_high_performance() {
     }
 }
 
-#[tokio::test]
-async fn test_device_creation_low_power() {
-    match GpuDevice::create(wgpu::PowerPreference::LowPower).await {
+#[test]
+fn test_device_creation_low_power() {
+    match create_device(DevicePreference::LowPower) {
         Ok(device) => {
-            // Verify device is created successfully
-            assert!(device.device().limits().max_buffer_size > 0);
+            assert!(device.limits().max_buffer_size > 0);
         }
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -34,9 +37,9 @@ async fn test_device_creation_low_power() {
     }
 }
 
-#[tokio::test]
-async fn test_device_info() {
-    let device = match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
+#[test]
+fn test_device_info() {
+    let device = match create_device(DevicePreference::HighPerformance) {
         Ok(d) => d,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -62,9 +65,9 @@ async fn test_device_info() {
     println!("Backend: {}", info.backend);
 }
 
-#[tokio::test]
-async fn test_device_limits() {
-    let device = match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
+#[test]
+fn test_device_limits() {
+    let device = match create_device(DevicePreference::HighPerformance) {
         Ok(d) => d,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -112,9 +115,9 @@ async fn test_device_limits() {
     );
 }
 
-#[tokio::test]
-async fn test_device_features() {
-    let device = match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
+#[test]
+fn test_device_features() {
+    let device = match create_device(DevicePreference::HighPerformance) {
         Ok(d) => d,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -123,9 +126,9 @@ async fn test_device_features() {
     };
 
     // Test feature checking
-    let has_timestamp = device.supports_feature(wgpu::Features::TIMESTAMP_QUERY);
-    let has_f64 = device.supports_feature(wgpu::Features::SHADER_F64);
-    let has_f16 = device.supports_feature(wgpu::Features::SHADER_F16);
+    let has_timestamp = device.supports_feature(DeviceFeature::TimestampQuery);
+    let has_f64 = device.supports_feature(DeviceFeature::ShaderF64);
+    let has_f16 = device.supports_feature(DeviceFeature::ShaderF16);
 
     println!("Timestamp query support: {}", has_timestamp);
     println!("F64 shader support: {}", has_f64);
@@ -134,19 +137,17 @@ async fn test_device_features() {
     // These are informational, not assertions since feature support varies
 }
 
-#[tokio::test]
-async fn test_device_multiple_instances() {
+#[test]
+fn test_device_multiple_instances() {
     // Test creating multiple device instances
-    let device1: KwaversResult<GpuDevice> =
-        GpuDevice::create(wgpu::PowerPreference::HighPerformance).await;
-    let device2: KwaversResult<GpuDevice> =
-        GpuDevice::create(wgpu::PowerPreference::HighPerformance).await;
+    let device1 = create_device(DevicePreference::HighPerformance);
+    let device2 = create_device(DevicePreference::HighPerformance);
 
     match (device1, device2) {
         (Ok(d1), Ok(d2)) => {
             // Both devices should be independently valid
-            assert!(d1.device().limits().max_buffer_size > 0);
-            assert!(d2.device().limits().max_buffer_size > 0);
+            assert!(d1.limits().max_buffer_size > 0);
+            assert!(d2.limits().max_buffer_size > 0);
 
             // They should have the same capabilities but be different instances
             assert_eq!(d1.limits().max_buffer_size, d2.limits().max_buffer_size);
@@ -157,9 +158,9 @@ async fn test_device_multiple_instances() {
     }
 }
 
-#[tokio::test]
-async fn test_device_queue_operations() {
-    let device: GpuDevice = match GpuDevice::create(wgpu::PowerPreference::HighPerformance).await {
+#[test]
+fn test_device_queue_operations() {
+    let device: GpuDevice = match create_device(DevicePreference::HighPerformance) {
         Ok(d) => d,
         Err(_) => {
             eprintln!("GPU not available, skipping test");
@@ -167,30 +168,27 @@ async fn test_device_queue_operations() {
         }
     };
 
-    // Test that queue is functional
-    let queue = device.queue();
+    let buffer = GpuBufferData::create_on_device(
+        &device,
+        256,
+        BufferUsage::COPY_DST | BufferUsage::COPY_SRC,
+    )
+    .expect("buffer creation must succeed");
 
-    // Create a simple buffer operation
-    let buffer = device.device().create_buffer(&wgpu::BufferDescriptor {
-        label: Some("test_buffer"),
-        size: 256,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::COPY_SRC,
-        mapped_at_creation: false,
-    });
-
-    // Write to buffer via queue
     let data: Vec<u8> = vec![42; 256];
-    queue.write_buffer(&buffer, 0, &data);
+    buffer.write_on_device(&device, &data);
 
-    // Submit and wait (ensures queue is working)
-    device.device().poll(wgpu::Maintain::Wait);
+    device.synchronize().unwrap();
 
-    assert_eq!(buffer.size(), 256);
+    let read_back: Vec<u8> = buffer
+        .read_to_vec_on_device(&device)
+        .expect("buffer readback must succeed");
+    assert_eq!(read_back, data);
 }
 
 #[test]
 fn test_device_info_clone() {
-    let info = DeviceInfo {
+    let info = GpuDeviceInfo {
         name: "Test Device".to_string(),
         vendor: 0x1234,
         device_type: "DiscreteGpu".to_string(),
@@ -207,7 +205,7 @@ fn test_device_info_clone() {
 
 #[test]
 fn test_device_info_debug() {
-    let info = DeviceInfo {
+    let info = GpuDeviceInfo {
         name: "Test Device".to_string(),
         vendor: 0x1234,
         device_type: "DiscreteGpu".to_string(),

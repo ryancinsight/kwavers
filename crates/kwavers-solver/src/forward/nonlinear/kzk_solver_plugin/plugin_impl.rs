@@ -31,7 +31,7 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
 
     fn update(
         &mut self,
-        fields: &mut ndarray::Array4<f64>,
+        fields: &mut leto::Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
@@ -40,9 +40,10 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
     ) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;
 
-        let pressure_field =
-            fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
-        let mut pressure_array = pressure_field.to_owned();
+        let pressure_field = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
+        let mut pressure_array = pressure_field.to_contiguous();
 
         if let Some(operators) = &self.frequency_operators {
             self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
@@ -56,8 +57,9 @@ impl crate::plugin::Plugin for KzkSolverPlugin {
             self.apply_nonlinear_step(&mut pressure_array, beta, density, c0, dt, grid)?;
             self.apply_linear_step(&mut pressure_array, operators, dt / 2.0)?;
 
-            let mut pressure_slice =
-                fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+            let mut pressure_slice = fields
+                .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+                .expect("invariant: pressure field index within field stack");
             pressure_slice.assign(&pressure_array);
         }
 

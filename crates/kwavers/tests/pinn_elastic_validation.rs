@@ -27,10 +27,10 @@
 #![cfg(feature = "pinn")]
 
 use kwavers_physics::foundations::wave_equation::{
-    AutodiffElasticWaveEquation, AutodiffWaveEquation, BoundaryCondition, Domain,
+    AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, WaveEquationBoundary,
 };
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D, ElasticPINN2DSolver};
-use ndarray::{Array2, ArrayD};
+use leto::Array2;
 
 // Import validation framework
 mod elastic_wave_validation_framework;
@@ -40,7 +40,7 @@ use elastic_wave_validation_framework::{
 };
 
 // Backend selection for tests
-type TestBackend = burn::backend::NdArray;
+type TestBackend = coeus_core::MoiraiBackend;
 
 // ============================================================================
 // Helper Functions
@@ -48,12 +48,11 @@ type TestBackend = burn::backend::NdArray;
 
 /// Create a simple homogeneous test solver
 fn create_homogeneous_solver(lambda: f64, mu: f64, rho: f64) -> ElasticPINN2DSolver<TestBackend> {
-    let domain = Domain::new_2d(0.0, 1.0, 0.0, 1.0, 21, 21, BoundaryCondition::Periodic);
-    let device = Default::default();
+    let domain = Domain::new_2d(0.0, 1.0, 0.0, 1.0, 21, 21, WaveEquationBoundary::Periodic);
     let mut config = Config::forward_problem(lambda, mu, rho);
     config.hidden_layers = vec![32, 32, 32];
 
-    let model = match ElasticPINN2D::<TestBackend>::new(&config, &device) {
+    let model = match ElasticPINN2D::<TestBackend>::new(&config) {
         Ok(model) => model,
         Err(err) => panic!("Failed to construct ElasticPINN2D test model: {err}"),
     };
@@ -70,18 +69,17 @@ fn create_heterogeneous_solver() -> ElasticPINN2DSolver<TestBackend> {
         2.0,
         41,
         41,
-        BoundaryCondition::Absorbing { damping: 0.1 },
+        WaveEquationBoundary::Absorbing { damping: 0.1 },
     );
 
     let lambda = 5.76e10;
     let mu = 2.6e10;
     let rho = 2700.0;
 
-    let device = Default::default();
     let mut config = Config::forward_problem(lambda, mu, rho);
     config.hidden_layers = vec![64, 64, 64, 64];
 
-    let model = match ElasticPINN2D::<TestBackend>::new(&config, &device) {
+    let model = match ElasticPINN2D::<TestBackend>::new(&config) {
         Ok(model) => model,
         Err(err) => panic!("Failed to construct ElasticPINN2D test model: {err}"),
     };

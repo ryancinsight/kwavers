@@ -7,7 +7,8 @@ use super::validation::{field_validation_error, validate_finite_field};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Multi-element bowl array (makeMultiBowl equivalent)
 #[derive(Debug)]
@@ -23,7 +24,7 @@ pub struct MultiBowlArray {
 impl MultiBowlArray {
     /// Create a new multi-bowl array
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new(configs: Vec<BowlConfig>) -> KwaversResult<Self> {
         let mut bowls = Vec::with_capacity(configs.len());
@@ -69,10 +70,10 @@ impl MultiBowlArray {
     /// applying both amplitude scaling and phase shifts. The phase shifts
     /// are crucial for beam steering and complex field synthesis.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut combined_source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut combined_source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
         // Add contributions from each bowl
         for (i, bowl) in self.bowls.iter().enumerate() {
@@ -89,9 +90,15 @@ impl MultiBowlArray {
             // Apply relative amplitude
             let scale = amplitude_scale(self.amplitudes[i], bowl.config.amplitude);
 
-            Zip::from(&mut combined_source)
-                .and(&bowl_source)
-                .par_for_each(|c, &b| *c += scale * b);
+            let combined_data = combined_source
+                .as_slice_mut()
+                .expect("invariant: freshly allocated Array3 is contiguous");
+            let bowl_data = bowl_source
+                .as_slice()
+                .expect("invariant: generated bowl source Array3 is contiguous");
+            enumerate_mut_with::<Adaptive, _, _>(combined_data, |idx, c| {
+                *c += scale * bowl_data[idx];
+            });
         }
 
         Ok(combined_source)

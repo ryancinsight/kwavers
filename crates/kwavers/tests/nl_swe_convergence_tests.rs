@@ -31,7 +31,7 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::elastic::nonlinear::{
     HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Analytical test case for simple harmonic wave propagation

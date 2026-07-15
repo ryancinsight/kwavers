@@ -7,9 +7,12 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{get_fft_for_grid, Complex64, Fft3d};
+use kwavers_math::fft::{
+    fft_3d_axis_complex_inplace, get_fft_for_grid, ifft_3d_axis_complex_inplace, Complex64, Fft3d,
+};
 use kwavers_medium::viscoelastic::GeneralizedMaxwellModel;
-use ndarray::{Array3, Axis, Zip};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// One relaxation arm with its precomputed per-voxel exponential-integrator
@@ -29,10 +32,15 @@ struct Arm {
 fn build_arm(delta_m: &Array3<f64>, tau: &Array3<f64>, dt: f64) -> Arm {
     let decay = tau.mapv(|t| (-dt / t).exp());
     let inv_tau = tau.mapv(|t| 1.0 / t);
-    let gain = Zip::from(delta_m)
-        .and(tau)
-        .and(&decay)
-        .map_collect(|&dm, &t, &dc| -dm * t * (1.0 - dc));
+    let mut gain = Array3::<f64>::zeros(delta_m.shape());
+    leto_ops::zip3_mut_with(
+        &mut gain.view_mut(),
+        &delta_m.view(),
+        &tau.view(),
+        &decay.view(),
+        |g, &dm, &t, &dc| *g = -dm * t * (1.0 - dc),
+    )
+    .expect("invariant: build_arm operands share grid shape");
     Arm {
         decay,
         gain,
@@ -53,9 +61,9 @@ pub struct ViscoacousticMemorySolver {
     dt: f64,
     /// Per-voxel `1/ρ(x)` \[m³·kg⁻¹] for the velocity update.
     inv_rho: Array3<f64>,
-    /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \[Pa].
+    /// Per-voxel unrelaxed (instantaneous) modulus `M_U(x) = M_∞(x) + Σ ΔMₗ(x)` \\[Pa\].
     m_u: Array3<f64>,
-    /// Per-voxel equilibrium (relaxed) modulus `M_∞(x)` \[Pa] — potential-energy norm.
+    /// Per-voxel equilibrium (relaxed) modulus `M_∞(x)` \\[Pa\] — potential-energy norm.
     m_inf: Array3<f64>,
     /// Maximum unrelaxed sound speed over the grid \[m·s⁻¹] — the CFL reference.
     max_unrelaxed_speed: f64,
@@ -67,7 +75,7 @@ pub struct ViscoacousticMemorySolver {
     kx: Vec<f64>,
     ky: Vec<f64>,
     kz: Vec<f64>,
-    cbuf: Array3<Complex64>,
+    cbuf: LetoArray3<Complex64>,
 
     // State.
     p: Array3<f64>,
@@ -104,7 +112,7 @@ impl std::fmt::Debug for ViscoacousticMemorySolver {
             .field("nz", &self.nz)
             .field("dt", &self.dt)
             .field("max_unrelaxed_speed", &self.max_unrelaxed_speed)
-            .field("arms", &self.arms.len())
+            .field("arms", &(self.arms.len()))
             .finish()
     }
 }
@@ -264,17 +272,22 @@ impl ViscoacousticMemorySolver {
         // M_U(x) = M_∞(x) + Σ ΔMₗ(x); recover ΔMₗ = −gain / (τ(1−decay)) = −gain·inv_tau/(1−decay).
         let mut m_u = m_inf.clone();
         for arm in &arms {
-            Zip::from(&mut m_u)
-                .and(&arm.gain)
-                .and(&arm.decay)
-                .and(&arm.inv_tau)
-                .for_each(|mu, &gain, &decay, &inv_tau| {
+            leto_ops::zip3_mut_with(
+                &mut m_u.view_mut(),
+                &arm.gain.view(),
+                &arm.decay.view(),
+                &arm.inv_tau.view(),
+                |mu, &gain, &decay, &inv_tau| {
                     *mu += -gain * inv_tau / (1.0 - decay);
-                });
+                },
+            )
+            .expect("invariant: viscoacoustic modulus fields share grid shape");
         }
-        let max_unrelaxed_speed = Zip::from(&m_u)
-            .and(&inv_rho)
-            .fold(0.0_f64, |acc, &mu, &ir| acc.max((mu * ir).sqrt()));
+        let max_unrelaxed_speed =
+            leto_ops::zip_fold(&m_u.view(), &inv_rho.view(), 0.0_f64, |acc, &mu, &ir| {
+                acc.max((mu * ir).sqrt())
+            })
+            .expect("invariant: modulus and inv_rho fields share grid shape");
 
         Self {
             nx,
@@ -292,7 +305,7 @@ impl ViscoacousticMemorySolver {
             kx: fft_wavenumbers(nx, dx),
             ky: fft_wavenumbers(ny, dy),
             kz: fft_wavenumbers(nz, dz),
-            cbuf: Array3::from_elem(shape, Complex64::new(0.0, 0.0)),
+            cbuf: LetoArray3::from_elem([nx, ny, nz], Complex64::new(0.0, 0.0)),
             p: Array3::zeros(shape),
             vx: Array3::zeros(shape),
             vy: Array3::zeros(shape),
@@ -341,7 +354,7 @@ impl ViscoacousticMemorySolver {
         };
 
         let dt = self.dt;
-        let decay = Array3::from_shape_fn((self.nx, self.ny, self.nz), |(i, j, k)| {
+        let decay = Array3::from_shape_fn((self.nx, self.ny, self.nz), |[i, j, k]| {
             let gamma = ramp(i, self.nx) + ramp(j, self.ny) + ramp(k, self.nz);
             (-gamma * dt).exp()
         });
@@ -458,13 +471,14 @@ impl ViscoacousticMemorySolver {
         // Per-voxel: M_∞ = ρc², calibrate the total relaxation strength so the
         // spectrum's α(ω_ref) equals the target (α scales ~linearly with strength).
         let omega_ref = TWO_PI * f_ref;
-        let m_inf = Zip::from(rho).and(c).map_collect(|&r, &cc| r * cc * cc);
+        let m_inf = rho.zip_map(c, |r, cc| r * cc * cc);
         let mut scale = Array3::<f64>::zeros((nx, ny, nz));
-        Zip::from(&mut scale)
-            .and(rho)
-            .and(&m_inf)
-            .and(alpha_np_m)
-            .for_each(|sc, &r, &mi, &a_target| {
+        leto_ops::zip3_mut_with(
+            &mut scale.view_mut(),
+            &rho.view(),
+            &m_inf.view(),
+            &alpha_np_m.view(),
+            |sc, &r, &mi, &a_target| {
                 // α for unit total strength (weights = `base`, summing to 1 Pa).
                 let a_unit = relaxation_attenuation(omega_ref, r, mi, &base, &taus);
                 *sc = if a_unit > 0.0 && a_target > 0.0 {
@@ -472,13 +486,15 @@ impl ViscoacousticMemorySolver {
                 } else {
                     0.0
                 };
-            });
+            },
+        )
+        .expect("invariant: calibration fields share grid shape");
 
         // Arm fields: ΔMₗ(x) = scale(x)·baseₗ, τₗ uniform.
         let arms: Vec<(Array3<f64>, Array3<f64>)> = (0..n_arms)
             .map(|l| {
                 let dm = scale.mapv(|s| (s * base[l]).max(f64::MIN_POSITIVE));
-                let tau = Array3::from_elem((nx, ny, nz), taus[l]);
+                let tau = Array3::from_elem([nx, ny, nz], taus[l]);
                 (dm, tau)
             })
             .collect();
@@ -493,7 +509,7 @@ impl ViscoacousticMemorySolver {
         self.max_unrelaxed_speed
     }
 
-    /// Pressure field \[Pa].
+    /// Pressure field \\[Pa\].
     #[must_use]
     pub fn pressure(&self) -> &Array3<f64> {
         &self.p
@@ -525,7 +541,7 @@ impl ViscoacousticMemorySolver {
     }
 
     /// Register a **soft (additive) pressure source** at `index` with a per-step
-    /// time `signal`: `p[index] += signal[step]` while `step < signal.len()`.
+    /// time `signal`: `p[index] += signal[step]` while `step < (signal.len())`.
     /// # Errors
     /// - `index` out of grid bounds.
     pub fn add_pressure_source(
@@ -546,7 +562,7 @@ impl ViscoacousticMemorySolver {
         self.check_index(index)?;
         self.pressure_sensors.push(index);
         self.sensor_record.push(Vec::new());
-        Ok(self.pressure_sensors.len() - 1)
+        Ok((self.pressure_sensors.len()) - 1)
     }
 
     /// Recorded pressure time trace for sensor `id`.
@@ -570,14 +586,20 @@ impl ViscoacousticMemorySolver {
     #[must_use]
     pub fn energy(&self) -> f64 {
         // PE = Σ p²/(2 M_∞(x));  KE = Σ ρ(x)|v|²/2 = Σ |v|²/(2/ρ) = Σ |v|²·inv_rho⁻¹/2.
-        let pe = Zip::from(&self.p)
-            .and(&self.m_inf)
-            .fold(0.0_f64, |acc, &p, &mi| acc + p * p / (2.0 * mi));
-        let ke = Zip::from(&self.vx)
-            .and(&self.vy)
-            .and(&self.vz)
-            .and(&self.inv_rho)
-            .fold(0.0_f64, |acc, &vx, &vy, &vz, &ir| {
+        let pe = leto_ops::zip_fold(
+            &self.p.view(),
+            &self.m_inf.view(),
+            0.0_f64,
+            |acc, &p, &mi| acc + p * p / (2.0 * mi),
+        )
+        .expect("invariant: pressure and modulus fields share grid shape");
+        let ke = self
+            .vx
+            .iter()
+            .zip(self.vy.iter())
+            .zip(self.vz.iter())
+            .zip(self.inv_rho.iter())
+            .fold(0.0_f64, |acc, (((&vx, &vy), &vz), &ir)| {
                 acc + (vx * vx + vy * vy + vz * vz) / (2.0 * ir)
             });
         (pe + ke) * self.cell_volume
@@ -591,19 +613,61 @@ impl ViscoacousticMemorySolver {
         k: &[f64],
         axis: usize,
         field: &Array3<f64>,
-        cbuf: &mut Array3<Complex64>,
+        cbuf: &mut LetoArray3<Complex64>,
         out: &mut Array3<f64>,
     ) {
-        Zip::from(&mut *cbuf)
-            .and(field)
-            .for_each(|c, &f| *c = Complex64::new(f, 0.0));
-        fft.forward_axis_complex_inplace(cbuf, axis);
-        for (m, mut lane) in cbuf.axis_iter_mut(Axis(axis)).enumerate() {
-            let factor = Complex64::new(0.0, k[m]);
-            lane.mapv_inplace(|v| v * factor);
+        let [nx, ny, nz] = cbuf.shape();
+        assert_eq!(
+            field.shape(),
+            [nx, ny, nz],
+            "invariant: viscoacoustic FFT scratch shape matches input field"
+        );
+        assert_eq!(
+            out.shape(),
+            [nx, ny, nz],
+            "invariant: viscoacoustic derivative output shape matches input field"
+        );
+        if let (Some(dst), Some(src)) = (cbuf.as_slice_mut(), field.as_slice()) {
+            for (dst, &src) in dst.iter_mut().zip(src) {
+                *dst = Complex64::new(src, 0.0);
+            }
+        } else {
+            for z in 0..nz {
+                for y in 0..ny {
+                    for x in 0..nx {
+                        cbuf[[x, y, z]] = Complex64::new(field[[x, y, z]], 0.0);
+                    }
+                }
+            }
         }
-        fft.inverse_axis_complex_inplace(cbuf, axis);
-        Zip::from(&mut *out).and(&*cbuf).for_each(|o, c| *o = c.re);
+        fft_3d_axis_complex_inplace(fft, cbuf, axis);
+        for z in 0..nz {
+            for y in 0..ny {
+                for x in 0..nx {
+                    let mode = match axis {
+                        0 => x,
+                        1 => y,
+                        2 => z,
+                        _ => unreachable!("invariant: derivative axis is 0, 1, or 2"),
+                    };
+                    cbuf[[x, y, z]] *= Complex64::new(0.0, k[mode]);
+                }
+            }
+        }
+        ifft_3d_axis_complex_inplace(fft, cbuf, axis);
+        if let (Some(dst), Some(src)) = (out.as_slice_mut(), cbuf.as_slice()) {
+            for (dst, src) in dst.iter_mut().zip(src) {
+                *dst = src.re;
+            }
+        } else {
+            for z in 0..nz {
+                for y in 0..ny {
+                    for x in 0..nx {
+                        out[[x, y, z]] = cbuf[[x, y, z]].re;
+                    }
+                }
+            }
+        }
     }
 
     /// Advance the state by one time step `Δt`.
@@ -634,18 +698,27 @@ impl ViscoacousticMemorySolver {
             &mut self.cbuf,
             &mut self.gz,
         );
-        Zip::from(&mut self.vx)
-            .and(&self.gx)
-            .and(&self.inv_rho)
-            .for_each(|v, &g, &ir| *v += -dt * ir * g);
-        Zip::from(&mut self.vy)
-            .and(&self.gy)
-            .and(&self.inv_rho)
-            .for_each(|v, &g, &ir| *v += -dt * ir * g);
-        Zip::from(&mut self.vz)
-            .and(&self.gz)
-            .and(&self.inv_rho)
-            .for_each(|v, &g, &ir| *v += -dt * ir * g);
+        leto_ops::zip2_mut_with(
+            &mut self.vx.view_mut(),
+            &self.gx.view(),
+            &self.inv_rho.view(),
+            |v, &g, &ir| *v += -dt * ir * g,
+        )
+        .expect("invariant: velocity-x update fields share grid shape");
+        leto_ops::zip2_mut_with(
+            &mut self.vy.view_mut(),
+            &self.gy.view(),
+            &self.inv_rho.view(),
+            |v, &g, &ir| *v += -dt * ir * g,
+        )
+        .expect("invariant: velocity-y update fields share grid shape");
+        leto_ops::zip2_mut_with(
+            &mut self.vz.view_mut(),
+            &self.gz.view(),
+            &self.inv_rho.view(),
+            |v, &g, &ir| *v += -dt * ir * g,
+        )
+        .expect("invariant: velocity-z update fields share grid shape");
 
         // 2. Dilatation rate D = ∇·v (accumulated into gx).
         Self::axis_derivative(
@@ -672,36 +745,63 @@ impl ViscoacousticMemorySolver {
             &mut self.cbuf,
             &mut self.gz,
         );
-        Zip::from(&mut self.gx)
-            .and(&self.gy)
-            .and(&self.gz)
-            .for_each(|d, &y, &z| *d += y + z); // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
+        // gx = ∂vx/∂x + ∂vy/∂y + ∂vz/∂z
+        leto_ops::zip2_mut_with(
+            &mut self.gx.view_mut(),
+            &self.gy.view(),
+            &self.gz.view(),
+            |d, &y, &z| *d += y + z,
+        )
+        .expect("invariant: divergence components share grid shape");
 
         // 3. Advance each σ_l with the exact exponential integrator (per-voxel
         //    coefficients) and accumulate its trapezoidal pressure contribution
         //    into gy (reused as the relax sum): σ_new = decay·σ + gain·D.
         self.gy.fill(0.0);
+        // Two mutable outputs (`sigma` arm and `self.gy` relax-sum) updated in
+        // lockstep with 4 read inputs; leto_ops zip is single-lhs only, so this
+        // is a native flat-index loop over the contiguous same-shape grid fields.
         for (arm, sigma) in self.arms.iter().zip(self.sigma.iter_mut()) {
-            Zip::from(sigma)
-                .and(&self.gx)
-                .and(&mut self.gy)
-                .and(&arm.decay)
-                .and(&arm.gain)
-                .and(&arm.inv_tau)
-                .for_each(|s, &d, r, &decay, &gain, &inv_tau| {
-                    let old = *s;
-                    let new = decay.mul_add(old, gain * d);
-                    *r += 0.5 * (old + new) * inv_tau;
-                    *s = new;
-                });
+            let s_slice = sigma
+                .as_slice_mut()
+                .expect("invariant: viscoacoustic σ arm is contiguous");
+            let gx_slice = self
+                .gx
+                .as_slice()
+                .expect("invariant: viscoacoustic gx is contiguous");
+            let gy_slice = self
+                .gy
+                .as_slice_mut()
+                .expect("invariant: viscoacoustic gy is contiguous");
+            let decay_slice = arm
+                .decay
+                .as_slice()
+                .expect("invariant: viscoacoustic decay is contiguous");
+            let gain_slice = arm
+                .gain
+                .as_slice()
+                .expect("invariant: viscoacoustic gain is contiguous");
+            let inv_tau_slice = arm
+                .inv_tau
+                .as_slice()
+                .expect("invariant: viscoacoustic inv_tau is contiguous");
+            for idx in 0..s_slice.len() {
+                let old = s_slice[idx];
+                let new = decay_slice[idx].mul_add(old, gain_slice[idx] * gx_slice[idx]);
+                gy_slice[idx] += 0.5 * (old + new) * inv_tau_slice[idx];
+                s_slice[idx] = new;
+            }
         }
 
         // 4. Pressure update: p += -Δt (M_U(x) D + Σ_l ½(σ_l+σ_l^new)/τ_l(x)).
-        Zip::from(&mut self.p)
-            .and(&self.gx)
-            .and(&self.gy)
-            .and(&self.m_u)
-            .for_each(|p, &d, &relax, &mu| *p -= dt * (mu * d + relax));
+        leto_ops::zip3_mut_with(
+            &mut self.p.view_mut(),
+            &self.gx.view(),
+            &self.gy.view(),
+            &self.m_u.view(),
+            |p, &d, &relax, &mu| *p -= dt * (mu * d + relax),
+        )
+        .expect("invariant: pressure update fields share grid shape");
 
         // 5. Soft pressure sources: p[index] += signal[step].
         for (index, signal) in &self.pressure_sources {
@@ -712,10 +812,14 @@ impl ViscoacousticMemorySolver {
 
         // 6. Absorbing boundary: damp p and v inside the sponge layer.
         if let Some(decay) = &self.damping_decay {
-            Zip::from(&mut self.p).and(decay).for_each(|p, &d| *p *= d);
-            Zip::from(&mut self.vx).and(decay).for_each(|v, &d| *v *= d);
-            Zip::from(&mut self.vy).and(decay).for_each(|v, &d| *v *= d);
-            Zip::from(&mut self.vz).and(decay).for_each(|v, &d| *v *= d);
+            leto_ops::zip_mut_with(&mut self.p.view_mut(), &decay.view(), |p, &d| *p *= d)
+                .expect("invariant: pressure and damping fields share grid shape");
+            leto_ops::zip_mut_with(&mut self.vx.view_mut(), &decay.view(), |v, &d| *v *= d)
+                .expect("invariant: velocity-x and damping fields share grid shape");
+            leto_ops::zip_mut_with(&mut self.vy.view_mut(), &decay.view(), |v, &d| *v *= d)
+                .expect("invariant: velocity-y and damping fields share grid shape");
+            leto_ops::zip_mut_with(&mut self.vz.view_mut(), &decay.view(), |v, &d| *v *= d)
+                .expect("invariant: velocity-z and damping fields share grid shape");
         }
 
         // 7. Record sensor traces, then advance the simulation clock.
@@ -743,7 +847,7 @@ fn relaxation_attenuation(omega: f64, rho: f64, m_inf: f64, weights: &[f64], tau
     k.im.abs()
 }
 
-/// FFT-order signed wavenumbers `k[m] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`
+/// FFT-order signed wavenumbers `k\[m\] = 2π m'/(n·Δx)` with `m' = m` for `m < n/2`
 /// and `m' = m − n` otherwise. For `n = 1` this is `[0]` (derivative along a
 /// singleton axis is zero).
 ///

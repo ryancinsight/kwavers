@@ -9,7 +9,7 @@ use kwavers_core::constants::ct_acoustics::{
 use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, SOUND_SPEED_WATER_37C};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::interpolation::bilinear_index_space;
-use ndarray::{s, Array2, Array3};
+use leto::{Array2, Array3};
 
 use super::config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
@@ -45,7 +45,7 @@ pub struct AcousticSlice {
 
 /// Select the axial slice with the largest non-air head support.
 pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
-    let (_, _, nz) = volume_hu.dim();
+    let [_, _, nz] = volume_hu.shape();
     if nz == 0 {
         return Err(KwaversError::InvalidInput(
             "CT volume must contain at least one slice".to_owned(),
@@ -54,7 +54,9 @@ pub fn select_head_slice(volume_hu: &Array3<f64>) -> KwaversResult<usize> {
 
     let mut best = None;
     for z in 0..nz {
-        let slice = volume_hu.slice(s![.., .., z]);
+        let slice = volume_hu
+            .index_axis::<2>(2, z)
+            .expect("z index within CT volume depth");
         let head_voxels = slice
             .iter()
             .filter(|v| **v > HU_BRAIN_BODY_THRESHOLD)
@@ -89,14 +91,17 @@ pub fn resample_head_slice(
         ));
     }
 
-    let (nx, ny, nz) = volume_hu.dim();
+    let [nx, ny, nz] = volume_hu.shape();
     if slice_index >= nz {
         return Err(KwaversError::InvalidInput(format!(
             "slice_index {slice_index} out of bounds for {nz} CT slices"
         )));
     }
 
-    let slice = volume_hu.slice(s![.., .., slice_index]).to_owned();
+    let slice = volume_hu
+        .index_axis::<2>(2, slice_index)
+        .expect("slice_index within CT volume depth")
+        .to_contiguous();
     let bbox = head_bbox(&slice)?;
     let margin_x = ((bbox.1 - bbox.0 + 1) as f64 * 0.08).ceil() as usize;
     let margin_y = ((bbox.3 - bbox.2 + 1) as f64 * 0.08).ceil() as usize;
@@ -160,7 +165,7 @@ impl AcousticSlice {
                 "slice_offset_m must be finite".to_owned(),
             ));
         }
-        let (nx, ny) = ct_hu.dim();
+        let [nx, ny] = ct_hu.shape();
         if nx < 16 || ny < 16 {
             return Err(KwaversError::InvalidInput(
                 "CT slice must be at least 16 x 16".to_owned(),
@@ -227,7 +232,7 @@ impl AcousticSlice {
 }
 
 fn head_bbox(slice: &Array2<f64>) -> KwaversResult<(usize, usize, usize, usize)> {
-    let (nx, ny) = slice.dim();
+    let [nx, ny] = slice.shape();
     let mut bbox: Option<(usize, usize, usize, usize)> = None;
     for ix in 0..nx {
         for iy in 0..ny {
@@ -248,7 +253,7 @@ fn head_centroid(slice: &Array2<f64>) -> Option<(f64, f64)> {
     let mut sx = 0.0;
     let mut sy = 0.0;
     let mut n = 0.0;
-    for ((ix, iy), hu) in slice.indexed_iter() {
+    for ([ix, iy], hu) in slice.indexed_iter() {
         if *hu > HU_BRAIN_BODY_THRESHOLD {
             sx += ix as f64;
             sy += iy as f64;

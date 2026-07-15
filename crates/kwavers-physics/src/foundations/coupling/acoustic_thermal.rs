@@ -20,7 +20,7 @@ use super::MultiPhysicsCoupling;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
-use ndarray::ArrayD;
+use leto::Array3;
 
 /// Acoustic-thermal coupling for thermoacoustic effects
 pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
@@ -30,9 +30,9 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
     /// Compute acoustic pressure source from temperature rate ∂T/∂t
     fn pressure_source_from_temperature(
         &self,
-        temperature_rate: &ArrayD<f64>,
+        temperature_rate: &Array3<f64>,
         position: &[f64],
-    ) -> ArrayD<f64> {
+    ) -> Array3<f64> {
         let beta = self.thermal_expansion_coefficient(position);
         let rho = DENSITY_WATER_NOMINAL;
         let c = SOUND_SPEED_WATER_SIM;
@@ -40,7 +40,7 @@ pub trait AcousticThermalCoupling: MultiPhysicsCoupling {
     }
 
     /// Viscous dissipation heating rate (W/m³)
-    fn viscous_heating(&self, _velocity_field: &ArrayD<f64>, _position: &[f64]) -> f64 {
+    fn viscous_heating(&self, _velocity_field: &Array3<f64>, _position: &[f64]) -> f64 {
         0.0 // Override with actual strain-rate computation
     }
 

@@ -1,6 +1,6 @@
 //! Medium and speed helpers for the 2-D acoustic waveform simulation.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::medium::PreparedTheranosticSlice;
@@ -12,7 +12,7 @@ pub(super) fn lesion_speed(
     config: &TheranosticInverseConfig,
     lesion: &Array2<f64>,
 ) -> Array2<f64> {
-    Array2::from_shape_fn(prepared.sound_speed_m_s.dim(), |idx| {
+    Array2::from_shape_fn(prepared.sound_speed_m_s.shape(), |idx| {
         if prepared.body_mask[idx] {
             (prepared.sound_speed_m_s[idx] + config.lesion_delta_c_m_s * lesion[idx])
                 .clamp(SOUND_SPEED_WATER_SIM, BONE_SOUND_SPEED)

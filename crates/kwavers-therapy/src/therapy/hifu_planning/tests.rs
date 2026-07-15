@@ -170,14 +170,18 @@ fn focal_spot_pressure_uses_acoustic_power_without_empirical_ceiling() {
 
 #[test]
 fn focal_spot_rejects_invalid_transducer_domain() {
-    let mut transducer = ClinicalHIFUTransducer::default();
-    transducer.frequency = 0.0;
+    let transducer = ClinicalHIFUTransducer {
+        frequency: 0.0,
+        ..ClinicalHIFUTransducer::default()
+    };
     let err = FocalSpot::estimate_from_transducer(&transducer)
         .expect_err("zero frequency must be rejected");
     assert!(err.to_string().contains("transducer.frequency"));
 
-    let mut transducer = ClinicalHIFUTransducer::default();
-    transducer.efficiency = 1.2;
+    let transducer = ClinicalHIFUTransducer {
+        efficiency: 1.2,
+        ..ClinicalHIFUTransducer::default()
+    };
     let err = FocalSpot::estimate_from_transducer(&transducer)
         .expect_err("efficiency above unity must be rejected");
     assert!(err.to_string().contains("transducer.efficiency"));

@@ -14,6 +14,7 @@
 //! ## Modules
 //!
 //! - **`beamforming/`**: Array signal processing for image formation
+//! - **`baseband/`**: Analytic-signal I/Q demodulation for RF channel records
 //! - **`localization/`**: Source localization algorithms (trilateration, beamforming search)
 //! - **`pam/`**: Passive acoustic mapping for cavitation monitoring
 //!
@@ -38,7 +39,6 @@
 //! - [x] Migrate time-domain DAS (Delay-and-Sum) ✅
 //! - [x] Migrate delay reference policy ✅
 //! - [ ] Add deprecation warnings to `domain::sensor::beamforming`
-//! - [ ] Create backward compatibility shims
 //! - [ ] Migrate adaptive beamforming (Capon, MUSIC)
 //! - [ ] Migrate localization algorithms
 //! - [ ] Migrate PAM algorithms
@@ -55,7 +55,7 @@
 //!     delay_and_sum, DelayReference, DEFAULT_DELAY_REFERENCE
 //! };
 //! use kwavers_receiver::GridSensorSet;
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! // Sensor geometry (domain primitive)
 //! let sensors = GridSensorSet::new(positions, sample_rate)?;
@@ -161,6 +161,7 @@
 //! - `reconstruction`: Advanced image reconstruction algorithms
 
 pub mod b_mode;
+pub mod baseband;
 pub mod beamforming;
 pub mod doppler;
 pub mod filtering;
@@ -188,6 +189,7 @@ pub mod tissue_staging;
 pub mod wavelength_estimation;
 
 // Re-export main types from implemented modules
+pub use baseband::{demodulate_rf_to_iq, IqDemodulationConfig};
 pub use beamforming::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
 };

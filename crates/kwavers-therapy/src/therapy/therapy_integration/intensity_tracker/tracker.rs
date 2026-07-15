@@ -7,7 +7,7 @@ use kwavers_core::constants::medical::{
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Real-time acoustic intensity tracker
 ///
@@ -90,7 +90,8 @@ impl IntensityTracker {
         timestamp: f64,
     ) -> KwaversResult<TemporalIntensityMetrics> {
         // Compute intensity field: I = p²/Z
-        let intensity_field = pressure_field.mapv(|p| p * p) / impedance_field;
+        let p_squared = pressure_field.mapv(|p| p * p);
+        let intensity_field = &p_squared / impedance_field;
 
         // Find spatial peak (maximum intensity)
         let spatial_peak = intensity_field.iter().cloned().fold(0.0_f64, f64::max);

@@ -3,7 +3,8 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
 
 use super::super::wave_model::NonlinearWave;
 
@@ -40,7 +41,7 @@ impl NonlinearWave {
         medium: &dyn Medium,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
 
         // Single FFT of pressure — shared by gradient and Laplacian computations.
         let mut pressure_k = fft_3d_array(pressure);
@@ -57,27 +58,27 @@ impl NonlinearWave {
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
 
-        let mut grad_x_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
-        let mut grad_y_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
-        let mut grad_z_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
-        let mut laplacian_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
+        let mut grad_x_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut grad_y_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut grad_z_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut laplacian_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
 
         // Spectral differentiation in one indexed pass over the filtered spectrum.
-        Zip::indexed(&pressure_k)
-            .and(&mut grad_x_k)
-            .and(&mut grad_y_k)
-            .and(&mut grad_z_k)
-            .and(&mut laplacian_k)
-            .par_for_each(|(i, j, k), &pk, gx, gy, gz, lap| {
-                let kxi = kx_s[i];
-                let kyj = ky_s[j];
-                let kzk = kz_s[k];
-                let k2 = kxi.mul_add(kxi, kyj.mul_add(kyj, kzk * kzk));
-                *gx = pk * Complex::new(0.0, kxi);
-                *gy = pk * Complex::new(0.0, kyj);
-                *gz = pk * Complex::new(0.0, kzk);
-                *lap = pk * (-k2);
-            });
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let pk = pressure_k[[i, j, k]];
+                    let kxi = kx_s[i];
+                    let kyj = ky_s[j];
+                    let kzk = kz_s[k];
+                    let k2 = kxi.mul_add(kxi, kyj.mul_add(kyj, kzk * kzk));
+                    grad_x_k[[i, j, k]] = pk * Complex::new(0.0, kxi);
+                    grad_y_k[[i, j, k]] = pk * Complex::new(0.0, kyj);
+                    grad_z_k[[i, j, k]] = pk * Complex::new(0.0, kzk);
+                    laplacian_k[[i, j, k]] = pk * (-k2);
+                }
+            }
+        }
 
         let p_filt = ifft_3d_array(&pressure_k);
         let grad_x = ifft_3d_array(&grad_x_k);
@@ -85,7 +86,7 @@ impl NonlinearWave {
         let grad_z = ifft_3d_array(&grad_z_k);
         let laplacian = ifft_3d_array(&laplacian_k);
 
-        let mut nonlinear_term = Array3::zeros((nx, ny, nz));
+        let mut nonlinear_term = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -121,7 +122,7 @@ mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// A spatially uniform (constant) pressure field has zero gradient and zero
     /// Laplacian. Both terms of the Westervelt nonlinear operator vanish, so the
@@ -169,7 +170,7 @@ mod tests {
 
         // cos(π·i) alternates ±1: DFT energy concentrated at index N/2 = 6
         let p_nyquist =
-            Array3::from_shape_fn((n, n, n), |(i, _j, _k)| 1e5_f64 * (PI * i as f64).cos());
+            Array3::from_shape_fn([n, n, n], |[i, _j, _k]| 1e5_f64 * (PI * i as f64).cos());
 
         let term = w
             .compute_nonlinear_term(&p_nyquist, &medium, &grid)

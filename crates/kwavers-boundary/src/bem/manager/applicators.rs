@@ -2,9 +2,9 @@
 
 use super::BemBoundaryManager;
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 
 impl BemBoundaryManager {
     /// Apply Dirichlet BCs (p = g): zero the row in H/G and store g in RHS.

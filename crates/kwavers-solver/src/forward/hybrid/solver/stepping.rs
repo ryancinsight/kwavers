@@ -1,12 +1,11 @@
 use super::HybridSolver;
 use crate::forward::hybrid::domain_decomposition::{DomainRegion, DomainType};
 use kwavers_core::error::KwaversResult;
-use ndarray::s;
 
 impl HybridSolver {
     /// Perform a single time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step_forward(&mut self) -> KwaversResult<()> {
         self.pstd_solver.fields.p.assign(&self.fields.p);
@@ -22,54 +21,118 @@ impl HybridSolver {
         self.pstd_solver.step_forward()?;
         self.fdtd_solver.step_forward()?;
 
-        for region_index in 0..self.regions.len() {
+        for region_index in 0..(self.regions.len()) {
             let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
-                    let slice = s![
-                        region.start.0..region.end.0,
-                        region.start.1..region.end.1,
-                        region.start.2..region.end.2
+                    let slice_spec = &[
+                        (region.start.0, region.end.0, 1isize),
+                        (region.start.1, region.end.1, 1isize),
+                        (region.start.2, region.end.2, 1isize),
                     ];
                     self.fields
                         .p
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.p.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid PSTD pressure slice")
+                        .assign(
+                            &self
+                                .pstd_solver
+                                .fields
+                                .p
+                                .slice(slice_spec)
+                                .expect("valid hybrid PSTD pressure slice"),
+                        );
                     self.fields
                         .ux
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.ux.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid PSTD velocity-x slice")
+                        .assign(
+                            &self
+                                .pstd_solver
+                                .fields
+                                .ux
+                                .slice(slice_spec)
+                                .expect("valid hybrid PSTD velocity-x slice"),
+                        );
                     self.fields
                         .uy
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.uy.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid PSTD velocity-y slice")
+                        .assign(
+                            &self
+                                .pstd_solver
+                                .fields
+                                .uy
+                                .slice(slice_spec)
+                                .expect("valid hybrid PSTD velocity-y slice"),
+                        );
                     self.fields
                         .uz
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.uz.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid PSTD velocity-z slice")
+                        .assign(
+                            &self
+                                .pstd_solver
+                                .fields
+                                .uz
+                                .slice(slice_spec)
+                                .expect("valid hybrid PSTD velocity-z slice"),
+                        );
                 }
                 DomainType::FDTD => {
-                    let slice = s![
-                        region.start.0..region.end.0,
-                        region.start.1..region.end.1,
-                        region.start.2..region.end.2
+                    let slice_spec = &[
+                        (region.start.0, region.end.0, 1isize),
+                        (region.start.1, region.end.1, 1isize),
+                        (region.start.2, region.end.2, 1isize),
                     ];
                     self.fields
                         .p
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.p.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid FDTD pressure slice")
+                        .assign(
+                            &self
+                                .fdtd_solver
+                                .fields
+                                .p
+                                .slice(slice_spec)
+                                .expect("valid hybrid FDTD pressure slice"),
+                        );
                     self.fields
                         .ux
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.ux.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid FDTD velocity-x slice")
+                        .assign(
+                            &self
+                                .fdtd_solver
+                                .fields
+                                .ux
+                                .slice(slice_spec)
+                                .expect("valid hybrid FDTD velocity-x slice"),
+                        );
                     self.fields
                         .uy
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.uy.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid FDTD velocity-y slice")
+                        .assign(
+                            &self
+                                .fdtd_solver
+                                .fields
+                                .uy
+                                .slice(slice_spec)
+                                .expect("valid hybrid FDTD velocity-y slice"),
+                        );
                     self.fields
                         .uz
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.uz.slice(slice));
+                        .slice_mut(slice_spec)
+                        .expect("valid hybrid FDTD velocity-z slice")
+                        .assign(
+                            &self
+                                .fdtd_solver
+                                .fields
+                                .uz
+                                .slice(slice_spec)
+                                .expect("valid hybrid FDTD velocity-z slice"),
+                        );
                 }
                 DomainType::Hybrid => {
                     self.apply_hybrid_region_blended_internal(&region)?;

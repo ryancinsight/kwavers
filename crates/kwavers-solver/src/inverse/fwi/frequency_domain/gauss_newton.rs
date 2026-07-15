@@ -28,7 +28,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     slowness_to_sound_speed, sound_speed_to_slowness, MultiRowRingArray,
 };
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 /// Gauss-Newton / Newton-CG tuning.
 #[derive(Clone, Copy, Debug)]
@@ -68,7 +68,7 @@ const LM_MIN: f64 = 1.0e-12;
 /// `config.iterations` bounds the outer Newton steps.
 ///
 /// # Errors
-/// Propagates forward/adjoint evaluation errors from [`objective_and_gradient`].
+/// Propagates forward/adjoint evaluation errors from `objective_and_gradient`.
 pub fn invert_gauss_newton(
     observations: &[FrequencyObservation],
     array: &MultiRowRingArray,
@@ -110,9 +110,9 @@ pub fn invert_gauss_newton(
                 continue;
             }
             let mut candidate = slowness.clone();
-            Zip::from(&mut candidate)
-                .and(&step)
-                .for_each(|s, &p| *s += p);
+            for (s, &p) in candidate.iter_mut().zip(step.iter()) {
+                *s += p;
+            }
             clamp_slowness(&mut candidate, config);
             let (candidate_objective, candidate_gradient) =
                 objective_and_gradient(&candidate, observations, array, config)?;
@@ -136,10 +136,10 @@ pub fn invert_gauss_newton(
     Ok(InversionResult {
         sound_speed_m_s: slowness_to_sound_speed(&slowness)?,
         objective_history: history,
-        frequencies_used: observations.len(),
+        frequencies_used: (observations.len()),
         transmissions_used: observations
             .first()
-            .map(|obs| obs.observed_pressure.nrows())
+            .map(|obs| obs.observed_pressure.shape()[0])
             .unwrap_or(0),
         receivers_used: array.element_count(),
         model_family: FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
@@ -165,20 +165,21 @@ fn hessian_vector(
 ) -> KwaversResult<Array3<f64>> {
     let scale = max_abs(direction);
     if scale <= f64::EPSILON {
-        return Ok(Array3::zeros(slowness.dim()));
+        let shape = slowness.shape();
+        return Ok(Array3::zeros([shape[0], shape[1], shape[2]]));
     }
     // Keep the largest slowness perturbation at fd_epsilon · reference_slowness.
     let eps = fd_epsilon * reference_slowness / scale;
     let mut perturbed = slowness.clone();
-    Zip::from(&mut perturbed)
-        .and(direction)
-        .for_each(|m, &v| *m += eps * v);
+    for (m, &v) in perturbed.iter_mut().zip(direction.iter()) {
+        *m += eps * v;
+    }
     clamp_slowness(&mut perturbed, config);
     let (_objective, gradient1) = objective_and_gradient(&perturbed, observations, array, config)?;
     let mut hv = gradient1;
-    Zip::from(&mut hv)
-        .and(gradient0)
-        .for_each(|h, &g0| *h = (*h - g0) / eps);
+    for (h, &g0) in hv.iter_mut().zip(gradient0.iter()) {
+        *h = (*h - g0) / eps;
+    }
     Ok(hv)
 }
 
@@ -200,7 +201,8 @@ fn newton_cg(
     reference_slowness: f64,
     lambda: f64,
 ) -> KwaversResult<Array3<f64>> {
-    let mut p = Array3::<f64>::zeros(slowness.dim());
+    let shape = slowness.shape();
+    let mut p = Array3::<f64>::zeros([shape[0], shape[1], shape[2]]);
     // Residual r = -g - (H+λI)p, with p = 0 → r = -g.
     let mut r = gradient.mapv(|g| -g);
     let mut direction = r.clone();
@@ -222,9 +224,9 @@ fn newton_cg(
             gn.fd_epsilon,
         )?;
         if lambda > 0.0 {
-            Zip::from(&mut hd)
-                .and(&direction)
-                .for_each(|h, &d| *h += lambda * d);
+            for (h, &d) in hd.iter_mut().zip(direction.iter()) {
+                *h += lambda * d;
+            }
         }
         let d_hd = dot(&direction, &hd);
         if d_hd <= 0.0 {
@@ -233,20 +235,20 @@ fn newton_cg(
             return Ok(p);
         }
         let alpha = rs_old / d_hd;
-        Zip::from(&mut p)
-            .and(&direction)
-            .for_each(|pv, &d| *pv += alpha * d);
-        Zip::from(&mut r)
-            .and(&hd)
-            .for_each(|rv, &h| *rv -= alpha * h);
+        for (pv, &d) in p.iter_mut().zip(direction.iter()) {
+            *pv += alpha * d;
+        }
+        for (rv, &h) in r.iter_mut().zip(hd.iter()) {
+            *rv -= alpha * h;
+        }
         let rs_new = dot(&r, &r);
         if rs_new <= 1.0e-12 * rs_initial {
             break;
         }
         let beta = rs_new / rs_old;
-        Zip::from(&mut direction)
-            .and(&r)
-            .for_each(|dv, &rv| *dv = rv + beta * *dv);
+        for (dv, &rv) in direction.iter_mut().zip(r.iter()) {
+            *dv = rv + beta * *dv;
+        }
         rs_old = rs_new;
     }
     Ok(p)
@@ -256,7 +258,7 @@ fn newton_cg(
 mod tests {
     use super::*;
     use crate::inverse::fwi::frequency_domain::{simulate_frequency_observation, Config};
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn ring(n_elem: usize, diameter: f64) -> MultiRowRingArray {
         MultiRowRingArray::new(n_elem, 1, diameter, 0.0).unwrap()
@@ -282,7 +284,7 @@ mod tests {
         };
 
         // Background homogeneous; perturbed has a +60 m/s inclusion at the centre.
-        let background = Array3::from_elem((n, n, 1), 1500.0);
+        let background = Array3::from_elem([n, n, 1], 1500.0);
         let mut perturbed = background.clone();
         for i in centre - 1..=centre + 1 {
             for j in centre - 1..=centre + 1 {
@@ -310,7 +312,7 @@ mod tests {
         let obj_end = *result.objective_history.last().unwrap();
         eprintln!(
             "GN objective {obj_start:.4e} -> {obj_end:.4e} ({} steps); centre Δc {:+.2}",
-            result.objective_history.len(),
+            (result.objective_history.len()),
             result.sound_speed_m_s[[centre, centre, 0]] - 1500.0
         );
         assert!(

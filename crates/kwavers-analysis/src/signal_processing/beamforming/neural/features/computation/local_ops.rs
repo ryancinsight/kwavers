@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute local standard deviation (texture feature).
 ///
@@ -24,8 +24,8 @@ use ndarray::Array3;
 /// Borders (1-pixel margin) are set to zero to avoid edge artifacts.
 #[must_use]
 pub fn compute_local_std(image: &Array3<f32>) -> Array3<f32> {
-    let mut std_map = Array3::zeros(image.dim());
-    let (d0, d1, d2) = image.dim();
+    let mut std_map = Array3::zeros(image.shape());
+    let [d0, d1, d2] = image.shape();
 
     for k in 0..d0 {
         for i in 1..d1 - 1 {
@@ -85,8 +85,8 @@ pub fn compute_local_std(image: &Array3<f32>) -> Array3<f32> {
 /// Gradient magnitude map: |∇I| = √(Gₓ² + Gᵧ²)
 #[must_use]
 pub fn compute_spatial_gradient(image: &Array3<f32>) -> Array3<f32> {
-    let mut grad_map = Array3::zeros(image.dim());
-    let (d0, d1, d2) = image.dim();
+    let mut grad_map = Array3::zeros(image.shape());
+    let [d0, d1, d2] = image.shape();
 
     for k in 0..d0 {
         for i in 1..d1 - 1 {
@@ -146,8 +146,8 @@ pub fn compute_spatial_gradient(image: &Array3<f32>) -> Array3<f32> {
 /// Absolute value of Laplacian: |∇²I|
 #[must_use]
 pub fn compute_laplacian(image: &Array3<f32>) -> Array3<f32> {
-    let mut lap_map = Array3::zeros(image.dim());
-    let (d0, d1, d2) = image.dim();
+    let mut lap_map = Array3::zeros(image.shape());
+    let [d0, d1, d2] = image.shape();
 
     for k in 0..d0 {
         for i in 1..d1 - 1 {
@@ -195,8 +195,8 @@ pub fn compute_laplacian(image: &Array3<f32>) -> Array3<f32> {
 /// patch variance for computational efficiency.
 #[must_use]
 pub fn compute_local_entropy(image: &Array3<f32>) -> Array3<f32> {
-    let mut entropy_map = Array3::zeros(image.dim());
-    let (d0, d1, d2) = image.dim();
+    let mut entropy_map = Array3::zeros(image.shape());
+    let [d0, d1, d2] = image.shape();
 
     const EPSILON: f32 = 1e-10;
 

@@ -49,7 +49,7 @@ fn test_histogram_single_localization() {
         "Single localization should give count=1"
     );
 
-    let total: f64 = recon.image().sum();
+    let total: f64 = recon.image().iter().sum::<f64>();
     assert!((total - 1.0).abs() < 1e-10, "total={total}");
 }
 
@@ -66,7 +66,7 @@ fn test_histogram_multiple_localizations() {
     let mut recon = SuperResReconstructor::new(config).unwrap();
     let track = make_track(&[(100e-6, 200e-6), (101e-6, 200e-6), (102e-6, 200e-6)]);
     recon.accumulate(&[track]);
-    let total: f64 = recon.image().sum();
+    let total: f64 = recon.image().iter().sum::<f64>();
     assert!((total - 3.0).abs() < 1e-10, "total count must be 3");
 }
 
@@ -205,7 +205,7 @@ fn test_out_of_bounds_localizations_ignored() {
     let mut recon = SuperResReconstructor::new(config).unwrap();
     let track = make_track(&[(2e-3, 500e-6)]);
     recon.accumulate(&[track]);
-    let total: f64 = recon.image().sum();
+    let total: f64 = recon.image().iter().sum::<f64>();
     assert!(
         (total - 0.0).abs() < 1e-10,
         "Out-of-bounds localization must be ignored"

@@ -33,11 +33,13 @@ pub mod scheduler;
 // ============================================================================
 
 /// Optimization algorithms and state
-pub use optimizer::OptimizerAlgorithm;
+pub use optimizer::{OptimizerAlgorithm, PINNOptimizer};
 
 /// Learning rate scheduling
 pub use scheduler::{ElasticPinnLrScheduler, LRScheduler};
 
 /// Re-export data structures from data module
-#[cfg(feature = "pinn")]
 pub use data::{ElasticPinnTrainingMetrics, TrainingData};
+
+/// Main training loop entry points
+pub use r#loop::{train_pinn, train_simple, ElasticPinnLoopConfig};

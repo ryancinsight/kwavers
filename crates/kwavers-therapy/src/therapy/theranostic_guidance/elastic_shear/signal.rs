@@ -1,21 +1,21 @@
 //! Velocity source waveform construction for elastic shear propagation.
 
 use kwavers_solver::forward::pstd::extensions::{ElasticPstdSourceMode, ElasticPstdVelocitySource};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 const LINEAR_STRAIN_SOURCE_AMPLITUDE: f64 = 1.0e-5;
 const TONE_BURST_CYCLES: f64 = 2.0;
 
 pub(super) fn velocity_source(
     source_mask_2d: &Array2<bool>,
-    shape_2d: (usize, usize),
+    shape_2d: [usize; 2],
     time_steps: usize,
     dt_s: f64,
     frequency_hz: f64,
     shear_speed_m_s: f64,
 ) -> ElasticPstdVelocitySource {
-    let mut mask = Array3::<bool>::from_elem((shape_2d.0, shape_2d.1, 1), false);
-    for ((ix, iy), active) in source_mask_2d.indexed_iter() {
+    let mut mask = Array3::<bool>::from_elem((shape_2d[0], shape_2d[1], 1), false);
+    for ([ix, iy], active) in source_mask_2d.indexed_iter() {
         mask[[ix, iy, 0]] = *active;
     }
     let duration_s = TONE_BURST_CYCLES / frequency_hz;
@@ -31,10 +31,10 @@ pub(super) fn velocity_source(
         }
     }));
     ElasticPstdVelocitySource {
-        mask,
+        mask: mask.into(),
         ux: None,
         uy: None,
-        uz: Some(signal),
+        uz: Some(signal.into()),
         mode: ElasticPstdSourceMode::Additive,
     }
 }

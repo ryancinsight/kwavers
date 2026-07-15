@@ -12,7 +12,7 @@
 //! - Wavenumber computations must respect Nyquist limits
 
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 mod cartesian;
 mod cylindrical;
@@ -92,7 +92,7 @@ pub trait GridTopology: Send + Sync {
     ///
     fn create_field(&self) -> Array3<f64> {
         let [n0, n1, n2] = self.dimensions();
-        Array3::zeros((n0, n1, n2))
+        Array3::zeros([n0, n1, n2])
     }
 
     /// Validate that indices are within grid bounds

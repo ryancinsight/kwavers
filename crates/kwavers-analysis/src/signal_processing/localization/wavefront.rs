@@ -4,7 +4,7 @@
 //! and distinguish between plane waves (far-field) and spherical waves (near-field).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Wavefront type detection
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -74,7 +74,7 @@ impl WavefrontAnalyzer {
         &self,
         pressure_field: &Array3<f64>,
     ) -> KwaversResult<WavefrontAnalysis> {
-        let (nx, ny, nz) = pressure_field.dim();
+        let [nx, ny, nz] = pressure_field.shape();
 
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(

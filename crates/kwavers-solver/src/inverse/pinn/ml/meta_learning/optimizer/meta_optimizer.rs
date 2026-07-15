@@ -14,9 +14,11 @@
 //! 2. Kingma, D. P., & Ba, J. (2014). Adam. *arXiv:1412.6980*
 //! 3. Antoniou, A., Edwards, H., & Storkey, A. (2018). How to train your MAML. *ICLR 2019*
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
-
 /// Meta-optimizer for outer-loop parameter updates.
+///
+/// Operates on flat `Vec<f32>` parameter/gradient snapshots (one entry per
+/// model parameter, in `parameters()` order) — the same native representation
+/// used throughout `meta_learning` for gradient bookkeeping.
 ///
 /// Supports SGD, Momentum, Adam, and RMSProp update modes.
 ///
@@ -29,7 +31,7 @@ use burn::tensor::{backend::AutodiffBackend, Tensor};
 /// θ ← θ - α*m̂/(√v̂ + ε)
 /// ```
 #[derive(Debug)]
-pub struct MetaOptimizer<B: AutodiffBackend> {
+pub struct MetaOptimizer {
     /// Outer-loop learning rate.
     lr: f64,
 
@@ -52,10 +54,10 @@ pub struct MetaOptimizer<B: AutodiffBackend> {
     pub(crate) _iteration_count: usize,
 
     /// First moment estimates (for Adam/momentum).
-    pub(crate) _m: Vec<Option<Tensor<B, 2>>>,
+    pub(crate) _m: Vec<Option<Vec<f32>>>,
 
     /// Second moment estimates (for Adam/RMSProp).
-    pub(crate) _v: Vec<Option<Tensor<B, 2>>>,
+    pub(crate) _v: Vec<Option<Vec<f32>>>,
 }
 
 /// Optimization algorithm selection.
@@ -67,7 +69,7 @@ pub enum MetaOptimizerMode {
     RmsProp,
 }
 
-impl<B: AutodiffBackend> MetaOptimizer<B> {
+impl MetaOptimizer {
     /// Create a new meta-optimizer with SGD mode.
     ///
     /// # Panics
@@ -164,14 +166,14 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
     /// ```text
     /// θ ← θ - α∇L
     /// ```
-    pub fn step(&mut self, params: &mut [Tensor<B, 2>], gradients: &[Option<Tensor<B, 2>>]) {
+    pub fn step(&mut self, params: &mut [Vec<f32>], gradients: &[Option<Vec<f32>>]) {
         self._iteration_count += 1;
 
-        if self._m.len() != params.len() {
-            self._m = vec![None; params.len()];
+        if (self._m.len()) != (params.len()) {
+            self._m = vec![None; (params.len())];
         }
-        if self._v.len() != params.len() {
-            self._v = vec![None; params.len()];
+        if (self._v.len()) != (params.len()) {
+            self._v = vec![None; (params.len())];
         }
 
         let beta1 = self._beta1 as f32;
@@ -179,70 +181,84 @@ impl<B: AutodiffBackend> MetaOptimizer<B> {
         let eps = self._epsilon as f32;
         let beta1_pow = (1.0 - self._beta1.powi(self._iteration_count as i32)) as f32;
         let beta2_pow = (1.0 - self._beta2.powi(self._iteration_count as i32)) as f32;
+        let lr = self.lr as f32;
 
         for (idx, (param, grad)) in params.iter_mut().zip(gradients.iter()).enumerate() {
-            if let Some(g) = grad {
-                match self.mode {
-                    MetaOptimizerMode::Sgd => {
-                        *param = param.clone().sub(g.clone().mul_scalar(self.lr as f32));
+            let Some(g) = grad else { continue };
+
+            match self.mode {
+                MetaOptimizerMode::Sgd => {
+                    for (p, &gi) in param.iter_mut().zip(g.iter()) {
+                        *p -= lr * gi;
                     }
-                    MetaOptimizerMode::Momentum => {
-                        let momentum = self._momentum.unwrap_or(0.0) as f32;
-                        let prev = self._m[idx].take();
-                        let m = if let Some(m_prev) = prev {
-                            m_prev.mul_scalar(momentum).add(g.clone())
-                        } else {
-                            g.clone()
-                        };
-                        *param = param.clone().sub(m.clone().mul_scalar(self.lr as f32));
-                        self._m[idx] = Some(m);
+                }
+                MetaOptimizerMode::Momentum => {
+                    let momentum = self._momentum.unwrap_or(0.0) as f32;
+                    let prev = self._m[idx].take();
+                    let m: Vec<f32> = if let Some(m_prev) = prev {
+                        m_prev
+                            .iter()
+                            .zip(g.iter())
+                            .map(|(&mp, &gi)| momentum * mp + gi)
+                            .collect()
+                    } else {
+                        g.clone()
+                    };
+                    for (p, &mi) in param.iter_mut().zip(m.iter()) {
+                        *p -= lr * mi;
                     }
-                    MetaOptimizerMode::Adam => {
-                        let prev_m = self._m[idx].take();
-                        let prev_v = self._v[idx].take();
+                    self._m[idx] = Some(m);
+                }
+                MetaOptimizerMode::Adam => {
+                    let prev_m = self._m[idx].take();
+                    let prev_v = self._v[idx].take();
 
-                        let m = if let Some(m_prev) = prev_m {
-                            m_prev
-                                .mul_scalar(beta1)
-                                .add(g.clone().mul_scalar(1.0 - beta1))
-                        } else {
-                            g.clone().mul_scalar(1.0 - beta1)
-                        };
+                    let m: Vec<f32> = if let Some(m_prev) = prev_m {
+                        m_prev
+                            .iter()
+                            .zip(g.iter())
+                            .map(|(&mp, &gi)| beta1 * mp + (1.0 - beta1) * gi)
+                            .collect()
+                    } else {
+                        g.iter().map(|&gi| (1.0 - beta1) * gi).collect()
+                    };
 
-                        let g2 = g.clone().powf_scalar(2.0);
-                        let v = if let Some(v_prev) = prev_v {
-                            v_prev.mul_scalar(beta2).add(g2.mul_scalar(1.0 - beta2))
-                        } else {
-                            g2.mul_scalar(1.0 - beta2)
-                        };
+                    let v: Vec<f32> = if let Some(v_prev) = prev_v {
+                        v_prev
+                            .iter()
+                            .zip(g.iter())
+                            .map(|(&vp, &gi)| beta2 * vp + (1.0 - beta2) * gi * gi)
+                            .collect()
+                    } else {
+                        g.iter().map(|&gi| (1.0 - beta2) * gi * gi).collect()
+                    };
 
-                        let m_hat = m.clone().div_scalar(beta1_pow);
-                        let v_hat = v.clone().div_scalar(beta2_pow);
-                        let denom = v_hat.sqrt().add_scalar(eps);
-
-                        *param = param
-                            .clone()
-                            .sub((m_hat / denom).mul_scalar(self.lr as f32));
-
-                        self._m[idx] = Some(m);
-                        self._v[idx] = Some(v);
+                    for ((p, &mi), &vi) in param.iter_mut().zip(m.iter()).zip(v.iter()) {
+                        let m_hat = mi / beta1_pow;
+                        let v_hat = vi / beta2_pow;
+                        *p -= lr * m_hat / (v_hat.sqrt() + eps);
                     }
-                    MetaOptimizerMode::RmsProp => {
-                        let prev_v = self._v[idx].take();
-                        let g2 = g.clone().powf_scalar(2.0);
-                        let v = if let Some(v_prev) = prev_v {
-                            v_prev.mul_scalar(beta2).add(g2.mul_scalar(1.0 - beta2))
-                        } else {
-                            g2.mul_scalar(1.0 - beta2)
-                        };
 
-                        let denom = v.clone().sqrt().add_scalar(eps);
-                        *param = param
-                            .clone()
-                            .sub((g.clone() / denom).mul_scalar(self.lr as f32));
+                    self._m[idx] = Some(m);
+                    self._v[idx] = Some(v);
+                }
+                MetaOptimizerMode::RmsProp => {
+                    let prev_v = self._v[idx].take();
+                    let v: Vec<f32> = if let Some(v_prev) = prev_v {
+                        v_prev
+                            .iter()
+                            .zip(g.iter())
+                            .map(|(&vp, &gi)| beta2 * vp + (1.0 - beta2) * gi * gi)
+                            .collect()
+                    } else {
+                        g.iter().map(|&gi| (1.0 - beta2) * gi * gi).collect()
+                    };
 
-                        self._v[idx] = Some(v);
+                    for ((p, &gi), &vi) in param.iter_mut().zip(g.iter()).zip(v.iter()) {
+                        *p -= lr * gi / (vi.sqrt() + eps);
                     }
+
+                    self._v[idx] = Some(v);
                 }
             }
         }

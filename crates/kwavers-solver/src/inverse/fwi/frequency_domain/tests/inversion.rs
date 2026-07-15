@@ -4,19 +4,19 @@ use super::*;
 fn nonlinear_inversion_reduces_objective_and_raises_high_speed_target() {
     let array = test_array();
     let config = test_config();
-    let mut truth = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 1]] = 1535.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 240_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(
         240_000.0,
-        observed.slice(ndarray::s![0..4, ..]).to_owned(),
+        first_rows(&observed, 4),
     )];
-    let initial = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
+    let initial = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
 
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
-    assert!(result.objective_history.len() >= 2);
+    assert!((result.objective_history.len()) >= 2);
     assert!(
         result.objective_history.last().copied().unwrap() < result.objective_history[0],
         "objective history={:?}",
@@ -52,12 +52,12 @@ fn source_scaled_gradient_is_descent_direction() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = 1515.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
     // Evaluate gradient at a model different from truth.
-    let mut current_speed = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut current_speed = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     current_speed[[0, 0, 0]] = 1490.0;
     let current_slowness = sound_speed_to_slowness(&current_speed).expect("slowness");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
@@ -78,7 +78,7 @@ fn source_scaled_gradient_is_descent_direction() {
         .map(|(&s, &g)| s - step_size * g)
         .collect::<Vec<_>>();
     let candidate_slowness =
-        Array3::from_shape_vec(current_slowness.dim(), candidate_slowness).expect("shape");
+        Array3::from_shape_vec(current_slowness.shape(), candidate_slowness).expect("shape");
     let (candidate_objective, _) =
         objective_and_gradient(&candidate_slowness, &observations, &array, &config)
             .expect("candidate objective");
@@ -114,12 +114,12 @@ fn inversion_with_source_scaling_converges_for_consistent_model() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = 1520.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
-    let initial = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let initial = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
     // Objective must decrease by at least 80 %.
@@ -160,16 +160,16 @@ fn pstd_finite_window_born_inversion_reduces_objective() {
         }),
         ..Config::default()
     };
-    let mut truth = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let mut truth = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     truth[[1, 1, 0]] = 1520.0;
     let observed =
         simulate_frequency_observation(&truth, &array, 200_000.0, &config).expect("observed");
     let observations = [FrequencyObservation::new(200_000.0, observed)];
-    let initial = Array3::from_elem((3, 3, 1), SOUND_SPEED_WATER_SIM);
+    let initial = Array3::from_elem([3, 3, 1], SOUND_SPEED_WATER_SIM);
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
     assert!(
-        result.objective_history.len() >= 2,
+        (result.objective_history.len()) >= 2,
         "must record at least two objectives"
     );
     assert!(
@@ -225,7 +225,7 @@ fn ali2025_table1_parity_gate() {
 
     // Synthetic breast-like phantom: 1500 m/s water background with
     // four interior anomalies in the clinical range 1510–1540 m/s.
-    let mut truth = Array3::from_elem((5, 5, 3), 1500.0_f64);
+    let mut truth = Array3::from_elem([5, 5, 3], 1500.0_f64);
     truth[[1, 1, 1]] = 1530.0; // glandular tissue
     truth[[3, 3, 1]] = 1520.0; // fibroglandular
     truth[[1, 3, 1]] = 1510.0; // fatty tissue
@@ -242,12 +242,12 @@ fn ali2025_table1_parity_gate() {
         FrequencyObservation::new(freq_hi, obs_hi),
     ];
 
-    let initial = Array3::from_elem((5, 5, 3), 1500.0_f64);
+    let initial = Array3::from_elem([5, 5, 3], 1500.0_f64);
     let result = invert(&observations, &array, &initial, &config).expect("inversion");
 
     let truth_flat: Vec<f64> = truth.iter().copied().collect();
     let recon_flat: Vec<f64> = result.sound_speed_m_s.iter().copied().collect();
-    let n = truth_flat.len() as f64;
+    let n = (truth_flat.len()) as f64;
     let rmse = (truth_flat
         .iter()
         .zip(recon_flat.iter())

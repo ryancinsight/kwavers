@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ndarray::{Array3, Array4, Axis};
+use leto::{Array3, Array4};
 
 use crate::plugin::{Plugin, PluginContext, PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
@@ -217,7 +217,14 @@ impl Plugin for BubbleDynamicsPlugin {
         }
 
         // Extract current pressure as an owned Array3.
-        let current_pressure = fields.index_axis(Axis(0), pressure_idx).to_owned();
+        let pressure_view = fields
+            .index_axis::<3>(0, pressure_idx)
+            .expect("invariant: pressure field axis index in range");
+        let current_pressure = Array3::from_shape_vec(
+            pressure_view.shape(),
+            pressure_view.iter().copied().collect(),
+        )
+        .expect("invariant: axis view shape yields valid owned array");
 
         match self.engine.as_mut() {
             None => {} // initialize() not yet called; skip silently.
@@ -227,7 +234,8 @@ impl Plugin for BubbleDynamicsPlugin {
                 prev_pressure,
             }) => {
                 // Backward-difference dp/dt estimate.
-                let dp_dt = (&current_pressure - &*prev_pressure) / dt;
+                let dp_diff = &current_pressure - &*prev_pressure;
+                let dp_dt = &dp_diff / dt;
 
                 field.update(&current_pressure, &dp_dt, dt, t);
 

@@ -3,8 +3,8 @@
 //! Provides distributed training coordination, gradient aggregation,
 //! checkpoint management, and fault tolerance for multi-GPU PINN training.
 
-use crate::inverse::pinn::ml::BurnTrainingMetrics2D;
-use burn::tensor::backend::AutodiffBackend;
+use crate::inverse::pinn::ml::TrainingMetrics2D;
+use serde::{Deserialize, Serialize};
 
 mod checkpoint;
 #[cfg(test)]
@@ -20,12 +20,12 @@ pub enum GradientAggregation {
 }
 
 /// Checkpoint data for training recovery
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TrainingCheckpoint {
     pub epoch: usize,
     pub parameters: Vec<f32>,
     pub optimizer_state: Vec<f32>,
-    pub metrics: BurnTrainingMetrics2D,
+    pub metrics: TrainingMetrics2D,
     pub timestamp: std::time::SystemTime,
 }
 
@@ -37,20 +37,34 @@ pub struct CheckpointManager {
 }
 
 /// Training coordinator for multi-GPU PINN training
-#[derive(Debug)]
-pub struct TrainingCoordinator<B: AutodiffBackend> {
-    model_replicas: Vec<crate::inverse::pinn::ml::BurnPINN2DWave<B>>,
+pub struct TrainingCoordinator<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    model_replicas: Vec<crate::inverse::pinn::ml::PinnWave2D<B>>,
     checkpoint_manager: CheckpointManager,
     training_state: TrainingState,
     performance_stats: Vec<PerformanceStats>,
+}
+
+// Manual `Debug` impl: `PinnWave2D<B>` requires the `CpuAddressableStorage`
+// bound to implement `Debug`, which this struct's own bound does not carry.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for TrainingCoordinator<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TrainingCoordinator")
+            .field("num_replicas", &(self.model_replicas.len()))
+            .field("checkpoint_manager", &self.checkpoint_manager)
+            .field("training_state", &self.training_state)
+            .field("performance_stats", &self.performance_stats)
+            .finish()
+    }
 }
 
 /// Training state information
 #[derive(Debug, Clone)]
 pub struct TrainingState {
     pub current_epoch: usize,
-    pub global_metrics: BurnTrainingMetrics2D,
-    pub gpu_metrics: Vec<BurnTrainingMetrics2D>,
+    pub global_metrics: TrainingMetrics2D,
+    pub gpu_metrics: Vec<TrainingMetrics2D>,
     pub last_checkpoint: usize,
     pub start_time: std::time::Instant,
 }
@@ -66,11 +80,22 @@ pub struct PerformanceStats {
 }
 
 /// Distributed PINN trainer
-#[derive(Debug)]
-pub struct DistributedPinnTrainer<B: AutodiffBackend> {
+pub struct DistributedPinnTrainer<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     coordinator: TrainingCoordinator<B>,
     multi_gpu_manager: Option<crate::inverse::pinn::ml::MultiGpuManager>,
     config: DistributedTrainingConfig,
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for DistributedPinnTrainer<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DistributedPinnTrainer")
+            .field("coordinator", &self.coordinator)
+            .field("multi_gpu_manager", &self.multi_gpu_manager)
+            .field("config", &self.config)
+            .finish()
+    }
 }
 
 /// Configuration for distributed training

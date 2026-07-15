@@ -26,24 +26,24 @@ kwavers-source = { path = "../kwavers-source" }
 kwavers-boundary = { path = "../kwavers-boundary" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics" }
-kwavers-solver = { path = "../kwavers-solver" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
 kwavers-analysis = { path = "../kwavers-analysis" }
 kwavers-simulation = { path = "../kwavers-simulation" }
 kwavers-diagnostics = { path = "../kwavers-diagnostics" }
 kwavers-therapy = { path = "../kwavers-therapy" }
 kwavers-gpu = { path = "../kwavers-gpu" }
-burn = { version = "0.19", features = ["ndarray"] }
+coeus-core = { workspace = true }
+leto = { workspace = true, features = ["ndarray-compat"] }
 ritk-io = { workspace = true }
+ritk-image = { workspace = true }
+eunomia = { workspace = true, features = ["numpy"] }
 
 # PyO3 for Python bindings
 pyo3 = { version = "0.27", features = ["extension-module", "abi3-py38", "multiple-pymethods"] }
 numpy = "0.27"  # ndarray ↔ numpy conversions
 
-# Essential numerical computing (re-export from kwavers)
-# Note: Must match burn's ndarray requirement (0.16.1) and numpy 0.27 supports this
-ndarray = { version = "=0.16.1", features = ["rayon", "serde"] }
-num-complex = "0.4"
+# Keep boundary ndarray aligned with the vendored numpy patch in workspace root.
 
 # Error handling
 thiserror = "1.0"
@@ -62,7 +62,6 @@ default = ["minimal"]
 minimal = []
 gpu = [
     "kwavers-gpu/gpu",
-    "kwavers-core/gpu",
     "kwavers-math/gpu",
     "kwavers-solver/gpu",
     "kwavers-analysis/gpu",

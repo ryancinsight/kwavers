@@ -44,7 +44,7 @@ impl ElasticPointForce {
 }
 
 impl ElasticWaveSolver {
-    /// CFL-stable time step for the current medium \[s].
+    /// CFL-stable time step for the current medium \\[s\].
     ///
     /// Constructs the same [`TimeIntegrator`] used by the propagation methods and
     /// returns its stable step for the configured `cfl_factor`.
@@ -55,7 +55,7 @@ impl ElasticWaveSolver {
     }
 
     /// Propagate `n_steps` velocity-Verlet steps from rest, injecting the given
-    /// per-point body forces, and return the full per-step history. `history[n]`
+    /// per-point body forces, and return the full per-step history. `history\[n\]`
     /// is the field state after step `n` (so the returned vector has length
     /// `n_steps`).
     ///

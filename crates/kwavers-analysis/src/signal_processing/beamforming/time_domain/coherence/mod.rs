@@ -41,10 +41,10 @@
 
 use super::das::{align_channels, sum_aligned};
 use super::delay_reference::DelayReference;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::analytic_signal_1d;
-use ndarray::{Array1, Array2, Array3};
-use num_complex::Complex64;
+use kwavers_signal::analytic::hilbert_transform;
+use leto::{Array1, Array2, Array3};
 use std::f64::consts::PI;
 
 /// Amplitude coherence factor from pre-accumulated aperture sums
@@ -122,10 +122,16 @@ pub fn phase_coherence_from_phases(phases: &[f64], sensitivity: f64) -> f64 {
 /// aperture row, shape `(n_elements, n_samples)` — the input to the phase
 /// coherence factor.
 fn instantaneous_phase_matrix(aligned: &Array2<f64>) -> Array2<f64> {
-    let (n_elements, n_samples) = aligned.dim();
+    let [n_elements, n_samples] = aligned.shape();
     let mut phase = Array2::<f64>::zeros((n_elements, n_samples));
-    for (i, row) in aligned.outer_iter().enumerate() {
-        let analytic = analytic_signal_1d(&row.to_owned());
+    for i in 0..n_elements {
+        let row = aligned
+            .index_axis::<1>(0, i)
+            .expect("invariant: i < n_elements");
+        let analytic = hilbert_transform(
+            &leto::Array1::from_vec([n_samples], row.iter().copied().collect())
+                .expect("coherence row length must match its Leto shape"),
+        );
         for (j, z) in analytic.iter().enumerate() {
             phase[[i, j]] = z.arg();
         }
@@ -150,7 +156,7 @@ pub fn phase_coherence_from_iq_aperture(
     sensitivity: f64,
 ) -> KwaversResult<Array1<f64>> {
     CoherenceFactor::Phase { sensitivity }.validate()?;
-    let (n_elements, n_samples) = iq.dim();
+    let [n_elements, n_samples] = iq.shape();
     if n_elements == 0 {
         return Err(KwaversError::InvalidInput(
             "phase_coherence_from_iq_aperture requires n_elements > 0".to_owned(),
@@ -326,7 +332,7 @@ impl CoherenceFactor {
         }
     }
 
-    /// Per-output-sample coherence weights in `[0, 1]`, length `aligned.ncols()`.
+    /// Per-output-sample coherence weights in `[0, 1]`, length `aligned.shape()[1]`.
     ///
     /// `aligned` is the delay-aligned, **unapodized** aperture matrix from
     /// [`align_channels`], shape `(n_elements, n_samples)`.
@@ -336,7 +342,7 @@ impl CoherenceFactor {
     ///   empty aperture (`n_elements == 0`).
     pub fn weights(&self, aligned: &Array2<f64>) -> KwaversResult<Array1<f64>> {
         self.validate()?;
-        let (n_elements, n_samples) = aligned.dim();
+        let [n_elements, n_samples] = aligned.shape();
         if n_elements == 0 {
             return Err(KwaversError::InvalidInput(
                 "CoherenceFactor::weights requires n_elements > 0".to_owned(),

@@ -3,7 +3,8 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 
-use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray};
+use super::{ArrayTransform, DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
+use crate::transducers::physics::PlanarApertureGeometry;
 
 impl KWaveArray {
     /// Create a new empty `KWaveArray`.
@@ -85,13 +86,16 @@ impl KWaveArray {
         radius: f64,
         diameter: f64,
     ) -> &mut Self {
-        self.elements.push(ElementShape::Arc {
-            position,
-            radius,
-            diameter,
-            start_angle: -45.0,
-            end_angle: 45.0,
-        });
+        self.elements.push(
+            ElementShape::Arc {
+                position,
+                radius,
+                diameter,
+                start_angle: -45.0,
+                end_angle: 45.0,
+            }
+            .into(),
+        );
         self
     }
 
@@ -111,13 +115,16 @@ impl KWaveArray {
         start_angle: f64,
         end_angle: f64,
     ) -> &mut Self {
-        self.elements.push(ElementShape::Arc {
-            position,
-            radius,
-            diameter,
-            start_angle,
-            end_angle,
-        });
+        self.elements.push(
+            ElementShape::Arc {
+                position,
+                radius,
+                diameter,
+                start_angle,
+                end_angle,
+            }
+            .into(),
+        );
         self
     }
 
@@ -135,13 +142,16 @@ impl KWaveArray {
         height: f64,
         length: f64,
     ) -> &mut Self {
-        self.elements.push(ElementShape::Rect {
-            position,
-            width,
-            height,
-            length,
-            euler_xyz_deg: (0.0, 0.0, 0.0),
-        });
+        self.elements.push(
+            ElementShape::Rect {
+                position,
+                width,
+                height,
+                length,
+                euler_xyz_deg: (0.0, 0.0, 0.0),
+            }
+            .into(),
+        );
         self
     }
 
@@ -157,13 +167,16 @@ impl KWaveArray {
         length: f64,
         euler_xyz_deg: (f64, f64, f64),
     ) -> &mut Self {
-        self.elements.push(ElementShape::Rect {
-            position,
-            width,
-            height,
-            length,
-            euler_xyz_deg,
-        });
+        self.elements.push(
+            ElementShape::Rect {
+                position,
+                width,
+                height,
+                length,
+                euler_xyz_deg,
+            }
+            .into(),
+        );
         self
     }
 
@@ -179,11 +192,14 @@ impl KWaveArray {
         diameter: f64,
         focus_position: Option<(f64, f64, f64)>,
     ) -> &mut Self {
-        self.elements.push(ElementShape::Disc {
-            position,
-            diameter,
-            focus_position,
-        });
+        self.elements.push(
+            ElementShape::Disc {
+                position,
+                diameter,
+                focus_position,
+            }
+            .into(),
+        );
         self
     }
 
@@ -201,12 +217,21 @@ impl KWaveArray {
         focus_position: Option<(f64, f64, f64)>,
         profile: DiscSourceProfile,
     ) -> &mut Self {
-        self.elements.push(ElementShape::ProfiledDisc {
-            position,
-            diameter,
-            focus_position,
-            profile,
-        });
+        self.elements.push(
+            ElementShape::ProfiledDisc {
+                position,
+                diameter,
+                focus_position,
+                profile,
+            }
+            .into(),
+        );
+        self
+    }
+
+    /// Add validated oriented planar disk or annular-sector geometry.
+    pub fn add_planar_aperture_element(&mut self, geometry: PlanarApertureGeometry) -> &mut Self {
+        self.elements.push(KWaveElement::PlanarAperture(geometry));
         self
     }
 
@@ -222,11 +247,14 @@ impl KWaveArray {
         radius: f64,
         diameter: f64,
     ) -> &mut Self {
-        self.elements.push(ElementShape::Bowl {
-            position,
-            radius,
-            diameter,
-        });
+        self.elements.push(
+            ElementShape::Bowl {
+                position,
+                radius,
+                diameter,
+            }
+            .into(),
+        );
         self
     }
 
@@ -249,12 +277,15 @@ impl KWaveArray {
             "annulus requires 0 ≤ inner_diameter < outer_diameter \
              (got inner={inner_diameter}, outer={outer_diameter})",
         );
-        self.elements.push(ElementShape::Annulus {
-            position,
-            radius,
-            inner_diameter,
-            outer_diameter,
-        });
+        self.elements.push(
+            ElementShape::Annulus {
+                position,
+                radius,
+                inner_diameter,
+                outer_diameter,
+            }
+            .into(),
+        );
         self
     }
 

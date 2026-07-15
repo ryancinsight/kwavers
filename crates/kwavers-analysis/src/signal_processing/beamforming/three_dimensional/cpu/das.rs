@@ -35,8 +35,8 @@
 //! - Jeong M.K., Kwon S. (2013): "A comparison study of beamforming techniques
 //!   for 3D ultrasound." *J. Med. Ultrason.* 40, 395–408.
 
-use ndarray::{Array3, Array4};
-use rayon::prelude::*;
+use leto::{Array3, Array4};
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 use crate::signal_processing::beamforming::three_dimensional::apodization::create_apodization_weights;
 use crate::signal_processing::beamforming::three_dimensional::config::{
@@ -68,7 +68,7 @@ pub fn delay_and_sum_cpu(
     config: &BeamformingConfig3D,
     apodization: &Beamforming3dApodizationWindow,
 ) -> KwaversResult<Array3<f32>> {
-    let (frames, channels, samples, _) = rf_data.dim();
+    let [frames, channels, samples, _] = rf_data.shape();
     let (vol_x, vol_y, vol_z) = config.volume_dims;
     let (nel_x, nel_y, nel_z) = config.num_elements_3d;
     let expected_channels = nel_x * nel_y * nel_z;
@@ -116,7 +116,7 @@ pub fn delay_and_sum_cpu(
 
     // Apodization weights — flat, indexed by channel (same order as elem_pos).
     let apod_3d = create_apodization_weights((nel_x, nel_y, nel_z), apodization);
-    let apod_flat: Vec<f32> = apod_3d.into_raw_vec_and_offset().0;
+    let apod_flat: Vec<f32> = apod_3d.iter().copied().collect();
 
     // Safe RF accessor: returns the linearly interpolated value at fractional
     // sample index `tau_s` for channel `ch` in `frame`.  Returns 0.0 if the
@@ -136,11 +136,9 @@ pub fn delay_and_sum_cpu(
         alpha.mul_add(s1 - s0, s0)
     };
 
-    // Parallelise across voxels with Rayon.
+    // Schedule independent voxel evaluations through the Atlas provider seam.
     let n_voxels = vol_x * vol_y * vol_z;
-    let mut flat: Vec<f32> = vec![0.0_f32; n_voxels];
-
-    flat.par_iter_mut().enumerate().for_each(|(v_idx, out)| {
+    let flat: Vec<f32> = map_collect_index_with::<Adaptive, _, _>(n_voxels, |v_idx| {
         let vx = v_idx / (vol_y * vol_z);
         let vy = (v_idx / vol_z) % vol_y;
         let vz = v_idx % vol_z;
@@ -169,7 +167,7 @@ pub fn delay_and_sum_cpu(
         }
 
         // Coherent compounding average.
-        *out = coherent_sum / frames.max(1) as f32;
+        coherent_sum / frames.max(1) as f32
     });
 
     Array3::from_shape_vec((vol_x, vol_y, vol_z), flat)
@@ -186,7 +184,7 @@ mod tests {
     };
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array4;
+    use leto::Array4;
 
     fn make_config(
         nel: (usize, usize, usize),

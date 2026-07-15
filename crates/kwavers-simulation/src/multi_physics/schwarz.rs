@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::{CoupledPhysicsSolver, MultiPhysicsFieldCoupler, SimulationPhysicsDomain};
@@ -156,7 +156,7 @@ impl SchwarzCoupling {
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use ndarray::ArrayView3;
+    use leto::ArrayView3;
 
     // Mock physics solver for testing
     struct MockSolver {
@@ -212,7 +212,9 @@ mod tests {
             _source_domain: SimulationPhysicsDomain,
             source: ArrayView3<f64>,
         ) -> KwaversResult<()> {
-            self.field += &source;
+            for (f, s) in self.field.iter_mut().zip(source.iter()) {
+                *f += *s;
+            }
             Ok(())
         }
     }

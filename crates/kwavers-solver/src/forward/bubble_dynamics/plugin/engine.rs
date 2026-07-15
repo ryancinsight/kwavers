@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_physics::acoustics::bubble_dynamics::{
     bubble_field::BubbleField, bubble_state::BubbleState, gilmore::GilmoreSolver,
@@ -9,7 +9,7 @@ use kwavers_physics::acoustics::bubble_dynamics::{
 /// Per-model runtime engine, created lazily in [`Plugin::initialize`].
 ///
 /// `KmOrRp` covers Keller-Miksis, Keller-Herring, and Rayleigh-Plesset because
-/// the existing [`BubbleField`] code path handles all three:
+/// the existing `BubbleField` code path handles all three:
 /// `BubbleParameters::use_compressibility = false` the KM O(Mach) correction
 /// factors collapse to unity, recovering the incompressible RP equation.
 ///

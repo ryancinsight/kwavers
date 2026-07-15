@@ -1,7 +1,7 @@
 use kwavers_core::error::KwaversResult;
-use ndarray::Array4;
+use leto::Array4 as LetoArray4;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use rand::Rng;
-use rayon::prelude::*;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
@@ -77,40 +77,48 @@ impl StreamingDataSource {
         Ok(())
     }
 
-    fn generate_rf_frame(config: &StreamingConfig) -> Array4<f32> {
+    fn generate_rf_frame(config: &StreamingConfig) -> LetoArray4<f32> {
         let (n_tx, n_rx, n_samples, n_frames) = config.frame_size;
-        let mut rf_data = Array4::zeros((n_tx, n_rx, n_samples, n_frames));
+        let mut rf_data = LetoArray4::zeros([n_tx, n_rx, n_samples, n_frames]);
+        let rx_frame_len = n_samples * n_frames;
 
-        use ndarray::Axis;
-
-        rf_data
-            .axis_iter_mut(Axis(0))
-            .into_par_iter()
-            .enumerate()
-            .for_each(|(tx, mut tx_slice)| {
-                tx_slice
-                    .axis_iter_mut(Axis(0))
-                    .into_par_iter()
-                    .enumerate()
-                    .for_each(|(rx, mut rx_slice)| {
-                        let mut rng = rand::thread_rng();
-                        let delay = (tx + rx) as f64 * 1e-7;
-
-                        for sample in 0..n_samples {
-                            let time = sample as f64 * 1e-8;
-
-                            let signal = config.signal_amplitude
-                                * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
-                                * ((time - delay) * 3e7).cos();
-
-                            for frame in 0..n_frames {
-                                let noise = config.noise_level * rng.gen::<f64>();
-                                rx_slice[[sample, frame]] = (signal + noise) as f32;
-                            }
-                        }
-                    });
-            });
+        if let Some(values) = rf_data.as_slice_memory_order_mut() {
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                values,
+                rx_frame_len,
+                |tx_rx, rx_slice| {
+                    let tx = tx_rx / n_rx;
+                    let rx = tx_rx % n_rx;
+                    fill_rf_rx_slice(config, tx, rx, n_samples, n_frames, rx_slice);
+                },
+            );
+        }
 
         rf_data
+    }
+}
+
+fn fill_rf_rx_slice(
+    config: &StreamingConfig,
+    tx: usize,
+    rx: usize,
+    n_samples: usize,
+    n_frames: usize,
+    rx_slice: &mut [f32],
+) {
+    let mut rng = rand::thread_rng();
+    let delay = (tx + rx) as f64 * 1e-7;
+
+    for sample in 0..n_samples {
+        let time = sample as f64 * 1e-8;
+
+        let signal = config.signal_amplitude
+            * (-0.5 * ((time - delay) * 5e7).powi(2)).exp()
+            * ((time - delay) * 3e7).cos();
+
+        for frame in 0..n_frames {
+            let noise = config.noise_level * rng.gen::<f64>();
+            rx_slice[sample * n_frames + frame] = (signal + noise) as f32;
+        }
     }
 }

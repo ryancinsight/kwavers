@@ -3,7 +3,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::optimization::LbfgsMemory;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::ElasticFwi;
 
@@ -89,9 +89,11 @@ impl ElasticFwi {
     /// # Errors
     /// Propagates solver errors.
     pub fn run_lbfgs(&mut self, memory: usize) -> KwaversResult<Array3<f64>> {
-        let dim = self.solver.mu().dim();
+        let dim = self.solver.mu().shape();
         let mut model = self.solver.mu().clone();
-        model.mapv_inplace(|m| m.clamp(self.config.mu_min, self.config.mu_max));
+        for m in model.iter_mut() {
+            *m = m.clamp(self.config.mu_min, self.config.mu_max);
+        }
 
         let mut mem = LbfgsMemory::new(memory);
         let (mut objective, grad0) = self.misfit_and_true_gradient(&model)?;
@@ -174,9 +176,9 @@ impl ElasticFwi {
     /// `clamp(μ − α·grad, μ_min, μ_max)`.
     fn stepped_model(&self, mu: &Array3<f64>, grad: &Array3<f64>, alpha: f64) -> Array3<f64> {
         let mut out = mu.clone();
-        out.zip_mut_with(grad, |m, &g| {
+        for (m, g) in out.iter_mut().zip(grad.iter()) {
             *m = (*m - alpha * g).clamp(self.config.mu_min, self.config.mu_max);
-        });
+        }
         out
     }
 
@@ -204,10 +206,9 @@ impl ElasticFwi {
     fn add_regularization_gradient(&self, grad: &mut Array3<f64>, mu: &Array3<f64>) {
         if self.config.tikhonov_weight > 0.0 {
             let w = self.config.tikhonov_weight;
-            ndarray::Zip::from(&mut *grad)
-                .and(mu)
-                .and(&self.mu_start)
-                .for_each(|g, &m, &m0| *g += w * (m - m0));
+            for ((g, &m), &m0) in grad.iter_mut().zip(mu.iter()).zip(self.mu_start.iter()) {
+                *g += w * (m - m0);
+            }
         }
         if self.config.tv_weight > 0.0 {
             add_tv_gradient(grad, mu, self.config.tv_weight);
@@ -228,7 +229,7 @@ fn dot(a: &[f64], b: &[f64]) -> f64 {
 /// Isotropic Huber-smoothed total variation `Σ √(ε² + (∂_x μ)² + (∂_y μ)²)` over
 /// the `k = 0` plane (forward differences).
 fn tv_functional(mu: &Array3<f64>) -> f64 {
-    let (nx, ny, _nz) = mu.dim();
+    let [nx, ny, _nz] = mu.shape();
     let mut acc = 0.0;
     for i in 0..nx {
         for j in 0..ny {
@@ -250,7 +251,7 @@ fn tv_functional(mu: &Array3<f64>) -> f64 {
 
 /// Add `λ_TV · ∂TV/∂μ` (standard Rudin–Osher–Fatemi divergence) into `grad`.
 fn add_tv_gradient(grad: &mut Array3<f64>, mu: &Array3<f64>, weight: f64) {
-    let (nx, ny, _nz) = mu.dim();
+    let [nx, ny, _nz] = mu.shape();
     let fwd_dx = |i: usize, j: usize| {
         if i + 1 < nx {
             mu[[i + 1, j, 0]] - mu[[i, j, 0]]

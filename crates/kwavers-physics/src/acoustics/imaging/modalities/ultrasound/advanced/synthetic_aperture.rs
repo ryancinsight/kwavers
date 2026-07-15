@@ -12,11 +12,11 @@
 //! - Karaman et al. (1995), "Synthetic aperture imaging for small scale systems"
 //! - Jensen et al. (2006), "Synthetic aperture ultrasound imaging"
 
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
 
 /// Synthetic Aperture (SA) imaging configuration
 #[derive(Debug, Clone)]
@@ -67,10 +67,10 @@ impl SyntheticApertureReconstruction {
     /// Reconstruct SA image from RF data
     #[must_use]
     pub fn reconstruct(&self, rf_data: &Array3<f64>, image_grid: &Array3<f64>) -> Array2<f64> {
-        let (n_samples, n_rx, n_tx) = rf_data.dim();
-        let (_, height, width) = image_grid.dim();
+        let [n_samples, n_rx, n_tx] = rf_data.shape();
+        let [_, height, width] = image_grid.shape();
 
-        let mut image = Array2::<f64>::zeros((height, width));
+        let mut image = Array2::<f64>::zeros([height, width]);
 
         for i in 0..height {
             for j in 0..width {

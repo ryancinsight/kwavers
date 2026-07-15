@@ -25,7 +25,7 @@
 //! use kwavers_medium::optical_map::{OpticalPropertyMap, Region};
 //! ```
 
-use ndarray::Array3;
+use leto::Array3;
 
 // Re-export domain types for backwards compatibility
 pub use kwavers_medium::optical_map::{

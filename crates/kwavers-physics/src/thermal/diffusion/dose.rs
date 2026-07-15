@@ -7,7 +7,9 @@
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+
+use crate::parallel::zip_mut_ref;
 
 /// CEM43 thermal-dose constants and damage thresholds (Sapareto & Dewey 1984),
 /// re-exported from the `kwavers-core` medical-constants SSOT.
@@ -72,9 +74,10 @@ impl ThermalDoseCalculator {
             R_ABOVE_BREAKPOINT, R_BELOW_BREAKPOINT,
         };
 
-        Zip::from(&mut self.cumulative_dose)
-            .and(temperature)
-            .for_each(|dose, &temp_kelvin| {
+        zip_mut_ref(
+            self.cumulative_dose.view_mut(),
+            temperature.view(),
+            |dose, &temp_kelvin| {
                 let temp_celsius = temp_kelvin - KELVIN_OFFSET_C;
 
                 if temp_celsius > MIN_DOSE_TEMPERATURE_C {
@@ -87,13 +90,15 @@ impl ThermalDoseCalculator {
                     let exponent = REFERENCE_TEMPERATURE_C - temp_celsius;
                     let dose_increment = r.powf(exponent) * dt / SECONDS_PER_MINUTE;
                     *dose += dose_increment;
-
-                    if *dose > self.max_dose {
-                        self.max_dose = *dose;
-                        self.max_dose_time = current_time;
-                    }
                 }
-            });
+            },
+        );
+
+        let updated_max = self.cumulative_dose.iter().copied().fold(0.0_f64, f64::max);
+        if updated_max > self.max_dose {
+            self.max_dose = updated_max;
+            self.max_dose_time = current_time;
+        }
 
         Ok(())
     }

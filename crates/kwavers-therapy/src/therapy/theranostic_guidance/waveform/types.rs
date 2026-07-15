@@ -1,6 +1,6 @@
 //! Internal and public types for the 2-D acoustic waveform simulation.
 
-use ndarray::Array2;
+use leto::Array2;
 
 /// Padded 2-D simulation domain that encompasses both the body slice and the
 /// transducer aperture, surrounded by coupling water and CPML on the outer ring.
@@ -24,7 +24,7 @@ pub(super) struct PaddedSimulation {
     /// Body sub-region dimensions in REFINED cells:
     /// `body_dims = (nx_body * refinement, ny_body * refinement)`.
     pub(super) body_dims: (usize, usize),
-    /// Caller-visible body dimensions (matches `prepared.sound_speed_m_s.dim()`).
+    /// Caller-visible body dimensions (matches `prepared.sound_speed_m_s.shape()`).
     pub(super) body_dims_coarse: (usize, usize),
     /// Internal grid-refinement factor (refined cells per body cell along
     /// each axis).  Chosen so `λ / dx_refined ≥ 4` at the highest configured
@@ -68,7 +68,7 @@ pub(super) struct WavefieldRun {
     pub(super) traces: Vec<f32>,
     /// Checkpoint snapshots stored every `interval` steps.
     pub(super) checkpoints: Option<Vec<f32>>,
-    /// Checkpoint interval K = ceil(√T).
+    /// Checkpoint interval selected from a replay-work target and memory budget.
     pub(super) checkpoint_interval: usize,
 }
 
@@ -137,9 +137,24 @@ pub(super) struct CheckpointSchedule {
 }
 
 impl CheckpointSchedule {
-    pub(super) fn new(time_steps: usize) -> Self {
-        let interval = (time_steps as f64).sqrt().ceil() as usize;
-        let interval = interval.max(1);
+    pub(super) fn new(time_steps: usize, cell_count: usize) -> Self {
+        const TARGET_REPLAY_INTERVAL: usize = 8;
+        const MAX_CHECKPOINT_BYTES: usize = 256 * 1024 * 1024;
+        const BYTES_PER_SLOT_CELL: usize = 2 * std::mem::size_of::<f32>();
+
+        let sqrt_interval = (time_steps as f64).sqrt().ceil() as usize;
+        let replay_interval = sqrt_interval.clamp(1, TARGET_REPLAY_INTERVAL);
+        let max_slots = if cell_count == 0 {
+            1
+        } else {
+            MAX_CHECKPOINT_BYTES / (BYTES_PER_SLOT_CELL * cell_count)
+        };
+        let budget_interval = if max_slots <= 1 {
+            time_steps.max(1)
+        } else {
+            time_steps.div_ceil(max_slots - 1).max(1)
+        };
+        let interval = replay_interval.max(budget_interval);
         Self {
             interval,
             time_steps,

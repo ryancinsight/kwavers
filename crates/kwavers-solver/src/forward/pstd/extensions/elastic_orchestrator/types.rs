@@ -1,6 +1,6 @@
 //! Public data types for the ElasticPSTD orchestrator.
 
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 /// Velocity-source injection mode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

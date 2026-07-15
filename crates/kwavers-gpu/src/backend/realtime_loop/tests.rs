@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 
 use crate::backend::physics_kernels::{
     GpuKernelPhysicsDomain, PhysicsKernel, PhysicsKernelRegistry, WorkgroupConfig,
@@ -72,7 +72,7 @@ fn test_nonempty_fields_require_registered_kernel() -> KwaversResult<()> {
     let registry = PhysicsKernelRegistry::new();
     let mut orchestrator = RealtimeSimulationOrchestrator::new(config, registry)?;
     let grid = Grid::new(4, 4, 4, 0.1, 0.1, 0.1)?;
-    let mut fields = HashMap::from([("pressure".to_string(), Array3::zeros((4, 4, 4)))]);
+    let mut fields = HashMap::from([("pressure".to_string(), LetoArray3::zeros([4, 4, 4]))]);
 
     let error = orchestrator
         .step(&mut fields, 1e-6, 0.0, &grid)
@@ -95,7 +95,7 @@ fn test_registered_kernel_step_records_execution_metadata() -> KwaversResult<()>
     ))?;
     let mut orchestrator = RealtimeSimulationOrchestrator::new(config, registry)?;
     let grid = Grid::new(4, 4, 4, 0.1, 0.1, 0.1)?;
-    let mut fields = HashMap::from([("pressure".to_string(), Array3::zeros((4, 4, 4)))]);
+    let mut fields = HashMap::from([("pressure".to_string(), LetoArray3::zeros([4, 4, 4]))]);
 
     let result = orchestrator.step(&mut fields, 1e-6, 1e-5, &grid)?;
     let metrics = orchestrator.get_metrics();

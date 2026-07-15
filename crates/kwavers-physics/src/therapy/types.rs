@@ -1,7 +1,7 @@
 use kwavers_core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, SECONDS_PER_HOUR};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug, Clone, Default)]
 pub struct DomainTreatmentMetrics {
@@ -30,7 +30,7 @@ impl DomainTreatmentMetrics {
 
     #[must_use]
     pub fn calculate_cavitation_dose(cavitation_field: &Array3<f64>, dt: f64) -> f64 {
-        cavitation_field.sum() * dt
+        cavitation_field.iter().copied().sum::<f64>() * dt
     }
 
     pub fn update_peak_temperature(&mut self, temperature: &Array3<f64>) {

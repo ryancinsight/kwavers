@@ -7,7 +7,7 @@ use kwavers_core::constants::numerical::{
     STENCIL_COEFF_1_4, WENO_WEIGHT_0, WENO_WEIGHT_1, WENO_WEIGHT_2,
 };
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl WENOLimiter {
     /// WENO3 limiting — zero-allocation version.
@@ -24,7 +24,7 @@ impl WENOLimiter {
         shock_indicator: &Array3<f64>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = src.dim();
+        let [nx, ny, nz] = src.shape();
         for i in 2..nx - 2 {
             for j in 2..ny - 2 {
                 for k in 2..nz - 2 {

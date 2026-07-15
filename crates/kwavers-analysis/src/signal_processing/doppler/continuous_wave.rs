@@ -28,11 +28,11 @@
 //! - Jensen, J. A. (1996). *Estimation of Blood Velocities Using Ultrasound*.
 //!   Cambridge University Press.
 
+use apollo::{fft_1d_complex, fftshift, Complex64};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{fft_1d_complex, fftshift, Complex64};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Continuous-wave Doppler configuration.
 #[derive(Debug, Clone, Copy)]
@@ -95,7 +95,7 @@ impl CwSpectrum {
     /// Power-weighted mean velocity (spectral centroid) [m/s].
     #[must_use]
     pub fn mean_velocity(&self) -> f64 {
-        let total: f64 = self.power.sum();
+        let total: f64 = leto::sum_all(&self.power).unwrap_or(0.0);
         if total <= 0.0 {
             return 0.0;
         }
@@ -165,7 +165,7 @@ impl ContinuousWaveDoppler {
             let inv = 1.0 / count as f64;
             baseband.push(Complex64::new(sx * inv, sy * inv));
         }
-        Array1::from(baseband)
+        Array1::from_vec([baseband.len()], baseband).expect("demodulate: vec matches length")
     }
 
     /// Compute the two-sided Doppler velocity spectrum from a received signal.
@@ -190,11 +190,11 @@ impl ContinuousWaveDoppler {
         let f_bb = self.config.baseband_rate;
         // Bin k (after shift) → baseband frequency (k − n/2)·f_bb/n.
         let half = (n / 2) as f64;
-        let velocity = Array1::from_shape_fn(n, |k| {
-            let f_d = (k as f64 - half) * f_bb / n as f64;
+        let velocity = Array1::from_shape_fn([n], |idx| {
+            let f_d = (idx[0] as f64 - half) * f_bb / n as f64;
             self.config.velocity_from_frequency(f_d)
         });
-        let power = Array1::from_shape_fn(n, |k| shifted[k].norm_sqr());
+        let power = Array1::from_shape_fn([n], |idx| shifted[idx[0]].norm_sqr());
         Ok(CwSpectrum { velocity, power })
     }
 }

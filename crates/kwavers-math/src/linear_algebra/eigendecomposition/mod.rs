@@ -38,8 +38,8 @@ mod helpers;
 #[cfg(test)]
 mod tests;
 
-use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use eunomia::Complex64;
+use leto::{Array1, Array2};
 
 /// Advanced eigenvalue decomposition with multiple algorithms
 #[derive(Debug)]
@@ -75,7 +75,7 @@ pub struct EigenResult {
     /// Eigenvalues (sorted if config.sort_descending = true)
     pub eigenvalues: Array1<f64>,
     /// Eigenvectors as columns (corresponding to eigenvalues)
-    pub eigenvectors: Array2<Complex<f64>>,
+    pub eigenvectors: Array2<Complex64>,
     /// Number of iterations used
     pub iterations: usize,
     /// Final off-diagonal norm (convergence criterion)

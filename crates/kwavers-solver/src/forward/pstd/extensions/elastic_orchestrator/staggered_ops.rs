@@ -1,5 +1,5 @@
-use ndarray::Array3;
-use num_complex::Complex;
+use kwavers_math::fft::Complex64;
+use leto::Array3;
 
 /// Pre-built complex spectral derivative operators for the staggered-grid
 /// PSTD scheme used by KWave.jl `pstd_elastic_2d` (Treeby & Cox 2010, eq.
@@ -18,12 +18,12 @@ use num_complex::Complex;
 /// peak_ratio sat at 0.13–0.23 instead of ≈ 1.0 prior to this change).
 #[derive(Debug)]
 pub(super) struct StaggeredDerivativeOps {
-    pub(super) dkx_pos: Array3<Complex<f64>>,
-    pub(super) dky_pos: Array3<Complex<f64>>,
-    pub(super) dkz_pos: Array3<Complex<f64>>,
-    pub(super) dkx_neg: Array3<Complex<f64>>,
-    pub(super) dky_neg: Array3<Complex<f64>>,
-    pub(super) dkz_neg: Array3<Complex<f64>>,
+    pub(super) dkx_pos: Array3<Complex64>,
+    pub(super) dky_pos: Array3<Complex64>,
+    pub(super) dkz_pos: Array3<Complex64>,
+    pub(super) dkx_neg: Array3<Complex64>,
+    pub(super) dky_neg: Array3<Complex64>,
+    pub(super) dkz_neg: Array3<Complex64>,
 }
 
 impl StaggeredDerivativeOps {
@@ -35,11 +35,19 @@ impl StaggeredDerivativeOps {
         dy: f64,
         dz: f64,
     ) -> Self {
-        let make = |k: &Array3<f64>, d: f64, sign: f64| -> Array3<Complex<f64>> {
-            k.mapv(|kv| {
-                let shift = Complex::new(0.0, sign * kv * d * 0.5).exp();
-                Complex::new(0.0, kv) * shift
-            })
+        let make = |k: &Array3<f64>, d: f64, sign: f64| -> Array3<Complex64> {
+            let [nx, ny, nz] = k.shape();
+            let mut out = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+            for i in 0..nx {
+                for j in 0..ny {
+                    for l in 0..nz {
+                        let kv = k[[i, j, l]];
+                        let shift = Complex64::new(0.0, sign * kv * d * 0.5).exp();
+                        out[[i, j, l]] = Complex64::new(0.0, kv) * shift;
+                    }
+                }
+            }
+            out
         };
         Self {
             dkx_pos: make(kx, dx, 1.0),

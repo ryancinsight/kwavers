@@ -1,7 +1,9 @@
 //! Acoustic intensity and power flux.
 
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+
+use crate::parallel::zip_mut_two_refs;
 
 /// Compute acoustic intensity vector field `I = p v` [W/m^2].
 #[must_use]
@@ -11,15 +13,35 @@ pub fn acoustic_intensity(
     velocity_y: &Array3<f64>,
     velocity_z: &Array3<f64>,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let ix = Zip::from(pressure)
-        .and(velocity_x)
-        .map_collect(|&p, &vx| p * vx);
-    let iy = Zip::from(pressure)
-        .and(velocity_y)
-        .map_collect(|&p, &vy| p * vy);
-    let iz = Zip::from(pressure)
-        .and(velocity_z)
-        .map_collect(|&p, &vz| p * vz);
+    let mut ix = Array3::zeros(pressure.shape());
+    let mut iy = Array3::zeros(pressure.shape());
+    let mut iz = Array3::zeros(pressure.shape());
+
+    zip_mut_two_refs(
+        ix.view_mut(),
+        pressure.view(),
+        velocity_x.view(),
+        |ix, &p, &vx| {
+            *ix = p * vx;
+        },
+    );
+    zip_mut_two_refs(
+        iy.view_mut(),
+        pressure.view(),
+        velocity_y.view(),
+        |iy, &p, &vy| {
+            *iy = p * vy;
+        },
+    );
+    zip_mut_two_refs(
+        iz.view_mut(),
+        pressure.view(),
+        velocity_z.view(),
+        |iz, &p, &vz| {
+            *iz = p * vz;
+        },
+    );
+
     (ix, iy, iz)
 }
 
@@ -33,7 +55,7 @@ pub fn acoustic_power_through_z_plane(
 ) -> f64 {
     let da = grid.dx * grid.dy;
     let mut power = 0.0_f64;
-    let (nx, ny, _) = pressure.dim();
+    let [nx, ny, _] = pressure.shape();
     for i in 0..nx {
         for j in 0..ny {
             power += pressure[[i, j, k_plane]] * velocity_z[[i, j, k_plane]] * da;
@@ -46,7 +68,7 @@ pub fn acoustic_power_through_z_plane(
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn uniform(val: f64) -> Array3<f64> {
         Array3::from_elem((4, 4, 4), val)
@@ -59,8 +81,8 @@ mod tests {
     fn acoustic_intensity_matches_pv_product() {
         let p = uniform(3.0);
         let vx = uniform(2.0);
-        let vy = Array3::zeros((4, 4, 4));
-        let vz = Array3::zeros((4, 4, 4));
+        let vy = Array3::zeros([4, 4, 4]);
+        let vz = Array3::zeros([4, 4, 4]);
 
         let (ix, iy, iz) = acoustic_intensity(&p, &vx, &vy, &vz);
 

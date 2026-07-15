@@ -28,7 +28,7 @@
 //! The scalp and brain are both below the default skull_hu_threshold of 300 HU,
 //! matching the separation used by `plan_transcranial_focused_bowl_placement`.
 
-use ndarray::Array3;
+use leto::Array3;
 
 const NX: usize = 128;
 const NY: usize = 128;

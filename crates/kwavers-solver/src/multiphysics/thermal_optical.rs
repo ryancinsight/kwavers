@@ -6,7 +6,7 @@ use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Thermal-optical solver for coupled simulations
 #[derive(Debug)]
@@ -43,7 +43,7 @@ impl ThermalOpticalSolver {
         let rho = DENSITY_WATER_NOMINAL; // kg/m³ — nominal water density (1000 kg/m³)
         let c = SPECIFIC_HEAT_WATER; // J/(kg·K) — water isobaric specific heat at 20°C
 
-        for ((i, j, k), &i_val) in intensity.indexed_iter() {
+        for ([i, j, k], &i_val) in intensity.indexed_iter() {
             // Heat generated per unit volume (W/m³)
             let heat_source = self.absorption_coefficient * i_val;
             // Temperature change

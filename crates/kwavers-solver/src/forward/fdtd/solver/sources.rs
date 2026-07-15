@@ -2,13 +2,69 @@
 //! velocity-component injection, and `add_source_arc` injection-mode
 //! classification by mask geometry.
 
-use ndarray::{s, Array3, Zip};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_source::{Source, SourceField, SourceInjectionMode};
+
+fn ndarray_mask(mask: &LetoArray3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = mask.shape();
+    Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
+        .expect("FDTD source mask shape must match contiguous ndarray storage")
+}
+
+fn apply_boundary_pressure_mask(
+    pressure: &mut LetoArray3<f64>,
+    mask: &Array3<f64>,
+    amplitude: f64,
+) {
+    assert_eq!(
+        pressure.shape(),
+        mask.shape(),
+        "invariant: FDTD pressure source mask shape matches pressure field"
+    );
+
+    if let (Some(pressure_values), Some(mask_values)) = (pressure.as_slice_mut(), mask.as_slice()) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
+            if mask_values[idx] > 0.0 {
+                *pressure_value = amplitude;
+            }
+        });
+    } else {
+        for (pressure_value, &mask_value) in pressure.iter_mut().zip(mask.iter()) {
+            if mask_value > 0.0 {
+                *pressure_value = amplitude;
+            }
+        }
+    }
+}
+
+fn apply_additive_pressure_mask(
+    pressure: &mut LetoArray3<f64>,
+    mask: &Array3<f64>,
+    amplitude: f64,
+) {
+    assert_eq!(
+        pressure.shape(),
+        mask.shape(),
+        "invariant: FDTD pressure source mask shape matches pressure field"
+    );
+
+    if let (Some(pressure_values), Some(mask_values)) = (pressure.as_slice_mut(), mask.as_slice()) {
+        enumerate_mut_with::<Adaptive, _, _>(pressure_values, |idx, pressure_value| {
+            *pressure_value += mask_values[idx] * amplitude;
+        });
+    } else {
+        for (pressure_value, &mask_value) in pressure.iter_mut().zip(mask.iter()) {
+            *pressure_value += mask_value * amplitude;
+        }
+    }
+}
 
 impl GenericFdtdSolver<Array3<f64>> {
     pub(super) fn apply_dynamic_pressure_sources(&mut self, dt: f64) {
@@ -40,19 +96,13 @@ impl GenericFdtdSolver<Array3<f64>> {
                     match mode {
                         SourceInjectionMode::Boundary => {
                             // Dirichlet: enforce p = amplitude at boundary
-                            Zip::from(&mut fields.p).and(mask).par_for_each(|p, &m| {
-                                if m > 0.0 {
-                                    *p = amp;
-                                }
-                            });
+                            apply_boundary_pressure_mask(&mut fields.p, mask, amp);
                         }
                         SourceInjectionMode::Additive { .. } => {
                             // Additive: p += mask * amplitude
                             // For parity with k-Wave's additive mass sources, we do not normalize by mask sum
                             // and we expect the physical scaling to be handled by the caller or precomputed.
-                            Zip::from(&mut fields.p)
-                                .and(mask)
-                                .par_for_each(|p, &m| *p += m * amp);
+                            apply_additive_pressure_mask(&mut fields.p, mask, amp);
                         }
                     }
                 }
@@ -80,11 +130,7 @@ impl GenericFdtdSolver<Array3<f64>> {
             if amp.abs() < 1e-12 {
                 continue;
             }
-            Zip::from(&mut fields.p).and(mask).par_for_each(|p, &m| {
-                if m > 0.0 {
-                    *p = amp;
-                }
-            });
+            apply_boundary_pressure_mask(&mut fields.p, mask, amp);
         }
     }
 
@@ -105,19 +151,19 @@ impl GenericFdtdSolver<Array3<f64>> {
             match source.source_type() {
                 SourceField::Pressure => {}
                 SourceField::VelocityX => {
-                    Zip::from(&mut fields.ux)
-                        .and(mask)
-                        .for_each(|u, &m| *u += m * amp);
+                    for (u, &m) in fields.ux.iter_mut().zip(mask.iter()) {
+                        *u += m * amp;
+                    }
                 }
                 SourceField::VelocityY => {
-                    Zip::from(&mut fields.uy)
-                        .and(mask)
-                        .for_each(|u, &m| *u += m * amp);
+                    for (u, &m) in fields.uy.iter_mut().zip(mask.iter()) {
+                        *u += m * amp;
+                    }
                 }
                 SourceField::VelocityZ => {
-                    Zip::from(&mut fields.uz)
-                        .and(mask)
-                        .for_each(|u, &m| *u += m * amp);
+                    for (u, &m) in fields.uz.iter_mut().zip(mask.iter()) {
+                        *u += m * amp;
+                    }
                 }
             }
         }
@@ -127,7 +173,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
-        let mask = source.create_mask(&self.grid);
+        let mask = ndarray_mask(&source.create_mask(&self.grid));
 
         // Determine injection mode once and cache it
         let mode = Self::determine_injection_mode(&mask, &self.grid);
@@ -159,42 +205,48 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         // X boundaries (planes at x=0 or x=nx-1)
         let x0_count = mask
-            .slice(s![0, .., ..])
+            .slice_with::<2>(&s![0, .., ..])
+            .expect("invariant: x=0 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
         let xn_count = mask
-            .slice(s![nx - 1, .., ..])
+            .slice_with::<2>(&s![nx - 1, .., ..])
+            .expect("invariant: x=nx-1 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
 
         // Y boundaries (planes at y=0 or y=ny-1)
         let y0_count = mask
-            .slice(s![.., 0, ..])
+            .slice_with::<2>(&s![.., 0, ..])
+            .expect("invariant: y=0 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
         let yn_count = mask
-            .slice(s![.., ny - 1, ..])
+            .slice_with::<2>(&s![.., ny - 1, ..])
+            .expect("invariant: y=ny-1 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
 
         // Z boundaries (planes at z=0 or z=nz-1)
         let z0_count = mask
-            .slice(s![.., .., 0])
+            .slice_with::<2>(&s![.., .., 0])
+            .expect("invariant: z=0 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
         let zn_count = mask
-            .slice(s![.., .., nz - 1])
+            .slice_with::<2>(&s![.., .., nz - 1])
+            .expect("invariant: z=nz-1 boundary plane slice in range")
             .iter()
             .filter(|&&v| v > 0.0)
             .count();
 
         // Compute total mask statistics
-        for &val in mask {
+        for &val in mask.iter() {
             if val > 0.0 {
                 nonzero_count += 1;
                 mask_sum += val;

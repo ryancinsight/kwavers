@@ -5,8 +5,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
+use leto::Array3;
 use log::{info, warn};
-use ndarray::Array3;
 
 /// Fallback renderer for CPU-based visualization
 #[derive(Debug)]
@@ -66,14 +66,14 @@ impl FallbackRenderer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn render_ascii_slice(&self, field: &Array3<f64>, z_slice: usize) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         if z_slice >= nz {
             return Ok(());
         }
 
         // Normalize field values to 0-9 range for ASCII display
-        let slice = field.slice(ndarray::s![.., .., z_slice]);
+        let slice = field.index_axis::<2>(2, z_slice);
         let min_val = slice.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = slice.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
@@ -118,7 +118,7 @@ impl FallbackRenderer {
 
         // Write header
         writeln!(file, "# Field: {:?}", field_type)?;
-        writeln!(file, "# Shape: {:?}", field.dim())?;
+        writeln!(file, "# Shape: {:?}", field.shape())?;
 
         // Write data in simple format
         for ((i, j, k), &value) in field.indexed_iter() {

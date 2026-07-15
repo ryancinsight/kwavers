@@ -26,8 +26,8 @@
 use super::types::SvdClutterConfig;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{s, Array1, Array2};
+use leto::{Array1, Array2, SliceArg};
+use leto_ops::svd_rank_revealing;
 
 /// SVD spatiotemporal clutter filter.
 ///
@@ -61,7 +61,7 @@ impl UlmSvdClutterFilter {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn filter(&self, iq_data: &Array2<f64>) -> KwaversResult<(Array2<f64>, usize)> {
-        let (n_px, n_t) = (iq_data.nrows(), iq_data.ncols());
+        let [n_px, n_t] = iq_data.shape();
         if n_px == 0 || n_t == 0 {
             return Err(KwaversError::Numerical(NumericalError::SolverFailed {
                 method: "SVD clutter filter".to_owned(),
@@ -69,7 +69,13 @@ impl UlmSvdClutterFilter {
             }));
         }
 
-        let (u, sigma, vt) = LinearAlgebra::svd(iq_data)?;
+        // IQ clutter ensembles are routinely rank-deficient (low-rank tissue
+        // clutter is the signal being separated), so use the rank-revealing SVD,
+        // which surfaces zero singular values instead of failing to converge.
+        let svd = svd_rank_revealing(&iq_data.view())?;
+        let u = svd.left_singular_vectors;
+        let vt = svd.right_singular_vectors;
+        let sigma = Array1::from_vec(svd.singular_values.len(), svd.singular_values)?;
 
         let k = if self.config.fixed_clutter_rank > 0 {
             self.config.fixed_clutter_rank.min(sigma.len())
@@ -87,10 +93,39 @@ impl UlmSvdClutterFilter {
         // LinearAlgebra::svd returns (U, Σ, V) where V columns = right singular vectors.
         // Reconstruction: V_k^T = first k columns of V, transposed.
         let tissue = {
-            let u_k = u.slice(s![.., 0..k]).to_owned();
-            let sigma_k = sigma.slice(s![0..k]).to_owned();
-            let v_k = vt.slice(s![.., 0..k]).to_owned();
-            let vt_k = v_k.t().to_owned();
+            let u_k = u
+                .slice_with::<2>(&[
+                    SliceArg::All,
+                    SliceArg::Range {
+                        start: Some(0),
+                        end: Some(k as isize),
+                        step: 1,
+                    },
+                ])
+                .expect("invariant: SVD U column slice within bounds")
+                .to_contiguous();
+            let sigma_k = sigma
+                .slice_with::<1>(&[SliceArg::Range {
+                    start: Some(0),
+                    end: Some(k as isize),
+                    step: 1,
+                }])
+                .expect("invariant: sigma slice within bounds")
+                .to_contiguous();
+            let v_k = vt
+                .slice_with::<2>(&[
+                    SliceArg::All,
+                    SliceArg::Range {
+                        start: Some(0),
+                        end: Some(k as isize),
+                        step: 1,
+                    },
+                ])
+                .expect("invariant: SVD V column slice within bounds")
+                .to_contiguous();
+            let vt_k = v_k
+                .transpose([1, 0])
+                .expect("invariant: 2-D transpose axes valid");
             let mut us = u_k;
             for (j, &s_j) in sigma_k.iter().enumerate() {
                 for i in 0..n_px {
@@ -98,7 +133,8 @@ impl UlmSvdClutterFilter {
                 }
             }
             let mut result = Array2::<f64>::zeros((n_px, n_t));
-            ndarray::linalg::general_mat_mul(1.0, &us, &vt_k, 0.0, &mut result);
+            leto_ops::matmul(&us.view(), &vt_k, &mut result.view_mut())
+                .expect("invariant: tissue reconstruction dimensions match");
             result
         };
 

@@ -1,8 +1,8 @@
 //! PyO3 wrappers for multi-focus transducer fields.
 
 use kwavers_physics::analytical::transducer;
-use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1};
+use numpy::ndarray::Array2;
+use numpy::{PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -50,7 +50,7 @@ pub fn multi_focus_delay_laws_2d(
     let flat = transducer::multi_focus_delay_laws_2d(ex, ez, sx, sz, c);
     let arr = Array2::from_shape_vec((n_spots, n_elem), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr.into_pyarray(py).unbind())
+    Ok(arr.to_pyarray(py).unbind())
 }
 
 /// Simultaneous multi-focus CW field magnitude via phase-conjugation synthesis.
@@ -114,5 +114,5 @@ pub fn multi_focus_field_magnitude_2d(
     let flat = transducer::multi_focus_field_magnitude_2d(x_s, z_s, ex, ez, sx, sz, sa, freq_hz, c);
     let arr = Array2::from_shape_vec((nx, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr.into_pyarray(py).unbind())
+    Ok(arr.to_pyarray(py).unbind())
 }

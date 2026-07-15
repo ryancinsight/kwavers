@@ -1,33 +1,33 @@
 use super::*;
-use ndarray::Array2;
-use num_complex::Complex;
+use eunomia::Complex64;
+use leto::Array2;
 
-fn create_hermitian_2x2() -> Array2<Complex<f64>> {
+fn create_hermitian_2x2() -> Array2<Complex64> {
     Array2::from_shape_vec(
         (2, 2),
         vec![
-            Complex::new(2.0, 0.0),
-            Complex::new(1.0, 1.0),
-            Complex::new(1.0, -1.0),
-            Complex::new(3.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(1.0, 1.0),
+            Complex64::new(1.0, -1.0),
+            Complex64::new(3.0, 0.0),
         ],
     )
     .unwrap()
 }
 
-fn create_hermitian_3x3() -> Array2<Complex<f64>> {
+fn create_hermitian_3x3() -> Array2<Complex64> {
     Array2::from_shape_vec(
         (3, 3),
         vec![
-            Complex::new(2.0, 0.0),
-            Complex::new(1.0, 1.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(1.0, -1.0),
-            Complex::new(3.0, 0.0),
-            Complex::new(1.0, -1.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(1.0, 1.0),
-            Complex::new(4.0, 0.0),
+            Complex64::new(2.0, 0.0),
+            Complex64::new(1.0, 1.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, -1.0),
+            Complex64::new(3.0, 0.0),
+            Complex64::new(1.0, -1.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 1.0),
+            Complex64::new(4.0, 0.0),
         ],
     )
     .unwrap()
@@ -45,11 +45,15 @@ fn test_jacobi_2x2_hermitian() {
 
     for k in 0..2 {
         let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.column(k);
-        let av = matrix.dot(&v.to_owned());
+        let v = result
+            .eigenvectors
+            .index_axis::<1>(1, k)
+            .unwrap()
+            .to_contiguous();
 
         for i in 0..2 {
-            let error = (av[i] - lambda * v[i]).norm();
+            let av_i = (0..2).map(|j| matrix[[i, j]] * v[j]).sum::<Complex64>();
+            let error = (av_i - lambda * v[i]).norm();
             assert!(
                 error < 1.5,
                 "Eigenvalue equation failed for λ[{}]: error = {}",
@@ -73,11 +77,15 @@ fn test_qr_algorithm_3x3_hermitian() {
 
     for k in 0..3 {
         let lambda = result.eigenvalues[k];
-        let v = result.eigenvectors.column(k);
-        let av = matrix.dot(&v.to_owned());
+        let v = result
+            .eigenvectors
+            .index_axis::<1>(1, k)
+            .unwrap()
+            .to_contiguous();
 
         for i in 0..3 {
-            let error = (av[i] - lambda * v[i]).norm();
+            let av_i = (0..3).map(|j| matrix[[i, j]] * v[j]).sum::<Complex64>();
+            let error = (av_i - lambda * v[i]).norm();
             assert!(
                 error < 2.0,
                 "QR eigenvalue equation failed for λ[{}]: error = {}",
@@ -125,10 +133,10 @@ fn test_non_hermitian_matrix_rejected() {
     let matrix = Array2::from_shape_vec(
         (2, 2),
         vec![
-            Complex::new(1.0, 0.0),
-            Complex::new(1.0, 0.0),
-            Complex::new(0.0, 1.0),
-            Complex::new(2.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 1.0),
+            Complex64::new(2.0, 0.0),
         ],
     )
     .unwrap();
@@ -144,12 +152,12 @@ fn test_dimension_mismatch_rejected() {
     let matrix = Array2::from_shape_vec(
         (2, 3),
         vec![
-            Complex::new(1.0, 0.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(0.0, 0.0),
-            Complex::new(1.0, 0.0),
-            Complex::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
         ],
     )
     .unwrap();

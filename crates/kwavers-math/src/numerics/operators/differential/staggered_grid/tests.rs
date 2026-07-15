@@ -1,7 +1,7 @@
 use super::operator::StaggeredGridOperator;
 use approx::assert_abs_diff_eq;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 fn assert_invalid_grid_spacing(
     result: KwaversResult<StaggeredGridOperator>,
@@ -68,7 +68,7 @@ fn test_constructor_invalid_spacing() {
 fn test_forward_difference_linear_function() {
     let dx = 0.1;
     let op = StaggeredGridOperator::new(dx, dx, dx).unwrap();
-    let mut field = Array3::zeros((10, 5, 5));
+    let mut field = Array3::zeros([10, 5, 5]);
     for i in 0..10 {
         for j in 0..5 {
             for k in 0..5 {
@@ -77,7 +77,7 @@ fn test_forward_difference_linear_function() {
         }
     }
     let grad = op.apply_forward_x(field.view()).unwrap();
-    assert_eq!(grad.dim(), (9, 5, 5));
+    assert_eq!(grad.shape(), [9, 5, 5]);
     for i in 0..9 {
         for j in 0..5 {
             for k in 0..5 {
@@ -91,7 +91,7 @@ fn test_forward_difference_linear_function() {
 fn test_backward_difference_linear_function() {
     let dx = 0.1;
     let op = StaggeredGridOperator::new(dx, dx, dx).unwrap();
-    let mut field = Array3::zeros((10, 5, 5));
+    let mut field = Array3::zeros([10, 5, 5]);
     for i in 0..10 {
         for j in 0..5 {
             for k in 0..5 {
@@ -100,7 +100,7 @@ fn test_backward_difference_linear_function() {
         }
     }
     let grad = op.apply_backward_x(field.view()).unwrap();
-    assert_eq!(grad.dim(), (10, 5, 5));
+    assert_eq!(grad.shape(), [10, 5, 5]);
     for i in 1..10 {
         for j in 0..5 {
             for k in 0..5 {
@@ -135,9 +135,9 @@ fn test_constant_field_has_zero_derivative() {
 #[test]
 fn test_insufficient_grid_points() {
     let op = StaggeredGridOperator::new(0.1, 0.1, 0.1).unwrap();
-    let field_x = Array3::zeros((1, 10, 10));
-    let field_y = Array3::zeros((10, 1, 10));
-    let field_z = Array3::zeros((10, 10, 1));
+    let field_x = Array3::zeros([1, 10, 10]);
+    let field_y = Array3::zeros([10, 1, 10]);
+    let field_z = Array3::zeros([10, 10, 1]);
     assert_insufficient_grid_points(op.apply_forward_x(field_x.view()), 2, 1, "X");
     assert_insufficient_grid_points(op.apply_backward_x(field_x.view()), 2, 1, "X");
     assert_insufficient_grid_points(op.apply_forward_y(field_y.view()), 2, 1, "Y");
@@ -160,7 +160,7 @@ fn test_properties() {
 fn test_forward_backward_complementarity() {
     let dx = 0.1;
     let op = StaggeredGridOperator::new(dx, dx, dx).unwrap();
-    let mut field = Array3::zeros((10, 5, 5));
+    let mut field = Array3::zeros([10, 5, 5]);
     for i in 0..10 {
         let x = (i as f64) * dx;
         for j in 0..5 {
@@ -188,7 +188,7 @@ fn test_forward_backward_complementarity() {
 fn test_all_directions() {
     let dx = 0.1;
     let op = StaggeredGridOperator::new(dx, dx, dx).unwrap();
-    let mut field = Array3::zeros((10, 10, 10));
+    let mut field = Array3::zeros([10, 10, 10]);
     for i in 0..10 {
         for j in 0..10 {
             for k in 0..10 {
@@ -213,7 +213,7 @@ fn test_all_directions() {
 fn test_forward_into_x_matches_allocating() {
     let dx = 0.1;
     let op = StaggeredGridOperator::new(dx, dx, dx).unwrap();
-    let mut field = Array3::zeros((10, 5, 5));
+    let mut field = Array3::zeros([10, 5, 5]);
     for i in 0..10 {
         for j in 0..5 {
             for k in 0..5 {
@@ -222,9 +222,9 @@ fn test_forward_into_x_matches_allocating() {
         }
     }
     let expected = op.apply_forward_x(field.view()).unwrap();
-    let mut result = Array3::zeros((9, 5, 5));
+    let mut result = Array3::zeros([9, 5, 5]);
     op.apply_forward_x_into(field.view(), &mut result).unwrap();
-    assert_eq!(result.dim(), expected.dim());
+    assert_eq!(result.shape(), expected.shape());
     for i in 0..9 {
         for j in 0..5 {
             for k in 0..5 {
@@ -238,7 +238,7 @@ fn test_forward_into_x_matches_allocating() {
 fn test_forward_into_y_matches_allocating() {
     let dy = 0.05;
     let op = StaggeredGridOperator::new(dy, dy, dy).unwrap();
-    let mut field = Array3::zeros((5, 10, 5));
+    let mut field = Array3::zeros([5, 10, 5]);
     for i in 0..5 {
         for j in 0..10 {
             for k in 0..5 {
@@ -247,9 +247,9 @@ fn test_forward_into_y_matches_allocating() {
         }
     }
     let expected = op.apply_forward_y(field.view()).unwrap();
-    let mut result = Array3::zeros((5, 9, 5));
+    let mut result = Array3::zeros([5, 9, 5]);
     op.apply_forward_y_into(field.view(), &mut result).unwrap();
-    assert_eq!(result.dim(), expected.dim());
+    assert_eq!(result.shape(), expected.shape());
     for i in 0..5 {
         for j in 0..9 {
             for k in 0..5 {
@@ -263,7 +263,7 @@ fn test_forward_into_y_matches_allocating() {
 fn test_forward_into_z_matches_allocating() {
     let dz = 0.02;
     let op = StaggeredGridOperator::new(dz, dz, dz).unwrap();
-    let mut field = Array3::zeros((4, 4, 8));
+    let mut field = Array3::zeros([4, 4, 8]);
     for i in 0..4 {
         for j in 0..4 {
             for k in 0..8 {
@@ -272,9 +272,9 @@ fn test_forward_into_z_matches_allocating() {
         }
     }
     let expected = op.apply_forward_z(field.view()).unwrap();
-    let mut result = Array3::zeros((4, 4, 7));
+    let mut result = Array3::zeros([4, 4, 7]);
     op.apply_forward_z_into(field.view(), &mut result).unwrap();
-    assert_eq!(result.dim(), expected.dim());
+    assert_eq!(result.shape(), expected.shape());
     for i in 0..4 {
         for j in 0..4 {
             for k in 0..7 {

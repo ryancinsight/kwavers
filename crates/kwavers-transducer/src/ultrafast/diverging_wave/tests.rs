@@ -1,7 +1,7 @@
 use super::config::DivergingWaveConfig;
 use super::processor::DivergingWave;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Build a small N-element array with uniform pitch `pitch` centred at x=0.
 fn uniform_array(n: usize, pitch: f64) -> DivergingWave {
@@ -196,12 +196,12 @@ fn test_hann_apodization_out_of_aperture_is_zero() {
 #[test]
 fn test_transmit_delay_surface_shape() {
     let dw = uniform_array(8, 3.0e-4);
-    let x_px = Array1::linspace(-0.005, 0.005, 16);
-    let z_px = Array1::linspace(0.005, 0.030, 32);
+    let x_px = Array1::from_shape_fn(16, |[i]| -0.005 + (0.005 - -0.005) / 15.0 * i as f64);
+    let z_px = Array1::from_shape_fn(32, |[i]| 0.005 + (0.030 - 0.005) / 31.0 * i as f64);
     let surf = dw.transmit_delay_surface(&x_px, &z_px).unwrap();
     assert_eq!(
-        surf.dim(),
-        (8, 16 * 32),
+        surf.shape(),
+        [8, 16 * 32],
         "transmit_delay_surface shape mismatch"
     );
 }
@@ -213,12 +213,12 @@ fn test_transmit_delay_surface_shape() {
 #[test]
 fn test_sta_delay_table_shape() {
     let dw = uniform_array(4, 3.0e-4);
-    let x_px = Array1::linspace(-0.003, 0.003, 8);
-    let z_px = Array1::linspace(0.005, 0.020, 16);
+    let x_px = Array1::from_shape_fn(8, |[i]| -0.003 + (0.003 - -0.003) / 7.0 * i as f64);
+    let z_px = Array1::from_shape_fn(16, |[i]| 0.005 + (0.020 - 0.005) / 15.0 * i as f64);
     let table = dw.sta_delay_table(&x_px, &z_px).unwrap();
     assert_eq!(
-        table.dim(),
-        (4, 4, 8 * 16),
+        table.shape(),
+        [4, 4, 8 * 16],
         "sta_delay_table shape mismatch"
     );
 }
@@ -230,8 +230,8 @@ fn test_sta_delay_table_shape() {
 #[test]
 fn test_transmit_delay_surface_matches_scalar() {
     let dw = uniform_array(4, 3.0e-4);
-    let x_px = Array1::from_vec(vec![0.0, 0.002]);
-    let z_px = Array1::from_vec(vec![0.010, 0.020]);
+    let x_px = Array1::from_vec(2, vec![0.0, 0.002]).unwrap();
+    let z_px = Array1::from_vec(2, vec![0.010, 0.020]).unwrap();
     let surf = dw.transmit_delay_surface(&x_px, &z_px).unwrap();
 
     // pixel at (ix=0, iz=1) → index = 1*2+0 = 2

@@ -50,9 +50,11 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{get_fft_for_grid, Fft3dInOutExt};
-use ndarray::{Array3, ArrayView2, Zip};
-use num_complex::Complex64;
+use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// k-space pseudospectral time-reversal reconstructor.
 ///
@@ -101,7 +103,7 @@ impl PhotoacousticTimeReversal {
         sensor_positions: &[[f64; 3]],
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (n_time, _n_sensors) = sensor_data.dim();
+        let [n_time, _n_sensors] = sensor_data.shape();
         let [nx, ny, nz] = self.grid_size;
         let fft = get_fft_for_grid(nx, ny, nz);
 
@@ -169,7 +171,9 @@ impl PhotoacousticTimeReversal {
         for s in 0..n_time {
             // Reversed sensor time index.
             let sensor_t = n_time - 1 - s;
-            let sensor_row = sensor_data.row(sensor_t);
+            let sensor_row = sensor_data
+                .slice_with::<1>(&s![sensor_t, ..])
+                .expect("invariant: reversed sensor time index within record length");
 
             // Hard Dirichlet source: replace field values at sensor locations.
             // (Treeby et al. 2010, §2.3; k-Wave `source.p_mode = 'dirichlet'`.)
@@ -227,26 +231,45 @@ impl PhotoacousticTimeReversal {
         let [nx, ny, nz] = self.grid_size;
 
         // Forward FFT of current and previous pressure fields.
-        let mut p_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        let mut p_prev_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        fft.forward_into(pressure, &mut p_hat);
-        fft.forward_into(pressure_prev, &mut p_prev_hat);
+        let pressure = LetoArray3::from_shape_vec([nx, ny, nz], pressure.iter().copied().collect())
+            .expect("time-reversal pressure shape must match its Leto FFT shape");
+        let pressure_prev =
+            LetoArray3::from_shape_vec([nx, ny, nz], pressure_prev.iter().copied().collect())
+                .expect("time-reversal previous pressure shape must match its Leto FFT shape");
+        let mut p_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+        let mut p_prev_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+        fft.forward_into(&pressure, &mut p_hat);
+        fft.forward_into(&pressure_prev, &mut p_prev_hat);
 
         // Leapfrog update in k-space: p̂_next = 2·cos·p̂ − p̂_prev.
         // `propagator` is real (f64); multiply real cosine by complex spectrum.
-        let mut p_next_hat = Array3::<Complex64>::zeros((nx, ny, nz));
-        Zip::from(&mut p_next_hat)
-            .and(propagator)
-            .and(&p_hat)
-            .and(&p_prev_hat)
-            .par_for_each(|pn, &cos_val, &p, &pp| {
-                *pn = Complex64::from(2.0 * cos_val) * p - pp;
+        let mut p_next_hat = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+        if let (Some(next_values), Some(propagator_values), Some(p_values), Some(prev_values)) = (
+            p_next_hat.as_slice_mut(),
+            propagator.as_slice(),
+            p_hat.as_slice(),
+            p_prev_hat.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(next_values, |idx, next| {
+                *next = Complex64::from(2.0 * propagator_values[idx]) * p_values[idx]
+                    - prev_values[idx];
             });
+        } else {
+            for (((next, &cos_val), &p), &prev) in p_next_hat
+                .iter_mut()
+                .zip(propagator.iter())
+                .zip(p_hat.iter())
+                .zip(p_prev_hat.iter())
+            {
+                *next = Complex64::from(2.0 * cos_val) * p - prev;
+            }
+        }
 
         // Inverse FFT → real output.
-        let mut out = Array3::<f64>::zeros((nx, ny, nz));
-        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
+        let mut out = LetoArray3::<f64>::zeros([nx, ny, nz]);
+        let mut scratch = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
         fft.inverse_into(&p_next_hat, &mut out, &mut scratch);
-        Ok(out)
+        Ok(Array3::from_shape_vec([nx, ny, nz], out.into_vec())
+            .expect("time-reversal inverse FFT output shape must match its grid"))
     }
 }

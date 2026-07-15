@@ -1,21 +1,24 @@
 use super::super::{DistributedPinnTrainer, TrainingState};
-use crate::inverse::pinn::ml::{BurnTrainingMetrics2D, BurnTrainingMetrics2D as Metrics};
-use burn::tensor::backend::AutodiffBackend;
-use burn::tensor::Tensor;
+use crate::inverse::pinn::ml::{TrainingMetrics2D, TrainingMetrics2D as Metrics};
+use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 
-impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DistributedPinnTrainer<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Single-epoch training step across all model replicas.
     ///
     /// ## Algorithm
     ///
     /// Each replica receives the full point set (data-parallel replication).
     /// For each replica:
-    /// 1. Convert (x, y, t) point arrays to Burn tensors on the replica device.
-    /// 2. Call `BurnPINN2DWave::compute_physics_loss` (5-tuple output).
-    /// 3. Backward pass → gradient tensors.
+    /// 1. Convert (x, y, t) point arrays to leaf `Var`s on the replica backend.
+    /// 2. Call `PinnWave2D::compute_physics_loss` (5-tuple output).
+    /// 3. Backward pass → per-parameter gradients (accumulated in-place).
     /// 4. `SimpleOptimizer2D::step` updates replica parameters.
-    /// 5. Return per-replica `BurnTrainingMetrics2D` and serialised gradients.
+    /// 5. Return per-replica `TrainingMetrics2D` and serialised gradients.
     ///
     /// True multi-GPU collective gradient aggregation (NCCL/MPI) is not yet
     /// available; `aggregate_gradients_and_update` averages loss scalars from
@@ -27,22 +30,22 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
-    pub(super) async fn train_epoch_distributed(
+    pub(super) fn train_epoch_distributed(
         &mut self,
         collocation_points: &[(f64, f64, f64)],
         boundary_points: &[(f64, f64, f64)],
         initial_points: &[(f64, f64, f64)],
         target_values: &[f64],
-    ) -> KwaversResult<Vec<(BurnTrainingMetrics2D, Vec<f32>)>> {
-        use crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D;
-        use crate::inverse::pinn::ml::BurnLossWeights2D;
+    ) -> KwaversResult<Vec<(TrainingMetrics2D, Vec<f32>)>> {
+        use crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D;
+        use crate::inverse::pinn::ml::LossWeights2D;
 
-        // Build tensor helper: &[(f64,f64,f64)] → three [N,1] tensors.
-        fn to_xyz_tensors<B: AutodiffBackend>(
+        // Build Var helper: &[(f64,f64,f64)] → three [N,1] leaf Vars.
+        fn to_xyz_vars<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
             pts: &[(f64, f64, f64)],
-            device: &B::Device,
-        ) -> (Tensor<B, 2>, Tensor<B, 2>, Tensor<B, 2>) {
-            let n = pts.len().max(1);
+            backend: &B,
+        ) -> (Var<f32, B>, Var<f32, B>, Var<f32, B>) {
+            let n = (pts.len()).max(1);
             let xv: Vec<f32> = pts.iter().map(|p| p.0 as f32).collect();
             let yv: Vec<f32> = pts.iter().map(|p| p.1 as f32).collect();
             let tv: Vec<f32> = pts.iter().map(|p| p.2 as f32).collect();
@@ -53,70 +56,85 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
                     v
                 }
             };
-            let x = Tensor::<B, 1>::from_floats(pad(xv).as_slice(), device).reshape([n, 1]);
-            let y = Tensor::<B, 1>::from_floats(pad(yv).as_slice(), device).reshape([n, 1]);
-            let t = Tensor::<B, 1>::from_floats(pad(tv).as_slice(), device).reshape([n, 1]);
-            (x, y, t)
+            let mk = |v: Vec<f32>| {
+                Var::new(
+                    coeus_tensor::Tensor::from_slice_on(vec![n, 1], &pad(v), backend),
+                    false,
+                )
+            };
+            (mk(xv), mk(yv), mk(tv))
         }
 
-        let n_colloc = collocation_points.len().max(1);
-        let n_bc = boundary_points.len().max(1);
-        let n_ic = initial_points.len().max(1);
+        let n_colloc = (collocation_points.len()).max(1);
+        let n_bc = (boundary_points.len()).max(1);
+        let n_ic = (initial_points.len()).max(1);
 
-        let mut results: Vec<(BurnTrainingMetrics2D, Vec<f32>)> = Vec::new();
+        let mut results: Vec<(TrainingMetrics2D, Vec<f32>)> = Vec::new();
 
-        let n_replicas = self.coordinator.model_replicas.len();
+        let n_replicas = (self.coordinator.model_replicas.len());
         for replica_idx in 0..n_replicas {
-            let device = B::Device::default();
+            let backend = B::default();
 
-            let (x_colloc, y_colloc, t_colloc) = to_xyz_tensors::<B>(collocation_points, &device);
-            let (x_bc, y_bc, t_bc) = to_xyz_tensors::<B>(boundary_points, &device);
-            let (x_ic, y_ic, t_ic) = to_xyz_tensors::<B>(initial_points, &device);
+            let (x_colloc, y_colloc, t_colloc) = to_xyz_vars::<B>(collocation_points, &backend);
+            let (x_bc, y_bc, t_bc) = to_xyz_vars::<B>(boundary_points, &backend);
+            let (x_ic, y_ic, t_ic) = to_xyz_vars::<B>(initial_points, &backend);
 
             let u_colloc_vals: Vec<f32> = (0..n_colloc)
                 .map(|i| target_values.get(i).copied().unwrap_or(0.0) as f32)
                 .collect();
-            let u_colloc = Tensor::<B, 1>::from_floats(u_colloc_vals.as_slice(), &device)
-                .reshape([n_colloc, 1]);
+            let u_colloc = Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n_colloc, 1], &u_colloc_vals, &backend),
+                false,
+            );
 
-            let u_bc = Tensor::<B, 2>::zeros([n_bc, 1], &device);
-            let u_ic = Tensor::<B, 2>::zeros([n_ic, 1], &device);
+            let u_bc = Var::new(
+                coeus_tensor::Tensor::zeros_on(vec![n_bc, 1], &backend),
+                false,
+            );
+            let u_ic = Var::new(
+                coeus_tensor::Tensor::zeros_on(vec![n_ic, 1], &backend),
+                false,
+            );
 
-            let loss_weights = BurnLossWeights2D::default();
+            let loss_weights = LossWeights2D::default();
             let wave_speed = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
+
+            for p in self.coordinator.model_replicas[replica_idx].parameters() {
+                p.zero_grad();
+            }
 
             let (total_loss, data_loss, pde_loss, bc_loss, ic_loss) =
                 self.coordinator.model_replicas[replica_idx].compute_physics_loss(
-                    x_colloc.clone(),
-                    y_colloc.clone(),
-                    t_colloc.clone(),
-                    u_colloc,
-                    x_colloc,
-                    y_colloc,
-                    t_colloc,
-                    x_bc.clone(),
-                    y_bc.clone(),
-                    t_bc.clone(),
-                    u_bc,
-                    x_ic.clone(),
-                    y_ic.clone(),
-                    t_ic.clone(),
-                    u_ic,
+                    &x_colloc,
+                    &y_colloc,
+                    &t_colloc,
+                    &u_colloc,
+                    &x_colloc,
+                    &y_colloc,
+                    &t_colloc,
+                    &x_bc,
+                    &y_bc,
+                    &t_bc,
+                    &u_bc,
+                    &x_ic,
+                    &y_ic,
+                    &t_ic,
+                    &u_ic,
                     wave_speed,
                     loss_weights,
                 );
 
-            let total_val = total_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let data_val = data_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let pde_val = pde_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let bc_val = bc_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
-            let ic_val = ic_loss.clone().into_data().as_slice::<f32>().unwrap()[0] as f64;
+            let total_val = total_loss.tensor.as_slice()[0] as f64;
+            let data_val = data_loss.tensor.as_slice()[0] as f64;
+            let pde_val = pde_loss.tensor.as_slice()[0] as f64;
+            let bc_val = bc_loss.tensor.as_slice()[0] as f64;
+            let ic_val = ic_loss.tensor.as_slice()[0] as f64;
 
             if total_val.is_finite() {
-                let grads = total_loss.backward();
+                total_loss.backward();
                 let optimizer = SimpleOptimizer2D::new(1e-3_f32);
                 self.coordinator.model_replicas[replica_idx] =
-                    optimizer.step(self.coordinator.model_replicas[replica_idx].clone(), &grads);
+                    optimizer.step(self.coordinator.model_replicas[replica_idx].clone());
             }
 
             results.push((
@@ -136,11 +154,11 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         Ok(results)
     }
 
-    pub(super) async fn aggregate_gradients_and_update(
+    pub(super) fn aggregate_gradients_and_update(
         &mut self,
-        gpu_results: &[(BurnTrainingMetrics2D, Vec<f32>)],
+        gpu_results: &[(TrainingMetrics2D, Vec<f32>)],
     ) -> KwaversResult<()> {
-        let n_gpus = gpu_results.len();
+        let n_gpus = (gpu_results.len());
 
         let mut total_loss = 0.0_f64;
         let mut data_loss = 0.0_f64;

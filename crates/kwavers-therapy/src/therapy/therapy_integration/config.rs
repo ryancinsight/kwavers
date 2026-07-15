@@ -188,6 +188,16 @@ pub struct AcousticTherapyParams {
     /// Volume of tissue to be treated.
     /// Used for dose calculations and treatment time estimation.
     pub treatment_volume: f64,
+
+    /// Enable nonlinear acoustic field solver (KZK)
+    ///
+    /// When `true`, the orchestration path uses the KZK nonlinear solver
+    /// ([`crate::therapy::therapy_integration::orchestrator::execution::generate_kzk_acoustic_field`])
+    /// instead of the linear Gaussian-beam estimator.
+    ///
+    /// By default this is `false` and the linear Gaussian beam is used.
+    /// Currently only supported for [`TherapyIntegrationModality::HIFU`].
+    pub use_nonlinear_field: bool,
 }
 
 /// Safety limits for therapy
@@ -237,7 +247,7 @@ pub struct PatientParameters {
     /// 3D map of skull thickness from CT imaging.
     /// Used for transcranial aberration correction.
     /// None if not applicable (non-transcranial therapy).
-    pub skull_thickness: Option<ndarray::Array3<f64>>,
+    pub skull_thickness: Option<leto::Array3<f64>>,
 
     /// Tissue properties map
     ///

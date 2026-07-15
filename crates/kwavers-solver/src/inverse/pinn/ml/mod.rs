@@ -25,7 +25,7 @@
 //!
 //! - FDTD reference solution generator for validation
 //! - Comprehensive validation framework comparing PINN vs FDTD
-//! - Burn 0.18 integration (bincode compatibility resolved)
+//! - Coeus autograd integration
 //! - Performance benchmarking with speedup measurements
 //!
 //! ## Literature References
@@ -40,14 +40,14 @@
 //! ```no_run
 //! # #[cfg(feature = "pinn")]
 //! # {
-//! use kwavers_solver::inverse::pinn::ml::{BurnPINN1DWave, BurnPINNConfig};
+//! use kwavers_solver::inverse::pinn::ml::{PinnWave1D, PinnConfig};
 //! use kwavers_solver::inverse::pinn::ml::fdtd_reference::FDTDConfig;
 //! use kwavers_solver::inverse::pinn::ml::validation::validate_pinn_vs_fdtd;
 //!
 //! // Create 1D wave equation PINN
 //! let device = Default::default();
-//! let config = BurnPINNConfig::default();
-//! let mut pinn = BurnPINN1DWave::new(config, &device)?; // 1500 m/s wave speed
+//! let config = PinnConfig::default();
+//! let mut pinn = PinnWave1D::new(config, &device)?; // 1500 m/s wave speed
 //!
 //! // Train on reference data
 //! let metrics = pinn.train(&x_points, &t_points, &reference_data, 1500.0, &device, 1000)?;
@@ -72,17 +72,17 @@ pub mod fdtd_reference;
 #[cfg(feature = "pinn")]
 pub mod validation;
 
-// Sprint 143 Phase 2: Burn-based PINN with automatic differentiation
+// Sprint 143 Phase 2: PINN with automatic differentiation (coeus)
 #[cfg(feature = "pinn")]
-pub mod burn_wave_equation_1d;
+pub mod wave_equation_1d;
 
 // Sprint 144: 2D Wave Equation PINN extension
 #[cfg(feature = "pinn")]
-pub mod burn_wave_equation_2d;
+pub mod wave_equation_2d;
 
 // Sprint 173: 3D Wave Equation PINN extension for heterogeneous media
 #[cfg(feature = "pinn")]
-pub mod burn_wave_equation_3d;
+pub mod wave_equation_3d;
 
 // Field-surrogate PINN: parameterised (x, y, z, f0, pnp) → (p_min,
 // p_max, p_rms) for treatment-planner use. Static surrogate trained
@@ -91,15 +91,11 @@ pub mod burn_wave_equation_3d;
 #[cfg(feature = "pinn")]
 pub mod field_surrogate;
 
-// Sprint 151: GPU Acceleration & Advanced Geometries
-// #[cfg(feature = "pinn")]
-// pub mod gpu_accelerator;
-
 // Sprint 150: Advanced neural architectures for improved PINN convergence
 #[cfg(feature = "pinn")]
 pub mod advanced_architectures;
 
-// Sprint 191: Burn autodiff utilities for gradient computation patterns
+// Sprint 191: Coeus autodiff utilities for gradient computation patterns
 #[cfg(feature = "pinn")]
 pub mod autodiff_utils;
 
@@ -108,26 +104,21 @@ pub mod autodiff_utils;
 pub mod transfer_learning;
 
 #[cfg(feature = "pinn")]
-pub use burn_wave_equation_1d::{
-    BurnLossWeights, BurnPINN1DWave, BurnPINNConfig, BurnPINNTrainer, BurnTrainingMetrics,
-    SimpleOptimizer,
+pub use wave_equation_1d::{
+    LossWeights, PinnConfig, PinnTrainer, PinnWave1D, SimpleOptimizer, TrainingMetrics,
 };
 
 #[cfg(feature = "pinn")]
-pub use burn_wave_equation_2d::{
-    BoundaryCondition2D, BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DWave,
-    BurnTrainingMetrics2D, BurnWave2dGeometry, BurnWave2dInterfaceCondition,
+pub use wave_equation_2d::{
+    BoundaryCondition2D, LossWeights2D, PinnConfig2D, PinnWave2D, TrainingMetrics2D,
+    WaveGeometry2D, WaveInterfaceCondition2D,
 };
 
 #[cfg(feature = "pinn")]
-pub use burn_wave_equation_3d::{
-    BoundaryCondition3D, BurnLossWeights3D, BurnPINN3DConfig, BurnPINN3DWave,
-    BurnTrainingMetrics3D, Geometry3D, InterfaceCondition3D,
+pub use wave_equation_3d::{
+    BoundaryCondition3D, Geometry3D, InterfaceCondition3D, LossWeights3D, PinnConfig3D, PinnWave3D,
+    TrainingMetrics3D,
 };
-
-// Sprint 151: GPU Acceleration & Advanced Geometries
-#[cfg(feature = "pinn")]
-pub use gpu_accelerator::{GpuMemoryManager, TrainingStats};
 
 // Sprint 152: Multi-GPU Support & Distributed Training
 #[cfg(feature = "pinn")]
@@ -155,7 +146,7 @@ pub mod meta_learning;
 pub mod physics;
 
 // Beamforming provider adapter moved to analysis layer
-// See: src/analysis/signal_processing/beamforming/neural/backends/burn_adapter.rs
+// See: src/analysis/signal_processing/beamforming/neural/backends/pinn_adapter.rs
 
 #[cfg(feature = "pinn")]
 pub mod acoustic_wave;
@@ -172,9 +163,6 @@ pub mod sonoluminescence_coupled;
 
 #[cfg(feature = "pinn")]
 pub mod universal_solver;
-
-#[cfg(feature = "pinn")]
-pub mod gpu_accelerator;
 
 #[cfg(feature = "pinn")]
 pub mod adaptive_sampling;
@@ -254,12 +242,6 @@ pub use universal_solver::{
 };
 
 #[cfg(feature = "pinn")]
-pub use gpu_accelerator::{
-    BatchedPINNTrainer, CudaBuffer, CudaKernelManager, CudaStream, PinnGpuMemoryPoolType,
-    TrainingStep,
-};
-
-#[cfg(feature = "pinn")]
 pub use adaptive_sampling::{AdaptiveCollocationSampler, SamplingStats};
 
 #[cfg(feature = "pinn")]
@@ -300,8 +282,7 @@ mod tests {
     fn test_pinn_module_exists() {
         #[cfg(feature = "pinn")]
         {
-            use burn::backend::{Autodiff, NdArray};
-            type TestBackend = Autodiff<NdArray<f32>>;
+            type TestBackend = coeus_core::MoiraiBackend;
             let solver = super::UniversalPINNSolver::<TestBackend>::new();
             let _solver = solver.unwrap();
         }

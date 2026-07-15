@@ -26,8 +26,8 @@
 //!   Imaging*, Ch. 6. IEEE Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::Array2;
 
 /// Minimum incident-field magnitude below which the Rytov phase (a logarithm /
 /// division by `u_inc`) is undefined.
@@ -45,18 +45,18 @@ pub fn born_total_field(
 /// Rytov-approximation total field: `u = u_inc · exp(u_B / u_inc)`.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on a shape mismatch or where the
-/// incident field magnitude falls below [`MIN_INCIDENT`].
+/// Returns [`crate::KwaversError::InvalidInput`] on a shape mismatch or where the
+/// incident field magnitude falls below `MIN_INCIDENT`.
 pub fn rytov_total_field(
     incident: &Array2<Complex64>,
     born_scattered: &Array2<Complex64>,
 ) -> KwaversResult<Array2<Complex64>> {
-    if incident.dim() != born_scattered.dim() {
+    if incident.shape() != born_scattered.shape() {
         return Err(KwaversError::InvalidInput(
             "incident and scattered fields have mismatched shapes".to_owned(),
         ));
     }
-    let mut out = Array2::zeros(incident.dim());
+    let mut out = Array2::zeros(incident.shape());
     for ((idx, &u0), &ub) in incident.indexed_iter().zip(born_scattered.iter()) {
         if u0.norm() < MIN_INCIDENT {
             return Err(KwaversError::InvalidInput(
@@ -74,18 +74,18 @@ pub fn rytov_total_field(
 /// approximation; feeding it to a Born forward operator yields Rytov inversion.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on a shape mismatch, or where the
-/// incident or total field magnitude falls below [`MIN_INCIDENT`].
+/// Returns [`crate::KwaversError::InvalidInput`] on a shape mismatch, or where the
+/// incident or total field magnitude falls below `MIN_INCIDENT`.
 pub fn rytov_phase(
     incident: &Array2<Complex64>,
     total: &Array2<Complex64>,
 ) -> KwaversResult<Array2<Complex64>> {
-    if incident.dim() != total.dim() {
+    if incident.shape() != total.shape() {
         return Err(KwaversError::InvalidInput(
             "incident and total fields have mismatched shapes".to_owned(),
         ));
     }
-    let mut psi = Array2::zeros(incident.dim());
+    let mut psi = Array2::zeros(incident.shape());
     for ((idx, &u0), &u) in incident.indexed_iter().zip(total.iter()) {
         if u0.norm() < MIN_INCIDENT || u.norm() < MIN_INCIDENT {
             return Err(KwaversError::InvalidInput(
@@ -102,7 +102,7 @@ mod tests {
     use super::*;
 
     fn field(v: Complex64) -> Array2<Complex64> {
-        Array2::from_elem((2, 3), v)
+        Array2::from_elem([2, 3], v)
     }
 
     #[test]

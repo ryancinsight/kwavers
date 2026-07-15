@@ -3,7 +3,7 @@
 use crate::traits::BoundaryCondition;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::ArrayViewMut3;
+use leto::ArrayViewMut3;
 
 use super::super::types::{
     BoundaryCouplingPhysicsDomain, BoundaryCouplingType, BoundaryDirections,
@@ -133,7 +133,7 @@ impl BoundaryCondition for BoundaryMultiPhysicsInterface {
 
     fn apply_scalar_frequency(
         &mut self,
-        _field: &mut ndarray::Array3<num_complex::Complex<f64>>,
+        _field: &mut leto::Array3<kwavers_math::fft::Complex64>,
         _grid: &dyn GridTopology,
         _time_step: usize,
         _dt: f64,

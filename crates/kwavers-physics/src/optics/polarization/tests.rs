@@ -2,9 +2,9 @@
 
 use super::*;
 use approx::assert_relative_eq;
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
-use num_complex::Complex64;
 
 #[test]
 fn test_jones_vector_construction() {
@@ -94,10 +94,10 @@ fn test_jones_polarization_model() {
     let mut model = JonesPolarizationModel::new(500e-9);
     model.add_element(JonesMatrix::horizontal_polarizer());
 
-    let mut fluence = ndarray::Array3::<f64>::zeros((2, 2, 2));
+    let mut fluence = leto::Array3::<f64>::zeros((2, 2, 2));
     fluence.fill(1.0);
 
-    let mut polarization_state = ndarray::Array4::<Complex64>::zeros((2, 2, 2, 2));
+    let mut polarization_state = leto::Array4::<Complex64>::zeros((2, 2, 2, 2));
     polarization_state.fill(Complex64::new(1.0, 0.0));
 
     let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0).unwrap();

@@ -3,7 +3,7 @@
 use super::eikonal::EikonalSolver;
 use super::kirchhoff::{KirchhoffMigrator, Trace};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 // ── Eikonal solver ────────────────────────────────────────────────────────────
 

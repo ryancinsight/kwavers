@@ -16,6 +16,7 @@ pub mod directivity;
 pub mod frequency;
 pub mod geometry;
 pub mod materials;
+pub mod rayleigh;
 pub mod sensitivity;
 
 // Re-export main types for convenience
@@ -27,6 +28,10 @@ pub use geometry::ElementGeometry;
 pub use materials::{
     corrective_lens_thickness, isoplanatic_steering_pose, AcousticLens, BackingLayer,
     BackingMaterial, FresnelZonePlate, LensMaterial, MatchingLayer, PiezoMaterial, PiezoType,
+};
+pub use rayleigh::{
+    rayleigh_pressure, PlanarAperture, PlanarApertureGeometry, PlanarApertureShape,
+    RayleighIntegralSpec, RayleighLayer, RayleighPropagationPath,
 };
 pub use sensitivity::TransducerSensitivity;
 

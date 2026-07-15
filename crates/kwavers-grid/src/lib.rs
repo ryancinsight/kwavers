@@ -101,7 +101,7 @@ impl GridDimensions {
     }
 }
 
-// Extension methods for Grid (compatibility layer)
+// Extension methods for Grid
 impl Grid {
     /// Get minimum spacing
     #[inline]
@@ -169,22 +169,22 @@ impl Grid {
         ))
     }
 
-    /// Compute kx array — delegates to [`Self::kx`].
+    /// Compute the x-axis wave-number vector.
     #[inline]
-    pub fn compute_kx(&self) -> ndarray::Array1<f64> {
-        self.kx()
+    pub fn compute_kx(&self) -> leto::Array1<f64> {
+        KSpaceCalculator::generate_k_vector(self.nx, self.dx)
     }
 
-    /// Compute ky array — delegates to [`Self::ky`].
+    /// Compute the y-axis wave-number vector.
     #[inline]
-    pub fn compute_ky(&self) -> ndarray::Array1<f64> {
-        self.ky()
+    pub fn compute_ky(&self) -> leto::Array1<f64> {
+        KSpaceCalculator::generate_k_vector(self.ny, self.dy)
     }
 
-    /// Compute kz array — delegates to [`Self::kz`].
+    /// Compute the z-axis wave-number vector.
     #[inline]
-    pub fn compute_kz(&self) -> ndarray::Array1<f64> {
-        self.kz()
+    pub fn compute_kz(&self) -> leto::Array1<f64> {
+        KSpaceCalculator::generate_k_vector(self.nz, self.dz)
     }
 
     /// Calculate CFL timestep for given sound speed
@@ -196,39 +196,21 @@ impl Grid {
         stability::StabilityCalculator::cfl_timestep_fdtd(self, max_sound_speed)
     }
 
-    /// Get kx array (compatibility)
-    #[inline]
-    pub fn kx(&self) -> ndarray::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nx, self.dx)
-    }
-
-    /// Get ky array (compatibility)
-    #[inline]
-    pub fn ky(&self) -> ndarray::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.ny, self.dy)
-    }
-
-    /// Get kz array (compatibility)
-    #[inline]
-    pub fn kz(&self) -> ndarray::Array1<f64> {
-        KSpaceCalculator::generate_k_vector(self.nz, self.dz)
-    }
-
     /// Get x coordinates (compatibility)
     #[inline]
-    pub fn x_coordinates(&self) -> ndarray::Array1<f64> {
+    pub fn x_coordinates(&self) -> leto::Array1<f64> {
         CoordinateSystem::generate_x_vector(self)
     }
 
     /// Get y coordinates (compatibility)
     #[inline]
-    pub fn y_coordinates(&self) -> ndarray::Array1<f64> {
+    pub fn y_coordinates(&self) -> leto::Array1<f64> {
         CoordinateSystem::generate_y_vector(self)
     }
 
     /// Get z coordinates (compatibility)
     #[inline]
-    pub fn z_coordinates(&self) -> ndarray::Array1<f64> {
+    pub fn z_coordinates(&self) -> leto::Array1<f64> {
         CoordinateSystem::generate_z_vector(self)
     }
 

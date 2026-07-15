@@ -10,7 +10,7 @@
 
 use kwavers_core::constants::{CFL_FACTOR_3D_FDTD, DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 mod fused;
 mod pressure;
@@ -69,7 +69,7 @@ pub struct FdtdSimdStencilProcessor {
 impl FdtdSimdStencilProcessor {
     /// New.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(
         nx: usize,

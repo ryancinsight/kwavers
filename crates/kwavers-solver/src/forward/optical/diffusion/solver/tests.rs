@@ -4,7 +4,8 @@ use super::{analytical, DiffusionSolver, DiffusionSolverConfig};
 use anyhow::Result;
 use kwavers_grid::Grid;
 use kwavers_medium::properties::OpticalPropertyData;
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
+use leto::Array3;
 
 #[test]
 fn test_analytical_infinite_medium() {
@@ -61,13 +62,54 @@ fn test_solver_uniform_medium() -> Result<()> {
         .max_by(|(_, a), (_, b)| a.total_cmp(b))
         .unwrap()
         .0;
-    let dist_from_center = ((max_idx.0 as isize - nx as isize / 2).pow(2)
-        + (max_idx.1 as isize - ny as isize / 2).pow(2)
-        + (max_idx.2 as isize - nz as isize / 2).pow(2)) as f64;
+    let dist_from_center = ((max_idx[0] as isize - nx as isize / 2).pow(2)
+        + (max_idx[1] as isize - ny as isize / 2).pow(2)
+        + (max_idx[2] as isize - nz as isize / 2).pow(2)) as f64;
     assert!(
         dist_from_center < 10.0,
         "Maximum fluence should be near source location"
     );
+
+    Ok(())
+}
+
+#[test]
+fn leto_solver_matches_ndarray_solver_bitwise() -> Result<()> {
+    let grid = Grid::new(12, 10, 8, 1e-3, 1e-3, 1e-3)?;
+    let tissue = OpticalPropertyData::soft_tissue();
+
+    let config = DiffusionSolverConfig {
+        max_iterations: 1000,
+        tolerance: 1e-4,
+        boundary_parameter: 2.0,
+        boundary_conditions: None,
+        verbose: false,
+    };
+
+    let solver = DiffusionSolver::uniform(grid.clone(), tissue, config)?;
+    let (nx, ny, nz) = grid.dimensions();
+    let mut ndarray_source = Array3::zeros((nx, ny, nz));
+    let mut leto_source = LetoArray3::zeros([nx, ny, nz]);
+    let source_index = (nx / 2, ny / 2, nz / 2);
+    ndarray_source[[source_index.0, source_index.1, source_index.2]] = 1e6;
+    leto_source[[source_index.0, source_index.1, source_index.2]] = 1e6;
+
+    let ndarray_fluence = solver.solve(&ndarray_source)?;
+    let leto_fluence = solver.solve_leto(&leto_source)?;
+
+    assert_eq!(leto_fluence.shape(), [nx, ny, nz]);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let index = [i, j, k];
+                assert_eq!(
+                    ndarray_fluence[[i, j, k]].to_bits(),
+                    leto_fluence[index].to_bits(),
+                    "fluence mismatch at {index:?}"
+                );
+            }
+        }
+    }
 
     Ok(())
 }
@@ -108,8 +150,8 @@ fn test_solver_symmetry() -> Result<()> {
         .map(|&(i, j, k)| fluence[[i, j, k]])
         .collect();
 
-    if fluence_values.len() >= 2 {
-        let mean = fluence_values.iter().sum::<f64>() / fluence_values.len() as f64;
+    if (fluence_values.len()) >= 2 {
+        let mean = fluence_values.iter().sum::<f64>() / (fluence_values.len()) as f64;
         let max_deviation = fluence_values
             .iter()
             .map(|&f| (f - mean).abs() / mean)
@@ -134,7 +176,7 @@ fn test_heterogeneous_medium() -> Result<()> {
     let tissue = OpticalPropertyData::soft_tissue();
     let tumor = OpticalPropertyData::tumor();
 
-    let mut optical_map = Array3::from_elem((nx, ny, nz), tissue);
+    let mut optical_map = Array3::from_elem([nx, ny, nz], tissue);
 
     let center = (nx / 2, ny / 2, nz / 2);
     let radius = 5;

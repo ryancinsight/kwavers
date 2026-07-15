@@ -3,12 +3,12 @@ use super::{
     validate_covariance_matrix,
 };
 use approx::assert_relative_eq;
-use ndarray::Array2;
-use num_complex::Complex64;
+use eunomia::Complex64;
+use leto::Array2;
 
 #[test]
 fn test_sample_covariance_basic() {
-    let mut data = Array2::<Complex64>::zeros((2, 10));
+    let mut data = Array2::<Complex64>::from_elem((2, 10), Complex64::default());
     for m in 0..10 {
         data[[0, m]] = Complex64::new(1.0, 0.0);
         data[[1, m]] = Complex64::new(0.5, 0.5);
@@ -16,7 +16,7 @@ fn test_sample_covariance_basic() {
 
     let cov = estimate_sample_covariance(&data, 0.0).expect("should compute");
 
-    assert_eq!(cov.shape(), &[2, 2]);
+    assert_eq!(cov.shape(), [2, 2]);
     assert!(is_hermitian(&cov, 1e-10));
     assert!(cov[[0, 0]].im.abs() < 1e-10);
     assert!(cov[[1, 1]].im.abs() < 1e-10);
@@ -26,7 +26,7 @@ fn test_sample_covariance_basic() {
 
 #[test]
 fn test_sample_covariance_with_diagonal_loading() {
-    let data = Array2::<Complex64>::zeros((4, 8));
+    let data = Array2::<Complex64>::from_elem((4, 8), Complex64::default());
     let loading = 1e-3;
 
     let cov = estimate_sample_covariance(&data, loading).expect("should compute");
@@ -39,32 +39,32 @@ fn test_sample_covariance_with_diagonal_loading() {
 
 #[test]
 fn test_sample_covariance_insufficient_snapshots() {
-    let data = Array2::<Complex64>::zeros((8, 4));
+    let data = Array2::<Complex64>::from_elem((8, 4), Complex64::default());
 
     let result = estimate_sample_covariance(&data, 0.0);
     assert!(result.is_err());
 
     let cov = estimate_sample_covariance(&data, 1e-4).unwrap();
     assert_eq!(
-        cov.dim(),
-        (8, 8),
+        cov.shape(),
+        [8, 8],
         "covariance matrix must be 8×8 (n_sensors)"
     );
 }
 
 #[test]
 fn test_sample_covariance_invalid_inputs() {
-    let data = Array2::<Complex64>::zeros((4, 0));
+    let data = Array2::<Complex64>::from_elem((4, 0), Complex64::default());
     assert!(estimate_sample_covariance(&data, 0.0).is_err());
 
-    let data = Array2::<Complex64>::zeros((4, 8));
+    let data = Array2::<Complex64>::from_elem((4, 8), Complex64::default());
     assert!(estimate_sample_covariance(&data, -1.0).is_err());
     assert!(estimate_sample_covariance(&data, f64::NAN).is_err());
 }
 
 #[test]
 fn test_forward_backward_averaging() {
-    let mut data = Array2::<Complex64>::zeros((4, 10));
+    let mut data = Array2::<Complex64>::from_elem((4, 10), Complex64::default());
     for m in 0..10 {
         for i in 0..4 {
             data[[i, m]] = Complex64::new((i as f64) * 0.1, (m as f64) * 0.01);
@@ -74,13 +74,13 @@ fn test_forward_backward_averaging() {
     let cov_fb = estimate_forward_backward_covariance(&data, 1e-4).expect("should compute");
 
     assert!(is_hermitian(&cov_fb, 1e-10));
-    assert_eq!(cov_fb.shape(), &[4, 4]);
+    assert_eq!(cov_fb.shape(), [4, 4]);
     validate_covariance_matrix(&cov_fb).expect("should be valid");
 }
 
 #[test]
 fn test_is_hermitian() {
-    let mut matrix = Array2::<Complex64>::zeros((3, 3));
+    let mut matrix = Array2::<Complex64>::from_elem((3, 3), Complex64::default());
 
     matrix[[0, 0]] = Complex64::new(1.0, 0.0);
     matrix[[1, 1]] = Complex64::new(2.0, 0.0);
@@ -103,7 +103,7 @@ fn test_is_hermitian() {
 
 #[test]
 fn test_trace() {
-    let mut matrix = Array2::<Complex64>::zeros((3, 3));
+    let mut matrix = Array2::<Complex64>::from_elem((3, 3), Complex64::default());
     matrix[[0, 0]] = Complex64::new(1.0, 0.0);
     matrix[[1, 1]] = Complex64::new(2.0, 0.0);
     matrix[[2, 2]] = Complex64::new(3.0, 0.0);
@@ -115,14 +115,14 @@ fn test_trace() {
 
 #[test]
 fn test_validate_covariance_matrix() {
-    let data = Array2::<Complex64>::zeros((4, 20));
+    let data = Array2::<Complex64>::from_elem((4, 20), Complex64::default());
     let cov = estimate_sample_covariance(&data, 1e-4).expect("should compute");
     validate_covariance_matrix(&cov).expect("should be valid");
 
-    let non_square = Array2::<Complex64>::zeros((3, 4));
+    let non_square = Array2::<Complex64>::from_elem((3, 4), Complex64::default());
     assert!(validate_covariance_matrix(&non_square).is_err());
 
-    let mut non_hermitian = Array2::<Complex64>::zeros((3, 3));
+    let mut non_hermitian = Array2::<Complex64>::from_elem((3, 3), Complex64::default());
     non_hermitian[[0, 1]] = Complex64::new(1.0, 1.0);
     non_hermitian[[1, 0]] = Complex64::new(1.0, 0.0);
     assert!(validate_covariance_matrix(&non_hermitian).is_err());
@@ -130,7 +130,7 @@ fn test_validate_covariance_matrix() {
 
 #[test]
 fn test_covariance_with_non_finite_data() {
-    let mut data = Array2::<Complex64>::zeros((4, 10));
+    let mut data = Array2::<Complex64>::from_elem((4, 10), Complex64::default());
     data[[0, 0]] = Complex64::new(f64::NAN, 0.0);
 
     assert!(estimate_sample_covariance(&data, 0.0).is_err());
@@ -146,7 +146,7 @@ fn test_covariance_with_non_finite_data() {
 ///   R[1,0] = (0+1j)·(1)^* = 0+j,  R[1,1] = |j|² = 1.0.
 #[test]
 fn covariance_sample_rank1_exact_cross_terms() {
-    let mut data = Array2::<Complex64>::zeros((2, 4));
+    let mut data = Array2::<Complex64>::from_elem((2, 4), Complex64::default());
     for m in 0..4 {
         data[[0, m]] = Complex64::new(1.0, 0.0);
         data[[1, m]] = Complex64::new(0.0, 1.0);
@@ -179,7 +179,7 @@ fn covariance_sample_rank1_exact_cross_terms() {
 /// All-zero data + loading=0.3 → R[i,i] = 0.3, off-diagonals = 0.
 #[test]
 fn covariance_sample_diagonal_loading_exact() {
-    let data = Array2::<Complex64>::zeros((3, 6));
+    let data = Array2::<Complex64>::from_elem((3, 6), Complex64::default());
     let loading = 0.3_f64;
     let r = estimate_sample_covariance(&data, loading).expect("should succeed");
     for i in 0..3 {
@@ -201,7 +201,7 @@ fn covariance_sample_diagonal_loading_exact() {
 /// R = diag(1+2j, 3−j) → tr = (1+2j)+(3−j) = 4+j.
 #[test]
 fn covariance_trace_diagonal_matrix_exact() {
-    let mut r = Array2::<Complex64>::zeros((2, 2));
+    let mut r = Array2::<Complex64>::from_elem((2, 2), Complex64::default());
     r[[0, 0]] = Complex64::new(1.0, 2.0);
     r[[1, 1]] = Complex64::new(3.0, -1.0);
     let tr = trace(&r).expect("trace should succeed");
@@ -220,7 +220,7 @@ fn covariance_trace_diagonal_matrix_exact() {
 /// `trace` on non-square matrix returns Err.
 #[test]
 fn covariance_trace_non_square_returns_err() {
-    let r = Array2::<Complex64>::zeros((2, 3));
+    let r = Array2::<Complex64>::from_elem((2, 3), Complex64::default());
     assert!(
         trace(&r).is_err(),
         "trace of non-square matrix must return Err"
@@ -232,7 +232,7 @@ fn covariance_trace_non_square_returns_err() {
 /// R = [[2, 1+j], [1−j, 3]] is Hermitian; flipping one entry breaks it.
 #[test]
 fn covariance_is_hermitian_exact() {
-    let mut r = Array2::<Complex64>::zeros((2, 2));
+    let mut r = Array2::<Complex64>::from_elem((2, 2), Complex64::default());
     r[[0, 0]] = Complex64::new(2.0, 0.0);
     r[[1, 1]] = Complex64::new(3.0, 0.0);
     r[[0, 1]] = Complex64::new(1.0, 1.0);
@@ -253,7 +253,7 @@ fn covariance_is_hermitian_exact() {
 /// If data is real-valued (1 sensor, many snapshots), R_f is real scalar → R_fb = R_f.
 #[test]
 fn covariance_forward_backward_single_sensor_matches_sample() {
-    let mut data = Array2::<Complex64>::zeros((1, 4));
+    let mut data = Array2::<Complex64>::from_elem((1, 4), Complex64::default());
     for m in 0..4 {
         data[[0, m]] = Complex64::new((m + 1) as f64, 0.0);
     }

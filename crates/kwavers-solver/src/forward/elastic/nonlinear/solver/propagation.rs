@@ -1,6 +1,7 @@
 use super::super::wave_field::NonlinearElasticWaveField;
 use super::NonlinearElasticWaveSolver;
 use kwavers_core::error::KwaversResult;
+use kwavers_core::utils::iterators::apply_inplace;
 use log::info;
 
 impl NonlinearElasticWaveSolver {
@@ -16,7 +17,7 @@ impl NonlinearElasticWaveSolver {
     ///
     pub fn propagate_waves(
         &self,
-        initial_displacement: &ndarray::Array3<f64>,
+        initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<NonlinearElasticWaveField>> {
         let max_abs_u = initial_displacement
             .iter()
@@ -160,11 +161,11 @@ impl NonlinearElasticWaveSolver {
 
         if self.attenuation_np_per_m > 0.0 {
             let decay = (-self.attenuation_np_per_m * self.config.sound_speed() * dt).exp();
-            field.u_fundamental.par_mapv_inplace(|x| x * decay);
-            field.u_fundamental_prev.par_mapv_inplace(|x| x * decay);
-            field.u_second.par_mapv_inplace(|x| x * decay);
+            apply_inplace(&mut field.u_fundamental, |x| x * decay);
+            apply_inplace(&mut field.u_fundamental_prev, |x| x * decay);
+            apply_inplace(&mut field.u_second, |x| x * decay);
             for h in &mut field.u_harmonics {
-                h.par_mapv_inplace(|x| x * decay);
+                apply_inplace(h, |x| x * decay);
             }
         }
     }

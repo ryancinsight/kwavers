@@ -7,7 +7,7 @@ use crate::inverse::pinn::ml::physics::{
     PinnBoundaryComponent, PinnBoundaryConditionSpec, PinnCouplingInterface,
     PinnDomainPhysicsParameters, PinnPhysicsCouplingType, SimulationPhysicsDomain,
 };
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use std::collections::HashMap;
 
 /// Acoustic wave physics domain implementation
@@ -71,75 +71,71 @@ impl AcousticWaveDomain {
     }
 }
 
-impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> SimulationPhysicsDomain<B>
+    for AcousticWaveDomain
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     fn domain_name(&self) -> &'static str {
         "acoustic_wave"
     }
 
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
-        let _p = model.forward(x.clone(), y.clone(), t.clone());
+    ) -> Var<f32, B> {
+        let backend = B::default();
+        let zeros_like = |v: &Var<f32, B>| {
+            Var::new(
+                coeus_tensor::Tensor::zeros_on(v.tensor.shape(), &backend),
+                false,
+            )
+        };
 
-        let x_grad = x.clone().require_grad();
-        let y_grad = y.clone().require_grad();
-        let t_grad = t.clone().require_grad();
+        // First derivatives are not needed by the residual itself (only the
+        // second derivatives below and the raw field `p` for the nonlinear
+        // term), so this is a plain forward pass.
+        let p = model.forward(x, y, t);
 
-        let p = model.forward(x_grad.clone(), y_grad.clone(), t_grad.clone());
-
-        let grad_p = p.backward();
-        let _p_x = x_grad
-            .grad(&grad_p)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| x.zeros_like());
-        let _p_y = y_grad
-            .grad(&grad_p)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| y.zeros_like());
-        let _p_t = t_grad
-            .grad(&grad_p)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| t.zeros_like());
-
-        let x_grad_2 = x.clone().require_grad();
-        let y_grad_2 = y.clone().require_grad();
-        let t_grad_2 = t.clone().require_grad();
-
-        let p_x_for_xx = model.forward(x_grad_2.clone(), y.clone(), t.clone());
-        let grad_p_x = p_x_for_xx.backward();
+        let x_grad_2 = Var::new(x.tensor.clone(), true);
+        let p_x_for_xx = model.forward(&x_grad_2, y, t);
+        p_x_for_xx.backward();
         let p_xx = x_grad_2
-            .grad(&grad_p_x)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| x.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(x));
 
-        let p_y_for_yy = model.forward(x.clone(), y_grad_2.clone(), t.clone());
-        let grad_p_y = p_y_for_yy.backward();
+        let y_grad_2 = Var::new(y.tensor.clone(), true);
+        let p_y_for_yy = model.forward(x, &y_grad_2, t);
+        p_y_for_yy.backward();
         let p_yy = y_grad_2
-            .grad(&grad_p_y)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| y.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(y));
 
-        let p_t_for_tt = model.forward(x.clone(), y.clone(), t_grad_2.clone());
-        let grad_p_t = p_t_for_tt.backward();
+        let t_grad_2 = Var::new(t.tensor.clone(), true);
+        let p_t_for_tt = model.forward(x, y, &t_grad_2);
+        p_t_for_tt.backward();
         let p_tt = t_grad_2
-            .grad(&grad_p_t)
-            .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-            .unwrap_or_else(|| t.zeros_like());
+            .grad()
+            .map(|g| Var::new(g, false))
+            .unwrap_or_else(|| zeros_like(t));
 
-        let laplacian = p_xx + p_yy;
+        let laplacian = coeus_autograd::add(&p_xx, &p_yy);
 
         let c = physics_params
             .material_properties
             .get("wave_speed")
             .copied()
             .unwrap_or(self.wave_speed);
-        let c_squared = c * c;
-        let mut residual = p_tt.clone() - c_squared * laplacian;
+        let c_squared = (c * c) as f32;
+        let mut residual =
+            coeus_autograd::sub(&p_tt, &coeus_autograd::scalar_mul(&laplacian, c_squared));
 
         if let AcousticProblemType::Nonlinear = self.problem_type {
             if let Some(beta) = self.nonlinearity_coefficient {
@@ -153,20 +149,23 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for AcousticWaveDomain {
                 // Residual = 0 form:
                 //   R = p_tt - c²∇²p - β/(ρ₀c²) * ∂²(p²)/∂t²
                 // coeff = β/(ρ₀c²), not β/(ρ₀c⁴).
-                let coeff = beta / (rho_0 * c_squared);
+                let coeff = (beta / (rho_0 * (c * c))) as f32;
 
-                let t_grad_for_pt = t.clone().require_grad();
-                let p_for_pt = model.forward(x.clone(), y.clone(), t_grad_for_pt.clone());
-                let grad_p_t_calc = p_for_pt.backward();
+                let t_grad_for_pt = Var::new(t.tensor.clone(), true);
+                let p_for_pt = model.forward(x, y, &t_grad_for_pt);
+                p_for_pt.backward();
                 let p_t = t_grad_for_pt
-                    .grad(&grad_p_t_calc)
-                    .map(|g| Tensor::<B, 2>::from_data(g.into_data(), &Default::default()))
-                    .unwrap_or_else(|| t.zeros_like());
+                    .grad()
+                    .map(|g| Var::new(g, false))
+                    .unwrap_or_else(|| zeros_like(t));
 
                 // ∂²(p²)/∂t² = 2*(p_t² + p * p_tt)
-                let p2_tt = (p_t.clone() * p_t.clone() + p.clone() * p_tt.clone()).mul_scalar(2.0);
+                let p_t_sq = coeus_autograd::mul(&p_t, &p_t);
+                let p_p_tt = coeus_autograd::mul(&p, &p_tt);
+                let p2_tt = coeus_autograd::scalar_mul(&coeus_autograd::add(&p_t_sq, &p_p_tt), 2.0);
 
-                residual = residual - coeff * p2_tt;
+                residual =
+                    coeus_autograd::sub(&residual, &coeus_autograd::scalar_mul(&p2_tt, coeff));
             }
         }
 

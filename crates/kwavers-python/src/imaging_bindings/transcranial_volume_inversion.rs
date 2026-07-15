@@ -1,10 +1,11 @@
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use kwavers_diagnostics::reconstruction::transcranial_ust::{
     reconstruct_brain_volume, resample_head_volume, select_head_slice, AcousticVolume,
     TranscranialUstBornInversionConfig,
 };
 use kwavers_solver::inverse::linear_born_inversion::LinearBornInversionConfig;
-use ndarray::Array1;
-use numpy::IntoPyArray;
+use numpy::ndarray::Array1;
+use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -63,7 +64,9 @@ pub fn run_transcranial_ust_volume_inversion_from_ritk_ct<'py>(
 ) -> PyResult<Bound<'py, PyDict>> {
     let path = Path::new(ct_nifti_path);
     let (mut volume_hu, spacing_mm) = load_ritk_nifti(path)?;
-    volume_hu.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+    for hu in volume_hu.iter_mut() {
+        *hu = hu.clamp(-1024.0, 3071.0);
+    }
     let selected_slice = match slice_index {
         Some(idx) => idx,
         None => select_head_slice(&volume_hu).map_err(kwavers_to_py)?,
@@ -146,39 +149,40 @@ pub fn run_transcranial_ust_volume_inversion_from_ritk_ct<'py>(
         result.metrics.reconstruction_dynamic_range_m_s,
     )?;
 
-    let volume_shape = result.ct_hu.dim();
-    out.set_item("ct_hu", result.ct_hu.into_pyarray(py))?;
+    let volume_shape = {
+        let s = result.ct_hu.shape();
+        (s[0], s[1], s[2])
+    };
+    out.set_item("ct_hu", leto3_to_nd3(result.ct_hu).to_pyarray(py))?;
     out.set_item(
         "target_sound_speed_m_s",
-        result.target_sound_speed_m_s.into_pyarray(py),
+        leto3_to_nd3(result.target_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "initial_sound_speed_m_s",
-        result.initial_sound_speed_m_s.into_pyarray(py),
+        leto3_to_nd3(result.initial_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "migration_sound_speed_m_s",
-        result.migration_sound_speed_m_s.into_pyarray(py),
+        leto3_to_nd3(result.migration_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "reconstruction_sound_speed_m_s",
-        result.reconstruction_sound_speed_m_s.into_pyarray(py),
+        leto3_to_nd3(result.reconstruction_sound_speed_m_s).to_pyarray(py),
     )?;
     out.set_item(
         "enhanced_reconstruction_sound_speed_m_s",
-        result
-            .enhanced_reconstruction_sound_speed_m_s
-            .into_pyarray(py),
+        leto3_to_nd3(result.enhanced_reconstruction_sound_speed_m_s).to_pyarray(py),
     )?;
-    out.set_item("brain_mask", result.brain_mask.into_pyarray(py))?;
-    out.set_item("skull_mask", result.skull_mask.into_pyarray(py))?;
+    out.set_item("brain_mask", leto3_to_nd3(result.brain_mask).to_pyarray(py))?;
+    out.set_item("skull_mask", leto3_to_nd3(result.skull_mask).to_pyarray(py))?;
     out.set_item(
         "synthetic_data",
-        Array1::from(result.synthetic_data).into_pyarray(py),
+        Array1::from(result.synthetic_data).to_pyarray(py),
     )?;
     out.set_item(
         "residual_history",
-        Array1::from(result.residual_history).into_pyarray(py),
+        Array1::from(result.residual_history).to_pyarray(py),
     )?;
     out.set_item("metrics", metrics)?;
     out.set_item("spacing_m", acoustic.spacing_m)?;

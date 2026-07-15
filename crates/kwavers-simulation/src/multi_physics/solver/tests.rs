@@ -6,7 +6,7 @@ use super::super::{
 use super::core::SimulationMultiPhysicsSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 
 struct MockSolver {
     domain: SimulationPhysicsDomain,
@@ -60,7 +60,9 @@ impl CoupledPhysicsSolver for MockSolver {
         _source_domain: SimulationPhysicsDomain,
         source: ArrayView3<f64>,
     ) -> KwaversResult<()> {
-        self.field += &source;
+        for (f, s) in self.field.iter_mut().zip(source.iter()) {
+            *f += *s;
+        }
         Ok(())
     }
 }

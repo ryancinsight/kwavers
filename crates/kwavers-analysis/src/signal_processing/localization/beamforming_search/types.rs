@@ -4,7 +4,7 @@ use crate::signal_processing::beamforming::time_domain::DelayReference;
 use crate::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Covariance / snapshot domain policy for narrowband MVDR/Capon scoring.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -221,7 +221,7 @@ impl BeamformingLocalizationInput {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self, expected_sensors: usize) -> KwaversResult<()> {
-        let (n_sensors, channels, n_samples) = self.sensor_data.dim();
+        let [n_sensors, channels, n_samples] = self.sensor_data.shape();
         if n_sensors != expected_sensors {
             return Err(KwaversError::InvalidInput(format!(
                 "BeamformingLocalizationInput: sensor_data n_sensors ({n_sensors}) does not match expected ({expected_sensors})"

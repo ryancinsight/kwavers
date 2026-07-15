@@ -43,7 +43,7 @@ pub use ct_loader::{CTImageLoader, CTMetadata};
 pub use dicom_loader::{DicomImageLoader, DicomMetadata, DicomModality};
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Metadata common to all medical imaging formats
 #[derive(Debug, Clone)]

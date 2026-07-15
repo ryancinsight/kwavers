@@ -5,7 +5,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_mesh::Tetrahedron;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Gauss quadrature points and weights for tetrahedral elements
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ impl BasisFunction {
 
     /// Evaluate all basis functions at local coordinates ξ ∈ \[0,1\]³
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn evaluate(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         match self.degree {
@@ -69,7 +69,7 @@ impl BasisFunction {
 
     /// Evaluate derivatives of all basis functions
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn evaluate_derivatives(&self, xi: [f64; 3]) -> KwaversResult<Array2<f64>> {
         match self.degree {
@@ -88,7 +88,7 @@ impl BasisFunction {
     /// φ₃ = η
     /// φ₄ = ζ
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn evaluate_linear(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
@@ -144,7 +144,7 @@ impl BasisFunction {
     /// Quadratic (P2) tetrahedral basis functions
     /// 10-node tetrahedron with edge and face nodes
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn evaluate_quadratic(&self, xi: [f64; 3]) -> KwaversResult<Vec<f64>> {
         let [xi_xi, eta, zeta] = xi;
@@ -301,26 +301,26 @@ impl GaussQuadrature {
     pub fn add_element_contribution(
         &self,
         global_stiffness: &mut kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix<
-            num_complex::Complex64,
+            kwavers_math::fft::Complex64,
         >,
         global_mass: &mut kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix<
-            num_complex::Complex64,
+            kwavers_math::fft::Complex64,
         >,
-        global_rhs: &mut ndarray::Array1<num_complex::Complex64>,
-        elem_stiffness: &ndarray::Array2<num_complex::Complex64>,
-        elem_mass: &ndarray::Array2<num_complex::Complex64>,
-        elem_rhs: &ndarray::Array1<num_complex::Complex64>,
+        global_rhs: &mut leto::Array1<kwavers_math::fft::Complex64>,
+        elem_stiffness: &leto::Array2<kwavers_math::fft::Complex64>,
+        elem_mass: &leto::Array2<kwavers_math::fft::Complex64>,
+        elem_rhs: &leto::Array1<kwavers_math::fft::Complex64>,
         element: &Tetrahedron,
         _basis: &BasisFunction,
     ) -> KwaversResult<()> {
         // Add element contributions to global matrices
-        for i in 0..elem_stiffness.nrows() {
+        for i in 0..elem_stiffness.shape()[0] {
             let global_i = element.nodes[i];
 
             // Right-hand side
             global_rhs[global_i] += elem_rhs[i];
 
-            for j in 0..elem_stiffness.ncols() {
+            for j in 0..elem_stiffness.shape()[1] {
                 let global_j = element.nodes[j];
 
                 // Stiffness matrix

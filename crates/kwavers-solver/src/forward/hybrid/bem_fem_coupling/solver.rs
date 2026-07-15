@@ -1,7 +1,7 @@
 use super::{BemFemCoupler, BemFemCouplingConfig, BemFemInterface};
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;
-use num_complex::Complex64;
 
 /// BEM-FEM Coupled Solver for Helmholtz problems
 #[derive(Debug)]
@@ -16,7 +16,7 @@ pub struct BemFemSolver {
 impl BemFemSolver {
     /// Create new BEM-FEM coupled solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: BemFemCouplingConfig,
@@ -37,7 +37,7 @@ impl BemFemSolver {
 
     /// Solve the coupled BEM-FEM system
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn solve(
         &mut self,

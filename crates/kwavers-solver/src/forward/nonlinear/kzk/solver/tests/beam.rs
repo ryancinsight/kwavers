@@ -2,7 +2,7 @@
 
 use crate::forward::nonlinear::kzk::{KZKConfig, KZKSolver};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Tier 3 — comprehensive validation (>30 s).
 /// Uses a 64×64×128 grid.
@@ -44,7 +44,7 @@ fn test_gaussian_beam_propagation() {
 
     let intensity = solver.get_intensity();
     assert!(
-        intensity.sum() > 0.0,
+        intensity.iter().sum::<f64>() > 0.0,
         "intensity must be positive after propagation"
     );
 }
@@ -89,7 +89,7 @@ fn test_gaussian_beam_propagation_fast() {
 
     let intensity = solver.get_intensity();
     assert!(
-        intensity.sum() > 0.0,
+        intensity.iter().sum::<f64>() > 0.0,
         "intensity must be positive after propagation"
     );
 }

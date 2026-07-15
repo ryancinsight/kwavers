@@ -5,18 +5,19 @@ use super::bayesian_networks::MlPredictionWithUncertainty;
 use super::bayesian_networks::{BayesianConfig, MlBayesianPINN};
 use super::conformal_prediction::{ConformalConfig, MlConformalPredictor};
 use super::ensemble_methods::{EnsembleConfig, EnsembleQuantifier};
+#[cfg(feature = "pinn")]
+use super::predictor::PinnUncertaintyPredictor;
 use super::sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
 use super::types::{
     BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
     UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };
-#[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 #[cfg(feature = "pinn")]
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3 as NdArray3};
 #[cfg(not(feature = "pinn"))]
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3 as NdArray3};
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
 
@@ -99,16 +100,16 @@ impl UncertaintyQuantifier {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "pinn")]
-    pub fn quantify_pinn_uncertainty<B: Backend>(
+    pub fn quantify_pinn_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
         &self,
-        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        predictor: &P,
         inputs: &Array2<f32>,
         ground_truth: Option<&Array2<f32>>,
     ) -> KwaversResult<MlPredictionWithUncertainty> {
         match self._config.method {
             MlUncertaintyMethod::MonteCarloDropout => {
                 if let Some(bayesian) = &self._bayesian {
-                    bayesian.quantify_uncertainty(pinn, inputs)
+                    bayesian.quantify_uncertainty(predictor, inputs)
                 } else {
                     Err(KwaversError::InvalidInput(
                         "Bayesian module not configured".to_string(),
@@ -117,7 +118,7 @@ impl UncertaintyQuantifier {
             }
             MlUncertaintyMethod::Ensemble => {
                 if let Some(ensemble) = &self._ensemble {
-                    ensemble.quantify_uncertainty(pinn, inputs)
+                    ensemble.quantify_uncertainty(predictor, inputs)
                 } else {
                     Err(KwaversError::InvalidInput(
                         "Ensemble module not configured".to_string(),
@@ -126,7 +127,7 @@ impl UncertaintyQuantifier {
             }
             MlUncertaintyMethod::Conformal => {
                 if let Some(conformal) = &self._conformal {
-                    conformal.quantify_uncertainty(pinn, inputs, ground_truth)
+                    conformal.quantify_uncertainty(predictor, inputs, ground_truth)
                 } else {
                     Err(KwaversError::InvalidInput(
                         "Conformal module not configured".to_string(),
@@ -137,11 +138,11 @@ impl UncertaintyQuantifier {
                 let mut results = Vec::new();
 
                 if let Some(bayesian) = &self._bayesian {
-                    results.push(bayesian.quantify_uncertainty(pinn, inputs)?);
+                    results.push(bayesian.quantify_uncertainty(predictor, inputs)?);
                 }
 
                 if let Some(ensemble) = &self._ensemble {
-                    results.push(ensemble.quantify_uncertainty(pinn, inputs)?);
+                    results.push(ensemble.quantify_uncertainty(predictor, inputs)?);
                 }
 
                 Ok(results
@@ -166,14 +167,15 @@ impl UncertaintyQuantifier {
     ///
     pub fn quantify_beamforming_uncertainty(
         &self,
-        beamformed_image: &Array3<f32>,
+        beamformed_image: &LetoArray3<f32>,
         signal_quality: f64,
     ) -> KwaversResult<BeamformingUncertainty> {
-        let mut uncertainty_map = Array3::zeros(beamformed_image.dim());
+        let [nx, ny, nz] = beamformed_image.shape();
+        let mut uncertainty_map = NdArray3::zeros((nx, ny, nz));
 
-        for i in 1..beamformed_image.dim().0 - 1 {
-            for j in 1..beamformed_image.dim().1 - 1 {
-                for k in 0..beamformed_image.dim().2 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 0..nz {
                     let center = beamformed_image[[i, j, k]];
                     let neighbors = [
                         beamformed_image[[i - 1, j, k]],
@@ -229,13 +231,13 @@ impl UncertaintyQuantifier {
         uncertainty.confidence_score() >= threshold
     }
 
-    fn compute_cnr(&self, image: &Array3<f32>) -> f64 {
-        let mean_signal = image.iter().sum::<f32>() / image.len() as f32;
+    fn compute_cnr(&self, image: &LetoArray3<f32>) -> f64 {
+        let mean_signal = image.iter().sum::<f32>() / image.size() as f32;
         let variance = image
             .iter()
             .map(|&x| (x - mean_signal).powi(2))
             .sum::<f32>()
-            / image.len() as f32;
+            / image.size() as f32;
 
         if variance > 0.0 {
             (mean_signal / variance.sqrt()) as f64
@@ -244,13 +246,14 @@ impl UncertaintyQuantifier {
         }
     }
 
-    fn estimate_resolution(&self, image: &Array3<f32>) -> f64 {
+    fn estimate_resolution(&self, image: &LetoArray3<f32>) -> f64 {
         let mut total_gradient = 0.0;
         let mut count = 0;
+        let [nx, ny, nz] = image.shape();
 
-        for i in 1..image.dim().0 - 1 {
-            for j in 1..image.dim().1 - 1 {
-                for k in 0..image.dim().2 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 0..nz {
                     let dx = (image[[i + 1, j, k]] - image[[i - 1, j, k]]).abs();
                     let dy = (image[[i, j + 1, k]] - image[[i, j - 1, k]]).abs();
                     total_gradient += (dx + dy) / 2.0;

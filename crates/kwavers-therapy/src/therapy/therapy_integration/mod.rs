@@ -96,6 +96,7 @@
 //!         duty_cycle: 0.01,
 //!         focal_depth: 0.05,
 //!         treatment_volume: 1.0,
+//!         use_nonlinear_field: false,
 //!     },
 //!     safety_limits: TherapyIntegrationSafetyLimits {
 //!         thermal_index_max: 6.0,

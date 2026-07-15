@@ -17,7 +17,7 @@ pub use parameter_optimizer::ParameterOptimizerModel;
 pub use tissue_classifier::TissueClassifierModel;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Common trait for all ML models
 pub trait MLModel {
@@ -70,7 +70,7 @@ pub mod constants {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::{array, Array1, Array2};
+    use leto::{Array1, Array2};
 
     // ── AnomalyDetectorModel ─────────────────────────────────────────────────
 
@@ -79,10 +79,11 @@ mod tests {
     #[test]
     fn test_anomaly_detector_threshold_correct() {
         let model = AnomalyDetectorModel::new(3.0);
-        let input = array![[4.0_f32], [1.0_f32], [-4.0_f32], [3.0_f32]];
+        let input =
+            Array2::from_shape_vec((4, 1), vec![4.0_f32, 1.0_f32, -4.0_f32, 3.0_f32]).unwrap();
         let output = model.predict(&input).unwrap();
 
-        assert_eq!(output.shape(), &[4, 1]);
+        assert_eq!(output.shape(), [4, 1]);
         assert!((output[[0, 0]] - 1.0).abs() < 1e-6, "4.0 > 3.0 → 1.0");
         assert!((output[[1, 0]] - 0.0).abs() < 1e-6, "1.0 ≤ 3.0 → 0.0");
         assert!((output[[2, 0]] - 1.0).abs() < 1e-6, "|-4.0| > 3.0 → 1.0");
@@ -107,7 +108,7 @@ mod tests {
         let input = Array2::<f32>::zeros((5, 10));
         let output = model.predict(&input).unwrap();
 
-        assert_eq!(output.shape(), &[5, 1]);
+        assert_eq!(output.shape(), [5, 1]);
         for val in output.iter() {
             assert!(
                 *val >= 0.0 && *val <= 1.0,
@@ -136,7 +137,7 @@ mod tests {
         let input = Array2::from_elem((3, 20), 0.4_f32);
         let output = model.predict(&input).unwrap();
 
-        assert_eq!(output.shape(), &[3, 3]);
+        assert_eq!(output.shape(), [3, 3]);
         for i in 0..3 {
             assert!((output[[i, 0]] - 0.4).abs() < 1e-5, "ch0 should be 0.4");
             assert!((output[[i, 1]] - 0.6).abs() < 1e-5, "ch1 should be 0.6");
@@ -163,7 +164,7 @@ mod tests {
         let input = Array2::<f32>::ones((4, 8));
         let output = model.predict(&input).unwrap();
 
-        assert_eq!(output.shape(), &[4, 3]);
+        assert_eq!(output.shape(), [4, 3]);
         for &v in output.iter() {
             assert!(v.is_finite(), "output must be finite, got {v}");
         }
@@ -175,10 +176,10 @@ mod tests {
         let bias = Some(Array1::from_elem(4, 0.1_f32));
         let model = ParameterOptimizerModel::from_weights(weights, bias);
 
-        let input = array![[1.0_f32, 0.0, 0.0, 0.0]];
+        let input = Array2::from_shape_vec((1, 4), vec![1.0_f32, 0.0, 0.0, 0.0]).unwrap();
         let output = model.predict(&input).unwrap();
 
-        assert_eq!(output.shape(), &[1, 4]);
+        assert_eq!(output.shape(), [1, 4]);
         // W=I, b=0.1: output[0,0] = 1.0 + 0.1 = 1.1
         assert!((output[[0, 0]] - 1.1).abs() < 1e-5);
     }
@@ -200,7 +201,7 @@ mod tests {
         let input = Array2::<f32>::ones((3, 8));
         let output = model.predict(&input).unwrap();
 
-        assert_eq!(output.shape(), &[3, 5]);
+        assert_eq!(output.shape(), [3, 5]);
         for &v in output.iter() {
             assert!(v.is_finite());
         }

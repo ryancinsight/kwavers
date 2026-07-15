@@ -10,7 +10,7 @@ use kwavers_core::constants::medical::{
 };
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::constants::thermodynamic::THERMAL_CONDUCTIVITY_WATER;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Bioeffects model parameters.
 #[derive(Debug, Clone)]

@@ -37,7 +37,8 @@ use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array3, ArrayView3};
+use leto::Array3 as NdArray3;
+use leto::Array3 as LetoArray3;
 use std::time::{Duration, Instant};
 
 const NX: usize = 16;
@@ -76,21 +77,21 @@ fn main() -> KwaversResult<()> {
 
     let fdtd_vs_pstd = compare_fields(
         "FDTD",
-        Solver::pressure_field(&fdtd.solver).view(),
+        Solver::pressure_field(&fdtd.solver),
         "PSTD",
-        Solver::pressure_field(&pstd.solver).view(),
+        Solver::pressure_field(&pstd.solver),
     );
     let kspace_vs_pstd = compare_fields(
         "FDTD+k-space",
-        Solver::pressure_field(&fdtd_kspace.solver).view(),
+        Solver::pressure_field(&fdtd_kspace.solver),
         "PSTD",
-        Solver::pressure_field(&pstd.solver).view(),
+        Solver::pressure_field(&pstd.solver),
     );
     let fdtd_vs_kspace = compare_fields(
         "FDTD",
-        Solver::pressure_field(&fdtd.solver).view(),
+        Solver::pressure_field(&fdtd.solver),
         "FDTD+k-space",
-        Solver::pressure_field(&fdtd_kspace.solver).view(),
+        Solver::pressure_field(&fdtd_kspace.solver),
     );
 
     print_run_summary(&[fdtd.summary(), fdtd_kspace.summary(), pstd.summary()]);
@@ -136,7 +137,7 @@ impl FdtdRun {
     fn summary(&self) -> RunSummary {
         summarize_field(
             self.name,
-            Solver::pressure_field(&self.solver).view(),
+            Solver::pressure_field(&self.solver),
             self.elapsed,
         )
     }
@@ -146,7 +147,7 @@ impl PstdRun {
     fn summary(&self) -> RunSummary {
         summarize_field(
             self.name,
-            Solver::pressure_field(&self.solver).view(),
+            Solver::pressure_field(&self.solver),
             self.elapsed,
         )
     }
@@ -219,10 +220,10 @@ fn run_pstd(grid: &Grid, medium: &HomogeneousMedium, dt: f64, nt: usize) -> Kwav
 }
 
 fn gaussian_initial_source(grid: &Grid, dt: f64) -> GridSource {
-    let mut p0 = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
-    let mut ux0 = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
-    let mut uy0 = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
-    let mut uz0 = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    let mut p0 = NdArray3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    let mut ux0 = NdArray3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    let mut uy0 = NdArray3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+    let mut uz0 = NdArray3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
 
     let center = (
         0.5 * (grid.nx as f64 - 1.0) * grid.dx,
@@ -283,11 +284,7 @@ fn gaussian_dpdz(x: f64, y: f64, z: f64, center: (f64, f64, f64), sigma: f64) ->
     -(z - center.2) / (sigma * sigma) * gaussian_pressure(x, y, z, center, sigma)
 }
 
-fn summarize_field(
-    name: &'static str,
-    field: ArrayView3<'_, f64>,
-    elapsed: Duration,
-) -> RunSummary {
+fn summarize_field(name: &'static str, field: &LetoArray3<f64>, elapsed: Duration) -> RunSummary {
     let mut energy_sq: f64 = 0.0;
     let mut peak_abs: f64 = 0.0;
     for &value in field.iter() {
@@ -308,11 +305,15 @@ fn summarize_field(
 
 fn compare_fields(
     lhs: &'static str,
-    a: ArrayView3<'_, f64>,
+    a: &LetoArray3<f64>,
     rhs: &'static str,
-    b: ArrayView3<'_, f64>,
+    b: &LetoArray3<f64>,
 ) -> Comparison {
-    assert_eq!(a.dim(), b.dim(), "comparison fields must share dimensions");
+    assert_eq!(
+        a.shape(),
+        b.shape(),
+        "comparison fields must share dimensions"
+    );
 
     let mut diff_sq: f64 = 0.0;
     let mut a_sq: f64 = 0.0;
@@ -343,7 +344,7 @@ fn compare_fields(
         max_signal = max_signal.max(av.abs()).max(bv.abs());
     }
 
-    let n = a.len() as f64;
+    let n = a.size() as f64;
     let denom_l2 = a_sq.sqrt().max(b_sq.sqrt()).max(f64::EPSILON);
     let var_a = (a_sq - sum_a * sum_a / n).max(0.0);
     let var_b = (b_sq - sum_b * sum_b / n).max(0.0);
@@ -367,24 +368,31 @@ fn compare_fields(
     }
 }
 
-fn centroid_shift_cells(a: ArrayView3<'_, f64>, b: ArrayView3<'_, f64>) -> f64 {
+fn centroid_shift_cells(a: &LetoArray3<f64>, b: &LetoArray3<f64>) -> f64 {
     let ca = energy_centroid_cells(a);
     let cb = energy_centroid_cells(b);
     ((ca.0 - cb.0).powi(2) + (ca.1 - cb.1).powi(2) + (ca.2 - cb.2).powi(2)).sqrt()
 }
 
-fn energy_centroid_cells(field: ArrayView3<'_, f64>) -> (f64, f64, f64) {
+fn energy_centroid_cells(field: &LetoArray3<f64>) -> (f64, f64, f64) {
+    let s = field.shape();
+    let (nx, ny, nz) = (s[0], s[1], s[2]);
     let mut weight_sum = 0.0;
     let mut x_sum = 0.0;
     let mut y_sum = 0.0;
     let mut z_sum = 0.0;
 
-    for ((i, j, k), &value) in field.indexed_iter() {
-        let weight = value * value;
-        weight_sum += weight;
-        x_sum += weight * i as f64;
-        y_sum += weight * j as f64;
-        z_sum += weight * k as f64;
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let value = field[[i, j, k]];
+                let weight = value * value;
+                weight_sum += weight;
+                x_sum += weight * i as f64;
+                y_sum += weight * j as f64;
+                z_sum += weight * k as f64;
+            }
+        }
     }
 
     if weight_sum > f64::EPSILON {
@@ -440,10 +448,33 @@ mod tests {
         let grid = Grid::new(NX, NX, NX, DX, DX, DX).unwrap();
         let source = gaussian_initial_source(&grid, CFL * DX / C0);
         let p0 = source.p0.as_ref().expect("p0 must be present");
-        let centroid = energy_centroid_cells(p0.view());
         let expected = 0.5 * (NX as f64 - 1.0);
 
         assert!(p0.iter().all(|value| value.is_finite()));
+
+        // Compute energy centroid manually from the ndarray p0
+        let [nx, ny, nz] = p0.shape();
+        let mut weight_sum = 0.0f64;
+        let mut x_sum = 0.0f64;
+        let mut y_sum = 0.0f64;
+        let mut z_sum = 0.0f64;
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let v = p0[[i, j, k]];
+                    let w = v * v;
+                    weight_sum += w;
+                    x_sum += w * i as f64;
+                    y_sum += w * j as f64;
+                    z_sum += w * k as f64;
+                }
+            }
+        }
+        let centroid = if weight_sum > f64::EPSILON {
+            (x_sum / weight_sum, y_sum / weight_sum, z_sum / weight_sum)
+        } else {
+            (0.0, 0.0, 0.0)
+        };
         assert!((centroid.0 - expected).abs() < 0.05);
         assert!((centroid.1 - expected).abs() < 0.05);
         assert!((centroid.2 - expected).abs() < 0.05);
@@ -451,10 +482,15 @@ mod tests {
 
     #[test]
     fn comparison_metrics_detect_identical_fields() {
-        let field = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| {
-            (i as f64 + 2.0 * j as f64 - k as f64).sin()
-        });
-        let metrics = compare_fields("a", field.view(), "b", field.view());
+        let mut field = LetoArray3::<f64>::zeros([4, 4, 4]);
+        for i in 0..4usize {
+            for j in 0..4usize {
+                for k in 0..4usize {
+                    field[[i, j, k]] = (i as f64 + 2.0 * j as f64 - k as f64).sin();
+                }
+            }
+        }
+        let metrics = compare_fields("a", &field, "b", &field);
 
         assert_eq!(metrics.relative_l2, 0.0);
         assert_eq!(metrics.normalized_max_abs, 0.0);

@@ -9,7 +9,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::NonlinearParameterMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::HarmonicDisplacementField;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Bayesian MAP inversion with uncertainty quantification.
 ///
@@ -26,17 +26,17 @@ pub(super) fn bayesian_inversion(
     _grid: &Grid,
     config: &NonlinearInversionConfig,
 ) -> KwaversResult<NonlinearParameterMap> {
-    let (nx, ny, nz) = harmonic_field.fundamental_magnitude.dim();
+    let [nx, ny, nz] = harmonic_field.fundamental_magnitude.shape();
 
-    let mut nonlinearity_parameter = Array3::zeros((nx, ny, nz));
-    let mut nonlinearity_uncertainty = Array3::zeros((nx, ny, nz));
-    let mut estimation_quality = Array3::zeros((nx, ny, nz));
+    let mut nonlinearity_parameter = Array3::zeros([nx, ny, nz]);
+    let mut nonlinearity_uncertainty = Array3::zeros([nx, ny, nz]);
+    let mut estimation_quality = Array3::zeros([nx, ny, nz]);
 
     let mut elastic_constants = vec![
-        Array3::zeros((nx, ny, nz)),
-        Array3::zeros((nx, ny, nz)),
-        Array3::zeros((nx, ny, nz)),
-        Array3::zeros((nx, ny, nz)),
+        Array3::zeros([nx, ny, nz]),
+        Array3::zeros([nx, ny, nz]),
+        Array3::zeros([nx, ny, nz]),
+        Array3::zeros([nx, ny, nz]),
     ];
 
     let mu = shear_modulus(config);

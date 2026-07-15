@@ -28,8 +28,8 @@
 //! `delta` (nx × ny × nt, f64) is allocated once in `KzkNonlinearOperator::new`
 //! and reused across every call to `apply`, eliminating a 128 × 128 × nt × 8 =
 //! 131 MB heap allocation per z-step.  The per-(i,j) spectral work buffer `w`
-//! is created per Rayon thread (one `nt × 16`-byte allocation per thread,
-//! not per spatial point), so no shared `w_scratch` field is needed.
+//! is created per scheduled slab (one `nt × 16`-byte allocation per slab, not
+//! per spatial point), so no shared `w_scratch` field is needed.
 //!
 //! # References
 //!
@@ -40,9 +40,12 @@
 //!   §4.2.1, eq. (4.2.3).
 
 use super::KZKConfig;
+use apollo::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
-use ndarray::{Array1, Array3};
+use kwavers_math::fft::Complex64;
+use leto::Array1 as LetoArray1;
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Nonlinear operator for the KZK equation.
 ///
@@ -51,8 +54,8 @@ use ndarray::{Array1, Array3};
 ///
 /// `delta` is pre-allocated at construction and reused on every `apply` call
 /// to eliminate 131 MB of heap allocation per z-step.  Per-thread spectral
-/// work buffers `w` are allocated inside the Rayon closure (one `nt × 16`-byte
-/// buffer per thread), giving race-free parallel execution without a shared
+/// work buffers `w` are allocated inside the Moirai closure (one `nt × 16`-byte
+/// buffer per scheduled slab), giving race-free parallel execution without a shared
 /// mutable field.
 #[derive(Debug)]
 pub struct KzkNonlinearOperator {
@@ -169,31 +172,45 @@ impl KzkNonlinearOperator {
         // signals; avoids the sin(ωΔτ)/(ωΔτ) attenuation of central differences.
         let nt = self.config.nt;
         let ny = self.config.ny;
+        let slab_len = ny * nt;
         // Angular-frequency multiplier per FFT bin:  ω[k] = 2πk/(N·Δτ)
         let two_pi_over_n_dt = TWO_PI / (nt as f64 * dt);
 
         // Zero the pre-allocated delta buffer (replaces a 131 MB allocation per step).
         self.delta.fill(0.0);
 
-        // Parallelise the (i,j) spatial loop using disjoint i-row slices.
+        // Parallelise the (i,j) spatial loop using disjoint i-slabs.
         //
         // Theorem (operator isolation, parallel):
-        //   Each i-row of `pressure` and `delta` is disjoint. Parallel writes to
+        //   Each i-slab of `pressure` and `delta` is disjoint. Parallel writes to
         //   `delta[i, j, t]` for different `i` values are race-free. The full
         //   delta is computed before any pressure update begins (see below), so
         //   the Strang-split invariant (RHS evaluated at consistent input state)
         //   is preserved even with parallel execution.
         //
         // Per-thread scratch `w` replaces the shared `self.w_scratch`;
-        // one Array1 allocation of `nt × 16 bytes` per Rayon thread, not per (i,j).
-        ndarray::Zip::from(self.delta.axis_iter_mut(ndarray::Axis(0)))
-            .and(pressure.axis_iter(ndarray::Axis(0)))
-            .par_for_each(|mut delta_row, p_row| {
-                let mut w = Array1::<Complex64>::zeros(nt);
+        // one Array1 allocation of `nt × 16 bytes` per scheduled slab, not per (i,j).
+        let pressure_values = pressure
+            .as_slice()
+            .expect("invariant: KZK nonlinear pressure is standard-layout");
+        let delta_values = self
+            .delta
+            .as_slice_mut()
+            .expect("invariant: KZK nonlinear delta is standard-layout");
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            delta_values,
+            slab_len,
+            |i, delta_slab| {
+                let mut w = LetoArray1::<ApolloComplex64>::zeros([nt]);
+                let pressure_slab = &pressure_values[i * slab_len..(i + 1) * slab_len];
                 for j in 0..ny {
+                    let row_start = j * nt;
+                    let pressure_row = &pressure_slab[row_start..row_start + nt];
+                    let delta_row = &mut delta_slab[row_start..row_start + nt];
+
                     // Step 1: fill per-thread scratch with Re[p] as complex input.
-                    for t in 0..nt {
-                        w[t] = Complex64::new(p_row[[j, t]].re, 0.0);
+                    for (w_t, p_t) in w.iter_mut().zip(pressure_row.iter()) {
+                        *w_t = ApolloComplex64::new(p_t.re, 0.0);
                     }
 
                     // Step 2: forward FFT (no normalisation).
@@ -209,38 +226,48 @@ impl KzkNonlinearOperator {
                         let omega_k = freq_k * two_pi_over_n_dt;
                         let re = w[k].re;
                         let im = w[k].im;
-                        w[k] = Complex64::new(-im * omega_k, re * omega_k);
+                        w[k] = ApolloComplex64::new(-im * omega_k, re * omega_k);
                     }
                     // Zero Nyquist to guarantee real-valued derivative.
                     if nt.is_multiple_of(2) {
-                        w[nt / 2] = Complex64::new(0.0, 0.0);
+                        w[nt / 2] = ApolloComplex64::new(0.0, 0.0);
                     }
 
                     // Step 4: inverse FFT (includes 1/N normalisation).
                     ifft_1d_complex_inplace(&mut w);
 
                     // Step 5: δp[j,t] = coeff · p[j,t] · (∂p/∂τ)[j,t]
-                    for t in 0..nt {
-                        let p_t = p_row[[j, t]].re;
-                        let dp_dt = w[t].re; // exact spectral derivative
-                        delta_row[[j, t]] = coeff * p_t * dp_dt;
+                    for ((delta_t, p_t), w_t) in
+                        delta_row.iter_mut().zip(pressure_row.iter()).zip(w.iter())
+                    {
+                        let dp_dt = w_t.re; // exact spectral derivative
+                        *delta_t = coeff * p_t.re * dp_dt;
                     }
                 }
-            });
+            },
+        );
 
         // Apply corrections to the real (physical) component only.
         // Im[p] carries the quadrature component for diffraction phase tracking
         // and does not participate in nonlinear self-coupling.
-        // Parallelise the application pass over i-rows as well.
-        ndarray::Zip::from(pressure.axis_iter_mut(ndarray::Axis(0)))
-            .and(self.delta.axis_iter(ndarray::Axis(0)))
-            .par_for_each(|mut p_row, delta_row| {
-                for j in 0..ny {
-                    for t in 0..nt {
-                        p_row[[j, t]].re += delta_row[[j, t]];
-                    }
+        // Parallelise the application pass over i-slabs as well.
+        let pressure_values = pressure
+            .as_slice_mut()
+            .expect("invariant: KZK nonlinear pressure is standard-layout");
+        let delta_values = self
+            .delta
+            .as_slice()
+            .expect("invariant: KZK nonlinear delta is standard-layout");
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            pressure_values,
+            slab_len,
+            |i, pressure_slab| {
+                let delta_slab = &delta_values[i * slab_len..(i + 1) * slab_len];
+                for (p, &delta) in pressure_slab.iter_mut().zip(delta_slab.iter()) {
+                    p.re += delta;
                 }
-            });
+            },
+        );
     }
 
     /// Shock formation distance for a plane wave (m).

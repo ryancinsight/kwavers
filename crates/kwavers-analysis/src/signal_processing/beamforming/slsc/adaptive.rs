@@ -1,7 +1,7 @@
 use super::{beamformer::compute_lag_coherence, SlscBeamformer, SlscConfig};
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 
 /// Adaptive SLSC with automatic parameter selection
 #[derive(Debug, Clone)]
@@ -30,11 +30,8 @@ impl AdaptiveSlsc {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn process_adaptive(
-        &self,
-        data: &ndarray::Array2<Complex64>,
-    ) -> KwaversResult<Array1<f64>> {
-        let n_elements = data.nrows();
+    pub fn process_adaptive(&self, data: &leto::Array2<Complex64>) -> KwaversResult<Array1<f64>> {
+        let n_elements = data.shape()[0];
 
         let optimal_lag = self.estimate_optimal_lag(data);
         let max_lag = ((optimal_lag as f64 * self.adaptation_rate) as usize)
@@ -50,9 +47,9 @@ impl AdaptiveSlsc {
         slsc.process(data)
     }
 
-    fn estimate_optimal_lag(&self, data: &ndarray::Array2<Complex64>) -> usize {
-        let n_elements = data.nrows();
-        let sample_idx = data.ncols() / 2;
+    fn estimate_optimal_lag(&self, data: &leto::Array2<Complex64>) -> usize {
+        let n_elements = data.shape()[0];
+        let sample_idx = data.shape()[1] / 2;
 
         let sample_data: Vec<Complex64> = (0..n_elements).map(|i| data[[i, sample_idx]]).collect();
 

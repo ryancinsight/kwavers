@@ -1,8 +1,10 @@
 //! Fractional Laplacian absorption model
 
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array3, Zip};
-use num_complex::Complex;
+use leto::Array3;
+
+use crate::parallel::zip_mut_ref;
 
 /// Fractional Laplacian model for absorption
 ///
@@ -42,7 +44,7 @@ impl FractionalLaplacian {
     ) {
         let omega = TWO_PI * frequency;
 
-        Zip::from(spectrum).and(k_squared).par_for_each(|s, &k2| {
+        zip_mut_ref(spectrum, k_squared, |s, &k2| {
             if k2 > 0.0 {
                 // Fractional Laplacian operator: (-k²)^(y/2)
                 let fractional_term = k2.powf(self.y / 2.0);

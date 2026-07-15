@@ -1,7 +1,7 @@
 //! `ModelRegularizer2D` — regularization on 2D spatial model arrays.
 
-use super::config::RegularizationConfig;
-use ndarray::{Array2, Zip};
+use super::{config::RegularizationConfig, ops::for_each_pair_mut};
+use leto::Array2;
 
 /// 2D Model Regularizer
 ///
@@ -42,13 +42,12 @@ impl ModelRegularizer2D {
     }
 
     fn apply_tikhonov(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.tikhonov_weight * m;
-        });
+        let weight = self.config.tikhonov_weight;
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| *g += weight * m);
     }
 
     fn apply_total_variation(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        let (nx, ny) = model.dim();
+        let [nx, ny] = model.shape();
         let eps = self.config.tv_epsilon;
 
         for i in 1..nx - 1 {
@@ -67,8 +66,8 @@ impl ModelRegularizer2D {
     }
 
     fn apply_smoothness(&self, gradient: &mut Array2<f64>) {
-        let (nx, ny) = gradient.dim();
-        let mut laplacian = Array2::zeros(gradient.dim());
+        let [nx, ny] = gradient.shape();
+        let mut laplacian = Array2::zeros(gradient.shape());
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -82,14 +81,16 @@ impl ModelRegularizer2D {
             }
         }
 
-        Zip::from(gradient).and(&laplacian).par_for_each(|g, &lap| {
-            *g += self.config.smoothness_weight * lap;
+        let weight = self.config.smoothness_weight;
+        for_each_pair_mut(gradient.view_mut(), laplacian.view(), |g, lap| {
+            *g += weight * lap
         });
     }
 
     fn apply_l1(&self, gradient: &mut Array2<f64>, model: &Array2<f64>) {
-        Zip::from(gradient).and(model).par_for_each(|g, &m| {
-            *g += self.config.l1_weight * m.signum();
+        let weight = self.config.l1_weight;
+        for_each_pair_mut(gradient.view_mut(), model.view(), |g, m| {
+            *g += weight * m.signum()
         });
     }
 }

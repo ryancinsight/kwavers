@@ -2,7 +2,7 @@ use super::field::AblationField;
 use super::kinetics::AblationKinetics;
 use super::state::AblationState;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_kinetics_creation() {
@@ -111,10 +111,10 @@ fn test_kinetics_variants() {
 #[test]
 fn test_ablation_field() {
     let kinetics = AblationKinetics::hifu_ablation();
-    let mut field = AblationField::new((10, 10, 10), kinetics);
+    let mut field = AblationField::new([10, 10, 10], kinetics);
 
     // Create temperature field
-    let mut temperature = Array3::from_elem((10, 10, 10), BODY_TEMPERATURE_C);
+    let mut temperature = Array3::from_elem([10, 10, 10], BODY_TEMPERATURE_C);
     temperature[[5, 5, 5]] = 70.0; // Hot spot at center
 
     // Update multiple times
@@ -134,10 +134,10 @@ fn test_ablation_field() {
 #[test]
 fn test_ablation_volume_counting() {
     let kinetics = AblationKinetics::default();
-    let mut field = AblationField::new((5, 5, 5), kinetics);
+    let mut field = AblationField::new([5, 5, 5], kinetics);
 
     // Create hotly heated field
-    let mut temperature = Array3::from_elem((5, 5, 5), BODY_TEMPERATURE_C);
+    let mut temperature = Array3::from_elem([5, 5, 5], BODY_TEMPERATURE_C);
     for i in 1..4 {
         for j in 1..4 {
             for k in 1..4 {

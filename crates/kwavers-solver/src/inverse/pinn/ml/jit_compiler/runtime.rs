@@ -1,4 +1,4 @@
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use crate::inverse::pinn::ml::WaveGeometry2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 use super::{
@@ -39,12 +39,12 @@ impl OptimizedRuntime {
     }
     /// Load model.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn load_model(
         &mut self,
         model: &dyn std::any::Any,
-        geometry: &BurnWave2dGeometry,
+        geometry: &WaveGeometry2D,
         name: &str,
     ) -> KwaversResult<String> {
         let kernel = self.compiler.compile_pinn_model(model, geometry, name)?;
@@ -57,7 +57,7 @@ impl OptimizedRuntime {
     }
     /// Inference.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn inference(&self, kernel_id: &str, input: &[f32]) -> KwaversResult<Vec<f32>> {
         let kernel = self.active_kernels.get(kernel_id).ok_or_else(|| {
@@ -130,7 +130,7 @@ impl OptimizedRuntime {
 
     pub fn get_performance_stats(&self) -> InferenceStats {
         InferenceStats {
-            active_kernels: self.active_kernels.len(),
+            active_kernels: (self.active_kernels.len()),
             memory_usage: self.memory_pool.get_total_allocated(),
             compiler_stats: self.compiler.get_stats().clone(),
             avg_latency_us: 250.0,

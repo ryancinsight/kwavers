@@ -1,6 +1,147 @@
 use crate::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Zip};
+use leto::{Array2, ArrayView2, ArrayViewMut2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+
+#[derive(Clone, Copy)]
+enum AsAxis {
+    X,
+    R,
+}
+
+#[inline]
+fn dense_indices(index: usize, nr: usize) -> (usize, usize) {
+    (index / nr, index % nr)
+}
+
+#[inline]
+fn pml_index(axis: AsAxis, i: usize, k: usize) -> usize {
+    match axis {
+        AsAxis::X => i,
+        AsAxis::R => k,
+    }
+}
+
+fn compute_axisymmetric_coefficient(
+    coefficient: &mut Array2<f64>,
+    rho0: ArrayView2<'_, f64>,
+    rhox: ArrayView2<'_, f64>,
+    rhoz: ArrayView2<'_, f64>,
+) {
+    assert_eq!(
+        coefficient.shape(),
+        rho0.shape(),
+        "invariant: AS density coefficient shape matches rho0"
+    );
+    assert_eq!(
+        coefficient.shape(),
+        rhox.shape(),
+        "invariant: AS density coefficient shape matches rhox"
+    );
+    assert_eq!(
+        coefficient.shape(),
+        rhoz.shape(),
+        "invariant: AS density coefficient shape matches rhoz"
+    );
+
+    if let (Some(coef_values), Some(rho0_values), Some(rx_values), Some(rz_values)) = (
+        coefficient.as_slice_mut(),
+        rho0.as_slice(),
+        rhox.as_slice(),
+        rhoz.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(coef_values, |index, coefficient| {
+            *coefficient = 2.0f64.mul_add(rx_values[index] + rz_values[index], rho0_values[index]);
+        });
+        return;
+    }
+
+    let [nx, nr] = coefficient.shape();
+    for k in 0..nr {
+        for i in 0..nx {
+            coefficient[[i, k]] = 2.0f64.mul_add(rhox[[i, k]] + rhoz[[i, k]], rho0[[i, k]]);
+        }
+    }
+}
+
+fn update_axisymmetric_density_fused(
+    mut density: ArrayViewMut2<'_, f64>,
+    divergence: &Array2<f64>,
+    coefficient: &Array2<f64>,
+    pml: &[f64],
+    axis: AsAxis,
+    dt: f64,
+) {
+    assert_eq!(
+        density.shape(),
+        divergence.shape(),
+        "invariant: AS density shape matches divergence"
+    );
+    assert_eq!(
+        density.shape(),
+        coefficient.shape(),
+        "invariant: AS density shape matches update coefficient"
+    );
+
+    let [_nx, nr] = density.shape();
+    if let (Some(density_values), Some(div_values), Some(coef_values)) = (
+        density.as_mut_slice(),
+        divergence.as_slice(),
+        coefficient.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
+            let (i, k) = dense_indices(index, nr);
+            let p = pml[pml_index(axis, i, k)];
+            *density = p * (p * *density - dt * coef_values[index] * div_values[index]);
+        });
+        return;
+    }
+
+    let [nx, nr] = density.shape();
+    for k in 0..nr {
+        for i in 0..nx {
+            let p = pml[pml_index(axis, i, k)];
+            density[[i, k]] =
+                p * (p * density[[i, k]] - dt * coefficient[[i, k]] * divergence[[i, k]]);
+        }
+    }
+}
+
+fn update_axisymmetric_density_unfused(
+    mut density: ArrayViewMut2<'_, f64>,
+    divergence: &Array2<f64>,
+    coefficient: &Array2<f64>,
+    dt: f64,
+) {
+    assert_eq!(
+        density.shape(),
+        divergence.shape(),
+        "invariant: AS density shape matches divergence"
+    );
+    assert_eq!(
+        density.shape(),
+        coefficient.shape(),
+        "invariant: AS density shape matches update coefficient"
+    );
+
+    if let (Some(density_values), Some(div_values), Some(coef_values)) = (
+        density.as_mut_slice(),
+        divergence.as_slice(),
+        coefficient.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(density_values, |index, density| {
+            *density -= dt * coef_values[index] * div_values[index];
+        });
+        return;
+    }
+
+    let [nx, nr] = density.shape();
+    for k in 0..nr {
+        for i in 0..nx {
+            density[[i, k]] -= dt * coefficient[[i, k]] * divergence[[i, k]];
+        }
+    }
+}
 
 impl PSTDSolver {
     /// Axisymmetric WSWA-FFT density update.
@@ -29,8 +170,8 @@ impl PSTDSolver {
     /// (which fuses div_u* into `dpx` via a single Zip — Opt-7 + Opt-12).
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    /// - Returns [`KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InternalError`] if `AsContext` is unexpectedly `None`
     ///   for `CylindricalAS` geometry.
     ///
     pub(crate) fn update_density_as(&mut self, dt: f64) -> KwaversResult<()> {
@@ -47,9 +188,14 @@ impl PSTDSolver {
             KwaversError::InternalError("AsContext unexpectedly None for CylindricalAS".into())
         })?;
 
+        let ux = self.fields.ux.view();
+        let uz = self.fields.uz.view();
+        let rho0 = self.materials.rho0.view();
         ctx.compute_density_divs(
-            self.fields.ux.slice(s![.., 0, ..]),
-            self.fields.uz.slice(s![.., 0, ..]),
+            ux.slice_with::<2>(&s![.., 0, ..])
+                .expect("invariant: axisymmetric r=0 plane within ux bounds"),
+            uz.slice_with::<2>(&s![.., 0, ..])
+                .expect("invariant: axisymmetric r=0 plane within uz bounds"),
         );
 
         // Populate the pre-allocated coefficient scratch (no heap allocation).
@@ -57,21 +203,29 @@ impl PSTDSolver {
         // update_density_cartesian fused path.  In fallback mode, coef uses the
         // pre-PML'd rhox/rhoz (same as the previous non-fused AS implementation).
         if self.config.nonlinearity {
-            Zip::from(&mut ctx.coef)
-                .and(self.materials.rho0.slice(s![.., 0, ..]))
-                .and(self.rhox.slice(s![.., 0, ..]))
-                .and(self.rhoz.slice(s![.., 0, ..]))
-                .par_for_each(|c, &rho0, &rx, &rz| {
-                    *c = 2.0f64.mul_add(rx + rz, rho0);
-                });
+            let rhox = self.rhox.view();
+            let rhoz = self.rhoz.view();
+            compute_axisymmetric_coefficient(
+                &mut ctx.coef,
+                rho0.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
+                rhox.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhox bounds"),
+                rhoz.slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhoz bounds"),
+            );
         } else {
-            ctx.coef.assign(&self.materials.rho0.slice(s![.., 0, ..]));
+            ctx.coef.assign(
+                &rho0
+                    .slice_with::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rho0 bounds"),
+            );
         }
 
         if use_fused {
             // Fused: rhox = pml_x[i]·(pml_x[i]·rhox − dt·coef·duxdx)
             //        rhoz = pml_z[k]·(pml_z[k]·rhoz − dt·coef·duzdr)
-            // In the 2-D slice (nx, nr), Zip::indexed returns (i, k).
+            // In the 2-D slice (nx, nr), dense row-major indexing maps to (i, k).
             let pml_exp = self.pml_exp.as_ref().ok_or_else(|| {
                 KwaversError::InternalError(
                     "pml_exp unexpectedly None in fused AS density path".into(),
@@ -84,35 +238,49 @@ impl PSTDSolver {
                 KwaversError::InternalError("pml_den_z must be contiguous".into())
             })?;
 
-            Zip::indexed(self.rhox.slice_mut(s![.., 0, ..]))
-                .and(&ctx.duxdx)
-                .and(&ctx.coef)
-                .par_for_each(|(i, _k), rho, &du, &c| {
-                    let p = pml_dx[i];
-                    *rho = p * (p * *rho - dt * c * du);
-                });
+            update_axisymmetric_density_fused(
+                self.rhox
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhox bounds"),
+                &ctx.duxdx,
+                &ctx.coef,
+                pml_dx,
+                AsAxis::X,
+                dt,
+            );
 
-            Zip::indexed(self.rhoz.slice_mut(s![.., 0, ..]))
-                .and(&ctx.duzdr)
-                .and(&ctx.coef)
-                .par_for_each(|(_i, k), rho, &du, &c| {
-                    let p = pml_dz[k];
-                    *rho = p * (p * *rho - dt * c * du);
-                });
+            update_axisymmetric_density_fused(
+                self.rhoz
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhoz bounds"),
+                &ctx.duzdr,
+                &ctx.coef,
+                pml_dz,
+                AsAxis::R,
+                dt,
+            );
         } else {
-            Zip::from(self.rhox.slice_mut(s![.., 0, ..]))
-                .and(&ctx.duxdx)
-                .and(&ctx.coef)
-                .par_for_each(|rho, &du, &c| {
-                    *rho -= dt * c * du;
-                });
+            update_axisymmetric_density_unfused(
+                self.rhox
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhox bounds"),
+                &ctx.duxdx,
+                &ctx.coef,
+                dt,
+            );
 
-            Zip::from(self.rhoz.slice_mut(s![.., 0, ..]))
-                .and(&ctx.duzdr)
-                .and(&ctx.coef)
-                .par_for_each(|rho, &du, &c| {
-                    *rho -= dt * c * du;
-                });
+            update_axisymmetric_density_unfused(
+                self.rhoz
+                    .view_mut()
+                    .slice_with_mut::<2>(&s![.., 0, ..])
+                    .expect("invariant: axisymmetric r=0 plane within rhoz bounds"),
+                &ctx.duzdr,
+                &ctx.coef,
+                dt,
+            );
 
             self.apply_pml_to_density()?; // post-step PML (fallback only)
         }
@@ -120,9 +288,17 @@ impl PSTDSolver {
         // Write divergences into div_ux/div_uz (the divergence cache).
         // apply_absorption_to_pressure fuses div_ux/div_uy/div_uz → dpx at Step 1 (Opt-7+12).
         // Writing to div_u* here (not dpx) ensures absorption receives the correct AS values.
-        self.div_ux.slice_mut(s![.., 0, ..]).assign(&ctx.duxdx);
+        self.div_ux
+            .view_mut()
+            .slice_with_mut(&s![.., 0, ..])
+            .unwrap()
+            .assign(&ctx.duxdx);
         self.div_uy.fill(0.0);
-        self.div_uz.slice_mut(s![.., 0, ..]).assign(&ctx.duzdr);
+        self.div_uz
+            .view_mut()
+            .slice_with_mut(&s![.., 0, ..])
+            .unwrap()
+            .assign(&ctx.duzdr);
         self.as_ctx = Some(ctx);
         Ok(())
     }

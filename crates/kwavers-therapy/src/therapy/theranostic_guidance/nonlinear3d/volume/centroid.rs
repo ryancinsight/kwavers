@@ -1,6 +1,6 @@
 //! Centroid utilities for CT-derived nonlinear 3-D supports.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::types::GridIndex;
 
@@ -22,7 +22,7 @@ pub(crate) fn centroid_float(
 ) -> Option<[f64; 3]> {
     let mut sum = [0.0; 3];
     let mut count = 0.0;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
+    for ([ix, iy, iz], active) in mask.indexed_iter() {
         let in_range = z_range.is_none_or(|(lo, hi)| iz >= lo && iz <= hi);
         if *active && in_range {
             sum[0] += ix as f64;

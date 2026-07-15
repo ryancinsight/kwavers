@@ -5,7 +5,7 @@ use crate::{
     heterogeneous::{core::HeterogeneousMedium, interpolation::HetTrilinearInterpolator},
 };
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl BubbleProperties for HeterogeneousMedium {
     #[inline]

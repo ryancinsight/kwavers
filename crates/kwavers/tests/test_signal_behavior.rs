@@ -343,7 +343,7 @@ fn test_cpml_absorption_effectiveness() -> kwavers_core::error::KwaversResult<()
 
     // Helper: compute total acoustic energy ∝ Σ p²
     let total_energy =
-        |p: &ndarray::Array3<f64>| -> f64 { p.iter().map(|&v| v * v).sum::<f64>() * dx * dx * dx };
+        |p: &leto::Array3<f64>| -> f64 { p.iter().map(|&v| v * v).sum::<f64>() * dx * dx * dx };
 
     // --- Run 1: No boundary (periodic PSTD) ---
     let config_none = PSTDConfig {

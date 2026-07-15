@@ -3,7 +3,7 @@
 use super::material::StoneMaterial;
 use super::model::StoneFractureModel;
 use kwavers_core::constants::numerical::MPA_TO_PA;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_calcium_oxalate_properties() {
@@ -52,8 +52,8 @@ fn test_fracture_model_initialization() {
     let stone = StoneMaterial::calcium_oxalate_monohydrate();
     let model = StoneFractureModel::new(stone, (10, 10, 10));
 
-    assert_eq!(model.damage_field().dim(), (10, 10, 10));
-    assert_eq!(model.damage_field().sum(), 0.0);
+    assert_eq!(model.damage_field().shape(), [10, 10, 10]);
+    assert_eq!(model.damage_field().iter().sum::<f64>(), 0.0);
     assert!(model.fragment_sizes().is_empty());
 }
 

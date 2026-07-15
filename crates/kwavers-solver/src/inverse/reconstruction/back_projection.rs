@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use super::config::{ReconstructionConfig, Reconstructor};
 use super::filters::apply_reconstruction_filter;
@@ -54,7 +54,7 @@ impl UniversalBackProjection {
             let time_delay = distance / config.sound_speed;
             let sample_idx = (time_delay / dt).round() as usize;
 
-            if sample_idx < sensor_data.dim().1 {
+            if sample_idx < sensor_data.shape()[1] {
                 let sensor_value = sensor_data[[sensor_idx, sample_idx]];
 
                 // Apply weighting
@@ -68,7 +68,7 @@ impl UniversalBackProjection {
             }
         }
 
-        value / sensor_positions.len() as f64
+        value / (sensor_positions.len()) as f64
     }
 }
 

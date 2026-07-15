@@ -11,7 +11,8 @@
 #[cfg(test)]
 mod tests;
 
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Operator splitting solver for nonlinear acoustics
 #[derive(Debug)]
@@ -150,7 +151,7 @@ impl OperatorSplittingSolver {
         let u = pressure.mapv(|p| beta * p / norm_factor);
 
         // Compute flux F = u²/2 and its derivative using upwind scheme
-        let mut flux_gradient = Array3::zeros(pressure.dim());
+        let mut flux_gradient = Array3::zeros(pressure.shape());
 
         for k in 0..self.nz {
             for j in 0..self.ny {
@@ -186,11 +187,18 @@ impl OperatorSplittingSolver {
 
         // Apply the nonlinear correction
         let scale = self.dt * self.sound_speed * norm_factor / beta;
-        Zip::from(pressure)
-            .and(&flux_gradient)
-            .par_for_each(|p, &grad| {
+        {
+            let p_slice = pressure
+                .as_slice_mut()
+                .expect("pressure: standard-layout asserted just above; layout matched");
+            let grad_slice = flux_gradient
+                .as_slice()
+                .expect("flux_gradient: standard-layout asserted just above; layout matched");
+            enumerate_mut_with::<Adaptive, _, _>(p_slice, |idx, p: &mut f64| {
+                let grad = grad_slice[idx];
                 *p -= scale * grad;
             });
+        }
     }
 
     /// Step 3: Linear propagation again for dt/2 (Strang splitting)

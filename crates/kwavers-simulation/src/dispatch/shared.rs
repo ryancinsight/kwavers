@@ -5,6 +5,7 @@
 
 use kwavers_receiver::recorder::config::RecordingMode;
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
+use leto::SliceArg;
 
 // ── Recording mode helpers ────────────────────────────────────────────────────
 
@@ -71,35 +72,71 @@ pub(crate) fn recording_modes_from_strings(modes: &[String]) -> Vec<RecordingMod
 
 /// Trim the initial recorder sample (record-start offset) from owned data.
 pub(crate) fn trim_initial_recorder_sample(
-    recorded_data: ndarray::Array2<f64>,
+    recorded_data: leto::Array2<f64>,
     time_steps: usize,
     record_start_index: usize,
-) -> ndarray::Array2<f64> {
+) -> leto::Array2<f64> {
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
-    if recorded_data.ncols() > time_steps {
+    if recorded_data.shape()[1] > time_steps {
         recorded_data
-            .slice(ndarray::s![.., skip..time_steps])
-            .to_owned()
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: Some(time_steps as isize),
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     } else {
-        recorded_data.slice(ndarray::s![.., skip..]).to_owned()
+        recorded_data
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: None,
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     }
 }
 
 /// Trim the initial recorder sample (record-start offset) from a view.
 pub(crate) fn trim_initial_recorder_view(
-    recorded_data: ndarray::ArrayView2<'_, f64>,
+    recorded_data: leto::ArrayView2<'_, f64>,
     time_steps: usize,
     record_start_index: usize,
-) -> ndarray::Array2<f64> {
+) -> leto::Array2<f64> {
     let start = record_start_index.max(1).min(time_steps);
     let skip = start.saturating_sub(1);
-    if recorded_data.ncols() > time_steps {
+    if recorded_data.shape()[1] > time_steps {
         recorded_data
-            .slice(ndarray::s![.., skip..time_steps])
-            .to_owned()
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: Some(time_steps as isize),
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     } else {
-        recorded_data.slice(ndarray::s![.., skip..]).to_owned()
+        recorded_data
+            .slice_with::<2>(&[
+                SliceArg::All,
+                SliceArg::Range {
+                    start: Some(skip as isize),
+                    end: None,
+                    step: 1,
+                },
+            ])
+            .expect("invariant: valid recorder-trim slice bounds")
+            .to_contiguous()
     }
 }
 

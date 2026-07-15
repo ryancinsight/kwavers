@@ -3,8 +3,8 @@
 //! This module provides comprehensive validation of beamforming algorithms
 //! against analytical solutions and performance benchmarks.
 
-use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 use kwavers_analysis::signal_processing::beamforming::adaptive::MinimumVariance;
@@ -26,7 +26,7 @@ fn create_test_covariance(n: usize) -> Array2<Complex64> {
             } else {
                 Complex64::new(0.1 / (1.0 + (i as f64 - j as f64).abs()), 0.0)
             };
-            r[(i, j)] = val;
+            r[[i, j]] = val;
         }
     }
     r
@@ -36,6 +36,7 @@ fn create_test_covariance(n: usize) -> Array2<Complex64> {
 fn create_steering_vector(n: usize, angle: f64) -> Array1<Complex64> {
     let k = 2.0 * PI; // Normalized wavenumber
     Array1::from_vec(
+        n,
         (0..n)
             .map(|i| {
                 let phase = k * (i as f64) * angle.sin();
@@ -43,6 +44,7 @@ fn create_steering_vector(n: usize, angle: f64) -> Array1<Complex64> {
             })
             .collect(),
     )
+    .unwrap()
 }
 
 #[cfg(test)]
@@ -61,7 +63,7 @@ mod tests {
 
         // Weights should be finite
         assert_eq!(weights.len(), n);
-        for &w in &weights {
+        for &w in weights.iter() {
             assert!(w.is_finite());
         }
     }
@@ -82,7 +84,7 @@ mod tests {
 
         // Basic sanity: weights should be finite and correct length.
         assert_eq!(weights.len(), n);
-        for &w in &weights {
+        for &w in weights.iter() {
             assert!(w.is_finite());
         }
     }
@@ -102,7 +104,7 @@ mod tests {
 
         // Basic validation - weights should be finite and correct size
         assert_eq!(weights.len(), n);
-        for &w in &weights {
+        for &w in weights.iter() {
             assert!(w.is_finite());
         }
     }

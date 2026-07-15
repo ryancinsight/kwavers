@@ -1,8 +1,8 @@
 use super::*;
 use crate::forward::bem::field::BemSolution;
+use kwavers_math::fft::Complex64;
 use kwavers_mesh::tetrahedral::{MeshBoundaryType, TetrahedralMesh};
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 
 fn create_test_mesh() -> TetrahedralMesh {
     let mut mesh = TetrahedralMesh::new();
@@ -20,7 +20,7 @@ fn test_bem_solver_creation() {
     let mesh = create_test_mesh();
     let solver = BemSolver::from_mesh(config, &mesh).unwrap();
 
-    assert_eq!(solver.vertices.len(), 4);
+    assert_eq!((solver.vertices.len()), 4);
     assert!(solver.boundary_manager_ref().is_empty());
     assert!(solver.h_matrix.is_none());
     assert!(solver.g_matrix.is_none());
@@ -65,8 +65,8 @@ fn test_bem_boundary_conditions() {
     solver.assemble_system().unwrap();
     let solution = solver.solve(1.0, None).unwrap();
 
-    assert_eq!(solution.boundary_pressure.len(), 4);
-    assert_eq!(solution.boundary_velocity.len(), 4);
+    assert_eq!((solution.boundary_pressure.len()), 4);
+    assert_eq!((solution.boundary_velocity.len()), 4);
     assert_eq!(solution.wavenumber, 1.0);
 }
 
@@ -86,9 +86,9 @@ fn test_compute_scattered_field() {
         wavenumber: 1.0,
     };
 
-    let points = Array1::from_vec(vec![[2.0, 2.0, 2.0]]);
+    let points = Array1::from_vec(1, vec![[2.0, 2.0, 2.0]]).unwrap();
     let field = solver.compute_scattered_field(&points, &solution).unwrap();
 
-    assert_eq!(field.len(), 1);
+    assert_eq!((field.len()), 1);
     assert!(field[0].norm() > 1e-10, "Field should be non-zero");
 }

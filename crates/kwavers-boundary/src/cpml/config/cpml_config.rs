@@ -174,7 +174,7 @@ impl CPMLConfig {
 
     /// Sigma factor for a specific dimension (respects `per_dimension_alpha`).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn sigma_factor_for_dimension(&self, dim: usize) -> KwaversResult<f64> {
         self.per_dimension_alpha.get(dim)
@@ -182,7 +182,7 @@ impl CPMLConfig {
 
     /// PML thickness for a specific dimension (0=x, 1=y, 2=z).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn thickness_for_dimension(&self, dim: usize) -> KwaversResult<usize> {
         self.per_dimension.get(dim)
@@ -190,7 +190,7 @@ impl CPMLConfig {
 
     /// Validate all configuration parameters.
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if any parameter violates its constraint.
+    /// - Returns [`kwavers_core::error::KwaversError::Config`] if any parameter violates its constraint.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.thickness == 0 {
@@ -278,7 +278,7 @@ impl CPMLConfig {
 
     /// Theoretical reflection for a specific dimension.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn theoretical_reflection_for_dimension(
         &self,

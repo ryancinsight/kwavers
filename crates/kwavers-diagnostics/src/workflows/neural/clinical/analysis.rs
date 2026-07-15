@@ -1,7 +1,7 @@
 use super::super::types::{ClinicalAnalysis, FeatureMap, LesionDetection, TissueClassification};
 use super::NeuralClinicalDecisionSupport;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 use std::collections::HashMap;
 
 impl NeuralClinicalDecisionSupport {
@@ -41,7 +41,7 @@ impl NeuralClinicalDecisionSupport {
         volume: ArrayView3<f32>,
         features: &FeatureMap,
     ) -> KwaversResult<TissueClassification> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
 
         let mut probabilities = HashMap::new();
         let mut dominant_tissue = Array3::<String>::from_elem((nx, ny, nz), "Unknown".to_owned());
@@ -146,7 +146,7 @@ impl NeuralClinicalDecisionSupport {
             lesions.iter().map(|l| l.confidence).sum::<f32>() / lesions.len() as f32
         };
 
-        let image_confidence = confidence.iter().sum::<f32>() / confidence.len() as f32;
+        let image_confidence = confidence.iter().sum::<f32>() / confidence.size() as f32;
         (lesion_confidence + image_confidence) / 2.0
     }
 }

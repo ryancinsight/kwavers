@@ -3,7 +3,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Analyzes domain characteristics for solver selection
 #[derive(Debug)]
@@ -21,7 +21,7 @@ impl DomainAnalyzer {
 
     /// Analyze the domain and compute quality metrics
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn analyze(
         &self,
@@ -45,13 +45,19 @@ impl DomainAnalyzer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_homogeneity(&self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
-        let mut homogeneity = Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+        let mut homogeneity = Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
 
         // Check density variations relative to mean
         {
             let density = medium.density_array();
-            let mean = density.mean().unwrap_or(1.0);
-            for ((i, j, k), val) in density.indexed_iter() {
+            let count = density.shape().iter().product::<usize>();
+            let mean = if count == 0 {
+                1.0
+            } else {
+                density.iter().copied().sum::<f64>() / count as f64
+            };
+            for (index, val) in density.indexed_iter() {
+                let [i, j, k] = index;
                 let variation = (val - mean).abs() / mean;
                 homogeneity[[i, j, k]] = 1.0 - variation.min(1.0);
             }
@@ -69,7 +75,7 @@ impl DomainAnalyzer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_smoothness(&self, grid: &Grid, _medium: &dyn Medium) -> KwaversResult<Array3<f64>> {
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
+        Ok(Array3::from_elem([grid.nx, grid.ny, grid.nz], 0.5))
     }
 
     /// Estimate spectral content
@@ -81,7 +87,7 @@ impl DomainAnalyzer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn estimate_spectral_content(&self, grid: &Grid) -> KwaversResult<Array3<f64>> {
-        Ok(Array3::from_elem((grid.nx, grid.ny, grid.nz), 0.5))
+        Ok(Array3::from_elem([grid.nx, grid.ny, grid.nz], 0.5))
     }
 }
 

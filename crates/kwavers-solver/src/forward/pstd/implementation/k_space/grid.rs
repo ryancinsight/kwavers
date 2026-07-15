@@ -3,7 +3,8 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_math::fft::KSpaceCalculator;
-use ndarray::Array1;
+use leto::Array1;
+use leto::Array3;
 
 /// Wavenumber grid for PSTD simulations
 #[derive(Debug, Clone)]
@@ -11,7 +12,7 @@ pub struct PSTDKSGrid {
     pub kx: Array1<f64>,
     pub ky: Array1<f64>,
     pub kz: Array1<f64>,
-    pub k_mag: ndarray::Array3<f64>,
+    pub k_mag: Array3<f64>,
 }
 
 impl PSTDKSGrid {
@@ -25,7 +26,7 @@ impl PSTDKSGrid {
         let kz = Self::compute_wavenumbers(spatial_grid.nz, spatial_grid.dz);
 
         // Precompute k magnitude grid
-        let mut k_mag = ndarray::Array3::zeros((spatial_grid.nx, spatial_grid.ny, spatial_grid.nz));
+        let mut k_mag = Array3::zeros((spatial_grid.nx, spatial_grid.ny, spatial_grid.nz));
         for i in 0..spatial_grid.nx {
             for j in 0..spatial_grid.ny {
                 for k in 0..spatial_grid.nz {
@@ -48,7 +49,7 @@ impl PSTDKSGrid {
     /// Get grid dimensions (nx, ny, nz)
     #[must_use]
     pub fn dimensions(&self) -> (usize, usize, usize) {
-        let shape = self.k_mag.dim();
-        (shape.0, shape.1, shape.2)
+        let shape = self.k_mag.shape();
+        (shape[0], shape[1], shape[2])
     }
 }

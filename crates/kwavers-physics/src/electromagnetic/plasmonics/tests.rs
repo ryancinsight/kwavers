@@ -1,5 +1,5 @@
 use super::*;
-use num_complex::Complex;
+use eunomia::Complex;
 
 #[test]
 fn test_mie_theory_gold() {

@@ -1,9 +1,11 @@
 //! FastNearfieldSolver implementation.
 
+use apollo::{fft_2d_complex, ifft_2d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_math::fft::{fft_2d_complex, ifft_2d_complex, Complex64};
+use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::rectangular::RectangularTransducer;
-use ndarray::{s, Array2, Array3, Axis};
+use leto::Array2 as LetoArray2;
+use leto::{Array2, Array3};
 use std::collections::HashMap;
 
 use super::types::{AngularSpectrumFactors, FNMConfig};
@@ -91,7 +93,7 @@ impl FastNearfieldSolver {
 
     /// Precompute angular spectrum factors for a given z-distance
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn precompute_factors(&mut self, z: f64) -> Result<(), String> {
         let transducer = self
@@ -125,7 +127,7 @@ impl FastNearfieldSolver {
 
         // Compute angular spectrum of Green's function
         // Based on McGough (2004) and Kelly & McGough (2006)
-        let mut green_spectrum = Array2::<Complex64>::zeros((n_kx, n_ky));
+        let mut green_spectrum = Array2::<Complex64>::from_elem([n_kx, n_ky], Complex64::default());
 
         for (i, &kx_val) in self.kx.iter().enumerate() {
             for (j, &ky_val) in self.ky.iter().enumerate() {
@@ -169,7 +171,7 @@ impl FastNearfieldSolver {
 
     /// Compute pressure field from transducer velocity distribution
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_field(
         &self,
@@ -189,11 +191,11 @@ impl FastNearfieldSolver {
 
         // Check velocity array dimensions match transducer elements
         let (n_elem_x, n_elem_y) = transducer.elements;
-        if velocity.nrows() != n_elem_x || velocity.ncols() != n_elem_y {
+        if velocity.shape()[0] != n_elem_x || velocity.shape()[1] != n_elem_y {
             return Err(format!(
                 "Velocity array dimensions ({}, {}) don't match transducer elements ({}, {})",
-                velocity.nrows(),
-                velocity.ncols(),
+                velocity.shape()[0],
+                velocity.shape()[1],
                 n_elem_x,
                 n_elem_y
             ));
@@ -201,22 +203,36 @@ impl FastNearfieldSolver {
 
         // Zero-pad velocity to angular spectrum size
         let padded_velocity = self.zero_pad_velocity(velocity);
+        let (n_kx, n_ky) = self.config.angular_spectrum_size;
+        let padded_velocity = LetoArray2::from_shape_vec(
+            [n_kx, n_ky],
+            padded_velocity
+                .iter()
+                .map(|value| ApolloComplex64::new(value.re, value.im))
+                .collect(),
+        )
+        .expect("fast-nearfield padded velocity shape must match its Leto FFT shape");
 
         // Forward FFT (angular spectrum of velocity)
         let velocity_spectrum = fft_2d_complex(&padded_velocity);
 
         // Multiply by Green's function angular spectrum
         let mut pressure_spectrum = velocity_spectrum;
-        for ((i, j), val) in pressure_spectrum.indexed_iter_mut() {
-            *val *= factors.green_spectrum[[i, j]];
+        for i in 0..n_kx {
+            for j in 0..n_ky {
+                let factor = factors.green_spectrum[[i, j]];
+                pressure_spectrum[[i, j]] *= ApolloComplex64::new(factor.re, factor.im);
+            }
         }
 
         // Scaling factor from Rayleigh-Sommerfeld theory
         let k = transducer.wavenumber(self.c0);
-        let scaling = Complex64::new(0.0, self.rho0 * self.c0 * k / (TWO_PI));
+        let scaling = ApolloComplex64::new(0.0, self.rho0 * self.c0 * k / (TWO_PI));
 
-        for val in &mut pressure_spectrum {
-            *val *= scaling;
+        for i in 0..n_kx {
+            for j in 0..n_ky {
+                pressure_spectrum[[i, j]] *= scaling;
+            }
         }
 
         // Inverse FFT to get spatial pressure field
@@ -224,20 +240,23 @@ impl FastNearfieldSolver {
         let pressure_field = ifft_2d_complex(&pressure_spectrum);
 
         // Extract the central region corresponding to the transducer aperture
-        let (n_kx, n_ky) = self.config.angular_spectrum_size;
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
 
-        let result = pressure_field
-            .slice(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y])
-            .to_owned();
+        let mut result = Array2::<Complex64>::from_elem([n_elem_x, n_elem_y], Complex64::default());
+        for i in 0..n_elem_x {
+            for j in 0..n_elem_y {
+                let value = pressure_field[[start_x + i, start_y + j]];
+                result[[i, j]] = Complex64::new(value.re, value.im);
+            }
+        }
 
         Ok(result)
     }
 
     /// Compute field at multiple z-distances (efficient batch computation)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_field_stack(
         &self,
@@ -252,11 +271,12 @@ impl FastNearfieldSolver {
         }
 
         // Stack into 3D array (z, x, y)
-        let shape = (z_values.len(), results[0].nrows(), results[0].ncols());
+        let [n_rows, n_cols] = results[0].shape();
+        let shape = (z_values.len(), n_rows, n_cols);
         let mut stacked = Array3::<Complex64>::zeros(shape);
 
         for (i, field) in results.into_iter().enumerate() {
-            stacked.index_axis_mut(Axis(0), i).assign(&field);
+            stacked.index_axis_mut(0, i).unwrap().assign(&field);
         }
 
         Ok(stacked)
@@ -264,16 +284,20 @@ impl FastNearfieldSolver {
 
     /// Zero-pad velocity distribution to angular spectrum size
     fn zero_pad_velocity(&self, velocity: &Array2<Complex64>) -> Array2<Complex64> {
-        let (n_elem_x, n_elem_y) = velocity.dim();
+        let [n_elem_x, n_elem_y] = velocity.shape();
         let (n_kx, n_ky) = self.config.angular_spectrum_size;
 
-        let mut padded = Array2::<Complex64>::zeros((n_kx, n_ky));
+        let mut padded = Array2::<Complex64>::from_elem([n_kx, n_ky], Complex64::default());
 
         let start_x = (n_kx - n_elem_x) / 2;
         let start_y = (n_ky - n_elem_y) / 2;
 
         padded
-            .slice_mut(s![start_x..start_x + n_elem_x, start_y..start_y + n_elem_y])
+            .slice_with_mut(&s![
+                start_x..start_x + n_elem_x,
+                start_y..start_y + n_elem_y
+            ])
+            .unwrap()
             .assign(velocity);
 
         padded
@@ -300,7 +324,7 @@ impl FastNearfieldSolver {
 
         // Cache memory
         for factors in self.cached_factors.values() {
-            total += factors.green_spectrum.len() * std::mem::size_of::<Complex64>();
+            total += (factors.green_spectrum.len()) * std::mem::size_of::<Complex64>();
             total += factors.kx.len() * std::mem::size_of::<f64>();
             total += factors.ky.len() * std::mem::size_of::<f64>();
         }

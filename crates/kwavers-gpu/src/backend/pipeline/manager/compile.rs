@@ -1,11 +1,11 @@
-//! Shader compilation helpers for PipelineManager.
+//! Shader compilation helpers for WgpuPipelineManager.
 
 use super::super::types::PipelineType;
 use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 use wgpu;
 
-impl super::PipelineManager {
+impl super::WgpuPipelineManager {
     /// Compile elementwise pipeline.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -112,6 +112,26 @@ impl super::PipelineManager {
                     visibility: wgpu::ShaderStages::COMPUTE,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: false },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::COMPUTE,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
                         min_binding_size: None,
                     },

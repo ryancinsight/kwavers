@@ -15,7 +15,7 @@ use kwavers_math::numerics::operators::{
     CentralDifference2, CentralDifference4, CentralDifference6, DifferentialOperator,
 };
 use kwavers_medium::{CoreMedium, HomogeneousMedium};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Benchmark FDTD finite difference operations (critical inner loop)
 ///
@@ -42,7 +42,7 @@ fn bench_fdtd_derivatives(c: &mut Criterion) {
                 }
             }
 
-            fn apply_x(&self, field: ndarray::ArrayView3<f64>) -> ndarray::Array3<f64> {
+            fn apply_x(&self, field: leto::ArrayView3<f64>) -> leto::Array3<f64> {
                 match self {
                     Self::Order2(op) => op.apply_x(field).expect("Derivative computation"),
                     Self::Order4(op) => op.apply_x(field).expect("Derivative computation"),
@@ -208,7 +208,9 @@ fn bench_field_operations(c: &mut Criterion) {
         // Benchmark scalar multiplication
         group.bench_with_input(BenchmarkId::new("scalar_multiply", size), &size, |b, _| {
             b.iter(|| {
-                field1.mapv_inplace(|x| x * black_box(scalar));
+                for x in field1.iter_mut() {
+                    *x = *x * black_box(scalar);
+                }
             })
         });
 

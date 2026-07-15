@@ -1,7 +1,7 @@
 //! LiteratureValidator struct and validation methods.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::types::{treeby_2010, LiteratureValidationResult};
 
@@ -20,7 +20,7 @@ impl LiteratureValidator {
 
     /// Validate against Treeby (2010) plane wave propagation.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_treeby_plane_wave(
         &self,
@@ -43,11 +43,11 @@ impl LiteratureValidator {
             .map(|&t| treeby_2010::analytical_pressure(t, amplitude))
             .collect();
 
-        if computed_waveform.len() != expected.len() {
+        if (computed_waveform.len()) != (expected.len()) {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: expected.len().to_string(),
-                    actual: computed_waveform.len().to_string(),
+                    expected: (expected.len()).to_string(),
+                    actual: (computed_waveform.len()).to_string(),
                 },
             ));
         }
@@ -169,7 +169,7 @@ impl LiteratureValidator {
     ) -> LiteratureValidationResult {
         let mut result = LiteratureValidationResult::new("ConvergenceAnalysis");
 
-        if dx_values.len() < 2 || errors.len() < 2 {
+        if (dx_values.len()) < 2 || (errors.len()) < 2 {
             result.notes = "Need at least 2 points for convergence analysis".to_string();
             return result;
         }
@@ -203,7 +203,7 @@ impl LiteratureValidator {
 
     /// Compute relative L2 error between computed and reference.
     pub(super) fn relative_l2_error(computed: &[f64], reference: &[f64]) -> f64 {
-        if computed.len() != reference.len() || computed.is_empty() {
+        if (computed.len()) != (reference.len()) || computed.is_empty() {
             return f64::NAN;
         }
 
@@ -225,11 +225,11 @@ impl LiteratureValidator {
 
     /// Simple linear regression (slope, intercept).
     pub(super) fn linear_regression(x: &[f64], y: &[f64]) -> (f64, f64) {
-        if x.len() != y.len() || x.len() < 2 {
+        if (x.len()) != (y.len()) || (x.len()) < 2 {
             return (f64::NAN, f64::NAN);
         }
 
-        let n = x.len() as f64;
+        let n = (x.len()) as f64;
         let sum_x: f64 = x.iter().sum();
         let sum_y: f64 = y.iter().sum();
         let sum_xy: f64 = x.iter().zip(y.iter()).map(|(xi, yi)| xi * yi).sum();

@@ -80,21 +80,75 @@ fn scalar_multiply(@builtin(global_invocation_id) global_id: vec3<u32>) {
     output_scalar[idx] = input[idx] * params.value;
 }
 
-// Spatial derivative using k-space operator
-// This is a placeholder - full implementation requires FFT integration
+struct DerivativeParams {
+    nx: u32,
+    ny: u32,
+    nz: u32,
+    direction: u32,
+}
+
+@group(0) @binding(3)
+var<uniform> derivative_params: DerivativeParams;
+
+// Spatial derivative using second-order central finite differences.
+// The original k-space derivative belongs in Apollo FFT-backed kernels.
+// Spatial boundary samples use first-order one-sided differences.
 @compute @workgroup_size(256, 1, 1)
 fn spatial_derivative(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let idx = global_id.x;
+    let total = derivative_params.nx * derivative_params.ny * derivative_params.nz;
 
-    if (idx >= arrayLength(&input_a)) {
+    if (idx >= total) {
         return;
     }
 
-    // Placeholder: k-space derivative = FFT → multiply by ik → IFFT
-    // For now, just copy input to output
-    output[idx] = input_a[idx];
-}
+    let yz = derivative_params.ny * derivative_params.nz;
+    let x = idx / yz;
+    let rem = idx - x * yz;
+    let y = rem / derivative_params.nz;
+    let z = rem - y * derivative_params.nz;
 
+    if (derivative_params.direction == 0u) {
+        if (derivative_params.nx < 2u) {
+            output[idx] = 0.0;
+        } else if (x == 0u) {
+            output[idx] = input_a[idx + yz] - input_a[idx];
+        } else if (x + 1u == derivative_params.nx) {
+            output[idx] = input_a[idx] - input_a[idx - yz];
+        } else {
+            output[idx] = 0.5 * (input_a[idx + yz] - input_a[idx - yz]);
+        }
+        return;
+    }
+
+    if (derivative_params.direction == 1u) {
+        if (derivative_params.ny < 2u) {
+            output[idx] = 0.0;
+        } else if (y == 0u) {
+            output[idx] = input_a[idx + derivative_params.nz] - input_a[idx];
+        } else if (y + 1u == derivative_params.ny) {
+            output[idx] = input_a[idx] - input_a[idx - derivative_params.nz];
+        } else {
+            output[idx] = 0.5 * (input_a[idx + derivative_params.nz] - input_a[idx - derivative_params.nz]);
+        }
+        return;
+    }
+
+    if (derivative_params.direction == 2u) {
+        if (derivative_params.nz < 2u) {
+            output[idx] = 0.0;
+        } else if (z == 0u) {
+            output[idx] = input_a[idx + 1u] - input_a[idx];
+        } else if (z + 1u == derivative_params.nz) {
+            output[idx] = input_a[idx] - input_a[idx - 1u];
+        } else {
+            output[idx] = 0.5 * (input_a[idx + 1u] - input_a[idx - 1u]);
+        }
+        return;
+    }
+
+    output[idx] = 0.0;
+}
 // 3D element-wise multiply with proper indexing
 struct GridParams {
     nx: u32,

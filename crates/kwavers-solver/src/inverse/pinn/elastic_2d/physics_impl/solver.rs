@@ -3,13 +3,8 @@
 //! This module contains the core ElasticPINN2DSolver struct and its
 //! basic functionality for evaluating the neural network.
 
-#[cfg(feature = "pinn")]
 use super::super::model::ElasticPINN2D;
-#[cfg(feature = "pinn")]
 use kwavers_physics::foundations::Domain;
-
-#[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
 
 /// PINN solver wrapper implementing ElasticWaveEquation trait
 ///
@@ -19,7 +14,7 @@ use burn::tensor::backend::Backend;
 ///
 /// # Type Parameters
 ///
-/// * `B` - Burn backend (NdArray, Wgpu, Cuda, etc.)
+/// * `B` - coeus compute backend for the current CPU PINN implementation.
 ///
 /// # Fields
 ///
@@ -28,9 +23,8 @@ use burn::tensor::backend::Backend;
 /// * `lambda` - Lamé first parameter (Pa) (may be learned or fixed)
 /// * `mu` - Shear modulus (Pa) (may be learned or fixed)
 /// * `rho` - Density [kg/m³] (may be learned or fixed)
-#[cfg(feature = "pinn")]
 #[derive(Debug)]
-pub struct ElasticPINN2DSolver<B: Backend> {
+pub struct ElasticPINN2DSolver<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Neural network model
     pub model: ElasticPINN2D<B>,
     /// Spatial domain
@@ -43,8 +37,11 @@ pub struct ElasticPINN2DSolver<B: Backend> {
     pub rho: f64,
 }
 
-#[cfg(feature = "pinn")]
-impl<B: Backend> ElasticPINN2DSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ElasticPINN2DSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create new solver from trained model and domain specification
     ///
     /// # Arguments

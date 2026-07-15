@@ -14,11 +14,11 @@
 use super::*;
 use crate::signal_processing::beamforming::adaptive::subspace::{EigenspaceMV, MUSIC};
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, TWO_PI};
-use kwavers_math::linear_algebra::EigenDecomposition;
-use ndarray::{Array1, Array2, Array3};
-use num_complex::Complex64;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use leto::{Array1, Array2, Array3};
 
 /// Uniform linear array of `n` elements with pitch `d` along x, centred on origin.
 fn linear_array(n: usize, d: f64) -> Vec<[f64; 3]> {
@@ -47,7 +47,7 @@ fn eigenvalue_split_matches_theorem_22_2() {
     // Two orthonormal complex signal vectors via columns of a small DFT-like basis.
     let mut e: Vec<Array1<Complex64>> = Vec::new();
     for col in 0..k {
-        let mut v = Array1::<Complex64>::zeros(n);
+        let mut v = Array1::<Complex64>::from_elem(n, Complex64::default());
         for (row, value) in v.iter_mut().enumerate() {
             let phase = TWO_PI * (col as f64 + 1.0) * (row as f64) / (n as f64);
             *value = Complex64::new(0.0, phase).exp() / (n as f64).sqrt();
@@ -63,20 +63,21 @@ fn eigenvalue_split_matches_theorem_22_2() {
     assert!(cross.norm() < 1e-12, "signal vectors must be orthonormal");
 
     // R = σ_n² I + σ_s² Σ_k e_k e_kᴴ.
-    let mut r = Array2::<Complex64>::zeros((n, n));
+    let mut r = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
-        r[(i, i)] += Complex64::new(sigma_n2, 0.0);
+        r[[i, i]] += Complex64::new(sigma_n2, 0.0);
     }
     for ev in &e {
         for i in 0..n {
             for j in 0..n {
-                r[(i, j)] += Complex64::new(sigma_s2, 0.0) * ev[i] * ev[j].conj();
+                r[[i, j]] += Complex64::new(sigma_s2, 0.0) * ev[i] * ev[j].conj();
             }
         }
     }
 
-    let (eigenvalues, _) =
-        EigenDecomposition::hermitian_eigendecomposition_complex(&r).expect("eig");
+    let eigenvalues = EigenSolver::jacobi_hermitian(&r, EigenSolverConfig::default())
+        .expect("eig")
+        .eigenvalues;
     let mut vals: Vec<f64> = (0..n).map(|i| eigenvalues[i]).collect();
     vals.sort_by(|a, b| b.total_cmp(a));
 
@@ -107,15 +108,15 @@ fn build_source_covariance(
     sigma_n2: f64,
 ) -> Array2<Complex64> {
     let n = positions.len();
-    let mut r = Array2::<Complex64>::zeros((n, n));
+    let mut r = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
-        r[(i, i)] += Complex64::new(sigma_n2, 0.0);
+        r[[i, i]] += Complex64::new(sigma_n2, 0.0);
     }
     for &sp in source_points {
         let a = steering(positions, sp, f, c);
         for i in 0..n {
             for j in 0..n {
-                r[(i, j)] += Complex64::new(sigma_s2, 0.0) * a[i] * a[j].conj();
+                r[[i, j]] += Complex64::new(sigma_s2, 0.0) * a[i] * a[j].conj();
             }
         }
     }
@@ -152,7 +153,7 @@ fn subspace_beats_das_peak_to_sidelobe() {
         for i in 0..positions.len() {
             let mut ra_i = Complex64::new(0.0, 0.0);
             for j in 0..positions.len() {
-                ra_i += r[(i, j)] * a[j];
+                ra_i += r[[i, j]] * a[j];
             }
             das_p += a[i].conj() * ra_i;
         }
@@ -223,7 +224,7 @@ fn end_to_end_localizes_single_tone_source() {
         let tau = (dx * dx + dy * dy + dz * dz).sqrt() / c;
         for t in 0..n_samples {
             let time = t as f64 / fs;
-            data[(i, 0, t)] = (TWO_PI * f * (time - tau)).cos();
+            data[[i, 0, t]] = (TWO_PI * f * (time - tau)).cos();
         }
     }
 

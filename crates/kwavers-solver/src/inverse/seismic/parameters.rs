@@ -88,7 +88,7 @@ pub struct RegularizationParameters {
     /// sparse-view CT*, PMC10745410. Default `0.0` (disabled, backward-compatible).
     pub directional_tv_weight: f64,
     /// Enable the adaptive directional-TV (FDTV) weight schedule in the
-    /// steepest-descent driver ([`FwiProcessor::invert`]).
+    /// steepest-descent driver ([`crate::inverse::fwi::time_domain::FwiProcessor::invert`]).
     ///
     /// When set, the effective FDTV weight tracks the relative inter-iteration
     /// model change (normalized by the largest change seen, floored at a small

@@ -5,7 +5,7 @@
 
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use kwavers_math::simd_safe::SimdOps;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Generate test data for FDTD benchmarking
 fn generate_test_data(
@@ -45,7 +45,7 @@ fn scalar_pressure_update(
     sound_speed: &Array3<f64>,
     dt: f64,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
 
     for i in 0..nx {
         for j in 0..ny {

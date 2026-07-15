@@ -1,9 +1,9 @@
-/// GPU dispatcher for the FDTD pressure update.
+/// CPU reference dispatcher for the FDTD pressure update.
 ///
 /// Mirrors the CPU [`kwavers_solver::forward::fdtd::dispatch::FdtdStencilDispatcher`]
-/// interface. When a GPU device is available the `fdtd_pressure.wgsl` kernel is
-/// used; otherwise the CPU fallback path computes the identical 6-point Laplacian
-/// stencil in Rust.
+/// interface. This path computes the 6-point Laplacian stencil in Rust over
+/// `leto::Array3` storage and serves as the value-semantic reference for
+/// provider-specific GPU implementations.
 ///
 /// # Algorithm — scalar wave equation (Yee 1966)
 ///
@@ -19,12 +19,12 @@
 /// (Dirichlet condition), matching the `kspace_shift_apply` entry point in
 /// `pstd_gpu/shaders/pstd.wgsl`.
 ///
-/// # CPU vs GPU Parity
+/// # CPU Reference Contract
 ///
-/// The CPU fallback uses `f64` arithmetic throughout.  The GPU kernel uses
-/// `f32`; the relative error between CPU and GPU paths is therefore bounded by
-/// `f32` round-off (`~6e-8`) rather than the stated `1e-10`.  The CPU path is
-/// the reference implementation for correctness tests.
+/// This dispatcher uses `f64` arithmetic throughout. Provider-specific GPU
+/// kernels with different scalar precision must prove equivalence against this
+/// path with a tolerance derived from their scalar contract and evaluation
+/// order.
 ///
 /// # References
 ///
@@ -32,16 +32,16 @@
 /// - Moczo P et al. (2014). The Finite-Difference Modelling of Earthquake
 ///   Motions. Cambridge Univ. Press. (6-point Laplacian, §3.1)
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 
 #[derive(Debug)]
-pub struct FdtdGpuDispatcher {
+pub struct FdtdCpuReferenceDispatcher {
     nx: usize,
     ny: usize,
     nz: usize,
 }
 
-impl FdtdGpuDispatcher {
+impl FdtdCpuReferenceDispatcher {
     /// Create dispatcher for a grid of size `nx × ny × nz`.
     ///
     /// # Errors
@@ -51,7 +51,7 @@ impl FdtdGpuDispatcher {
     pub fn new(nx: usize, ny: usize, nz: usize) -> KwaversResult<Self> {
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
-                "FdtdGpuDispatcher: grid dimensions must be >= 3".to_string(),
+                "FdtdCpuReferenceDispatcher: grid dimensions must be >= 3".to_string(),
             ));
         }
         Ok(Self { nx, ny, nz })
@@ -70,15 +70,15 @@ impl FdtdGpuDispatcher {
     /// Returns `InvalidInput` if any field shape does not match `(nx, ny, nz)`.
     pub fn update_pressure_into(
         &mut self,
-        p_curr: &Array3<f64>,
-        p_prev: &Array3<f64>,
+        p_curr: &LetoArray3<f64>,
+        p_prev: &LetoArray3<f64>,
         coeff: f64,
-        output: &mut Array3<f64>,
+        output: &mut LetoArray3<f64>,
     ) -> KwaversResult<()> {
-        let expected = (self.nx, self.ny, self.nz);
-        if p_curr.dim() != expected || p_prev.dim() != expected || output.dim() != expected {
+        let expected = [self.nx, self.ny, self.nz];
+        if p_curr.shape() != expected || p_prev.shape() != expected || output.shape() != expected {
             return Err(KwaversError::InvalidInput(format!(
-                "FdtdGpuDispatcher: field shape mismatch (expected {:?})",
+                "FdtdCpuReferenceDispatcher: field shape mismatch (expected {:?})",
                 expected
             )));
         }
@@ -111,11 +111,11 @@ impl FdtdGpuDispatcher {
     ///
     pub fn update_pressure(
         &mut self,
-        p_curr: &Array3<f64>,
-        p_prev: &Array3<f64>,
+        p_curr: &LetoArray3<f64>,
+        p_prev: &LetoArray3<f64>,
         coeff: f64,
-    ) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros((self.nx, self.ny, self.nz));
+    ) -> KwaversResult<LetoArray3<f64>> {
+        let mut result = LetoArray3::zeros([self.nx, self.ny, self.nz]);
         self.update_pressure_into(p_curr, p_prev, coeff, &mut result)?;
         Ok(result)
     }
@@ -126,8 +126,8 @@ impl FdtdGpuDispatcher {
     }
 
     /// Zero the six boundary faces of a 3D volume.
-    fn zero_boundary_faces(output: &mut Array3<f64>) {
-        let (nx, ny, nz) = output.dim();
+    fn zero_boundary_faces(output: &mut LetoArray3<f64>) {
+        let [nx, ny, nz] = output.shape();
 
         for j in 0..ny {
             for k in 0..nz {

@@ -2,7 +2,7 @@
 
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::types::{MechanicalIndexResult, MechanicalIndexSafetyStatus, MechanicalIndexTissueType};
 
@@ -97,7 +97,7 @@ impl MechanicalIndexCalculator {
     ///
     /// ```
     /// use kwavers_therapy::safety::mechanical_index::{MechanicalIndexCalculator, MechanicalIndexTissueType};
-    /// use ndarray::Array3;
+    /// use leto::Array3;
     ///
     /// let mi_calc = MechanicalIndexCalculator::new(5.0, 0.5, MechanicalIndexTissueType::SoftTissue);
     /// let pressure = Array3::from_elem((10, 10, 10), -1e5);

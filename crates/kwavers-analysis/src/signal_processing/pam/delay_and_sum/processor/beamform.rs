@@ -1,9 +1,10 @@
 //! Beamforming: delay computation, apodization, and DAS accumulation.
 
-use ndarray::{Array1, Array2, ArrayView2};
+use leto::Array1;
+use leto::{Array2, ArrayView2};
 
+use apollo::fft_1d_array;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::fft_1d_array;
 
 use super::super::types::PamImagingMode;
 use super::DelayAndSumPAM;
@@ -70,11 +71,15 @@ impl DelayAndSumPAM {
     ) -> KwaversResult<Array1<f64>> {
         self.validate_beamform_inputs(passive_data, grid_points)?;
 
-        let num_grid_points = grid_points.nrows();
-        let mut intensity_map = Array1::<f64>::zeros(num_grid_points);
+        let num_grid_points = grid_points.shape()[0];
+        let mut intensity_map = Array1::<f64>::zeros([num_grid_points]);
         let apodization_weights = self.compute_apodization_weights();
 
-        for (grid_idx, grid_point) in grid_points.rows().into_iter().enumerate() {
+        for (grid_idx, grid_point) in grid_points
+            .rows()
+            .expect("invariant: rank-2 array has a row axis")
+            .enumerate()
+        {
             let candidate_pos = [grid_point[0], grid_point[1], grid_point[2]];
             let delays_samples = self.compute_delays(&candidate_pos)?;
             intensity_map[grid_idx] = match mode {
@@ -112,9 +117,13 @@ impl DelayAndSumPAM {
     ) -> KwaversResult<Array2<f64>> {
         self.validate_beamform_inputs(passive_data, grid_points)?;
         let apodization = self.compute_apodization_weights();
-        let window = self.config.window_size.min(passive_data.ncols()).max(1);
-        let mut signals = Array2::<f64>::zeros((grid_points.nrows(), window));
-        for (grid_idx, grid_point) in grid_points.rows().into_iter().enumerate() {
+        let window = self.config.window_size.min(passive_data.shape()[1]).max(1);
+        let mut signals = Array2::<f64>::zeros((grid_points.shape()[0], window));
+        for (grid_idx, grid_point) in grid_points
+            .rows()
+            .expect("invariant: rank-2 array has a row axis")
+            .enumerate()
+        {
             let candidate_pos = [grid_point[0], grid_point[1], grid_point[2]];
             let delays_samples = self.compute_delays(&candidate_pos)?;
             let series =
@@ -146,7 +155,7 @@ impl DelayAndSumPAM {
         passive_data: ArrayView2<'_, f64>,
         delays_samples: ArrayView2<'_, f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let (num_sensors_data, num_samples) = passive_data.dim();
+        let [num_sensors_data, num_samples] = passive_data.shape();
         if num_sensors_data != self.num_sensors {
             return Err(KwaversError::InvalidInput(format!(
                 "Data has {} sensors but PAM configured for {}",
@@ -158,7 +167,7 @@ impl DelayAndSumPAM {
                 "Passive data must contain at least one time sample".to_owned(),
             ));
         }
-        let (num_points, delay_cols) = delays_samples.dim();
+        let [num_points, delay_cols] = delays_samples.shape();
         if delay_cols != self.num_sensors {
             return Err(KwaversError::InvalidInput(format!(
                 "Delay matrix has {delay_cols} columns but PAM configured for {} sensors",
@@ -184,7 +193,11 @@ impl DelayAndSumPAM {
         let apodization = self.compute_apodization_weights();
         let window = self.config.window_size.min(num_samples).max(1);
         let mut signals = Array2::<f64>::zeros((num_points, window));
-        for (grid_idx, delay_row) in delays_samples.outer_iter().enumerate() {
+        for (grid_idx, delay_row) in delays_samples
+            .rows()
+            .expect("invariant: rank-2 array has a row axis")
+            .enumerate()
+        {
             let delays: Vec<f64> = delay_row.iter().copied().collect();
             let series =
                 self.beamformed_signal_at_point_view(passive_data, &delays, &apodization)?;
@@ -200,25 +213,25 @@ impl DelayAndSumPAM {
         passive_data: ArrayView2<'_, f64>,
         grid_points: ArrayView2<'_, f64>,
     ) -> KwaversResult<()> {
-        let (num_sensors_data, _) = passive_data.dim();
+        let [num_sensors_data, _] = passive_data.shape();
         if num_sensors_data != self.num_sensors {
             return Err(KwaversError::InvalidInput(format!(
                 "Data has {} sensors but PAM configured for {}",
                 num_sensors_data, self.num_sensors
             )));
         }
-        if passive_data.ncols() == 0 {
+        if passive_data.shape()[1] == 0 {
             return Err(KwaversError::InvalidInput(
                 "Passive data must contain at least one time sample".to_owned(),
             ));
         }
-        if grid_points.ncols() != 3 {
+        if grid_points.shape()[1] != 3 {
             return Err(KwaversError::InvalidInput(format!(
                 "Grid points must have shape [points x 3], got {} columns",
-                grid_points.ncols()
+                grid_points.shape()[1]
             )));
         }
-        if grid_points.nrows() == 0 {
+        if grid_points.shape()[0] == 0 {
             return Err(KwaversError::InvalidInput(
                 "Grid points must contain at least one candidate".to_owned(),
             ));
@@ -278,7 +291,7 @@ impl DelayAndSumPAM {
         delays_samples: &[f64],
         apodization: &[f64],
     ) -> KwaversResult<Vec<f64>> {
-        let num_samples = passive_data.ncols();
+        let num_samples = passive_data.shape()[1];
         let window_size = self.config.window_size.min(num_samples).max(1);
         let mut summed_signal = vec![0.0; window_size];
 
@@ -346,7 +359,7 @@ impl DelayAndSumPAM {
     ) -> f64 {
         use crate::signal_processing::beamforming::time_domain::dmas::dmas_combine;
 
-        let num_samples = passive_data.ncols();
+        let num_samples = passive_data.shape()[1];
         let window_size = self.config.window_size.min(num_samples).max(1);
         let mut energy = 0.0_f64;
         // Reused buffer for the apodized, time-aligned aperture column at each t.
@@ -380,7 +393,9 @@ impl DelayAndSumPAM {
             return None;
         }
 
-        let complex_data = fft_1d_array(&Array1::from_vec(signal.to_vec()));
+        let complex_data = fft_1d_array(
+            &leto::Array1::from_vec([signal.len()], signal.to_vec()).expect("fft_1d_array signal"),
+        );
         let half = n / 2;
         let mut max_mag = 0.0f64;
         let mut max_idx: Option<usize> = None;
@@ -402,7 +417,7 @@ impl DelayAndSumPAM {
     }
 
     pub(super) fn noise_threshold(&self, intensity_map: &Array1<f64>) -> f64 {
-        let mut sorted = intensity_map.to_vec();
+        let mut sorted: Vec<f64> = intensity_map.iter().copied().collect();
         sorted.sort_by(|a, b| a.total_cmp(b));
         let noise_floor = sorted[sorted.len() / 4]; // lower quartile
         noise_floor * self.config.detection_threshold

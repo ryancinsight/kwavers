@@ -1,7 +1,7 @@
 use super::matfree::{solve_lsqr_matfree, MatFreeOperator};
 use super::solver::LsqrSolver;
 use super::types::{LsqrConfig, StopReason};
-use ndarray::{arr1, Array2};
+use leto::{Array1, Array2};
 
 // ─── Matrix-free LSQR tests ──────────────────────────────────────────────────
 
@@ -201,7 +201,7 @@ fn matfree_consistent_with_explicit_lsqr_on_small_system() {
             a_nd[[i, j]] = v;
         }
     }
-    let b_nd = arr1(&b);
+    let b_nd = Array1::from_vec(b.len(), b.clone()).unwrap();
     let r_ex = LsqrSolver::new(LsqrConfig {
         max_iterations: 500,
         atol: 1e-12,
@@ -230,7 +230,7 @@ fn test_lsqr_config_default() {
 fn test_lsqr_identity_system() {
     // Solve I·x = b where I is identity and b = [1, 2, 3]
     let a = Array2::eye(3);
-    let b = arr1(&[1.0, 2.0, 3.0]);
+    let b = Array1::from_vec(3, vec![1.0, 2.0, 3.0]).unwrap();
 
     let solver = LsqrSolver::new(LsqrConfig::default());
     let result = solver.solve(&a, &b);
@@ -245,7 +245,7 @@ fn test_lsqr_diagonal_system() {
     a[[0, 0]] = 2.0;
     a[[1, 1]] = 3.0;
     a[[2, 2]] = 5.0;
-    let b = arr1(&[2.0, 3.0, 5.0]);
+    let b = Array1::from_vec(3, vec![2.0, 3.0, 5.0]).unwrap();
 
     let solver = LsqrSolver::new(LsqrConfig::default());
     let result = solver.solve(&a, &b);
@@ -271,8 +271,8 @@ fn test_lsqr_diagonal_system() {
 ///
 #[test]
 fn test_lsqr_overdetermined_exact_solution() {
-    let a = Array2::from_shape_vec((3, 2), vec![1.0, 0.0, 0.0, 2.0, 1.0, 1.0]).unwrap();
-    let b = arr1(&[1.0, 4.0, 3.0]);
+    let a = Array2::from_vec([3, 2], vec![1.0, 0.0, 0.0, 2.0, 1.0, 1.0]).unwrap();
+    let b = Array1::from_vec(3, vec![1.0, 4.0, 3.0]).unwrap();
 
     let cfg = LsqrConfig {
         atol: 1e-10,
@@ -303,8 +303,8 @@ fn test_lsqr_overdetermined_exact_solution() {
 #[test]
 fn test_lsqr_overdetermined_system() {
     // Overdetermined system (more equations than unknowns)
-    let a = Array2::from_shape_vec((3, 2), vec![1.0, 0.0, 1.0, 1.0, 0.0, 1.0]).unwrap();
-    let b = arr1(&[1.0, 2.0, 1.0]);
+    let a = Array2::from_vec([3, 2], vec![1.0, 0.0, 1.0, 1.0, 0.0, 1.0]).unwrap();
+    let b = Array1::from_vec(3, vec![1.0, 2.0, 1.0]).unwrap();
 
     let solver = LsqrSolver::new(LsqrConfig::default());
     let result = solver.solve(&a, &b);
@@ -317,7 +317,7 @@ fn test_lsqr_overdetermined_system() {
 #[test]
 fn test_lsqr_zero_vector() {
     let a = Array2::eye(3);
-    let b = arr1(&[0.0, 0.0, 0.0]);
+    let b = Array1::from_vec(3, vec![0.0, 0.0, 0.0]).unwrap();
 
     let solver = LsqrSolver::new(LsqrConfig::default());
     let result = solver.solve(&a, &b);
@@ -329,7 +329,7 @@ fn test_lsqr_zero_vector() {
 #[test]
 fn test_lsqr_damping() {
     let a = Array2::eye(3);
-    let b = arr1(&[1.0, 1.0, 1.0]);
+    let b = Array1::from_vec(3, vec![1.0, 1.0, 1.0]).unwrap();
 
     let cfg = LsqrConfig {
         damping: 0.1,
@@ -353,7 +353,7 @@ fn test_lsqr_condition_number() {
     let mut a = Array2::eye(2);
     a[[0, 0]] = 1.0;
     a[[1, 1]] = 1e-6;
-    let b = arr1(&[1.0, 1.0]);
+    let b = Array1::from_vec(2, vec![1.0, 1.0]).unwrap();
 
     let solver = LsqrSolver::new(LsqrConfig::default());
     let result = solver.solve(&a, &b);
@@ -365,7 +365,7 @@ fn test_lsqr_condition_number() {
 #[test]
 fn test_lsqr_convergence_tracking() {
     let a = Array2::eye(5);
-    let b = arr1(&[1.0, 2.0, 3.0, 4.0, 5.0]);
+    let b = Array1::from_vec(5, vec![1.0, 2.0, 3.0, 4.0, 5.0]).unwrap();
 
     let solver = LsqrSolver::new(LsqrConfig::default());
     let result = solver.solve(&a, &b);

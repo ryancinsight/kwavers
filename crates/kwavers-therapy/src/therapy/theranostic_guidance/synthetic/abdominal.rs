@@ -22,7 +22,7 @@
 //! `nearest_exterior_skin_point` will place the bowl contact on the
 //! anterior-lateral skin face, outside the body, as required.
 
-use ndarray::Array3;
+use leto::Array3;
 
 // ─── Liver phantom dimensions ─────────────────────────────────────────────────
 

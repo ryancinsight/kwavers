@@ -2,7 +2,7 @@
 
 use super::InterfaceGeometry;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Conservation enforcer for interface coupling
 #[derive(Debug)]
@@ -23,18 +23,18 @@ impl HybridCouplingConservationEnforcer {
 
     /// Enforce conservation laws on transferred fields
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn enforce(
         &self,
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        if interpolated.dim() != target.dim() {
+        if interpolated.shape() != target.shape() {
             return Err(KwaversError::Validation(
                 ValidationError::DimensionMismatch {
-                    expected: format!("{:?}", target.dim()),
-                    actual: format!("{:?}", interpolated.dim()),
+                    expected: format!("{:?}", target.shape()),
+                    actual: format!("{:?}", interpolated.shape()),
                 },
             ));
         }
@@ -65,7 +65,7 @@ impl HybridCouplingConservationEnforcer {
         interpolated: &Array3<f64>,
         target: &Array3<f64>,
     ) {
-        let n = target.len() as f64;
+        let n = (target.len()) as f64;
         let source_sum: f64 = interpolated.iter().sum();
         let source_mean = source_sum / n;
         let target_sum: f64 = target.iter().sum();
@@ -88,9 +88,9 @@ impl HybridCouplingConservationEnforcer {
         let variable_energy = (target_energy - constant_energy).max(0.0);
         let scale = (variable_energy / centered_energy).sqrt();
 
-        fields.zip_mut_with(interpolated, |field_value, &source_value| {
+        for (field_value, source_value) in fields.iter_mut().zip(interpolated.iter()) {
             *field_value = target_mean + scale * (source_value - source_mean);
-        });
+        }
     }
 
     /// Get conservation metrics
@@ -129,8 +129,8 @@ mod tests {
     #[test]
     fn enforcement_matches_target_integral_and_energy() {
         let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
-        let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, 2.0, 4.0, 8.0]).unwrap();
-        let target = Array3::from_shape_vec((2, 2, 1), vec![3.0, 5.0, 6.0, 10.0]).unwrap();
+        let interpolated = Array3::from_shape_vec([2, 2, 1], vec![1.0, 2.0, 4.0, 8.0]).unwrap();
+        let target = Array3::from_shape_vec([2, 2, 1], vec![3.0, 5.0, 6.0, 10.0]).unwrap();
 
         let conserved = enforcer.enforce(&interpolated, &target).unwrap();
 
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn enforcement_preserves_identical_interface() {
         let enforcer = HybridCouplingConservationEnforcer::new(&geometry());
-        let interpolated = Array3::from_shape_vec((2, 2, 1), vec![1.0, -2.0, 4.0, 8.0]).unwrap();
+        let interpolated = Array3::from_shape_vec([2, 2, 1], vec![1.0, -2.0, 4.0, 8.0]).unwrap();
 
         let conserved = enforcer.enforce(&interpolated, &interpolated).unwrap();
 

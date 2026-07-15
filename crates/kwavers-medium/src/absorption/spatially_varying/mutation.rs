@@ -1,5 +1,5 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{AbsorptionStatistics, SpatiallyVaryingAbsorption};
 
@@ -9,7 +9,7 @@ impl SpatiallyVaryingAbsorption {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn update_temperature(&mut self, temperature_field: Array3<f64>) -> KwaversResult<()> {
-        if temperature_field.dim() != self.alpha_0_field.dim() {
+        if temperature_field.shape() != self.alpha_0_field.shape() {
             return Err(KwaversError::InvalidInput(
                 "Temperature field dimension mismatch".to_owned(),
             ));
@@ -29,7 +29,7 @@ impl SpatiallyVaryingAbsorption {
         alpha_0: f64,
         gamma: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = self.alpha_0_field.dim();
+        let [nx, ny, nz] = self.alpha_0_field.shape();
 
         if i_range.end > nx || j_range.end > ny || k_range.end > nz {
             return Err(KwaversError::InvalidInput(
@@ -60,7 +60,7 @@ impl SpatiallyVaryingAbsorption {
         dy: f64,
         dz: f64,
     ) {
-        let (nx, ny, nz) = self.alpha_0_field.dim();
+        let [nx, ny, nz] = self.alpha_0_field.shape();
 
         for i in 0..nx {
             for j in 0..ny {
@@ -96,7 +96,7 @@ impl SpatiallyVaryingAbsorption {
         dy: f64,
         dz: f64,
     ) {
-        let (nx, ny, nz) = self.alpha_0_field.dim();
+        let [nx, ny, nz] = self.alpha_0_field.shape();
 
         for i in 0..nx {
             for j in 0..ny {
@@ -162,7 +162,8 @@ impl SpatiallyVaryingAbsorption {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let alpha_mean = self.alpha_0_field.mean().unwrap_or(0.0);
+        let count = self.alpha_0_field.size().max(1);
+        let alpha_mean = self.alpha_0_field.iter().copied().sum::<f64>() / count as f64;
 
         let gamma_min = self
             .gamma_field
@@ -174,7 +175,8 @@ impl SpatiallyVaryingAbsorption {
             .iter()
             .copied()
             .fold(f64::NEG_INFINITY, f64::max);
-        let gamma_mean = self.gamma_field.mean().unwrap_or(0.0);
+        let gamma_count = self.gamma_field.size().max(1);
+        let gamma_mean = self.gamma_field.iter().copied().sum::<f64>() / gamma_count as f64;
 
         AbsorptionStatistics {
             alpha_0_min: alpha_min,

@@ -14,7 +14,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn build_solver_with_sensor(
     nx: usize,
@@ -40,7 +40,7 @@ pub(super) fn build_solver_with_sensor(
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 
-    let mut mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     mask[[nx / 2, ny / 2, nz / 2]] = true;
     solver.sensor_recorder = SensorRecorder::new(Some(&mask), (nx, ny, nz), nt + 1).unwrap();
     solver
@@ -100,12 +100,12 @@ fn test_checkpoint_bit_exact_continuation() {
     );
 
     assert_eq!(
-        ref_data.dim(),
-        resumed_data.dim(),
+        ref_data.shape(),
+        resumed_data.shape(),
         "Sensor data shape mismatch"
     );
-    for col in 0..ref_data.ncols() {
-        for row in 0..ref_data.nrows() {
+    for col in 0..ref_data.shape()[1] {
+        for row in 0..ref_data.shape()[0] {
             let r = ref_data[[row, col]];
             let c = resumed_data[[row, col]];
             assert_eq!(
@@ -133,12 +133,12 @@ fn test_checkpoint_roundtrip_serialisation() {
     let n = nx * ny * nz;
 
     let make_arr = |offset: f64| -> Array3<f64> {
-        Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             (i * ny * nz + j * nz + k) as f64 + offset
         })
     };
 
-    let sensor_data = ndarray::Array2::from_shape_fn((3, 5), |(i, j)| (i * 5 + j) as f64);
+    let sensor_data = leto::Array2::from_shape_fn((3, 5), |[i, j]| (i * 5 + j) as f64);
 
     let ckpt = PSTDCheckpoint {
         nx,

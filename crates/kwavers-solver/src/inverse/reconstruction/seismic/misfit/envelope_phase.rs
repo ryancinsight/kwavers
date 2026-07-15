@@ -8,17 +8,17 @@
 //! - Taner et al. (1979): "Complex seismic trace analysis"
 
 use super::types::MisfitFunction;
+use apollo::{fft_1d_leto, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
-use kwavers_signal::analytic::{
-    hilbert_transform, instantaneous_envelope_2d, instantaneous_phase_2d,
-};
-use ndarray::Array2;
+use kwavers_math::fft::Complex64;
+use kwavers_signal::analytic::hilbert_transform;
+use leto::Array1 as LetoArray1;
+use leto::Array2;
 
 impl MisfitFunction {
     /// Envelope misfit: 0.5 * ||E_syn − E_obs||² (cycle-skipping mitigation).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn envelope_misfit(
         &self,
@@ -32,7 +32,7 @@ impl MisfitFunction {
 
     /// Instantaneous phase misfit.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn phase_misfit(
         &self,
@@ -58,15 +58,18 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let (ntraces, nsamples) = synthetic.dim();
+        let [ntraces, nsamples] = synthetic.shape();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
-        let env_obs = instantaneous_envelope_2d(observed);
-        let env_syn = instantaneous_envelope_2d(synthetic);
+        let env_obs = self.compute_envelope(observed)?;
+        let env_syn = self.compute_envelope(synthetic)?;
 
         for i in 0..ntraces {
-            let syn_trace = synthetic.row(i).to_owned();
-            let analytic = hilbert_transform(&syn_trace);
+            let syn_trace = synthetic.index_axis::<1>(0, i).unwrap().to_contiguous();
+            let analytic = hilbert_transform(
+                &LetoArray1::from_vec([nsamples], syn_trace.iter().copied().collect())
+                    .expect("envelope trace length must match its Leto shape"),
+            );
 
             for j in 0..nsamples {
                 let env_diff = env_syn[[i, j]] - env_obs[[i, j]];
@@ -96,15 +99,18 @@ impl MisfitFunction {
         observed: &Array2<f64>,
         synthetic: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let (ntraces, nsamples) = synthetic.dim();
+        let [ntraces, nsamples] = synthetic.shape();
         let mut adjoint = Array2::zeros((ntraces, nsamples));
 
-        let phase_obs = instantaneous_phase_2d(observed);
-        let phase_syn = instantaneous_phase_2d(synthetic);
+        let phase_obs = self.compute_instantaneous_phase(observed)?;
+        let phase_syn = self.compute_instantaneous_phase(synthetic)?;
 
         for i in 0..ntraces {
-            let syn_trace = synthetic.row(i).to_owned();
-            let analytic = hilbert_transform(&syn_trace);
+            let syn_trace = synthetic.index_axis::<1>(0, i).unwrap().to_contiguous();
+            let analytic = hilbert_transform(
+                &LetoArray1::from_vec([nsamples], syn_trace.iter().copied().collect())
+                    .expect("phase trace length must match its Leto shape"),
+            );
 
             // Time derivative of analytic signal (central differences)
             let mut dz_dt = vec![Complex64::new(0.0, 0.0); nsamples];
@@ -139,22 +145,30 @@ impl MisfitFunction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn compute_envelope(&self, signal: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (ntraces, nsamples) = signal.dim();
+        let [ntraces, nsamples] = signal.shape();
         let mut envelope = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let trace = signal.row(i);
-            let mut buffer = fft_1d_array(&trace.to_owned());
+            let trace = signal.index_axis::<1>(0, i).unwrap();
+            let trace_buffer =
+                LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
+                    .expect("seismic envelope trace length must match its Leto shape");
+            let mut buffer = fft_1d_leto(trace_buffer.view());
 
             // Double positive frequencies, zero negative frequencies
-            for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
-                *sample *= Complex64::new(2.0, 0.0);
+            let spectrum = buffer
+                .as_slice_mut()
+                .expect("Apollo 1-D FFT output must be contiguous");
+            for sample in spectrum.iter_mut().take(nsamples / 2).skip(1) {
+                *sample *= ApolloComplex64::new(2.0, 0.0);
             }
-            for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
-                *sample = Complex64::new(0.0, 0.0);
+            for sample in spectrum.iter_mut().skip(nsamples / 2 + 1) {
+                *sample = ApolloComplex64::new(0.0, 0.0);
             }
 
-            let analytic_signal = ifft_1d_complex(&buffer);
+            let complex_buffer = LetoArray1::from_shape_vec([nsamples], buffer.into_vec())
+                .expect("seismic envelope spectrum length must match its Leto shape");
+            let analytic_signal = ifft_1d_complex(&complex_buffer);
             for (j, sample) in analytic_signal.iter().enumerate() {
                 envelope[[i, j]] = sample.norm();
             }
@@ -173,21 +187,29 @@ impl MisfitFunction {
         &self,
         signal: &Array2<f64>,
     ) -> KwaversResult<Array2<f64>> {
-        let (ntraces, nsamples) = signal.dim();
+        let [ntraces, nsamples] = signal.shape();
         let mut phase = Array2::zeros((ntraces, nsamples));
 
         for i in 0..ntraces {
-            let trace = signal.row(i);
-            let mut buffer = fft_1d_array(&trace.to_owned());
+            let trace = signal.index_axis::<1>(0, i).unwrap();
+            let trace_buffer =
+                LetoArray1::from_shape_vec([nsamples], trace.iter().cloned().collect::<Vec<_>>())
+                    .expect("seismic phase trace length must match its Leto shape");
+            let mut buffer = fft_1d_leto(trace_buffer.view());
 
-            for sample in buffer.iter_mut().take(nsamples / 2).skip(1) {
-                *sample *= Complex64::new(2.0, 0.0);
+            let spectrum = buffer
+                .as_slice_mut()
+                .expect("Apollo 1-D FFT output must be contiguous");
+            for sample in spectrum.iter_mut().take(nsamples / 2).skip(1) {
+                *sample *= ApolloComplex64::new(2.0, 0.0);
             }
-            for sample in buffer.iter_mut().skip(nsamples / 2 + 1) {
-                *sample = Complex64::new(0.0, 0.0);
+            for sample in spectrum.iter_mut().skip(nsamples / 2 + 1) {
+                *sample = ApolloComplex64::new(0.0, 0.0);
             }
 
-            let analytic_signal = ifft_1d_complex(&buffer);
+            let complex_buffer = LetoArray1::from_shape_vec([nsamples], buffer.into_vec())
+                .expect("seismic phase spectrum length must match its Leto shape");
+            let analytic_signal = ifft_1d_complex(&complex_buffer);
             for (j, sample) in analytic_signal.iter().enumerate() {
                 let real = trace[j];
                 let imag = sample.im;
@@ -204,6 +226,6 @@ impl MisfitFunction {
     ///
     fn l2_misfit_arrays(&self, a: &Array2<f64>, b: &Array2<f64>) -> KwaversResult<f64> {
         let diff = b - a;
-        Ok(0.5 * diff.mapv(|x| x * x).sum())
+        Ok(0.5 * diff.mapv(|x| x * x).iter().sum::<f64>())
     }
 }

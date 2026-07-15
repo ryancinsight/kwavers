@@ -8,13 +8,13 @@ mod model;
 mod tests;
 
 #[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
+use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
-use model::EnsembleModel;
 #[cfg(not(feature = "pinn"))]
-use ndarray::Array2;
+use leto::Array2;
 #[cfg(feature = "pinn")]
-use ndarray::Array2;
+use leto::Array2;
+use model::EnsembleModel;
 use std::collections::HashMap;
 
 /// Configuration for ensemble methods
@@ -74,16 +74,16 @@ impl EnsembleQuantifier {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty<B: Backend>(
+    pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
         &self,
-        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        predictor: &P,
         inputs: &Array2<f32>,
     ) -> KwaversResult<super::MlPredictionWithUncertainty> {
         let mut predictions = Vec::new();
         let mut weights = Vec::new();
 
         for model in &self.ensemble_models {
-            let prediction = model.predict_with_noise(pinn, inputs)?;
+            let prediction = model.predict_with_noise(predictor, inputs)?;
             predictions.push(prediction);
             weights.push(model.weight);
         }
@@ -148,12 +148,12 @@ impl EnsembleQuantifier {
             ));
         }
 
-        let shape = predictions[0].dim();
+        let shape = predictions[0].shape();
         let mut weighted_sum = Array2::zeros(shape);
         let mut total_weight = 0.0;
 
         for (prediction, &weight) in predictions.iter().zip(weights.iter()) {
-            weighted_sum = &weighted_sum + &(&prediction.view() * weight as f32);
+            weighted_sum = &weighted_sum + &(prediction * weight as f32);
             total_weight += weight;
         }
 
@@ -166,7 +166,7 @@ impl EnsembleQuantifier {
         let mut variance = Array2::zeros(shape);
         for (prediction, &weight) in predictions.iter().zip(weights.iter()) {
             let diff = prediction - &mean_prediction;
-            let weighted_diff = &diff * &diff * weight as f32;
+            let weighted_diff = &(&diff * &diff) * weight as f32;
             variance = &variance + &weighted_diff;
         }
 

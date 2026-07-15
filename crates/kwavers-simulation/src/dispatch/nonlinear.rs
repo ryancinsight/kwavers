@@ -38,13 +38,13 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
             .map(|m| m.iter().filter(|&&a| a).count())
             .unwrap_or(0),
     );
-    let mut sensor_data = ndarray::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
+    let mut sensor_data = leto::Array2::<f64>::zeros((n_sensors, req.time_steps + 1));
 
     // Record initial state
     if let Some(ref mask) = req.sensor_mask {
         let p0 = solver.pressure();
         let mut sensor_idx = 0;
-        for ((i, j, k), &active) in mask.indexed_iter() {
+        for ([i, j, k], &active) in mask.indexed_iter() {
             if active {
                 sensor_data[[sensor_idx, 0]] = p0[[i, j, k]];
                 sensor_idx += 1;
@@ -60,7 +60,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         if let Some(ref mask) = req.sensor_mask {
             let pressure = solver.pressure();
             let mut sensor_idx = 0;
-            for ((i, j, k), &active) in mask.indexed_iter() {
+            for ([i, j, k], &active) in mask.indexed_iter() {
                 if active {
                     sensor_data[[sensor_idx, step + 1]] = pressure[[i, j, k]];
                     sensor_idx += 1;
@@ -108,7 +108,7 @@ fn build_sources(gs: &kwavers_source::GridSource, grid: &Grid) -> Vec<Box<dyn So
 
     let signal: Arc<dyn Signal> = Arc::new(NullSignal::new());
     let mut sources: Vec<Box<dyn Source>> = Vec::new();
-    for ((i, j, k), &val) in p0.indexed_iter() {
+    for ([i, j, k], &val) in p0.indexed_iter() {
         if val.abs() > 1e-15 {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             sources.push(Box::new(PointSource::new((x, y, z), Arc::clone(&signal))));

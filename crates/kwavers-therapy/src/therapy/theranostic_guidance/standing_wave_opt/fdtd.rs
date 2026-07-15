@@ -23,17 +23,18 @@
 //! arrived and steady state is established), giving the full complex
 //! pressure field due to unit-amplitude driving of element i.
 
-use ndarray::{Array2, Zip};
-use rayon::prelude::*;
+use leto::Array2;
+use moirai_parallel::{map_collect_with, Adaptive};
 
 use super::config::StandingWaveOptConfig;
+use crate::parallel::{zip_mut_four_refs, zip_mut_ref, zip_two_mut_ref};
 
 /// Five-point Laplacian with edge-replication (Neumann) boundary.
 ///
 /// Returns ∇²f / dx² (scaled by 1/dx² already included via `idx = 1/dx²`).
 fn laplacian(field: &Array2<f64>, idx: f64) -> Array2<f64> {
-    let nx = field.nrows();
-    let ny = field.ncols();
+    let nx = field.shape()[0];
+    let ny = field.shape()[1];
     let mut lap = Array2::zeros((nx, ny));
     for xi in 0..nx {
         for yi in 0..ny {
@@ -93,32 +94,36 @@ pub(super) fn compute_green_function(
 
         // Second-order leapfrog update
         let mut p_next = Array2::<f64>::zeros((nx, ny));
-        Zip::from(&mut p_next)
-            .and(&p_curr)
-            .and(&p_prev)
-            .and(&c2)
-            .and(&lap)
-            .for_each(|pn, &pc, &pp, &c2, &l| {
+        zip_mut_four_refs(
+            p_next.view_mut(),
+            p_curr.view(),
+            p_prev.view(),
+            c2.view(),
+            lap.view(),
+            |pn, &pc, &pp, &c2, &l| {
                 *pn = 2.0 * pc - pp + dt2 * c2 * l;
-            });
+            },
+        );
 
         // Unit sinusoidal point source
         p_next[[config.source_x, element_y]] += (omega * t).sin();
 
         // PML absorption
-        Zip::from(&mut p_next).and(damp).for_each(|pn, &d| *pn *= d);
+        zip_mut_ref(p_next.view_mut(), damp.view(), |pn, &d| *pn *= d);
 
         // Lock-in accumulation: G(x,y) += p(x,y,t) × exp(−iωt)
         if step >= accum_start {
             let cos_t = (omega * t).cos();
             let sin_t = (omega * t).sin();
-            Zip::from(&mut acc_re)
-                .and(&mut acc_im)
-                .and(&p_next)
-                .for_each(|re, im, &p| {
+            zip_two_mut_ref(
+                acc_re.view_mut(),
+                acc_im.view_mut(),
+                p_next.view(),
+                |re, im, &p| {
                     *re += p * cos_t;
                     *im -= p * sin_t;
-                });
+                },
+            );
             count += 1;
         }
 
@@ -130,7 +135,8 @@ pub(super) fn compute_green_function(
     (acc_re.mapv(|v| v * scale), acc_im.mapv(|v| v * scale))
 }
 
-/// Precompute Green's function columns for all elements in parallel via Rayon.
+/// Precompute Green's function columns for all elements through the Atlas
+/// parallel execution provider.
 ///
 /// Returns `(G_re, G_im)` each of length `n_elements`, where `G_re[i]` and
 /// `G_im[i]` are `Array2<f64>` of shape `(nx, ny)`.
@@ -140,9 +146,9 @@ pub(super) fn compute_all_green_functions(
     element_ys: &[usize],
     config: &StandingWaveOptConfig,
 ) -> (Vec<Array2<f64>>, Vec<Array2<f64>>) {
-    let pairs: Vec<(Array2<f64>, Array2<f64>)> = element_ys
-        .par_iter()
-        .map(|&ey| compute_green_function(c_map, damp, ey, config))
-        .collect();
+    let pairs: Vec<(Array2<f64>, Array2<f64>)> =
+        map_collect_with::<Adaptive, _, _, _>(element_ys, |&ey| {
+            compute_green_function(c_map, damp, ey, config)
+        });
     pairs.into_iter().unzip()
 }

@@ -1,9 +1,9 @@
 use crate::gpu::memory::GpuMemoryPoolType;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{Complex64, Shape1D, FFT_CACHE_1D};
+use kwavers_math::fft::{fft_1d_complex_slice_inplace, ifft_1d_complex_slice_inplace, Complex64};
+use leto::{Array3 as LetoArray3, Array4 as LetoArray4};
 use log::{debug, info, warn};
-use ndarray::{Array1, Array3, Array4};
-use rayon::prelude::*;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 use std::time::Instant;
 
 use super::HILBERT_SPECTRUM;
@@ -84,7 +84,7 @@ impl RealtimeImagingPipeline {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn submit_rf_data(&mut self, rf_data: Array4<f32>) -> KwaversResult<()> {
+    pub fn submit_rf_data(&mut self, rf_data: LetoArray4<f32>) -> KwaversResult<()> {
         if self.state != PipelineState::Running {
             return Err(KwaversError::InvalidInput(
                 "Pipeline is not running".to_string(),
@@ -106,7 +106,7 @@ impl RealtimeImagingPipeline {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn get_processed_frame(&mut self) -> Option<Array3<f32>> {
+    pub fn get_processed_frame(&mut self) -> Option<LetoArray3<f32>> {
         let mut buffer = self.output_buffer.lock().unwrap_or_else(|e| e.into_inner());
         buffer.pop_front()
     }
@@ -159,88 +159,76 @@ impl RealtimeImagingPipeline {
         Ok(())
     }
 
-    fn process_frame(&mut self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
+    fn process_frame(&mut self, rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
         let beamformed = self.beamform(rf_data)?;
         let envelope = self.envelope_detection(&beamformed)?;
         let compressed = self.log_compression(&envelope)?;
         self.scan_conversion(&compressed)
     }
 
-    fn beamform(&self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
-        use ndarray::Axis;
-        Ok(rf_data.sum_axis(Axis(0)))
+    fn beamform(&self, rf_data: &LetoArray4<f32>) -> KwaversResult<LetoArray3<f32>> {
+        let [tx_count, rx_count, samples, frames] = rf_data.shape();
+        let mut beamformed = LetoArray3::zeros([rx_count, samples, frames]);
+
+        for tx in 0..tx_count {
+            for rx in 0..rx_count {
+                for sample in 0..samples {
+                    for frame in 0..frames {
+                        beamformed[[rx, sample, frame]] += rf_data[[tx, rx, sample, frame]];
+                    }
+                }
+            }
+        }
+
+        Ok(beamformed)
     }
 
-    fn envelope_detection(&mut self, beamformed: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        let mut envelope = Array3::zeros(beamformed.dim());
+    fn envelope_detection(
+        &mut self,
+        beamformed: &LetoArray3<f32>,
+    ) -> KwaversResult<LetoArray3<f32>> {
+        let [rx_count, samples, frames] = beamformed.shape();
+        let mut envelope = LetoArray3::zeros([rx_count, samples, frames]);
+        let rx_plane_len = samples * frames;
 
-        use ndarray::Axis;
-
-        envelope
-            .axis_iter_mut(Axis(0))
-            .zip(beamformed.axis_iter(Axis(0)))
-            .par_bridge()
-            .for_each(|(mut envelope_rx, beamformed_rx)| {
-                let len = beamformed_rx.dim().0;
-                if len == 0 {
-                    return;
+        match (
+            envelope.as_slice_memory_order_mut(),
+            beamformed.as_slice_memory_order(),
+        ) {
+            (Some(envelope_values), Some(beamformed_values)) => {
+                for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                    envelope_values,
+                    rx_plane_len,
+                    |rx, envelope_rx| {
+                        let start = rx * rx_plane_len;
+                        let beamformed_rx = &beamformed_values[start..start + envelope_rx.len()];
+                        compute_envelope_plane(samples, frames, beamformed_rx, envelope_rx);
+                    },
+                );
+            }
+            _ => {
+                for rx in 0..rx_count {
+                    compute_envelope_plane_indexed(
+                        samples,
+                        frames,
+                        |sample, frame| beamformed[[rx, sample, frame]],
+                        |sample, frame, value| envelope[[rx, sample, frame]] = value,
+                    );
                 }
-
-                let plan =
-                    FFT_CACHE_1D.get_or_create(Shape1D::new(len).expect("non-zero FFT length"));
-
-                HILBERT_SPECTRUM.with(|spectrum_cell| {
-                    let mut spectrum = spectrum_cell.borrow_mut();
-                    if spectrum.len() != len {
-                        *spectrum = Array1::zeros(len);
-                    }
-
-                    for k in 0..beamformed_rx.dim().1 {
-                        for j in 0..len {
-                            spectrum[j] = Complex64::new(beamformed_rx[[j, k]] as f64, 0.0);
-                        }
-
-                        plan.forward_complex_inplace(&mut spectrum);
-
-                        if len > 1 {
-                            if len % 2 == 0 {
-                                for coeff in spectrum.iter_mut().take(len / 2).skip(1) {
-                                    *coeff *= 2.0;
-                                }
-                                for coeff in spectrum.iter_mut().skip(len / 2 + 1) {
-                                    *coeff = Complex64::default();
-                                }
-                            } else {
-                                for coeff in spectrum.iter_mut().take(len / 2 + 1).skip(1) {
-                                    *coeff *= 2.0;
-                                }
-                                for coeff in spectrum.iter_mut().skip(len / 2 + 1) {
-                                    *coeff = Complex64::default();
-                                }
-                            }
-                        }
-
-                        plan.inverse_complex_inplace(&mut spectrum);
-
-                        let norm = 1.0 / len as f64;
-                        for j in 0..len {
-                            envelope_rx[[j, k]] = (spectrum[j] * norm).norm() as f32;
-                        }
-                    }
-                });
-            });
+            }
+        }
 
         Ok(envelope)
     }
 
-    fn log_compression(&self, envelope: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        let mut compressed = Array3::zeros(envelope.dim());
+    fn log_compression(&self, envelope: &LetoArray3<f32>) -> KwaversResult<LetoArray3<f32>> {
+        let mut compressed = LetoArray3::zeros(envelope.shape());
         let dynamic_range_db = 60.0_f64;
         let compression_factor: f32 = (dynamic_range_db / 20.0) as f32;
 
         for i in 0..envelope.shape()[0] {
             for j in 0..envelope.shape()[1] {
-                for k in 0..envelope.dim().2 {
+                for k in 0..envelope.shape()[2] {
                     let value = envelope[[i, j, k]].max(1e-10) as f64;
                     let log_value = value.ln() / (compression_factor as f64).ln();
                     compressed[[i, j, k]] = log_value.clamp(0.0, 1.0) as f32;
@@ -251,7 +239,7 @@ impl RealtimeImagingPipeline {
         Ok(compressed)
     }
 
-    fn scan_conversion(&self, compressed: &Array3<f32>) -> KwaversResult<Array3<f32>> {
+    fn scan_conversion(&self, compressed: &LetoArray3<f32>) -> KwaversResult<LetoArray3<f32>> {
         Ok(compressed.clone())
     }
 
@@ -293,4 +281,67 @@ impl RealtimeImagingPipeline {
     pub fn set_target_fps(&mut self, fps: f64) {
         self.config.target_fps = fps;
     }
+}
+
+fn compute_envelope_plane(samples: usize, frames: usize, beamformed: &[f32], envelope: &mut [f32]) {
+    compute_envelope_plane_indexed(
+        samples,
+        frames,
+        |sample, frame| beamformed[sample * frames + frame],
+        |sample, frame, value| envelope[sample * frames + frame] = value,
+    );
+}
+
+fn compute_envelope_plane_indexed<Read, Write>(
+    samples: usize,
+    frames: usize,
+    read: Read,
+    mut write: Write,
+) where
+    Read: Fn(usize, usize) -> f32,
+    Write: FnMut(usize, usize, f32),
+{
+    if samples == 0 {
+        return;
+    }
+
+    HILBERT_SPECTRUM.with(|spectrum_cell| {
+        let mut spectrum = spectrum_cell.borrow_mut();
+        if spectrum.len() != samples {
+            spectrum.resize(samples, Complex64::default());
+        }
+
+        for frame in 0..frames {
+            for sample in 0..samples {
+                spectrum[sample] = Complex64::new(read(sample, frame) as f64, 0.0);
+            }
+
+            fft_1d_complex_slice_inplace(spectrum.as_mut_slice());
+
+            if samples > 1 {
+                if samples.is_multiple_of(2) {
+                    for coeff in spectrum.iter_mut().take(samples / 2).skip(1) {
+                        *coeff *= 2.0;
+                    }
+                    for coeff in spectrum.iter_mut().skip(samples / 2 + 1) {
+                        *coeff = Complex64::default();
+                    }
+                } else {
+                    for coeff in spectrum.iter_mut().take(samples / 2 + 1).skip(1) {
+                        *coeff *= 2.0;
+                    }
+                    for coeff in spectrum.iter_mut().skip(samples / 2 + 1) {
+                        *coeff = Complex64::default();
+                    }
+                }
+            }
+
+            ifft_1d_complex_slice_inplace(spectrum.as_mut_slice());
+
+            let norm = 1.0 / samples as f64;
+            for sample in 0..samples {
+                write(sample, frame, (spectrum[sample] * norm).norm() as f32);
+            }
+        }
+    });
 }

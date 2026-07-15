@@ -17,7 +17,7 @@ fn config(spatial_order: usize) -> ThermalDiffusionConfig {
 fn second_order_laplacian_keeps_singleton_axis_active_for_other_axes() {
     let grid = Grid::new(5, 5, 1, 1.0, 1.0, 1.0).unwrap();
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
-    let field = Array3::from_shape_fn((5, 5, 1), |(i, j, _)| (i * i) as f64 + 2.0 * (j * j) as f64);
+    let field = Array3::from_shape_fn((5, 5, 1), |[i, j, _]| (i * i) as f64 + 2.0 * (j * j) as f64);
     solver.set_temperature(field);
 
     solver.calculate_laplacian(&grid).unwrap();
@@ -30,7 +30,7 @@ fn second_order_laplacian_keeps_singleton_axis_active_for_other_axes() {
 fn fourth_order_laplacian_falls_back_per_axis_on_narrow_dimensions() {
     let grid = Grid::new(7, 3, 1, 1.0, 1.0, 1.0).unwrap();
     let mut solver = ThermalDiffusionSolver::new(config(4), &grid);
-    let field = Array3::from_shape_fn((7, 3, 1), |(i, j, _)| (i * i) as f64 + 3.0 * (j * j) as f64);
+    let field = Array3::from_shape_fn((7, 3, 1), |[i, j, _]| (i * i) as f64 + 3.0 * (j * j) as f64);
     solver.set_temperature(field);
 
     solver.calculate_laplacian(&grid).unwrap();
@@ -43,7 +43,7 @@ fn fourth_order_laplacian_falls_back_per_axis_on_narrow_dimensions() {
 fn fourth_order_laplacian_is_exact_for_quadratic_field_in_3d() {
     let grid = Grid::new(7, 7, 7, 1.0, 1.0, 1.0).unwrap();
     let mut solver = ThermalDiffusionSolver::new(config(4), &grid);
-    let field = Array3::from_shape_fn((7, 7, 7), |(i, j, k)| {
+    let field = Array3::from_shape_fn((7, 7, 7), |[i, j, k]| {
         let x = i as f64 - 3.0;
         let y = j as f64 - 3.0;
         let z = k as f64 - 3.0;
@@ -78,7 +78,7 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
     let medium =
         HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
     let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
-    solver.set_temperature(Array3::from_elem((3, 3, 1), 310.0));
+    solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
     let mut source = Array3::zeros((3, 3, 1));
     source[[1, 1, 0]] = 5.0;
 
@@ -88,4 +88,49 @@ fn standard_update_consumes_borrowed_source_view_without_source_clone() {
 
     assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
     assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
+}
+
+#[test]
+fn standard_update_consumes_noncontiguous_source_view() {
+    let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
+    solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
+    let mut source = Array3::zeros((3, 3, 1));
+    source[[1, 1, 0]] = 5.0;
+    let source_view = source
+        .slice_with(&s![.., ..;-1, ..])
+        .expect("invariant: reversed slice within bounds");
+    assert_eq!(source_view.as_slice(), None);
+
+    solver
+        .update(&medium, &grid, 2.0, Some(source_view))
+        .unwrap();
+
+    assert_eq!(solver.temperature()[[1, 1, 0]], 320.0);
+    assert_eq!(solver.temperature()[[0, 0, 0]], 310.0);
+}
+
+#[test]
+fn standard_update_rejects_mismatched_source_shape_without_mutation() {
+    let grid = Grid::new(3, 3, 1, 1.0, 1.0, 1.0).unwrap();
+    let medium =
+        HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
+    let mut solver = ThermalDiffusionSolver::new(config(2), &grid);
+    solver.set_temperature(Array3::from_elem([3, 3, 1], 310.0));
+    let source = Array3::zeros((2, 3, 1));
+
+    let err = solver
+        .update(&medium, &grid, 2.0, Some(source.view()))
+        .unwrap_err();
+
+    match err {
+        KwaversError::DimensionMismatch(message) => assert_eq!(
+            message,
+            "thermal diffusion source shape [2, 3, 1] does not match temperature shape [3, 3, 1]"
+        ),
+        other => panic!("expected source dimension mismatch, got {other:?}"),
+    }
+    assert_eq!(solver.temperature()[[1, 1, 0]], 310.0);
 }

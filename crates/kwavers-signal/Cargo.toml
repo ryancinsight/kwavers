@@ -10,8 +10,8 @@ repository = "https://github.com/ryancinsight/kwavers"
 [dependencies]
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-num-complex = "0.4"
+apollo = { workspace = true }
+leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 anyhow = "1.0"

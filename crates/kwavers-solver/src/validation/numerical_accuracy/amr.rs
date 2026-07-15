@@ -2,7 +2,7 @@
 mod tests {
     use crate::amr::AMRSolver;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::f64::consts::PI;
 
     #[test]

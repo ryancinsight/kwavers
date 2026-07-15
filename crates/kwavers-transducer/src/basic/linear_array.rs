@@ -1,9 +1,9 @@
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::{Apodization, Source};
+use leto::Array3;
 use log::debug;
-use ndarray::Array3;
-use rayon::prelude::*;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -87,20 +87,17 @@ impl LinearArray {
         let start_x = self.x_pos - self.length / 2.0;
 
         // Calculate time delays (not phase delays) for proper broadband focusing
-        self.time_delays
-            .par_iter_mut()
-            .enumerate()
-            .for_each(|(i, delay)| {
-                let x_elem = (i as f64).mul_add(spacing, start_x);
-                let distance = (self.z_pos - focus_z)
-                    .mul_add(
-                        self.z_pos - focus_z,
-                        (self.y_pos - focus_y)
-                            .mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)),
-                    )
-                    .sqrt();
-                *delay = distance / c; // Time delay, not phase delay
-            });
+        enumerate_mut_with::<Adaptive, _, _>(&mut self.time_delays, |i, delay| {
+            let x_elem = (i as f64).mul_add(spacing, start_x);
+            let distance = (self.z_pos - focus_z)
+                .mul_add(
+                    self.z_pos - focus_z,
+                    (self.y_pos - focus_y)
+                        .mul_add(self.y_pos - focus_y, (x_elem - focus_x).powi(2)),
+                )
+                .sqrt();
+            *delay = distance / c; // Time delay, not phase delay
+        });
         debug!(
             "Adjusted focus to ({}, {}, {}) using time delays",
             focus_x, focus_y, focus_z
@@ -114,13 +111,13 @@ impl LinearArray {
 
 impl Source for LinearArray {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
         let spacing = self.element_spacing();
         let start_x = self.x_pos - self.length / 2.0;
@@ -128,7 +125,7 @@ impl Source for LinearArray {
         for i in 0..self.num_elements {
             let x_elem = (i as f64).mul_add(spacing, start_x);
             if let Some((ix, iy, iz)) = grid.position_to_indices(x_elem, self.y_pos, self.z_pos) {
-                mask[(ix, iy, iz)] = self.apodization_weights[i];
+                mask[[ix, iy, iz]] = self.apodization_weights[i];
             }
         }
     }

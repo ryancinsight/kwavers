@@ -8,9 +8,8 @@
 //! estimator used for passive-cavitation spectroscopy (Gyöngy & Coussios 2010).
 
 use crate::analytical::cavitation::keller_miksis_rk4;
+use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::fft_1d_array;
-use ndarray::Array1;
 
 pub(super) const MAX_EXACT_F64_INTEGER: usize = 1usize << 53;
 
@@ -317,7 +316,9 @@ pub(super) fn hann_power_spectrum_fft(signal: &[f64], dt_s: f64) -> Option<(Vec<
         let w = 0.5 * (1.0 - (TWO_PI * j_f / (n_f - 1.0)).cos());
         windowed.push((sample - mean) * w);
     }
-    let spectrum = fft_1d_array(&Array1::from_vec(windowed));
+    let fft_input = leto::Array1::from_shape_vec([n], windowed)
+        .expect("Hann-windowed signal length must match Leto FFT shape");
+    let spectrum = fft_1d_leto(fft_input.view());
     let n_pos = n / 2 + 1;
     let mut freqs = Vec::with_capacity(n_pos);
     let mut psd = Vec::with_capacity(n_pos);

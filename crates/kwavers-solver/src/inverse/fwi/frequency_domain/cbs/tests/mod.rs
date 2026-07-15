@@ -8,13 +8,12 @@ use super::spectral::{
     apply_shifted_green_spectral_with_boundary,
 };
 use super::*;
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_math::fft::{fft_3d_complex_into, ifft_3d_complex_inplace};
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::Array3;
-use num_complex::Complex64;
 
 mod absorbing;
 mod grid_green;

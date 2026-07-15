@@ -13,7 +13,7 @@ pub struct GridValidator;
 impl GridValidator {
     /// Validate grid configuration with evidence-based constraints
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn validate(config: &GridConfig) -> KwaversResult<()> {
         Self::validate_dimensions(config)?;

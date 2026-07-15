@@ -37,7 +37,16 @@ use kwavers_physics::acoustics::mechanics::absorption::{
     np_m_to_power_law_db_cm, power_law_db_cm_to_np_omega_m, AbsorptionMode,
 };
 use kwavers_physics::acoustics::mechanics::RelaxationAbsorption;
-use ndarray::Array3;
+use leto::Array3;
+
+fn map_real_field(input: &Array3<f64>, mut map: impl FnMut(f64) -> f64) -> Array3<f64> {
+    let shape = input.shape();
+    let mut output = Array3::<f64>::zeros([shape[0], shape[1], shape[2]]);
+    for (dst, &src) in output.iter_mut().zip(input.iter()) {
+        *dst = map(src);
+    }
+    output
+}
 
 /// Initialize absorption operators τ, η, spatially-varying exponent y, and the
 /// spectral nabla operators ∇^(y−2) and ∇^(y−1) in FFT-order k-space.
@@ -64,7 +73,7 @@ use ndarray::Array3;
 /// ## References
 /// Treeby & Cox (2010) Eqs. 19–21 for τ and η; Eq. 10 for nabla operators.
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 ///
 pub(crate) fn initialize_absorption_operators(
     config: &PSTDConfig,
@@ -74,7 +83,7 @@ pub(crate) fn initialize_absorption_operators(
     _k_max: f64,
     _c_ref: f64,
 ) -> KwaversResult<Option<AbsorptionKernel>> {
-    let shape = (grid.nx, grid.ny, grid.nz);
+    let shape = [grid.nx, grid.ny, grid.nz];
 
     match &config.absorption_mode {
         AbsorptionMode::Lossless => Ok(None),
@@ -123,14 +132,14 @@ pub(crate) fn initialize_absorption_operators(
                 }
             }
 
-            let nabla1 = k_mag.mapv(|k| {
+            let nabla1 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     1.0
                 } else {
                     0.0
                 }
             });
-            let nabla2 = k_mag.mapv(|k| {
+            let nabla2 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k
                 } else {
@@ -209,14 +218,14 @@ pub(crate) fn initialize_absorption_operators(
             // Spectral nabla operators — precomputed in FFT wavenumber order.
             // nabla1 = |k|^(y_config − 2),  nabla2 = |k|^(y_config − 1)
             // Treeby & Cox (2010) Eq. 10; DC bin → 0 to avoid singularity.
-            let nabla1 = k_mag.mapv(|k| {
+            let nabla1 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k.powf(y_config - 2.0)
                 } else {
                     0.0
                 }
             });
-            let nabla2 = k_mag.mapv(|k| {
+            let nabla2 = map_real_field(k_mag, |k| {
                 if k > ABSORPTION_SINGULARITY_THRESHOLD {
                     k.powf(y_config - 1.0)
                 } else {
@@ -286,7 +295,7 @@ fn build_relaxation_kernel(
     relaxation: &RelaxationAbsorption,
     causal_alpha_0: Option<f64>,
 ) -> KwaversResult<Option<AbsorptionKernel>> {
-    let shape = (grid.nx, grid.ny, grid.nz);
+    let shape = [grid.nx, grid.ny, grid.nz];
     let f_ref = medium.reference_frequency();
     let omega_ref = 2.0 * std::f64::consts::PI * f_ref;
     let y_eff = clamp_fractional_exponent(relaxation.local_exponent(omega_ref));
@@ -314,14 +323,14 @@ fn build_relaxation_kernel(
         }
     }
 
-    let nabla1 = k_mag.mapv(|k| {
+    let nabla1 = map_real_field(k_mag, |k| {
         if k > ABSORPTION_SINGULARITY_THRESHOLD {
             k.powf(y_eff - 2.0)
         } else {
             0.0
         }
     });
-    let nabla2 = k_mag.mapv(|k| {
+    let nabla2 = map_real_field(k_mag, |k| {
         if k > ABSORPTION_SINGULARITY_THRESHOLD {
             k.powf(y_eff - 1.0)
         } else {

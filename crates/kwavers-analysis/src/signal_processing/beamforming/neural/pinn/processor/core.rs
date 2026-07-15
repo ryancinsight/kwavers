@@ -1,7 +1,7 @@
 //! NeuralBeamformingProcessor core implementation.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{s, Array3, Array4, ArrayView3, ArrayView4};
+use leto::{Array3, Array4, ArrayView3, ArrayView4};
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
@@ -105,8 +105,8 @@ impl NeuralBeamformingProcessor {
             let frame_data = rf_data.slice(s![frame_idx, .., .., 0..1]);
             let frame_result = self.process_frame(&frame_data)?;
             volume
-                .index_axis_mut(ndarray::Axis(0), frame_idx)
-                .assign(&frame_result.index_axis(ndarray::Axis(2), 0));
+                .index_axis_mut(0, frame_idx)
+                .assign(&frame_result.index_axis(2, 0));
         }
 
         let uncertainty = self.compute_uncertainty(&volume)?;

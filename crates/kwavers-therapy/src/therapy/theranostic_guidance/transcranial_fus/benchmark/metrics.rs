@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -9,7 +9,7 @@ pub fn evaluate_pressure_field(
     candidate_pressure_pa: &Array3<f32>,
     spacing_m: [f64; 3],
 ) -> KwaversResult<PressureFieldMetrics> {
-    if reference_pressure_pa.dim() != candidate_pressure_pa.dim() {
+    if reference_pressure_pa.shape() != candidate_pressure_pa.shape() {
         return Err(KwaversError::InvalidInput(
             "reference and candidate pressure fields must have identical shapes".to_owned(),
         ));
@@ -65,7 +65,7 @@ pub fn evaluate_pressure_field(
 fn argmax_pressure(pressure_pa: &Array3<f32>) -> KwaversResult<([usize; 3], f64)> {
     let mut best_index = [0_usize; 3];
     let mut best_value = f64::NEG_INFINITY;
-    for ((ix, iy, iz), value) in pressure_pa.indexed_iter() {
+    for ([ix, iy, iz], value) in pressure_pa.indexed_iter() {
         let value = f64::from(*value);
         if !value.is_finite() {
             return Err(KwaversError::InvalidInput(

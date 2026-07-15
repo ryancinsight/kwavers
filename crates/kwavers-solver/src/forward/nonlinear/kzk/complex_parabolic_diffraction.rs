@@ -4,7 +4,7 @@
 //!
 //! `scratch` (`Array2<Complex64>`, shape (nx, ny)) is allocated once in
 //! `ParabolicDiffractionOperator::new` and reused on every `apply_complex` call.
-//! The 2-D FFT plan is obtained from `FFT_CACHE_2D` (cached per shape).
+//! The 2-D FFT plan is obtained directly through Apollo's cached Leto-native API.
 //!
 //! Per `apply_complex` call this eliminates:
 //! - 1 × `field.to_owned()` clone (~262 KB for 128×128)
@@ -14,9 +14,11 @@
 //! When called for every retarded-time slice (nt = 1000), one diffraction
 //! half-step saves 3000 allocations (~786 MB total clones + FFT temporaries).
 
-use kwavers_math::fft::{Complex64, Fft2d, Shape2D, FFT_CACHE_2D};
-use ndarray::{Array2, ArrayViewMut2, Zip};
-use std::sync::Arc;
+use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
+use kwavers_math::fft::Complex64;
+use leto::Array2 as LetoArray2;
+use leto::{Array2, ArrayViewMut2};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -29,15 +31,12 @@ pub struct ParabolicDiffractionOperator {
     config: KZKConfig,
     kx2: Array2<f64>,
     ky2: Array2<f64>,
-    /// Cached 2-D FFT plan for shape (nx, ny) — shared with other users of
-    /// `FFT_CACHE_2D` at the same shape.
-    fft_plan: Arc<Fft2d>,
     /// Pre-allocated complex scratch buffer (nx, ny).
     ///
     /// Reused on every `apply_complex` call to hold the complex field during
     /// in-place FFT → phase-multiply → in-place IFFT.  Eliminates one clone
     /// and two allocating FFT round-trips per time slice.
-    scratch: Array2<Complex64>,
+    scratch: LetoArray2<ApolloComplex64>,
 }
 
 impl std::fmt::Debug for ParabolicDiffractionOperator {
@@ -54,8 +53,8 @@ impl ParabolicDiffractionOperator {
     /// Create new complex parabolic diffraction operator.
     ///
     /// Pre-computes the transverse wavenumber grids `kx²` and `ky²`,
-    /// acquires the (nx, ny) 2-D FFT plan from `FFT_CACHE_2D`, and
-    /// allocates the complex scratch buffer.
+    /// allocates the complex scratch buffer. FFT plan caching is owned by
+    /// Apollo.
     #[must_use]
     pub fn new(config: &KZKConfig) -> Self {
         let nx = config.nx;
@@ -93,14 +92,12 @@ impl ParabolicDiffractionOperator {
             }
         }
 
-        let fft_plan = FFT_CACHE_2D.get_or_create(Shape2D { nx, ny });
-        let scratch = Array2::<Complex64>::zeros((nx, ny));
+        let scratch = LetoArray2::<ApolloComplex64>::zeros([nx, ny]);
 
         Self {
             config: config.clone(),
             kx2,
             ky2,
-            fft_plan,
             scratch,
         }
     }
@@ -134,10 +131,23 @@ impl ParabolicDiffractionOperator {
         let k0 = TWO_PI * self.config.frequency / self.config.c0;
 
         // Step 1: copy field slice into scratch (no heap allocation).
-        self.scratch.assign(field);
+        let scratch = self
+            .scratch
+            .as_slice_mut()
+            .expect("invariant: complex KZK diffraction scratch is standard-layout");
+        if let Some(field_values) = field.as_slice() {
+            enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
+                let value = field_values[idx];
+                *s = ApolloComplex64::new(value.re, value.im);
+            });
+        } else {
+            for (s, &value) in scratch.iter_mut().zip(field.as_view().iter()) {
+                *s = ApolloComplex64::new(value.re, value.im);
+            }
+        }
 
         // Step 2: forward complex-to-complex in-place FFT.
-        self.fft_plan.forward_complex_inplace(&mut self.scratch);
+        fft_2d_complex_inplace(&mut self.scratch);
 
         // Step 3: apply parabolic diffraction propagator H(k_T) per mode.
         //
@@ -154,26 +164,52 @@ impl ParabolicDiffractionOperator {
         // The update is a pointwise `scratch[i,j] *= H(kx2[i,j], ky2[i,j])`.
         // Each element depends only on the collocated kx2 and ky2 values
         // (immutable read) and overwrites its own scratch cell (mutable write).
-        // No two Rayon tasks share memory → `par_for_each` is race-free.
+        // No two Moirai tasks share memory because each scratch index is visited
+        // exactly once.
         {
-            let kx2_v = self.kx2.view();
-            let ky2_v = self.ky2.view();
-            Zip::from(self.scratch.view_mut())
-                .and(kx2_v)
-                .and(ky2_v)
-                .par_for_each(|s, &kx2, &ky2| {
-                    let kt2 = kx2 + ky2;
-                    let phase = kt2 * step_size / (2.0 * k0);
-                    // exp(−i·phase): negative sign is physically correct
-                    *s *= Complex64::from_polar(1.0, -phase);
-                });
+            let kx2 = self
+                .kx2
+                .as_slice()
+                .expect("invariant: complex KZK diffraction kx2 is standard-layout");
+            let ky2 = self
+                .ky2
+                .as_slice()
+                .expect("invariant: complex KZK diffraction ky2 is standard-layout");
+            let scratch = self
+                .scratch
+                .as_slice_mut()
+                .expect("invariant: complex KZK diffraction scratch is standard-layout");
+            enumerate_mut_with::<Adaptive, _, _>(scratch, |idx, s| {
+                let kt2 = kx2[idx] + ky2[idx];
+                let phase = kt2 * step_size / (2.0 * k0);
+                // exp(−i·phase): negative sign is physically correct
+                *s *= ApolloComplex64::from_polar(1.0, -phase);
+            });
         }
 
         // Step 4: inverse complex-to-complex in-place FFT (includes 1/N norm).
-        self.fft_plan.inverse_complex_inplace(&mut self.scratch);
+        ifft_2d_complex_inplace(&mut self.scratch);
 
         // Step 5: copy scratch back to the field view.
-        field.assign(&self.scratch);
+        let scratch = self
+            .scratch
+            .as_slice()
+            .expect("invariant: complex KZK diffraction scratch is standard-layout");
+        if let Some(field_values) = field.as_mut_slice() {
+            enumerate_mut_with::<Adaptive, _, _>(field_values, |idx, value| {
+                let scratch_value = scratch[idx];
+                *value = Complex64::new(scratch_value.re, scratch_value.im);
+            });
+        } else {
+            for (([_, _], value), &s) in field
+                .reborrow()
+                .indexed_iter_mut()
+                .expect("invariant: 2-D field view yields indexed iterator")
+                .zip(scratch.iter())
+            {
+                *value = Complex64::new(s.re, s.im);
+            }
+        }
     }
 }
 
@@ -203,7 +239,8 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::<Complex64>::zeros((config.nx, config.ny));
+        let mut field =
+            Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
 
         for i in 0..config.nx {
             for j in 0..config.ny {
@@ -247,7 +284,8 @@ mod tests {
 
         // Create complex Gaussian beam
         let beam_waist = DEFAULT_BEAM_WAIST;
-        let mut field = Array2::<Complex64>::zeros((config.nx, config.ny));
+        let mut field =
+            Array2::<Complex64>::from_elem([config.nx, config.ny], Complex64::default());
 
         for i in 0..config.nx {
             for j in 0..config.ny {

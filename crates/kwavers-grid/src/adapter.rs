@@ -19,7 +19,7 @@
 use super::structure::Grid;
 use super::topology::{CartesianTopology, GridTopology, TopologyDimension};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Adapter that implements `GridTopology` for the legacy `Grid` struct
 ///
@@ -85,7 +85,7 @@ impl GridAdapter {
     /// This provides a bridge in the opposite direction for code that still
     /// requires the legacy `Grid` struct.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn from_topology(topology: &dyn GridTopology) -> KwaversResult<Self> {
         let dims = topology.dimensions();
@@ -265,6 +265,6 @@ mod tests {
         let adapter = GridAdapter::new(grid);
 
         let field = adapter.create_field();
-        assert_eq!(field.dim(), (8, 8, 8));
+        assert_eq!(field.shape(), [8, 8, 8]);
     }
 }

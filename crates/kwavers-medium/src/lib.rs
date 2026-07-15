@@ -19,6 +19,7 @@ pub mod interface;
 pub mod material_fields;
 pub mod optical;
 pub mod optical_map;
+pub(crate) mod parallel;
 pub mod properties;
 pub mod thermal;
 pub mod traits;
@@ -37,6 +38,7 @@ pub use anisotropic::{
 };
 pub use config::{DomainMediumParameters, InterfaceTypeParameters, LayerParameters, MediumType};
 pub use frequency_dependent::{FrequencyDependentProperties, TissueFrequencyModels};
+pub use heterogeneous::CtMediumBuilder;
 pub use homogeneous::HomogeneousMedium;
 pub use material_fields::MaterialFields;
 pub use optical_map::{Layer, OpticalPropertyMap, OpticalPropertyMapBuilder, Region};

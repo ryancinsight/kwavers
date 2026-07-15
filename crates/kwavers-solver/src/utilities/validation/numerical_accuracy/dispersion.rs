@@ -4,7 +4,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 impl NumericalValidator {
     /// Validate dispersion.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn validate_dispersion(
         &self,

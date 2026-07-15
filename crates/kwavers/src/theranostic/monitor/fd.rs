@@ -31,7 +31,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     invert, invert_gauss_newton, simulate_frequency_observation, Config, FrequencyObservation,
     GaussNewtonConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Configuration for the frequency-domain CBS monitor channel.
@@ -144,23 +144,34 @@ pub fn reconstruct(
     cfg: &FdMonitorConfig,
 ) -> KwaversResult<Array3<f64>> {
     let config = build_config(cfg)?;
+    let medium_slice = medium_slice.clone().into();
+    let background = background.clone().into();
     let mut observations = Vec::with_capacity(cfg.frequencies_hz.len());
     for &frequency_hz in &cfg.frequencies_hz {
-        let pressure = simulate_frequency_observation(medium_slice, array, frequency_hz, &config)?;
+        let pressure = simulate_frequency_observation(&medium_slice, array, frequency_hz, &config)?;
         observations.push(FrequencyObservation::new(frequency_hz, pressure));
     }
     let result = if cfg.use_gauss_newton {
         invert_gauss_newton(
             &observations,
             array,
-            background,
+            &background,
             &config,
             &GaussNewtonConfig::default(),
         )?
     } else {
-        invert(&observations, array, background, &config)?
+        invert(&observations, array, &background, &config)?
     };
-    Ok(result.sound_speed_m_s)
+    let [nx, ny, nz] = result.sound_speed_m_s.shape();
+    Ok(Array3::from_shape_vec(
+        (nx, ny, nz),
+        result
+            .sound_speed_m_s
+            .as_slice()
+            .expect("FD monitor reconstruction must be densely stored")
+            .to_vec(),
+    )
+    .expect("FD monitor reconstruction shape must match its flattened length"))
 }
 
 /// Differential lesion map: reconstruct the perturbed and the background media
@@ -181,7 +192,7 @@ pub fn differential_lesion_map(
     array: &MultiRowRingArray,
     cfg: &FdMonitorConfig,
 ) -> KwaversResult<Array3<f64>> {
-    let reference = Array3::from_elem(background_true.dim(), cfg.reference_sound_speed_m_s);
+    let reference = Array3::from_elem(background_true.shape(), cfg.reference_sound_speed_m_s);
     let bg_recon = reconstruct(background_true, &reference, array, cfg)?;
     let pert_recon = reconstruct(perturbed_true, &reference, array, cfg)?;
     Ok(&pert_recon - &bg_recon)
@@ -190,7 +201,7 @@ pub fn differential_lesion_map(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Build an `(n, n, 1)` homogeneous slice with an optional square Δc bump.
     fn slice_with_bump(n: usize, base: f64, bump: f64, half: usize) -> Array3<f64> {
@@ -237,8 +248,9 @@ mod tests {
         let config = build_config(&cfg);
         assert!(config.is_ok(), "CBS config must build");
         let slice = slice_with_bump(20, 1500.0, 60.0, 1);
-        let obs = simulate_frequency_observation(&slice, &array, 3.0e5, &config.unwrap()).unwrap();
-        assert_eq!(obs.dim(), (cfg.ring_elements, cfg.ring_elements));
+        let obs =
+            simulate_frequency_observation(&slice.into(), &array, 3.0e5, &config.unwrap()).unwrap();
+        assert_eq!(obs.shape(), [cfg.ring_elements, cfg.ring_elements]);
         assert!(obs.iter().all(|z| z.re.is_finite() && z.im.is_finite()));
         assert!(obs.iter().any(|z| z.norm() > 0.0), "data must be nonzero");
     }

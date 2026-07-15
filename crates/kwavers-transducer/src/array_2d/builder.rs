@@ -207,7 +207,7 @@ impl TransducerArray2DBuilder {
     ///
     /// Use this when you need precise frequency control
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn build_with_frequency(
         self,

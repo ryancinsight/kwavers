@@ -3,7 +3,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::kinetics::FlowKinetics;
 
@@ -31,8 +31,8 @@ impl CeusPerfusionModel {
         let (nx, ny, nz) = grid.dimensions();
 
         Ok(Self {
-            concentration: Array3::zeros((nx, ny, nz)),
-            velocity: Array3::from_elem((nx, ny, nz), (0.0, 0.0, 0.0)),
+            concentration: Array3::zeros([nx, ny, nz]),
+            velocity: Array3::from_elem([nx, ny, nz], (0.0, 0.0, 0.0)),
             permeability: 1e-6, // m/s (typical capillary permeability for lipid-shell CEUS agents)
             dx: grid.dx,
             dy: grid.dy,
@@ -57,7 +57,7 @@ impl CeusPerfusionModel {
         inflow_concentration: f64,
         dt: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = self.concentration.dim();
+        let [nx, ny, nz] = self.concentration.shape();
 
         // Scratch copy of C at time n (upwind reads must come from unmodified state)
         let c_old = self.concentration.clone();

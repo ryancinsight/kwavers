@@ -6,7 +6,8 @@
 use kwavers_grid::Grid;
 use kwavers_medium::AcousticProperties;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
+use leto::SliceArg;
 use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -47,9 +48,11 @@ fn test_heat_diffusion() -> Result<(), Box<dyn std::error::Error>> {
     let mut temperature = Array3::<f64>::zeros((nx, nx, 1));
     // Use iterator-based approach with slice for 2D iteration
     temperature
-        .slice_mut(ndarray::s![.., .., 0])
+        .index_axis_mut::<2>(2, 0)
+        .expect("index_axis")
         .indexed_iter_mut()
-        .for_each(|((i, j), value)| {
+        .expect("indexed_iter_mut")
+        .for_each(|([i, j], value)| {
             let x = i as f64 * dx;
             let y = j as f64 * dx;
             let r2 = (x - x0).powi(2) + (y - y0).powi(2);
@@ -162,17 +165,29 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
         // Use iterator approach for initialization
         p_curr
-            .slice_mut(ndarray::s![.., 0, 0])
+            .slice_with_mut::<1>(&[
+                SliceArg::All,
+                SliceArg::Index(0 as isize),
+                SliceArg::Index(0 as isize),
+            ])
+            .expect("slice_with_mut")
             .indexed_iter_mut()
-            .for_each(|(i, value)| {
+            .expect("indexed_iter_mut")
+            .for_each(|([i], value)| {
                 let x = i as f64 * dx;
                 *value = (k * x).sin();
             });
 
         p_prev
-            .slice_mut(ndarray::s![.., 0, 0])
+            .slice_with_mut::<1>(&[
+                SliceArg::All,
+                SliceArg::Index(0 as isize),
+                SliceArg::Index(0 as isize),
+            ])
+            .expect("slice_with_mut")
             .indexed_iter_mut()
-            .for_each(|(i, value)| {
+            .expect("indexed_iter_mut")
+            .for_each(|([i], value)| {
                 let x = i as f64 * dx;
                 *value = (k * x - omega_exact * dt).sin();
             });
@@ -207,7 +222,12 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
 
         // Use iterator with enumerate for index access
         p_curr
-            .slice(ndarray::s![.., 0, 0])
+            .slice_with::<1>(&[
+                SliceArg::All,
+                SliceArg::Index(0 as isize),
+                SliceArg::Index(0 as isize),
+            ])
+            .expect("slice_with")
             .iter()
             .enumerate()
             .for_each(|(i, &actual)| {

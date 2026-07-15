@@ -1,8 +1,8 @@
 use crate::signal_processing::localization::SourceLocation;
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::EigenDecomposition;
-use ndarray::Array2;
-use num_complex::Complex;
+use kwavers_math::linear_algebra::eigendecomposition::{EigenSolver, EigenSolverConfig};
+use leto::Array2;
 
 use super::super::model_order::{ModelOrderConfig, ModelOrderEstimator};
 use super::{MUSICProcessor, MUSICResult};
@@ -17,7 +17,7 @@ impl MUSICProcessor {
     ///
     pub(super) fn compute_pseudospectrum(
         &self,
-        noise_eigenvectors: &Array2<Complex<f64>>,
+        noise_eigenvectors: &Array2<Complex64>,
     ) -> KwaversResult<(Vec<f64>, [usize; 3])> {
         let sensor_positions = &self.config.config.sensor_positions;
         let frequency = self.config.center_frequency;
@@ -50,12 +50,12 @@ impl MUSICProcessor {
 
         // Precompute E_n E_n^H for efficiency
         let num_sensors = sensor_positions.len();
-        let noise_subspace_dim = noise_eigenvectors.ncols();
+        let noise_subspace_dim = noise_eigenvectors.shape()[1];
         let mut noise_projector = Array2::zeros((num_sensors, num_sensors));
 
         for i in 0..num_sensors {
             for j in 0..num_sensors {
-                let mut sum = Complex::new(0.0, 0.0);
+                let mut sum = Complex64::new(0.0, 0.0);
                 for k in 0..noise_subspace_dim {
                     sum += noise_eigenvectors[[i, k]] * noise_eigenvectors[[j, k]].conj();
                 }
@@ -184,14 +184,16 @@ impl MUSICProcessor {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn run(&self, snapshots: &Array2<Complex<f64>>) -> KwaversResult<MUSICResult> {
-        let num_sensors = snapshots.nrows();
-        let num_snapshots = snapshots.ncols();
+    pub fn run(&self, snapshots: &Array2<Complex64>) -> KwaversResult<MUSICResult> {
+        let num_sensors = snapshots.shape()[0];
+        let num_snapshots = snapshots.shape()[1];
 
         let covariance = self.estimate_covariance(snapshots)?;
 
-        let (eigenvalues, eigenvectors) =
-            EigenDecomposition::hermitian_eigendecomposition_complex(&covariance)?;
+        let (eigenvalues, eigenvectors) = {
+            let r = EigenSolver::jacobi_hermitian(&covariance, EigenSolverConfig::default())?;
+            (r.eigenvalues, r.eigenvectors)
+        };
 
         let num_sources = if let Some(k) = self.config.num_sources {
             k
@@ -199,7 +201,7 @@ impl MUSICProcessor {
             let model_config = ModelOrderConfig::new(num_sensors, num_snapshots)?
                 .with_criterion(self.config.model_order_criterion);
             let estimator = ModelOrderEstimator::new(model_config)?;
-            let real_eigenvalues: Vec<f64> = eigenvalues.to_vec();
+            let real_eigenvalues: Vec<f64> = eigenvalues.iter().copied().collect();
             let result = estimator.estimate(&real_eigenvalues)?;
             result.num_sources
         };

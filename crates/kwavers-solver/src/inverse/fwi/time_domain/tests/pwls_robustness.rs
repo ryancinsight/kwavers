@@ -18,7 +18,7 @@ use crate::inverse::seismic::parameters::{FwiParameters, RegularizationParameter
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Single-shot problem with a long quiet pre-arrival window (source at `ix=1`,
 /// receivers at `ix=6`) so the per-trace noise variance is estimable.
@@ -30,7 +30,10 @@ fn build_problem() -> (Grid, FwiGeometry, FwiParameters, Array3<f64>, Array3<f64
     let c0 = SOUND_SPEED_WATER_SIM;
     let initial = Array3::from_elem(dims, c0);
     let mut truth = initial.clone();
-    for ((ix, iy, iz), value) in truth.indexed_iter_mut() {
+    for ([ix, iy, iz], value) in truth
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
         *value += 60.0 * (-r2 / 3.0).exp();
     }
@@ -97,8 +100,8 @@ fn pwls_is_robust_to_bad_channels_vs_unweighted_l2() {
     let (clean, _hist) = base
         .forward_model(&truth, &geometry, &grid)
         .expect("observed forward");
-    let (n_rx, nt) = clean.dim();
-    let rms = (clean.iter().map(|v| v * v).sum::<f64>() / clean.len() as f64).sqrt();
+    let [n_rx, nt] = clean.shape();
+    let rms = (clean.iter().map(|v| v * v).sum::<f64>() / (clean.len()) as f64).sqrt();
 
     // A minority (every 4th receiver) is 10× noisier (variance 100×). Same
     // realisation feeds both inversions.
@@ -144,7 +147,7 @@ fn pwls_is_robust_to_bad_channels_vs_unweighted_l2() {
     let core_mae = |a: &Array3<f64>| -> f64 {
         let c0 = SOUND_SPEED_WATER_SIM;
         let (mut sum, mut n) = (0.0_f64, 0usize);
-        for ((ix, iy, iz), &t) in truth.indexed_iter() {
+        for ([ix, iy, iz], &t) in truth.indexed_iter() {
             if t - c0 > 20.0 {
                 sum += (a[[ix, iy, iz]] - t).abs();
                 n += 1;

@@ -5,7 +5,7 @@
 
 #[cfg(test)]
 mod tests {
-    use ndarray::{s, Array2, Array3, Array4};
+    use leto::{Array2, Array3, Array4};
 
     use crate::inverse::reconstruction::seismic::config::{
         RtmImagingCondition, SeismicImagingConfig,
@@ -17,7 +17,7 @@ mod tests {
     fn rtm_with_condition(condition: RtmImagingCondition) -> ReverseTimeMigration {
         let mut config = SeismicImagingConfig::default();
         config.rtm_imaging_condition = condition;
-        ReverseTimeMigration::new(config, Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM))
+        ReverseTimeMigration::new(config, Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM))
     }
 
     /// The derivative-based Laplacian imaging condition must return a typed error
@@ -27,15 +27,15 @@ mod tests {
     fn laplacian_errors_on_2d_grid_instead_of_panicking() {
         let rtm = rtm_with_condition(RtmImagingCondition::Laplacian);
         assert!(
-            rtm.compute_laplacian(&Array3::<f64>::zeros((8, 8, 1)))
+            rtm.compute_laplacian(&Array3::<f64>::zeros((8, 8, 1)).view())
                 .is_err(),
             "2-D grid must yield a typed error, not a panic"
         );
         // 3-D still computes correctly: the Laplacian of a linear ramp f(i)=i is
         // zero in the interior (the second difference of a linear function).
-        let ramp = Array3::from_shape_fn((4, 4, 4), |(i, _, _)| i as f64);
-        let lap = rtm.compute_laplacian(&ramp).expect("3-D laplacian");
-        assert_eq!(lap.dim(), (4, 4, 4));
+        let ramp = Array3::from_shape_fn((4, 4, 4), |[i, _, _]| i as f64);
+        let lap = rtm.compute_laplacian(&ramp.view()).expect("3-D laplacian");
+        assert_eq!(lap.shape(), [4, 4, 4]);
         assert!(
             lap[[1, 1, 1]].abs() < 1e-12,
             "interior Laplacian of a linear ramp must be 0, got {}",
@@ -55,8 +55,8 @@ mod tests {
     #[test]
     fn energy_normalized_condition_matches_cross_correlation_over_source_energy() {
         let mut rtm = rtm_with_condition(RtmImagingCondition::EnergyNormalized);
-        let source = Array4::from_elem((2, 3, 3, 3), 2.0);
-        let receiver = Array4::from_elem((2, 3, 3, 3), 3.0);
+        let source = Array4::from_elem([2, 3, 3, 3], 2.0);
+        let receiver = Array4::from_elem([2, 3, 3, 3], 3.0);
 
         rtm.apply_imaging_condition(&source, &receiver).unwrap();
 
@@ -79,9 +79,12 @@ mod tests {
         let mut rtm = rtm_with_condition(RtmImagingCondition::SourceNormalized);
         let mut source = Array4::zeros((3, 3, 3, 3));
         for t in 0..3_usize {
-            source.slice_mut(s![t, .., .., ..]).fill(t as f64);
+            source
+                .slice_with_mut::<3>(&s![t, .., .., ..])
+                .unwrap()
+                .fill(t as f64);
         }
-        let receiver = Array4::from_elem((3, 3, 3, 3), 3.0);
+        let receiver = Array4::from_elem([3, 3, 3, 3], 3.0);
 
         rtm.apply_imaging_condition(&source, &receiver).unwrap();
 
@@ -167,7 +170,7 @@ mod tests {
             rtm_imaging_condition: RtmImagingCondition::ZeroLag,
             ..SeismicImagingConfig::default()
         };
-        let velocity = Array3::from_elem((NX, NY, NZ), C);
+        let velocity = Array3::from_elem([NX, NY, NZ], C);
         let mut rtm = ReverseTimeMigration::new(config, velocity);
 
         // Single source / single receiver placed inside the interior so the

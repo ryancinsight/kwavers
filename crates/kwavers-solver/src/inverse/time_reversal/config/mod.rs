@@ -67,27 +67,23 @@ impl Default for TimeReversalConfig {
 impl TimeReversalConfig {
     /// Validate configuration parameters
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.iterations == 0 {
-            return Err(KwaversError::Validation(
-                ValidationError::OutOfRange {
-                    value: self.iterations as f64,
-                    min: 1.0,
-                    max: usize::MAX as f64,
-                }, /* field: iterations */
-            ));
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: self.iterations as f64,
+                min: 1.0,
+                max: usize::MAX as f64,
+            }));
         }
 
         if self.tolerance <= 0.0 || self.tolerance >= 1.0 {
-            return Err(KwaversError::Validation(
-                ValidationError::OutOfRange {
-                    value: self.tolerance,
-                    min: 0.0,
-                    max: 1.0,
-                }, /* field: tolerance */
-            ));
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: self.tolerance,
+                min: 0.0,
+                max: 1.0,
+            }));
         }
 
         if let Some((f_min, f_max)) = self.frequency_range {
@@ -111,23 +107,19 @@ impl TimeReversalConfig {
         }
 
         if self.max_amplification <= 0.0 {
-            return Err(KwaversError::Validation(
-                ValidationError::OutOfRange {
-                    value: self.max_amplification,
-                    min: 0.0,
-                    max: usize::MAX as f64,
-                }, /* field: max_amplification */
-            ));
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: self.max_amplification,
+                min: 0.0,
+                max: usize::MAX as f64,
+            }));
         }
 
         if self.reference_sound_speed <= 0.0 {
-            return Err(KwaversError::Validation(
-                ValidationError::OutOfRange {
-                    value: self.reference_sound_speed,
-                    min: 0.0,
-                    max: usize::MAX as f64,
-                }, /* field: reference_sound_speed */
-            ));
+            return Err(KwaversError::Validation(ValidationError::OutOfRange {
+                value: self.reference_sound_speed,
+                min: 0.0,
+                max: usize::MAX as f64,
+            }));
         }
 
         Ok(())

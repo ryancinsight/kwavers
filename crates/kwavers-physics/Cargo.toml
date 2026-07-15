@@ -8,28 +8,35 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core", features = ["registration"] }
+consus-npy = { workspace = true }
+kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
-kwavers-imaging = { path = "../kwavers-imaging" }
+kwavers-imaging = { path = "../kwavers-imaging", optional = true }
 kwavers-transducer = { path = "../kwavers-transducer" }
 kwavers-receiver = { path = "../kwavers-receiver" }
 kwavers-source = { path = "../kwavers-source" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-ndarray-npy = { version = "0.9", default-features = false, features = ["compressed_npz"] }
-num-complex = "0.4"
-num-traits = "0.2"
+apollo = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-rayon = "1.10"
+leto = { workspace = true }
+moirai-parallel = { workspace = true }
 rand = "0.8"
 rand_distr = "0.4"
 rand_chacha = "0.3"
 anyhow = "1.0"
 uom = { version = "0.36", default-features = false, features = ["f64", "si", "std"] }
-ritk-registration = { workspace = true }
+ritk-registration = { workspace = true, optional = true }
+eunomia = { workspace = true }
+
+[features]
+clinical-imaging = [
+    "dep:kwavers-imaging",
+    "dep:ritk-registration",
+    "kwavers-core/registration",
+]
 
 [dev-dependencies]
 approx = "0.5"

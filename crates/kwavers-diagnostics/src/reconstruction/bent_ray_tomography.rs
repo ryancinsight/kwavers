@@ -29,7 +29,7 @@
 //! - Nolet, G. (1987). *Seismic Tomography*. (bent-ray traveltime inversion)
 
 use super::bent_ray::bent_ray_path;
-use ndarray::Array2;
+use leto::Array2;
 
 /// One traveltime measurement: a source→receiver pair and its observed
 /// first-arrival traveltime \[s]. Source/receiver are grid indices `(i, j)`.
@@ -89,7 +89,7 @@ pub fn reconstruct_bent_ray_tomography(
     config: &BentRayTomographyConfig,
 ) -> BentRayTomographyResult {
     let mut slowness = initial_slowness.clone();
-    let ny = slowness.ncols();
+    let ny = slowness.shape()[1];
     let mut residual_history = Vec::with_capacity(config.outer_iterations);
 
     for _outer in 0..config.outer_iterations {
@@ -128,7 +128,7 @@ pub fn reconstruct_bent_ray_tomography(
         residual_history.push(rms_misfit(&slowness, dx, data));
     }
 
-    debug_assert_eq!(slowness.ncols(), ny);
+    debug_assert_eq!(slowness.shape()[1], ny);
     BentRayTomographyResult {
         slowness,
         residual_history,

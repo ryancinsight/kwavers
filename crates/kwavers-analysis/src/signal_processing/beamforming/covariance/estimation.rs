@@ -1,7 +1,7 @@
 use super::is_hermitian;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
-use num_complex::Complex64;
+use leto::Array2;
 
 /// Estimate sample covariance matrix from multi-snapshot sensor data.
 ///
@@ -23,7 +23,7 @@ pub fn estimate_sample_covariance(
     data: &Array2<Complex64>,
     diagonal_loading: f64,
 ) -> KwaversResult<Array2<Complex64>> {
-    let (n_sensors, n_snapshots) = (data.nrows(), data.ncols());
+    let [n_sensors, n_snapshots] = data.shape();
 
     if n_snapshots == 0 {
         return Err(KwaversError::InvalidInput(
@@ -38,7 +38,7 @@ pub fn estimate_sample_covariance(
         )));
     }
 
-    if !data.iter().all(|&x| x.is_finite()) {
+    if !data.iter().all(|&x| x.re.is_finite() && x.im.is_finite()) {
         return Err(KwaversError::InvalidInput(
             "Input data contains non-finite values (NaN or Inf)".into(),
         ));
@@ -55,9 +55,12 @@ pub fn estimate_sample_covariance(
     }
 
     // R = (1/M) * X * X^H
-    let mut covariance = Array2::<Complex64>::zeros((n_sensors, n_sensors));
+    let mut covariance =
+        Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
     for m in 0..n_snapshots {
-        let snapshot = data.column(m);
+        let snapshot = data
+            .index_axis::<1>(1, m)
+            .expect("snapshot column within bounds");
         for i in 0..n_sensors {
             for j in 0..n_sensors {
                 covariance[[i, j]] += snapshot[i] * snapshot[j].conj();
@@ -66,7 +69,9 @@ pub fn estimate_sample_covariance(
     }
 
     let scale = 1.0 / (n_snapshots as f64);
-    covariance.par_mapv_inplace(|x| x * scale);
+    for x in covariance.iter_mut() {
+        *x *= scale;
+    }
 
     if diagonal_loading > 0.0 {
         for i in 0..n_sensors {
@@ -106,10 +111,10 @@ pub fn estimate_forward_backward_covariance(
     diagonal_loading: f64,
 ) -> KwaversResult<Array2<Complex64>> {
     let r_forward = estimate_sample_covariance(data, 0.0)?;
-    let n = data.nrows();
+    let n = data.shape()[0];
 
     // R_b = J R_f^* J: reverse rows and columns, conjugate
-    let mut r_backward = Array2::<Complex64>::zeros((n, n));
+    let mut r_backward = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
         for j in 0..n {
             r_backward[[i, j]] = r_forward[[n - 1 - i, n - 1 - j]].conj();
@@ -117,7 +122,7 @@ pub fn estimate_forward_backward_covariance(
     }
 
     // R_fb = (1/2) [R_f + R_b]
-    let mut r_fb = Array2::<Complex64>::zeros((n, n));
+    let mut r_fb = Array2::<Complex64>::from_elem((n, n), Complex64::default());
     for i in 0..n {
         for j in 0..n {
             r_fb[[i, j]] = (r_forward[[i, j]] + r_backward[[i, j]]) * 0.5;

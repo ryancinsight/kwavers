@@ -44,8 +44,8 @@
 
 use std::collections::HashMap;
 
-use ndarray::{Array1, Array2};
-use rayon::prelude::*;
+use leto::{Array1, Array2};
+use moirai_parallel::{map_collect_with, Adaptive};
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::geometry::{DeviceLayout, Point2};
@@ -140,7 +140,7 @@ pub fn passive_acoustic_maps(
     let n_samples = sim.grid.time_steps;
     let dt_s = sim.grid.dt_s;
     // Flattened layout: traces[step * n_receivers + receiver].
-    let passive_data = Array2::from_shape_fn((n_receivers, n_samples), |(receiver, step)| {
+    let passive_data = Array2::from_shape_fn((n_receivers, n_samples), |[receiver, step]| {
         f64::from(run.traces[step * n_receivers + receiver])
     });
 
@@ -230,9 +230,8 @@ fn eikonal_delay_matrix(sim: &PaddedSimulation, grid_cells: &[(usize, usize)]) -
     unique_cells.sort_unstable();
     unique_cells.dedup();
 
-    let solved: HashMap<usize, Vec<f64>> = unique_cells
-        .par_iter()
-        .map(|&cell| {
+    let solved: HashMap<usize, Vec<f64>> =
+        map_collect_with::<Adaptive, _, _, _>(&unique_cells, |&cell| {
             let travel_time = eikonal_travel_time(&sim.speed_baseline, dx, (cell / ny, cell % ny));
             let column: Vec<f64> = grid_cells
                 .iter()
@@ -240,6 +239,7 @@ fn eikonal_delay_matrix(sim: &PaddedSimulation, grid_cells: &[(usize, usize)]) -
                 .collect();
             (cell, column)
         })
+        .into_iter()
         .collect();
 
     let mut delays = Array2::<f64>::zeros((grid_cells.len(), n_receivers));
@@ -267,9 +267,10 @@ fn band_power_per_point(
     bandwidth_hz: f64,
 ) -> Vec<f64> {
     beamformed
-        .outer_iter()
+        .rows()
+        .expect("invariant: beamformed is rank-2")
         .map(|row| {
-            let series: Array1<f64> = row.to_owned();
+            let series: Array1<f64> = row.to_contiguous();
             let filtered = apply_spectral_response_1d(&series, fs, |_, freq, nyquist| {
                 let f_eff = freq.min(2.0 * nyquist - freq).max(0.0);
                 let z = (f_eff - center_hz) / bandwidth_hz;

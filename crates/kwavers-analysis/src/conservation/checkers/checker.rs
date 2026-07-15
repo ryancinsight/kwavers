@@ -2,8 +2,8 @@
 
 use std::collections::HashMap;
 
+use leto::Array3;
 use log::{debug, warn};
-use ndarray::Array3;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;

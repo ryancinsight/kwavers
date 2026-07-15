@@ -1,6 +1,6 @@
 //! Field accessor and statistics methods for emission data
 
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::optics::sonoluminescence::spectral::EmissionSpectrum;
 
@@ -38,7 +38,7 @@ impl SonoluminescenceEmission {
     /// Get total light output
     #[must_use]
     pub fn total_light_output(&self) -> f64 {
-        self.emission_field.sum()
+        self.emission_field.iter().copied().sum::<f64>()
     }
 
     /// Get peak emission location
@@ -47,7 +47,7 @@ impl SonoluminescenceEmission {
         let mut max_val = 0.0;
         let mut max_loc = (0, 0, 0);
 
-        for ((i, j, k), &val) in self.emission_field.indexed_iter() {
+        for ([i, j, k], &val) in self.emission_field.indexed_iter() {
             if val > max_val {
                 max_val = val;
                 max_loc = (i, j, k);
@@ -70,8 +70,22 @@ impl SonoluminescenceEmission {
         self.spectral_field
             .as_ref()
             .map(|field| SpectralStatistics {
-                mean_peak_wavelength: field.peak_wavelength.mean().unwrap_or(0.0),
-                mean_color_temperature: field.color_temperature.mean().unwrap_or(0.0),
+                mean_peak_wavelength: {
+                    let n = field.peak_wavelength.len();
+                    if n > 0 {
+                        field.peak_wavelength.iter().copied().sum::<f64>() / n as f64
+                    } else {
+                        0.0
+                    }
+                },
+                mean_color_temperature: {
+                    let n = field.color_temperature.len();
+                    if n > 0 {
+                        field.color_temperature.iter().copied().sum::<f64>() / n as f64
+                    } else {
+                        0.0
+                    }
+                },
                 max_total_intensity: field.total_intensity.iter().copied().fold(0.0, f64::max),
                 peak_location: self.peak_emission_location(),
             })

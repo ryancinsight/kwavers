@@ -21,7 +21,7 @@ fn test_time_of_flight_inversion() {
     let displacement = DisplacementField::zeros(20, 20, 20);
 
     let map = time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
-    assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20));
+    assert_eq!(map.shear_wave_speed.shape(), [20, 20, 20]);
     let center = map.shear_wave_speed[[10, 10, 10]];
     assert!(
         (0.5..=10.0).contains(&center),
@@ -36,7 +36,7 @@ fn test_phase_gradient_inversion() {
     let displacement = DisplacementField::zeros(20, 20, 20);
 
     let map = phase_gradient_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
-    assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20));
+    assert_eq!(map.shear_wave_speed.shape(), [20, 20, 20]);
     let center = map.shear_wave_speed[[10, 10, 10]];
     assert!(
         (0.5..=10.0).contains(&center),
@@ -104,7 +104,7 @@ fn test_local_frequency_estimation_recovers_known_speed() {
 
     let map =
         local_frequency_estimation_inversion(&displacement, &grid, 1000.0, frequency).unwrap();
-    assert_eq!(map.shear_wave_speed.dim(), (nx, ny, nz));
+    assert_eq!(map.shear_wave_speed.shape(), [nx, ny, nz]);
 
     let center = map.shear_wave_speed[[nx / 2, ny / 2, nz / 2]];
     // Value-semantic: recovered speed tracks the true 1.0 m/s (not the default
@@ -174,8 +174,8 @@ fn test_all_inversion_methods() {
             .reconstruct(&displacement, &grid)
             .unwrap_or_else(|e| panic!("Inversion method {method:?} should succeed; got: {e:?}"));
         assert_eq!(
-            map.shear_wave_speed.dim(),
-            (20, 20, 20),
+            map.shear_wave_speed.shape(),
+            [20, 20, 20],
             "method {method:?}: shear_wave_speed must be 20×20×20"
         );
     }
@@ -189,8 +189,8 @@ fn test_volumetric_tof_with_single_peak() {
 
     let map = volumetric_time_of_flight_inversion(&displacement, &grid, 1000.0, 100.0).unwrap();
     assert_eq!(
-        map.shear_wave_speed.dim(),
-        (20, 20, 20),
+        map.shear_wave_speed.shape(),
+        [20, 20, 20],
         "output must span full 20×20×20 grid"
     );
 }

@@ -1,8 +1,10 @@
 //! Dispersion correction models
 
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array3, Zip};
-use num_complex::Complex;
+use leto::Array3;
+
+use crate::parallel::zip_mut_ref;
 
 /// Dispersion model for frequency-dependent phase velocity
 #[derive(Debug, Clone)]
@@ -109,7 +111,7 @@ impl AbsorptionDispersionCorrection {
         k_values: &Array3<f64>,
         dt: f64,
     ) {
-        Zip::from(spectrum).and(k_values).par_for_each(|s, &k| {
+        zip_mut_ref(spectrum, k_values, |s, &k| {
             if k != 0.0 {
                 // Frequency corresponding to this k value
                 let freq = k * self.model.c0 / (TWO_PI);

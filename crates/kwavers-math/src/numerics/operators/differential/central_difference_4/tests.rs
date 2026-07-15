@@ -1,7 +1,7 @@
 use super::{CentralDifference4, DifferentialOperator};
 use approx::assert_abs_diff_eq;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 fn assert_invalid_grid_spacing(
     result: KwaversResult<CentralDifference4>,
@@ -68,7 +68,7 @@ fn test_apply_x_linear_function() {
     let dx = 0.1;
     let op = CentralDifference4::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 5, 5));
+    let mut field = Array3::zeros([20, 5, 5]);
     for i in 0..20 {
         for j in 0..5 {
             for k in 0..5 {
@@ -101,7 +101,7 @@ fn test_apply_x_quadratic_function() {
     let dx = 0.1;
     let op = CentralDifference4::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 5, 5));
+    let mut field = Array3::zeros([20, 5, 5]);
     for i in 0..20 {
         let x = (i as f64) * dx;
         for j in 0..5 {
@@ -145,9 +145,9 @@ fn test_constant_field_has_zero_derivative() {
 fn test_insufficient_grid_points() {
     let op = CentralDifference4::new(0.1, 0.1, 0.1).unwrap();
 
-    let field_x = Array3::zeros((4, 10, 10));
-    let field_y = Array3::zeros((10, 4, 10));
-    let field_z = Array3::zeros((10, 10, 4));
+    let field_x = Array3::zeros([4, 10, 10]);
+    let field_y = Array3::zeros([10, 4, 10]);
+    let field_z = Array3::zeros([10, 10, 4]);
 
     assert_insufficient_grid_points(op.apply_x(field_x.view()), 5, 4, "X");
     assert_insufficient_grid_points(op.apply_y(field_y.view()), 5, 4, "Y");
@@ -169,7 +169,7 @@ fn test_symmetry() {
     let dx = 0.1;
     let op = CentralDifference4::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 5, 5));
+    let mut field = Array3::zeros([20, 5, 5]);
     for i in 0..20 {
         let x = (i as f64) * dx - 1.0; // Center at x=1
         for j in 0..5 {

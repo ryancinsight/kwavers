@@ -27,7 +27,7 @@
 //!
 //! Reference: Baysal et al. (1983), *Geophysics* **48**(11), 1514–1524.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::SeismicImagingConfig;
 
@@ -67,8 +67,8 @@ impl ReverseTimeMigration {
     /// [`reset`]: ReverseTimeMigration::reset
     #[must_use]
     pub fn new(config: SeismicImagingConfig, velocity_model: Array3<f64>) -> Self {
-        let image = Array3::zeros(velocity_model.dim());
-        let source_illumination = Array3::zeros(velocity_model.dim());
+        let image = Array3::zeros(velocity_model.shape());
+        let source_illumination = Array3::zeros(velocity_model.shape());
 
         Self {
             config,

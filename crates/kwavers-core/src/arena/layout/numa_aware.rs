@@ -1,4 +1,4 @@
-use rayon::prelude::*;
+use moirai_parallel::{for_each_chunk_mut_with, Adaptive};
 use std::alloc::{alloc, Layout};
 use std::ptr::NonNull;
 
@@ -81,13 +81,11 @@ impl NumaAwareAllocator {
         // SAFETY: Memory is valid for num_elements * sizeof(T) bytes
         let slice = unsafe { std::slice::from_raw_parts_mut(ptr.as_ptr(), num_elements) };
 
-        // Divide among threads
-        let chunk_size = num_elements.div_ceil(rayon::current_num_threads());
+        let workers = std::thread::available_parallelism().map_or(1, usize::from);
+        let chunk_size = num_elements.div_ceil(workers).max(1);
 
-        slice.par_chunks_mut(chunk_size).for_each(|chunk| {
-            for elem in chunk.iter_mut() {
-                *elem = T::default();
-            }
+        for_each_chunk_mut_with::<Adaptive, _, _>(slice, chunk_size, |chunk| {
+            chunk.fill(T::default());
         });
     }
 

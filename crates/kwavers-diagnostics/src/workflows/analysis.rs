@@ -1,7 +1,7 @@
 use super::results::{DiagnosticRecommendation, DiagnosticUrgency};
 use kwavers_core::error::KwaversResult;
 use kwavers_imaging::fusion::FusedImageResult;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 /// Generate diagnostic recommendations.
 /// # Errors
@@ -27,7 +27,7 @@ pub fn generate_diagnostic_recommendations(
             .iter()
             .filter(|&&x| (0.5..1.0).contains(&x))
             .count();
-        let total_voxels = classification.len();
+        let total_voxels = classification.size();
 
         let high_risk_ratio = high_risk_voxels as f64 / total_voxels as f64;
         let moderate_risk_ratio = moderate_risk_voxels as f64 / total_voxels as f64;
@@ -60,7 +60,7 @@ pub fn generate_diagnostic_recommendations(
     if let Some(oxygenation) = tissue_properties.get("oxygenation_index") {
         let low_oxygenation_voxels = oxygenation.iter().filter(|&&x| x < 0.6).count();
         let high_oxygenation_voxels = oxygenation.iter().filter(|&&x| x > 0.9).count();
-        let total_voxels = oxygenation.len();
+        let total_voxels = oxygenation.size();
 
         let hypoxia_ratio = low_oxygenation_voxels as f64 / total_voxels as f64;
         let hyperoxia_ratio = high_oxygenation_voxels as f64 / total_voxels as f64;
@@ -87,7 +87,7 @@ pub fn generate_diagnostic_recommendations(
     // Stiffness analysis
     if let Some(stiffness) = tissue_properties.get("composite_stiffness") {
         let high_stiffness_voxels = stiffness.iter().filter(|&&x| x > 40.0).count(); // >40 kPa
-        let total_voxels = stiffness.len();
+        let total_voxels = stiffness.size();
 
         let stiff_ratio = high_stiffness_voxels as f64 / total_voxels as f64;
         if stiff_ratio > 0.25 {
@@ -183,9 +183,9 @@ pub fn calculate_confidence_score(
     }
 
     // Fusion confidence factor - handle empty collections
-    if !fused_result.confidence_map.is_empty() {
+    if fused_result.confidence_map.size() > 0 {
         let avg_confidence = fused_result.confidence_map.iter().sum::<f64>()
-            / fused_result.confidence_map.len() as f64;
+            / fused_result.confidence_map.size() as f64;
         if avg_confidence.is_finite() {
             confidence += avg_confidence * 5.0; // ±5 based on fusion confidence
         }

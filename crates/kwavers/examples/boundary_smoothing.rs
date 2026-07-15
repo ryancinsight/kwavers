@@ -19,7 +19,7 @@ use kwavers_boundary::smoothing::{
     BoundarySmoothing, BoundarySmoothingConfig, GhostCellConfig, IIMConfig, JumpConditionType,
     SmoothingMethod, SubgridConfig,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("╔════════════════════════════════════════════════════════════╗");
@@ -231,7 +231,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 /// Measure boundary roughness as variance of property gradient
 fn measure_boundary_roughness(property: &Array3<f64>, geometry: &Array3<f64>) -> f64 {
-    let (nx, ny, nz) = property.dim();
+    let [nx, ny, nz] = property.shape();
     let mut gradients = Vec::new();
 
     for i in 1..(nx - 1) {

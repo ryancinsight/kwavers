@@ -3,7 +3,7 @@
 use super::super::*;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_staggered_conservation() {
@@ -11,7 +11,7 @@ fn test_staggered_conservation() {
     let dx = 0.1;
     let op = StaggeredGridOperator::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 10, 10));
+    let mut field = Array3::zeros([20, 10, 10]);
     for i in 0..20 {
         let x = (i as f64) * dx;
         for j in 0..10 {

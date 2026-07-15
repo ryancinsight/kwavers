@@ -97,7 +97,7 @@ use kwavers_solver::inverse::seismic::{
     rtm::RtmProcessor,
 };
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Zip};
+use leto::{Array2, Array3};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter, Write};
@@ -106,10 +106,11 @@ use std::time::Instant;
 
 // CT loading imports (ritk required-feature)
 use anyhow::Context as _;
-use burn::backend::NdArray as NdArrayBackend;
-use ritk_io::{
-    load_dicom_series, read_nifti, read_png_series, scan_dicom_directory, DicomSeriesInfo,
-};
+use coeus_core::MoiraiBackend;
+use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
+use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
+use ritk_io::ImageReader;
+use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Grid constants
@@ -303,8 +304,7 @@ fn build_brain_velocity_model(
     skull_phantom: &SkullPhantom,
     mni_dir: &Path,
 ) -> anyhow::Result<Array3<f64>> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     // Load the three probability maps via ritk NIfTI reader.
     // CtVolume.hu stores probability values [0,1] (HU clamping [-1024,3071] is harmless).
@@ -317,12 +317,11 @@ fn build_brain_velocity_model(
             "https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/mni_icbm152_nlin_sym_09c_nifti.zip"
         );
         // Load through ritk (returns [Z,Y,X] tensor → transposed to hu[X,Y,Z]).
-        let img = ritk_io::read_nifti::<Backend, _>(&path, &device)
+        let img = ImageReader::read(&NativeNiftiReader::new(backend), &path)
             .with_context(|| format!("NIfTI load failed: '{}'", path.display()))?;
         let [depth, rows, cols] = img.shape();
-        let td = img.data().clone().into_data();
-        let vals = td
-            .as_slice::<f32>()
+        let vals = img
+            .data_slice()
             .map_err(|e| anyhow::anyhow!("NIfTI data not f32: {e:?}"))?;
         let mut vol = Array3::<f64>::zeros((cols, rows, depth));
         for z in 0..depth {
@@ -340,7 +339,7 @@ fn build_brain_velocity_model(
     let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
     let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
 
-    let (mni_nx, mni_ny, mni_nz) = gm.dim();
+    let [mni_nx, mni_ny, mni_nz] = gm.shape();
     // MNI centroid voxel (brain centre-of-mass in MNI space ≈ [nx/2, ny/2, nz/2]).
     let cx_mni = mni_nx / 2; // ~90
     let cy_mni = mni_ny / 2; // ~108 — mid coronal slice (near AC)
@@ -723,7 +722,6 @@ fn gaussian_blur_xz(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
 ///
 /// `hu` has shape `(cols, rows, depth)` = `(x, y, z)` in the patient frame.
 /// `spacing_mm` is `[dx, dy, dz]` — physical mm per voxel on each axis.
-
 struct CtVolume {
     hu: Array3<f64>,
     spacing_mm: [f64; 3],
@@ -744,10 +742,8 @@ struct CtVolume {
 /// - z = superior-inferior (slice axis / depth)
 ///
 /// This matches the convention used in `skull_ct_phase_correction.rs`.
-
 fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     // ── PNG series (bone-window secondary-capture) ────────────────────────
     // The "Paired MRI / CT" public dataset stores CT as secondary-capture
@@ -783,12 +779,11 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 
         if has_png {
             println!("  PNG series      : {}", path.display());
-            let img = read_png_series::<Backend, _>(path, &device)
+            let img = ImageReader::read(&NativePngSeriesReader::new(backend), path)
                 .map_err(|e| anyhow::anyhow!("PNG series load failed: {e:#}"))?;
             let [depth, rows, cols] = img.shape();
-            let tensor_data = img.data().clone().into_data();
-            let values = tensor_data
-                .as_slice::<f32>()
+            let values = img
+                .data_slice()
                 .map_err(|e| anyhow::anyhow!("PNG tensor data is not f32: {e:?}"))?;
             anyhow::ensure!(
                 values.len() == depth * rows * cols,
@@ -819,7 +814,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
             // −4048 outside the reconstructed circle).  Values above 3071 are outside the
             // 12-bit DICOM signed range.  Neither appears in real tissue.
-            hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+            for h in hu.iter_mut() {
+                *h = (*h).clamp(-1024.0, 3071.0);
+            }
 
             // Assumed spacing: 0.5 mm in-plane, 4.0 mm slice (256mm FOV / 512 px)
             return Ok(CtVolume {
@@ -842,10 +839,10 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             selected.series_description,
             selected.file_paths.len()
         );
-        load_dicom_series::<Backend>(&selected, &device).map_err(|e| {
+        load_native_dicom_series(&selected, &backend).map_err(|e| {
             anyhow::anyhow!(
                 "DICOM load failed for series '{}': {e:#}",
-                selected.series_instance_uid
+                selected.series_instance_uid()
             )
         })?
     } else {
@@ -858,22 +855,16 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             );
         }
         println!("  NIfTI file      : {}", path.display());
-        read_nifti::<Backend, _>(path, &device)
+        ImageReader::read(&NativeNiftiReader::new(backend), path)
             .with_context(|| format!("NIfTI read failed for '{}'", path.display()))?
     };
 
     // image shape is [depth/Z, rows/Y, cols/X] in ritk convention
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
-    anyhow::ensure!(
-        spacing.len() == 3,
-        "unexpected spacing rank {}",
-        spacing.len()
-    );
+    let spacing = image.spacing().into_vector().to_array();
 
-    let tensor_data = image.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
+    let values = image
+        .data_slice()
         .map_err(|e| anyhow::anyhow!("tensor data is not f32: {e:?}"))?;
     anyhow::ensure!(
         values.len() == depth * rows * cols,
@@ -896,7 +887,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
     // Values below −1024 are FOV-padding artefacts (some scanners write −3024 or
     // −4048 outside the reconstructed circle).  Values above 3071 are outside the
     // 12-bit DICOM signed range.  Neither appears in real tissue.
-    hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+    for h in hu.iter_mut() {
+        *h = (*h).clamp(-1024.0, 3071.0);
+    }
 
     // spacing[0..2] = [x_spacing, y_spacing, z_spacing] in mm for both
     // DICOM (pixel_spacing + slice_thickness) and NIfTI (affine column norms).
@@ -923,16 +916,15 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 /// Detection heuristic: all series have ≤ 1 file.
 ///
 /// Fix: merge all file paths from all series into one synthetic
-/// `DicomSeriesInfo`.  `load_dicom_series` will sort them spatially by
+/// `DicomSeriesInfo`.  `load_native_dicom_series` will sort them spatially by
 /// `ImagePositionPatient`, producing a correct 3-D volume regardless of the
 /// per-slice UID anomaly.
-
 fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
     let max_files = series.iter().map(|s| s.file_paths.len()).max().unwrap_or(0);
 
     if let Some(best) = series
         .iter()
-        .position(|s| s.series_instance_uid.as_str() == DEFAULT_MEDIMODEL_SERIES_UID)
+        .position(|s| s.series_instance_uid() == DEFAULT_MEDIMODEL_SERIES_UID)
     {
         return series.swap_remove(best);
     }
@@ -948,19 +940,19 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
             "  Note: each DICOM slice has a unique SeriesInstanceUID; \
                   merging {n} files into one logical series for spatial sort."
         );
-        DicomSeriesInfo {
-            series_instance_uid: "merged".parse().expect("UID fits in 64 chars"),
-            series_description: format!("merged-{n}-slices"),
-            modality: "CT".parse().expect("modality fits in 16 chars"),
-            patient_id: String::new(),
-            file_paths: all_paths,
-        }
+        DicomSeriesInfo::new(
+            "merged",
+            format!("merged-{n}-slices"),
+            "CT",
+            String::new(),
+            all_paths,
+        )
     } else {
         // Standard multi-file series: pick the best one.
         let ct: Vec<usize> = series
             .iter()
             .enumerate()
-            .filter(|(_, s)| s.modality.as_str() == "CT")
+            .filter(|(_, s)| s.modality() == "CT")
             .map(|(i, _)| i)
             .collect();
         let pool: Vec<usize> = if ct.is_empty() {
@@ -980,12 +972,12 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 ///
 /// The equatorial skull cross-section has the largest bone ring area and gives
 /// the most informative FWI slice for hemispherical array geometry.
-
 fn skull_equator_z(hu: &Array3<f64>) -> usize {
-    let (_, _, nz) = hu.dim();
+    let [_, _, nz] = hu.shape();
     (0..nz)
         .max_by_key(|&z| {
-            hu.slice(ndarray::s![.., .., z])
+            hu.index_axis::<2>(2, z)
+                .expect("index_axis")
                 .iter()
                 .filter(|&&h| h > 300.0)
                 .count()
@@ -996,12 +988,11 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 /// Find the centroid (x_ct, y_ct) of bone voxels on an axial slice.
 ///
 /// Falls back to the geometric centre when no bone is present.
-
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.slice(ndarray::s![.., .., z]);
-    let (nx, ny) = slice.dim();
+    let slice = hu.index_axis::<2>(2, z).expect("index_axis");
+    let [nx, ny] = slice.shape();
     let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
-    for ((x, y), &h) in slice.indexed_iter() {
+    for ([x, y], &h) in slice.indexed_iter() {
         if h > 300.0 {
             sx += x as f64;
             sy += y as f64;
@@ -1019,9 +1010,8 @@ fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
 ///
 /// Clamps out-of-bound indices to the boundary (reflects water coupling at
 /// CT field-of-view edges).
-
 fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
-    let (nx, ny, nz) = hu.dim();
+    let [nx, ny, nz] = hu.shape();
     if z >= nz {
         return 0.0;
     }
@@ -1045,14 +1035,14 @@ fn bilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: usize) -> f64 {
 ///
 /// Returns `nx.min(ny) / 4` as a safe fallback when no bone is found
 /// (prevents division-by-zero in the scale computation).
-
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
-    let (nx, ny, _) = hu.dim();
+    let [nx, ny, _] = hu.shape();
     let r = hu
-        .slice(ndarray::s![.., .., z])
+        .index_axis::<2>(2, z)
+        .expect("index_axis")
         .indexed_iter()
         .filter(|(_, &h)| h > 300.0)
-        .map(|((x, y), _)| {
+        .map(|([x, y], _)| {
             let dx = x as f64 - cx;
             let dy = y as f64 - cy;
             (dx * dx + dy * dy).sqrt()
@@ -1091,7 +1081,6 @@ fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
 /// 6. Broadcast the 2-D result to all `NY` planes.
 ///
 /// FWI ix (lateral) maps to CT x (columns); FWI iz (depth) maps to CT y (rows).
-
 fn resample_ct_to_fwi_grid(vol: &CtVolume) -> Array3<f64> {
     let z_eq = skull_equator_z(&vol.hu);
     let (cx, cy) = skull_centroid_2d(&vol.hu, z_eq);
@@ -1159,7 +1148,7 @@ fn build_phantom_for_demo() -> (SkullPhantom, Option<CtVolume>) {
         print!("  CT source       : {}  ", ct_path.display());
         match load_ct_volume(&ct_path) {
             Ok(vol) => {
-                let (cx, cy, nz) = vol.hu.dim();
+                let [cx, cy, nz] = vol.hu.shape();
                 println!(
                     "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
                     vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
@@ -1206,8 +1195,8 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
         .sum();
     let rmse = (l2 / n).sqrt();
 
-    let mean_t = true_model.sum() / n;
-    let mean_r = reconstructed.sum() / n;
+    let mean_t = true_model.iter().sum::<f64>() / n;
+    let mean_r = reconstructed.iter().sum::<f64>() / n;
     let cov = true_model
         .iter()
         .zip(reconstructed.iter())
@@ -1260,11 +1249,11 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
     let cz = (NZ / 2) as f64;
     let free_pairs: Vec<(f64, f64)> = true_model
         .indexed_iter()
-        .filter(|((ix, _iy, iz), _)| {
+        .filter(|([ix, _iy, iz], _)| {
             let r = (((*ix as f64) - cx).powi(2) + ((*iz as f64) - cz).powi(2)).sqrt();
-            r < R_SKULL_IN as f64
+            r < R_SKULL_IN
         })
-        .map(|((ix, _iy, iz), &t)| (t, reconstructed[[ix, _iy, iz]]))
+        .map(|([ix, _iy, iz], &t)| (t, reconstructed[[ix, _iy, iz]]))
         .collect();
     print_quality_pairs(&free_pairs);
 }
@@ -1360,6 +1349,12 @@ fn diverging_color(value: f64, max_abs: f64) -> [u8; 3] {
 }
 
 /// Render one velocity model panel (x–z at y = 0) into `rgb`.
+#[derive(Clone, Copy)]
+struct VelocityScale {
+    lo: f64,
+    hi: f64,
+}
+
 fn draw_velocity_panel(
     rgb: &mut [u8],
     width: usize,
@@ -1367,14 +1362,13 @@ fn draw_velocity_panel(
     x_offset: usize,
     y_offset: usize,
     model: &Array3<f64>,
-    c_lo: f64,
-    c_hi: f64,
+    scale: VelocityScale,
 ) {
     for py in 0..PANEL {
         for px in 0..PANEL {
             let ix = (px * NX / PANEL).min(NX - 1);
             let iz = (py * NZ / PANEL).min(NZ - 1);
-            let color = velocity_color(model[[ix, 0, iz]], c_lo, c_hi);
+            let color = velocity_color(model[[ix, 0, iz]], scale.lo, scale.hi);
             put_pixel(rgb, width, height, x_offset + px, y_offset + py, color);
         }
     }
@@ -1473,17 +1467,23 @@ fn draw_colorbar(
 ///
 /// When `ct_vol` is `None` the top row is omitted and the image is the standard
 /// three-panel true | reconstructed | difference layout.
+#[derive(Clone, Copy)]
+struct AcquisitionMarkers<'a> {
+    shot_positions: &'a [(usize, usize)],
+    active_elements: &'a [(usize, usize)],
+}
+
 fn write_three_plane_png(
     path: &Path,
     true_model: &Array3<f64>,
     reconstructed: &Array3<f64>,
-    c_lo: f64,
-    c_hi: f64,
-    shot_positions: &[(usize, usize)],
-    active_elements: &[(usize, usize)],
+    velocity_scale: VelocityScale,
+    acquisition: AcquisitionMarkers<'_>,
     ct_vol: Option<&CtVolume>,
 ) -> io::Result<()> {
     let img_w = 3 * PANEL;
+    let c_lo = velocity_scale.lo;
+    let c_hi = velocity_scale.hi;
 
     if let Some(vol) = ct_vol {
         // ── 3×2 grid: CT triplanar (top) + FWI reconstruction (bottom) ───
@@ -1491,7 +1491,7 @@ fn write_three_plane_png(
         let img_h = 2 * (PANEL + COLORBAR_H);
         let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-        let (nx_ct, ny_ct, nz_ct) = vol.hu.dim();
+        let [nx_ct, ny_ct, nz_ct] = vol.hu.shape();
         let cy_ct = ny_ct / 2;
         let cz_ct = nz_ct / 2;
         let cx_ct = nx_ct / 2;
@@ -1558,15 +1558,23 @@ fn write_three_plane_png(
         let fwi_y0 = PANEL + COLORBAR_H; // y-pixel where FWI row starts
 
         // Panel (0,1): FWI true velocity — coronal x-z @ y=0.
-        draw_velocity_panel(&mut rgb, img_w, img_h, 0, fwi_y0, true_model, c_lo, c_hi);
+        draw_velocity_panel(
+            &mut rgb,
+            img_w,
+            img_h,
+            0,
+            fwi_y0,
+            true_model,
+            velocity_scale,
+        );
         draw_acquisition_markers(
             &mut rgb,
             img_w,
             img_h,
             0,
             fwi_y0,
-            shot_positions,
-            active_elements,
+            acquisition.shot_positions,
+            acquisition.active_elements,
         );
         draw_colorbar(&mut rgb, img_w, img_h, 0, fwi_y0, c_lo, c_hi);
 
@@ -1578,8 +1586,7 @@ fn write_three_plane_png(
             PANEL,
             fwi_y0,
             reconstructed,
-            c_lo,
-            c_hi,
+            velocity_scale,
         );
         draw_acquisition_markers(
             &mut rgb,
@@ -1587,8 +1594,8 @@ fn write_three_plane_png(
             img_h,
             PANEL,
             fwi_y0,
-            shot_positions,
-            active_elements,
+            acquisition.shot_positions,
+            acquisition.active_elements,
         );
         draw_colorbar(&mut rgb, img_w, img_h, PANEL, fwi_y0, c_lo, c_hi);
 
@@ -1635,27 +1642,35 @@ fn write_three_plane_png(
         let img_h = PANEL + COLORBAR_H;
         let mut rgb = vec![0_u8; img_w * img_h * 3];
 
-        draw_velocity_panel(&mut rgb, img_w, img_h, 0, 0, true_model, c_lo, c_hi);
+        draw_velocity_panel(&mut rgb, img_w, img_h, 0, 0, true_model, velocity_scale);
         draw_acquisition_markers(
             &mut rgb,
             img_w,
             img_h,
             0,
             0,
-            shot_positions,
-            active_elements,
+            acquisition.shot_positions,
+            acquisition.active_elements,
         );
         draw_colorbar(&mut rgb, img_w, img_h, 0, 0, c_lo, c_hi);
 
-        draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, 0, reconstructed, c_lo, c_hi);
+        draw_velocity_panel(
+            &mut rgb,
+            img_w,
+            img_h,
+            PANEL,
+            0,
+            reconstructed,
+            velocity_scale,
+        );
         draw_acquisition_markers(
             &mut rgb,
             img_w,
             img_h,
             PANEL,
             0,
-            shot_positions,
-            active_elements,
+            acquisition.shot_positions,
+            acquisition.active_elements,
         );
         draw_colorbar(&mut rgb, img_w, img_h, PANEL, 0, c_lo, c_hi);
 
@@ -1710,8 +1725,9 @@ pub fn write_velocity_panels(
     let img_w = 4 * PANEL;
     let img_h = PANEL + COLORBAR_H;
     let mut rgb = vec![0_u8; img_w * img_h * 3];
+    let velocity_scale = VelocityScale { lo: C_LO, hi: C_HI };
 
-    draw_velocity_panel(&mut rgb, img_w, img_h, 0, 0, true_model, C_LO, C_HI);
+    draw_velocity_panel(&mut rgb, img_w, img_h, 0, 0, true_model, velocity_scale);
     draw_acquisition_markers(
         &mut rgb,
         img_w,
@@ -1723,7 +1739,15 @@ pub fn write_velocity_panels(
     );
     draw_colorbar(&mut rgb, img_w, img_h, 0, 0, C_LO, C_HI);
 
-    draw_velocity_panel(&mut rgb, img_w, img_h, PANEL, 0, initial_model, C_LO, C_HI);
+    draw_velocity_panel(
+        &mut rgb,
+        img_w,
+        img_h,
+        PANEL,
+        0,
+        initial_model,
+        velocity_scale,
+    );
     draw_acquisition_markers(
         &mut rgb,
         img_w,
@@ -1742,8 +1766,7 @@ pub fn write_velocity_panels(
         2 * PANEL,
         0,
         reconstructed,
-        C_LO,
-        C_HI,
+        velocity_scale,
     );
     draw_acquisition_markers(
         &mut rgb,
@@ -1994,8 +2017,8 @@ fn write_brain_tissue_png(
     // to ≥ 20 m/s so the colorbar has a meaningful range even if errors are small.
     let max_diff = true_model
         .indexed_iter()
-        .filter(|((ix, _, iz), _)| is_brain(*ix, *iz))
-        .map(|((ix, _, iz), &t)| (reconstructed[[ix, 0, iz]] - t).abs())
+        .filter(|([ix, _, iz], _)| is_brain(*ix, *iz))
+        .map(|([ix, _, iz], &t)| (reconstructed[[ix, 0, iz]] - t).abs())
         .fold(0.0_f64, f64::max)
         .max(20.0);
 
@@ -2061,10 +2084,10 @@ fn write_png(path: &Path, rgb: &[u8], width: usize, height: usize) -> io::Result
     enc.set_depth(png::BitDepth::Eight);
     let mut writer = enc
         .write_header()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     writer
         .write_image_data(rgb)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     Ok(())
 }
 
@@ -2463,7 +2486,7 @@ fn main() -> KwaversResult<()> {
                 let (bt_min, bt_max) = skull_mask
                     .indexed_iter()
                     .filter(|(_, &frozen)| !frozen)
-                    .map(|((ix, iy, iz), _)| brain_true[[ix, iy, iz]])
+                    .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
                     .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
                         (mn.min(c), mx.max(c))
                     });
@@ -2522,14 +2545,16 @@ fn main() -> KwaversResult<()> {
                     let mut brain_initial =
                         skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER });
                     // Fill frozen voxels with CT skull velocity for the reference model.
-                    Zip::from(&mut brain_initial)
-                        .and(&skull_mask)
-                        .and(&phantom.sound_speed)
-                        .for_each(|c, &frozen, &ct| {
-                            if frozen {
-                                *c = ct;
+                    let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
+                    for i in 0..bi_nx {
+                        for j in 0..bi_ny {
+                            for k in 0..bi_nz {
+                                if skull_mask[[i, j, k]] {
+                                    brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
+                                }
                             }
-                        });
+                        }
+                    }
 
                     println!(
                         "  Running {N_BRAIN_ITER} iterations at {:.0} kHz (nt={nt_brain}) …",
@@ -2578,11 +2603,11 @@ fn main() -> KwaversResult<()> {
     {
         let recv_mask = &geom0.sensor_mask;
         let mut recv_idx = 0usize;
-        for ((i, _j, k), &active) in recv_mask.indexed_iter() {
+        for ([i, _j, k], &active) in recv_mask.indexed_iter() {
             if active {
-                if recv_idx < obs0.nrows() {
-                    let trace = obs0.row(recv_idx);
-                    let nt_obs = trace.len().max(1);
+                if recv_idx < obs0.shape()[0] {
+                    let trace = obs0.index_axis::<1>(0, recv_idx).expect("index_axis");
+                    let nt_obs = trace.shape()[0].max(1);
                     // RMS amplitude of the observed trace: scalar proxy for the
                     // receiver wavefield energy at this grid point.
                     let rms = (trace.iter().map(|&v| v * v).sum::<f64>() / nt_obs as f64).sqrt();
@@ -2636,10 +2661,11 @@ fn main() -> KwaversResult<()> {
         &three_plane_path,
         &true_model,
         &reconstructed,
-        C_LO,
-        C_HI,
-        &shot_positions,
-        &active_elements,
+        VelocityScale { lo: C_LO, hi: C_HI },
+        AcquisitionMarkers {
+            shot_positions: &shot_positions,
+            active_elements: &active_elements,
+        },
         ct_vol.as_ref(),
     )
     .map_err(|e| KwaversError::InvalidInput(format!("PNG write failed: {e}")))?;

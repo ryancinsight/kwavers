@@ -1,6 +1,6 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::TimeCoupling;
@@ -85,14 +85,14 @@ impl SubcyclingStrategy {
     /// k4 = f(t_n + dt, y_n + dt*k3)
     /// y_{n+1} = y_n + dt/6*(k1 + 2*k2 + 2*k3 + k4)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn rk4_step(
         field: &mut Array3<f64>,
         field_initial: &Array3<f64>,
         dt: f64,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // Stage 1: k1 = f(t_n, y_n)
         let k1 = Self::compute_derivative(field, field_initial)?;
@@ -157,7 +157,7 @@ impl SubcyclingStrategy {
         field: &Array3<f64>,
         _field_initial: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut derivative = Array3::zeros((nx, ny, nz));
 
         // Compute Laplacian as proxy for diffusion term

@@ -3,7 +3,8 @@
 //! Geometry-neutral: consumes any [`VolumeOperator`] over an active voxel set,
 //! with regularization parameters drawn from [`LinearBornInversionConfig`].
 
-use ndarray::Array3;
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_with_state, Adaptive};
 
 use super::regularization::{
     build_active_index, edge_preserving_penalty, edge_preserving_projection,
@@ -41,7 +42,7 @@ pub fn invert(
 ) -> InversionState {
     let mut model = vec![0.0; active.len()];
     let stages = continuation_rows(config, data.len());
-    let all_rows: Vec<usize> = (0..data.len()).collect();
+    let all_rows: Vec<usize> = (0..(data.len())).collect();
     // Build active-index lookup once; passed through every composite_objective call so
     // the O(NX·NY·NZ) Array3 allocation occurs exactly once per inversion.
     let active_index = build_active_index(active, shape);
@@ -85,7 +86,7 @@ pub fn invert(
     InversionState {
         model,
         history,
-        stages: stages.len(),
+        stages: (stages.len()),
     }
 }
 
@@ -341,22 +342,24 @@ fn box_filter_y(data: &mut [f64], nx: usize, ny: usize, nz: usize, r: usize) {
 /// In-place 1-D prefix-sum box filter along the Z axis (contiguous).
 ///
 /// Z lines are contiguous in memory (`[ix * NY * NZ + iy * NZ .. + NZ]`).
-/// Uses Rayon `for_each_with` so the `prefix` scratch buffer is cloned once
-/// per worker thread rather than once per chunk, bounding allocations to the
-/// Rayon thread-pool size instead of `NX × NY`.
+/// Uses Moirai chunk state so the `prefix` scratch buffer is initialized once
+/// per worker shard rather than once per chunk, bounding allocations by the
+/// execution policy's worker partition instead of `NX × NY`.
 fn box_filter_z(data: &mut [f64], _nx: usize, _ny: usize, nz: usize, r: usize) {
-    use rayon::prelude::*;
-    let scratch_init = vec![0.0f64; nz + 1];
-    data.par_chunks_mut(nz)
-        .for_each_with(scratch_init, |prefix, line| {
+    for_each_chunk_mut_with_state::<Adaptive, _, _, _, _>(
+        data,
+        nz,
+        || vec![0.0f64; nz + 1],
+        |prefix, line| {
             apply_box_filter_1d_with_scratch(line, r, prefix);
-        });
+        },
+    );
 }
 
 /// Replace each element of `line` with the sum over the symmetric window of
 /// half-width `r`, computed in O(L) via prefix sums.
 ///
-/// `scratch` must have capacity ≥ `line.len() + 1`; it is resized as needed
+/// `scratch` must have capacity ≥ `(line.len()) + 1`; it is resized as needed
 /// so the caller may pass a pre-allocated buffer of the right size to avoid
 /// repeated heap allocation across calls.
 #[allow(clippy::needless_range_loop)]

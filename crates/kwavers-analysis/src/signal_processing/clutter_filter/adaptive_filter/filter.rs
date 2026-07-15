@@ -1,7 +1,6 @@
 use super::types::{AdaptiveFilterConfig, CbrEstimationMethod, SubspaceSeparationMethod};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::linear_algebra::EigenDecomposition;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Adaptive clutter filter using eigendecomposition.
 ///
@@ -75,7 +74,7 @@ impl AdaptiveFilter {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn filter(&mut self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_pixels, n_frames) = slow_time_data.dim();
+        let [n_pixels, n_frames] = slow_time_data.shape();
 
         if n_frames < 3 {
             return Err(KwaversError::InvalidInput(
@@ -96,7 +95,9 @@ impl AdaptiveFilter {
         let mut filtered_data = Array2::<f64>::zeros((n_pixels, n_frames));
 
         for pixel_idx in 0..n_pixels {
-            let signal = slow_time_data.row(pixel_idx);
+            let signal = slow_time_data
+                .index_axis::<1>(0, pixel_idx)
+                .expect("row index within pixel bounds");
             let filtered_signal = self.filter_single_pixel(&signal)?;
             for (t, &value) in filtered_signal.iter().enumerate() {
                 filtered_data[[pixel_idx, t]] = value;
@@ -108,9 +109,9 @@ impl AdaptiveFilter {
 
     fn filter_single_pixel(
         &mut self,
-        signal: &ndarray::ArrayView1<f64>,
+        signal: &leto::ArrayView1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n_frames = signal.len();
+        let n_frames = signal.shape()[0];
 
         // Construct temporal covariance matrix R[i,j] = E[x(t+i) x(t+j)]
         let mut covariance = Array2::<f64>::zeros((n_frames, n_frames));
@@ -127,7 +128,15 @@ impl AdaptiveFilter {
             }
         }
 
-        let (eigenvalues, eigenvectors) = EigenDecomposition::eigendecomposition(&covariance)?;
+        // The temporal covariance is symmetric by construction (R[i,j] = R[j,i]),
+        // so use the symmetric Jacobi eigensolver, which guarantees real
+        // eigenvalues and orthonormal eigenvectors. The general complex QR
+        // (`eig`) is unnecessary here and orders of magnitude slower on matrices
+        // this size (>60 s per 120×120 vs milliseconds), which per-pixel across
+        // an image made the adaptive filter unusable.
+        let decomposition = leto_ops::symmetric_eigen_jacobi(&covariance.view())?;
+        let eigenvalues = decomposition.eigenvalues;
+        let eigenvectors = decomposition.eigenvectors;
 
         // Sort descending
         let mut indices: Vec<usize> = (0..eigenvalues.len()).collect();
@@ -146,9 +155,11 @@ impl AdaptiveFilter {
         self.cbr_history.push(cbr);
 
         // Project onto blood subspace: filtered = x − Σᵢ <x,eᵢ> eᵢ
-        let mut filtered_signal = signal.to_owned();
+        let mut filtered_signal = signal.to_contiguous();
         for i in 0..clutter_rank.min(n_frames) {
-            let eigenvector = sorted_eigenvectors.column(i);
+            let eigenvector = sorted_eigenvectors
+                .index_axis::<1>(1, i)
+                .expect("eigenvector column index within bounds");
             let mut projection_coef = 0.0;
             for (idx, &x_val) in signal.iter().enumerate() {
                 projection_coef += x_val * eigenvector[idx];

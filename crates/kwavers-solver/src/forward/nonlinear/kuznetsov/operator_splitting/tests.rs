@@ -1,7 +1,7 @@
 use super::OperatorSplittingSolver;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, TWO_PI};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_harmonic_generation() -> Result<(), kwavers_core::error::KwaversError> {
@@ -77,9 +77,12 @@ fn test_harmonic_generation() -> Result<(), kwavers_core::error::KwaversError> {
     }
 
     // Perform FFT to check for harmonics
-    use kwavers_math::fft::fft_1d_array;
+    use apollo::fft_1d_leto;
+    use leto::Array1;
 
-    let spectrum = fft_1d_array(&pressure.slice(ndarray::s![.., 0, 0]).to_owned());
+    let line = (0..nx).map(|i| pressure[[i, 0, 0]]).collect::<Vec<_>>();
+    let line = Array1::from_shape_vec([nx], line).expect("line shape matches grid length");
+    let spectrum = fft_1d_leto(line.view());
 
     // Find fundamental and second harmonic peaks
     // For spatial FFT: wavenumber k = 2π/λ = 2πf/c
@@ -94,7 +97,7 @@ fn test_harmonic_generation() -> Result<(), kwavers_core::error::KwaversError> {
     let second_harmonic_idx = second_harmonic_idx.min(nx / 2 - 1);
 
     let fundamental_amp = spectrum[fundamental_idx].norm();
-    let second_harmonic_amp = if second_harmonic_idx < spectrum.len() {
+    let second_harmonic_amp = if second_harmonic_idx < (spectrum.len()) {
         spectrum[second_harmonic_idx].norm()
     } else {
         0.0

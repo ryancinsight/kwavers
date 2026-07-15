@@ -7,7 +7,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::bubble_dynamics::{BubbleParameters, BubbleState, KellerMiksisModel};
 
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Test Rayleigh collapse time for bubble dynamics
@@ -75,9 +75,9 @@ fn test_acoustic_dispersion_relation() {
     let c = 1500.0; // Sound speed in water
 
     // Generate k-space
-    let _kx = grid.kx();
-    let _ky = grid.ky();
-    let _kz = grid.kz();
+    let _kx = grid.compute_kx();
+    let _ky = grid.compute_ky();
+    let _kz = grid.compute_kz();
 
     // Test dispersion relation: ω = c*k
     for i in 1..10 {

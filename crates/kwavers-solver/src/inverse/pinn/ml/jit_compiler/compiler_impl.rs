@@ -1,4 +1,4 @@
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use crate::inverse::pinn::ml::WaveGeometry2D;
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 use kwavers_core::error::KwaversResult;
 use std::sync::Arc;
@@ -25,12 +25,12 @@ impl JitCompiler {
     }
     /// Compile pinn model.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compile_pinn_model(
         &mut self,
         model: &dyn std::any::Any,
-        geometry: &BurnWave2dGeometry,
+        geometry: &WaveGeometry2D,
         kernel_name: &str,
     ) -> KwaversResult<CompiledKernel> {
         if let Some(cached_kernel) = self.kernel_cache.get(kernel_name) {
@@ -84,7 +84,7 @@ impl JitCompiler {
     fn generate_execution_plan(
         &self,
         model_info: &ModelInfo,
-        geometry: &BurnWave2dGeometry,
+        geometry: &WaveGeometry2D,
     ) -> KwaversResult<ExecutionPlan> {
         let mut operations = Vec::new();
 
@@ -127,7 +127,7 @@ impl JitCompiler {
             OptimizationLevel::Maximum => 0.5,
         };
 
-        plan.operations.len() as f64 * base_time_per_op
+        (plan.operations.len()) as f64 * base_time_per_op
     }
 
     fn estimate_memory_usage(&self, _plan: &ExecutionPlan) -> usize {
@@ -149,7 +149,7 @@ impl JitCompiler {
     }
 
     fn enforce_cache_limit(&mut self) {
-        while self.kernel_cache.len() > self.cache_size_limit {
+        while (self.kernel_cache.len()) > self.cache_size_limit {
             if let Some(oldest_key) = self.kernel_cache.keys().next().cloned() {
                 if let Some(removed_kernel) = self.kernel_cache.remove(&oldest_key) {
                     self.stats.memory_usage = self

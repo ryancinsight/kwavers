@@ -1,6 +1,6 @@
 //! Forward prediction through a cached fixed-acquisition operator.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -20,10 +20,10 @@ impl SoundSpeedShiftPlan {
         &self,
         sound_speed_shift_m_s: &Array2<f64>,
     ) -> KwaversResult<Vec<f64>> {
-        if sound_speed_shift_m_s.dim() != self.shape {
+        if sound_speed_shift_m_s.shape() != [self.shape.0, self.shape.1] {
             return Err(KwaversError::DimensionMismatch(format!(
                 "speed-shift image shape {:?} does not match fixed plan shape {:?}",
-                sound_speed_shift_m_s.dim(),
+                sound_speed_shift_m_s.shape(),
                 self.shape
             )));
         }

@@ -1,7 +1,7 @@
 use super::range::SpectralRange;
 use super::spectrum::EmissionSpectrum;
 use kwavers_core::constants::optical::WIEN_CONSTANT;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Spectral analyzer for sonoluminescence
 #[derive(Debug)]
@@ -39,8 +39,8 @@ impl SpectralAnalyzer {
     #[must_use]
     pub fn peak_wavelength_evolution(&self) -> (Array1<f64>, Array1<f64>) {
         let n = self.spectra_history.len();
-        let mut times = Array1::zeros(n);
-        let mut peaks = Array1::zeros(n);
+        let mut times = Array1::zeros([n]);
+        let mut peaks = Array1::zeros([n]);
 
         for (i, spectrum) in self.spectra_history.iter().enumerate() {
             times[i] = spectrum.time;
@@ -54,8 +54,8 @@ impl SpectralAnalyzer {
     #[must_use]
     pub fn intensity_evolution(&self) -> (Array1<f64>, Array1<f64>) {
         let n = self.spectra_history.len();
-        let mut times = Array1::zeros(n);
-        let mut intensities = Array1::zeros(n);
+        let mut times = Array1::zeros([n]);
+        let mut intensities = Array1::zeros([n]);
 
         for (i, spectrum) in self.spectra_history.iter().enumerate() {
             times[i] = spectrum.time;
@@ -76,13 +76,17 @@ impl SpectralAnalyzer {
         }
 
         let wavelengths = self.spectra_history[0].wavelengths.clone();
-        let mut avg_intensities = Array1::zeros(wavelengths.len());
+        let mut avg_intensities = Array1::zeros([wavelengths.size()]);
 
         for spectrum in &self.spectra_history {
-            avg_intensities += &spectrum.intensities;
+            for (i, &val) in spectrum.intensities.iter().enumerate() {
+                avg_intensities[[i]] += val;
+            }
         }
 
-        avg_intensities /= self.spectra_history.len() as f64;
+        for val in avg_intensities.iter_mut() {
+            *val /= self.spectra_history.len() as f64;
+        }
 
         Some(EmissionSpectrum::new(
             wavelengths,

@@ -1,4 +1,5 @@
 use super::maxwell::ElectromagneticWaveEquation;
+use leto::Array3;
 
 /// Photoacoustic coupling trait for EM-acoustic interactions
 ///
@@ -22,11 +23,16 @@ pub trait PhotoacousticCoupling: ElectromagneticWaveEquation {
     /// p₀ = Γ μ_a Φ
     fn initial_pressure_from_fluence(
         &self,
-        fluence: &ndarray::ArrayD<f64>,
+        fluence: &Array3<f64>,
         position: &[f64],
-    ) -> ndarray::ArrayD<f64> {
+    ) -> Array3<f64> {
         let gamma = self.gruneisen_parameter(position);
         let mu_a = self.optical_absorption(position);
-        fluence.mapv(|phi| gamma * mu_a * phi)
+        let shape = fluence.shape();
+        let mut result = Array3::zeros(shape);
+        for (r, &phi) in result.iter_mut().zip(fluence.iter()) {
+            *r = gamma * mu_a * phi;
+        }
+        result
     }
 }

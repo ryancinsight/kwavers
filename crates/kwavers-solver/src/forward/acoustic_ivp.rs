@@ -23,7 +23,7 @@
 //! already available from the source-injection operator.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute the spectral IVP velocity scale from the source-injection phase factor.
 ///
@@ -31,7 +31,7 @@ use ndarray::Array3;
 /// limit handled analytically. This is the scalar multiplier used by the exact
 /// initial-pressure velocity start in the PSTD and k-space FDTD solvers.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn spectral_velocity_scale_from_source_kappa(
     source_kappa: &Array3<f64>,
@@ -65,7 +65,7 @@ mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::f64::consts::FRAC_PI_4;
 
     #[test]
@@ -73,7 +73,7 @@ mod tests {
         let dt = 2.0e-7;
         let rho0_ref = DENSITY_WATER_NOMINAL;
         let theta = FRAC_PI_4;
-        let source_kappa = Array3::from_elem((2, 2, 2), theta.cos());
+        let source_kappa = Array3::from_elem([2, 2, 2], theta.cos());
         let scale = spectral_velocity_scale_from_source_kappa(&source_kappa, dt, rho0_ref).unwrap();
         let expected = dt / (2.0 * rho0_ref) * theta.sin() / theta;
         assert_abs_diff_eq!(scale[[0, 0, 0]], expected, epsilon = 1e-15);
@@ -83,7 +83,7 @@ mod tests {
     fn scale_uses_removable_limit_at_zero() {
         let dt = 2.0e-7;
         let rho0_ref = DENSITY_WATER_NOMINAL;
-        let source_kappa = Array3::from_elem((1, 1, 1), 1.0);
+        let source_kappa = Array3::from_elem([1, 1, 1], 1.0);
         let scale = spectral_velocity_scale_from_source_kappa(&source_kappa, dt, rho0_ref).unwrap();
         assert_abs_diff_eq!(scale[[0, 0, 0]], dt / (2.0 * rho0_ref), epsilon = 1e-18);
     }

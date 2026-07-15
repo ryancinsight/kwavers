@@ -31,13 +31,15 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
+use crate::breast_fwi_bindings::complex_compat::leto3_to_nd3;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,
     pressure_to_membrane_tension_mn_m, simulate_lif_trace, LifParams, PressureThresholdParams,
 };
-use ndarray::{Array1, Array3};
-use numpy::{IntoPyArray, PyReadonlyArray1};
+use leto::Array3;
+use numpy::ndarray::Array1;
+use numpy::{PyReadonlyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
@@ -95,7 +97,7 @@ pub fn compute_acoustic_membrane_tension_py<'py>(
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(Array1::from_vec(tension_mn_m).into_pyarray(py))
+    Ok(Array1::from_vec(tension_mn_m).to_pyarray(py))
 }
 
 // ── Channel open probability ──────────────────────────────────────────────────
@@ -142,7 +144,7 @@ pub fn boltzmann_open_probability_py<'py>(
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(Array1::from_vec(p_open).into_pyarray(py))
+    Ok(Array1::from_vec(p_open).to_pyarray(py))
 }
 
 /// Compute pressure-threshold open probability from acoustic radiation pressure.
@@ -186,7 +188,7 @@ pub fn pressure_threshold_open_probability_py<'py>(
     let p_open = py
         .detach(|| pressure_threshold_p_open(&field, &params))
         .map_err(kwavers_to_py)?;
-    Ok(Array1::from_iter(p_open.iter().copied()).into_pyarray(py))
+    Ok(Array1::from_iter(p_open.iter().copied()).to_pyarray(py))
 }
 
 // ── Coupled channel drive ─────────────────────────────────────────────────────
@@ -251,7 +253,7 @@ pub fn coupled_channel_drive_py<'py>(
             )
         })
         .map_err(kwavers_to_py)?;
-    Ok(Array1::from_vec(drive).into_pyarray(py))
+    Ok(Array1::from_vec(drive).to_pyarray(py))
 }
 
 // ── Gaussian beam ─────────────────────────────────────────────────────────────
@@ -310,10 +312,10 @@ pub fn gaussian_beam_pressure_field_py<'py>(
         })
         .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
-    dict.set_item("x", field.x_m.into_pyarray(py))?;
-    dict.set_item("y", field.y_m.into_pyarray(py))?;
-    dict.set_item("z", field.z_m.into_pyarray(py))?;
-    dict.set_item("pressure", field.pressure_pa.into_pyarray(py))?;
+    dict.set_item("x", leto3_to_nd3(field.x_m).to_pyarray(py))?;
+    dict.set_item("y", leto3_to_nd3(field.y_m).to_pyarray(py))?;
+    dict.set_item("z", leto3_to_nd3(field.z_m).to_pyarray(py))?;
+    dict.set_item("pressure", leto3_to_nd3(field.pressure_pa).to_pyarray(py))?;
     Ok(dict)
 }
 
@@ -391,11 +393,11 @@ pub fn simulate_lif_neuron_py<'py>(
     let dict = PyDict::new(py);
     dict.set_item(
         "voltage_v",
-        Array1::from_vec(trace.voltage_v).into_pyarray(py),
+        Array1::from_vec(trace.voltage_v).to_pyarray(py),
     )?;
     dict.set_item(
         "spike_times_s",
-        Array1::from_vec(trace.spike_times_s).into_pyarray(py),
+        Array1::from_vec(trace.spike_times_s).to_pyarray(py),
     )?;
     dict.set_item("spike_count", spike_count)?;
     Ok(dict)
@@ -423,11 +425,11 @@ pub fn lif_response_probability_py<'py>(
     let dict = PyDict::new(py);
     dict.set_item(
         "spike_train",
-        Array1::from_vec(response.spike_train).into_pyarray(py),
+        Array1::from_vec(response.spike_train).to_pyarray(py),
     )?;
     dict.set_item(
         "response_probability",
-        Array1::from_vec(response.response_probability).into_pyarray(py),
+        Array1::from_vec(response.response_probability).to_pyarray(py),
     )?;
     Ok(dict)
 }

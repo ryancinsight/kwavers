@@ -15,7 +15,7 @@ use crate::{
 };
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Medium with spatially varying properties
 ///
@@ -92,34 +92,34 @@ impl HeterogeneousMedium {
     pub fn new(nx: usize, ny: usize, nz: usize, use_trilinear_interpolation: bool) -> Self {
         Self {
             use_trilinear_interpolation,
-            density: Array3::zeros((nx, ny, nz)),
-            sound_speed: Array3::zeros((nx, ny, nz)),
-            viscosity: Array3::zeros((nx, ny, nz)),
-            surface_tension: Array3::zeros((nx, ny, nz)),
+            density: Array3::zeros([nx, ny, nz]),
+            sound_speed: Array3::zeros([nx, ny, nz]),
+            viscosity: Array3::zeros([nx, ny, nz]),
+            surface_tension: Array3::zeros([nx, ny, nz]),
             ambient_pressure: 0.0,
-            vapor_pressure: Array3::zeros((nx, ny, nz)),
-            polytropic_index: Array3::zeros((nx, ny, nz)),
-            specific_heat: Array3::zeros((nx, ny, nz)),
-            thermal_conductivity: Array3::zeros((nx, ny, nz)),
-            thermal_expansion: Array3::zeros((nx, ny, nz)),
-            gas_diffusion_coeff: Array3::zeros((nx, ny, nz)),
-            thermal_diffusivity: Array3::zeros((nx, ny, nz)),
-            mu_a: Array3::zeros((nx, ny, nz)),
-            mu_s_prime: Array3::zeros((nx, ny, nz)),
-            temperature: Array3::zeros((nx, ny, nz)),
-            bubble_radius: Array3::zeros((nx, ny, nz)),
-            bubble_velocity: Array3::zeros((nx, ny, nz)),
-            alpha0: Array3::zeros((nx, ny, nz)),
-            delta: Array3::zeros((nx, ny, nz)),
-            b_a: Array3::zeros((nx, ny, nz)),
-            absorption: Array3::zeros((nx, ny, nz)),
-            alpha_power: Array3::from_elem((nx, ny, nz), 1.0),
-            nonlinearity: Array3::zeros((nx, ny, nz)),
-            shear_sound_speed: Array3::zeros((nx, ny, nz)),
-            shear_viscosity_coeff: Array3::zeros((nx, ny, nz)),
-            bulk_viscosity_coeff: Array3::zeros((nx, ny, nz)),
-            lame_lambda: Array3::zeros((nx, ny, nz)),
-            lame_mu: Array3::zeros((nx, ny, nz)),
+            vapor_pressure: Array3::zeros([nx, ny, nz]),
+            polytropic_index: Array3::zeros([nx, ny, nz]),
+            specific_heat: Array3::zeros([nx, ny, nz]),
+            thermal_conductivity: Array3::zeros([nx, ny, nz]),
+            thermal_expansion: Array3::zeros([nx, ny, nz]),
+            gas_diffusion_coeff: Array3::zeros([nx, ny, nz]),
+            thermal_diffusivity: Array3::zeros([nx, ny, nz]),
+            mu_a: Array3::zeros([nx, ny, nz]),
+            mu_s_prime: Array3::zeros([nx, ny, nz]),
+            temperature: Array3::zeros([nx, ny, nz]),
+            bubble_radius: Array3::zeros([nx, ny, nz]),
+            bubble_velocity: Array3::zeros([nx, ny, nz]),
+            alpha0: Array3::zeros([nx, ny, nz]),
+            delta: Array3::zeros([nx, ny, nz]),
+            b_a: Array3::zeros([nx, ny, nz]),
+            absorption: Array3::zeros([nx, ny, nz]),
+            alpha_power: Array3::from_elem([nx, ny, nz], 1.0),
+            nonlinearity: Array3::zeros([nx, ny, nz]),
+            shear_sound_speed: Array3::zeros([nx, ny, nz]),
+            shear_viscosity_coeff: Array3::zeros([nx, ny, nz]),
+            bulk_viscosity_coeff: Array3::zeros([nx, ny, nz]),
+            lame_lambda: Array3::zeros([nx, ny, nz]),
+            lame_mu: Array3::zeros([nx, ny, nz]),
             reference_frequency: REFERENCE_FREQUENCY_HZ,
         }
     }
@@ -147,13 +147,13 @@ impl HeterogeneousMedium {
     /// arrays are copied directly when available.
     pub fn from_homogeneous(h: &HomogeneousMedium, grid: &Grid) -> Self {
         let (nx, ny, nz) = grid.dimensions();
-        let fill = |val: f64| Array3::from_elem((nx, ny, nz), val);
+        let fill = |val: f64| Array3::from_elem([nx, ny, nz], val);
 
         // Arrays via trait-provided views
-        let density = h.density_array().to_owned();
-        let sound_speed = h.sound_speed_array().to_owned();
-        let absorption = h.absorption_array().to_owned();
-        let nonlinearity = h.nonlinearity_array().to_owned();
+        let density = h.density_array().to_contiguous();
+        let sound_speed = h.sound_speed_array().to_contiguous();
+        let absorption = h.absorption_array().to_contiguous();
+        let nonlinearity = h.nonlinearity_array().to_contiguous();
 
         // Elastic arrays
         let lame_lambda_arr = h.lame_lambda_array();
@@ -178,7 +178,7 @@ impl HeterogeneousMedium {
 
         // Thermal diffusivity approximation: k / (rho * c)
         // Compute per-voxel using arrays
-        let mut thermal_diffusivity = Array3::zeros((nx, ny, nz));
+        let mut thermal_diffusivity = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -189,7 +189,7 @@ impl HeterogeneousMedium {
         }
 
         // Shear sound speed per voxel: sqrt(mu / rho)
-        let mut shear_speed_arr = Array3::zeros((nx, ny, nz));
+        let mut shear_speed_arr = Array3::zeros([nx, ny, nz]);
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {

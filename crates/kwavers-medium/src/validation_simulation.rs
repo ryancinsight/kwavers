@@ -13,7 +13,7 @@ pub struct MediumValidator;
 impl MediumValidator {
     /// Validate medium configuration with physics-based constraints
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate(config: &DomainMediumParameters) -> KwaversResult<()> {
         match config.medium_type {

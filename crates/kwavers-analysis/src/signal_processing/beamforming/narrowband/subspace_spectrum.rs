@@ -24,9 +24,9 @@ use crate::signal_processing::beamforming::narrowband::snapshots::{
     extract_narrowband_snapshots, SnapshotScenario, SnapshotSelection,
 };
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
-use num_complex::Complex64;
+use leto::{Array2, Array3};
 
 /// Method selector for the subspace localization map.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -111,7 +111,7 @@ fn validate_inputs(
     candidate: [f64; 3],
     cfg: &SubspaceSpectrumConfig,
 ) -> KwaversResult<usize> {
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "subspace spectrum expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"

@@ -2,7 +2,7 @@
 
 use super::model::ChemicalModel;
 use super::parameters::ChemicalMetrics;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 impl ChemicalModel {
@@ -34,9 +34,18 @@ impl ChemicalModel {
             let oh_conc = kinetics.hydroxyl_concentration();
             let h2o2_conc = kinetics.hydrogen_peroxide();
 
-            let avg_radical = radical_conc.mean().unwrap_or(0.0);
-            let avg_oh = oh_conc.mean().unwrap_or(0.0);
-            let avg_h2o2 = h2o2_conc.mean().unwrap_or(0.0);
+            let avg_radical = {
+                let sum: f64 = radical_conc.iter().sum();
+                sum / radical_conc.len() as f64
+            };
+            let avg_oh = {
+                let sum: f64 = oh_conc.iter().sum();
+                sum / oh_conc.len() as f64
+            };
+            let avg_h2o2 = {
+                let sum: f64 = h2o2_conc.iter().sum();
+                sum / h2o2_conc.len() as f64
+            };
 
             rates.insert(
                 "OH_production_rate".to_owned(),

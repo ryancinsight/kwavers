@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 pub(super) fn validate_pressure_field_domain(
     pressure_field: ArrayView3<f64>,
@@ -16,8 +16,8 @@ pub(super) fn validate_pressure_field_shape(
     pressure_field: ArrayView3<f64>,
     grid: &Grid,
 ) -> KwaversResult<()> {
-    let expected = (grid.nx, grid.ny, grid.nz);
-    let actual = pressure_field.dim();
+    let expected = [grid.nx, grid.ny, grid.nz];
+    let actual = pressure_field.shape();
     if actual != expected {
         return Err(KwaversError::Validation(
             ValidationError::DimensionMismatch {
@@ -31,7 +31,7 @@ pub(super) fn validate_pressure_field_shape(
 }
 
 pub(super) fn validate_finite_pressure_field(pressure_field: ArrayView3<f64>) -> KwaversResult<()> {
-    for ((ix, iy, iz), &pressure) in pressure_field.indexed_iter() {
+    for ([ix, iy, iz], &pressure) in pressure_field.indexed_iter() {
         if !pressure.is_finite() {
             return Err(validation_error(format!(
                 "Pressure field contains nonfinite value {pressure} at [{ix}, {iy}, {iz}]"

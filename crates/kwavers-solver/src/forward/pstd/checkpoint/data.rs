@@ -38,7 +38,8 @@
 //! - Field arrays are in C (row-major) order, matching ndarray's default layout.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::Array3 as LetoArray3;
+use leto::{Array2, Array3};
 use std::io::{BufReader, BufWriter, Read, Write};
 use std::path::Path;
 
@@ -69,10 +70,10 @@ pub struct PSTDCheckpoint {
     pub total_steps: usize,
     /// Time step size (s).
     pub dt: f64,
-    pub p: Array3<f64>,
-    pub ux: Array3<f64>,
-    pub uy: Array3<f64>,
-    pub uz: Array3<f64>,
+    pub p: LetoArray3<f64>,
+    pub ux: LetoArray3<f64>,
+    pub uy: LetoArray3<f64>,
+    pub uz: LetoArray3<f64>,
     pub rhox: Array3<f64>,
     pub rhoy: Array3<f64>,
     pub rhoz: Array3<f64>,
@@ -88,10 +89,10 @@ pub struct PSTDCheckpoint {
 impl PSTDCheckpoint {
     /// Serialize to a binary file at `path`.
     ///
-    /// Prefer [`save_borrowed`] in hot paths — it writes directly from borrowed
+    /// Prefer [`Self::save_borrowed`] in hot paths — it writes directly from borrowed
     /// field slices without cloning the arrays into a `PSTDCheckpoint` struct first.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn save(&self, path: &Path) -> KwaversResult<()> {
         Self::save_borrowed(
@@ -126,7 +127,7 @@ impl PSTDCheckpoint {
     /// For a 256³ grid, this avoids 7 × 256³ × 8 = 896 MiB of intermediate
     /// allocations and copies per checkpoint vs. the struct-based `save()` path.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(clippy::too_many_arguments)]
     pub fn save_borrowed(
@@ -137,10 +138,10 @@ impl PSTDCheckpoint {
         time_step_index: usize,
         total_steps: usize,
         dt: f64,
-        p: &Array3<f64>,
-        ux: &Array3<f64>,
-        uy: &Array3<f64>,
-        uz: &Array3<f64>,
+        p: &LetoArray3<f64>,
+        ux: &LetoArray3<f64>,
+        uy: &LetoArray3<f64>,
+        uz: &LetoArray3<f64>,
         rhox: &Array3<f64>,
         rhoy: &Array3<f64>,
         rhoz: &Array3<f64>,
@@ -166,21 +167,23 @@ impl PSTDCheckpoint {
             }
             Some(data) => {
                 w.write_all(&[1u8])?;
-                let (n_sensors, n_recorded) = data.dim();
+                let [n_sensors, n_recorded] = data.shape();
                 w.write_all(&(n_sensors as u64).to_le_bytes())?;
                 w.write_all(&(n_recorded as u64).to_le_bytes())?;
                 w.write_all(&(sensor_expected_steps as u64).to_le_bytes())?;
-                for &v in data {
+                for &v in data.iter() {
                     w.write_all(&v.to_le_bytes())?;
                 }
             }
         }
 
-        for arr in [p, ux, uy, uz, rhox, rhoy, rhoz] {
-            for &v in arr {
-                w.write_all(&v.to_le_bytes())?;
-            }
-        }
+        write_f64_iter(&mut w, p.iter())?;
+        write_f64_iter(&mut w, ux.iter())?;
+        write_f64_iter(&mut w, uy.iter())?;
+        write_f64_iter(&mut w, uz.iter())?;
+        write_f64_iter(&mut w, rhox.iter())?;
+        write_f64_iter(&mut w, rhoy.iter())?;
+        write_f64_iter(&mut w, rhoz.iter())?;
 
         w.flush()?;
         Ok(())
@@ -188,8 +191,8 @@ impl PSTDCheckpoint {
 
     /// Deserialize from a binary file at `path`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn load(path: &Path) -> KwaversResult<Self> {
         let file = std::fs::File::open(path)?;
@@ -227,18 +230,18 @@ impl PSTDCheckpoint {
             for v in &mut flat {
                 *v = read_le(&mut r)?;
             }
-            let data = Array2::from_shape_vec((n_sensors, n_recorded), flat)
-                .map_err(KwaversError::Shape)?;
+            let data = Array2::from_shape_vec([n_sensors, n_recorded], flat)
+                .map_err(|e| KwaversError::Shape(e.to_string()))?;
             (Some(data), n_recorded, expected_steps)
         } else {
             (None, 0, 0)
         };
 
         let n = nx * ny * nz;
-        let p = read_array3(&mut r, n, nx, ny, nz)?;
-        let ux = read_array3(&mut r, n, nx, ny, nz)?;
-        let uy = read_array3(&mut r, n, nx, ny, nz)?;
-        let uz = read_array3(&mut r, n, nx, ny, nz)?;
+        let p = read_leto_array3(&mut r, n, nx, ny, nz)?;
+        let ux = read_leto_array3(&mut r, n, nx, ny, nz)?;
+        let uy = read_leto_array3(&mut r, n, nx, ny, nz)?;
+        let uz = read_leto_array3(&mut r, n, nx, ny, nz)?;
         let rhox = read_array3(&mut r, n, nx, ny, nz)?;
         let rhoy = read_array3(&mut r, n, nx, ny, nz)?;
         let rhoz = read_array3(&mut r, n, nx, ny, nz)?;
@@ -267,9 +270,9 @@ impl PSTDCheckpoint {
     ///
     /// Returns `Err` if any dimension, step count, or `dt` diverges from expectations.
     /// # Errors
-    /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn validate_restore_contract(
         &self,
@@ -399,5 +402,29 @@ fn read_array3<T: WirePrimitive>(
     for v in &mut flat {
         *v = read_le(r)?;
     }
-    Array3::from_shape_vec((nx, ny, nz), flat).map_err(KwaversError::Shape)
+    Array3::from_shape_vec([nx, ny, nz], flat).map_err(|e| KwaversError::Shape(e.to_string()))
+}
+
+fn write_f64_iter<'a>(
+    w: &mut impl Write,
+    values: impl IntoIterator<Item = &'a f64>,
+) -> KwaversResult<()> {
+    for value in values {
+        w.write_all(&value.to_le_bytes())?;
+    }
+    Ok(())
+}
+
+fn read_leto_array3(
+    r: &mut impl Read,
+    n: usize,
+    nx: usize,
+    ny: usize,
+    nz: usize,
+) -> KwaversResult<LetoArray3<f64>> {
+    let mut flat = vec![0.0_f64; n];
+    for v in &mut flat {
+        *v = read_le(r)?;
+    }
+    LetoArray3::from_shape_vec([nx, ny, nz], flat).map_err(|e| KwaversError::Shape(e.to_string()))
 }

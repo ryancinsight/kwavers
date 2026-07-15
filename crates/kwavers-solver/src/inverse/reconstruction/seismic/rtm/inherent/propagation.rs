@@ -11,24 +11,25 @@
 //!
 //! # Wavefield update
 //! Each step delegates to [`super::wavefield::update_wavefield`], which uses
-//! parallel 4th-order finite-difference stencils.
+//! Moirai-backed 4th-order finite-difference stencils.
 //!
 //! Reference: Claerbout (1985), *Imaging the Earth's Interior*, Ch. 3.
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{s, Array3, Array4, Zip};
+use leto::{Array3, Array4};
 
 use super::super::super::constants::RTM_STORAGE_DECIMATION;
 use super::super::super::wavelet::SeismicRickerWavelet;
 use super::super::types::ReverseTimeMigration;
+use super::parallel::for_each_view_mut;
 
 impl ReverseTimeMigration {
     /// Forward-propagate the source wavelet; return the (possibly
     /// decimated-then-reconstructed) `Array4<f64>` of shape
     /// `(n_time_steps, nx, ny, nz)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn forward_propagation(
         &self,
@@ -46,12 +47,13 @@ impl ReverseTimeMigration {
         let src_signal = wavelet.generate_time_series(self.config.dt, n_time_steps);
 
         for (t, &src_val) in src_signal.iter().enumerate() {
-            pressure[source_position] += src_val;
+            pressure[[source_position.0, source_position.1, source_position.2]] += src_val;
             self.update_wavefield(&mut pressure, &pressure_prev, grid)?;
 
             if t % RTM_STORAGE_DECIMATION == 0 {
                 stored
-                    .slice_mut(s![t / RTM_STORAGE_DECIMATION, .., .., ..])
+                    .slice_with_mut(&s![t / RTM_STORAGE_DECIMATION, .., .., ..])
+                    .unwrap()
                     .assign(&pressure);
             }
 
@@ -69,11 +71,11 @@ impl ReverseTimeMigration {
     ///
     /// Returns `Array4<f64>` of shape `(n_time_steps, nx, ny, nz)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn backward_propagation(
         &self,
-        shot_data: &ndarray::Array2<f64>,
+        shot_data: &leto::Array2<f64>,
         receiver_positions: &[(usize, usize, usize)],
         grid: &Grid,
         n_time_steps: usize,
@@ -85,12 +87,15 @@ impl ReverseTimeMigration {
 
         for t in (0..n_time_steps).rev() {
             for (rec_idx, &rec_pos) in receiver_positions.iter().enumerate() {
-                pressure[rec_pos] += shot_data[[rec_idx, t]];
+                pressure[[rec_pos.0, rec_pos.1, rec_pos.2]] += shot_data[[rec_idx, t]];
             }
 
             self.update_wavefield(&mut pressure, &pressure_prev, grid)?;
 
-            backward.slice_mut(s![t, .., .., ..]).assign(&pressure);
+            backward
+                .slice_with_mut(&s![t, .., .., ..])
+                .unwrap()
+                .assign(&pressure);
 
             std::mem::swap(&mut pressure, &mut pressure_prev);
         }
@@ -116,19 +121,29 @@ impl ReverseTimeMigration {
             let t_rem = t % RTM_STORAGE_DECIMATION;
 
             if t_rem == 0 {
-                full.slice_mut(s![t, .., .., ..])
-                    .assign(&decimated.slice(s![t_dec, .., .., ..]));
+                full.slice_with_mut::<3>(&s![t, .., .., ..])
+                    .expect("invariant: RTM full-wavefield time slice in range")
+                    .assign(
+                        &decimated
+                            .slice_with::<3>(&s![t_dec, .., .., ..])
+                            .expect("invariant: RTM decimated time slice in range"),
+                    );
             } else if t_dec + 1 < decimated.shape()[0] {
                 let weight = t_rem as f64 / RTM_STORAGE_DECIMATION as f64;
-                let snap1 = decimated.slice(s![t_dec, .., .., ..]);
-                let snap2 = decimated.slice(s![t_dec + 1, .., .., ..]);
+                let snap1 = decimated
+                    .slice_with::<3>(&s![t_dec, .., .., ..])
+                    .expect("invariant: RTM stencil slice in range");
+                let snap2 = decimated
+                    .slice_with::<3>(&s![t_dec + 1, .., .., ..])
+                    .expect("invariant: RTM stencil slice in range");
 
-                Zip::from(full.slice_mut(s![t, .., .., ..]))
-                    .and(&snap1)
-                    .and(&snap2)
-                    .par_for_each(|f, &s1, &s2| {
-                        *f = (1.0 - weight).mul_add(s1, weight * s2);
-                    });
+                for_each_view_mut(
+                    full.slice_with_mut::<3>(&s![t, .., .., ..])
+                        .expect("invariant: RTM full-wavefield time slice in range"),
+                    |idx, f| {
+                        *f = (1.0 - weight).mul_add(snap1[idx], weight * snap2[idx]);
+                    },
+                );
             }
         }
 

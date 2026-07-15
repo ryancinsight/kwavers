@@ -59,38 +59,64 @@
 //! - LeVeque RJ (2007). Finite Difference Methods for ODEs and PDEs.
 //!   SIAM. §2.14.
 
-use ndarray::Zip;
-
 use kwavers_grid::Grid;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::WesterveltFdtd;
 
 impl WesterveltFdtd {
     /// Calculate the nonlinear term ∂²(p²)/∂t²
     pub(super) fn calculate_nonlinear_term_into(&mut self, dt: f64, grid: &Grid) {
-        debug_assert_eq!(self.nonlinear_term.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(self.nonlinear_term.shape(), [grid.nx, grid.ny, grid.nz]);
         if let Some(ref p_prev2) = self.pressure_prev2 {
             // Full second-order time derivative of p²
             // ∂²(p²)/∂t² = 2p * ∂²p/∂t² + 2(∂p/∂t)²
 
-            Zip::from(&mut self.nonlinear_term)
-                .and(&self.pressure)
-                .and(&self.pressure_prev)
-                .and(p_prev2)
-                .par_for_each(|nl, &p, &p_prev, &p_prev2| {
-                    let d2p_dt2 = (2.0f64.mul_add(-p_prev, p) + p_prev2) / (dt * dt);
-                    let dp_dt = (p - p_prev) / dt;
-                    *nl = (2.0 * p).mul_add(d2p_dt2, 2.0 * dp_dt * dp_dt);
-                });
+            let pressure = self
+                .pressure
+                .as_slice()
+                .expect("invariant: Westervelt pressure is standard-layout");
+            let pressure_prev = self
+                .pressure_prev
+                .as_slice()
+                .expect("invariant: Westervelt previous pressure is standard-layout");
+            let pressure_prev2 = p_prev2
+                .as_slice()
+                .expect("invariant: Westervelt second previous pressure is standard-layout");
+            let nonlinear_term = self
+                .nonlinear_term
+                .as_slice_mut()
+                .expect("invariant: Westervelt nonlinear term is standard-layout");
+
+            enumerate_mut_with::<Adaptive, _, _>(nonlinear_term, |idx, nl| {
+                let p = pressure[idx];
+                let p_prev = pressure_prev[idx];
+                let p_prev2 = pressure_prev2[idx];
+                let d2p_dt2 = (2.0f64.mul_add(-p_prev, p) + p_prev2) / (dt * dt);
+                let dp_dt = (p - p_prev) / dt;
+                *nl = (2.0 * p).mul_add(d2p_dt2, 2.0 * dp_dt * dp_dt);
+            });
         } else {
             // First time step: forward difference initialization (LeVeque 2007 §2.14)
-            Zip::from(&mut self.nonlinear_term)
-                .and(&self.pressure)
-                .and(&self.pressure_prev)
-                .par_for_each(|nl, &p, &p_prev| {
-                    let dp_dt = (p - p_prev) / dt;
-                    *nl = 2.0 * dp_dt * dp_dt;
-                });
+            let pressure = self
+                .pressure
+                .as_slice()
+                .expect("invariant: Westervelt pressure is standard-layout");
+            let pressure_prev = self
+                .pressure_prev
+                .as_slice()
+                .expect("invariant: Westervelt previous pressure is standard-layout");
+            let nonlinear_term = self
+                .nonlinear_term
+                .as_slice_mut()
+                .expect("invariant: Westervelt nonlinear term is standard-layout");
+
+            enumerate_mut_with::<Adaptive, _, _>(nonlinear_term, |idx, nl| {
+                let p = pressure[idx];
+                let p_prev = pressure_prev[idx];
+                let dp_dt = (p - p_prev) / dt;
+                *nl = 2.0 * dp_dt * dp_dt;
+            });
         }
     }
 }

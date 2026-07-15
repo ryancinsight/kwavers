@@ -2,8 +2,9 @@
 
 use super::material::{CavitationDamageMaterialProperties, DamageParameters};
 use crate::bubble_dynamics::bubble_field::BubbleStateFields;
+use crate::parallel::zip_mut_ref;
 use kwavers_core::constants::cavitation::{IMPACT_ENERGY_COEFFICIENT, MATERIAL_REMOVAL_EFFICIENCY};
-use ndarray::{Array3, Zip};
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Cavitation damage model
@@ -52,7 +53,7 @@ impl CavitationDamage {
 
         self.impact_pressure.fill(0.0);
 
-        for ((i, j, k), &is_collapsing) in bubble_states.is_collapsing.indexed_iter() {
+        for ([i, j, k], &is_collapsing) in bubble_states.is_collapsing.indexed_iter() {
             if is_collapsing > 0.5 {
                 let r = bubble_states.radius[[i, j, k]];
                 let v = bubble_states.velocity[[i, j, k]].abs();
@@ -125,7 +126,7 @@ impl CavitationDamage {
     /// Get total accumulated damage
     #[must_use]
     pub fn total_damage(&self) -> f64 {
-        self.damage_field.sum()
+        leto::application::reduction::sum_all(&self.damage_field).unwrap_or(0.0)
     }
 
     /// Get maximum damage location
@@ -134,7 +135,7 @@ impl CavitationDamage {
         let mut max_damage = 0.0;
         let mut max_loc = (0, 0, 0);
 
-        for ((i, j, k), &damage) in self.damage_field.indexed_iter() {
+        for ([i, j, k], &damage) in self.damage_field.indexed_iter() {
             if damage > max_damage {
                 max_damage = damage;
                 max_loc = (i, j, k);
@@ -160,15 +161,13 @@ impl CavitationDamage {
     #[must_use]
     pub fn erosion_depth(&self, time: f64) -> Array3<f64> {
         let density = self.material.density;
-        let mut depth = Array3::zeros(self.erosion_rate.dim());
+        let mut depth = Array3::zeros(self.erosion_rate.shape());
 
-        Zip::from(&mut depth)
-            .and(&self.erosion_rate)
-            .par_for_each(|out, &rate| {
-                if rate > 0.0 {
-                    *out = rate * time / density;
-                }
-            });
+        zip_mut_ref(depth.view_mut(), self.erosion_rate.view(), |out, &rate| {
+            if rate > 0.0 {
+                *out = rate * time / density;
+            }
+        });
 
         depth
     }

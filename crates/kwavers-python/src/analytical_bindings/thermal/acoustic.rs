@@ -1,8 +1,8 @@
 //! Acoustic pressure, intensity, and heat-source thermal bindings.
 
 use kwavers_physics::analytical::thermal;
-use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::ndarray::Array2;
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -73,7 +73,7 @@ pub fn gaussian_power_deposition_2d(
     );
     let arr2d = Array2::from_shape_vec((nr, nz), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray(py).unbind())
+    Ok(arr2d.to_pyarray(py).unbind())
 }
 
 /// Acoustic intensity depth profile I(z) = I₀·exp(−2·α·z).
@@ -97,7 +97,7 @@ pub fn acoustic_intensity_depth_profile(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = thermal::acoustic_intensity_depth_profile(z_s, alpha_np_m, surface_intensity);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Volumetric acoustic power deposition Q(z) = 2·α·I₀·exp(−2·α·z).
@@ -122,7 +122,7 @@ pub fn acoustic_power_deposition_depth_profile(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         thermal::acoustic_power_deposition_depth_profile(z_s, alpha_np_m, surface_intensity);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Acoustic intensity from peak pressure amplitude: I = p² / (2·ρ·c) [W/m²].
@@ -152,7 +152,7 @@ pub fn acoustic_intensity_from_amplitude(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = thermal::acoustic_intensity_from_amplitude(p_s, rho, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Peak acoustic pressure amplitude from intensity: p = sqrt(2*rho*c*I) [Pa].
@@ -169,7 +169,7 @@ pub fn acoustic_pressure_amplitude_from_intensity(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = thermal::acoustic_pressure_amplitude_from_intensity(i_s, rho, c)
         .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Convert a flattened acoustic pressure field to volumetric heat-source density.
@@ -207,5 +207,5 @@ pub fn acoustic_heat_source_density(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = thermal::acoustic_heat_source_density(p_s, alpha_np_m, rho, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

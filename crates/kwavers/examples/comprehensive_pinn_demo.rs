@@ -406,7 +406,7 @@ fn main() {
     println!();
     println!("📚 Next Steps:");
     println!("   • Run specific demos: --basic, --physics, --meta, --uncertainty");
-    println!("   • Enable GPU acceleration: --features pinn-gpu");
+    println!("   • Track GPU training through the Coeus + Hephaestus provider migration");
     println!("   • Deploy to cloud: Check cloud deployment documentation");
     println!("   • Explore examples: cargo run --example [example_name]");
     println!();

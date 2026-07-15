@@ -1,7 +1,7 @@
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 use std::f64::consts::PI;
 
 pub const NX: usize = 64;
@@ -76,7 +76,7 @@ pub fn elements() -> Vec<Element> {
 pub fn focused_source() -> GridSource {
     let elems = elements();
     let mut p_mask = Array3::<f64>::zeros((NX, NY, NZ));
-    let mut p_signal = ndarray::Array2::<f64>::zeros((elems.len() * NZ, NT));
+    let mut p_signal = leto::Array2::<f64>::zeros((elems.len() * NZ, NT));
 
     for z in 0..NZ {
         for (element_index, element) in elems.iter().enumerate() {
@@ -113,7 +113,7 @@ pub fn focused_aperture_pressure_at(t: f64) -> f64 {
 
 pub fn analytical_peak_map() -> Array2<f64> {
     let elems = elements();
-    Array2::from_shape_fn((NX, NY), |(i, j)| {
+    Array2::from_shape_fn((NX, NY), |[i, j]| {
         if j <= SOURCE_Y {
             return 0.0;
         }

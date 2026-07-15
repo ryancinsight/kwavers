@@ -1,18 +1,18 @@
 use super::EigenSolver;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use leto::{Array1, Array2};
 
 /// `(Q, R)` factor pair from a complex QR decomposition.
-type ComplexQr = (Array2<Complex<f64>>, Array2<Complex<f64>>);
+type ComplexQr = (Array2<Complex64>, Array2<Complex64>);
 
 impl EigenSolver {
     /// Verify hermitian.
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
     ///
-    pub(super) fn verify_hermitian(matrix: &Array2<Complex<f64>>) -> KwaversResult<()> {
-        let n = matrix.nrows();
+    pub(super) fn verify_hermitian(matrix: &Array2<Complex64>) -> KwaversResult<()> {
+        let n = matrix.shape()[0];
         let tolerance = 1e-10;
 
         for i in 0..n {
@@ -31,19 +31,20 @@ impl EigenSolver {
 
         Ok(())
     }
+
     /// Qr decomposition.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn qr_decomposition(
-        matrix: &Array2<Complex<f64>>,
+        matrix: &Array2<Complex64>,
         n: usize,
     ) -> KwaversResult<ComplexQr> {
         let mut h = matrix.clone();
-        let mut q = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
+        let mut q = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
 
         for k in 0..n.saturating_sub(1) {
-            let mut x: Vec<Complex<f64>> = (k..n).map(|i| h[[i, k]]).collect();
+            let mut x: Vec<Complex64> = (k..n).map(|i| h[[i, k]]).collect();
 
             let sigma = x.iter().map(|z| (z.norm()).powi(2)).sum::<f64>().sqrt();
             let sigma = if h[[k, k]].re >= 0.0 { sigma } else { -sigma };
@@ -52,7 +53,7 @@ impl EigenSolver {
                 continue;
             }
 
-            x[0] += Complex::new(sigma, 0.0);
+            x[0] += Complex64::new(sigma, 0.0);
             let x_norm = x.iter().map(|z| (z.norm()).powi(2)).sum::<f64>().sqrt();
 
             if x_norm.abs() < 1e-14 {
@@ -60,7 +61,7 @@ impl EigenSolver {
             }
 
             for j in k..n {
-                let mut dot = Complex::new(0.0, 0.0);
+                let mut dot = Complex64::new(0.0, 0.0);
                 for i in k..n {
                     dot += x[i - k].conj() * h[[i, j]];
                 }
@@ -71,7 +72,7 @@ impl EigenSolver {
             }
 
             for i in 0..n {
-                let mut dot = Complex::new(0.0, 0.0);
+                let mut dot = Complex64::new(0.0, 0.0);
                 for j in k..n {
                     dot += x[j - k].conj() * q[[j, i]];
                 }
@@ -85,7 +86,7 @@ impl EigenSolver {
         Ok((q.mapv(|x| x.conj()), h))
     }
 
-    pub(super) fn wilkinson_shift(matrix: &Array2<Complex<f64>>, n: usize) -> f64 {
+    pub(super) fn wilkinson_shift(matrix: &Array2<Complex64>, n: usize) -> f64 {
         let n_minus_2 = n - 2;
         let a = matrix[[n_minus_2, n_minus_2]].re;
         let b = matrix[[n_minus_2, n - 1]].norm();
@@ -105,7 +106,7 @@ impl EigenSolver {
         }
     }
 
-    pub(super) fn compute_off_diagonal_norm(matrix: &Array2<Complex<f64>>, n: usize) -> f64 {
+    pub(super) fn compute_off_diagonal_norm(matrix: &Array2<Complex64>, n: usize) -> f64 {
         let mut norm = 0.0;
         for i in 0..n {
             for j in 0..n {
@@ -122,15 +123,15 @@ impl EigenSolver {
     ///
     pub(super) fn sort_eigenvalues(
         eigenvalues: Array1<f64>,
-        eigenvectors: Array2<Complex<f64>>,
-    ) -> (Array1<f64>, Array2<Complex<f64>>, Vec<usize>) {
+        eigenvectors: Array2<Complex64>,
+    ) -> (Array1<f64>, Array2<Complex64>, Vec<usize>) {
         let n = eigenvalues.len();
         let mut indices: Vec<usize> = (0..n).collect();
 
         indices.sort_by(|&i, &j| eigenvalues[j].total_cmp(&eigenvalues[i]));
 
-        let mut sorted_eigenvalues = Array1::zeros(n);
-        let mut sorted_eigenvectors = Array2::zeros((n, n));
+        let mut sorted_eigenvalues = Array1::zeros([n]);
+        let mut sorted_eigenvectors = Array2::zeros([n, n]);
 
         for (new_idx, &old_idx) in indices.iter().enumerate() {
             sorted_eigenvalues[new_idx] = eigenvalues[old_idx];

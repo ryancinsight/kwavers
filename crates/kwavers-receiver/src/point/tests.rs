@@ -2,7 +2,7 @@ use super::*;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 fn create_test_grid() -> Grid {
     Grid::new(32, 32, 32, 0.001, 0.001, 0.001).unwrap()
@@ -39,7 +39,7 @@ fn test_point_sensor_validation() {
 #[test]
 fn test_trilinear_interpolation_at_grid_point() {
     let grid = create_test_grid();
-    let field = Array3::<f64>::from_shape_fn((32, 32, 32), |(i, j, k)| (i + j + k) as f64);
+    let field = Array3::<f64>::from_shape_fn((32, 32, 32), |[i, j, k]| (i + j + k) as f64);
 
     let locations = vec![[0.016, 0.016, 0.016]];
     let config = PointSensorConfig::new(locations);
@@ -56,7 +56,7 @@ fn test_trilinear_interpolation_at_grid_point() {
 fn test_trilinear_interpolation_midpoint() {
     let grid = create_test_grid();
 
-    let field = Array3::<f64>::from_shape_fn((32, 32, 32), |(i, j, k)| {
+    let field = Array3::<f64>::from_shape_fn((32, 32, 32), |[i, j, k]| {
         (i as f64) + 10.0 * (j as f64) + 100.0 * (k as f64)
     });
 
@@ -209,7 +209,7 @@ fn test_all_time_histories() {
     }
 
     let histories = sensor.all_time_histories();
-    assert_eq!(histories.shape(), &[2, 5]);
+    assert_eq!(histories.shape(), [2, 5]);
 
     for t in 0..5 {
         let expected = (t as f64) * 10.0;

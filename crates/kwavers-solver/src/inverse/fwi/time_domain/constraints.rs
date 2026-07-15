@@ -3,7 +3,52 @@
 use super::FwiProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4, Axis, Zip};
+use leto::{Array3, Array4, ArrayView3};
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, for_each_chunk_mut_with, Adaptive};
+
+fn pressure_second_derivative_views_into(
+    dst: &mut Array3<f64>,
+    p0: ArrayView3<'_, f64>,
+    p1: ArrayView3<'_, f64>,
+    p2: ArrayView3<'_, f64>,
+    inv_dt_sq: f64,
+) {
+    if dst.view().is_c_contiguous()
+        && p0.is_c_contiguous()
+        && p1.is_c_contiguous()
+        && p2.is_c_contiguous()
+    {
+        let p0 = p0
+            .as_slice()
+            .expect("invariant: standard-layout p0 view exposes memory-order slice");
+        let p1 = p1
+            .as_slice()
+            .expect("invariant: standard-layout p1 view exposes memory-order slice");
+        let p2 = p2
+            .as_slice()
+            .expect("invariant: standard-layout p2 view exposes memory-order slice");
+        let dst_slice = dst
+            .as_slice_mut()
+            .expect("invariant: standard-layout destination exposes memory-order slice");
+        let chunk_size = super::FWI_FIELD_CHUNK;
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            dst_slice,
+            chunk_size,
+            |chunk_index, chunk| {
+                let start = chunk_index * chunk_size;
+                for (offset, d) in chunk.iter_mut().enumerate() {
+                    let idx = start + offset;
+                    *d = (2.0f64.mul_add(-p1[idx], p0[idx]) + p2[idx]) * inv_dt_sq;
+                }
+            },
+        );
+    } else {
+        leto_ops::zip3_mut_with(&mut dst.view_mut(), &p0, &p1, &p2, |d, v0, v1, v2| {
+            *d = (2.0f64.mul_add(-*v1, *v0) + *v2) * inv_dt_sq;
+        })
+        .expect("invariant: dst, p0, p1, p2 shapes asserted equal above");
+    }
+}
 
 impl FwiProcessor {
     /// Apply physical constraints to velocity model.
@@ -14,26 +59,37 @@ impl FwiProcessor {
         use kwavers_core::constants::SOUND_SPEED_WATER;
         let min_velocity = SOUND_SPEED_WATER * 0.5; // 750 m/s
         let max_velocity = SOUND_SPEED_WATER * 4.0; // 6000 m/s
-        model.par_mapv_inplace(|v| v.clamp(min_velocity, max_velocity));
+        if let Some(values) = model.as_slice_mut() {
+            for_each_chunk_mut_with::<Adaptive, _, _>(values, super::FWI_FIELD_CHUNK, |chunk| {
+                for value in chunk {
+                    *value = value.clamp(min_velocity, max_velocity);
+                }
+            });
+        } else {
+            model
+                .iter_mut()
+                .for_each(|value| *value = value.clamp(min_velocity, max_velocity));
+        }
     }
 
     /// Validate timestep and model compatibility with the grid.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn validate_time_step(
         &self,
         model: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<f64> {
-        if model.dim() != grid.dimensions() {
+        let (grid_nx, grid_ny, grid_nz) = grid.dimensions();
+        if model.shape() != [grid_nx, grid_ny, grid_nz] {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Model shape mismatch: expected {:?}, got {:?}",
                         grid.dimensions(),
-                        model.dim()
+                        model.shape()
                     ),
                 },
             ));
@@ -86,7 +142,7 @@ impl FwiProcessor {
     ///
     /// Reference: Courant et al. (1928). *Math. Ann.* 100(1), 32–74.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn calculate_stable_timestep(
         &self,
@@ -119,7 +175,7 @@ impl FwiProcessor {
     /// Adding the two expansions and subtracting `2p_i` yields
     /// `(p_{i-1} - 2p_i + p_{i+1}) / dt² = p''_i + O(dt²)`.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub(super) fn pressure_second_derivative_into(
         &self,
@@ -128,57 +184,64 @@ impl FwiProcessor {
         dt: f64,
         dst: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        if idx >= forward_history.len_of(Axis(0)) {
+        if idx >= forward_history.shape()[0] {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Forward history index out of bounds: idx {} >= {}",
                         idx,
-                        forward_history.len_of(Axis(0))
+                        forward_history.shape()[0]
                     ),
                 },
             ));
         }
 
-        let nt = forward_history.len_of(Axis(0));
+        let nt = forward_history.shape()[0];
         let inv_dt_sq = 1.0 / (dt * dt);
-        let current = forward_history.index_axis(Axis(0), idx);
+        let current = forward_history
+            .index_axis::<3>(0, idx)
+            .expect("invariant: axis-0 index within forward-history bounds");
+        if dst.shape() != current.shape() {
+            return Err(KwaversError::Validation(
+                ValidationError::ConstraintViolation {
+                    message: format!(
+                        "Second-derivative destination shape mismatch: dst {:?}, source {:?}",
+                        dst.shape(),
+                        current.shape()
+                    ),
+                },
+            ));
+        }
 
         if idx == 0 {
-            let next = forward_history.index_axis(Axis(0), 1);
-            let next2 = forward_history.index_axis(Axis(0), 2);
-            Zip::from(dst)
-                .and(&current)
-                .and(&next)
-                .and(&next2)
-                .par_for_each(|d, &p0, &p1, &p2| {
-                    *d = (2.0f64.mul_add(-p1, p0) + p2) * inv_dt_sq;
-                });
+            let next = forward_history
+                .index_axis::<3>(0, 1)
+                .expect("invariant: axis-0 index within forward-history bounds");
+            let next2 = forward_history
+                .index_axis::<3>(0, 2)
+                .expect("invariant: axis-0 index within forward-history bounds");
+            pressure_second_derivative_views_into(dst, current, next, next2, inv_dt_sq);
             return Ok(());
         }
 
         if idx + 1 == nt {
-            let prev = forward_history.index_axis(Axis(0), nt - 2);
-            let prev2 = forward_history.index_axis(Axis(0), nt - 3);
-            Zip::from(dst)
-                .and(&prev2)
-                .and(&prev)
-                .and(&current)
-                .par_for_each(|d, &p0, &p1, &p2| {
-                    *d = (2.0f64.mul_add(-p1, p0) + p2) * inv_dt_sq;
-                });
+            let prev = forward_history
+                .index_axis::<3>(0, nt - 2)
+                .expect("invariant: axis-0 index within forward-history bounds");
+            let prev2 = forward_history
+                .index_axis::<3>(0, nt - 3)
+                .expect("invariant: axis-0 index within forward-history bounds");
+            pressure_second_derivative_views_into(dst, prev2, prev, current, inv_dt_sq);
             return Ok(());
         }
 
-        let prev = forward_history.index_axis(Axis(0), idx - 1);
-        let next = forward_history.index_axis(Axis(0), idx + 1);
-        Zip::from(dst)
-            .and(&prev)
-            .and(&current)
-            .and(&next)
-            .par_for_each(|d, &p0, &p1, &p2| {
-                *d = (2.0f64.mul_add(-p1, p0) + p2) * inv_dt_sq;
-            });
+        let prev = forward_history
+            .index_axis::<3>(0, idx - 1)
+            .expect("invariant: axis-0 index within forward-history bounds");
+        let next = forward_history
+            .index_axis::<3>(0, idx + 1)
+            .expect("invariant: axis-0 index within forward-history bounds");
+        pressure_second_derivative_views_into(dst, prev, current, next, inv_dt_sq);
         Ok(())
     }
 }

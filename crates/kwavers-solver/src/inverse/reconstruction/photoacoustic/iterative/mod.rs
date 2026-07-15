@@ -7,7 +7,7 @@ mod iterations;
 mod system;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array3, ArrayView2};
+use leto::{Array1, Array3, ArrayView2};
 
 use super::algorithms::PhotoacousticAlgorithm;
 use super::config::ReconstructionPhotoacousticConfig;
@@ -65,7 +65,7 @@ impl IterativeMethods {
     /// Builds the system matrix, then runs the selected algorithm for
     /// `self.iterations` steps, applying regularization after each step.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -82,8 +82,9 @@ impl IterativeMethods {
         let n_voxels = grid_size[0] * grid_size[1] * grid_size[2];
         let mut x = Array1::zeros(n_voxels);
 
-        let y = sensor_data.as_slice().unwrap().to_vec();
-        let y = Array1::from_vec(y);
+        let y_vec = sensor_data.as_slice().unwrap().to_vec();
+        let y = Array1::from_vec(y_vec.len(), y_vec)
+            .expect("invariant: sensor data length matches its Leto shape");
 
         for _iter in 0..self.iterations {
             match &self.algorithm {

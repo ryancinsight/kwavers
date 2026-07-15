@@ -1,7 +1,7 @@
 //! Types and data structures for harmonic detection
 
 use super::config::HarmonicDetectionConfig;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Multi-frequency displacement field with harmonic components
 #[derive(Debug, Clone)]
@@ -33,18 +33,18 @@ impl HarmonicDisplacementField {
         let mut harmonic_snrs = Vec::with_capacity(n_harmonics);
 
         for _ in 0..n_harmonics {
-            harmonic_magnitudes.push(Array3::zeros((nx, ny, nz)));
-            harmonic_phases.push(Array3::zeros((nx, ny, nz)));
-            harmonic_snrs.push(Array3::zeros((nx, ny, nz)));
+            harmonic_magnitudes.push(Array3::zeros([nx, ny, nz]));
+            harmonic_phases.push(Array3::zeros([nx, ny, nz]));
+            harmonic_snrs.push(Array3::zeros([nx, ny, nz]));
         }
 
         Self {
-            fundamental_magnitude: Array3::zeros((nx, ny, nz)),
-            fundamental_phase: Array3::zeros((nx, ny, nz)),
+            fundamental_magnitude: Array3::zeros([nx, ny, nz]),
+            fundamental_phase: Array3::zeros([nx, ny, nz]),
             harmonic_magnitudes,
             harmonic_phases,
             harmonic_snrs,
-            nonlinearity_parameter: Array3::zeros((nx, ny, nz)),
+            nonlinearity_parameter: Array3::zeros([nx, ny, nz]),
             time: vec![0.0; n_time_points],
             frequency: vec![0.0; n_time_points / 2 + 1], // FFT frequency bins
         }
@@ -56,15 +56,27 @@ impl HarmonicDisplacementField {
         // The stored `harmonic_magnitudes` exclude the fundamental and start at the second harmonic.
         // Therefore: harmonic_order=2 -> index 0, harmonic_order=3 -> index 1, etc.
         if harmonic_order < 2 {
-            return Array3::zeros(self.fundamental_magnitude.dim());
+            return Array3::zeros(self.fundamental_magnitude.shape());
         }
 
         let idx = harmonic_order - 2;
         if idx >= self.harmonic_magnitudes.len() {
-            return Array3::zeros(self.fundamental_magnitude.dim());
+            return Array3::zeros(self.fundamental_magnitude.shape());
         }
 
-        &self.harmonic_magnitudes[idx] / &self.fundamental_magnitude
+        {
+            let mut result = Array3::zeros(self.fundamental_magnitude.shape());
+            let [nx, ny, nz] = result.shape();
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        result[[i, j, k]] = self.harmonic_magnitudes[idx][[i, j, k]]
+                            / self.fundamental_magnitude[[i, j, k]];
+                    }
+                }
+            }
+            result
+        }
     }
 
     /// Compute local nonlinearity parameter map from the second-harmonic displacement ratio.

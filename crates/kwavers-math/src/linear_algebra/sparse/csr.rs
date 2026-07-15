@@ -1,8 +1,7 @@
 //! Compressed Sparse Row (CSR) matrix format
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, ArrayView1, ArrayView2};
-use num_traits::Zero;
+use leto::{Array1, ArrayView1, ArrayView2};
 use std::ops::{AddAssign, Mul};
 
 /// Compressed Sparse Row matrix format
@@ -22,15 +21,16 @@ pub struct CompressedSparseRowMatrix<T = f64> {
     pub nnz: usize,
 }
 
-pub trait CsrScalar: Copy + Zero + AddAssign + Mul<Output = Self> {
+pub trait CsrScalar: Copy + Default + AddAssign + Mul<Output = Self> {
     fn magnitude(self) -> f64;
+    fn zero() -> Self;
 }
 
 impl CompressedSparseRowMatrix<f64> {
     /// Create CSR matrix from dense matrix with sparsity threshold
     #[must_use]
     pub fn from_dense(dense: ArrayView2<f64>, threshold: f64) -> Self {
-        let (rows, cols) = dense.dim();
+        let [rows, cols] = dense.shape();
         let mut values = Vec::new();
         let mut col_indices = Vec::new();
         let mut row_pointers = vec![0; rows + 1];
@@ -62,11 +62,19 @@ impl CsrScalar for f64 {
     fn magnitude(self) -> f64 {
         self.abs()
     }
+
+    fn zero() -> Self {
+        0.0
+    }
 }
 
-impl CsrScalar for num_complex::Complex64 {
+impl CsrScalar for eunomia::Complex64 {
     fn magnitude(self) -> f64 {
         self.norm()
+    }
+
+    fn zero() -> Self {
+        Self::new(0.0, 0.0)
     }
 }
 
@@ -108,16 +116,16 @@ impl<T> CompressedSparseRowMatrix<T> {
     where
         T: CsrScalar,
     {
-        if x.len() != self.cols {
+        if x.shape()[0] != self.cols {
             return Err(kwavers_core::error::KwaversError::Numerical(
                 kwavers_core::error::NumericalError::Instability {
                     operation: "csr_matvec".to_owned(),
-                    condition: x.len() as f64,
+                    condition: x.shape()[0] as f64,
                 },
             ));
         }
 
-        let mut y = Array1::from_elem(self.rows, T::zero());
+        let mut y = Array1::from_elem([self.rows], T::zero());
 
         for i in 0..self.rows {
             let mut sum = T::zero();
@@ -159,11 +167,11 @@ impl<T> CompressedSparseRowMatrix<T> {
 
     /// Convert to dense matrix
     #[must_use]
-    pub fn to_dense(&self) -> ndarray::Array2<T>
+    pub fn to_dense(&self) -> leto::Array2<T>
     where
-        T: Copy + Zero,
+        T: Copy + /*Zero*/ Default,
     {
-        let mut dense = ndarray::Array2::from_elem((self.rows, self.cols), T::zero());
+        let mut dense = leto::Array2::from_elem([self.rows, self.cols], T::default());
 
         for i in 0..self.rows {
             for j in self.row_pointers[i]..self.row_pointers[i + 1] {
@@ -215,7 +223,7 @@ impl<T> CompressedSparseRowMatrix<T> {
     #[must_use]
     pub fn get_diagonal(&self, row: usize) -> T
     where
-        T: Copy + Zero,
+        T: Copy + /*Zero*/ Default,
     {
         let row_start = self.row_pointers[row];
         let row_end = self.row_pointers[row + 1];
@@ -226,7 +234,7 @@ impl<T> CompressedSparseRowMatrix<T> {
             }
         }
 
-        T::zero()
+        T::default()
     }
 
     /// Zero out row (except diagonal)
@@ -300,5 +308,132 @@ impl<T> CompressedSparseRowMatrix<T> {
                 i += 1;
             }
         }
+    }
+}
+#[cfg(test)]
+mod tests {
+    //! CsrScalar-magnitude + cross-type default-equivalence regression pins.
+    //!
+    //! Drift surfaces as a numerical failure (not a silent compile regression)
+    //! when a future change touches:
+    //! - the per-impl `CsrScalar::magnitude` body;
+    //! - the `eunomia::ComplexField` blanket-impl wiring through
+    //!   `Complex<T>::norm()` (csr.rs → eunomia::impls::field.rs:148-149);
+    //! - the `eunomia::Complex64` value-domain invariants defined in
+    //!   `eunomia::impls::field`.
+    //!
+    //! Comparison strategy: `assert_eq!` for the integer-square-root-of-
+    //! perfect-square cases (bit-exact under IEEE 754). No transcendental
+    //! `magnitude` cases in the fixture set — magnitude always evaluates
+    //! `sqrt(re² + im²)` over integer operands, and all chosen operands
+    //! produce bit-exact outputs (3²+4²=25, 5²+12²=169, 6²+8²=100).
+
+    use super::CsrScalar;
+
+    // ───── `CsrScalar::magnitude` over `eunomia::Complex64` (native surface) ─────
+
+    /// USER-VERBATIM: `|3+4i| = 5`.
+    #[test]
+    fn csr_scalar_magnitude_eunomia_complex_3_4_5() {
+        // 3² + 4² = 25; sqrt(25) = 5 — bit-exact under IEEE 754.
+        let z = eunomia::Complex64::new(3.0, 4.0);
+        assert_eq!(CsrScalar::magnitude(z), 5.0);
+    }
+
+    /// 5/12/13 Pythagorean triple.
+    #[test]
+    fn csr_scalar_magnitude_eunomia_complex_5_12_13() {
+        let z = eunomia::Complex64::new(5.0, 12.0);
+        assert_eq!(CsrScalar::magnitude(z), 13.0);
+    }
+
+    /// Sign-invariance (all four quadrants return the same magnitude).
+    #[test]
+    fn csr_scalar_magnitude_eunomia_complex_sign_invariant_all_quadrants() {
+        let q1 = eunomia::Complex64::new(6.0, 8.0);
+        let q2 = eunomia::Complex64::new(-6.0, 8.0);
+        let q3 = eunomia::Complex64::new(6.0, -8.0);
+        let q4 = eunomia::Complex64::new(-6.0, -8.0);
+        assert_eq!(CsrScalar::magnitude(q1), 10.0);
+        assert_eq!(CsrScalar::magnitude(q2), 10.0);
+        assert_eq!(CsrScalar::magnitude(q3), 10.0);
+        assert_eq!(CsrScalar::magnitude(q4), 10.0);
+    }
+
+    /// |0+0i| = 0 — zero-complex baseline.
+    #[test]
+    fn csr_scalar_magnitude_eunomia_complex_zero_complex() {
+        let z = eunomia::Complex64::new(0.0, 0.0);
+        assert_eq!(CsrScalar::magnitude(z), 0.0);
+    }
+
+    /// |1+0i| = 1 — also pin `default()` form (different construction route).
+    #[test]
+    fn csr_scalar_magnitude_eunomia_complex_one_real_imag_zero() {
+        let z = eunomia::Complex64::new(1.0, 0.0);
+        assert_eq!(CsrScalar::magnitude(z), 1.0);
+        assert_eq!(CsrScalar::magnitude(eunomia::Complex64::default()), 0.0);
+    }
+
+    /// |0+7i| = 7 — pure-imaginary branch (real-component zero path).
+    #[test]
+    fn csr_scalar_magnitude_eunomia_complex_pure_imaginary() {
+        let z = eunomia::Complex64::new(0.0, 7.0);
+        assert_eq!(CsrScalar::magnitude(z), 7.0);
+    }
+
+    // ───── `CsrScalar::magnitude` over `f64` (real-degenerate case) ─────
+
+    #[test]
+    fn csr_scalar_magnitude_f64_positive() {
+        assert_eq!(CsrScalar::magnitude(3.5_f64), 3.5);
+    }
+
+    #[test]
+    fn csr_scalar_magnitude_f64_negative() {
+        // |−3.5| = 3.5 — pins f64::abs() body.
+        assert_eq!(CsrScalar::magnitude(-3.5_f64), 3.5);
+    }
+
+    #[test]
+    fn csr_scalar_magnitude_f64_zero() {
+        assert_eq!(CsrScalar::magnitude(0.0_f64), 0.0);
+    }
+
+    #[test]
+    fn csr_scalar_magnitude_f64_one() {
+        assert_eq!(CsrScalar::magnitude(1.0_f64), 1.0);
+    }
+
+    // ───── Cross-type default-equivalence (eunomia default) ─────
+
+    /// USER-VERBATIM: `eunomia::Complex64::default()` pin. `re`/`im` are both
+    /// zero and remain aligned with the expected physical convention.
+    #[test]
+    fn eunomia_default_complex64_field_by_field_equals_eunomia_default() {
+        let e = eunomia::Complex64::default();
+        assert_eq!(e.re, 0.0_f64);
+        assert_eq!(e.im, 0.0_f64);
+        // Canonical comparison stays field-level because `Complex64` uses a
+        // public representation contract (`re`, `im`).
+    }
+
+    /// Pin `<eunomia::Complex<f64> as ComplexField>::modulus()` directly.
+    /// This is the SSOT-source of `CsrScalar::magnitude` post-ADR §2.
+    /// Compiles today: `eunomia::ComplexField::modulus` is implemented
+    /// for `Complex<f64>` via the blanket
+    /// `impl<T: RealField> ComplexField for Complex<T>` at
+    /// `crates/eunomia/src/impls/field.rs:148-149` (calls `self.norm()`).
+    #[test]
+    fn complex_field_modulus_eunomia_complex_3_4_5() {
+        let z = eunomia::Complex64::new(3.0, 4.0);
+        assert_eq!(
+            <eunomia::Complex64 as eunomia::ComplexField>::modulus(z),
+            5.0
+        );
+        assert_eq!(
+            <eunomia::Complex64 as eunomia::ComplexField>::modulus_squared(z),
+            25.0,
+        );
     }
 }

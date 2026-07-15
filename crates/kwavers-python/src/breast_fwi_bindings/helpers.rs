@@ -1,6 +1,8 @@
 //! Internal helpers: operator parsing, boundary parsing, array conversion,
 //! observation stack construction, and error conversion for breast FWI bindings.
 
+use super::complex_compat::nd_to_leto2;
+use eunomia::Complex64;
 use kwavers_solver::inverse::fwi::frequency_domain::{
     AbsorbingBoundary, Config, DenseConvergentBornOperator, FrequencyObservation,
     HelmholtzForwardOperator, PstdFiniteWindowBornOperator,
@@ -8,8 +10,7 @@ use kwavers_solver::inverse::fwi::frequency_domain::{
     PstdTemporalTransferConfig, SingleScatterBornOperator, SpectralConvergentBornOperator,
 };
 use kwavers_transducer::transducers::ElementPosition;
-use ndarray::{s, Array2, Array3};
-use num_complex::Complex64;
+use numpy::ndarray::{s, Array2, Array3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use std::sync::Arc;
@@ -135,7 +136,7 @@ pub(super) fn observations_from_stack(
         .map(|(index, &frequency_hz)| {
             FrequencyObservation::new(
                 frequency_hz,
-                observed_pressure.slice(s![index, .., ..]).to_owned(),
+                nd_to_leto2(observed_pressure.slice(s![index, .., ..]).to_owned()),
             )
         })
         .collect())

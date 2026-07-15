@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Create a line mask connecting two points using a Bresenham-like 3D algorithm.
 /// # Errors
@@ -14,7 +14,7 @@ pub fn make_line(
     let (nx, ny, nz) = dim;
     let (dx, dy, dz) = spacing;
 
-    let mut mask = Array3::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::from_elem([nx, ny, nz], false);
 
     let start_i = (start[0] / dx).round() as isize;
     let start_j = (start[1] / dy).round() as isize;

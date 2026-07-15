@@ -1,6 +1,6 @@
 //! OpenPros benchmark data contracts.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::{SoundSpeedShiftConfig, SoundSpeedShiftImage, SoundSpeedShiftSample};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;

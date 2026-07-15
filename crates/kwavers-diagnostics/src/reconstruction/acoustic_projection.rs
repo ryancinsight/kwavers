@@ -36,7 +36,7 @@
 
 use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 /// Acoustic forward-projection geometry for pulse-echo ultrasound SIRT.
 #[derive(Debug, Clone)]
@@ -107,7 +107,7 @@ pub(crate) fn project_acoustic(
     image: &Array3<f64>,
     geom: &AcousticProjectionGeometry,
 ) -> Array1<f64> {
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
     let (dx, dy, dz) = geom.voxel_spacing;
     let alpha = geom.alpha_nepers_per_m_per_hz();
     let f_c = geom.center_frequency_hz;

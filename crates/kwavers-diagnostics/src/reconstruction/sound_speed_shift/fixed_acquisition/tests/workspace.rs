@@ -73,7 +73,7 @@ fn fixed_plan_reconstruct_into_image_reuses_output_allocation() {
             .reconstruct_into_image(&predicted, &mut workspace, &mut output)
             .unwrap();
 
-        assert_eq!(first.sound_speed_shift_m_s.dim(), mask.dim());
+        assert_eq!(first.sound_speed_shift_m_s.shape(), mask.shape());
         assert!(!first.objective_history.is_empty());
         assert_eq!(first.rows_used, plan.rows_used());
         assert_eq!(first.rows_available, plan.rows_available());

@@ -1,8 +1,8 @@
 //! Spectral energy theorem validators (Parseval).
 
 use super::super::{TheoremValidation, TheoremValidator};
-use ndarray::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
+use leto::Array1;
 
 impl TheoremValidator {
     /// Validate Parseval's theorem: `∑|x[n]|² = (1/N) ∑|X[k]|²`

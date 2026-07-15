@@ -1,5 +1,7 @@
 //! PyO3 wrapper for Ali 2025 forward-operator equivalence diagnostics.
 
+use super::complex_compat::nd_to_leto3;
+use eunomia::Complex64;
 use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     forward_operator_equivalence_diagnostics_with_receiver_policy as breast_ust_forward_operator_equivalence_diagnostics_with_receiver_policy,
     scattering_increment_diagnostics as breast_ust_scattering_increment_diagnostics,
@@ -7,8 +9,7 @@ use kwavers_diagnostics::reconstruction::breast_ust_fwi::{
     BreastUstForwardOperatorPrediction, BreastUstReceiverChannelPolicy,
     BreastUstScatteringIncrementDiagnostics, BreastUstScatteringIncrementModelDiagnostics,
 };
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
 use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -37,15 +38,15 @@ pub fn breast_fwi_operator_equivalence_diagnostics<'py>(
     frequency_bin_start_steps_per_frequency: Vec<usize>,
     receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let observed = observed_pressure.as_array().to_owned();
+    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
     let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
         .map_err(kwavers_to_value_py)?;
     let mut owned_predictions =
-        Vec::<(String, Array3<Complex64>)>::with_capacity(predictions_by_model.len());
+        Vec::<(String, Array3<_>)>::with_capacity(predictions_by_model.len());
     for (model, pressure) in predictions_by_model.iter() {
         let model = model.extract::<String>()?;
         let pressure = pressure.extract::<PyReadonlyArray3<'_, Complex64>>()?;
-        owned_predictions.push((model, pressure.as_array().to_owned()));
+        owned_predictions.push((model, nd_to_leto3(pressure.as_array().to_owned())));
     }
 
     let diagnostics = py
@@ -86,16 +87,16 @@ pub fn breast_fwi_scattering_increment_diagnostics<'py>(
     observed_pressure: PyReadonlyArray3<'py, Complex64>,
     receiver_channel_policy: &str,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let baseline = homogeneous_baseline.as_array().to_owned();
-    let observed = observed_pressure.as_array().to_owned();
+    let baseline = nd_to_leto3(homogeneous_baseline.as_array().to_owned());
+    let observed = nd_to_leto3(observed_pressure.as_array().to_owned());
     let receiver_channel_policy = BreastUstReceiverChannelPolicy::parse(receiver_channel_policy)
         .map_err(kwavers_to_value_py)?;
     let mut owned_predictions =
-        Vec::<(String, Array3<Complex64>)>::with_capacity(predictions_by_model.len());
+        Vec::<(String, Array3<_>)>::with_capacity(predictions_by_model.len());
     for (model, pressure) in predictions_by_model.iter() {
         let model = model.extract::<String>()?;
         let pressure = pressure.extract::<PyReadonlyArray3<'_, Complex64>>()?;
-        owned_predictions.push((model, pressure.as_array().to_owned()));
+        owned_predictions.push((model, nd_to_leto3(pressure.as_array().to_owned())));
     }
 
     let diagnostics = py

@@ -8,10 +8,11 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+eunomia = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-num-traits = "0.2"
+moirai-parallel = { workspace = true }
+leto = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 rand = "0.8"

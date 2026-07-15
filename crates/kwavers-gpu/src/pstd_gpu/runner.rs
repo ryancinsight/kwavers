@@ -13,10 +13,13 @@
 //!   `f64` on return.
 //!
 //! # Output
-//! Returns `Array2<f64>` of shape `(num_sensors, time_steps)` with the
+//! Returns `leto::Array2<f64>` of shape `(num_sensors, time_steps)` with the
 //! pressure recorded at each sensor index per step.
 
-use crate::pstd_gpu::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use crate::pstd_gpu::{
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider, PstdRunState,
+    SolverParams, WgpuPstdStateProvider,
+};
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -25,7 +28,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
 use kwavers_source::GridSource;
-use ndarray::{Array2, Array3};
+use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::f64::consts::PI;
 
 /// GPU PSTD acquisition settings.
@@ -70,15 +73,36 @@ impl Default for GpuPstdRunConfig {
 ///
 /// # Errors
 /// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 256.
-/// - GPU device acquisition failures bubble up via the `wgpu` error path.
+/// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
 pub fn run_gpu_pstd(
     grid: &Grid,
     medium: &dyn Medium,
     source: &GridSource,
-    sensor_mask: &Array3<bool>,
+    sensor_mask: &LetoArray3<bool>,
     config: GpuPstdRunConfig,
-) -> KwaversResult<Array2<f64>> {
+) -> KwaversResult<LetoArray2<f64>> {
+    run_gpu_pstd_with_provider::<WgpuPstdStateProvider>(grid, medium, source, sensor_mask, config)
+}
+
+/// Drive a GPU-resident PSTD acoustic simulation with an explicit GPU state
+/// provider.
+///
+/// # Errors
+/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 256.
+/// - GPU device acquisition failures bubble up via the selected provider.
+/// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
+pub fn run_gpu_pstd_with_provider<P>(
+    grid: &Grid,
+    medium: &dyn Medium,
+    source: &GridSource,
+    sensor_mask: &LetoArray3<bool>,
+    config: GpuPstdRunConfig,
+) -> KwaversResult<LetoArray2<f64>>
+where
+    P: PstdAutoDeviceProvider,
+    P::State: PstdRunState,
+{
     let nx = grid.nx;
     let ny = grid.ny;
     let nz = grid.nz;
@@ -138,7 +162,7 @@ pub fn run_gpu_pstd(
     let mut pml_z_3d = vec![1.0f32; total];
 
     if pml_inside {
-        let exp_half = |sigma: &ndarray::Array1<f64>| -> Vec<f32> {
+        let exp_half = |sigma: &leto::Array1<f64>| -> Vec<f32> {
             sigma
                 .iter()
                 .map(|&s| (-s * dt * 0.5).exp() as f32)
@@ -178,15 +202,7 @@ pub fn run_gpu_pstd(
         }
     }
 
-    let sensor_indices: Vec<u32> = {
-        let flat = sensor_mask
-            .as_slice()
-            .ok_or_else(|| KwaversError::InvalidInput("sensor_mask must be C-contiguous".into()))?;
-        flat.iter()
-            .enumerate()
-            .filter_map(|(i, &v)| if v { Some(i as u32) } else { None })
-            .collect()
-    };
+    let sensor_indices = collect_sensor_indices(sensor_mask)?;
 
     let n_dim_active = [nx > 1, ny > 1, nz > 1]
         .iter()
@@ -324,7 +340,7 @@ pub fn run_gpu_pstd(
             )
         };
 
-    let mut solver = GpuPstdSolver::with_auto_device(
+    let mut solver = GpuPstdSolver::<P>::with_auto_device(
         grid,
         MediumArrays {
             c0_flat: &c0_flat,
@@ -364,14 +380,24 @@ pub fn run_gpu_pstd(
     );
 
     let n_sensors = sensor_indices.len();
-    let mut out = Array2::<f64>::zeros((n_sensors, time_steps));
-    for s in 0..n_sensors {
-        for t in 0..time_steps {
-            out[[s, t]] = sensor_data_f32[s * time_steps + t] as f64;
-        }
-    }
+    LetoArray2::from_shape_vec(
+        [n_sensors, time_steps],
+        sensor_data_f32.into_iter().map(f64::from).collect(),
+    )
+    .map_err(|err| {
+        KwaversError::InvalidInput(format!("GPU PSTD sensor trace shape mismatch: {err}"))
+    })
+}
 
-    Ok(out)
+fn collect_sensor_indices(sensor_mask: &LetoArray3<bool>) -> KwaversResult<Vec<u32>> {
+    let flat = sensor_mask.as_slice_memory_order().ok_or_else(|| {
+        KwaversError::InvalidInput("sensor_mask must be dense row-major leto::Array3".into())
+    })?;
+    Ok(flat
+        .iter()
+        .enumerate()
+        .filter_map(|(i, &v)| if v { Some(i as u32) } else { None })
+        .collect())
 }
 
 /// Minimum active axis length → admissible CPML thickness.
@@ -390,4 +416,22 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
     let max_allowed = (min_dim.saturating_sub(2)) / 2;
     let default_thickness = 20_usize.min(max_allowed).max(2);
     (default_thickness, max_allowed)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{collect_sensor_indices, LetoArray3};
+
+    #[test]
+    fn collect_sensor_indices_preserves_row_major_positions() {
+        let mask = LetoArray3::from_shape_vec(
+            [2, 2, 2],
+            vec![false, true, false, false, true, false, false, true],
+        )
+        .expect("test mask shape matches storage");
+
+        let indices = collect_sensor_indices(&mask).expect("dense Leto mask is valid");
+
+        assert_eq!(indices, vec![1, 4, 7]);
+    }
 }

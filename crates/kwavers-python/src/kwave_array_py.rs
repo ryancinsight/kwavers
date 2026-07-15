@@ -1,3 +1,4 @@
+use numpy::ndarray::Array3;
 use numpy::PyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -74,7 +75,12 @@ impl KWaveArray {
         py: Python<'py>,
         grid: &Grid,
     ) -> PyResult<Py<PyArray3<bool>>> {
-        Ok(PyArray3::from_owned_array(py, self.inner.get_array_binary_mask(&grid.inner)).into())
+        let mask: Array3<bool> = self
+            .inner
+            .get_array_binary_mask(&grid.inner)
+            .try_into()
+            .expect("contiguous");
+        Ok(PyArray3::from_owned_array(py, mask).into())
     }
 
     /// Generate a weighted mask on a computational grid.
@@ -83,7 +89,12 @@ impl KWaveArray {
         py: Python<'py>,
         grid: &Grid,
     ) -> PyResult<Py<PyArray3<f64>>> {
-        Ok(PyArray3::from_owned_array(py, self.inner.get_array_weighted_mask(&grid.inner)).into())
+        let mask: Array3<f64> = self
+            .inner
+            .get_array_weighted_mask(&grid.inner)
+            .try_into()
+            .expect("contiguous");
+        Ok(PyArray3::from_owned_array(py, mask).into())
     }
 
     /// Add an arc-shaped element.

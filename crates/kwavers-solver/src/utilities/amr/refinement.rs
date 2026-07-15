@@ -1,7 +1,8 @@
 //! Refinement management and level control
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Refinement level information
 #[derive(Debug, Clone)]
@@ -79,20 +80,24 @@ impl RefinementManager {
 
     /// Mark cells for refinement/coarsening
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn mark_cells(&self, error: &Array3<f64>, threshold: f64) -> KwaversResult<Array3<i8>> {
-        let mut markers = Array3::zeros(error.dim());
+        let mut markers = Array3::zeros(error.shape());
 
-        // Mark cells based on error threshold
-        Zip::from(&mut markers).and(error).par_for_each(|m, &e| {
-            if e > threshold {
-                *m = 1; // Mark for refinement
-            } else if e < threshold * 0.1 {
-                *m = -1; // Mark for coarsening
+        match (markers.as_slice_mut(), error.as_slice()) {
+            (Some(marker_slice), Some(error_slice)) => {
+                enumerate_mut_with::<Adaptive, _, _>(marker_slice, |idx, marker| {
+                    mark_cell(marker, error_slice[idx], threshold);
+                });
             }
-            // else 0 = no change
-        });
+            _ => {
+                leto_ops::zip_mut_with(&mut markers.view_mut(), &error.view(), |marker, &value| {
+                    mark_cell(marker, value, threshold);
+                })
+                .expect("invariant: markers and error fields share grid shape")
+            }
+        }
 
         // Add buffer zones around refinement regions
         self.add_buffer_zones(&mut markers)?;
@@ -108,7 +113,7 @@ impl RefinementManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn add_buffer_zones(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
-        let (nx, ny, nz) = markers.dim();
+        let [nx, ny, nz] = markers.shape();
         let mut buffer = markers.clone();
 
         for i in 0..nx {
@@ -164,7 +169,7 @@ impl RefinementManager {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn enforce_nesting(&self, markers: &mut Array3<i8>) -> KwaversResult<()> {
-        let (nx, ny, nz) = markers.dim();
+        let [nx, ny, nz] = markers.shape();
 
         // Optimized single-pass implementation:
         // We iterate over the inner grid once.
@@ -234,5 +239,50 @@ impl RefinementManager {
     #[must_use]
     pub fn get_level(&self, level: usize) -> Option<&RefinementLevel> {
         self.levels.get(level)
+    }
+}
+
+#[inline]
+fn mark_cell(marker: &mut i8, error: f64, threshold: f64) {
+    if error > threshold {
+        *marker = 1;
+    } else if error < threshold * 0.1 {
+        *marker = -1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mark_cells_marks_uniform_coarsening_region() {
+        let manager = RefinementManager::new(1);
+        let error = Array3::from_elem([4, 4, 4], 0.05);
+
+        let markers = manager.mark_cells(&error, 1.0).unwrap();
+
+        assert_eq!(markers, Array3::from_elem([4, 4, 4], -1));
+    }
+
+    #[test]
+    fn mark_cells_preserves_threshold_band_as_no_change() {
+        let manager = RefinementManager::new(1);
+        let error = Array3::from_elem([4, 4, 4], 0.5);
+
+        let markers = manager.mark_cells(&error, 0.5).unwrap();
+
+        assert_eq!(markers, Array3::<i8>::zeros((4, 4, 4)));
+    }
+
+    #[test]
+    fn mark_cells_expands_refinement_buffer() {
+        let manager = RefinementManager::new(1);
+        let mut error = Array3::from_elem([5, 5, 5], 0.5);
+        error[[2, 2, 2]] = 1.0;
+
+        let markers = manager.mark_cells(&error, 0.75).unwrap();
+
+        assert_eq!(markers, Array3::from_elem([5, 5, 5], 1));
     }
 }

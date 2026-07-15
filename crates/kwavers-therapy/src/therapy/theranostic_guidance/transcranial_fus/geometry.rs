@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_transducer::transducers::focused::{SphericalCapConfig, SphericalCapLayout};
@@ -33,7 +33,7 @@ pub fn focused_cap_positions(
         cap_max_polar_rad,
     ))?;
 
-    Ok(Array2::from_shape_fn((element_count, 3), |(idx, col)| {
+    Ok(Array2::from_shape_fn((element_count, 3), |[idx, col]| {
         layout.elements()[idx].position_m[col]
     }))
 }

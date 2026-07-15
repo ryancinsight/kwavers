@@ -5,20 +5,20 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt::Debug;
 
 /// Configuration trait for time steppers
 pub trait TimeStepperConfig: Clone + Send + Sync + Debug {
     /// Get the order of accuracy
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn order(&self) -> usize;
 
     /// Get the number of stages (for multi-stage methods)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn stages(&self) -> usize;
 

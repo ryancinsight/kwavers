@@ -2,7 +2,7 @@
 name = "kwavers-gpu"
 version = "3.0.0"
 edition = "2021"
-description = "wgpu-backed compute backend for kwavers: concrete ComputeBackend / FdtdGpuAccelerator implementations and WGSL kernels"
+description = "Hephaestus-backed provider-generic GPU compute backend for kwavers"
 license = "MIT OR Apache-2.0"
 
 [lints]
@@ -11,7 +11,7 @@ workspace = true
 [dependencies]
 # Layered kwavers crates. kwavers-gpu is a leaf above solver: it implements the
 # ComputeBackend / FdtdGpuAccelerator trait surfaces that live in kwavers-solver,
-# so the wgpu/WGSL concretions never sit in the algorithm crates (DIP).
+# so concrete WGPU/WGSL or CUDA kernels never sit in the algorithm crates.
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 kwavers-grid = { path = "../kwavers-grid" }
@@ -21,45 +21,50 @@ kwavers-medium = { path = "../kwavers-medium" }
 kwavers-signal = { path = "../kwavers-signal" }
 kwavers-physics = { path = "../kwavers-physics" }
 kwavers-solver = { path = "../kwavers-solver" }
+kwavers-analysis = { path = "../kwavers-analysis", features = ["gpu"], optional = true }
 
-ndarray = { workspace = true }
+leto = { workspace = true }
 tracing = { workspace = true }
 bytemuck = { version = "1.19", features = ["derive"], optional = true }
 log = "0.4"
 
-# GPU stack — optional, pulled in by the `gpu` feature. The GPU code paths are
-# currently being repaired against wgpu v26; until that lands they are gated so
-# the default workspace build (GPU off) stays green ("gate what is not complete").
+# GPU stack - optional, pulled in by the `gpu` feature. The implemented provider
+# is WGPU because current production kernels are WGSL; CUDA belongs behind the
+# same Hephaestus provider traits when real CUDA kernels are added.
 wgpu = { version = "26.0", features = ["wgsl"], optional = true }
 pollster = { version = "0.4", optional = true }
-apollofft-wgpu = { workspace = true, optional = true }
-burn = { version = "0.19", features = ["ndarray", "autodiff", "wgpu"], optional = true }
-rayon = { version = "1.10", optional = true }
+hephaestus-core = { workspace = true, optional = true }
+hephaestus-wgpu = { workspace = true, optional = true }
+hephaestus-cuda = { workspace = true, optional = true }
+moirai-parallel = { workspace = true, optional = true }
 rand = { version = "0.8", optional = true }
 once_cell = { version = "1.19", optional = true }
 flume = { version = "0.11", optional = true }
 
 [features]
 default = []
-# Concrete wgpu backend. Enables the WGSL kernels and ComputeBackend/
-# FdtdGpuAccelerator implementations. Mirrors the prior facade `gpu` feature.
+# Provider-generic GPU backend feature. Enables the current WGPU/WGSL provider
+# and the ComputeBackend/FdtdGpuAccelerator implementations.
 gpu = [
     "dep:wgpu",
     "dep:bytemuck",
     "dep:pollster",
-    "dep:apollofft-wgpu",
-    "dep:rayon",
+    "dep:hephaestus-core",
+    "dep:hephaestus-wgpu",
+    "dep:kwavers-analysis",
+    "dep:moirai-parallel",
     "dep:rand",
     "dep:once_cell",
     "dep:flume",
-    "kwavers-core/gpu",
     "kwavers-math/gpu",
     "kwavers-solver/gpu",
 ]
-# Burn-backed GPU accelerator (PINN residual kernels). Additive on top of `gpu`.
-pinn = ["gpu", "dep:burn"]
+# Compile Kwavers' Hephaestus CUDA acquisition contract. This does not expose a
+# CUDA compute backend until the operation kernels are implemented.
+cuda-provider = ["gpu", "dep:hephaestus-cuda"]
+# Enable Hephaestus' real CUDA runtime loading for provider acquisition.
+cuda-runtime = ["cuda-provider", "hephaestus-cuda/cuda"]
 
 [dev-dependencies]
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
 approx = "0.5"
-tokio = { version = "1.42", features = ["rt-multi-thread", "macros"] }

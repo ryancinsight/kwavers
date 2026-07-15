@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Container for the primary acoustic wave fields
 #[derive(Debug, Clone)]
@@ -19,11 +19,12 @@ impl WaveFields {
     /// Create new zero-initialized wave fields with given shape
     #[must_use]
     pub fn new(shape: (usize, usize, usize)) -> Self {
+        let s = [shape.0, shape.1, shape.2];
         Self {
-            p: Array3::zeros(shape),
-            ux: Array3::zeros(shape),
-            uy: Array3::zeros(shape),
-            uz: Array3::zeros(shape),
+            p: Array3::<f64>::zeros(s),
+            ux: Array3::<f64>::zeros(s),
+            uy: Array3::<f64>::zeros(s),
+            uz: Array3::<f64>::zeros(s),
         }
     }
 

@@ -16,7 +16,7 @@ use kwavers_core::constants::fundamental::{
 };
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Scattered acoustic field from bubble cloud
@@ -38,7 +38,7 @@ impl CloudDynamics {
     pub fn calculate_scattered_field(&self, frequency: f64) -> KwaversResult<ScatteredField> {
         if self.bubbles.is_empty() {
             return Ok(ScatteredField {
-                fundamental: Array3::<f64>::zeros((64, 64, 64)),
+                fundamental: Array3::<f64>::zeros([64, 64, 64]),
                 harmonics: HashMap::new(),
                 frequency,
             });
@@ -48,7 +48,7 @@ impl CloudDynamics {
         let ny = 64;
         let nz = 64;
 
-        let mut scattered_pressure = Array3::<f64>::zeros((nx, ny, nz));
+        let mut scattered_pressure = Array3::<f64>::zeros([nx, ny, nz]);
         let harmonics = HashMap::new();
 
         let k: f64 = TWO_PI * frequency / SOUND_SPEED_WATER_SIM;
@@ -96,7 +96,9 @@ impl CloudDynamics {
         }
 
         let bubble_count = self.bubbles.len().max(1) as f64;
-        scattered_pressure.par_mapv_inplace(|x| x / bubble_count);
+        crate::parallel::for_each_indexed_mut(scattered_pressure.view_mut(), |_, x| {
+            *x /= bubble_count
+        });
 
         Ok(ScatteredField {
             fundamental: scattered_pressure,

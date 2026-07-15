@@ -2,7 +2,7 @@ use super::*;
 use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 fn detector() -> TherapyCavitationDetector {
     TherapyCavitationDetector::new(MHZ_TO_HZ, 0.0)
@@ -115,7 +115,7 @@ fn test_threshold_detection_spatial_heterogeneity() {
 fn test_spectral_detection_zero_pressure_no_cavitation() {
     let mut det = TherapyCavitationDetector::new(3.26 * MHZ_TO_HZ, 0.0);
     det.method = CavitationDetectionMethod::Spectral;
-    let p = Array3::zeros((4, 4, 4));
+    let p = Array3::zeros([4, 4, 4]);
     let cav = det.detect(&p);
     assert!(
         cav.iter().all(|&c| !c),

@@ -51,7 +51,8 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::GridSource;
-use ndarray::{Array2, Array3, Zip};
+use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
+use leto::{Array2, Array3};
 
 /// Generate the `n × n` Sylvester–Hadamard code matrix (`n` a power of two).
 ///
@@ -60,7 +61,7 @@ use ndarray::{Array2, Array3, Zip};
 /// averaged encoded gradient.
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] if `n` is zero or not a power of two.
+/// Returns [`crate::KwaversError::Validation`] if `n` is zero or not a power of two.
 pub fn hadamard_codes(n: usize) -> KwaversResult<Vec<Vec<f64>>> {
     if n == 0 || !n.is_power_of_two() {
         return Err(KwaversError::Validation(
@@ -96,7 +97,7 @@ pub fn hadamard_codes(n: usize) -> KwaversResult<Vec<Vec<f64>>> {
 /// `Σᵢ cᵢ sᵢ` and the encoded data is `Σᵢ cᵢ dᵢ`, both formed row-wise.
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] if the gather is empty, the code count
+/// Returns [`crate::KwaversError::Validation`] if the gather is empty, the code count
 /// differs from the shot count, a shot lacks a pressure source signal/mask, or
 /// the shots do not share an identical receiver mask, source mask, source-signal
 /// shape, and data shape.
@@ -134,24 +135,30 @@ pub fn encode_shots(
         if require_mask(&geometry.source)? != reference_mask {
             return Err(mismatch(index, "source mask"));
         }
-        if require_signal(&geometry.source)?.dim() != reference_signal.dim() {
+        if require_signal(&geometry.source)?.shape() != reference_signal.shape() {
             return Err(mismatch(index, "source-signal shape"));
         }
-        if data.dim() != reference_data.dim() {
+        if data.shape() != reference_data.shape() {
             return Err(mismatch(index, "data shape"));
         }
     }
 
-    let mut encoded_signal = Array2::zeros(reference_signal.dim());
-    let mut encoded_data = Array2::zeros(reference_data.dim());
+    let [signal_rows, signal_cols] = reference_signal.shape();
+    let mut encoded_signal = LetoArray2::zeros([signal_rows, signal_cols]);
+    let mut encoded_data = Array2::zeros(reference_data.shape());
     for (code, (geometry, data)) in codes.iter().zip(shots.iter()) {
         let signal = require_signal(&geometry.source)?;
-        Zip::from(&mut encoded_signal)
-            .and(signal)
-            .for_each(|out, &s| *out += code * s);
-        Zip::from(&mut encoded_data)
-            .and(data)
-            .for_each(|out, &d| *out += code * d);
+        for row in 0..signal_rows {
+            for col in 0..signal_cols {
+                encoded_signal[[row, col]] += code * signal[[row, col]];
+            }
+        }
+        let [data_rows, data_cols] = data.shape();
+        for row in 0..data_rows {
+            for col in 0..data_cols {
+                encoded_data[[row, col]] += code * data[[row, col]];
+            }
+        }
     }
 
     let source = GridSource {
@@ -171,7 +178,7 @@ pub fn encode_shots(
     ))
 }
 
-fn require_signal(source: &GridSource) -> KwaversResult<&Array2<f64>> {
+fn require_signal(source: &GridSource) -> KwaversResult<&LetoArray2<f64>> {
     source.p_signal.as_ref().ok_or_else(|| {
         KwaversError::Validation(ValidationError::ConstraintViolation {
             message: "encode_shots requires every shot to carry a pressure source signal"
@@ -180,7 +187,7 @@ fn require_signal(source: &GridSource) -> KwaversResult<&Array2<f64>> {
     })
 }
 
-fn require_mask(source: &GridSource) -> KwaversResult<&Array3<f64>> {
+fn require_mask(source: &GridSource) -> KwaversResult<&LetoArray3<f64>> {
     source.p_mask.as_ref().ok_or_else(|| {
         KwaversError::Validation(ValidationError::ConstraintViolation {
             message: "encode_shots requires every shot to carry a pressure source mask".to_owned(),
@@ -204,10 +211,10 @@ impl FwiProcessor {
     /// random ±1 schedule produces the classical stochastic encoded FWI.
     ///
     /// # Errors
-    /// - [`KwaversError::Validation`] if the gather or schedule is empty, a code
+    /// - [`crate::KwaversError::Validation`] if the gather or schedule is empty, a code
     ///   vector length differs from the shot count, or a shot fails geometry
     ///   validation.
-    /// - Propagates any [`KwaversError`] from encoding or the descent step.
+    /// - Propagates any [`crate::KwaversError`] from encoding or the descent step.
     pub fn invert_encoded(
         &self,
         shots: &[(FwiGeometry, Array2<f64>)],
@@ -273,7 +280,7 @@ mod tests {
     use crate::inverse::seismic::parameters::FwiParameters;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_source::SourceMode;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn hadamard_codes_are_orthogonal() {
@@ -281,7 +288,7 @@ mod tests {
             let codes = hadamard_codes(n).expect("power of two");
             assert_eq!(codes.len(), n);
             for (i, row) in codes.iter().enumerate() {
-                assert_eq!(row.len(), n);
+                assert_eq!((row.len()), n);
                 assert!(row.iter().all(|&v| v == 1.0 || v == -1.0));
                 // Column-orthogonality: Σ_k c_ki c_kj = n δ_ij.
                 for j in 0..n {
@@ -330,7 +337,7 @@ mod tests {
             sensor_mask[[6, iy, 4]] = true;
         }
         let geometry = FwiGeometry::new(source, sensor_mask);
-        let observed = Array2::from_elem((4, nt), observed_level);
+        let observed = Array2::from_elem([4, nt], observed_level);
         (geometry, observed)
     }
 
@@ -388,7 +395,8 @@ mod tests {
         let mut reference = Array3::<f64>::zeros(dims);
         for (geometry, observed) in &shots {
             let g = raw_gradient(&processor, &model, geometry, observed, &grid);
-            reference += &g;
+            leto_ops::zip_mut_with(&mut reference.view_mut(), &g.view(), |r, gv| *r += *gv)
+                .expect("invariant: gradient shapes match");
         }
 
         // Encoded: average over the 2×2 Hadamard set.
@@ -397,9 +405,13 @@ mod tests {
         for code in &codes {
             let (geometry, encoded_data) = encode_shots(&shots, code).expect("encode");
             let g = raw_gradient(&processor, &model, &geometry, &encoded_data, &grid);
-            encoded_avg += &g;
+            leto_ops::zip_mut_with(&mut encoded_avg.view_mut(), &g.view(), |a, gv| *a += *gv)
+                .expect("invariant: gradient shapes match");
         }
-        encoded_avg.mapv_inplace(|v| v / codes.len() as f64);
+        let ncodes = codes.len() as f64;
+        for v in encoded_avg.iter_mut() {
+            *v /= ncodes;
+        }
 
         let max_ref = reference.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));
         assert!(max_ref > 1e-18, "reference gradient must be non-trivial");

@@ -9,7 +9,7 @@
 
 use std::cmp::Ordering;
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -195,11 +195,11 @@ fn target_sensitivity(elements: &[Point2], target_points: &[Point2], spacing_m: 
 }
 
 fn mask_points(mask: &Array2<bool>, spacing_m: f64) -> Vec<Point2> {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     let center_x = 0.5 * (nx.saturating_sub(1)) as f64;
     let center_y = 0.5 * (ny.saturating_sub(1)) as f64;
     mask.indexed_iter()
-        .filter_map(|((ix, iy), active)| {
+        .filter_map(|([ix, iy], active)| {
             active.then_some(Point2 {
                 x_m: (ix as f64 - center_x) * spacing_m,
                 y_m: (iy as f64 - center_y) * spacing_m,

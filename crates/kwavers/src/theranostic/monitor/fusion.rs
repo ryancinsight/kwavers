@@ -19,7 +19,9 @@
 //! raw energy for PAM).
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
+use leto::Array2;
+
+use crate::parallel::zip_two_mut_two_refs;
 
 /// Relative trust placed in each modality when forming the union channel.
 #[derive(Clone, Copy, Debug)]
@@ -63,7 +65,7 @@ fn normalize_abs(map: &Array2<f64>) -> Array2<f64> {
     if span > 0.0 {
         map.mapv(|v| (v.abs() - lo) / span)
     } else {
-        Array2::zeros(map.raw_dim())
+        Array2::zeros(map.shape())
     }
 }
 
@@ -79,11 +81,11 @@ pub fn fuse_lesion_map(
     passive_energy: &Array2<f64>,
     weights: FusionWeights,
 ) -> KwaversResult<FusedLesion> {
-    if quantitative_dc.dim() != passive_energy.dim() {
+    if quantitative_dc.shape() != passive_energy.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "fusion maps differ: quantitative {:?} vs passive {:?}",
-            quantitative_dc.dim(),
-            passive_energy.dim()
+            quantitative_dc.shape(),
+            passive_energy.shape()
         )));
     }
     let q = normalize_abs(quantitative_dc);
@@ -95,16 +97,18 @@ pub fn fuse_lesion_map(
     // (each normalized map is already in [0, 1]).
     let w_max = wq.max(wp).max(f64::EPSILON);
 
-    let mut agreement = Array2::zeros(q.raw_dim());
-    let mut union = Array2::zeros(q.raw_dim());
-    ndarray::Zip::from(&mut agreement)
-        .and(&mut union)
-        .and(&q)
-        .and(&p)
-        .for_each(|a, u, &qv, &pv| {
+    let mut agreement = Array2::zeros(q.shape());
+    let mut union = Array2::zeros(q.shape());
+    zip_two_mut_two_refs(
+        agreement.view_mut(),
+        union.view_mut(),
+        q.view(),
+        p.view(),
+        |a, u, &qv, &pv| {
             *a = (qv * pv).sqrt();
             *u = (wq * qv).max(wp * pv) / w_max;
-        });
+        },
+    );
     Ok(FusedLesion { agreement, union })
 }
 
@@ -118,7 +122,7 @@ pub fn lesion_extent(confidence: &Array2<f64>, threshold: f64) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     fn peak_at(n: usize, i: usize, j: usize, val: f64) -> Array2<f64> {
         let mut m = Array2::zeros((n, n));
@@ -202,7 +206,7 @@ mod tests {
     #[test]
     fn hybrid_pipeline_localizes_lesion_from_both_channels() {
         use super::super::{fd, pam};
-        use ndarray::Array3;
+        use leto::Array3;
 
         let n = 12usize;
         let centre = n / 2; // 6

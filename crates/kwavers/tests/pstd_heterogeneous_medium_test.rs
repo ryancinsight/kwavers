@@ -18,7 +18,7 @@ use kwavers_solver::forward::pstd::config::{BoundaryConfig, KSpaceMethod, PSTDCo
 use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolver;
 use kwavers_source::grid_source::SourceMode;
 use kwavers_source::GridSource;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 fn build_tone_burst(nt: usize, dt: f64, f0: f64, n_cycles: usize) -> Array2<f64> {
     let mut sig = Array2::<f64>::zeros((1, nt));
@@ -60,7 +60,7 @@ fn run_pstd_two_layer(use_heterogeneous: bool) -> KwaversResult<(f64, f64)> {
     let mut src_mask = Array3::<f64>::zeros((nx, ny, nz));
     src_mask[[src_ix, ny / 2, nz / 2]] = 1.0;
 
-    let mut sen_mask = Array3::<bool>::default((nx, ny, nz));
+    let mut sen_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     sen_mask[[sen_ix, ny / 2, nz / 2]] = true;
 
     let grid = Grid::new(nx, ny, nz, dx, dx, dx)?;

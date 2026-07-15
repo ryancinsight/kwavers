@@ -16,7 +16,7 @@ use super::{velocity_var, ACOUSTIC_PRESSURE_VAR};
 use crate::forward::pstd::dg::config::DgBoundaryCondition;
 use crate::forward::pstd::dg::dg_solver::core::DGSolver;
 use crate::forward::pstd::dg::dg_solver::topology::DgTopology;
-use ndarray::Array3;
+use leto::Array3;
 
 #[derive(Debug, Clone, Copy)]
 pub(super) struct NormalState {
@@ -100,10 +100,10 @@ pub(super) fn add_axis_surface_flux(
 
         for i in 0..solver.n_nodes {
             let lifted_node = topology.node_with_axis(transverse, axis, i);
-            rhs[(elem, lifted_node, ACOUSTIC_PRESSURE_VAR)] += axis_scale
+            rhs[[elem, lifted_node, ACOUSTIC_PRESSURE_VAR]] += axis_scale
                 * (solver.lift_matrix[[i, 0]] * face_res_left.pressure
                     + solver.lift_matrix[[i, 1]] * face_res_right.pressure);
-            rhs[(elem, lifted_node, velocity_var)] += axis_scale
+            rhs[[elem, lifted_node, velocity_var]] += axis_scale
                 * (solver.lift_matrix[[i, 0]] * face_res_left.velocity_normal
                     + solver.lift_matrix[[i, 1]] * face_res_right.velocity_normal);
         }
@@ -210,8 +210,8 @@ pub(super) fn absorbing_characteristic_external_state(
 #[inline]
 fn normal_state(state: &Array3<f64>, elem: usize, node: usize, velocity_var: usize) -> NormalState {
     NormalState {
-        pressure: state[(elem, node, ACOUSTIC_PRESSURE_VAR)],
-        velocity_normal: state[(elem, node, velocity_var)],
+        pressure: state[[elem, node, ACOUSTIC_PRESSURE_VAR]],
+        velocity_normal: state[[elem, node, velocity_var]],
     }
 }
 

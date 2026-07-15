@@ -8,7 +8,7 @@
 
 use super::properties::OpticalPropertyData;
 use kwavers_grid::GridDimensions;
-use ndarray::Array3;
+use leto::Array3;
 
 /// 3D optical property map
 ///
@@ -48,7 +48,7 @@ impl OpticalPropertyMap {
     /// Create a homogeneous map with constant properties
     #[must_use]
     pub fn homogeneous(props: &OpticalPropertyData, dimensions: GridDimensions) -> Self {
-        let shape = (dimensions.nx, dimensions.ny, dimensions.nz);
+        let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
         Self {
             mu_a: Array3::from_elem(shape, props.absorption_coefficient),
             mu_s_prime: Array3::from_elem(shape, props.reduced_scattering_coefficient()),
@@ -245,7 +245,7 @@ impl OpticalPropertyMapBuilder {
     /// Create a new builder with given dimensions
     #[must_use]
     pub fn new(dimensions: GridDimensions) -> Self {
-        let shape = (dimensions.nx, dimensions.ny, dimensions.nz);
+        let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
         Self {
             dimensions,
             mu_a: Array3::zeros(shape),
@@ -355,6 +355,6 @@ mod tests {
         builder.set_background(OpticalPropertyData::soft_tissue());
 
         let map = builder.build();
-        assert_eq!(map.mu_a.shape(), &[10, 10, 10]);
+        assert_eq!(map.mu_a.shape(), [10, 10, 10]);
     }
 }

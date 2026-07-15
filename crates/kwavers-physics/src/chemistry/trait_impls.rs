@@ -5,7 +5,7 @@ use super::parameters::ChemicalUpdateParams;
 use super::reactions::ReactionType;
 use crate::traits::ChemicalModelTrait;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl ChemicalModelTrait for ChemicalModel {
     fn update_chemical(

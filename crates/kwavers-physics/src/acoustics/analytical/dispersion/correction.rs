@@ -6,7 +6,7 @@
 use super::DispersionAnalysis;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Numerical method for dispersion calculation
 #[derive(Debug, Clone, Copy)]
@@ -55,7 +55,7 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        field.par_mapv_inplace(|v| v * correction_factor);
+        crate::parallel::for_each_indexed_mut(field.view_mut(), |_, v| *v *= correction_factor);
     }
 
     /// Apply dispersion correction to a field using full 3D analysis
@@ -87,7 +87,7 @@ impl DispersionAnalysis {
             DispersionMethod::None => 1.0,
         };
 
-        field.par_mapv_inplace(|v| v * correction_factor);
+        crate::parallel::for_each_indexed_mut(field.view_mut(), |_, v| *v *= correction_factor);
     }
 }
 
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn none_method_leaves_field_unchanged() {
         let grid = unit_grid();
-        let mut field = Array3::from_elem((8, 8, 8), 2.0_f64);
+        let mut field = Array3::from_elem([8, 8, 8], 2.0_f64);
         DispersionAnalysis::apply_correction(
             &mut field,
             &grid,
@@ -127,7 +127,7 @@ mod tests {
     #[test]
     fn pstd2_correction_reduces_field_amplitude() {
         let grid = unit_grid();
-        let mut field = Array3::from_elem((8, 8, 8), 1.0_f64);
+        let mut field = Array3::from_elem([8, 8, 8], 1.0_f64);
         // 1 MHz in water at 8 PPW → correction reduces amplitude
         DispersionAnalysis::apply_correction(
             &mut field,
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn none_method_3d_leaves_field_unchanged() {
         let grid = unit_grid();
-        let mut field = Array3::from_elem((8, 8, 8), 3.0_f64);
+        let mut field = Array3::from_elem([8, 8, 8], 3.0_f64);
         DispersionAnalysis::apply_correction_3d(
             &mut field,
             &grid,

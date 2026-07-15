@@ -7,7 +7,7 @@
 //! - Cohen, Daubechies & Feauveau (1992): "Biorthogonal bases of compactly supported wavelets"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::core::WaveletTransform;
 
@@ -25,7 +25,7 @@ impl WaveletTransform {
         // Get CDF filter coefficients
         let (h_analysis, g_analysis) = Self::cdf_coefficients(p, q);
 
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
 
         // Apply 3D separable transform
         for j in 0..ny {
@@ -74,7 +74,7 @@ impl WaveletTransform {
         // Get CDF synthesis filters
         let (h_synthesis, g_synthesis) = Self::cdf_synthesis_coefficients(p, q);
 
-        let (nx, ny, nz) = coeffs.dim();
+        let [nx, ny, nz] = coeffs.shape();
 
         // Inverse transform (reverse order)
         for i in 0..nx {
@@ -208,7 +208,7 @@ impl WaveletTransform {
             // Contribution from approximation coefficients
             for (k, &h_k) in h.iter().enumerate() {
                 let idx = if i >= k { (i - k) / 2 } else { (n + i - k) / 2 } % half;
-                if (i + h.len() - k).is_multiple_of(2) {
+                if (i + (h.len()) - k).is_multiple_of(2) {
                     sum += h_k * coeffs[idx];
                 }
             }
@@ -216,7 +216,7 @@ impl WaveletTransform {
             // Contribution from detail coefficients
             for (k, &g_k) in g.iter().enumerate() {
                 let idx = if i >= k { (i - k) / 2 } else { (n + i - k) / 2 } % half;
-                if (i + g.len() - k).is_multiple_of(2) {
+                if (i + (g.len()) - k).is_multiple_of(2) {
                     sum += g_k * coeffs[half + idx];
                 }
             }

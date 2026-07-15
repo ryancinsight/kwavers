@@ -41,7 +41,7 @@ fn test_quantized_tensor_creation() {
     let result = quantizer.quantize_tensor(&data, &shape);
 
     let quantized = result.unwrap();
-    assert_eq!(quantized.len(), 4);
+    assert_eq!((quantized.len()), 4);
     assert!(quantized.scale > 0.0);
 }
 

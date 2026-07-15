@@ -5,7 +5,8 @@
 //! constructor + step loop. Initialisation is intentionally a no-op because
 //! all heavy work happens in [`super::GenericFdtdSolver::new`].
 
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
+use leto::Array3 as NdArray3;
 use std::sync::Arc;
 
 use super::GenericFdtdSolver;
@@ -16,7 +17,7 @@ use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
 
-impl Solver for GenericFdtdSolver<Array3<f64>> {
+impl Solver for GenericFdtdSolver<NdArray3<f64>> {
     fn name(&self) -> &str {
         "FDTD"
     }
@@ -48,15 +49,15 @@ impl Solver for GenericFdtdSolver<Array3<f64>> {
         Self::step_forward(self)
     }
 
-    fn pressure_field(&self) -> &Array3<f64> {
+    fn pressure_field(&self) -> &LetoArray3<f64> {
         &self.fields.p
     }
 
-    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+    fn recorded_sensor_pressure(&self) -> Option<leto::Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
 
-    fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
+    fn velocity_fields(&self) -> (&LetoArray3<f64>, &LetoArray3<f64>, &LetoArray3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }
 

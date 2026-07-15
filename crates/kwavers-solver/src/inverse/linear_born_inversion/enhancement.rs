@@ -6,7 +6,7 @@
 //! adapters supply the mask, the reference (e.g. brain reference speed,
 //! soft-tissue reference speed), and the gain.
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// 2-D high-pass image enhancement (slice analogue of [`high_pass_enhance_volume`]).
 ///
@@ -25,7 +25,7 @@ pub fn high_pass_enhance_slice(
     if gain == 0.0 {
         return reconstruction.clone();
     }
-    let (nx, ny) = reconstruction.dim();
+    let [nx, ny] = reconstruction.shape();
     let mut enhanced = reconstruction.clone();
     for ix in 0..nx {
         for iy in 0..ny {
@@ -77,7 +77,7 @@ pub fn high_pass_enhance_volume(
     if gain == 0.0 {
         return reconstruction.clone();
     }
-    let (nx, ny, nz) = reconstruction.dim();
+    let [nx, ny, nz] = reconstruction.shape();
     let mut enhanced = reconstruction.clone();
     for ix in 0..nx {
         for iy in 0..ny {
@@ -116,8 +116,8 @@ mod tests {
 
     #[test]
     fn gain_zero_passes_through_input() {
-        let reconstruction = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
-        let mask = Array3::from_elem((2, 2, 2), true);
+        let reconstruction = Array3::from_elem([2, 2, 2], SOUND_SPEED_WATER_SIM);
+        let mask = Array3::from_elem([2, 2, 2], true);
         let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 0.0, SOUND_SPEED_WATER_SIM);
         for (a, b) in enhanced.iter().zip(reconstruction.iter()) {
             assert_eq!(a, b);
@@ -126,8 +126,8 @@ mod tests {
 
     #[test]
     fn cells_outside_support_mask_are_unchanged() {
-        let reconstruction = Array3::from_elem((3, 3, 3), 1700.0);
-        let mut mask = Array3::from_elem((3, 3, 3), false);
+        let reconstruction = Array3::from_elem([3, 3, 3], 1700.0);
+        let mut mask = Array3::from_elem([3, 3, 3], false);
         mask[[1, 1, 1]] = true;
         let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 1.0, SOUND_SPEED_WATER_SIM);
         // Cell (0,0,0) is outside the mask — pass-through.
@@ -136,9 +136,9 @@ mod tests {
 
     #[test]
     fn enhanced_values_stay_in_eight_percent_band() {
-        let mut reconstruction = Array3::from_elem((3, 3, 3), SOUND_SPEED_WATER_SIM);
+        let mut reconstruction = Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM);
         reconstruction[[1, 1, 1]] = 2500.0;
-        let mask = Array3::from_elem((3, 3, 3), true);
+        let mask = Array3::from_elem([3, 3, 3], true);
         let enhanced = high_pass_enhance_volume(&reconstruction, &mask, 5.0, SOUND_SPEED_WATER_SIM);
         let lower = SOUND_SPEED_WATER_SIM * 0.92;
         let upper = SOUND_SPEED_WATER_SIM * 1.08;

@@ -2,7 +2,7 @@ use crate::acoustics::skull::HeterogeneousSkull;
 use kwavers_core::constants::fundamental::DENSITY_WATER;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::constants::C_WATER_DEFAULT;
 use super::AberrationCorrection;
@@ -18,7 +18,7 @@ fn make_test_skull(
 ) -> HeterogeneousSkull {
     let mut sound_speed = Array3::from_elem((nx, ny, nz), C_WATER_DEFAULT);
     let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER);
-    let attenuation = Array3::zeros((nx, ny, nz));
+    let attenuation = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             for k in bone_start..bone_end.min(nz) {
@@ -43,7 +43,7 @@ fn test_zero_phase_in_water() {
     let skull = make_test_skull(8, 8, 16, 0, 0, C_WATER_DEFAULT);
     let ac = AberrationCorrection::new(&grid, &skull);
     let phases = ac.compute_time_reversal_phases(500e3).unwrap();
-    for v in &phases {
+    for v in phases.iter() {
         assert!(
             v.abs() < 1e-12,
             "Phase in pure water must be zero, got {v:.3e}"

@@ -51,8 +51,8 @@ impl EdgeRuntime {
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
         match kernel.io_spec.input_dtype {
-            DataType::Float32 => Ok(input.to_vec()),
-            DataType::Float16 => Ok(input.to_vec()),
+            DataType::Float32 => Ok(input.iter().cloned().collect::<Vec<_>>()),
+            DataType::Float16 => Ok(input.iter().cloned().collect::<Vec<_>>()),
             DataType::Int8 => {
                 let scale = input.iter().map(|x| x.abs()).fold(0.0, f32::max) / 127.0;
                 Ok(input
@@ -86,8 +86,8 @@ impl EdgeRuntime {
     }
     /// Execute kernel.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn execute_kernel(
         &self,
@@ -145,23 +145,23 @@ impl EdgeRuntime {
                 })
             })?;
 
-        let input_len = input.len().min(layer.input_size);
-        let output_len = output.len().min(layer.output_size);
+        let input_len = (input.len()).min(layer.input_size);
+        let output_len = (output.len()).min(layer.output_size);
         output.truncate(output_len);
 
         let weights = weight_tensor.dequantize();
         let biases = bias_tensor.dequantize();
 
-        for out_idx in 0..output.len() {
+        for out_idx in 0..(output.len()) {
             let mut sum = 0.0f32;
             for (j, &input_val) in input.iter().enumerate().take(input_len) {
                 let weight_index = j * layer.output_size + out_idx;
-                if weight_index < weights.len() {
+                if weight_index < (weights.len()) {
                     sum += input_val * weights[weight_index];
                 }
             }
 
-            if out_idx < biases.len() {
+            if out_idx < (biases.len()) {
                 sum += biases[out_idx];
             }
 
@@ -178,7 +178,7 @@ impl EdgeRuntime {
         match self.hardware_caps.architecture {
             Architecture::ARM | Architecture::ARM64 => self.neon_dequantize(quantized_output),
             Architecture::RISCV => self.riscv_dequantize(quantized_output),
-            _ => Ok(quantized_output.to_vec()),
+            _ => Ok(quantized_output.iter().cloned().collect::<Vec<_>>()),
         }
     }
     /// Neon dequantize.
@@ -186,13 +186,13 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn neon_dequantize(&self, input: &[f32]) -> KwaversResult<Vec<f32>> {
-        Ok(input.to_vec())
+        Ok(input.iter().cloned().collect::<Vec<_>>())
     }
     /// Riscv dequantize.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn riscv_dequantize(&self, input: &[f32]) -> KwaversResult<Vec<f32>> {
-        Ok(input.to_vec())
+        Ok(input.iter().cloned().collect::<Vec<_>>())
     }
 }

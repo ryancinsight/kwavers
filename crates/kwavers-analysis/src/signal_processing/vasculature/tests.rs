@@ -9,7 +9,7 @@ use kwavers_core::constants::numerical::MHZ_TO_HZ;
 fn test_vessel_segmentation_creation() {
     let image = Array3::ones((10, 10, 10));
     let seg = VesselSegmentation::segment(&image).unwrap();
-    assert_eq!(seg.mask.dim(), (10, 10, 10));
+    assert_eq!(seg.mask.shape(), [10, 10, 10]);
 }
 
 #[test]
@@ -58,7 +58,7 @@ fn test_vessel_classification_uses_static_contrast_and_geometry() {
 fn test_frangi_response_shape_and_nonnegativity() {
     let image = Array3::ones((10, 10, 10));
     let response = compute_frangi_response(&image).unwrap();
-    assert_eq!(response.dim(), (10, 10, 10));
+    assert_eq!(response.shape(), [10, 10, 10]);
     assert!(
         response.iter().all(|&v| v >= 0.0),
         "Frangi response must be non-negative"

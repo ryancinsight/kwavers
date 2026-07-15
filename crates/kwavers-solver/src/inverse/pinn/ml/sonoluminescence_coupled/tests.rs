@@ -5,9 +5,8 @@ use crate::inverse::pinn::ml::physics::SimulationPhysicsDomain;
 #[test]
 fn test_sonoluminescence_coupled_domain_creation() {
     let config = SonoluminescenceCouplingConfig::default();
-    let domain: SonoluminescenceCoupledDomain<
-        burn::backend::Autodiff<burn::backend::NdArray<f32>>,
-    > = SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::DynamicEmission);
+    let domain: SonoluminescenceCoupledDomain<coeus_core::MoiraiBackend> =
+        SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::DynamicEmission);
 
     assert_eq!(domain.domain_name(), "sonoluminescence_coupled");
     assert!(domain.supports_coupling());
@@ -20,12 +19,11 @@ fn test_spectral_coupling_interfaces() {
         spectral_resolution: true,
         ..Default::default()
     };
-    let domain: SonoluminescenceCoupledDomain<
-        burn::backend::Autodiff<burn::backend::NdArray<f32>>,
-    > = SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::SpectralCoupling);
+    let domain: SonoluminescenceCoupledDomain<coeus_core::MoiraiBackend> =
+        SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::SpectralCoupling);
 
     let interfaces = domain.coupling_interfaces();
-    assert!(interfaces.len() >= 2);
+    assert!((interfaces.len()) >= 2);
 
     let has_em_sl = interfaces
         .iter()
@@ -42,9 +40,8 @@ fn test_coupling_efficiency_parameter() {
         coupling_efficiency: 0.005,
         ..Default::default()
     };
-    let domain: SonoluminescenceCoupledDomain<
-        burn::backend::Autodiff<burn::backend::NdArray<f32>>,
-    > = SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::DynamicEmission);
+    let domain: SonoluminescenceCoupledDomain<coeus_core::MoiraiBackend> =
+        SonoluminescenceCoupledDomain::new(config, SonoluminescenceCouplingType::DynamicEmission);
 
     let weights = domain.loss_weights();
     assert_eq!(weights.physics_weights["light_source_weight"], 0.005);

@@ -155,12 +155,23 @@ pub struct UniversalSolverMemoryStats {
 }
 
 /// Physics solution containing trained model and metadata
-#[derive(Debug)]
-pub struct PhysicsSolution<B: burn::tensor::backend::AutodiffBackend> {
-    pub model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+pub struct PhysicsSolution<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    pub model: crate::inverse::pinn::ml::PinnWave2D<B>,
     pub config: UniversalTrainingConfig,
     pub stats: UniversalSolverStats,
     pub domain_info: UniversalSolverDomainInfo,
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for PhysicsSolution<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PhysicsSolution")
+            .field("config", &self.config)
+            .field("stats", &self.stats)
+            .field("domain_info", &self.domain_info)
+            .finish_non_exhaustive()
+    }
 }
 
 /// Domain information for solution metadata

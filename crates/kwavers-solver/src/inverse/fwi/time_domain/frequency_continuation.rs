@@ -39,7 +39,7 @@ use super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::fft::apply_spectral_response_1d;
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 /// Butterworth magnitude order for the zero-phase multiscale low-pass.
 ///
@@ -58,9 +58,19 @@ const BUTTERWORTH_ORDER: i32 = 4;
 #[must_use]
 pub(super) fn lowpass_band_limit(data: &Array2<f64>, dt: f64, corner_hz: f64) -> Array2<f64> {
     let fs = 1.0 / dt;
-    let mut filtered = Array2::zeros(data.raw_dim());
-    for (row, mut out) in data.outer_iter().zip(filtered.outer_iter_mut()) {
-        let trace: Array1<f64> = row.to_owned();
+    let mut filtered = Array2::zeros(data.shape());
+    for (row, mut out) in data
+        .view()
+        .axis_iter::<1>(0)
+        .expect("invariant: axis 0 within 2-D trace matrix")
+        .zip(
+            filtered
+                .view_mut()
+                .axis_iter_mut::<1>(0)
+                .expect("invariant: axis 0 within 2-D trace matrix"),
+        )
+    {
+        let trace: Array1<f64> = row.to_contiguous();
         let response = apply_spectral_response_1d(&trace, fs, |_, freq, nyquist| {
             let f_eff = freq.min(2.0 * nyquist - freq).max(0.0);
             let ratio = (f_eff / corner_hz).powi(2 * BUTTERWORTH_ORDER);
@@ -76,7 +86,7 @@ pub(super) fn lowpass_band_limit(data: &Array2<f64>, dt: f64, corner_hz: f64) ->
 /// [`FwiProcessor::invert_multiscale`].
 ///
 /// # Errors
-/// Returns [`KwaversError::Validation`] when any condition is violated.
+/// Returns [`crate::KwaversError::Validation`] when any condition is violated.
 pub(super) fn validate_corner_schedule(corner_hz_ascending: &[f64]) -> KwaversResult<()> {
     if corner_hz_ascending.is_empty() {
         return Err(KwaversError::Validation(
@@ -130,9 +140,9 @@ impl FwiProcessor {
     /// the exact discrete adjoint of the band-limited objective.
     ///
     /// # Errors
-    /// - [`KwaversError::Validation`] if `corner_hz_ascending` is empty, contains
+    /// - [`crate::KwaversError::Validation`] if `corner_hz_ascending` is empty, contains
     ///   a non-finite or non-positive corner, or is not strictly ascending.
-    /// - Propagates any [`KwaversError`] from the underlying [`Self::invert`].
+    /// - Propagates any [`crate::KwaversError`] from the underlying [`Self::invert`].
     pub fn invert_multiscale(
         &self,
         observed_data: &Array2<f64>,
@@ -149,7 +159,7 @@ impl FwiProcessor {
             log::info!(
                 "FWI multiscale stage {} / {}: low-pass corner = {:.3} Hz",
                 stage + 1,
-                corner_hz_ascending.len(),
+                (corner_hz_ascending.len()),
                 corner
             );
             model = stage_processor.invert(observed_data, &model, geometry, grid)?;
@@ -225,16 +235,18 @@ mod tests {
         }
         let filtered = lowpass_band_limit(&bump, DT, 0.05);
         // Peak stays at the centre sample.
-        let (peak_idx, _) = filtered.row(0).iter().enumerate().fold(
-            (0usize, f64::NEG_INFINITY),
-            |(bi, bv), (i, &v)| {
+        let (peak_idx, _) = filtered
+            .index_axis::<1>(0, 0)
+            .unwrap()
+            .iter()
+            .enumerate()
+            .fold((0usize, f64::NEG_INFINITY), |(bi, bv), (i, &v)| {
                 if v > bv {
                     (i, v)
                 } else {
                     (bi, bv)
                 }
-            },
-        );
+            });
         assert_eq!(
             peak_idx,
             N / 2,

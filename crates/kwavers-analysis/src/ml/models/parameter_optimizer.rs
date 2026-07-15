@@ -3,7 +3,7 @@
 use super::{MLModel, MlModelMetadata};
 use crate::ml::inference::InferenceEngine;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Parameter optimization model
 #[derive(Debug)]
@@ -25,7 +25,7 @@ impl ParameterOptimizerModel {
     /// Create model from weights
     #[must_use]
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let (input_dim, output_dim) = weights.dim();
+        let [input_dim, output_dim] = weights.shape();
         Self {
             engine: InferenceEngine::from_weights(weights, bias, 32, false),
             metadata: MlModelMetadata {

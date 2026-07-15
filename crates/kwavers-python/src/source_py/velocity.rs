@@ -41,7 +41,7 @@ impl Source {
             unreachable!()
         };
 
-        let mut u_signal = ndarray::Array3::<f64>::zeros((3, 1, nt));
+        let mut u_signal = leto::Array3::<f64>::zeros((3, 1, nt));
         if let Some(ref sx) = ux {
             let arr = sx.as_array();
             for t in 0..nt {
@@ -87,7 +87,9 @@ impl Source {
             frequency: 0.0,
             amplitude: max_amp,
             position: None,
-            mask: Some(mask_arr),
+            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
+                mask_arr,
+            )),
             signal: None,
             source_mode,
             initial_pressure: None,
@@ -146,7 +148,7 @@ impl Source {
             )));
         }
 
-        let mut u_signal = ndarray::Array3::<f64>::zeros((3, num_sources, nt));
+        let mut u_signal = leto::Array3::<f64>::zeros((3, num_sources, nt));
         if let Some(ref sx) = ux {
             let arr = sx.as_array();
             for s in 0..num_sources {
@@ -200,7 +202,9 @@ impl Source {
             frequency: 0.0,
             amplitude: max_amp,
             position: None,
-            mask: Some(mask_arr),
+            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
+                mask_arr,
+            )),
             signal: None,
             source_mode,
             initial_pressure: None,

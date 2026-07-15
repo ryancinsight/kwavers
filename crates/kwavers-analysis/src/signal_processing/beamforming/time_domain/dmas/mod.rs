@@ -20,7 +20,7 @@
 use super::das::align_channels;
 use super::delay_reference::DelayReference;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Sign-preserving DMAS combination of one aligned, apodized aperture column.
 ///
@@ -74,7 +74,7 @@ pub fn delay_and_sum_dmas(
         weights,
         reference,
     )?;
-    let (n_elements, n_samples) = aligned.dim();
+    let [n_elements, n_samples] = aligned.shape();
 
     let mut output = Array3::<f64>::zeros((1, 1, n_samples));
     let mut column = vec![0.0_f64; n_elements];

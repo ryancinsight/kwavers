@@ -36,11 +36,9 @@ pub mod pde_residual;
 // ============================================================================
 
 /// Loss computation engine
-#[cfg(feature = "pinn")]
 pub use computation::LossComputer;
 
 /// Re-export data structures from data module
-#[cfg(feature = "pinn")]
 pub use data::{
     BoundaryData, CollocationData, ElasticBoundaryCondition, ElasticPinnLossComponents,
     InitialData, ObservationData,

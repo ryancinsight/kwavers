@@ -27,17 +27,15 @@
 use super::kspace::{spectral_mul_x, spectral_mul_y, spectral_mul_z};
 use super::split_field_step::SpectralOperators;
 use super::types::ElasticPstdMedium;
-use kwavers_math::fft::{fft_3d_array_into, ifft_3d_array_into};
+use kwavers_math::fft::{fft_3d_array_into, ifft_3d_array_into, Complex64};
 use kwavers_physics::acoustics::mechanics::elastic_wave::{
     fields::{StressFields, VelocityFields},
     spectral_fields::{SpectralStressFields, SpectralVelocityFields},
 };
-use ndarray::{Array3, Zip};
-use num_complex::Complex;
+use leto::Array3;
 
 /// Axis-specific `out ← op·κ·field_k` spectral derivative multiplier.
-type SpectralMul =
-    fn(&Array3<Complex<f64>>, &[Complex<f64>], &Array3<f64>, &mut Array3<Complex<f64>>);
+type SpectralMul = fn(&Array3<Complex64>, &[Complex64], &Array3<f64>, &mut Array3<Complex64>);
 
 /// Advance `(stress, velocity)` one leapfrog step with real-space coefficients.
 #[allow(clippy::too_many_arguments)]
@@ -191,7 +189,7 @@ fn accumulate_stress(
     stress: &mut StressFields,
     medium: &ElasticPstdMedium,
     ops: &SpectralOperators<'_>,
-    buf: &mut Array3<Complex<f64>>,
+    buf: &mut Array3<Complex64>,
     scratch_r: &mut Array3<f64>,
     dt: f64,
 ) {
@@ -291,13 +289,13 @@ pub(super) fn seed_stress_from_displacement(
     medium: &ElasticPstdMedium,
     ops: &SpectralOperators<'_>,
     spec_vel: &mut SpectralVelocityFields,
-    buf: &mut Array3<Complex<f64>>,
+    buf: &mut Array3<Complex64>,
     scratch_r: &mut Array3<f64>,
 ) {
     stress.reset();
-    spec_vel.vx.fill(Complex::new(0.0, 0.0));
-    spec_vel.vy.fill(Complex::new(0.0, 0.0));
-    spec_vel.vz.fill(Complex::new(0.0, 0.0));
+    spec_vel.vx.fill(Complex64::new(0.0, 0.0));
+    spec_vel.vy.fill(Complex64::new(0.0, 0.0));
+    spec_vel.vz.fill(Complex64::new(0.0, 0.0));
     let slot = match axis {
         0 => &mut spec_vel.vx,
         1 => &mut spec_vel.vy,
@@ -321,34 +319,36 @@ fn accumulate_normal(
     dt: f64,
     axis: NormalAxis,
 ) {
-    Zip::from(stress.txx.view_mut())
-        .and(stress.tyy.view_mut())
-        .and(stress.tzz.view_mut())
-        .and(g.view())
-        .and(medium.lame_lambda.view())
-        .and(medium.lame_mu.view())
-        .for_each(|txx, tyy, tzz, &g, &lam, &mu| {
-            let lam_dt = dt * lam * g;
-            let p2 = dt * 2.0 * mu * g;
-            *txx += lam_dt;
-            *tyy += lam_dt;
-            *tzz += lam_dt;
-            match axis {
-                NormalAxis::X => *txx += p2,
-                NormalAxis::Y => *tyy += p2,
-                NormalAxis::Z => *tzz += p2,
+    let [nx, ny, nz] = g.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let gv = g[[i, j, k]];
+                let lam = medium.lame_lambda[[i, j, k]];
+                let mu = medium.lame_mu[[i, j, k]];
+                let lam_dt = dt * lam * gv;
+                let p2 = dt * 2.0 * mu * gv;
+                stress.txx[[i, j, k]] += lam_dt;
+                stress.tyy[[i, j, k]] += lam_dt;
+                stress.tzz[[i, j, k]] += lam_dt;
+                match axis {
+                    NormalAxis::X => stress.txx[[i, j, k]] += p2,
+                    NormalAxis::Y => stress.tyy[[i, j, k]] += p2,
+                    NormalAxis::Z => stress.tzz[[i, j, k]] += p2,
+                }
             }
-        });
+        }
+    }
 }
 
 /// `τ += dt · μ(x) · ∂_β v_α` (derivative in k-space, μ in real space).
 #[allow(clippy::too_many_arguments)]
 fn shear(
     mul: SpectralMul,
-    field_k: &Array3<Complex<f64>>,
-    op: &[Complex<f64>],
+    field_k: &Array3<Complex64>,
+    op: &[Complex64],
     kappa: &Array3<f64>,
-    buf: &mut Array3<Complex<f64>>,
+    buf: &mut Array3<Complex64>,
     scratch_r: &mut Array3<f64>,
     dt: f64,
     medium: &ElasticPstdMedium,
@@ -356,20 +356,24 @@ fn shear(
 ) {
     mul(field_k, op, kappa, buf);
     ifft_3d_array_into(buf, scratch_r);
-    Zip::from(tau.view_mut())
-        .and(scratch_r.view())
-        .and(medium.lame_mu.view())
-        .for_each(|t, &g, &mu| *t += dt * mu * g);
+    let [nx, ny, nz] = tau.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                tau[[i, j, k]] += dt * medium.lame_mu[[i, j, k]] * scratch_r[[i, j, k]];
+            }
+        }
+    }
 }
 
 /// `v += (dt/ρ(x)) · ∂_β τ_{αβ}`; preserves `v` where `ρ ≤ 0`.
 #[allow(clippy::too_many_arguments)]
 fn vel(
     mul: SpectralMul,
-    field_k: &Array3<Complex<f64>>,
-    op: &[Complex<f64>],
+    field_k: &Array3<Complex64>,
+    op: &[Complex64],
     kappa: &Array3<f64>,
-    buf: &mut Array3<Complex<f64>>,
+    buf: &mut Array3<Complex64>,
     scratch_r: &mut Array3<f64>,
     dt: f64,
     medium: &ElasticPstdMedium,
@@ -377,12 +381,15 @@ fn vel(
 ) {
     mul(field_k, op, kappa, buf);
     ifft_3d_array_into(buf, scratch_r);
-    Zip::from(v.view_mut())
-        .and(scratch_r.view())
-        .and(medium.density.view())
-        .for_each(|vv, &g, &rho| {
-            if rho > 0.0 {
-                *vv += (dt / rho) * g;
+    let [nx, ny, nz] = v.shape();
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                let rho = medium.density[[i, j, k]];
+                if rho > 0.0 {
+                    v[[i, j, k]] += (dt / rho) * scratch_r[[i, j, k]];
+                }
             }
-        });
+        }
+    }
 }

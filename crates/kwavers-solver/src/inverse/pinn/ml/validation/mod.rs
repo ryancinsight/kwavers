@@ -17,11 +17,10 @@ mod tests;
 
 pub use metrics::{compute_correlation, compute_mean_relative_error, compute_validation_metrics};
 
-use crate::inverse::pinn::ml::burn_wave_equation_1d::BurnPINN1DWave;
 use crate::inverse::pinn::ml::fdtd_reference::{FDTD1DWaveSolver, FDTDConfig};
-use burn::tensor::backend::AutodiffBackend;
+use crate::inverse::pinn::ml::wave_equation_1d::PinnWave1D;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Standard validation metrics.
 #[derive(Debug, Clone)]
@@ -98,13 +97,16 @@ impl PinnValidationReport {
 ///
 /// Returns a comprehensive report including timing, metrics, and correlation.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
-pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
-    pinn: &BurnPINN1DWave<B>,
-    device: &B::Device,
+pub fn validate_pinn_vs_fdtd<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
+    pinn: &PinnWave1D<B>,
     fdtd_config: FDTDConfig,
-) -> KwaversResult<PinnValidationReport> {
+) -> KwaversResult<PinnValidationReport>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     use std::time::Instant;
 
     let fdtd_start = Instant::now();
@@ -113,29 +115,35 @@ pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
     let fdtd_time = fdtd_start.elapsed().as_secs_f64();
 
     let pinn_start = Instant::now();
-    let x_coords = Array1::linspace(
-        0.0,
-        (fdtd_config.nx - 1) as f64 * fdtd_config.dx,
-        fdtd_config.nx,
-    );
-    let t_coords = Array1::linspace(
-        0.0,
-        (fdtd_config.nt - 1) as f64 * fdtd_config.dt,
-        fdtd_config.nt,
-    );
-    let mut x = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
-    let mut t = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
+    let x_coords = Array1::from_vec(
+        [fdtd_config.nx],
+        (0..fdtd_config.nx)
+            .map(|i| i as f64 * fdtd_config.dx)
+            .collect(),
+    )
+    .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let t_coords = Array1::from_vec(
+        [fdtd_config.nt],
+        (0..fdtd_config.nt)
+            .map(|i| i as f64 * fdtd_config.dt)
+            .collect(),
+    )
+    .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let mut x_values = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
+    let mut t_values = Vec::with_capacity(fdtd_config.nx * fdtd_config.nt);
     for x_val in x_coords.iter() {
         for t_val in t_coords.iter() {
-            x.push(*x_val);
-            t.push(*t_val);
+            x_values.push(*x_val);
+            t_values.push(*t_val);
         }
     }
-    let x = Array1::from_vec(x);
-    let t = Array1::from_vec(t);
-    let pinn_prediction_flat = pinn.predict(&x, &t, device)?;
-    let pinn_prediction = ndarray::Array2::from_shape_vec(
-        (fdtd_config.nx, fdtd_config.nt),
+    let x = Array1::from_vec([x_values.len()], x_values)
+        .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let t = Array1::from_vec([t_values.len()], t_values)
+        .map_err(|err| KwaversError::InternalError(err.to_string()))?;
+    let pinn_prediction_flat = pinn.predict(&x, &t)?;
+    let pinn_prediction = leto::Array2::from_shape_vec(
+        [fdtd_config.nx, fdtd_config.nt],
         pinn_prediction_flat.iter().copied().collect(),
     )
     .map_err(|err| KwaversError::InternalError(err.to_string()))?;
@@ -144,7 +152,7 @@ pub fn validate_pinn_vs_fdtd<B: AutodiffBackend>(
     let metrics = compute_validation_metrics(&fdtd_solution, &pinn_prediction)?;
     let correlation = compute_correlation(&fdtd_solution, &pinn_prediction)?;
     let mean_relative_error = compute_mean_relative_error(&fdtd_solution, &pinn_prediction)?;
-    let num_points = fdtd_solution.len();
+    let num_points = (fdtd_solution.len());
     let speedup_factor = if pinn_time > 0.0 {
         fdtd_time / pinn_time
     } else {

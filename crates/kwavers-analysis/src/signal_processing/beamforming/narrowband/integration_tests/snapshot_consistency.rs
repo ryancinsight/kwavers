@@ -54,10 +54,10 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
             .expect("time-res snapshots");
 
     // Both should produce valid snapshots with correct sensor dimension
-    assert_eq!(snapshots_robust.nrows(), n_sensors);
-    assert_eq!(snapshots_time_res.nrows(), n_sensors);
-    assert!(snapshots_robust.ncols() > 0);
-    assert!(snapshots_time_res.ncols() > 0);
+    assert_eq!(snapshots_robust.shape()[0], n_sensors);
+    assert_eq!(snapshots_time_res.shape()[0], n_sensors);
+    assert!(snapshots_robust.shape()[1] > 0);
+    assert!(snapshots_time_res.shape()[1] > 0);
 
     // Compute sample covariance for each
     let cov_robust = compute_sample_covariance(&snapshots_robust);
@@ -66,14 +66,14 @@ fn snapshot_methods_produce_consistent_covariance_rank() {
     // Check that both are Hermitian positive semi-definite
     for i in 0..n_sensors {
         assert!(
-            cov_robust[(i, i)].im.abs() < 1e-10,
+            cov_robust[[i, i]].im.abs() < 1e-10,
             "Covariance diagonal should be real"
         );
         assert!(
-            cov_robust[(i, i)].re >= 0.0,
+            cov_robust[[i, i]].re >= 0.0,
             "Covariance diagonal should be non-negative"
         );
-        assert!(cov_time_res[(i, i)].im.abs() < 1e-10);
-        assert!(cov_time_res[(i, i)].re >= 0.0);
+        assert!(cov_time_res[[i, i]].im.abs() < 1e-10);
+        assert!(cov_time_res[[i, i]].re >= 0.0);
     }
 }

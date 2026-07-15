@@ -1,18 +1,9 @@
 use super::lr_schedule::MetaLrSchedule;
 use super::meta_optimizer::MetaOptimizer;
-use burn::tensor::{backend::AutodiffBackend, Tensor};
-
-type TestBackend = burn::backend::Autodiff<burn::backend::NdArray<f32>>;
-
-fn extract_scalar<B: AutodiffBackend>(tensor: &Tensor<B, 2>) -> f32 {
-    let data = tensor.clone().into_data();
-    let slice = data.as_slice::<f32>().expect("tensor data must be f32");
-    slice[0]
-}
 
 #[test]
 fn test_meta_optimizer_creation() {
-    let optimizer = MetaOptimizer::<TestBackend>::new(0.001, 10);
+    let optimizer = MetaOptimizer::new(0.001, 10);
     assert_eq!(optimizer.learning_rate(), 0.001);
     assert_eq!(optimizer.iteration_count(), 0);
 }
@@ -20,19 +11,19 @@ fn test_meta_optimizer_creation() {
 #[test]
 #[should_panic(expected = "Learning rate must be positive")]
 fn test_meta_optimizer_invalid_lr() {
-    let _ = MetaOptimizer::<TestBackend>::new(-0.001, 10);
+    let _ = MetaOptimizer::new(-0.001, 10);
 }
 
 #[test]
 fn test_meta_optimizer_with_momentum() {
-    let optimizer = MetaOptimizer::<TestBackend>::with_momentum(0.001, 10, 0.9);
+    let optimizer = MetaOptimizer::with_momentum(0.001, 10, 0.9);
     assert_eq!(optimizer.learning_rate(), 0.001);
     assert_eq!(optimizer._momentum, Some(0.9));
 }
 
 #[test]
 fn test_meta_optimizer_with_adam() {
-    let optimizer = MetaOptimizer::<TestBackend>::with_adam(0.001, 10, 0.9, 0.999, 1e-8);
+    let optimizer = MetaOptimizer::with_adam(0.001, 10, 0.9, 0.999, 1e-8);
     assert_eq!(optimizer.learning_rate(), 0.001);
     assert_eq!(optimizer._beta1, 0.9);
     assert_eq!(optimizer._beta2, 0.999);
@@ -41,21 +32,21 @@ fn test_meta_optimizer_with_adam() {
 
 #[test]
 fn test_set_learning_rate() {
-    let mut optimizer = MetaOptimizer::<TestBackend>::new(0.001, 10);
+    let mut optimizer = MetaOptimizer::new(0.001, 10);
     optimizer.set_learning_rate(0.0005);
     assert_eq!(optimizer.learning_rate(), 0.0005);
 }
 
 #[test]
 fn test_decay_learning_rate() {
-    let mut optimizer = MetaOptimizer::<TestBackend>::new(0.001, 10);
+    let mut optimizer = MetaOptimizer::new(0.001, 10);
     optimizer.decay_learning_rate(0.5);
     assert!((optimizer.learning_rate() - 0.0005).abs() < 1e-10);
 }
 
 #[test]
 fn test_reset_optimizer() {
-    let mut optimizer = MetaOptimizer::<TestBackend>::new(0.001, 10);
+    let mut optimizer = MetaOptimizer::new(0.001, 10);
     optimizer._iteration_count = 100;
     optimizer.reset();
     assert_eq!(optimizer.iteration_count(), 0);
@@ -105,24 +96,22 @@ fn test_lr_schedule_cosine_annealing() {
 
 #[test]
 fn test_adam_step_updates_parameters() {
-    let device = Default::default();
-    let mut optimizer = MetaOptimizer::<TestBackend>::with_adam(0.01, 1, 0.9, 0.999, 1e-8);
+    let mut optimizer = MetaOptimizer::with_adam(0.01, 1, 0.9, 0.999, 1e-8);
 
-    let mut params = vec![Tensor::<TestBackend, 2>::zeros([1, 1], &device)];
-    let grads = vec![Some(Tensor::<TestBackend, 2>::ones([1, 1], &device))];
+    let mut params = vec![vec![0.0_f32]];
+    let grads = vec![Some(vec![1.0_f32])];
 
     optimizer.step(&mut params, &grads);
-    assert!(extract_scalar(&params[0]) < 0.0);
+    assert!(params[0][0] < 0.0);
 }
 
 #[test]
 fn test_rmsprop_step_updates_parameters() {
-    let device = Default::default();
-    let mut optimizer = MetaOptimizer::<TestBackend>::with_rmsprop(0.01, 1, 0.9, 1e-8);
+    let mut optimizer = MetaOptimizer::with_rmsprop(0.01, 1, 0.9, 1e-8);
 
-    let mut params = vec![Tensor::<TestBackend, 2>::zeros([1, 1], &device)];
-    let grads = vec![Some(Tensor::<TestBackend, 2>::ones([1, 1], &device))];
+    let mut params = vec![vec![0.0_f32]];
+    let grads = vec![Some(vec![1.0_f32])];
 
     optimizer.step(&mut params, &grads);
-    assert!(extract_scalar(&params[0]) < 0.0);
+    assert!(params[0][0] < 0.0);
 }

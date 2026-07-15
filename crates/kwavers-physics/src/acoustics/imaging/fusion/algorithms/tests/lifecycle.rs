@@ -13,7 +13,7 @@ fn test_register_ultrasound() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
 
-    let data = Array3::<f64>::zeros((8, 8, 4));
+    let data = Array3::<f64>::zeros([8, 8, 4]);
     fusion.register_ultrasound(&data).unwrap();
     assert_eq!(fusion.num_registered_modalities(), 1);
     assert!(fusion.is_modality_registered("ultrasound"));

@@ -22,7 +22,7 @@ use super::super::types::FusedImageResult;
 use super::classification::classify_tissue_types;
 use super::mechanical::compute_composite_stiffness;
 use super::oxygenation::compute_oxygenation_index;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Extract comprehensive tissue properties from fused imaging data

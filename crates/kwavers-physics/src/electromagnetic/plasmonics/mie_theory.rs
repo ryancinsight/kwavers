@@ -33,9 +33,9 @@
 //! - Polyanskiy, M.N. (2024). Refractiveindex.info database of optical
 //!   constants. *Scientific Data*, 11, 94.
 
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use num_complex::Complex;
 use std::f64::consts::PI;
 
 /// Johnson-Christy gold optical constants `(wavelength_um, n, k)`.
@@ -96,7 +96,7 @@ pub struct MieTheory {
     /// Nanoparticle radius (m)
     pub radius: f64,
     /// Dielectric function of nanoparticle ε_particle(ω)
-    pub particle_dielectric: Box<dyn Fn(f64) -> num_complex::Complex<f64>>,
+    pub particle_dielectric: Box<dyn Fn(f64) -> eunomia::Complex64>,
     /// Dielectric function of surrounding medium ε_medium
     pub medium_dielectric: f64,
 }
@@ -127,14 +127,14 @@ impl MieTheory {
 
     /// Compute polarizability (α) using Mie theory
     #[must_use]
-    pub fn polarizability(&self, wavelength: f64) -> num_complex::Complex<f64> {
+    pub fn polarizability(&self, wavelength: f64) -> eunomia::Complex64 {
         let eps_particle = (self.particle_dielectric)(wavelength);
         let eps_medium = self.medium_dielectric;
 
         // Mie polarizability (quasistatic limit): α = 4π ε₀ ε_m R³ (ε - ε_m)/(ε + 2ε_m)
         let eps_ratio = eps_particle / eps_medium;
-        let numerator = eps_ratio - num_complex::Complex::new(1.0, 0.0);
-        let denominator = eps_ratio + num_complex::Complex::new(2.0, 0.0);
+        let numerator = eps_ratio - eunomia::Complex::new(1.0, 0.0);
+        let denominator = eps_ratio + eunomia::Complex::new(2.0, 0.0);
 
         let alpha_dimensionless = self.radius * self.radius * self.radius * numerator / denominator;
 
@@ -183,7 +183,7 @@ impl MieTheory {
         for wavelength in wavelengths {
             let eps_particle = (self.particle_dielectric)(wavelength);
             let denominator =
-                eps_particle + num_complex::Complex::new(2.0 * self.medium_dielectric, 0.0);
+                eps_particle + eunomia::Complex::new(2.0 * self.medium_dielectric, 0.0);
 
             if denominator.re.abs() < 0.1 {
                 // Close to resonance

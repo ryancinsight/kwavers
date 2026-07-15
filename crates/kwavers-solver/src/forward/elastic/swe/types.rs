@@ -1,4 +1,5 @@
-use ndarray::{Array1, Array3};
+use crate::workspace::inplace_ops::apply_inplace;
+use leto::{Array1, Array3};
 
 pub use kwavers_physics::acoustics::mechanics::elastic_wave::ElasticBodyForceConfig;
 
@@ -84,7 +85,7 @@ pub struct ElasticWaveConfig {
     pub sensor_mask: Option<Array3<bool>>,
     /// Optional particle-velocity source. When present, at each step
     /// `n`, the integrator's post-step velocity field is assigned at
-    /// every masked grid point with `signal[n]` for any provided
+    /// every masked grid point with `signal\[n\]` for any provided
     /// component. Phase A.3 of ADR 007.
     pub velocity_source: Option<ElasticVelocitySource>,
 }
@@ -142,14 +143,44 @@ impl ElasticWaveField {
     #[must_use]
     pub fn displacement_magnitude(&self) -> Array3<f64> {
         let mut out = self.ux.clone();
-        out.zip_mut_with(&self.uy, |o, &y| {
+        for (o, y) in out.iter_mut().zip(self.uy.iter()) {
             *o = (*o).mul_add(*o, y * y);
-        });
-        out.zip_mut_with(&self.uz, |o, &z| {
+        }
+        for (o, z) in out.iter_mut().zip(self.uz.iter()) {
             *o += z * z;
-        });
-        out.par_mapv_inplace(f64::sqrt);
+        }
+        apply_inplace(&mut out, f64::sqrt);
         out
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn displacement_magnitude_computes_component_norm() {
+        let mut field = ElasticWaveField::new(2, 1, 1);
+        field.ux[[0, 0, 0]] = 3.0;
+        field.uy[[0, 0, 0]] = 4.0;
+        field.uz[[0, 0, 0]] = 12.0;
+        field.ux[[1, 0, 0]] = 8.0;
+        field.uy[[1, 0, 0]] = 15.0;
+
+        let magnitude = field.displacement_magnitude();
+
+        let expected = Array3::from_shape_vec([2, 1, 1], vec![13.0, 17.0])
+            .expect("invariant: shape matches two scalar norms");
+        assert_eq!(magnitude, expected);
+    }
+
+    #[test]
+    fn displacement_magnitude_preserves_zero_field() {
+        let field = ElasticWaveField::new(2, 2, 2);
+
+        let magnitude = field.displacement_magnitude();
+
+        assert_eq!(magnitude, Array3::<f64>::zeros((2, 2, 2)));
     }
 }
 

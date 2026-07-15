@@ -1,7 +1,7 @@
 use super::config::{ClinicalPhotoacousticConfig, ElastographyConfig};
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TISSUE};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(feature = "gpu")]
 use kwavers_analysis::signal_processing::beamforming::three_dimensional::config::BeamformingConfig3D;
@@ -15,7 +15,7 @@ pub fn generate_realistic_rf_volume(
     center_frequency: f64,
 ) -> Array3<f64> {
     let (num_depth, num_lat, num_elev) = volume_dims;
-    let mut rf_data = Array3::zeros((num_depth, num_lat, num_elev));
+    let mut rf_data = Array3::zeros([num_depth, num_lat, num_elev]);
 
     for elev in 0..num_elev {
         for lat in 0..num_lat {
@@ -74,7 +74,7 @@ pub fn generate_realistic_pa_data(
     let mut pressure_fields = Vec::new();
 
     for &t in &time_points {
-        let mut field = Array3::from_elem((128, 128, 64), 0.0);
+        let mut field = Array3::from_elem([128, 128, 64], 0.0);
 
         // Generate realistic PA wave propagation
         for z in 0..64 {
@@ -116,16 +116,29 @@ pub fn reconstruct_pa_image(
 ) -> KwaversResult<Array3<f64>> {
     // Simple back-projection reconstruction
     // In practice, this would use proper time-reversal algorithms
-    let mut reconstructed = Array3::zeros(pressure_fields[0].dim());
+    let mut reconstructed = Array3::zeros(pressure_fields[0].shape());
 
+    let [nx, ny, nz] = reconstructed.shape();
     for field in pressure_fields {
-        reconstructed += field;
+        for x in 0..nx {
+            for y in 0..ny {
+                for z in 0..nz {
+                    reconstructed[[x, y, z]] += field[[x, y, z]];
+                }
+            }
+        }
     }
 
     // Normalize
     let max_val = reconstructed.iter().copied().fold(0.0f64, f64::max);
     if max_val > 0.0 {
-        reconstructed.par_mapv_inplace(|x| x / max_val);
+        for x in 0..nx {
+            for y in 0..ny {
+                for z in 0..nz {
+                    reconstructed[[x, y, z]] /= max_val;
+                }
+            }
+        }
     }
 
     Ok(reconstructed)
@@ -134,8 +147,12 @@ pub fn reconstruct_pa_image(
 /// Compute photoacoustic SNR
 #[must_use]
 pub fn compute_pa_snr(image: &Array3<f64>) -> f64 {
-    let mean = image.mean().unwrap_or(0.0);
-    let variance = image.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / image.len() as f64;
+    let voxel_count = image.size();
+    if voxel_count == 0 {
+        return 0.0;
+    }
+    let mean = image.iter().sum::<f64>() / voxel_count as f64;
+    let variance = image.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / voxel_count as f64;
     let std = variance.sqrt();
 
     if std > 0.0 {
@@ -150,16 +167,16 @@ pub fn compute_pa_snr(image: &Array3<f64>) -> f64 {
 pub fn generate_realistic_elastography_data(
     _config: &ElastographyConfig,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-    let dims = (128, 128, 64);
+    let dims = [128, 128, 64];
 
     // Generate realistic tissue properties
     let mut youngs_modulus = Array3::zeros(dims);
     let mut shear_modulus = Array3::zeros(dims);
     let mut shear_wave_speed = Array3::zeros(dims);
 
-    for z in 0..dims.2 {
-        for y in 0..dims.1 {
-            for x in 0..dims.0 {
+    for z in 0..dims[2] {
+        for y in 0..dims[1] {
+            for x in 0..dims[0] {
                 // Create layered tissue structure
                 let depth = z as f64 * 0.001; // depth in meters
 

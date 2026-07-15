@@ -38,7 +38,7 @@ impl Simulation {
         pml_alpha_xyz: Option<(f64, f64, f64)>,
         axisymmetric: bool,
         record_modes: &[String],
-    ) -> KwaversResult<(PSTDSolver, KwaversGrid, ndarray::Array3<bool>)> {
+    ) -> KwaversResult<(PSTDSolver, KwaversGrid, leto::Array3<bool>)> {
         use kwavers_core::error::ValidationError;
 
         let sensor_mask = Self::create_sensor_mask(grid, sensor, transducer_sensor);
@@ -82,17 +82,26 @@ impl Simulation {
                 let pz_embed = if pad_z_two_sided { p } else { 0 };
                 let p = px_embed;
 
-                let embed = |arr: ndarray::Array3<f64>| -> ndarray::Array3<f64> {
-                    let mut out = ndarray::Array3::<f64>::zeros((pnx, pny, pnz));
-                    out.slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
-                        .assign(&arr);
+                let embed = |arr: leto::Array3<f64>| -> leto::Array3<f64> {
+                    let mut out = leto::Array3::<f64>::zeros([pnx, pny, pnz]);
+                    for i in 0..nx {
+                        for j in 0..ny {
+                            for k in 0..nz {
+                                out[[i + p, j + py, k + pz_embed]] = arr[[i, j, k]];
+                            }
+                        }
+                    }
                     out
                 };
 
-                let mut padded_mask = ndarray::Array3::<bool>::from_elem((pnx, pny, pnz), false);
-                padded_mask
-                    .slice_mut(ndarray::s![p..nx + p, py..ny + py, pz_embed..nz + pz_embed])
-                    .assign(&sensor_mask);
+                let mut padded_mask = leto::Array3::<bool>::from_elem((pnx, pny, pnz), false);
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            padded_mask[[i + p, j + py, k + pz_embed]] = sensor_mask[[i, j, k]];
+                        }
+                    }
+                }
 
                 let padded_source = GridSource {
                     p0: grid_source.p0.map(&embed),

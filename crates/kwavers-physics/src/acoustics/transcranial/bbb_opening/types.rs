@@ -1,5 +1,5 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Permeability enhancement data
 #[derive(Debug, Clone)]

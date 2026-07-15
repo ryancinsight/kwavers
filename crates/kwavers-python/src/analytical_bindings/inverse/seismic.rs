@@ -2,8 +2,9 @@
 
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::imaging::seismic::{EikonalSolver, KirchhoffMigrator, Trace};
-use ndarray::{Array2, Array3};
-use numpy::{IntoPyArray, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use leto::Array3;
+use numpy::ndarray::Array2;
+use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -25,7 +26,7 @@ pub fn eikonal_traveltime_2d(
     let (rows, cols) = speed.dim();
     let grid = Grid::new(rows, cols, 1, spacing_m, spacing_m, spacing_m)
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    let speed3 = Array3::from_shape_fn((rows, cols, 1), |(row, col, _)| speed[[row, col]]);
+    let speed3 = Array3::from_shape_fn((rows, cols, 1), |[row, col, _]| speed[[row, col]]);
     let solver = EikonalSolver::from_sound_speed(&grid, &speed3)
         .map_err(|e| PyValueError::new_err(e.to_string()))?
         .with_iterations(iterations);
@@ -33,7 +34,7 @@ pub fn eikonal_traveltime_2d(
         .solve((source_row, source_col, 0))
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let travel2 = Array2::from_shape_fn((rows, cols), |(row, col)| travel3[[row, col, 0]]);
-    Ok(travel2.into_pyarray(py).unbind())
+    Ok(travel2.to_pyarray(py).unbind())
 }
 
 /// Migrate synthetic point-scatterer traces with Rust eikonal and Kirchhoff kernels.
@@ -130,7 +131,7 @@ pub fn kirchhoff_point_scatterer_image_2d(
         .migrate(&traces, &travel_tables, &travel_tables)
         .map_err(|e| PyValueError::new_err(e.to_string()))?;
     let image2 = Array2::from_shape_fn((rows, cols), |(row, col)| image3[[row, col, 0]]);
-    Ok(image2.into_pyarray(py).unbind())
+    Ok(image2.to_pyarray(py).unbind())
 }
 
 fn paired_indices(

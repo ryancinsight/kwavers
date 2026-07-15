@@ -1,11 +1,10 @@
-//! GPU-Accelerated PINN Training with Advanced Geometries
+//! PINN Geometry Training Setup with Advanced Geometries
 //!
 //! This example demonstrates training a 2D Physics-Informed Neural Network
-//! using GPU acceleration and complex geometric domains.
+//! with complex geometric domains.
 //!
 //! ## Features Demonstrated
 //!
-//! - GPU-accelerated training with Burn WGPU backend
 //! - Advanced geometry support (polygonal, parametric curves)
 //! - Memory optimization and performance monitoring
 //! - Multi-region domains with interface conditions
@@ -13,18 +12,18 @@
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::Geometry2D;
+use kwavers_solver::inverse::pinn::ml::WaveGeometry2D;
 
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
-    println!("🚀 GPU-Accelerated PINN Training with Advanced Geometries");
+    println!("🚀 PINN Geometry Training Setup with Advanced Geometries");
     println!("========================================================");
 
     let wave_speed = 343.0; // m/s (speed of sound in air)
 
     println!("📋 Configuration:");
     println!("   Wave speed: {} m/s", wave_speed);
-    println!("   Backend: WGPU (GPU acceleration)");
+    println!("   Backend: CPU PINN setup");
     println!("   Geometry: Complex polygonal domain");
     println!();
 
@@ -35,7 +34,7 @@ fn main() -> KwaversResult<()> {
     println!("   - Parametric curve for smooth features");
 
     // Create L-shaped base geometry
-    let l_shape = Geometry2D::l_shaped(0.0, 1.0, 0.0, 1.0, 0.6, 0.6);
+    let l_shape = WaveGeometry2D::l_shaped(0.0, 1.0, 0.0, 1.0, 0.6, 0.6);
 
     // Create polygonal cutout
     // For demonstration, use just the L-shaped geometry
@@ -45,10 +44,10 @@ fn main() -> KwaversResult<()> {
     println!("   ✅ Complex geometry created successfully");
     println!();
 
-    // Initialize GPU backend (using CPU backend for demonstration)
+    // Initialize the current CPU PINN path.
     println!("🎮 Initializing Backend:");
     println!("   - Using CPU backend for demonstration");
-    println!("   - Note: GPU acceleration requires 'pinn-gpu' feature");
+    println!("   - Note: GPU PINN training is pending Coeus + Hephaestus provider integration");
 
     // Demonstrate geometry capabilities
     println!("🔍 Geometry Validation:");
@@ -103,7 +102,7 @@ fn main() -> KwaversResult<()> {
     println!("   • Complex geometry support (polygonal, multi-region)");
     println!("   • Point containment algorithms");
     println!("   • Geometry sampling and bounding boxes");
-    println!("   • GPU acceleration framework (ready for 'pinn-gpu' feature)");
+    println!("   • Provider-generic GPU migration target documented");
     println!();
 
     Ok(())

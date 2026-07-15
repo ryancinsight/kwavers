@@ -1,4 +1,4 @@
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -11,7 +11,7 @@ pub fn centered_origin_2d(nx: usize, ny: usize) -> (f64, f64) {
 
 /// 4-connected boundary test for a voxel in a 2-D bool array.
 pub fn is_boundary_2d(mask: &Array2<bool>, ix: usize, iy: usize) -> bool {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     ix == 0
         || iy == 0
         || ix + 1 == nx
@@ -35,7 +35,7 @@ pub fn active_bounds_3d(mask: &Array3<bool>) -> KwaversResult<IndexBounds3> {
         z1: 0,
     };
     let mut any = false;
-    for ((ix, iy, iz), &active) in mask.indexed_iter() {
+    for ([ix, iy, iz], &active) in mask.indexed_iter() {
         if active {
             b.x0 = b.x0.min(ix);
             b.x1 = b.x1.max(ix);
@@ -55,7 +55,7 @@ pub fn active_bounds_3d(mask: &Array3<bool>) -> KwaversResult<IndexBounds3> {
 /// Returns `true` when the voxel at `(ix, iy, iz)` is active and at least one
 /// 6-connected neighbour is either outside the grid bounds or inactive.
 pub fn is_boundary_3d(mask: &Array3<bool>, ix: usize, iy: usize, iz: usize) -> bool {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     ix == 0
         || iy == 0
         || iz == 0

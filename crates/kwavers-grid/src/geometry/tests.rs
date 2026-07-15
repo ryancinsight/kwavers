@@ -67,8 +67,8 @@ fn test_sampling() {
     let interior = domain.sample_interior(100, Some(42));
     let boundary = domain.sample_boundary(100, Some(42));
 
-    assert_eq!(interior.shape(), &[100, 2]);
-    assert_eq!(boundary.shape(), &[100, 2]);
+    assert_eq!(interior.shape(), [100, 2]);
+    assert_eq!(boundary.shape(), [100, 2]);
 
     for i in 0..interior.shape()[0] {
         let point = [interior[[i, 0]], interior[[i, 1]]];

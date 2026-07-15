@@ -57,7 +57,7 @@ impl PeakPressureBackend for ReferenceFdtdCpmlBackend {
         // max-pool down to the caller-visible coarse body grid.  Max-pool
         // preserves focal-spot localization across the refinement; mean-pool
         // would smear the peak across `R²` cells and reduce the contrast.
-        let raw_peak_refined = ndarray::Array2::from_shape_fn((nx_b, ny_b), |(ix, iy)| {
+        let raw_peak_refined = leto::Array2::from_shape_fn((nx_b, ny_b), |[ix, iy]| {
             peak[linear(ix + ox, iy + oy, padded_ny)] as f64
         });
         let raw_peak_pressure =
@@ -95,15 +95,15 @@ pub(super) fn simulate_peak_pressure_with_backend<B: PeakPressureBackend>(
 /// reduction for peak-pressure visualisation (it preserves the focal-spot
 /// maximum across the `R²` refined cells per coarse cell).
 pub(super) fn downsample_max(
-    refined: &ndarray::Array2<f64>,
+    refined: &leto::Array2<f64>,
     coarse_dims: (usize, usize),
     refinement: usize,
-) -> ndarray::Array2<f64> {
+) -> leto::Array2<f64> {
     let (nx_c, ny_c) = coarse_dims;
     if refinement <= 1 {
         return refined.clone();
     }
-    ndarray::Array2::from_shape_fn((nx_c, ny_c), |(ix, iy)| {
+    leto::Array2::from_shape_fn((nx_c, ny_c), |[ix, iy]| {
         let x0 = ix * refinement;
         let y0 = iy * refinement;
         let mut best = f64::NEG_INFINITY;

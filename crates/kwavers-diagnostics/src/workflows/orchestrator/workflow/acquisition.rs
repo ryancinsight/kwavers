@@ -4,7 +4,7 @@ use super::ClinicalWorkflowOrchestrator;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(not(feature = "gpu"))]
 use super::super::super::config::QualityPreference;
@@ -15,7 +15,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::{
     compute_bmode_image, UltrasoundConfig, UltrasoundMode,
 };
 #[cfg(not(feature = "gpu"))]
-use ndarray::Array2;
+use leto::Array2;
 
 #[cfg(feature = "gpu")]
 use super::super::super::simulation::generate_realistic_rf_data;
@@ -32,7 +32,7 @@ impl ClinicalWorkflowOrchestrator {
             use kwavers_physics::acoustics::imaging::modalities::ultrasound::{
                 compute_bmode_image, UltrasoundConfig, UltrasoundMode,
             };
-            use ndarray::Array2;
+            use leto::Array2;
 
             let config = UltrasoundConfig {
                 mode: UltrasoundMode::BMode,
@@ -64,7 +64,11 @@ impl ClinicalWorkflowOrchestrator {
             };
 
             let rf_data = generate_realistic_rf_data(&beamforming_config);
-            let mut bmode_volume = Array3::zeros(beamforming_config.volume_dims);
+            let mut bmode_volume = Array3::zeros([
+                beamforming_config.volume_dims.0,
+                beamforming_config.volume_dims.1,
+                beamforming_config.volume_dims.2,
+            ]);
 
             for elev in 0..beamforming_config.volume_dims.2 {
                 let mut rf_slice = Array2::zeros((
@@ -109,7 +113,7 @@ impl ClinicalWorkflowOrchestrator {
                 config.sampling_frequency,
                 config.frequency,
             );
-            let mut bmode_volume = Array3::zeros(volume_dims);
+            let mut bmode_volume = Array3::zeros([volume_dims.0, volume_dims.1, volume_dims.2]);
 
             for elev in 0..volume_dims.2 {
                 let mut rf_slice = Array2::zeros((volume_dims.0, volume_dims.1));

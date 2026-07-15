@@ -24,19 +24,19 @@
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::burn_wave_equation_2d::{
-    BurnLossWeights2D, BurnPINN2DConfig, BurnPINN2DTrainer, BurnPINN2DWave, Geometry2D,
+use kwavers_solver::inverse::pinn::ml::wave_equation_2d::{
+    LossWeights2D, PinnConfig2D, PinnTrainer2D, PinnWave2D, WaveGeometry2D,
 };
 #[cfg(feature = "pinn")]
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 #[cfg(feature = "pinn")]
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
-use burn::backend::NdArray;
+use coeus_core::MoiraiBackend;
 
 #[cfg(feature = "pinn")]
-type Backend = burn::backend::Autodiff<NdArray<f32>>;
+type Backend = MoiraiBackend;
 
 /// Layered medium wave speed function
 /// c(x,y) = 1500 m/s (water) for y < 0.5, 3000 m/s (tissue) for y >= 0.5
@@ -80,7 +80,7 @@ fn gradient_wave_speed(_x: f32, y: f32) -> f32 {
 #[cfg(feature = "pinn")]
 fn generate_heterogeneous_training_data<F>(
     n_samples: usize,
-    geometry: &Geometry2D,
+    geometry: &WaveGeometry2D,
     wave_speed_fn: F,
 ) -> (Array1<f64>, Array1<f64>, Array1<f64>, Array2<f64>)
 where
@@ -127,7 +127,7 @@ fn generate_heterogeneous_test_grid<F>(
     nx: usize,
     ny: usize,
     nt: usize,
-    geometry: &Geometry2D,
+    geometry: &WaveGeometry2D,
     wave_speed_fn: F,
 ) -> (Array1<f64>, Array1<f64>, Array1<f64>, Vec<f32>)
 where
@@ -187,16 +187,15 @@ fn main() -> KwaversResult<()> {
     println!("   Training epochs: {}", epochs);
     println!();
 
-    // Initialize Burn backend
-    let device: <Backend as burn::tensor::backend::Backend>::Device = Default::default();
-    println!("🔥 Burn Backend: Initialized (CPU with Autodiff)");
+    // Initialize backend
+    println!("🔥 Backend: Moirai (CPU)");
     println!();
 
     // Create PINN configuration optimized for heterogeneous media
-    let pinn_config = BurnPINN2DConfig {
+    let pinn_config = PinnConfig2D {
         hidden_layers: vec![150, 150, 150, 150], // Larger network for complex media
         learning_rate: 5e-4,                     // Lower learning rate for stability
-        loss_weights: BurnLossWeights2D {
+        loss_weights: LossWeights2D {
             data: 1.0,
             pde: 2.0, // Higher PDE weight for heterogeneous physics
             boundary: 20.0,
@@ -239,17 +238,13 @@ fn main() -> KwaversResult<()> {
         println!("=====================================");
 
         // Create geometry (unit square)
-        let geometry = Geometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
+        let geometry = WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0);
         println!("📐 Geometry: Unit square [0,1] × [0,1]");
         println!("🎵 Wave speed: {}", media_name);
         println!();
 
         // Create heterogeneous PINN
-        let _pinn = BurnPINN2DWave::<Backend>::new_heterogeneous(
-            pinn_config.clone(),
-            wave_speed_fn,
-            &device,
-        )?;
+        let _pinn = PinnWave2D::<Backend>::new_heterogeneous(pinn_config.clone(), wave_speed_fn)?;
         println!("✅ Heterogeneous PINN: Created successfully");
         println!();
 
@@ -267,8 +262,7 @@ fn main() -> KwaversResult<()> {
         println!("   Test points: {}", x_test.len());
 
         // Create trainer
-        let trainer =
-            BurnPINN2DTrainer::<Backend>::new_trainer(pinn_config.clone(), geometry, &device)?;
+        let trainer = PinnTrainer2D::<Backend>::new_trainer(pinn_config.clone(), geometry)?;
         println!("✅ PINN Trainer: Created successfully");
         println!();
 
@@ -283,7 +277,6 @@ fn main() -> KwaversResult<()> {
             &u_train,
             1500.0, // Default fallback (not used in heterogeneous mode)
             &pinn_config,
-            &device,
             epochs,
         )?;
         let training_time = start_time.elapsed();
@@ -309,7 +302,7 @@ fn main() -> KwaversResult<()> {
         println!();
 
         // Make predictions
-        let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test, &device)?;
+        let predictions = trainer.pinn().predict(&x_test, &y_test, &t_test)?;
         println!("   Predictions completed");
 
         // Compute error statistics

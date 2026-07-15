@@ -19,8 +19,8 @@ use super::residual::{
     validate_ring_channel_policy_shape, BreastUstReceiverChannelPolicy,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array3};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::{Array3, SliceArg};
 
 /// Per-model finite-window scattering-increment residual.
 #[derive(Clone, Debug, PartialEq)]
@@ -88,7 +88,7 @@ pub fn scattering_increment_diagnostics(
     }
     validate_model_names(predictions_by_model)?;
     validate_observation_pair(homogeneous_baseline, observed)?;
-    let (_, transmission_count, receiver_count) = observed.dim();
+    let [_, transmission_count, receiver_count] = observed.shape();
     validate_ring_channel_policy_shape(
         transmission_count,
         receiver_count,
@@ -156,7 +156,7 @@ fn scattering_increment_model_diagnostics(
     observed: &Array3<Complex64>,
     receiver_channel_policy: BreastUstReceiverChannelPolicy,
 ) -> KwaversResult<BreastUstScatteringIncrementModelDiagnostics> {
-    let (frequency_count, transmission_count, receiver_count) = observed.dim();
+    let [frequency_count, transmission_count, receiver_count] = observed.shape();
     let mut observed_full_field_norm_sq = 0.0;
     let mut observed_increment_norm_sq = 0.0;
     let mut predicted_increment_norm_sq = 0.0;
@@ -176,11 +176,28 @@ fn scattering_increment_model_diagnostics(
 
     for frequency_index in 0..frequency_count {
         for transmit_index in 0..transmission_count {
-            let baseline_row = homogeneous_baseline.slice(s![frequency_index, transmit_index, ..]);
-            let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
+            let baseline_row = homogeneous_baseline
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
+            let observed_row = observed
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
             let prediction_row = prediction
                 .pressure
-                .slice(s![frequency_index, transmit_index, ..]);
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
             let baseline_scale = row_scale_selected(baseline_row, observed_row, |receiver| {
                 receiver_channel_policy.selects(transmit_index, receiver, transmission_count)
             })?;

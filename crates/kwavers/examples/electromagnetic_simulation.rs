@@ -25,15 +25,15 @@
 //! - Result visualization and validation
 
 #[cfg(feature = "pinn")]
-use burn::backend::{Autodiff, NdArray};
+use coeus_core::MoiraiBackend;
 #[cfg(feature = "pinn")]
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::electromagnetic::{EMProblemType, ElectromagneticDomain};
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::physics::{BoundaryPosition, PhysicsParameters};
+use kwavers_solver::inverse::pinn::ml::physics::{BoundaryPosition, PinnDomainPhysicsParameters};
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::universal_solver::Geometry2D;
+use kwavers_solver::inverse::pinn::ml::universal_solver::UniversalSolverGeometry2D;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::{
     PinnEMSource, UniversalPINNSolver, UniversalTrainingConfig,
@@ -42,14 +42,14 @@ use kwavers_solver::inverse::pinn::ml::{
 use std::collections::HashMap;
 
 #[cfg(feature = "pinn")]
-type Backend = Autodiff<NdArray<f32>>;
+type Backend = MoiraiBackend;
 
 #[cfg(feature = "pinn")]
-fn empty_physics_parameters() -> PhysicsParameters {
-    PhysicsParameters {
+fn empty_physics_parameters() -> PinnDomainPhysicsParameters {
+    PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
-        boundary_values: HashMap::new(),
-        initial_values: HashMap::new(),
+        boundary_values: HashMap::<String, Vec<f64>>::new(),
+        initial_values: HashMap::<String, Vec<f64>>::new(),
         domain_params: HashMap::new(),
     }
 }
@@ -71,7 +71,7 @@ pub fn electrostatic_capacitor_example() -> KwaversResult<()> {
     .add_pec_boundary(BoundaryPosition::Left) // Side wall
     .add_pec_boundary(BoundaryPosition::Right); // Side wall
 
-    let geometry = Geometry2D::rectangle(0.0, 0.01, 0.0, 0.01);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 0.01, 0.0, 0.01);
 
     let mut physics_params = empty_physics_parameters();
     physics_params
@@ -124,7 +124,7 @@ pub fn magnetostatic_wire_example() -> KwaversResult<()> {
         phase: 0.0,
     }); // 1MA current at center
 
-    let geometry = Geometry2D::rectangle(0.0, 0.02, 0.0, 0.02);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 0.02, 0.0, 0.02);
 
     let physics_params = empty_physics_parameters();
 
@@ -163,7 +163,7 @@ pub fn wave_propagation_example() -> KwaversResult<()> {
         vec![0.1, 0.1], // 10cm x 10cm domain
     );
 
-    let geometry = Geometry2D::rectangle(0.0, 0.1, 0.0, 0.1);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 0.1, 0.0, 0.1);
 
     let mut physics_params = empty_physics_parameters();
     physics_params
@@ -211,7 +211,7 @@ pub fn lossy_waveguide_example() -> KwaversResult<()> {
     .add_pec_boundary(BoundaryPosition::Bottom)
     .add_pec_boundary(BoundaryPosition::Left); // Port excitation
 
-    let geometry = Geometry2D::rectangle(0.0, 0.05, 0.0, 0.02);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 0.05, 0.0, 0.02);
 
     let mut physics_params = empty_physics_parameters();
     physics_params
@@ -264,7 +264,7 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
         phase: 0.0,
     }); // Primary coil
 
-    let geometry = Geometry2D::rectangle(0.0, 0.03, 0.0, 0.03);
+    let geometry = UniversalSolverGeometry2D::rectangle(0.0, 0.03, 0.0, 0.03);
 
     let mut physics_params = empty_physics_parameters();
     physics_params
@@ -298,8 +298,7 @@ pub fn quasi_static_induction_example() -> KwaversResult<()> {
 
 /// Run all electromagnetic simulation examples
 #[cfg(feature = "pinn")]
-#[tokio::main]
-async fn main() -> KwaversResult<()> {
+fn main() -> KwaversResult<()> {
     println!("Electromagnetic PINN Simulation Examples");
     println!("========================================");
 
@@ -337,28 +336,28 @@ async fn main() -> KwaversResult<()> {
 mod tests {
     use super::*;
 
-    #[tokio::test]
-    async fn test_electrostatic_example() {
+    #[test]
+    fn test_electrostatic_example() {
         // Test that the electrostatic example can be created without errors
         let result = electrostatic_capacitor_example();
         // Note: Full training might be too slow for unit tests, so we just check setup
         assert!(result.is_ok() || matches!(result, Err(_))); // Allow setup errors in test environment
     }
 
-    #[tokio::test]
-    async fn test_magnetostatic_example() {
+    #[test]
+    fn test_magnetostatic_example() {
         let result = magnetostatic_wire_example();
         assert!(result.is_ok() || matches!(result, Err(_)));
     }
 
-    #[tokio::test]
-    async fn test_wave_propagation_example() {
+    #[test]
+    fn test_wave_propagation_example() {
         let result = wave_propagation_example();
         assert!(result.is_ok() || matches!(result, Err(_)));
     }
 
-    #[tokio::test]
-    async fn test_domain_configurations() {
+    #[test]
+    fn test_domain_configurations() {
         // Test that different domain configurations can be created
         let electrostatic = ElectromagneticDomain::<Backend>::new(
             EMProblemType::Electrostatic,

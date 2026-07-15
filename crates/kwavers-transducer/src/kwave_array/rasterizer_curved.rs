@@ -27,6 +27,7 @@
 use super::math::{DISC_SAMPLE_UPSAMPLING_RATE, GOLDEN_ANGLE};
 use super::KWaveArray;
 use kwavers_core::constants::numerical::TWO_PI;
+use leto::Array3;
 
 impl KWaveArray {
     // ─── Arc ───────────────────────────────────────────────────────────────
@@ -34,7 +35,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_arc(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -71,7 +72,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_arc_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -138,7 +139,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_bowl(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -165,7 +166,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_bowl_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -238,7 +239,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_annulus(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,
@@ -273,7 +274,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_annulus_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         radius: f64,

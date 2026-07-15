@@ -25,7 +25,7 @@
 //! <https://doi.org/10.1117/1.3360308>
 
 use kwavers_source::SourceInjectionMode;
-use ndarray::Array3;
+use leto::Array3;
 use tracing::debug;
 
 /// Classify how `mask` should be injected during PSTD time-stepping.
@@ -45,7 +45,7 @@ use tracing::debug;
 /// * `mask` — Source spatial mask (active voxels have |mask| > 1e-12).
 #[must_use]
 pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
-    let shape = mask.dim();
+    let shape = mask.shape();
     let mut num_active: usize = 0;
     let mut first_i: Option<usize> = None;
     let mut first_j: Option<usize> = None;
@@ -57,7 +57,7 @@ pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
     let mut mask_min = f64::MAX;
     let mut mask_max = f64::MIN;
 
-    for ((i, j, k), &m) in mask.indexed_iter() {
+    for ([i, j, k], &m) in mask.indexed_iter() {
         if m.abs() > 1e-12 {
             num_active += 1;
             mask_sum += m;
@@ -84,9 +84,9 @@ pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
 
     // A boundary plane has all active voxels at the same index on one axis,
     // and that index is exactly 0 or N−1 for that axis.
-    let is_boundary_plane = (all_same_i && (first_i == Some(0) || first_i == Some(shape.0 - 1)))
-        || (all_same_j && (first_j == Some(0) || first_j == Some(shape.1 - 1)))
-        || (all_same_k && (first_k == Some(0) || first_k == Some(shape.2 - 1)));
+    let is_boundary_plane = (all_same_i && (first_i == Some(0) || first_i == Some(shape[0] - 1)))
+        || (all_same_j && (first_j == Some(0) || first_j == Some(shape[1] - 1)))
+        || (all_same_k && (first_k == Some(0) || first_k == Some(shape[2] - 1)));
 
     let scale = if is_boundary_plane {
         1.0 // Plane wave: each boundary point receives full amplitude
@@ -119,7 +119,7 @@ pub fn determine_injection_mode(mask: &Array3<f64>) -> SourceInjectionMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Single active voxel in the interior → normalised (scale = 1.0 / 1 = 1.0).
     /// # Panics

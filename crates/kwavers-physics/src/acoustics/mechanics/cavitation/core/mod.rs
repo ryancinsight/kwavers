@@ -24,7 +24,7 @@ mod tests {
     use kwavers_core::constants::cavitation::{SURFACE_TENSION_WATER, VAPOR_PRESSURE_WATER};
     use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
     use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_threshold_calculations() {
@@ -52,7 +52,7 @@ mod tests {
 
     #[test]
     fn test_cavitation_model_update() {
-        let mut model = CavitationModel::new((5, 5, 5));
+        let mut model = CavitationModel::new([5, 5, 5]);
         model.threshold_model = ThresholdModel::MechanicalIndex;
 
         let mut pressure = Array3::from_elem((5, 5, 5), ATMOSPHERIC_PRESSURE);

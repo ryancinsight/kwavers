@@ -2,7 +2,7 @@
 //!
 //! Data structures for defining sources on the computational grid.
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 #[derive(Clone, Copy, Debug, PartialEq, Default)]
 pub enum SourceMode {

@@ -3,10 +3,7 @@
 //! This module defines the data containers and metrics used during
 //! physics-informed neural network training.
 
-#[cfg(feature = "pinn")]
 use super::super::loss::data::*;
-#[cfg(feature = "pinn")]
-use burn::tensor::backend::AutodiffBackend;
 
 // ============================================================================
 // Training Data Container
@@ -15,9 +12,8 @@ use burn::tensor::backend::AutodiffBackend;
 /// Training data container
 ///
 /// Aggregates all data required for PINN training.
-#[cfg(feature = "pinn")]
 #[derive(Debug, Clone)]
-pub struct TrainingData<B: AutodiffBackend> {
+pub struct TrainingData<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Interior collocation points for PDE residual
     pub collocation: CollocationData<B>,
     /// Boundary condition data
@@ -106,7 +102,7 @@ impl ElasticPinnTrainingMetrics {
         if self.epoch_times.is_empty() {
             0.0
         } else {
-            self.epoch_times.iter().sum::<f64>() / self.epoch_times.len() as f64
+            self.epoch_times.iter().sum::<f64>() / (self.epoch_times.len()) as f64
         }
     }
 
@@ -116,11 +112,11 @@ impl ElasticPinnTrainingMetrics {
     /// - Loss change < tolerance for N consecutive epochs
     /// - Absolute loss < absolute tolerance
     pub fn has_converged(&self, tolerance: f64, window: usize) -> bool {
-        if self.total_loss.len() < window {
+        if (self.total_loss.len()) < window {
             return false;
         }
 
-        let recent = &self.total_loss[self.total_loss.len() - window..];
+        let recent = &self.total_loss[(self.total_loss.len()) - window..];
         let max = recent.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let min = recent.iter().copied().fold(f64::INFINITY, f64::min);
 

@@ -77,7 +77,7 @@ fn test_impedance_zero_reflector() {
 fn test_impedance_boundary_spatial_apply_matched_zeros_face() {
     // Matched impedance → R = 0 → boundary cells set to zero (perfect absorption).
     use kwavers_grid::{Grid, GridAdapter};
-    use ndarray::Array3;
+    use leto::Array3;
 
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
     let mut boundary =
@@ -104,7 +104,7 @@ fn test_impedance_boundary_spatial_apply_matched_zeros_face() {
 fn test_impedance_boundary_spatial_apply_rigid_mirrors_face() {
     // Z_target → ∞ → R = +1 → boundary cells mirror interior (rigid wall).
     use kwavers_grid::{Grid, GridAdapter};
-    use ndarray::Array3;
+    use leto::Array3;
 
     let grid = Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap();
     let mut boundary = ImpedanceBoundary::new(1e15, BoundaryDirections::all())
@@ -127,7 +127,7 @@ fn test_impedance_boundary_spatial_apply_rigid_mirrors_face() {
 fn test_impedance_boundary_spatial_respects_directions() {
     // Only x_min direction enabled → only x_min face updated.
     use kwavers_grid::{Grid, GridAdapter};
-    use ndarray::Array3;
+    use leto::Array3;
 
     let grid = Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap();
     let directions = BoundaryDirections {

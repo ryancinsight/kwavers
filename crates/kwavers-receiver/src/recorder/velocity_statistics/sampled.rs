@@ -1,6 +1,6 @@
 //! Sampled velocity statistics at discrete sensor positions.
 
-use ndarray::Array1;
+use leto::Array1;
 
 /// Velocity statistics sampled at specific sensor positions.
 ///

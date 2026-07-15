@@ -2,7 +2,7 @@
 //!
 //! Builds a Penttinen-Gaussian kernel cube (4 corners: `0.5/1.0 MHz ×
 //! 15/30 MPa`) with realistic per-frequency focal-spot scaling, runs
-//! Burn-Autodiff Adam + Helmholtz-residual training for 2000 steps,
+//! Coeus Adam + Helmholtz-residual training for 2000 steps,
 //! and dumps:
 //!
 //!   * `target/field_surrogate_demo/training_history.csv` — per-step
@@ -26,17 +26,17 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::PathBuf;
 
-use burn::backend::{Autodiff, NdArray};
-use burn::tensor::{Tensor, TensorData};
-use ndarray::Array3;
+use coeus_autograd::Var;
+use coeus_core::MoiraiBackend;
+use leto::Array3;
 
 use kwavers_physics::field_surrogate::{discover_focal_kernels, FocalKernel};
 use kwavers_solver::inverse::pinn::ml::field_surrogate::{
-    KernelCubeSampler, ParamFieldPINNConfig, ParamFieldPINNNetwork, ParamFieldPINNTrainer,
-    SamplingMode, TrainingConfig,
+    FieldSurrogateTrainingConfig, KernelCubeSampler, ParamFieldPINNConfig, ParamFieldPINNNetwork,
+    ParamFieldPINNTrainer, SamplingMode,
 };
 
-type AB = Autodiff<NdArray<f32>>;
+type AB = MoiraiBackend;
 
 fn make_penttinen_kernel(
     f0: f64,
@@ -155,8 +155,7 @@ fn main() {
         hidden_layers: vec![256, 256, 256, 256],
         ..ParamFieldPINNConfig::default()
     };
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).expect("net");
+    let net = ParamFieldPINNNetwork::<AB>::new(&cfg).expect("net");
     // Phase C-5: cosine-annealed LR over the full training window
     // (initial 2e-3 → min 1e-5) lets the network do high-LR
     // exploration in the first ~30 % of steps then progressively
@@ -184,7 +183,7 @@ fn main() {
     // test) stays in the crate; the production demo sets weight to
     // 0 so C-8c (avg 77.5 % peak, RMSE 0.12) remains the
     // best-performing path.
-    let train_cfg = TrainingConfig {
+    let train_cfg = FieldSurrogateTrainingConfig {
         learning_rate: 2.0e-3,
         helmholtz_weight: 0.05,
         helmholtz_eps_m: 5.0e-4,
@@ -210,7 +209,7 @@ fn main() {
     let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).expect("trainer");
     let mut history: Vec<(f32, f32, f32, f32)> = Vec::with_capacity(n_steps);
     for step in 0..n_steps {
-        let batch = sampler.batch::<AB>(&device, step as u64, batch_size);
+        let batch = sampler.batch::<AB>(step as u64, batch_size);
         let m = trainer.step(batch);
         history.push((m.data, m.helmholtz, m.peak_prominence, m.total));
         if step % log_every == 0 {
@@ -282,16 +281,13 @@ fn main() {
             let x_phys = xi * hx;
             target_data[i] = (-(x_phys * x_phys) / (2.0 * sx * sx)).exp();
         }
-        let inputs = Tensor::<AB, 2>::from_data(
-            TensorData::new(input_data.clone(), [n_samples, 5]),
-            &device,
+        let backend = AB::default();
+        let inputs = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n_samples, 5], &input_data, &backend),
+            false,
         );
-        let pred = trainer.network.forward(inputs);
-        let pred_data: Vec<f32> = pred
-            .into_data()
-            .convert::<f32>()
-            .into_vec()
-            .expect("pred vec");
+        let pred = trainer.network.forward(&inputs);
+        let pred_data: Vec<f32> = pred.tensor.as_slice().to_vec();
         let mut peak_pred = 0.0_f32;
         let mut peak_target = 0.0_f32;
         let mut sum_sq = 0.0_f32;

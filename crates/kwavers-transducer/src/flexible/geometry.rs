@@ -3,7 +3,7 @@
 //! This module handles the geometric representation and deformation state
 //! of flexible transducer arrays.
 
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use serde::{Deserialize, Serialize};
 
 /// Geometry state of the flexible transducer array
@@ -25,8 +25,8 @@ impl GeometryState {
     /// Create a new geometry state for a flat array
     #[must_use]
     pub fn flat_array(num_elements: usize, spacing: f64) -> Self {
-        let mut positions = Array2::zeros((num_elements, 3));
-        let mut normals = Array2::zeros((num_elements, 3));
+        let mut positions = Array2::zeros([num_elements, 3]);
+        let mut normals = Array2::zeros([num_elements, 3]);
 
         // Initialize flat array along x-axis
         for i in 0..num_elements {
@@ -44,7 +44,7 @@ impl GeometryState {
         Self {
             element_positions: positions,
             element_normals: normals,
-            position_confidence: Array1::ones(num_elements),
+            position_confidence: Array1::ones([num_elements]),
             timestamp: 0.0,
             deformation: DeformationState::default(),
         }
@@ -59,22 +59,34 @@ impl GeometryState {
     /// Calculate curvature from current positions
     #[must_use]
     pub fn calculate_curvature(&self) -> f64 {
-        if self.element_positions.nrows() < 3 {
+        if self.element_positions.shape()[0] < 3 {
             return 0.0;
         }
 
         // Simple curvature estimation using three-point formula
         let mut total_curvature = 0.0;
-        let n_elements = self.element_positions.nrows();
+        let n_elements = self.element_positions.shape()[0];
 
         for i in 1..n_elements - 1 {
-            let p1 = self.element_positions.row(i - 1);
-            let p2 = self.element_positions.row(i);
-            let p3 = self.element_positions.row(i + 1);
+            let p1 = [
+                self.element_positions[[i - 1, 0]],
+                self.element_positions[[i - 1, 1]],
+                self.element_positions[[i - 1, 2]],
+            ];
+            let p2 = [
+                self.element_positions[[i, 0]],
+                self.element_positions[[i, 1]],
+                self.element_positions[[i, 2]],
+            ];
+            let p3 = [
+                self.element_positions[[i + 1, 0]],
+                self.element_positions[[i + 1, 1]],
+                self.element_positions[[i + 1, 2]],
+            ];
 
             // Calculate vectors
-            let v1 = &p2 - &p1;
-            let v2 = &p3 - &p2;
+            let v1 = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+            let v2 = [p3[0] - p2[0], p3[1] - p2[1], p3[2] - p2[2]];
 
             // Calculate angle between vectors
             let dot_product: f64 = v1.iter().zip(v2.iter()).map(|(a, b)| a * b).sum();
@@ -94,8 +106,13 @@ impl GeometryState {
     /// Get the centroid of all element positions
     #[must_use]
     pub fn centroid(&self) -> [f64; 3] {
-        let n = self.element_positions.nrows() as f64;
-        let sum = self.element_positions.sum_axis(ndarray::Axis(0));
+        let n = self.element_positions.shape()[0] as f64;
+        let mut sum = [0.0; 3];
+        for i in 0..self.element_positions.shape()[0] {
+            sum[0] += self.element_positions[[i, 0]];
+            sum[1] += self.element_positions[[i, 1]];
+            sum[2] += self.element_positions[[i, 2]];
+        }
         [sum[0] / n, sum[1] / n, sum[2] / n]
     }
 }

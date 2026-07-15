@@ -1,7 +1,7 @@
 use super::tracker::IntensityTracker;
 use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::constants::numerical::MPA_TO_PA;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_tracker_creation() {

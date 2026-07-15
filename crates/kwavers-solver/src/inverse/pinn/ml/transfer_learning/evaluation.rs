@@ -1,16 +1,19 @@
 use super::{TestPoint, TransferLearner};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::KwaversResult;
 
-impl<B: AutodiffBackend> TransferLearner<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> TransferLearner<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Evaluate model accuracy on geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn evaluate_accuracy(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<f32> {
         let test_points = self.generate_test_points(geometry, 1000)?;
@@ -18,11 +21,10 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         let mut total_boundary_error = 0.0;
 
         for point in &test_points {
-            let device = model.device();
-            let x_arr = ndarray::Array1::from_vec(vec![point.x]);
-            let y_arr = ndarray::Array1::from_vec(vec![point.y]);
-            let t_arr = ndarray::Array1::from_vec(vec![0.0]);
-            let _prediction = model.predict(&x_arr, &y_arr, &t_arr, &device)?;
+            let x_arr = leto::Array1::from_elem([1], point.x);
+            let y_arr = leto::Array1::from_elem([1], point.y);
+            let t_arr = leto::Array1::from_elem([1], 0.0);
+            let _prediction = model.predict(&x_arr, &y_arr, &t_arr)?;
             let residual = self.compute_pde_residual(model, point.x, point.y, 0.0)?;
             total_residual += residual * residual;
         }
@@ -32,8 +34,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
             total_boundary_error += boundary_error * boundary_error;
         }
 
-        let pde_accuracy = 1.0 / (1.0 + total_residual.sqrt() / test_points.len() as f64);
-        let boundary_accuracy = 1.0 / (1.0 + total_boundary_error.sqrt() / conditions.len() as f64);
+        let pde_accuracy = 1.0 / (1.0 + total_residual.sqrt() / (test_points.len()) as f64);
+        let boundary_accuracy =
+            1.0 / (1.0 + total_boundary_error.sqrt() / (conditions.len()) as f64);
 
         let overall_accuracy = 0.7 * pde_accuracy + 0.3 * boundary_accuracy;
 
@@ -46,7 +49,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn generate_test_points(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         num_points: usize,
     ) -> KwaversResult<Vec<TestPoint>> {
         let mut points = Vec::with_capacity(num_points);
@@ -66,36 +69,35 @@ impl<B: AutodiffBackend> TransferLearner<B> {
 
     /// Compute PDE residual at a point (simplified wave equation: ∂²u/∂t² = c²∇²u)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn compute_pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         x: f64,
         y: f64,
         t: f64,
     ) -> KwaversResult<f64> {
         let eps = 1e-6;
 
-        let device = model.device();
-        let x_arr = ndarray::Array1::from_vec(vec![x]);
-        let y_arr = ndarray::Array1::from_vec(vec![y]);
-        let t_arr = ndarray::Array1::from_vec(vec![t]);
+        let x_arr = leto::Array1::from_elem([1], x);
+        let y_arr = leto::Array1::from_elem([1], y);
+        let t_arr = leto::Array1::from_elem([1], t);
 
-        let u_center = model.predict(&x_arr, &y_arr, &t_arr, &device)?;
+        let u_center = model.predict(&x_arr, &y_arr, &t_arr)?;
         let u_val = u_center[[0, 0]];
 
-        let x_plus = ndarray::Array1::from_vec(vec![x + eps]);
-        let u_x_plus = model.predict(&x_plus, &y_arr, &t_arr, &device)?[[0, 0]];
+        let x_plus = leto::Array1::from_elem([1], x + eps);
+        let u_x_plus = model.predict(&x_plus, &y_arr, &t_arr)?[[0, 0]];
 
-        let x_minus = ndarray::Array1::from_vec(vec![x - eps]);
-        let u_x_minus = model.predict(&x_minus, &y_arr, &t_arr, &device)?[[0, 0]];
+        let x_minus = leto::Array1::from_elem([1], x - eps);
+        let u_x_minus = model.predict(&x_minus, &y_arr, &t_arr)?[[0, 0]];
 
-        let y_plus = ndarray::Array1::from_vec(vec![y + eps]);
-        let u_y_plus = model.predict(&x_arr, &y_plus, &t_arr, &device)?[[0, 0]];
+        let y_plus = leto::Array1::from_elem([1], y + eps);
+        let u_y_plus = model.predict(&x_arr, &y_plus, &t_arr)?[[0, 0]];
 
-        let y_minus = ndarray::Array1::from_vec(vec![y - eps]);
-        let u_y_minus = model.predict(&x_arr, &y_minus, &t_arr, &device)?[[0, 0]];
+        let y_minus = leto::Array1::from_elem([1], y - eps);
+        let u_y_minus = model.predict(&x_arr, &y_minus, &t_arr)?[[0, 0]];
 
         let laplacian = (u_x_plus - 2.0 * u_val + u_x_minus) / (eps * eps)
             + (u_y_plus - 2.0 * u_val + u_y_minus) / (eps * eps);
@@ -111,19 +113,18 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     /// For Neumann (∂u/∂n = 0): ε_BC = (1/N) Σ |∂u_model/∂n|²
     /// For Periodic/Absorbing: Returns 0.0 (no simple pointwise residual)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn evaluate_boundary_condition(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         condition: &crate::inverse::pinn::ml::BoundaryCondition2D,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> KwaversResult<f64> {
         use crate::inverse::pinn::ml::BoundaryCondition2D;
 
         let n_bc = 100;
         let (x_min, x_max, y_min, y_max) = geometry.bounding_box();
-        let device = model.device();
         let eps = 1e-5;
 
         match condition {
@@ -141,10 +142,10 @@ impl<B: AutodiffBackend> TransferLearner<B> {
                     .collect();
 
                 for (x, y) in &boundary_points {
-                    let x_arr = ndarray::Array1::from_vec(vec![*x]);
-                    let y_arr = ndarray::Array1::from_vec(vec![*y]);
-                    let t_arr = ndarray::Array1::from_vec(vec![0.0]);
-                    let u = model.predict(&x_arr, &y_arr, &t_arr, &device)?[[0, 0]];
+                    let x_arr = leto::Array1::from_elem([1], *x);
+                    let y_arr = leto::Array1::from_elem([1], *y);
+                    let t_arr = leto::Array1::from_elem([1], 0.0);
+                    let u = model.predict(&x_arr, &y_arr, &t_arr)?[[0, 0]];
                     total_violation += u * u;
                     count += 1;
                 }
@@ -160,21 +161,21 @@ impl<B: AutodiffBackend> TransferLearner<B> {
                     let x = x_min + (x_max - x_min) * frac;
                     let y = y_min + (y_max - y_min) * frac;
 
-                    let x_arr = ndarray::Array1::from_vec(vec![x]);
-                    let y0 = ndarray::Array1::from_vec(vec![y_min]);
-                    let y_eps = ndarray::Array1::from_vec(vec![y_min + eps]);
-                    let t_arr = ndarray::Array1::from_vec(vec![0.0]);
-                    let u0 = model.predict(&x_arr, &y0, &t_arr, &device)?[[0, 0]];
-                    let u_eps = model.predict(&x_arr, &y_eps, &t_arr, &device)?[[0, 0]];
+                    let x_arr = leto::Array1::from_elem([1], x);
+                    let y0 = leto::Array1::from_elem([1], y_min);
+                    let y_eps = leto::Array1::from_elem([1], y_min + eps);
+                    let t_arr = leto::Array1::from_elem([1], 0.0);
+                    let u0 = model.predict(&x_arr, &y0, &t_arr)?[[0, 0]];
+                    let u_eps = model.predict(&x_arr, &y_eps, &t_arr)?[[0, 0]];
                     let dudn = (u_eps - u0) / eps;
                     total_violation += dudn * dudn;
                     count += 1;
 
-                    let x0 = ndarray::Array1::from_vec(vec![x_min]);
-                    let x_eps_arr = ndarray::Array1::from_vec(vec![x_min + eps]);
-                    let y_arr = ndarray::Array1::from_vec(vec![y]);
-                    let u0 = model.predict(&x0, &y_arr, &t_arr, &device)?[[0, 0]];
-                    let u_eps = model.predict(&x_eps_arr, &y_arr, &t_arr, &device)?[[0, 0]];
+                    let x0 = leto::Array1::from_elem([1], x_min);
+                    let x_eps_arr = leto::Array1::from_elem([1], x_min + eps);
+                    let y_arr = leto::Array1::from_elem([1], y);
+                    let u0 = model.predict(&x0, &y_arr, &t_arr)?[[0, 0]];
+                    let u_eps = model.predict(&x_eps_arr, &y_arr, &t_arr)?[[0, 0]];
                     let dudn = (u_eps - u0) / eps;
                     total_violation += dudn * dudn;
                     count += 1;

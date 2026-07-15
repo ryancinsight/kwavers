@@ -3,7 +3,7 @@ mod tests {
     use super::super::helpers::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::tissue_thermal::THERMAL_DIFFUSIVITY_TISSUE;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::f64::consts::PI;
 
     const CFL_NUMBER: f64 = 0.3;

@@ -4,8 +4,8 @@
 //! viscoelastic complex moduli, Voigt dispersion relation, and a synthetic
 //! 2-D MRE displacement field.
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 use std::f64::consts::PI;

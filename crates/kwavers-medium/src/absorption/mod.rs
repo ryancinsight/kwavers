@@ -48,7 +48,9 @@ pub use tissue::{
 };
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
+
+use crate::parallel::for_each_mut;
 
 /// Main absorption calculator that orchestrates different models
 #[derive(Debug)]
@@ -112,7 +114,7 @@ impl AbsorptionCalculator {
     ) -> KwaversResult<()> {
         let alpha = self.absorption_coefficient(frequency);
         let decay = (-alpha * sound_speed * dt).exp();
-        field.par_mapv_inplace(|x| x * decay);
+        for_each_mut(field, |x| *x *= decay);
         Ok(())
     }
 }

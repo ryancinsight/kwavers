@@ -1,7 +1,7 @@
 //! Hounsfield-unit skull material conversion bindings.
 
 use kwavers_physics::analytical::skull as skull_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -22,7 +22,7 @@ pub fn hu_to_sound_speed_schneider(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = skull_mod::hu_to_sound_speed_schneider(h_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Convert Hounsfield units to density using the Schneider model.
@@ -42,5 +42,5 @@ pub fn hu_to_density_schneider(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = skull_mod::hu_to_density_schneider(h_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

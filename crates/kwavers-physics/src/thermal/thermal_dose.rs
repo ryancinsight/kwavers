@@ -8,7 +8,9 @@ use kwavers_core::constants::medical::{
     THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
 };
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
-use ndarray::{Array3, Zip};
+use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// CEM43 reference temperature (°C).
 ///
@@ -35,7 +37,7 @@ impl ThermalCEM43Grid {
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            dose: Array3::zeros((nx, ny, nz)),
+            dose: Array3::zeros([nx, ny, nz]),
             nx,
             ny,
             nz,
@@ -45,27 +47,57 @@ impl ThermalCEM43Grid {
 
     /// Update thermal dose based on current temperature field
     /// dt: time step in seconds
-    pub fn update(&mut self, temperature: &Array3<f64>, dt: f64) {
-        let dt_minutes = dt / SECONDS_PER_MINUTE;
+    ///
+    /// # Errors
+    /// Returns [`KwaversError::DimensionMismatch`] when `temperature` does not
+    /// have the same shape as this dose grid.
+    pub fn update(&mut self, temperature: &Array3<f64>, dt: f64) -> KwaversResult<()> {
+        let dose_shape = self.dose.shape();
+        let temperature_shape = temperature.shape();
+        if dose_shape != temperature_shape {
+            return Err(KwaversError::DimensionMismatch(format!(
+                "thermal dose update requires temperature shape {dose_shape:?}, got {temperature_shape:?}"
+            )));
+        }
 
-        Zip::from(&mut self.dose)
-            .and(temperature)
-            .par_for_each(|dose, &temp| {
+        let dt_minutes = dt / SECONDS_PER_MINUTE;
+        let reference_temp = self.reference_temp;
+        let temperatures = temperature.as_slice().ok_or_else(|| {
+            KwaversError::InvalidInput(
+                "thermal dose update requires a dense Leto temperature field".to_string(),
+            )
+        })?;
+        let doses = self
+            .dose
+            .as_slice_mut()
+            .expect("invariant: ThermalCEM43Grid owns a dense Leto dose field");
+        const CHUNK_SIZE: usize = 1024;
+
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            doses,
+            CHUNK_SIZE,
+            |chunk_index, dose_chunk| {
+                let offset = chunk_index * CHUNK_SIZE;
                 // CEM43 formula: CEM43 = ∫ R^(T_ref − T) dt
                 // Sapareto & Dewey (1984): R = 0.5 for T ≥ 43°C, R = 0.25 for T < 43°C.
                 // Accumulates at all physiological temperatures above 0°C; the R=0.25
                 // exponent naturally suppresses dose at low temperatures (e.g., at 30°C:
                 // 0.25^(43-30) ≈ 1.5e-8 CEM43/min), so no temperature gate is required.
-                if temp > 0.0 {
-                    let r = if temp >= self.reference_temp {
-                        THERMAL_DOSE_R_ABOVE_43C
-                    } else {
-                        THERMAL_DOSE_R_BELOW_43C
-                    };
-                    let equiv_time = dt_minutes * r.powf(self.reference_temp - temp);
-                    *dose += equiv_time;
+                for (local_index, dose) in dose_chunk.iter_mut().enumerate() {
+                    let temp = temperatures[offset + local_index];
+                    if temp > 0.0 {
+                        let r = if temp >= reference_temp {
+                            THERMAL_DOSE_R_ABOVE_43C
+                        } else {
+                            THERMAL_DOSE_R_BELOW_43C
+                        };
+                        let equiv_time = dt_minutes * r.powf(reference_temp - temp);
+                        *dose += equiv_time;
+                    }
                 }
-            });
+            },
+        );
+        Ok(())
     }
 
     /// Get cumulative thermal dose
@@ -115,8 +147,8 @@ mod tests {
 
         // At 45°C with R=0.5: CEM43 = 1 min * 0.5^(43−45) = 1 * 4 = 4 minutes
         // Sapareto & Dewey (1984), Table 1.
-        let temperature = Array3::from_elem((10, 10, 10), 45.0);
-        dose_calc.update(&temperature, 60.0);
+        let temperature = Array3::from_elem([10, 10, 10], 45.0);
+        dose_calc.update(&temperature, 60.0).unwrap();
 
         let expected = 0.5_f64.powf(43.0 - 45.0); // = 4.0 CEM43 per minute × 1 min
         let actual = dose_calc.get_dose()[[5, 5, 5]];
@@ -132,8 +164,8 @@ mod tests {
         // The prior implementation (guard: temp > 37°C) blocked this range.
         // Sapareto & Dewey (1984) use R=0.25 for T < 43°C, giving non-zero accumulation.
         let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
-        let temperature = Array3::from_elem((5, 5, 5), 40.0);
-        dose_calc.update(&temperature, 60.0); // 1 minute
+        let temperature = Array3::from_elem([5, 5, 5], 40.0);
+        dose_calc.update(&temperature, 60.0).unwrap(); // 1 minute
 
         // expected = 0.25^(43 - 40) = 0.25^3 = 0.015625 CEM43
         let expected = 0.25_f64.powf(43.0 - 40.0);
@@ -155,7 +187,7 @@ mod tests {
         // Half volume at 50°C (ablative), half at 37°C (body temperature).
         // At 37°C: 0.25^(43-37) = 0.25^6 ≈ 2.44e-4 CEM43/min — negligible vs 100 CEM43.
         // At 50°C: 0.5^(43-50) = 0.5^(-7) = 128 CEM43/min × 10 min = 1280 CEM43.
-        let mut temperature = Array3::from_elem((10, 10, 10), BODY_TEMPERATURE_C);
+        let mut temperature = Array3::from_elem([10, 10, 10], BODY_TEMPERATURE_C);
         for k in 0..5 {
             for j in 0..10 {
                 for i in 0..10 {
@@ -163,7 +195,7 @@ mod tests {
                 }
             }
         }
-        dose_calc.update(&temperature, 600.0); // 10 minutes
+        dose_calc.update(&temperature, 600.0).unwrap(); // 10 minutes
 
         let fraction = dose_calc.fraction_above_threshold(100.0);
         assert!(
@@ -184,10 +216,23 @@ mod tests {
     #[test]
     fn test_dose_resets_to_zero() {
         let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
-        let temperature = Array3::from_elem((5, 5, 5), 45.0);
-        dose_calc.update(&temperature, 60.0);
+        let temperature = Array3::from_elem([5, 5, 5], 45.0);
+        dose_calc.update(&temperature, 60.0).unwrap();
         assert!(dose_calc.get_max_dose() > 0.0);
         dose_calc.reset();
         assert_eq!(dose_calc.get_max_dose(), 0.0);
+    }
+
+    #[test]
+    fn test_update_rejects_shape_mismatch() {
+        let mut dose_calc = ThermalCEM43Grid::new(5, 5, 5);
+        let temperature = Array3::from_elem([5, 4, 5], 45.0);
+
+        let error = dose_calc.update(&temperature, 60.0).unwrap_err();
+
+        assert!(
+            format!("{error}").contains("thermal dose update requires temperature shape"),
+            "unexpected error: {error}"
+        );
     }
 }

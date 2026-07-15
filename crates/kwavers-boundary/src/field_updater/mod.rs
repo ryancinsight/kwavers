@@ -25,7 +25,7 @@ pub use gradient::GradientFieldUpdater;
 use crate::traits::{BoundaryCondition, BoundaryFieldType};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Field updater that applies boundary conditions during solver steps.
 ///
@@ -78,7 +78,7 @@ impl<B: BoundaryCondition> FieldUpdater<B> {
     /// Primary method for pressure, temperature, and similar scalar fields.
     /// # Errors
     /// - Returns [`kwavers_core::error::KwaversError::Config`] if the boundary does not support this field type.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn apply_to_scalar_field(
         &mut self,

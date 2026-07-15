@@ -6,7 +6,7 @@
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayView3, ArrayViewMut3};
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 use std::fmt::Debug;
 
 /// Minimum physical density to prevent numerical instabilities (kg/m³)
@@ -159,9 +159,9 @@ mod tests {
 
     #[test]
     fn test_max_sound_speed() {
-        let mut data = Array3::zeros((2, 2, 2));
-        data[(0, 0, 0)] = SOUND_SPEED_WATER_SIM;
-        data[(1, 1, 1)] = 1600.0;
+        let mut data = Array3::zeros([2, 2, 2]);
+        data[[0, 0, 0]] = SOUND_SPEED_WATER_SIM;
+        data[[1, 1, 1]] = 1600.0;
 
         assert_eq!(max_sound_speed(&data), 1600.0);
     }

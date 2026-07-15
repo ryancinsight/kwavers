@@ -15,10 +15,10 @@
 //!   *IEEE UFFC*, 56(3), 489–506.
 
 use super::config::PlaneWaveCompoundingConfig;
+use eunomia::Complex;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
-use num_complex::Complex;
+use leto::Array2;
 
 /// Plane wave compounding processor.
 #[derive(Debug, Clone)]
@@ -116,8 +116,10 @@ impl PlaneWaveCompound {
         let mut field = Array2::zeros((self.num_axial, self.num_lateral));
         let apod = self.compute_apodization();
 
-        for (idx, elem) in field.indexed_iter_mut() {
-            let (axial_idx, lateral_idx) = idx;
+        for ([axial_idx, lateral_idx], elem) in field
+            .indexed_iter_mut()
+            .expect("plane-wave field is contiguously stored")
+        {
             let x = lateral_idx as f64 * self.config.lateral_step;
             let z = axial_idx as f64 * self.config.axial_step;
 
@@ -197,9 +199,11 @@ impl PlaneWaveCompound {
         let angle = self.angles[angle_idx];
         let mut beamformed = Array2::zeros((self.num_axial, self.num_lateral));
 
-        for (idx, elem) in beamformed.indexed_iter_mut() {
-            let (ai, li) = idx;
-            if ai >= received_field.nrows() || li >= received_field.ncols() {
+        for ([ai, li], elem) in beamformed
+            .indexed_iter_mut()
+            .expect("beamformed image is contiguously stored")
+        {
+            if ai >= received_field.shape()[0] || li >= received_field.shape()[1] {
                 continue;
             }
 
@@ -228,7 +232,7 @@ impl PlaneWaveCompound {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn compound(&mut self) -> KwaversResult<()> {
-        for elem in &mut self.compounded_image {
+        for elem in self.compounded_image.iter_mut() {
             *elem = Complex::new(0.0, 0.0);
         }
 
@@ -236,12 +240,12 @@ impl PlaneWaveCompound {
             if angle_idx >= self.angle_images.len() {
                 continue;
             }
-            for ((i, j), &value) in self.angle_images[angle_idx].indexed_iter() {
+            for ([i, j], &value) in self.angle_images[angle_idx].indexed_iter() {
                 self.compounded_image[[i, j]] += value;
             }
         }
 
-        for ((i, j), elem) in self.compounded_image.indexed_iter() {
+        for ([i, j], elem) in self.compounded_image.indexed_iter() {
             let intensity = elem.norm_sqr();
             let db = if intensity > 1e-12 {
                 10.0 * intensity.log10()

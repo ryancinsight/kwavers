@@ -7,8 +7,8 @@
 //! outside that treatment window, including skin/source boundary cells, emit no
 //! passive cavitation source even if their source-injection pressure is high.
 
-use ndarray::Array3;
-use rayon::prelude::*;
+use leto::Array3;
+use moirai_parallel::{fold_reduce_with, map_collect_index_with, Adaptive};
 
 use kwavers_physics::acoustics::analysis::calculate_mechanical_index;
 use kwavers_physics::acoustics::bubble_dynamics::{
@@ -24,22 +24,27 @@ pub(super) fn cavitation_source(
     peak_pressure: &Array3<f64>,
     config: &Nonlinear3dConfig,
 ) -> Array3<f64> {
-    let dim = peak_pressure.dim();
+    let dim = peak_pressure.shape();
     if let (Some(pressures), Some(source_mask)) = (
         peak_pressure.as_slice_memory_order(),
         volume.inversion_mask.as_slice_memory_order(),
     ) {
-        let max_pressure = pressures
-            .par_iter()
-            .zip(source_mask.par_iter())
-            .filter_map(|(&pressure, &active)| active.then_some(pressure))
-            .reduce(|| 0.0, f64::max)
-            .max(1.0);
-        let values = pressures
-            .par_iter()
-            .zip(source_mask.par_iter())
-            .map(|(&pressure, &active)| cavitation_value(active, pressure, max_pressure, config))
-            .collect::<Vec<_>>();
+        let max_pressure = fold_reduce_with::<Adaptive, f64, _, _, _>(
+            pressures.len(),
+            || 0.0,
+            |acc, i| {
+                if source_mask[i] {
+                    acc.max(pressures[i])
+                } else {
+                    acc
+                }
+            },
+            f64::max,
+        )
+        .max(1.0);
+        let values = map_collect_index_with::<Adaptive, _, _>(pressures.len(), |i| {
+            cavitation_value(source_mask[i], pressures[i], max_pressure, config)
+        });
         return Array3::from_shape_vec(dim, values)
             .expect("contiguous cavitation source length must match grid shape");
     }
@@ -282,8 +287,8 @@ mod tests {
         config.bubble_time_steps_per_period = 24;
         config.cycles = 2.0;
         let n = 5;
-        let center = (2, 2, 2);
-        let boundary = (1, 1, 1);
+        let center = [2, 2, 2];
+        let boundary = [1, 1, 1];
         let volume = treatment_window_fixture(n, center);
         let mut pressure = Array3::<f64>::zeros((n, n, n));
         pressure[boundary] = 8.0e6;
@@ -302,7 +307,7 @@ mod tests {
         );
     }
 
-    fn treatment_window_fixture(n: usize, target: (usize, usize, usize)) -> Nonlinear3dVolume {
+    fn treatment_window_fixture(n: usize, target: [usize; 3]) -> Nonlinear3dVolume {
         let shape = (n, n, n);
         let body_mask = Array3::<bool>::from_elem(shape, true);
         let mut target_mask = Array3::<bool>::from_elem(shape, false);
@@ -329,9 +334,9 @@ mod tests {
             aperture_direction: None,
             aperture_skin: None,
             focus: GridIndex {
-                x: target.0,
-                y: target.1,
-                z: target.2,
+                x: target[0],
+                y: target[1],
+                z: target[2],
             },
         }
     }

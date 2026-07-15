@@ -1,17 +1,21 @@
 use super::AdaptiveCollocationSampler;
-use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
-impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> AdaptiveCollocationSampler<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Evaluate residuals.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn evaluate_residuals(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-    ) -> KwaversResult<Tensor<B, 1>> {
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+    ) -> KwaversResult<Vec<f32>> {
         let physics_params = crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters {
             material_properties: HashMap::new(),
             boundary_values: HashMap::new(),
@@ -19,31 +23,28 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             domain_params: HashMap::new(),
         };
 
-        let x: Tensor<B, 1> = self
-            .active_points
-            .clone()
-            .slice([0..self.total_points, 0..1])
-            .flatten(0, 1);
-        let y: Tensor<B, 1> = self
-            .active_points
-            .clone()
-            .slice([0..self.total_points, 1..2])
-            .flatten(0, 1);
-        let t: Tensor<B, 1> = self
-            .active_points
-            .clone()
-            .slice([0..self.total_points, 2..3])
-            .flatten(0, 1);
+        let backend = B::default();
+        let extract_column = |col: usize| -> Var<f32, B> {
+            let values: Vec<f32> = (0..self.total_points)
+                .map(|i| self.active_points[i * 3 + col])
+                .collect();
+            Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![self.total_points, 1], &values, &backend),
+                false,
+            )
+        };
+        let x = extract_column(0);
+        let y = extract_column(1);
+        let t = extract_column(2);
 
-        let residuals = self.domain.pde_residual(
-            model,
-            &x.unsqueeze(),
-            &y.unsqueeze(),
-            &t.unsqueeze(),
-            &physics_params,
-        );
+        let residuals = self.domain.pde_residual(model, &x, &y, &t, &physics_params);
 
-        let residual_magnitude = (residuals.clone() * residuals).sum_dim(1).sqrt().squeeze();
+        let residual_magnitude: Vec<f32> = residuals
+            .tensor
+            .as_slice()
+            .iter()
+            .map(|r| r.abs())
+            .collect();
 
         Ok(residual_magnitude)
     }
@@ -51,35 +52,31 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub(super) fn update_priorities(&mut self, residuals: &Tensor<B, 1>) -> KwaversResult<()> {
-        let max_residual = residuals.clone().max().into_scalar().elem::<f32>();
-        let min_residual = residuals.clone().min().into_scalar().elem::<f32>();
+    pub(super) fn update_priorities(&mut self, residuals: &[f32]) -> KwaversResult<()> {
+        let max_residual = residuals.iter().cloned().fold(f32::MIN, f32::max);
+        let min_residual = residuals.iter().cloned().fold(f32::MAX, f32::min);
 
         if (max_residual - min_residual).abs() < 1e-10_f32 {
-            self.priorities = Tensor::ones([self.total_points], &Default::default());
+            self.priorities = vec![1.0_f32; self.total_points];
         } else {
-            let normalized_residuals =
-                (residuals.clone() - min_residual) / (max_residual - min_residual);
-
-            let residual_priority = normalized_residuals * self.strategy.residual_weight as f32;
-
-            let uncertainty_priority = Tensor::<B, 1>::from_floats(
-                [self.strategy.uncertainty_weight as f32],
-                &residuals.device(),
-            )
-            .expand([self.total_points]);
-
-            self.priorities = residual_priority + uncertainty_priority;
+            let range = max_residual - min_residual;
+            self.priorities = residuals
+                .iter()
+                .map(|&r| {
+                    let normalized = (r - min_residual) / range;
+                    normalized * self.strategy.residual_weight as f32
+                        + self.strategy.uncertainty_weight as f32
+                })
+                .collect();
         }
 
-        let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
-        let sum: f32 = priorities_data.iter().sum();
-        let max: f32 = priorities_data.iter().cloned().fold(0.0, f32::max);
+        let sum: f32 = self.priorities.iter().sum();
+        let max: f32 = self.priorities.iter().cloned().fold(0.0, f32::max);
 
-        self.stats.avg_priority = if priorities_data.is_empty() {
+        self.stats.avg_priority = if self.priorities.is_empty() {
             0.0
         } else {
-            (sum / priorities_data.len() as f32) as f64
+            (sum / (self.priorities.len()) as f32) as f64
         };
         self.stats.max_priority = max as f64;
 
@@ -90,18 +87,16 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn update_statistics(&mut self) -> KwaversResult<()> {
-        let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
-
         let mut entropy = 0.0;
         let n_bins = 10;
         let mut bins = vec![0.0; n_bins];
 
-        for &priority in &priorities_data {
+        for &priority in &self.priorities {
             let bin_idx = ((priority * n_bins as f32) as usize).min(n_bins - 1);
             bins[bin_idx] += 1.0;
         }
 
-        let total = priorities_data.len() as f32;
+        let total = (self.priorities.len()) as f32;
         for &count in &bins {
             if count > 0.0 {
                 let p = count / total;

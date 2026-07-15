@@ -20,7 +20,7 @@ use super::super::FwiProcessor;
 use crate::inverse::fwi::time_domain::l2_objective;
 use crate::inverse::reconstruction::seismic::{MisfitFunction, MisfitType};
 use crate::inverse::seismic::parameters::FwiParameters;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Carrier period in samples for the synthetic wavelet.
 const PERIOD_SAMPLES: usize = 16;

@@ -41,7 +41,7 @@ mod tests;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array2, ArrayView3};
+use leto::{Array1, Array2, ArrayView3};
 use serde::{Deserialize, Serialize};
 
 /// Point sensor configuration
@@ -238,7 +238,7 @@ impl PointSensor {
     pub fn time_history(&self, sensor_idx: usize) -> Option<Array1<f64>> {
         self.time_history
             .get(sensor_idx)
-            .map(|history| Array1::from_vec(history.clone()))
+            .and_then(|history| Array1::from_vec([history.len()], history.clone()).ok())
     }
 
     /// Get all time histories as 2D array [n_sensors × n_timesteps].
@@ -247,7 +247,7 @@ impl PointSensor {
         let n_sensors = self.locations.len();
         let n_timesteps = self.n_timesteps;
 
-        let mut histories = Array2::<f64>::zeros((n_sensors, n_timesteps));
+        let mut histories = Array2::<f64>::zeros([n_sensors, n_timesteps]);
         for (i, history) in self.time_history.iter().enumerate() {
             for (j, &value) in history.iter().enumerate() {
                 histories[[i, j]] = value;

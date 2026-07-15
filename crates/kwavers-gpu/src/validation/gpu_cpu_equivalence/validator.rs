@@ -3,7 +3,7 @@ use super::{
     WARMUP_STEPS,
 };
 use kwavers_core::error::ValidationError;
-use ndarray::{Array3, Zip};
+use leto::Array3 as LetoArray3;
 
 /// Configuration for equivalence validation
 ///
@@ -76,8 +76,8 @@ impl EquivalenceValidator {
     ///
     pub fn validate_arrays(
         &self,
-        cpu_result: &Array3<f64>,
-        gpu_result: &Array3<f64>,
+        cpu_result: &LetoArray3<f64>,
+        gpu_result: &LetoArray3<f64>,
         cpu_time_ms: f64,
         gpu_time_ms: f64,
     ) -> Result<EquivalenceReport, ValidationError> {
@@ -89,7 +89,7 @@ impl EquivalenceValidator {
             });
         }
 
-        let total_points = cpu_result.len();
+        let total_points = cpu_result.shape().iter().product();
         let mut report = EquivalenceReport::new(self.tolerance_relative, total_points);
 
         // Compute peak pressures
@@ -102,25 +102,23 @@ impl EquivalenceValidator {
         let mut divergent_count: usize = 0;
         let min_threshold = self.tolerance_absolute.max(1e-300);
 
-        Zip::from(cpu_result)
-            .and(gpu_result)
-            .for_each(|&cpu_val, &gpu_val| {
-                let abs_error = (gpu_val - cpu_val).abs();
-                max_abs_error = max_abs_error.max(abs_error);
+        for (&cpu_val, &gpu_val) in cpu_result.iter().zip(gpu_result.iter()) {
+            let abs_error = (gpu_val - cpu_val).abs();
+            max_abs_error = max_abs_error.max(abs_error);
 
-                // Relative error (only when |cpu_val| > threshold)
-                let rel_error = if cpu_val.abs() > min_threshold {
-                    abs_error / cpu_val.abs()
-                } else {
-                    abs_error / min_threshold
-                };
+            // Relative error (only when |cpu_val| > threshold)
+            let rel_error = if cpu_val.abs() > min_threshold {
+                abs_error / cpu_val.abs()
+            } else {
+                abs_error / min_threshold
+            };
 
-                max_rel_error = max_rel_error.max(rel_error);
+            max_rel_error = max_rel_error.max(rel_error);
 
-                if rel_error > self.tolerance_relative {
-                    divergent_count += 1;
-                }
-            });
+            if rel_error > self.tolerance_relative {
+                divergent_count += 1;
+            }
+        }
 
         report.max_absolute_error = max_abs_error;
         report.max_relative_error = max_rel_error;
@@ -193,9 +191,9 @@ mod tests {
     ///
     #[test]
     fn test_validate_arrays_identical() {
-        let shape = (10, 10, 10);
-        let cpu = Array3::from_elem(shape, 1.0);
-        let gpu = Array3::from_elem(shape, 1.0);
+        let shape = [10, 10, 10];
+        let cpu = LetoArray3::from_elem(shape, 1.0);
+        let gpu = LetoArray3::from_elem(shape, 1.0);
 
         let validator = EquivalenceValidator::strict();
         let report = validator
@@ -219,9 +217,9 @@ mod tests {
     ///
     #[test]
     fn test_validate_arrays_small_error() {
-        let shape = (10, 10, 10);
-        let cpu = Array3::from_elem(shape, 1.0);
-        let mut gpu = Array3::from_elem(shape, 1.0);
+        let shape = [10, 10, 10];
+        let cpu = LetoArray3::from_elem(shape, 1.0);
+        let mut gpu = LetoArray3::from_elem(shape, 1.0);
 
         // Introduce 1 ULP error at one point
         gpu[[5, 5, 5]] = 1.0 + f64::EPSILON;
@@ -248,8 +246,8 @@ mod tests {
     ///
     #[test]
     fn test_validate_arrays_dimension_mismatch() {
-        let cpu = Array3::zeros((10, 10, 10));
-        let gpu = Array3::zeros((10, 10, 11));
+        let cpu = LetoArray3::zeros([10, 10, 10]);
+        let gpu = LetoArray3::zeros([10, 10, 11]);
 
         let validator = EquivalenceValidator::default();
         let result = validator.validate_arrays(&cpu, &gpu, 1.0, 1.0);
@@ -263,9 +261,9 @@ mod tests {
     ///
     #[test]
     fn test_validate_arrays_zero_pressure() {
-        let shape = (10, 10, 10);
-        let cpu = Array3::zeros(shape);
-        let gpu = Array3::zeros(shape);
+        let shape = [10, 10, 10];
+        let cpu = LetoArray3::zeros(shape);
+        let gpu = LetoArray3::zeros(shape);
 
         let validator = EquivalenceValidator::default();
         let report = validator
@@ -283,8 +281,8 @@ mod tests {
     ///
     #[test]
     fn test_error_symmetry() {
-        let cpu = Array3::from_elem((10, 10, 10), 1.5);
-        let gpu = Array3::from_elem((10, 10, 10), 1.5);
+        let cpu = LetoArray3::from_elem([10, 10, 10], 1.5);
+        let gpu = LetoArray3::from_elem([10, 10, 10], 1.5);
 
         let validator1 = EquivalenceValidator::default();
         let report1 = validator1
@@ -310,7 +308,7 @@ mod tests {
     ///
     #[test]
     fn test_zero_error_for_identical() {
-        let array = Array3::from_elem((5, 5, 5), std::f64::consts::E);
+        let array = LetoArray3::from_elem([5, 5, 5], std::f64::consts::E);
         let validator = EquivalenceValidator::strict();
 
         let report = validator

@@ -20,7 +20,7 @@ use kwavers_math::inverse_problems::tv_denoise_chambolle;
 use kwavers_solver::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 use std::io::Write;
 
 const NX: usize = 64;
@@ -163,7 +163,9 @@ fn main() {
             .expect("forward");
         let rms = (data.iter().map(|v| v * v).sum::<f64>() / data.len() as f64).sqrt();
         let sigma = (NOISE_PCT / 100.0) * rms;
-        data.mapv_inplace(|v| v + sigma * next_noise());
+        for value in data.iter_mut() {
+            *value += sigma * next_noise();
+        }
         shots.push((geometry, data));
     }
 

@@ -37,10 +37,10 @@ fn spectral_absorbing_boundary_damps_edge_source_response() {
 fn spectral_absorbing_green_adjoint_satisfies_inner_product_identity() {
     let grid = GridSpec::new((5, 5, 5), 0.01).unwrap();
     let boundary = AbsorbingBoundary::polynomial(1, 1.5, 2).unwrap();
-    let x = (0..grid.len())
+    let x = (0..(grid.len()))
         .map(|index| Complex64::new(index as f64 * 0.125, -0.03125 * index as f64))
         .collect::<Vec<_>>();
-    let y = (0..grid.len())
+    let y = (0..(grid.len()))
         .map(|index| Complex64::new(0.25 - index as f64 * 0.0625, 0.125 * index as f64))
         .collect::<Vec<_>>();
     let gx = apply_shifted_green_spectral_with_boundary(grid, 11.0, 0.25, &x, boundary);

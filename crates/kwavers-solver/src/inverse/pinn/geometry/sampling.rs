@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_grid::geometry::{GeometricDomain, PointLocation};
 
@@ -92,9 +92,9 @@ impl CollocationSampler {
         };
 
         let bbox = self.domain.bounding_box();
-        let dim = bbox.len() / 2;
+        let dim = (bbox.len()) / 2;
 
-        let mut points = Array2::zeros((n_points, dim));
+        let mut points = Array2::zeros([n_points, dim]);
 
         for d in 0..dim {
             let mut perm: Vec<usize> = (0..n_points).collect();
@@ -112,7 +112,10 @@ impl CollocationSampler {
         let mut valid_points = Vec::new();
         let tolerance = 1e-8;
         for i in 0..n_points {
-            let point: Vec<f64> = points.row(i).iter().copied().collect();
+            let mut point = vec![0.0; dim];
+            for d in 0..dim {
+                point[d] = points[[i, d]];
+            }
             let loc = self.domain.classify_point(&point, tolerance);
             let include = (boundary && loc == PointLocation::Boundary)
                 || (!boundary && loc == PointLocation::Interior);
@@ -121,8 +124,8 @@ impl CollocationSampler {
             }
         }
 
-        let n_valid = valid_points.len().min(n_points);
-        let mut result = Array2::zeros((n_valid, dim));
+        let n_valid = (valid_points.len()).min(n_points);
+        let mut result = Array2::zeros([n_valid, dim]);
         for (i, point) in valid_points.iter().take(n_valid).enumerate() {
             for (j, &coord) in point.iter().enumerate() {
                 result[[i, j]] = coord;
@@ -138,10 +141,10 @@ impl CollocationSampler {
         }
 
         let bbox = self.domain.bounding_box();
-        let dim = bbox.len() / 2;
+        let dim = (bbox.len()) / 2;
 
         let unit_points = sobol_unit_hypercube_points(n_points, dim, self.seed);
-        let mut points = Array2::zeros((n_points, dim));
+        let mut points = Array2::zeros([n_points, dim]);
         for (i, u) in unit_points.iter().enumerate() {
             for d in 0..dim {
                 points[[i, d]] = u[d].mul_add(bbox[2 * d + 1] - bbox[2 * d], bbox[2 * d]);
@@ -188,7 +191,7 @@ pub(super) fn sobol_unit_hypercube_points(
         }
     }
 
-    debug_assert_eq!(result.len(), n_points);
+    debug_assert_eq!((result.len()), n_points);
     result
 }
 
@@ -214,7 +217,7 @@ fn sobol_direction_numbers(dim: usize) -> Vec<[u32; 32]> {
 
 fn sobol_direction_numbers_from_params(s: usize, a: u32, m: &[u32]) -> [u32; 32] {
     const MAX_BITS: usize = 32;
-    assert_eq!(m.len(), s);
+    assert_eq!((m.len()), s);
     assert!((1..MAX_BITS).contains(&s));
 
     let mut v = [0u32; MAX_BITS];

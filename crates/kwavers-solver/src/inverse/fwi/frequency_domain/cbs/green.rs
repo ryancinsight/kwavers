@@ -3,9 +3,9 @@
 use super::absorbing::AbsorbingBoundary;
 use super::grid::GridSpec;
 use super::temporal::PstdTemporalBinConfig;
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_transducer::transducers::ElementPosition;
-use num_complex::Complex64;
 
 pub(super) fn shifted_wavenumber(reference_wavenumber: f64, epsilon: f64) -> Complex64 {
     Complex64::new(reference_wavenumber * reference_wavenumber, epsilon).sqrt()
@@ -162,7 +162,7 @@ pub enum GreenOperatorKind {
     },
     /// Pseudospectral inverse using the PSTD leapfrog/k-space modal symbol.
     SpectralPstdPeriodic {
-        /// PSTD time step [s] used by the acquisition generator.
+        /// PSTD time step \[s\] used by the acquisition generator.
         time_step_s: f64,
         /// Reference homogeneous sound speed [m/s].
         reference_sound_speed_m_s: f64,

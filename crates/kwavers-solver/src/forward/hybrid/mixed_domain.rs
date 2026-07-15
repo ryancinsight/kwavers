@@ -5,10 +5,12 @@ use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
+use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
-use num_complex::Complex64;
+use leto::Array3 as LetoArray3;
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Mixed-Domain Propagation Plugin
 /// Combines time-domain and frequency-domain methods for optimal performance
@@ -44,7 +46,7 @@ impl MixedDomainPropagationPlugin {
     /// Propagate field using optimal domain selection
     /// Based on Huijssen & Verweij (2010): "An iterative method for the computation"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate(
         &mut self,
@@ -95,8 +97,14 @@ impl MixedDomainPropagationPlugin {
     #[must_use]
     pub fn analyze_field(&self, field: &Array3<f64>) -> DomainSelection {
         // Calculate field statistics for domain selection
-        let mean = field.mean().unwrap_or(0.0);
-        let variance = field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / field.len() as f64;
+        let n = field.len();
+        let mean = if n == 0 {
+            0.0
+        } else {
+            field.iter().sum::<f64>() / n as f64
+        };
+        let variance =
+            field.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / (field.len()) as f64;
 
         // Estimate nonlinearity strength from field variance
         let nonlinearity_metric = variance.sqrt() / (mean.abs() + 1e-10);
@@ -115,12 +123,17 @@ impl MixedDomainPropagationPlugin {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn to_frequency_domain(&mut self, field: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
-        let (nx, ny, nz) = field.dim();
+    pub fn to_frequency_domain(
+        &mut self,
+        field: &Array3<f64>,
+    ) -> KwaversResult<LetoArray3<Complex64>> {
+        let [nx, ny, nz] = field.shape();
         let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
 
-        let mut out = Array3::<Complex64>::zeros((nx, ny, nz));
-        fft.forward_into(field, &mut out);
+        let field_leto = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+            .expect("mixed-domain field shape must match its Leto FFT shape");
+        let mut out = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+        fft.forward_into(&field_leto, &mut out);
         Ok(out)
     }
 
@@ -128,13 +141,14 @@ impl MixedDomainPropagationPlugin {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn to_time_domain(&mut self, field: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
+    pub fn to_time_domain(&mut self, field: &LetoArray3<Complex64>) -> KwaversResult<Array3<f64>> {
+        let [nx, ny, nz] = field.shape();
         let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
-        let mut out = Array3::<f64>::zeros((nx, ny, nz));
-        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
+        let mut out = LetoArray3::<f64>::zeros([nx, ny, nz]);
+        let mut scratch = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
         fft.inverse_into(field, &mut out, &mut scratch);
-        Ok(out)
+        Ok(Array3::from_shape_vec([nx, ny, nz], out.into_vec())
+            .expect("mixed-domain inverse FFT output shape must match its grid"))
     }
 
     /// Time-domain propagation for nonlinear fields
@@ -161,17 +175,25 @@ impl MixedDomainPropagationPlugin {
     ///
     fn propagate_frequency_domain(
         &mut self,
-        field: &Array3<Complex64>,
+        field: &LetoArray3<Complex64>,
         grid: &Grid,
         medium: &dyn Medium,
         time_step: f64,
-    ) -> KwaversResult<Array3<Complex64>> {
+    ) -> KwaversResult<LetoArray3<Complex64>> {
         // Apply spectral propagator exp(ikz * dz) in frequency domain
         let mut result = field.clone();
         let k = TWO_PI / (kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid) * time_step);
+        let phase = Complex64::from_polar(1.0, k * grid.dx);
 
-        Zip::from(&mut result).and(field).par_for_each(|r, &f| {
-            *r = f * Complex64::from_polar(1.0, k * grid.dx);
+        let input = field
+            .as_slice()
+            .expect("invariant: mixed-domain frequency input is standard-layout");
+        let output = result
+            .as_slice_mut()
+            .expect("invariant: mixed-domain frequency output is standard-layout");
+
+        enumerate_mut_with::<Adaptive, _, _>(output, |idx, r| {
+            *r = input[idx] * phase;
         });
 
         Ok(result)
@@ -183,11 +205,11 @@ impl MixedDomainPropagationPlugin {
     ///
     fn apply_linear_propagator(
         &mut self,
-        field: &Array3<Complex64>,
+        field: &LetoArray3<Complex64>,
         grid: &Grid,
         medium: &dyn Medium,
         time_step: f64,
-    ) -> KwaversResult<Array3<Complex64>> {
+    ) -> KwaversResult<LetoArray3<Complex64>> {
         self.propagate_frequency_domain(field, grid, medium, time_step)
     }
 
@@ -241,7 +263,7 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
 
     fn update(
         &mut self,
-        fields: &mut ndarray::Array4<f64>,
+        fields: &mut leto::Array4<f64>,
         grid: &Grid,
         medium: &dyn Medium,
         dt: f64,
@@ -251,9 +273,10 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
         use kwavers_field::mapping::UnifiedFieldType;
 
         // Extract pressure field
-        let pressure_field =
-            fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
-        let pressure_array = pressure_field.to_owned();
+        let pressure_field = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
+        let pressure_array = pressure_field.to_contiguous();
 
         // Determine optimal domain based on field characteristics
         let domain = self.select_optimal_domain(&pressure_array, grid)?;
@@ -263,11 +286,9 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
                 self.propagate_time_domain(&pressure_array, grid, medium, dt)
             }
             DomainSelection::FrequencyDomain => {
-                // Convert real field to complex and propagate
-                let complex_field = pressure_array.mapv(|x| Complex64::new(x, 0.0));
+                let complex_field = self.to_frequency_domain(&pressure_array)?;
                 let result = self.propagate_frequency_domain(&complex_field, grid, medium, dt)?;
-                // Convert complex result back to real (take real part)
-                Ok(result.mapv(|c| c.re))
+                self.to_time_domain(&result)
             }
             DomainSelection::Hybrid => {
                 // Apply hybrid method: time domain + frequency domain correction
@@ -277,8 +298,9 @@ impl crate::plugin::Plugin for MixedDomainPropagationPlugin {
         }?;
 
         // Update pressure field in the fields array
-        let mut pressure_slice =
-            fields.index_axis_mut(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let mut pressure_slice = fields
+            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
         pressure_slice.assign(&result);
 
         Ok(())

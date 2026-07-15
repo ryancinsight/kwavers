@@ -4,7 +4,8 @@ use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array2};
+use leto::Array1;
+use leto::Array2;
 
 #[test]
 fn test_pam_creation() {
@@ -58,11 +59,11 @@ fn test_beamform_basic() {
     let config = DelayAndSumConfig::default();
     let pam = DelayAndSumPAM::new(sensors, config).unwrap();
 
-    let passive_data = Array2::<f64>::from_shape_fn((4, 1000), |(i, t)| {
+    let passive_data = Array2::<f64>::from_shape_fn((4, 1000), |[i, t]| {
         (TWO_PI * t as f64 / 100.0 + i as f64).sin()
     });
 
-    let grid_points = Array2::<f64>::from_shape_fn((5, 3), |(i, j)| match j {
+    let grid_points = Array2::<f64>::from_shape_fn((5, 3), |[i, j]| match j {
         0 => (i as f64 - 2.0) * 0.005,
         1 => (i as f64 - 2.0) * 0.005,
         2 => 0.02,
@@ -169,7 +170,7 @@ fn dmas_sharpens_localization_relative_to_das() {
 
     // Axial scan line through the source; off-source pixels are sidelobes.
     let n_pixels = 41;
-    let grid_points = Array2::from_shape_fn((n_pixels, 3), |(i, j)| match j {
+    let grid_points = Array2::from_shape_fn((n_pixels, 3), |[i, j]| match j {
         2 => 0.030 + (i as f64 - 20.0) * 0.0006,
         _ => 0.0,
     });
@@ -239,19 +240,23 @@ fn beamform_with_delays_aligns_on_supplied_delays() {
         data[[sensor, arrival]] = 1.0;
     }
 
-    let delays = Array2::from_shape_vec(
-        (2, 3),
-        vec![
-            10.0, 12.0, 14.0, /* aligned */ 0.0, 0.0, 0.0, /* mis-aligned */
-        ],
-    )
-    .unwrap();
+    let delays = Array2::from_shape_vec((2, 3), vec![10.0, 12.0, 14.0, 0.0, 0.0, 0.0]).unwrap();
     let signals = pam
         .beamform_signals_with_delays(data.view(), delays.view())
         .unwrap();
 
-    let energy_aligned: f64 = signals.row(0).iter().map(|&x| x * x).sum();
-    let energy_misaligned: f64 = signals.row(1).iter().map(|&x| x * x).sum();
+    let energy_aligned: f64 = signals
+        .index_axis::<1>(0, 0)
+        .expect("invariant: row 0 within bounds")
+        .iter()
+        .map(|&x| x * x)
+        .sum();
+    let energy_misaligned: f64 = signals
+        .index_axis::<1>(0, 1)
+        .expect("invariant: row 1 within bounds")
+        .iter()
+        .map(|&x| x * x)
+        .sum();
     assert!(
         energy_aligned > 8.0,
         "aligned delays must coherently sum impulses (energy ≈ 9): {energy_aligned}"
@@ -328,7 +333,8 @@ fn test_event_detection() {
     };
     let pam = DelayAndSumPAM::new(sensors, config).unwrap();
 
-    let intensity_map = Array1::from_vec(vec![0.5, 0.8, 5.0, 1.0, 0.3]);
+    let intensity_map =
+        Array1::from_vec([5], vec![0.5, 0.8, 5.0, 1.0, 0.3]).expect("shape matches map length");
     let grid_points = Array2::from_shape_vec(
         (5, 3),
         vec![
@@ -367,7 +373,7 @@ fn test_event_detection_with_peak_frequency() {
         }
     }
 
-    let intensity_map = Array1::from_vec(vec![2.0]);
+    let intensity_map = Array1::from_vec([1], vec![2.0]).expect("shape matches map length");
     let grid_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
 
     let events = pam

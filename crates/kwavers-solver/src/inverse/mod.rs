@@ -18,6 +18,7 @@
 //! - Traditional methods: Optimization, adjoint methods, iterative reconstruction
 //! - PINN methods: Neural network approximation with physics-informed loss
 
+#[cfg(feature = "clinical-imaging")]
 pub mod elastography;
 pub mod fwi;
 pub mod linear_born_inversion;
@@ -29,9 +30,11 @@ pub mod same_aperture;
 pub mod seismic;
 pub mod time_reversal;
 
+#[cfg(feature = "pinn")]
+pub use pinn::elastic_2d;
 pub use pinn::{
-    elastic_2d, AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy,
-    MultiRegionDomain, PinnGeometryInterfaceCondition,
+    AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain,
+    PinnGeometryInterfaceCondition,
 };
 pub use reconstruction::{
     ReconstructionAlgorithm, ReconstructionConfig, ReconstructionFilterType,

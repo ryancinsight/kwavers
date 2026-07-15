@@ -1,7 +1,7 @@
 //! Core wave equation traits
 
 use super::domain::{Domain, TimeIntegration};
-use ndarray::ArrayD;
+use leto::Array3;
 
 /// Abstract wave equation trait for traditional numerical solvers
 ///
@@ -38,13 +38,13 @@ pub trait WaveEquation: Send + Sync {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn spatial_operator(&self, field: &ArrayD<f64>) -> ArrayD<f64>;
+    fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
 
     /// Apply boundary conditions to field
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_boundary_conditions(&mut self, field: &mut ArrayD<f64>);
+    fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
 
     /// Check if the current state satisfies physics constraints
     ///
@@ -52,7 +52,7 @@ pub trait WaveEquation: Send + Sync {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn check_constraints(&self, field: &ArrayD<f64>) -> Result<(), String>;
+    fn check_constraints(&self, field: &Array3<f64>) -> Result<(), String>;
 }
 
 /// Abstract wave equation trait for autodiff-based solvers
@@ -104,13 +104,13 @@ pub trait AutodiffWaveEquation: Send {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn spatial_operator(&self, field: &ArrayD<f64>) -> ArrayD<f64>;
+    fn spatial_operator(&self, field: &Array3<f64>) -> Array3<f64>;
 
     /// Apply boundary conditions to field
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn apply_boundary_conditions(&mut self, field: &mut ArrayD<f64>);
+    fn apply_boundary_conditions(&mut self, field: &mut Array3<f64>);
 
     /// Check if the current state satisfies physics constraints
     ///
@@ -118,5 +118,5 @@ pub trait AutodiffWaveEquation: Send {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn check_constraints(&self, field: &ArrayD<f64>) -> Result<(), String>;
+    fn check_constraints(&self, field: &Array3<f64>) -> Result<(), String>;
 }

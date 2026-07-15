@@ -2,7 +2,7 @@
 
 use super::types::CavitationMetrics;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::ArrayView1;
+use leto::ArrayView1;
 
 /// Trait for cavitation detection algorithms
 pub trait CavitationDetector: Send + Sync {

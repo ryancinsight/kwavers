@@ -4,7 +4,7 @@
 
 use super::types::WENOLimiter;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl WENOLimiter {
     /// WENO7 limiting — zero-allocation version.
@@ -19,7 +19,7 @@ impl WENOLimiter {
         shock_indicator: &Array3<f64>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = src.dim();
+        let [nx, ny, nz] = src.shape();
         for i in 4..nx - 4 {
             for j in 4..ny - 4 {
                 for k in 4..nz - 4 {

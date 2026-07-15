@@ -4,7 +4,7 @@ use super::HeterogeneousFactory;
 use crate::heterogeneous::core::HeterogeneousMedium;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::ROOM_TEMPERATURE_K;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 
 impl HeterogeneousFactory {
     /// Create a heterogeneous elastic medium from per-voxel wave speed and density arrays.
@@ -48,11 +48,11 @@ impl HeterogeneousFactory {
         check_shape!(c_shear, "c_shear");
         check_shape!(density, "density");
 
-        let mut lame_lambda = Array3::zeros((nx, ny, nz));
-        let mut lame_mu = Array3::zeros((nx, ny, nz));
-        let mut sound_speed = Array3::zeros((nx, ny, nz));
-        let mut shear_sound_speed = Array3::zeros((nx, ny, nz));
-        let mut density_arr = Array3::zeros((nx, ny, nz));
+        let mut lame_lambda = Array3::zeros([nx, ny, nz]);
+        let mut lame_mu = Array3::zeros([nx, ny, nz]);
+        let mut sound_speed = Array3::zeros([nx, ny, nz]);
+        let mut shear_sound_speed = Array3::zeros([nx, ny, nz]);
+        let mut density_arr = Array3::zeros([nx, ny, nz]);
 
         for i in 0..nx {
             for j in 0..ny {
@@ -105,30 +105,30 @@ impl HeterogeneousFactory {
             use_trilinear_interpolation: true,
             density: density_arr,
             sound_speed,
-            viscosity: Array3::zeros((nx, ny, nz)),
-            surface_tension: Array3::zeros((nx, ny, nz)),
+            viscosity: Array3::zeros([nx, ny, nz]),
+            surface_tension: Array3::zeros([nx, ny, nz]),
             ambient_pressure: ATMOSPHERIC_PRESSURE,
-            vapor_pressure: Array3::zeros((nx, ny, nz)),
-            polytropic_index: Array3::zeros((nx, ny, nz)),
-            specific_heat: Array3::zeros((nx, ny, nz)),
-            thermal_conductivity: Array3::zeros((nx, ny, nz)),
-            thermal_expansion: Array3::zeros((nx, ny, nz)),
-            gas_diffusion_coeff: Array3::zeros((nx, ny, nz)),
-            thermal_diffusivity: Array3::zeros((nx, ny, nz)),
-            mu_a: Array3::zeros((nx, ny, nz)),
-            mu_s_prime: Array3::zeros((nx, ny, nz)),
-            temperature: Array3::from_elem((nx, ny, nz), ROOM_TEMPERATURE_K),
-            bubble_radius: Array3::zeros((nx, ny, nz)),
-            bubble_velocity: Array3::zeros((nx, ny, nz)),
-            alpha0: Array3::zeros((nx, ny, nz)),
-            delta: Array3::zeros((nx, ny, nz)),
-            b_a: Array3::zeros((nx, ny, nz)),
-            absorption: Array3::zeros((nx, ny, nz)),
-            alpha_power: Array3::from_elem((nx, ny, nz), 1.0),
-            nonlinearity: Array3::zeros((nx, ny, nz)),
+            vapor_pressure: Array3::zeros([nx, ny, nz]),
+            polytropic_index: Array3::zeros([nx, ny, nz]),
+            specific_heat: Array3::zeros([nx, ny, nz]),
+            thermal_conductivity: Array3::zeros([nx, ny, nz]),
+            thermal_expansion: Array3::zeros([nx, ny, nz]),
+            gas_diffusion_coeff: Array3::zeros([nx, ny, nz]),
+            thermal_diffusivity: Array3::zeros([nx, ny, nz]),
+            mu_a: Array3::zeros([nx, ny, nz]),
+            mu_s_prime: Array3::zeros([nx, ny, nz]),
+            temperature: Array3::from_elem([nx, ny, nz], ROOM_TEMPERATURE_K),
+            bubble_radius: Array3::zeros([nx, ny, nz]),
+            bubble_velocity: Array3::zeros([nx, ny, nz]),
+            alpha0: Array3::zeros([nx, ny, nz]),
+            delta: Array3::zeros([nx, ny, nz]),
+            b_a: Array3::zeros([nx, ny, nz]),
+            absorption: Array3::zeros([nx, ny, nz]),
+            alpha_power: Array3::from_elem([nx, ny, nz], 1.0),
+            nonlinearity: Array3::zeros([nx, ny, nz]),
             shear_sound_speed,
-            shear_viscosity_coeff: Array3::zeros((nx, ny, nz)),
-            bulk_viscosity_coeff: Array3::zeros((nx, ny, nz)),
+            shear_viscosity_coeff: Array3::zeros([nx, ny, nz]),
+            bulk_viscosity_coeff: Array3::zeros([nx, ny, nz]),
             lame_lambda,
             lame_mu,
             reference_frequency,

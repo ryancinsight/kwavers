@@ -8,7 +8,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{ElasticFwi, ElasticFwiConfig};
 use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveConfig, ElasticWaveSolver};
@@ -123,7 +123,7 @@ pub struct TransmissionFwiParams {
     pub n_steps: usize,
     /// Descent iterations.
     pub iterations: usize,
-    /// Source centre frequency \[Hz].
+    /// Source centre frequency \\[Hz\].
     pub f0: f64,
     /// Source force-density amplitude \[N/m³].
     pub amp: f64,

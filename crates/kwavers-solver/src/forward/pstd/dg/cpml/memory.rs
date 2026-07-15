@@ -38,7 +38,7 @@
 //! field state layout. One ψ component per axis-variable pair; inactive axes
 //! carry zeros and are skipped during RHS evaluation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Number of auxiliary CPML memory variables per GLL node.
 pub const DG_CPML_MEMORY_VARS: usize = 6;
@@ -90,8 +90,8 @@ impl DgCpmlMemoryWorkspace {
     /// Reshape the workspace if the field state geometry changed; leaves a
     /// freshly-zeroed memory state in that case (cold restart).
     pub fn ensure_dim(&mut self, n_elements: usize, nodes_per_element: usize) {
-        let dim = (n_elements, nodes_per_element, DG_CPML_MEMORY_VARS);
-        if self.state.dim() != dim {
+        let dim = [n_elements, nodes_per_element, DG_CPML_MEMORY_VARS];
+        if self.state.shape() != dim {
             *self = Self::new(n_elements, nodes_per_element);
         }
     }
@@ -126,7 +126,7 @@ mod tests {
     #[test]
     fn new_workspace_is_cold_zero_state() {
         let ws = DgCpmlMemoryWorkspace::new(4, 9);
-        assert_eq!(ws.state.dim(), (4, 9, DG_CPML_MEMORY_VARS));
+        assert_eq!(ws.state.shape(), [4, 9, DG_CPML_MEMORY_VARS]);
         assert!(ws.state.iter().all(|v| *v == 0.0));
         assert!(ws.original.iter().all(|v| *v == 0.0));
         assert!(ws.stage.iter().all(|v| *v == 0.0));
@@ -136,18 +136,18 @@ mod tests {
     #[test]
     fn ensure_dim_reshapes_when_geometry_changes() {
         let mut ws = DgCpmlMemoryWorkspace::new(4, 9);
-        ws.state[(0, 0, 0)] = 1.5;
+        ws.state[[0, 0, 0]] = 1.5;
         ws.ensure_dim(8, 27);
-        assert_eq!(ws.state.dim(), (8, 27, DG_CPML_MEMORY_VARS));
+        assert_eq!(ws.state.shape(), [8, 27, DG_CPML_MEMORY_VARS]);
         assert!(ws.state.iter().all(|v| *v == 0.0));
     }
 
     #[test]
     fn reset_zeros_all_buffers() {
         let mut ws = DgCpmlMemoryWorkspace::new(4, 9);
-        ws.state[(0, 0, 0)] = 1.5;
-        ws.stage[(1, 2, 3)] = -7.0;
-        ws.rhs[(2, 3, 4)] = 11.0;
+        ws.state[[0, 0, 0]] = 1.5;
+        ws.stage[[1, 2, 3]] = -7.0;
+        ws.rhs[[2, 3, 4]] = 11.0;
         ws.reset();
         assert!(ws.state.iter().all(|v| *v == 0.0));
         assert!(ws.stage.iter().all(|v| *v == 0.0));

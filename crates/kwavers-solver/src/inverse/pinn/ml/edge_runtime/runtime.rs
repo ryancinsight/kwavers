@@ -29,7 +29,7 @@ impl EdgeRuntime {
 
     /// Load a quantized model for edge deployment
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn load_model(&mut self, model: QuantizedModel) -> KwaversResult<()> {
         self.validate_model_compatibility(&model)?;
@@ -45,7 +45,7 @@ impl EdgeRuntime {
 
     /// Execute optimized inference
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn inference(&mut self, input: &[f32]) -> KwaversResult<Vec<f32>> {
         let start_time = std::time::Instant::now();
@@ -62,7 +62,7 @@ impl EdgeRuntime {
         self.allocator.allocate_block(input_size, 16)?;
         self.allocator.allocate_block(output_size, 16)?;
 
-        let mut current_input = input.to_vec();
+        let mut current_input = input.iter().cloned().collect::<Vec<_>>();
 
         for kernel in self.kernel_cache.values() {
             let quantized_input = if self.hardware_caps.has_fpu {
@@ -83,7 +83,7 @@ impl EdgeRuntime {
     }
     /// Validate model compatibility.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub(super) fn validate_model_compatibility(&self, model: &QuantizedModel) -> KwaversResult<()> {
         let model_memory = model.memory_usage();

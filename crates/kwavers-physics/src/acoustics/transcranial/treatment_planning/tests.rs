@@ -1,6 +1,6 @@
 use super::*;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_treatment_planner_creation() {
@@ -139,7 +139,7 @@ fn test_skull_properties_analysis() {
     let planner = TreatmentPlanner::new(&grid, &ct_data).unwrap();
 
     let props = planner.analyze_skull_properties().unwrap();
-    assert_eq!(props.sound_speed.dim(), (16, 16, 16));
-    assert_eq!(props.density.dim(), (16, 16, 16));
-    assert_eq!(props.attenuation.dim(), (16, 16, 16));
+    assert_eq!(props.sound_speed.shape(), [16, 16, 16]);
+    assert_eq!(props.density.shape(), [16, 16, 16]);
+    assert_eq!(props.attenuation.shape(), [16, 16, 16]);
 }

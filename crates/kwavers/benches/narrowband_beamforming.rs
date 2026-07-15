@@ -29,7 +29,7 @@ use kwavers_analysis::signal_processing::beamforming::narrowband::{
     NarrowbandSteering, SnapshotScenario, SnapshotSelection,
 };
 use kwavers_analysis::signal_processing::beamforming::utils::steering::SteeringVectorMethod;
-use ndarray::Array3;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Generate synthetic RF data for benchmarking (plane wave from broadside)
@@ -45,7 +45,7 @@ fn generate_benchmark_data(
         for sample_idx in 0..n_samples {
             let t = sample_idx as f64 / sampling_frequency_hz;
             // Plane wave from broadside (no phase shift between sensors)
-            data[(sensor_idx, 0, sample_idx)] = (2.0 * PI * frequency_hz * t).cos();
+            data[[sensor_idx, 0, sample_idx]] = (2.0 * PI * frequency_hz * t).cos();
         }
     }
 
@@ -130,8 +130,8 @@ fn bench_snapshot_extraction(c: &mut Criterion) {
                                 .expect("snapshot extraction");
 
                         // Correctness assertion: valid dimensions
-                        debug_assert_eq!(snapshots.nrows(), *n_sensors);
-                        debug_assert!(snapshots.ncols() > 0);
+                        debug_assert_eq!(snapshots.shape()[0], *n_sensors);
+                        debug_assert!(snapshots.shape()[1] > 0);
 
                         black_box(snapshots)
                     });

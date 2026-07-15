@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 /// Spectral unmixing configuration
 #[derive(Debug, Clone)]

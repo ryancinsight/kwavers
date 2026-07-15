@@ -35,12 +35,12 @@
 //!
 //! ```rust,ignore
 //! use kwavers::math::numerics::operators::differential::{DifferentialOperator, CentralDifference2};
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! let dx = 0.001; // 1 mm grid spacing
 //! let op = CentralDifference2::new(dx, dx, dx)?;
 //!
-//! let field = Array3::zeros((100, 100, 100));
+//! let field = Array3::zeros([100, 100, 100]);
 //! let gradient_x = op.apply_x(field.view())?;
 //! ```
 //!
@@ -51,9 +51,10 @@
 //!   DOI: 10.1090/S0025-5718-1988-0935077-0
 
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{s, Array3, ArrayView3, Zip};
+use leto::{Array3, ArrayView3};
+use leto_ops::zip2_mut_with;
 
-use super::DifferentialOperator;
+use super::{traversal, DifferentialOperator};
 
 #[cfg(test)]
 mod tests;
@@ -133,7 +134,7 @@ impl CentralDifference2 {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_x_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -142,27 +143,73 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(
+            dst.shape(),
+            [nx, ny, nz],
+            "dst shape must match field shape"
+        );
         let inv2dx = 0.5 / self.dx;
         let inv_dx = 1.0 / self.dx;
 
+        if field.is_c_contiguous() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if i == 0 {
+                        (field_values[traversal::row_major_index(1, j, k, ny, nz)]
+                            - field_values[center])
+                            * inv_dx
+                    } else if i == nx - 1 {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(nx - 2, j, k, ny, nz)])
+                            * inv_dx
+                    } else {
+                        (field_values[traversal::row_major_index(i + 1, j, k, ny, nz)]
+                            - field_values[traversal::row_major_index(i - 1, j, k, ny, nz)])
+                            * inv2dx
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
+
         // Interior: central difference via contiguous slice pairs
-        Zip::from(dst.slice_mut(s![1..nx - 1, .., ..]))
-            .and(field.slice(s![2..nx, .., ..]))
-            .and(field.slice(s![0..nx - 2, .., ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dx);
+        let mut dst_slice = dst
+            .slice_mut(&[(1, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_hi = field.slice(&[(2, nx, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx - 2, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv2dx
+        })
+        .unwrap();
 
         // Left boundary (i=0): forward difference
-        Zip::from(dst.slice_mut(s![0, .., ..]))
-            .and(field.slice(s![1, .., ..]))
-            .and(field.slice(s![0, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dx);
+        let mut dst_slice = dst.slice_mut(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(1, 2, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, 1, 1), (0, ny, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dx
+        })
+        .unwrap();
 
         // Right boundary (i=nx−1): backward difference
-        Zip::from(dst.slice_mut(s![nx - 1, .., ..]))
-            .and(field.slice(s![nx - 1, .., ..]))
-            .and(field.slice(s![nx - 2, .., ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dx);
+        let mut dst_slice = dst
+            .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_hi = field
+            .slice(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_lo = field
+            .slice(&[(nx - 2, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dx
+        })
+        .unwrap();
 
         Ok(())
     }
@@ -178,7 +225,7 @@ impl CentralDifference2 {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_y_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if ny < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -187,27 +234,73 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(
+            dst.shape(),
+            [nx, ny, nz],
+            "dst shape must match field shape"
+        );
         let inv2dy = 0.5 / self.dy;
         let inv_dy = 1.0 / self.dy;
 
+        if field.is_c_contiguous() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if j == 0 {
+                        (field_values[traversal::row_major_index(i, 1, k, ny, nz)]
+                            - field_values[center])
+                            * inv_dy
+                    } else if j == ny - 1 {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i, ny - 2, k, ny, nz)])
+                            * inv_dy
+                    } else {
+                        (field_values[traversal::row_major_index(i, j + 1, k, ny, nz)]
+                            - field_values[traversal::row_major_index(i, j - 1, k, ny, nz)])
+                            * inv2dy
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
+
         // Interior
-        Zip::from(dst.slice_mut(s![.., 1..ny - 1, ..]))
-            .and(field.slice(s![.., 2..ny, ..]))
-            .and(field.slice(s![.., 0..ny - 2, ..]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dy);
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (1, ny - 1, 1), (0, nz, 1)])
+            .unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (2, ny, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny - 2, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv2dy
+        })
+        .unwrap();
 
         // Bottom boundary (j=0)
-        Zip::from(dst.slice_mut(s![.., 0, ..]))
-            .and(field.slice(s![.., 1, ..]))
-            .and(field.slice(s![.., 0, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dy);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (1, 2, 1), (0, nz, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, 1, 1), (0, nz, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dy
+        })
+        .unwrap();
 
         // Top boundary (j=ny−1)
-        Zip::from(dst.slice_mut(s![.., ny - 1, ..]))
-            .and(field.slice(s![.., ny - 1, ..]))
-            .and(field.slice(s![.., ny - 2, ..]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dy);
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_hi = field
+            .slice(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
+            .unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (ny - 2, ny - 1, 1), (0, nz, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dy
+        })
+        .unwrap();
 
         Ok(())
     }
@@ -224,7 +317,7 @@ impl CentralDifference2 {
     /// - Panics if an internal precondition is violated.
     ///
     pub fn apply_z_into(&self, field: ArrayView3<f64>, dst: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nz < 3 {
             return Err(NumericalError::InsufficientGridPoints {
                 required: 3,
@@ -233,27 +326,73 @@ impl CentralDifference2 {
             }
             .into());
         }
-        debug_assert_eq!(dst.dim(), (nx, ny, nz), "dst shape must match field shape");
+        debug_assert_eq!(
+            dst.shape(),
+            [nx, ny, nz],
+            "dst shape must match field shape"
+        );
         let inv2dz = 0.5 / self.dz;
         let inv_dz = 1.0 / self.dz;
 
+        if field.is_c_contiguous() {
+            if let Some(field_values) = field.as_slice() {
+                if traversal::try_fill_standard_layout(dst, |i, j, k| {
+                    let center = traversal::row_major_index(i, j, k, ny, nz);
+                    if k == 0 {
+                        (field_values[traversal::row_major_index(i, j, 1, ny, nz)]
+                            - field_values[center])
+                            * inv_dz
+                    } else if k == nz - 1 {
+                        (field_values[center]
+                            - field_values[traversal::row_major_index(i, j, nz - 2, ny, nz)])
+                            * inv_dz
+                    } else {
+                        (field_values[traversal::row_major_index(i, j, k + 1, ny, nz)]
+                            - field_values[traversal::row_major_index(i, j, k - 1, ny, nz)])
+                            * inv2dz
+                    }
+                }) {
+                    return Ok(());
+                }
+            }
+        }
+
         // Interior (innermost dimension — highest SIMD throughput)
-        Zip::from(dst.slice_mut(s![.., .., 1..nz - 1]))
-            .and(field.slice(s![.., .., 2..nz]))
-            .and(field.slice(s![.., .., 0..nz - 2]))
-            .par_for_each(|r, &hi, &lo| *r = (hi - lo) * inv2dz);
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (0, ny, 1), (1, nz - 1, 1)])
+            .unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (2, nz, 1)]).unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 2, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv2dz
+        })
+        .unwrap();
 
         // Near boundary (k=0)
-        Zip::from(dst.slice_mut(s![.., .., 0]))
-            .and(field.slice(s![.., .., 1]))
-            .and(field.slice(s![.., .., 0]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dz);
+        let mut dst_slice = dst.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
+        let field_hi = field.slice(&[(0, nx, 1), (0, ny, 1), (1, 2, 1)]).unwrap();
+        let field_lo = field.slice(&[(0, nx, 1), (0, ny, 1), (0, 1, 1)]).unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dz
+        })
+        .unwrap();
 
         // Far boundary (k=nz−1)
-        Zip::from(dst.slice_mut(s![.., .., nz - 1]))
-            .and(field.slice(s![.., .., nz - 1]))
-            .and(field.slice(s![.., .., nz - 2]))
-            .for_each(|r, &hi, &lo| *r = (hi - lo) * inv_dz);
+        let mut dst_slice = dst
+            .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
+            .unwrap();
+        let field_hi = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
+            .unwrap();
+        let field_lo = field
+            .slice(&[(0, nx, 1), (0, ny, 1), (nz - 2, nz - 1, 1)])
+            .unwrap();
+        zip2_mut_with(&mut dst_slice, &field_hi, &field_lo, |r, &hi, &lo| {
+            *r = (hi - lo) * inv_dz
+        })
+        .unwrap();
 
         Ok(())
     }
@@ -261,19 +400,19 @@ impl CentralDifference2 {
 
 impl DifferentialOperator for CentralDifference2 {
     fn apply_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.apply_x_into(field, &mut result)?;
         Ok(result)
     }
 
     fn apply_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.apply_y_into(field, &mut result)?;
         Ok(result)
     }
 
     fn apply_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.apply_z_into(field, &mut result)?;
         Ok(result)
     }

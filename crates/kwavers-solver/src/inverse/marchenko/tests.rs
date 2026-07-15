@@ -48,7 +48,7 @@ fn conv_is_linear() {
     let lhs = conv_causal(&r, &sum);
     let ca = conv_causal(&r, &a);
     let cb = conv_causal(&r, &b);
-    for i in 0..lhs.len() {
+    for i in 0..(lhs.len()) {
         assert!((lhs[i] - (ca[i] + cb[i])).abs() < 1e-12);
     }
 }

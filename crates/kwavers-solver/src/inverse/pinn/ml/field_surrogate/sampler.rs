@@ -1,4 +1,4 @@
-//! Sampling helpers that turn cached PSTD kernels into Burn
+//! Sampling helpers that turn cached PSTD kernels into
 //! `TrainingBatch`es.
 //!
 //! The trainer ([`super::training::ParamFieldPINNTrainer`]) is data-
@@ -14,7 +14,7 @@
 //! envelope amplitudes and reused across all batches so the
 //! normalisation is consistent.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor, TensorData};
+use coeus_autograd::Var;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 
@@ -100,7 +100,7 @@ impl KernelCubeSampler {
     /// can apply the matching inverse.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the dataset is
+    /// Returns [`crate::KwaversError::InvalidInput`] when the dataset is
     /// empty (no kernels with shape ≥ 3 on every axis).
     pub fn with_transforms(
         kernels: &[FocalKernel],
@@ -170,7 +170,7 @@ impl KernelCubeSampler {
         let coord_halves = coord_halves_override.unwrap_or_else(|| {
             let (mut hx, mut hy, mut hz) = (0.0_f32, 0.0_f32, 0.0_f32);
             for k in kernels {
-                let (nx, ny, nz) = k.shape();
+                let [nx, ny, nz] = k.shape();
                 let dx = k.dx_m as f32;
                 hx = hx.max((nx as f32) * dx * 0.5);
                 hy = hy.max((ny as f32) * dx * 0.5);
@@ -187,7 +187,7 @@ impl KernelCubeSampler {
         let total_voxels: usize = kernels
             .iter()
             .map(|k| {
-                let (nx, ny, nz) = k.shape();
+                let [nx, ny, nz] = k.shape();
                 if nx < 3 || ny < 3 || nz < 3 {
                     0
                 } else {
@@ -204,7 +204,7 @@ impl KernelCubeSampler {
         let mut group_ids: Vec<f32> = Vec::with_capacity(total_voxels);
         let mut active_kernel_count: usize = 0;
         for kernel in kernels.iter() {
-            let (nx, ny, nz) = kernel.shape();
+            let [nx, ny, nz] = kernel.shape();
             if nx < 3 || ny < 3 || nz < 3 {
                 continue;
             }
@@ -263,7 +263,7 @@ impl KernelCubeSampler {
                 }
             }
         }
-        let n = inputs.len() / 5;
+        let n = (inputs.len()) / 5;
 
         Ok(Self {
             inputs,
@@ -320,7 +320,7 @@ impl KernelCubeSampler {
                 idx.min(self.n - 1)
             }
             SamplingMode::ImportanceByMagnitude { .. } => {
-                debug_assert_eq!(self.cumulative_weights.len(), self.n);
+                debug_assert_eq!((self.cumulative_weights.len()), self.n);
                 let total = *self.cumulative_weights.last().unwrap_or(&0.0);
                 let target = u * total;
                 let result = self
@@ -351,9 +351,8 @@ impl KernelCubeSampler {
     ///
     /// Returns inputs `[batch, 5]`, targets `[batch, 3]`, and per-
     /// sample physical `f0` `[batch]` for the Helmholtz residual.
-    pub fn batch<B: AutodiffBackend>(
+    pub fn batch<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        device: &B::Device,
         step: u64,
         batch_size: usize,
     ) -> TrainingBatch<B> {
@@ -370,11 +369,23 @@ impl KernelCubeSampler {
             f0_buf.push(self.f0_phys_hz[idx]);
             group_buf.push(self.group_ids[idx]);
         }
-        let inputs = Tensor::<B, 2>::from_data(TensorData::new(input_buf, [batch_size, 5]), device);
-        let targets =
-            Tensor::<B, 2>::from_data(TensorData::new(target_buf, [batch_size, 3]), device);
-        let f0_phys_hz = Tensor::<B, 1>::from_data(TensorData::new(f0_buf, [batch_size]), device);
-        let group_ids = Tensor::<B, 1>::from_data(TensorData::new(group_buf, [batch_size]), device);
+        let backend = B::default();
+        let inputs = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 5], &input_buf, &backend),
+            false,
+        );
+        let targets = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 3], &target_buf, &backend),
+            false,
+        );
+        let f0_phys_hz = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size], &f0_buf, &backend),
+            false,
+        );
+        let group_ids = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size], &group_buf, &backend),
+            false,
+        );
         TrainingBatch {
             inputs,
             targets,

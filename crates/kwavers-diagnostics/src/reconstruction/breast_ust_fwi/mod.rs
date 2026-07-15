@@ -61,7 +61,7 @@ use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domai
 use kwavers_solver::inverse::fwi::frequency_domain::{
     self, Config as FrequencyDomainFwiConfig, FrequencyObservation,
 };
-use ndarray::Array3;
+use leto::Array3;
 use std::io::Read;
 use std::path::Path;
 
@@ -171,11 +171,22 @@ pub fn reconstruct_breast_ust_sound_speed_volume(
     initial_sound_speed_m_s: &Array3<f64>,
     config: &FrequencyDomainFwiConfig,
 ) -> KwaversResult<BreastUstFwiImage> {
+    let initial_sound_speed_m_s = initial_sound_speed_m_s.clone().into();
     let solver_result =
-        frequency_domain::invert(observations, array, initial_sound_speed_m_s, config)?;
+        frequency_domain::invert(observations, array, &initial_sound_speed_m_s, config)?;
+    let [nx, ny, nz] = solver_result.sound_speed_m_s.shape();
+    let sound_speed_m_s = Array3::from_shape_vec(
+        (nx, ny, nz),
+        solver_result
+            .sound_speed_m_s
+            .as_slice()
+            .expect("solver output must be densely stored")
+            .to_vec(),
+    )
+    .expect("solver output shape must match its flattened length");
 
     Ok(BreastUstFwiImage {
-        sound_speed_m_s: solver_result.sound_speed_m_s,
+        sound_speed_m_s,
         objective_history: solver_result.objective_history,
         frequencies_used: solver_result.frequencies_used,
         transmissions_used: solver_result.transmissions_used,
@@ -210,12 +221,23 @@ mod tests {
         };
         let mut truth = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
         truth[[1, 1, 1]] = 1525.0;
-        let observed =
-            simulate_frequency_observation(&truth, &array, 230_000.0, &config).expect("observed");
-        let observations = [FrequencyObservation::new(
-            230_000.0,
-            observed.slice(ndarray::s![0..3, ..]).to_owned(),
-        )];
+        let truth_leto: leto::Array3<f64> = truth.clone().into();
+        let observed = simulate_frequency_observation(&truth_leto, &array, 230_000.0, &config)
+            .expect("observed");
+        let observed_nd: leto::Array2<kwavers_math::fft::Complex64> =
+            observed.try_into().expect("contiguous");
+        let sliced: leto::Array2<kwavers_math::fft::Complex64> = observed_nd
+            .slice_with::<2>(&[
+                leto::SliceArg::Range {
+                    start: Some(0),
+                    end: Some(3),
+                    step: 1,
+                },
+                leto::SliceArg::All,
+            ])
+            .expect("row slice within bounds")
+            .to_contiguous();
+        let observations = [FrequencyObservation::new(230_000.0, sliced)];
         let initial = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
 
         let result =

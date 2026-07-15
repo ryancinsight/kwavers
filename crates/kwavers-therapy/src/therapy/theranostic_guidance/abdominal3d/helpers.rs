@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -42,7 +42,7 @@ use super::super::geometry::{is_boundary_3d, Point3};
 /// otherwise the input mask with all components except the largest
 /// cleared to `false`.
 pub(crate) fn keep_largest_connected_component_3d(mask: &Array3<bool>) -> Array3<bool> {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     if nx == 0 || ny == 0 || nz == 0 {
         return mask.clone();
     }
@@ -114,7 +114,7 @@ pub(crate) fn keep_largest_connected_component_3d(mask: &Array3<bool>) -> Array3
     }
 
     let mut output: Array3<bool> = Array3::from_elem((nx, ny, nz), false);
-    for ((ix, iy, iz), &label) in labels.indexed_iter() {
+    for ([ix, iy, iz], &label) in labels.indexed_iter() {
         if label == best_label {
             output[[ix, iy, iz]] = true;
         }
@@ -137,7 +137,10 @@ pub(crate) fn index_to_point(
 
 /// Euclidean distance between two 3-D points [m].
 pub(super) fn distance_3d(a: Point3, b: Point3) -> f64 {
-    kwavers_math::vector3::distance3([a.x_m, a.y_m, a.z_m], [b.x_m, b.y_m, b.z_m])
+    let dx = a.x_m - b.x_m;
+    let dy = a.y_m - b.y_m;
+    let dz = a.z_m - b.z_m;
+    (dx * dx + dy * dy + dz * dz).sqrt()
 }
 
 /// Convert voxel indices to physical metres relative to `center_index`.
@@ -174,7 +177,7 @@ pub(super) fn voxel_to_point(
 /// placing the nearest-skin-contact inside the patient.  The flood-fill
 /// correctly restricts skin candidates to the **exterior** skin surface.
 pub(crate) fn exterior_air_mask(body_mask: &Array3<bool>) -> Array3<bool> {
-    let (nx, ny, nz) = body_mask.dim();
+    let [nx, ny, nz] = body_mask.shape();
     let mut exterior: Array3<bool> = Array3::from_elem((nx, ny, nz), false);
     let mut queue: VecDeque<(usize, usize, usize)> = VecDeque::new();
 
@@ -391,13 +394,13 @@ pub(crate) fn nearest_exterior_skin_point(
     const APPROACH_Z_WEIGHT: f64 = 4.0;
     const APPROACH_Y_WEIGHT: f64 = 6.0;
 
-    let (nx, ny, nz) = body_mask.dim();
+    let [nx, ny, nz] = body_mask.shape();
 
     let mut best_score = f64::INFINITY;
     let mut best = focus_m;
     let mut found = false;
 
-    for ((ix, iy, iz), active) in body_mask.indexed_iter() {
+    for ([ix, iy, iz], active) in body_mask.indexed_iter() {
         if !active {
             continue;
         }
@@ -455,10 +458,10 @@ pub(super) fn exterior_body_surface_points(
     center_index: [f64; 3],
     stride: usize,
 ) -> Vec<Point3> {
-    let (nx, ny, nz) = body_mask.dim();
+    let [nx, ny, nz] = body_mask.shape();
     body_mask
         .indexed_iter()
-        .filter(|&((ix, iy, iz), &active)| {
+        .filter(|&([ix, iy, iz], &active)| {
             if !active || (ix + iy + iz) % stride != 0 {
                 return false;
             }
@@ -469,7 +472,7 @@ pub(super) fn exterior_body_surface_points(
                 || (iz > 0 && exterior[[ix, iy, iz - 1]])
                 || (iz + 1 < nz && exterior[[ix, iy, iz + 1]])
         })
-        .map(|((ix, iy, iz), _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
+        .map(|([ix, iy, iz], _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
         .collect()
 }
 
@@ -483,9 +486,9 @@ pub(super) fn surface_points_3d(
     stride: usize,
 ) -> Vec<Point3> {
     mask.indexed_iter()
-        .filter(|&((ix, iy, iz), &active)| {
+        .filter(|&([ix, iy, iz], &active)| {
             active && is_boundary_3d(mask, ix, iy, iz) && (ix + iy + iz) % stride == 0
         })
-        .map(|((ix, iy, iz), _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
+        .map(|([ix, iy, iz], _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
         .collect()
 }

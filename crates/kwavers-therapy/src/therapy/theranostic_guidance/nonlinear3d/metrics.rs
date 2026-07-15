@@ -4,7 +4,7 @@
 //! [`super::super::metrics`]; this module delegates to them to maintain
 //! SSOT and avoid behavioural drift between the 2-D and 3-D metric paths.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::metrics::{cnr, dice_equal_area};
 use super::types::VolumeReconstructionMetrics;
@@ -40,7 +40,7 @@ pub(crate) fn fused_score(
         .filter_map(|(value, active)| active.then_some(*value))
         .fold(0.0, f64::max)
         .max(1.0e-12);
-    Array3::from_shape_fn(fwi_score.dim(), |idx| {
+    Array3::from_shape_fn(fwi_score.shape(), |idx| {
         if !body[idx] {
             return 0.0;
         }

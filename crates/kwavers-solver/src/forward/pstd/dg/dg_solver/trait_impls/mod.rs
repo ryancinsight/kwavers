@@ -32,7 +32,7 @@ use super::super::traits::{DGOperations, NumericalSolver};
 use super::core::DGSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 impl NumericalSolver for DGSolver {
     fn solve(
@@ -41,7 +41,7 @@ impl NumericalSolver for DGSolver {
         dt: f64,
         mask: &Array3<bool>,
     ) -> KwaversResult<Array3<f64>> {
-        let mut result = Array3::zeros(field.dim());
+        let mut result = Array3::zeros(field.shape());
         self.solve_into(field, dt, mask, &mut result)?;
         Ok(result)
     }
@@ -91,7 +91,7 @@ impl DGOperations for DGSolver {
     ///
     /// Hesthaven & Warburton (2008). §3.1, eq. (3.4).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn project_to_basis(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let n_elements = field.shape()[0];
@@ -106,12 +106,14 @@ impl DGOperations for DGSolver {
         }
 
         let v_inv = &*self.vandermonde_inv;
-        let mut coefficients = Array3::<f64>::zeros(field.raw_dim());
+        let mut coefficients = Array3::<f64>::zeros(field.shape());
 
         for e in 0..n_elements {
             for v in 0..n_vars {
                 let f_col: Array1<f64> = (0..self.n_nodes).map(|i| field[[e, i, v]]).collect();
-                let c_col = v_inv.dot(&f_col);
+                let mut c_col = Array1::<f64>::zeros(v_inv.shape()[0]);
+                leto_ops::matvec(&v_inv.view(), &f_col.view(), &mut c_col.view_mut())
+                    .expect("invariant: DG modal projection V⁻¹·f conforms");
                 for i in 0..self.n_nodes {
                     coefficients[[e, i, v]] = c_col[i];
                 }
@@ -133,7 +135,7 @@ impl DGOperations for DGSolver {
     ///
     /// Hesthaven & Warburton (2008). §3.1, eq. (3.3).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn reconstruct_from_basis(&self, coefficients: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let n_elements = coefficients.shape()[0];
@@ -148,14 +150,16 @@ impl DGOperations for DGSolver {
         }
 
         let v = &*self.vandermonde;
-        let mut field = Array3::<f64>::zeros(coefficients.raw_dim());
+        let mut field = Array3::<f64>::zeros(coefficients.shape());
 
         for e in 0..n_elements {
             for var in 0..n_vars {
                 let c_col: Array1<f64> = (0..self.n_nodes)
                     .map(|i| coefficients[[e, i, var]])
                     .collect();
-                let f_col = v.dot(&c_col);
+                let mut f_col = Array1::<f64>::zeros(v.shape()[0]);
+                leto_ops::matvec(&v.view(), &c_col.view(), &mut f_col.view_mut())
+                    .expect("invariant: DG nodal reconstruction V·c conforms");
                 for i in 0..self.n_nodes {
                     field[[e, i, var]] = f_col[i];
                 }
@@ -178,12 +182,12 @@ impl DGSolver {
         mask: &Array3<bool>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        if field.dim() != mask.dim() || field.dim() != output.dim() {
+        if field.shape() != mask.shape() || field.shape() != output.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "DG solve_into dimension mismatch: field={:?}, mask={:?}, output={:?}",
-                field.dim(),
-                mask.dim(),
-                output.dim()
+                field.shape(),
+                mask.shape(),
+                output.shape()
             )));
         }
 
@@ -218,7 +222,7 @@ impl DGSolver {
             if element_id < coeffs.shape()[0] {
                 let mut data = Vec::with_capacity(self.n_nodes);
                 for node in 0..self.n_nodes {
-                    data.push(coeffs[(element_id, node, 0)]);
+                    data.push(coeffs[[element_id, node, 0]]);
                 }
                 Some(data)
             } else {
@@ -235,9 +239,9 @@ impl DGSolver {
     ///
     pub fn set_element_data(&mut self, element_id: usize, data: &[f64]) -> KwaversResult<()> {
         if let Some(ref mut coeffs) = self.modal_coefficients {
-            if element_id < coeffs.shape()[0] && data.len() == self.n_nodes {
+            if element_id < coeffs.shape()[0] && (data.len()) == self.n_nodes {
                 for (i, &value) in data.iter().enumerate() {
-                    coeffs[(element_id, i, 0)] = value;
+                    coeffs[[element_id, i, 0]] = value;
                 }
                 Ok(())
             } else {

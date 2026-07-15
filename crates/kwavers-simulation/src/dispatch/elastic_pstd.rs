@@ -8,7 +8,7 @@ use kwavers_solver::forward::pstd::extensions::{ElasticPstdMedium, ElasticPstdOr
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {
     let lame_lambda = req.medium.lame_lambda_array();
     let lame_mu = req.medium.lame_mu_array();
-    let density = req.medium.density_array().to_owned();
+    let density = req.medium.density_array().to_contiguous();
 
     // Maximum P-wave speed c_p = sqrt((λ+2μ)/ρ), used to size the PML σ_max.
     let c_max = lame_lambda
@@ -54,17 +54,16 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
         orch.seed_initial_displacement(u0, axis);
     }
 
-    let sensor_mask = req.sensor_mask.clone();
     let recorded = orch.propagate(
         req.time_steps,
         req.elastic_velocity_source.as_ref(),
-        sensor_mask.as_ref(),
+        req.sensor_mask.as_ref(),
     )?;
 
     let sensor_data = recorded
         .vz
         .clone()
-        .unwrap_or_else(|| ndarray::Array2::zeros((1, 0)));
+        .unwrap_or_else(|| leto::Array2::zeros((1, 0)));
 
     Ok(SimulationRunResult {
         sensor_data,

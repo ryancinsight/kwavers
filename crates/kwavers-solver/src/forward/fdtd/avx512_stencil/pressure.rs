@@ -20,7 +20,7 @@
 
 use super::FdtdAvx512StencilProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 impl FdtdAvx512StencilProcessor {
     /// Update pressure field with AVX-512 acceleration.
@@ -36,9 +36,9 @@ impl FdtdAvx512StencilProcessor {
     /// # Returns
     /// Updated pressure field at time step n+1.
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update_pressure_avx512(
         &self,
@@ -51,8 +51,8 @@ impl FdtdAvx512StencilProcessor {
                 "All fields must have identical dimensions".to_owned(),
             ));
         }
-        let shape = p_curr.dim();
-        if shape != (self.nx, self.ny, self.nz) {
+        let shape = p_curr.shape();
+        if shape != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(
                 "Field dimensions do not match processor configuration".to_owned(),
             ));
@@ -82,7 +82,7 @@ impl FdtdAvx512StencilProcessor {
     /// # Safety
     ///
     /// Preconditions (all verified by `update_pressure_avx512` before calling):
-    /// 1. `p_curr.dim() == p_prev.dim() == u_div.dim() == p_new.dim() == (self.nx, self.ny, self.nz)`
+    /// 1. `p_curr.shape() == p_prev.shape() == u_div.shape() == p_new.shape() == (self.nx, self.ny, self.nz)`
     /// 2. `(self.nx, self.ny, self.nz) >= (4, 4, 4)` (enforced by constructor).
     /// 3. AVX-512F is available (checked at construction time on x86_64).
     /// 4. All arrays are standard-layout (C-order, row-major, contiguous allocation).
@@ -94,7 +94,7 @@ impl FdtdAvx512StencilProcessor {
     ///
     /// `p_new` is exclusively owned (no aliasing); `p_curr`/`p_prev`/`u_div` are immutable.
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
     ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
@@ -119,7 +119,10 @@ impl FdtdAvx512StencilProcessor {
         let p_curr_ptr = p_curr.as_ptr();
         let p_prev_ptr = p_prev.as_ptr();
         let _u_div_ptr = u_div.as_ptr();
-        let p_new_ptr = p_new.as_mut_ptr();
+        let p_new_ptr = p_new
+            .as_slice_memory_order_mut()
+            .expect("invariant: AVX-512 stencil output field must be contiguous")
+            .as_mut_ptr();
 
         let coeff_central = _mm512_set1_pd(self.pressure_central_coeff);
         let coeff = _mm512_set1_pd(self.pressure_coeff);

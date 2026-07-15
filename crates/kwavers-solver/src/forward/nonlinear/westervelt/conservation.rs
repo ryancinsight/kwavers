@@ -35,13 +35,12 @@
 //!
 //! ## Parallelism
 //!
-//! All three integrals use rayon parallel iterators over ndarray elements to
-//! amortize summation cost on large 3D grids.
-
-use rayon::prelude::*;
+//! All three integrals use Moirai indexed reductions to amortize summation cost
+//! on large 3D grids while keeping the solver on the Atlas execution provider.
 
 use super::WesterveltFdtd;
 use crate::forward::nonlinear::conservation::ConservationDiagnostics;
+use moirai_parallel::{reduce_index_with, Adaptive};
 
 impl ConservationDiagnostics for WesterveltFdtd {
     /// Total acoustic potential energy `E = ∫ p²/(2ρ₀c₀²) dV`.
@@ -50,8 +49,17 @@ impl ConservationDiagnostics for WesterveltFdtd {
         let c0 = self.medium_properties.c0;
         let factor = 1.0 / (2.0 * rho0 * c0 * c0);
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
+        let pressure = self
+            .pressure
+            .as_slice()
+            .expect("invariant: Westervelt pressure is standard-layout");
 
-        self.pressure.par_iter().map(|&p| p * p * factor * dv).sum()
+        reduce_index_with::<Adaptive, _, _, _>(
+            pressure.len(),
+            0.0,
+            |idx| pressure[idx] * pressure[idx] * factor * dv,
+            |a, b| a + b,
+        )
     }
 
     /// Pressure-gradient momentum proxy `(∫ ρ₀·∂p/∂x dV, ∫ ρ₀·∂p/∂y dV, ∫ ρ₀·∂p/∂z dV)`.
@@ -67,10 +75,11 @@ impl ConservationDiagnostics for WesterveltFdtd {
         let ny = self.grid.ny;
         let nz = self.grid.nz;
 
-        // Collect partial sums over interior i-slices in parallel.
-        let (px, py, pz) = (1..nx - 1)
-            .into_par_iter()
-            .map(|i| {
+        let (px, py, pz) = reduce_index_with::<Adaptive, _, _, _>(
+            nx.saturating_sub(2),
+            (0.0, 0.0, 0.0),
+            |offset| {
+                let i = offset + 1;
                 let mut sx = 0.0f64;
                 let mut sy = 0.0f64;
                 let mut sz = 0.0f64;
@@ -89,11 +98,9 @@ impl ConservationDiagnostics for WesterveltFdtd {
                     }
                 }
                 (sx, sy, sz)
-            })
-            .reduce(
-                || (0.0, 0.0, 0.0),
-                |(ax, ay, az), (bx, by, bz)| (ax + bx, ay + by, az + bz),
-            );
+            },
+            |(ax, ay, az), (bx, by, bz)| (ax + bx, ay + by, az + bz),
+        );
 
         (px, py, pz)
     }
@@ -107,10 +114,16 @@ impl ConservationDiagnostics for WesterveltFdtd {
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
         let rho0 = self.medium_properties.rho0;
         let c0_sq = c0 * c0;
+        let pressure = self
+            .pressure
+            .as_slice()
+            .expect("invariant: Westervelt pressure is standard-layout");
 
-        self.pressure
-            .par_iter()
-            .map(|&p| rho0 * (1.0 + p / (rho0 * c0_sq)) * dv)
-            .sum()
+        reduce_index_with::<Adaptive, _, _, _>(
+            pressure.len(),
+            0.0,
+            |idx| rho0 * (1.0 + pressure[idx] / (rho0 * c0_sq)) * dv,
+            |a, b| a + b,
+        )
     }
 }

@@ -1,5 +1,5 @@
 //! `MechanicalStressPlugin` — elastic stress–velocity propagation as a
-//! [`Plugin`](crate::plugin::Plugin) for the capability-driven solver loop.
+//! [`Plugin`] for the capability-driven solver loop.
 //!
 //! # Why a dedicated plugin (and not the deleted `ElasticWavePlugin`)
 //!
@@ -27,7 +27,7 @@
 //! consumed: an acoustic pressure source is not an elastic velocity source, and
 //! conflating them would misrepresent the excitation.
 
-use ndarray::{Array4, Axis};
+use leto::Array4;
 use std::any::Any;
 use std::fmt::Debug;
 
@@ -54,7 +54,7 @@ pub struct MechanicalStressPlugin {
 }
 
 impl MechanicalStressPlugin {
-    /// Create a new elastic-stress plugin for integrator timestep `dt` [s].
+    /// Create a new elastic-stress plugin for integrator timestep `dt` \[s\].
     ///
     /// The orchestrator is not built until [`Plugin::initialize`] supplies the
     /// grid and medium.
@@ -118,7 +118,7 @@ impl Plugin for MechanicalStressPlugin {
         let elastic_medium = ElasticPstdMedium {
             lame_lambda: medium.lame_lambda_array(),
             lame_mu: medium.lame_mu_array(),
-            density: medium.density_array().to_owned(),
+            density: medium.density_array().to_contiguous(),
         };
         self.orchestrator = Some(ElasticPstdOrchestrator::new(grid, elastic_medium, self.dt)?);
         self.state = PluginState::Initialized;
@@ -145,9 +145,17 @@ impl Plugin for MechanicalStressPlugin {
 
         // Provide the isotropic pressure p = -⅓ tr(σ) to the unified cube.
         let pressure = orchestrator.pressure_field();
-        fields
-            .index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())
-            .assign(&pressure);
+        let mut pressure_plane = fields
+            .index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within unified field array");
+        let [nx, ny, nz] = pressure.shape();
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    pressure_plane[[i, j, k]] = pressure[[i, j, k]];
+                }
+            }
+        }
 
         Ok(())
     }
@@ -169,7 +177,7 @@ mod tests {
     use kwavers_grid::Grid;
     use kwavers_medium::elastic::lame_from_speeds;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::{Array4, Axis};
+    use leto::Array4;
 
     fn grid() -> Grid {
         Grid::new(24, 24, 1, 1e-3, 1e-3, 1e-3).expect("grid")
@@ -235,7 +243,7 @@ mod tests {
         plugin
             .update(&mut fields, &g, &medium, 5e-8, 0.0, &mut ctx)
             .expect("first step");
-        let after_one = fields.index_axis(Axis(0), p_idx).to_owned();
+        let after_one = fields.index_axis::<3>(0, p_idx).unwrap().to_contiguous();
         let energy_one: f64 = after_one.iter().map(|v| v * v).sum();
         assert!(
             energy_one > 0.0,
@@ -245,7 +253,7 @@ mod tests {
         plugin
             .update(&mut fields, &g, &medium, 5e-8, 5e-8, &mut ctx)
             .expect("second step");
-        let after_two = fields.index_axis(Axis(0), p_idx).to_owned();
+        let after_two = fields.index_axis::<3>(0, p_idx).unwrap().to_contiguous();
 
         // The wave propagates: the field is different between steps (genuine
         // evolution, not a static write).

@@ -1,7 +1,7 @@
 //! Passive cavitation monitoring and closed-loop control PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -55,10 +55,10 @@ pub fn cavitation_monitor_timeseries(
     .ok_or_else(|| PyRuntimeError::new_err("invalid cavitation monitor trace parameters"))?;
 
     Ok((
-        trace.time_s.into_pyarray(py).unbind(),
-        trace.cavitation_signal.into_pyarray(py).unbind(),
-        trace.power_percent.into_pyarray(py).unbind(),
-        trace.cumulative_dose.into_pyarray(py).unbind(),
+        trace.time_s.to_pyarray(py).unbind(),
+        trace.cavitation_signal.to_pyarray(py).unbind(),
+        trace.power_percent.to_pyarray(py).unbind(),
+        trace.cumulative_dose.to_pyarray(py).unbind(),
         trace.goal_dose,
     ))
 }
@@ -174,13 +174,13 @@ pub fn simulated_population_monitor_timeseries(
         })?;
 
     Ok((
-        trace.time_s.into_pyarray(py).unbind(),
-        trace.cavitation_signal.into_pyarray(py).unbind(),
-        trace.power_percent.into_pyarray(py).unbind(),
-        trace.cumulative_dose.into_pyarray(py).unbind(),
+        trace.time_s.to_pyarray(py).unbind(),
+        trace.cavitation_signal.to_pyarray(py).unbind(),
+        trace.power_percent.to_pyarray(py).unbind(),
+        trace.cumulative_dose.to_pyarray(py).unbind(),
         trace.goal_dose,
-        trace.stable_signal.into_pyarray(py).unbind(),
-        trace.broadband_signal.into_pyarray(py).unbind(),
+        trace.stable_signal.to_pyarray(py).unbind(),
+        trace.broadband_signal.to_pyarray(py).unbind(),
     ))
 }
 
@@ -236,11 +236,11 @@ pub fn closed_loop_cavitation_sonication(
     })?;
 
     Ok((
-        trace.pressure_pa.into_pyarray(py).unbind(),
-        trace.stable_emission.into_pyarray(py).unbind(),
-        trace.inertial_emission.into_pyarray(py).unbind(),
-        trace.stable_dose.into_pyarray(py).unbind(),
-        trace.inertial_dose.into_pyarray(py).unbind(),
+        trace.pressure_pa.to_pyarray(py).unbind(),
+        trace.stable_emission.to_pyarray(py).unbind(),
+        trace.inertial_emission.to_pyarray(py).unbind(),
+        trace.stable_dose.to_pyarray(py).unbind(),
+        trace.inertial_dose.to_pyarray(py).unbind(),
     ))
 }
 
@@ -331,15 +331,15 @@ pub fn raster_cavitation_pulsing(
     .ok_or_else(|| PyRuntimeError::new_err("invalid raster cavitation pulsing parameters"))?;
 
     Ok((
-        trace.time_s.into_pyarray(py).unbind(),
-        trace.coverage.into_pyarray(py).unbind(),
-        trace.cumulative_dose.into_pyarray(py).unbind(),
-        trace.per_spot_dose.into_pyarray(py).unbind(),
-        trace.per_spot_peak_temp_k.into_pyarray(py).unbind(),
+        trace.time_s.to_pyarray(py).unbind(),
+        trace.coverage.to_pyarray(py).unbind(),
+        trace.cumulative_dose.to_pyarray(py).unbind(),
+        trace.per_spot_dose.to_pyarray(py).unbind(),
+        trace.per_spot_peak_temp_k.to_pyarray(py).unbind(),
         trace.efficacy,
         trace.dt_spot_s,
         trace.treatment_s,
-        trace.p_spot_pa.into_pyarray(py).unbind(),
+        trace.p_spot_pa.to_pyarray(py).unbind(),
     ))
 }
 
@@ -475,9 +475,9 @@ pub fn per_spot_cavitation_dose_grid(
     .ok_or_else(|| PyRuntimeError::new_err("invalid per-spot cavitation dose grid parameters"))?;
 
     Ok((
-        grid.dose.into_pyarray(py).unbind(),
-        grid.efficiency.into_pyarray(py).unbind(),
-        grid.p_spot_pa.into_pyarray(py).unbind(),
+        grid.dose.to_pyarray(py).unbind(),
+        grid.efficiency.to_pyarray(py).unbind(),
+        grid.p_spot_pa.to_pyarray(py).unbind(),
         grid.goal_dose,
     ))
 }

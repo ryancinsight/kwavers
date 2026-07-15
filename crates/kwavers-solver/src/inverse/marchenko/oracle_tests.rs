@@ -13,7 +13,7 @@ use crate::inverse::fwi::time_domain::{FwiEngine, FwiGeometry, FwiProcessor};
 use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 const DX: f64 = 1e-3;
 const DT: f64 = 2e-7;
@@ -65,7 +65,7 @@ fn engine_trace(c: &[f64], src_cell: usize, recv_cell: usize, nt: usize) -> Vec<
         u_signal: None,
         u_mode: SourceMode::default(),
     };
-    let mut sensor_mask = Array3::from_elem((nx, 1, 1), false);
+    let mut sensor_mask = Array3::from_elem([nx, 1, 1], false);
     sensor_mask[[recv_cell, 0, 0]] = true;
     let geometry = FwiGeometry::new(source, sensor_mask);
     let params = FwiParameters {

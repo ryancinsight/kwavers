@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Container for common initialization material properties
 #[derive(Debug, Clone)]

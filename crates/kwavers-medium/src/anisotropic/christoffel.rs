@@ -5,7 +5,7 @@
 
 use super::stiffness::AnisotropicStiffnessTensor;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Christoffel equation solver for anisotropic wave propagation
 #[derive(Debug)]
@@ -26,7 +26,7 @@ impl ChristoffelEquation {
     /// Compute Christoffel matrix for given propagation direction
     #[must_use]
     pub fn christoffel_matrix(&self, direction: &[f64; 3]) -> Array2<f64> {
-        let mut gamma = Array2::zeros((3, 3));
+        let mut gamma = Array2::zeros([3, 3]);
         let c = &self.stiffness.c;
         let n = direction;
 
@@ -127,34 +127,28 @@ impl ChristoffelEquation {
     /// [`phase_velocities`]: Self::phase_velocities
     /// [`polarization_vectors`]: Self::polarization_vectors
     fn sorted_eigen(&self, direction: &[f64; 3]) -> ([f64; 3], [[f64; 3]; 3]) {
-        use nalgebra::{Matrix3, SymmetricEigen};
+        use leto::application::fixed::FixedMatrix;
         let g = self.christoffel_matrix(direction);
-        let m = Matrix3::new(
-            g[[0, 0]],
-            g[[0, 1]],
-            g[[0, 2]],
-            g[[1, 0]],
-            g[[1, 1]],
-            g[[1, 2]],
-            g[[2, 0]],
-            g[[2, 1]],
-            g[[2, 2]],
-        );
-        let eig = SymmetricEigen::new(m);
+        let m = FixedMatrix::from_rows([
+            [g[[0, 0]], g[[0, 1]], g[[0, 2]]],
+            [g[[1, 0]], g[[1, 1]], g[[1, 2]]],
+            [g[[2, 0]], g[[2, 1]], g[[2, 2]]],
+        ]);
+        let (eigenvalues, eigenvectors) = m.symmetric_eigen();
         let mut order = [0usize, 1, 2];
         order.sort_by(|&a, &b| {
-            eig.eigenvalues[b]
-                .partial_cmp(&eig.eigenvalues[a])
+            eigenvalues[b]
+                .partial_cmp(&eigenvalues[a])
                 .unwrap_or(core::cmp::Ordering::Equal)
         });
         let mut vals = [0.0; 3];
         let mut vecs = [[0.0; 3]; 3];
         for (k, &o) in order.iter().enumerate() {
-            vals[k] = eig.eigenvalues[o];
+            vals[k] = eigenvalues[o];
             vecs[k] = [
-                eig.eigenvectors[(0, o)],
-                eig.eigenvectors[(1, o)],
-                eig.eigenvectors[(2, o)],
+                eigenvectors[(0, o)],
+                eigenvectors[(1, o)],
+                eigenvectors[(2, o)],
             ];
         }
         (vals, vecs)
@@ -414,18 +408,18 @@ mod tests {
         let n = [s, s, s];
         let vg = solver.group_velocities(&n).unwrap();
         let speeds = [c_p, c_s, c_s];
-        for m in 0..3 {
+        for (m, (mode_vg, &speed)) in vg.iter().zip(speeds.iter()).enumerate() {
             // V_g = speed · n̂  (parallel to n, magnitude = phase speed).
-            for i in 0..3 {
+            for (i, (&component, &direction)) in mode_vg.iter().zip(n.iter()).enumerate() {
                 assert!(
-                    (vg[m][i] - speeds[m] * n[i]).abs() < 1e-3 * c_p,
+                    (component - speed * direction).abs() < 1e-3 * c_p,
                     "mode {m} comp {i}: {} vs {}",
-                    vg[m][i],
-                    speeds[m] * n[i]
+                    component,
+                    speed * direction
                 );
             }
-            let mag = (vg[m][0].powi(2) + vg[m][1].powi(2) + vg[m][2].powi(2)).sqrt();
-            assert!((mag - speeds[m]).abs() < 1e-3 * c_p, "|V_g| mode {m}");
+            let mag = (mode_vg[0].powi(2) + mode_vg[1].powi(2) + mode_vg[2].powi(2)).sqrt();
+            assert!((mag - speed).abs() < 1e-3 * c_p, "|V_g| mode {m}");
         }
         // Zero direction / bad density rejected.
         assert!(solver.group_velocities(&[0.0, 0.0, 0.0]).is_err());
@@ -449,9 +443,9 @@ mod tests {
         );
         assert!(vg[0][2] > 0.0, "qP energy travels +z");
         // All components finite.
-        for m in 0..3 {
-            for i in 0..3 {
-                assert!(vg[m][i].is_finite());
+        for mode_vg in &vg {
+            for component in mode_vg {
+                assert!(component.is_finite());
             }
         }
     }
@@ -498,8 +492,9 @@ mod tests {
         let dot0 = pol[0][0] * dir[0] + pol[0][1] * dir[1] + pol[0][2] * dir[2];
         assert!(dot0.abs() > 0.999, "qP polarization must be longitudinal");
         // Shear modes ⊥ dir ⇒ |pol · dir| ≈ 0.
-        for s in 1..=2 {
-            let dot = pol[s][0] * dir[0] + pol[s][1] * dir[1] + pol[s][2] * dir[2];
+        for (s, polarization) in pol.iter().enumerate().skip(1).take(2) {
+            let dot =
+                polarization[0] * dir[0] + polarization[1] * dir[1] + polarization[2] * dir[2];
             assert!(dot.abs() < 1e-6, "qS{s} polarization must be transverse");
         }
     }

@@ -83,15 +83,15 @@ pub struct ClassicalHeterogeneousNucleation<T: std::fmt::Debug + Clone> {
     pub reference_stiffness: T,
 }
 
-impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationModel
-    for ClassicalHeterogeneousNucleation<T>
+impl<T: eunomia::FloatElement + std::fmt::Debug + Clone + std::ops::Neg<Output = T>>
+    HeterogeneousNucleationModel for ClassicalHeterogeneousNucleation<T>
 {
     type Scalar = T;
 
     #[inline(always)]
     fn calculate_stiffness_factor(&self, youngs_modulus: T) -> T {
-        let one = T::one();
-        let zero = T::zero();
+        let one = T::ONE;
+        let zero = T::ZERO;
         if youngs_modulus <= zero {
             return one;
         }
@@ -114,7 +114,7 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
 
     #[inline(always)]
     fn calculate_nucleation_rate(&self, pressure: T, temperature: T, stiffness_factor: T) -> T {
-        let zero = T::zero();
+        let zero = T::ZERO;
 
         // Nucleation only occurs under negative acoustic pressure (tension)
         // pulling the fluid apart relative to vapor pressure.
@@ -125,8 +125,7 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
         // Classical Nucleation Theory geometric prefactor: 16π/3.
         // Sourced from std::f64::consts::PI to avoid drifting from the
         // canonical value via a hand-computed decimal literal.
-        let sixteen_pi_over_three =
-            T::from(16.0 * std::f64::consts::PI / 3.0).expect("16π/3 representable in Scalar T");
+        let sixteen_pi_over_three = T::from_f64(16.0 * std::f64::consts::PI / 3.0);
         let p_diff = self.vapor_pressure - pressure;
 
         let surface_tension_cubed =
@@ -140,7 +139,7 @@ impl<T: num_traits::Float + std::fmt::Debug + Clone> HeterogeneousNucleationMode
 
         let delta_g_c = (sixteen_pi_over_three * surface_tension_cubed) / p_diff_squared;
 
-        let k_b = T::from(BOLTZMANN).expect("BOLTZMANN constant representable in Scalar T");
+        let k_b = T::from_f64(BOLTZMANN);
         let k_t = k_b * temperature;
         if k_t <= zero {
             return zero;

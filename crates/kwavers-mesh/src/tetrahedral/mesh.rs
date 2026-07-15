@@ -11,7 +11,7 @@
 //! - Si (2015): "TetGen: A quality tetrahedral mesh generator"
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use nalgebra::{Matrix3, Vector3};
+use leto::application::fixed::{FixedMatrix, FixedVector};
 use std::collections::HashMap;
 
 use super::types::{BoundingBox, MeshBoundaryType, MeshNode, MeshStatistics, Tetrahedron};
@@ -314,13 +314,13 @@ impl TetrahedralMesh {
         let c = self.nodes[element.nodes[2]].coordinates;
         let d = self.nodes[element.nodes[3]].coordinates;
 
-        let a = Vector3::new(a[0], a[1], a[2]);
-        let b = Vector3::new(b[0], b[1], b[2]);
-        let c = Vector3::new(c[0], c[1], c[2]);
-        let d = Vector3::new(d[0], d[1], d[2]);
-        let p = Vector3::new(point[0], point[1], point[2]);
+        let a = FixedVector::new([a[0], a[1], a[2]]);
+        let b = FixedVector::new([b[0], b[1], b[2]]);
+        let c = FixedVector::new([c[0], c[1], c[2]]);
+        let d = FixedVector::new([d[0], d[1], d[2]]);
+        let p = FixedVector::new([point[0], point[1], point[2]]);
 
-        let m = Matrix3::from_columns(&[b - a, c - a, d - a]);
+        let m = FixedMatrix::from_columns([b - a, c - a, d - a]);
         let Some(inv) = m.try_inverse() else {
             return false;
         };

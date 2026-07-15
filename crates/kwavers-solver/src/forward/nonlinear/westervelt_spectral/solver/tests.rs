@@ -4,7 +4,7 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::traits::AcousticWaveModel;
 use kwavers_source::NullSource;
-use ndarray::Array4;
+use leto::Array4;
 
 #[test]
 fn pressure_buffer_permutation_returns_disjoint_step_roles() {
@@ -50,7 +50,7 @@ fn pressure_buffer_permutation_returns_disjoint_step_roles() {
 #[test]
 fn fd_laplacian_of_constant_is_exactly_zero() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let field = ndarray::Array3::from_elem((8, 8, 8), 42.0_f64);
+    let field = leto::Array3::from_elem([8, 8, 8], 42.0_f64);
     let lap = compute_laplacian_fd(&field, &grid);
     // Interior points must be exactly 0.0; boundary stencil is not computed (left 0)
     for i in 1..7usize {
@@ -80,7 +80,7 @@ fn fd_laplacian_of_x_squared_equals_two_interior() {
     let n = 8usize;
     let dx = 1.0e-3_f64;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let mut field = ndarray::Array3::<f64>::zeros((n, n, n));
+    let mut field = leto::Array3::<f64>::zeros((n, n, n));
     for i in 0..n {
         for j in 0..n {
             for k in 0..n {
@@ -187,7 +187,9 @@ fn update_wave_preserves_pressure_buffer_storage_for_zero_state() {
         .each_ref()
         .map(|buffer| buffer.as_ptr() as usize);
     after.sort_unstable();
-    let pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+    let pressure = fields
+        .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+        .expect("invariant: pressure field index within unified field rank");
 
     assert_eq!(after, before);
     assert_eq!(solver.nonlinear_scratch.as_ptr(), nonlinear_before);
@@ -232,7 +234,7 @@ fn lossy_westervelt_stays_finite_and_bounded() {
     let mut solver = WesterveltWave::new(&grid);
     solver.set_nonlinearity_scaling(0.0); // linear; damping_scaling stays 1.0 → LOSSY
     let mut fields = Array4::<f64>::zeros((1, n, n, n));
-    fields.index_axis_mut(ndarray::Axis(0), 0).assign(&ic);
+    fields.index_axis_mut(0, 0).unwrap().assign(&ic);
     let prev = Array3::<f64>::zeros((n, n, n));
     let source = NullSource::new();
 
@@ -250,7 +252,9 @@ fn lossy_westervelt_stays_finite_and_bounded() {
             .unwrap();
     }
 
-    let p = fields.index_axis(ndarray::Axis(0), 0);
+    let p = fields
+        .index_axis::<3>(0, 0)
+        .expect("invariant: field 0 within unified field rank");
     assert!(
         p.iter().all(|v| v.is_finite()),
         "lossy Westervelt must stay finite (was Inf/NaN before the c² coefficient fix)"
@@ -391,12 +395,18 @@ fn lossy_westervelt_absorption_rate_matches_stokes_end_to_end() {
             &mut damp, &p, &p_prev, &medium, &grid, dt,
         );
         let mut p_next = Array3::<f64>::zeros((nx, ny, nz));
-        ndarray::Zip::from(&mut p_next)
-            .and(&p)
-            .and(&p_prev)
-            .and(&lap)
-            .and(&damp)
-            .for_each(|pn, &pc, &pp, &l, &d| *pn = 2.0 * pc - pp + dt2 * (c * c * l + d));
+        {
+            // 4 read inputs + 1 mut output; leto_ops zip is single-lhs only, so a
+            // native flat-index loop over the same-shape contiguous field slices.
+            let pn = p_next.as_slice_mut().expect("invariant: p_next contiguous");
+            let pc = p.as_slice().expect("invariant: p contiguous");
+            let pp = p_prev.as_slice().expect("invariant: p_prev contiguous");
+            let ls = lap.as_slice().expect("invariant: lap contiguous");
+            let ds = damp.as_slice().expect("invariant: damp contiguous");
+            for i in 0..pn.len() {
+                pn[i] = 2.0 * pc[i] - pp[i] + dt2 * (c * c * ls[i] + ds[i]);
+            }
+        }
         p_prev = std::mem::replace(&mut p, p_next);
         if step < window {
             max_early = max_early.max(amp(&p));

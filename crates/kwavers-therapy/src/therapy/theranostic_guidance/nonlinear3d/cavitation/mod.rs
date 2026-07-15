@@ -12,7 +12,7 @@ mod forward;
 mod helpers;
 mod passive_inverse;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::metrics::metrics_from_score;
 use super::types::{
@@ -37,7 +37,7 @@ pub(crate) fn run_cavitation_inverse(
     peak_pressure: &Array3<f64>,
     config: &Nonlinear3dConfig,
 ) -> CavitationResult {
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let body = volume.body_mask.iter().copied().collect::<Vec<_>>();
     let source = cavitation_source(volume, peak_pressure, config);
     let source_vec = source.iter().copied().collect::<Vec<_>>();

@@ -1,5 +1,5 @@
 use kwavers_core::error::{ConfigError, KwaversResult};
-use ndarray::ArrayViewMut3;
+use leto::ArrayViewMut3;
 use serde::{Deserialize, Serialize};
 
 mod boundary_impl;
@@ -99,7 +99,7 @@ impl DomainPmlConfig {
 impl DomainPMLBoundary {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new(config: DomainPmlConfig) -> KwaversResult<Self> {
         config.validate()?;

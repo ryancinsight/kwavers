@@ -35,7 +35,7 @@
 //! workspace at the configured stencil order, incurring no additional FD
 //! stencil evaluation.
 
-use ndarray::Zip;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use tracing::warn;
 
 use super::WesterveltFdtd;
@@ -58,7 +58,7 @@ impl WesterveltFdtd {
     /// ```
     ///
     /// # Errors
-    /// Propagates any [`KwaversError`] from the Laplacian stencil.
+    /// Propagates any [`crate::KwaversError`] from the Laplacian stencil.
     pub fn update(
         &mut self,
         medium: &dyn Medium,
@@ -70,45 +70,66 @@ impl WesterveltFdtd {
         self.calculate_laplacian(grid)?;
         self.calculate_nonlinear_term_into(dt, grid);
 
-        let pressure = &self.pressure;
-        let pressure_prev = &self.pressure_prev;
-        let laplacian = &self.laplacian;
-        let nonlinear_term = &self.nonlinear_term;
-        let pressure_next = &mut self.pressure_next;
+        let pressure = self
+            .pressure
+            .as_slice()
+            .expect("invariant: Westervelt pressure is standard-layout");
+        let pressure_prev = self
+            .pressure_prev
+            .as_slice()
+            .expect("invariant: Westervelt previous pressure is standard-layout");
+        let laplacian = self
+            .laplacian
+            .as_slice()
+            .expect("invariant: Westervelt laplacian is standard-layout");
+        let nonlinear_term = self
+            .nonlinear_term
+            .as_slice()
+            .expect("invariant: Westervelt nonlinear term is standard-layout");
+        let pressure_next = self
+            .pressure_next
+            .as_slice_mut()
+            .expect("invariant: Westervelt next pressure is standard-layout");
         let enable_absorption = self.config.enable_absorption;
         let artificial_viscosity = self.config.artificial_viscosity;
+        let ny = grid.ny;
+        let nz = grid.nz;
+        let slab_len = ny * nz;
 
-        Zip::indexed(pressure_next)
-            .and(pressure)
-            .and(pressure_prev)
-            .and(laplacian)
-            .and(nonlinear_term)
-            .par_for_each(|(i, j, k), p_next, &p, &p_prev, &lap, &nl| {
-                let c = medium.sound_speed(i, j, k);
-                let rho = medium.density(i, j, k);
-                let beta = 1.0 + medium.nonlinearity(i, j, k) / 2.0;
+        enumerate_mut_with::<Adaptive, _, _>(pressure_next, |idx, p_next| {
+            let i = idx / slab_len;
+            let rem = idx % slab_len;
+            let j = rem / nz;
+            let k = rem % nz;
+            let p = pressure[idx];
+            let p_prev = pressure_prev[idx];
+            let lap = laplacian[idx];
+            let nl = nonlinear_term[idx];
+            let c = medium.sound_speed(i, j, k);
+            let rho = medium.density(i, j, k);
+            let beta = 1.0 + medium.nonlinearity(i, j, k) / 2.0;
 
-                // Linear wave + artificial viscosity share the precomputed Laplacian.
-                // artificial_viscosity·Δt·∇²p uses the same stencil order as the
-                // main wave operator — no redundant stencil recomputation.
-                let linear_and_visc = (c * dt).mul_add(c * dt, artificial_viscosity * dt) * lap;
+            // Linear wave + artificial viscosity share the precomputed Laplacian.
+            // artificial_viscosity·Δt·∇²p uses the same stencil order as the
+            // main wave operator — no redundant stencil recomputation.
+            let linear_and_visc = (c * dt).mul_add(c * dt, artificial_viscosity * dt) * lap;
 
-                // Nonlinear coefficient β·Δt²/(ρ·c²)
-                let nl_coeff = beta * dt * dt / (rho * c * c);
+            // Nonlinear coefficient β·Δt²/(ρ·c²)
+            let nl_coeff = beta * dt * dt / (rho * c * c);
 
-                // Leapfrog propagation step (Hamilton & Blackstock 1998 §3.5)
-                let p_propagated = 2.0f64.mul_add(p, -p_prev) + linear_and_visc + nl_coeff * nl;
+            // Leapfrog propagation step (Hamilton & Blackstock 1998 §3.5)
+            let p_propagated = 2.0f64.mul_add(p, -p_prev) + linear_and_visc + nl_coeff * nl;
 
-                // Multiplicative absorption (Stokes-Kirchhoff, O(Δt) operator splitting):
-                //   p *= exp(−α·c·Δt)
-                // Stable for all α ≥ 0.  See module-level doc for derivation.
-                *p_next = if enable_absorption {
-                    let alpha = medium.absorption(i, j, k);
-                    p_propagated * (-alpha * c * dt).exp()
-                } else {
-                    p_propagated
-                };
-            });
+            // Multiplicative absorption (Stokes-Kirchhoff, O(Δt) operator splitting):
+            //   p *= exp(−α·c·Δt)
+            // Stable for all α ≥ 0.  See module-level doc for derivation.
+            *p_next = if enable_absorption {
+                let alpha = medium.absorption(i, j, k);
+                p_propagated * (-alpha * c * dt).exp()
+            } else {
+                p_propagated
+            };
+        });
 
         // Source injection: amplitude × Δt (Pa·s) applied as a pressure impulse.
         for source in sources {

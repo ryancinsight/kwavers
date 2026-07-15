@@ -5,9 +5,9 @@
 
 use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
-/// Convert isotropic-elastic wave speeds to Lamé parameters `(λ, μ)` [Pa].
+/// Convert isotropic-elastic wave speeds to Lamé parameters `(λ, μ)` \[Pa].
 ///
 /// `μ = ρ·c_s²` (shear modulus) and `λ = ρ·(c_p² − 2c_s²)`, where `c_p`/`c_s`
 /// are the compressional/shear speeds [m/s] and `ρ` the density [kg/m³].
@@ -142,13 +142,13 @@ pub trait ElasticArrayAccess: ElasticProperties + ArrayAccess {
     /// - Catheline et al., "Measurement of viscoelastic properties of homogeneous
     ///   soft solid using transient elastography" (2004), Ultrasound Med. Biol. 30(11), 1461-1469
     fn shear_viscosity_coeff_array(&self) -> Array3<f64> {
-        let shape = self.lame_mu_array().dim();
+        let shape = self.lame_mu_array().shape();
         Array3::zeros(shape)
     }
 
     /// Returns a 3D array of bulk viscosity coefficients
     fn bulk_viscosity_coeff_array(&self) -> Array3<f64> {
-        let shape = self.lame_mu_array().dim();
+        let shape = self.lame_mu_array().shape();
         Array3::zeros(shape)
     }
 }

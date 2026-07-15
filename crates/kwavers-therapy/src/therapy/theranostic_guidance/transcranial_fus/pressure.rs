@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -57,7 +57,7 @@ pub(super) fn rayleigh_pressure_field_unscaled(
     brain_c: f64,
     chunk_size: usize,
 ) -> KwaversResult<Array3<f32>> {
-    let n_elem = element_positions.nrows();
+    let n_elem = element_positions.shape()[0];
     if phases_rad.len() != n_elem || amplitude_weights.len() != n_elem || active.len() != n_elem {
         return Err(KwaversError::InvalidInput(
             "element_positions, phases_rad, amplitude_weights, and active must have matching length"
@@ -161,7 +161,7 @@ pub(super) fn pressure_peak_and_scale(
 }
 
 pub(super) fn scale_pressure_field(mut pressure_pa: Array3<f32>, scale: f32) -> Array3<f32> {
-    for value in &mut pressure_pa {
+    for value in pressure_pa.iter_mut() {
         *value *= scale;
     }
     pressure_pa

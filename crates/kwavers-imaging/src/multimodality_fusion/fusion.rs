@@ -1,6 +1,6 @@
 use super::{FusionParameters, ImageData, MultimodalityFusionMethod, RegistrationTransform};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Image fusion engine
 #[derive(Debug)]
@@ -64,7 +64,8 @@ impl FusionEngine {
         transform: &RegistrationTransform,
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = floating.dimensions;
-        let mut transformed = Array3::zeros((nx, ny, nz));
+        let mut transformed = Array3::from_shape_vec([nx, ny, nz], vec![0.0; nx * ny * nz])
+            .expect("invariant: dimensions match zero-filled transform buffer length");
 
         // Apply inverse transform to avoid holes
         let inv_transform = transform.invert()?;
@@ -98,12 +99,15 @@ impl FusionEngine {
 
     /// Overlay fusion: weighted blend
     fn fusion_overlay(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
-        reference * (1.0 - self.params.blend_weight) + floating * self.params.blend_weight
+        reference.zip_map(floating, |reference_value, floating_value| {
+            reference_value * (1.0 - self.params.blend_weight)
+                + floating_value * self.params.blend_weight
+        })
     }
 
     /// Checkerboard fusion: alternating tiles
     fn fusion_checkerboard(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
-        let (nx, ny, nz) = reference.dim();
+        let [nx, ny, nz] = reference.shape();
         let tile_size = 32; // 32×32 voxel tiles
 
         let mut result = reference.clone();
@@ -129,7 +133,9 @@ impl FusionEngine {
 
     /// Difference fusion: subtraction (change detection)
     fn fusion_difference(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
-        (floating - reference).mapv(f64::abs)
+        floating.zip_map(reference, |floating_value, reference_value| {
+            (floating_value - reference_value).abs()
+        })
     }
 
     /// False color fusion: color-coded composite
@@ -139,19 +145,21 @@ impl FusionEngine {
     /// Current 3D output format cannot represent color information.
     fn fusion_false_color(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
         // Approximate: intensity-weighted blend (true color requires 4D output)
-        let ref_norm = reference
-            / (reference
-                .iter()
-                .copied()
-                .fold(f64::NEG_INFINITY, f64::max)
-                .max(1e-10));
-        let flt_norm = floating
-            / (floating
-                .iter()
-                .copied()
-                .fold(f64::NEG_INFINITY, f64::max)
-                .max(1e-10));
-        &ref_norm * (1.0 - self.params.blend_weight) + &flt_norm * self.params.blend_weight
+        let ref_scale = reference
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max)
+            .max(1e-10);
+        let flt_scale = floating
+            .iter()
+            .copied()
+            .fold(f64::NEG_INFINITY, f64::max)
+            .max(1e-10);
+        reference.zip_map(floating, |reference_value, floating_value| {
+            let ref_norm = reference_value / ref_scale;
+            let flt_norm = floating_value / flt_scale;
+            ref_norm * (1.0 - self.params.blend_weight) + flt_norm * self.params.blend_weight
+        })
     }
 
     /// Multi-channel fusion: R=ref, G=float, B=diff
@@ -160,7 +168,11 @@ impl FusionEngine {
     /// This returns a 3D weighted combination as an approximation.
     fn fusion_multi_channel(&self, reference: &Array3<f64>, floating: &Array3<f64>) -> Array3<f64> {
         // Weighted combination (true RGB requires 4D output format)
-        reference * 0.4 + floating * 0.4 + (floating - reference).mapv(f64::abs) * 0.2
+        reference.zip_map(floating, |reference_value, floating_value| {
+            reference_value * 0.4
+                + floating_value * 0.4
+                + (floating_value - reference_value).abs() * 0.2
+        })
     }
 }
 

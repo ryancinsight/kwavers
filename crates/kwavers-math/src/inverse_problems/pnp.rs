@@ -15,7 +15,7 @@
 //! prox_{λ TV}(f) = argmin_u  ½‖u − f‖² + λ·TV(u).
 //! ```
 
-use ndarray::{Array3, Axis};
+use leto::Array3;
 
 /// Edge-preserving TV denoiser (Chambolle 2004), applied in-plane to every
 /// `z`-slice of a 3-D field. This is the proximal operator of `λ·TV` and the
@@ -36,15 +36,19 @@ pub fn tv_denoise_chambolle(
     image: &Array3<f64>,
     weight: f64,
     iterations: usize,
-    frozen: Option<&ndarray::Array3<bool>>,
+    frozen: Option<&leto::Array3<bool>>,
 ) -> Array3<f64> {
     if let Some(m) = frozen {
-        assert_eq!(m.dim(), image.dim(), "frozen mask must match image shape");
+        assert_eq!(
+            m.shape(),
+            image.shape(),
+            "frozen mask must match image shape"
+        );
     }
     if weight <= 0.0 {
         return image.clone();
     }
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
     // Chambolle–Pock primal-dual for ROF (στ‖∇‖² ≤ 1, ‖∇‖² ≤ 8).
     let sigma = 0.35_f64;
     let tau = 0.35_f64;
@@ -123,21 +127,21 @@ pub fn tv_denoise_chambolle(
             }
         }
     }
-    let _ = Axis(0); // ndarray::Axis kept in scope for future n-D generalisation
+    let _ = 0usize; // placeholder kept in scope for future n-D generalisation
     out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// TV denoising of a noisy piecewise-constant image moves it closer to the
     /// clean image while preserving the central edge (a flat-region/edge test).
     #[test]
     fn tv_denoise_reduces_noise_and_preserves_edge() {
         let (nx, ny) = (40usize, 40);
-        let mut clean = Array3::zeros((nx, ny, 1));
+        let mut clean = Array3::zeros([nx, ny, 1]);
         for j in 0..ny {
             for i in 0..nx {
                 clean[[i, j, 0]] = if i < nx / 2 { 1.0 } else { 2.0 }; // step edge
@@ -153,7 +157,16 @@ mod tests {
             *v += 0.25 * u;
         }
 
-        let err = |a: &Array3<f64>| (a - &clean).mapv(|x| x * x).sum().sqrt();
+        let err = |a: &Array3<f64>| {
+            a.iter()
+                .zip(clean.iter())
+                .map(|(x, c)| {
+                    let d = x - c;
+                    d * d
+                })
+                .sum::<f64>()
+                .sqrt()
+        };
         let noisy_err = err(&noisy);
         let den = tv_denoise_chambolle(&noisy, 0.4, 200, None);
         let den_err = err(&den);
@@ -183,7 +196,7 @@ mod tests {
     /// `weight = 0` is a no-op; frozen voxels are left untouched.
     #[test]
     fn zero_weight_and_frozen_are_identity() {
-        let mut img = Array3::zeros((8, 8, 1));
+        let mut img = Array3::zeros([8, 8, 1]);
         for (n, v) in img.iter_mut().enumerate() {
             *v = (n % 5) as f64;
         }

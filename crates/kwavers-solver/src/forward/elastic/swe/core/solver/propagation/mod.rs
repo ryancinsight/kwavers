@@ -13,7 +13,7 @@ mod sensors;
 impl ElasticWaveSolver {
     /// Propagate.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate(
         &mut self,
@@ -68,7 +68,7 @@ impl ElasticWaveSolver {
             .map(|vs| {
                 vs.mask
                     .indexed_iter()
-                    .filter_map(|(idx, &active)| active.then_some(idx))
+                    .filter_map(|(idx, &active)| active.then_some((idx[0], idx[1], idx[2])))
                     .collect()
             });
 
@@ -180,10 +180,10 @@ impl ElasticWaveSolver {
     ///
     pub fn propagate_waves(
         &self,
-        initial_displacement: &ndarray::Array3<f64>,
+        initial_displacement: &leto::Array3<f64>,
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        if initial_displacement.dim() != (nx, ny, nz) {
+        if initial_displacement.shape() != [nx, ny, nz] {
             return Err(NumericalError::InvalidOperation(
                 "Initial displacement shape does not match grid".to_owned(),
             )
@@ -209,7 +209,7 @@ impl ElasticWaveSolver {
 
     /// Propagate history.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn propagate_history(
         &self,

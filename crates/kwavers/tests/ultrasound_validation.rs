@@ -21,7 +21,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::InversionMethod;
 use kwavers_medium::homogeneous::HomogeneousMedium;
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
 
 /// Simple finite difference derivative computation for validation
@@ -143,7 +143,9 @@ pub mod acoustic_wave_validation {
         // Create spatial grid
         let dx = wavelength / 20.0; // 20 points per wavelength
         let x_max = (grid_points - 1) as f64 * dx;
-        let x: Array1<f64> = Array1::linspace(0.0, x_max, grid_points);
+        let x: Array1<f64> = Array1::from_shape_fn(grid_points, |[i]| {
+            0.0 + i as f64 * (x_max - 0.0) / (grid_points - 1) as f64
+        });
 
         // Time stepping parameters
         let dt = dx / wave_speed * 0.9; // CFL condition
@@ -407,8 +409,9 @@ pub mod swe_validation {
             },
             performance: PerformanceMetrics {
                 computation_time,
-                memory_usage: (elasticity_map.youngs_modulus.len() * 3 * std::mem::size_of::<f64>())
-                    as f64
+                memory_usage: (elasticity_map.youngs_modulus.size()
+                    * 3
+                    * std::mem::size_of::<f64>()) as f64
                     / 1e6,
                 convergence_rate: 0.95,
             },

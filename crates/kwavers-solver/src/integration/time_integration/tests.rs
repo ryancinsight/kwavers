@@ -12,14 +12,14 @@ use super::time_stepper::{AdamsBashforth, AdamsBashforthConfig, RK4Config, Runge
 use super::traits::{MultiRateConfig, TimeStepper};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4};
+use leto::{Array3, Array4};
 use std::collections::HashMap;
 
 #[test]
 fn rk4_matches_fourth_order_stability_polynomial_for_linear_growth() -> KwaversResult<()> {
     let grid = Grid::new(1, 1, 1, 1.0, 1.0, 1.0)?;
     let mut stepper = RungeKutta4::new(RK4Config::default());
-    let mut field = Array3::from_elem((1, 1, 1), 1.0);
+    let mut field = Array3::from_elem([1, 1, 1], 1.0);
     let lambda = -2.0_f64;
     let dt = 0.1_f64;
 
@@ -48,14 +48,14 @@ fn adams_bashforth2_is_exact_for_constant_derivative_after_startup() -> KwaversR
         order: 2,
         startup_steps: 1,
     });
-    let mut field = Array3::from_elem((1, 1, 1), 3.0);
+    let mut field = Array3::from_elem([1, 1, 1], 3.0);
     let derivative = 2.5_f64;
     let dt = 0.2_f64;
 
     for _ in 0..3 {
         stepper.step(
             &mut field,
-            |u| Ok(Array3::from_elem(u.dim(), derivative)),
+            |u| Ok(Array3::from_elem(u.shape(), derivative)),
             dt,
             &grid,
         )?;
@@ -72,10 +72,38 @@ fn adams_bashforth2_is_exact_for_constant_derivative_after_startup() -> KwaversR
 }
 
 #[test]
+fn adams_bashforth3_is_exact_for_constant_derivative_after_startup() -> KwaversResult<()> {
+    let grid = Grid::new(2, 2, 2, 1.0, 1.0, 1.0)?;
+    let mut stepper = AdamsBashforth::new(AdamsBashforthConfig {
+        order: 3,
+        startup_steps: 2,
+    });
+    let mut field = Array3::from_elem([2, 2, 2], 3.0);
+    let derivative = -1.25_f64;
+    let dt = 0.2_f64;
+
+    for _ in 0..4 {
+        stepper.step(
+            &mut field,
+            |u| Ok(Array3::from_elem(u.shape(), derivative)),
+            dt,
+            &grid,
+        )?;
+    }
+
+    let expected = 3.0 + 4.0 * dt * derivative;
+    assert!(
+        field.iter().all(|&value| (value - expected).abs() < 1e-15),
+        "AB3 constant-derivative field {field:?}, expected all {expected}"
+    );
+    Ok(())
+}
+
+#[test]
 fn stability_analyzer_uses_acoustic_and_diffusion_bounds() -> KwaversResult<()> {
     let grid = Grid::new(4, 4, 4, 0.002, 0.001, 0.004)?;
     let analyzer = StabilityAnalyzer::new(0.5);
-    let field = Array3::from_elem((4, 4, 4), 1.0);
+    let field = Array3::from_elem([4, 4, 4], 1.0);
     let constraints = HashMap::from([
         ("max_wave_speed".to_string(), 2_000.0),
         ("diffusion_coefficient".to_string(), 1.25e-3),
@@ -170,7 +198,7 @@ fn time_scale_separator_matches_quadratic_closed_form() -> KwaversResult<()> {
 #[test]
 fn time_scale_separator_handles_domains_without_central_stencil() -> KwaversResult<()> {
     let grid = Grid::new(2, 3, 3, 1.0, 1.0, 1.0)?;
-    let fields = Array4::from_elem((2, 2, 3, 3), 7.0);
+    let fields = Array4::from_elem([2, 2, 3, 3], 7.0);
     let mut separator = TimeScaleSeparator::new(&grid);
 
     let scales = separator.analyze(&fields, 1e-12)?;

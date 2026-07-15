@@ -1,7 +1,7 @@
 //! Tissue attenuation and dispersion analytical bindings.
 
 use kwavers_physics::analytical::tissue;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -24,7 +24,7 @@ pub fn tissue_absorption_db_cm(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = tissue::tissue_absorption_db_cm(f_s, &tissue);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the Kramers–Kronig consistent sound speed dispersion.
@@ -52,5 +52,5 @@ pub fn kramers_kronig_sound_speed(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = tissue::kramers_kronig_sound_speed(f_s, alpha0, y, f_ref_hz, c_ref);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

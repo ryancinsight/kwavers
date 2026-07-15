@@ -56,6 +56,7 @@
 
 mod record_field;
 mod record_spec;
+#[cfg(test)]
 mod tests;
 
 pub use record_field::SensorRecordField;

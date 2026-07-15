@@ -13,8 +13,8 @@
 
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
-use ndarray::Array1;
-use numpy::{IntoPyArray, PyArray1};
+use numpy::ndarray::Array1;
+use numpy::{PyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -114,8 +114,8 @@ pub fn solve_gilmore(
     }
 
     Ok((
-        Array1::from(time).into_pyarray(py).into(),
-        Array1::from(radius).into_pyarray(py).into(),
-        Array1::from(rdot).into_pyarray(py).into(),
+        Array1::from(time).to_pyarray(py).into(),
+        Array1::from(radius).to_pyarray(py).into(),
+        Array1::from(rdot).to_pyarray(py).into(),
     ))
 }

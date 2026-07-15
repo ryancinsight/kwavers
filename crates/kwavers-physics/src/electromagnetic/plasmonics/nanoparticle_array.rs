@@ -38,7 +38,7 @@ impl NanoparticleArray {
     /// Inherently restricted to ≥ 1.0 (no macroscopic destructive cancellation).
     #[must_use]
     pub fn collective_enhancement(&self, wavelength: f64, evaluation_point: &[f64; 3]) -> f64 {
-        let mut total_field = num_complex::Complex::new(1.0, 0.0); // Baseline incident field = 1
+        let mut total_field = eunomia::Complex::new(1.0, 0.0); // Baseline incident field = 1
 
         for (particle, position) in &self.particles {
             let distance = (evaluation_point[2] - position[2])
@@ -57,7 +57,7 @@ impl NanoparticleArray {
                 let k = self.medium_wavenumber(wavelength);
 
                 // Near-field dominant term: E ∝ α / r³ · exp(ikr)
-                let phase = num_complex::Complex::new(0.0, k * distance).exp();
+                let phase = eunomia::Complex::new(0.0, k * distance).exp();
                 let geometric_factor = 1.0 / distance.powi(3);
 
                 let dipole_field = alpha * geometric_factor * phase;

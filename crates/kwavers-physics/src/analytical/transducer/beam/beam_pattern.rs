@@ -1,5 +1,5 @@
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
 
 // ─── Beam pattern ─────────────────────────────────────────────────────────────
 

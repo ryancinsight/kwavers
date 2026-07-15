@@ -1,17 +1,18 @@
 //! PSTD time-stepping kernel: `step_forward` and k-space variant.
 
 use super::super::orchestrator::PSTDSolver;
+use super::ops::{add_gradient_source_term, add_masked_source_term};
 use crate::forward::pstd::config::KSpaceMethod;
 use crate::forward::pstd::implementation::k_space::PSTDKSOperators;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_source::{SourceField, SourceInjectionMode};
-use ndarray::{Array3, Zip};
+use leto::Array3;
 use tracing::{enabled, trace, warn, Level};
 
 impl PSTDSolver {
     /// Perform a single time step using k-space pseudospectral method
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[inline]
     pub fn step_forward(&mut self) -> KwaversResult<()> {
@@ -97,7 +98,7 @@ impl PSTDSolver {
 
     /// Time step using full k-space pseudospectral method (dispersion-free)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn step_forward_kspace(&mut self, dt: f64, time_index: usize) -> KwaversResult<()> {
         self.dpx.fill(0.0);
@@ -120,18 +121,10 @@ impl PSTDSolver {
 
                     match mode {
                         SourceInjectionMode::Boundary => {
-                            Zip::from(&mut self.dpx).and(mask).par_for_each(|s, &m| {
-                                if m.abs() > 1e-12 {
-                                    *s += m * amp;
-                                }
-                            });
+                            add_masked_source_term(&mut self.dpx, mask, amp);
                         }
                         SourceInjectionMode::Additive { scale } => {
-                            Zip::from(&mut self.dpx).and(mask).par_for_each(|s, &m| {
-                                if m.abs() > 1e-12 {
-                                    *s += m * amp * scale;
-                                }
-                            });
+                            add_masked_source_term(&mut self.dpx, mask, amp * scale);
                         }
                     }
                 }
@@ -146,11 +139,7 @@ impl PSTDSolver {
                     let c_sq = self.c_ref * self.c_ref;
                     match self.velocity_source_grad_masks.get(idx) {
                         Some(Some(grad_mask)) => {
-                            Zip::from(&mut self.dpx)
-                                .and(grad_mask)
-                                .par_for_each(|s, &gm| {
-                                    *s -= c_sq * amp * gm;
-                                });
+                            add_gradient_source_term(&mut self.dpx, grad_mask, -c_sq * amp);
                         }
                         Some(None) => {}
                         None => {
@@ -174,7 +163,7 @@ impl PSTDSolver {
             })
         })?;
 
-        let source_term = std::mem::replace(&mut self.dpx, Array3::zeros((0, 0, 0)));
+        let source_term = std::mem::replace(&mut self.dpx, Array3::zeros([0, 0, 0]));
         self.propagate_kspace(dt, &source_term, &mut ops)?;
         self.dpx = source_term;
         self.kspace_operators = Some(ops);
@@ -225,7 +214,7 @@ impl PSTDSolver {
     /// must use `StandardPSTD`, whose first-order split-field system carries `c(x)`
     /// in the equation of state.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn propagate_kspace(
         &mut self,
@@ -244,25 +233,34 @@ impl PSTDSolver {
                 .wave_coeff
                 .as_ref()
                 .expect("invariant: ensure_wave_coeff populated wave_coeff");
-            Zip::from(&mut p_hat).and(coeff).par_for_each(|ph, &c| {
-                *ph *= if is_first { 0.5 * c } else { c };
-            });
+            let factor = if is_first { 0.5 } else { 1.0 };
+            for (value, &coef) in p_hat.iter_mut().zip(coeff.iter()) {
+                *value *= factor * coef;
+            }
         }
         let mut new_p = kspace_ops.inverse_fft_3d(&p_hat)?;
 
         if let Some(prev) = &p_prev_old {
-            Zip::from(&mut new_p)
-                .and(prev)
-                .and(source_term)
-                .par_for_each(|np, &pp, &s| *np += s - pp);
+            for ((dst, &old), &source) in new_p.iter_mut().zip(prev.iter()).zip(source_term.iter())
+            {
+                *dst += source - old;
+            }
         } else {
-            Zip::from(&mut new_p)
-                .and(source_term)
-                .par_for_each(|np, &s| *np += s);
+            for (dst, &source) in new_p.iter_mut().zip(source_term.iter()) {
+                *dst += source;
+            }
         }
 
         // pⁿ becomes pⁿ⁻¹ for the next step; new_p becomes the current pressure.
-        kspace_ops.p_prev = Some(std::mem::replace(&mut self.fields.p, new_p));
+        let shape = self.fields.p.shape();
+        let mut old_p = leto::Array3::zeros((shape[0], shape[1], shape[2]));
+        for (dst, src) in old_p.iter_mut().zip(self.fields.p.iter()) {
+            *dst = *src;
+        }
+        for (dst, src) in self.fields.p.iter_mut().zip(new_p.iter()) {
+            *dst = *src;
+        }
+        kspace_ops.p_prev = Some(old_p);
         Ok(())
     }
 }

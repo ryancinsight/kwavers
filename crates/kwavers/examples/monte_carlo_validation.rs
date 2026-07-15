@@ -33,7 +33,7 @@ use kwavers_phantom::PhantomBuilder;
 use kwavers_physics::optics::map_builder::OpticalPropertyMap;
 use kwavers_physics::optics::monte_carlo::{MonteCarloSolver, PhotonSource, SimulationConfig};
 use kwavers_solver::forward::optical::diffusion::{DiffusionSolver, DiffusionSolverConfig};
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 fn main() -> Result<()> {
@@ -433,7 +433,7 @@ fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPro
 }
 
 fn flatten_kji(field: &Array3<f64>) -> Vec<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let mut out = Vec::with_capacity(nx * ny * nz);
     for k in 0..nz {
         for j in 0..ny {

@@ -14,7 +14,7 @@
 //! - Jensen (1996). *Estimation of Blood Velocities Using Ultrasound*.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 mod analysis;
 mod classify;
@@ -80,7 +80,7 @@ impl VesselSegmentation {
     /// # Errors
     /// Returns `InvalidInput` when any image dimension is < 3.
     pub fn segment(image: &Array3<f64>) -> KwaversResult<Self> {
-        let (nx, ny, nz) = image.dim();
+        let [nx, ny, nz] = image.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return Err(KwaversError::InvalidInput(
                 "image must be at least 3×3×3".to_owned(),

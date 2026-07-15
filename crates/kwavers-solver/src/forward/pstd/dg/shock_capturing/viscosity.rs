@@ -4,7 +4,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4, Axis};
+use leto::{Array3, Array4};
 
 use kwavers_core::constants::numerical::{
     LINEAR_VISCOSITY_COEFF, MAX_VISCOSITY_LIMIT, QUADRATIC_VISCOSITY_COEFF,
@@ -59,13 +59,19 @@ impl ArtificialViscosity {
         shock_indicator: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (_, nx, ny, nz) = velocity.dim();
+        let [_, nx, ny, nz] = velocity.shape();
         let mut viscosity = Array3::zeros((nx, ny, nz));
 
         // Extract velocity components
-        let vx = velocity.index_axis(Axis(0), 0);
-        let vy = velocity.index_axis(Axis(0), 1);
-        let vz = velocity.index_axis(Axis(0), 2);
+        let vx = velocity
+            .index_axis::<3>(0, 0)
+            .expect("invariant: velocity axis-0 component 0 in bounds");
+        let vy = velocity
+            .index_axis::<3>(0, 1)
+            .expect("invariant: velocity axis-0 component 1 in bounds");
+        let vz = velocity
+            .index_axis::<3>(0, 2)
+            .expect("invariant: velocity axis-0 component 2 in bounds");
 
         let dx = grid.dx.min(grid.dy).min(grid.dz);
 
@@ -118,12 +124,16 @@ impl ArtificialViscosity {
         grid: &Grid,
         dt: f64,
     ) -> KwaversResult<()> {
-        let (_, nx, ny, nz) = momentum.dim();
+        let [_, nx, ny, nz] = momentum.shape();
 
         // Apply viscous stress tensor
         for component in 0..3 {
-            let mut momentum_component = momentum.index_axis_mut(Axis(0), component);
-            let velocity_component = velocity.index_axis(Axis(0), component);
+            let mut momentum_component = momentum
+                .index_axis_mut::<3>(0, component)
+                .expect("invariant: momentum axis-0 component in bounds");
+            let velocity_component = velocity
+                .index_axis::<3>(0, component)
+                .expect("invariant: velocity axis-0 component in bounds");
 
             for i in 1..nx - 1 {
                 for j in 1..ny - 1 {
@@ -174,8 +184,8 @@ mod tests {
 
         // Create test data with compression
         let mut velocity = Array4::<f64>::zeros((3, 10, 10, 10));
-        let density = Array3::from_elem((10, 10, 10), 1.0);
-        let sound_speed = Array3::from_elem((10, 10, 10), SOUND_SPEED_AIR);
+        let density = Array3::from_elem([10, 10, 10], 1.0);
+        let sound_speed = Array3::from_elem([10, 10, 10], SOUND_SPEED_AIR);
         let mut shock_indicator = Array3::zeros((10, 10, 10));
 
         // Add converging velocity field (compression)

@@ -7,25 +7,31 @@ mod shot_gradient;
 use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+
+fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("FWI source mask shape must match contiguous ndarray storage")
+}
 
 impl FwiProcessor {
     /// Perform Full Waveform Inversion (single-source).
     ///
     /// Minimizes the configured data misfit `J(d_syn, d_obs)` (default L2
     /// least-squares `J = (dt/2) Σ_{r,t} (d_syn − d_obs)²`; see
-    /// [`FwiProcessor::with_misfit`](super::super::FwiProcessor::with_misfit) for
+    /// [`Self::with_misfit`] for
     /// the cycle-skipping-robust envelope / phase / Wasserstein alternatives) by
     /// gradient descent with max-norm normalization and Armijo line search. The
     /// objective, convergence test, line search, and adjoint source all use the
     /// same selected functional.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn invert(
         &self,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         initial_model: &Array3<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
@@ -111,12 +117,12 @@ impl FwiProcessor {
     /// [`Self::invert`], [`Self::invert_multiscale`](super::FwiProcessor), and
     /// [`Self::invert_encoded`](super::FwiProcessor).
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve, the
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, regularization, or the line search.
     pub(in crate::inverse::fwi::time_domain) fn descent_update(
         &self,
         current_model: &Array3<f64>,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
         dtv_scale: f64,
@@ -161,12 +167,12 @@ impl FwiProcessor {
     /// requires the true gradient so the stored curvature pairs
     /// `(s, y = Δg)` retain their physical scaling.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve, the
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, or regularization.
     pub(in crate::inverse::fwi::time_domain) fn misfit_and_gradient(
         &self,
         current_model: &Array3<f64>,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
         dtv_scale: f64,
@@ -190,14 +196,16 @@ impl FwiProcessor {
     /// self-adjoint engine and the FDTD/PSTD `Solver` engine both require the full
     /// stored forward history and use it.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve or misfit.
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve or misfit.
     pub(in crate::inverse::fwi::time_domain) fn forward_misfit_raw_gradient(
         &self,
         current_model: &Array3<f64>,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>)> {
+        let source_mask = geometry.source.p_mask.as_ref().map(ndarray_from_leto3);
+
         // Exact self-adjoint engine, lossless: reconstruct the forward field
         // backward instead of storing the O(nt·N) history.
         if matches!(self.engine, FwiEngine::SecondOrderSelfAdjoint) && self.sa_damping.is_none() {
@@ -214,7 +222,7 @@ impl FwiProcessor {
                     p_last: &p_last,
                     p_second_last: &p_second_last,
                 },
-                geometry.source.p_mask.as_ref(),
+                source_mask.as_ref(),
             )?;
             return Ok((objective, gradient));
         }
@@ -231,7 +239,7 @@ impl FwiProcessor {
                     current_model,
                     grid,
                     &forward_history,
-                    geometry.source.p_mask.as_ref(),
+                    source_mask.as_ref(),
                 )?
             }
             FwiEngine::SecondOrderSelfAdjoint => self.adjoint_gradient_self_adjoint(
@@ -240,7 +248,7 @@ impl FwiProcessor {
                 geometry,
                 grid,
                 &forward_history,
-                geometry.source.p_mask.as_ref(),
+                source_mask.as_ref(),
             )?,
         };
         Ok((objective, gradient))
@@ -254,11 +262,11 @@ impl FwiProcessor {
 fn relative_model_change(old: &Array3<f64>, new: &Array3<f64>) -> f64 {
     let mut diff_sq = 0.0_f64;
     let mut old_sq = 0.0_f64;
-    Zip::from(old).and(new).for_each(|&o, &n| {
-        let d = n - o;
+    for (o, n) in old.iter().zip(new.iter()) {
+        let d = *n - *o;
         diff_sq += d * d;
-        old_sq += o * o;
-    });
+        old_sq += *o * *o;
+    }
     if old_sq <= 0.0 {
         return 0.0;
     }

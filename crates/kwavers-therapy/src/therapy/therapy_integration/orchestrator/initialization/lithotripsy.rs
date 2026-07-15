@@ -29,10 +29,10 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 #[cfg(feature = "nifti")]
 use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
+use leto::Array3;
 #[cfg(feature = "nifti")]
 use log::info;
 use log::warn;
-use ndarray::Array3;
 
 use super::super::super::config::TherapySessionConfig;
 

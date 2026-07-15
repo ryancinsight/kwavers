@@ -15,11 +15,7 @@
 //! # Running Benchmarks
 //!
 //! ```bash
-//! # CPU benchmarks
 //! cargo bench --bench pinn_elastic_2d_training --features pinn
-//!
-//! # GPU benchmarks (requires WGPU)
-//! cargo bench --bench pinn_elastic_2d_training --features pinn-gpu
 //! ```
 //!
 //! # Mathematical Validation
@@ -33,19 +29,56 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion, Throughput};
 
 #[cfg(feature = "pinn")]
-use burn::{
-    backend::{Autodiff, NdArray},
-    tensor::Tensor,
-};
+use coeus_autograd::Var;
+#[cfg(feature = "pinn")]
+use coeus_core::MoiraiBackend;
 
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::elastic_2d::{
-    BoundaryData, BoundaryType, CollocationData, Config, ElasticPINN2D, InitialData, LossComputer,
-    TrainingData,
+    loss::ElasticBoundaryCondition,
+    training::optimizer::PINNOptimizer,
+    training::scheduler::LRScheduler,
+    training::{train_pinn, ElasticPinnLoopConfig},
+    BoundaryData, CollocationData, Config, ElasticPINN2D, InitialData, LossComputer, TrainingData,
 };
 
 #[cfg(feature = "pinn")]
-type Backend = Autodiff<NdArray<f32>>;
+type Backend = MoiraiBackend;
+
+#[cfg(feature = "pinn")]
+fn uniform_var(backend: &Backend, n: usize, lo: f32, hi: f32) -> Var<f32, Backend> {
+    let data: Vec<f32> = (0..n)
+        .map(|_| lo + rand::random::<f32>() * (hi - lo))
+        .collect();
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend),
+        false,
+    )
+}
+
+#[cfg(feature = "pinn")]
+fn normal_var(backend: &Backend, n: usize, mean: f32, std: f32) -> Var<f32, Backend> {
+    // Box-Muller transform for approximate standard normal samples.
+    let data: Vec<f32> = (0..n)
+        .map(|_| {
+            let u1: f32 = rand::random::<f32>().max(1e-7);
+            let u2: f32 = rand::random::<f32>();
+            mean + std * (-2.0 * u1.ln()).sqrt() * (2.0 * std::f32::consts::PI * u2).cos()
+        })
+        .collect();
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n, 1], &data, backend),
+        false,
+    )
+}
+
+#[cfg(feature = "pinn")]
+fn zeros_var(backend: &Backend, n: usize, cols: usize) -> Var<f32, Backend> {
+    Var::new(
+        coeus_tensor::Tensor::zeros_on(vec![n, cols], backend),
+        false,
+    )
+}
 
 // ============================================================================
 // Benchmark: Forward Pass
@@ -53,13 +86,14 @@ type Backend = Autodiff<NdArray<f32>>;
 
 #[cfg(feature = "pinn")]
 fn bench_forward_pass(c: &mut Criterion) {
-    let device = Default::default();
-    let mut config = Config::default();
-    config.hidden_layers = vec![64, 64, 64]; // 3 hidden layers
+    let backend = Backend::default();
+    let config = Config {
+        hidden_layers: vec![64, 64, 64],
+        ..Config::default()
+    };
 
-    let model = ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
+    let model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
-    // Test batch sizes
     let batch_sizes = vec![32, 128, 512, 2048];
 
     let mut group = c.benchmark_group("forward_pass");
@@ -71,34 +105,13 @@ fn bench_forward_pass(c: &mut Criterion) {
             BenchmarkId::from_parameter(batch_size),
             &batch_size,
             |b, &batch_size| {
-                // Create input tensors
-                let x = Tensor::<Backend, 1>::random(
-                    [batch_size as usize],
-                    burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                    &device,
-                )
-                .reshape([batch_size as usize, 1]);
-
-                let y = Tensor::<Backend, 1>::random(
-                    [batch_size as usize],
-                    burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                    &device,
-                )
-                .reshape([batch_size as usize, 1]);
-
-                let t = Tensor::<Backend, 1>::random(
-                    [batch_size as usize],
-                    burn::tensor::Distribution::Uniform(0.0, 1.0),
-                    &device,
-                )
-                .reshape([batch_size as usize, 1]);
+                let n = batch_size as usize;
+                let x = uniform_var(&backend, n, -1.0, 1.0);
+                let y = uniform_var(&backend, n, -1.0, 1.0);
+                let t = uniform_var(&backend, n, 0.0, 1.0);
 
                 b.iter(|| {
-                    let output = model.forward(
-                        black_box(x.clone()),
-                        black_box(y.clone()),
-                        black_box(t.clone()),
-                    );
+                    let output = model.forward(black_box(&x), black_box(&y), black_box(&t));
                     black_box(output)
                 });
             },
@@ -114,81 +127,56 @@ fn bench_forward_pass(c: &mut Criterion) {
 
 #[cfg(feature = "pinn")]
 fn bench_loss_computation(c: &mut Criterion) {
-    let device = Default::default();
-    let mut config = Config::default();
-    config.hidden_layers = vec![64, 64, 64];
+    let backend = Backend::default();
+    let config = Config {
+        hidden_layers: vec![64, 64, 64],
+        ..Config::default()
+    };
 
-    let model = ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
+    let _model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
     let loss_computer = LossComputer::new(config.loss_weights);
 
-    let batch_size = 512;
+    let batch_size: u64 = 512;
+    let n = batch_size as usize;
 
     let mut group = c.benchmark_group("loss_computation");
     group.throughput(Throughput::Elements(batch_size));
 
     // PDE loss
     group.bench_function("pde_residual", |b| {
-        let residual_x = Tensor::<Backend, 1>::random(
-            [batch_size as usize],
-            burn::tensor::Distribution::Normal(0.0, 1.0),
-            &device,
-        )
-        .reshape([batch_size as usize, 1]);
-
-        let residual_y = Tensor::<Backend, 1>::random(
-            [batch_size as usize],
-            burn::tensor::Distribution::Normal(0.0, 1.0),
-            &device,
-        )
-        .reshape([batch_size as usize, 1]);
+        let residual_x = normal_var(&backend, n, 0.0, 1.0);
+        let residual_y = normal_var(&backend, n, 0.0, 1.0);
 
         b.iter(|| {
-            let loss = loss_computer
-                .pde_loss(black_box(residual_x.clone()), black_box(residual_y.clone()));
+            let loss = loss_computer.pde_loss(black_box(&residual_x), black_box(&residual_y));
             black_box(loss)
         });
     });
 
     // Boundary loss
     group.bench_function("boundary_condition", |b| {
-        let predicted = Tensor::<Backend, 2>::random(
-            [batch_size as usize, 2],
-            burn::tensor::Distribution::Uniform(-1.0, 1.0),
-            &device,
-        );
-
-        let target = Tensor::<Backend, 2>::zeros([batch_size as usize, 2], &device);
+        let predicted = uniform_var(&backend, n, -1.0, 1.0);
+        let target = zeros_var(&backend, n, 2);
 
         b.iter(|| {
-            let loss = loss_computer
-                .boundary_loss(black_box(predicted.clone()), black_box(target.clone()));
+            let loss = loss_computer.boundary_loss(black_box(&predicted), black_box(&target));
             black_box(loss)
         });
     });
 
     // Initial condition loss
     group.bench_function("initial_condition", |b| {
-        let u_pred = Tensor::<Backend, 2>::random(
-            [batch_size as usize, 2],
-            burn::tensor::Distribution::Uniform(-1.0, 1.0),
-            &device,
-        );
-
-        let v_pred = Tensor::<Backend, 2>::random(
-            [batch_size as usize, 2],
-            burn::tensor::Distribution::Uniform(-1.0, 1.0),
-            &device,
-        );
-
-        let u_target = Tensor::<Backend, 2>::zeros([batch_size as usize, 2], &device);
-        let v_target = Tensor::<Backend, 2>::zeros([batch_size as usize, 2], &device);
+        let u_pred = uniform_var(&backend, n, -1.0, 1.0);
+        let v_pred = uniform_var(&backend, n, -1.0, 1.0);
+        let u_target = zeros_var(&backend, n, 2);
+        let v_target = zeros_var(&backend, n, 2);
 
         b.iter(|| {
             let loss = loss_computer.initial_loss(
-                black_box(u_pred.clone()),
-                black_box(v_pred.clone()),
-                black_box(u_target.clone()),
-                black_box(v_target.clone()),
+                black_box(&u_pred),
+                black_box(&v_pred),
+                black_box(&u_target),
+                black_box(&v_target),
             );
             black_box(loss)
         });
@@ -203,51 +191,35 @@ fn bench_loss_computation(c: &mut Criterion) {
 
 #[cfg(feature = "pinn")]
 fn bench_backward_pass(c: &mut Criterion) {
-    let device = Default::default();
-    let mut config = Config::default();
-    config.hidden_layers = vec![64, 64, 64];
+    let backend = Backend::default();
+    let config = Config {
+        hidden_layers: vec![64, 64, 64],
+        ..Config::default()
+    };
 
-    let model = ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
-    let loss_computer = LossComputer::new(config.loss_weights);
+    let model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
-    let batch_size = 512;
+    let batch_size: u64 = 512;
+    let n = batch_size as usize;
 
     let mut group = c.benchmark_group("backward_pass");
     group.throughput(Throughput::Elements(batch_size));
 
     group.bench_function("gradient_computation", |b| {
-        let x = Tensor::<Backend, 1>::random(
-            [batch_size as usize],
-            burn::tensor::Distribution::Uniform(-1.0, 1.0),
-            &device,
-        )
-        .reshape([batch_size as usize, 1]);
-
-        let y = Tensor::<Backend, 1>::random(
-            [batch_size as usize],
-            burn::tensor::Distribution::Uniform(-1.0, 1.0),
-            &device,
-        )
-        .reshape([batch_size as usize, 1]);
-
-        let t = Tensor::<Backend, 1>::random(
-            [batch_size as usize],
-            burn::tensor::Distribution::Uniform(0.0, 1.0),
-            &device,
-        )
-        .reshape([batch_size as usize, 1]);
+        let x = uniform_var(&backend, n, -1.0, 1.0);
+        let y = uniform_var(&backend, n, -1.0, 1.0);
+        let t = uniform_var(&backend, n, 0.0, 1.0);
 
         b.iter(|| {
-            // Forward pass
-            let output = model.forward(x.clone(), y.clone(), t.clone());
-
-            // Simple MSE loss
-            let target = Tensor::<Backend, 2>::zeros([batch_size as usize, 2], &device);
-            let loss = (output - target).powf_scalar(2.0).mean();
-
-            // Backward pass
-            let grads = black_box(loss.backward());
-            black_box(grads)
+            for p in model.parameters() {
+                p.zero_grad();
+            }
+            let output = model.forward(&x, &y, &t);
+            let target = zeros_var(&backend, n, 2);
+            let diff = coeus_autograd::sub(&output, &target);
+            let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+            loss.backward();
+            black_box(())
         });
     });
 
@@ -260,116 +232,68 @@ fn bench_backward_pass(c: &mut Criterion) {
 
 #[cfg(feature = "pinn")]
 fn bench_training_epoch(c: &mut Criterion) {
-    let device = Default::default();
-    let mut config = Config::default();
-    config.hidden_layers = vec![64, 64, 64];
-    config.n_collocation_interior = 1000;
-    config.n_collocation_boundary = 100;
-    config.n_collocation_initial = 100;
+    let backend = Backend::default();
+    let config = Config {
+        hidden_layers: vec![64, 64, 64],
+        n_collocation_interior: 1000,
+        n_collocation_boundary: 100,
+        n_collocation_initial: 100,
+        ..Config::default()
+    };
 
     let mut group = c.benchmark_group("training_epoch");
     group.sample_size(10); // Fewer samples for expensive operation
 
     group.bench_function("single_epoch", |b| {
         b.iter(|| {
-            let mut model =
-                ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
+            let mut model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
-            // Create synthetic training data
             let n_colloc = config.n_collocation_interior;
             let n_boundary = config.n_collocation_boundary;
             let n_initial = config.n_collocation_initial;
 
             let training_data = TrainingData {
                 collocation: CollocationData {
-                    x: Tensor::<Backend, 1>::random(
-                        [n_colloc],
-                        burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_colloc, 1]),
-                    y: Tensor::<Backend, 1>::random(
-                        [n_colloc],
-                        burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_colloc, 1]),
-                    t: Tensor::<Backend, 1>::random(
-                        [n_colloc],
-                        burn::tensor::Distribution::Uniform(0.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_colloc, 1]),
+                    x: uniform_var(&backend, n_colloc, -1.0, 1.0),
+                    y: uniform_var(&backend, n_colloc, -1.0, 1.0),
+                    t: uniform_var(&backend, n_colloc, 0.0, 1.0),
                     source_x: None,
                     source_y: None,
                 },
                 boundary: BoundaryData {
-                    x: Tensor::<Backend, 1>::random(
-                        [n_boundary],
-                        burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_boundary, 1]),
-                    y: Tensor::<Backend, 1>::random(
-                        [n_boundary],
-                        burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_boundary, 1]),
-                    t: Tensor::<Backend, 1>::random(
-                        [n_boundary],
-                        burn::tensor::Distribution::Uniform(0.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_boundary, 1]),
-                    boundary_type: vec![BoundaryType::Dirichlet; n_boundary],
-                    values: Tensor::<Backend, 2>::zeros([n_boundary, 2], &device),
+                    x: uniform_var(&backend, n_boundary, -1.0, 1.0),
+                    y: uniform_var(&backend, n_boundary, -1.0, 1.0),
+                    t: uniform_var(&backend, n_boundary, 0.0, 1.0),
+                    boundary_type: vec![ElasticBoundaryCondition::Dirichlet; n_boundary],
+                    values: zeros_var(&backend, n_boundary, 2),
                 },
                 initial: InitialData {
-                    x: Tensor::<Backend, 1>::random(
-                        [n_initial],
-                        burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_initial, 1]),
-                    y: Tensor::<Backend, 1>::random(
-                        [n_initial],
-                        burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                        &device,
-                    )
-                    .reshape([n_initial, 1]),
-                    displacement: Tensor::<Backend, 2>::zeros([n_initial, 2], &device),
-                    velocity: Tensor::<Backend, 2>::zeros([n_initial, 2], &device),
+                    x: uniform_var(&backend, n_initial, -1.0, 1.0),
+                    y: uniform_var(&backend, n_initial, -1.0, 1.0),
+                    displacement: zeros_var(&backend, n_initial, 2),
+                    velocity: zeros_var(&backend, n_initial, 2),
                 },
                 observations: None,
             };
 
-            let mut optimizer = kwavers_solver::inverse::pinn::elastic_2d::training::optimizer::PINNOptimizer::adam(
-                &model,
-                config.learning_rate,
-                0.0,
-                0.9,
-                0.999,
-                1e-8,
-            );
-            let mut scheduler =
-                kwavers_solver::inverse::pinn::elastic_2d::training::scheduler::LRScheduler::constant(
-                    config.learning_rate,
-                );
-            let loop_config = kwavers_solver::inverse::pinn::elastic_2d::training::r#loop::TrainingConfig {
+            let mut optimizer =
+                PINNOptimizer::adam(&model, config.learning_rate, 0.0, 0.9, 0.999, 1e-8);
+            let mut scheduler = LRScheduler::constant(config.learning_rate);
+            let loop_config = ElasticPinnLoopConfig {
                 max_epochs: 1,
                 convergence_tolerance: 1e-6,
                 convergence_window: 10,
                 log_every: 1,
                 checkpoint_every: 1000,
             };
-            let metrics = kwavers_solver::inverse::pinn::elastic_2d::training::r#loop::train_pinn(
+            let metrics = train_pinn(
                 &mut model,
                 &training_data,
                 &mut optimizer,
                 &mut scheduler,
                 &loop_config,
-            ).ok();
+            )
+            .ok();
             black_box(metrics)
         });
     });
@@ -383,10 +307,10 @@ fn bench_training_epoch(c: &mut Criterion) {
 
 #[cfg(feature = "pinn")]
 fn bench_network_scaling(c: &mut Criterion) {
-    let device = Default::default();
-    let batch_size = 512;
+    let backend = Backend::default();
+    let batch_size: u64 = 512;
+    let n = batch_size as usize;
 
-    // Test different network architectures
     let architectures = vec![
         ("small", vec![32, 32]),
         ("medium", vec![64, 64, 64]),
@@ -400,39 +324,19 @@ fn bench_network_scaling(c: &mut Criterion) {
 
     for (name, layers) in architectures {
         group.bench_with_input(BenchmarkId::from_parameter(name), &layers, |b, layers| {
-            let mut config = Config::default();
-            config.hidden_layers = layers.clone();
+            let config = Config {
+                hidden_layers: layers.clone(),
+                ..Config::default()
+            };
 
-            let model =
-                ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
+            let model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
-            let x = Tensor::<Backend, 1>::random(
-                [batch_size as usize],
-                burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                &device,
-            )
-            .reshape([batch_size as usize, 1]);
-
-            let y = Tensor::<Backend, 1>::random(
-                [batch_size as usize],
-                burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                &device,
-            )
-            .reshape([batch_size as usize, 1]);
-
-            let t = Tensor::<Backend, 1>::random(
-                [batch_size as usize],
-                burn::tensor::Distribution::Uniform(0.0, 1.0),
-                &device,
-            )
-            .reshape([batch_size as usize, 1]);
+            let x = uniform_var(&backend, n, -1.0, 1.0);
+            let y = uniform_var(&backend, n, -1.0, 1.0);
+            let t = uniform_var(&backend, n, 0.0, 1.0);
 
             b.iter(|| {
-                let output = model.forward(
-                    black_box(x.clone()),
-                    black_box(y.clone()),
-                    black_box(t.clone()),
-                );
+                let output = model.forward(black_box(&x), black_box(&y), black_box(&t));
                 black_box(output)
             });
         });
@@ -447,11 +351,13 @@ fn bench_network_scaling(c: &mut Criterion) {
 
 #[cfg(feature = "pinn")]
 fn bench_batch_scaling(c: &mut Criterion) {
-    let device = Default::default();
-    let mut config = Config::default();
-    config.hidden_layers = vec![64, 64, 64];
+    let backend = Backend::default();
+    let config = Config {
+        hidden_layers: vec![64, 64, 64],
+        ..Config::default()
+    };
 
-    let model = ElasticPINN2D::<Backend>::new(&config, &device).expect("Failed to create model");
+    let model = ElasticPINN2D::<Backend>::new(&config).expect("Failed to create model");
 
     let batch_sizes = vec![16, 64, 256, 1024, 4096];
 
@@ -464,37 +370,22 @@ fn bench_batch_scaling(c: &mut Criterion) {
             BenchmarkId::from_parameter(batch_size),
             &batch_size,
             |b, &batch_size| {
-                let x = Tensor::<Backend, 1>::random(
-                    [batch_size as usize],
-                    burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                    &device,
-                )
-                .reshape([batch_size as usize, 1]);
-
-                let y = Tensor::<Backend, 1>::random(
-                    [batch_size as usize],
-                    burn::tensor::Distribution::Uniform(-1.0, 1.0),
-                    &device,
-                )
-                .reshape([batch_size as usize, 1]);
-
-                let t = Tensor::<Backend, 1>::random(
-                    [batch_size as usize],
-                    burn::tensor::Distribution::Uniform(0.0, 1.0),
-                    &device,
-                )
-                .reshape([batch_size as usize, 1]);
+                let n = batch_size as usize;
+                let x = uniform_var(&backend, n, -1.0, 1.0);
+                let y = uniform_var(&backend, n, -1.0, 1.0);
+                let t = uniform_var(&backend, n, 0.0, 1.0);
 
                 b.iter(|| {
-                    // Forward pass
-                    let output = model.forward(x.clone(), y.clone(), t.clone());
+                    for p in model.parameters() {
+                        p.zero_grad();
+                    }
+                    let output = model.forward(&x, &y, &t);
+                    let target = zeros_var(&backend, n, 2);
+                    let diff = coeus_autograd::sub(&output, &target);
+                    let loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+                    loss.backward();
 
-                    // Backward pass
-                    let target = Tensor::<Backend, 2>::zeros([batch_size as usize, 2], &device);
-                    let loss = (output - target).powf_scalar(2.0).mean();
-                    let grads = loss.backward();
-
-                    black_box(grads)
+                    black_box(())
                 });
             },
         );

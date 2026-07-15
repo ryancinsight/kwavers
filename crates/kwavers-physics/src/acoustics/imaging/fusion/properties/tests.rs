@@ -6,12 +6,12 @@ use super::mechanical::{
     DENSITY_NONLINEARITY_EXPONENT, STIFFNESS_INTENSITY_COUPLING,
 };
 use super::oxygenation::compute_oxygenation_index;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 #[test]
 fn test_classify_tissue_types_normal() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.2);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.2);
     let classification = classify_tissue_types(&intensity);
 
     for value in classification.iter() {
@@ -21,7 +21,7 @@ fn test_classify_tissue_types_normal() {
 
 #[test]
 fn test_classify_tissue_types_borderline() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.5);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.5);
     let classification = classify_tissue_types(&intensity);
 
     for value in classification.iter() {
@@ -31,7 +31,7 @@ fn test_classify_tissue_types_borderline() {
 
 #[test]
 fn test_classify_tissue_types_abnormal() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.7);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.7);
     let classification = classify_tissue_types(&intensity);
 
     for value in classification.iter() {
@@ -41,7 +41,7 @@ fn test_classify_tissue_types_abnormal() {
 
 #[test]
 fn test_classify_tissue_types_high_abnormal() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.9);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.9);
     let classification = classify_tissue_types(&intensity);
 
     for value in classification.iter() {
@@ -51,7 +51,7 @@ fn test_classify_tissue_types_high_abnormal() {
 
 #[test]
 fn test_compute_oxygenation_index_normal() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.0);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.0);
     let oxygenation = compute_oxygenation_index(&intensity);
 
     for value in oxygenation.iter() {
@@ -61,7 +61,7 @@ fn test_compute_oxygenation_index_normal() {
 
 #[test]
 fn test_compute_oxygenation_index_high() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 1.0);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 1.0);
     let oxygenation = compute_oxygenation_index(&intensity);
 
     for value in oxygenation.iter() {
@@ -72,7 +72,7 @@ fn test_compute_oxygenation_index_high() {
 
 #[test]
 fn test_compute_oxygenation_index_clamped() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 2.0);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 2.0);
     let oxygenation = compute_oxygenation_index(&intensity);
 
     for value in oxygenation.iter() {
@@ -82,7 +82,7 @@ fn test_compute_oxygenation_index_clamped() {
 
 #[test]
 fn test_compute_composite_stiffness_low_intensity() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.0);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.0);
     let stiffness = compute_composite_stiffness(&intensity);
 
     for value in stiffness.iter() {
@@ -94,7 +94,7 @@ fn test_compute_composite_stiffness_low_intensity() {
 
 #[test]
 fn test_compute_composite_stiffness_high_intensity() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 1.0);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 1.0);
     let stiffness = compute_composite_stiffness(&intensity);
 
     for value in stiffness.iter() {
@@ -106,7 +106,7 @@ fn test_compute_composite_stiffness_high_intensity() {
 
 #[test]
 fn test_compute_composite_stiffness_range() {
-    let mut intensity = Array3::<f64>::zeros((4, 4, 2));
+    let mut intensity = Array3::<f64>::zeros([4, 4, 2]);
     intensity[[0, 0, 0]] = 0.0;
     intensity[[1, 1, 1]] = 1.0;
 
@@ -123,7 +123,7 @@ fn test_compute_composite_stiffness_range() {
 
 #[test]
 fn test_compute_tissue_density() {
-    let intensity = Array3::<f64>::from_elem((4, 4, 2), 0.25);
+    let intensity = Array3::<f64>::from_elem([4, 4, 2], 0.25);
     let density = compute_tissue_density(&intensity);
 
     for value in density.iter() {
@@ -134,7 +134,7 @@ fn test_compute_tissue_density() {
 
 #[test]
 fn test_detect_regions_of_interest() {
-    let mut classification = Array3::<f64>::zeros((4, 4, 2));
+    let mut classification = Array3::<f64>::zeros([4, 4, 2]);
     classification[[0, 0, 0]] = 0.0; // Normal
     classification[[1, 1, 1]] = 1.0; // Abnormal
     classification[[2, 2, 0]] = 2.0; // High abnormal
@@ -149,9 +149,9 @@ fn test_detect_regions_of_interest() {
 #[test]
 fn test_extract_tissue_properties_keys() {
     let fused_result = FusedImageResult {
-        intensity_image: Array3::<f64>::zeros((4, 4, 2)),
+        intensity_image: Array3::<f64>::zeros([4, 4, 2]),
         tissue_properties: HashMap::new(),
-        confidence_map: Array3::<f64>::zeros((4, 4, 2)),
+        confidence_map: Array3::<f64>::zeros([4, 4, 2]),
         uncertainty_map: None,
         registration_transforms: HashMap::new(),
         modality_quality: HashMap::new(),

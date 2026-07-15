@@ -18,7 +18,7 @@
 //! - Otsu, N. (1979). IEEE Trans. Syst. Man Cybern. 9(1), pp. 62-66.
 //! - Rosenfeld & Pfaltz (1966). J. ACM 13(4), pp. 471-494.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Number of equally-spaced histogram bins for Otsu thresholding.
 const OTSU_BINS: usize = 256;
@@ -53,7 +53,7 @@ pub(super) fn otsu_threshold(image: &Array3<f64>) -> f64 {
 
     // Normalised histogram: bin(v) = ⌊(v − x_min)/range · (N − 1)⌋, clamped.
     let mut counts = vec![0u64; OTSU_BINS];
-    for &v in image {
+    for &v in image.iter() {
         let bin = (((v - x_min) / range * bins_minus_1).floor() as usize).min(OTSU_BINS - 1);
         counts[bin] += 1;
     }
@@ -92,8 +92,8 @@ pub(super) fn otsu_threshold(image: &Array3<f64>) -> f64 {
 ///
 /// Returns `(n_components, total_vessel_voxels)`.
 pub(super) fn count_connected_components(mask: &Array3<f64>) -> (usize, usize) {
-    let (nx, ny, nz) = mask.dim();
-    let mut visited = Array3::<bool>::default((nx, ny, nz));
+    let [nx, ny, nz] = mask.shape();
+    let mut visited = Array3::<bool>::from_elem((nx, ny, nz), false);
     let mut n_components = 0_usize;
     let mut total_voxels = 0_usize;
 

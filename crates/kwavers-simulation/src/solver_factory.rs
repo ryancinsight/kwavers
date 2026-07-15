@@ -261,7 +261,7 @@ mod tests {
 
         assert_eq!(solver.name(), "PSTD");
         solver.run(0).unwrap();
-        assert_eq!(solver.pressure_field().dim(), (4, 4, 4));
+        assert_eq!(solver.pressure_field().shape(), [4, 4, 4]);
     }
 
     #[test]
@@ -286,7 +286,7 @@ mod tests {
         assert_eq!(solver.name(), "DiscontinuousGalerkin");
         solver.run(1).unwrap();
         assert_eq!(solver.statistics().current_step, 1);
-        assert_eq!(solver.pressure_field().dim(), (3, 3, 1));
+        assert_eq!(solver.pressure_field().shape(), [3, 3, 1]);
     }
 
     #[test]
@@ -332,7 +332,7 @@ mod tests {
             "CPML FDTD produced non-finite pressure after 2 steps"
         );
         // Shape must match the grid dimensions unchanged.
-        assert_eq!(p.dim(), (16, 16, 16));
+        assert_eq!(p.shape(), [16, 16, 16]);
     }
 
     #[test]

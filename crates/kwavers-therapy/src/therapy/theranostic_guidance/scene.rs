@@ -5,7 +5,7 @@
 //! fraction against its own body or brain mask, so figure and solver paths use
 //! the same anatomical target without sharing grid-specific voxel indices.
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -69,7 +69,7 @@ fn bounds_3d(mask: &Array3<bool>) -> KwaversResult<Bounds3> {
     let mut min = [usize::MAX; 3];
     let mut max = [0usize; 3];
     let mut any = false;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
+    for ([ix, iy, iz], active) in mask.indexed_iter() {
         if *active {
             min[0] = min[0].min(ix);
             min[1] = min[1].min(iy);
@@ -88,7 +88,7 @@ fn bounds_2d(mask: &Array2<bool>) -> KwaversResult<Bounds2> {
     let mut min = [usize::MAX; 2];
     let mut max = [0usize; 2];
     let mut any = false;
-    for ((ix, iy), active) in mask.indexed_iter() {
+    for ([ix, iy], active) in mask.indexed_iter() {
         if *active {
             min[0] = min[0].min(ix);
             min[1] = min[1].min(iy);

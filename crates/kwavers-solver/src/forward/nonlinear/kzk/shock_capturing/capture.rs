@@ -2,7 +2,7 @@
 
 use super::{ShockCapture, ShockDetectionResult};
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 impl ShockCapture {
     /// Compute artificial viscosity source term: `Q_av = μ |∇p| ∇²p / ρ₀`
@@ -17,7 +17,7 @@ impl ShockCapture {
         rho0: f64,
         c0: f64,
     ) -> KwaversResult<Array2<f64>> {
-        let (nx, nz) = pressure.dim();
+        let [nx, nz] = pressure.shape();
         let mut q_av = Array2::zeros((nx, nz));
 
         if !self.config.enable_capturing || nx < 3 || nz < 3 {
@@ -73,7 +73,7 @@ impl ShockCapture {
             return Ok(());
         }
 
-        let (nx, nz) = pressure.dim();
+        let [nx, nz] = pressure.shape();
 
         if let Some(z_shock) = shock_result.shock_location {
             let z_min = z_shock.saturating_sub(filter_width);

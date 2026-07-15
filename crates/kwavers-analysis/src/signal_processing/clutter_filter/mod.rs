@@ -13,11 +13,11 @@
 //! ## Implementation Status
 //!
 //! ✅ **Spatiotemporal SVD Clutter Filter** - IMPLEMENTED
-//! - Singular Value Decomposition on slow-time data matrix
+//! - Singular Value Decomposition on real slow-time and complex I/Q matrices
 //! - Tissue/blood subspace separation via singular value thresholding
 //! - Manual and automatic rank selection
 //! - Temporal filtering across ensemble blocks
-//! - Implementation: `svd_filter.rs` (444 lines)
+//! - Implementation: `svd_filter/`
 //! - References: Demené et al. (2015), Baranger et al. (2018)
 //!
 //! ✅ **Polynomial Regression Filter** - IMPLEMENTED
@@ -160,7 +160,8 @@
 //!
 //! **Spatiotemporal SVD:**
 //! - Demené, C., et al. (2015). "Spatiotemporal clutter filtering of ultrafast ultrasound data highly increases Doppler and fUltrasound sensitivity."
-//!   *Scientific Reports*, 5, 11203. DOI: 10.1038/srep11203
+//!   *IEEE Transactions on Medical Imaging*, 34(11), 2271-2285.
+//!   DOI: 10.1109/TMI.2015.2428634
 //!
 //! - Baranger, J., et al. (2018). "Adaptive spatiotemporal SVD clutter filtering for ultrafast Doppler imaging using similarity of spatial singular vectors."
 //!   *IEEE Transactions on Medical Imaging*, 37(7), 1574-1586. DOI: 10.1109/TMI.2018.2789499
@@ -181,7 +182,7 @@
 //!
 //! All filters are fully implemented and production-ready:
 //!
-//! - `svd_filter`: Spatiotemporal SVD clutter filtering (444 lines)
+//! - `svd_filter`: Spatiotemporal real slow-time and complex I/Q SVD clutter filtering
 //! - `polynomial_filter`: Polynomial regression filtering (390 lines)
 //! - `iir_filter`: IIR high-pass filtering (411 lines)
 //! - `adaptive_filter`: Adaptive clutter rejection (571 lines)
@@ -200,4 +201,6 @@ pub use adaptive_filter::{
 };
 pub use iir_filter::{IirFilter, IirFilterConfig};
 pub use polynomial_filter::{PolynomialFilter, PolynomialFilterConfig};
-pub use svd_filter::{SignalSvdClutterFilter, SvdClutterFilterConfig};
+pub use svd_filter::{
+    IqSvdClutterFilter, IqSvdClutterResult, SignalSvdClutterFilter, SvdClutterFilterConfig,
+};

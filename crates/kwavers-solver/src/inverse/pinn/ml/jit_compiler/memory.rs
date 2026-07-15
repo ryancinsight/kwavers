@@ -48,7 +48,7 @@ impl JitMemoryPool {
     pub fn get_total_allocated(&self) -> usize {
         self.buffers
             .iter()
-            .map(|b| b.len() * std::mem::size_of::<f32>())
+            .map(|b| (b.len()) * std::mem::size_of::<f32>())
             .sum()
     }
 }

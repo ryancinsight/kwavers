@@ -17,6 +17,7 @@ fn test_therapy_step_execution() {
             duty_cycle: 0.1,
             focal_depth: 0.03,
             treatment_volume: 0.5,
+            use_nonlinear_field: false,
         },
         safety_limits: TherapyIntegrationSafetyLimits {
             thermal_index_max: TI_LIMIT_SOFT_TISSUE,

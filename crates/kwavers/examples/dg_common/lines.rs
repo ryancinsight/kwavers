@@ -1,5 +1,20 @@
 use super::{physical_coordinate, ELEMENTS};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
+
+pub trait LineField3 {
+    fn shape3(&self) -> [usize; 3];
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl LineField3 for leto::Array3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        self.shape()
+    }
+
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct NamedLine {
@@ -7,9 +22,10 @@ pub struct NamedLine {
     pub samples: Vec<(f64, f64)>,
 }
 
-pub fn center_line(field: &Array3<f64>) -> Array1<f64> {
-    let (_, ny, nz) = field.dim();
-    Array1::from_shape_fn(field.dim().0, |i| field[(i, ny / 2, nz / 2)])
+pub fn center_line<F: LineField3>(field: &F) -> Array1<f64> {
+    let shape = field.shape3();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    Array1::from_shape_fn(nx, |[i]| field.value_at(i, ny / 2, nz / 2))
 }
 
 pub fn dg_line(field: &Array3<f64>, xi_nodes: &Array1<f64>) -> Vec<(f64, f64)> {
@@ -18,7 +34,7 @@ pub fn dg_line(field: &Array3<f64>, xi_nodes: &Array1<f64>) -> Vec<(f64, f64)> {
         for node in 0..xi_nodes.len() {
             samples.push((
                 physical_coordinate(elem, xi_nodes[node]),
-                field[(elem, node, 0)],
+                field[[elem, node, 0]],
             ));
         }
     }

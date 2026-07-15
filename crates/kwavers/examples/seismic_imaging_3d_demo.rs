@@ -16,16 +16,18 @@
 // - MNI ICBM 2009c: https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/
 
 use anyhow::Context as _;
-use burn::backend::NdArray as NdArrayBackend;
+use coeus_core::MoiraiBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Zip};
-use ritk_io::{
-    load_dicom_series, read_nifti, read_png_series, scan_dicom_directory, DicomSeriesInfo,
-};
+use leto::{Array2, Array3};
+use moirai_parallel::{map_collect_index_with, Adaptive};
+use ritk_io::format::nifti::native::NiftiReader as NativeNiftiReader;
+use ritk_io::format::png::native::PngSeriesReader as NativePngSeriesReader;
+use ritk_io::ImageReader;
+use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 use std::f64::consts::PI;
 use std::fs::File;
 use std::io::{self, BufWriter};
@@ -223,7 +225,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 
     if let Some(best) = series
         .iter()
-        .position(|s| s.series_instance_uid.as_str() == DEFAULT_MEDIMODEL_SERIES_UID)
+        .position(|s| s.series_instance_uid() == DEFAULT_MEDIMODEL_SERIES_UID)
     {
         return series.swap_remove(best);
     }
@@ -238,18 +240,18 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
             "  Note: each DICOM slice has a unique SeriesInstanceUID; \
                   merging {n} files into one logical series for spatial sort."
         );
-        DicomSeriesInfo {
-            series_instance_uid: "merged".parse().expect("UID fits in 64 chars"),
-            series_description: format!("merged-{n}-slices"),
-            modality: "CT".parse().expect("modality fits in 16 chars"),
-            patient_id: String::new(),
-            file_paths: all_paths,
-        }
+        DicomSeriesInfo::new(
+            "merged",
+            format!("merged-{n}-slices"),
+            "CT",
+            String::new(),
+            all_paths,
+        )
     } else {
         let ct: Vec<usize> = series
             .iter()
             .enumerate()
-            .filter(|(_, s)| s.modality.as_str() == "CT")
+            .filter(|(_, s)| s.modality() == "CT")
             .map(|(i, _)| i)
             .collect();
         let pool: Vec<usize> = if ct.is_empty() {
@@ -269,8 +271,7 @@ fn build_dicom_series(mut series: Vec<DicomSeriesInfo>) -> DicomSeriesInfo {
 ///
 /// Returns `hu[x, y, z]` — [cols, rows, depth].
 fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     // ── PNG series ────────────────────────────────────────────────────────
     if path.is_dir() {
@@ -287,12 +288,11 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 
         if has_png {
             println!("  PNG series      : {}", path.display());
-            let img = read_png_series::<Backend, _>(path, &device)
+            let img = ImageReader::read(&NativePngSeriesReader::new(backend), path)
                 .map_err(|e| anyhow::anyhow!("PNG series load failed: {e:#}"))?;
             let [depth, rows, cols] = img.shape();
-            let tensor_data = img.data().clone().into_data();
-            let values = tensor_data
-                .as_slice::<f32>()
+            let values = img
+                .data_slice()
                 .map_err(|e| anyhow::anyhow!("PNG tensor data is not f32: {e:?}"))?;
             anyhow::ensure!(
                 values.len() == depth * rows * cols,
@@ -313,7 +313,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
                     }
                 }
             }
-            hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+            for h in hu.iter_mut() {
+                *h = (*h).clamp(-1024.0, 3071.0);
+            }
             return Ok(CtVolume {
                 hu,
                 spacing_mm: [0.5, 0.5, 4.0],
@@ -333,10 +335,10 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             selected.series_description,
             selected.file_paths.len()
         );
-        load_dicom_series::<Backend>(&selected, &device).map_err(|e| {
+        load_native_dicom_series(&selected, &backend).map_err(|e| {
             anyhow::anyhow!(
                 "DICOM load failed for series '{}': {e:#}",
-                selected.series_instance_uid
+                selected.series_instance_uid()
             )
         })?
     } else {
@@ -348,20 +350,14 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             );
         }
         println!("  NIfTI file      : {}", path.display());
-        read_nifti::<Backend, _>(path, &device)
+        ImageReader::read(&NativeNiftiReader::new(backend), path)
             .with_context(|| format!("NIfTI read failed for '{}'", path.display()))?
     };
 
     let [depth, rows, cols] = image.shape();
-    let spacing = image.spacing().to_vec();
-    anyhow::ensure!(
-        spacing.len() == 3,
-        "unexpected spacing rank {}",
-        spacing.len()
-    );
-    let tensor_data = image.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
+    let spacing = image.spacing().into_vector().to_array();
+    let values = image
+        .data_slice()
         .map_err(|e| anyhow::anyhow!("tensor data is not f32: {e:?}"))?;
     anyhow::ensure!(
         values.len() == depth * rows * cols,
@@ -377,7 +373,9 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
             }
         }
     }
-    hu.mapv_inplace(|h| h.clamp(-1024.0, 3071.0));
+    for h in hu.iter_mut() {
+        *h = (*h).clamp(-1024.0, 3071.0);
+    }
     Ok(CtVolume {
         hu,
         spacing_mm: [spacing[0], spacing[1], spacing[2]],
@@ -390,10 +388,11 @@ fn load_ct_volume(path: &Path) -> anyhow::Result<CtVolume> {
 
 /// Find the axial slice index with the maximum count of bone voxels (HU > 300).
 fn skull_equator_z(hu: &Array3<f64>) -> usize {
-    let (_, _, nz) = hu.dim();
+    let [_, _, nz] = hu.shape();
     (0..nz)
         .max_by_key(|&z| {
-            hu.slice(ndarray::s![.., .., z])
+            hu.index_axis::<2>(2, z)
+                .expect("index_axis")
                 .iter()
                 .filter(|&&h| h > 300.0)
                 .count()
@@ -403,10 +402,10 @@ fn skull_equator_z(hu: &Array3<f64>) -> usize {
 
 /// Find the centroid (x_ct, y_ct) of bone voxels on an axial slice.
 fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
-    let slice = hu.slice(ndarray::s![.., .., z]);
-    let (nx, ny) = slice.dim();
+    let slice = hu.index_axis::<2>(2, z).expect("index_axis");
+    let [nx, ny] = slice.shape();
     let (mut sx, mut sy, mut n) = (0.0f64, 0.0f64, 0.0f64);
-    for ((x, y), &h) in slice.indexed_iter() {
+    for ([x, y], &h) in slice.indexed_iter() {
         if h > 300.0 {
             sx += x as f64;
             sy += y as f64;
@@ -422,12 +421,13 @@ fn skull_centroid_2d(hu: &Array3<f64>, z: usize) -> (f64, f64) {
 
 /// Measure the outer skull radius in an axial slice.
 fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
-    let (nx, ny, _) = hu.dim();
+    let [nx, ny, _] = hu.shape();
     let r = hu
-        .slice(ndarray::s![.., .., z])
+        .index_axis::<2>(2, z)
+        .expect("index_axis")
         .indexed_iter()
         .filter(|(_, &h)| h > 300.0)
-        .map(|((x, y), _)| {
+        .map(|([x, y], _)| {
             let dx = x as f64 - cx;
             let dy = y as f64 - cy;
             (dx * dx + dy * dy).sqrt()
@@ -444,7 +444,7 @@ fn skull_outer_radius_ct(hu: &Array3<f64>, z: usize, cx: f64, cy: f64) -> f64 {
 ///
 /// Clamps all indices to valid range.  Returns 0.0 for empty volumes.
 fn trilinear_hu(hu: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let (nx, ny, nz) = hu.dim();
+    let [nx, ny, nz] = hu.shape();
     if nx == 0 || ny == 0 || nz == 0 {
         return 0.0;
     }
@@ -597,8 +597,7 @@ fn build_brain_velocity_3d(
     skull_phantom: &SkullPhantom,
     mni_dir: &Path,
 ) -> anyhow::Result<Array3<f64>> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     let load = |name: &str| -> anyhow::Result<Array3<f64>> {
         let path = mni_dir.join(name);
@@ -608,12 +607,11 @@ fn build_brain_velocity_3d(
             path.display(),
             "https://www.bic.mni.mcgill.ca/~vfonov/icbm/2009/mni_icbm152_nlin_sym_09c_nifti.zip"
         );
-        let img = ritk_io::read_nifti::<Backend, _>(&path, &device)
+        let img = ImageReader::read(&NativeNiftiReader::new(backend), &path)
             .with_context(|| format!("NIfTI load failed: '{}'", path.display()))?;
         let [depth, rows, cols] = img.shape();
-        let td = img.data().clone().into_data();
-        let vals = td
-            .as_slice::<f32>()
+        let vals = img
+            .data_slice()
             .map_err(|e| anyhow::anyhow!("NIfTI data not f32: {e:?}"))?;
         let mut vol = Array3::<f64>::zeros((cols, rows, depth));
         for z in 0..depth {
@@ -631,7 +629,7 @@ fn build_brain_velocity_3d(
     let wm = load("mni_icbm152_wm_tal_nlin_sym_09c.nii")?;
     let csf = load("mni_icbm152_csf_tal_nlin_sym_09c.nii")?;
 
-    let (mni_nx, mni_ny, mni_nz) = gm.dim();
+    let [mni_nx, mni_ny, mni_nz] = gm.shape();
     let cx_mni = mni_nx / 2;
     let cy_mni = mni_ny / 2;
     let cz_mni = mni_nz / 2;
@@ -692,23 +690,16 @@ fn build_brain_velocity_3d(
 /// Transposes [Z,Y,X] tensor to [X,Y,Z] and normalises by the 99th percentile
 /// of non-zero voxels.  Returns (vol_normalized, spacing_mm).
 fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
-    type Backend = NdArrayBackend<f32>;
-    let device = Default::default();
+    let backend = MoiraiBackend;
 
     println!("  T1 NIfTI file   : {}", path.display());
-    let img = read_nifti::<Backend, _>(path, &device)
+    let img = ImageReader::read(&NativeNiftiReader::new(backend), path)
         .with_context(|| format!("T1 NIfTI read failed for '{}'", path.display()))?;
 
     let [depth, rows, cols] = img.shape();
-    let spacing = img.spacing().to_vec();
-    anyhow::ensure!(
-        spacing.len() == 3,
-        "unexpected spacing rank {}",
-        spacing.len()
-    );
-    let tensor_data = img.data().clone().into_data();
-    let values = tensor_data
-        .as_slice::<f32>()
+    let spacing = img.spacing().into_vector().to_array();
+    let values = img
+        .data_slice()
         .map_err(|e| anyhow::anyhow!("T1 tensor data is not f32: {e:?}"))?;
     anyhow::ensure!(
         values.len() == depth * rows * cols,
@@ -737,7 +728,9 @@ fn load_t1_mri(path: &Path) -> anyhow::Result<(Array3<f64>, [f64; 3])> {
         nonzero[idx.min(nonzero.len() - 1)].max(1.0)
     };
 
-    vol.mapv_inplace(|v| (v / p99).clamp(0.0, 1.0));
+    for v in vol.iter_mut() {
+        *v = (*v / p99).clamp(0.0, 1.0);
+    }
 
     Ok((vol, [spacing[0], spacing[1], spacing[2]]))
 }
@@ -773,7 +766,7 @@ fn build_brain_velocity_from_t1(
     t1: &Array3<f64>,
     t1_spacing: [f64; 3],
 ) -> Array3<f64> {
-    let (t1_nx, t1_ny, t1_nz) = t1.dim();
+    let [t1_nx, t1_ny, t1_nz] = t1.shape();
     let cx_t1 = t1_nx as f64 / 2.0;
     let cy_t1 = t1_ny as f64 / 2.0;
     let cz_t1 = t1_nz as f64 / 2.0;
@@ -881,7 +874,7 @@ fn build_phantom_3d() -> (SkullPhantom, Option<CtVolume>) {
         print!("  CT source       : {}  ", ct_path.display());
         match load_ct_volume(&ct_path) {
             Ok(vol) => {
-                let (cx, cy, nz) = vol.hu.dim();
+                let [cx, cy, nz] = vol.hu.shape();
                 println!(
                     "({cx}×{cy}×{nz} voxels @ [{:.2},{:.2},{:.2}] mm)",
                     vol.spacing_mm[0], vol.spacing_mm[1], vol.spacing_mm[2]
@@ -993,9 +986,8 @@ fn build_shot_3d(
 
 /// Separable 3D Gaussian blur applied sequentially in x → y → z.
 ///
-/// Uses two temporary buffers (not three): the z-pass writes back into the
-/// first buffer, eliminating one 1.2 MB allocation.  All three passes run in
-/// parallel via `Zip::par_for_each` (ndarray rayon feature).
+/// Each pass maps one flat output index through Moirai with clamped boundary
+/// handling.
 ///
 /// Boundary voxels use reflect-padding (clamp-at-edge).
 ///
@@ -1014,43 +1006,59 @@ fn gaussian_blur_3d(model: &Array3<f64>, sigma: f64) -> Array3<f64> {
     let ksum: f64 = raw.iter().sum();
     let kernel: Vec<f64> = raw.iter().map(|&k| k / ksum).collect();
 
-    // Pass 1: convolve along x → tmp_x.  Parallel over all output voxels.
-    let mut tmp_x = Array3::<f64>::zeros((NX, NY, NZ));
-    Zip::indexed(tmp_x.view_mut()).par_for_each(|(ix, iy, iz), v| {
+    let cell_count = NX * NY * NZ;
+
+    // Pass 1: convolve along x → tmp_x. Parallel over all output voxels.
+    let tmp_x_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let ix = idx / (NY * NZ);
+        let rem = idx % (NY * NZ);
+        let iy = rem / NZ;
+        let iz = rem % NZ;
         let mut acc = 0.0_f64;
         for (ki, &kw) in kernel.iter().enumerate() {
             let si =
                 (ix as isize + ki as isize - radius as isize).clamp(0, NX as isize - 1) as usize;
             acc += kw * model[[si, iy, iz]];
         }
-        *v = acc;
+        acc
     });
+    let tmp_x = Array3::<f64>::from_shape_vec((NX, NY, NZ), tmp_x_values)
+        .expect("invariant: flat Moirai x-pass preserves model shape length");
 
-    // Pass 2: convolve along y → tmp_y.  Parallel over all output voxels.
-    let mut tmp_y = Array3::<f64>::zeros((NX, NY, NZ));
-    Zip::indexed(tmp_y.view_mut()).par_for_each(|(ix, iy, iz), v| {
+    // Pass 2: convolve along y → tmp_y. Parallel over all output voxels.
+    let tmp_y_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let ix = idx / (NY * NZ);
+        let rem = idx % (NY * NZ);
+        let iy = rem / NZ;
+        let iz = rem % NZ;
         let mut acc = 0.0_f64;
         for (ki, &kw) in kernel.iter().enumerate() {
             let sj =
                 (iy as isize + ki as isize - radius as isize).clamp(0, NY as isize - 1) as usize;
             acc += kw * tmp_x[[ix, sj, iz]];
         }
-        *v = acc;
+        acc
     });
+    let tmp_y = Array3::<f64>::from_shape_vec((NX, NY, NZ), tmp_y_values)
+        .expect("invariant: flat Moirai y-pass preserves model shape length");
 
-    // Pass 3: convolve along z back into tmp_x (reuse; saves one 1.2 MB allocation).
-    // Reads only from tmp_y; writes only to tmp_x — no aliasing.
-    Zip::indexed(tmp_x.view_mut()).par_for_each(|(ix, iy, iz), v| {
+    // Pass 3: convolve along z.
+    let out_values = map_collect_index_with::<Adaptive, _, _>(cell_count, |idx| {
+        let ix = idx / (NY * NZ);
+        let rem = idx % (NY * NZ);
+        let iy = rem / NZ;
+        let iz = rem % NZ;
         let mut acc = 0.0_f64;
         for (ki, &kw) in kernel.iter().enumerate() {
             let sk =
                 (iz as isize + ki as isize - radius as isize).clamp(0, NZ as isize - 1) as usize;
             acc += kw * tmp_y[[ix, iy, sk]];
         }
-        *v = acc;
+        acc
     });
 
-    tmp_x
+    Array3::<f64>::from_shape_vec((NX, NY, NZ), out_values)
+        .expect("invariant: flat Moirai z-pass preserves model shape length")
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1066,8 +1074,8 @@ fn print_quality_report(true_model: &Array3<f64>, reconstructed: &Array3<f64>) -
         .map(|(&t, &r)| (t - r).powi(2))
         .sum();
     let rmse = (l2 / n).sqrt();
-    let mean_t = true_model.sum() / n;
-    let mean_r = reconstructed.sum() / n;
+    let mean_t = true_model.iter().sum::<f64>() / n;
+    let mean_r = reconstructed.iter().sum::<f64>() / n;
     let cov = true_model
         .iter()
         .zip(reconstructed.iter())
@@ -1115,13 +1123,13 @@ fn print_quality_report_brain(true_model: &Array3<f64>, reconstructed: &Array3<f
     let cz = (NZ / 2) as f64;
     let free_pairs: Vec<(f64, f64)> = true_model
         .indexed_iter()
-        .filter(|((ix, iy, iz), _)| {
+        .filter(|([ix, iy, iz], _)| {
             let dx = *ix as f64 - cx;
             let dy = *iy as f64 - cy;
             let dz = *iz as f64 - cz;
             (dx * dx + dy * dy + dz * dz).sqrt() < R_SKULL_IN
         })
-        .map(|((ix, iy, iz), &t)| (t, reconstructed[[ix, iy, iz]]))
+        .map(|([ix, iy, iz], &t)| (t, reconstructed[[ix, iy, iz]]))
         .collect();
     print_quality_pairs(&free_pairs);
 }
@@ -1219,10 +1227,10 @@ fn write_png(path: &Path, rgb: &[u8], width: usize, height: usize) -> io::Result
     enc.set_depth(png::BitDepth::Eight);
     let mut writer = enc
         .write_header()
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     writer
         .write_image_data(rgb)
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+        .map_err(|e| io::Error::other(e.to_string()))?;
     Ok(())
 }
 
@@ -1341,7 +1349,7 @@ fn main() -> KwaversResult<()> {
     let t1_result = if t1_path.exists() {
         match load_t1_mri(&t1_path) {
             Ok(r) => {
-                let (t1_nx, t1_ny, t1_nz) = r.0.dim();
+                let [t1_nx, t1_ny, t1_nz] = r.0.shape();
                 println!(
                     "  T1 loaded       : {t1_nx}×{t1_ny}×{t1_nz} voxels @ [{:.2},{:.2},{:.2}] mm",
                     r.1[0], r.1[1], r.1[2]
@@ -1667,7 +1675,7 @@ fn main() -> KwaversResult<()> {
                 let (bt_min, bt_max) = skull_mask
                     .indexed_iter()
                     .filter(|(_, &frozen)| !frozen)
-                    .map(|((ix, iy, iz), _)| brain_true[[ix, iy, iz]])
+                    .map(|([ix, iy, iz], _)| brain_true[[ix, iy, iz]])
                     .fold((f64::INFINITY, f64::NEG_INFINITY), |(mn, mx), c| {
                         (mn.min(c), mx.max(c))
                     });
@@ -1684,14 +1692,16 @@ fn main() -> KwaversResult<()> {
                     None => skull_mask.mapv(|frozen| if frozen { 0.0_f64 } else { C_WATER }),
                 };
                 // Fill frozen voxels with CT skull velocity.
-                Zip::from(&mut brain_initial)
-                    .and(&skull_mask)
-                    .and(&phantom.sound_speed)
-                    .for_each(|c, &frozen, &ct| {
-                        if frozen {
-                            *c = ct;
+                let [bi_nx, bi_ny, bi_nz] = brain_initial.shape();
+                for i in 0..bi_nx {
+                    for j in 0..bi_ny {
+                        for k in 0..bi_nz {
+                            if skull_mask[[i, j, k]] {
+                                brain_initial[[i, j, k]] = phantom.sound_speed[[i, j, k]];
+                            }
                         }
-                    });
+                    }
+                }
 
                 // Stage-2 FWI at 400 kHz, 15 iterations.
                 let f0_brain = 400_000.0_f64;

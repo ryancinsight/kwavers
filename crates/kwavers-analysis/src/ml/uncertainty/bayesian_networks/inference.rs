@@ -1,8 +1,10 @@
-//! Monte Carlo inference: quantify_uncertainty, apply_dropout_mask, compute_prediction_statistics.
+//! Monte Carlo inference: quantify_uncertainty and compute_prediction_statistics.
 
 use super::{MlBayesianPINN, MlPredictionWithUncertainty};
+#[cfg(feature = "pinn")]
+use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 use std::collections::HashMap;
 
 impl MlBayesianPINN {
@@ -11,39 +13,18 @@ impl MlBayesianPINN {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty<B: burn::tensor::backend::Backend>(
+    pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
         &self,
-        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        predictor: &P,
         inputs: &Array2<f32>,
     ) -> KwaversResult<MlPredictionWithUncertainty> {
-        use ndarray::Array1;
         let mut predictions = Vec::new();
 
         for _ in 0..self._config.num_samples {
-            self.apply_dropout_mask(pinn)?;
-
-            let x: Array1<f64> = inputs.column(0).mapv(|v| v as f64).to_owned();
-            let t: Array1<f64> = inputs.column(1).mapv(|v| v as f64).to_owned();
-            let device = pinn.device();
-
-            let prediction_f64 = pinn.predict(&x, &t, &device)?;
-            let prediction = prediction_f64.mapv(|v| v as f32);
-            predictions.push(prediction);
+            predictions.push(predictor.predict_inputs(inputs)?);
         }
 
         self.compute_prediction_statistics(&predictions)
-    }
-
-    /// Apply dropout mask to network
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
-    #[cfg(feature = "pinn")]
-    pub(super) fn apply_dropout_mask<B: burn::tensor::backend::Backend>(
-        &self,
-        _pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
-    ) -> KwaversResult<()> {
-        Ok(())
     }
 
     /// Compute prediction statistics from Monte Carlo samples.
@@ -63,7 +44,7 @@ impl MlBayesianPINN {
             ));
         }
 
-        let shape = predictions[0].dim();
+        let shape = predictions[0].shape();
         let mut mean_prediction = Array2::zeros(shape);
         let mut variance: Array2<f32> = Array2::zeros(shape);
 
@@ -79,8 +60,8 @@ impl MlBayesianPINN {
         variance = &variance / (predictions.len() - 1) as f32;
 
         let mut uncertainty = Array2::zeros(shape);
-        for i in 0..shape.0 {
-            for j in 0..shape.1 {
+        for i in 0..shape[0] {
+            for j in 0..shape[1] {
                 uncertainty[[i, j]] = variance[[i, j]].sqrt();
             }
         }

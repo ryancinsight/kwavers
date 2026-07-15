@@ -168,11 +168,21 @@ pub fn tikhonov_lcurve(
 /// # Errors
 /// Returns an error if `n < 2`, `sigma <= 0`, or any scalar parameter is
 /// non-finite.
+#[derive(Debug, Clone, PartialEq)]
+pub struct GaussianDeconvolutionFixture {
+    /// Row-major Gaussian convolution matrix.
+    pub matrix: Vec<f64>,
+    /// Analytic truth signal before convolution.
+    pub truth_signal: Vec<f64>,
+    /// Deterministically perturbed observation vector.
+    pub observed_signal: Vec<f64>,
+}
+
 pub fn gaussian_deconvolution_fixture(
     n: usize,
     sigma: f64,
     perturbation_scale: f64,
-) -> Result<(Vec<f64>, Vec<f64>, Vec<f64>), String> {
+) -> Result<GaussianDeconvolutionFixture, String> {
     if n < 2 {
         return Err("n must be at least two".to_owned());
     }
@@ -212,7 +222,11 @@ pub fn gaussian_deconvolution_fixture(
                     + 0.5 * (2.0 * std::f64::consts::PI * 11.0 * t[row]).cos());
     }
 
-    Ok((a, x_true, y))
+    Ok(GaussianDeconvolutionFixture {
+        matrix: a,
+        truth_signal: x_true,
+        observed_signal: y,
+    })
 }
 
 // ─── Born inversion ───────────────────────────────────────────────────────────
@@ -503,23 +517,23 @@ mod tests {
 
     #[test]
     fn gaussian_deconvolution_fixture_matches_closed_form_samples() {
-        let (a, x_true, y) =
+        let fixture =
             gaussian_deconvolution_fixture(5, 0.05, 0.01).expect("valid fixture parameters");
 
-        assert_eq!(a.len(), 25);
-        assert_eq!(x_true.len(), 5);
-        assert_eq!(y.len(), 5);
+        assert_eq!(fixture.matrix.len(), 25);
+        assert_eq!(fixture.truth_signal.len(), 5);
+        assert_eq!(fixture.observed_signal.len(), 5);
 
         let gaussian_norm = 0.05 * (2.0 * std::f64::consts::PI).sqrt();
-        assert!((a[0] - 1.0 / gaussian_norm / 5.0).abs() <= 1.0e-15);
+        assert!((fixture.matrix[0] - 1.0 / gaussian_norm / 5.0).abs() <= 1.0e-15);
         let expected_first_truth = (-0.5_f64 * (0.0_f64 - 0.3_f64).powi(2) / 0.01_f64).exp()
             + 0.7_f64 * (-0.5_f64 * (0.0_f64 - 0.7_f64).powi(2) / 0.01_f64).exp();
-        assert!((x_true[0] - expected_first_truth).abs() <= 1.0e-15);
+        assert!((fixture.truth_signal[0] - expected_first_truth).abs() <= 1.0e-15);
 
         let unperturbed = gaussian_deconvolution_fixture(5, 0.05, 0.0)
             .expect("valid fixture parameters")
-            .2;
-        assert_ne!(y, unperturbed);
+            .observed_signal;
+        assert_ne!(fixture.observed_signal, unperturbed);
     }
 
     #[test]

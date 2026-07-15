@@ -319,8 +319,10 @@ mod tests {
 
     #[test]
     fn test_blood_properties() {
-        assert!(WHOLE_BLOOD.sound_speed > SOUND_SPEED_WATER_SIM);
-        assert!(WHOLE_BLOOD.sound_speed < 1600.0);
+        const {
+            assert!(WHOLE_BLOOD.sound_speed > SOUND_SPEED_WATER_SIM);
+            assert!(WHOLE_BLOOD.sound_speed < 1600.0);
+        }
         WHOLE_BLOOD.validate().unwrap();
     }
 
@@ -347,17 +349,25 @@ mod tests {
     fn test_water_temperature_dependence() {
         // Water sound speed increases monotonically with temperature up to ~74 °C.
         // At 20 °C: ~1483 m/s; at 37 °C: ~1524 m/s (Del Grosso & Mader 1972).
-        assert!(WATER_37C.sound_speed > 1515.0);
-        assert!(WATER_37C.sound_speed < 1535.0);
+        const {
+            assert!(WATER_37C.sound_speed > 1515.0);
+            assert!(WATER_37C.sound_speed < 1535.0);
+        }
     }
 
     #[test]
     fn test_contrast_agent_acoustic_differences() {
         // Microbubbles should have higher absorption
-        assert!(MICROBUBBLE_SUSPENSION.absorption_coefficient > WATER_37C.absorption_coefficient);
+        const {
+            assert!(
+                MICROBUBBLE_SUSPENSION.absorption_coefficient > WATER_37C.absorption_coefficient
+            );
+        }
 
         // Nanoparticles should have high optical absorption
-        assert!(NANOPARTICLE_SUSPENSION.optical_absorption > WATER_37C.optical_absorption);
+        const {
+            assert!(NANOPARTICLE_SUSPENSION.optical_absorption > WATER_37C.optical_absorption);
+        }
     }
 
     #[test]

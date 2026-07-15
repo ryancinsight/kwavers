@@ -4,9 +4,9 @@
 //! Hounsfield unit conversions (Schneider 1996), Strehl ratio, semi-infinite
 //! solid surface temperature rise, and transfer-matrix skull transmission.
 
+use eunomia::Complex64;
 use kwavers_core::constants::hu_mapping::HuAcousticModel;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
 use rand::SeedableRng;
 use rand_chacha::ChaCha8Rng;
 use rand_distr::{Distribution, Normal};

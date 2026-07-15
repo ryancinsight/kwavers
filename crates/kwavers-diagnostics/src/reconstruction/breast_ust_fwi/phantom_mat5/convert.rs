@@ -3,7 +3,7 @@
 use super::BreastUstMriBreastSide;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::VecDeque;
 
 const MRI_EXTENT_X_MM: f64 = 340.0;
@@ -62,7 +62,7 @@ pub(super) fn mri_to_sound_speed(
             config.output_shape[1],
             config.output_shape[2],
         ),
-        |(i, j, k)| {
+        |[i, j, k]| {
             if tissue[[i, j, k]] {
                 c_min + (breast_seg[[i, j, k]] - min_intensity) * scale
             } else {
@@ -85,7 +85,7 @@ fn interpolate_rotated_mri(
             config.output_shape[1],
             config.output_shape[2],
         ),
-        |(i, j, k)| {
+        |[i, j, k]| {
             let x_mm = centered_coord(i, config.output_shape[0], spacing_mm);
             let y_mm = centered_coord(j, config.output_shape[1], spacing_mm);
             let z_mm = centered_coord(k, config.output_shape[2], spacing_mm);
@@ -222,16 +222,16 @@ fn mri_value(dims: [usize; 3], values: &[f64], x: isize, y: isize, z: isize) -> 
 }
 
 fn threshold_and_fill(volume: &Array3<f64>, threshold: f64) -> Array3<bool> {
-    let dims = volume.dim();
+    let dims = volume.shape();
     let mut mask = Array3::from_shape_fn(dims, |idx| volume[idx] > threshold);
-    for k in 0..dims.2 {
+    for k in 0..dims[2] {
         fill_holes_in_slice(&mut mask, k);
     }
     mask
 }
 
 fn fill_holes_in_slice(mask: &mut Array3<bool>, k: usize) {
-    let (nx, ny, _) = mask.dim();
+    let [nx, ny, _] = mask.shape();
     let mut exterior = vec![false; nx * ny];
     let mut queue = VecDeque::new();
     for i in 0..nx {
@@ -264,7 +264,7 @@ fn enqueue_background(
     j: usize,
     k: usize,
 ) {
-    let (nx, _, _) = mask.dim();
+    let [nx, _, _] = mask.shape();
     let idx = i + nx * j;
     if !mask[[i, j, k]] && !exterior[idx] {
         exterior[idx] = true;

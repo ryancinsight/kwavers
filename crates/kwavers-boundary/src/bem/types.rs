@@ -1,4 +1,4 @@
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Boundary condition types for BEM methods.
 #[derive(Debug, Clone)]

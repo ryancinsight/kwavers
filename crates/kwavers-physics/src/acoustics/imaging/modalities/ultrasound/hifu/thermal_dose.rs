@@ -20,7 +20,7 @@ use kwavers_core::constants::medical::{
 };
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Thermal dose calculation in cumulative equivalent minutes at 43 deg C.
 #[derive(Debug, Clone)]
@@ -47,8 +47,8 @@ impl HifuThermalDose {
     /// Add a temperature measurement at time `time_s` seconds.
     pub fn add_temperature_measurement(&mut self, temperature: Array3<f64>, time_s: f64) {
         debug_assert_eq!(
-            temperature.dim(),
-            self.cem43.dim(),
+            temperature.shape(),
+            self.cem43.shape(),
             "HIFU temperature measurement must match dose-grid dimensions"
         );
         self.temperature_history.push(temperature);
@@ -65,7 +65,18 @@ impl HifuThermalDose {
     /// Check if ablation threshold reached (CEM43 > 240 CEM43 min).
     #[must_use]
     pub fn ablation_threshold_reached(&self) -> Array3<bool> {
-        self.cem43.mapv(|dose| dose > THERMAL_DOSE_THRESHOLD)
+        {
+            let [nx, ny, nz] = self.cem43.shape();
+            let mut result = Array3::from_elem([nx, ny, nz], false);
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        result[[i, j, k]] = self.cem43[[i, j, k]] > THERMAL_DOSE_THRESHOLD;
+                    }
+                }
+            }
+            result
+        }
     }
 
     fn update_cem43(&mut self) {

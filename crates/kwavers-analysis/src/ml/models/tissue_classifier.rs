@@ -3,7 +3,7 @@
 use super::{MLModel, MlModelMetadata};
 use crate::ml::inference::InferenceEngine;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Tissue classification model for acoustic simulations
 #[derive(Debug)]
@@ -16,7 +16,7 @@ impl TissueClassifierModel {
     /// Load model from path
     ///
     /// **Implementation Status**: Template model with random initialization
-    /// **Rationale**: Full neural network loading requires ML framework selection (burn/candle).
+    /// **Rationale**: Full neural network loading requires the Coeus model provider path.
     /// Template provides functional inference API for integration testing and development.
     /// Production ML models would deserialize trained weights from checkpoint files.
     ///
@@ -31,7 +31,7 @@ impl TissueClassifierModel {
     /// Create from weights
     #[must_use]
     pub fn from_weights(weights: Array2<f32>, bias: Option<Array1<f32>>) -> Self {
-        let (features, classes) = weights.dim();
+        let [features, classes] = weights.shape();
         let engine = InferenceEngine::from_weights(weights, bias, 32, false);
 
         let metadata = MlModelMetadata {
@@ -88,7 +88,10 @@ impl TissueClassifierModel {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
-        let input = features.clone().insert_axis(ndarray::Axis(0));
+        let input = features
+            .clone()
+            .into_shape([1, features.len()])
+            .expect("invariant: 1-D to (1, n) reshape preserves element count");
         let output = self.engine.forward(&input)?;
 
         // Find class with highest probability

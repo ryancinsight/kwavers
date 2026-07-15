@@ -52,7 +52,7 @@ fn test_fault_tolerance_config() {
 fn test_distributed_processing_matches_sequential_result() {
     use crate::signal_processing::beamforming::neural::pinn::NeuralBeamformingProcessor;
     use crate::signal_processing::beamforming::neural::types::PINNBeamformingConfig;
-    use ndarray::Array4;
+    use leto::Array4;
 
     let beamforming_config = PINNBeamformingConfig {
         rf_data_channels: 2,
@@ -76,17 +76,13 @@ fn test_distributed_processing_matches_sequential_result() {
     let mut distributed =
         DistributedNeuralBeamformingProcessor::new(beamforming_config, distributed_config).unwrap();
 
-    let rf_data = Array4::from_shape_fn((4, 2, 3, 1), |(frame, channel, sample, _)| {
+    let rf_data = Array4::from_shape_fn((4, 2, 3, 1), |[frame, channel, sample, _]| {
         frame as f32 + 0.1 * channel as f32 + 0.01 * sample as f32
     });
 
     let expected = sequential.process_volume(&rf_data).unwrap();
 
-    let runtime = tokio::runtime::Runtime::new().unwrap();
-
-    let actual = runtime
-        .block_on(distributed.process_volume_distributed(&rf_data))
-        .unwrap();
+    let actual = distributed.process_volume_distributed(&rf_data).unwrap();
 
     assert_eq!(actual.volume, expected.volume);
     assert_eq!(actual.uncertainty, expected.uncertainty);

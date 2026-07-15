@@ -1,5 +1,4 @@
 use super::*;
-use ndarray::Array;
 
 #[test]
 fn test_physics_constraints_creation() {
@@ -63,7 +62,7 @@ fn test_sparsity_thresholding() {
 #[test]
 fn test_combined_constraints() {
     let pc = PhysicsConstraints::default();
-    let image = Array::from_shape_fn((10, 10, 5), |(i, j, _k)| {
+    let image = Array3::from_shape_fn((10, 10, 5), |[i, j, _k]| {
         if i == 5 && j == 5 {
             100.0
         } else {
@@ -75,7 +74,7 @@ fn test_combined_constraints() {
 
     // Should be well-formed
     assert!(result.iter().all(|&x| x.is_finite()));
-    assert!(result.dim() == image.dim());
+    assert!(result.shape() == image.shape());
 }
 
 #[test]

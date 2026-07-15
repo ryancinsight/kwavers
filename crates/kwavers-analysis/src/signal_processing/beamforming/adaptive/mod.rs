@@ -54,7 +54,7 @@
 //!
 //! This module enforces **Single Source of Truth** for numerical operations:
 //!
-//! - ❌ **NO local matrix inversion** - use `math::linear_algebra::LinearAlgebra`
+//! - ❌ **NO local matrix inversion** - use `math::linear_algebra::ComplexLinearAlgebra`
 //! - ❌ **NO silent fallbacks** - return `Err(...)` on numerical failure
 //! - ❌ **NO error masking** - all failures are explicit
 //! - ❌ **NO dummy weights** - never return steering vector as disguised fallback
@@ -96,8 +96,11 @@
 //! use kwavers_analysis::signal_processing::beamforming::adaptive::{
 //!     MinimumVariance, AdaptiveTimeDomainBeamformer
 //! };
-//! use ndarray::{Array1, Array2};
-//! use num_complex::Complex64;
+//! use leto::{
+//!     Array1,
+//!     Array2,
+//! };
+//! use eunomia::Complex64;
 //!
 //! // Create 8-element linear array covariance matrix
 //! let n = 8;
@@ -175,9 +178,9 @@
 //! - `lcmv`: Linearly Constrained Minimum Variance beamformer with multiple constraints
 //! - `gsc`: Generalized Sidelobe Canceller for adaptive interference suppression
 
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+use leto::{Array1, Array2};
 
 // Algorithm implementations
 pub mod music;
@@ -300,8 +303,8 @@ mod tests {
             .expect("trait method should work");
 
         assert_eq!(weights.len(), n);
-        for &w in &weights {
-            assert!(w.is_finite());
+        for &w in weights.iter() {
+            assert!(w.re.is_finite() && w.im.is_finite());
         }
     }
 
@@ -320,7 +323,7 @@ mod tests {
         let gain: Complex64 = weights
             .iter()
             .zip(steering.iter())
-            .map(|(w, a)| w.conj() * a)
+            .map(|(w, a)| w.conj() * *a)
             .sum();
 
         assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);
@@ -357,7 +360,7 @@ mod tests {
         let gain: Complex64 = weights
             .iter()
             .zip(steering.iter())
-            .map(|(w, a)| w.conj() * a)
+            .map(|(w, a)| w.conj() * *a)
             .sum();
 
         assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);

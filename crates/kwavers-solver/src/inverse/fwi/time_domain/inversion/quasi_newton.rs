@@ -22,7 +22,7 @@ use super::super::{geometry::FwiGeometry, FwiProcessor};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_math::optimization::LbfgsMemory;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Maximum Armijo backtracking halvings per outer L-BFGS iteration.
 const MAX_LINE_SEARCH: usize = 12;
@@ -41,20 +41,20 @@ impl FwiProcessor {
     ///
     /// The gradient used to drive L-BFGS is the **un-normalized** smoothed,
     /// regularized reduced gradient `g = +∂J/∂c` from
-    /// [`Self::misfit_and_gradient`]: the curvature pairs `(s, y = Δg)` must
+    /// `Self::misfit_and_gradient`: the curvature pairs `(s, y = Δg)` must
     /// retain physical scaling for the inverse-Hessian estimate `γ = sᵀy/yᵀy`
     /// to be meaningful. The first iteration (empty memory ⇒ steepest descent
     /// direction `−g`) is scaled by `parameters.step_size / ‖g‖∞` so its model
     /// change matches the steepest-descent driver; subsequent iterations try a
     /// unit step first, as the two-loop recursion already carries the units.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the geometry is invalid or
+    /// - Returns [`crate::KwaversError::Validation`] if the geometry is invalid or
     ///   `nt < 3`.
-    /// - Propagates any [`KwaversError`] from the forward/adjoint solve, the
+    /// - Propagates any [`crate::KwaversError`] from the forward/adjoint solve, the
     ///   misfit evaluation, or regularization.
     pub fn invert_lbfgs(
         &self,
-        observed_data: &ndarray::Array2<f64>,
+        observed_data: &leto::Array2<f64>,
         initial_model: &Array3<f64>,
         geometry: &FwiGeometry,
         grid: &Grid,
@@ -70,7 +70,7 @@ impl FwiProcessor {
             ));
         }
 
-        let dim = initial_model.dim();
+        let dim = initial_model.shape();
         let mut model = initial_model.clone();
         self.apply_model_constraints(&mut model);
 

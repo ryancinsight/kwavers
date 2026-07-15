@@ -5,13 +5,14 @@
 //! and return complex128 arrays; the inverse transforms accept complex128 and
 //! return f64.
 
+use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
+use eunomia::Complex64;
 use kwavers_math::{
     fft::{fft_1d_array, fft_3d_array, ifft_1d_array, ifft_3d_array},
     signal::window::hann,
 };
-use ndarray::{Array1, Array3};
-use num_complex::Complex64;
-use numpy::{IntoPyArray, PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3};
+use numpy::ndarray::{Array1, Array3};
+use numpy::{PyArray1, PyArray3, PyReadonlyArray1, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -34,8 +35,11 @@ pub fn fft1<'py>(
             "fft1: input signal must be non-empty",
         ));
     }
-    let spectrum = py.detach(|| fft_1d_array(&arr));
-    Ok(spectrum.into_pyarray(py).into())
+    let spectrum = py.detach(|| fft_1d_array(&arr.into()));
+    let spectrum: Array1<Complex64> = spectrum
+        .try_into()
+        .expect("invariant: contiguous FFT output");
+    Ok(spectrum.to_pyarray(py).into())
 }
 
 /// Inverse 1-D DFT of a complex spectrum.
@@ -57,8 +61,11 @@ pub fn ifft1<'py>(
             "ifft1: input spectrum must be non-empty",
         ));
     }
-    let signal = py.detach(|| ifft_1d_array(&arr));
-    Ok(signal.into_pyarray(py).into())
+    let signal = py.detach(|| ifft_1d_array(&arr.into()));
+    let signal: Array1<f64> = signal
+        .try_into()
+        .expect("invariant: contiguous inverse FFT output");
+    Ok(signal.to_pyarray(py).into())
 }
 
 /// Forward 3-D DFT of a real-valued field.
@@ -81,8 +88,8 @@ pub fn fft3<'py>(
             "fft3: all dimensions must be non-zero",
         ));
     }
-    let spectrum = py.detach(|| fft_3d_array(&arr));
-    Ok(spectrum.into_pyarray(py).into())
+    let spectrum = py.detach(|| fft_3d_array(&nd_to_leto3(arr)));
+    Ok(leto3_to_nd3(spectrum).to_pyarray(py).into())
 }
 
 /// Inverse 3-D DFT of a complex spectrum.
@@ -105,8 +112,8 @@ pub fn ifft3<'py>(
             "ifft3: all dimensions must be non-zero",
         ));
     }
-    let field = py.detach(|| ifft_3d_array(&arr));
-    Ok(field.into_pyarray(py).into())
+    let field = py.detach(|| ifft_3d_array(&nd_to_leto3(arr)));
+    Ok(leto3_to_nd3(field).to_pyarray(py).into())
 }
 
 /// Demeaned Hann-windowed one-sided power spectrum of a 1-D real profile.
@@ -146,7 +153,7 @@ pub fn demeaned_hann_power_spectrum_1d<'py>(
         windowed.push((sample - mean) * hann(idx as f64 / denominator));
     }
 
-    let spectrum = py.detach(|| fft_1d_array(&Array1::from_vec(windowed)));
+    let spectrum = py.detach(|| fft_1d_array(&Array1::from_vec(windowed).into()));
     let one_sided = n / 2 + 1;
     let scale = 1.0 / (n as f64 * sample_spacing);
     let mut frequency = Vec::with_capacity(one_sided);
@@ -157,8 +164,8 @@ pub fn demeaned_hann_power_spectrum_1d<'py>(
     }
 
     Ok((
-        Array1::from_vec(frequency).into_pyarray(py).into(),
-        Array1::from_vec(power).into_pyarray(py).into(),
+        Array1::from_vec(frequency).to_pyarray(py).into(),
+        Array1::from_vec(power).to_pyarray(py).into(),
     ))
 }
 

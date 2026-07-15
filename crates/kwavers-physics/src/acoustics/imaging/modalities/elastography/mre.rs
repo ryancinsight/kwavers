@@ -28,7 +28,7 @@ use super::displacement::DisplacementField;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::fft::Complex64;
-use ndarray::{Array3, Array4};
+use leto::{Array3, Array4};
 
 /// Extract the complex first-harmonic displacement field [m] from an MRE
 /// motion-encoded phase-offset stack.
@@ -44,7 +44,7 @@ pub fn extract_first_harmonic(
     phase_stack: &Array4<f64>,
     encoding_sensitivity_rad_per_m: f64,
 ) -> KwaversResult<Array3<Complex64>> {
-    let (nx, ny, nz, n_offsets) = phase_stack.dim();
+    let [nx, ny, nz, n_offsets] = phase_stack.shape();
     if n_offsets < 2 {
         return Err(KwaversError::InvalidInput(format!(
             "MRE extract_first_harmonic requires n_offsets >= 2, got {n_offsets}"
@@ -67,13 +67,13 @@ pub fn extract_first_harmonic(
     let inv_kappa = 1.0 / encoding_sensitivity_rad_per_m;
     let scale = 2.0 / n;
 
-    let mut harmonic = Array3::<Complex64>::zeros((nx, ny, nz));
+    let mut harmonic = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {
                 let mut acc = Complex64::new(0.0, 0.0);
                 for (l, tw) in twiddles.iter().enumerate() {
-                    acc += tw * phase_stack[[i, j, k, l]];
+                    acc += *tw * phase_stack[[i, j, k, l]];
                 }
                 harmonic[[i, j, k]] = acc * scale * inv_kappa;
             }
@@ -86,7 +86,16 @@ pub fn extract_first_harmonic(
 #[must_use]
 pub fn harmonic_snapshot(harmonic: &Array3<Complex64>, snapshot_phase_rad: f64) -> Array3<f64> {
     let rot = Complex64::new(snapshot_phase_rad.cos(), snapshot_phase_rad.sin());
-    harmonic.mapv(|u| (u * rot).re)
+    let [nx, ny, nz] = harmonic.shape();
+    let mut result = Array3::from_elem([nx, ny, nz], 0.0);
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                result[[i, j, k]] = (harmonic[[i, j, k]] * rot).re;
+            }
+        }
+    }
+    result
 }
 
 /// Build a [`DisplacementField`] from a `z`-encoded MRE phase stack (the common
@@ -100,7 +109,7 @@ pub fn mre_displacement_field_z(
     encoding_sensitivity_rad_per_m: f64,
 ) -> KwaversResult<DisplacementField> {
     let harmonic = extract_first_harmonic(uz_phase_stack, encoding_sensitivity_rad_per_m)?;
-    let (nx, ny, nz) = harmonic.dim();
+    let [nx, ny, nz] = harmonic.shape();
     let mut field = DisplacementField::zeros(nx, ny, nz);
     field.uz = harmonic_snapshot(&harmonic, 0.0);
     Ok(field)

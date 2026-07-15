@@ -47,7 +47,7 @@ pub use acquisition::{
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::forward::elastic::swe::{
     ElasticPointForce, ElasticWaveConfig, ElasticWaveField, ElasticWaveSolver,
@@ -61,16 +61,16 @@ pub type ReceiverTraces = Vec<Vec<[f64; 3]>>;
 pub struct ElasticFwiConfig {
     /// Number of forward/adjoint time steps.
     pub n_steps: usize,
-    /// Time step \[s] (fixed; obtain a stable value from
+    /// Time step \\[s\] (fixed; obtain a stable value from
     /// [`ElasticWaveSolver::recommended_timestep`]).
     pub dt: f64,
     /// Receiver grid indices where displacement is recorded / residual injected.
     pub receivers: Vec<(usize, usize, usize)>,
     /// Forward shear-wave source (point forces).
     pub source: Vec<ElasticPointForce>,
-    /// Lower clamp on the reconstructed shear modulus \[Pa].
+    /// Lower clamp on the reconstructed shear modulus \\[Pa\].
     pub mu_min: f64,
-    /// Upper clamp on the reconstructed shear modulus \[Pa].
+    /// Upper clamp on the reconstructed shear modulus \\[Pa\].
     pub mu_max: f64,
     /// Maximum descent iterations.
     pub iterations: usize,
@@ -129,7 +129,7 @@ pub struct ElasticFwi {
     observed: ReceiverTraces,
     /// Starting model, retained as the Tikhonov reference.
     mu_start: Array3<f64>,
-    /// Grid spacing `(dx, dy, dz)` \[m] for the strain operators.
+    /// Grid spacing `(dx, dy, dz)` \\[m\] for the strain operators.
     grid_spacing: (f64, f64, f64),
 }
 
@@ -181,7 +181,7 @@ impl ElasticFwi {
         Ok(sample_receivers(&history, &config.receivers))
     }
 
-    /// Current shear-modulus estimate `μ` \[Pa].
+    /// Current shear-modulus estimate `μ` \\[Pa\].
     #[must_use]
     pub fn mu(&self) -> &Array3<f64> {
         self.solver.mu()

@@ -1,7 +1,7 @@
 //! Sensor data extraction methods for `ElasticWaveSolver`.
 
 use super::super::definition::ElasticWaveSolver;
-use ndarray::{Array2, ArrayView2};
+use leto::{Array2, ArrayView2};
 
 /// Per-component recorded sensor traces `(x, y, z)`, each `Some` when the
 /// corresponding component buffer was allocated; shape `(n_sensors, steps)`.
@@ -65,7 +65,7 @@ impl ElasticWaveSolver {
         )
     }
 
-    /// Back-compat alias for [`extract_recorded_velocity_components`].
+    /// Back-compat alias for [`Self::extract_recorded_velocity_components`].
     ///
     /// This method does **not** return displacement, despite the legacy
     /// name; it has always returned particle velocity (m/s). The shim

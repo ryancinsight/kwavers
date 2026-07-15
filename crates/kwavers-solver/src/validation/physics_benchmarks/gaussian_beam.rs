@@ -7,7 +7,7 @@
 //! - Saleh & Teich (2007) "Fundamentals of Photonics", Ch. 3
 
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 /// Analytical Gaussian beam parameters
@@ -103,7 +103,7 @@ impl GaussianBeamParameters {
 /// Measure beam radius from intensity profile using 1/e² criterion
 #[must_use]
 pub fn measure_beam_radius(intensity: &Array2<f64>, dx: f64) -> f64 {
-    let (nx, ny) = intensity.dim();
+    let [nx, ny] = intensity.shape();
     let cx = nx / 2;
     let cy = ny / 2;
 

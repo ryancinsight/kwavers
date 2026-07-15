@@ -1,7 +1,7 @@
 //! Spatial phase randomization
 
 use super::constants::{DEFAULT_SEED, MAX_PHASE_SHIFT};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -24,8 +24,8 @@ impl SpatialRandomization {
 
     /// Generate spatially correlated random phases
     pub fn generate_correlated_phases(&mut self, positions: &Array2<f64>) -> Array1<f64> {
-        let n_elements = positions.nrows();
-        let mut phases = Array1::zeros(n_elements);
+        let n_elements = positions.shape()[0];
+        let mut phases = Array1::zeros([n_elements]);
 
         // Generate uncorrelated random phases
         for i in 0..n_elements {
@@ -42,8 +42,8 @@ impl SpatialRandomization {
 
     /// Apply spatial correlation using Gaussian smoothing
     fn apply_spatial_correlation(&self, phases: &mut Array1<f64>, positions: &Array2<f64>) {
-        let n = phases.len();
-        let mut smoothed = Array1::zeros(n);
+        let n = phases.size();
+        let mut smoothed = Array1::zeros([n]);
         let sigma2 = self.correlation_length * self.correlation_length;
 
         for i in 0..n {
@@ -78,16 +78,16 @@ impl SpatialRandomization {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// generate_correlated_phases returns one phase per element.
     #[test]
     fn generates_one_phase_per_element() {
         let mut sr = SpatialRandomization::new(1e-3);
         // 4-element 1-D array; positions are (x,y,z) columns
-        let positions = Array2::from_shape_fn((4, 3), |(i, _)| i as f64 * 1e-3);
+        let positions = Array2::from_shape_fn([4, 3], |[i, _]| i as f64 * 1e-3);
         let phases = sr.generate_correlated_phases(&positions);
-        assert_eq!(phases.len(), 4, "must return 4 phases for 4 elements");
+        assert_eq!(phases.size(), 4, "must return 4 phases for 4 elements");
     }
 
     /// With zero correlation length, phases are uncorrelated random values in [0, MAX_PHASE_SHIFT).
@@ -95,9 +95,9 @@ mod tests {
     fn zero_correlation_produces_uncorrelated_phases() {
         use super::super::constants::MAX_PHASE_SHIFT;
         let mut sr = SpatialRandomization::new(0.0);
-        let positions = Array2::zeros((8, 3));
+        let positions = Array2::zeros([8, 3]);
         let phases = sr.generate_correlated_phases(&positions);
-        assert_eq!(phases.len(), 8);
+        assert_eq!(phases.size(), 8);
         for &p in phases.iter() {
             assert!(
                 (0.0..MAX_PHASE_SHIFT).contains(&p),
@@ -112,8 +112,8 @@ mod tests {
         let mut sr = SpatialRandomization::new(0.0);
         sr.set_correlation_length(5e-3);
         // Just verify it doesn't panic and the struct is usable afterward
-        let positions = Array2::from_shape_fn((3, 3), |(i, _)| i as f64 * 5e-3);
+        let positions = Array2::from_shape_fn([3, 3], |[i, _]| i as f64 * 5e-3);
         let phases = sr.generate_correlated_phases(&positions);
-        assert_eq!(phases.len(), 3);
+        assert_eq!(phases.size(), 3);
     }
 }

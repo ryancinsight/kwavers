@@ -6,14 +6,43 @@ use kwavers_boundary::Boundary;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_medium::Medium;
 use kwavers_source::{Source, SourceField};
+use leto::Array4;
 use log::debug;
-use ndarray::{s, Array4, Zip};
 use std::time::Instant;
+
+fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
+    for (dst_value, src_value) in dst
+        .as_slice_mut()
+        .expect("leto hybrid field must be contiguous")
+        .iter_mut()
+        .zip(src.iter())
+    {
+        *dst_value = *src_value;
+    }
+}
+
+fn copy_leto_slice_into_ndarray(
+    dst: &mut leto::ArrayViewMut3<'_, f64>,
+    src: &leto::Array3<f64>,
+    region: &DomainRegion,
+) {
+    let leto_slice = &[
+        (region.start.0, region.end.0, 1isize),
+        (region.start.1, region.end.1, 1isize),
+        (region.start.2, region.end.2, 1isize),
+    ];
+    let mut dst_slice = dst.reborrow().slice_mut(leto_slice).unwrap();
+    let src_slice = src.slice(leto_slice).unwrap();
+    leto_ops::zip_mut_with(&mut dst_slice, &src_slice, |dst_value, src_value| {
+        *dst_value = *src_value;
+    })
+    .expect("invariant: source and destination region slices share shape");
+}
 
 impl HybridSolver {
     /// Update fields for one time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update(
         &mut self,
@@ -36,46 +65,48 @@ impl HybridSolver {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        self.pstd_solver
-            .fields
-            .p
-            .assign(&fields.index_axis(ndarray::Axis(0), p_idx));
-        self.pstd_solver
-            .fields
-            .ux
-            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
-        self.pstd_solver
-            .fields
-            .uy
-            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
-        self.pstd_solver
-            .fields
-            .uz
-            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+        copy_ndarray_view_into_leto(&mut self.pstd_solver.fields.p, fields.index_axis(0, p_idx)?);
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.ux,
+            fields.index_axis(0, vx_idx)?,
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.uy,
+            fields.index_axis(0, vy_idx)?,
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.pstd_solver.fields.uz,
+            fields.index_axis(0, vz_idx)?,
+        );
 
-        self.fdtd_solver
-            .fields
-            .p
-            .assign(&fields.index_axis(ndarray::Axis(0), p_idx));
-        self.fdtd_solver
-            .fields
-            .ux
-            .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
-        self.fdtd_solver
-            .fields
-            .uy
-            .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
-        self.fdtd_solver
-            .fields
-            .uz
-            .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+        copy_ndarray_view_into_leto(&mut self.fdtd_solver.fields.p, fields.index_axis(0, p_idx)?);
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.ux,
+            fields.index_axis(0, vx_idx)?,
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.uy,
+            fields.index_axis(0, vy_idx)?,
+        );
+        copy_ndarray_view_into_leto(
+            &mut self.fdtd_solver.fields.uz,
+            fields.index_axis(0, vz_idx)?,
+        );
 
         let amp = source.amplitude(t);
         if amp.abs() > 1e-12 && source.source_type() == SourceField::Pressure {
             source.create_mask_into(&self.grid, &mut self.source_mask_scratch);
-            Zip::from(&mut self.fdtd_solver.fields.p)
-                .and(&self.source_mask_scratch)
-                .for_each(|p, &m| *p += m * amp);
+            for (p, m) in self
+                .fdtd_solver
+                .fields
+                .p
+                .as_slice_mut()
+                .expect("leto hybrid pressure field must be contiguous")
+                .iter_mut()
+                .zip(self.source_mask_scratch.iter())
+            {
+                *p += m * amp;
+            }
         }
 
         self.pstd_solver.step_forward()?;
@@ -85,56 +116,54 @@ impl HybridSolver {
             let region = self.regions[region_index];
             match region.domain_type {
                 DomainType::PSTD => {
-                    let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
-                    let slice = s![
-                        region.start.0..region.end.0,
-                        region.start.1..region.end.1,
-                        region.start.2..region.end.2
-                    ];
-                    p_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.p.slice(slice));
+                    let mut p_view = fields.index_axis_mut(0, p_idx)?;
+                    copy_leto_slice_into_ndarray(&mut p_view, &self.pstd_solver.fields.p, &region);
 
-                    let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
-                    vx_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.ux.slice(slice));
+                    let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
+                    copy_leto_slice_into_ndarray(
+                        &mut vx_view,
+                        &self.pstd_solver.fields.ux,
+                        &region,
+                    );
 
-                    let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
-                    vy_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.uy.slice(slice));
+                    let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
+                    copy_leto_slice_into_ndarray(
+                        &mut vy_view,
+                        &self.pstd_solver.fields.uy,
+                        &region,
+                    );
 
-                    let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
-                    vz_view
-                        .slice_mut(slice)
-                        .assign(&self.pstd_solver.fields.uz.slice(slice));
+                    let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
+                    copy_leto_slice_into_ndarray(
+                        &mut vz_view,
+                        &self.pstd_solver.fields.uz,
+                        &region,
+                    );
                 }
                 DomainType::FDTD => {
-                    let mut p_view = fields.index_axis_mut(ndarray::Axis(0), p_idx);
-                    let slice = s![
-                        region.start.0..region.end.0,
-                        region.start.1..region.end.1,
-                        region.start.2..region.end.2
-                    ];
-                    p_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.p.slice(slice));
+                    let mut p_view = fields.index_axis_mut(0, p_idx)?;
+                    copy_leto_slice_into_ndarray(&mut p_view, &self.fdtd_solver.fields.p, &region);
 
-                    let mut vx_view = fields.index_axis_mut(ndarray::Axis(0), vx_idx);
-                    vx_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.ux.slice(slice));
+                    let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
+                    copy_leto_slice_into_ndarray(
+                        &mut vx_view,
+                        &self.fdtd_solver.fields.ux,
+                        &region,
+                    );
 
-                    let mut vy_view = fields.index_axis_mut(ndarray::Axis(0), vy_idx);
-                    vy_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.uy.slice(slice));
+                    let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
+                    copy_leto_slice_into_ndarray(
+                        &mut vy_view,
+                        &self.fdtd_solver.fields.uy,
+                        &region,
+                    );
 
-                    let mut vz_view = fields.index_axis_mut(ndarray::Axis(0), vz_idx);
-                    vz_view
-                        .slice_mut(slice)
-                        .assign(&self.fdtd_solver.fields.uz.slice(slice));
+                    let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
+                    copy_leto_slice_into_ndarray(
+                        &mut vz_view,
+                        &self.fdtd_solver.fields.uz,
+                        &region,
+                    );
                 }
                 DomainType::Hybrid => {
                     self.apply_hybrid_region_blended(fields, &region)?;
@@ -162,7 +191,7 @@ impl HybridSolver {
 
     /// Apply hybrid processing to transition region
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_hybrid_region_blended(
         &mut self,
@@ -227,7 +256,7 @@ impl HybridSolver {
 
     /// Update domain decomposition based on current fields
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn update_decomposition(
         &mut self,
@@ -259,12 +288,14 @@ impl HybridSolver {
 
     /// Validate solution quality
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     fn validate_solution(&mut self, fields: &Array4<f64>, _time: f64) -> KwaversResult<()> {
         use kwavers_field::mapping::UnifiedFieldType;
 
-        let pressure = fields.index_axis(ndarray::Axis(0), UnifiedFieldType::Pressure.index());
+        let pressure = fields
+            .index_axis::<3>(0, UnifiedFieldType::Pressure.index())
+            .expect("invariant: pressure field index within field stack");
         let has_nan = pressure.iter().any(|&x| x.is_nan());
         let has_inf = pressure.iter().any(|&x| x.is_infinite());
 
@@ -298,7 +329,7 @@ impl HybridSolver {
 
     /// Extract recorded sensor data from the internal FDTD solver.
     /// Returns None if no sensors are configured or no data has been recorded.
-    pub fn extract_recorded_sensor_data(&self) -> Option<ndarray::Array2<f64>> {
+    pub fn extract_recorded_sensor_data(&self) -> Option<leto::Array2<f64>> {
         self.fdtd_solver.extract_recorded_sensor_data()
     }
 }
@@ -314,7 +345,7 @@ mod tests {
     use kwavers_medium::HomogeneousMedium;
     use kwavers_signal::Signal;
     use kwavers_source::PointSource;
-    use ndarray::Array4;
+    use leto::Array4;
     use std::sync::Arc;
 
     #[derive(Debug, Clone)]
@@ -360,7 +391,7 @@ mod tests {
         assert_eq!(solver.source_mask_scratch.as_ptr(), before);
         assert_eq!(solver.source_mask_scratch[[1, 2, 3]], 1.0);
         assert_eq!(
-            solver.source_mask_scratch.sum(),
+            solver.source_mask_scratch.iter().sum::<f64>(),
             1.0,
             "point-source mask must contain exactly one active cell"
         );

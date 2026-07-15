@@ -1,4 +1,5 @@
-use ndarray::Array3;
+use kwavers_core::utils::iterators::apply_inplace;
+use leto::Array3;
 
 use super::local_ops::{
     compute_laplacian, compute_local_entropy, compute_local_std, compute_spatial_gradient,
@@ -27,44 +28,48 @@ use super::local_ops::{
 /// # Example
 ///
 /// ```rust,ignore
-/// use ndarray::Array3;
+/// use leto::Array3;
 /// let image = Array3::<f32>::zeros((1, 1, 256));
 /// let features = extract_all_features(&image);
 /// assert_eq!(features.len(), 6);
 /// ```
-pub fn extract_all_features(image: &Array3<f32>) -> ndarray::Array1<f32> {
-    use ndarray::Array1;
+pub fn extract_all_features(image: &Array3<f32>) -> leto::Array1<f32> {
+    use leto::Array1;
 
     // 1. Mean intensity
-    let mean_intensity = image.mean().unwrap_or(0.0);
+    let mean_intensity = leto::mean_all(image).unwrap_or(0.0);
 
     // 2. Standard deviation (global texture)
     let std_map = compute_local_std(image);
-    let mean_std = std_map.mean().unwrap_or(0.0);
+    let mean_std = leto::mean_all(&std_map).unwrap_or(0.0);
 
     // 3. Mean gradient magnitude (edge strength)
     let gradient_map = compute_spatial_gradient(image);
-    let mean_gradient = gradient_map.mean().unwrap_or(0.0);
+    let mean_gradient = leto::mean_all(&gradient_map).unwrap_or(0.0);
 
     // 4. Mean Laplacian (structural complexity)
     let laplacian_map = compute_laplacian(image);
-    let mean_laplacian = laplacian_map.mean().unwrap_or(0.0);
+    let mean_laplacian = leto::mean_all(&laplacian_map).unwrap_or(0.0);
 
     // 5. Entropy (information content)
     let entropy_map = compute_local_entropy(image);
-    let mean_entropy = entropy_map.mean().unwrap_or(0.0);
+    let mean_entropy = leto::mean_all(&entropy_map).unwrap_or(0.0);
 
     // 6. Peak intensity (dynamic range)
     let peak_intensity = image.iter().copied().fold(0.0f32, f32::max);
 
-    Array1::from_vec(vec![
-        mean_intensity,
-        mean_std,
-        mean_gradient,
-        mean_laplacian,
-        mean_entropy,
-        peak_intensity,
-    ])
+    Array1::from_vec(
+        6,
+        vec![
+            mean_intensity,
+            mean_std,
+            mean_gradient,
+            mean_laplacian,
+            mean_entropy,
+            peak_intensity,
+        ],
+    )
+    .expect("invariant: 6-element feature vector")
 }
 
 /// Normalize features to [0, 1] range.
@@ -95,7 +100,7 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 
         let range = max_val - min_val;
         if range > 1e-10 {
-            feature.par_mapv_inplace(|v| (v - min_val) / range);
+            apply_inplace(feature, |v| (v - min_val) / range);
         }
     }
 }
@@ -121,15 +126,15 @@ pub fn normalize_features(features: &mut [Array3<f32>]) {
 /// assert_eq!(stacked.shape(), &[1, 5, 256, 256]);
 /// ```
 #[must_use]
-pub fn concatenate_features(features: &[Array3<f32>]) -> ndarray::Array4<f32> {
+pub fn concatenate_features(features: &[Array3<f32>]) -> leto::Array4<f32> {
     if features.is_empty() {
-        return ndarray::Array4::zeros((0, 0, 0, 0));
+        return leto::Array4::zeros((0, 0, 0, 0));
     }
 
-    let (d0, d1, d2) = features[0].dim();
+    let [d0, d1, d2] = features[0].shape();
     let num_features = features.len();
 
-    let mut stacked = ndarray::Array4::zeros((d0, num_features, d1, d2));
+    let mut stacked = leto::Array4::zeros((d0, num_features, d1, d2));
 
     for (feat_idx, feature) in features.iter().enumerate() {
         for k in 0..d0 {

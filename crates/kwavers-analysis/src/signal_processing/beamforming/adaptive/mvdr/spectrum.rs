@@ -1,7 +1,7 @@
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::linear_algebra::ComplexLinearAlgebra;
-use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+use leto::{Array1, Array2};
 
 use super::{validate_real_positive_denominator, MinimumVariance};
 
@@ -17,13 +17,13 @@ impl MinimumVariance {
         covariance: &Array2<Complex64>,
         steering: &Array1<Complex64>,
     ) -> KwaversResult<f64> {
-        let n = covariance.nrows();
+        let n = covariance.shape()[0];
 
-        if n == 0 || covariance.ncols() != n {
+        if n == 0 || covariance.shape()[1] != n {
             return Err(KwaversError::InvalidInput(format!(
                 "MVDR pseudospectrum: covariance must be square; got {}×{}",
                 n,
-                covariance.ncols()
+                covariance.shape()[1]
             )));
         }
         if steering.len() != n {
@@ -39,7 +39,7 @@ impl MinimumVariance {
         let denom: Complex64 = steering
             .iter()
             .zip(y.iter())
-            .map(|(a, y_i)| a.conj() * y_i)
+            .map(|(a, y_i)| a.conj() * *y_i)
             .sum();
 
         let denom_re =

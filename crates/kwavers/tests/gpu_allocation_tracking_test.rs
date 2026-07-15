@@ -1,41 +1,12 @@
 #![cfg(feature = "gpu")]
 
-use kwavers_gpu::gpu::FdtdGpu;
+use kwavers_gpu::gpu::{FdtdGpuProvider, WgpuFdtd};
 use kwavers_gpu::profiling::{GpuAllocationConfig, GpuAllocationTracker};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3 as LetoArray3;
 
-async fn create_test_device() -> Result<(wgpu::Device, wgpu::Queue), String> {
-    let instance = wgpu::Instance::default();
-    let adapter = instance
-        .request_adapter(&wgpu::RequestAdapterOptions::default())
-        .await
-        .map_err(|_| "No GPU adapter found".to_string())?;
-
-    let (device, queue) = adapter
-        .request_device(&wgpu::DeviceDescriptor {
-            label: None,
-            required_features: wgpu::Features::PUSH_CONSTANTS,
-            required_limits: wgpu::Limits {
-                max_push_constant_size: 128,
-                max_compute_invocations_per_workgroup: 512,
-                ..wgpu::Limits::default()
-            },
-            ..Default::default()
-        })
-        .await
-        .map_err(|_| "No device found".to_string())?;
-
-    Ok((device, queue))
-}
-
-#[tokio::test]
-async fn test_gpu_budget_enforcement() {
-    let (_device, _queue) = match create_test_device().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-
+#[test]
+fn test_gpu_budget_enforcement() {
     // Budget of 1MB = 1048576 bytes
     let config = GpuAllocationConfig::with_safety_factor(1.0);
     let tracker = GpuAllocationTracker::new(1024 * 1024, config);
@@ -56,13 +27,8 @@ async fn test_gpu_budget_enforcement() {
     assert_eq!(tracker.current_bytes(), 500_000);
 }
 
-#[tokio::test]
-async fn test_gpu_allocation_guard_raii_release() {
-    let (_device, _queue) = match create_test_device().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-
+#[test]
+fn test_gpu_allocation_guard_raii_release() {
     let config = GpuAllocationConfig::with_safety_factor(1.0);
     let tracker = GpuAllocationTracker::new(1024 * 1024, config);
 
@@ -85,43 +51,34 @@ async fn test_gpu_allocation_guard_raii_release() {
     assert_eq!(tracker.peak_bytes(), 500_000);
 }
 
-#[tokio::test]
-async fn test_fdtd_gpu_construction_and_pressure_roundtrip() {
-    let (device, queue) = match create_test_device().await {
-        Ok(d) => d,
-        Err(_) => return,
-    };
-
+#[test]
+fn test_fdtd_gpu_construction_and_pressure_roundtrip() {
     let grid = Grid::new(6, 6, 6, 0.1, 0.1, 0.1).unwrap();
-    let fdtd = FdtdGpu::new(&device, &grid).expect("Failed to create FdtdGpu");
-
-    let pressure = Array3::from_shape_fn((6, 6, 6), |(i, j, k)| (i + 6 * j + 36 * k) as f64);
-    fdtd.upload_pressure(&queue, &pressure);
-
-    let downloaded = fdtd
-        .download_pressure(&device, &queue, &grid)
-        .await
-        .expect("pressure download must succeed");
-
-    assert_eq!(downloaded, pressure);
+    let pressure = LetoArray3::from_shape_fn([6, 6, 6], |[i, j, k]| (i + 6 * j + 36 * k) as f32);
+    assert_fdtd_pressure_roundtrip::<WgpuFdtd>(&grid, pressure);
 }
 
-#[tokio::test]
-async fn test_fdtd_gpu_pressure_roundtrip() {
-    let (device, queue) = match create_test_device().await {
-        Ok(d) => d,
+#[test]
+fn test_fdtd_gpu_pressure_roundtrip() {
+    let grid = Grid::new(4, 4, 4, 0.1, 0.1, 0.1).unwrap();
+    let pressure = LetoArray3::from_shape_fn([4, 4, 4], |[i, j, k]| (i + 4 * j + 16 * k) as f32);
+    assert_fdtd_pressure_roundtrip::<WgpuFdtd>(&grid, pressure);
+}
+
+fn assert_fdtd_pressure_roundtrip<P>(grid: &Grid, pressure: LetoArray3<f32>)
+where
+    P: FdtdGpuProvider<Scalar = f32>,
+{
+    let fdtd = match P::new(grid) {
+        Ok(fdtd) => fdtd,
         Err(_) => return,
     };
 
-    let grid = Grid::new(4, 4, 4, 0.1, 0.1, 0.1).unwrap();
-    let fdtd = FdtdGpu::new(&device, &grid).expect("Failed to create FdtdGpu");
-
-    let pressure = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| (i + 4 * j + 16 * k) as f64);
-    fdtd.upload_pressure(&queue, &pressure);
+    fdtd.upload_pressure(&pressure)
+        .expect("pressure upload must succeed");
 
     let downloaded = fdtd
-        .download_pressure(&device, &queue, &grid)
-        .await
+        .download_pressure_blocking(grid)
         .expect("pressure download must succeed");
 
     assert_eq!(downloaded, pressure);

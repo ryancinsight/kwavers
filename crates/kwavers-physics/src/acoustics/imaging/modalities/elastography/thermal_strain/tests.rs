@@ -10,7 +10,7 @@ use super::config::ThermalStrainConfig;
 use super::strain::least_squares_strain;
 use super::tracking::{track_line_samples, TrackingParams};
 use super::{ThermalStrainImager, ThermalStrainResult};
-use ndarray::{Array1, Array3, ArrayView1};
+use leto::{Array1, Array3, ArrayView1};
 
 // ── Deterministic synthetic RF generation (no RNG; reproducible) ──────────────
 
@@ -44,7 +44,7 @@ fn synthetic_rf(nz: usize, seed: u64, samples_per_cycle: f64) -> Array1<f64> {
 
 /// Linear interpolation of `line` at a (possibly fractional) index.
 fn interp(line: ArrayView1<f64>, idx: f64) -> f64 {
-    let n = line.len();
+    let n = line.size();
     if idx <= 0.0 {
         return line[0];
     }
@@ -116,7 +116,7 @@ fn ncc_recovers_known_subsample_shift() {
     let reference = synthetic_rf(nz, 0x1234_5678, 5.0);
     let true_shift = 1.6_f64; // samples; post[k] = ref[k − shift]
     let tracked: Array1<f64> =
-        Array1::from_shape_fn(nz, |k| interp(reference.view(), k as f64 - true_shift));
+        Array1::from_shape_fn([nz], |[k]| interp(reference.view(), k as f64 - true_shift));
 
     let params = TrackingParams {
         window_half: 10,
@@ -142,7 +142,7 @@ fn least_squares_strain_recovers_exact_slope() {
     let (nx, ny, nz) = (1, 1, 64);
     let dz = 1e-4;
     let slope = 0.01;
-    let disp = Array3::from_shape_fn((nx, ny, nz), |(_, _, k)| slope * (k as f64 * dz));
+    let disp = Array3::from_shape_fn([nx, ny, nz], |[_i, _j, k]| slope * (k as f64 * dz));
     let strain = least_squares_strain(&disp, dz, 7);
     // Interior points must recover the slope to machine precision.
     for k in 5..nz - 5 {
@@ -171,8 +171,8 @@ fn reconstructs_uniform_temperature_change() {
     let k_t = cfg.combined_coefficient();
 
     // Build pre/post volumes: post[k] = ref[k − d(k)], d(k) = u(z)/dz = k_T·ΔT·k.
-    let mut reference = Array3::zeros((nx, ny, nz));
-    let mut tracked = Array3::zeros((nx, ny, nz));
+    let mut reference = Array3::zeros([nx, ny, nz]);
+    let mut tracked = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             let seed = 0xABCD_0000u64 ^ ((i as u64) << 16) ^ (j as u64);
@@ -238,8 +238,8 @@ fn dimension_mismatch_is_rejected() {
         40e6,
     )
     .unwrap();
-    let a = Array3::zeros((2, 2, 32));
-    let b = Array3::zeros((2, 2, 16));
+    let a = Array3::zeros([2, 2, 32]);
+    let b = Array3::zeros([2, 2, 16]);
     assert!(imager.reconstruct_temperature(&a, &b).is_err());
 }
 
@@ -258,7 +258,7 @@ fn no_heating_gives_zero_displacement_and_temperature() {
     // maximum is at lag 0, so the integer displacement is exactly zero
     // everywhere; only bounded sub-sample residual remains.
     let (nx, ny, nz) = (2, 2, 256);
-    let mut rf = Array3::zeros((nx, ny, nz));
+    let mut rf = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
             let line = synthetic_rf(nz, 0x55AA_0000u64 ^ ((i as u64) << 8) ^ j as u64, 5.0);
@@ -280,7 +280,8 @@ fn no_heating_gives_zero_displacement_and_temperature() {
     );
 
     // No systematic temperature bias.
-    let mean_dt = result.temperature_change.sum() / result.temperature_change.len() as f64;
+    let mean_dt = result.temperature_change.iter().copied().sum::<f64>()
+        / result.temperature_change.size() as f64;
     assert!(mean_dt.abs() < 0.5, "mean ΔT bias = {mean_dt} °C");
 }
 
@@ -290,7 +291,7 @@ fn uniform_displacement_yields_exactly_zero_strain() {
     // apparent displacement has zero gradient, hence exactly zero thermal strain
     // and zero ΔT, independent of tracking.
     use super::strain::least_squares_strain;
-    let disp = Array3::from_elem((2, 2, 64), 3.7e-6_f64);
+    let disp = Array3::from_elem([2, 2, 64], 3.7e-6_f64);
     let strain = least_squares_strain(&disp, 1e-5, 9);
     let max_abs = strain.iter().fold(0.0_f64, |m, &v| m.max(v.abs()));
     assert!(max_abs < 1e-15, "max |strain| = {max_abs}");

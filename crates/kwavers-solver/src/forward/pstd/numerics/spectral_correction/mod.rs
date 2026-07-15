@@ -27,7 +27,7 @@
 //!   reconstruction of photoacoustic wave fields." Journal of Biomedical Optics, 15(2).
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use serde::{Deserialize, Serialize};
 
 mod corrections;
@@ -100,7 +100,7 @@ pub fn compute_spectral_correction(
     c_ref: f64,
 ) -> Array3<f64> {
     if !config.enabled {
-        return Array3::from_elem((grid.nx, grid.ny, grid.nz), 1.0);
+        return Array3::from_elem([grid.nx, grid.ny, grid.nz], 1.0);
     }
 
     corrections::compute_spectral_correction_dispatch(

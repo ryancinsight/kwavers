@@ -7,14 +7,15 @@
 //! - Norton (1980) "Reconstruction from projections"
 //! - Kostli et al. (2001) "Temporal backward projection of optoacoustic pressure"
 
+use apollo::{fft_1d_leto, ifft_1d_leto, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::fft::{
-    fft_1d_array, ifft_1d_array, Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D,
-};
+use kwavers_core::utils::iterators::apply_inplace;
+use kwavers_math::fft::{Complex64, Fft3dInOutExt, Shape3D, FFT_CACHE_3D};
 use kwavers_signal::window_value;
 use kwavers_signal::SignalWindowType;
-use ndarray::{Array1, Array2, Array3, ArrayView2};
+use leto::{Array1, Array2, Array3, ArrayView2};
+use leto::{Array1 as LetoArray1, Array3 as LetoArray3};
 use std::f64::consts::PI;
 
 /// Fourier domain reconstruction algorithm
@@ -42,26 +43,28 @@ impl FourierReconstructor {
     /// the Fourier transform of a projection equals a slice through
     /// the Fourier transform of the object.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn reconstruct(
         &self,
         sensor_data: ArrayView2<f64>,
         sensor_positions: &[[f64; 3]],
     ) -> KwaversResult<Array3<f64>> {
-        let (_n_time, _n_sensors) = sensor_data.dim();
+        let [_n_time, _n_sensors] = sensor_data.shape();
         let [nx, ny, nz] = self.grid_size;
 
         // Initialize k-space representation
-        let mut k_space = Array3::zeros((nx, ny, nz));
+        let mut k_space = LetoArray3::zeros([nx, ny, nz]);
 
         // Process each sensor
         for (sensor_idx, sensor_pos) in sensor_positions.iter().enumerate() {
             // Get sensor signal
-            let signal = sensor_data.column(sensor_idx);
+            let signal = sensor_data
+                .slice_with::<1>(&s![.., sensor_idx])
+                .expect("invariant: sensor index within column count");
 
             // Apply ramp filter for derivative (d/dt -> multiplication by iω in Fourier)
-            let filtered_signal = self.apply_ramp_filter(signal.to_owned())?;
+            let filtered_signal = self.apply_ramp_filter(signal.to_contiguous())?;
 
             // Compute angular spectrum for this sensor
             let angular_spectrum = self.compute_angular_spectrum(&filtered_signal, sensor_pos)?;
@@ -83,11 +86,17 @@ impl FourierReconstructor {
     ///
     fn apply_ramp_filter(&self, signal: Array1<f64>) -> KwaversResult<Array1<f64>> {
         let n = signal.len();
-        let mut complex_signal = fft_1d_array(&signal);
+        let leto_signal =
+            LetoArray1::from_shape_vec([n], signal.iter().cloned().collect::<Vec<_>>())
+                .expect("photoacoustic ramp-filter signal length must match its Leto shape");
+        let mut complex_signal = fft_1d_leto(leto_signal.view());
 
         // Apply ramp filter: H(ω) = iω
         let df = self.sampling_frequency / n as f64;
-        for (i, val) in complex_signal.iter_mut().enumerate() {
+        let spectrum = complex_signal
+            .as_slice_mut()
+            .expect("Apollo 1-D FFT output must be contiguous");
+        for (i, val) in spectrum.iter_mut().enumerate() {
             let freq = if i <= n / 2 {
                 i as f64 * df
             } else {
@@ -96,10 +105,12 @@ impl FourierReconstructor {
 
             // Multiply by iω (derivative in frequency domain)
             let omega = TWO_PI * freq;
-            *val *= Complex64::new(0.0, omega);
+            *val *= ApolloComplex64::new(0.0, omega);
         }
 
-        Ok(ifft_1d_array(&complex_signal))
+        let filtered_vec = ifft_1d_leto(complex_signal.view()).into_vec();
+        Ok(Array1::from_vec(filtered_vec.len(), filtered_vec)
+            .expect("invariant: ramp-filtered signal length matches its Leto shape"))
     }
 
     /// Compute angular spectrum from filtered sensor data
@@ -114,7 +125,12 @@ impl FourierReconstructor {
         let n_time = filtered_signal.len();
         let n_freq = n_time / 2 + 1;
 
-        let complex_signal = fft_1d_array(filtered_signal);
+        let signal = LetoArray1::from_shape_vec(
+            [n_time],
+            filtered_signal.iter().cloned().collect::<Vec<_>>(),
+        )
+        .expect("photoacoustic angular-spectrum signal length must match its Leto shape");
+        let complex_signal = fft_1d_leto(signal.view());
 
         // Create angular spectrum (frequency vs angle)
         let n_angles = 180; // Angular resolution
@@ -129,12 +145,13 @@ impl FourierReconstructor {
                 let theta = angle_idx as f64 * PI / n_angles as f64;
 
                 // Project onto this angle
-                let projection_factor = Complex64::new(
+                let projection_factor = ApolloComplex64::new(
                     (k * sensor_pos[0] * theta.cos()).cos(),
                     (k * sensor_pos[0] * theta.cos()).sin(),
                 );
 
-                angular_spectrum[[f_idx, angle_idx]] = complex_signal[f_idx] * projection_factor;
+                let projected = complex_signal[f_idx] * projection_factor;
+                angular_spectrum[[f_idx, angle_idx]] = Complex64::new(projected.re, projected.im);
             }
         }
 
@@ -147,12 +164,12 @@ impl FourierReconstructor {
     ///
     fn add_to_k_space(
         &self,
-        k_space: &mut Array3<Complex64>,
+        k_space: &mut LetoArray3<Complex64>,
         angular_spectrum: &Array2<Complex64>,
         sensor_pos: &[f64; 3],
     ) -> KwaversResult<()> {
         let [nx, ny, nz] = self.grid_size;
-        let (n_freq, n_angles) = angular_spectrum.dim();
+        let [n_freq, n_angles] = angular_spectrum.shape();
 
         // Map angular spectrum to k-space using projection theorem
         for f_idx in 0..n_freq {
@@ -183,7 +200,7 @@ impl FourierReconstructor {
     }
 
     /// Apply k-space filter for noise suppression and regularization
-    fn apply_k_space_filter(&self, k_space: &mut Array3<Complex64>) {
+    fn apply_k_space_filter(&self, k_space: &mut LetoArray3<Complex64>) {
         let [nx, ny, nz] = self.grid_size;
 
         for ix in 0..nx {
@@ -211,15 +228,20 @@ impl FourierReconstructor {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn inverse_fourier_transform(&self, k_space: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
+    fn inverse_fourier_transform(
+        &self,
+        k_space: &LetoArray3<Complex64>,
+    ) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.grid_size;
         let fft = FFT_CACHE_3D.get_or_create(Shape3D { nx, ny, nz });
-        let mut result = Array3::<f64>::zeros((nx, ny, nz));
-        let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
-        fft.inverse_into(k_space, &mut result, &mut scratch);
+        let mut result_leto = LetoArray3::<f64>::zeros([nx, ny, nz]);
+        let mut scratch = LetoArray3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
+        fft.inverse_into(k_space, &mut result_leto, &mut scratch);
+        let mut result = Array3::from_shape_vec([nx, ny, nz], result_leto.into_vec())
+            .expect("photoacoustic inverse FFT output shape must match reconstruction grid");
 
         // Apply positivity constraint (pressure should be non-negative)
-        result.par_mapv_inplace(|x| x.max(0.0));
+        apply_inplace(&mut result, |x| x.max(0.0));
 
         Ok(result)
     }

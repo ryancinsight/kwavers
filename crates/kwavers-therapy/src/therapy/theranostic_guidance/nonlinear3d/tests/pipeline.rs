@@ -32,7 +32,7 @@ fn nonlinear_3d_westervelt_fwi_and_cavitation_inverse_are_input_sensitive() {
     assert!(result.is_full_wave_inversion);
     assert!(result.uses_nonlinear_wave_propagation);
     assert!(result.uses_rayleigh_plesset);
-    assert_eq!(result.ct_hu.dim(), (12, 12, 12));
+    assert_eq!(result.ct_hu.shape(), [12, 12, 12]);
     assert!((result.treatment_window_radius_m - config.treatment_window_radius_m).abs() < 1.0e-12);
     assert!(result.wavelength_min_m > 0.0);
     assert!(result.points_per_wavelength_min > 0.0);
@@ -149,7 +149,7 @@ fn nonlinear_3d_brain_focused_bowl_pipeline_is_input_sensitive_through_skull() {
     assert!(result.is_full_wave_inversion);
     assert!(result.uses_nonlinear_wave_propagation);
     assert!(result.uses_rayleigh_plesset);
-    assert_eq!(result.ct_hu.dim(), (12, 12, 12));
+    assert_eq!(result.ct_hu.shape(), [12, 12, 12]);
     assert!(result.active_voxels > 32);
     assert!(
         result.target_mask.iter().filter(|active| **active).count() >= 2,

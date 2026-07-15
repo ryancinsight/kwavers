@@ -10,7 +10,7 @@ use kwavers_solver::inverse::linear_born_inversion::{
     high_pass_enhance_volume, pcg_invert, VolumeOperator, VolumeVoxel,
 };
 use kwavers_transducer::transducers::TransducerGeometry;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     config::{TranscranialUstBornInversionConfig, SOUND_SPEED_TISSUE},
@@ -79,13 +79,14 @@ pub fn reconstruct_brain_volume(
     let row_norms = operator.row_norms();
     let data = operator.data_from_target(&row_norms);
     let migration_model = operator.migration(&data, &all_rows, &row_norms, linear);
+    let [shape_x, shape_y, shape_z] = medium.sound_speed_m_s.shape();
     let inversion = pcg_invert(
         &operator,
         &data,
         &row_norms,
         linear,
         &active,
-        medium.sound_speed_m_s.dim(),
+        (shape_x, shape_y, shape_z),
     );
 
     let migration = fill_sound_speed_volume(medium, &active, &migration_model);
@@ -158,7 +159,7 @@ pub fn reconstruct_brain_volume(
 }
 
 fn active_voxels(medium: &AcousticVolume) -> Vec<VolumeVoxel> {
-    let (nx, ny, nz) = medium.sound_speed_m_s.dim();
+    let [nx, ny, nz] = medium.sound_speed_m_s.shape();
     let cx = (nx - 1) as f64 / 2.0;
     let cy = (ny - 1) as f64 / 2.0;
     let cz = (nz - 1) as f64 / 2.0;

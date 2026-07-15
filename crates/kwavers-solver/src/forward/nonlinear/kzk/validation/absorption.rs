@@ -5,7 +5,7 @@ mod tests {
     use super::super::super::*;
     use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array2;
+    use leto::Array2;
 
     /// Test power-law absorption: spectral field amplitude decay.
     ///
@@ -50,8 +50,8 @@ mod tests {
     ///
     #[test]
     fn test_absorption() {
-        use kwavers_math::fft::fft_1d_array;
-        use ndarray::Array1;
+        use apollo::fft_1d_leto;
+        use leto::Array1;
 
         let frequency = MHZ_TO_HZ;
         // dt chosen so fundamental falls on exact FFT bin: dt = 1/(8·f₀)
@@ -78,12 +78,13 @@ mod tests {
 
         let mut solver = KZKSolver::new(config.clone()).unwrap();
 
-        let source = Array2::from_elem((config.nx, config.ny), 1.0_f64);
+        let source = Array2::from_elem([config.nx, config.ny], 1.0_f64);
         solver.set_source(source, frequency);
 
         let initial_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
-        let initial_signal = Array1::from_vec(initial_signal);
-        let initial_spectrum = fft_1d_array(&initial_signal);
+        let initial_signal =
+            Array1::from_shape_vec([nt], initial_signal).expect("time signal length matches nt");
+        let initial_spectrum = fft_1d_leto(initial_signal.view());
         let fundamental_bin = (frequency * nt as f64 * dt).round() as usize; // = 32
         let initial_amp = initial_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
@@ -93,8 +94,9 @@ mod tests {
         }
 
         let final_signal = solver.get_time_signal(config.nx / 2, config.ny / 2);
-        let final_signal = Array1::from_vec(final_signal);
-        let final_spectrum = fft_1d_array(&final_signal);
+        let final_signal =
+            Array1::from_shape_vec([nt], final_signal).expect("time signal length matches nt");
+        let final_spectrum = fft_1d_leto(final_signal.view());
         let final_amp = final_spectrum[fundamental_bin].norm() * 2.0 / nt as f64;
 
         // Expected amplitude decay: exp(−α·d)

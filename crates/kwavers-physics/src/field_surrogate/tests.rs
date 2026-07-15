@@ -2,7 +2,7 @@
 //! synthetic kernels (no real PSTD runs needed) to exercise resampling,
 //! placement, and `(f0, pnp)` blending invariants.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     helmholtz_residual_field, helmholtz_residual_kernel, helmholtz_residual_stats,
@@ -20,13 +20,16 @@ fn synthetic_gaussian_kernel(
     pnp: f64,
 ) -> FocalKernel {
     let focus = (nx / 2, ny / 2, nz / 2);
-    let mut field = Array3::<f64>::zeros((nx, ny, nz));
+    let mut field = Array3::<f64>::zeros([nx, ny, nz]);
     // Gaussian half-widths set to a few voxels so the peak is clearly
     // localised and resampling effects are testable.
     let sx = 3.0; // axial half-width in voxels
     let sy = 1.5; // lateral
     let sz = 1.5;
-    for ((i, j, k), v) in field.indexed_iter_mut() {
+    for ([i, j, k], v) in field
+        .indexed_iter_mut()
+        .expect("synthetic kernel storage has disjoint logical indices")
+    {
         let di = (i as f64) - (focus.0 as f64);
         let dj = (j as f64) - (focus.1 as f64);
         let dk = (k as f64) - (focus.2 as f64);
@@ -40,7 +43,7 @@ fn synthetic_gaussian_kernel(
 fn test_focal_pressure_matches_pnp() {
     let k = synthetic_gaussian_kernel(40, 30, 30, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     assert!((k.focal_pressure() - 30.0 * MPA_TO_PA).abs() < 1e-9);
-    assert_eq!(k.shape(), (40, 30, 30));
+    assert_eq!(k.shape(), [40, 30, 30]);
 }
 
 #[test]
@@ -70,7 +73,7 @@ fn test_resample_identity_when_dx_unchanged() {
 fn test_resample_changes_shape_proportionally() {
     let k = synthetic_gaussian_kernel(40, 20, 20, 0.5e-3, MHZ_TO_HZ, 30.0 * MPA_TO_PA);
     let r = resample_trilinear(&k, 1.0e-3); // 2× downsample
-    assert_eq!(r.shape(), (20, 10, 10));
+    assert_eq!(r.shape(), [20, 10, 10]);
     assert!((r.dx_m - 1.0e-3).abs() < 1e-12);
 }
 
@@ -89,9 +92,12 @@ fn test_place_kernel_at_focus_aligns_voxel() {
     let target_shape = (60, 40, 40);
     let target_focus = (45, 20, 20);
     let placed = place_kernel_at_focus(&k, target_shape, target_focus);
-    assert_eq!(placed.dim(), target_shape);
-    let placed_at_focus = placed[target_focus];
-    let kernel_focal = k.field[k.focus_idx];
+    assert_eq!(
+        placed.shape(),
+        [target_shape.0, target_shape.1, target_shape.2]
+    );
+    let placed_at_focus = placed[target_focus.into()];
+    let kernel_focal = k.field[k.focus_idx.into()];
     assert!(
         (placed_at_focus - kernel_focal).abs() < 1e-9,
         "kernel focal voxel must land at target_focus"
@@ -267,7 +273,7 @@ fn test_resample_large_kernel_completes() {
 fn test_cube_blend_in_place_zero_extra_allocation() {
     // Functional test that the in-place blend produces the same result
     // as the previous out-of-place implementation. Exercises the new
-    // Zip-based blend path inside KernelCube::query.
+    // Moirai-backed blend path inside KernelCube::query.
     let kernels: Vec<FocalKernel> = [
         (0.5 * MHZ_TO_HZ, 15.0 * MPA_TO_PA),
         (0.5 * MHZ_TO_HZ, 30.0 * MPA_TO_PA),

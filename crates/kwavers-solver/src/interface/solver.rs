@@ -9,6 +9,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::GridSensorSet;
 use kwavers_source::Source;
+use leto::Array3;
 use std::fmt::Debug;
 
 /// Fundamental solver trait
@@ -62,7 +63,7 @@ pub trait Solver: Debug + Send + Sync {
     }
 
     /// Get the current pressure field
-    fn pressure_field(&self) -> &ndarray::Array3<f64>;
+    fn pressure_field(&self) -> &Array3<f64>;
 
     /// Owned snapshot of the recorded sensor pressure history, if the solver
     /// has been configured with a sensor mask or sensor set.
@@ -77,18 +78,12 @@ pub trait Solver: Debug + Send + Sync {
     /// downcasting to the concrete solver type. Allocating once at the end of
     /// a run is acceptable; callers that want zero-copy access should hold a
     /// concrete-typed reference and use the inherent view accessors.
-    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+    fn recorded_sensor_pressure(&self) -> Option<leto::Array2<f64>> {
         None
     }
 
     /// Get the current velocity fields
-    fn velocity_fields(
-        &self,
-    ) -> (
-        &ndarray::Array3<f64>,
-        &ndarray::Array3<f64>,
-        &ndarray::Array3<f64>,
-    );
+    fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>);
 
     /// Get solver statistics
     /// # Errors

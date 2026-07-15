@@ -1,3 +1,4 @@
+use numpy::ndarray::Array2;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -64,6 +65,7 @@ fn create_cw_signals(
         .map_err(|_| PyValueError::new_err("Failed to read phases"))?;
     let signals = kwavers_signal::create_cw_signals(t_slice, frequency_hz, amp_slice, phase_slice)
         .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
+    let signals: Array2<f64> = signals.try_into().expect("contiguous");
     Ok(PyArray2::from_owned_array(py, signals).into())
 }
 

@@ -1,3 +1,5 @@
+#![cfg(all(feature = "pinn", feature = "ai_integration_module_exists"))]
+
 //! Tests for AI-enhanced beamforming integration
 
 #[cfg(feature = "pinn")]
@@ -6,7 +8,7 @@ use kwavers_transducer::beamforming::{
     ClinicalDecisionSupport, DiagnosisAlgorithm, FeatureExtractor, RealTimeWorkflow,
 };
 #[cfg(feature = "pinn")]
-use ndarray::Array3;
+use leto::Array3;
 #[cfg(feature = "pinn")]
 use std::collections::HashMap;
 

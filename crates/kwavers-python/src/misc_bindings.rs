@@ -1,10 +1,11 @@
 //! Phase 22 wrappers: PID controller, resampling, reconstruction, and bubble field.
 
+use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3, nd_to_leto2};
 use kwavers_core::error::KwaversError;
 use kwavers_solver::inverse::reconstruction::photoacoustic::{
     kspace_line_recon as kwavers_kspace_line_recon, LineReconDataOrder, LineReconInterpolation,
 };
-use ndarray::{Array2, Array3, Axis};
+use leto::{Array2, Array3};
 use numpy::{PyArray2, PyArray3, PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
@@ -79,8 +80,25 @@ fn resample_to_target_grid<'py>(
 ) -> Py<PyArray3<f64>> {
     use kwavers_physics::acoustics::imaging::fusion::registration::resample_to_target_grid as kwavers_resample;
     let arr = source_image.as_array().to_owned();
-    let resampled = py.detach(|| kwavers_resample(&arr, &transform, target_dims));
-    PyArray3::from_owned_array(py, resampled).into()
+    let shape = arr.shape();
+    let source_leto = leto::Array3::from_shape_vec(
+        [shape[0], shape[1], shape[2]],
+        arr.iter().copied().collect(),
+    )
+    .expect("ndarray source image shape must match contiguous voxel payload");
+    let target = [target_dims.0, target_dims.1, target_dims.2];
+
+    let resampled = py.detach(|| kwavers_resample(&source_leto, &transform, target));
+    let out = leto::Array3::from_shape_vec(
+        (target[0], target[1], target[2]),
+        resampled
+            .as_slice_memory_order()
+            .expect("Leto resample output should be contiguous")
+            .to_vec(),
+    )
+    .expect("target dimensions must match resampled voxel payload");
+
+    PyArray3::from_owned_array(py, leto3_to_nd3(out)).into()
 }
 
 #[pyfunction]
@@ -115,12 +133,12 @@ fn kspace_line_recon<'py>(
         }
     };
 
-    let input = sensor_data.as_array().to_owned();
+    let input = nd_to_leto2(sensor_data.as_array().to_owned());
     let recon = py
         .detach(|| kwavers_kspace_line_recon(input.view(), dy, dt, c, data_order, interp, pos_cond))
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers error: {}", err)))?;
 
-    Ok(PyArray2::from_owned_array(py, recon).into())
+    Ok(PyArray2::from_owned_array(py, leto2_to_nd2(recon)).into())
 }
 
 #[pyfunction]
@@ -134,8 +152,8 @@ fn time_reversal_reconstruction<'py>(
     sampling_frequency: f64,
     pml_size: Option<usize>,
 ) -> PyResult<Py<PyArray3<f64>>> {
-    let sensor_data = sensor_data.as_array().to_owned();
-    let sensor_positions = sensor_positions.as_array().to_owned();
+    let sensor_data = nd_to_leto2(sensor_data.as_array().to_owned());
+    let sensor_positions = nd_to_leto2(sensor_positions.as_array().to_owned());
     let grid_inner = grid.inner.clone();
     let reconstruction = py
         .detach(move || {
@@ -150,7 +168,7 @@ fn time_reversal_reconstruction<'py>(
         })
         .map_err(|err| PyRuntimeError::new_err(format!("kwavers error: {}", err)))?;
 
-    Ok(PyArray3::from_owned_array(py, reconstruction).into())
+    Ok(PyArray3::from_owned_array(py, leto3_to_nd3(reconstruction)).into())
 }
 
 /// Reconstruct an initial pressure field by replaying time-reversed boundary data.
@@ -206,22 +224,25 @@ pub(crate) fn time_reversal_reconstruction_impl(
             },
         ));
     }
-    if sensor_positions.ncols() != 3 || sensor_positions.nrows() == 0 {
+    if sensor_positions.shape()[1] != 3 || sensor_positions.shape()[0] == 0 {
         return Err(KwaversError::Validation(
             kwavers_core::error::ValidationError::FieldValidation {
                 field: "sensor_positions".to_string(),
-                value: format!("{:?}", sensor_positions.dim()),
+                value: format!("{:?}", sensor_positions.shape()),
                 constraint: "must have shape (n_sensors, 3) and contain at least one sensor"
                     .to_string(),
             },
         ));
     }
 
-    let n_sensors = sensor_positions.nrows();
-    let sensor_data = match sensor_data.dim() {
-        (rows, _cols) if rows == n_sensors => sensor_data,
-        (_rows, cols) if cols == n_sensors => sensor_data.reversed_axes().to_owned(),
-        (rows, cols) => {
+    let n_sensors = sensor_positions.shape()[0];
+    let sensor_data = match sensor_data.shape() {
+        [rows, _cols] if rows == n_sensors => sensor_data,
+        [_rows, cols] if cols == n_sensors => sensor_data
+            .transpose([1, 0])
+            .expect("2-D transpose axes")
+            .to_contiguous(),
+        [rows, cols] => {
             return Err(KwaversError::Validation(
                 kwavers_core::error::ValidationError::FieldValidation {
                     field: "sensor_data".to_string(),
@@ -235,7 +256,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
         }
     };
 
-    if sensor_data.ncols() == 0 {
+    if sensor_data.shape()[1] == 0 {
         return Err(KwaversError::Validation(
             kwavers_core::error::ValidationError::FieldValidation {
                 field: "sensor_data".to_string(),
@@ -244,7 +265,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
             },
         ));
     }
-    let nt = sensor_data.ncols();
+    let nt = sensor_data.shape()[1];
 
     let (default_thickness, max_allowed) =
         crate::Simulation::cpml_thickness_limits(grid.nx, grid.ny, grid.nz);
@@ -265,10 +286,13 @@ pub(crate) fn time_reversal_reconstruction_impl(
     )?;
 
     let mut p_mask = Array3::<f64>::zeros((expanded_grid.nx, expanded_grid.ny, expanded_grid.nz));
-    for row in sensor_positions.outer_iter() {
-        let x = row[0] + expand_x as f64 * grid.dx;
-        let y = row[1] + expand_y as f64 * grid.dy;
-        let z = row[2] + expand_z as f64 * grid.dz;
+    for row in sensor_positions
+        .rows()
+        .expect("sensor_positions is a dense 2-D array")
+    {
+        let x = row[[0]] + expand_x as f64 * grid.dx;
+        let y = row[[1]] + expand_y as f64 * grid.dy;
+        let z = row[[2]] + expand_z as f64 * grid.dz;
         let i = (x / grid.dx).round() as isize;
         let j = (y / grid.dy).round() as isize;
         let k = (z / grid.dz).round() as isize;
@@ -300,8 +324,10 @@ pub(crate) fn time_reversal_reconstruction_impl(
         p_mask[[i, j, k]] = 1.0;
     }
 
-    let mut reversed_signal = sensor_data;
-    reversed_signal.invert_axis(Axis(1));
+    let [signal_rows, signal_cols] = sensor_data.shape();
+    let reversed_signal = leto::Array2::from_shape_fn([signal_rows, signal_cols], |[r, c]| {
+        sensor_data[[r, signal_cols - 1 - c]]
+    });
 
     let grid_source = GridSource {
         p_mask: Some(p_mask),
@@ -332,7 +358,7 @@ pub(crate) fn time_reversal_reconstruction_impl(
 
     SolverTrait::run(&mut solver, nt)?;
     let pressure = SolverTrait::pressure_field(&solver);
-    let mut cropped = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, j, k)| {
+    let mut cropped = Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |[i, j, k]| {
         pressure[[i + expand_x, j + expand_y, k + expand_z]]
     });
     // Apply the standard Dirichlet half-amplitude compensation (k-Wave
@@ -342,7 +368,9 @@ pub(crate) fn time_reversal_reconstruction_impl(
     // Signed values are preserved — the non-negativity prior p₀ ≥ 0 is a
     // photoacoustic post-processing choice and is left to the caller because
     // clipping breaks signed-pattern parity against k-Wave's `p_final`.
-    cropped.mapv_inplace(|value| 2.0 * value);
+    for value in cropped.iter_mut() {
+        *value *= 2.0;
+    }
 
     Ok(cropped)
 }

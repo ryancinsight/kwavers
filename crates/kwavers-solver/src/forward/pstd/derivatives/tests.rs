@@ -1,20 +1,20 @@
 use super::operator::SpectralDerivativeOperator;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 /// **Theorem (spectral derivative exactness for DFT-representable modes):**
 ///
-/// For a grid function `f[n] = A·sin(2π·m·n/N)` where m ∈ {1, …, N/2−1}
+/// For a grid function `f\[n\] = A·sin(2π·m·n/N)` where m ∈ {1, …, N/2−1}
 /// (an exactly DFT-representable mode not at Nyquist), the spectral
 /// derivative `F⁻¹[iω[k]·F[f]]` equals the exact continuous derivative
 /// `∂f/∂x = A·k_m·cos(k_m·x_n)` to within floating-point rounding, where
 /// `k_m = 2πm/(N·Δx)`.
 ///
-/// **Proof.** The DFT of `f[n] = A sin(2πmn/N)` has exactly two non-zero bins:
+/// **Proof.** The DFT of `f\[n\] = A sin(2πmn/N)` has exactly two non-zero bins:
 /// bin m with coefficient `−iAN/2` and bin N−m with coefficient `iAN/2`.
-/// Multiplying by `iω[k]` at bin m gives `iω[m]·(−iAN/2) = ω[m]·AN/2`,
+/// Multiplying by `iω[k]` at bin m gives `iω\[m\]·(−iAN/2) = ω\[m\]·AN/2`,
 /// and at bin N−m gives `iω[N−m]·(iAN/2) = −ω[N−m]·AN/2`. Since
-/// `ω[m] = 2πm/(N·Δx) = k_m` and `ω[N−m] = −k_m` (negative frequency
+/// `ω\[m\] = 2πm/(N·Δx) = k_m` and `ω[N−m] = −k_m` (negative frequency
 /// conjugate), IDFT recovers `A·k_m·cos(2πmn/N)` exactly. No aliasing
 /// occurs because m < N/2. (Trefethen 2000, Thm. 3.1.)
 ///
@@ -130,9 +130,9 @@ fn test_derivative_output() {
     let deriv_y = op.derivative_y(&field_view).unwrap();
     let deriv_z = op.derivative_z(&field_view).unwrap();
 
-    assert_eq!(deriv_x.shape(), &[32, 32, 32]);
-    assert_eq!(deriv_y.shape(), &[32, 32, 32]);
-    assert_eq!(deriv_z.shape(), &[32, 32, 32]);
+    assert_eq!(deriv_x.shape(), [32, 32, 32]);
+    assert_eq!(deriv_y.shape(), [32, 32, 32]);
+    assert_eq!(deriv_z.shape(), [32, 32, 32]);
 
     assert!(deriv_x.iter().all(|&x| x.is_finite()));
     assert!(deriv_y.iter().all(|&y| y.is_finite()));

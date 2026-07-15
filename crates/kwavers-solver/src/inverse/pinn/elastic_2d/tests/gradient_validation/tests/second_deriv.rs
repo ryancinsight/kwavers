@@ -1,16 +1,17 @@
 use super::helpers::{autodiff_second_derivative_xx, second_difference_xx};
-use super::{TestAutodiffBackend, TestBackend, FD_H_SECOND, REL_TOL_SECOND};
+use super::{FD_H_SECOND, REL_TOL_SECOND};
 use crate::inverse::elastic_2d::Config;
 use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
+
+type B = super::TestBackend;
 
 #[test]
 #[ignore = "Requires trained model for reliable FD comparison - use analytic tests instead"]
 fn test_second_derivative_xx_vs_finite_difference() {
     let config = Config::default();
-    let device = Default::default();
 
-    let model_autodiff = ElasticPINN2D::<TestAutodiffBackend>::new(&config, &device).unwrap();
-    let model_fd = ElasticPINN2D::<TestBackend>::new(&config, &device).unwrap();
+    let model_autodiff = ElasticPINN2D::<B>::new(&config).unwrap();
+    let model_fd = ElasticPINN2D::<B>::new(&config).unwrap();
 
     let test_points = vec![(0.5, 0.5, 0.5), (0.3, 0.7, 0.2)];
 
@@ -46,23 +47,20 @@ fn test_second_derivative_xx_vs_finite_difference() {
 }
 
 #[test]
-#[ignore = "Nested autodiff requires complex graph management - see test_second_derivative_xx_vs_finite_difference"]
+#[ignore = "Both paths are now finite-difference-based on this untrained model (coeus_autograd has no double-backward — see autodiff_utils::second_order's weight-gradient contract), so this duplicates test_second_derivative_xx_vs_finite_difference; retained for its is_finite() smoke coverage"]
 fn test_analytic_polynomial_second_derivative() {
     // Polynomial: u(x) = x² → ∂u/∂x = 2x → ∂²u/∂x² = 2
-    // This tests nested autodiff on a known analytic function
+    // This tests the finite-difference second-derivative path on a known
+    // analytic function.
     //
-    // NOTE: Computing second derivatives in Burn 0.19 requires careful graph management.
-    // After the first .backward() call, the graph is consumed. To compute second derivatives,
-    // we need to either:
-    // 1. Use a higher-level API that preserves the graph
-    // 2. Recompute the forward pass with nested grad tracking
-    // 3. Use numerical differentiation of the first derivative
-    //
-    // This is a known limitation and requires more research into Burn's autodiff patterns.
+    // NOTE: `coeus_autograd::Var::grad()` returns a plain, non-differentiable
+    // `Tensor` (no double-backward support), so `autodiff_second_derivative_xx`
+    // is finite-difference-based (see
+    // `ml::autodiff_utils::second_order::compute_second_derivative_2d`),
+    // not a nested-autodiff reconstruction.
 
     let config = Config::default();
-    let device = Default::default();
-    let model = ElasticPINN2D::<TestAutodiffBackend>::new(&config, &device).unwrap();
+    let model = ElasticPINN2D::<B>::new(&config).unwrap();
 
     let test_points = vec![(0.3, 0.5, 0.1), (0.5, 0.5, 0.5), (0.7, 0.3, 0.2)];
 

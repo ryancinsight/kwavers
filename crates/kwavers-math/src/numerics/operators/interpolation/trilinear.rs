@@ -16,7 +16,7 @@
 
 use super::traits::Interpolator;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
+use leto::{Array1, Array3, ArrayView1, ArrayView3};
 
 /// Trilinear interpolator (C⁰, order 1, monotonicity-preserving).
 #[derive(Debug, Clone)]
@@ -47,7 +47,7 @@ impl NumericsTrilinearInterpolator {
         y: f64,
         z: f64,
     ) -> KwaversResult<f64> {
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
 
         let i_float = x / self.dx;
         let j_float = y / self.dy;
@@ -109,7 +109,7 @@ impl NumericsTrilinearInterpolator {
 /// [`domain::medium::heterogeneous::interpolation::NumericsTrilinearInterpolator`] instead.
 #[must_use]
 pub fn trilinear_index_space(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
-    let (nx, ny, nz) = input.dim();
+    let [nx, ny, nz] = input.shape();
     let x0 = x.floor().clamp(0.0, (nx - 1) as f64) as usize;
     let y0 = y.floor().clamp(0.0, (ny - 1) as f64) as usize;
     let z0 = z.floor().clamp(0.0, (nz - 1) as f64) as usize;
@@ -134,8 +134,8 @@ impl Interpolator for NumericsTrilinearInterpolator {
         data: ArrayView1<f64>,
         target_points: ArrayView1<f64>,
     ) -> KwaversResult<Array1<f64>> {
-        let n = data.len();
-        let mut result = Array1::zeros(target_points.len());
+        let n = data.shape()[0];
+        let mut result = Array1::zeros([target_points.shape()[0]]);
 
         for (idx, &x) in target_points.iter().enumerate() {
             let i_float = x / self.dx;
@@ -164,11 +164,11 @@ impl Interpolator for NumericsTrilinearInterpolator {
         target_y: ArrayView1<f64>,
         target_z: ArrayView1<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let nx_target = target_x.len();
-        let ny_target = target_y.len();
-        let nz_target = target_z.len();
+        let nx_target = target_x.shape()[0];
+        let ny_target = target_y.shape()[0];
+        let nz_target = target_z.shape()[0];
 
-        let mut result = Array3::zeros((nx_target, ny_target, nz_target));
+        let mut result = Array3::zeros([nx_target, ny_target, nz_target]);
 
         for i in 0..nx_target {
             for j in 0..ny_target {

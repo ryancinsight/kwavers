@@ -10,7 +10,7 @@ impl PluginManager {
     ///
     /// Uses DFS-based topological sort with cycle detection.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if a duplicate field provider or circular dependency is detected.
+    /// - Returns [`crate::KwaversError::Validation`] if a duplicate field provider or circular dependency is detected.
     ///
     pub(super) fn resolve_dependencies(&mut self) -> KwaversResult<()> {
         let n = self.plugins.len();

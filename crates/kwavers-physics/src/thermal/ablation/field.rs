@@ -1,6 +1,6 @@
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::kinetics::AblationKinetics;
 
@@ -23,12 +23,11 @@ impl AblationField {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     #[must_use]
-    pub fn new(shape: (usize, usize, usize), kinetics: AblationKinetics) -> Self {
-        let (nx, ny, nz) = shape;
+    pub fn new(shape: [usize; 3], kinetics: AblationKinetics) -> Self {
         Self {
-            damage: Array3::zeros((nx, ny, nz)),
-            viability: Array3::ones((nx, ny, nz)),
-            ablated: Array3::from_elem((nx, ny, nz), false),
+            damage: Array3::zeros(shape),
+            viability: Array3::ones(shape),
+            ablated: Array3::from_elem(shape, false),
             kinetics,
         }
     }
@@ -39,9 +38,9 @@ impl AblationField {
     ///
     pub fn update(&mut self, temperature: &Array3<f64>, dt: f64) -> KwaversResult<()> {
         let (nx, ny, nz) = (
-            self.damage.dim().0,
-            self.damage.dim().1,
-            self.damage.dim().2,
+            self.damage.shape()[0],
+            self.damage.shape()[1],
+            self.damage.shape()[2],
         );
 
         for i in 0..nx {

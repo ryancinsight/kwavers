@@ -84,7 +84,7 @@
 //! ```rust,ignore
 //! use kwavers_analysis::signal_processing::beamforming::DelayAndSum;
 //! use kwavers_receiver::GridSensorSet;
-//! use ndarray::Array2;
+//! use leto::Array2;
 //!
 //! // 1. Define sensor geometry (domain layer)
 //! let sensor_positions = vec![[0.0, 0.0, 0.0], [0.001, 0.0, 0.0], ...];
@@ -231,7 +231,7 @@ pub mod neural; // Neural/ML beamforming (PINN, distributed) // Experimental/res
 pub mod slsc; // Short-Lag Spatial Coherence beamforming
 
 // GPU-accelerated implementations (Sprint 214 Session 3)
-pub mod gpu; // GPU beamforming (Burn-based + WGSL shaders)
+pub mod gpu; // GPU beamforming provider integration and WGSL reference shaders
 
 // Future algorithm modules (planned for Phase 3)
 pub mod narrowband; // Frequency-domain beamforming (awaiting migration)
@@ -243,7 +243,11 @@ pub mod test_utilities;
 
 // Re-exports for convenience
 pub use adaptive::{AdaptiveTimeDomainBeamformer, EigenspaceMV, MinimumVariance, MUSIC};
-pub use imaging_das::{beamform_image_das, ImagingDasApodization, ImagingDasConfig};
+pub use imaging_das::{
+    beamform_complex_image_das, beamform_complex_image_das_with_transmit_delays,
+    beamform_image_das, beamform_image_das_with_transmit_delays, ImagingDasApodization,
+    ImagingDasConfig,
+};
 pub use time_domain::{
     alignment_shifts_s, delay_and_sum, relative_delays_s, DelayReference, DEFAULT_DELAY_REFERENCE,
 };
@@ -256,10 +260,6 @@ pub use covariance::{
     estimate_forward_backward_covariance, estimate_sample_covariance, is_hermitian, trace,
     validate_covariance_matrix,
 };
-
-// GPU beamforming re-exports (conditional on pinn feature)
-#[cfg(feature = "pinn")]
-pub use gpu::{beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, DasInterpolationMethod};
 
 #[cfg(test)]
 mod tests {

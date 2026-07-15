@@ -1,8 +1,8 @@
 //! Shared helper functions for narrowband integration tests.
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
 use std::f64::consts::PI;
 
 /// Parameters for deterministic plane-wave fixture generation.
@@ -60,7 +60,7 @@ pub(super) fn generate_plane_wave_data(spec: PlaneWaveDataSpec) -> Array3<f64> {
                     + (sample_idx as f64 * 13.0 + sensor_idx as f64 * 29.0).cos())
                 / 2.0_f64.sqrt();
 
-            data[(sensor_idx, 0, sample_idx)] = signal + noise;
+            data[[sensor_idx, 0, sample_idx]] = signal + noise;
         }
     }
 
@@ -76,17 +76,18 @@ pub(super) fn generate_ula_positions(n_sensors: usize, spacing_m: f64) -> Vec<[f
 
 /// Compute sample covariance matrix from complex snapshots.
 pub(super) fn compute_sample_covariance(
-    snapshots: &ndarray::Array2<Complex64>,
-) -> ndarray::Array2<Complex64> {
-    let n_sensors = snapshots.nrows();
-    let n_snapshots = snapshots.ncols();
-    let mut cov = ndarray::Array2::<Complex64>::zeros((n_sensors, n_sensors));
+    snapshots: &leto::Array2<Complex64>,
+) -> leto::Array2<Complex64> {
+    let n_sensors = snapshots.shape()[0];
+    let n_snapshots = snapshots.shape()[1];
+    let mut cov =
+        leto::Array2::<Complex64>::from_elem((n_sensors, n_sensors), Complex64::default());
 
     for k in 0..n_snapshots {
-        let snapshot = snapshots.column(k);
+        let snapshot = snapshots.index_axis::<1>(1, k).unwrap();
         for i in 0..n_sensors {
             for j in 0..n_sensors {
-                cov[(i, j)] += snapshot[i] * snapshot[j].conj();
+                cov[[i, j]] += snapshot[i] * snapshot[j].conj();
             }
         }
     }

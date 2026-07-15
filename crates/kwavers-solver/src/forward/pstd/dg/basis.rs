@@ -62,7 +62,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_math::special::legendre::legendre_poly;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BasisType {
@@ -74,7 +74,7 @@ pub enum BasisType {
 /// Build Vandermonde matrix for given nodes and basis
 /// V_ij = phi_j(xi_i)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn build_vandermonde(
     nodes: &Array1<f64>,
@@ -226,15 +226,14 @@ pub(super) fn fourier_vandermonde_entry(n_modes: usize, mode: usize, theta: f64)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::arr1;
 
     #[test]
     fn fourier_vandermonde_evaluates_real_trigonometric_basis() {
-        let nodes = arr1(&[-0.5, 0.0, 0.5]);
+        let nodes = Array1::from_vec(3, vec![-0.5, 0.0, 0.5]).unwrap();
 
         let v = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap();
 
-        assert_eq!(v.shape(), &[3, 3]);
+        assert_eq!(v.shape(), [3, 3]);
         for row in 0..3 {
             assert_eq!(v[[row, 0]], 1.0);
         }
@@ -248,7 +247,7 @@ mod tests {
 
     #[test]
     fn fourier_vandermonde_rejects_duplicate_periodic_endpoints() {
-        let nodes = arr1(&[-1.0, 0.0, 1.0]);
+        let nodes = Array1::from_vec(3, vec![-1.0, 0.0, 1.0]).unwrap();
 
         let error = build_vandermonde(&nodes, 2, BasisType::Fourier).unwrap_err();
 

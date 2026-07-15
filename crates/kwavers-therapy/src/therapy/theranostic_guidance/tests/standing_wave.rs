@@ -64,7 +64,7 @@ fn swi_decreases_after_optimization() {
 
     // SWI must be non-negative and bounded by 1.
     assert!(
-        swi_init >= 0.0 && swi_init <= 1.0,
+        (0.0..=1.0).contains(&swi_init),
         "initial SWI {swi_init} not in [0,1]"
     );
 
@@ -93,20 +93,22 @@ fn snapshot_shape_and_energy() {
 
     let n_snap = result.snapshot_iterations.len();
     assert!(n_snap >= 1, "at least one snapshot expected");
-    let (sn, sx, sy) = result.snapshot_fields_re.dim();
+    let [sn, sx, sy] = result.snapshot_fields_re.shape();
     assert_eq!((sn, sx, sy), (n_snap, config.nx, config.ny));
 
     // Each snapshot slice must carry non-zero acoustic energy.
     for k in 0..n_snap {
         let energy: f32 = result
             .snapshot_fields_re
-            .slice(ndarray::s![k, .., ..])
+            .index_axis::<2>(0, k)
+            .unwrap()
             .iter()
             .map(|&v| v * v)
             .sum::<f32>()
             + result
                 .snapshot_fields_im
-                .slice(ndarray::s![k, .., ..])
+                .index_axis::<2>(0, k)
+                .unwrap()
                 .iter()
                 .map(|&v| v * v)
                 .sum::<f32>();
@@ -138,10 +140,10 @@ fn geometry_scalars_consistent() {
 
     assert_eq!(result.nx, config.nx);
     assert_eq!(result.ny, config.ny);
-    assert_eq!((result.dx_m - config.dx_m).abs() < 1e-15, true);
+    assert!((result.dx_m - config.dx_m).abs() < 1e-15);
     assert_eq!(result.n_elements, config.n_elements);
     assert_eq!(result.element_ys.len(), config.n_elements);
     assert_eq!(result.reflector_x_start, config.layer_x_start);
     assert_eq!(result.reflector_x_end, config.layer_x_end);
-    assert_eq!(result.sound_speed_map.dim(), (config.nx, config.ny));
+    assert_eq!(result.sound_speed_map.shape(), [config.nx, config.ny]);
 }

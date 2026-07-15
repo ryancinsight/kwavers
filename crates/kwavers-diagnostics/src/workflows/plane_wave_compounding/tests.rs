@@ -1,8 +1,8 @@
 use super::compound::PlaneWaveCompound;
 use super::config::PlaneWaveCompoundingConfig;
+use eunomia::Complex;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use ndarray::Array2;
-use num_complex::Complex;
+use leto::Array2;
 
 #[test]
 fn test_plane_wave_config_default() {
@@ -68,8 +68,8 @@ fn test_plane_wave_field_generation() {
     let config = PlaneWaveCompoundingConfig::default();
     let compounding = PlaneWaveCompound::new(config).unwrap();
     let field = compounding.generate_plane_wave(0).unwrap();
-    assert_eq!(field.nrows(), compounding.num_axial);
-    assert_eq!(field.ncols(), compounding.num_lateral);
+    assert_eq!(field.shape()[0], compounding.num_axial);
+    assert_eq!(field.shape()[1], compounding.num_lateral);
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn test_beamforming() {
     );
 
     let beamformed = compounding.beamform_angle(0, &received).unwrap();
-    assert_eq!(beamformed.dim(), received.dim());
+    assert_eq!(beamformed.shape(), received.shape());
 }
 
 #[test]
@@ -113,8 +113,8 @@ fn test_process_frame() {
         .collect();
 
     let image = compounding.process_frame(&received_fields).unwrap();
-    assert_eq!(image.nrows(), compounding.num_axial);
-    assert_eq!(image.ncols(), compounding.num_lateral);
+    assert_eq!(image.shape()[0], compounding.num_axial);
+    assert_eq!(image.shape()[1], compounding.num_lateral);
 
     // Display image must be normalized to [0, 1]
     for &v in image.iter() {

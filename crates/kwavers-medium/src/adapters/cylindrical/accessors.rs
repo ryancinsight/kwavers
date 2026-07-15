@@ -1,6 +1,6 @@
 //! Read-only field views, point-wise samplers, and dimension/spacing queries.
 
-use ndarray::ArrayView2;
+use leto::ArrayView2;
 
 use super::CylindricalMediumProjection;
 use crate::Medium;

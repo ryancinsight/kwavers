@@ -16,7 +16,7 @@
 //! - FDA 510(k) Guidance: "Ultrasound Devices"
 //! - Apfel & Holland (1991): "Gaseous cavitation thresholds"
 
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Therapy session state

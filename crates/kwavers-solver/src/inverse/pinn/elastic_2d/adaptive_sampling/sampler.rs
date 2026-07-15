@@ -1,12 +1,8 @@
-#[cfg(feature = "pinn")]
 use super::BatchIterator;
-#[cfg(feature = "pinn")]
 use kwavers_core::error::{KwaversError, KwaversResult};
-#[cfg(feature = "pinn")]
 use rand::prelude::*;
 
 /// Adaptive sampling strategy: how collocation points are selected.
-#[cfg(feature = "pinn")]
 #[derive(Debug, Clone, PartialEq)]
 pub enum ElasticAdaptiveSamplingStrategy {
     Uniform,
@@ -25,7 +21,6 @@ pub enum ElasticAdaptiveSamplingStrategy {
     },
 }
 
-#[cfg(feature = "pinn")]
 impl Default for ElasticAdaptiveSamplingStrategy {
     fn default() -> Self {
         ElasticAdaptiveSamplingStrategy::ResidualWeighted {
@@ -36,7 +31,6 @@ impl Default for ElasticAdaptiveSamplingStrategy {
 }
 
 /// Adaptive collocation point sampler with mini-batching.
-#[cfg(feature = "pinn")]
 #[derive(Debug)]
 pub struct AdaptiveSampler {
     pub strategy: ElasticAdaptiveSamplingStrategy,
@@ -46,7 +40,6 @@ pub struct AdaptiveSampler {
     current_indices: Vec<usize>,
 }
 
-#[cfg(feature = "pinn")]
 impl AdaptiveSampler {
     pub fn new(
         strategy: ElasticAdaptiveSamplingStrategy,
@@ -73,14 +66,14 @@ impl AdaptiveSampler {
 
     /// Resample collocation points based on PDE residuals.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn resample(&mut self, residuals: &[f64]) -> KwaversResult<Vec<usize>> {
-        let n_candidates = residuals.len();
+        let n_candidates = (residuals.len());
         if n_candidates == 0 {
             return Err(KwaversError::InvalidInput(
                 "No candidate points for resampling".into(),
@@ -114,7 +107,7 @@ impl AdaptiveSampler {
                 if n_keep > 0 && !self.current_indices.is_empty() {
                     let mut old = self.current_indices.clone();
                     old.shuffle(&mut self.rng);
-                    selected.extend_from_slice(&old[..n_keep.min(old.len())]);
+                    selected.extend_from_slice(&old[..n_keep.min((old.len()))]);
                 }
                 selected.extend(self.weighted_sample(&probs, n_new)?);
                 self.current_indices = selected.clone();
@@ -135,9 +128,9 @@ impl AdaptiveSampler {
                     return self.resample(&vec![1.0; n_candidates]);
                 }
                 candidates.sort_by(|a, b| b.1.total_cmp(&a.1));
-                let k = ((top_k_ratio * candidates.len() as f64) as usize)
+                let k = ((top_k_ratio * (candidates.len()) as f64) as usize)
                     .max(self.n_points)
-                    .min(candidates.len());
+                    .min((candidates.len()));
                 candidates.truncate(k);
                 let mut indices: Vec<usize> = candidates.into_iter().map(|(i, _)| i).collect();
                 indices.shuffle(&mut self.rng);
@@ -177,7 +170,7 @@ impl AdaptiveSampler {
         if n_samples == 0 {
             return Ok(Vec::new());
         }
-        let n = probs.len();
+        let n = (probs.len());
         if n_samples > n {
             return Err(KwaversError::InvalidInput(format!(
                 "Cannot sample {} points from {} candidates",
@@ -203,7 +196,7 @@ impl AdaptiveSampler {
         let mut indices = self.current_indices.clone();
         indices.shuffle(&mut self.rng);
         let batch_size = if self.batch_size == 0 {
-            indices.len()
+            (indices.len())
         } else {
             self.batch_size
         };

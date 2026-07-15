@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Kwavers Acoustic Simulation - Minimal Demo\n");

@@ -1,8 +1,7 @@
 //! Parallel execution optimization
 
-use kwavers_core::error::KwaversResult;
-use rayon::prelude::*;
-use std::sync::Arc;
+use kwavers_core::error::{KwaversError, KwaversResult, SystemError};
+use moirai_parallel::{for_each_index_with, map_collect_with, reduce_index_with, Adaptive};
 
 /// Parallel execution optimizer
 #[derive(Debug)]
@@ -19,33 +18,28 @@ impl Default for ParallelOptimizer {
 
 impl ParallelOptimizer {
     /// Create a new parallel optimizer
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    ///
     #[must_use]
     pub fn new() -> Self {
         Self {
-            num_threads: rayon::current_num_threads(),
+            num_threads: std::thread::available_parallelism()
+                .map(std::num::NonZeroUsize::get)
+                .unwrap_or(1),
             chunk_size: 1024, // Default chunk size for parallel iteration
         }
     }
 
     /// Set the number of threads for parallel execution
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`KwaversError::System`] if `threads` is zero.
     ///
     pub fn set_num_threads(&mut self, threads: usize) -> KwaversResult<()> {
+        if threads == 0 {
+            return Err(KwaversError::System(SystemError::InvalidConfiguration {
+                parameter: "threads".to_owned(),
+                reason: "parallel optimizer requires at least one scheduling lane".to_owned(),
+            }));
+        }
         self.num_threads = threads;
-        rayon::ThreadPoolBuilder::new()
-            .num_threads(threads)
-            .build_global()
-            .map_err(|e| {
-                kwavers_core::error::KwaversError::System(
-                    kwavers_core::error::SystemError::ThreadCreation {
-                        reason: e.to_string(),
-                    },
-                )
-            })?;
         Ok(())
     }
 
@@ -54,10 +48,7 @@ impl ParallelOptimizer {
     where
         F: Fn(usize, usize, usize) + Sync + Send,
     {
-        let f = Arc::new(f);
-
-        // Parallelize over the outermost dimension
-        (0..nz).into_par_iter().for_each(|k| {
+        for_each_index_with::<Adaptive, _>(nz, |k| {
             for j in 0..ny {
                 for i in 0..nx {
                     f(i, j, k);
@@ -74,9 +65,17 @@ impl ParallelOptimizer {
         F: Fn(R, &T) -> R + Sync + Send,
         G: Fn(R, R) -> R + Sync + Send,
     {
-        data.par_chunks(self.chunk_size)
-            .map(|chunk| chunk.iter().fold(identity.clone(), &op))
-            .reduce(|| identity.clone(), combine)
+        let chunk_count = data.len().div_ceil(self.chunk_size);
+        reduce_index_with::<Adaptive, _, _, _>(
+            chunk_count,
+            identity.clone(),
+            |chunk_index| {
+                let start = chunk_index * self.chunk_size;
+                let end = (start + self.chunk_size).min(data.len());
+                data[start..end].iter().fold(identity.clone(), &op)
+            },
+            combine,
+        )
     }
 
     /// Parallel map operation on arrays
@@ -86,10 +85,7 @@ impl ParallelOptimizer {
         U: Send,
         F: Fn(&T) -> U + Sync + Send,
     {
-        input
-            .par_chunks(self.chunk_size)
-            .flat_map(|chunk| chunk.iter().map(&f).collect::<Vec<_>>())
-            .collect()
+        map_collect_with::<Adaptive, _, _, _>(input, f)
     }
 
     /// Get optimal chunk size based on data size and thread count
@@ -208,5 +204,35 @@ mod tests {
                 "optimal_chunk_size({size}) = {chunk} (expected >= 8)"
             );
         }
+    }
+
+    /// `set_num_threads` rejects zero because it cannot form a chunk schedule.
+    #[test]
+    fn set_num_threads_rejects_zero() {
+        let mut optimizer = ParallelOptimizer::new();
+
+        let error = optimizer
+            .set_num_threads(0)
+            .expect_err("zero scheduling lanes must be invalid");
+
+        assert!(
+            matches!(
+                error,
+                KwaversError::System(SystemError::InvalidConfiguration { .. })
+            ),
+            "expected invalid configuration, got {error:?}"
+        );
+    }
+
+    /// `set_num_threads` updates the chunk-size heuristic without a Rayon pool.
+    #[test]
+    fn set_num_threads_updates_chunk_size_heuristic() {
+        let mut optimizer = ParallelOptimizer::new();
+
+        optimizer
+            .set_num_threads(2)
+            .expect("two scheduling lanes are valid");
+
+        assert_eq!(optimizer.optimal_chunk_size(8_000), 1_000);
     }
 }

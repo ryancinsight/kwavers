@@ -35,11 +35,14 @@
 //! scaling factor is the same `2·2/c` compensation used by the reference
 //! implementation to account for the one-sided detector line.
 
+use apollo::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_math::fft::utils::{fft_shift_2d, ifft_shift_2d};
-use kwavers_math::fft::{fft_2d_complex_inplace, ifft_2d_complex_inplace, Complex64};
-use ndarray::{s, Array1, Array2, ArrayView1, ArrayView2, Axis};
+use kwavers_math::fft::Complex64;
+use leto::Array2 as LetoArray2;
+use leto::{Array1, Array2, ArrayView1, ArrayView2};
+use moirai_parallel::{for_each_mut_with, Adaptive};
 
 /// Order of the sensor data axes.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,8 +74,8 @@ pub enum LineReconInterpolation {
 /// * `interp` - interpolation mode on the k-space frequency axis
 /// * `pos_cond` - if true, clamp negative output values to zero
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn kspace_line_recon(
     sensor_data: ArrayView2<'_, f64>,
@@ -88,20 +91,20 @@ pub fn kspace_line_recon(
     validate_scalar("c", c)?;
 
     let data = match data_order {
-        LineReconDataOrder::Ty => sensor_data.to_owned(),
-        LineReconDataOrder::Yt => sensor_data.t().to_owned(),
+        LineReconDataOrder::Ty => sensor_data.to_contiguous(),
+        LineReconDataOrder::Yt => sensor_data.transpose([1, 0]).unwrap().to_contiguous(),
     };
 
-    if data.nrows() < 2 || data.ncols() == 0 {
+    if data.shape()[0] < 2 || data.shape()[1] == 0 {
         return Err(KwaversError::Validation(ValidationError::FieldValidation {
             field: "sensor_data".to_owned(),
-            value: format!("{:?}", data.dim()),
+            value: format!("{:?}", data.shape()),
             constraint: "expected at least two time samples and one detector column".to_owned(),
         }));
     }
 
     let mirrored = mirror_time_axis(&data);
-    let (nt, ny) = mirrored.dim();
+    let [nt, ny] = mirrored.shape();
     let x_spacing = dt * c;
     let kx_axis = centered_wavenumber_vector(nt, x_spacing);
     let ky_axis = centered_wavenumber_vector(ny, dy);
@@ -109,10 +112,12 @@ pub fn kspace_line_recon(
 
     let mut spectrum = mirrored.mapv(|v| Complex64::new(v, 0.0));
     ifft_shift_2d(&mut spectrum);
-    fft_2d_complex_inplace(&mut spectrum);
+    let mut leto_spectrum = to_apollo_array2(&spectrum, "spectrum");
+    fft_2d_complex_inplace(&mut leto_spectrum);
+    spectrum = from_apollo_array2(leto_spectrum, "FFT output");
     fft_shift_2d(&mut spectrum);
 
-    let mut scaled = Array2::<Complex64>::zeros((nt, ny));
+    let mut scaled = Array2::<Complex64>::from_elem([nt, ny], Complex64::default());
     for j in 0..ny {
         let ky = ky_axis[j];
         for i in 0..nt {
@@ -133,9 +138,11 @@ pub fn kspace_line_recon(
         }
     }
 
-    let mut interpolated = Array2::<Complex64>::zeros((nt, ny));
+    let mut interpolated = Array2::<Complex64>::from_elem([nt, ny], Complex64::default());
     for j in 0..ny {
-        let column = scaled.index_axis(Axis(1), j);
+        let column = scaled
+            .index_axis::<1>(1, j)
+            .expect("invariant: column index within array width");
         let ky = ky_axis[j];
         for i in 0..nt {
             let target_w = c * kx_axis[i].hypot(ky);
@@ -144,16 +151,26 @@ pub fn kspace_line_recon(
     }
 
     ifft_shift_2d(&mut interpolated);
-    ifft_2d_complex_inplace(&mut interpolated);
+    let mut leto_interpolated = to_apollo_array2(&interpolated, "interpolated spectrum");
+    ifft_2d_complex_inplace(&mut leto_interpolated);
+    interpolated = from_apollo_array2(leto_interpolated, "inverse FFT output");
     fft_shift_2d(&mut interpolated);
 
     let trim_start = nt / 2;
     let mut recon = interpolated
-        .slice(s![trim_start.., ..])
+        .slice_with::<2>(&s![trim_start.., ..])
+        .expect("invariant: trim range within interpolated time extent")
+        .to_contiguous()
         .mapv(|value| value.re * (4.0 / c));
 
     if pos_cond {
-        recon.par_mapv_inplace(|value| value.max(0.0));
+        if let Some(values) = recon.as_slice_mut() {
+            for_each_mut_with::<Adaptive, _, _>(values, |value| *value = value.max(0.0));
+        } else {
+            for value in recon.iter_mut() {
+                *value = value.max(0.0);
+            }
+        }
     }
 
     Ok(recon)
@@ -172,18 +189,44 @@ fn validate_scalar(name: &str, value: f64) -> KwaversResult<()> {
 
 fn centered_wavenumber_vector(n: usize, spacing: f64) -> Array1<f64> {
     let scale = TWO_PI / (n as f64 * spacing);
-    Array1::from_shape_fn(n, |idx| (idx as isize - (n as isize / 2)) as f64 * scale)
+    Array1::from_shape_fn(n, |[idx]| (idx as isize - (n as isize / 2)) as f64 * scale)
 }
 
 fn mirror_time_axis(input: &Array2<f64>) -> Array2<f64> {
-    let (nt, ny) = input.dim();
-    Array2::from_shape_fn((2 * nt - 1, ny), |(i, j)| {
+    let [nt, ny] = input.shape();
+    Array2::from_shape_fn((2 * nt - 1, ny), |[i, j]| {
         if i < nt {
             input[[nt - 1 - i, j]]
         } else {
             input[[i - nt + 1, j]]
         }
     })
+}
+
+fn to_apollo_array2(input: &Array2<Complex64>, label: &str) -> LetoArray2<ApolloComplex64> {
+    LetoArray2::from_shape_vec(
+        [input.shape()[0], input.shape()[1]],
+        input
+            .iter()
+            .map(|value| ApolloComplex64::new(value.re, value.im))
+            .collect(),
+    )
+    .unwrap_or_else(|_| panic!("line-reconstruction {label} shape must match its Leto FFT shape"))
+}
+
+fn from_apollo_array2(input: LetoArray2<ApolloComplex64>, label: &str) -> Array2<Complex64> {
+    let shape = input.shape();
+    let rows = shape[0];
+    let cols = shape[1];
+    Array2::from_shape_vec(
+        (rows, cols),
+        input
+            .into_vec()
+            .into_iter()
+            .map(|value| Complex64::new(value.re, value.im))
+            .collect(),
+    )
+    .unwrap_or_else(|_| panic!("line-reconstruction {label} shape must match its ndarray boundary"))
 }
 
 fn interpolate_on_axis(
@@ -196,7 +239,7 @@ fn interpolate_on_axis(
         return Complex64::new(0.0, 0.0);
     }
     let first = axis[0];
-    let last = axis[axis.len() - 1];
+    let last = axis[(axis.len()) - 1];
     if target < first || target > last {
         return Complex64::new(0.0, 0.0);
     }
@@ -205,8 +248,8 @@ fn interpolate_on_axis(
     if upper == 0 {
         return values[0];
     }
-    if upper >= axis.len() {
-        return values[axis.len() - 1];
+    if upper >= (axis.len()) {
+        return values[(axis.len()) - 1];
     }
 
     let lower = upper - 1;
@@ -236,7 +279,6 @@ fn interpolate_on_axis(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use ndarray::array;
 
     #[test]
     fn line_reconstruction_zero_input_stays_zero() {
@@ -251,18 +293,17 @@ mod tests {
             true,
         )
         .expect("zero input must reconstruct");
-        assert_eq!(recon.shape(), &[5, 4]);
+        assert_eq!(recon.shape(), [5, 4]);
         assert!(recon.iter().all(|&value| value == 0.0));
     }
 
     #[test]
     fn line_reconstruction_data_order_is_equivalent_under_transpose() {
-        let sensor_ty = array![
-            [0.0, 1.0, 2.0],
-            [3.0, 4.0, 5.0],
-            [6.0, 7.0, 8.0],
-            [9.0, 10.0, 11.0],
-        ];
+        let sensor_ty = Array2::from_shape_vec(
+            (4, 3),
+            vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 11.0],
+        )
+        .unwrap();
         let recon_ty = kspace_line_recon(
             sensor_ty.view(),
             0.1e-3,
@@ -274,7 +315,7 @@ mod tests {
         )
         .expect("line reconstruction must succeed");
         let recon_yt = kspace_line_recon(
-            sensor_ty.t(),
+            sensor_ty.transpose([1, 0]).unwrap(),
             0.1e-3,
             1.0e-8,
             SOUND_SPEED_WATER_SIM,
@@ -287,15 +328,58 @@ mod tests {
     }
 
     #[test]
+    fn line_reconstruction_positive_condition_clamps_negative_values() {
+        let sensor = Array2::from_shape_vec(
+            (4, 3),
+            vec![
+                0.0, 1.0, -2.0, 3.0, -4.0, 5.0, -6.0, 7.0, -8.0, 9.0, -10.0, 11.0,
+            ],
+        )
+        .unwrap();
+        let unclamped = kspace_line_recon(
+            sensor.view(),
+            0.1e-3,
+            1.0e-8,
+            SOUND_SPEED_WATER_SIM,
+            LineReconDataOrder::Ty,
+            LineReconInterpolation::Nearest,
+            false,
+        )
+        .expect("unclamped reconstruction must succeed");
+        let clamped = kspace_line_recon(
+            sensor.view(),
+            0.1e-3,
+            1.0e-8,
+            SOUND_SPEED_WATER_SIM,
+            LineReconDataOrder::Ty,
+            LineReconInterpolation::Nearest,
+            true,
+        )
+        .expect("clamped reconstruction must succeed");
+
+        assert!(
+            unclamped.iter().any(|value| *value < 0.0),
+            "test input must exercise the positivity clamp"
+        );
+        for (&before, &after) in unclamped.iter().zip(clamped.iter()) {
+            assert_eq!(after, before.max(0.0));
+        }
+    }
+
+    #[test]
     fn interpolation_rejects_out_of_range_target_values() {
         let axis = vec![-2.0, -1.0, 0.0, 1.0, 2.0];
-        let values = array![
-            Complex64::new(0.0, 0.0),
-            Complex64::new(1.0, 0.0),
-            Complex64::new(2.0, 0.0),
-            Complex64::new(3.0, 0.0),
-            Complex64::new(4.0, 0.0),
-        ];
+        let values = Array1::from_vec(
+            5,
+            vec![
+                Complex64::new(0.0, 0.0),
+                Complex64::new(1.0, 0.0),
+                Complex64::new(2.0, 0.0),
+                Complex64::new(3.0, 0.0),
+                Complex64::new(4.0, 0.0),
+            ],
+        )
+        .unwrap();
         let interpolated =
             interpolate_on_axis(&axis, values.view(), 3.0, LineReconInterpolation::Linear);
         assert_eq!(interpolated, Complex64::new(0.0, 0.0));

@@ -103,8 +103,9 @@ pub(crate) fn process_source_for_run(
                 arr.num_elements()
             )));
         }
+        let signal_leto = signal.clone();
         let (mask, per_cell_signal) = arr
-            .build_per_element_source(&grid.inner, signal)
+            .build_per_element_source(&grid.inner, &signal_leto)
             .map_err(PyValueError::new_err)?;
         let num_active = mask.iter().filter(|&&v| v != 0.0).count();
         if num_active == 0 {

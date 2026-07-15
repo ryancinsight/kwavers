@@ -5,9 +5,12 @@ mod velocity;
 
 pub(crate) use helpers::pressure_signal_to_matrix;
 
-use ndarray::{Array2, Array3, Axis};
+use leto::{Array2, Array3};
+use numpy::ndarray::Axis;
 use numpy::{PyReadonlyArray2, PyReadonlyArray3};
 use pyo3::exceptions::PyValueError;
+
+use crate::breast_fwi_bindings::complex_compat::nd_to_leto3;
 use pyo3::prelude::*;
 
 /// Acoustic source for wave excitation.
@@ -38,7 +41,7 @@ pub struct Source {
     /// Initial pressure distribution (for p0 / IVP sources)
     pub(crate) initial_pressure: Option<Array3<f64>>,
     /// Velocity signal [3, num_sources, time_steps] for velocity sources
-    pub(crate) velocity_signal: Option<ndarray::Array3<f64>>,
+    pub(crate) velocity_signal: Option<leto::Array3<f64>>,
     /// Propagation direction for plane wave sources
     pub(crate) direction: Option<(f64, f64, f64)>,
     /// KWaveArray for custom transducer geometry sources
@@ -47,9 +50,9 @@ pub struct Source {
     /// velocity-source path (Phase A.3 of ADR 007). Each entry is `Some`
     /// when the corresponding component is to be driven; `None` otherwise.
     /// The `mask` field above carries the `u_mask` for this source path.
-    pub(crate) elastic_ux_signal_1d: Option<ndarray::Array1<f64>>,
-    pub(crate) elastic_uy_signal_1d: Option<ndarray::Array1<f64>>,
-    pub(crate) elastic_uz_signal_1d: Option<ndarray::Array1<f64>>,
+    pub(crate) elastic_ux_signal_1d: Option<leto::Array1<f64>>,
+    pub(crate) elastic_uy_signal_1d: Option<leto::Array1<f64>>,
+    pub(crate) elastic_uz_signal_1d: Option<leto::Array1<f64>>,
 }
 
 #[pymethods]
@@ -229,7 +232,7 @@ impl Source {
             frequency,
             amplitude,
             position: None,
-            mask: Some(mask_arr),
+            mask: Some(nd_to_leto3(mask_arr)),
             signal: Some(signal_arr),
             source_mode,
             initial_pressure: None,
@@ -254,9 +257,9 @@ impl Source {
     #[staticmethod]
     fn from_initial_pressure(p0: &Bound<'_, PyAny>) -> PyResult<Self> {
         let p0_arr: Array3<f64> = if let Ok(p0_3d) = p0.extract::<PyReadonlyArray3<f64>>() {
-            p0_3d.as_array().to_owned()
+            nd_to_leto3(p0_3d.as_array().to_owned())
         } else if let Ok(p0_2d) = p0.extract::<PyReadonlyArray2<f64>>() {
-            p0_2d.as_array().insert_axis(Axis(2)).to_owned()
+            nd_to_leto3(p0_2d.as_array().insert_axis(Axis(2)).to_owned())
         } else {
             return Err(PyValueError::new_err(
                 "Initial pressure must be a 2D or 3D ndarray of float64 values",

@@ -8,14 +8,10 @@
 mod dg_acoustic_common;
 
 use dg_acoustic_common::{
-    embedded_grid, gaussian_embedded_source, print_common_solver_matrix, print_solver_matrix,
-    run_embedded_gaussian_series, run_embedded_gaussian_solver_matrix,
-    run_native_acoustic_diagnostic, DENSITY, DT, ELEMENTS, EMBEDDED_NY, EMBEDDED_NZ,
-    POLYNOMIAL_ORDER, STEPS,
+    print_common_solver_matrix, print_solver_matrix, run_embedded_gaussian_series,
+    run_native_acoustic_diagnostic, ELEMENTS, POLYNOMIAL_ORDER, STEPS,
 };
 use kwavers_core::error::KwaversResult;
-use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
-use std::f64::consts::PI;
 
 fn main() -> KwaversResult<()> {
     let diagnostic = run_native_acoustic_diagnostic()?;
@@ -64,6 +60,12 @@ fn main() -> KwaversResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::dg_acoustic_common::{
+        embedded_grid, gaussian_embedded_source, run_embedded_gaussian_solver_matrix, DENSITY, DT,
+        EMBEDDED_NY, EMBEDDED_NZ,
+    };
+    use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
+    use std::f64::consts::PI;
 
     #[test]
     fn exact_standing_wave_phase_contract_is_finite() {
@@ -102,11 +104,11 @@ mod tests {
 
         assert!(pressure.iter().all(|value| value.is_finite()));
         assert!(ux.iter().all(|value| value.is_finite()));
-        assert_eq!(pressure[(center_i, EMBEDDED_NY / 2, EMBEDDED_NZ / 2)], 1.0);
+        assert_eq!(pressure[[center_i, EMBEDDED_NY / 2, EMBEDDED_NZ / 2]], 1.0);
         assert!(uy.iter().all(|value| *value == 0.0));
         assert!(uz.iter().all(|value| *value == 0.0));
-        assert!(ux[(center_i - 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2)] > 0.0);
-        assert!(ux[(center_i + 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2)] < 0.0);
+        assert!(ux[[center_i - 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2]] > 0.0);
+        assert!(ux[[center_i + 2, EMBEDDED_NY / 2, EMBEDDED_NZ / 2]] < 0.0);
     }
 
     #[test]

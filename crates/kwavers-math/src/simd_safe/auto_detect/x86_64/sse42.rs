@@ -3,7 +3,8 @@
 //! This module contains SSE4.2-optimized operations following memory
 //! safety practices from IEEE TSE 2022.
 
-use ndarray::Array3;
+use crate::simd_safe::auto_detect::ops;
+use leto::Array3;
 
 /// Add two arrays using SSE4.2 instructions
 ///
@@ -18,20 +19,12 @@ use ndarray::Array3;
 /// - Panics if an internal precondition is violated.
 ///
 pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-    assert_eq!(a.shape(), b.shape());
-    assert_eq!(a.shape(), out.shape());
-
-    ndarray::Zip::from(out)
-        .and(a)
-        .and(b)
-        .for_each(|out, &a, &b| {
-            *out = a + b;
-        });
+    ops::add_arrays(a, b, out);
 }
 
 /// Scale array using SSE4.2 instructions
 pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
-    array.par_mapv_inplace(|x| x * scalar);
+    ops::scale_array(array, scalar);
 }
 
 /// Fused multiply-add using SSE4.2 instructions
@@ -39,13 +32,5 @@ pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
 /// - Panics if an internal precondition is violated.
 ///
 pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
-    assert_eq!(a.shape(), b.shape());
-    assert_eq!(a.shape(), c.shape());
-
-    ndarray::Zip::from(c)
-        .and(a)
-        .and(b)
-        .par_for_each(|c, &a, &b| {
-            *c += multiplier * a * b;
-        });
+    ops::fma_arrays(a, b, c, multiplier);
 }

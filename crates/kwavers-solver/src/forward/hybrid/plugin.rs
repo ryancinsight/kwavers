@@ -6,7 +6,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array4;
+use leto::Array4;
 
 /// Hybrid solver plugin for integration with physics pipeline
 #[derive(Debug)]

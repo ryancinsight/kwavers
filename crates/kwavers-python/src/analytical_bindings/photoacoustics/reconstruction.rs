@@ -1,7 +1,7 @@
 //! Axial-resolution and spectroscopic-unmixing photoacoustic bindings.
 
 use kwavers_physics::analytical::photoacoustics;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -46,7 +46,7 @@ pub fn spectroscopic_unmixing_lstsq(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = photoacoustics::spectroscopic_unmixing_lstsq(&spectra_vecs, meas_slice);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute deterministic spectroscopic-unmixing sO₂ curves.
@@ -79,7 +79,7 @@ pub fn spectroscopic_unmixing_so2_sweep<'py>(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
 
     let out = PyDict::new(py);
-    out.set_item("true_so2", result.true_so2.into_pyarray(py))?;
+    out.set_item("true_so2", result.true_so2.to_pyarray(py))?;
     out.set_item("estimated_so2_by_perturbation", estimates)?;
     Ok(out)
 }

@@ -20,7 +20,7 @@ use kwavers_grid::Grid;
 use kwavers_solver::forward::pstd::dg::dg_solver::acoustic::AcousticDg1DWorkspace;
 use kwavers_solver::forward::pstd::dg::quadrature::gauss_lobatto_quadrature;
 use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 use plotters::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
@@ -83,7 +83,7 @@ fn run_dg_order(polynomial_order: usize) -> Result<DgConvergenceRow> {
     let mut velocity = Array3::zeros((ELEMENTS, n_nodes, 1));
     for elem in 0..ELEMENTS {
         for node in 0..n_nodes {
-            pressure[(elem, node, 0)] = gaussian_profile(physical_coordinate(elem, xi_nodes[node]));
+            pressure[[elem, node, 0]] = gaussian_profile(physical_coordinate(elem, xi_nodes[node]));
         }
     }
     let initial_mass = weighted_mass(&pressure, &weights);
@@ -95,7 +95,10 @@ fn run_dg_order(polynomial_order: usize) -> Result<DgConvergenceRow> {
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, grid)?;
-    let mut workspace = AcousticDg1DWorkspace::new(pressure.dim());
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     for _ in 0..STEPS {
         solver.step_acoustic_1d_ssp_rk3(
             &mut pressure,
@@ -122,7 +125,7 @@ fn exact_dg_pressure(xi_nodes: &Array1<f64>, time: f64) -> Array3<f64> {
     let mut pressure = Array3::zeros((ELEMENTS, xi_nodes.len(), 1));
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
-            pressure[(elem, node, 0)] =
+            pressure[[elem, node, 0]] =
                 exact_gaussian_pressure(physical_coordinate(elem, xi_nodes[node]), time);
         }
     }
@@ -159,7 +162,7 @@ fn interpolate_lagrange(
 ) -> f64 {
     for node in 0..solution_nodes.len() {
         if (xi - solution_nodes[node]).abs() <= 1.0e-14 {
-            return pressure[(elem, node, 0)];
+            return pressure[[elem, node, 0]];
         }
     }
 
@@ -172,7 +175,7 @@ fn interpolate_lagrange(
                     (xi - solution_nodes[other]) / (solution_nodes[node] - solution_nodes[other]);
             }
         }
-        value += pressure[(elem, node, 0)] * basis;
+        value += pressure[[elem, node, 0]] * basis;
     }
     value
 }

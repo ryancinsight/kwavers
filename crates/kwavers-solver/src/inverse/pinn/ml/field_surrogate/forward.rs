@@ -4,10 +4,10 @@
 //! field on its target grid, parameterised by `(f0, pnp)`. This module
 //! turns a [`super::ParamFieldPINNNetwork`] forward pass on a stream
 //! of voxel-coordinates into three `Array3<f64>` outputs without
-//! committing the planner to Burn's tensor API.
+//! committing the planner to the training backend tensor API.
 
-use burn::tensor::{backend::Backend, Tensor, TensorData};
-use ndarray::Array3;
+use coeus_autograd::Var;
+use leto::Array3;
 
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -27,11 +27,11 @@ pub struct GridQueryParams {
     pub shape: (usize, usize, usize),
     /// Index of the focal voxel within the output grid.
     pub focus_idx: (usize, usize, usize),
-    /// Isotropic grid spacing [m].
+    /// Isotropic grid spacing \[m\].
     pub dx_m: f64,
-    /// Source centre frequency [Hz].
+    /// Source centre frequency \[Hz\].
     pub f0: f64,
-    /// Target peak rarefactional pressure [Pa].
+    /// Target peak rarefactional pressure \[Pa\].
     pub pnp: f64,
     /// Per-axis half-extent used to normalise spatial coordinates to
     /// `[-1, 1]`. Should match the training-time bounding box; for
@@ -133,11 +133,14 @@ fn normalise_to_unit(v: f64, lo: f64, hi: f64) -> f64 {
 ///
 /// Returns `KwaversError::InvalidInput` when [`GridQueryParams`]
 /// fails validation.
-pub fn infer_grid<B: Backend>(
+pub fn infer_grid<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
     network: &ParamFieldPINNNetwork<B>,
     params: &GridQueryParams,
-    device: &B::Device,
-) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
+) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     params.validate()?;
     let (nx, ny, nz) = params.shape;
     let (fx, fy, fz) = params.focus_idx;
@@ -181,16 +184,15 @@ pub fn infer_grid<B: Backend>(
             buf_in.push(pnp_n);
         }
 
-        let input = Tensor::<B, 2>::from_data(TensorData::new(buf_in.clone(), [n, 5]), device);
-        let output = network.forward(input);
-        // Output is `[n, 3]`; copy to host as f32 then denormalise.
-        let out_data = output.into_data();
-        let out_vec: Vec<f32> = out_data.convert::<f32>().into_vec().map_err(|e| {
-            KwaversError::InvalidInput(format!(
-                "ParamFieldPINN forward returned unexpected tensor data: {e:?}"
-            ))
-        })?;
-        debug_assert_eq!(out_vec.len(), n * OUTPUT_DIM);
+        let backend = B::default();
+        let input = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![n, 5], &buf_in, &backend),
+            false,
+        );
+        let output = network.forward(&input);
+        // Output is `[n, 3]`; already host-resident f32.
+        let out_vec = output.tensor.as_slice();
+        debug_assert_eq!((out_vec.len()), n * OUTPUT_DIM);
 
         for off in 0..n {
             let lin = linear_idx + off;

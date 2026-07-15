@@ -7,7 +7,7 @@
 //!
 //! Uses central difference scheme:
 //! - Spatial: ∂²u/∂x² ≈ (u[i+1] - 2u[i] + u[i-1]) / dx²
-//! - Temporal: ∂²u/∂t² ≈ (u[n+1] - 2u[n] + u[n-1]) / dt²
+//! - Temporal: ∂²u/∂t² ≈ (u[n+1] - 2u\[n\] + u[n-1]) / dt²
 //!
 //! ## References
 //!

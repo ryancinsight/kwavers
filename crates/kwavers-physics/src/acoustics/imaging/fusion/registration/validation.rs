@@ -8,14 +8,14 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 ///
 pub fn validate_registration_compatibility(
-    source_dims: (usize, usize, usize),
-    target_dims: (usize, usize, usize),
+    source_dims: [usize; 3],
+    target_dims: [usize; 3],
 ) -> KwaversResult<()> {
     const MAX_RATIO: f64 = 10.0;
 
     for dim in 0..3 {
-        let source = [source_dims.0, source_dims.1, source_dims.2][dim] as f64;
-        let target = [target_dims.0, target_dims.1, target_dims.2][dim] as f64;
+        let source = source_dims[dim] as f64;
+        let target = target_dims[dim] as f64;
         let ratio = (source / target).max(target / source);
 
         if ratio > MAX_RATIO {

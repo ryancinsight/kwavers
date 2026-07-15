@@ -2,16 +2,16 @@
 
 use super::types::ElectromagneticFdtdSolver;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_field::EMFields;
+use kwavers_field::{ArrayD, EMFields, VecStorage};
 use kwavers_grid::Grid;
 use kwavers_physics::electromagnetic::equations::EMMaterialDistribution;
-use ndarray::{Array3, Array4, ArrayD, Ix4};
+use leto::Array3;
 
 impl ElectromagneticFdtdSolver {
     /// Create a new electromagnetic FDTD solver
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -31,13 +31,13 @@ impl ElectromagneticFdtdSolver {
 
         // Initialize field arrays with Yee staggering
         // E fields are at integer grid points, H fields at half-points
-        let ex = Array3::zeros((grid.nx, grid.ny + 1, grid.nz + 1));
-        let ey = Array3::zeros((grid.nx + 1, grid.ny, grid.nz + 1));
-        let ez = Array3::zeros((grid.nx + 1, grid.ny + 1, grid.nz));
+        let ex = Array3::<f64>::zeros([grid.nx, grid.ny + 1, grid.nz + 1]);
+        let ey = Array3::<f64>::zeros([grid.nx + 1, grid.ny, grid.nz + 1]);
+        let ez = Array3::<f64>::zeros([grid.nx + 1, grid.ny + 1, grid.nz]);
 
-        let hx = Array3::zeros((grid.nx + 1, grid.ny, grid.nz));
-        let hy = Array3::zeros((grid.nx, grid.ny + 1, grid.nz));
-        let hz = Array3::zeros((grid.nx, grid.ny, grid.nz + 1));
+        let hx = Array3::<f64>::zeros([grid.nx + 1, grid.ny, grid.nz]);
+        let hy = Array3::<f64>::zeros([grid.nx, grid.ny + 1, grid.nz]);
+        let hz = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz + 1]);
 
         // Cache grid dimensions before moving grid
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
@@ -54,8 +54,10 @@ impl ElectromagneticFdtdSolver {
             hy,
             hz,
             fields_cache: EMFields {
-                electric: Array4::zeros((nx, ny, nz, 3)).into_dyn(),
-                magnetic: Array4::zeros((nx, ny, nz, 3)).into_dyn(),
+                electric: ArrayD::<f64, VecStorage<f64>>::zeros(&[nx, ny, nz, 3])
+                    .expect("valid shape for electric field cache"),
+                magnetic: ArrayD::<f64, VecStorage<f64>>::zeros(&[nx, ny, nz, 3])
+                    .expect("valid shape for magnetic field cache"),
                 displacement: None,
                 flux_density: None,
             },
@@ -77,19 +79,6 @@ impl ElectromagneticFdtdSolver {
             self.fields_cache.magnetic.shape(),
             &[self.grid.nx, self.grid.ny, self.grid.nz, 3]
         );
-
-        let mut electric = self
-            .fields_cache
-            .electric
-            .view_mut()
-            .into_dimensionality::<Ix4>()
-            .expect("electric field cache is allocated as [nx, ny, nz, 3]");
-        let mut magnetic = self
-            .fields_cache
-            .magnetic
-            .view_mut()
-            .into_dimensionality::<Ix4>()
-            .expect("magnetic field cache is allocated as [nx, ny, nz, 3]");
 
         for i in 0..self.grid.nx {
             for j in 0..self.grid.ny {
@@ -114,13 +103,13 @@ impl ElectromagneticFdtdSolver {
                     let hy_c = 0.5 * (self.hy[[i, j, k]] + self.hy[[i, j + 1, k]]);
                     let hz_c = 0.5 * (self.hz[[i, j, k]] + self.hz[[i, j, k + 1]]);
 
-                    electric[[i, j, k, 0]] = ex_c;
-                    electric[[i, j, k, 1]] = ey_c;
-                    electric[[i, j, k, 2]] = ez_c;
+                    *self.fields_cache.electric.get_mut(&[i, j, k, 0]).unwrap() = ex_c;
+                    *self.fields_cache.electric.get_mut(&[i, j, k, 1]).unwrap() = ey_c;
+                    *self.fields_cache.electric.get_mut(&[i, j, k, 2]).unwrap() = ez_c;
 
-                    magnetic[[i, j, k, 0]] = hx_c;
-                    magnetic[[i, j, k, 1]] = hy_c;
-                    magnetic[[i, j, k, 2]] = hz_c;
+                    *self.fields_cache.magnetic.get_mut(&[i, j, k, 0]).unwrap() = hx_c;
+                    *self.fields_cache.magnetic.get_mut(&[i, j, k, 1]).unwrap() = hy_c;
+                    *self.fields_cache.magnetic.get_mut(&[i, j, k, 2]).unwrap() = hz_c;
                 }
             }
         }
@@ -149,7 +138,7 @@ impl ElectromagneticFdtdSolver {
     pub(super) fn permittivity_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.materials
             .permittivity
-            .get(ndarray::IxDyn(&[i, j, k]))
+            .get(&[i, j, k])
             .copied()
             .unwrap_or(1.0)
     }
@@ -157,7 +146,7 @@ impl ElectromagneticFdtdSolver {
     pub(super) fn conductivity_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.materials
             .conductivity
-            .get(ndarray::IxDyn(&[i, j, k]))
+            .get(&[i, j, k])
             .copied()
             .unwrap_or(0.0)
     }
@@ -165,7 +154,7 @@ impl ElectromagneticFdtdSolver {
     pub(super) fn permeability_at(&self, i: usize, j: usize, k: usize) -> f64 {
         self.materials
             .permeability
-            .get(ndarray::IxDyn(&[i, j, k]))
+            .get(&[i, j, k])
             .copied()
             .unwrap_or(1.0)
     }
@@ -307,21 +296,30 @@ impl ElectromagneticFdtdSolver {
     }
 }
 
-fn assign_array(target: &mut ArrayD<f64>, source: &ArrayD<f64>) {
-    if target.raw_dim() != source.raw_dim() {
-        *target = ArrayD::zeros(source.raw_dim());
+fn assign_array(target: &mut ArrayD<f64, VecStorage<f64>>, source: &ArrayD<f64, VecStorage<f64>>) {
+    if target.shape() != source.shape() {
+        *target = ArrayD::<f64, VecStorage<f64>>::zeros(source.shape())
+            .expect("valid shape for target reallocation");
     }
-
-    target.assign(source);
+    // Element-wise copy via iterators (works for any VecStorage).
+    for (t, s) in target.iter_mut().zip(source.iter()) {
+        *t = *s;
+    }
 }
 
-fn assign_optional_array(target: &mut Option<ArrayD<f64>>, source: Option<&ArrayD<f64>>) {
+fn assign_optional_array(
+    target: &mut Option<ArrayD<f64, VecStorage<f64>>>,
+    source: Option<&ArrayD<f64, VecStorage<f64>>>,
+) {
     match source {
         Some(source) => match target {
             Some(target) => assign_array(target, source),
             None => {
-                let mut array = ArrayD::zeros(source.raw_dim());
-                array.assign(source);
+                let mut array = ArrayD::<f64, VecStorage<f64>>::zeros(source.shape())
+                    .expect("valid shape for optional array allocation");
+                for (t, s) in array.iter_mut().zip(source.iter()) {
+                    *t = *s;
+                }
                 *target = Some(array);
             }
         },

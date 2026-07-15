@@ -3,7 +3,8 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::ArrayView3;
+use leto::Array3 as LetoArray3;
+use leto::ArrayView3;
 
 /// Spectral analysis metrics for method selection
 #[derive(Debug, Clone)]
@@ -31,7 +32,7 @@ impl SpectralMetrics {
 
     fn compute_smoothness(field: ArrayView3<f64>, grid: &Grid) -> f64 {
         // Compute gradient magnitude as measure of smoothness
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut total_gradient = 0.0;
         let mut count = 0;
 
@@ -61,14 +62,14 @@ impl SpectralMetrics {
         use kwavers_math::fft::{Fft3d, Fft3dInOutExt, Shape3D};
         use std::f64::consts::PI;
 
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // 1. Perform FFT
         // Create a new processor (acceptable cost for adaptive selection)
         let fft = Fft3d::new(Shape3D { nx, ny, nz });
 
-        // We need an owned array for the FFT processor
-        let field_owned = field.to_owned();
+        let field_owned = LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+            .expect("adaptive-selection field shape must match its Leto FFT shape");
         let spectrum = fft.forward(&field_owned);
 
         // 2. Compute Spectral Metrics
@@ -178,8 +179,8 @@ impl MaterialMetrics {
 
     fn compute_homogeneity(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
         // Compute coefficient of variation as measure of homogeneity
-        let density_cv = density.std(0.0) / density.mean().unwrap_or(1.0);
-        let speed_cv = sound_speed.std(0.0) / sound_speed.mean().unwrap_or(1.0);
+        let density_cv = coefficient_of_variation(density.iter().copied());
+        let speed_cv = coefficient_of_variation(sound_speed.iter().copied());
 
         1.0 - (density_cv + speed_cv) / 2.0
     }
@@ -190,7 +191,7 @@ impl MaterialMetrics {
     ) -> f64 {
         // Check for material discontinuities near position
         let (i, j, k) = position;
-        let (nx, ny, nz) = density.dim();
+        let [nx, ny, nz] = density.shape();
 
         // Check neighbors for large changes
         let mut max_change = 0.0;
@@ -219,10 +220,31 @@ impl MaterialMetrics {
     }
 
     fn compute_impedance_contrast(density: ArrayView3<f64>, sound_speed: ArrayView3<f64>) -> f64 {
-        // Compute acoustic impedance variation
-        let impedance = &density * &sound_speed;
-        impedance.std(0.0) / impedance.mean().unwrap_or(1.0)
+        // Compute acoustic impedance variation: coefficient of variation of ρ·c.
+        coefficient_of_variation(
+            density
+                .iter()
+                .zip(sound_speed.iter())
+                .map(|(&rho, &c)| rho * c),
+        )
     }
+}
+
+/// Population coefficient of variation (standard deviation with `ddof = 0`
+/// divided by the mean).
+///
+/// Reproduces the ndarray expression `arr.std(0.0) / arr.mean().unwrap_or(1.0)`:
+/// the mean is `Σx / n`, the population variance is `Σ(x − mean)² / n`, and an
+/// empty input yields `0.0` (degenerate; the source arrays are never empty).
+fn coefficient_of_variation(values: impl IntoIterator<Item = f64>) -> f64 {
+    let samples: Vec<f64> = values.into_iter().collect();
+    let n = samples.len();
+    if n == 0 {
+        return 0.0;
+    }
+    let mean = samples.iter().sum::<f64>() / n as f64;
+    let variance = samples.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n as f64;
+    variance.sqrt() / mean
 }
 
 /// Computational efficiency metrics
@@ -280,7 +302,7 @@ impl ComputationalMetrics {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
     use std::f64::consts::PI;
 
     #[test]

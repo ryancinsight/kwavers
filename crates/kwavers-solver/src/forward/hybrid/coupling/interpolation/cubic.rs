@@ -2,7 +2,7 @@
 
 use super::InterpolationManager;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl InterpolationManager {
     /// Tricubic interpolation using Catmull-Rom splines.
@@ -128,8 +128,8 @@ impl InterpolationManager {
         let shape = source_field.shape();
 
         // For simplicity, if coords don't match source shape, fall back to cubic
-        if source_coords.len() != shape[0] * shape[1] * shape[2]
-            || target_coords.len() != shape[0] * shape[1] * shape[2]
+        if (source_coords.len()) != shape[0] * shape[1] * shape[2]
+            || (target_coords.len()) != shape[0] * shape[1] * shape[2]
         {
             return self.cubic_spline_interpolation(source_field, source_coords, target_coords);
         }

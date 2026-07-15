@@ -1,7 +1,7 @@
 use super::{GridTopology, TopologyDimension};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 /// Cylindrical grid topology for axisymmetric simulations
@@ -84,8 +84,8 @@ impl CylindricalTopology {
             }));
         }
 
-        let z_coords = Array1::from_shape_fn(nz, |i| (i as f64).mul_add(dz, z0));
-        let r_coords = Array1::from_shape_fn(nr, |j| (j as f64).mul_add(dr, r0));
+        let z_coords = Array1::from_shape_fn([nz], |[i]| (i as f64).mul_add(dz, z0));
+        let r_coords = Array1::from_shape_fn([nr], |[j]| (j as f64).mul_add(dr, r0));
         let kz = Self::compute_fft_wavenumbers(nz, dz);
         let kr = Self::compute_hankel_wavenumbers(nr, dr, r0);
 
@@ -109,7 +109,7 @@ impl CylindricalTopology {
     /// [0, 1, 2, ..., N/2, -N/2+1, ..., -1] / (N * d)
     fn compute_fft_wavenumbers(n: usize, d: f64) -> Array1<f64> {
         let dk = TWO_PI / (n as f64 * d);
-        Array1::from_shape_fn(n, |i| {
+        Array1::from_shape_fn([n], |[i]| {
             if i <= n / 2 {
                 i as f64 * dk
             } else {
@@ -124,7 +124,7 @@ impl CylindricalTopology {
     /// Wavenumbers are k_m = j₀ₘ / r_max.
     fn compute_hankel_wavenumbers(nr: usize, dr: f64, r0: f64) -> Array1<f64> {
         let r_max = (nr as f64).mul_add(dr, r0);
-        Array1::from_shape_fn(nr, |m| {
+        Array1::from_shape_fn([nr], |[m]| {
             if m == 0 {
                 0.0
             } else {
@@ -199,7 +199,7 @@ impl CylindricalTopology {
     /// Create 2D meshgrid of z coordinates
     #[must_use]
     pub fn z_mesh(&self) -> Array2<f64> {
-        let mut mesh = Array2::zeros((self.nz, self.nr));
+        let mut mesh = Array2::zeros([self.nz, self.nr]);
         for i in 0..self.nz {
             let z = self.z_coords[i];
             for j in 0..self.nr {
@@ -212,7 +212,7 @@ impl CylindricalTopology {
     /// Create 2D meshgrid of r coordinates
     #[must_use]
     pub fn r_mesh(&self) -> Array2<f64> {
-        let mut mesh = Array2::zeros((self.nz, self.nr));
+        let mut mesh = Array2::zeros([self.nz, self.nr]);
         for i in 0..self.nz {
             for j in 0..self.nr {
                 mesh[[i, j]] = self.r_coords[j];
@@ -310,7 +310,7 @@ impl GridTopology for CylindricalTopology {
         PI / min_spacing
     }
 
-    fn create_field(&self) -> Array3<f64> {
-        Array3::zeros((self.nz, self.nr, 1))
+    fn create_field(&self) -> leto::Array3<f64> {
+        leto::Array3::zeros([self.nz, self.nr, 1])
     }
 }

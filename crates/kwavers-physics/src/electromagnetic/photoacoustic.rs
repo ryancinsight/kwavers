@@ -11,7 +11,7 @@ use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 /// This is the single source of truth for Grüneisen parameter evaluation in kwavers
 /// (Sprint 226 SSOT consolidation). Use this type everywhere a Grüneisen value is
 /// needed; `GruneisenParameter` is deprecated and will be removed in a future sprint.
-pub use crate::photoacoustics::thermoelasticity::GrueneisenModel;
+pub use crate::photoacoustics::GrueneisenModel;
 
 /// Grüneisen parameter for thermoelastic coupling.
 ///
@@ -24,7 +24,7 @@ pub use crate::photoacoustics::thermoelasticity::GrueneisenModel;
 /// diverges from the canonical water reference temperature (20 °C vs 37 °C here).
 #[deprecated(
     since = "0.4.0",
-    note = "Use `GrueneisenModel` from `physics::photoacoustics::thermoelasticity` instead"
+    note = "Use `GrueneisenModel` from `physics::photoacoustics` instead"
 )]
 ///
 /// ## Not yet implemented

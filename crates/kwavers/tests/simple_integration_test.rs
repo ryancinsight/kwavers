@@ -3,7 +3,7 @@
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
 use kwavers_grid::Grid;
 use kwavers_medium::{ArrayAccess, CoreMedium, HomogeneousMedium};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Test basic medium and grid initialization
 #[test]
@@ -68,10 +68,10 @@ fn test_medium_arrays() {
     let absorption_array = medium.absorption_array();
     let nonlinearity_array = medium.nonlinearity_array();
 
-    assert_eq!(density_array.shape(), &[10, 10, 10]);
-    assert_eq!(sound_speed_array.shape(), &[10, 10, 10]);
-    assert_eq!(absorption_array.shape(), &[10, 10, 10]);
-    assert_eq!(nonlinearity_array.shape(), &[10, 10, 10]);
+    assert_eq!(density_array.shape(), [10, 10, 10]);
+    assert_eq!(sound_speed_array.shape(), [10, 10, 10]);
+    assert_eq!(absorption_array.shape(), [10, 10, 10]);
+    assert_eq!(nonlinearity_array.shape(), [10, 10, 10]);
 
     // Check values are uniform for homogeneous medium
     assert!(density_array.iter().all(|&d| d == 1500.0));

@@ -10,7 +10,7 @@
 //!
 //! - Montaldo et al. (2009), "Coherent plane-wave compounding"
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Multi-angle plane wave compounding
 #[derive(Debug)]
@@ -29,8 +29,8 @@ impl PlaneWaveCompounding {
     /// Compound multiple plane wave images
     #[must_use]
     pub fn compound(&self, images: &Array3<f64>) -> Array2<f64> {
-        let (num_angles, height, width) = images.dim();
-        let mut compounded = Array2::<f64>::zeros((height, width));
+        let [num_angles, height, width] = images.shape();
+        let mut compounded = Array2::<f64>::zeros([height, width]);
 
         for i in 0..height {
             for j in 0..width {

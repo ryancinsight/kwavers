@@ -50,10 +50,10 @@ fn pstd_spectral_green_constant_source_matches_leapfrog_zero_mode_symbol() {
 #[test]
 fn spectral_green_adjoint_satisfies_inner_product_identity() {
     let grid = GridSpec::new((4, 3, 2), 0.01).unwrap();
-    let x = (0..grid.len())
+    let x = (0..(grid.len()))
         .map(|index| Complex64::new(index as f64 * 0.25, -0.125 * index as f64))
         .collect::<Vec<_>>();
-    let y = (0..grid.len())
+    let y = (0..(grid.len()))
         .map(|index| Complex64::new(0.5 - index as f64 * 0.125, 0.25 * index as f64))
         .collect::<Vec<_>>();
     let gx = apply_shifted_green_spectral(grid, 11.0, 0.25, &x);
@@ -70,10 +70,10 @@ fn spectral_green_adjoint_satisfies_inner_product_identity() {
 #[test]
 fn pstd_spectral_green_adjoint_satisfies_inner_product_identity() {
     let grid = GridSpec::new((4, 3, 2), 0.01).unwrap();
-    let x = (0..grid.len())
+    let x = (0..(grid.len()))
         .map(|index| Complex64::new(index as f64 * 0.25, -0.125 * index as f64))
         .collect::<Vec<_>>();
-    let y = (0..grid.len())
+    let y = (0..(grid.len()))
         .map(|index| Complex64::new(0.5 - index as f64 * 0.125, 0.25 * index as f64))
         .collect::<Vec<_>>();
     let boundary = AbsorbingBoundary::disabled();

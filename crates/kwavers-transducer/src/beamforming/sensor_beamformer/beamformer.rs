@@ -1,13 +1,13 @@
 //! `SensorBeamformer` — geometry-aware delay, apodization, and steering for sensor arrays.
 
 use super::types::{BeamformerWindowType, SensorProcessingParams};
+use eunomia::Complex;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_receiver::array::SensorArray;
 use kwavers_receiver::grid_sampling::GridSensorSet;
 use kwavers_signal::window as signal_window;
-use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use leto::Array2;
 
 /// Sensor-specific beamforming interface tied to hardware array geometry.
 #[derive(Debug, Clone)]
@@ -89,8 +89,7 @@ impl SensorBeamformer {
         }
 
         let origin = image_grid.origin;
-        let mut delays = Array2::zeros((self.sensor_positions.len(), image_grid.size()));
-
+        let mut delays = Array2::zeros([self.sensor_positions.len(), image_grid.size()]);
         let x_coords: Vec<f64> = image_grid
             .coordinates(kwavers_grid::GridDimension::X)
             .collect();
@@ -145,7 +144,7 @@ impl SensorBeamformer {
         delays: &Array2<f64>,
         window_type: BeamformerWindowType,
     ) -> KwaversResult<Array2<f64>> {
-        let n_sensors = delays.nrows();
+        let n_sensors = delays.shape()[0];
 
         let signal_window_type = match window_type {
             BeamformerWindowType::Hanning => signal_window::SignalWindowType::Hann,
@@ -157,9 +156,10 @@ impl SensorBeamformer {
         let window_coeffs = signal_window::get_win(signal_window_type, n_sensors, true);
 
         let mut windowed_delays = delays.clone();
-        for mut col in windowed_delays.columns_mut() {
+        let [_n_sensors, n_pts] = windowed_delays.shape();
+        for pt in 0..n_pts {
             for (sensor_idx, window_coeff) in window_coeffs.iter().enumerate() {
-                col[sensor_idx] *= window_coeff;
+                windowed_delays[[sensor_idx, pt]] *= window_coeff;
             }
         }
 
@@ -179,7 +179,7 @@ impl SensorBeamformer {
     /// # References
     /// - Van Trees, H. L. (2002): *Optimum Array Processing*, §2.4. Wiley.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn calculate_steering(
         &self,
@@ -202,7 +202,7 @@ impl SensorBeamformer {
 
         let n_sensors = self.sensor_positions.len();
         let n_angles = angles.len();
-        let mut steering_matrix = Array2::zeros((n_sensors, n_angles));
+        let mut steering_matrix = Array2::zeros([n_sensors, n_angles]);
 
         for (idx, &(theta, phi)) in angles.iter().enumerate() {
             let sin_theta = theta.sin();
@@ -215,12 +215,9 @@ impl SensorBeamformer {
                 sound_speed,
             )?;
 
-            let mut vector = Array1::<Complex<f64>>::zeros(n_sensors);
             for (i, &phase) in phase_delays.iter().enumerate() {
-                vector[i] = Complex::new(0.0, phase).exp();
+                steering_matrix[[i, idx]] = Complex::new(0.0, phase).exp();
             }
-
-            steering_matrix.column_mut(idx).assign(&vector);
         }
 
         Ok(steering_matrix)

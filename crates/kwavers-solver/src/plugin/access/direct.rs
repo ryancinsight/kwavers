@@ -1,6 +1,6 @@
 use kwavers_core::error::{KwaversResult, PhysicsError};
 use kwavers_field::mapping::UnifiedFieldType;
-use ndarray::{Array4, ArrayView3, ArrayViewMut3};
+use leto::{Array4, ArrayView3, ArrayViewMut3};
 use std::collections::HashSet;
 
 /// This provides direct access to the fields array but with compile-time
@@ -57,7 +57,10 @@ impl<'a> DirectPluginFieldAccess<'a> {
             .into());
         }
 
-        Ok(self.fields.index_axis(ndarray::Axis(0), index))
+        Ok(self
+            .fields
+            .index_axis::<3>(0, index)
+            .expect("invariant: field index within fields axis 0"))
     }
 
     /// Get a mutable view of a field
@@ -77,6 +80,9 @@ impl<'a> DirectPluginFieldAccess<'a> {
             .into());
         }
 
-        Ok(self.fields.index_axis_mut(ndarray::Axis(0), index))
+        Ok(self
+            .fields
+            .index_axis_mut::<3>(0, index)
+            .expect("invariant: field index within fields axis 0"))
     }
 }

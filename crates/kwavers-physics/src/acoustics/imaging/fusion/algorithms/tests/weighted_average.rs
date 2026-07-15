@@ -5,7 +5,7 @@ fn test_weighted_average_fusion_is_bounded() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
 
-    let shape = (4, 4, 4);
+    let shape = [4, 4, 4];
 
     // Bounds check property test: Output must strictly be within [min(A_i), max(B_i)]
     let v_us = 1.0;
@@ -23,7 +23,7 @@ fn test_weighted_average_fusion_is_bounded() {
     );
 
     let fused = fusion.fuse().unwrap();
-    assert_eq!(fused.intensity_image.dim(), shape);
+    assert_eq!(fused.intensity_image.shape(), shape);
 
     let weights = &fusion.config.modality_weights;
     let w_us = weights.get("ultrasound").copied().unwrap_or(1.0);

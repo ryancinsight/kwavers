@@ -60,10 +60,10 @@
 //!   therapy." IEEE Trans. UFFC 43(6):1122–1129.
 
 use super::phase_correction::{PhaseCorrection, TranscranialAberrationCorrection};
+use eunomia::Complex;
 use kwavers_core::error::KwaversResult;
+use leto::Array3;
 use log::info;
-use ndarray::Array3;
-use num_complex::Complex;
 
 impl TranscranialAberrationCorrection {
     /// Apply CW time-reversal (phase conjugation) aberration correction.
@@ -100,7 +100,7 @@ impl TranscranialAberrationCorrection {
 
         for &pos in transducer_positions {
             // Convert physical position to fractional grid index.
-            let (mx, my, mz) = measured_field.dim();
+            let [mx, my, mz] = measured_field.shape();
             let xi = (pos[0] / self.grid.dx).clamp(0.0, mx.saturating_sub(2) as f64);
             let yj = (pos[1] / self.grid.dy).clamp(0.0, my.saturating_sub(2) as f64);
             let zk = (pos[2] / self.grid.dz).clamp(0.0, mz.saturating_sub(2) as f64);

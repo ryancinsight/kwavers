@@ -5,7 +5,7 @@ fn test_neural_layer_creation() {
     let layer = NeuralLayer::new(64, 32).unwrap();
     assert_eq!(layer.input_size(), 64);
     assert_eq!(layer.output_size(), 32);
-    assert_eq!(layer.weights().dim(), (64, 32));
+    assert_eq!(layer.weights().shape(), [64, 32]);
     assert_eq!(layer.biases().len(), 32);
 }
 
@@ -36,18 +36,18 @@ fn test_xavier_initialization_bounds() {
 #[test]
 fn test_neural_layer_forward() {
     let layer = NeuralLayer::new(8, 4).unwrap();
-    let input = ndarray::Array3::ones((2, 3, 8)); // Batch=(2×3)=6, Features=8
+    let input = leto::Array3::ones((2, 3, 8)); // Batch=(2×3)=6, Features=8
 
     let output = layer.forward(&input).unwrap();
 
-    assert_eq!(output.dim(), (2, 3, 4));
+    assert_eq!(output.shape(), [2, 3, 4]);
     assert!(output.iter().all(|&x| x.is_finite()));
 }
 
 #[test]
 fn test_neural_layer_activation_range() {
     let layer = NeuralLayer::new(4, 4).unwrap();
-    let input = ndarray::Array3::from_elem((2, 2, 4), 100.0); // Very large input
+    let input = leto::Array3::from_elem((2, 2, 4), 100.0); // Very large input
 
     let output = layer.forward(&input).unwrap();
 
@@ -63,7 +63,7 @@ fn test_neural_layer_dimension_mismatch() {
     use kwavers_core::error::KwaversError;
 
     let layer = NeuralLayer::new(8, 4).unwrap();
-    let wrong_input = ndarray::Array3::ones((2, 3, 16)); // Wrong feature size (16 instead of 8)
+    let wrong_input = leto::Array3::ones((2, 3, 16)); // Wrong feature size (16 instead of 8)
 
     let result = layer.forward(&wrong_input);
     assert!(result.is_err());
@@ -79,14 +79,14 @@ fn test_neural_layer_dimension_mismatch() {
 #[test]
 fn test_neural_layer_forward_shape_preservation() {
     let layer = NeuralLayer::new(16, 8).unwrap();
-    let input = ndarray::Array3::from_elem((5, 7, 16), 0.5);
+    let input = leto::Array3::from_elem((5, 7, 16), 0.5);
 
     let output = layer.forward(&input).unwrap();
 
     // Spatial dimensions preserved, feature dimension transformed
-    assert_eq!(output.dim().0, 5);
-    assert_eq!(output.dim().1, 7);
-    assert_eq!(output.dim().2, 8);
+    assert_eq!(output.shape()[0], 5);
+    assert_eq!(output.shape()[1], 7);
+    assert_eq!(output.shape()[2], 8);
 }
 
 #[test]
@@ -120,7 +120,7 @@ fn test_neural_layer_adaptation_zero_gradient_is_noop() {
 #[test]
 fn test_tanh_activation_zero_input() {
     let layer = NeuralLayer::new(4, 4).unwrap();
-    let input = ndarray::Array3::zeros((2, 2, 4));
+    let input = leto::Array3::zeros((2, 2, 4));
 
     let output = layer.forward(&input).unwrap();
 
@@ -134,8 +134,8 @@ fn test_layer_linearity_before_activation() {
     // Test that doubling input approximately doubles pre-activation output
     // (ignoring saturation effects)
     let layer = NeuralLayer::new(4, 4).unwrap();
-    let input1 = ndarray::Array3::from_elem((2, 2, 4), 0.01);
-    let input2 = ndarray::Array3::from_elem((2, 2, 4), 0.02);
+    let input1 = leto::Array3::from_elem((2, 2, 4), 0.01);
+    let input2 = leto::Array3::from_elem((2, 2, 4), 0.02);
 
     let output1 = layer.forward(&input1).unwrap();
     let output2 = layer.forward(&input2).unwrap();

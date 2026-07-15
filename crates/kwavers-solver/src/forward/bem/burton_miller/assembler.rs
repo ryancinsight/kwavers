@@ -1,5 +1,5 @@
-use ndarray::Array2;
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::Array2;
 
 use super::config::BurtonMillerConfig;
 use kwavers_core::error::KwaversResult;
@@ -49,7 +49,7 @@ impl BurtonMillerAssembler {
 
     /// Assemble Burton-Miller H matrix (CBIE + α·HBIE).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn assemble_h_matrix(
         &self,
@@ -93,7 +93,7 @@ impl BurtonMillerAssembler {
 
     /// Assemble Burton-Miller G matrix (Neumann data RHS).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn assemble_g_matrix(
         &self,

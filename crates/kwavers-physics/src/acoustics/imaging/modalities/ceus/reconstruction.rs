@@ -31,7 +31,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::ceus::CEUSImagingParameters;
-use ndarray::Array3;
+use leto::Array3;
 
 /// CEUS image reconstruction
 #[derive(Debug)]
@@ -116,7 +116,7 @@ impl CEUSReconstruction {
         }
 
         // Apply amplitude-coherence weighting: w(r) = |p(r)| / max|p|
-        let (nx, ny, nz) = beamformed.dim();
+        let [nx, ny, nz] = beamformed.shape();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -134,8 +134,8 @@ impl CEUSReconstruction {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn extract_harmonics(&self, beamformed: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut harmonic_image = Array3::zeros(beamformed.raw_dim());
-        let (nx, ny, nz) = beamformed.dim();
+        let mut harmonic_image = Array3::zeros(beamformed.shape());
+        let [nx, ny, nz] = beamformed.shape();
 
         // Apply harmonic filters
         for filter in &self.harmonic_filters {
@@ -161,7 +161,7 @@ impl CEUSReconstruction {
         let mut enhanced = harmonic_image.clone();
 
         // Apply log compression
-        let (nx, ny, nz) = enhanced.dim();
+        let [nx, ny, nz] = enhanced.shape();
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
@@ -182,7 +182,7 @@ impl CEUSReconstruction {
         let min_intensity = enhanced.iter().copied().fold(f64::INFINITY, f64::min);
 
         if max_intensity > min_intensity {
-            for intensity in &mut enhanced {
+            for intensity in enhanced.iter_mut() {
                 let normalized = (*intensity - min_intensity) / (max_intensity - min_intensity);
                 *intensity = (normalized * 255.0).clamp(0.0, 255.0);
             }

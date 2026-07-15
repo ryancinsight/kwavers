@@ -4,7 +4,7 @@ use kwavers_physics::acoustics::therapy::neuromodulation::{
     simulate_hh, simulate_nice, simulate_sonic, BilayerSonophore, BilayerSonophoreDynamic,
     BilayerSonophoreQuasistatic, CorticalNeuron, HhParams, NiceConfig, SonicConfig,
 };
-use numpy::{IntoPyArray, PyArray1};
+use numpy::{PyArray1, ToPyArray};
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -40,9 +40,9 @@ pub fn hodgkin_huxley_response(
     let p = HhParams::default();
     let trace = simulate_hh(&p, v_rest_mv, |_| i_ext_ua_cm2, dt_ms, t_end_ms);
     Ok((
-        trace.time_ms.into_pyarray(py).unbind(),
-        trace.voltage_mv.into_pyarray(py).unbind(),
-        trace.spike_times_ms.into_pyarray(py).unbind(),
+        trace.time_ms.to_pyarray(py).unbind(),
+        trace.voltage_mv.to_pyarray(py).unbind(),
+        trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }
 
@@ -86,10 +86,10 @@ pub fn nice_bilayer_sonophore_response(
     }
     let trace = simulate_nice(&cfg);
     Ok((
-        trace.time_ms.into_pyarray(py).unbind(),
-        trace.voltage_mv.into_pyarray(py).unbind(),
-        trace.charge_nc_cm2.into_pyarray(py).unbind(),
-        trace.spike_times_ms.into_pyarray(py).unbind(),
+        trace.time_ms.to_pyarray(py).unbind(),
+        trace.voltage_mv.to_pyarray(py).unbind(),
+        trace.charge_nc_cm2.to_pyarray(py).unbind(),
+        trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }
 
@@ -135,10 +135,10 @@ pub fn nice_sonic_response(
     }
     let trace = simulate_sonic(&cfg);
     Ok((
-        trace.time_ms.into_pyarray(py).unbind(),
-        trace.voltage_mv.into_pyarray(py).unbind(),
-        trace.charge_nc_cm2.into_pyarray(py).unbind(),
-        trace.spike_times_ms.into_pyarray(py).unbind(),
+        trace.time_ms.to_pyarray(py).unbind(),
+        trace.voltage_mv.to_pyarray(py).unbind(),
+        trace.charge_nc_cm2.to_pyarray(py).unbind(),
+        trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }
 
@@ -181,10 +181,10 @@ pub fn nice_quasistatic_response(
     }
     let trace = simulate_nice(&cfg);
     Ok((
-        trace.time_ms.into_pyarray(py).unbind(),
-        trace.voltage_mv.into_pyarray(py).unbind(),
-        trace.charge_nc_cm2.into_pyarray(py).unbind(),
-        trace.spike_times_ms.into_pyarray(py).unbind(),
+        trace.time_ms.to_pyarray(py).unbind(),
+        trace.voltage_mv.to_pyarray(py).unbind(),
+        trace.charge_nc_cm2.to_pyarray(py).unbind(),
+        trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }
 
@@ -225,10 +225,10 @@ pub fn nice_dynamic_response(
     }
     let trace = simulate_nice(&cfg);
     Ok((
-        trace.time_ms.into_pyarray(py).unbind(),
-        trace.voltage_mv.into_pyarray(py).unbind(),
-        trace.charge_nc_cm2.into_pyarray(py).unbind(),
-        trace.spike_times_ms.into_pyarray(py).unbind(),
+        trace.time_ms.to_pyarray(py).unbind(),
+        trace.voltage_mv.to_pyarray(py).unbind(),
+        trace.charge_nc_cm2.to_pyarray(py).unbind(),
+        trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }
 
@@ -281,9 +281,9 @@ pub fn cortical_sonic_response(
     }
     let trace = simulate_sonic(&cfg);
     Ok((
-        trace.time_ms.into_pyarray(py).unbind(),
-        trace.voltage_mv.into_pyarray(py).unbind(),
-        trace.charge_nc_cm2.into_pyarray(py).unbind(),
-        trace.spike_times_ms.into_pyarray(py).unbind(),
+        trace.time_ms.to_pyarray(py).unbind(),
+        trace.voltage_mv.to_pyarray(py).unbind(),
+        trace.charge_nc_cm2.to_pyarray(py).unbind(),
+        trace.spike_times_ms.to_pyarray(py).unbind(),
     ))
 }

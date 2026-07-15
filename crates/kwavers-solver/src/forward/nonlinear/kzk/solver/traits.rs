@@ -21,7 +21,8 @@
 //! This is the most physically relevant single-slice summary for HIFU
 //! intensity calculations, where I ∝ p_rms².
 
-use ndarray::{Array2, Zip};
+use leto::Array2;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::KZKSolver;
 use kwavers_physics::acoustics::wave_propagation::nonlinear::kzk::KZKSolverTrait;
@@ -51,15 +52,24 @@ impl KZKSolverTrait for KZKSolver {
     ///
     /// Each output element `rms[i,j]` is computed as a sequential reduction
     /// over `self.pressure[[i,j,0..nt]]`, a disjoint slice from every other
-    /// transverse cell.  No two Rayon tasks read or write the same memory
-    /// location → `par_for_each` is race-free.
+    /// transverse cell.  No two Moirai workers share mutable output memory.
     fn current_field(&self) -> Array2<f64> {
         let nt_f64 = self.config.nt as f64;
+        let ny = self.config.ny;
         let nt = self.config.nt;
-        let pressure = &self.pressure;
+        let pressure = self
+            .pressure
+            .as_slice()
+            .expect("invariant: KZK pressure is standard-layout");
         let mut rms = Array2::zeros((self.config.nx, self.config.ny));
-        Zip::indexed(rms.view_mut()).par_for_each(|(i, j), r| {
-            let sum_sq: f64 = (0..nt).map(|t| pressure[[i, j, t]].re.powi(2)).sum();
+        let rms_slice = rms
+            .as_slice_mut()
+            .expect("invariant: KZK RMS output is standard-layout");
+        enumerate_mut_with::<Adaptive, _, _>(rms_slice, |idx, r| {
+            let i = idx / ny;
+            let j = idx % ny;
+            let base = (i * ny + j) * nt;
+            let sum_sq: f64 = (0..nt).map(|t| pressure[base + t].re.powi(2)).sum();
             *r = (sum_sq / nt_f64).sqrt();
         });
         rms

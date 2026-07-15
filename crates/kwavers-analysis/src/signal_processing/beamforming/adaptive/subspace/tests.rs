@@ -2,8 +2,8 @@ use super::esmv::EigenspaceMV;
 use super::music::MUSIC;
 use crate::signal_processing::beamforming::test_utilities;
 use approx::assert_relative_eq;
-use ndarray::Array2;
-use num_complex::Complex64;
+use eunomia::Complex64;
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 #[test]
@@ -77,8 +77,8 @@ fn test_esmv_weight_computation() {
         .expect("should compute weights");
 
     assert_eq!(weights.len(), n);
-    for &w in &weights {
-        assert!(w.is_finite());
+    for &w in weights.iter() {
+        assert!(w.re.is_finite() && w.im.is_finite());
     }
 }
 
@@ -96,7 +96,7 @@ fn test_esmv_unit_gain_constraint() {
     let gain: Complex64 = weights
         .iter()
         .zip(steering.iter())
-        .map(|(w, a)| w.conj() * a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
 
     assert_relative_eq!(gain.re, 1.0, epsilon = 1e-6);
@@ -135,7 +135,7 @@ fn test_esmv_diagonal_loading_stability() {
     let mut cov = test_utilities::create_test_covariance(n, 0.2, 0.1);
 
     for i in 0..n {
-        cov[(i, i)] *= Complex64::new(1e-8, 0.0);
+        cov[[i, i]] *= Complex64::new(1e-8, 0.0);
     }
 
     let steering = test_utilities::create_steering_vector(n, 0.0);
@@ -157,8 +157,11 @@ fn test_esmv_diagonal_loading_stability() {
             !weights.is_empty(),
             "high-loading weights must be non-empty"
         );
-        for &w in &weights {
-            assert!(w.is_finite(), "high-loading weight {w} must be finite");
+        for &w in weights.iter() {
+            assert!(
+                w.re.is_finite() && w.im.is_finite(),
+                "high-loading weight {w} must be finite"
+            );
         }
     }
 }
@@ -228,18 +231,22 @@ fn test_music_peak_detection_concept() {
 ///   E_n^H · a = [0, 0, 0]  →  ‖E_n^H · a‖² = 0  →  P = 1e30.
 #[test]
 fn music_pseudospectrum_at_signal_direction_is_near_infinite() {
-    let mut r = Array2::<Complex64>::zeros((4, 4));
-    r[(0, 0)] = Complex64::new(10.0, 0.0);
-    r[(1, 1)] = Complex64::new(1.0, 0.0);
-    r[(2, 2)] = Complex64::new(1.0, 0.0);
-    r[(3, 3)] = Complex64::new(1.0, 0.0);
+    let mut r = Array2::<Complex64>::from_elem((4, 4), Complex64::default());
+    r[[0, 0]] = Complex64::new(10.0, 0.0);
+    r[[1, 1]] = Complex64::new(1.0, 0.0);
+    r[[2, 2]] = Complex64::new(1.0, 0.0);
+    r[[3, 3]] = Complex64::new(1.0, 0.0);
 
-    let a_signal = ndarray::array![
-        Complex64::new(1.0, 0.0),
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-    ];
+    let a_signal = Array1::from_vec(
+        4,
+        vec![
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+        ],
+    )
+    .unwrap();
 
     let music = MUSIC::new(1);
     let p = music
@@ -260,18 +267,22 @@ fn music_pseudospectrum_at_signal_direction_is_near_infinite() {
 ///   ‖E_n^H · a‖² = 1  →  P = 1/1 = 1.0.
 #[test]
 fn music_pseudospectrum_at_orthogonal_direction_is_one() {
-    let mut r = Array2::<Complex64>::zeros((4, 4));
-    r[(0, 0)] = Complex64::new(10.0, 0.0);
-    r[(1, 1)] = Complex64::new(1.0, 0.0);
-    r[(2, 2)] = Complex64::new(1.0, 0.0);
-    r[(3, 3)] = Complex64::new(1.0, 0.0);
+    let mut r = Array2::<Complex64>::from_elem((4, 4), Complex64::default());
+    r[[0, 0]] = Complex64::new(10.0, 0.0);
+    r[[1, 1]] = Complex64::new(1.0, 0.0);
+    r[[2, 2]] = Complex64::new(1.0, 0.0);
+    r[[3, 3]] = Complex64::new(1.0, 0.0);
 
-    let a_noise = ndarray::array![
-        Complex64::new(0.0, 0.0),
-        Complex64::new(1.0, 0.0),
-        Complex64::new(0.0, 0.0),
-        Complex64::new(0.0, 0.0),
-    ];
+    let a_noise = Array1::from_vec(
+        4,
+        vec![
+            Complex64::new(0.0, 0.0),
+            Complex64::new(1.0, 0.0),
+            Complex64::new(0.0, 0.0),
+            Complex64::new(0.0, 0.0),
+        ],
+    )
+    .unwrap();
 
     let music = MUSIC::new(1);
     let p = music
@@ -303,21 +314,21 @@ fn test_esmv_signal_subspace_dimension_effect() {
     let gain1: Complex64 = weights1
         .iter()
         .zip(steering.iter())
-        .map(|(w, a)| w.conj() * a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
     let gain2: Complex64 = weights2
         .iter()
         .zip(steering.iter())
-        .map(|(w, a)| w.conj() * a)
+        .map(|(w, a)| w.conj() * *a)
         .sum();
 
     assert_relative_eq!(gain1.re, 1.0, epsilon = 1e-6);
     assert_relative_eq!(gain2.re, 1.0, epsilon = 1e-6);
 
-    for &w in &weights1 {
-        assert!(w.is_finite());
+    for &w in weights1.iter() {
+        assert!(w.re.is_finite() && w.im.is_finite());
     }
-    for &w in &weights2 {
-        assert!(w.is_finite());
+    for &w in weights2.iter() {
+        assert!(w.re.is_finite() && w.im.is_finite());
     }
 }

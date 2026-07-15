@@ -13,7 +13,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array4, ArrayView3, Axis};
+use leto::{Array4, ArrayView3};
 use std::collections::HashMap;
 
 /// Time scale information for a physics component
@@ -60,7 +60,7 @@ impl TimeScaleSeparator {
 
     /// Analyze fields to identify time scales
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -70,7 +70,9 @@ impl TimeScaleSeparator {
 
         // Analyze each field component
         for f in 0..fields.shape()[0] {
-            let field = fields.index_axis(Axis(0), f);
+            let field = fields
+                .index_axis::<3>(0, f)
+                .expect("invariant: component index within Array4 axis-0 bounds");
 
             // Compute characteristic time scales
             let (grad_max, laplacian_max) = self.compute_spatial_derivatives(field, &self.grid)?;
@@ -120,7 +122,7 @@ impl TimeScaleSeparator {
         field: ArrayView3<'_, f64>,
         grid: &Grid,
     ) -> KwaversResult<(f64, f64)> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut grad_max: f64 = 0.0;
         let mut laplacian_max: f64 = 0.0;
 

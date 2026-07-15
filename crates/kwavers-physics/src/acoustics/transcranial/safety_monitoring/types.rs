@@ -1,7 +1,7 @@
 //! Core data structures for safety monitoring
 
 use kwavers_core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Thermal dose accumulation (CEM43)
 #[derive(Debug, Clone)]

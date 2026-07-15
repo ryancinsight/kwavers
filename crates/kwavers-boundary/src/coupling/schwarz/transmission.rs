@@ -1,7 +1,7 @@
 //! `apply_transmission` — Schwarz transmission-condition dispatcher across
 //! the four canonical branches (Dirichlet / Neumann / Robin / Optimized).
 
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 
 use super::SchwarzBoundary;
 use crate::coupling::types::BoundaryTransmissionCondition;
@@ -30,9 +30,14 @@ impl SchwarzBoundary {
         match self.transmission_condition {
             BoundaryTransmissionCondition::Dirichlet => {
                 // Direct copying: u_interface = u_neighbor
-                interface_field.zip_mut_with(neighbor_field, |i, &n| {
-                    *i = n;
-                });
+                let [nx, ny, nz] = interface_field.shape();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            interface_field[[i, j, k]] = neighbor_field[[i, j, k]];
+                        }
+                    }
+                }
             }
             BoundaryTransmissionCondition::Neumann => {
                 // Neumann flux continuity: ∂u₁/∂n = ∂u₂/∂n
@@ -42,13 +47,14 @@ impl SchwarzBoundary {
                 // 2. Compute ∂u/∂n on neighbor side using centered differences.
                 // 3. Apply correction: Δu = Δx * (grad_neighbor - grad_interface) / 2
                 // 4. Update interface field: u_new = u_old + Δu
-                let (nx, ny, nz) = interface_field.dim();
+                let [nx, ny, nz] = interface_field.shape();
+                let interface_snapshot = interface_field.as_view().to_contiguous();
 
                 for i in 0..nx {
                     for j in 0..ny {
                         for k in 0..nz {
                             let grad_interface =
-                                Self::compute_normal_gradient(&interface_field.to_owned(), i, j, k);
+                                Self::compute_normal_gradient(&interface_snapshot, i, j, k);
                             let grad_neighbor =
                                 Self::compute_normal_gradient(neighbor_field, i, j, k);
 
@@ -73,7 +79,7 @@ impl SchwarzBoundary {
                 // 3. Calculate Robin-corrected value: (β - ∂u/∂n) / α.
                 // 4. Blend interface, neighbor, and Robin values for stability.
                 // 5. Update: u_new = (u_interface + α·u_neighbor + robin_value) / (2 + α).
-                let (nx, ny, nz) = interface_field.dim();
+                let [nx, ny, nz] = interface_field.shape();
 
                 if alpha.abs() < 1e-12 {
                     // α ≈ 0: degenerate case → reduces to Neumann condition.
@@ -101,10 +107,17 @@ impl SchwarzBoundary {
             BoundaryTransmissionCondition::Optimized => {
                 // Optimized Schwarz with relaxation.
                 // u_new = (1−θ)·u_old + θ·u_neighbor.
-                interface_field.zip_mut_with(neighbor_field, |i, &n| {
-                    *i = (1.0 - self.relaxation_parameter)
-                        .mul_add(*i, self.relaxation_parameter * n);
-                });
+                let [nx, ny, nz] = interface_field.shape();
+                for i in 0..nx {
+                    for j in 0..ny {
+                        for k in 0..nz {
+                            let current = interface_field[[i, j, k]];
+                            let neighbor = neighbor_field[[i, j, k]];
+                            interface_field[[i, j, k]] = (1.0 - self.relaxation_parameter)
+                                .mul_add(current, self.relaxation_parameter * neighbor);
+                        }
+                    }
+                }
             }
         }
     }

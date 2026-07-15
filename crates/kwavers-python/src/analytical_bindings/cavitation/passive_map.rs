@@ -1,7 +1,7 @@
 //! Passive acoustic map and receiver-array PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -29,7 +29,7 @@ pub fn integrate_receiver_array_psd(
     let (n_channels, n_bins) = arr.dim();
     let flat: Vec<f64> = arr.iter().copied().collect();
     let result = cavitation::integrate_receiver_array_psd(&flat, n_channels, n_bins);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Integrate a passive-acoustic-map emission-energy field over a sonication volume.

@@ -7,7 +7,7 @@ use super::super::{
 };
 use super::transfer::estimate_collapse_energy;
 use kwavers_core::constants::fundamental::AVOGADRO;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Sonochemical yield parameters
@@ -63,7 +63,7 @@ impl SonochemistryModel {
             radical_kinetics: RadicalKinetics::new(initial_ph, 298.15),
             yields: HashMap::new(),
             shape,
-            ph_field: Array3::from_elem(shape, initial_ph),
+            ph_field: Array3::from_elem([nx, ny, nz], initial_ph),
         }
     }
 
@@ -76,7 +76,7 @@ impl SonochemistryModel {
     ) {
         self.yields.clear();
 
-        for ((i, j, k), state) in bubble_states.indexed_iter() {
+        for ([i, j, k], state) in bubble_states.indexed_iter() {
             if state.is_collapsing && state.temperature > 2000.0 {
                 let water_vapor_fraction = state.n_vapor / (state.n_gas + state.n_vapor);
                 let generation_rates = calculate_ros_generation(
@@ -184,7 +184,7 @@ impl SonochemistryModel {
 
                     for (species, rate) in rate_changes {
                         if let Some(field) = self.ros_concentrations.get_mut(species) {
-                            field[[i, j, k]] = rate.mul_add(dt, field[[i, j, k]]).max(0.0);
+                            field[[i, j, k]] = (rate * dt + field[[i, j, k]]).max(0.0);
                         }
                     }
                 }
@@ -229,7 +229,7 @@ impl SonochemistryModel {
     #[must_use]
     pub fn oxidative_stress(&self) -> Array3<f64> {
         let stress_value = self.ros_concentrations.oxidative_stress_index();
-        Array3::from_elem(self.shape, stress_value)
+        Array3::from_elem([self.shape.0, self.shape.1, self.shape.2], stress_value)
     }
 
     /// Update pH based on chemical reactions
@@ -238,7 +238,11 @@ impl SonochemistryModel {
             self.ros_concentrations.get(ROSSpecies::HydrogenPeroxide),
             self.ros_concentrations.get(ROSSpecies::HydroxylRadical),
         ) {
-            for ((i, j, k), ph) in self.ph_field.indexed_iter_mut() {
+            for ([i, j, k], ph) in self
+                .ph_field
+                .indexed_iter_mut()
+                .expect("ph_field indexed_iter_mut failed")
+            {
                 let h2o2_effect = -0.1 * h2o2[[i, j, k]] / 1e-3;
                 let oh_effect = 0.5 * oh[[i, j, k]] / 1e-6;
                 *ph = (h2o2_effect + oh_effect).mul_add(dt, *ph).clamp(2.0, 12.0);

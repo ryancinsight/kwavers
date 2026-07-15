@@ -2,7 +2,7 @@ use crate::transducers::focused::bowl::{BowlConfig, BowlTransducer};
 use kwavers_grid::Grid;
 use kwavers_signal::Signal;
 use kwavers_source::Source;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -83,19 +83,19 @@ fn build_element_map(transducer: &BowlTransducer, grid: &Grid) -> ElementMap {
 
 impl Source for FocusedSource {
     fn create_mask(&self, grid: &Grid) -> Array3<f64> {
-        let mut mask = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut mask = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         self.create_mask_into(grid, &mut mask);
         mask
     }
 
     fn create_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
         mask.fill(0.0);
         self.add_mask_into(grid, mask);
     }
 
     fn add_mask_into(&self, grid: &Grid, mask: &mut Array3<f64>) {
-        debug_assert_eq!(mask.dim(), (grid.nx, grid.ny, grid.nz));
+        debug_assert_eq!(mask.shape(), [grid.nx, grid.ny, grid.nz]);
 
         for (key, indices) in &self.element_map {
             let (ix, iy, iz) = *key;
@@ -104,7 +104,7 @@ impl Source for FocusedSource {
                 for &idx in indices {
                     weight_sum += self.transducer.element_areas[idx];
                 }
-                mask[(ix, iy, iz)] += weight_sum;
+                mask[[ix, iy, iz]] += weight_sum;
             }
         }
     }

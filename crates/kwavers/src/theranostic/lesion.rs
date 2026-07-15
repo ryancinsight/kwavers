@@ -29,7 +29,10 @@
 
 use kwavers_physics::acoustics::bubble_dynamics::wood_sound_speed;
 use kwavers_physics::thermal::TemperatureCoefficients;
-use ndarray::{Array3, Zip};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
+
+use crate::parallel::zip_mut_ref;
 
 /// CEM43 thermal dose [equivalent minutes at 43 °C] at which soft tissue is
 /// taken as coagulated/ablated.
@@ -64,7 +67,7 @@ pub enum LesionState<'a> {
     /// Thermal: per-voxel temperature [°C] with the linear sound-speed law.
     Thermal {
         /// Temperature field [°C], same shape as the base sound-speed field.
-        temperature_c: &'a Array3<f64>,
+        temperature_c: &'a LetoArray3<f64>,
         /// Reference (baseline) temperature [°C] at which `base_c` is defined.
         reference_c: f64,
         /// Tissue temperature coefficients (e.g. [`TemperatureCoefficients::soft_tissue`]).
@@ -84,14 +87,23 @@ pub enum LesionState<'a> {
 #[must_use]
 pub fn thermal_perturbed_sound_speed(
     base_c: &Array3<f64>,
-    temperature_c: &Array3<f64>,
+    temperature_c: &LetoArray3<f64>,
     reference_c: f64,
     coeff: &TemperatureCoefficients,
 ) -> Array3<f64> {
+    let [nx, ny, nz] = temperature_c.shape();
+    assert_eq!(
+        base_c.shape(),
+        [nx, ny, nz],
+        "invariant: thermal lesion perturbation requires matching base and temperature shapes"
+    );
     let mut out = base_c.clone();
-    Zip::from(&mut out).and(temperature_c).for_each(|c, &t| {
-        *c = coeff.sound_speed(*c, t, reference_c);
-    });
+    for ([i, j, k], c) in out
+        .indexed_iter_mut()
+        .expect("invariant: contiguous lesion field")
+    {
+        *c = coeff.sound_speed(*c, temperature_c[[i, j, k]], reference_c);
+    }
     out
 }
 
@@ -104,8 +116,13 @@ pub fn cavitation_perturbed_sound_speed(
     base_c: &Array3<f64>,
     void_fraction: &Array3<f64>,
 ) -> Array3<f64> {
+    assert_eq!(
+        base_c.shape(),
+        void_fraction.shape(),
+        "invariant: cavitation lesion perturbation requires matching base and void-fraction shapes"
+    );
     let mut out = base_c.clone();
-    Zip::from(&mut out).and(void_fraction).for_each(|c, &beta| {
+    zip_mut_ref(out.view_mut(), void_fraction.view(), |c, &beta| {
         *c = wood_sound_speed(beta, *c, RHO_LIQUID_DEFAULT, C_GAS_DEFAULT, RHO_GAS_DEFAULT);
     });
     out
@@ -130,20 +147,20 @@ pub fn perturb_sound_speed(base_c: &Array3<f64>, state: &LesionState<'_>) -> Arr
 ///
 /// Use [`ABLATION_CEM43_THRESHOLD_MIN`] for the standard ablation iso-effect.
 #[must_use]
-pub fn lesion_mask(cem43_dose: &Array3<f64>, threshold_min: f64) -> Array3<bool> {
+pub fn lesion_mask(cem43_dose: &LetoArray3<f64>, threshold_min: f64) -> LetoArray3<bool> {
     cem43_dose.mapv(|d| d >= threshold_min)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn thermal_shift_matches_linear_law() {
         // soft_tissue ∂c/∂T = 2 m/s/°C; +10 °C over reference → +20 m/s.
         let base = Array3::from_elem((2, 2, 2), 1540.0);
-        let temp = Array3::from_elem((2, 2, 2), 47.0);
+        let temp = LetoArray3::from_elem([2, 2, 2], 47.0);
         let coeff = TemperatureCoefficients::soft_tissue();
         let out = thermal_perturbed_sound_speed(&base, &temp, 37.0, &coeff);
         for &c in out.iter() {
@@ -157,7 +174,7 @@ mod tests {
     #[test]
     fn thermal_no_rise_is_identity() {
         let base = Array3::from_elem((2, 1, 3), 1500.0);
-        let temp = Array3::from_elem((2, 1, 3), 37.0);
+        let temp = LetoArray3::from_elem([2, 1, 3], 37.0);
         let coeff = TemperatureCoefficients::soft_tissue();
         let out = thermal_perturbed_sound_speed(&base, &temp, 37.0, &coeff);
         for &c in out.iter() {
@@ -198,8 +215,17 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "cavitation lesion perturbation")]
+    fn cavitation_rejects_shape_mismatch() {
+        let base = Array3::from_elem((2, 1, 1), 1540.0);
+        let beta = Array3::from_elem((1, 1, 1), 0.0);
+
+        let _ = cavitation_perturbed_sound_speed(&base, &beta);
+    }
+
+    #[test]
     fn lesion_mask_thresholds_dose() {
-        let mut dose = Array3::from_elem((2, 1, 2), 0.0);
+        let mut dose = LetoArray3::from_elem([2, 1, 2], 0.0);
         dose[[0, 0, 0]] = ABLATION_CEM43_THRESHOLD_MIN + 1.0;
         dose[[1, 0, 1]] = ABLATION_CEM43_THRESHOLD_MIN - 1.0;
         let mask = lesion_mask(&dose, ABLATION_CEM43_THRESHOLD_MIN);
@@ -211,7 +237,7 @@ mod tests {
     #[test]
     fn dispatch_matches_direct_calls() {
         let base = Array3::from_elem((2, 2, 2), 1530.0);
-        let temp = Array3::from_elem((2, 2, 2), 50.0);
+        let temp = LetoArray3::from_elem([2, 2, 2], 50.0);
         let coeff = TemperatureCoefficients::soft_tissue();
         let via_dispatch = perturb_sound_speed(
             &base,

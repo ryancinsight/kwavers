@@ -78,7 +78,7 @@ pub(crate) fn write_three_dimensional_diagnostics(
 }
 
 fn sample_skull_boundary(ct: &CtVolume) -> SkullSample {
-    let (nx, ny, nz) = ct.hu.dim();
+    let [nx, ny, nz] = ct.hu.shape();
     let center_x = 0.5 * (nx.saturating_sub(1) as f64);
     let center_y = 0.5 * (ny.saturating_sub(1) as f64);
     let center_z = 0.5 * (nz.saturating_sub(1) as f64);
@@ -226,7 +226,7 @@ fn write_svg(
 }
 
 fn sample_anterior_air_cavities(ct: &CtVolume, skull: &SkullSample) -> AirCavitySample {
-    let (nx, ny, nz) = ct.hu.dim();
+    let [nx, ny, nz] = ct.hu.shape();
     let center_x = 0.5 * (nx.saturating_sub(1) as f64);
     let center_y = 0.5 * (ny.saturating_sub(1) as f64);
     let center_z = 0.5 * (nz.saturating_sub(1) as f64);
@@ -308,7 +308,7 @@ fn ap_bone_span_display_mm(
     center_y: f64,
     sy: f64,
 ) -> Option<(f64, f64)> {
-    let (_, ny, _) = ct.hu.dim();
+    let [_, ny, _] = ct.hu.shape();
     let mut posterior = f64::INFINITY;
     let mut anterior = f64::NEG_INFINITY;
     for y in 0..ny {

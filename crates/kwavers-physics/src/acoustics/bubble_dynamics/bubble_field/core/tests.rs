@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
 

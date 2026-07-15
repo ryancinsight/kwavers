@@ -2,7 +2,7 @@
 //! k-space correction error, CFL stability limit).
 
 use kwavers_physics::analytical::wave;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -25,7 +25,7 @@ pub fn fdtd_phase_error_1d(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::fdtd_phase_error_1d(kh_slice, cfl);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute centered finite-difference modified wavenumber `k* dx`.
@@ -41,7 +41,7 @@ pub fn centered_fd_modified_wavenumber(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         wave::centered_fd_modified_wavenumber(kh_slice, order).map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute PSTD numerical phase error.
@@ -58,7 +58,7 @@ pub fn pstd_phase_error(py: Python<'_>, kh: PyReadonlyArray1<f64>) -> PyResult<P
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::pstd_phase_error(kh_slice);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute k-space dispersion-correction phase error.
@@ -80,7 +80,7 @@ pub fn kspace_correction_error(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::kspace_correction_error(kh_slice, cfl);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute k-space temporal sinc correction factor.
@@ -95,7 +95,7 @@ pub fn kspace_temporal_correction(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::kspace_temporal_correction(kh_slice, cfl).map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the FDTD CFL stability limit for an n-dimensional grid.
@@ -129,5 +129,5 @@ pub fn fdtd_cfl_stability_region_2d(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::fdtd_cfl_stability_region_2d(cfl_x_slice, cfl_z_slice)
         .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

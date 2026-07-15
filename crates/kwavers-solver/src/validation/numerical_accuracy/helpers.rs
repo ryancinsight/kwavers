@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 pub(crate) fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> {
     let n = field.len();
@@ -31,7 +31,7 @@ pub(crate) fn compute_laplacian_1d(field: &Array1<f64>, dx: f64) -> Array1<f64> 
 /// so any conserved-sum PDE (e.g., heat equation ∂T/∂t = α∇²T with Σu = const)
 /// is preserved to floating-point precision.
 pub(crate) fn compute_laplacian_3d(field: &Array3<f64>, dx: f64) -> Array3<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let mut lap = Array3::zeros((nx, ny, nz));
     let dx2_inv = 1.0 / (dx * dx);
     for i in 0..nx {

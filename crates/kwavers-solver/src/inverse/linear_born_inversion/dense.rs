@@ -5,7 +5,7 @@
 //! adapters own geometry, media, and active-voxel extraction, then pass the
 //! assembled dense operator here.
 
-use rayon::prelude::*;
+use moirai_parallel::{fold_reduce_with, reduce_index_with, Adaptive};
 
 use super::LinearBornInversionConfig;
 
@@ -44,30 +44,25 @@ pub fn normal_equation_diagonal_rows(
     ncols: usize,
     regularization: f64,
 ) -> Vec<f64> {
-    let mut diagonal = rows
-        .par_chunks(row_chunk_len(rows.len()))
-        .fold(
-            || vec![0.0f64; ncols],
-            |mut partial, chunk| {
-                for &row in chunk {
-                    let base = row * ncols;
-                    for col in 0..ncols {
-                        let a = matrix[base + col];
-                        partial[col] += a * a;
-                    }
-                }
-                partial
-            },
-        )
-        .reduce(
-            || vec![0.0f64; ncols],
-            |mut a, b| {
-                for (ai, bi) in a.iter_mut().zip(&b) {
-                    *ai += bi;
-                }
-                a
-            },
-        );
+    let mut diagonal = fold_reduce_with::<Adaptive, _, _, _, _>(
+        rows.len(),
+        || vec![0.0f64; ncols],
+        |mut partial, row_index| {
+            let row = rows[row_index];
+            let base = row * ncols;
+            for col in 0..ncols {
+                let a = matrix[base + col];
+                partial[col] += a * a;
+            }
+            partial
+        },
+        |mut a, b| {
+            for (ai, bi) in a.iter_mut().zip(&b) {
+                *ai += bi;
+            }
+            a
+        },
+    );
     let reg = regularization.max(1.0e-12);
     for d in &mut diagonal {
         *d += reg;
@@ -98,17 +93,14 @@ where
     F: Fn(usize) -> f64 + Sync,
 {
     let mut data = vec![0.0; nrows];
-    data.par_iter_mut()
-        .enumerate()
-        .take(nrows)
-        .for_each(|(row, value)| {
-            let base = row * ncols;
-            let mut acc = 0.0;
-            for col in 0..ncols {
-                acc += matrix[base + col] * x(col);
-            }
-            *value = acc;
-        });
+    for (row, value) in data.iter_mut().enumerate() {
+        let base = row * ncols;
+        let mut acc = 0.0;
+        for col in 0..ncols {
+            acc += matrix[base + col] * x(col);
+        }
+        *value = acc;
+    }
     data
 }
 
@@ -134,50 +126,45 @@ pub fn objective_rows(
     ncols: usize,
     regularization: f64,
 ) -> f64 {
-    let misfit: f64 = rows
-        .par_chunks(row_chunk_len(rows.len()))
-        .map(|chunk| {
-            let mut sum = 0.0;
-            for &row in chunk {
-                let datum = data[row];
-                let base = row * ncols;
-                let mut pred = 0.0;
-                for col in 0..ncols {
-                    pred += matrix[base + col] * model[col];
-                }
-                let residual = datum - pred;
-                sum += 0.5 * residual * residual;
+    let misfit = reduce_index_with::<Adaptive, _, _, _>(
+        rows.len(),
+        0.0,
+        |row_index| {
+            let row = rows[row_index];
+            let datum = data[row];
+            let base = row * ncols;
+            let mut pred = 0.0;
+            for col in 0..ncols {
+                pred += matrix[base + col] * model[col];
             }
-            sum
-        })
-        .sum::<f64>();
+            let residual = datum - pred;
+            0.5 * residual * residual
+        },
+        |a, b| a + b,
+    );
     misfit + 0.5 * regularization * model.iter().map(|v| v * v).sum::<f64>()
 }
 
 fn adjoint_rows(matrix: &[f64], data: &[f64], rows: &[usize], ncols: usize) -> Vec<f64> {
-    rows.par_chunks(row_chunk_len(rows.len()))
-        .fold(
-            || vec![0.0f64; ncols],
-            |mut partial, chunk| {
-                for &row in chunk {
-                    let datum = data[row];
-                    let base = row * ncols;
-                    for col in 0..ncols {
-                        partial[col] += matrix[base + col] * datum;
-                    }
-                }
-                partial
-            },
-        )
-        .reduce(
-            || vec![0.0f64; ncols],
-            |mut a, b| {
-                for (ai, bi) in a.iter_mut().zip(&b) {
-                    *ai += bi;
-                }
-                a
-            },
-        )
+    fold_reduce_with::<Adaptive, _, _, _, _>(
+        rows.len(),
+        || vec![0.0f64; ncols],
+        |mut partial, row_index| {
+            let row = rows[row_index];
+            let datum = data[row];
+            let base = row * ncols;
+            for col in 0..ncols {
+                partial[col] += matrix[base + col] * datum;
+            }
+            partial
+        },
+        |mut a, b| {
+            for (ai, bi) in a.iter_mut().zip(&b) {
+                *ai += bi;
+            }
+            a
+        },
+    )
 }
 
 fn adjoint_residual_rows(
@@ -187,39 +174,30 @@ fn adjoint_residual_rows(
     rows: &[usize],
     ncols: usize,
 ) -> Vec<f64> {
-    rows.par_chunks(row_chunk_len(rows.len()))
-        .fold(
-            || vec![0.0f64; ncols],
-            |mut partial, chunk| {
-                for &row in chunk {
-                    let datum = data[row];
-                    let base = row * ncols;
-                    let mut pred = 0.0;
-                    for col in 0..ncols {
-                        pred += matrix[base + col] * model[col];
-                    }
-                    let residual = datum - pred;
-                    for col in 0..ncols {
-                        partial[col] += matrix[base + col] * residual;
-                    }
-                }
-                partial
-            },
-        )
-        .reduce(
-            || vec![0.0f64; ncols],
-            |mut a, b| {
-                for (ai, bi) in a.iter_mut().zip(&b) {
-                    *ai += bi;
-                }
-                a
-            },
-        )
-}
-
-fn row_chunk_len(row_count: usize) -> usize {
-    let target_chunks = rayon::current_num_threads().max(1) * 4;
-    row_count.div_ceil(target_chunks).max(1)
+    fold_reduce_with::<Adaptive, _, _, _, _>(
+        rows.len(),
+        || vec![0.0f64; ncols],
+        |mut partial, row_index| {
+            let row = rows[row_index];
+            let datum = data[row];
+            let base = row * ncols;
+            let mut pred = 0.0;
+            for col in 0..ncols {
+                pred += matrix[base + col] * model[col];
+            }
+            let residual = datum - pred;
+            for col in 0..ncols {
+                partial[col] += matrix[base + col] * residual;
+            }
+            partial
+        },
+        |mut a, b| {
+            for (ai, bi) in a.iter_mut().zip(&b) {
+                *ai += bi;
+            }
+            a
+        },
+    )
 }
 
 #[cfg(test)]

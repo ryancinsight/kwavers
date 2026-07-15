@@ -1,7 +1,7 @@
 //! Basic fusion configuration, registration, and weighted-average tests.
 
 use super::super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_fusion_config_creation_and_defaults() {
@@ -25,7 +25,7 @@ fn test_multimodal_fusion_registration() {
     assert_eq!(fusion.num_registered_modalities(), 0);
 
     // Register ultrasound
-    let us_data = Array3::<f64>::from_elem((8, 8, 4), 1.0);
+    let us_data = Array3::<f64>::from_elem([8, 8, 4], 1.0);
     fusion.register_ultrasound(&us_data).unwrap();
 
     assert_eq!(fusion.num_registered_modalities(), 1);
@@ -38,7 +38,7 @@ fn test_weighted_average_fusion_two_modalities() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
 
-    let shape = (8, 8, 4);
+    let shape = [8, 8, 4];
 
     // Register two modalities with known values
     fusion
@@ -56,8 +56,8 @@ fn test_weighted_average_fusion_two_modalities() {
     let result = fusion.fuse().unwrap();
 
     // Verify dimensions
-    assert_eq!(result.intensity_image.dim(), shape);
-    assert_eq!(result.confidence_map.dim(), shape);
+    assert_eq!(result.intensity_image.shape(), shape);
+    assert_eq!(result.confidence_map.shape(), shape);
 
     // Verify weighted average calculation (defaults to 1.0 for each modality)
     let w_us = fusion
@@ -84,7 +84,7 @@ fn test_weighted_average_fusion_three_modalities() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
 
-    let shape = (6, 6, 3);
+    let shape = [6, 6, 3];
 
     // Register three modalities
     fusion
@@ -109,7 +109,7 @@ fn test_weighted_average_fusion_three_modalities() {
 
     let result = fusion.fuse().unwrap();
 
-    assert_eq!(result.intensity_image.dim(), shape);
+    assert_eq!(result.intensity_image.shape(), shape);
     assert_eq!(result.modality_quality.len(), 3);
 
     // Verify all modalities contributed (defaults to 1.0 for each modality)
@@ -150,7 +150,7 @@ fn test_fusion_insufficient_modalities() {
     // Attempt fusion with only one modality
     let mut fusion = MultiModalFusion::new(config);
     fusion
-        .register_ultrasound(&Array3::zeros((4, 4, 2)))
+        .register_ultrasound(&Array3::zeros([4, 4, 2]))
         .unwrap();
     let result = fusion.fuse();
     assert!(result.is_err());

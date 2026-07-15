@@ -24,7 +24,20 @@
 //!   Comput. 7(3), 856–869. DOI: 10.1137/0907058
 
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
+
+/// Dense residual `r = rhs − A·x` via native leto matvec.
+fn gmres_residual(a: &Array2<f64>, rhs: &Array1<f64>, x: &Array1<f64>) -> Array1<f64> {
+    let n = rhs.len();
+    let mut ax = Array1::<f64>::zeros(n);
+    leto_ops::matvec(&a.view(), &x.view(), &mut ax.view_mut())
+        .expect("invariant: GMRES residual A·x shapes conform");
+    let mut r = Array1::<f64>::zeros(n);
+    for i in 0..n {
+        r[i] = rhs[i] - ax[i];
+    }
+    r
+}
 
 /// Solve `A·x = b` using preconditioned restarted GMRES.
 ///
@@ -53,7 +66,7 @@ pub fn solve_gmres(
     let n = rhs.len();
     debug_assert_eq!(
         a.shape(),
-        &[n, n],
+        [n, n],
         "A must be N×N square; got {:?}",
         a.shape()
     );
@@ -86,13 +99,17 @@ pub fn solve_gmres(
 
     for _outer in 0..max_iter {
         // r = M⁻¹(b − Ax)
-        let ax = a.dot(&x);
+        let mut ax = Array1::<f64>::zeros(n);
+        leto_ops::matvec(&a.view(), &x.view(), &mut ax.view_mut())
+            .expect("invariant: GMRES A·x shapes conform");
         let mut r = Array1::<f64>::zeros(n);
         for i in 0..n {
             r[i] = precond[i] * (rhs[i] - ax[i]);
         }
 
-        let beta = r.dot(&r).sqrt();
+        let beta = leto_ops::dot(&r.view(), &r.view())
+            .expect("invariant: GMRES residual self-dot")
+            .sqrt();
         if beta / pb_norm < tol {
             return Ok(x);
         }
@@ -112,9 +129,13 @@ pub fn solve_gmres(
 
         let mut j_end = m;
         for j in 0..m {
-            // w = M⁻¹ · A · v[:,j]
-            let v_j: Array1<f64> = v.column(j).to_owned();
-            let av_j = a.dot(&v_j);
+            // w = M⁻¹ · A · v[:,j]  (v_j is the strided column view; matvec handles strides)
+            let v_j = v
+                .index_axis::<1>(1, j)
+                .expect("invariant: GMRES Krylov column in range");
+            let mut av_j = Array1::<f64>::zeros(n);
+            leto_ops::matvec(&a.view(), &v_j, &mut av_j.view_mut())
+                .expect("invariant: GMRES A·v_j shapes conform");
             let mut w = Array1::<f64>::zeros(n);
             for i in 0..n {
                 w[i] = precond[i] * av_j[i];
@@ -122,14 +143,18 @@ pub fn solve_gmres(
 
             // Modified Gram-Schmidt
             for i in 0..=j {
-                let v_i = v.column(i);
+                let v_i = v
+                    .index_axis::<1>(1, i)
+                    .expect("invariant: GMRES MGS column in range");
                 let hij: f64 = v_i.iter().zip(w.iter()).map(|(&a, &b)| a * b).sum();
                 h[[i, j]] = hij;
                 for k in 0..n {
                     w[k] -= hij * v_i[k];
                 }
             }
-            let h_jp1 = w.dot(&w).sqrt();
+            let h_jp1 = leto_ops::dot(&w.view(), &w.view())
+                .expect("invariant: GMRES Arnoldi self-dot")
+                .sqrt();
             h[[j + 1, j]] = h_jp1;
 
             // Apply previous Givens rotations
@@ -183,24 +208,37 @@ pub fn solve_gmres(
 
         // Update solution: x += V[:,0..j_end] · y
         for k in 0..j_end {
-            let v_k = v.column(k).to_owned();
+            let v_k = v
+                .index_axis::<1>(1, k)
+                .expect("invariant: GMRES update column in range");
             for i in 0..n {
                 x[i] += y[k] * v_k[i];
             }
         }
 
         // Final convergence check
-        let r_final: Array1<f64> = rhs - &a.dot(&x);
-        let r_norm: f64 = r_final.dot(&r_final).sqrt();
-        let b_norm: f64 = rhs.dot(rhs).sqrt().max(1e-300);
+        let r_final = gmres_residual(a, rhs, &x);
+        let r_norm: f64 = leto_ops::dot(&r_final.view(), &r_final.view())
+            .expect("invariant: GMRES residual self-dot")
+            .sqrt();
+        let b_norm: f64 = leto_ops::dot(&rhs.view(), &rhs.view())
+            .expect("invariant: GMRES rhs self-dot")
+            .sqrt()
+            .max(1e-300);
         if r_norm / b_norm < tol {
             return Ok(x);
         }
     }
 
     // Non-convergence
-    let r_final: Array1<f64> = rhs - &a.dot(&x);
-    let final_res = r_final.dot(&r_final).sqrt() / rhs.dot(rhs).sqrt().max(1e-300);
+    let r_final = gmres_residual(a, rhs, &x);
+    let final_res = leto_ops::dot(&r_final.view(), &r_final.view())
+        .expect("invariant: GMRES residual self-dot")
+        .sqrt()
+        / leto_ops::dot(&rhs.view(), &rhs.view())
+            .expect("invariant: GMRES rhs self-dot")
+            .sqrt()
+            .max(1e-300);
     Err(KwaversError::Numerical(NumericalError::ConvergenceFailed {
         method: "GMRES".to_owned(),
         iterations: max_iter * restart,
@@ -231,8 +269,9 @@ mod tests {
                 a[[i, i + 1]] = -1.0;
             }
         }
-        let x_true = Array1::from_vec(vec![1.0, 2.0, 3.0, 4.0, 5.0]);
-        let rhs = a.dot(&x_true);
+        let x_true = Array1::from_vec(5, vec![1.0, 2.0, 3.0, 4.0, 5.0]).unwrap();
+        let mut rhs = Array1::<f64>::zeros(n);
+        leto_ops::matvec(&a.view(), &x_true.view(), &mut rhs.view_mut()).unwrap();
 
         let x_gmres = solve_gmres(&a, &rhs, 1e-12, 20, 10).unwrap();
 
@@ -268,9 +307,11 @@ mod tests {
 
         let x = solve_gmres(&a, &rhs, 1e-12, 1, n).unwrap();
 
-        let residual: Array1<f64> = rhs.clone() - a.dot(&x);
-        let res_norm = residual.dot(&residual).sqrt();
-        let rhs_norm = rhs.dot(&rhs).sqrt();
+        let residual = gmres_residual(&a, &rhs, &x);
+        let res_norm = leto_ops::dot(&residual.view(), &residual.view())
+            .unwrap()
+            .sqrt();
+        let rhs_norm = leto_ops::dot(&rhs.view(), &rhs.view()).unwrap().sqrt();
         assert!(
             res_norm / rhs_norm < 1e-10,
             "GMRES residual too large: rel={:.3e}",

@@ -1,6 +1,6 @@
 //! `PerfusionMap` and `PerfusionStatistics` — quantitative perfusion analysis.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Perfusion map containing quantitative perfusion parameters
 #[derive(Debug, Clone)]

@@ -68,7 +68,7 @@ fn test_apply_x_linear_function() {
     let dx = 0.1;
     let op = CentralDifference2::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((10, 5, 5));
+    let mut field = Array3::zeros([10, 5, 5]);
     for i in 0..10 {
         for j in 0..5 {
             for k in 0..5 {
@@ -97,7 +97,7 @@ fn test_apply_y_linear_function() {
     let dy = 0.1;
     let op = CentralDifference2::new(dy, dy, dy).unwrap();
 
-    let mut field = Array3::zeros((5, 10, 5));
+    let mut field = Array3::zeros([5, 10, 5]);
     for i in 0..5 {
         for j in 0..10 {
             for k in 0..5 {
@@ -125,7 +125,7 @@ fn test_apply_z_linear_function() {
     let dz = 0.1;
     let op = CentralDifference2::new(dz, dz, dz).unwrap();
 
-    let mut field = Array3::zeros((5, 5, 10));
+    let mut field = Array3::zeros([5, 5, 10]);
     for i in 0..5 {
         for j in 0..5 {
             for k in 0..10 {
@@ -172,9 +172,9 @@ fn test_constant_field_has_zero_derivative() {
 fn test_insufficient_grid_points() {
     let op = CentralDifference2::new(0.1, 0.1, 0.1).unwrap();
 
-    let field_x = Array3::zeros((2, 10, 10));
-    let field_y = Array3::zeros((10, 2, 10));
-    let field_z = Array3::zeros((10, 10, 2));
+    let field_x = Array3::zeros([2, 10, 10]);
+    let field_y = Array3::zeros([10, 2, 10]);
+    let field_z = Array3::zeros([10, 10, 2]);
 
     assert_insufficient_grid_points(op.apply_x(field_x.view()), 3, 2, "X");
     assert_insufficient_grid_points(op.apply_y(field_y.view()), 3, 2, "Y");

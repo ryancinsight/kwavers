@@ -1,6 +1,6 @@
 //! CPU beamforming kernels for 3D ultrasound.
 //!
-//! Provides Rayon-parallelised, analytically specified implementations of:
+//! Provides Moirai-parallel, analytically specified implementations of:
 //! - Delay-and-Sum (DAS) — coherent receive summation with apodization.
 //! - Minimum Variance Distortionless Response (MVDR / Capon) — adaptive
 //!   covariance beamforming with spatial smoothing and diagonal loading.
@@ -13,7 +13,7 @@
 //! - [`das`]: Delay-and-Sum with fractional-delay linear interpolation and
 //!   full apodization support.
 //! - [`mvdr`]: MVDR with spatially-smoothed covariance (Shan & Kailath 1985),
-//!   relative diagonal loading, and Cholesky/LU solve via nalgebra.
+//!   relative diagonal loading, and the Leto-owned linear-solver surface.
 
 pub mod das;
 pub mod mvdr;

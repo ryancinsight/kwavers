@@ -11,10 +11,10 @@
 //! This represents the complete interdisciplinary pathway from sound to light.
 
 #[cfg(feature = "pinn")]
-use burn::backend::{Autodiff, NdArray};
+use coeus_core::MoiraiBackend;
 use kwavers_core::error::KwaversResult;
 #[cfg(feature = "pinn")]
-use kwavers_solver::inverse::pinn::ml::physics::PhysicsParameters;
+use kwavers_solver::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
 #[cfg(feature = "pinn")]
 use kwavers_solver::inverse::pinn::ml::universal_solver::{
     UniversalPINNSolver, UniversalTrainingConfig,
@@ -23,7 +23,7 @@ use kwavers_solver::inverse::pinn::ml::universal_solver::{
 use std::time::Instant;
 
 #[cfg(feature = "pinn")]
-type Backend = Autodiff<NdArray<f32>>;
+type Backend = MoiraiBackend;
 #[cfg(feature = "pinn")]
 fn main() -> KwaversResult<()> {
     println!("🔬 Multi-Physics Sonoluminescence Coupling Simulation");
@@ -51,7 +51,7 @@ fn main() -> KwaversResult<()> {
     }
 
     // Physics parameters for the coupled system
-    let mut physics_params = PhysicsParameters {
+    let mut physics_params = PinnDomainPhysicsParameters {
         material_properties: [
             ("ambient_pressure".to_string(), 101325.0),     // 1 atm
             ("liquid_density".to_string(), 1000.0),         // Water density (kg/m³)

@@ -9,7 +9,7 @@
 //! - Mallat (2008): "A Wavelet Tour of Signal Processing"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::core::WaveletTransform;
 
@@ -28,7 +28,7 @@ impl WaveletTransform {
         let g = Self::wavelet_highpass_from_lowpass(&h);
 
         // Apply 1D transform along each dimension
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
 
         // Transform along x-axis
         for j in 0..ny {
@@ -79,7 +79,7 @@ impl WaveletTransform {
         let h = Self::daubechies_coefficients(order);
         let g = Self::wavelet_highpass_from_lowpass(&h);
 
-        let (nx, ny, nz) = coeffs.dim();
+        let [nx, ny, nz] = coeffs.shape();
 
         // Inverse transform along z-axis (reverse order from forward)
         for i in 0..nx {

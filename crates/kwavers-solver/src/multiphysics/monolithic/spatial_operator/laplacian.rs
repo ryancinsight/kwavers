@@ -1,41 +1,20 @@
-use ndarray::{Array3, ArrayBase, Data, Ix3};
+use leto::{Array3, ArrayView3};
 
 /// Compute the 3-D Laplacian ∇²f using second-order central differences.
-///
-/// ## Algorithm
-///
-/// ```text
-/// ∇²f[i,j,k] ≈ (f[i+1,j,k] - 2f[i,j,k] + f[i-1,j,k]) / dx²
-///             + (f[i,j+1,k] - 2f[i,j,k] + f[i,j-1,k]) / dy²
-///             + (f[i,j,k+1] - 2f[i,j,k] + f[i,j,k-1]) / dz²
-/// ```
-///
-/// Truncation error: `O(dx², dy², dz²)`. Boundary nodes use homogeneous
-/// Neumann ghost-cell conditions.
-///
-/// The caller owns `lap`, and the kernel overwrites every output cell exactly
-/// once. The input is generic over `ndarray` storage, so owned arrays and
-/// borrowed block views monomorphize to direct indexing code.
-///
-/// Reference: LeVeque, R.J. (2007). *Finite Difference Methods for Ordinary
-/// and Partial Differential Equations*. SIAM. §1.3.
-pub(in crate::multiphysics::monolithic) fn laplacian_3d_into<S>(
-    field: &ArrayBase<S, Ix3>,
-    grid_dims: (usize, usize, usize),
+pub(in crate::multiphysics::monolithic) fn laplacian_3d_into(
+    field: &ArrayView3<'_, f64>,
+    _grid_dims: (usize, usize, usize),
     dx: f64,
     dy: f64,
     dz: f64,
     lap: &mut Array3<f64>,
-) where
-    S: Data<Elem = f64>,
-{
-    let (nx, ny, nz) = field.dim();
+) {
+    let [nx, ny, nz] = field.shape();
     assert_eq!(
-        lap.dim(),
-        (nx, ny, nz),
+        lap.shape(),
+        [nx, ny, nz],
         "Laplacian output must match input field dimensions"
     );
-    let _ = grid_dims;
 
     let inv_dx2 = 1.0 / (dx * dx);
     let inv_dy2 = 1.0 / (dy * dy);

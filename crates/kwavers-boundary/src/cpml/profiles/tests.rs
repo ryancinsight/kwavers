@@ -168,7 +168,7 @@ fn test_precomputed_pml_exp_factors_match_sigma() {
 #[test]
 fn test_fused_pml_matches_sequential_pml() {
     use crate::{Boundary, CPMLBoundary};
-    use ndarray::Array3;
+    use leto::Array3;
 
     let c0 = SOUND_SPEED_WATER_SIM;
     let dx = 1e-3_f64;
@@ -184,8 +184,8 @@ fn test_fused_pml_matches_sequential_pml() {
     let profiles = CPMLProfiles::new(&config, &grid, c0, dt).expect("profiles");
 
     // Construct a non-trivial initial field: random-ish values using deterministic formula.
-    let shape = (nx, nx, nx);
-    let u_init: Array3<f64> = Array3::from_shape_fn(shape, |(i, j, k)| {
+    let shape = [nx, nx, nx];
+    let u_init: Array3<f64> = Array3::from_shape_fn(shape, |[i, j, k]| {
         ((i + 2 * j + 3 * k) as f64 * 0.001).sin()
     });
 
@@ -202,10 +202,14 @@ fn test_fused_pml_matches_sequential_pml() {
     // ── Fused path: u = pml * (pml * u_old - 0) = pml^2 * u_old ────────────
     let mut u_fused = u_init.clone();
     let pml_vx = profiles.pml_vel_x.as_slice().expect("contiguous");
-    ndarray::Zip::indexed(u_fused.view_mut()).for_each(|(i, _j, _k), val| {
+    for i in 0..nx {
         let p = pml_vx[i];
-        *val = p * (p * *val);
-    });
+        for j in 0..nx {
+            for k in 0..nx {
+                u_fused[[i, j, k]] = p * (p * u_fused[[i, j, k]]);
+            }
+        }
+    }
 
     // Both paths must produce identical results (bitwise, or within f64 rounding).
     for i in 0..nx {

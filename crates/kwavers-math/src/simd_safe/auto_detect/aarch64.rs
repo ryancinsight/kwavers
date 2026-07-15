@@ -3,16 +3,16 @@
 //! ## Design
 //!
 //! Signatures match the x86_64 variants so the dispatcher compiles and
-//! executes correctly on aarch64 targets.  The current bodies use ndarray
+//! executes correctly on aarch64 targets. The current bodies use Leto
 //! `Zip`-based implementations identical to the x86_64 fallback path —
 //! LLVM autovectorises these to ASIMD/NEON instructions on `-C target-cpu=native`.
 //!
 //! ## Theorem: LLVM autovectorisation contract
 //!
-//! ndarray `Zip::for_each` over contiguous f64 slices emits a loop with no
+//! Leto element-wise traversal over contiguous `f64` slices emits a loop with no
 //! aliasing.  LLVM's autovectoriser is guaranteed to fold independent
 //! element-wise operations into NEON `FADD`/`FMUL`/`VFMA` instructions when:
-//!   1. The slice is contiguous (ndarray layout check is statically verifiable
+//!   1. The slice is contiguous (the Leto layout check is statically verifiable
 //!      for standard column/row-major `Array3`).
 //!   2. `-C target-cpu=native` or `+neon` feature is active.
 //!   3. No `restrict`-defeating aliasing annotations are required.
@@ -21,7 +21,8 @@
 //! reserved for a future sprint that includes aarch64 CI validation.
 
 pub mod neon {
-    use ndarray::Array3;
+    use crate::simd_safe::auto_detect::ops;
+    use leto::Array3;
 
     /// Add two arrays element-wise: `out[i] = a[i] + b[i]`.
     ///
@@ -31,12 +32,7 @@ pub mod neon {
     ///
     #[inline]
     pub fn add_arrays(a: &Array3<f64>, b: &Array3<f64>, out: &mut Array3<f64>) {
-        debug_assert_eq!(a.shape(), b.shape());
-        debug_assert_eq!(a.shape(), out.shape());
-        ndarray::Zip::from(out)
-            .and(a)
-            .and(b)
-            .for_each(|o, &ai, &bi| *o = ai + bi);
+        ops::add_arrays(a, b, out);
     }
 
     /// Scale array in place: `array[i] *= scalar`.
@@ -44,7 +40,7 @@ pub mod neon {
     /// LLVM autovectorises to `FMUL Vn.2D` on `-C target-cpu=native`.
     #[inline]
     pub fn scale_array(array: &mut Array3<f64>, scalar: f64) {
-        array.par_mapv_inplace(|x| x * scalar);
+        ops::scale_array(array, scalar);
     }
 
     /// Fused multiply-add in place: `c[i] += multiplier * a[i] * b[i]`.
@@ -59,11 +55,6 @@ pub mod neon {
     ///
     #[inline]
     pub fn fma_arrays(a: &Array3<f64>, b: &Array3<f64>, c: &mut Array3<f64>, multiplier: f64) {
-        debug_assert_eq!(a.shape(), b.shape());
-        debug_assert_eq!(a.shape(), c.shape());
-        ndarray::Zip::from(c)
-            .and(a)
-            .and(b)
-            .for_each(|ci, &ai, &bi| *ci += multiplier * ai * bi);
+        ops::fma_arrays(a, b, c, multiplier);
     }
 }

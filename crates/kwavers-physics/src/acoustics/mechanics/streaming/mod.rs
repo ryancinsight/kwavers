@@ -51,7 +51,9 @@
 use kwavers_core::constants::acoustic_parameters::REFERENCE_FREQUENCY_HZ;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+
+use crate::parallel::for_each_indexed_pair_mut;
 
 /// Eckart steady-streaming velocity field driven by acoustic absorption.
 #[derive(Debug)]
@@ -63,7 +65,7 @@ impl StreamingModel {
     #[must_use]
     pub fn new(grid: &Grid) -> Self {
         Self {
-            velocity: Array3::zeros((grid.nx, grid.ny, grid.nz)),
+            velocity: Array3::zeros([grid.nx, grid.ny, grid.nz]),
         }
     }
 
@@ -87,9 +89,10 @@ impl StreamingModel {
         dt: f64,
     ) {
         let length_scale_sq = grid.dx.min(grid.dy).min(grid.dz).powi(2);
-        Zip::indexed(&mut self.velocity)
-            .and(pressure)
-            .for_each(|(i, j, k), v, &p| {
+        for_each_indexed_pair_mut(
+            self.velocity.view_mut(),
+            pressure.view(),
+            |(i, j, k), v, &p| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -113,7 +116,8 @@ impl StreamingModel {
                 } else {
                     *v = 0.0;
                 }
-            });
+            },
+        );
     }
 
     #[must_use]

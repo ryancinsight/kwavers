@@ -32,7 +32,7 @@ mod traits;
 #[cfg(test)]
 mod tests;
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use super::absorption::KzkAbsorptionOperator;
 use super::complex_parabolic_diffraction::ParabolicDiffractionOperator;
@@ -107,7 +107,7 @@ impl KZKSolver {
     /// Initialises the complex pressure field to zero and constructs the
     /// spectral diffraction, absorption, and nonlinear sub-operators.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: KZKConfig) -> Result<Self, String> {
         super::validate_config(&config)?;
@@ -210,6 +210,57 @@ impl KZKSolver {
             for j in 0..self.config.ny {
                 for i in 0..self.config.nx {
                     self.pressure[[i, j, t]] = Complex64::new(source[[i, j]] * temporal, 0.0);
+                }
+            }
+        }
+
+        self.pressure_prev.assign(&self.pressure);
+    }
+
+    /// Set focused source plane with quadratic focusing phase.
+    ///
+    /// Initialises the complex pressure field with a time-harmonic signal
+    /// modulated by both a Gaussian apodization amplitude and a spherical
+    /// focusing phase:
+    ///
+    ///   `Re[p(x,y,τ)] = source(x,y) · sin(ω₀τ + φ(x,y))`
+    ///
+    /// where the focusing phase is:
+    ///
+    ///   `φ(x,y) = −k · (x² + y²) / (2 · focal_depth)`
+    ///
+    /// This encodes geometric focusing at depth `focal_depth` (m).  The
+    /// imaginary component is zero at the source plane; it accumulates
+    /// non-zero values as the field propagates through diffraction steps.
+    ///
+    /// # Arguments
+    ///
+    /// * `source` — real-valued source amplitude map `A(x,y)` (Pa), shape `(nx, ny)`
+    /// * `frequency` — operating frequency (Hz)
+    /// * `focal_depth` — geometric focal distance from the source plane (m).
+    ///   When `focal_depth → ∞`, the phase reduces to zero and the source
+    ///   behaves identically to [`set_source`].
+    pub fn set_focused_source(&mut self, source: Array2<f64>, frequency: f64, focal_depth: f64) {
+        self.config.frequency = frequency;
+        self.complex_diffraction = ParabolicDiffractionOperator::new(&self.config);
+        self.absorption = KzkAbsorptionOperator::new(&self.config);
+
+        let omega = TWO_PI * frequency;
+        let dt = self.config.dt;
+        let k = omega / self.config.c0;
+        let dx = self.config.dx;
+
+        for t in 0..self.config.nt {
+            let time = t as f64 * dt;
+            for j in 0..self.config.ny {
+                for i in 0..self.config.nx {
+                    let x = (i as f64 - self.config.nx as f64 / 2.0) * dx;
+                    let y = (j as f64 - self.config.ny as f64 / 2.0) * dx;
+                    let r2 = x * x + y * y;
+                    let amplitude = source[[i, j]];
+                    let phase = -k * r2 / (2.0 * focal_depth);
+                    self.pressure[[i, j, t]] =
+                        Complex64::new(amplitude * (omega * time + phase).sin(), 0.0);
                 }
             }
         }

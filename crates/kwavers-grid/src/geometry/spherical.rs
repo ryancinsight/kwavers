@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 use super::{GeometricDomain, GeometryDimension, PointLocation};
@@ -92,7 +92,7 @@ impl GeometricDomain for SphericalDomain {
         }
 
         let n = self.center.len();
-        let mut normal = Array1::zeros(n);
+        let mut normal = Array1::zeros([n]);
 
         for i in 0..n {
             normal[i] = point[i] - self.center[i];
@@ -100,7 +100,9 @@ impl GeometricDomain for SphericalDomain {
 
         let norm = normal.iter().map(|x| x * x).sum::<f64>().sqrt();
         if norm > 0.0 {
-            normal /= norm;
+            for i in 0..n {
+                normal[i] /= norm;
+            }
         }
 
         Some(normal)
@@ -125,7 +127,7 @@ impl GeometricDomain for SphericalDomain {
         };
 
         let dim = self.center.len();
-        let mut points = Array2::zeros((n_points, dim));
+        let mut points = Array2::zeros([n_points, dim]);
 
         for i in 0..n_points {
             loop {
@@ -161,7 +163,7 @@ impl GeometricDomain for SphericalDomain {
         };
 
         let dim = self.center.len();
-        let mut points = Array2::zeros((n_points, dim));
+        let mut points = Array2::zeros([n_points, dim]);
 
         for i in 0..n_points {
             match dim {

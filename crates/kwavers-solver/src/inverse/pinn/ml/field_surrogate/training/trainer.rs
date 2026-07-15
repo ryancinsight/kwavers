@@ -1,35 +1,35 @@
-use burn::module::AutodiffModule;
-use burn::optim::adaptor::OptimizerAdaptor;
-use burn::optim::lr_scheduler::cosine::{
-    CosineAnnealingLrScheduler, CosineAnnealingLrSchedulerConfig,
-};
-use burn::optim::lr_scheduler::LrScheduler;
-use burn::optim::{Adam, AdamConfig, GradientsParams, Optimizer};
-use burn::tensor::{backend::AutodiffBackend, ElementConversion};
+use coeus_autograd::Parameter;
+use coeus_optim::scheduler::{CosineAnneal, SchedulerStrategy};
+use coeus_optim::{Adam, Optimizer as CoeusOptimizer};
 
 use super::super::network::ParamFieldPINNNetwork;
 use super::helmholtz::helmholtz_residual_tensor;
 use super::types::{
     FieldSurrogateTrainingConfig, StepMetrics, SurrogateTrainingMetrics, TrainingBatch,
 };
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 
 /// Training context bundling network + optimiser + config.
 ///
-/// Uses Burn's built-in `Adam` optimizer (β₁=0.9, β₂=0.999, ε=1e-5)
-/// — empirically converges 5–10× faster than plain SGD on the
-/// field-surrogate regression. The legacy [`ParamFieldOptimizer`]
+/// Uses `coeus_optim::Adam` (β₁=0.9, β₂=0.999, ε=1e-5) — empirically
+/// converges 5–10× faster than plain SGD on the field-surrogate
+/// regression. The legacy [`super::super::ParamFieldOptimizer`]
 /// (plain SGD) remains available for tests that need an
 /// allocation-free optimizer step.
-pub struct ParamFieldPINNTrainer<B: AutodiffBackend> {
+pub struct ParamFieldPINNTrainer<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     pub network: ParamFieldPINNNetwork<B>,
-    pub optimizer: OptimizerAdaptor<Adam, ParamFieldPINNNetwork<B>, B>,
+    pub optimizer: Adam<f32, B>,
     pub config: FieldSurrogateTrainingConfig,
-    /// Optional cosine-annealing scheduler. `None` keeps the LR fixed.
-    pub lr_scheduler: Option<CosineAnnealingLrScheduler>,
+    /// Optional cosine-annealing schedule `(t_max, eta_min)`. `None`
+    /// keeps the LR fixed at `config.learning_rate`.
+    pub lr_schedule: Option<CosineAnneal>,
+    /// Step counter driving the cosine schedule.
+    step_count: usize,
 }
 
-impl<B: AutodiffBackend> std::fmt::Debug for ParamFieldPINNTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for ParamFieldPINNTrainer<B>
+{
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ParamFieldPINNTrainer")
             .field("config", &self.config)
@@ -37,7 +37,11 @@ impl<B: AutodiffBackend> std::fmt::Debug for ParamFieldPINNTrainer<B> {
     }
 }
 
-impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ParamFieldPINNTrainer<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Construct a trainer from a fresh network + config.
     /// # Errors
     /// Propagates [`FieldSurrogateTrainingConfig::validate`] errors.
@@ -46,21 +50,31 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
         config: FieldSurrogateTrainingConfig,
     ) -> KwaversResult<Self> {
         config.validate()?;
-        let optimizer = AdamConfig::new().init();
-        let lr_scheduler = match config.cosine_schedule {
-            Some((max_iter, min_lr)) if max_iter > 0 => {
-                let sched_cfg =
-                    CosineAnnealingLrSchedulerConfig::new(config.learning_rate as f64, max_iter)
-                        .with_min_lr(min_lr);
-                Some(sched_cfg.init().map_err(KwaversError::InvalidInput)?)
-            }
+        let optimizer = Adam::new(
+            network
+                .parameters()
+                .into_iter()
+                .enumerate()
+                .map(|(index, var)| Parameter::new(var, format!("p{index}")))
+                .collect(),
+            config.learning_rate,
+            0.9,
+            0.999,
+            1e-5,
+        );
+        let lr_schedule = match config.cosine_schedule {
+            Some((max_iter, min_lr)) if max_iter > 0 => Some(CosineAnneal {
+                t_max: max_iter,
+                eta_min: min_lr,
+            }),
             _ => None,
         };
         Ok(Self {
             network,
             optimizer,
             config,
-            lr_scheduler,
+            lr_schedule,
+            step_count: 0,
         })
     }
 
@@ -69,66 +83,84 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
     /// Returns the data, Helmholtz, and total loss for the batch.
     /// Mutates `self.network` in place by consuming and replacing it
     /// with the updated network from the optimiser.
-    pub fn step(&mut self, batch: TrainingBatch<B>) -> StepMetrics
-    where
-        B: AutodiffBackend,
-        ParamFieldPINNNetwork<B>: AutodiffModule<B>,
-    {
-        let pred = self.network.forward(batch.inputs.clone());
-        let diff = pred.clone() - batch.targets.clone();
-        let data_loss = diff.powf_scalar(2.0).mean();
-        let data_loss_w = data_loss.clone().mul_scalar(self.config.data_weight);
+    pub fn step(&mut self, batch: TrainingBatch<B>) -> StepMetrics {
+        for p in self.network.parameters() {
+            p.zero_grad();
+        }
+
+        let pred = self.network.forward(&batch.inputs);
+        let diff = coeus_autograd::sub(&pred, &batch.targets);
+        let data_loss = coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff));
+        let data_loss_w = coeus_autograd::scalar_mul(&data_loss, self.config.data_weight);
 
         let mut total = data_loss_w;
+
         // Per-kernel-scoped peak-prominence loss (Phase C-10).
         //
         // Phase C-9 demonstrated that a single batch-wide
         // `(max(pred) − max(target))²` term fragments per-f0 fits
         // because the batch mixes voxels from every kernel and a
         // single `max(target)` aggregates over an ambiguous
-        // `(f0, pnp)`. The C-10 fix groups batch rows by
-        // `group_ids[i] = source-kernel index`, computes the
-        // max-pair *per group* via boolean masking, and accumulates
-        // the squared gaps. Empty groups contribute 0. Masking uses
-        // a large negative constant on out-of-group rows so the
-        // per-group max correctly picks the in-group maximum;
-        // gradient flows only through in-group rows because the
-        // mask is a constant in the autodiff graph.
+        // `(f0, pnp)`. This groups batch rows by
+        // `group_ids[i] = source-kernel index`, finds the argmax row
+        // *per group* from the raw (untracked) prediction values, and
+        // re-selects that exact row through `coeus_autograd::slice` so
+        // the gradient flows only into the argmax voxel of each
+        // group — the same selectivity `Tensor::max()`'s backward
+        // gives in the original formulation.
         let prom_value: f32 = if self.config.peak_prominence_weight > 0.0 {
-            let n = batch.inputs.dims()[0];
-            let pred_pmax = pred.clone().slice([0..n, 1..2]).reshape([n]);
-            let tgt_pmax = batch.targets.clone().slice([0..n, 1..2]).reshape([n]);
-            // OUT_FILL is well below any plausible network output in
-            // `[-1, 1]`. Out-of-group rows are forced to this value
-            // so the per-group `.max()` always selects an in-group
-            // row. For groups with zero representatives in this
-            // batch, *all* rows are OUT_FILL after masking; the
-            // resulting `(OUT_FILL − OUT_FILL)² = 0` and gradient
-            // through `pred * 0` is zero, so empty groups
-            // contribute neither loss nor gradient — exactly the
-            // desired behaviour.
-            const OUT_FILL: f32 = -1.0e6;
-            // Start the accumulator with an autodiff-connected zero
-            // (pred * 0 still carries the autodiff lineage).
-            let mut prom_acc = pred_pmax.clone().mul_scalar(0.0).sum();
+            let n = batch.inputs.tensor.shape()[0];
+            let pred_pmax_vals = pred.tensor.as_slice();
+            let group_ids = batch.group_ids.tensor.as_slice();
+            let target_pmax_vals = batch.targets.tensor.as_slice();
+
+            let mut prom_acc: Option<coeus_autograd::Var<f32, B>> = None;
             for g in 0..batch.num_groups {
-                let mask_bool = batch.group_ids.clone().equal_elem(g as f32);
-                let mask = mask_bool.float();
-                let inv_mask = mask.clone().mul_scalar(-1.0).add_scalar(1.0);
-                let pred_masked =
-                    pred_pmax.clone() * mask.clone() + inv_mask.clone().mul_scalar(OUT_FILL);
-                let tgt_masked = tgt_pmax.clone() * mask + inv_mask.mul_scalar(OUT_FILL);
-                let gap_g = pred_masked.max() - tgt_masked.max();
-                prom_acc = prom_acc + gap_g.powf_scalar(2.0);
+                let mut best_idx = None;
+                let mut best_val = f32::NEG_INFINITY;
+                for i in 0..n {
+                    if group_ids[i] as usize == g {
+                        let v = pred_pmax_vals[i * 3 + 1];
+                        if v > best_val {
+                            best_val = v;
+                            best_idx = Some(i);
+                        }
+                    }
+                }
+                let Some(idx) = best_idx else { continue };
+                let pred_sel = coeus_autograd::slice(&pred, &[(idx, idx + 1), (1, 2)]);
+                let target_best_idx = (0..n)
+                    .filter(|&i| group_ids[i] as usize == g)
+                    .max_by(|&a, &b| {
+                        target_pmax_vals[a * 3 + 1].total_cmp(&target_pmax_vals[b * 3 + 1])
+                    })
+                    .unwrap_or(idx);
+                let target_sel = coeus_autograd::slice(
+                    &batch.targets,
+                    &[(target_best_idx, target_best_idx + 1), (1, 2)],
+                );
+                let gap_g = coeus_autograd::sub(&pred_sel, &target_sel);
+                let gap_sq = coeus_autograd::mul(&gap_g, &gap_g);
+                prom_acc = Some(match prom_acc {
+                    Some(acc) => coeus_autograd::add(&acc, &gap_sq),
+                    None => gap_sq,
+                });
             }
             let denom = batch.num_groups.max(1) as f32;
-            let prom = prom_acc.div_scalar(denom);
-            let prom_w = prom.clone().mul_scalar(self.config.peak_prominence_weight);
-            total = total + prom_w;
-            prom.into_scalar().elem::<f32>() * self.config.peak_prominence_weight
+            match prom_acc {
+                Some(acc) => {
+                    let prom = coeus_autograd::scalar_mul(&acc, 1.0 / denom);
+                    let prom_w =
+                        coeus_autograd::scalar_mul(&prom, self.config.peak_prominence_weight);
+                    total = coeus_autograd::add(&total, &prom_w);
+                    prom.tensor.as_slice()[0] * self.config.peak_prominence_weight
+                }
+                None => 0.0,
+            }
         } else {
             0.0
         };
+
         let helm_value: f32 = if self.config.helmholtz_weight > 0.0 {
             let r = helmholtz_residual_tensor(
                 &self.network,
@@ -136,26 +168,35 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
                 self.config.helmholtz_eps_m,
                 self.config.c0_m_per_s,
             );
-            let helm = r.powf_scalar(2.0).mean();
-            let helm_w = helm.clone().mul_scalar(self.config.helmholtz_weight);
-            total = total + helm_w;
-            helm.into_scalar().elem::<f32>() * self.config.helmholtz_weight
+            let helm = coeus_autograd::mean(&coeus_autograd::mul(&r, &r));
+            let helm_w = coeus_autograd::scalar_mul(&helm, self.config.helmholtz_weight);
+            total = coeus_autograd::add(&total, &helm_w);
+            helm.tensor.as_slice()[0] * self.config.helmholtz_weight
         } else {
             0.0
         };
-        let data_value: f32 = data_loss.into_scalar().elem::<f32>() * self.config.data_weight;
-        let total_value: f32 = total.clone().into_scalar().elem::<f32>();
 
-        let grads = total.backward();
-        let grads_params = GradientsParams::from_grads(grads, &self.network);
-        let lr = if let Some(scheduler) = self.lr_scheduler.as_mut() {
-            scheduler.step()
+        let data_value: f32 = data_loss.tensor.as_slice()[0] * self.config.data_weight;
+        let total_value: f32 = total.tensor.as_slice()[0];
+
+        total.backward();
+
+        let lr = if let Some(schedule) = self.lr_schedule.as_ref() {
+            let lr = schedule.lr(self.config.learning_rate as f64, self.step_count);
+            self.step_count += 1;
+            lr as f32
         } else {
-            self.config.learning_rate as f64
+            self.config.learning_rate
         };
-        let placeholder = self.network.clone();
-        let net_taken = std::mem::replace(&mut self.network, placeholder);
-        self.network = self.optimizer.step(lr, net_taken, grads_params);
+        self.optimizer.lr = lr;
+        self.optimizer.step();
+        let updated_parameters = self
+            .optimizer
+            .params
+            .iter()
+            .map(|parameter| parameter.var.clone())
+            .collect::<Vec<_>>();
+        self.network.load_parameters(&updated_parameters);
 
         StepMetrics {
             data: data_value,
@@ -171,7 +212,6 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
     pub fn run<F>(&mut self, n_steps: usize, mut make_batch: F) -> SurrogateTrainingMetrics
     where
         F: FnMut(usize) -> TrainingBatch<B>,
-        ParamFieldPINNNetwork<B>: AutodiffModule<B>,
     {
         let mut metrics = SurrogateTrainingMetrics::default();
         for step in 0..n_steps {
@@ -181,22 +221,12 @@ impl<B: AutodiffBackend> ParamFieldPINNTrainer<B> {
         }
         metrics
     }
-}
 
-// `AutodiffModule` is required so the optimiser's `step` consumes the
-// network and the gradient mapper can traverse parameters; this trait
-// is auto-derived for any type marked `#[derive(Module)]`.
-impl<B: AutodiffBackend> ParamFieldPINNTrainer<B>
-where
-    ParamFieldPINNNetwork<B>: AutodiffModule<
-        B,
-        InnerModule = ParamFieldPINNNetwork<<B as AutodiffBackend>::InnerBackend>,
-    >,
-{
-    /// Move the network into a non-autodiff backend `B::InnerBackend`
-    /// after training is complete — typically used to detach the
-    /// autodiff graph before serialising or doing pure inference.
-    pub fn into_inference_network(self) -> ParamFieldPINNNetwork<B::InnerBackend> {
-        self.network.valid()
+    /// Detach the network from any further training state — coeus has
+    /// no separate autodiff/inference backend split, so this simply
+    /// returns a clone of the current network for use in inference-only
+    /// contexts.
+    pub fn into_inference_network(self) -> ParamFieldPINNNetwork<B> {
+        self.network
     }
 }

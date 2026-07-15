@@ -3,10 +3,20 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::Array3;
 use log::warn;
-use ndarray::{Array3, Zip};
 
 use super::types::{ConservationError, ConservationHistory, ConservedQuantities};
+
+fn for_each_cell([nx, ny, nz]: [usize; 3], mut f: impl FnMut(usize, usize, usize)) {
+    for i in 0..nx {
+        for j in 0..ny {
+            for k in 0..nz {
+                f(i, j, k);
+            }
+        }
+    }
+}
 
 /// Conservation monitor for multi-rate integration
 #[derive(Debug)]
@@ -46,7 +56,7 @@ impl ConservationMonitor {
 
     /// Check conservation at current time
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn check_conservation(
         &mut self,
@@ -137,35 +147,51 @@ impl ConservationMonitor {
         velocity_z: &Array3<f64>,
         medium: &dyn Medium,
     ) -> f64 {
+        assert_eq!(
+            pressure.shape(),
+            velocity_x.shape(),
+            "invariant: pressure and x-velocity shapes must match"
+        );
+        assert_eq!(
+            pressure.shape(),
+            velocity_y.shape(),
+            "invariant: pressure and y-velocity shapes must match"
+        );
+        assert_eq!(
+            pressure.shape(),
+            velocity_z.shape(),
+            "invariant: pressure and z-velocity shapes must match"
+        );
+
         let dv = self.grid.dx * self.grid.dy * self.grid.dz;
         let mut total_energy = 0.0;
 
-        Zip::indexed(pressure)
-            .and(velocity_x)
-            .and(velocity_y)
-            .and(velocity_z)
-            .for_each(|(i, j, k), &p, &vx, &vy, &vz| {
-                let x = i as f64 * self.grid.dx;
-                let y = j as f64 * self.grid.dy;
-                let z = k as f64 * self.grid.dz;
+        for_each_cell(pressure.shape(), |i, j, k| {
+            let x = i as f64 * self.grid.dx;
+            let y = j as f64 * self.grid.dy;
+            let z = k as f64 * self.grid.dz;
+            let p = pressure[[i, j, k]];
+            let vx = velocity_x[[i, j, k]];
+            let vy = velocity_y[[i, j, k]];
+            let vz = velocity_z[[i, j, k]];
 
-                let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
-                let gamma = medium.gamma(x, y, z, &self.grid);
+            let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
+            let gamma = medium.gamma(x, y, z, &self.grid);
 
-                // Kinetic energy density
-                let kinetic = 0.5 * density * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
+            // Kinetic energy density
+            let kinetic = 0.5 * density * vz.mul_add(vz, vx.mul_add(vx, vy * vy));
 
-                // Internal energy density (ideal gas)
-                let gamma_minus_one = gamma - 1.0;
-                if gamma_minus_one.abs() > 1e-9 {
-                    // Avoid division by zero for gamma = 1
-                    let internal = p / gamma_minus_one;
-                    total_energy += (kinetic + internal) * dv;
-                } else {
-                    // For gamma = 1 (isothermal), only kinetic energy
-                    total_energy += kinetic * dv;
-                }
-            });
+            // Internal energy density (ideal gas)
+            let gamma_minus_one = gamma - 1.0;
+            if gamma_minus_one.abs() > 1e-9 {
+                // Avoid division by zero for gamma = 1
+                let internal = p / gamma_minus_one;
+                total_energy += (kinetic + internal) * dv;
+            } else {
+                // For gamma = 1 (isothermal), only kinetic energy
+                total_energy += kinetic * dv;
+            }
+        });
 
         total_energy
     }
@@ -196,34 +222,51 @@ impl ConservationMonitor {
         if has_velocity {
             // Complete acoustic energy computation with safe access
             if let (Some(vx), Some(vy), Some(vz)) = (velocity_x, velocity_y, velocity_z) {
-                Zip::indexed(pressure).and(vx).and(vy).and(vz).for_each(
-                    |(i, j, k), &p, &vx_val, &vy_val, &vz_val| {
-                        let x = i as f64 * self.grid.dx;
-                        let y = j as f64 * self.grid.dy;
-                        let z = k as f64 * self.grid.dz;
-
-                        let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
-                        let sound_speed =
-                            kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
-
-                        // Potential energy density: Ep = p²/(2ρc²)
-                        let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
-
-                        // Kinetic energy density: Ek = ρv²/2
-                        let kinetic_energy = 0.5
-                            * density
-                            * vz_val.mul_add(vz_val, vx_val.mul_add(vx_val, vy_val * vy_val));
-
-                        total_energy += (potential_energy + kinetic_energy) * dv;
-                    },
+                assert_eq!(
+                    pressure.shape(),
+                    vx.shape(),
+                    "invariant: pressure and x-velocity shapes must match"
                 );
+                assert_eq!(
+                    pressure.shape(),
+                    vy.shape(),
+                    "invariant: pressure and y-velocity shapes must match"
+                );
+                assert_eq!(
+                    pressure.shape(),
+                    vz.shape(),
+                    "invariant: pressure and z-velocity shapes must match"
+                );
+                for_each_cell(pressure.shape(), |i, j, k| {
+                    let x = i as f64 * self.grid.dx;
+                    let y = j as f64 * self.grid.dy;
+                    let z = k as f64 * self.grid.dz;
+                    let p = pressure[[i, j, k]];
+                    let vx_val = vx[[i, j, k]];
+                    let vy_val = vy[[i, j, k]];
+                    let vz_val = vz[[i, j, k]];
+
+                    let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
+                    let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);
+
+                    // Potential energy density: Ep = p²/(2ρc²)
+                    let potential_energy = p * p / (2.0 * density * sound_speed * sound_speed);
+
+                    // Kinetic energy density: Ek = ρv²/2
+                    let kinetic_energy = 0.5
+                        * density
+                        * vz_val.mul_add(vz_val, vx_val.mul_add(vx_val, vy_val * vy_val));
+
+                    total_energy += (potential_energy + kinetic_energy) * dv;
+                });
             }
         } else {
             // Potential energy only
-            Zip::indexed(pressure).for_each(|(i, j, k), &p| {
+            for_each_cell(pressure.shape(), |i, j, k| {
                 let x = i as f64 * self.grid.dx;
                 let y = j as f64 * self.grid.dy;
                 let z = k as f64 * self.grid.dz;
+                let p = pressure[[i, j, k]];
 
                 let density = kwavers_medium::density_at(medium, x, y, z, &self.grid);
                 let sound_speed = kwavers_medium::sound_speed_at(medium, x, y, z, &self.grid);

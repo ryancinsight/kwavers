@@ -1,4 +1,4 @@
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 /// Error metrics for comparing numerical and analytical solutions.
 ///
@@ -31,8 +31,8 @@ impl KwaveErrorMetrics {
     #[must_use]
     pub fn compute(numerical: ArrayView3<f64>, analytical: ArrayView3<f64>) -> Self {
         assert_eq!(
-            numerical.dim(),
-            analytical.dim(),
+            numerical.shape(),
+            analytical.shape(),
             "Arrays must have same dimensions"
         );
 

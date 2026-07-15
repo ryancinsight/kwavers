@@ -1,10 +1,9 @@
 use super::MetaLearner;
 use crate::inverse::pinn::ml::meta_learning::types::{PhysicsTask, TaskData};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 
-impl<B: AutodiffBackend> MetaLearner<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearner<B> {
     /// Generate task data.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -24,7 +23,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
 
     fn generate_collocation_points(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
         let num_points = 1000;
@@ -44,17 +43,17 @@ impl<B: AutodiffBackend> MetaLearner<B> {
 
     fn generate_boundary_data(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> Vec<(f64, f64, f64, f64)> {
-        let condition_count = conditions.len().max(1);
+        let condition_count = (conditions.len()).max(1);
         let (x_min, x_max, y_min, _y_max) = geometry.bounding_box();
         let span_x = (x_max - x_min).abs();
         let base_count = 200;
         let mut data = Vec::new();
 
         let push_point = |points: &mut Vec<(f64, f64, f64, f64)>, x: f64, y: f64, t: f64| {
-            let idx = points.len() % condition_count;
+            let idx = (points.len()) % condition_count;
             let bc = conditions
                 .get(idx)
                 .copied()
@@ -69,7 +68,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
         };
 
         match geometry {
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Rectangular {
+            crate::inverse::pinn::ml::WaveGeometry2D::Rectangular {
                 x_min,
                 x_max,
                 y_min,
@@ -92,7 +91,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x_max, y, t);
                 }
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Circular {
+            crate::inverse::pinn::ml::WaveGeometry2D::Circular {
                 x_center,
                 y_center,
                 radius,
@@ -107,7 +106,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x, y, s);
                 }
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::LShaped {
+            crate::inverse::pinn::ml::WaveGeometry2D::LShaped {
                 x_min,
                 x_max,
                 y_min,
@@ -147,12 +146,12 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, notch_x, y, t);
                 }
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Polygonal { vertices, holes } => {
+            crate::inverse::pinn::ml::WaveGeometry2D::Polygonal { vertices, holes } => {
                 let sample_edges = |poly: &[(f64, f64)], points: &mut Vec<(f64, f64, f64, f64)>| {
-                    if poly.len() < 2 {
+                    if (poly.len()) < 2 {
                         return;
                     }
-                    let n_edges = poly.len();
+                    let n_edges = (poly.len());
                     let n = (base_count / n_edges.max(1)).max(10);
                     for i in 0..n_edges {
                         let (x0, y0) = poly[i];
@@ -171,7 +170,7 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     sample_edges(hole, &mut data);
                 }
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::ParametricCurve {
+            crate::inverse::pinn::ml::WaveGeometry2D::ParametricCurve {
                 x_func,
                 y_func,
                 t_min,
@@ -188,12 +187,10 @@ impl<B: AutodiffBackend> MetaLearner<B> {
                     push_point(&mut data, x, y, s);
                 }
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::AdaptiveMesh {
-                base_geometry, ..
-            } => {
+            crate::inverse::pinn::ml::WaveGeometry2D::AdaptiveMesh { base_geometry, .. } => {
                 data.extend(self.generate_boundary_data(base_geometry.as_ref(), conditions));
             }
-            crate::inverse::pinn::ml::BurnWave2dGeometry::MultiRegion { regions, .. } => {
+            crate::inverse::pinn::ml::WaveGeometry2D::MultiRegion { regions, .. } => {
                 for (region, _) in regions {
                     data.extend(self.generate_boundary_data(region, conditions));
                 }

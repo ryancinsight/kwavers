@@ -45,8 +45,9 @@ use crate::forward::nonlinear::conservation::{
 use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::Medium;
+use leto::Array3 as LetoArray3;
+use leto::{Array3, ArrayView3};
 use log::warn;
-use ndarray::{Array3, ArrayView3};
 use std::sync::{Arc, Mutex};
 
 use super::metrics::WesterveltStepMetrics;
@@ -77,7 +78,7 @@ pub struct WesterveltWave {
     pub(super) pressure_buffers: [Array3<f64>; 3],
     pub(super) buffer_indices: [usize; 3], // [next, current, previous]
     /// Pre-allocated complex scratch for spectral Laplacian FFT.
-    pub(super) fft_scratch: Option<Array3<Complex64>>,
+    pub(super) fft_scratch: Option<LetoArray3<Complex64>>,
     /// Pre-allocated real scratch for spectral Laplacian IFFT.
     pub(super) laplacian_scratch: Option<Array3<f64>>,
     /// Pre-allocated nonlinear-term workspace.
@@ -85,7 +86,7 @@ pub struct WesterveltWave {
     /// Pre-allocated viscoelastic damping workspace.
     pub(super) damping_scratch: Array3<f64>,
     /// Pre-allocated source-mask workspace.
-    pub(super) source_mask_scratch: Array3<f64>,
+    pub(super) source_mask_scratch: LetoArray3<f64>,
     pub(super) metrics: Arc<Mutex<WesterveltStepMetrics>>,
     pub(super) conservation_tracker: Option<ConservationTracker>,
     pub(super) current_step: usize,
@@ -100,7 +101,10 @@ impl WesterveltWave {
         let (k_squared, _kx, _ky, _kz) = initialize_kspace_grids(grid);
         let shape = (grid.nx, grid.ny, grid.nz);
 
-        let fft_scratch = Some(Array3::<Complex64>::zeros(shape));
+        let fft_scratch = Some(LetoArray3::<Complex64>::from_elem(
+            [grid.nx, grid.ny, grid.nz],
+            Complex64::default(),
+        ));
         let laplacian_scratch = Some(Array3::<f64>::zeros(shape));
 
         Self {
@@ -117,7 +121,7 @@ impl WesterveltWave {
             laplacian_scratch,
             nonlinear_scratch: Array3::zeros(shape),
             damping_scratch: Array3::zeros(shape),
-            source_mask_scratch: Array3::zeros(shape),
+            source_mask_scratch: LetoArray3::zeros([grid.nx, grid.ny, grid.nz]),
             metrics: Arc::new(Mutex::new(WesterveltStepMetrics::new())),
             conservation_tracker: None,
             current_step: 0,
@@ -196,7 +200,7 @@ impl WesterveltWave {
     /// satisfy the XOR ownership rule: exactly one mutable next buffer and two
     /// immutable history buffers. This keeps pressure history rotation
     /// allocation-free while preserving the three-level recurrence
-    /// `p[n+1] = 2p[n] - p[n-1] + dt^2 rhs(p[n], p[n-1])`.
+    /// `p[n+1] = 2p\[n\] - p[n-1] + dt^2 rhs(p\[n\], p[n-1])`.
     pub(super) fn pressure_buffers_for_step(
         pressure_buffers: &mut [Array3<f64>; 3],
         buffer_indices: [usize; 3],

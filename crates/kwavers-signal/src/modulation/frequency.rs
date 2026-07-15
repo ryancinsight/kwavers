@@ -51,14 +51,15 @@ impl Modulation for FrequencyModulation {
         // - Boashash (1992): "Estimating and interpreting the instantaneous frequency"
         // - Marple (1999): "Computing the discrete-time analytic signal via FFT"
         use crate::analytic::instantaneous_frequency;
-        use ndarray::Array1;
+        use leto::Array1;
 
         if signal.len() < 2 {
             return Ok(signal.to_vec());
         }
 
         // Convert to ndarray for signal processing
-        let signal_array = Array1::from_vec(signal.to_vec());
+        let signal_array =
+            Array1::from_vec([signal.len()], signal.to_vec()).expect("signal shape must match");
 
         // Compute sample rate from time array
         let dt = if t.len() > 1 {

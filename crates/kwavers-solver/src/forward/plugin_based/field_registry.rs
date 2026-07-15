@@ -6,8 +6,8 @@
 use kwavers_core::error::{FieldError, KwaversResult};
 use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
+use leto::{Array3, Array4, ArrayView3, ArrayViewMut3};
 use log::{debug, info};
-use ndarray::{Array3, Array4, ArrayView3, ArrayViewMut3, Axis};
 
 #[derive(Clone, Debug)]
 struct FieldMetadata {
@@ -72,18 +72,18 @@ impl FieldRegistry {
 
     /// Register a new field dynamically
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn register_field(&mut self, field_type: UnifiedFieldType) -> KwaversResult<()> {
         let idx = field_type as usize;
 
         // Check if already registered
-        if idx < self.fields.len() && self.fields[idx].is_some() {
+        if idx < (self.fields.len()) && self.fields[idx].is_some() {
             return Ok(());
         }
 
         // Ensure Vec is large enough
-        while self.fields.len() <= idx {
+        while (self.fields.len()) <= idx {
             self.fields.push(None);
         }
 
@@ -104,7 +104,7 @@ impl FieldRegistry {
 
     /// Register multiple fields at once
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn register_fields(&mut self, fields: &[UnifiedFieldType]) -> KwaversResult<()> {
         for field_type in fields {
@@ -115,7 +115,7 @@ impl FieldRegistry {
 
     /// Get a field view (zero-copy, read-only)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn get_field(
         &self,
@@ -129,12 +129,14 @@ impl FieldRegistry {
 
         let data = self.data.as_ref().ok_or(FieldError::DataNotInitialized)?;
 
-        Ok(data.index_axis(Axis(0), metadata.index))
+        Ok(data
+            .index_axis::<3>(0, metadata.index)
+            .expect("invariant: field index within data axis 0"))
     }
 
     /// Get a mutable field view (zero-copy)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn get_field_mut(
         &mut self,
@@ -155,12 +157,14 @@ impl FieldRegistry {
 
         let data = self.data.as_mut().ok_or(FieldError::DataNotInitialized)?;
 
-        Ok(data.index_axis_mut(Axis(0), metadata_index))
+        Ok(data
+            .index_axis_mut::<3>(0, metadata_index)
+            .expect("invariant: field index within data axis 0"))
     }
 
     /// Set a specific field with dimension validation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn set_field(
         &mut self,
@@ -168,7 +172,8 @@ impl FieldRegistry {
         values: &Array3<f64>,
     ) -> KwaversResult<()> {
         // Validate dimensions
-        let actual_dims = values.dim();
+        let [adx, ady, adz] = values.shape();
+        let actual_dims = (adx, ady, adz);
         if actual_dims != self.grid_dims {
             return Err(FieldError::DimensionMismatch {
                 field: field_type.name().to_owned(),
@@ -187,7 +192,7 @@ impl FieldRegistry {
     #[must_use]
     pub fn has_field(&self, field_type: UnifiedFieldType) -> bool {
         let idx = field_type as usize;
-        idx < self.fields.len() && self.fields[idx].is_some()
+        idx < (self.fields.len()) && self.fields[idx].is_some()
     }
 
     /// Get list of registered fields
@@ -195,7 +200,7 @@ impl FieldRegistry {
     pub fn registered_fields(&self) -> Vec<UnifiedFieldType> {
         (0..UnifiedFieldType::COUNT)
             .filter_map(|i| {
-                if i < self.fields.len() && self.fields[i].is_some() {
+                if i < (self.fields.len()) && self.fields[i].is_some() {
                     UnifiedFieldType::from_index(i)
                 } else {
                     None
@@ -257,15 +262,20 @@ impl FieldRegistry {
         }
 
         let (nx, ny, nz) = self.grid_dims;
-        let mut resized_data = Array4::zeros((self.fields.len(), nx, ny, nz));
+        let mut resized_data = Array4::zeros(((self.fields.len()), nx, ny, nz));
 
         // Copy existing data if present
         if let Some(existing_data) = &self.data {
             let min_fields = existing_data.shape()[0].min(resized_data.shape()[0]);
             for i in 0..min_fields {
                 resized_data
-                    .index_axis_mut(Axis(0), i)
-                    .assign(&existing_data.index_axis(Axis(0), i));
+                    .index_axis_mut::<3>(0, i)
+                    .expect("invariant: field index within resized data axis 0")
+                    .assign(
+                        &existing_data
+                            .index_axis::<3>(0, i)
+                            .expect("invariant: field index within existing data axis 0"),
+                    );
             }
         }
 
@@ -300,6 +310,6 @@ mod tests {
 
         // Test field access
         let pressure = registry.get_field(UnifiedFieldType::Pressure).unwrap();
-        assert_eq!(pressure.shape(), &[10, 10, 10]);
+        assert_eq!(pressure.shape(), [10, 10, 10]);
     }
 }

@@ -1,13 +1,13 @@
-//! GPU-accelerated beamforming implementations
+//! Provider-generic beamforming backend integration.
 //!
-//! This module provides GPU-accelerated beamforming algorithms using multiple
-//! backend approaches:
+//! GPU execution for kwavers is owned by Hephaestus provider traits. Provider
+//! implementations may target WGPU, CUDA, or another accelerator without changing
+//! the beamforming algorithm surface. Concrete device APIs stay behind the
+//! provider boundary.
 //!
-//! 1. **Burn Framework** (`das_burn`): High-level tensor operations with automatic
-//!    backend selection (CPU, WGPU, CUDA). Recommended for most use cases.
-//!
-//! 2. **Raw WGSL Shaders** (`shaders/`): Low-level compute shaders for custom
-//!    optimizations and advanced use cases.
+//! Legacy Burn DAS code has been removed from analysis. PINN replacement work
+//! belongs behind Coeus plus Hephaestus provider traits, while this module keeps
+//! only provider-generic GPU integration points and WGSL reference kernels.
 //!
 //! # Architecture
 //!
@@ -17,8 +17,8 @@
 //! Analysis Layer (6) - Beamforming Algorithms
 //!     ├── time_domain (CPU - Reference Implementation)
 //!     └── gpu (GPU - Accelerated Implementation)
-//!         ├── das_burn (Burn-based, recommended)
-//!         └── shaders/ (WGSL compute kernels)
+//!         ├── provider-backed kernels (Hephaestus WGPU/CUDA providers)
+//!         └── shaders/ (WGSL reference kernels)
 //! ```
 //!
 //! Both CPU and GPU implementations produce mathematically equivalent results
@@ -26,78 +26,11 @@
 //!
 //! # Usage
 //!
-//! ## Burn-based GPU Beamforming (Recommended)
-//!
-//! ```rust,ignore
-//! use kwavers_analysis::signal_processing::beamforming::gpu::BurnDasBeamformer;
-//! use burn::backend::Wgpu;  // or NdArray for CPU
-//! use ndarray::Array3;
-//!
-//! // Create GPU beamformer
-//! let device = Default::default();
-//! let beamformer = BurnDasBeamformer::<Wgpu>::new(device)?;
-//!
-//! // Prepare data
-//! let rf_data = Array3::zeros((32, 1, 2000));  // 32 channels, 1 frame, 2000 samples
-//! let sensor_positions = vec![[0.0, 0.0, 0.0]; 32];
-//! let focal_points = vec![[0.0, 0.0, 0.02]];  // Single focal point at 20mm depth
-//!
-//! // Beamform
-//! let image = beamformer.beamform(
-//!     &rf_data,
-//!     &sensor_positions,
-//!     &focal_points,
-//!     10e6,    // 10 MHz sampling rate
-//!     1540.0,  // 1540 m/s sound speed (soft tissue)
-//!     None,    // No custom apodization (uses uniform weights)
-//! )?;
-//! ```
-//!
-//! ## CPU Fallback (No GPU Required)
-//!
-//! ```rust,ignore
-//! use kwavers_analysis::signal_processing::beamforming::gpu::beamform_cpu;
-//!
-//! let image = beamform_cpu(
-//!     &rf_data,
-//!     &sensor_positions,
-//!     &focal_points,
-//!     10e6,
-//!     1540.0,
-//!     None,
-//! )?;
-//! ```
-//!
-//! ## Backend Selection
-//!
-//! Burn supports multiple backends for different hardware:
-//!
-//! ```rust,ignore
-//! // WGPU (cross-platform GPU via WebGPU)
-//! use burn::backend::Wgpu;
-//! let beamformer = BurnDasBeamformer::<Wgpu>::new(device)?;
-//!
-//! // CUDA (NVIDIA GPUs, requires CUDA toolkit)
-//! use burn::backend::Cuda;
-//! let beamformer = BurnDasBeamformer::<Cuda>::new(device)?;
-//!
-//! // NdArray (CPU fallback, no GPU required)
-//! use burn::backend::NdArray;
-//! let beamformer = BurnDasBeamformer::<NdArray>::new(device)?;
-//! ```
-//!
 //! # Performance
 //!
-//! Expected speedup vs CPU implementation (WGPU backend):
-//!
-//! | Configuration | CPU Time | GPU Time | Speedup |
-//! |---------------|----------|----------|---------|
-//! | 32ch × 100px  | ~10ms    | ~1ms     | 10×     |
-//! | 64ch × 400px  | ~80ms    | ~4ms     | 20×     |
-//! | 128ch × 1600px| ~640ms   | ~20ms    | 32×     |
-//! | 256ch × 6400px| ~5.1s    | ~100ms   | 51×     |
-//!
-//! CUDA backend typically provides 2-3× additional speedup over WGPU.
+//! Backend-specific speedups must be reported from criterion baselines for the
+//! selected Hephaestus provider. This module does not encode an unconditional
+//! WGPU or CUDA performance claim.
 //!
 //! # Mathematical Specification
 //!
@@ -127,8 +60,9 @@
 //!
 //! # Feature Flags
 //!
-//! - `pinn`: Enable Burn framework integration (required for GPU beamforming)
-//! - `gpu`: Enable raw WGPU compute shaders (advanced use cases)
+//! - `pinn`: Enables solver-owned PINN seams while they migrate to Coeus. It
+//!   does not expose a Burn GPU beamforming backend from this module.
+//! - `gpu`: Enable provider-backed GPU integration.
 //!
 //! # Research Integration
 //!
@@ -151,67 +85,15 @@
 //!
 //! # Implementation Status
 //!
-//! - [x] Burn-based DAS beamforming ✅ (Sprint 214 Session 3)
-//! - [x] CPU fallback (NdArray backend) ✅
-//! - [x] WGPU backend support ✅
-//! - [x] CUDA backend support ✅
-//! - [x] WGSL compute shaders (reference) ✅
-//! - [ ] Linear interpolation (sub-sample accuracy) 🟡
-//! - [ ] Multi-GPU support 🟢
-//! - [ ] Streaming mode (batch processing) 🟢
-//! - [ ] GPU MUSIC implementation 🟢
-//! - [ ] GPU MVDR (adaptive beamforming) 🟢
+//! - [x] Burn DAS holdout removed from analysis
+//! - [x] WGSL reference shader module
+//! - [ ] Hephaestus provider-backed DAS beamforming
+//! - [ ] Linear interpolation (sub-sample accuracy)
+//! - [ ] Multi-GPU provider dispatch
+//! - [ ] Streaming mode (batch processing)
+//! - [ ] GPU MUSIC implementation
+//! - [ ] GPU MVDR (adaptive beamforming)
 
-#[cfg(feature = "pinn")]
-pub mod das_burn;
-
-// WGSL shaders (for reference and custom kernels)
-// Note: These are not used by default; Burn-based implementation is recommended
+// WGSL shaders retained as reference kernels while provider-backed dispatch is
+// consolidated through Hephaestus.
 pub mod shaders {}
-
-// Re-exports
-#[cfg(feature = "pinn")]
-pub use das_burn::{
-    beamform_cpu, BurnBeamformingConfig, BurnDasBeamformer, DasInterpolationMethod,
-};
-
-#[cfg(test)]
-mod tests {
-    #[cfg(feature = "pinn")]
-    #[test]
-    fn test_burn_beamformer_available() {
-        use super::BurnDasBeamformer;
-        use burn::backend::NdArray;
-
-        let device = Default::default();
-        let _beamformer = BurnDasBeamformer::<NdArray>::new(device);
-        // Constructor no longer returns Result
-    }
-
-    #[cfg(feature = "pinn")]
-    #[test]
-    fn test_cpu_beamform_function() {
-        use super::beamform_cpu;
-        use ndarray::{Array2, Array3};
-
-        let rf_data = Array3::zeros((2, 1, 100));
-        let sensor_positions =
-            Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 0.001, 0.0, 0.0]).unwrap();
-        let focal_points = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.02]).unwrap();
-
-        use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-        use kwavers_core::constants::numerical::MHZ_TO_HZ;
-        let result = beamform_cpu(
-            &rf_data,
-            &sensor_positions,
-            &focal_points,
-            None,
-            10.0 * MHZ_TO_HZ,
-            SOUND_SPEED_TISSUE,
-        );
-
-        let image = result.unwrap();
-        assert_eq!(image.shape(), &[1, 1, 1]);
-        assert_eq!(image[[0, 0, 0]], 0.0);
-    }
-}

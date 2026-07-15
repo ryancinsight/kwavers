@@ -17,7 +17,7 @@
 //!   tracking methods for ultrasonic elasticity imaging using short-time
 //!   correlation." *IEEE TUFFC*, 46(1), 82–96.
 
-use ndarray::{Array3, ArrayView1};
+use leto::{Array3, ArrayView1, SliceArg};
 
 /// Parameters controlling the cross-correlation displacement estimator.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -42,9 +42,17 @@ impl Default for TrackingParams {
 /// Returns a value in `[-1, 1]`. Zero is returned when either window has no
 /// variance (constant signal), for which displacement is undefined.
 fn ncc(a: ArrayView1<f64>, b: ArrayView1<f64>) -> f64 {
-    let n = a.len() as f64;
-    let mean_a = a.sum() / n;
-    let mean_b = b.sum() / n;
+    let n = a.size() as f64;
+    let mut sum_a = 0.0;
+    let mut sum_b = 0.0;
+    for &va in a.iter() {
+        sum_a += va;
+    }
+    for &vb in b.iter() {
+        sum_b += vb;
+    }
+    let mean_a = sum_a / n;
+    let mean_b = sum_b / n;
     let mut num = 0.0;
     let mut den_a = 0.0;
     let mut den_b = 0.0;
@@ -90,7 +98,7 @@ pub fn track_line_samples(
     tracked: ArrayView1<f64>,
     params: TrackingParams,
 ) -> Vec<f64> {
-    let nz = reference.len();
+    let nz = reference.size();
     let mut disp = vec![0.0; nz];
     let w = params.window_half;
     let max_lag = params.max_lag as isize;
@@ -98,19 +106,18 @@ pub fn track_line_samples(
     if nz <= 2 * guard {
         return disp;
     }
-    // `z` is the window centre, used in slice arithmetic (z±w, z+lag) as well as
-    // to store the result; it is not a plain element index.
-    #[allow(clippy::needless_range_loop)]
-    for z in guard..(nz - guard) {
-        let ref_win = reference.slice(ndarray::s![(z - w)..=(z + w)]);
+    for (z, displacement) in disp.iter_mut().enumerate().take(nz - guard).skip(guard) {
+        let ref_win = reference
+            .slice(&[(z - w, z + w, 1)])
+            .expect("reference window is in bounds");
         let mut best_corr = f64::NEG_INFINITY;
         let mut best_lag = 0isize;
-        // Sample correlation at every integer lag, retaining the three values
-        // around the maximum for sub-sample refinement.
         let mut corr = vec![0.0; (2 * max_lag + 1) as usize];
         for (idx, lag) in (-max_lag..=max_lag).enumerate() {
             let center = (z as isize + lag) as usize;
-            let trk_win = tracked.slice(ndarray::s![(center - w)..=(center + w)]);
+            let trk_win = tracked
+                .slice(&[(center - w, center + w, 1)])
+                .expect("tracked window is in bounds");
             let c = ncc(ref_win, trk_win);
             corr[idx] = c;
             if c > best_corr {
@@ -124,7 +131,7 @@ pub fn track_line_samples(
         } else {
             parabolic_subsample(corr[best_idx - 1], corr[best_idx], corr[best_idx + 1])
         };
-        disp[z] = best_lag as f64 + sub;
+        *displacement = best_lag as f64 + sub;
     }
     disp
 }
@@ -141,12 +148,24 @@ pub fn track_axial_displacement(
     params: TrackingParams,
     dz: f64,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = reference.dim();
-    let mut field = Array3::zeros((nx, ny, nz));
+    let [nx, ny, nz] = reference.shape();
+    let mut field = Array3::zeros([nx, ny, nz]);
     for i in 0..nx {
         for j in 0..ny {
-            let ref_line = reference.slice(ndarray::s![i, j, ..]);
-            let trk_line = tracked.slice(ndarray::s![i, j, ..]);
+            let ref_line = reference
+                .slice_with::<1>(&[
+                    SliceArg::Index(i as isize),
+                    SliceArg::Index(j as isize),
+                    SliceArg::All,
+                ])
+                .expect("reference slice is in bounds");
+            let trk_line = tracked
+                .slice_with::<1>(&[
+                    SliceArg::Index(i as isize),
+                    SliceArg::Index(j as isize),
+                    SliceArg::All,
+                ])
+                .expect("tracked slice is in bounds");
             let disp_samples = track_line_samples(ref_line, trk_line, params);
             for (z, &d) in disp_samples.iter().enumerate() {
                 field[[i, j, z]] = d * dz;

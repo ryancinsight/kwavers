@@ -1,6 +1,6 @@
 //! Active-support graph construction for same-aperture inverse problems.
 
-use ndarray::Array2;
+use leto::Array2;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct PlanarPoint {
@@ -58,13 +58,13 @@ impl ActiveGrid {
 
 #[must_use]
 pub fn active_grid(mask: &Array2<bool>, spacing_m: f64) -> ActiveGrid {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     let cx = (nx - 1) as f64 * 0.5;
     let cy = (ny - 1) as f64 * 0.5;
     let mut indices = Vec::new();
     let mut points_m = Vec::new();
     let mut active_lookup = vec![None; nx * ny];
-    for ((ix, iy), active) in mask.indexed_iter() {
+    for ([ix, iy], active) in mask.indexed_iter() {
         if *active {
             active_lookup[linear_index(ix, iy, ny)] = Some(indices.len());
             indices.push((ix, iy));

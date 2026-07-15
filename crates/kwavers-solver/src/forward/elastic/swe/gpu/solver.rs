@@ -6,13 +6,14 @@ use super::metrics::SweGpuStepMetrics;
 use super::types::{GPUInversionResult, GPUPropagationResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
-/// GPU-accelerated 3D elastic wave solver
+/// Legacy 3D elastic-wave GPU performance model.
 ///
-/// KNOWN_LIMITATION: This is a CPU simulation of GPU functionality.
-/// Actual CUDA/OpenCL/wgpu implementation is needed for real GPU acceleration.
+/// This path estimates GPU memory and kernel timing but does not dispatch real
+/// GPU work. Production WGPU or CUDA execution belongs in provider-generic
+/// Hephaestus implementations in `kwavers-gpu`.
 #[derive(Debug)]
 pub struct GPUElasticWaveSolver3D {
     device: GPUDevice,
@@ -85,8 +86,8 @@ impl GPUElasticWaveSolver3D {
 
     /// Execute GPU-accelerated 3D wave propagation
     /// # Errors
-    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_waves_gpu(
         &mut self,
@@ -217,8 +218,8 @@ impl GPUElasticWaveSolver3D {
 
     /// Execute GPU-accelerated multi-directional inversion
     /// # Errors
-    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn multidirectional_inversion_gpu(
         &mut self,
@@ -229,7 +230,7 @@ impl GPUElasticWaveSolver3D {
         let start_time = std::time::Instant::now();
 
         let volume_size = grid.nx * grid.ny * grid.nz;
-        let total_memory = volume_size * std::mem::size_of::<f64>() * (arrival_times.len() + 2);
+        let total_memory = volume_size * std::mem::size_of::<f64>() * ((arrival_times.len()) + 2);
 
         if !self.device.can_handle_volume(grid) {
             return Err(KwaversError::ResourceLimitExceeded {
@@ -238,7 +239,7 @@ impl GPUElasticWaveSolver3D {
         }
 
         let mut memory_blocks = Vec::new();
-        for _ in 0..(arrival_times.len() + 2) {
+        for _ in 0..((arrival_times.len()) + 2) {
             memory_blocks.push(
                 self.memory_pool
                     .allocate(volume_size * std::mem::size_of::<f64>())?,
@@ -256,7 +257,7 @@ impl GPUElasticWaveSolver3D {
             "multidirectional_inversion",
             grid_size,
             block_size,
-            volume_size * arrival_times.len(),
+            volume_size * (arrival_times.len()),
         );
 
         let total_time = start_time.elapsed().as_secs_f64() + kernel_time;
@@ -273,7 +274,7 @@ impl GPUElasticWaveSolver3D {
             execution_time: total_time,
             kernel_time,
             memory_used: total_memory,
-            directions_processed: wave_directions.len(),
+            directions_processed: (wave_directions.len()),
             convergence_iterations: 50,
             residual_error: 0.001,
         })
@@ -296,6 +297,6 @@ impl GPUElasticWaveSolver3D {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn optimize_memory_layout(&self, data: &mut Array3<f64>) {
-        data.as_slice_memory_order().unwrap();
+        data.as_slice().unwrap();
     }
 }

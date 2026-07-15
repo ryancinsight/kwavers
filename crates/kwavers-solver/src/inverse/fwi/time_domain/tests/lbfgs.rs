@@ -11,7 +11,7 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Build the shared small-grid FWI problem: grid, geometry, true model, and a
 /// homogeneous initial model. The anomaly is a `+anomaly` m/s Gaussian bump at
@@ -25,7 +25,10 @@ fn build_problem(anomaly: f64) -> (Grid, FwiGeometry, FwiParameters, Array3<f64>
     let c0 = SOUND_SPEED_WATER_SIM;
     let initial = Array3::from_elem(dims, c0);
     let mut truth = initial.clone();
-    for ((ix, iy, iz), value) in truth.indexed_iter_mut() {
+    for ([ix, iy, iz], value) in truth
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
         *value += anomaly * (-r2 / 3.0).exp();
     }

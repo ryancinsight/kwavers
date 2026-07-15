@@ -1,6 +1,6 @@
 //! `solve_coupled` — iterative BEM-FEM coupling loop.
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use kwavers_core::error::KwaversResult;
 use kwavers_mesh::tetrahedral::TetrahedralMesh;

@@ -53,7 +53,7 @@
 //!   heterogeneous media. Geophysics **66**(1), 294–307.
 
 use super::pml::{build_axis_alpha_beta, ElasticPmlSpec};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 /// Pre-computed per-axis exponential and integration coefficients for the
 /// split-field PML.
@@ -206,7 +206,7 @@ impl SplitFieldState {
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         macro_rules! zero {
             () => {
-                Array3::<f64>::zeros((nx, ny, nz))
+                Array3::<f64>::zeros([nx, ny, nz])
             };
         }
         Self {

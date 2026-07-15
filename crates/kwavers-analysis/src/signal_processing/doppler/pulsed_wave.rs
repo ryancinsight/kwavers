@@ -48,12 +48,12 @@
 //! - Kasai C et al. (1985). "Real-time two-dimensional blood flow imaging using
 //!   an autocorrelation technique." *IEEE Trans Sonics Ultrason* 32(3):458–464.
 
+use apollo::{fft_1d_complex, Complex64};
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{fft_1d_complex, Complex64};
-use ndarray::{Array1, ArrayView1};
+use leto::{Array1, ArrayView1};
 
 /// Pulsed-wave Doppler configuration
 #[derive(Debug, Clone)]
@@ -130,7 +130,7 @@ impl PulsedWaveDoppler {
         &self,
         iq_ensemble: ArrayView1<Complex64>,
     ) -> KwaversResult<SpectralWaveform> {
-        let ensemble_len = iq_ensemble.len();
+        let ensemble_len = iq_ensemble.size();
 
         if ensemble_len == 0 {
             return Err(KwaversError::InvalidInput(
@@ -153,7 +153,7 @@ impl PulsedWaveDoppler {
         // ── Step 2: Hann window + zero-pad to fft_size ────────────────────────
         // Window length = min(ensemble_len, fft_size); zero-pad remaining.
         let win_len = ensemble_len.min(fft_size);
-        let mut windowed = Array1::<Complex64>::zeros(fft_size);
+        let mut windowed = Array1::<Complex64>::zeros([fft_size]);
 
         for n in 0..win_len {
             let w = 0.5 * (1.0 - (TWO_PI * n as f64 / (win_len - 1).max(1) as f64).cos());
@@ -166,7 +166,8 @@ impl PulsedWaveDoppler {
         // ── Step 4: One-sided magnitude spectrum ──────────────────────────────
         // Length = fft_size/2 + 1; bin k → f_d = k·f_prf/fft_size.
         let out_len = fft_size / 2 + 1;
-        let waveform: SpectralWaveform = Array1::from_shape_fn(out_len, |k| spectrum[k].norm());
+        let waveform: SpectralWaveform =
+            Array1::from_shape_fn([out_len], |idx| spectrum[idx[0]].norm());
 
         Ok(waveform)
     }
@@ -183,7 +184,7 @@ impl PulsedWaveDoppler {
         let df_to_v = self.config.c_sound / (2.0 * self.config.center_frequency * cos_theta);
         let df = self.config.prf / fft_size as f64;
 
-        Array1::from_shape_fn(out_len, |k| k as f64 * df * df_to_v)
+        Array1::from_shape_fn([out_len], |idx| idx[0] as f64 * df * df_to_v)
     }
 
     /// Maximum alias-free velocity (m/s) (Nyquist limit for PW Doppler).
@@ -213,7 +214,7 @@ mod tests {
     fn test_extract_waveform_zero_signal() {
         let config = PWDConfig::default();
         let pwd = PulsedWaveDoppler::new(config);
-        let ensemble: Array1<Complex64> = Array1::zeros(64);
+        let ensemble: Array1<Complex64> = Array1::zeros([64]);
 
         let waveform = pwd.extract_waveform(ensemble.view()).unwrap();
         assert!(
@@ -244,7 +245,8 @@ mod tests {
         let f_d = k0 as f64 * config.prf / config.fft_size as f64;
         let n_samples = 128usize;
 
-        let ensemble: Array1<Complex64> = Array1::from_shape_fn(n_samples, |n| {
+        let ensemble: Array1<Complex64> = Array1::from_shape_fn([n_samples], |idx| {
+            let n = idx[0];
             let phase = 2.0 * PI * f_d * n as f64 / config.prf;
             Complex64::new(phase.cos(), phase.sin())
         });
@@ -277,7 +279,7 @@ mod tests {
             ..Default::default()
         };
         let pwd = PulsedWaveDoppler::new(config.clone());
-        let ensemble: Array1<Complex64> = Array1::from_shape_fn(64, |_| Complex64::new(1.0, 0.0));
+        let ensemble: Array1<Complex64> = Array1::from_shape_fn([64], |_| Complex64::new(1.0, 0.0));
 
         let waveform = pwd.extract_waveform(ensemble.view()).unwrap();
         assert_eq!(waveform.len(), config.fft_size / 2 + 1);
@@ -291,7 +293,8 @@ mod tests {
     fn test_extract_waveform_non_negative() {
         let config = PWDConfig::default();
         let pwd = PulsedWaveDoppler::new(config);
-        let ensemble: Array1<Complex64> = Array1::from_shape_fn(64, |n| {
+        let ensemble: Array1<Complex64> = Array1::from_shape_fn([64], |idx| {
+            let n = idx[0];
             Complex64::new((n as f64 * 0.1).sin(), (n as f64 * 0.1).cos())
         });
 
@@ -332,7 +335,7 @@ mod tests {
         );
 
         // Last bin of velocity axis should equal v_max
-        let last_v = *v_axis.last().unwrap();
+        let last_v = v_axis[v_axis.len() - 1];
         assert!(
             (last_v - v_max).abs() < 1e-10,
             "Last velocity bin {last_v:.4e} should equal v_max {v_max:.4e}"

@@ -5,7 +5,8 @@
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_core::{constants::SOUND_SPEED_WATER, error::KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::{s, Array2, Array3, Zip};
+use leto::{Array2, Array3};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::f64::consts::PI;
 
 use super::validation::{
@@ -131,7 +132,7 @@ impl ArcSource {
         spacing: [f64; 2],
         time: f64,
     ) -> Array2<f64> {
-        let mut source = Array2::zeros((nx, ny));
+        let mut source = Array2::zeros([nx, ny]);
         let omega = TWO_PI * self.config.frequency;
 
         // Focus is at the center of curvature
@@ -148,8 +149,14 @@ impl ArcSource {
             })
             .collect();
 
-        // Generate source field
-        Zip::indexed(&mut source).par_for_each(|(ix, iy), val| {
+        let source_data = source
+            .as_slice_mut()
+            .expect("invariant: freshly allocated Array2 is contiguous");
+
+        // Generate source field.
+        enumerate_mut_with::<Adaptive, _, _>(source_data, |idx, val| {
+            let ix = idx / ny;
+            let iy = idx % ny;
             let x = (ix as f64).mul_add(spacing[0], origin[0]);
             let y = (iy as f64).mul_add(spacing[1], origin[1]);
 
@@ -184,11 +191,15 @@ impl ArcSource {
             [grid.dx, grid.dy],
             time,
         );
-        let mut source_3d = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut source_3d = Array3::zeros([grid.nx, grid.ny, grid.nz]);
 
         // Copy 2D pattern to all z-slices
         for iz in 0..grid.nz {
-            source_3d.slice_mut(s![.., .., iz]).assign(&source_2d);
+            for ix in 0..grid.nx {
+                for iy in 0..grid.ny {
+                    source_3d[[ix, iy, iz]] = source_2d[[ix, iy]];
+                }
+            }
         }
 
         source_3d

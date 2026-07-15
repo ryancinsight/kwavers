@@ -9,7 +9,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Cached medium properties for conservation calculations
 #[derive(Debug, Clone)]
@@ -43,7 +43,7 @@ pub struct KuznetsovWave {
 impl KuznetsovWave {
     /// Create a new Kuznetsov wave solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: KuznetsovConfig, grid: &Grid) -> KwaversResult<Self> {
         config.validate(grid)?;

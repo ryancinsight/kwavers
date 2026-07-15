@@ -19,7 +19,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::fdtd::{FdtdConfig, FdtdPlugin};
 use kwavers_solver::plugin::PluginManager;
-use ndarray::{s, Array4};
+use leto::{Array4, SliceArg};
 
 /// Test CFL stability condition
 ///
@@ -70,7 +70,13 @@ fn test_cfl_stability_condition() {
 
         // Check stability
         let max_pressure = fields
-            .slice(s![0, .., .., ..])
+            .slice_with::<3>(&[
+                SliceArg::Index(0),
+                SliceArg::All,
+                SliceArg::All,
+                SliceArg::All,
+            ])
+            .expect("slice_with")
             .iter()
             .fold(0.0f64, |a, &b| a.max(b.abs()));
 
@@ -142,10 +148,38 @@ fn test_energy_conservation() {
     let rho_c2 = rho * c * c;
 
     let energy = |f: &Array4<f64>| -> f64 {
-        let p = f.slice(s![0, .., .., ..]);
-        let vx = f.slice(s![6, .., .., ..]);
-        let vy = f.slice(s![7, .., .., ..]);
-        let vz = f.slice(s![8, .., .., ..]);
+        let p = f
+            .slice_with::<3>(&[
+                SliceArg::Index(0),
+                SliceArg::All,
+                SliceArg::All,
+                SliceArg::All,
+            ])
+            .expect("slice_with");
+        let vx = f
+            .slice_with::<3>(&[
+                SliceArg::Index(6),
+                SliceArg::All,
+                SliceArg::All,
+                SliceArg::All,
+            ])
+            .expect("slice_with");
+        let vy = f
+            .slice_with::<3>(&[
+                SliceArg::Index(7),
+                SliceArg::All,
+                SliceArg::All,
+                SliceArg::All,
+            ])
+            .expect("slice_with");
+        let vz = f
+            .slice_with::<3>(&[
+                SliceArg::Index(8),
+                SliceArg::All,
+                SliceArg::All,
+                SliceArg::All,
+            ])
+            .expect("slice_with");
 
         let potential = p.iter().map(|&x| (x * x) / rho_c2).sum::<f64>();
         let kinetic = vx

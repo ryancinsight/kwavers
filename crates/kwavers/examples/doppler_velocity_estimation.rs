@@ -16,11 +16,11 @@
 //! cargo run --example doppler_velocity_estimation
 //! ```
 
+use eunomia::Complex64;
 use kwavers_analysis::signal_processing::doppler::{
     AutocorrelationConfig, AutocorrelationEstimator, ColorFlowConfig, ColorFlowImaging,
 };
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
 use std::f64::consts::PI;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -110,8 +110,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "  └─ Velocity map computed: {} × {}",
-        velocity.dim().0,
-        velocity.dim().1
+        velocity.shape()[0],
+        velocity.shape()[1]
     );
 
     // Find peak velocity in flow region

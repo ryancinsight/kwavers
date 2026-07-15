@@ -24,6 +24,8 @@ mod rasterizer_curved;
 mod rasterizer_planar;
 mod transform;
 
+use crate::transducers::physics::PlanarApertureGeometry;
+
 #[cfg(test)]
 mod tests;
 
@@ -161,13 +163,25 @@ pub enum ElementShape {
     },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum KWaveElement {
+    Shape(ElementShape),
+    PlanarAperture(PlanarApertureGeometry),
+}
+
+impl From<ElementShape> for KWaveElement {
+    fn from(shape: ElementShape) -> Self {
+        Self::Shape(shape)
+    }
+}
+
 /// Custom transducer array with mixed element geometries.
 ///
 /// Allows building arbitrary transducer arrays by adding elements of different
 /// shapes, matching k-wave-python's `KWaveArray` functionality.
 #[derive(Debug, Clone)]
 pub struct KWaveArray {
-    pub(super) elements: Vec<ElementShape>,
+    pub(super) elements: Vec<KWaveElement>,
     pub(super) frequency: f64,
     pub(super) sound_speed: f64,
     pub(super) _element_width: f64,

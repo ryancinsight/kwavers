@@ -10,7 +10,7 @@ impl BemSolver {
     /// Use this constructor when the boundary surface has already been extracted.
     /// Triangles must follow CCW outward-normal winding convention.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(
         config: BemConfig,
@@ -44,7 +44,7 @@ impl BemSolver {
     /// Only faces shared by exactly one element (boundary faces) are included.
     /// Outward normal orientation is determined by the position of the interior node.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn from_mesh(config: BemConfig, mesh: &TetrahedralMesh) -> KwaversResult<Self> {
         let mut nodes: Vec<[f64; 3]> = Vec::new();
@@ -75,7 +75,7 @@ impl BemSolver {
                 }
             }
 
-            if face_nodes.len() != 3 {
+            if (face_nodes.len()) != 3 {
                 continue;
             }
 

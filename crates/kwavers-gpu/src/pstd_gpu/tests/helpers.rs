@@ -1,8 +1,25 @@
 //! Test helpers for GPU PSTD solver tests.
 
-use super::super::{AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams};
+use super::super::{
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+};
+use crate::{backend::init::GpuProviderContext, gpu::GpuDeviceProvider};
+use hephaestus_core::DeviceFeature;
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use std::sync::Arc;
+
+pub(super) fn pstd_test_provider(label: &str) -> Option<GpuProviderContext<WgpuDevice>> {
+    GpuProviderContext::<WgpuDevice>::with_features_and_limits(
+        WgpuDevice::acquisition_preference(),
+        &[DeviceFeature::PushConstants],
+        pstd_test_required_limits(),
+    )
+    .map_err(|error| {
+        eprintln!("{label}: GPU device creation failed - {error}");
+        error
+    })
+    .ok()
+}
 
 pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
     let nx = 8usize;
@@ -14,38 +31,7 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
     let dt = 1.0e-8_f64;
     let nt = 4usize;
 
-    let instance = wgpu::Instance::new(&wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::all(),
-        ..Default::default()
-    });
-    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
-        power_preference: wgpu::PowerPreference::HighPerformance,
-        compatible_surface: None,
-        force_fallback_adapter: false,
-    }));
-
-    let Ok(adapter) = adapter else {
-        eprintln!("No GPU adapter — skipping GpuPstdSolver medium-update test");
-        return None;
-    };
-
-    let native_limits = adapter.limits();
-    let device = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
-        label: Some("gpu_pstd_medium_update_test"),
-        required_features: wgpu::Features::PUSH_CONSTANTS,
-        required_limits: wgpu::Limits {
-            max_push_constant_size: 128,
-            max_storage_buffers_per_shader_stage:
-                native_limits.max_storage_buffers_per_shader_stage,
-            ..wgpu::Limits::default()
-        },
-        memory_hints: wgpu::MemoryHints::Performance,
-        trace: wgpu::Trace::default(),
-    }));
-    let Ok((device, queue)) = device else {
-        eprintln!("GPU device creation failed — skipping medium-update test");
-        return None;
-    };
+    let provider = pstd_test_provider("gpu_pstd_medium_update_test")?;
 
     let grid = kwavers_grid::Grid::new(nx, ny, nz, dx, dx, dx).ok()?;
     let c0_flat = vec![c0 as f32; total];
@@ -53,9 +39,8 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
     let pml = vec![0.0f32; total];
     let bon_a = vec![0.375f32; total];
 
-    GpuPstdSolver::new(
-        Arc::new(device),
-        Arc::new(queue),
+    GpuPstdSolver::<WgpuPstdStateProvider>::new(
+        provider,
         &grid,
         MediumArrays {
             c0_flat: &c0_flat,
@@ -86,6 +71,14 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
     )
     .ok()
 }
+
+fn pstd_test_required_limits() -> hephaestus_core::DeviceLimits {
+    hephaestus_core::DeviceLimits {
+        max_push_constant_size: 128,
+        ..WgpuDevice::required_limits()
+    }
+}
+
 /// Read a typed GPU buffer back to the CPU via a staging buffer.
 /// # Panics
 /// - Panics if `buffer readback callback`.
@@ -115,7 +108,7 @@ pub(super) fn read_buffer<T: bytemuck::Pod>(
     slice.map_async(wgpu::MapMode::Read, move |result| {
         let _ = tx.send(result);
     });
-    let _ = device.poll(wgpu::PollType::Wait);
+    let _ = device.poll(wgpu::PollType::wait_indefinitely());
     rx.recv()
         .expect("buffer readback callback")
         .expect("buffer map");

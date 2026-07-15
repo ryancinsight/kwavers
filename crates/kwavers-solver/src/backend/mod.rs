@@ -7,15 +7,16 @@
 //! ## Submodule status
 //!
 //! - `traits` — the public `ComputeBackend` trait surface (this crate owns the
-//!   abstraction). The concrete wgpu `GPUBackend` implementation lives in the
-//!   `kwavers-gpu` leaf crate (`kwavers_gpu::backend`), downstream of solver,
-//!   per the dependency-inversion rule — algorithm crates never import wgpu.
+//!   abstraction). The provider-generic `GPUBackend<P>` implementation lives in
+//!   the `kwavers-gpu` leaf crate (`kwavers_gpu::backend`), downstream of solver,
+//!   per the dependency-inversion rule — algorithm crates never import WGPU,
+//!   CUDA, or other concrete GPU provider APIs.
 
 pub mod traits;
 
 // Re-export main trait + capability/device types so callers consume them via the
 // stable `solver::backend::*` path rather than reaching into `traits::*`.
-pub use traits::{BackendCapabilities, BackendType, ComputeBackend, ComputeDevice};
+pub use traits::{BackendCapabilities, BackendType, ComputeBackend, ComputeDevice, GpuProvider};
 
 #[cfg(test)]
 mod backend_surface_tests {
@@ -31,24 +32,30 @@ mod backend_surface_tests {
     fn backend_trait_reachable_via_canonical_path() {
         // dyn-trait reference forms only if the trait is in scope; bound check
         // forms only if the trait is object-safe — both invariants verified.
-        fn _assert_object_safe(_: &dyn crate::backend::ComputeBackend) {}
+        fn _assert_object_safe(_: &dyn crate::backend::ComputeBackend<Scalar = f64>) {}
     }
 
     /// `BackendType` enum variants compile-time pattern-checked.
     #[test]
     fn backend_type_variants_match_specification() {
-        use crate::backend::BackendType;
+        use crate::backend::{BackendType, GpuProvider};
         // Exhaustive match — fails to compile if a variant is added/removed
         // without updating callers, per project standards' "type-system
         // enforcement" rule.
         let cpu = BackendType::CPU;
-        let gpu = BackendType::GPU;
+        let gpu = BackendType::GPU(GpuProvider::Wgpu);
         for variant in [cpu, gpu] {
             match variant {
                 BackendType::CPU => {}
-                BackendType::GPU => {}
+                BackendType::GPU(provider) => match provider {
+                    GpuProvider::Wgpu => {}
+                    GpuProvider::Cuda => {}
+                    GpuProvider::Metal => {}
+                },
             }
         }
+        assert_eq!(gpu.gpu_provider(), Some(GpuProvider::Wgpu));
+        assert_eq!(cpu.gpu_provider(), None);
     }
 
     /// `ComputeDevice` and `BackendCapabilities` constructible (positive value
@@ -78,14 +85,14 @@ mod backend_surface_tests {
         assert!((dev.peak_performance - 1.5e12).abs() < 1.0);
 
         let caps = BackendCapabilities {
-            supports_fft: true,
+            supports_fft: false,
             supports_f64: true,
             supports_f32: true,
             supports_async: false,
             max_parallelism: 16,
             supports_unified_memory: false,
         };
-        assert!(caps.supports_fft);
+        assert!(!caps.supports_fft);
         assert!(caps.supports_f64);
         assert!(caps.supports_f32);
         assert!(!caps.supports_async);

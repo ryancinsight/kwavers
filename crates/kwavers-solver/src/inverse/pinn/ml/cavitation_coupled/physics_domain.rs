@@ -6,31 +6,36 @@ use crate::inverse::pinn::ml::physics::{
     PinnBoundaryComponent, PinnBoundaryConditionSpec, PinnCouplingInterface,
     PinnDomainPhysicsParameters, SimulationPhysicsDomain,
 };
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use std::collections::HashMap;
 
 use super::config::CavitationCouplingType;
 
-impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for CavitationCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> SimulationPhysicsDomain<B>
+    for CavitationCoupledDomain<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     fn domain_name(&self) -> &'static str {
         "cavitation_coupled"
     }
 
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
-        let acoustic_field = model.forward(x.clone(), y.clone(), t.clone());
+    ) -> Var<f32, B> {
+        let acoustic_field = model.forward(x, y, t);
 
         // Build bubble-position tensor from physics-driven nucleation sites.
         // Falls back to collocation points if no bubbles have nucleated yet.
-        let device = x.device();
+        let backend = B::default();
         let bubble_positions = if !self.bubble_locations.is_empty() {
-            let n = self.bubble_locations.len();
+            let n = (self.bubble_locations.len());
             let xs: Vec<f32> = self
                 .bubble_locations
                 .iter()
@@ -41,16 +46,22 @@ impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for CavitationCoupledDomain<
                 .iter()
                 .map(|(_, v, _)| *v as f32)
                 .collect();
-            let xt = Tensor::<B, 1>::from_floats(xs.as_slice(), &device).reshape([n, 1]);
-            let yt = Tensor::<B, 1>::from_floats(ys.as_slice(), &device).reshape([n, 1]);
-            Tensor::cat(vec![xt, yt], 1)
+            let xt = Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &xs, &backend),
+                false,
+            );
+            let yt = Var::new(
+                coeus_tensor::Tensor::from_slice_on(vec![n, 1], &ys, &backend),
+                false,
+            );
+            coeus_autograd::cat(&[&xt, &yt], 1)
         } else {
-            Tensor::cat(vec![x.clone(), y.clone()], 1)
+            coeus_autograd::cat(&[x, y], 1)
         };
 
         let cav = self.cavitation_residual(&acoustic_field, &bubble_positions, physics_params);
         let scat = self.bubble_scattering_residual(&acoustic_field, &bubble_positions);
-        cav + scat
+        coeus_autograd::add(&cav, &scat)
     }
 
     fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec> {

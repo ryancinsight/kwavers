@@ -1,7 +1,7 @@
 //! Aperture-plane phase maps.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 use super::model::AberrationCorrection;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -20,7 +20,7 @@ impl AberrationCorrection<'_> {
         let nz = self.grid.nz;
         let k_water = TWO_PI * frequency / self.c_water;
         let dz = self.grid.dz;
-        let mut map = Array2::zeros((nx, ny));
+        let mut map = Array2::zeros([nx, ny]);
 
         for i in 0..nx {
             for j in 0..ny {

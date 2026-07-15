@@ -1,8 +1,8 @@
 //! PyO3 wrappers for transducer interpolation helpers.
 
 use kwavers_physics::analytical::transducer;
-use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1};
+use numpy::ndarray::Array2;
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -29,7 +29,7 @@ pub fn bli_stencil_weights(
     let flat: Vec<f64> = rows.into_iter().flatten().collect();
     let arr2d = Array2::from_shape_vec((n_delta, n_stencil), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray(py).unbind())
+    Ok(arr2d.to_pyarray(py).unbind())
 }
 
 /// Compute nearest-neighbour and BLI RMS interpolation-error curves.
@@ -75,8 +75,5 @@ pub fn bli_interpolation_error_curves(
         return Err(PyValueError::new_err("delta entries must be finite"));
     }
     let (nearest, bli) = transducer::bli_interpolation_error_curves(ppw_s, delta_s, n_stencil);
-    Ok((
-        nearest.into_pyarray(py).unbind(),
-        bli.into_pyarray(py).unbind(),
-    ))
+    Ok((nearest.to_pyarray(py).unbind(), bli.to_pyarray(py).unbind()))
 }

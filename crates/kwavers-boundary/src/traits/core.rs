@@ -4,7 +4,7 @@
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::{Array3, ArrayViewMut3};
+use leto::{Array3, ArrayViewMut3};
 use std::fmt::Debug;
 
 use super::types::{BoundaryDirections, BoundaryFieldType};
@@ -25,7 +25,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
 
     /// Return the directions where this boundary is active.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn active_directions(&self) -> BoundaryDirections;
 
@@ -36,7 +36,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     /// u(x,t) → u(x,t) * exp(-σ(x) * Δt)
     /// ```
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn apply_scalar_spatial(
         &mut self,
@@ -50,11 +50,11 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     ///
     /// Used for spectral / k-space pseudospectral solvers.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn apply_scalar_frequency(
         &mut self,
-        field: &mut Array3<num_complex::Complex<f64>>,
+        field: &mut Array3<kwavers_math::fft::Complex64>,
         grid: &dyn GridTopology,
         time_step: usize,
         dt: f64,
@@ -64,7 +64,7 @@ pub trait BoundaryCondition: Debug + Send + Sync {
     ///
     /// Default: applies `apply_scalar_spatial` independently to each component.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     fn apply_vector_spatial(
         &mut self,
@@ -177,7 +177,7 @@ pub trait ReflectiveBoundary: BoundaryCondition {
     /// - Rigid boundary: r = +1.0
     /// - Soft boundary:  r = −1.0
     /// - Impedance-matched: r = (Z − Z₀) / (Z + Z₀)
-    fn reflection_coefficient_complex(&self, frequency: f64) -> num_complex::Complex<f64>;
+    fn reflection_coefficient_complex(&self, frequency: f64) -> kwavers_math::fft::Complex64;
 
     /// Return `true` if the boundary is perfectly rigid (no normal velocity).
     fn is_rigid(&self) -> bool {

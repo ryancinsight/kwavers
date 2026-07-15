@@ -1,6 +1,6 @@
 //! `Sensor` pyclass — acoustic field recorder configuration.
 
-use ndarray::Array3;
+use leto::Array3;
 use numpy::PyReadonlyArray3;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -98,7 +98,9 @@ impl Sensor {
         Ok(Sensor {
             sensor_type: "mask".to_string(),
             position: None,
-            mask: Some(mask_arr),
+            mask: Some(crate::breast_fwi_bindings::complex_compat::nd_to_leto3(
+                mask_arr,
+            )),
             record_modes: Vec::new(),
             record_start_index: 1,
         })

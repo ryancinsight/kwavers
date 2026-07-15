@@ -12,7 +12,7 @@ use kwavers_physics::electromagnetic::equations::{
     EMMaterialDistribution, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };
 use kwavers_physics::electromagnetic::photoacoustic::{GrueneisenModel, OpticalAbsorption};
-use ndarray::ArrayD;
+use leto::{ArrayD, VecStorage};
 
 /// Photoacoustic solver implementation
 pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
@@ -23,7 +23,7 @@ pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
     /// Optical absorption properties
     pub optical_properties: OpticalAbsorption,
     /// Initial acoustic pressure field
-    pub initial_pressure: Option<ArrayD<f64>>,
+    pub initial_pressure: Option<ArrayD<f64, VecStorage<f64>>>,
 }
 
 impl<T: ElectromagneticWaveEquation> std::fmt::Debug for PhotoacousticSolver<T> {
@@ -57,13 +57,15 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     ///
     pub fn compute_initial_pressure(
         &mut self,
-        fluence: &ArrayD<f64>,
-    ) -> KwaversResult<ArrayD<f64>> {
+        fluence: &ArrayD<f64, VecStorage<f64>>,
+    ) -> KwaversResult<ArrayD<f64, VecStorage<f64>>> {
         let gamma = self.gruneisen.evaluate(BODY_TEMPERATURE_C);
         let mu_a = self.optical_properties.absorption_coefficient;
 
         // p₀ = Γ μ_a Φ
-        let pressure = fluence.mapv(|phi| gamma * mu_a * phi);
+        let mapped: Vec<f64> = fluence.iter().map(|&phi| gamma * mu_a * phi).collect();
+        let pressure = ArrayD::from_shape_vec(fluence.shape(), mapped)
+            .expect("invariant: mapped data preserves fluence shape");
 
         self.initial_pressure = Some(pressure.clone());
         Ok(pressure)
@@ -93,13 +95,13 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     ///
     /// Fluence array of the same shape as `evaluation_points`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_fluence_diffusion(
         &self,
         source_position: &[f64],
-        evaluation_points: &ArrayD<f64>,
-    ) -> KwaversResult<ArrayD<f64>> {
+        evaluation_points: &ArrayD<f64, VecStorage<f64>>,
+    ) -> KwaversResult<ArrayD<f64, VecStorage<f64>>> {
         let mu_a = self.optical_properties.absorption_coefficient;
         let mu_s_prime = self.optical_properties.reduced_scattering;
         let mu_eff = (3.0 * mu_a * (mu_a + mu_s_prime)).sqrt();
@@ -125,12 +127,12 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         } else {
             (nx as f64 * dx) / 2.0
         };
-        let sy = if source_position.len() > 1 {
+        let sy = if (source_position.len()) > 1 {
             source_position[1]
         } else {
             (ny as f64 * dy) / 2.0
         };
-        let sz = if source_position.len() > 2 {
+        let sz = if (source_position.len()) > 2 {
             source_position[2]
         } else {
             (nz as f64 * dz) / 2.0
@@ -165,7 +167,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
             }
         }
 
-        let result = ArrayD::from_shape_vec(evaluation_points.raw_dim(), data).map_err(|e| {
+        let result = ArrayD::from_shape_vec(evaluation_points.shape(), data).map_err(|e| {
             kwavers_core::error::KwaversError::DimensionMismatch(format!(
                 "Fluence shape mismatch: expected {:?}, got flat vec of length {}: {}",
                 evaluation_points.shape(),
@@ -253,7 +255,7 @@ mod tests {
         let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);
 
         // Test fluence to pressure conversion
-        let fluence = ArrayD::from_elem(ndarray::IxDyn(&[5, 5, 5]), 100.0); // 100 J/m²
+        let fluence = ArrayD::from_elem(&[5, 5, 5], 100.0).unwrap(); // 100 J/m²
         let pressure = pa_solver.compute_initial_pressure(&fluence).unwrap();
 
         // Pressure should be positive and proportional to fluence

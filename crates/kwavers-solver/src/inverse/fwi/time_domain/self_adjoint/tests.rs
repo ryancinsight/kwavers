@@ -11,8 +11,7 @@ use super::{
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
-use ndarray::Axis;
-use ndarray::{Array2, Array3, Zip};
+use leto::{Array2, Array3};
 
 const RHO: f64 = 1000.0;
 
@@ -34,8 +33,8 @@ fn wavelet(nt: usize) -> Array2<f64> {
 fn self_adjoint_objective_vanishes_for_self_data() {
     let (nx, ny, nz) = (10usize, 10, 10);
     let grid = Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).expect("grid");
-    let model = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
-    let density = Array3::from_elem((nx, ny, nz), RHO);
+    let model = Array3::from_elem([nx, ny, nz], SOUND_SPEED_WATER_SIM);
+    let density = Array3::from_elem([nx, ny, nz], RHO);
     let cfg = SelfAdjointConfig { nt: 60, dt: 1e-7 };
     let src = wavelet(cfg.nt);
     let source_voxels = [(2usize, 5usize, 5usize)];
@@ -50,11 +49,11 @@ fn self_adjoint_objective_vanishes_for_self_data() {
 
     let synth =
         forward_sensor_only(model.view(), density.view(), &grid, &cfg, &acq, None).expect("fwd");
-    let j: f64 = 0.5 * cfg.dt * (&synth - &synth).mapv(|x| x * x).sum();
+    let j: f64 = 0.5 * cfg.dt * (&synth - &synth).mapv(|x| x * x).iter().sum::<f64>();
     assert_eq!(j, 0.0, "self-data misfit must be exactly zero");
     // And the field is genuinely non-trivial (engine is doing real work).
     assert!(
-        synth.mapv(|x| x * x).sum().sqrt() > 1e-9,
+        synth.mapv(|x| x * x).iter().sum::<f64>().sqrt() > 1e-9,
         "synthetic must be non-trivial"
     );
 }
@@ -97,7 +96,10 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
     // (a) axial slab; (b) y-ramped slab; (c) off-centre Gaussian blob.
     let make_dir = |kind: u8| -> Array3<f64> {
         let mut d = Array3::zeros(dims);
-        for ((i, j, k), v) in d.indexed_iter_mut() {
+        for ([i, j, k], v) in d
+            .indexed_iter_mut()
+            .expect("invariant: owned array yields indexed iterator")
+        {
             if !boundary_clear(i, j, k) {
                 continue;
             }
@@ -119,9 +121,10 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
     // misfit and gradient are non-trivial.
     let dir_a = make_dir(0);
     let mut true_model = Array3::from_elem(dims, c0);
-    Zip::from(&mut true_model)
-        .and(&dir_a)
-        .for_each(|c, &d| *c += 100.0 * d);
+    leto_ops::zip_mut_with(&mut true_model.view_mut(), &dir_a.view(), |c, d| {
+        *c += 100.0 * *d
+    })
+    .expect("invariant: FWI field shapes match");
     let model = Array3::from_elem(dims, c0);
 
     let observed = forward_sensor_only(true_model.view(), density.view(), &grid, &cfg, &acq, None)
@@ -129,7 +132,7 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
     let (synth0, history0) =
         forward(model.view(), density.view(), &grid, &cfg, &acq, None).expect("fwd m");
     let residual = &synth0 - &observed; // L2 adjoint source r^m = d_syn − d_obs.
-    let j0 = 0.5 * cfg.dt * residual.mapv(|x| x * x).sum();
+    let j0 = 0.5 * cfg.dt * residual.mapv(|x| x * x).iter().sum::<f64>();
     assert!(
         j0 > 0.0,
         "misfit at start model must be non-zero; J(m) = {j0:e}"
@@ -151,12 +154,21 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
     // Objective along an arbitrary direction, evaluated by the SAME forward map.
     let objective_at = |dir: &Array3<f64>, scale: f64| -> f64 {
         let mut perturbed = model.clone();
-        Zip::from(&mut perturbed)
-            .and(dir)
-            .for_each(|c, &d| *c += scale * d);
+        leto_ops::zip_mut_with(&mut perturbed.view_mut(), &dir.view(), |c, d| {
+            *c += scale * *d
+        })
+        .expect("invariant: FWI field shapes match");
         let synth = forward_sensor_only(perturbed.view(), density.view(), &grid, &cfg, &acq, None)
             .expect("fd");
-        0.5 * cfg.dt * (&synth - &observed).mapv(|x| x * x).sum()
+        0.5 * cfg.dt
+            * synth
+                .iter()
+                .zip(observed.iter())
+                .map(|(&a, &b)| {
+                    let e = a - b;
+                    e * e
+                })
+                .sum::<f64>()
     };
     // Richardson-extrapolated central FD: O(ε⁴) accurate true directional derivative.
     let fd_slope = |dir: &Array3<f64>| -> f64 {
@@ -169,9 +181,11 @@ fn self_adjoint_gradient_matches_finite_difference_kappa_one() {
         let dir = make_dir(kind);
         // Source-voxel-muted gradient ⇒ exclude the source voxel from g·δm too;
         // δm is already ~0 there (boundary_clear excludes ix<2; source at ix=2).
-        let g_dot: f64 = Zip::from(&g)
-            .and(&dir)
-            .fold(0.0, |acc, &gv, &dv| acc + gv * dv);
+        let g_dot: f64 = g
+            .iter()
+            .zip(dir.iter())
+            .map(|(&gv, &dv)| gv * dv)
+            .sum::<f64>();
         let fd = fd_slope(&dir);
         assert!(
             g_dot.abs() > 0.0 && fd.abs() > 0.0,
@@ -218,15 +232,19 @@ fn self_adjoint_gradient_kappa_one_with_sponge() {
     let damp = Some(sponge.view());
 
     let mut dir = Array3::zeros(dims);
-    for ((i, j, k), v) in dir.indexed_iter_mut() {
+    for ([i, j, k], v) in dir
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         if i >= 2 && j >= 2 && k >= 2 && i < nx - 2 && j < ny - 2 && k < nz - 2 {
             *v = (-((i as f64 - 6.5).powi(2)) / 0.98).exp();
         }
     }
     let mut true_model = Array3::from_elem(dims, c0);
-    Zip::from(&mut true_model)
-        .and(&dir)
-        .for_each(|c, &d| *c += 100.0 * d);
+    leto_ops::zip_mut_with(&mut true_model.view_mut(), &dir.view(), |c, d| {
+        *c += 100.0 * *d
+    })
+    .expect("invariant: FWI field shapes match");
     let model = Array3::from_elem(dims, c0);
 
     let observed = forward_sensor_only(true_model.view(), density.view(), &grid, &cfg, &acq, damp)
@@ -246,18 +264,29 @@ fn self_adjoint_gradient_kappa_one_with_sponge() {
         damp,
     )
     .expect("gradient");
-    let g_dot: f64 = Zip::from(&g)
-        .and(&dir)
-        .fold(0.0, |acc, &gv, &dv| acc + gv * dv);
+    let g_dot: f64 = g
+        .iter()
+        .zip(dir.iter())
+        .map(|(&gv, &dv)| gv * dv)
+        .sum::<f64>();
 
     let objective_at = |scale: f64| -> f64 {
         let mut perturbed = model.clone();
-        Zip::from(&mut perturbed)
-            .and(&dir)
-            .for_each(|c, &d| *c += scale * d);
+        leto_ops::zip_mut_with(&mut perturbed.view_mut(), &dir.view(), |c, d| {
+            *c += scale * *d
+        })
+        .expect("invariant: FWI field shapes match");
         let synth = forward_sensor_only(perturbed.view(), density.view(), &grid, &cfg, &acq, damp)
             .expect("fd");
-        0.5 * cfg.dt * (&synth - &observed).mapv(|x| x * x).sum()
+        0.5 * cfg.dt
+            * synth
+                .iter()
+                .zip(observed.iter())
+                .map(|(&a, &b)| {
+                    let e = a - b;
+                    e * e
+                })
+                .sum::<f64>()
     };
     let central = |eps: f64| (objective_at(eps) - objective_at(-eps)) / (2.0 * eps);
     let eps = 4.0_f64;
@@ -280,7 +309,7 @@ fn self_adjoint_sponge_absorbs_outgoing_waves() {
     let dx = 1e-3;
     let grid = Grid::new(nx, ny, 1, dx, dx, dx).expect("grid");
     let c0 = SOUND_SPEED_WATER_SIM;
-    let density = Array3::from_elem((nx, ny, 1), RHO);
+    let density = Array3::from_elem([nx, ny, 1], RHO);
     let cfg = SelfAdjointConfig { nt: 220, dt: 2e-7 };
     let src = wavelet(cfg.nt);
     let source_voxels = [(24usize, 24usize, 0usize)];
@@ -290,15 +319,17 @@ fn self_adjoint_sponge_absorbs_outgoing_waves() {
         source_signal: src.view(),
         receiver_voxels: &receiver_voxels,
     };
-    let model = Array3::from_elem((nx, ny, 1), c0);
+    let model = Array3::from_elem([nx, ny, 1], c0);
 
-    let final_energy = |damp: Option<ndarray::ArrayView3<f64>>| -> f64 {
+    let final_energy = |damp: Option<leto::ArrayView3<f64>>| -> f64 {
         let (_, history) =
             forward(model.view(), density.view(), &grid, &cfg, &acq, damp).expect("fwd");
         history
-            .index_axis(Axis(0), cfg.nt - 1)
-            .mapv(|p| p * p)
-            .sum()
+            .index_axis::<3>(0, cfg.nt - 1)
+            .expect("invariant: history time index in bounds")
+            .iter()
+            .map(|&p| p * p)
+            .sum::<f64>()
     };
 
     let energy_reflecting = final_energy(None);
@@ -352,7 +383,10 @@ fn reconstructed_gradient_matches_stored_history() {
 
     // Non-trivial misfit: heterogeneous true model, homogeneous start.
     let mut true_model = Array3::from_elem(dims, c0);
-    for ((i, j, k), c) in true_model.indexed_iter_mut() {
+    for ([i, j, k], c) in true_model
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         if i >= 2 && j >= 2 && k >= 2 && i < nx - 2 && j < ny - 2 && k < nz - 2 {
             *c += 100.0 * (-((i as f64 - 6.5).powi(2)) / 0.98).exp();
         }
@@ -388,12 +422,18 @@ fn reconstructed_gradient_matches_stored_history() {
     );
     assert_eq!(
         p_last,
-        history.index_axis(Axis(0), cfg.nt - 1).to_owned(),
+        history
+            .index_axis::<3>(0, cfg.nt - 1)
+            .unwrap()
+            .to_contiguous(),
         "p_last must equal history[N-1]"
     );
     assert_eq!(
         p_second_last,
-        history.index_axis(Axis(0), cfg.nt - 2).to_owned(),
+        history
+            .index_axis::<3>(0, cfg.nt - 2)
+            .unwrap()
+            .to_contiguous(),
         "p_second_last must equal history[N-2]"
     );
 
@@ -416,9 +456,10 @@ fn reconstructed_gradient_matches_stored_history() {
         max_abs > 0.0,
         "gradient must be non-trivial; max|g| = {max_abs:e}"
     );
-    let max_diff = Zip::from(&g_history)
-        .and(&g_recon)
-        .fold(0.0_f64, |m, &a, &b| m.max((a - b).abs()));
+    let max_diff = g_history
+        .iter()
+        .zip(g_recon.iter())
+        .fold(0.0_f64, |m, (&a, &b)| m.max((a - b).abs()));
     assert!(
         max_diff < 1e-9 * max_abs,
         "reconstructed gradient must match stored-history gradient to round-off: \

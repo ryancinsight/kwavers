@@ -5,10 +5,10 @@ use super::types::{
     CalibrationSummary, ConformalResult, ConformalValidationMetrics, ScoreDistribution,
 };
 #[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
+use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
+use leto::{Array1, Array2};
 use log::info;
-use ndarray::{Array1, Array2};
 use std::collections::HashMap;
 
 /// Conformal predictor for uncertainty quantification
@@ -79,9 +79,9 @@ impl MlConformalPredictor {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     #[cfg(feature = "pinn")]
-    pub fn quantify_uncertainty<B: Backend>(
+    pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
         &self,
-        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        predictor: &P,
         inputs: &Array2<f32>,
         _ground_truth: Option<&Array2<f32>>,
     ) -> KwaversResult<crate::ml::uncertainty::MlPredictionWithUncertainty> {
@@ -91,12 +91,7 @@ impl MlConformalPredictor {
             ));
         }
 
-        let x: Array1<f64> = inputs.column(0).mapv(|v| v as f64).to_owned();
-        let t: Array1<f64> = inputs.column(1).mapv(|v| v as f64).to_owned();
-        let device = pinn.device();
-
-        let prediction_f64 = pinn.predict(&x, &t, &device)?;
-        let prediction = prediction_f64.mapv(|v| v as f32);
+        let prediction = predictor.predict_inputs(inputs)?;
 
         let quantile = self.compute_quantile(self.config.confidence_level);
 
@@ -158,7 +153,11 @@ impl MlConformalPredictor {
         Ok(ConformalResult {
             prediction_intervals,
             coverage_probability: self.estimate_coverage_probability(),
-            conformity_scores: Array1::from_vec(self.calibration_scores.clone()),
+            conformity_scores: Array1::from_vec(
+                self.calibration_scores.len(),
+                self.calibration_scores.clone(),
+            )
+            .expect("invariant: 1-D length matches vec"),
         })
     }
 
@@ -313,7 +312,7 @@ impl MlConformalPredictor {
 mod tests {
     use super::*;
     use crate::ml::uncertainty::conformal_prediction::config::ConformalConfig;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn test_conformal_predictor_creation() {

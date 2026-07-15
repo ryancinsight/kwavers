@@ -1,4 +1,4 @@
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -14,7 +14,7 @@ pub fn gbm_subspot_raster(
     spacing_m: [f64; 3],
     pitch_m: f64,
 ) -> KwaversResult<Array2<usize>> {
-    let (nx, ny, nz) = tumor_mask.dim();
+    let [nx, ny, nz] = tumor_mask.shape();
 
     let mut cx = 0.0_f64;
     let mut cy = 0.0_f64;
@@ -22,7 +22,7 @@ pub fn gbm_subspot_raster(
     let mut count = 0_usize;
     let mut lo = [nx, ny, nz];
     let mut hi = [0_usize; 3];
-    for ((ix, iy, iz), &active) in tumor_mask.indexed_iter() {
+    for ([ix, iy, iz], &active) in tumor_mask.indexed_iter() {
         if active {
             cx += ix as f64;
             cy += iy as f64;
@@ -84,7 +84,7 @@ pub fn gbm_subspot_raster(
     }
 
     let m = candidates.len();
-    let arr = Array2::from_shape_fn((m, 3), |(row, col)| candidates[row][col]);
+    let arr = Array2::from_shape_fn((m, 3), |[row, col]| candidates[row][col]);
     Ok(arr)
 }
 
@@ -106,14 +106,17 @@ pub fn gbm_subspot_covered_fraction(
     let radius2 = 0.25 * pitch_m * pitch_m;
     let covered_count = tumor_mask
         .indexed_iter()
-        .filter(|&((ix, iy, iz), &active)| {
+        .filter(|&([ix, iy, iz], &active)| {
             active
-                && subspot_indices.rows().into_iter().any(|spot| {
-                    let dx = (ix as f64 - spot[0] as f64) * spacing_m[0];
-                    let dy = (iy as f64 - spot[1] as f64) * spacing_m[1];
-                    let dz = (iz as f64 - spot[2] as f64) * spacing_m[2];
-                    dx * dx + dy * dy + dz * dz <= radius2
-                })
+                && subspot_indices
+                    .rows()
+                    .expect("invariant: subspot_indices is rank-2")
+                    .any(|spot| {
+                        let dx = (ix as f64 - spot[0] as f64) * spacing_m[0];
+                        let dy = (iy as f64 - spot[1] as f64) * spacing_m[1];
+                        let dz = (iz as f64 - spot[2] as f64) * spacing_m[2];
+                        dx * dx + dy * dy + dz * dz <= radius2
+                    })
         })
         .count();
     covered_count as f64 / tumor_count as f64

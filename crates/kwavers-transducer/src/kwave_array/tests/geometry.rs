@@ -45,9 +45,11 @@ fn test_set_array_position_matches_manual_position_rotation() {
 
     let manual_count = m_manual.iter().filter(|&&b| b).count();
     let native_count = m_native.iter().filter(|&&b| b).count();
-    let inter = ndarray::Zip::from(&m_manual)
-        .and(&m_native)
-        .fold(0usize, |acc, &a, &b| acc + usize::from(a && b));
+    let inter = m_manual
+        .iter()
+        .zip(m_native.iter())
+        .filter(|(&a, &b)| a && b)
+        .count();
 
     assert!(
         manual_count > 0 && native_count > 0,
@@ -127,8 +129,8 @@ fn test_rect_weighted_mask_matches_kwave_python_reference_mass() {
     let weights = array.get_array_weighted_mask(&grid);
     let expected = 16.036_130_608_724_637_f64;
     assert!(
-        (weights.sum() - expected).abs() < 5.0e-6,
+        (weights.iter().sum::<f64>() - expected).abs() < 5.0e-6,
         "rect weighted mass got {}, expected {expected}",
-        weights.sum()
+        weights.iter().sum::<f64>()
     );
 }

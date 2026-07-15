@@ -82,22 +82,22 @@ impl CoreMedium for HeterogeneousMedium {
 
 impl ArrayAccess for HeterogeneousMedium {
     /// Get sound speed array view (zero-copy)
-    fn sound_speed_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn sound_speed_array(&self) -> leto::ArrayView3<'_, f64> {
         self.sound_speed.view()
     }
 
     /// Get density array view (zero-copy)  
-    fn density_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn density_array(&self) -> leto::ArrayView3<'_, f64> {
         self.density.view()
     }
 
     /// Get nonlinearity array view (zero-copy)
-    fn nonlinearity_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn nonlinearity_array(&self) -> leto::ArrayView3<'_, f64> {
         self.nonlinearity.view()
     }
 
     /// Get absorption array view (zero-copy)
-    fn absorption_array(&self) -> ndarray::ArrayView3<'_, f64> {
+    fn absorption_array(&self) -> leto::ArrayView3<'_, f64> {
         self.absorption.view()
     }
 }

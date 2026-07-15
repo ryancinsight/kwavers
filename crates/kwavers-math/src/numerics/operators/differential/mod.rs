@@ -32,10 +32,10 @@
 //!
 //! ```rust,ignore
 //! use kwavers::math::numerics::operators::differential::{DifferentialOperator, CentralDifference2};
-//! use ndarray::Array3;
+//! use leto::Array3;
 //!
 //! let op = CentralDifference2::new(0.001, 0.001, 0.001)?;
-//! let field = Array3::zeros((100, 100, 100));
+//! let field = Array3::zeros([100, 100, 100]);
 //! let gradient_x = op.apply_x(field.view())?;
 //! ```
 //!
@@ -64,13 +64,14 @@
 //!   DOI: 10.1109/TAP.1966.1138693
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 
 // Implementation modules
 mod central_difference_2;
 mod central_difference_4;
 mod central_difference_6;
 mod staggered_grid;
+mod traversal;
 
 // Re-export implementations
 pub use central_difference_2::CentralDifference2;

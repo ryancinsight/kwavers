@@ -46,8 +46,8 @@ use super::{geometry::FwiGeometry, FwiEngine, FwiProcessor};
 use crate::inverse::reconstruction::seismic::MisfitType;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::{Array2, Array3};
-use rayon::prelude::*;
+use leto::{Array2, Array3};
+use moirai_parallel::{map_collect_with, Adaptive};
 use transform::{project_gradient, transform_template, transform_with_jacobian, PlaneGeometry};
 
 /// MOFI optimisation settings.
@@ -55,7 +55,7 @@ use transform::{project_gradient, transform_template, transform_with_jacobian, P
 pub struct MofiConfig {
     /// Maximum outer iterations.
     pub max_iterations: usize,
-    /// Initial line-search step in the balanced parameter space [m].
+    /// Initial line-search step in the balanced parameter space \[m\].
     pub initial_step_m: f64,
     /// Armijo sufficient-decrease constant `c₁ ∈ (0, 1)`.
     pub armijo_c1: f64,
@@ -105,12 +105,12 @@ pub struct MofiResult {
 /// ```no_run
 /// use kwavers_solver::inverse::fwi::time_domain::{mofi_transform, RigidTransform};
 /// use kwavers_grid::Grid;
-/// use ndarray::Array3;
+/// use leto::Array3;
 /// let grid = Grid::new(32, 32, 1, 1e-3, 1e-3, 1e-3).unwrap();
-/// let template = Array3::from_elem((32, 32, 1), 1500.0);
+/// let template = Array3::from_elem([32, 32, 1], 1500.0);
 /// let phi = RigidTransform { theta_rad: 6_f64.to_radians(), delta_x_m: 2e-3, delta_y_m: -1e-3 };
 /// let misaligned = mofi_transform(&template, &phi, &grid, 1500.0);
-/// assert_eq!(misaligned.dim(), template.dim());
+/// assert_eq!(misaligned.shape(), template.shape());
 /// ```
 #[must_use]
 pub fn transform(
@@ -127,7 +127,7 @@ pub fn transform(
 /// SE(2) manifold update (paper Appendix A) in the balanced scaled space.
 ///
 /// `dir_scaled` is a descent direction in `(L·θ, δ₁, δ₂)` space; `step` is the
-/// arc length [m]. The rotation increment is `dθ = step·dir₀ / L` (wrapped to
+/// arc length \[m\]. The rotation increment is `dθ = step·dir₀ / L` (wrapped to
 /// `[−π, π]` via the log/exp maps), and the translation increment
 /// `(step·dir₁, step·dir₂)` is rotated by the current rotation `R_{θ}`.
 fn manifold_update(
@@ -162,7 +162,7 @@ fn manifold_update(
 pub struct MofiStage {
     /// Data misfit functional for this stage.
     pub misfit_type: MisfitType,
-    /// Optional low-pass corner [Hz] applied to traces this stage (multiscale).
+    /// Optional low-pass corner \[Hz\] applied to traces this stage (multiscale).
     pub band_limit_hz: Option<f64>,
     /// Optimisation settings for this stage.
     pub config: MofiConfig,
@@ -250,8 +250,8 @@ pub fn align_homotopy(
 /// on the inversion grid; `observed` is the recorded data (recorder/Fortran row
 /// order, as produced by the engine's forward model).
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the processor is not on the
-///   self-adjoint engine, or [`KwaversError::Validation`] on shape/geometry
+/// - Returns [`crate::KwaversError::InvalidInput`] if the processor is not on the
+///   self-adjoint engine, or [`crate::KwaversError::Validation`] on shape/geometry
 ///   problems; propagates forward/adjoint solve errors.
 pub fn align(
     processor: &FwiProcessor,
@@ -281,11 +281,11 @@ pub fn align(
 /// [`align_from`] / [`align_homotopy`].
 #[derive(Debug, Clone, Copy)]
 pub struct CoarseSearchConfig {
-    /// Half-range of the rotation sweep [rad]; candidates span `[−θ_max, θ_max]`.
+    /// Half-range of the rotation sweep \[rad\]; candidates span `[−θ_max, θ_max]`.
     pub theta_max_rad: f64,
     /// Number of rotation samples (≥ 1).
     pub theta_steps: usize,
-    /// Half-range of each translation axis [m]; candidates span `[−δ_max, δ_max]`.
+    /// Half-range of each translation axis \[m\]; candidates span `[−δ_max, δ_max]`.
     pub delta_max_m: f64,
     /// Number of samples per translation axis (≥ 1).
     pub delta_steps: usize,
@@ -322,7 +322,7 @@ fn linspace(half_range: f64, steps: usize) -> Vec<f64> {
 /// the search grid. Pure global sampling — no gradient — so it cannot cycle-skip;
 /// use it to initialise [`align_from`] when the misalignment may be large.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] off the self-adjoint engine;
+/// - Returns [`crate::KwaversError::InvalidInput`] off the self-adjoint engine;
 ///   propagates solve errors.
 pub fn coarse_pose_search(
     processor: &FwiProcessor,
@@ -344,10 +344,11 @@ pub fn coarse_pose_search(
 
     // Enumerate the (θ, δ₁, δ₂) grid; each pose's misfit is an independent
     // sensor-only forward solve (~55 MB/call, documented parallel-safe), so the
-    // search runs over Rayon. `collect` preserves grid order, so reducing with a
-    // strict `<` reproduces the serial first-minimum tie-break exactly.
+    // search runs through the Atlas execution provider. Ordered collection
+    // preserves grid order, so reducing with a strict `<` reproduces the serial
+    // first-minimum tie-break exactly.
     let mut candidates: Vec<RigidTransform> =
-        Vec::with_capacity(thetas.len() * deltas.len() * deltas.len());
+        Vec::with_capacity((thetas.len()) * (deltas.len()) * (deltas.len()));
     for &theta in &thetas {
         for &dx in &deltas {
             for &dy in &deltas {
@@ -359,14 +360,12 @@ pub fn coarse_pose_search(
             }
         }
     }
-    let misfits: Vec<KwaversResult<f64>> = candidates
-        .par_iter()
-        .map(|phi| {
+    let misfits: Vec<KwaversResult<f64>> =
+        map_collect_with::<Adaptive, _, _, _>(&candidates, |phi| {
             let model = transform_template(template, phi, &geom, search.background_c);
             let synth = processor.forward_model_sensor_only(&model, geometry, grid)?;
             processor.compute_misfit_objective(observed, &synth)
-        })
-        .collect();
+        });
 
     let mut best = RigidTransform::identity();
     let mut best_misfit = f64::INFINITY;
@@ -438,7 +437,7 @@ fn optimize_speed_scale(
         let residual = processor.compute_adjoint_source(observed, &synth)?;
         let g = processor
             .adjoint_gradient_self_adjoint(&residual, &model, geometry, grid, &history, None)?;
-        let g_alpha = (&g * &contrast).sum();
+        let g_alpha = (&g * &contrast).iter().sum::<f64>();
         if g_alpha.abs() <= f64::MIN_POSITIVE {
             break;
         }
@@ -681,12 +680,13 @@ pub fn align_from(
                 .to_owned(),
         ));
     }
-    if template.dim() != grid.dimensions() {
+    let (grid_nx, grid_ny, grid_nz) = grid.dimensions();
+    if template.shape() != [grid_nx, grid_ny, grid_nz] {
         return Err(KwaversError::Validation(
             ValidationError::ConstraintViolation {
                 message: format!(
                     "MOFI template shape {:?} must match grid {:?}",
-                    template.dim(),
+                    template.shape(),
                     grid.dimensions()
                 ),
             },

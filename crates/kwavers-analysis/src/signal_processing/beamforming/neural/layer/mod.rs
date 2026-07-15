@@ -51,7 +51,7 @@
 //! - LeCun et al. (1998): "Efficient BackProp"
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 use rand::distributions::{Distribution, Uniform};
 
 #[cfg(test)]
@@ -216,7 +216,7 @@ impl NeuralLayer {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn forward(&self, input: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        let (d0, d1, d2) = input.dim();
+        let [d0, d1, d2] = input.shape();
 
         // Validate input dimension
         if d2 != self.input_size {
@@ -226,29 +226,38 @@ impl NeuralLayer {
             )));
         }
 
+        let batch = d0 * d1;
+
         // Reshape to (Batch, InputSize) where Batch = d0 × d1
         // This flattens the spatial dimensions for matrix multiplication
         let flattened_input = input
-            .to_shape((d0 * d1, d2))
+            .reshape([batch, d2])
             .map_err(|e| KwaversError::InternalError(format!("Input reshape failed: {}", e)))?;
 
         // Linear transformation: (Batch, In) × (In, Out) → (Batch, Out)
-        let linear_output = flattened_input.dot(&self.weights);
+        let mut linear_output = Array2::<f32>::zeros((batch, self.output_size));
+        leto_ops::matmul(
+            &flattened_input,
+            &self.weights.view(),
+            &mut linear_output.view_mut(),
+        )
+        .map_err(|e| KwaversError::InternalError(format!("Linear transform failed: {}", e)))?;
 
-        // Add biases: broadcast across batch dimension
-        // b ∈ ℝ^(out) is broadcast to match (batch, out)
-        let output_with_bias = linear_output + &self.biases;
-
-        // Apply tanh activation element-wise
-        // tanh(x) = (e^x - e^-x) / (e^x + e^-x)
-        let activated_output = output_with_bias.mapv(|x| x.tanh());
+        // Add biases (broadcast b ∈ ℝ^(out) across batch) and apply tanh activation
+        // element-wise: tanh(x) = (e^x - e^-x) / (e^x + e^-x).
+        let mut activated_output = Array2::<f32>::zeros((batch, self.output_size));
+        for b in 0..batch {
+            for o in 0..self.output_size {
+                activated_output[[b, o]] = (linear_output[[b, o]] + self.biases[o]).tanh();
+            }
+        }
 
         // Reshape back to (d0, d1, output_size)
         // Restores spatial structure
         let output = activated_output
-            .to_shape((d0, d1, self.output_size))
+            .reshape([d0, d1, self.output_size])
             .map_err(|e| KwaversError::InternalError(format!("Output reshape failed: {}", e)))?
-            .to_owned();
+            .to_contiguous();
 
         Ok(output)
     }
@@ -299,8 +308,12 @@ impl NeuralLayer {
             ));
         }
 
-        self.weights.par_mapv_inplace(|w| w * scale);
-        self.biases.par_mapv_inplace(|b| b * scale);
+        for w in self.weights.iter_mut() {
+            *w *= scale;
+        }
+        for b in self.biases.iter_mut() {
+            *b *= scale;
+        }
         Ok(())
     }
 }

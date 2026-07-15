@@ -19,7 +19,7 @@
 use super::config::GMRESConfig;
 use super::types::GmresConvergenceInfo;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 /// GMRES solver for linear systems A·x = b.
 ///
@@ -47,8 +47,8 @@ impl GMRESSolver {
 
     /// Solve A·x = b using GMRES with implicit matrix-vector product.
     /// # Errors
-    /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     #[allow(non_snake_case)]
     pub fn solve<F>(
@@ -82,7 +82,7 @@ impl GMRESSolver {
         self.residual_history.push(rho);
 
         for _restart_iter in 0..self.config.max_iterations {
-            let mut V = vec![Array3::zeros(x0.dim()); m + 1];
+            let mut V = vec![Array3::zeros(x0.shape()); m + 1];
             let mut H: Vec<Vec<f64>> = vec![vec![0.0; m]; m + 1];
             let mut gamma: Vec<f64> = vec![0.0; m + 1];
             let mut cs: Vec<f64> = vec![0.0; m];

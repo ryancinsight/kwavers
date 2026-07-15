@@ -32,7 +32,7 @@
 //! - LeCun et al. (1998): "Efficient BackProp"
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::layer::NeuralLayer;
 use super::types::BeamformingFeedback;
@@ -124,7 +124,7 @@ impl NeuralBeamformingNetwork {
     ///
     pub fn forward(
         &self,
-        features: &ndarray::Array1<f32>,
+        features: &leto::Array1<f32>,
         steering_angles: &[f64],
     ) -> KwaversResult<Array3<f32>> {
         // Concatenate features with steering angle into 3D input
@@ -159,7 +159,7 @@ impl NeuralBeamformingNetwork {
     #[cfg(feature = "pinn")]
     pub fn forward_physics_informed(
         &self,
-        features: &ndarray::Array1<f32>,
+        features: &leto::Array1<f32>,
         steering_angles: &[f64],
         constraints: &PhysicsConstraints,
     ) -> KwaversResult<Array3<f32>> {
@@ -216,7 +216,7 @@ impl NeuralBeamformingNetwork {
     ///
     fn concatenate_features(
         &self,
-        features: &ndarray::Array1<f32>,
+        features: &leto::Array1<f32>,
         steering_angles: &[f64],
     ) -> KwaversResult<Array3<f32>> {
         if features.len() != 6 {
@@ -233,7 +233,7 @@ impl NeuralBeamformingNetwork {
         }
 
         // Create input vector: [6 features + 1 angle] = 7 elements
-        let mut input_vec = features.to_vec();
+        let mut input_vec: Vec<f32> = features.iter().copied().collect();
         input_vec.push(steering_angles[0] as f32); // Use first steering angle
 
         // Reshape to (1, 1, 7) for layer processing
@@ -269,14 +269,14 @@ mod tests {
         let net = NeuralBeamformingNetwork::new(&[7, 5]).unwrap();
 
         // 6 feature statistics + 1 angle = 7 input features
-        use ndarray::Array1;
-        let features = Array1::from_vec(vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]);
+        use leto::Array1;
+        let features = Array1::from_vec(6, vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]).unwrap();
         let angles = vec![15.0];
 
         let concatenated = net.concatenate_features(&features, &angles).unwrap();
 
         // Should be (1, 1, 7): 6 features + 1 angle
-        assert_eq!(concatenated.dim(), (1, 1, 7));
+        assert_eq!(concatenated.shape(), [1, 1, 7]);
     }
 
     #[test]
@@ -284,13 +284,13 @@ mod tests {
         let net = NeuralBeamformingNetwork::new(&[7, 4, 2]).unwrap();
 
         // 6 feature statistics
-        use ndarray::Array1;
-        let features = Array1::from_vec(vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]);
+        use leto::Array1;
+        let features = Array1::from_vec(6, vec![0.5, 0.1, 0.2, 0.05, 0.3, 0.8]).unwrap();
         let angles = vec![15.0];
 
         let output = net.forward(&features, &angles).unwrap();
 
-        assert_eq!(output.dim().2, 2); // Output size = 2
+        assert_eq!(output.shape()[2], 2); // Output size = 2
         assert!(output.iter().all(|&x| x.is_finite()));
     }
 

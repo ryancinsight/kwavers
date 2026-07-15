@@ -15,17 +15,22 @@
 //!
 //! - Demené, C., et al. (2015). "Spatiotemporal clutter filtering of ultrafast
 //!   ultrasound data highly increases Doppler and fUltrasound sensitivity."
-//!   *Scientific Reports*, 5, 11203. DOI: 10.1038/srep11203
+//!   *IEEE Transactions on Medical Imaging*, 34(11), 2271-2285.
+//!   DOI: 10.1109/TMI.2015.2428634
 //!
 //! - Baranger, J., et al. (2018). "Adaptive spatiotemporal SVD clutter filtering."
 //!   *IEEE Trans. Medical Imaging*, 37(7), 1574-1586. DOI: 10.1109/TMI.2018.2789499
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::{Array1, Array2, Axis};
+use leto::{Array1, Array2};
+use leto_ops::svd_rank_revealing;
+
+mod iq;
 
 #[cfg(test)]
 mod tests;
+
+pub use iq::{IqSvdClutterFilter, IqSvdClutterResult};
 
 /// Configuration for SVD clutter filter
 #[derive(Debug, Clone)]
@@ -160,7 +165,7 @@ impl SignalSvdClutterFilter {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_pixels, n_frames) = slow_time_data.dim();
+        let [n_pixels, n_frames] = slow_time_data.shape();
 
         // Validate input dimensions
         if n_frames < self.config.min_ensemble_length {
@@ -171,7 +176,8 @@ impl SignalSvdClutterFilter {
         }
 
         // Step 1: Center the data (remove temporal mean from each pixel)
-        let temporal_means = slow_time_data.mean_axis(Axis(1)).unwrap();
+        let temporal_means =
+            leto_ops::mean_axis(&slow_time_data.view(), 1).expect("mean over the frames axis");
         let mut centered_data = slow_time_data.clone();
         for (i, mean) in temporal_means.iter().enumerate() {
             for j in 0..n_frames {
@@ -179,9 +185,19 @@ impl SignalSvdClutterFilter {
             }
         }
 
-        // Step 2: Compute SVD: S = UΣV^T
-        // Note: LinearAlgebra::svd returns (U, Σ, V), not (U, Σ, V^T)
-        let (u, mut sigma, v) = LinearAlgebra::svd(&centered_data)?;
+        // Step 2: Compute SVD: S = UΣV^T. Clutter ensembles are routinely
+        // rank-deficient (low-rank tissue clutter is the entire premise), so this
+        // uses the rank-revealing one-sided Jacobi SVD, which surfaces zero
+        // singular values instead of rejecting the input. Returns V (right
+        // singular vectors as columns); transpose to Vᵀ.
+        let svd = svd_rank_revealing(&centered_data.view())?;
+        let u = svd.left_singular_vectors;
+        let vt = svd
+            .right_singular_vectors
+            .transpose([1, 0])
+            .expect("invariant: 2-D transpose axes valid")
+            .to_contiguous();
+        let mut sigma = Array1::from_vec(svd.singular_values.len(), svd.singular_values)?;
 
         // Step 3: Determine clutter rank
         let clutter_rank = if self.config.auto_rank_selection {
@@ -196,9 +212,9 @@ impl SignalSvdClutterFilter {
         }
 
         // Step 5: Reconstruct filtered signal: S_filtered = U * Σ * V^T
-        // SVD returns U (n_pixels × min(n_pixels, n_frames))
-        //             Σ (min(n_pixels, n_frames))
-        //             V (n_frames × min(n_pixels, n_frames))
+        // svd_decompose returns U (n_pixels × min(n_pixels, n_frames))
+        //                   Σ (min(n_pixels, n_frames))
+        //                   Vᵀ (min(n_pixels, n_frames) × n_frames)
 
         let rank = sigma.len();
 
@@ -211,7 +227,9 @@ impl SignalSvdClutterFilter {
         }
 
         // Then compute (U * Σ) * V^T
-        let filtered_data = u_sigma.dot(&v.t());
+        let mut filtered_data = Array2::<f64>::zeros((n_pixels, n_frames));
+        leto_ops::matmul(&u_sigma.view(), &vt.view(), &mut filtered_data.view_mut())
+            .expect("reconstruction matmul shapes conform");
 
         // Step 6: Add back temporal means
         let mut final_data = filtered_data;
@@ -272,15 +290,17 @@ impl SignalSvdClutterFilter {
     /// variance of the filtered signal at that pixel
     #[must_use]
     pub fn compute_power_doppler(&self, filtered_data: &Array2<f64>) -> Array1<f64> {
-        let (n_pixels, n_frames) = filtered_data.dim();
+        let [n_pixels, n_frames] = filtered_data.shape();
         let mut power_doppler = Array1::zeros(n_pixels);
 
         for i in 0..n_pixels {
             // Extract temporal signal for this pixel
-            let temporal_signal = filtered_data.row(i);
+            let temporal_signal = filtered_data
+                .index_axis::<1>(0, i)
+                .expect("pixel row index within bounds");
 
             // Compute mean
-            let mean = temporal_signal.sum() / (n_frames as f64);
+            let mean = temporal_signal.iter().sum::<f64>() / (n_frames as f64);
 
             // Compute variance
             let variance: f64 = temporal_signal
@@ -322,14 +342,16 @@ impl SignalSvdClutterFilter {
         original: &Array2<f64>,
         filtered: &Array2<f64>,
     ) -> KwaversResult<f64> {
-        if original.dim() != filtered.dim() {
+        if original.shape() != filtered.shape() {
             return Err(KwaversError::InvalidInput(
                 "Original and filtered data must have same dimensions".to_owned(),
             ));
         }
 
         // Compute clutter (difference between original and filtered)
-        let clutter = original - filtered;
+        let mut clutter = Array2::<f64>::zeros(original.shape());
+        leto_ops::sub(&original.view(), &filtered.view(), &mut clutter.view_mut())
+            .expect("elementwise sub shapes conform");
 
         // Compute energy of original clutter-dominated signal
         let original_energy: f64 = original.iter().map(|&x| x * x).sum();

@@ -4,7 +4,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Validator for time-reversal inputs
 #[derive(Debug)]
@@ -13,7 +13,7 @@ pub struct InputValidator;
 impl InputValidator {
     /// Validate sensor data for time-reversal
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_sensor_data(
         pressure_data: &Array2<f64>,
@@ -29,14 +29,14 @@ impl InputValidator {
             }));
         }
 
-        if pressure_data.nrows() != num_sensors {
+        if pressure_data.shape()[0] != num_sensors {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "pressure_data".to_owned(),
-                value: format!("rows={}", pressure_data.nrows()),
+                value: format!("rows={}", pressure_data.shape()[0]),
                 constraint: format!("must match number of sensors ({num_sensors})"),
             }));
         }
-        if pressure_data.ncols() == 0 {
+        if pressure_data.shape()[1] == 0 {
             return Err(KwaversError::Validation(ValidationError::FieldValidation {
                 field: "pressure_data".to_owned(),
                 value: "0 time steps".to_owned(),
@@ -62,7 +62,7 @@ impl InputValidator {
 
     /// Validate signal length consistency
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_signal_lengths(
         signals: &[Vec<f64>],
@@ -80,10 +80,10 @@ impl InputValidator {
 
         // Check all signals have the same length
         for (i, signal) in signals.iter().enumerate() {
-            if signal.len() != first_length {
+            if (signal.len()) != first_length {
                 return Err(KwaversError::Validation(ValidationError::FieldValidation {
                     field: format!("signal[{i}]"),
-                    value: format!("length={}", signal.len()),
+                    value: format!("length={}", (signal.len())),
                     constraint: format!("must match first signal length={first_length}"),
                 }));
             }
@@ -105,7 +105,7 @@ impl InputValidator {
 
     /// Validate grid dimensions
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate_grid_dimensions(grid: &Grid) -> KwaversResult<()> {
         if grid.nx == 0 || grid.ny == 0 || grid.nz == 0 {

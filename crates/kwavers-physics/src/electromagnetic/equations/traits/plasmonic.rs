@@ -1,10 +1,10 @@
 use super::super::types::NanoparticleGeometry;
 use super::maxwell::ElectromagneticWaveEquation;
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::optical::{
     GOLD_DRUDE_DAMPING_RAD_S, GOLD_EPS_INF, GOLD_PLASMA_FREQUENCY_RAD_S,
 };
-use num_complex::Complex;
 
 mod geometry;
 

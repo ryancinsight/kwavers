@@ -49,7 +49,7 @@
 //!   disruptive technology for non-invasive therapy. Phys. Med. Biol. 61(17):
 //!   R206–R248.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -97,11 +97,11 @@ pub fn plan_abdominal_array_placement(
             "abdominal array placement requires positive finite CT spacing".to_owned(),
         ));
     }
-    if ct_hu.dim() != label.dim() {
+    if ct_hu.shape() != label.shape() {
         return Err(KwaversError::InvalidInput(format!(
             "CT shape {:?} does not match segmentation shape {:?}",
-            ct_hu.dim(),
-            label.dim()
+            ct_hu.shape(),
+            label.shape()
         )));
     }
 

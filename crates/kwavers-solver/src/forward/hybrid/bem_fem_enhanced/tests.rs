@@ -35,7 +35,7 @@ fn test_solver_creation() {
     let config = EnhancedBemFemConfig::default();
     let solver = EnhancedBemFemSolver::new(config);
     assert!(solver.interface_quality.is_none());
-    assert_eq!(solver.refinement_history.len(), 0);
+    assert_eq!((solver.refinement_history.len()), 0);
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn test_adaptive_refinement_reduces_interface_error() {
     let history = solver.refinement_history();
 
     assert_eq!(result.refinement_levels, 3);
-    assert_eq!(history.len(), 3);
+    assert_eq!((history.len()), 3);
     assert!(history[0].estimated_error > history[1].estimated_error);
     assert!(history[1].estimated_error > history[2].estimated_error);
     assert_eq!(

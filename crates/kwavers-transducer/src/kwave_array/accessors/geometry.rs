@@ -1,4 +1,4 @@
-use super::super::{ElementShape, KWaveArray};
+use super::super::{ElementShape, KWaveArray, KWaveElement};
 
 impl KWaveArray {
     /// Number of elements in the array.
@@ -14,12 +14,18 @@ impl KWaveArray {
             .iter()
             .map(|e| {
                 let local = match e {
-                    ElementShape::Arc { position, .. } => *position,
-                    ElementShape::Rect { position, .. } => *position,
-                    ElementShape::Disc { position, .. } => *position,
-                    ElementShape::ProfiledDisc { position, .. } => *position,
-                    ElementShape::Bowl { position, .. } => *position,
-                    ElementShape::Annulus { position, .. } => *position,
+                    KWaveElement::PlanarAperture(geometry) => {
+                        let [x, y, z] = geometry.center_m();
+                        (x, y, z)
+                    }
+                    KWaveElement::Shape(shape) => match shape {
+                        ElementShape::Arc { position, .. }
+                        | ElementShape::Rect { position, .. }
+                        | ElementShape::Disc { position, .. }
+                        | ElementShape::ProfiledDisc { position, .. }
+                        | ElementShape::Bowl { position, .. }
+                        | ElementShape::Annulus { position, .. } => *position,
+                    },
                 };
                 self.apply_transform_point(local)
             })
@@ -36,32 +42,37 @@ impl KWaveArray {
         self.elements
             .iter()
             .map(|e| match e {
-                ElementShape::Bowl {
-                    radius: r,
-                    diameter: d,
-                    ..
-                } => Self::bowl_surface_area(*r, *d),
-                ElementShape::Disc { diameter: d, .. } => std::f64::consts::PI * (d / 2.0).powi(2),
-                ElementShape::ProfiledDisc { diameter: d, .. } => {
-                    std::f64::consts::PI * (d / 2.0).powi(2)
-                }
-                ElementShape::Rect {
-                    width: w,
-                    height: h,
-                    ..
-                } => w * h,
-                ElementShape::Arc {
-                    radius: r,
-                    start_angle: s,
-                    end_angle: e,
-                    ..
-                } => Self::arc_line_length(*r, *s, *e),
-                ElementShape::Annulus {
-                    radius: r,
-                    inner_diameter: di,
-                    outer_diameter: d_o,
-                    ..
-                } => Self::annulus_surface_area(*r, *di, *d_o),
+                KWaveElement::PlanarAperture(geometry) => geometry.shape().area_m2(),
+                KWaveElement::Shape(e) => match e {
+                    ElementShape::Bowl {
+                        radius: r,
+                        diameter: d,
+                        ..
+                    } => Self::bowl_surface_area(*r, *d),
+                    ElementShape::Disc { diameter: d, .. } => {
+                        std::f64::consts::PI * (d / 2.0).powi(2)
+                    }
+                    ElementShape::ProfiledDisc { diameter: d, .. } => {
+                        std::f64::consts::PI * (d / 2.0).powi(2)
+                    }
+                    ElementShape::Rect {
+                        width: w,
+                        height: h,
+                        ..
+                    } => w * h,
+                    ElementShape::Arc {
+                        radius: r,
+                        start_angle: s,
+                        end_angle: e,
+                        ..
+                    } => Self::arc_line_length(*r, *s, *e),
+                    ElementShape::Annulus {
+                        radius: r,
+                        inner_diameter: di,
+                        outer_diameter: d_o,
+                        ..
+                    } => Self::annulus_surface_area(*r, *di, *d_o),
+                },
             })
             .sum()
     }

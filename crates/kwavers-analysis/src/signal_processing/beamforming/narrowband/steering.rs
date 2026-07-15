@@ -28,11 +28,11 @@
 //!
 //! This file provides explicit, jargon-aligned helpers to avoid silent convention mismatches.
 
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::geometry::distance3;
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 
 /// Newtype representing a narrowband steering vector (complex phasors).
 ///
@@ -172,7 +172,7 @@ pub fn steering_from_delays_s(delays_s: &[f64], frequency_hz: f64) -> Narrowband
     // Caller is expected to validate `frequency_hz` and `delays_s` finiteness where needed.
     // We stay total here and propagate non-finite through to output if the caller violates invariants.
     let omega = -TWO_PI * frequency_hz;
-    let mut a = Array1::<Complex64>::zeros(delays_s.len());
+    let mut a = Array1::<Complex64>::from_elem(delays_s.len(), Complex64::default());
     for (i, &tau) in delays_s.iter().enumerate() {
         let phase = omega * tau;
         a[i] = Complex64::new(0.0, phase).exp();

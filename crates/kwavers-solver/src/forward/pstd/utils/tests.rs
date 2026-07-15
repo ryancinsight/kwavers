@@ -1,6 +1,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
+use leto::Array3;
 
 #[test]
 fn test_wavenumber_computation() {
@@ -8,9 +9,9 @@ fn test_wavenumber_computation() {
     let (kx, ky, kz) = compute_wavenumbers(&grid);
 
     // Check dimensions
-    assert_eq!(kx.dim(), (8, 8, 8));
-    assert_eq!(ky.dim(), (8, 8, 8));
-    assert_eq!(kz.dim(), (8, 8, 8));
+    assert_eq!(kx.shape(), [8, 8, 8]);
+    assert_eq!(ky.shape(), [8, 8, 8]);
+    assert_eq!(kz.shape(), [8, 8, 8]);
 
     // Check DC component
     assert_eq!(kx[[0, 0, 0]], 0.0);
@@ -63,7 +64,7 @@ fn test_spectral_gradient_x_sinusoid() {
     let l = n as f64 * dx;
     let k_fund = 2.0 * PI / l;
 
-    let mut field = ndarray::Array3::<f64>::zeros((n, 1, 1));
+    let mut field = Array3::<f64>::zeros([n, 1, 1]);
     for i in 0..n {
         field[[i, 0, 0]] = (k_fund * i as f64 * dx).sin();
     }

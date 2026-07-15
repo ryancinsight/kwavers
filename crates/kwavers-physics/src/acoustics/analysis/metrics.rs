@@ -4,7 +4,7 @@ use super::pressure::{acoustic_impedance, harmonic_peak_intensity};
 use super::validation::{validate_pressure_field_domain, validation_error};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 /// Field analysis metrics
 #[derive(Debug, Clone)]
@@ -191,8 +191,9 @@ fn calculate_beam_width_at_location(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
+    use kwavers_core::error::{KwaversError, ValidationError};
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn small_grid() -> Grid {
         Grid::new(8, 8, 8, 1e-3, 1e-3, 1e-3).unwrap()
@@ -331,13 +332,12 @@ mod tests {
         let field = Array3::<f64>::zeros((7, 8, 8));
 
         let err = find_peak_pressure(field.view(), &grid).unwrap_err();
-        let message = err.to_string();
-
-        assert!(
-            message.contains("Dimension mismatch"),
-            "unexpected error: {message}"
-        );
-        assert!(message.contains("(8, 8, 8)"), "expected shape: {message}");
-        assert!(message.contains("(7, 8, 8)"), "actual shape: {message}");
+        match err {
+            KwaversError::Validation(ValidationError::DimensionMismatch { expected, actual }) => {
+                assert_eq!(expected, "[8, 8, 8]");
+                assert_eq!(actual, "[7, 8, 8]");
+            }
+            other => panic!("unexpected error: {other}"),
+        }
     }
 }

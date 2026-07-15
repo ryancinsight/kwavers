@@ -6,7 +6,7 @@ use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::cavitation::VAPOR_PRESSURE_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl BubbleProperties for HeterogeneousTissueMedium {
     fn surface_tension(&self, x: f64, y: f64, z: f64, grid: &Grid) -> f64 {

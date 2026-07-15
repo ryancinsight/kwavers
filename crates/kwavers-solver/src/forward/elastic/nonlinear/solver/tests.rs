@@ -4,11 +4,11 @@ use super::NonlinearElasticWaveSolver;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 /// CFL stability factor used internally by [`NonlinearElasticWaveSolver::calculate_time_step_for_amplitude`].
 const CFL: f64 = 0.45;
-/// Reference displacement scale used in the nonlinear CFL formula [m].
+/// Reference displacement scale used in the nonlinear CFL formula \[m\].
 const U_REF: f64 = 1e-3;
 
 /// Verify construction invariants for `NonlinearElasticWaveSolver`.
@@ -152,9 +152,9 @@ fn wave_propagation_history_is_monotone_in_time() {
     let history = solver.propagate_waves(&initial).unwrap();
 
     assert!(
-        history.len() >= 2,
+        (history.len()) >= 2,
         "history must contain at least initial + final frame; got {}",
-        history.len()
+        (history.len())
     );
 
     assert_eq!(
@@ -163,7 +163,7 @@ fn wave_propagation_history_is_monotone_in_time() {
         history[0].time
     );
 
-    for i in 1..history.len() {
+    for i in 1..(history.len()) {
         assert!(
             history[i].time > history[i - 1].time,
             "history time not strictly monotone at index {}: {:.6e} ≤ {:.6e}",

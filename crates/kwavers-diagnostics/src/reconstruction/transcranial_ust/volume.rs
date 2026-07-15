@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     config::{SOUND_SPEED_SKULL, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM},
@@ -42,7 +42,7 @@ impl AcousticVolume {
                 "spacing_m must be finite and positive".to_owned(),
             ));
         }
-        let (nx, ny, nz) = volume.hu.dim();
+        let [nx, ny, nz] = volume.hu.shape();
         if nx < 8 || ny < 8 || nz < 8 {
             return Err(KwaversError::InvalidInput(
                 "CT volume must be at least 8 x 8 x 8".to_owned(),
@@ -131,7 +131,7 @@ pub fn resample_head_volume(
             "CT spacing must be positive in x, y, and z".to_owned(),
         ));
     }
-    let (nx, ny, nz) = volume_hu.dim();
+    let [nx, ny, nz] = volume_hu.shape();
     if nz == 0 || source_slice_index >= nz {
         return Err(KwaversError::InvalidInput(format!(
             "source_slice_index {source_slice_index} out of bounds for {nz} CT slices"
@@ -201,7 +201,7 @@ fn head_centroid3(volume: &Array3<f64>) -> Option<(f64, f64, f64)> {
     let mut sy = 0.0;
     let mut sz = 0.0;
     let mut n = 0.0;
-    for ((ix, iy, iz), hu) in volume.indexed_iter() {
+    for ([ix, iy, iz], hu) in volume.indexed_iter() {
         if *hu > HU_BRAIN_BODY_THRESHOLD {
             sx += ix as f64;
             sy += iy as f64;
@@ -213,7 +213,7 @@ fn head_centroid3(volume: &Array3<f64>) -> Option<(f64, f64, f64)> {
 }
 
 fn head_bbox3(volume: &Array3<f64>) -> KwaversResult<(usize, usize, usize, usize, usize, usize)> {
-    let (nx, ny, nz) = volume.dim();
+    let [nx, ny, nz] = volume.shape();
     let mut bbox: Option<(usize, usize, usize, usize, usize, usize)> = None;
     for ix in 0..nx {
         for iy in 0..ny {

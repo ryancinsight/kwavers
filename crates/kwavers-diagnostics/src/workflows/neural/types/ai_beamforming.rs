@@ -2,7 +2,7 @@
 
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use kwavers_transducer::beamforming::BeamformingConfig;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::ClinicalAnalysis;

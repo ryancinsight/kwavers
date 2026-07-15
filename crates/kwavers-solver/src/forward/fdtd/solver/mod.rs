@@ -89,7 +89,7 @@ use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::StaggeredGridOperator;
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_source::{Source, SourceInjectionMode};
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 use super::config::FdtdConfig;
@@ -135,8 +135,7 @@ pub struct GenericFdtdSolver<T> {
     pub(crate) time_step_index: usize,
 
     // Wave Fields (p, ux, uy, uz)
-    // Instantiated as T, natively mapped by alias
-    pub fields: kwavers_field::wave::GenericWaveFields<T>,
+    pub fields: kwavers_field::wave::WaveFields,
 
     // Material Properties (rho0, c0)
     pub materials: kwavers_medium::material_fields::GenericMaterialFields<T>,
@@ -185,7 +184,7 @@ impl<T: std::fmt::Debug> std::fmt::Debug for GenericFdtdSolver<T> {
                 &self.gpu_accelerator.as_ref().map(|_| "GpuAccelerator"),
             )
             .field("source_handler", &self.source_handler)
-            .field("dynamic_sources_count", &self.dynamic_sources.len())
+            .field("dynamic_sources_count", &(self.dynamic_sources.len()))
             .field("sensor_recorder", &self.sensor_recorder)
             .field("time_step_index", &self.time_step_index)
             .field("fields", &self.fields)

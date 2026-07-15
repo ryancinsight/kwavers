@@ -3,9 +3,9 @@
 //! Removes slow-moving clutter from vessel walls and tissue while preserving
 //! blood flow signals. Essential for clean Doppler velocity estimation.
 
+use eunomia::Complex64;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
-use num_complex::Complex64;
+use leto::{Array3, ArrayView3};
 
 /// Wall filter types
 #[derive(Debug, Clone, Copy)]
@@ -58,7 +58,7 @@ impl WallFilter {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn apply(&self, iq_data: &ArrayView3<Complex64>) -> KwaversResult<Array3<Complex64>> {
-        let (ensemble_size, n_depths, n_beams) = iq_data.dim();
+        let [ensemble_size, n_depths, n_beams] = iq_data.shape();
         let mut filtered = Array3::<Complex64>::zeros((ensemble_size, n_depths, n_beams));
 
         match self.config.filter_type {

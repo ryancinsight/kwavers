@@ -49,8 +49,18 @@ use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
 use kwavers_source::SourceMode;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 use proptest::prelude::*;
+
+trait Field3 {
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a>;
+}
+
+impl Field3 for leto::Array3<f64> {
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
+        Box::new(self.iter())
+    }
+}
 
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
@@ -281,10 +291,10 @@ proptest! {
         // (This is a simplified check - real boundary condition testing
         // would depend on the specific BC implementation)
 
-        let shape = field.dim();
-        let nx = shape.0;
-        let ny = shape.1;
-        let nz = shape.2;
+        let shape = field.shape();
+        let nx = shape[0];
+        let ny = shape[1];
+        let nz = shape[2];
 
         // Check corners and edges aren't pathological
         let corner_values = [
@@ -431,8 +441,8 @@ proptest! {
 }
 
 /// Helper function to calculate total energy
-fn calculate_energy(field: &ndarray::Array3<f64>) -> f64 {
-    field.iter().map(|&x| x * x).sum::<f64>().sqrt()
+fn calculate_energy<F: Field3>(field: &F) -> f64 {
+    field.iter_values().map(|&x| x * x).sum::<f64>().sqrt()
 }
 
 /// Run all property-based tests

@@ -30,10 +30,10 @@
 //! finite difference (LeVeque 2007, §2.2). The backward stencil requires no
 //! future values, keeping the scheme fully explicit. Taylor expansion shows
 //! the truncation error is O(Δt), not O(Δt²) — the centered stencil
-//! `(p²[n+1] − 2p²[n] + p²[n-1])/Δt²` achieves O(Δt²) but is implicit:
+//! `(p²[n+1] − 2p²\[n\] + p²[n-1])/Δt²` achieves O(Δt²) but is implicit:
 //!
 //! ```text
-//! ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt)
+//! ∂²(p²)/∂t² ≈ (p²\[n\] − 2p²[n-1] + p²[n-2]) / Δt²   + O(Δt)
 //! ```
 //!
 //! For weakly nonlinear acoustics (Ma ≪ 1) this is acceptable: the nonlinear
@@ -51,7 +51,8 @@
 //!   SIAM. §2.2.
 
 use kwavers_core::constants::numerical::{B_OVER_A_DIVISOR, NONLINEARITY_COEFFICIENT_OFFSET};
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Compute the nonlinear term for the Kuznetsov equation using workspace.
 ///
@@ -72,11 +73,11 @@ use ndarray::{Array3, Zip};
 ///
 /// Discrete ∂²(p²)/∂t² — backward stencil (LeVeque 2007, §2.2), O(Δt):
 /// ```text
-/// ∂²(p²)/∂t² ≈ (p²[n] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt)
+/// ∂²(p²)/∂t² ≈ (p²\[n\] − 2p²[n−1] + p²[n−2]) / Δt²   + O(Δt)
 /// ```
 ///
 /// # Arguments
-/// * `pressure` - Current pressure field p[n]
+/// * `pressure` - Current pressure field p\[n\]
 /// * `pressure_prev` - Previous pressure field p[n−1]
 /// * `pressure_prev2` - Two steps back p[n−2]
 /// * `dt` - Time step size Δt
@@ -102,17 +103,30 @@ pub fn compute_nonlinear_term_workspace(
     // Derived from: ∂²p/∂t² = c₀²∇²p + (β/ρ₀c₀²)∂²(p²)/∂t² + …
     let coeff = beta / (density * sound_speed.powi(2));
 
-    Zip::from(nonlinear_term_out)
-        .and(pressure)
-        .and(pressure_prev)
-        .and(pressure_prev2)
-        .par_for_each(|nl, &p, &p_prev, &p_prev2| {
-            let p2 = p * p;
-            let p2_prev = p_prev * p_prev;
-            let p2_prev2 = p_prev2 * p_prev2;
+    {
+        let nl_slice = nonlinear_term_out
+            .as_slice_mut()
+            .expect("nonlinear_term_out: standard-layout asserted just above; layout matched");
+        let p_slice = pressure
+            .as_slice()
+            .expect("pressure: standard-layout asserted just above; layout matched");
+        let prev_slice = pressure_prev
+            .as_slice()
+            .expect("pressure_prev: standard-layout asserted just above; layout matched");
+        let prev2_slice = pressure_prev2
+            .as_slice()
+            .expect("pressure_prev2: standard-layout asserted just above; layout matched");
+        enumerate_mut_with::<Adaptive, _, _>(nl_slice, |idx, nl: &mut f64| {
+            let p_val = p_slice[idx];
+            let prev_val = prev_slice[idx];
+            let prev2_val = prev2_slice[idx];
+            let p2 = p_val * p_val;
+            let p2_prev = prev_val * prev_val;
+            let p2_prev2 = prev2_val * prev2_val;
             let d2p2_dt2 = (2.0f64.mul_add(-p2_prev, p2) + p2_prev2) / (dt * dt);
             *nl = coeff * d2p2_dt2; // positive; added to leapfrog RHS
         });
+    }
 }
 
 /// Compute the quadratic nonlinearity coefficient

@@ -1,8 +1,10 @@
-//! GPU-accelerated 3D FFT facade backed by `apollofft-wgpu`.
+//! GPU-accelerated 3D FFT facade backed by Apollo's FFT backend trait.
 //!
-//! The single source of truth for WGPU FFT execution is Apollo. `kwavers`
+//! The single source of truth for GPU FFT execution is Apollo. `kwavers`
 //! exposes this narrow facade so solver code depends on the spectral contract
-//! rather than on Apollo's internal module tree.
+//! rather than on Apollo's internal module tree. Apollo currently exposes a
+//! WGPU implementation for this contract; CUDA FFT remains an upstream backend
+//! gap rather than a Kwavers-side placeholder.
 //!
 //! # Theorem
 //! Let `F_N` be the unnormalised length-`N` DFT and let each 3D transform be
@@ -15,7 +17,7 @@
 //! DFT matrices. Each factor satisfies `F_N^{-1} F_N = I_N` under the inverse
 //! `1 / N` scaling, so the tensor product satisfies
 //! `(F_nx^{-1} (*) F_ny^{-1} (*) F_nz^{-1})(F_nx (*) F_ny (*) F_nz) = I`.
-//! Apollo's WGPU plan evaluates the same separable transforms as the CPU path:
+//! Apollo's current GPU plan evaluates the same separable transforms as the CPU path:
 //! radix-2 Cooley-Tukey for power-of-two axes and Bluestein convolution for
 //! non-power-of-two axes. The GPU facade therefore has one acceptance criterion:
 //! its interleaved complex spectrum and inverse round trip must match Apollo
@@ -30,15 +32,16 @@
 //! convolution with `M = next_power_of_two(2N - 1)`, giving `O(N log N)` for
 //! every positive axis length.
 
-/// Returns whether the compiled crate can expose Apollo WGPU FFT execution.
+/// Returns whether the compiled crate can expose Apollo GPU FFT execution.
 ///
 /// This is a capability predicate, not a numerical substitute. Callers that
-/// need a plan must construct `WgpuBackend` and handle adapter/device failure.
+/// need a plan must construct an Apollo [`FftBackend`] implementation and
+/// handle adapter/device failure.
 #[must_use]
 pub fn gpu_fft_available() -> bool {
     #[cfg(feature = "gpu")]
     {
-        apollofft_wgpu::gpu_fft_available()
+        apollo::gpu_fft_available()
     }
     #[cfg(not(feature = "gpu"))]
     {
@@ -47,16 +50,15 @@ pub fn gpu_fft_available() -> bool {
 }
 
 #[cfg(feature = "gpu")]
-pub use apollofft_wgpu::{GpuFft3d, GpuFft3dBuffers, WgpuBackend};
+pub use apollo::{FftBackend, GpuFft3d, GpuFft3dBuffers, WgpuBackend};
 
 #[cfg(all(test, feature = "gpu"))]
 mod tests {
-    use super::WgpuBackend;
+    use super::{FftBackend, WgpuBackend};
     use crate::fft::{fft_3d_array, Shape3D};
-    use apollo::backend::FftBackend;
-    use ndarray::Array3;
+    use leto::Array3;
 
-    fn try_plan(shape: Shape3D) -> Option<apollofft_wgpu::GpuFft3d> {
+    fn try_plan(shape: Shape3D) -> Option<apollo::GpuFft3d> {
         let backend = match WgpuBackend::try_default() {
             Ok(backend) => backend,
             Err(error) => {
@@ -84,7 +86,7 @@ mod tests {
         let Some(plan) = try_plan(shape) else {
             return;
         };
-        let field = Array3::from_shape_fn((shape.nx, shape.ny, shape.nz), |(i, j, k)| {
+        let field = Array3::from_shape_fn([shape.nx, shape.ny, shape.nz], |[i, j, k]| {
             (i as f64 + 1.0) - 0.25 * (j as f64) + 0.125 * (k as f64)
         });
 
@@ -114,17 +116,27 @@ mod tests {
         let Some(plan) = try_plan(shape) else {
             return;
         };
-        let field = Array3::from_shape_fn((shape.nx, shape.ny, shape.nz), |(i, j, k)| {
+        let field = Array3::from_shape_fn([shape.nx, shape.ny, shape.nz], |[i, j, k]| {
             ((i * 7 + j * 3 + k) as f64).sin()
         });
         let mut spectrum = vec![0.0_f32; 2 * shape.volume()];
-        let mut buffers = apollofft_wgpu::GpuFft3dBuffers::new(&plan);
-        let mut out = Array3::<f64>::zeros((shape.nx, shape.ny, shape.nz));
+        let mut buffers = apollo::GpuFft3dBuffers::new(&plan);
+        let mut out = Array3::<f64>::from_shape_vec(
+            [shape.nx, shape.ny, shape.nz],
+            vec![0.0; shape.volume()],
+        )
+        .expect("zeroed Leto output must match the plan shape");
 
         plan.forward_into_with_buffers(&field, &mut spectrum, &mut buffers);
         plan.inverse_with_buffers(&spectrum, &mut out, &mut buffers);
 
-        for (idx, (actual, expected)) in out.iter().zip(field.iter()).enumerate() {
+        for (idx, (actual, expected)) in out
+            .as_slice_memory_order()
+            .expect("Leto output must be contiguous")
+            .iter()
+            .zip(field.iter())
+            .enumerate()
+        {
             assert!(
                 (actual - expected).abs() <= 2.0e-4,
                 "round-trip mismatch at {idx}: actual={actual} expected={expected}"

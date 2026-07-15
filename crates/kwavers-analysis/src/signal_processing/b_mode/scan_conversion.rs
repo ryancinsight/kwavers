@@ -20,7 +20,7 @@
 //!   §10.4 (scan conversion). Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, ArrayView2};
+use leto::{Array2, ArrayView2};
 
 /// Polar acquisition geometry: uniformly-spaced beams, uniform range sampling.
 #[derive(Debug, Clone, Copy)]
@@ -78,7 +78,7 @@ impl ScanConverter {
     /// Bilinear sample of the beam grid at fractional `(line, sample)`; returns
     /// `None` when outside the acquired fan.
     fn sample(beam: ArrayView2<f64>, line: f64, sample: f64) -> Option<f64> {
-        let (n_lines, n_samples) = beam.dim();
+        let [n_lines, n_samples] = beam.shape();
         if line < 0.0 || sample < 0.0 {
             return None;
         }
@@ -103,7 +103,7 @@ impl ScanConverter {
     /// Returns [`KwaversError::InvalidInput`] when `beam_data` has fewer than two
     /// beams or two samples (interpolation needs a 2×2 neighbourhood).
     pub fn convert(&self, beam_data: ArrayView2<f64>) -> KwaversResult<Array2<f64>> {
-        let (n_lines, n_samples) = beam_data.dim();
+        let [n_lines, n_samples] = beam_data.shape();
         if n_lines < 2 || n_samples < 2 {
             return Err(KwaversError::InvalidInput(
                 "scan conversion needs at least 2 beams and 2 samples".to_owned(),

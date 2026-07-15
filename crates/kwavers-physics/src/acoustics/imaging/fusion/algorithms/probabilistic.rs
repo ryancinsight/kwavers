@@ -1,11 +1,10 @@
 use super::MultiModalFusion;
 use crate::acoustics::imaging::fusion::quality;
-use crate::acoustics::imaging::fusion::registration;
+use crate::acoustics::imaging::fusion::registration::{self, RitkRegistrationEngine};
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, CowArray};
-use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
-use std::collections::HashMap;
+use leto::Array3;
+use std::{borrow::Cow, collections::HashMap};
 
 /// Probabilistic fusion with uncertainty modeling
 ///
@@ -33,7 +32,7 @@ use std::collections::HashMap;
 /// - Propagates any [`KwaversError`] returned by called functions.
 ///
 pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
-    let registration = ImageRegistration::default();
+    let registration_engine = RitkRegistrationEngine::default();
 
     // Use first modality as reference
     let reference_modality = fusion.registered_data.values().next().ok_or_else(|| {
@@ -43,8 +42,7 @@ pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<Fus
     })?;
 
     // Define target grid dimensions based on the reference modality's native grid
-    let ref_shape = reference_modality.data.dim();
-    let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
+    let target_dims = reference_modality.data.shape();
 
     let mut fused_intensity = Array3::<f64>::zeros(target_dims);
     let mut confidence_map = Array3::<f64>::zeros(target_dims);
@@ -69,41 +67,41 @@ pub(crate) fn fuse_probabilistic(fusion: &MultiModalFusion) -> KwaversResult<Fus
         // Register modality
         let identity_transform = registration::IDENTITY_HOMOGENEOUS;
 
-        let registration_result = registration.rigid_registration_mutual_info(
+        let registration_result = registration_engine.register_for_method(
             &reference_modality.data,
             &modality.data,
-            &RitkAffineTransform::IDENTITY,
+            kwavers_imaging::fusion::RegistrationMethod::RigidBody,
         )?;
 
         let affine_transform =
-            AffineTransform::from_homogeneous(registration_result.transform.as_array());
+            AffineTransform::from_homogeneous(&registration_result.transform_matrix);
         registration_transforms.insert(modality_name.clone(), affine_transform);
 
         // Resample to common grid
-        let transform = *registration_result.transform.as_array();
+        let transform = registration_result.transform_matrix;
         let resampled_data =
-            if modality.data.dim() == target_dims && transform == identity_transform {
-                CowArray::from(modality.data.view())
+            if modality.data.shape() == target_dims && transform == identity_transform {
+                Cow::Borrowed(&modality.data)
             } else {
-                CowArray::from(registration::resample_to_target_grid(
+                Cow::Owned(registration_engine.resample_registered(
                     &modality.data,
-                    &transform,
+                    &registration_result,
                     target_dims,
-                ))
+                )?)
             };
 
         modality_data.push((
             resampled_data,
             weight,
             modality.quality_score,
-            registration_result.quality.normalized_cross_correlation,
+            registration_result.confidence,
         ));
     }
 
     // Perform probabilistic fusion at each voxel
-    for i in 0..target_dims.0 {
-        for j in 0..target_dims.1 {
-            for k in 0..target_dims.2 {
+    for i in 0..target_dims[0] {
+        for j in 0..target_dims[1] {
+            for k in 0..target_dims[2] {
                 let voxel_data: Vec<f64> = modality_data
                     .iter()
                     .map(|(data, _, _, _)| data[[i, j, k]])

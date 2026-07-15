@@ -32,7 +32,7 @@ impl PoroelasticSolver {
     ///
     /// CFL condition: Δt ≤ Δx / c_max
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn compute_stable_timestep(&self) -> KwaversResult<f64> {
         let speeds = self.biot.compute_wave_speeds(MHZ_TO_HZ)?; // At 1 MHz

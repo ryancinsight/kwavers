@@ -1,11 +1,11 @@
 //! Direct inversion — Gauss-Seidel optimization of `J(k²) = ‖∇²u + k²u‖² + λ‖∇k²‖²`.
 
-use ndarray::Array3;
-
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::ElasticityMap;
 use kwavers_physics::acoustics::imaging::modalities::elastography::displacement::DisplacementField;
+use leto::Array3 as LetoArray3;
+use leto::Array3;
 
 use super::super::algorithms::{fill_boundaries, spatial_smoothing};
 use super::super::types::elasticity_map_from_speed;
@@ -37,8 +37,8 @@ pub(super) fn direct_inversion(
     density: f64,
     frequency: f64,
 ) -> KwaversResult<ElasticityMap> {
-    let (nx, ny, nz) = displacement.uz.dim();
-    let mut shear_wave_speed = Array3::zeros((nx, ny, nz));
+    let [nx, ny, nz] = displacement.uz.shape();
+    let mut shear_wave_speed = LetoArray3::zeros([nx, ny, nz]);
 
     // 1. Compute Laplacian of displacement field
     let laplacian = compute_laplacian(&displacement.uz, grid);
@@ -48,7 +48,7 @@ pub(super) fn direct_inversion(
     let initial_k = omega / 3.0;
     let initial_theta = initial_k * initial_k;
 
-    let mut theta = Array3::from_elem((nx, ny, nz), initial_theta);
+    let mut theta = Array3::from_elem([nx, ny, nz], initial_theta);
 
     // 3. Optimization parameters
     let max_iterations = 50;
@@ -108,7 +108,7 @@ pub(super) fn direct_inversion(
 
 /// Compute Laplacian of a scalar field using 7-point stencil
 fn compute_laplacian(field: &Array3<f64>, grid: &Grid) -> Array3<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let mut laplacian = Array3::zeros((nx, ny, nz));
 
     let idx2 = 1.0 / (grid.dx * grid.dx);

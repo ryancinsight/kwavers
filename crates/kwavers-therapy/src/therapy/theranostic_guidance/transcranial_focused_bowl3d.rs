@@ -21,7 +21,7 @@
 //! - Voxel body threshold (−350 HU) captures all head/neck tissue.
 //! - The z-axis is approximately aligned with the inferior-superior axis.
 
-use ndarray::{s, Array3};
+use leto::{Array3, SliceArg};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_transducer::transducers::focused::BowlAngularBounds;
@@ -274,7 +274,7 @@ fn body_bounds(mask: &Array3<bool>) -> KwaversResult<Bounds> {
     let mut min = [usize::MAX; 3];
     let mut max = [0usize; 3];
     let mut any = false;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
+    for ([ix, iy, iz], active) in mask.indexed_iter() {
         if *active {
             min[0] = min[0].min(ix);
             min[1] = min[1].min(iy);
@@ -303,14 +303,14 @@ fn surface_points(
     max_z: usize,
 ) -> Vec<Point3> {
     mask.indexed_iter()
-        .filter(|&((ix, iy, iz), active)| {
+        .filter(|&([ix, iy, iz], active)| {
             *active
                 && iz >= min_z
                 && iz <= max_z
                 && is_boundary_3d(mask, ix, iy, iz)
                 && (ix + iy + iz) % stride == 0
         })
-        .map(|((ix, iy, iz), _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
+        .map(|([ix, iy, iz], _)| voxel_to_point(ix, iy, iz, spacing_m, center_index))
         .collect()
 }
 
@@ -325,8 +325,8 @@ fn body_radius(
     max_z: usize,
 ) -> f64 {
     mask.indexed_iter()
-        .filter(|&((_, _, iz), active)| *active && iz >= min_z && iz <= max_z)
-        .map(|((ix, iy, iz), _)| {
+        .filter(|&([_, _, iz], active)| *active && iz >= min_z && iz <= max_z)
+        .map(|([ix, iy, iz], _)| {
             let point = voxel_to_point(ix, iy, iz, spacing_m, center_index);
             (point.x_m * point.x_m + point.y_m * point.y_m + point.z_m * point.z_m).sqrt()
         })
@@ -365,10 +365,11 @@ fn configured_polar_bound(
 }
 
 fn axial_areas(mask: &Array3<bool>) -> Vec<usize> {
-    let (_, _, nz) = mask.dim();
+    let [_, _, nz] = mask.shape();
     (0..nz)
         .map(|iz| {
-            mask.slice(s![.., .., iz])
+            mask.slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(iz as isize)])
+                .expect("invariant: axis index in bounds")
                 .iter()
                 .filter(|active| **active)
                 .count()
@@ -430,12 +431,12 @@ fn point_in_mask(
     let ix = (point.x_m / spacing_m[0] + center_index[0]).round() as isize;
     let iy = (point.y_m / spacing_m[1] + center_index[1]).round() as isize;
     let iz = (point.z_m / spacing_m[2] + center_index[2]).round() as isize;
-    let shape = mask.dim();
+    let shape = mask.shape();
     if ix < 0 || iy < 0 || iz < 0 {
         return false;
     }
     let (ix, iy, iz) = (ix as usize, iy as usize, iz as usize);
-    ix < shape.0 && iy < shape.1 && iz < shape.2 && mask[[ix, iy, iz]]
+    ix < shape[0] && iy < shape[1] && iz < shape[2] && mask[[ix, iy, iz]]
 }
 
 fn voxel_to_point(

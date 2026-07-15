@@ -4,6 +4,7 @@ use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
+use kwavers_solver::Solver;
 
 #[test]
 fn rejects_non_power_of_two_grid() {

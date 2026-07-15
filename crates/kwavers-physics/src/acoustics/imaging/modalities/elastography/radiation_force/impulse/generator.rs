@@ -3,7 +3,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::absorption::PowerLawAbsorption;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::patterns::MultiDirectionalPush;
 use super::parameters::PushPulseParameters;
@@ -164,7 +164,7 @@ impl AcousticRadiationForce {
         push_location: [f64; 3],
     ) -> KwaversResult<Array3<f64>> {
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut displacement = Array3::zeros((nx, ny, nz));
+        let mut displacement = Array3::zeros([nx, ny, nz]);
 
         // Calculate radiation force density
         // f = (2·α(f)·I)/c (N/m³) — α evaluated at the active push frequency.

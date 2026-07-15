@@ -64,7 +64,7 @@ impl ConservationTracker {
             .fold(0.0, f64::max);
 
         ConservationSummary {
-            total_checks: self.history.len() / 3,
+            total_checks: (self.history.len()) / 3,
             max_severity: self.max_severity,
             max_energy_error,
             final_energy_error: energy_violations

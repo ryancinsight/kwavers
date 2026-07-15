@@ -14,10 +14,10 @@
 
 use super::trait_def::SpectralOperatorTrait;
 use super::{SpectralFilter, SpectralFilterType};
-use crate::fft::{Complex64, Fft1d, Shape1D, FFT_CACHE_1D};
+use crate::fft::{fft_1d_complex_inplace, ifft_1d_complex_inplace, Complex64};
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array3, ArrayView3};
+use leto::{Array1, Array3, ArrayView3};
 use std::f64::consts::PI;
 
 /// Pseudospectral derivative operator using FFT
@@ -71,7 +71,7 @@ impl PseudospectralDerivative {
     /// k[i] = 2π·i / (N·d)        for i = 0..N/2
     /// k[i] = 2π·(i−N) / (N·d)   for i = N/2..N
     pub(super) fn wavenumber_vector(n: usize, d: f64) -> Array1<f64> {
-        let mut k = Array1::zeros(n);
+        let mut k = Array1::zeros([n]);
         let dk = TWO_PI / ((n as f64) * d);
 
         for i in 0..n / 2 {
@@ -94,8 +94,9 @@ impl PseudospectralDerivative {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn derivative_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut derivative = Array3::zeros(field.dim());
-        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().0);
+        let shape = field.shape();
+        let mut derivative = Array3::zeros(shape);
+        let mut line_workspace = Array1::<Complex64>::zeros([shape[0]]);
         self.derivative_x_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
@@ -125,8 +126,9 @@ impl PseudospectralDerivative {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn derivative_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut derivative = Array3::zeros(field.dim());
-        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().1);
+        let shape = field.shape();
+        let mut derivative = Array3::zeros(shape);
+        let mut line_workspace = Array1::<Complex64>::zeros([shape[1]]);
         self.derivative_y_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
@@ -155,8 +157,9 @@ impl PseudospectralDerivative {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn derivative_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
-        let mut derivative = Array3::zeros(field.dim());
-        let mut line_workspace = Array1::<Complex64>::zeros(field.dim().2);
+        let shape = field.shape();
+        let mut derivative = Array3::zeros(shape);
+        let mut line_workspace = Array1::<Complex64>::zeros([shape[2]]);
         self.derivative_z_into(field, &mut line_workspace, &mut derivative)?;
         Ok(derivative)
     }
@@ -192,20 +195,19 @@ impl PseudospectralDerivative {
         line_workspace: &mut Array1<Complex64>,
         output: &mut Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
-        validate_output_shape(output.dim(), field.dim())?;
+        let [nx, ny, nz] = field.shape();
+        validate_output_shape(output.shape(), field.shape())?;
 
         match AXIS {
             0 => {
-                validate_axis_len(nx, self.kx.len(), self.dx, self.dy, self.dz)?;
-                validate_line_workspace(line_workspace.len(), nx)?;
-                let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nx });
+                validate_axis_len(nx, self.kx.size(), self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.size(), nx)?;
                 for j in 0..ny {
                     for k in 0..nz {
                         for i in 0..nx {
                             line_workspace[i] = Complex64::new(field[[i, j, k]], 0.0);
                         }
-                        differentiate_line(line_workspace, &self.kx, &fft);
+                        differentiate_line(line_workspace, &self.kx);
                         for i in 0..nx {
                             output[[i, j, k]] = line_workspace[i].re;
                         }
@@ -213,15 +215,14 @@ impl PseudospectralDerivative {
                 }
             }
             1 => {
-                validate_axis_len(ny, self.ky.len(), self.dx, self.dy, self.dz)?;
-                validate_line_workspace(line_workspace.len(), ny)?;
-                let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: ny });
+                validate_axis_len(ny, self.ky.size(), self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.size(), ny)?;
                 for i in 0..nx {
                     for k in 0..nz {
                         for j in 0..ny {
                             line_workspace[j] = Complex64::new(field[[i, j, k]], 0.0);
                         }
-                        differentiate_line(line_workspace, &self.ky, &fft);
+                        differentiate_line(line_workspace, &self.ky);
                         for j in 0..ny {
                             output[[i, j, k]] = line_workspace[j].re;
                         }
@@ -229,15 +230,14 @@ impl PseudospectralDerivative {
                 }
             }
             2 => {
-                validate_axis_len(nz, self.kz.len(), self.dx, self.dy, self.dz)?;
-                validate_line_workspace(line_workspace.len(), nz)?;
-                let fft = FFT_CACHE_1D.get_or_create(Shape1D { n: nz });
+                validate_axis_len(nz, self.kz.size(), self.dx, self.dy, self.dz)?;
+                validate_line_workspace(line_workspace.size(), nz)?;
                 for i in 0..nx {
                     for j in 0..ny {
                         for k in 0..nz {
                             line_workspace[k] = Complex64::new(field[[i, j, k]], 0.0);
                         }
-                        differentiate_line(line_workspace, &self.kz, &fft);
+                        differentiate_line(line_workspace, &self.kz);
                         for k in 0..nz {
                             output[[i, j, k]] = line_workspace[k].re;
                         }
@@ -251,19 +251,15 @@ impl PseudospectralDerivative {
     }
 }
 
-fn differentiate_line(
-    line_workspace: &mut Array1<Complex64>,
-    wavenumbers: &Array1<f64>,
-    fft: &std::sync::Arc<Fft1d>,
-) {
-    fft.forward_complex_inplace(line_workspace);
+fn differentiate_line(line_workspace: &mut Array1<Complex64>, wavenumbers: &Array1<f64>) {
+    fft_1d_complex_inplace(line_workspace);
 
     for (value, &k_axis) in line_workspace.iter_mut().zip(wavenumbers.iter()) {
         *value *= Complex64::new(0.0, k_axis);
     }
 
-    // apollo-fft applies 1/N normalisation; no extra scale needed.
-    fft.inverse_complex_inplace(line_workspace);
+    // Apollo applies 1/N inverse normalisation; no extra scale needed.
+    ifft_1d_complex_inplace(line_workspace);
 }
 
 fn validate_axis_len(
@@ -290,10 +286,7 @@ fn validate_line_workspace(actual: usize, expected: usize) -> KwaversResult<()> 
     Ok(())
 }
 
-fn validate_output_shape(
-    actual: (usize, usize, usize),
-    expected: (usize, usize, usize),
-) -> KwaversResult<()> {
+fn validate_output_shape(actual: [usize; 3], expected: [usize; 3]) -> KwaversResult<()> {
     if actual != expected {
         return Err(KwaversError::DimensionMismatch(format!(
             "PseudospectralDerivative output shape {actual:?} must match field shape {expected:?}"

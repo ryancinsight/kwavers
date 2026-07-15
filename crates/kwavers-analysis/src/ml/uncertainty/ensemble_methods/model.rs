@@ -1,10 +1,10 @@
 #[cfg(feature = "pinn")]
-use burn::tensor::backend::Backend;
+use crate::ml::uncertainty::PinnUncertaintyPredictor;
 use kwavers_core::error::KwaversResult;
 #[cfg(not(feature = "pinn"))]
-use ndarray::Array2;
+use leto::Array2;
 #[cfg(feature = "pinn")]
-use ndarray::{Array1, Array2};
+use leto::Array2;
 
 /// Individual ensemble model
 #[derive(Debug, Clone)]
@@ -24,9 +24,9 @@ impl EnsembleModel {
     }
 
     #[cfg(feature = "pinn")]
-    pub(super) fn predict_with_noise<B: Backend>(
+    pub(super) fn predict_with_noise<P: PinnUncertaintyPredictor + ?Sized>(
         &self,
-        pinn: &kwavers_solver::inverse::pinn::ml::BurnPINN1DWave<B>,
+        predictor: &P,
         inputs: &Array2<f32>,
     ) -> KwaversResult<Array2<f32>> {
         use rand::rngs::StdRng;
@@ -40,12 +40,7 @@ impl EnsembleModel {
             *elem += noise;
         }
 
-        let x: Array1<f64> = noisy_inputs.column(0).mapv(|v| v as f64).to_owned();
-        let t: Array1<f64> = noisy_inputs.column(1).mapv(|v| v as f64).to_owned();
-        let device = pinn.device();
-
-        let prediction_f64 = pinn.predict(&x, &t, &device)?;
-        Ok(prediction_f64.mapv(|v| v as f32))
+        predictor.predict_inputs(&noisy_inputs)
     }
 
     pub(super) fn train(

@@ -4,7 +4,7 @@ use super::types::{HarmonicAnalysis, HarmonicConfig};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Harmonic tracker for nonlinear propagation.
 #[derive(Debug)]
@@ -28,8 +28,8 @@ impl HarmonicTracker {
 
     /// Analyze harmonics from pressure time series.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn analyze_harmonics(&self, pressure: &Array1<f64>) -> KwaversResult<HarmonicAnalysis> {
         if pressure.is_empty() {
@@ -92,11 +92,12 @@ impl HarmonicTracker {
         &self,
         pressure: &Array2<f64>,
     ) -> KwaversResult<Vec<HarmonicAnalysis>> {
-        let (_nx, nz) = pressure.dim();
         let mut analyses = Vec::new();
 
-        for z in 0..nz {
-            let line = pressure.column(z).to_owned();
+        for column in pressure.columns().map_err(|err| {
+            KwaversError::InvalidInput(format!("invalid harmonic pressure field: {err}"))
+        })? {
+            let line = column.to_contiguous();
             if let Ok(analysis) = self.analyze_harmonics(&line) {
                 analyses.push(analysis);
             }
@@ -112,7 +113,7 @@ impl HarmonicTracker {
         pressure: &Array1<f64>,
         mut analysis: HarmonicAnalysis,
     ) -> KwaversResult<HarmonicAnalysis> {
-        let n = pressure.len() as f64;
+        let n = (pressure.len()) as f64;
 
         let mean = pressure.iter().sum::<f64>() / n;
         let variance = pressure.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / n;
@@ -143,7 +144,7 @@ impl HarmonicTracker {
         pressure: &Array1<f64>,
         mut analysis: HarmonicAnalysis,
     ) -> KwaversResult<HarmonicAnalysis> {
-        let _n = pressure.len() as f64;
+        let _n = (pressure.len()) as f64;
         let dt = 1.0 / self.config.sampling_rate;
 
         let mut frequencies = Vec::new();
@@ -197,7 +198,7 @@ impl HarmonicTracker {
             sin_acc += p * phase.sin();
         }
 
-        let amplitude = cos_acc.hypot(sin_acc) / pressure.len() as f64;
+        let amplitude = cos_acc.hypot(sin_acc) / (pressure.len()) as f64;
         Ok(amplitude)
     }
 

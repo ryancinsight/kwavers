@@ -48,36 +48,44 @@ impl Simulation {
 
     /// Trim the recorder buffer to `Nt` columns aligned with k-Wave's time-axis convention.
     pub(crate) fn trim_initial_recorder_sample(
-        recorded_data: ndarray::Array2<f64>,
+        recorded_data: leto::Array2<f64>,
         time_steps: usize,
         record_start_index: usize,
-    ) -> ndarray::Array2<f64> {
+    ) -> leto::Array2<f64> {
         let start = record_start_index.max(1).min(time_steps);
         let skip = start.saturating_sub(1);
-        if recorded_data.ncols() > time_steps {
-            recorded_data
-                .slice(ndarray::s![.., skip..time_steps])
-                .to_owned()
+        let nrows = recorded_data.shape()[0];
+        let ncols = recorded_data.shape()[1];
+        let end = if ncols > time_steps {
+            time_steps
         } else {
-            recorded_data.slice(ndarray::s![.., skip..]).to_owned()
-        }
+            ncols
+        };
+        recorded_data
+            .slice(&[(0, nrows, 1), (skip, end, 1)])
+            .expect("recorder trim slice bounds")
+            .to_contiguous()
     }
 
     /// Borrowed-view variant of [`trim_initial_recorder_sample`].
     pub(crate) fn trim_initial_recorder_view(
-        recorded_data: ndarray::ArrayView2<'_, f64>,
+        recorded_data: leto::ArrayView2<'_, f64>,
         time_steps: usize,
         record_start_index: usize,
-    ) -> ndarray::Array2<f64> {
+    ) -> leto::Array2<f64> {
         let start = record_start_index.max(1).min(time_steps);
         let skip = start.saturating_sub(1);
-        if recorded_data.ncols() > time_steps {
-            recorded_data
-                .slice(ndarray::s![.., skip..time_steps])
-                .to_owned()
+        let nrows = recorded_data.shape()[0];
+        let ncols = recorded_data.shape()[1];
+        let end = if ncols > time_steps {
+            time_steps
         } else {
-            recorded_data.slice(ndarray::s![.., skip..]).to_owned()
-        }
+            ncols
+        };
+        recorded_data
+            .slice(&[(0, nrows, 1), (skip, end, 1)])
+            .expect("recorder trim slice bounds")
+            .to_contiguous()
     }
 
     /// Return the minimum active axis length and admissible CPML thickness.

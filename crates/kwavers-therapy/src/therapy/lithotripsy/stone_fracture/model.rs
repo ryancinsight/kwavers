@@ -13,7 +13,7 @@
 //! - `k`: Damage rate parameter (0.01 per event)
 
 use super::material::StoneMaterial;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Stone fracture mechanics model.
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ impl StoneFractureModel {
         let threshold = self.material.tensile_strength();
         const DAMAGE_RATE: f64 = 0.01;
 
-        for ((i, j, k), &stress) in stress_field.indexed_iter() {
+        for ([i, j, k], &stress) in stress_field.indexed_iter() {
             if stress < -threshold {
                 let overstress_ratio = (-stress / threshold) - 1.0;
                 self.damage_field[[i, j, k]] += DAMAGE_RATE * (1.0 + overstress_ratio);

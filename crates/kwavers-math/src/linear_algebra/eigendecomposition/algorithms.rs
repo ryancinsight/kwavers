@@ -1,7 +1,24 @@
 use super::{EigenResult, EigenSolver, EigenSolverConfig};
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult, NumericalError};
-use ndarray::{Array1, Array2};
-use num_complex::Complex;
+use leto::{Array1, Array2};
+
+fn matmul_complex(lhs: &Array2<Complex64>, rhs: &Array2<Complex64>) -> Array2<Complex64> {
+    let [rows, inner] = lhs.shape();
+    let [rhs_inner, cols] = rhs.shape();
+    debug_assert_eq!(inner, rhs_inner);
+    let mut out = Array2::from_elem([rows, cols], Complex64::new(0.0, 0.0));
+    for i in 0..rows {
+        for j in 0..cols {
+            let mut sum = Complex64::new(0.0, 0.0);
+            for k in 0..inner {
+                sum += lhs[[i, k]] * rhs[[k, j]];
+            }
+            out[[i, j]] = sum;
+        }
+    }
+    out
+}
 
 impl EigenSolver {
     /// Compute eigendecomposition of complex Hermitian matrix using QR algorithm
@@ -23,16 +40,16 @@ impl EigenSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn qr_algorithm(
-        matrix: &Array2<Complex<f64>>,
+        matrix: &Array2<Complex64>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
-        let n = matrix.nrows();
+        let n = matrix.shape()[0];
 
-        if matrix.ncols() != n {
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "qr_algorithm".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
@@ -43,8 +60,8 @@ impl EigenSolver {
         }
 
         let mut h = matrix.clone();
-        let mut q = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
-        let mut eigenvalues = Array1::zeros(n);
+        let mut q = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
+        let mut eigenvalues = Array1::zeros([n]);
         let mut iterations = 0;
 
         for iter in 0..config.max_iterations {
@@ -57,17 +74,17 @@ impl EigenSolver {
             };
 
             for i in 0..n {
-                h[[i, i]] -= Complex::new(shift, 0.0);
+                h[[i, i]] -= Complex64::new(shift, 0.0);
             }
 
             let (q_iter, r) = Self::qr_decomposition(&h, n)?;
-            h = r.dot(&q_iter);
+            h = matmul_complex(&r, &q_iter);
 
             for i in 0..n {
-                h[[i, i]] += Complex::new(shift, 0.0);
+                h[[i, i]] += Complex64::new(shift, 0.0);
             }
 
-            q = q.dot(&q_iter);
+            q = matmul_complex(&q, &q_iter);
 
             let off_diag_norm = Self::compute_off_diagonal_norm(&h, n);
             if off_diag_norm < config.tolerance {
@@ -130,24 +147,24 @@ impl EigenSolver {
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
     pub fn jacobi_hermitian(
-        matrix: &Array2<Complex<f64>>,
+        matrix: &Array2<Complex64>,
         config: EigenSolverConfig,
     ) -> KwaversResult<EigenResult> {
-        let n = matrix.nrows();
+        let n = matrix.shape()[0];
 
-        if matrix.ncols() != n {
+        if matrix.shape()[1] != n {
             return Err(KwaversError::Numerical(NumericalError::MatrixDimension {
                 operation: "jacobi_hermitian".to_owned(),
                 expected: format!("{}×{} square matrix", n, n),
-                actual: format!("{}×{} matrix", matrix.nrows(), matrix.ncols()),
+                actual: format!("{}×{} matrix", matrix.shape()[0], matrix.shape()[1]),
             }));
         }
 
         Self::verify_hermitian(matrix)?;
 
         let mut h = matrix.clone();
-        let mut v = Array2::eye(n).mapv(|x| Complex::new(x, 0.0));
-        let mut eigenvalues = Array1::zeros(n);
+        let mut v = Array2::eye(n).mapv(|x| Complex64::new(x, 0.0));
+        let mut eigenvalues = Array1::zeros([n]);
         let mut iterations = 0;
 
         for sweep in 0..config.max_iterations {
@@ -165,41 +182,51 @@ impl EigenSolver {
                     max_off_diag = max_off_diag.max(h_pq_norm);
 
                     if h_pq_norm > 1e-15 {
-                        let theta = if (h_pp - h_qq).abs() < 1e-12 {
-                            std::f64::consts::PI / 4.0
+                        // Complex Hermitian Jacobi rotation. The off-diagonal
+                        // `h_pq = r·e^{iφ}` is first phase-reduced to the real
+                        // value `r`, turning the (p,q) block into the real
+                        // symmetric `[[h_pp, r], [r, h_qq]]`; a stable real
+                        // Jacobi rotation then zeroes it. The composite unitary
+                        // `U = diag(1, ē)·[[c, s], [-s, c]]` (ē = conj(h_pq)/r)
+                        // carries the phase back, so the update multiplies the
+                        // rotated `q`-column entries by `ē`.
+                        let e_bar = h_pq.conj() / h_pq_norm;
+                        let tau = (h_qq - h_pp) / (2.0 * h_pq_norm);
+                        // t solves t² + 2τt − 1 = 0 with the smaller-magnitude
+                        // root (sign(τ)) for numerical stability.
+                        let t = if tau >= 0.0 {
+                            1.0 / (tau + tau.mul_add(tau, 1.0).sqrt())
                         } else {
-                            0.5 * ((h_qq - h_pp) / (2.0 * h_pq_norm)).atan()
+                            -1.0 / (-tau + tau.mul_add(tau, 1.0).sqrt())
                         };
-
-                        let c = theta.cos();
-                        let s = theta.sin();
+                        let c = 1.0 / t.mul_add(t, 1.0).sqrt();
+                        let s = t * c;
 
                         for i in 0..n {
                             if i != p && i != q {
                                 let h_ip = h[[i, p]];
                                 let h_iq = h[[i, q]];
-                                h[[i, p]] = c * h_ip - s * h_iq;
-                                h[[i, q]] = s * h_ip + c * h_iq;
+                                h[[i, p]] = c * h_ip - e_bar * (s * h_iq);
+                                h[[i, q]] = s * h_ip + e_bar * (c * h_iq);
                                 h[[p, i]] = h[[i, p]].conj();
                                 h[[q, i]] = h[[i, q]].conj();
                             }
                         }
 
-                        let h_pp_new =
-                            (2.0 * s * c).mul_add(-h_pq.re, (c * c).mul_add(h_pp, s * s * h_qq));
-                        let h_qq_new =
-                            (2.0 * s * c).mul_add(h_pq.re, (s * s).mul_add(h_pp, c * c * h_qq));
+                        // Golub & Van Loan 8.4.1: λ_p = h_pp − t·r, λ_q = h_qq + t·r.
+                        let h_pp_new = t.mul_add(-h_pq_norm, h_pp);
+                        let h_qq_new = t.mul_add(h_pq_norm, h_qq);
 
-                        h[[p, p]] = Complex::new(h_pp_new, 0.0);
-                        h[[q, q]] = Complex::new(h_qq_new, 0.0);
-                        h[[p, q]] = Complex::new(0.0, 0.0);
-                        h[[q, p]] = Complex::new(0.0, 0.0);
+                        h[[p, p]] = Complex64::new(h_pp_new, 0.0);
+                        h[[q, q]] = Complex64::new(h_qq_new, 0.0);
+                        h[[p, q]] = Complex64::new(0.0, 0.0);
+                        h[[q, p]] = Complex64::new(0.0, 0.0);
 
                         for i in 0..n {
                             let v_ip = v[[i, p]];
                             let v_iq = v[[i, q]];
-                            v[[i, p]] = c * v_ip - s * v_iq;
-                            v[[i, q]] = s * v_ip + c * v_iq;
+                            v[[i, p]] = c * v_ip - e_bar * (s * v_iq);
+                            v[[i, q]] = s * v_ip + e_bar * (c * v_iq);
                         }
 
                         _rotations += 1;

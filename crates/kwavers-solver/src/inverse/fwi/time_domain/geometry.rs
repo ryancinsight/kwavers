@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Source and receiver geometry used by acoustic FWI.
 #[derive(Debug, Clone)]
@@ -62,7 +62,7 @@ impl FwiGeometry {
     }
 
     pub(super) fn collect_fortran_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
-        let (nx, ny, nz) = mask.dim();
+        let [nx, ny, nz] = mask.shape();
         let mut indices = Vec::new();
         for k in 0..nz {
             for j in 0..ny {
@@ -78,7 +78,7 @@ impl FwiGeometry {
 
     fn collect_row_major_indices(mask: &Array3<bool>) -> Vec<(usize, usize, usize)> {
         let mut indices = Vec::new();
-        for ((i, j, k), &active) in mask.indexed_iter() {
+        for ([i, j, k], &active) in mask.indexed_iter() {
             if active {
                 indices.push((i, j, k));
             }
@@ -87,21 +87,22 @@ impl FwiGeometry {
     }
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// # Panics
     /// - Panics if `validated above`.
     ///
     pub(super) fn validate(&self, grid: &Grid, nt: usize) -> KwaversResult<()> {
         let expected_shape = grid.dimensions();
-        if self.sensor_mask.dim() != expected_shape {
+        let expected_shape_arr = [grid.nx, grid.ny, grid.nz];
+        if self.sensor_mask.shape() != expected_shape_arr {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Receiver mask shape mismatch: expected {:?}, got {:?}",
                         expected_shape,
-                        self.sensor_mask.dim()
+                        self.sensor_mask.shape()
                     ),
                 },
             ));
@@ -114,13 +115,13 @@ impl FwiGeometry {
                 },
             ));
         };
-        if source_mask.dim() != expected_shape {
+        if source_mask.shape() != expected_shape_arr {
             return Err(KwaversError::Validation(
                 ValidationError::ConstraintViolation {
                     message: format!(
                         "Source mask shape mismatch: expected {:?}, got {:?}",
-                        expected_shape,
-                        source_mask.dim()
+                        expected_shape_arr,
+                        source_mask.shape()
                     ),
                 },
             ));

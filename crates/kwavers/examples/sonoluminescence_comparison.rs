@@ -32,7 +32,7 @@ use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_physics::bubble_dynamics::bubble_state::BubbleParameters;
 use kwavers_physics::optics::sonoluminescence::{EmissionParameters, IntegratedSonoluminescence};
-use ndarray::Array3;
+use leto::Array3;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("🔬 Sonoluminescence Hypothesis Comparison");
@@ -79,8 +79,14 @@ fn run_bremsstrahlung_dominant_scenario(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());
@@ -196,8 +202,14 @@ fn run_cherenkov_dominant_scenario(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());
@@ -321,8 +333,14 @@ fn run_combined_emission_scenario(
         ..Default::default()
     };
 
-    let mut simulator =
-        IntegratedSonoluminescence::new(grid.dimensions(), bubble_params.clone(), emission_params);
+    let mut simulator = IntegratedSonoluminescence::new(
+        {
+            let d = grid.dimensions();
+            [d.0, d.1, d.2]
+        },
+        bubble_params.clone(),
+        emission_params,
+    );
 
     // Create Keller-Miksis model for bubble dynamics
     let bubble_model = KellerMiksisModel::new(bubble_params.clone());

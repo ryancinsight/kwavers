@@ -1,11 +1,11 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Medical image data with metadata
 #[derive(Debug, Clone)]
 pub struct ImageData {
     /// Image modality type
     pub modality: ImageModality,
-    /// 3D image array (nx, ny, nz)
+    /// 3D image array (nx, ny, nz), owned by Leto.
     pub data: Array3<f64>,
     /// Voxel spacing (dx, dy, dz) in mm
     pub voxel_spacing_mm: (f64, f64, f64),

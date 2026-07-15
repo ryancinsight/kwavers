@@ -51,7 +51,7 @@ impl MultiGpuManager {
         _dimensions: usize,
         overlap: f64,
     ) -> KwaversResult<Vec<WorkUnit>> {
-        let n_gpus = self.devices.len();
+        let n_gpus = (self.devices.len());
         let points_per_gpu = total_points / n_gpus;
         let mut work_units = Vec::new();
 
@@ -88,7 +88,7 @@ impl MultiGpuManager {
         total_points: usize,
         _steps_per_gpu: usize,
     ) -> KwaversResult<Vec<WorkUnit>> {
-        let n_gpus = self.devices.len();
+        let n_gpus = (self.devices.len());
         let mut work_units = Vec::new();
 
         for gpu_id in 0..n_gpus {
@@ -109,7 +109,7 @@ impl MultiGpuManager {
     }
     /// Decompose hybrid.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn decompose_hybrid(
         &self,

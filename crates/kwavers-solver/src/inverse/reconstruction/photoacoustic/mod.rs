@@ -33,7 +33,7 @@ pub use line_reconstruction::{kspace_line_recon, LineReconDataOrder, LineReconIn
 
 use crate::reconstruction::Reconstructor;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 impl Reconstructor for PhotoacousticReconstructor {
     fn reconstruct(
@@ -82,7 +82,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn test_photoacoustic_reconstructor_creation() {

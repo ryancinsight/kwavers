@@ -39,7 +39,8 @@
 //!   *Curr. Med. Imaging Rev.*, 6(1), 15-25.
 //! - Duque, M. et al. (2023). Sonogenetic control via MscL-G22S. *Science*, 380, 1084-1090.
 
-use ndarray::{Array3, Zip};
+use crate::parallel::zip_mut_two_refs;
+use leto::Array3;
 
 /// Cell geometry and membrane parameters for the Laplace tension model.
 ///
@@ -91,13 +92,15 @@ pub fn compute_radiation_pressure(
     intensity: &Array3<f64>,
     sound_speed: &Array3<f64>,
 ) -> Array3<f64> {
-    let mut out = Array3::<f64>::zeros(intensity.dim());
-    Zip::from(&mut out)
-        .and(intensity)
-        .and(sound_speed)
-        .par_for_each(|p_rad, &i, &c| {
+    let mut out = Array3::<f64>::zeros(intensity.shape());
+    zip_mut_two_refs(
+        out.view_mut(),
+        intensity.view(),
+        sound_speed.view(),
+        |p_rad, &i, &c| {
             *p_rad = if c > 0.0 { i / c } else { 0.0 };
-        });
+        },
+    );
     out
 }
 
@@ -129,13 +132,15 @@ pub fn compute_membrane_tension(
         "CellMembraneParams must have positive radius and thickness"
     );
     let r = params.radius_m;
-    let mut out = Array3::<f64>::zeros(intensity.dim());
-    Zip::from(&mut out)
-        .and(intensity)
-        .and(sound_speed)
-        .par_for_each(|t, &i, &c| {
+    let mut out = Array3::<f64>::zeros(intensity.shape());
+    zip_mut_two_refs(
+        out.view_mut(),
+        intensity.view(),
+        sound_speed.view(),
+        |t, &i, &c| {
             *t = if c > 0.0 { i * r / (2.0 * c) } else { 0.0 };
-        });
+        },
+    );
     out
 }
 
@@ -144,7 +149,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Analytical reference:
     ///   I = 1e5 W/m², c = 1500 m/s, R = 10 μm

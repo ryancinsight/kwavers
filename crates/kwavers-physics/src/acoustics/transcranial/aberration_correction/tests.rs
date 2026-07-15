@@ -1,10 +1,10 @@
 //! Tests for aberration correction
 
 use super::*;
+use eunomia::Complex;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
-use num_complex::Complex;
+use leto::Array3;
 use std::f64::consts::PI;
 
 fn make_corrector() -> TranscranialAberrationCorrection {
@@ -239,7 +239,7 @@ fn test_time_reversal_focal_gain_positive_for_aberrated_field() {
     // Different phases at each element position → pre-correction coherence < 1
     let (nx, ny, nz) = (32, 32, 32);
     // Spatially varying phase: φ(i,j,k) = 0.3 * i
-    let field: Array3<Complex<f64>> = Array3::from_shape_fn((nx, ny, nz), |(i, _j, _k)| {
+    let field: Array3<Complex<f64>> = Array3::from_shape_fn([nx, ny, nz], |[i, _j, _k]| {
         Complex::from_polar(1.0, 0.3 * i as f64)
     });
 

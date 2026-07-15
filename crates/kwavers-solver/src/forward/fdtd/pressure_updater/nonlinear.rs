@@ -6,7 +6,7 @@
 //! - Hamilton, M. F. & Blackstock, D. T. (1998). Nonlinear Acoustics, Ch. 3.
 //! - Aanonsen, S. I. et al. (1984). J. Acoust. Soc. Am. 75(3), 749–768.
 
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 use super::super::solver::FdtdSolver;
 
@@ -16,7 +16,7 @@ impl FdtdSolver {
     /// Discretization (Hamilton & Blackstock 1998, Eq. 3.43a):
     /// ```text
     /// S_nl^n = (β/(ρ₀c₀²)) · [2pⁿ(pⁿ−2pⁿ⁻¹+pⁿ⁻²)/Δt² + 2((pⁿ−pⁿ⁻¹)/Δt)²]  [Pa/s²]
-    /// Δpⁿ    = Δt² · S_nl^n                                                        [Pa]
+    /// Δpⁿ    = Δt² · S_nl^n                                                        \[Pa\]
     /// ```
     /// Note: nl_coeff = β/(ρ₀c₀²), so Δp = Δt² · nl_coeff · d²(p²)/dt².
     pub(crate) fn apply_westervelt_nonlinear_correction(&mut self, dt: f64) {
@@ -61,9 +61,7 @@ impl FdtdSolver {
             _ => return,
         }
 
-        Zip::from(self.fields.p.view_mut())
-            .and(nl_scratch.view())
-            .par_for_each(|p, &nl| *p += nl);
+        super::add_nonlinear_pressure_delta(&mut self.fields.p, nl_scratch);
     }
 
     /// Rotate pressure history: p^{n-2} ← p^{n-1} ← p^n (swap to avoid allocation).
@@ -74,11 +72,14 @@ impl FdtdSolver {
             }
         } else if self.p_prev.is_some() {
             self.p_prev2 = self.p_prev.take();
-            self.p_prev = Some(Array3::zeros(self.fields.p.dim()));
+            let [nx, ny, nz] = self.fields.p.shape();
+            self.p_prev = Some(Array3::zeros((nx, ny, nz)));
         }
 
         if let Some(ref mut p_prev) = self.p_prev {
-            p_prev.assign(&self.fields.p);
+            for (dst, src) in p_prev.iter_mut().zip(self.fields.p.iter()) {
+                *dst = *src;
+            }
         }
     }
 }

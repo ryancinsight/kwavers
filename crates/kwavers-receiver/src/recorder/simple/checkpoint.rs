@@ -18,7 +18,7 @@
 /// appended after restoration writes to column `k` (and beyond) in both the
 /// original and the restored recorder.
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, ArrayView2};
+use leto::{Array2, ArrayView2};
 
 use super::SensorRecorder;
 
@@ -49,7 +49,9 @@ impl SensorRecorder {
     #[must_use]
     pub fn checkpoint_state(&self) -> Option<(Array2<f64>, usize, usize)> {
         self.checkpoint_state_view()
-            .map(|(view, next_step, expected_steps)| (view.to_owned(), next_step, expected_steps))
+            .map(|(view, next_step, expected_steps)| {
+                (view.to_contiguous(), next_step, expected_steps)
+            })
     }
 
     /// Restore recorder state from a checkpoint.
@@ -64,7 +66,7 @@ impl SensorRecorder {
         data: Array2<f64>,
         next_step: usize,
     ) -> KwaversResult<()> {
-        let (n_sensors, n_recorded) = data.dim();
+        let [n_sensors, n_recorded] = data.shape();
         if n_sensors != self.sensor_indices.len() {
             return Err(KwaversError::DimensionMismatch(format!(
                 "checkpoint sensor count {n_sensors} ≠ recorder sensor count {}",
@@ -84,10 +86,11 @@ impl SensorRecorder {
         }
         let pressure = self
             .pressure
-            .get_or_insert_with(|| Array2::zeros((n_sensors, self.expected_steps)));
+            .get_or_insert_with(|| Array2::zeros([n_sensors, self.expected_steps]));
         pressure
-            .slice_mut(ndarray::s![.., ..next_step])
-            .assign(&data);
+            .slice_mut(&[(0, n_sensors, 1), (0, next_step, 1)])
+            .map_err(|e| KwaversError::InternalError(format!("checkpoint slice failed: {e}")))?
+            .assign(&data.view());
         self.next_step = next_step;
         Ok(())
     }

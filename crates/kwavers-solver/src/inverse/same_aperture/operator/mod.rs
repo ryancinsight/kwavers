@@ -8,7 +8,7 @@
 //! `divmod`, the source/receiver pair, the angular wavenumber, or the
 //! frequency-MHz factor on a per-cell basis. Inverse row norms are cached
 //! alongside the row norms so the inner loops never recompute `1 / norm`.
-//! Outer loops over rows or columns dispatch through rayon for cache-aware
+//! Outer loops over rows or columns dispatch through Moirai for cache-aware
 //! parallelism on the SPD normal equations driven by PCG.
 //!
 //! # Module layout

@@ -8,7 +8,7 @@
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;
 use kwavers_physics::skull::CTBasedSkullModel;
-use ndarray::Array3;
+use leto::Array3;
 use nifti::{writer::WriterOptions, InMemNiftiObject, NiftiHeader};
 use std::fs;
 use std::path::PathBuf;

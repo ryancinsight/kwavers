@@ -28,7 +28,7 @@
 
 use std::fmt::Debug;
 
-/// Cartesian position of one transducer element [m].
+/// Cartesian position of one transducer element \[m\].
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ElementPosition {
     pub x_m: f64,
@@ -43,7 +43,7 @@ pub struct ElementPosition {
 /// positions wrappers); they expose the Cartesian element layout and the
 /// source-to-receiver offset semantics specific to the array topology.
 pub trait TransducerGeometry: Debug + Send + Sync {
-    /// Cartesian element positions [m]. Indexing convention is implementor-
+    /// Cartesian element positions \[m\]. Indexing convention is implementor-
     /// defined; all sensitivity / Born kernels iterate over this slice
     /// directly.
     fn elements(&self) -> &[ElementPosition];

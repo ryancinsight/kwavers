@@ -60,7 +60,8 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3, ArrayViewMut3};
+use leto::Array1;
+use leto::{Array3, ArrayViewMut3};
 use std::any::Any;
 use std::fmt::Debug;
 

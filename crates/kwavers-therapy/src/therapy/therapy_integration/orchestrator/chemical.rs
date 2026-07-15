@@ -26,7 +26,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::chemistry::ChemicalModel;
 use kwavers_physics::traits::ChemicalModelTrait;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::super::config::AcousticTherapyParams;
@@ -93,13 +93,13 @@ pub fn update_chemical_reactions(
     // Extract cavitation activity for chemical reaction rates
     let cavitation_activity = cavitation_activity
         .cloned()
-        .unwrap_or_else(|| Array3::zeros(acoustic_field.pressure.dim()));
+        .unwrap_or_else(|| Array3::zeros(acoustic_field.pressure.shape()));
 
     // Create light field (from sonoluminescence or external sources)
-    let light_field = Array3::zeros(acoustic_field.pressure.dim());
+    let light_field = Array3::zeros(acoustic_field.pressure.shape());
 
     // Create emission spectrum for photochemical reactions
-    let emission_spectrum = Array3::zeros(acoustic_field.pressure.dim());
+    let emission_spectrum = Array3::zeros(acoustic_field.pressure.shape());
 
     // Create bubble radius field based on cavitation activity
     // Use empirical relationship: higher cavitation activity → smaller bubbles (more violent collapse)
@@ -172,7 +172,7 @@ fn calculate_temperature_field(
     dt: f64,
 ) -> Array3<f64> {
     let ambient_temp = BODY_TEMPERATURE_K; // 37°C = 310.15 K
-    let mut temperature = Array3::from_elem(acoustic_field.pressure.dim(), ambient_temp);
+    let mut temperature = Array3::from_elem(acoustic_field.pressure.shape(), ambient_temp);
 
     // Calculate acoustic absorption heating from pressure field
     // Q_acoustic = α * |p|² / (ρ * c) where α is attenuation coefficient
@@ -187,7 +187,7 @@ fn calculate_temperature_field(
         let heating = heating_factor * pressure * pressure;
 
         // Apply distance-based spreading from focal point
-        let (i, j, k) = index;
+        let [i, j, k] = index;
         let x = i as f64 * grid.dx - acoustic_params.focal_depth;
         let y = j as f64 * grid.dy;
         let z = k as f64 * grid.dz;
@@ -227,6 +227,7 @@ mod tests {
             duty_cycle: 0.1,
             focal_depth: 0.005, // 5mm
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         let temperature =
@@ -236,7 +237,7 @@ mod tests {
         assert!(temperature.iter().all(|&t| t >= BODY_TEMPERATURE_K));
 
         // Temperature at focal region should be elevated
-        let focal_idx = (5, 5, 5);
+        let focal_idx = [5, 5, 5];
         assert!(temperature[focal_idx] > BODY_TEMPERATURE_K);
     }
 
@@ -259,6 +260,7 @@ mod tests {
             duty_cycle: 0.1,
             focal_depth: 0.01, // 10mm (center of grid)
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         let temperature =
@@ -268,7 +270,7 @@ mod tests {
         assert!(temperature.iter().all(|&t| t >= BODY_TEMPERATURE_K));
 
         // Temperature should have been calculated based on distance from focus
-        let center = temperature[(10, 10, 10)];
+        let center = temperature[[10, 10, 10]];
         assert!(center > BODY_TEMPERATURE_K); // Center should show heating
     }
 
@@ -286,13 +288,13 @@ mod tests {
             cavitation_high.mapv(|activity| base_radius * (1.0_f64 - activity * 0.5).max(0.1));
 
         // Higher cavitation should produce smaller bubbles (more violent collapse)
-        assert!(radius_high[(0, 0, 0)] < radius_low[(0, 0, 0)]);
+        assert!(radius_high[[0, 0, 0]] < radius_low[[0, 0, 0]]);
 
         // Both should be positive
-        assert!(radius_low[(0, 0, 0)] > 0.0);
-        assert!(radius_high[(0, 0, 0)] > 0.0);
+        assert!(radius_low[[0, 0, 0]] > 0.0);
+        assert!(radius_high[[0, 0, 0]] > 0.0);
 
         // Minimum radius should be enforced (10% of base)
-        assert!(radius_high[(0, 0, 0)] >= base_radius * 0.1);
+        assert!(radius_high[[0, 0, 0]] >= base_radius * 0.1);
     }
 }

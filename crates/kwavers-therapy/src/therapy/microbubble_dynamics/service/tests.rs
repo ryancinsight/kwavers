@@ -1,5 +1,5 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 use crate::therapy::microbubble_dynamics::{DrugLoadingMode, DrugPayload};
 use kwavers_physics::therapy::microbubble::{

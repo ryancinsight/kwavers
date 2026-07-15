@@ -1,7 +1,7 @@
 //! Training dataset and batch operations.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2};
+use leto::{Array2, SliceArg};
 
 /// Training metrics for monitoring convergence
 #[derive(Debug, Clone)]
@@ -39,7 +39,7 @@ impl TrainingDataset {
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(inputs: Array2<f64>, targets: Array2<f64>) -> KwaversResult<Self> {
-        if inputs.dim().0 != targets.dim().0 {
+        if inputs.shape()[0] != targets.shape()[0] {
             return Err(KwaversError::InvalidInput(
                 "inputs and targets must have same number of samples".to_owned(),
             ));
@@ -53,7 +53,7 @@ impl TrainingDataset {
     ///
     #[must_use]
     pub fn len(&self) -> usize {
-        self.inputs.dim().0
+        self.inputs.shape()[0]
     }
 
     /// Check if dataset is empty
@@ -80,10 +80,42 @@ impl TrainingDataset {
         let val_size = ((n as f64) * validation_fraction).ceil() as usize;
         let train_size = n - val_size;
 
-        let train_inputs = self.inputs.slice(s![0..train_size, ..]).to_owned();
-        let train_targets = self.targets.slice(s![0..train_size, ..]).to_owned();
-        let val_inputs = self.inputs.slice(s![train_size.., ..]).to_owned();
-        let val_targets = self.targets.slice(s![train_size.., ..]).to_owned();
+        let head = [
+            SliceArg::Range {
+                start: Some(0),
+                end: Some(train_size as isize),
+                step: 1,
+            },
+            SliceArg::All,
+        ];
+        let tail = [
+            SliceArg::Range {
+                start: Some(train_size as isize),
+                end: None,
+                step: 1,
+            },
+            SliceArg::All,
+        ];
+        let train_inputs = self
+            .inputs
+            .slice_with::<2>(&head)
+            .expect("invariant: train row range in bounds")
+            .to_contiguous();
+        let train_targets = self
+            .targets
+            .slice_with::<2>(&head)
+            .expect("invariant: train row range in bounds")
+            .to_contiguous();
+        let val_inputs = self
+            .inputs
+            .slice_with::<2>(&tail)
+            .expect("invariant: validation row range in bounds")
+            .to_contiguous();
+        let val_targets = self
+            .targets
+            .slice_with::<2>(&tail)
+            .expect("invariant: validation row range in bounds")
+            .to_contiguous();
 
         Ok((
             Self {
@@ -110,8 +142,24 @@ impl TrainingDataset {
         }
 
         let end = (offset + batch_size).min(n);
-        let batch_inputs = self.inputs.slice(s![offset..end, ..]).to_owned();
-        let batch_targets = self.targets.slice(s![offset..end, ..]).to_owned();
+        let rows = [
+            SliceArg::Range {
+                start: Some(offset as isize),
+                end: Some(end as isize),
+                step: 1,
+            },
+            SliceArg::All,
+        ];
+        let batch_inputs = self
+            .inputs
+            .slice_with::<2>(&rows)
+            .expect("invariant: batch row range in bounds")
+            .to_contiguous();
+        let batch_targets = self
+            .targets
+            .slice_with::<2>(&rows)
+            .expect("invariant: batch row range in bounds")
+            .to_contiguous();
 
         Ok(Self {
             inputs: batch_inputs,

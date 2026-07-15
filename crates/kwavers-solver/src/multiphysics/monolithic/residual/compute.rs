@@ -1,9 +1,10 @@
 use super::super::coupler::MonolithicCoupler;
 use super::super::spatial_operator::laplacian_3d_into;
 use super::super::state_vector::field_block_view;
+use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
-use ndarray::{s, Array3};
+use leto::Array3;
 
 impl MonolithicCoupler {
     /// Compute residual F(u) = u − u_prev − Δt·R(u).
@@ -57,50 +58,63 @@ impl MonolithicCoupler {
                 UnifiedFieldType::Pressure => {
                     let c2 = coeff.sound_speed * coeff.sound_speed;
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
-                    rate.par_mapv_inplace(|v| v * c2);
+                    scale_inplace(&mut rate, c2);
 
                     if let Some(light_f) = light.as_ref() {
                         let gamma_mu_a = coeff.gruneisen * coeff.optical_absorption;
-                        rate.zip_mut_with(light_f, |r_val, &i_val| {
-                            *r_val += gamma_mu_a * i_val;
-                        });
+                        for (r_val, i_val) in rate.iter_mut().zip(light_f.iter()) {
+                            {
+                                *r_val += gamma_mu_a * i_val;
+                            };
+                        }
                     }
                 }
                 UnifiedFieldType::LightFluence => {
                     let d = coeff.optical_diffusion();
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
-                    rate.par_mapv_inplace(|v| v * d);
-                    rate.zip_mut_with(&field_block, |r_val, &i_val| {
-                        *r_val -= coeff.optical_absorption * i_val;
-                    });
+                    scale_inplace(&mut rate, d);
+                    for (r_val, i_val) in rate.iter_mut().zip(field_block.iter()) {
+                        {
+                            *r_val -= coeff.optical_absorption * i_val;
+                        };
+                    }
                 }
                 UnifiedFieldType::Temperature => {
                     let kappa = coeff.thermal_diffusivity();
                     let inv_rho_cp = 1.0 / (coeff.density * coeff.specific_heat);
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
-                    rate.par_mapv_inplace(|v| v * kappa);
+                    scale_inplace(&mut rate, kappa);
 
                     if let Some(light_f) = light.as_ref() {
-                        rate.zip_mut_with(light_f, |r_val, &i_val| {
-                            *r_val += coeff.optical_absorption * i_val * inv_rho_cp;
-                        });
+                        for (r_val, i_val) in rate.iter_mut().zip(light_f.iter()) {
+                            {
+                                *r_val += coeff.optical_absorption * i_val * inv_rho_cp;
+                            };
+                        }
                     }
 
                     if let Some(pres) = pressure.as_ref() {
                         let inv_rho_c = 1.0 / (coeff.density * coeff.sound_speed);
-                        rate.zip_mut_with(pres, |r_val, &p_val| {
-                            let intensity = p_val * p_val * inv_rho_c;
-                            *r_val += coeff.acoustic_absorption * intensity * inv_rho_cp;
-                        });
+                        for (r_val, p_val) in rate.iter_mut().zip(pres.iter()) {
+                            {
+                                let intensity = p_val * p_val * inv_rho_c;
+                                *r_val += coeff.acoustic_absorption * intensity * inv_rho_cp;
+                            };
+                        }
                     }
                 }
                 _ => continue,
             };
 
-            let mut res_block = residual.slice_mut(s![row_start..row_start + nx, .., ..]);
-            res_block.zip_mut_with(&rate, |f_val, &r_val| {
+            let mut res_block = residual
+                .slice_with_mut::<3>(&s![row_start..row_start + nx, .., ..])
+                .expect("invariant: residual block slice within bounds");
+            let res_slice = res_block
+                .as_mut_slice()
+                .expect("invariant: residual block is contiguous (leading-axis slice)");
+            for (f_val, r_val) in res_slice.iter_mut().zip(rate.iter()) {
                 *f_val -= dt * r_val;
-            });
+            }
         }
 
         Ok(residual)

@@ -4,7 +4,7 @@
 //! spectral solver.
 
 use super::numerics::spectral_correction::SpectralCorrectionConfig;
-use ndarray::Array3;
+use leto::Array3;
 use serde::{Deserialize, Serialize};
 
 use kwavers_boundary::{CPMLConfig, DomainPmlConfig};

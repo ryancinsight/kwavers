@@ -2,13 +2,13 @@
 
 use super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::Grid;
+use eunomia::FloatElement;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
-use num_traits::Float;
+use leto::{Array3, ArrayView3};
 
 /// Compute divergence of a vector field
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -21,7 +21,7 @@ pub fn divergence<T>(
     order: FdAccuracyOrder,
 ) -> KwaversResult<Array3<T>>
 where
-    T: Float + Clone + Send + Sync,
+    T: FloatElement + Clone + Send + Sync + Default,
 {
     let shape = vx.shape();
     let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
@@ -50,38 +50,38 @@ where
         ));
     }
 
-    let mut divergence = Array3::<T>::zeros((nx, ny, nz));
+    let mut divergence = Array3::<T>::zeros([nx, ny, nz]);
     let coeffs = FDCoefficients::first_derivative::<T>(order);
     let stencil_radius = coeffs.len();
 
-    let dx_inv = T::one() / T::from(grid.dx).unwrap();
-    let dy_inv = T::one() / T::from(grid.dy).unwrap();
-    let dz_inv = T::one() / T::from(grid.dz).unwrap();
+    let dx_inv = T::from_f64(1.0) / T::from_f64(grid.dx);
+    let dy_inv = T::from_f64(1.0) / T::from_f64(grid.dy);
+    let dz_inv = T::from_f64(1.0) / T::from_f64(grid.dz);
 
     // Compute divergence in interior points
     for i in stencil_radius..nx - stencil_radius {
         for j in stencil_radius..ny - stencil_radius {
             for k in stencil_radius..nz - stencil_radius {
-                let mut div_x = T::zero();
-                let mut div_y = T::zero();
-                let mut div_z = T::zero();
+                let mut div_x = T::from_f64(0.0);
+                let mut div_y = T::from_f64(0.0);
+                let mut div_z = T::from_f64(0.0);
 
                 // ∂vx/∂x
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    div_x = div_x + coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
+                    div_x += coeff * (vx[[i + offset, j, k]] - vx[[i - offset, j, k]]);
                 }
 
                 // ∂vy/∂y
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    div_y = div_y + coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
+                    div_y += coeff * (vy[[i, j + offset, k]] - vy[[i, j - offset, k]]);
                 }
 
                 // ∂vz/∂z
                 for (n, &coeff) in coeffs.iter().enumerate() {
                     let offset = n + 1;
-                    div_z = div_z + coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
+                    div_z += coeff * (vz[[i, j, k + offset]] - vz[[i, j, k - offset]]);
                 }
 
                 divergence[[i, j, k]] = div_x * dx_inv + div_y * dy_inv + div_z * dz_inv;
@@ -96,14 +96,13 @@ where
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
-    use ndarray::Array3;
 
     #[test]
     fn test_divergence_constant_field() -> KwaversResult<()> {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0)?;
-        let vx = Array3::<f64>::ones((5, 5, 5));
-        let vy = Array3::<f64>::ones((5, 5, 5));
-        let vz = Array3::<f64>::ones((5, 5, 5));
+        let vx = Array3::<f64>::ones([5, 5, 5]);
+        let vy = Array3::<f64>::ones([5, 5, 5]);
+        let vz = Array3::<f64>::ones([5, 5, 5]);
 
         let div = divergence(
             &vx.view(),
@@ -122,9 +121,9 @@ mod tests {
     #[test]
     fn test_divergence_linear_field() -> KwaversResult<()> {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0)?;
-        let mut vx = Array3::<f64>::zeros((5, 5, 5));
-        let mut vy = Array3::<f64>::zeros((5, 5, 5));
-        let mut vz = Array3::<f64>::zeros((5, 5, 5));
+        let mut vx = Array3::<f64>::zeros([5, 5, 5]);
+        let mut vy = Array3::<f64>::zeros([5, 5, 5]);
+        let mut vz = Array3::<f64>::zeros([5, 5, 5]);
 
         // Create linear field: vx = x, vy = 2y, vz = 3z
         // Divergence should be 1 + 2 + 3 = 6

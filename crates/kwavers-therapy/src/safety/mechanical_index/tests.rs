@@ -1,7 +1,7 @@
 use super::calculator::MechanicalIndexCalculator;
 use super::types::{MechanicalIndexResult, MechanicalIndexSafetyStatus, MechanicalIndexTissueType};
 use kwavers_core::constants::numerical::MPA_TO_PA;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_mi_calculation_soft_tissue() {

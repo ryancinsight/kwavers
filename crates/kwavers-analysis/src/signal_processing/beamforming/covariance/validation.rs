@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
-use num_complex::Complex64;
+use leto::Array2;
 
 /// Validate covariance matrix structure: square, Hermitian, finite values.
 ///
@@ -12,7 +12,7 @@ use num_complex::Complex64;
 /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResult<()> {
-    let (nrows, ncols) = (covariance.nrows(), covariance.ncols());
+    let [nrows, ncols] = covariance.shape();
 
     if nrows != ncols {
         return Err(KwaversError::InvalidInput(format!(
@@ -21,7 +21,10 @@ pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResu
         )));
     }
 
-    if !covariance.iter().all(|&x| x.is_finite()) {
+    if !covariance
+        .iter()
+        .all(|&x| x.re.is_finite() && x.im.is_finite())
+    {
         return Err(KwaversError::InvalidInput(
             "Covariance matrix contains non-finite values (NaN or Inf)".into(),
         ));
@@ -42,8 +45,8 @@ pub fn validate_covariance_matrix(covariance: &Array2<Complex64>) -> KwaversResu
 /// A is Hermitian iff `A[i,j] = A[j,i]^*` for all i,j.
 #[must_use]
 pub fn is_hermitian(matrix: &Array2<Complex64>, tolerance: f64) -> bool {
-    let n = matrix.nrows();
-    if n != matrix.ncols() {
+    let n = matrix.shape()[0];
+    if n != matrix.shape()[1] {
         return false;
     }
 
@@ -71,16 +74,16 @@ pub fn is_hermitian(matrix: &Array2<Complex64>, tolerance: f64) -> bool {
 ///
 /// Returns `Err` if the matrix is not square.
 pub fn trace(matrix: &Array2<Complex64>) -> KwaversResult<Complex64> {
-    if matrix.nrows() != matrix.ncols() {
+    if matrix.shape()[0] != matrix.shape()[1] {
         return Err(KwaversError::InvalidInput(format!(
             "Trace requires square matrix, got shape ({}, {})",
-            matrix.nrows(),
-            matrix.ncols()
+            matrix.shape()[0],
+            matrix.shape()[1]
         )));
     }
 
     let mut sum = Complex64::new(0.0, 0.0);
-    for i in 0..matrix.nrows() {
+    for i in 0..matrix.shape()[0] {
         sum += matrix[[i, i]];
     }
 

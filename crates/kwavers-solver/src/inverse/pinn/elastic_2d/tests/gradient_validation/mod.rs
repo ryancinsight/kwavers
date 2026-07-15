@@ -34,5 +34,5 @@
 //! - Relative error < 1e-2 for second derivatives (h=1e-4)
 //! - Consistent across batch sizes and spatial domains
 
-#[cfg(all(test, feature = "pinn"))]
+#[cfg(test)]
 mod tests;

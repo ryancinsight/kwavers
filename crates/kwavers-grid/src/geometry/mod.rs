@@ -95,7 +95,7 @@
 //! let complex_domain = CompositeDomain::union(&liver, &tumor);
 //! ```
 
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Spatial dimension specification
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

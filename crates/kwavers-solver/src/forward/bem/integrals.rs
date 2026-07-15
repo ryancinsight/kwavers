@@ -38,7 +38,7 @@
 //! algebraic superconvergence.  For near-field elements, adaptive subdivision
 //! with depth d reduces the effective element size by 2^d, restoring the
 //! non-singular convergence rate on each sub-triangle.  The Duffy transform
-//! (Duffy 1982) maps [0,1]² → triangle with Jacobian J = 2·Area·u; since
+//! (Duffy 1982) maps \[0,1\]² → triangle with Jacobian J = 2·Area·u; since
 //! R = u·|dir(v)|, the product G·J = O(1) as u → 0, regularising the 1/R
 //! pole so tensor-product Gauss-Legendre rules converge at full algebraic order.
 //!
@@ -51,7 +51,7 @@
 //! - Atkinson K.E. (1997). *The Numerical Solution of Integral Equations of
 //!   the Second Kind*. Cambridge, §4.2 (Gauss quadrature accuracy).
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 use super::geometry::{add, barycentric_coords, cross, norm_sq, scale, sub, triangle_area_normal};
 use super::green::green_helmholtz;

@@ -4,25 +4,28 @@
 //! for electromagnetic wave propagation.
 
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
-use ndarray::ArrayD;
+use leto::{ArrayD, VecStorage};
 
 /// Electromagnetic field components
 #[derive(Debug, Clone)]
 pub struct EMFields {
     /// Electric field E (V/m) - [Ex, Ey, Ez] or [Ex, Ey] for 2D
-    pub electric: ArrayD<f64>,
+    pub electric: ArrayD<f64, VecStorage<f64>>,
     /// Magnetic field H (A/m) - [Hx, Hy, Hz] or [Hx, Hy] for 2D
-    pub magnetic: ArrayD<f64>,
+    pub magnetic: ArrayD<f64, VecStorage<f64>>,
     /// Electric displacement D (C/m²)
-    pub displacement: Option<ArrayD<f64>>,
+    pub displacement: Option<ArrayD<f64, VecStorage<f64>>>,
     /// Magnetic flux density B (T)
-    pub flux_density: Option<ArrayD<f64>>,
+    pub flux_density: Option<ArrayD<f64, VecStorage<f64>>>,
 }
 
 impl EMFields {
     /// Create new EM fields from electric and magnetic components
     #[must_use]
-    pub fn new(electric: ArrayD<f64>, magnetic: ArrayD<f64>) -> Self {
+    pub fn new(
+        electric: ArrayD<f64, VecStorage<f64>>,
+        magnetic: ArrayD<f64, VecStorage<f64>>,
+    ) -> Self {
         Self {
             electric,
             magnetic,
@@ -37,10 +40,10 @@ impl EMFields {
     ///
     #[must_use]
     pub fn with_auxiliary(
-        electric: ArrayD<f64>,
-        magnetic: ArrayD<f64>,
-        displacement: ArrayD<f64>,
-        flux_density: ArrayD<f64>,
+        electric: ArrayD<f64, VecStorage<f64>>,
+        magnetic: ArrayD<f64, VecStorage<f64>>,
+        displacement: ArrayD<f64, VecStorage<f64>>,
+        flux_density: ArrayD<f64, VecStorage<f64>>,
     ) -> Self {
         Self {
             electric,
@@ -93,11 +96,11 @@ impl EMFields {
 #[derive(Debug, Clone)]
 pub struct PoyntingVector {
     /// S = E × H (W/m²) - [Sx, Sy, Sz]
-    pub vector: ArrayD<f64>,
+    pub vector: ArrayD<f64, VecStorage<f64>>,
     /// Magnitude |S| (W/m²)
-    pub magnitude: ArrayD<f64>,
+    pub magnitude: ArrayD<f64, VecStorage<f64>>,
     /// Energy density u = (1/2)(ε|E|² + μ|H|²) (J/m³)
-    pub energy_density: ArrayD<f64>,
+    pub energy_density: ArrayD<f64, VecStorage<f64>>,
 }
 
 impl PoyntingVector {
@@ -118,8 +121,8 @@ impl PoyntingVector {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn from_fields(
-        electric: &ArrayD<f64>,
-        magnetic: &ArrayD<f64>,
+        electric: &ArrayD<f64, VecStorage<f64>>,
+        magnetic: &ArrayD<f64, VecStorage<f64>>,
         permittivity: f64,
         permeability: f64,
     ) -> Result<Self, String> {
@@ -143,9 +146,12 @@ impl PoyntingVector {
 
         let mut s_vector_shape = shape[..ndim - 1].to_vec();
         s_vector_shape.push(3);
-        let mut s_vector = ArrayD::zeros(ndarray::IxDyn(&s_vector_shape));
-        let mut s_magnitude = ArrayD::zeros(ndarray::IxDyn(&shape[..ndim - 1]));
-        let mut energy_density = ArrayD::zeros(ndarray::IxDyn(&shape[..ndim - 1]));
+        let mut s_vector =
+            ArrayD::<f64, VecStorage<f64>>::zeros(&s_vector_shape).map_err(|e| e.to_string())?;
+        let mut s_magnitude =
+            ArrayD::<f64, VecStorage<f64>>::zeros(&shape[..ndim - 1]).map_err(|e| e.to_string())?;
+        let mut energy_density =
+            ArrayD::<f64, VecStorage<f64>>::zeros(&shape[..ndim - 1]).map_err(|e| e.to_string())?;
 
         // For each spatial point
         let spatial_size = shape.iter().take(ndim - 1).product();
@@ -298,22 +304,38 @@ impl PoyntingVector {
             return 0.0;
         }
 
-        let spatial_len = self.vector.len() / components;
+        let spatial_len = self.vector.size() / components;
         if spatial_len == 0 {
             return 0.0;
         }
 
         let normal_len = surface_normal.len().min(components);
-        let mut sum_s_dot_n = 0.0f64;
 
-        for lane in self.vector.lanes(ndarray::Axis(ndim - 1)) {
-            let dot = lane
-                .iter()
-                .zip(surface_normal.iter())
-                .take(normal_len)
-                .map(|(s, n)| s * n)
-                .sum::<f64>();
+        // Iterate over each spatial position and compute S · n̂.
+        let spatial_shape = &self.vector.shape()[..ndim - 1];
+        let mut sum_s_dot_n = 0.0f64;
+        let mut spatial_idx = vec![0usize; ndim - 1];
+        for _ in 0..spatial_len {
+            let mut dot = 0.0;
+            for (comp, &normal_component) in surface_normal.iter().take(normal_len).enumerate() {
+                let mut idx = spatial_idx.clone();
+                idx.push(comp);
+                dot += self.vector[&idx[..]] * normal_component;
+            }
             sum_s_dot_n += dot;
+
+            // Increment spatial_idx in row-major order.
+            let mut carry = true;
+            for d in (0..ndim - 1).rev() {
+                if carry {
+                    spatial_idx[d] += 1;
+                    if spatial_idx[d] >= spatial_shape[d] {
+                        spatial_idx[d] = 0;
+                    } else {
+                        carry = false;
+                    }
+                }
+            }
         }
 
         let avg_s_dot_n = sum_s_dot_n / spatial_len as f64;
@@ -324,12 +346,11 @@ impl PoyntingVector {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::ArrayD;
 
     #[test]
     fn test_em_fields_creation() {
-        let electric = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
-        let magnetic = ArrayD::zeros(ndarray::IxDyn(&[10, 10, 2]));
+        let electric = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 2]).unwrap();
+        let magnetic = ArrayD::<f64, VecStorage<f64>>::zeros(&[10, 10, 2]).unwrap();
 
         let fields = EMFields::new(electric, magnetic);
         fields.validate_shapes().unwrap();
@@ -338,22 +359,23 @@ mod tests {
     #[test]
     fn test_poynting_vector_2d() {
         // Simple 2D case: E = [1, 0], H = [0, 1] → S_z = 1*1 - 0*0 = 1
-        let mut electric = ArrayD::zeros(ndarray::IxDyn(&[1, 1, 2]));
-        let mut magnetic = ArrayD::zeros(ndarray::IxDyn(&[1, 1, 2]));
+        let mut electric = ArrayD::<f64, VecStorage<f64>>::zeros(&[1, 1, 2]).unwrap();
+        let mut magnetic = ArrayD::<f64, VecStorage<f64>>::zeros(&[1, 1, 2]).unwrap();
 
-        electric[[0, 0, 0]] = 1.0; // Ex = 1
-        magnetic[[0, 0, 1]] = 1.0; // Hy = 1
+        *electric.get_mut(&[0, 0, 0]).unwrap() = 1.0; // Ex = 1
+        *magnetic.get_mut(&[0, 0, 1]).unwrap() = 1.0; // Hy = 1
 
         let poynting = PoyntingVector::from_fields(&electric, &magnetic, 1.0, 1.0).unwrap();
 
-        // For 2D, S should be [0, 0, 1] with magnitude 1
-        assert_eq!(poynting.magnitude[[0, 0]], 1.0);
+        // For 2D, S_z = Ex*Hy - Ey*Hx = 1*1 - 0*0 = 1 → magnitude = 1
+        assert_eq!(*poynting.magnitude.get(&[0, 0]).unwrap(), 1.0);
+        assert_eq!(poynting.total_power(&[0.0, 0.0, 1.0], 2.0), 2.0);
     }
 
     #[test]
     fn test_field_validation() {
-        let electric = ArrayD::zeros(ndarray::IxDyn(&[5, 5, 3]));
-        let magnetic = ArrayD::zeros(ndarray::IxDyn(&[5, 5, 2])); // Wrong shape
+        let electric = ArrayD::<f64, VecStorage<f64>>::zeros(&[5, 5, 3]).unwrap();
+        let magnetic = ArrayD::<f64, VecStorage<f64>>::zeros(&[5, 5, 2]).unwrap(); // Wrong shape
 
         let fields = EMFields::new(electric, magnetic);
         assert!(fields.validate_shapes().is_err());

@@ -5,7 +5,7 @@
 
 use crate::inverse::pinn::ml::meta_learning::config::MetaLearningConfig;
 use crate::inverse::pinn::ml::meta_learning::types::{PdeType, PhysicsTask};
-use crate::inverse::pinn::ml::BurnWave2dGeometry;
+use crate::inverse::pinn::ml::WaveGeometry2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 #[derive(Debug)]
@@ -56,7 +56,7 @@ impl TaskSampler {
 
     /// Sample a batch of tasks
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn sample_batch(&mut self, batch_size: usize) -> KwaversResult<Vec<PhysicsTask>> {
         if self.task_pool.is_empty() {
@@ -72,7 +72,7 @@ impl TaskSampler {
         for _ in 0..batch_size {
             let task = match self.sampling_strategy {
                 MetaLearningSamplingStrategy::Random => {
-                    let idx = rand::random::<usize>() % self.task_pool.len();
+                    let idx = rand::random::<usize>() % (self.task_pool.len());
                     self.task_pool[idx].clone()
                 }
                 MetaLearningSamplingStrategy::Curriculum => {
@@ -95,13 +95,13 @@ impl TaskSampler {
                             };
 
                             let geometry_complexity = match task.geometry.as_ref() {
-                                BurnWave2dGeometry::Rectangular { .. } => 1.0,
-                                BurnWave2dGeometry::Circular { .. } => 2.0,
-                                BurnWave2dGeometry::MultiRegion { .. } => 4.0,
+                                WaveGeometry2D::Rectangular { .. } => 1.0,
+                                WaveGeometry2D::Circular { .. } => 2.0,
+                                WaveGeometry2D::MultiRegion { .. } => 4.0,
                                 _ => 3.0, // Default for other geometries
                             };
 
-                            let boundary_complexity = task.boundary_conditions.len() as f64;
+                            let boundary_complexity = (task.boundary_conditions.len()) as f64;
 
                             complexity_score * geometry_complexity * boundary_complexity
                         })
@@ -122,18 +122,18 @@ impl TaskSampler {
 
                     if candidates.is_empty() {
                         // Fallback to any task if no candidates found
-                        let idx = self.current_index % self.task_pool.len();
+                        let idx = self.current_index % (self.task_pool.len());
                         self.task_pool[idx].clone()
                     } else {
                         // Sample from candidates, preferring higher difficulty within range
-                        let selected_idx = candidates[rand::random::<usize>() % candidates.len()];
+                        let selected_idx = candidates[rand::random::<usize>() % (candidates.len())];
                         self.current_index += 1;
                         self.task_pool[selected_idx].clone()
                     }
                 }
                 MetaLearningSamplingStrategy::Balanced => {
                     // Sample from different physics families
-                    let idx = rand::random::<usize>() % self.task_pool.len();
+                    let idx = rand::random::<usize>() % (self.task_pool.len());
                     self.task_pool[idx].clone()
                 }
                 MetaLearningSamplingStrategy::Diversity => {
@@ -160,9 +160,9 @@ impl TaskSampler {
                                 1.0
                             };
                             let geometry_diversity = match task.geometry.as_ref() {
-                                BurnWave2dGeometry::Rectangular { .. } => 0.5,
-                                BurnWave2dGeometry::Circular { .. } => 0.7,
-                                BurnWave2dGeometry::MultiRegion { .. } => 1.0,
+                                WaveGeometry2D::Rectangular { .. } => 0.5,
+                                WaveGeometry2D::Circular { .. } => 0.7,
+                                WaveGeometry2D::MultiRegion { .. } => 1.0,
                                 _ => 0.8,
                             };
                             let score = type_diversity * geometry_diversity;
@@ -185,7 +185,7 @@ impl TaskSampler {
 
                     // Fallback
                     selected_task.unwrap_or_else(|| {
-                        self.task_pool[rand::random::<usize>() % self.task_pool.len()].clone()
+                        self.task_pool[rand::random::<usize>() % (self.task_pool.len())].clone()
                     })
                 }
             };
@@ -205,6 +205,6 @@ mod tests {
     fn test_task_sampler_creation() {
         let config = MetaLearningConfig::default();
         let sampler = TaskSampler::new(MetaLearningSamplingStrategy::Random, config);
-        assert_eq!(sampler.task_pool.len(), 0);
+        assert_eq!((sampler.task_pool.len()), 0);
     }
 }

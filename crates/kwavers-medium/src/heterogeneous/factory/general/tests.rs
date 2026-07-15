@@ -5,12 +5,12 @@ use kwavers_core::constants::fundamental::{
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_from_arrays_basic() {
-    let c = Array3::from_elem((10, 10, 10), SOUND_SPEED_WATER_SIM);
-    let rho = Array3::from_elem((10, 10, 10), DENSITY_WATER_NOMINAL);
+    let c = Array3::from_elem([10, 10, 10], SOUND_SPEED_WATER_SIM);
+    let rho = Array3::from_elem([10, 10, 10], DENSITY_WATER_NOMINAL);
 
     let medium = HeterogeneousFactory::from_arrays(c, rho, None, None, None, MHZ_TO_HZ).unwrap();
 
@@ -22,11 +22,11 @@ fn test_from_arrays_basic() {
 
 #[test]
 fn test_from_arrays_with_optional() {
-    let c = Array3::from_elem((10, 10, 10), SOUND_SPEED_WATER_SIM);
-    let rho = Array3::from_elem((10, 10, 10), DENSITY_WATER_NOMINAL);
-    let alpha = Array3::from_elem((10, 10, 10), 0.5);
-    let yexp = Array3::from_elem((10, 10, 10), 1.5_f64);
-    let ba = Array3::from_elem((10, 10, 10), 6.0);
+    let c = Array3::from_elem([10, 10, 10], SOUND_SPEED_WATER_SIM);
+    let rho = Array3::from_elem([10, 10, 10], DENSITY_WATER_NOMINAL);
+    let alpha = Array3::from_elem([10, 10, 10], 0.5);
+    let yexp = Array3::from_elem([10, 10, 10], 1.5_f64);
+    let ba = Array3::from_elem([10, 10, 10], 6.0);
 
     let medium =
         HeterogeneousFactory::from_arrays(c, rho, Some(alpha), Some(yexp), Some(ba), MHZ_TO_HZ)
@@ -87,9 +87,9 @@ fn test_from_elastic_arrays_lame_inversion() {
     // μ = 1900 * 1500² = 4.275e9 Pa
     // λ = 1900 * (3000² - 2*1500²) = 1900 * (9e6 - 4.5e6) = 8.55e9 Pa
     let n = 4usize;
-    let cp = Array3::from_elem((n, n, n), 3000.0_f64);
-    let cs = Array3::from_elem((n, n, n), SOUND_SPEED_WATER_SIM);
-    let rho = Array3::from_elem((n, n, n), 1900.0_f64);
+    let cp = Array3::from_elem([n, n, n], 3000.0_f64);
+    let cs = Array3::from_elem([n, n, n], SOUND_SPEED_WATER_SIM);
+    let rho = Array3::from_elem([n, n, n], 1900.0_f64);
 
     let med =
         HeterogeneousFactory::from_elastic_arrays(cp.view(), cs.view(), rho.view(), MHZ_TO_HZ)
@@ -117,9 +117,9 @@ fn test_from_elastic_arrays_lame_inversion() {
 fn test_from_elastic_arrays_fluid_voxel() {
     // c_s = 0 → fluid: μ = 0, λ = ρ·c_p²
     let n = 2usize;
-    let cp = Array3::from_elem((n, n, n), SOUND_SPEED_WATER_SIM);
-    let cs = Array3::zeros((n, n, n));
-    let rho = Array3::from_elem((n, n, n), DENSITY_WATER_NOMINAL);
+    let cp = Array3::from_elem([n, n, n], SOUND_SPEED_WATER_SIM);
+    let cs = Array3::zeros([n, n, n]);
+    let rho = Array3::from_elem([n, n, n], DENSITY_WATER_NOMINAL);
 
     let med =
         HeterogeneousFactory::from_elastic_arrays(cp.view(), cs.view(), rho.view(), MHZ_TO_HZ)
@@ -136,9 +136,9 @@ fn test_from_elastic_arrays_fluid_voxel() {
 fn test_from_elastic_arrays_stability_violation() {
     // c_s > c_p/sqrt(2) → λ < 0, invalid
     let n = 2usize;
-    let cp = Array3::from_elem((n, n, n), 1000.0_f64);
-    let cs = Array3::from_elem((n, n, n), 900.0_f64);
-    let rho = Array3::from_elem((n, n, n), DENSITY_WATER_NOMINAL);
+    let cp = Array3::from_elem([n, n, n], 1000.0_f64);
+    let cs = Array3::from_elem([n, n, n], 900.0_f64);
+    let rho = Array3::from_elem([n, n, n], DENSITY_WATER_NOMINAL);
 
     let result =
         HeterogeneousFactory::from_elastic_arrays(cp.view(), cs.view(), rho.view(), MHZ_TO_HZ);

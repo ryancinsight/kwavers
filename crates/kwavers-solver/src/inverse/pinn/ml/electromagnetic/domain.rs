@@ -1,13 +1,11 @@
 use super::types::{EMProblemType, ElectromagneticBoundarySpec};
 use crate::inverse::pinn::ml::adapters::electromagnetic::PinnEMSource;
 use crate::inverse::pinn::ml::physics::BoundaryPosition;
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::constants::fundamental::{VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY};
 use kwavers_core::error::{KwaversError, KwaversResult};
 
 /// Electromagnetic physics domain implementation
-#[derive(Debug)]
-pub struct ElectromagneticDomain<B: AutodiffBackend> {
+pub struct ElectromagneticDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Problem type
     pub problem_type: EMProblemType,
     /// Electric permittivity (F/m)
@@ -28,7 +26,28 @@ pub struct ElectromagneticDomain<B: AutodiffBackend> {
     pub(crate) _backend: std::marker::PhantomData<B>,
 }
 
-impl<B: AutodiffBackend> Default for ElectromagneticDomain<B> {
+// Manual `Debug` impl: `#[derive(Debug)]` on a generic struct adds a spurious
+// `B: Debug` bound even though `B` appears only in `PhantomData<B>`.
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for ElectromagneticDomain<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ElectromagneticDomain")
+            .field("problem_type", &self.problem_type)
+            .field("permittivity", &self.permittivity)
+            .field("permeability", &self.permeability)
+            .field("conductivity", &self.conductivity)
+            .field("c", &self.c)
+            .field("current_sources", &self.current_sources)
+            .field("boundary_specs", &self.boundary_specs)
+            .field("domain_size", &self.domain_size)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Default
+    for ElectromagneticDomain<B>
+{
     fn default() -> Self {
         let permittivity = VACUUM_PERMITTIVITY;
         let permeability = VACUUM_PERMEABILITY;
@@ -48,7 +67,7 @@ impl<B: AutodiffBackend> Default for ElectromagneticDomain<B> {
     }
 }
 
-impl<B: AutodiffBackend> ElectromagneticDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> ElectromagneticDomain<B> {
     /// Create a new electromagnetic domain
     pub fn new(
         problem_type: EMProblemType,
@@ -103,7 +122,7 @@ impl<B: AutodiffBackend> ElectromagneticDomain<B> {
 
     /// Validate domain configuration
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.permittivity <= 0.0 {

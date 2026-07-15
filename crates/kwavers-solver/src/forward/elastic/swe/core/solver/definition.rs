@@ -6,7 +6,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::simple::SensorRecorder;
-use ndarray::Array3;
+use leto::Array3;
 
 /// 3D Elastic Wave Solver.
 #[derive(Debug)]
@@ -24,16 +24,16 @@ pub struct ElasticWaveSolver {
 impl ElasticWaveSolver {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(grid: &Grid, medium: &dyn Medium, config: ElasticWaveConfig) -> KwaversResult<Self> {
         let (nx, ny, nz) = grid.dimensions();
-        let density = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| medium.density(i, j, k));
-        let lambda = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        let density = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| medium.density(i, j, k));
+        let lambda = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             medium.lame_lambda(x, y, z, grid)
         });
-        let mu = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        let mu = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
             let (x, y, z) = grid.indices_to_coordinates(i, j, k);
             medium.lame_mu(x, y, z, grid)
         });
@@ -82,13 +82,13 @@ impl ElasticWaveSolver {
         self.volumetric_config = volumetric_config;
     }
 
-    /// Per-voxel shear modulus `μ` \[Pa] — the elastic-FWI inversion parameter.
+    /// Per-voxel shear modulus `μ` \\[Pa\] — the elastic-FWI inversion parameter.
     #[must_use]
     pub fn mu(&self) -> &Array3<f64> {
         &self.mu
     }
 
-    /// Per-voxel first Lamé parameter `λ` \[Pa].
+    /// Per-voxel first Lamé parameter `λ` \\[Pa\].
     #[must_use]
     pub fn lambda(&self) -> &Array3<f64> {
         &self.lambda
@@ -106,12 +106,12 @@ impl ElasticWaveSolver {
     /// per-iteration `μ` changes do not require re-tuning it.
     ///
     /// # Errors
-    /// Returns [`KwaversError::Validation`] when `new_mu` does not match the grid shape.
+    /// Returns [`crate::KwaversError::Validation`] when `new_mu` does not match the grid shape.
     pub fn set_mu(&mut self, new_mu: &Array3<f64>) -> KwaversResult<()> {
-        if new_mu.dim() != self.mu.dim() {
+        if new_mu.shape() != self.mu.shape() {
             return Err(kwavers_core::error::ValidationError::DimensionMismatch {
-                expected: format!("{:?}", self.mu.dim()),
-                actual: format!("{:?}", new_mu.dim()),
+                expected: format!("{:?}", self.mu.shape()),
+                actual: format!("{:?}", new_mu.shape()),
             }
             .into());
         }

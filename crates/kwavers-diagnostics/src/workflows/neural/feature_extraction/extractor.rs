@@ -36,7 +36,7 @@
 use super::super::types::FeatureMap;
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 use std::collections::HashMap;
 
 /// Feature Extractor for Ultrasound Analysis
@@ -49,7 +49,7 @@ use std::collections::HashMap;
 /// ```ignore
 /// use kwavers_transducer::beamforming::neural::config::FeatureConfig;
 /// use kwavers_transducer::beamforming::neural::features::FeatureExtractor;
-/// use ndarray::Array3;
+/// use leto::Array3;
 ///
 /// let config = FeatureConfig::default();
 /// let extractor = FeatureExtractor::new(config);
@@ -143,7 +143,7 @@ impl FeatureExtractor {
     ///
     /// - Canny (1986): "A computational approach to edge detection"
     pub(super) fn compute_gradient_magnitude(&self, volume: ArrayView3<f32>) -> Array3<f32> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
         for z in 1..nz - 1 {
@@ -180,7 +180,7 @@ impl FeatureExtractor {
     ///
     /// - Lindeberg (1998): "Feature detection with automatic scale selection"
     pub(super) fn compute_laplacian(&self, volume: ArrayView3<f32>) -> Array3<f32> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
         for z in 1..nz - 1 {
@@ -223,7 +223,7 @@ impl FeatureExtractor {
     ///
     /// - Mallat (1989): "A theory for multiresolution signal decomposition"
     pub(super) fn compute_local_frequency(&self, volume: ArrayView3<f32>) -> Array3<f32> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
         for z in 1..nz - 1 {
@@ -275,7 +275,7 @@ impl FeatureExtractor {
     /// - Wagner et al. (1983): "Statistics of speckle in ultrasound B-scans"
     /// - Dutt & Greenleaf (1994): "Adaptive speckle reduction filter"
     pub(super) fn compute_speckle_variance(&self, volume: ArrayView3<f32>) -> Array3<f32> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
         let window_size = self.config.window_size;
@@ -328,7 +328,7 @@ impl FeatureExtractor {
     ///
     /// - Haralick et al. (1973): "Textural Features for Image Classification"
     pub(super) fn compute_homogeneity(&self, volume: ArrayView3<f32>) -> Array3<f32> {
-        let (nx, ny, nz) = volume.dim();
+        let [nx, ny, nz] = volume.shape();
         let mut result = Array3::<f32>::zeros((nx, ny, nz));
 
         for z in 1..nz - 1 {

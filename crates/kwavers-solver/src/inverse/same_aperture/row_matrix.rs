@@ -31,16 +31,16 @@ impl RowMatrix {
     }
 
     fn matvec_impl(&self, x: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(x.len(), self.cols);
-        debug_assert_eq!(out.len(), self.rows);
+        debug_assert_eq!((x.len()), self.cols);
+        debug_assert_eq!((out.len()), self.rows);
         for (row, out_value) in out.iter_mut().enumerate().take(self.rows) {
             *out_value = dot(self.row(row), x);
         }
     }
 
     fn t_matvec_impl(&self, y: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(y.len(), self.rows);
-        debug_assert_eq!(out.len(), self.cols);
+        debug_assert_eq!((y.len()), self.rows);
+        debug_assert_eq!((out.len()), self.cols);
         out.fill(0.0);
         for (row, y_value) in y.iter().copied().enumerate().take(self.rows) {
             for (dst, value) in out.iter_mut().zip(self.row(row).iter()) {
@@ -91,7 +91,7 @@ impl LinearOperator for RowMatrix {
     }
 
     fn row_values(&self, row: usize, out: &mut [f32]) {
-        debug_assert_eq!(out.len(), self.cols);
+        debug_assert_eq!((out.len()), self.cols);
         out.copy_from_slice(self.row(row));
     }
 

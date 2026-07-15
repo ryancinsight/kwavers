@@ -6,15 +6,15 @@
 // Note: Field indices imported from physics::field_indices for SSOT
 
 #[cfg(not(feature = "plotting"))]
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(feature = "plotting")]
 mod plotting_impl {
 
     use kwavers_grid::Grid;
     use kwavers_receiver::recorder::Recorder;
+    use leto::{Array2, Array3};
     use log::info;
-    use ndarray::{Array2, Array3};
     use plotly::{
         common::{ColorBar, Mode, Title},
         HeatMap, Layout, Plot, Scatter, Scatter3D,
@@ -49,8 +49,10 @@ mod plotting_impl {
     ) {
         info!("Generating 2D pressure field plot: {}", filename);
 
-        let slice = pressure.slice(ndarray::s![.., .., z_slice]);
-        let (nx, ny) = slice.dim();
+        let slice = pressure
+            .index_axis::<2>(2, z_slice)
+            .expect("z_slice in range");
+        let [nx, ny] = slice.shape();
 
         let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
         let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();
@@ -81,7 +83,7 @@ mod plotting_impl {
     ) {
         info!("Generating 3D pressure field plot: {}", filename);
 
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
         let mut x = Vec::new();
         let mut y = Vec::new();
         let mut z = Vec::new();
@@ -150,12 +152,21 @@ mod plotting_impl {
     ) {
         info!("Generating field comparison plot: {}", filename);
 
-        let slice1 = field1.slice(ndarray::s![.., .., z_slice]);
-        let slice2 = field2.slice(ndarray::s![.., .., z_slice]);
-        let (nx, ny) = slice1.dim();
+        let slice1 = field1
+            .index_axis::<2>(2, z_slice)
+            .expect("z_slice in range");
+        let slice2 = field2
+            .index_axis::<2>(2, z_slice)
+            .expect("z_slice in range");
 
-        // Calculate difference
-        let diff: Array2<f64> = &slice1 - &slice2;
+        // Calculate difference. ArrayView lacks the Sub trait in leto; compute
+        // element-wise via indexed access into the contiguous layout.
+        let s1_shape = slice1.shape();
+        let diff: Array2<f64> = Array2::from_shape_fn([s1_shape[0], s1_shape[1]], |[i, j]| {
+            slice1[[i, j]] - slice2[[i, j]]
+        });
+        let nx = s1_shape[0];
+        let ny = s1_shape[1];
 
         let x: Vec<f64> = (0..nx).map(|i| i as f64 * grid.dx).collect();
         let y: Vec<f64> = (0..ny).map(|j| j as f64 * grid.dy).collect();

@@ -1,26 +1,25 @@
 use super::*;
 use crate::inverse::pinn::ml::physics::PinnDomainPhysicsParameters;
-use burn::backend::{Autodiff, NdArray};
-use burn::tensor::Tensor;
+use coeus_autograd::Var;
 
 #[derive(Debug)]
 struct MockPhysicsDomain;
 
-impl<B: AutodiffBackend> crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<B>
-    for MockPhysicsDomain
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+    crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<B> for MockPhysicsDomain
 {
     fn domain_name(&self) -> &'static str {
         "mock"
     }
     fn pde_residual(
         &self,
-        _model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        _y: &Tensor<B, 2>,
-        _t: &Tensor<B, 2>,
+        _model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        x: &Var<f32, B>,
+        _y: &Var<f32, B>,
+        _t: &Var<f32, B>,
         _params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
-        x.clone() * 0.1
+    ) -> Var<f32, B> {
+        coeus_autograd::scalar_mul(x, 0.1)
     }
     fn boundary_conditions(
         &self,
@@ -42,7 +41,7 @@ impl<B: AutodiffBackend> crate::inverse::pinn::ml::physics::SimulationPhysicsDom
 
 #[test]
 fn test_adaptive_sampler_creation() {
-    type TestBackend = Autodiff<NdArray<f32>>;
+    type TestBackend = coeus_core::MoiraiBackend;
 
     let domain: Box<dyn crate::inverse::pinn::ml::physics::SimulationPhysicsDomain<TestBackend>> =
         Box::new(MockPhysicsDomain);
@@ -52,8 +51,8 @@ fn test_adaptive_sampler_creation() {
 
     let sampler = sampler.unwrap();
     assert_eq!(sampler.total_points, 100);
-    assert_eq!(sampler.active_points.shape().dims, [100, 3]);
-    assert_eq!(sampler.priorities.shape().dims, [100]);
+    assert_eq!((sampler.active_points.len()), 300);
+    assert_eq!((sampler.priorities.len()), 100);
 }
 
 #[test]

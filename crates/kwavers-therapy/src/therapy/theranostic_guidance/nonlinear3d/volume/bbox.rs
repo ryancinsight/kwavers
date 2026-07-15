@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 use crate::therapy::theranostic_guidance::geometry::IndexBounds3;
 use kwavers_core::error::{KwaversError, KwaversResult};
@@ -56,7 +56,7 @@ fn brain_cube_bbox(
             KwaversError::InvalidInput("brain treatment-window target index is required".to_owned())
         })?;
         return Ok(cube_from_center_radius(
-            body.dim(),
+            body.shape(),
             center,
             treatment_window_radius_m,
             spacing_mm,
@@ -81,7 +81,7 @@ fn body_cube_bbox(body: &Array3<bool>, spacing_mm: [f64; 3]) -> KwaversResult<In
     .fold(0.0, f64::max)
         + 0.01;
     Ok(cube_from_center_radius(
-        body.dim(),
+        body.shape(),
         center,
         radius_m,
         spacing_mm,
@@ -120,7 +120,7 @@ fn path_cube_bbox(
         .max(target_radius_from_center_m + TARGET_TO_WINDOW_MARGIN_M)
         .max(bowl_radius_from_center_m);
     Ok(cube_from_center_radius(
-        body.dim(),
+        body.shape(),
         center,
         radius_m,
         spacing_mm,
@@ -133,9 +133,9 @@ pub(super) fn planned_abdominal_skin_index(
     spacing_mm: [f64; 3],
 ) -> KwaversResult<[f64; 3]> {
     let z = largest_target_slice(target)?;
-    let (nx, ny, _) = target.dim();
-    let body_slice = Array2::from_shape_fn((nx, ny), |(ix, iy)| body[[ix, iy, z]]);
-    let target_slice = Array2::from_shape_fn((nx, ny), |(ix, iy)| target[[ix, iy, z]]);
+    let [nx, ny, _] = target.shape();
+    let body_slice = Array2::from_shape_fn((nx, ny), |[ix, iy]| body[[ix, iy, z]]);
+    let target_slice = Array2::from_shape_fn((nx, ny), |[ix, iy]| target[[ix, iy, z]]);
     let body_component = connected_body_component(&body_slice, &target_slice)?;
     let focus = centroid_2d(&target_slice, spacing_mm)?;
     let sx = spacing_mm[0] * 1.0e-3;
@@ -150,11 +150,11 @@ pub(super) fn planned_abdominal_skin_index(
 }
 
 fn largest_target_slice(target: &Array3<bool>) -> KwaversResult<usize> {
-    let (_, _, nz) = target.dim();
+    let [_, _, nz] = target.shape();
     let mut best = None;
     for z in 0..nz {
-        let count = (0..target.dim().0)
-            .flat_map(|x| (0..target.dim().1).map(move |y| (x, y)))
+        let count = (0..target.shape()[0])
+            .flat_map(|x| (0..target.shape()[1]).map(move |y| (x, y)))
             .filter(|(x, y)| target[[*x, *y, z]])
             .count();
         if count > best.map_or(0, |(_, current)| current) {
@@ -169,14 +169,14 @@ fn largest_target_slice(target: &Array3<bool>) -> KwaversResult<usize> {
 }
 
 fn centroid_2d(target: &Array2<bool>, spacing_mm: [f64; 3]) -> KwaversResult<(f64, f64)> {
-    let (nx, ny) = target.dim();
+    let [nx, ny] = target.shape();
     let center = (0.5 * (nx - 1) as f64, 0.5 * (ny - 1) as f64);
     let sx = spacing_mm[0] * 1.0e-3;
     let sy = spacing_mm[1] * 1.0e-3;
     let mut sum_x = 0.0;
     let mut sum_y = 0.0;
     let mut count = 0.0;
-    for ((ix, iy), active) in target.indexed_iter() {
+    for ([ix, iy], active) in target.indexed_iter() {
         if *active {
             sum_x += (ix as f64 - center.0) * sx;
             sum_y += (iy as f64 - center.1) * sy;
@@ -198,9 +198,9 @@ fn connected_body_component(
 ) -> KwaversResult<Array2<bool>> {
     let seed = target
         .indexed_iter()
-        .find_map(|(idx, active)| active.then_some(idx))
+        .find_map(|(idx, active)| active.then_some((idx[0], idx[1])))
         .ok_or_else(|| KwaversError::InvalidInput("abdominal target slice is empty".to_owned()))?;
-    let (nx, ny) = body.dim();
+    let [nx, ny] = body.shape();
     let mut component = Array2::<bool>::from_elem((nx, ny), false);
     let mut queue = VecDeque::from([seed]);
     while let Some((ix, iy)) = queue.pop_front() {
@@ -230,7 +230,7 @@ fn connected_body_component(
 }
 
 fn cube_from_center_radius(
-    dims: (usize, usize, usize),
+    dims: [usize; 3],
     center: [f64; 3],
     radius_m: f64,
     spacing_mm: [f64; 3],
@@ -240,11 +240,11 @@ fn cube_from_center_radius(
     let rz = (radius_m / (spacing_mm[2] * 1.0e-3)).ceil() as usize;
     IndexBounds3 {
         x0: (center[0].round() as isize - rx as isize).max(0) as usize,
-        x1: (center[0].round() as usize + rx).min(dims.0 - 1),
+        x1: (center[0].round() as usize + rx).min(dims[0] - 1),
         y0: (center[1].round() as isize - ry as isize).max(0) as usize,
-        y1: (center[1].round() as usize + ry).min(dims.1 - 1),
+        y1: (center[1].round() as usize + ry).min(dims[1] - 1),
         z0: (center[2].round() as isize - rz as isize).max(0) as usize,
-        z1: (center[2].round() as usize + rz).min(dims.2 - 1),
+        z1: (center[2].round() as usize + rz).min(dims[2] - 1),
     }
 }
 
@@ -258,7 +258,7 @@ fn mask_bounds(mask: &Array3<bool>) -> KwaversResult<IndexBounds3> {
         z1: 0,
     };
     let mut any = false;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
+    for ([ix, iy, iz], active) in mask.indexed_iter() {
         if *active {
             b.x0 = b.x0.min(ix);
             b.x1 = b.x1.max(ix);
@@ -298,7 +298,7 @@ pub(super) fn physical_distance(a: [f64; 3], b: [f64; 3], spacing_mm: [f64; 3]) 
 
 #[cfg(test)]
 mod tests {
-    use ndarray::Array3;
+    use leto::Array3;
 
     use super::*;
 

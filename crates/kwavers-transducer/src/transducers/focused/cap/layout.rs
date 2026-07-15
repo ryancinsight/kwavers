@@ -18,15 +18,15 @@ use std::f64::consts::{FRAC_PI_2, PI};
 pub struct SphericalCapConfig {
     /// Number of elements on the cap.
     pub element_count: usize,
-    /// Radius from the acoustic focus to the cap surface [m].
+    /// Radius from the acoustic focus to the cap surface \[m\].
     pub radius_m: f64,
-    /// Acoustic focus [m].
+    /// Acoustic focus \[m\].
     pub focus_m: [f64; 3],
     /// Unit-agnostic axis from the cap vertex toward the focus.
     pub axis_vertex_to_focus: [f64; 3],
-    /// Minimum polar angle from the cap axis [rad].
+    /// Minimum polar angle from the cap axis \[rad\].
     pub theta_min_rad: f64,
-    /// Maximum polar angle from the cap axis [rad].
+    /// Maximum polar angle from the cap axis \[rad\].
     pub theta_max_rad: f64,
 }
 
@@ -93,7 +93,7 @@ impl SphericalCapConfig {
 /// One focused spherical-cap element.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SphericalCapElement {
-    /// Element center position [m].
+    /// Element center position \[m\].
     pub position_m: [f64; 3],
     /// Unit normal pointing from element toward the acoustic focus.
     pub normal_to_focus: [f64; 3],

@@ -4,8 +4,23 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::{FOUR_PI, TWO_PI};
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
+
+fn linspace(start: f64, end: f64, num_points: usize) -> Array1<f64> {
+    if num_points == 0 {
+        return Array1::zeros([0]);
+    }
+    if num_points == 1 {
+        return Array1::from_vec([1], vec![start]).expect("linspace shape must match");
+    }
+    let step = (end - start) / (num_points - 1) as f64;
+    Array1::from_vec(
+        [num_points],
+        (0..num_points).map(|i| start + step * i as f64).collect(),
+    )
+    .expect("linspace shape must match")
+}
 
 /// Directivity pattern of a transducer element
 ///
@@ -34,8 +49,8 @@ impl TransducerDirectivityPattern {
         let wavelength = SOUND_SPEED_TISSUE / frequency; // Assume tissue
         let k = TWO_PI / wavelength;
 
-        let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
-        let mut amplitude = Array1::zeros(num_points);
+        let angles = linspace(-90.0, 90.0, num_points);
+        let mut amplitude = Array1::zeros([num_points]);
 
         for (i, &angle_deg) in angles.iter().enumerate() {
             let angle_rad = angle_deg.to_radians();
@@ -82,8 +97,8 @@ impl TransducerDirectivityPattern {
         let k = TWO_PI / wavelength;
         let radius = diameter / 2.0;
 
-        let angles: Array1<f64> = Array1::linspace(-90.0, 90.0, num_points);
-        let mut amplitude = Array1::zeros(num_points);
+        let angles = linspace(-90.0, 90.0, num_points);
+        let mut amplitude = Array1::zeros([num_points]);
 
         for (i, &angle_deg) in angles.iter().enumerate() {
             let angle_rad = angle_deg.to_radians();

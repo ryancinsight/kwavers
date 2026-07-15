@@ -1,50 +1,73 @@
 //! `FourierFeatures`: frequency-domain input embedding for PINNs.
 
-use burn::{
-    module::{Module, Param},
-    tensor::{backend::Backend, Tensor},
-};
+use coeus_autograd::Var;
 
 /// Fourier feature embedding for improved frequency representation.
 ///
 /// Fourier features provide better representation of oscillatory physics by mapping
 /// input coordinates to higher-frequency sinusoidal functions.
-#[derive(Debug, Module)]
-pub struct FourierFeatures<B: Backend> {
-    /// Learned frequency parameters.
-    frequencies: Param<Tensor<B, 2>>,
+pub struct FourierFeatures<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
+    /// Learned frequency parameters, shape `[input_dim, num_features]`.
+    frequencies: Var<f32, B>,
     /// Feature scaling factor.
-    #[module(ignore)]
     scale: f32,
 }
 
-impl<B: Backend> FourierFeatures<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for FourierFeatures<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FourierFeatures")
+            .field("scale", &self.scale)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> FourierFeatures<B> {
     /// Create Fourier feature embedding.
-    pub fn new(input_dim: usize, num_features: usize, scale: f32, device: &B::Device) -> Self {
+    pub fn new(input_dim: usize, num_features: usize, scale: f32) -> Self {
+        let backend = B::default();
         let freq_data: Vec<f32> = (0..input_dim * num_features)
             .map(|_| rand::random::<f32>() * scale)
             .collect();
 
-        let frequencies = Tensor::<B, 1>::from_floats(freq_data.as_slice(), device)
-            .reshape([input_dim, num_features]);
+        let frequencies = Var::new(
+            coeus_tensor::Tensor::from_slice_on(
+                vec![input_dim, num_features],
+                &freq_data,
+                &backend,
+            ),
+            true,
+        );
 
-        Self {
-            frequencies: Param::from_tensor(frequencies),
-            scale,
-        }
+        Self { frequencies, scale }
+    }
+
+    /// Flatten the learnable frequency parameters.
+    pub fn parameters(&self) -> Vec<Var<f32, B>> {
+        vec![self.frequencies.clone()]
+    }
+
+    /// Write updated frequency values back (optimizer round-trip).
+    pub fn load_parameters(&mut self, params: &[Var<f32, B>]) {
+        self.frequencies = params[0].clone();
     }
 
     /// Apply Fourier feature transformation.
     ///
     /// Maps `x` ∈ ℝ^{batch × input_dim} to
     /// `[cos(scale·x·f), sin(scale·x·f)]` ∈ ℝ^{batch × 2·num_features}.
-    pub fn forward(&self, x: Tensor<B, 2>) -> Tensor<B, 2> {
-        let scaled_x = x * self.scale;
-        let features = scaled_x.matmul(self.frequencies.val());
+    pub fn forward(&self, x: &Var<f32, B>) -> Var<f32, B>
+    where
+        B::DeviceBuffer<f32>:
+            coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+    {
+        let scaled_x = coeus_autograd::scalar_mul(x, self.scale);
+        let features = coeus_autograd::matmul(&scaled_x, &self.frequencies);
 
-        let cos_features = features.clone().cos();
-        let sin_features = features.sin();
+        let cos_features = coeus_autograd::cos(&features);
+        let sin_features = coeus_autograd::sin(&features);
 
-        Tensor::cat(vec![cos_features, sin_features], 1)
+        coeus_autograd::cat(&[&cos_features, &sin_features], 1)
     }
 }

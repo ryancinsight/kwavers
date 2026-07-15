@@ -3,17 +3,15 @@
 use super::types::{
     PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 use super::conformal::PinnConformalPredictor;
 
 /// Bayesian PINN with uncertainty quantification.
-#[derive(Debug)]
-pub struct PinnBayesianPINN<B: AutodiffBackend> {
+pub struct PinnBayesianPINN<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     /// Ensemble of models for uncertainty estimation.
-    pub(super) ensemble: Vec<crate::inverse::pinn::ml::BurnPINN2DWave<B>>,
+    pub(super) ensemble: Vec<crate::inverse::pinn::ml::PinnWave2D<B>>,
     /// Uncertainty configuration.
     pub(super) config: PinnUncertaintyConfig,
     /// Calibration data for conformal prediction.
@@ -24,13 +22,29 @@ pub struct PinnBayesianPINN<B: AutodiffBackend> {
     pub stats: UncertaintyStats,
 }
 
-impl<B: AutodiffBackend> PinnBayesianPINN<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
+    for PinnBayesianPINN<B>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PinnBayesianPINN")
+            .field("ensemble_size", &(self.ensemble.len()))
+            .field("config", &self.config)
+            .field("stats", &self.stats)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PinnBayesianPINN<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new Bayesian PINN.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn new(
-        base_model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        base_model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         config: PinnUncertaintyConfig,
     ) -> KwaversResult<Self> {
         let mut ensemble = Vec::new();
@@ -52,7 +66,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
 
     /// Calibrate uncertainty estimates using validation data.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn calibrate(
         &mut self,
@@ -79,7 +93,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
 
     /// Predict with uncertainty quantification.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict_with_uncertainty(
         &mut self,
@@ -87,7 +101,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
     ) -> KwaversResult<PinnPredictionWithUncertainty> {
         if self.config.mc_samples > 0 {
             return Err(KwaversError::InvalidInput(
-                "MC dropout is not supported by the current Burn PINN architectures".into(),
+                "MC dropout is not supported by the current current PINN architectures".into(),
             ));
         }
         self.ensemble_prediction(input)
@@ -95,7 +109,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
 
     /// Deep ensemble prediction.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn ensemble_prediction(
         &mut self,
@@ -122,7 +136,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
 
     /// Compute uncertainty statistics from predictions.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     fn compute_uncertainty_stats(
         &mut self,
@@ -139,7 +153,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
         }
 
         let num_points = predictions[0].len();
-        let num_samples = predictions.len();
+        let num_samples = (predictions.len());
 
         let mut means = vec![0.0; num_points];
         let mut variances = vec![0.0; num_points];
@@ -179,7 +193,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
         let entropy = self.compute_predictive_entropy(&variances);
         let reliability = self.compute_reliability_score(&variances);
 
-        let avg_uncertainty = variances.iter().sum::<f32>() / variances.len() as f32;
+        let avg_uncertainty = variances.iter().sum::<f32>() / (variances.len()) as f32;
         self.stats.total_predictions += 1;
         self.stats.average_uncertainty = (self.stats.average_uncertainty + avg_uncertainty) / 2.0;
 
@@ -195,26 +209,25 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
 
     /// Get model prediction for ensemble member.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn model_prediction(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         input: &[f32],
     ) -> KwaversResult<Vec<f32>> {
-        if input.len() != 3 {
+        if (input.len()) != 3 {
             return Err(KwaversError::InvalidInput(
                 "Expected input to be [x, y, t]".into(),
             ));
         }
-        let x = Array1::from_elem((1,), input[0] as f64);
-        let y = Array1::from_elem((1,), input[1] as f64);
-        let t = Array1::from_elem((1,), input[2] as f64);
-        let device = model.device();
+        let x = Array1::from_elem([1], input[0] as f64);
+        let y = Array1::from_elem([1], input[1] as f64);
+        let t = Array1::from_elem([1], input[2] as f64);
 
         let output = model
-            .predict(&x, &y, &t, &device)
+            .predict(&x, &y, &t)
             .map(|output| output.iter().map(|&v| v as f32).collect::<Vec<_>>())?;
 
         Ok(output)
@@ -225,7 +238,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_predictive_entropy(&self, variances: &[f32]) -> f32 {
-        let avg_variance = variances.iter().sum::<f32>() / variances.len() as f32;
+        let avg_variance = variances.iter().sum::<f32>() / (variances.len()) as f32;
         0.5 * (1.0 + (2.0 * std::f32::consts::PI * avg_variance).ln())
     }
 
@@ -234,13 +247,13 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     fn compute_reliability_score(&self, variances: &[f32]) -> f32 {
-        let avg_variance = variances.iter().sum::<f32>() / variances.len() as f32;
+        let avg_variance = variances.iter().sum::<f32>() / (variances.len()) as f32;
         1.0 / (1.0 + avg_variance / self.config.variance_threshold as f32)
     }
 
     /// Update calibration metrics.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn _update_calibration_metrics(
         &mut self,
@@ -250,7 +263,7 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
             return Ok(());
         }
 
-        let mut abs_errors = Vec::with_capacity(calibration_data.len());
+        let mut abs_errors = Vec::with_capacity((calibration_data.len()));
         let mut covered = 0usize;
 
         for (input, target) in calibration_data {
@@ -273,8 +286,8 @@ impl<B: AutodiffBackend> PinnBayesianPINN<B> {
             }
         }
 
-        let calibration_error = abs_errors.iter().sum::<f32>() / abs_errors.len() as f32;
-        let coverage_probability = covered as f32 / calibration_data.len() as f32;
+        let calibration_error = abs_errors.iter().sum::<f32>() / (abs_errors.len()) as f32;
+        let coverage_probability = covered as f32 / (calibration_data.len()) as f32;
 
         self.stats.calibration_error = calibration_error;
         self.stats.coverage_probability = coverage_probability;

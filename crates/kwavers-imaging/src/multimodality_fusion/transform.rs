@@ -1,5 +1,5 @@
 use kwavers_core::error::KwaversResult;
-use ndarray::Array2;
+use leto::Array2;
 
 /// Registration transformation (rigid or affine)
 #[derive(Debug, Clone)]
@@ -29,7 +29,7 @@ impl RegistrationTransform {
     /// Create identity transformation
     #[must_use]
     pub fn identity() -> Self {
-        let mut matrix = Array2::zeros((4, 4));
+        let mut matrix = Array2::zeros([4, 4]);
         for i in 0..4 {
             matrix[[i, i]] = 1.0;
         }
@@ -116,7 +116,7 @@ impl RegistrationTransform {
         }
 
         // Assemble 4×4 inverse matrix
-        let mut inv = Array2::<f64>::zeros((4, 4));
+        let mut inv = Array2::<f64>::zeros([4, 4]);
         for i in 0..3 {
             for j in 0..3 {
                 inv[[i, j]] = rt[i][j];

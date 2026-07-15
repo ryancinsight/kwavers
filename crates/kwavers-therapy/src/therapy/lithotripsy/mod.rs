@@ -25,7 +25,7 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 pub mod bioeffects;
 pub mod cavitation_cloud;
@@ -128,11 +128,12 @@ impl LithotripsySimulator {
     ///
     pub fn new(params: LithotripsyParameters, grid: Grid) -> KwaversResult<Self> {
         // Validate stone geometry matches grid
-        if params.stone_geometry.dim() != grid.dimensions() {
+        let grid_dims = grid.dimensions();
+        if params.stone_geometry.shape() != [grid_dims.0, grid_dims.1, grid_dims.2] {
             return Err(kwavers_core::error::KwaversError::Validation(
                 kwavers_core::error::ValidationError::FieldValidation {
                     field: "stone_geometry".to_owned(),
-                    value: format!("{:?}", params.stone_geometry.dim()),
+                    value: format!("{:?}", params.stone_geometry.shape()),
                     constraint: format!("Must match grid dimensions {:?}", grid.dimensions()),
                 },
             ));
@@ -258,7 +259,7 @@ impl LithotripsySimulator {
         self.results.fragment_sizes = self.stone_model.fragment_sizes().to_vec();
         self.results.final_safety_assessment = self.bioeffects_model.check_safety().clone();
 
-        let cavitation_metric = self.cavitation_cloud.cloud_density().sum()
+        let cavitation_metric = self.cavitation_cloud.cloud_density().iter().sum::<f64>()
             * self.params.shock_parameters.pulse_duration;
         self.results.cavitation_history.push(cavitation_metric);
 

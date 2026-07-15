@@ -8,7 +8,7 @@
 //! This module now uses solver-agnostic interfaces from `pinn_interface`
 //! instead of direct solver imports, maintaining clean layer separation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_transducer::beamforming::BeamformingConfig;
 

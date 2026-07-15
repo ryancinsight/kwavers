@@ -3,8 +3,9 @@
 use super::types::FactoryError;
 use crate::config::{SolverConfiguration, SolverType};
 use crate::interface::Solver;
-use apollo::{self, Complex64, Normalization};
-use ndarray::{Array2, Array3};
+use kwavers_math::fft::{fft_3d_array, ifft_3d_array, Complex64, Normalization};
+use leto::Array3 as LetoArray3;
+use leto::{Array2, Array3};
 
 /// Abstract factory for creating solver instances
 pub trait SolverFactoryTrait {
@@ -88,8 +89,8 @@ pub trait FourierBackend: std::fmt::Debug + Send + Sync {
     fn normalization(&self) -> Normalization;
     fn is_available(&self) -> bool;
     fn workspace_len_3d(&self, nx: usize, ny: usize, nz: usize) -> usize;
-    fn forward_3d_real(&self, field: &Array3<f64>) -> Array3<Complex64>;
-    fn inverse_3d_real(&self, spectrum: &Array3<Complex64>) -> Array3<f64>;
+    fn forward_3d_real(&self, field: &LetoArray3<f64>) -> LetoArray3<Complex64>;
+    fn inverse_3d_real(&self, spectrum: &LetoArray3<Complex64>) -> LetoArray3<f64>;
 }
 
 /// Canonical Apollo-backed Fourier backend adapter.
@@ -113,12 +114,12 @@ impl FourierBackend for ApolloFourierBackend {
         nx * ny * nz
     }
 
-    fn forward_3d_real(&self, field: &Array3<f64>) -> Array3<Complex64> {
-        apollo::fft_3d_array(field)
+    fn forward_3d_real(&self, field: &LetoArray3<f64>) -> LetoArray3<Complex64> {
+        fft_3d_array(field)
     }
 
-    fn inverse_3d_real(&self, spectrum: &Array3<Complex64>) -> Array3<f64> {
-        apollo::ifft_3d_array(spectrum)
+    fn inverse_3d_real(&self, spectrum: &LetoArray3<Complex64>) -> LetoArray3<f64> {
+        ifft_3d_array(spectrum)
     }
 }
 

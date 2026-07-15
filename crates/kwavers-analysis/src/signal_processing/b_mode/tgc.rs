@@ -23,7 +23,7 @@
 //!   §4.2 (attenuation) and §10.4 (TGC). Academic Press.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Time-gain-compensation parameters.
 #[derive(Debug, Clone, Copy)]
@@ -56,7 +56,7 @@ impl TgcConfig {
     /// Per-sample linear gain curve for `n` axial samples.
     #[must_use]
     pub fn gain_curve(&self, n: usize) -> Array1<f64> {
-        Array1::from_shape_fn(n, |i| self.gain(i))
+        Array1::from_shape_fn(n, |[i]| self.gain(i))
     }
 
     /// Apply TGC to an axial RF/envelope line.

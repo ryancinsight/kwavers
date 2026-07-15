@@ -2,7 +2,7 @@
 
 use super::types::{ApodizationType, Array2dElement, TransducerArray2DConfig};
 use kwavers_signal::Signal;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt::Debug;
 use std::sync::Arc;
 
@@ -47,7 +47,7 @@ impl Clone for TransducerArray2D {
 impl TransducerArray2D {
     /// Create a new 2D transducer array
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: TransducerArray2DConfig,

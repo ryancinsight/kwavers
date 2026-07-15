@@ -6,7 +6,7 @@
 //! Where Q is the heat source from ultrasound absorption.
 
 use kwavers_medium::properties::ThermalPropertyData;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Pennes bioheat equation solver
 #[derive(Debug)]
@@ -72,7 +72,7 @@ impl PennesSolver {
             ));
         }
 
-        let temperature = Array3::from_elem((nx, ny, nz), arterial_temperature);
+        let temperature = Array3::from_elem([nx, ny, nz], arterial_temperature);
         let temperature_prev = temperature.clone();
 
         Ok(Self {

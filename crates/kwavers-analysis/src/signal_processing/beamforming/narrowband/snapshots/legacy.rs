@@ -1,107 +1,15 @@
 //! Legacy analytic-signal complex baseband snapshot extraction.
 //!
 //! Prefer windowed snapshots via `SnapshotSelection` for MVDR/MUSIC pipelines.
+//! The RF-to-I/Q operation itself is owned by
+//! [`crate::signal_processing::baseband::demodulate_rf_to_iq`]; this module
+//! only selects decimated narrowband snapshots from that canonical record.
 
 use super::config::BasebandSnapshotConfig;
-use kwavers_core::constants::numerical::TWO_PI;
+use crate::signal_processing::baseband::{demodulate_rf_to_iq, IqDemodulationConfig};
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::fft::{fft_1d_array, ifft_1d_complex, Complex64};
-use ndarray::{Array2, Array3};
-
-/// Convert a real-valued time series into its analytic signal via Hilbert transform.
-///
-/// Returns `z[n] = x[n] + j * H{x}[n]`.
-///
-/// # Errors
-/// - Rejects empty input.
-///
-/// # Implementation
-/// FFT-based Hilbert transform:
-/// - Forward FFT of real input (embedded as complex)
-/// - Multiply FFT bins by the "analytic signal" multiplier:
-///   - DC: keep (×1)
-///   - Nyquist (even N): keep (×1)
-///   - positive frequencies: ×2
-///   - negative frequencies: ×0
-/// - Inverse FFT and scale by 1/N (Apollo's transforms are unnormalized)
-fn analytic_signal_hilbert(signal: &[f64]) -> KwaversResult<Vec<Complex64>> {
-    let n = signal.len();
-    if n == 0 {
-        return Err(KwaversError::InvalidInput(
-            "analytic_signal_hilbert: signal must be non-empty".to_owned(),
-        ));
-    }
-
-    let mut spectrum = fft_1d_array(&ndarray::Array1::from_vec(signal.to_vec()));
-
-    // Apply analytic-signal (Hilbert/one-sided) multiplier.
-    //
-    // Indexing conventions:
-    // - For N even: positive bins are k=1..(N/2-1), Nyquist is k=N/2, negatives are k=(N/2+1)..(N-1).
-    // - For N odd:  positive bins are k=1..((N-1)/2), negatives are k=((N+1)/2)..(N-1).
-    if n >= 2 {
-        let half = n / 2;
-
-        if n.is_multiple_of(2) {
-            for v in spectrum.iter_mut().take(half).skip(1) {
-                *v *= 2.0;
-            }
-            for v in spectrum.iter_mut().skip(half + 1) {
-                *v = Complex64::new(0.0, 0.0);
-            }
-        } else {
-            for v in spectrum.iter_mut().take(half + 1).skip(1) {
-                *v *= 2.0;
-            }
-            for v in spectrum.iter_mut().skip(half + 1) {
-                *v = Complex64::new(0.0, 0.0);
-            }
-        }
-    }
-
-    Ok(ifft_1d_complex(&spectrum).to_vec())
-}
-
-/// Downconvert an analytic (complex) signal to complex baseband with center frequency `f0`.
-///
-/// Computes: `y[n] = z[n] * exp(-j 2π f0 (n / fs))`.
-///
-/// # Errors
-/// - Rejects invalid frequencies.
-fn downconvert_to_baseband(
-    analytic: &[Complex64],
-    sampling_frequency_hz: f64,
-    center_frequency_hz: f64,
-) -> KwaversResult<Vec<Complex64>> {
-    if analytic.is_empty() {
-        return Err(KwaversError::InvalidInput(
-            "downconvert_to_baseband: analytic must be non-empty".to_owned(),
-        ));
-    }
-    if !sampling_frequency_hz.is_finite() || sampling_frequency_hz <= 0.0 {
-        return Err(KwaversError::InvalidInput(
-            "downconvert_to_baseband: sampling_frequency_hz must be finite and > 0".to_owned(),
-        ));
-    }
-    if !center_frequency_hz.is_finite() || center_frequency_hz <= 0.0 {
-        return Err(KwaversError::InvalidInput(
-            "downconvert_to_baseband: center_frequency_hz must be finite and > 0".to_owned(),
-        ));
-    }
-
-    let n = analytic.len();
-    let omega = -TWO_PI * center_frequency_hz;
-    let inv_fs = 1.0 / sampling_frequency_hz;
-
-    let mut out = Vec::with_capacity(n);
-    for (idx, &z) in analytic.iter().enumerate() {
-        let t = (idx as f64) * inv_fs;
-        let rot = Complex64::new(0.0, omega * t).exp();
-        out.push(z * rot);
-    }
-
-    Ok(out)
-}
+use leto::{Array2, Array3};
 
 /// Extract **legacy** complex baseband snapshots from sensor time series.
 ///
@@ -131,7 +39,7 @@ pub fn extract_complex_baseband_snapshots(
 ) -> KwaversResult<Array2<Complex64>> {
     cfg.validate()?;
 
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "extract_complex_baseband_snapshots expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"
@@ -153,24 +61,23 @@ pub fn extract_complex_baseband_snapshots(
 
     let n_snapshots = ((n_samples - 1) / step) + 1;
 
-    let mut snapshots = Array2::<Complex64>::zeros((n_sensors, n_snapshots));
-
-    for s in 0..n_sensors {
-        let mut x = Vec::with_capacity(n_samples);
-        for t in 0..n_samples {
-            x.push(sensor_data[(s, 0, t)]);
-        }
-
-        let analytic = analytic_signal_hilbert(&x)?;
-        let baseband = downconvert_to_baseband(
-            &analytic,
-            cfg.sampling_frequency_hz,
-            cfg.center_frequency_hz,
-        )?;
-
+    let rf = Array2::from_shape_vec(
+        [n_sensors, n_samples],
+        (0..n_sensors)
+            .flat_map(|sensor| (0..n_samples).map(move |sample| sensor_data[[sensor, 0, sample]]))
+            .collect(),
+    )
+    .map_err(|error| KwaversError::InvalidInput(format!("legacy baseband RF shape: {error}")))?;
+    let baseband = demodulate_rf_to_iq(
+        rf.view(),
+        IqDemodulationConfig::new(cfg.sampling_frequency_hz, cfg.center_frequency_hz)?,
+    )?;
+    let mut snapshots =
+        Array2::<Complex64>::from_elem((n_sensors, n_snapshots), Complex64::default());
+    for sensor in 0..n_sensors {
         for k in 0..n_snapshots {
             let t_idx = k * step;
-            snapshots[(s, k)] = baseband[t_idx];
+            snapshots[[sensor, k]] = baseband[[sensor, t_idx]];
         }
     }
 
@@ -180,53 +87,8 @@ pub fn extract_complex_baseband_snapshots(
 #[cfg(test)]
 mod tests {
     use super::super::config::BasebandSnapshotConfig;
-    use super::{
-        analytic_signal_hilbert, downconvert_to_baseband, extract_complex_baseband_snapshots,
-    };
-    use approx::assert_abs_diff_eq;
-    use kwavers_math::fft::Complex64;
-    use ndarray::Array3;
-
-    #[test]
-    fn analytic_signal_of_cos_has_unit_magnitude_envelope_for_tone() {
-        let fs = 1024.0;
-        let f = 64.0;
-        let n = 1024usize;
-
-        let omega = 2.0 * std::f64::consts::PI * f;
-
-        let mut x = Vec::with_capacity(n);
-        for t in 0..n {
-            let ts = (t as f64) / fs;
-            x.push((omega * ts).cos());
-        }
-
-        let z = analytic_signal_hilbert(&x).expect("analytic");
-        for v in z.iter().take(64) {
-            assert_abs_diff_eq!(v.norm(), 1.0, epsilon = 5e-2);
-        }
-    }
-
-    #[test]
-    fn downconversion_moves_tone_to_dc() {
-        let fs = 1024.0;
-        let f0 = 64.0;
-        let n = 1024usize;
-
-        let omega = 2.0 * std::f64::consts::PI * f0;
-
-        let mut x = Vec::with_capacity(n);
-        for t in 0..n {
-            let ts = (t as f64) / fs;
-            x.push((omega * ts).cos());
-        }
-
-        let z = analytic_signal_hilbert(&x).expect("analytic");
-        let bb = downconvert_to_baseband(&z, fs, f0).expect("bb");
-
-        let mean = bb.iter().fold(Complex64::new(0.0, 0.0), |acc, &v| acc + v) * (1.0 / n as f64);
-        assert!(mean.norm() > 0.5);
-    }
+    use super::extract_complex_baseband_snapshots;
+    use leto::Array3;
 
     #[test]
     fn snapshot_extraction_shapes_match() {
@@ -235,7 +97,7 @@ mod tests {
         let mut data = Array3::<f64>::zeros((n_sensors, 1, n_samples));
         for s in 0..n_sensors {
             for t in 0..n_samples {
-                data[(s, 0, t)] = (s as f64) + (t as f64) * 1e-3;
+                data[[s, 0, t]] = (s as f64) + (t as f64) * 1e-3;
             }
         }
 
@@ -246,8 +108,8 @@ mod tests {
         };
 
         let snaps = extract_complex_baseband_snapshots(&data, &cfg).expect("snaps");
-        assert_eq!(snaps.nrows(), n_sensors);
-        assert!(snaps.ncols() > 0);
+        assert_eq!(snaps.shape()[0], n_sensors);
+        assert!(snaps.shape()[1] > 0);
     }
 
     #[test]

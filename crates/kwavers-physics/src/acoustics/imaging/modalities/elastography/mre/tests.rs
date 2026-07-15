@@ -2,7 +2,7 @@
 //! phases are derived analytically from the single-bin DFT of a sampled sinusoid.
 
 use super::{extract_first_harmonic, harmonic_snapshot, mre_displacement_field_z};
-use ndarray::Array4;
+use leto::Array4;
 use std::f64::consts::PI;
 
 const KAPPA: f64 = 1.0e4; // rad/m encoding sensitivity
@@ -10,8 +10,8 @@ const N: usize = 8; // phase offsets over one period
 
 /// Build a 1×1×1×N stack of φ[k] = κ·A·cos(2πk/N + θ).
 fn single_voxel_stack(amplitude: f64, theta: f64) -> Array4<f64> {
-    Array4::from_shape_fn((1, 1, 1, N), |(_, _, _, k)| {
-        KAPPA * amplitude * (2.0 * PI * k as f64 / N as f64 + theta).cos()
+    Array4::from_shape_fn([1, 1, 1, N], |[_i, _j, _k, phase]| {
+        KAPPA * amplitude * (2.0 * PI * phase as f64 / N as f64 + theta).cos()
     })
 }
 
@@ -37,7 +37,7 @@ fn rejects_dc_phase_offset() {
     let amplitude = 1.5e-6;
     let theta = -0.7;
     let mut stack = single_voxel_stack(amplitude, theta);
-    stack.mapv_inplace(|v| v + 3.3); // add DC bias
+    stack.iter_mut().for_each(|value| *value += 3.3); // add DC bias
     let h = extract_first_harmonic(&stack, KAPPA).expect("extract");
     assert!(
         (h[[0, 0, 0]].norm() - amplitude).abs() < 1e-12,
@@ -64,7 +64,7 @@ fn snapshot_recovers_amplitude_at_matched_phase() {
 
 #[test]
 fn zero_phase_stack_gives_zero_displacement() {
-    let stack = Array4::<f64>::zeros((2, 2, 2, N));
+    let stack = Array4::<f64>::zeros([2, 2, 2, N]);
     let h = extract_first_harmonic(&stack, KAPPA).expect("extract");
     assert!(h.iter().all(|u| u.norm() == 0.0));
 }
@@ -90,6 +90,6 @@ fn rejects_invalid_inputs() {
     let stack = single_voxel_stack(1e-6, 0.0);
     assert!(extract_first_harmonic(&stack, 0.0).is_err());
     assert!(extract_first_harmonic(&stack, -1.0).is_err());
-    let too_short = Array4::<f64>::zeros((1, 1, 1, 1));
+    let too_short = Array4::<f64>::zeros([1, 1, 1, 1]);
     assert!(extract_first_harmonic(&too_short, KAPPA).is_err());
 }

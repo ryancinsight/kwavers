@@ -6,7 +6,7 @@ use crate::forward::elastic::swe::scratch::ElasticStepScratch;
 use crate::forward::elastic::swe::types::ElasticWaveField;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 fn make_integrator(
     grid: &Grid,
@@ -14,9 +14,9 @@ fn make_integrator(
     mu_val: f64,
 ) -> (Array3<f64>, Array3<f64>, Array3<f64>, ElasticSwePMLBoundary) {
     let (nx, ny, nz) = grid.dimensions();
-    let lambda = Array3::<f64>::from_elem((nx, ny, nz), lambda_val);
-    let mu = Array3::<f64>::from_elem((nx, ny, nz), mu_val);
-    let density = Array3::<f64>::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
+    let lambda = Array3::<f64>::from_elem([nx, ny, nz], lambda_val);
+    let mu = Array3::<f64>::from_elem([nx, ny, nz], mu_val);
+    let density = Array3::<f64>::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL);
     let pml = ElasticSwePMLBoundary::new(grid, SwePmlConfig::default());
     (lambda, mu, density, pml)
 }

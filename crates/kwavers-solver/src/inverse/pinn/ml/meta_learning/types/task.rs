@@ -31,7 +31,7 @@ pub struct PhysicsTask {
     /// Geometric domain specification
     ///
     /// Wrapped in Arc for efficient cloning across threads.
-    pub geometry: Arc<crate::inverse::pinn::ml::BurnWave2dGeometry>,
+    pub geometry: Arc<crate::inverse::pinn::ml::WaveGeometry2D>,
 
     /// Boundary conditions
     pub boundary_conditions: Vec<crate::inverse::pinn::ml::BoundaryCondition2D>,
@@ -49,7 +49,7 @@ impl PhysicsTask {
         id: String,
         pde_type: PdeType,
         physics_params: MetaLearningPhysicsParameters,
-        geometry: Arc<crate::inverse::pinn::ml::BurnWave2dGeometry>,
+        geometry: Arc<crate::inverse::pinn::ml::WaveGeometry2D>,
         boundary_conditions: Vec<crate::inverse::pinn::ml::BoundaryCondition2D>,
         training_data: Option<TaskData>,
         validation_data: TaskData,
@@ -70,13 +70,13 @@ impl PhysicsTask {
         let pde_complexity = self.pde_type.complexity();
 
         let geometry_complexity = match self.geometry.as_ref() {
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Rectangular { .. } => 0.2,
-            crate::inverse::pinn::ml::BurnWave2dGeometry::Circular { .. } => 0.4,
-            crate::inverse::pinn::ml::BurnWave2dGeometry::MultiRegion { .. } => 1.0,
+            crate::inverse::pinn::ml::WaveGeometry2D::Rectangular { .. } => 0.2,
+            crate::inverse::pinn::ml::WaveGeometry2D::Circular { .. } => 0.4,
+            crate::inverse::pinn::ml::WaveGeometry2D::MultiRegion { .. } => 1.0,
             _ => 0.6,
         };
 
-        let bc_complexity = (self.boundary_conditions.len() as f64).min(10.0) / 10.0;
+        let bc_complexity = ((self.boundary_conditions.len()) as f64).min(10.0) / 10.0;
 
         0.5 * pde_complexity + 0.3 * geometry_complexity + 0.2 * bc_complexity
     }
@@ -131,7 +131,7 @@ impl TaskData {
 
     /// Get total number of data points
     pub fn total_points(&self) -> usize {
-        self.collocation_points.len() + self.boundary_data.len() + self.initial_data.len()
+        (self.collocation_points.len()) + (self.boundary_data.len()) + (self.initial_data.len())
     }
 
     /// Check if task data is empty
@@ -142,9 +142,9 @@ impl TaskData {
     /// Get statistics about point distribution
     pub fn statistics(&self) -> TaskDataStatistics {
         TaskDataStatistics {
-            num_collocation: self.collocation_points.len(),
-            num_boundary: self.boundary_data.len(),
-            num_initial: self.initial_data.len(),
+            num_collocation: (self.collocation_points.len()),
+            num_boundary: (self.boundary_data.len()),
+            num_initial: (self.initial_data.len()),
             total: self.total_points(),
         }
     }

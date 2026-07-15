@@ -37,7 +37,7 @@ use kwavers_physics::acoustics::imaging::modalities::elastography::radiation_for
 use kwavers_physics::acoustics::imaging::modalities::elastography::AcousticRadiationForce;
 use kwavers_solver::forward::elastic::swe::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers_solver::inverse::elastography::{ShearWaveInversion, ShearWaveInversionConfig};
-use ndarray::Array3;
+use leto::Array3;
 use std::time::Instant;
 
 /// Clinical liver fibrosis assessment using SWE
@@ -371,7 +371,7 @@ fn extract_region_stiffness(
     let mut sum = 0.0;
     let mut count = 0;
 
-    let (nx, ny, nz) = elasticity_map.youngs_modulus.dim();
+    let [nx, ny, nz] = elasticity_map.youngs_modulus.shape();
     for i in 0..nx {
         for j in 0..ny {
             for k in 0..nz {

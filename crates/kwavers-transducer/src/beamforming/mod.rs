@@ -15,14 +15,14 @@
 //! - Real-time processing interfaces
 //! - Physical sensor array characteristics
 //!
-//! **Analysis Layer Algorithms:** [`crate::analysis::signal_processing::beamforming`]
+//! **Analysis Layer Algorithms:** `kwavers_analysis::signal_processing::beamforming`
 //! - General-purpose beamforming algorithms (DAS, MVDR, MUSIC, etc.)
 //! - Mathematical optimizations and transformations
 //! - Advanced signal processing techniques (adaptive, frequency-domain)
 //! - Neural/ML beamforming methods
 //! - Receive beamforming signal processing
 //!
-//! **Clinical Layer Decision Support:** [`crate::clinical::imaging::workflows::neural`]
+//! **Clinical Layer Decision Support:** `kwavers_clinical::imaging::workflows::neural`
 //! - Lesion detection and tissue classification
 //! - Diagnostic recommendations
 //! - Clinical workflow orchestration

@@ -24,7 +24,7 @@ mod types;
 pub(crate) mod volume;
 mod westervelt;
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::KwaversResult;
 

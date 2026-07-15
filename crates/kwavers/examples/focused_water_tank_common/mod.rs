@@ -8,7 +8,7 @@ pub use metrics::{write_metrics_csv, write_profiles_csv, PairwiseMetric, SolverM
 pub use plot::write_plot;
 
 use anyhow::Result;
-use ndarray::Array2;
+use leto::Array2;
 use std::time::Duration;
 
 pub const OUT_DIR: &str = "target/focused_water_tank";

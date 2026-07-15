@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Heterogeneous skull model with spatially varying acoustic properties.
 ///

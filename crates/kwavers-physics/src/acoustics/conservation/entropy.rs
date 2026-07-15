@@ -1,7 +1,7 @@
 //! Entropy-production checks for acoustic absorption.
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute volumetric irreversible entropy production rate [W/K].
 /// # Panics
@@ -32,7 +32,7 @@ pub fn entropy_production_rate(
     let dv = grid.dx * grid.dy * grid.dz;
     let t0_inv = 1.0 / temperature;
     let mut total = 0.0_f64;
-    let (nx, ny, nz) = pressure.dim();
+    let [nx, ny, nz] = pressure.shape();
 
     for i in 0..nx {
         for j in 0..ny {
@@ -64,7 +64,7 @@ mod tests {
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn small_grid() -> Grid {
         Grid::new(4, 4, 4, 1e-3, 1e-3, 1e-3).unwrap()

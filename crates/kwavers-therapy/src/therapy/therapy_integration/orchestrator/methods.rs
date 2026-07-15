@@ -9,7 +9,7 @@ use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::TherapySessionConfig;
 use super::{
@@ -134,14 +134,18 @@ impl TherapyIntegrationOrchestrator {
     ///
     /// ## Acoustic-field fidelity (applies to ALL modalities, incl. HIFU)
     ///
-    /// The acoustic field is currently produced by the **linear Gaussian-beam
-    /// estimator** [`execution::generate_acoustic_field`], valid only at
-    /// low/diagnostic intensity. For high-intensity HIFU this does **not** model
-    /// shock formation, nonlinear harmonic heating, or cavitation — the KZK
-    /// nonlinear solver (`solver::forward::nonlinear::kzk_solver_plugin`) exists
-    /// but is **not yet wired into this orchestration path**. Treat HIFU
-    /// intensity/dose from this loop as a planning estimate, not a nonlinear
-    /// prediction. Tracked: gap_audit.md CLD-2 → backlog Sprint C.
+    /// The acoustic field is produced by either the **linear Gaussian-beam
+    /// estimator** [`execution::generate_acoustic_field`] (default) or the
+    /// **KZK nonlinear solver** [`execution::generate_kzk_acoustic_field`]
+    /// (when `acoustic_params.use_nonlinear_field = true` and modality is
+    /// HIFU). The linear estimator is valid only at low/diagnostic intensity.
+    /// For high-intensity HIFU with the nonlinear solver enabled, the KZK
+    /// equation captures shock formation, harmonic generation, nonlinear
+    /// absorption, and **geometric focusing** (quadratic phase on the source
+    /// plane at `focal_depth`).  The focusing model requires a grid where
+    /// the transverse extent does not exceed ~0.3× the axial extent (paraxial
+    /// approximation); otherwise the solver falls back to a collimated KZK
+    /// beam.
     ///
     /// # Errors
     ///
@@ -150,18 +154,31 @@ impl TherapyIntegrationOrchestrator {
         self.session_state.current_time += dt;
         self.session_state.progress = self.session_state.current_time / self.config.duration;
 
-        let mut acoustic_field =
-            execution::generate_acoustic_field(&self.grid, &self.config.acoustic_params)?;
+        let mut acoustic_field = if self.config.primary_modality == TherapyIntegrationModality::HIFU
+            && self.config.acoustic_params.use_nonlinear_field
+        {
+            execution::generate_kzk_acoustic_field(
+                &self.grid,
+                &self.config.acoustic_params,
+                &*self.medium,
+            )?
+        } else {
+            execution::generate_acoustic_field(&self.grid, &self.config.acoustic_params)?
+        };
 
         let power_factor = self.safety_controller.power_reduction_factor();
         if power_factor < 1.0 {
-            acoustic_field.pressure *= power_factor;
+            for value in acoustic_field.pressure.iter_mut() {
+                *value *= power_factor;
+            }
             for vel in &mut [
                 &mut acoustic_field.velocity_x,
                 &mut acoustic_field.velocity_y,
                 &mut acoustic_field.velocity_z,
             ] {
-                **vel *= power_factor;
+                for value in vel.iter_mut() {
+                    *value *= power_factor;
+                }
             }
         }
 
@@ -172,7 +189,16 @@ impl TherapyIntegrationOrchestrator {
         let impedance = {
             let rho = self.medium.density_array();
             let c = self.medium.sound_speed_array();
-            &rho * &c
+            let shape = rho.shape();
+            let mut impedance = Array3::zeros((shape[0], shape[1], shape[2]));
+            for k in 0..shape[2] {
+                for j in 0..shape[1] {
+                    for i in 0..shape[0] {
+                        impedance[[i, j, k]] = rho[[i, j, k]] * c[[i, j, k]];
+                    }
+                }
+            }
+            impedance
         };
 
         // Record intensity for thermal-dose accumulation tracking; return value not used

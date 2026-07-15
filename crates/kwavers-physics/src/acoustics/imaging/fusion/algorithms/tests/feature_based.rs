@@ -9,7 +9,7 @@ fn test_fuse_feature_based_tissue_classification_invariants() {
     };
 
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (2, 2, 1);
+    let shape = [2, 2, 1];
 
     // US
     let mut us_data = Array3::<f64>::zeros(shape);
@@ -55,7 +55,7 @@ fn test_fuse_feature_based_tissue_classification_invariants() {
 fn test_extract_tissue_properties_generates_composite() {
     let config = FusionConfig::default();
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (2, 2, 1);
+    let shape = [2, 2, 1];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))

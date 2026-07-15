@@ -14,9 +14,20 @@
 //! - Marple (1999): "Computing the discrete-time analytic signal via FFT", *IEEE Transactions
 //!   on Signal Processing*
 
+use apollo::{fft_1d_array, ifft_1d_complex, Complex64 as ApolloComplex64};
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::{Array1, Array2};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::{Array1, Array2};
+
+fn leto_signal(signal: &Array1<f64>) -> leto::Array1<f64> {
+    leto::Array1::from_shape_vec([signal.len()], signal.iter().copied().collect())
+        .expect("analytic signal input length must match Leto shape")
+}
+
+fn analytic_signal(signal: leto::Array1<ApolloComplex64>) -> Array1<Complex64> {
+    let len = signal.len();
+    Array1::from_vec([len], signal.into_vec()).expect("analytic signal shape must match")
+}
 
 /// Compute the Hilbert transform of a real signal using FFT
 ///
@@ -55,7 +66,7 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
     }
 
     // Convert to complex and compute FFT using central cache
-    let mut complex_signal = kwavers_math::fft::fft_1d_array(signal);
+    let mut complex_signal = fft_1d_array(&leto_signal(signal));
 
     // Apply Hilbert transform in frequency domain
     // Per Marple (1999): H[x] = -i * sign(ω) * X(ω)
@@ -68,11 +79,11 @@ pub fn hilbert_transform(signal: &Array1<f64>) -> Array1<Complex64> {
             *complex_val *= 2.0;
         } else {
             // Negative frequencies: zero out
-            *complex_val = Complex64::new(0.0, 0.0);
+            *complex_val = ApolloComplex64::new(0.0, 0.0);
         }
     }
 
-    kwavers_math::fft::ifft_1d_complex(&complex_signal)
+    analytic_signal(ifft_1d_complex(&complex_signal))
 }
 
 /// Compute instantaneous envelope from analytic signal
@@ -146,10 +157,10 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
     let n = phase.len();
 
     if n < 3 {
-        return Array1::zeros(n);
+        return Array1::zeros([n]);
     }
 
-    let mut freq = Array1::zeros(n);
+    let mut freq = Array1::zeros([n]);
     let factor = 1.0 / (TWO_PI * dt);
 
     // Forward difference for first point
@@ -187,11 +198,13 @@ pub fn instantaneous_frequency(signal: &Array1<f64>, dt: f64) -> Array1<f64> {
 /// 2D array of analytic signals
 #[must_use]
 pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
-    let (nrows, ncols) = data.dim();
-    let mut result = Array2::from_elem((nrows, ncols), Complex64::new(0.0, 0.0));
+    let [nrows, ncols] = data.shape();
+    let mut result = Array2::from_elem([nrows, ncols], Complex64::new(0.0, 0.0));
 
-    for (i, row) in data.outer_iter().enumerate() {
-        let analytic = hilbert_transform(&row.to_owned());
+    for i in 0..nrows {
+        let row = Array1::from_shape_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+            .expect("row shape must match");
+        let analytic = hilbert_transform(&row);
         for (j, &val) in analytic.iter().enumerate() {
             result[[i, j]] = val;
         }
@@ -203,11 +216,13 @@ pub fn hilbert_transform_2d(data: &Array2<f64>) -> Array2<Complex64> {
 /// Compute envelope for each row of a 2D array
 #[must_use]
 pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
-    let (nrows, ncols) = data.dim();
-    let mut result = Array2::zeros((nrows, ncols));
+    let [nrows, ncols] = data.shape();
+    let mut result = Array2::zeros([nrows, ncols]);
 
-    for (i, row) in data.outer_iter().enumerate() {
-        let envelope = instantaneous_envelope(&row.to_owned());
+    for i in 0..nrows {
+        let row = Array1::from_shape_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+            .expect("row shape must match");
+        let envelope = instantaneous_envelope(&row);
         for (j, &val) in envelope.iter().enumerate() {
             result[[i, j]] = val;
         }
@@ -219,11 +234,13 @@ pub fn instantaneous_envelope_2d(data: &Array2<f64>) -> Array2<f64> {
 /// Compute phase for each row of a 2D array
 #[must_use]
 pub fn instantaneous_phase_2d(data: &Array2<f64>) -> Array2<f64> {
-    let (nrows, ncols) = data.dim();
-    let mut result = Array2::zeros((nrows, ncols));
+    let [nrows, ncols] = data.shape();
+    let mut result = Array2::zeros([nrows, ncols]);
 
-    for (i, row) in data.outer_iter().enumerate() {
-        let phase = instantaneous_phase(&row.to_owned());
+    for i in 0..nrows {
+        let row = Array1::from_shape_vec([ncols], (0..ncols).map(|j| data[[i, j]]).collect())
+            .expect("row shape must match");
+        let phase = instantaneous_phase(&row);
         for (j, &val) in phase.iter().enumerate() {
             result[[i, j]] = val;
         }

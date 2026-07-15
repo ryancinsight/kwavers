@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 /// Calculate acoustic energy density at a point
 ///
@@ -39,13 +39,13 @@ pub fn acoustic_intensity(pressure: f64, velocity: (f64, f64, f64)) -> f64 {
 #[must_use]
 pub fn integrate_field(field: &Array3<f64>, dx: f64, dy: f64, dz: f64) -> f64 {
     let dv = dx * dy * dz;
-    field.sum() * dv
+    field.iter().sum::<f64>() * dv
 }
 
 /// Calculate RMS (root mean square) of field
 #[must_use]
 pub fn field_rms(field: &Array3<f64>) -> f64 {
-    let n = field.len() as f64;
+    let n = (field.len()) as f64;
     let sum_squares = field.iter().map(|&x| x * x).sum::<f64>();
     (sum_squares / n).sqrt()
 }

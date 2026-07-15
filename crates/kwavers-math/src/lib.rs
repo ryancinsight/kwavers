@@ -30,13 +30,12 @@ pub mod inverse_problems;
 pub mod linear_algebra;
 pub mod numerics;
 pub mod optimization;
+mod parallel;
 pub mod signal;
 pub mod simd;
 pub mod simd_safe;
 pub mod special;
 pub mod statistics;
-pub mod tensor;
-pub mod vector3;
 
 // ============================================================================
 // EXPLICIT RE-EXPORTS (Core Mathematical API)
@@ -67,8 +66,3 @@ pub use simd::{
 
 /// Safe SIMD operations with runtime feature detection
 pub use simd_safe::SimdOps;
-
-/// Unified CPU/GPU tensor abstraction (ndarray-backed; Burn-ready)
-pub use tensor::{
-    convert, DType, NdArrayTensor, Shape as TensorShape, TensorBackend, TensorMut, TensorView,
-};

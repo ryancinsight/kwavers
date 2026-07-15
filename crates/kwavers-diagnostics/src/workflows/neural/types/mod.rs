@@ -5,7 +5,7 @@
 
 pub mod ai_beamforming;
 
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 pub use ai_beamforming::{

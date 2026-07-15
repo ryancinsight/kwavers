@@ -1,7 +1,7 @@
 //! Rayleigh-Sommerfeld angular-spectrum solver dispatch.
 
-use ndarray::{Array1, Array2, Array3};
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
+use leto::{Array1, Array2, Array3};
 
 use crate::dispatch::shared::{next_pow2, trim_initial_recorder_sample};
 use crate::types::{SimulationRunRequest, SimulationRunResult};
@@ -63,7 +63,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let sensor_indices: Vec<(usize, usize, usize)> = sensor_mask
         .indexed_iter()
         .filter(|(_, &active)| active)
-        .map(|((i, j, k), _)| (i, j, k))
+        .map(|([i, j, k], _)| (i, j, k))
         .collect();
 
     let n_sensors = sensor_indices.len().max(1);
@@ -91,10 +91,42 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
     let sensor_data = trim_initial_recorder_sample(sensor_data, 1, req.record_start_index);
     let stats = if !sensor_indices.is_empty() {
         Some(SampledStatistics {
-            p_max: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_min: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_rms: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
-            p_final: Array1::from_vec(sensor_data.rows().into_iter().map(|row| row[0]).collect()),
+            p_max: {
+                let v: Vec<f64> = sensor_data
+                    .rows()
+                    .expect("invariant: rank-2 rows")
+                    .map(|row| row[0])
+                    .collect();
+                Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
+            }
+            .into(),
+            p_min: {
+                let v: Vec<f64> = sensor_data
+                    .rows()
+                    .expect("invariant: rank-2 rows")
+                    .map(|row| row[0])
+                    .collect();
+                Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
+            }
+            .into(),
+            p_rms: {
+                let v: Vec<f64> = sensor_data
+                    .rows()
+                    .expect("invariant: rank-2 rows")
+                    .map(|row| row[0])
+                    .collect();
+                Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
+            }
+            .into(),
+            p_final: {
+                let v: Vec<f64> = sensor_data
+                    .rows()
+                    .expect("invariant: rank-2 rows")
+                    .map(|row| row[0])
+                    .collect();
+                Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
+            }
+            .into(),
         })
     } else {
         None

@@ -2,7 +2,7 @@
 
 use super::{MLModel, MlModelMetadata};
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Anomaly detection model
 #[derive(Debug)]
@@ -27,7 +27,7 @@ impl AnomalyDetectorModel {
     /// Create model from weights
     ///
     /// **Implementation Status**: Statistical threshold model (non-ML baseline)
-    /// Neural network implementation deferred pending ML framework selection (burn/candle).
+    /// Neural network implementation is deferred pending Coeus model-provider integration.
     /// Current implementation provides functional anomaly detection via statistical methods.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.

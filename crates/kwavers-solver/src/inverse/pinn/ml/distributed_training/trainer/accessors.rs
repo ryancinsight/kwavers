@@ -1,9 +1,8 @@
 use super::super::{DistributedPinnTrainer, PerformanceStats, TrainingState};
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::error::KwaversResult;
 use log::warn;
 
-impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DistributedPinnTrainer<B> {
     /// Get training state.
     pub fn get_training_state(&self) -> &TrainingState {
         &self.coordinator.training_state
@@ -16,7 +15,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
 
     /// Handle gpu failure.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn handle_gpu_failure(&mut self, failed_gpu_id: usize) -> KwaversResult<()> {
         if let Some(ref mut manager) = self.multi_gpu_manager {

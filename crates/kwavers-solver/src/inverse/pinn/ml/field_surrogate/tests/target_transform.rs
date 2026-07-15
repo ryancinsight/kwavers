@@ -7,14 +7,14 @@
 //! to within the transform's f32 round-trip tolerance, and that
 //! sub-`p_eps` pressures are compressed instead of vanishing.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::ParamFieldPINNConfig;
 use super::super::forward::{infer_grid, GridQueryParams};
 use super::super::network::ParamFieldPINNNetwork;
 use super::super::target_transform::{OutputTransforms, TargetTransform};
 use super::super::KernelCubeSampler;
-use super::{AB, B};
+use super::B;
 use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA};
 use kwavers_physics::field_surrogate::FocalKernel;
 
@@ -22,7 +22,7 @@ fn gaussian_kernel(f0: f64, pnp: f64) -> FocalKernel {
     let (nx, ny, nz) = (12usize, 8usize, 8usize);
     let focus = (nx / 2, ny / 2, nz / 2);
     let mut field = Array3::<f64>::zeros((nx, ny, nz));
-    for ((i, j, k), v) in field.indexed_iter_mut() {
+    for ([i, j, k], v) in field.indexed_iter_mut().unwrap() {
         let dx = (i as f64 - focus.0 as f64) / (nx as f64 / 4.0);
         let dy = (j as f64 - focus.1 as f64) / (ny as f64 / 4.0);
         let dz = (k as f64 - focus.2 as f64) / (nz as f64 / 4.0);
@@ -64,15 +64,8 @@ fn sampler_with_signed_log1p_emits_targets_in_unit_interval() {
     let sampler =
         KernelCubeSampler::with_transforms(&kernels, None, transforms).expect("sampler build");
 
-    let device = Default::default();
-    let batch = sampler.batch::<AB>(&device, 0, 512);
-    let host: Vec<f32> = batch
-        .targets
-        .clone()
-        .into_data()
-        .convert::<f32>()
-        .into_vec()
-        .unwrap();
+    let batch = sampler.batch::<B>(0, 512);
+    let host: Vec<f32> = batch.targets.tensor.as_slice().to_vec();
 
     // All transformed targets must lie in [-1, 1] (the network's
     // output space) and the per-batch maximum magnitude must reach a
@@ -116,8 +109,7 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
     // physical Pa must be finite and lie within the transform's
     // calibrated range.
     let cfg = ParamFieldPINNConfig::default();
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<B>::new(&cfg, &device).unwrap();
+    let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
     let p_max_pa = 30.0 * MPA_TO_PA as f32;
     let transforms =
         OutputTransforms::signed_log1p(p_max_pa, p_max_pa, p_max_pa * 0.7, 1.0e-3).unwrap();
@@ -133,13 +125,17 @@ fn infer_grid_signed_log1p_round_trips_through_untrained_network() {
         output_transforms: transforms,
         batch_size: 64,
     };
-    let (pmin, pmax, prms) = infer_grid(&net, &params, &device).unwrap();
-    let bound_pa = p_max_pa as f64 * 1.0;
+    let (pmin, pmax, prms) = infer_grid(&net, &params).unwrap();
+    // `TargetTransform::inverse` clamps its input to `[-1, 1]` before
+    // inverting, so |p| saturates at |p|_max when the (unbounded,
+    // linear-output-layer) untrained network emits |t_norm| >= 1. At
+    // that boundary `T⁻¹(±1)` is exactly `±|p|_max` in real arithmetic,
+    // but f32 `ln`/`exp_m1` carries ~1 ULP relative round-trip error
+    // (f32::EPSILON ≈ 1.19e-7); allow a 10x-margin relative tolerance
+    // on top of the exact bound rather than an unattainable exact `<=`.
+    let bound_pa = p_max_pa as f64 * (1.0 + 10.0 * f32::EPSILON as f64);
     for v in pmin.iter().chain(pmax.iter()).chain(prms.iter()) {
         assert!(v.is_finite(), "non-finite Pa from infer_grid: {v}");
-        // Inverse signed-log1p can only saturate at the calibrated
-        // |p|_max when |t| = 1; an untrained net rarely saturates,
-        // so all values must lie strictly within ±|p|_max.
         assert!(v.abs() <= bound_pa, "infer_grid Pa exceeds |p|_max: {v}");
     }
 }

@@ -7,7 +7,7 @@ use super::spectral::KuznetsovSpectralOperator;
 use crate::workspace::ScratchArena;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Comprehensive workspace for Kuznetsov equation solver
 ///
@@ -66,7 +66,7 @@ pub struct KuznetsovWorkspace {
     ///
     /// Filled serially once per `compute_rhs` call (trait objects are not
     /// `Sync`); thereafter the mathematical combination uses these arrays
-    /// through `Zip::indexed().par_for_each()` without touching the trait
+    /// through `moirai_parallel` dispatch without touching the trait
     /// objects — achieving full Rayon parallelism over the grid volume.
     pub cache_density: Array3<f64>,
     pub cache_sound_speed: Array3<f64>,
@@ -131,6 +131,49 @@ impl KuznetsovWorkspace {
     /// stale cache values from a previous heterogeneous-medium step must not
     /// leak into a subsequent homogeneous step.
     pub fn clear(&mut self) {
+        self.pressure_prev.fill(0.0);
+        self.pressure_prev2.fill(0.0);
+        self.pressure_prev3.fill(0.0);
+        self.nonlinear_term.fill(0.0);
+        self.diffusive_term.fill(0.0);
+        self.laplacian.fill(0.0);
+        self.grad_x.fill(0.0);
+        self.grad_y.fill(0.0);
+        self.grad_z.fill(0.0);
+        self.k1.fill(0.0);
+        self.k2.fill(0.0);
+        self.k3.fill(0.0);
+        self.k4.fill(0.0);
+        self.temp_field.fill(0.0);
+        self.cache_density.fill(0.0);
+        self.cache_sound_speed.fill(0.0);
+        self.cache_nonlinearity.fill(0.0);
+        self.cache_source.fill(0.0);
+    }
+}
+
+impl ScratchArena for KuznetsovWorkspace {
+    /// Returns the byte footprint of the 18 pre-allocated `Array3<f64>` scratch
+    /// buffers.  The `KuznetsovSpectralOperator` (wavenumber tables) is a grid constant,
+    /// not scratch storage, and is excluded.
+    ///
+    /// Footprint = 18 × N × 8  where N = nx × ny × nz.
+    ///
+    /// The four additional buffers (vs. the original 14) are the medium
+    /// property caches that enable full Rayon parallelism in the heterogeneous
+    /// RHS path without requiring the `Medium` and `Source` traits to be `Sync`.
+    fn memory_bytes(&self) -> usize {
+        // pressure_prev, pressure_prev2, pressure_prev3          (3)
+        // nonlinear_term, diffusive_term, laplacian              (3)
+        // grad_x, grad_y, grad_z                                 (3)
+        // k1, k2, k3, k4, temp_field                            (5)
+        // cache_density, cache_sound_speed, cache_nonlinearity,
+        //   cache_source                                          (4)
+        //                                         total = 18 Array3<f64>
+        18 * (self.pressure_prev.len()) * std::mem::size_of::<f64>()
+    }
+
+    fn clear(&mut self) {
         self.pressure_prev.fill(0.0);
         self.pressure_prev2.fill(0.0);
         self.pressure_prev3.fill(0.0);
@@ -242,48 +285,5 @@ mod tests {
             bytes_before,
             "memory_bytes() must be stable across clear()"
         );
-    }
-}
-
-impl ScratchArena for KuznetsovWorkspace {
-    /// Returns the byte footprint of the 18 pre-allocated `Array3<f64>` scratch
-    /// buffers.  The `KuznetsovSpectralOperator` (wavenumber tables) is a grid constant,
-    /// not scratch storage, and is excluded.
-    ///
-    /// Footprint = 18 × N × 8  where N = nx × ny × nz.
-    ///
-    /// The four additional buffers (vs. the original 14) are the medium
-    /// property caches that enable full Rayon parallelism in the heterogeneous
-    /// RHS path without requiring the `Medium` and `Source` traits to be `Sync`.
-    fn memory_bytes(&self) -> usize {
-        // pressure_prev, pressure_prev2, pressure_prev3          (3)
-        // nonlinear_term, diffusive_term, laplacian              (3)
-        // grad_x, grad_y, grad_z                                 (3)
-        // k1, k2, k3, k4, temp_field                            (5)
-        // cache_density, cache_sound_speed, cache_nonlinearity,
-        //   cache_source                                          (4)
-        //                                         total = 18 Array3<f64>
-        18 * self.pressure_prev.len() * std::mem::size_of::<f64>()
-    }
-
-    fn clear(&mut self) {
-        self.pressure_prev.fill(0.0);
-        self.pressure_prev2.fill(0.0);
-        self.pressure_prev3.fill(0.0);
-        self.nonlinear_term.fill(0.0);
-        self.diffusive_term.fill(0.0);
-        self.laplacian.fill(0.0);
-        self.grad_x.fill(0.0);
-        self.grad_y.fill(0.0);
-        self.grad_z.fill(0.0);
-        self.k1.fill(0.0);
-        self.k2.fill(0.0);
-        self.k3.fill(0.0);
-        self.k4.fill(0.0);
-        self.temp_field.fill(0.0);
-        self.cache_density.fill(0.0);
-        self.cache_sound_speed.fill(0.0);
-        self.cache_nonlinearity.fill(0.0);
-        self.cache_source.fill(0.0);
     }
 }

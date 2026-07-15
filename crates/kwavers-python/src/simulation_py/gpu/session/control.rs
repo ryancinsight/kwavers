@@ -6,6 +6,7 @@ use pyo3::prelude::*;
 use pyo3::types::{PyDict, PyTuple};
 
 use super::GpuPstdSession;
+use crate::breast_fwi_bindings::complex_compat::{nd_to_leto2, nd_to_leto3};
 
 #[pymethods]
 impl GpuPstdSession {
@@ -16,10 +17,10 @@ impl GpuPstdSession {
         mask: PyReadonlyArray3<f64>,
         ux_signals: PyReadonlyArray2<f64>,
     ) -> PyResult<()> {
-        let mask_arr = mask.as_array();
-        let sig_arr = ux_signals.as_array();
-        self.rebuild_source_sensor_indices(mask_arr)?;
-        self.update_velocity_signal_rows(sig_arr)
+        let mask_leto = nd_to_leto3(mask.as_array().to_owned());
+        let sig_leto = nd_to_leto2(ux_signals.as_array().to_owned());
+        self.rebuild_source_sensor_indices(mask_leto.view())?;
+        self.update_velocity_signal_rows(sig_leto.view())
     }
 
     /// Cache the source/sensor mask when the geometry is invariant across runs.
@@ -28,7 +29,8 @@ impl GpuPstdSession {
         _py: Python<'_>,
         mask: PyReadonlyArray3<f64>,
     ) -> PyResult<()> {
-        self.rebuild_source_sensor_indices(mask.as_array())
+        let mask_leto = nd_to_leto3(mask.as_array().to_owned());
+        self.rebuild_source_sensor_indices(mask_leto.view())
     }
 
     /// Update only the x-velocity source signals for a previously cached mask.
@@ -37,7 +39,8 @@ impl GpuPstdSession {
         _py: Python<'_>,
         ux_signals: PyReadonlyArray2<f64>,
     ) -> PyResult<()> {
-        self.update_velocity_signal_rows(ux_signals.as_array())
+        let sig_leto = nd_to_leto2(ux_signals.as_array().to_owned());
+        self.update_velocity_signal_rows(sig_leto.view())
     }
 
     /// Disable the k-space source correction (sets source_kappa = 1 everywhere).

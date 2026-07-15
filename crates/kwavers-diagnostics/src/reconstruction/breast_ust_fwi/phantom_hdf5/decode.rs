@@ -5,7 +5,7 @@ use consus_core::{ByteOrder, Datatype};
 use consus_hdf5::dataset::StorageLayout;
 use consus_hdf5::file::Hdf5File;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 pub(super) fn read_dataset_payload<R: consus_io::ReadAt + Sync>(
     hdf5: &Hdf5File<R>,
@@ -90,17 +90,18 @@ pub(super) fn volume_from_storage_order(
     }
     match order {
         BreastUstPhantomStorageOrder::CContiguous => {
-            Array3::from_shape_vec((dims[0], dims[1], dims[2]), values).map_err(KwaversError::from)
+            Array3::from_shape_vec((dims[0], dims[1], dims[2]), values)
+                .map_err(|e| KwaversError::Shape(e.to_string()))
         }
         BreastUstPhantomStorageOrder::FortranContiguous => Ok(Array3::from_shape_fn(
             (dims[0], dims[1], dims[2]),
-            |(i, j, k)| values[i + dims[0] * (j + dims[1] * k)],
+            |[i, j, k]| values[i + dims[0] * (j + dims[1] * k)],
         )),
     }
 }
 
 pub(super) fn validate_sound_speed_domain(sound_speed_m_s: &Array3<f64>) -> KwaversResult<()> {
-    for &speed in sound_speed_m_s {
+    for &speed in sound_speed_m_s.iter() {
         if !speed.is_finite() || speed <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "sound speed must be positive and finite, got {speed}"

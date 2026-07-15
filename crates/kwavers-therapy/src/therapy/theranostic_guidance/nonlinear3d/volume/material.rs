@@ -1,6 +1,6 @@
 //! CT-derived sound-speed, density, beta, and attenuation maps.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Per-voxel acoustic material maps for the nonlinear 3-D solver:
 /// `(sound speed, density, nonlinearity β, attenuation, power-law exponent y)`,
@@ -129,14 +129,14 @@ pub(super) fn material_maps(
     label: &Array3<i16>,
     body: &Array3<bool>,
 ) -> MaterialMaps {
-    let speed = Array3::from_shape_fn(ct.dim(), |idx| {
+    let speed = Array3::from_shape_fn(ct.shape(), |idx| {
         if body[idx] {
             speed_from_hu(anatomy, ct[idx], label[idx])
         } else {
             COUPLING_SOUND_SPEED_M_S
         }
     });
-    let density = Array3::from_shape_fn(ct.dim(), |idx| {
+    let density = Array3::from_shape_fn(ct.shape(), |idx| {
         if !body[idx] {
             COUPLING_DENSITY_KG_M3
         } else if is_internal_gas(ct[idx], label[idx]) {
@@ -148,7 +148,7 @@ pub(super) fn material_maps(
             .clamp(CT_DENSITY_MIN_KG_M3, CT_DENSITY_MAX_KG_M3)
         }
     });
-    let beta = Array3::from_shape_fn(ct.dim(), |idx| {
+    let beta = Array3::from_shape_fn(ct.shape(), |idx| {
         if !body[idx] {
             COUPLING_BETA
         } else if is_internal_gas(ct[idx], label[idx]) {
@@ -159,10 +159,10 @@ pub(super) fn material_maps(
             SOFT_TISSUE_BETA
         }
     });
-    let attenuation = Array3::from_shape_fn(ct.dim(), |idx| {
+    let attenuation = Array3::from_shape_fn(ct.shape(), |idx| {
         attenuation_np_per_m_mhz_from_hu(ct[idx], label[idx], body[idx])
     });
-    let power_law_y = Array3::from_shape_fn(ct.dim(), |idx| {
+    let power_law_y = Array3::from_shape_fn(ct.shape(), |idx| {
         attenuation_power_law_y_from_hu(ct[idx], label[idx], body[idx])
     });
     (speed, density, beta, attenuation, power_law_y)

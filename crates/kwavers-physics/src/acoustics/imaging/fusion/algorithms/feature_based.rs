@@ -1,11 +1,10 @@
 use super::utils::{classify_voxel_features, compute_robust_bounds};
 use super::MultiModalFusion;
-use crate::acoustics::imaging::fusion::registration;
+use crate::acoustics::imaging::fusion::registration::{self, RitkRegistrationEngine};
 use crate::acoustics::imaging::fusion::types::{AffineTransform, FusedImageResult};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, CowArray};
-use ritk_registration::{AffineTransform as RitkAffineTransform, ImageRegistration};
-use std::collections::HashMap;
+use leto::Array3;
+use std::{borrow::Cow, collections::HashMap};
 
 /// Feature-based fusion using complementary tissue properties
 ///
@@ -36,7 +35,7 @@ use std::collections::HashMap;
 /// - Panics if an internal invariant assumed to hold at this call site is violated.
 ///
 pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<FusedImageResult> {
-    let registration = ImageRegistration::default();
+    let registration_engine = RitkRegistrationEngine::default();
 
     // 1. Setup Reference and Grid
     // Sort keys to ensure deterministic reference selection
@@ -54,13 +53,12 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         .get(*reference_name)
         .ok_or_else(|| KwaversError::InvalidInput("Reference modality missing".to_owned()))?;
 
-    let ref_shape = reference_modality.data.dim();
-    let target_dims = (ref_shape.0, ref_shape.1, ref_shape.2);
+    let target_dims = reference_modality.data.shape();
 
     // 2. Register & Resample All Modalities
     struct Channel<'a> {
         name: String,
-        data: CowArray<'a, f64, ndarray::Ix3>,
+        data: Cow<'a, Array3<f64>>,
         quality: f64,
         weight: f64,
     }
@@ -80,27 +78,27 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
             .unwrap_or(1.0);
         modality_quality.insert(name.clone(), modality.quality_score);
 
-        let reg_result = registration.rigid_registration_mutual_info(
+        let reg_result = registration_engine.register_for_method(
             &reference_modality.data,
             &modality.data,
-            &RitkAffineTransform::IDENTITY,
+            kwavers_imaging::fusion::RegistrationMethod::RigidBody,
         )?;
 
         registration_transforms.insert(
             name.clone(),
-            AffineTransform::from_homogeneous(reg_result.transform.as_array()),
+            AffineTransform::from_homogeneous(&reg_result.transform_matrix),
         );
 
         // Optimization: Skip resampling if transform is identity and dimensions match
-        let transform = *reg_result.transform.as_array();
-        let resampled = if modality.data.dim() == target_dims && transform == identity {
-            CowArray::from(modality.data.view())
+        let transform = reg_result.transform_matrix;
+        let resampled = if modality.data.shape() == target_dims && transform == identity {
+            Cow::Borrowed(&modality.data)
         } else {
-            CowArray::from(registration::resample_to_target_grid(
+            Cow::Owned(registration_engine.resample_registered(
                 &modality.data,
-                &transform,
+                &reg_result,
                 target_dims,
-            ))
+            )?)
         };
 
         channels.push(Channel {
@@ -120,7 +118,7 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
     let mut norm_params = Vec::new();
 
     for ch in &channels {
-        let (min, max) = compute_robust_bounds(ch.data.view());
+        let (min, max) = compute_robust_bounds(&ch.data);
         let scale = if max > min { 1.0 / (max - min) } else { 0.0 };
         norm_params.push(NormParams { min, scale });
     }
@@ -138,9 +136,9 @@ pub(crate) fn fuse_feature_based(fusion: &MultiModalFusion) -> KwaversResult<Fus
         None
     };
 
-    for i in 0..target_dims.0 {
-        for j in 0..target_dims.1 {
-            for k in 0..target_dims.2 {
+    for i in 0..target_dims[0] {
+        for j in 0..target_dims[1] {
+            for k in 0..target_dims[2] {
                 // Extract normalized features for classification on-the-fly
                 let mut us_val = 0.5; // Default mid
                 let mut pa_val = 0.0; // Default low

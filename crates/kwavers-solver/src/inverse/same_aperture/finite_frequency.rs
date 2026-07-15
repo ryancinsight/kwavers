@@ -1,6 +1,6 @@
 //! Finite-frequency same-aperture operator construction.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::active_grid::{ActiveGrid, PlanarPoint};
 use super::operator::FiniteFrequencyOperator;

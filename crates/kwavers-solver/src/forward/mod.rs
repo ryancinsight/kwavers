@@ -8,7 +8,7 @@
 //! | Domain                      | Spatial scheme        | Time scheme         | Canonical orchestrator                                                                                            |
 //! |-----------------------------|-----------------------|---------------------|-------------------------------------------------------------------------------------------------------------------|
 //! | Acoustic fluid (μ = 0)      | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`]                                                                                              |
-//! | Acoustic fluid (μ = 0)      | 4th-order FD          | Leapfrog            | [`fdtd::GenericFdtdSolver`]                                                                                       |
+//! | Acoustic fluid (μ = 0)      | 4th-order FD          | Leapfrog            | [`crate::forward::fdtd::solver::GenericFdtdSolver`]                                                                                       |
 //! | Acoustic fluid (μ = 0)      | Pseudospectral (GPU)  | k-space corrected   | `kwavers_gpu::pstd_gpu::GpuPstdSolver` (consolidated into the kwavers-gpu crate) |
 //! | Elastic isotropic (μ ≥ 0)   | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`] **+ [`pstd::extensions::PstdElasticPlugin`]** — μ = 0 reduces to baseline acoustic PSTD      |
 //! | Elastic isotropic (μ ≥ 0)   | 4th-order FD coll.    | Velocity-Verlet     | [`elastic::swe::ElasticWaveSolver`]                                                                               |

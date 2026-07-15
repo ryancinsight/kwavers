@@ -4,7 +4,8 @@ use kwavers_grid::Grid;
 use kwavers_math::fft::Complex64 as Complex;
 use kwavers_math::fft::{fft_3d_array, ifft_3d_array};
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
 
 use super::super::wave_model::NonlinearWave;
 
@@ -28,7 +29,7 @@ impl NonlinearWave {
     /// Canuto, Hussaini, Quarteroni & Zang (2006) *Spectral Methods in Fluid
     /// Dynamics*, §3.2.5; Kreiss & Oliger (1972).
     pub(crate) fn apply_dealiasing_filter(
-        field_k: &mut Array3<Complex>,
+        field_k: &mut LetoArray3<Complex>,
         nx: usize,
         ny: usize,
         nz: usize,
@@ -36,11 +37,16 @@ impl NonlinearWave {
         let cx = nx / 3;
         let cy = ny / 3;
         let cz = nz / 3;
-        Zip::indexed(field_k).for_each(|(i, j, k), val| {
-            if (i > cx && i < nx - cx) || (j > cy && j < ny - cy) || (k > cz && k < nz - cz) {
-                *val = Complex::new(0.0, 0.0);
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    if (i > cx && i < nx - cx) || (j > cy && j < ny - cy) || (k > cz && k < nz - cz)
+                    {
+                        field_k[[i, j, k]] = Complex::new(0.0, 0.0);
+                    }
+                }
             }
-        });
+        }
     }
 }
 
@@ -62,46 +68,65 @@ impl NonlinearWave {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let pressure_k = fft_3d_array(pressure);
+        let [nx, ny, nz] = pressure_k.shape();
 
         let kx = grid.compute_kx();
         let ky = grid.compute_ky();
         let kz = grid.compute_kz();
 
         let c_array = medium.sound_speed_array();
-        let c = c_array.mean().unwrap_or(self.max_sound_speed);
-        let mut result_k = Array3::<Complex>::zeros(pressure_k.raw_dim());
+        let mut c_sum = 0.0;
+        let mut c_count = 0usize;
+        for &value in c_array.iter() {
+            c_sum += value;
+            c_count += 1;
+        }
+        let c = if c_count > 0 {
+            c_sum / c_count as f64
+        } else {
+            self.max_sound_speed
+        };
+        let mut result_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
         let dt = self.dt;
 
         if let Some(ref k_squared) = self.k_squared {
-            Zip::from(&mut result_k)
-                .and(&pressure_k)
-                .and(k_squared)
-                .par_for_each(|r, &p, &k2| {
-                    let k = k2.sqrt();
-                    let sinc_factor = if k > numerical::EPSILON {
-                        (c * k * dt / 2.0).sin() / (c * k * dt / 2.0)
-                    } else {
-                        1.0
-                    };
-                    *r = p * Complex::new(sinc_factor * (c * k * dt).cos(), 0.0);
-                });
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let p = pressure_k[[i, j, k]];
+                        let k2 = k_squared[[i, j, k]];
+                        let k_mag = k2.sqrt();
+                        let sinc_factor = if k_mag > numerical::EPSILON {
+                            (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)
+                        } else {
+                            1.0
+                        };
+                        result_k[[i, j, k]] =
+                            p * Complex::new(sinc_factor * (c * k_mag * dt).cos(), 0.0);
+                    }
+                }
+            }
         } else {
             let kx_s = kx.as_slice().expect("kx contiguous");
             let ky_s = ky.as_slice().expect("ky contiguous");
             let kz_s = kz.as_slice().expect("kz contiguous");
-            Zip::indexed(&mut result_k)
-                .and(&pressure_k)
-                .par_for_each(|(i, j, k), val, &pk| {
-                    let k_mag_sq =
-                        kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
-                    let k_mag = k_mag_sq.sqrt();
-                    let sinc_factor = if k_mag > numerical::EPSILON {
-                        (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)
-                    } else {
-                        1.0
-                    };
-                    *val = pk * Complex::new(sinc_factor * (c * k_mag * dt).cos(), 0.0);
-                });
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let pk = pressure_k[[i, j, k]];
+                        let k_mag_sq =
+                            kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+                        let k_mag = k_mag_sq.sqrt();
+                        let sinc_factor = if k_mag > numerical::EPSILON {
+                            (c * k_mag * dt / 2.0).sin() / (c * k_mag * dt / 2.0)
+                        } else {
+                            1.0
+                        };
+                        result_k[[i, j, k]] =
+                            pk * Complex::new(sinc_factor * (c * k_mag * dt).cos(), 0.0);
+                    }
+                }
+            }
         }
 
         Ok(ifft_3d_array(&result_k))
@@ -121,36 +146,30 @@ impl NonlinearWave {
         grid: &Grid,
     ) -> KwaversResult<(Array3<f64>, Array3<f64>, Array3<f64>)> {
         let field_k = fft_3d_array(field);
+        let [nx, ny, nz] = field_k.shape();
 
         let kx = grid.compute_kx();
         let ky = grid.compute_ky();
         let kz = grid.compute_kz();
 
-        let mut grad_x_k = Array3::<Complex>::zeros(field_k.raw_dim());
-        let mut grad_y_k = Array3::<Complex>::zeros(field_k.raw_dim());
-        let mut grad_z_k = Array3::<Complex>::zeros(field_k.raw_dim());
+        let mut grad_x_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut grad_y_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
+        let mut grad_z_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
 
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
 
-        Zip::indexed(&mut grad_x_k)
-            .and(&field_k)
-            .par_for_each(|(i, _j, _k), val, &fk| {
-                *val = fk * Complex::new(0.0, kx_s[i]);
-            });
-
-        Zip::indexed(&mut grad_y_k)
-            .and(&field_k)
-            .par_for_each(|(_i, j, _k), val, &fk| {
-                *val = fk * Complex::new(0.0, ky_s[j]);
-            });
-
-        Zip::indexed(&mut grad_z_k)
-            .and(&field_k)
-            .par_for_each(|(_i, _j, k), val, &fk| {
-                *val = fk * Complex::new(0.0, kz_s[k]);
-            });
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let fk = field_k[[i, j, k]];
+                    grad_x_k[[i, j, k]] = fk * Complex::new(0.0, kx_s[i]);
+                    grad_y_k[[i, j, k]] = fk * Complex::new(0.0, ky_s[j]);
+                    grad_z_k[[i, j, k]] = fk * Complex::new(0.0, kz_s[k]);
+                }
+            }
+        }
 
         Ok((
             ifft_3d_array(&grad_x_k),
@@ -175,16 +194,18 @@ impl NonlinearWave {
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
         let field_k = fft_3d_array(field);
+        let [nx, ny, nz] = field_k.shape();
 
-        let mut laplacian_k = Array3::<Complex>::zeros(field_k.raw_dim());
+        let mut laplacian_k = LetoArray3::<Complex>::zeros([nx, ny, nz]);
 
         if let Some(ref k_squared) = self.k_squared {
-            Zip::from(&mut laplacian_k)
-                .and(&field_k)
-                .and(k_squared)
-                .par_for_each(|l, &f, &k2| {
-                    *l = f * (-k2);
-                });
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        laplacian_k[[i, j, k]] = field_k[[i, j, k]] * (-k_squared[[i, j, k]]);
+                    }
+                }
+            }
         } else {
             let kx = grid.compute_kx();
             let ky = grid.compute_ky();
@@ -193,13 +214,15 @@ impl NonlinearWave {
             let ky_s = ky.as_slice().expect("ky contiguous");
             let kz_s = kz.as_slice().expect("kz contiguous");
 
-            Zip::indexed(&mut laplacian_k)
-                .and(&field_k)
-                .par_for_each(|(i, j, k), val, &fk| {
-                    let k_mag_sq =
-                        kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
-                    *val = fk * (-k_mag_sq);
-                });
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let k_mag_sq =
+                            kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
+                        laplacian_k[[i, j, k]] = field_k[[i, j, k]] * (-k_mag_sq);
+                    }
+                }
+            }
         }
 
         Ok(ifft_3d_array(&laplacian_k))

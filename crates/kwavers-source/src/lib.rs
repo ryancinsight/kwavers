@@ -17,6 +17,7 @@ pub mod electromagnetic;
 pub mod grid_source;
 pub mod injection;
 pub mod optical;
+mod parallel;
 pub mod structs;
 pub mod types;
 pub mod wavefront;

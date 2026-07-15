@@ -1,7 +1,7 @@
 //! Elastic specific trait extensions
 
 use super::core::{AutodiffWaveEquation, WaveEquation};
-use ndarray::ArrayD;
+use leto::Array3;
 
 /// Elastic wave equation trait for traditional solvers (vector displacement field)
 ///
@@ -26,42 +26,46 @@ use ndarray::ArrayD;
 /// For autodiff-based implementations (PINN), see [`AutodiffElasticWaveEquation`].
 pub trait ElasticWaveEquation: WaveEquation {
     /// Get Lamé first parameter λ(x) (Pa)
-    fn lame_lambda(&self) -> ArrayD<f64>;
+    fn lame_lambda(&self) -> Array3<f64>;
 
     /// Get Lamé second parameter μ(x) (shear modulus) (Pa)
-    fn lame_mu(&self) -> ArrayD<f64>;
+    fn lame_mu(&self) -> Array3<f64>;
 
     /// Get density field ρ(x) [kg/m³]
-    fn density(&self) -> ArrayD<f64>;
+    fn density(&self) -> Array3<f64>;
 
     /// Compute stress tensor from displacement field
     ///
     /// σᵢⱼ = λδᵢⱼ∇·u + μ(∂uᵢ/∂xⱼ + ∂uⱼ/∂xᵢ)
-    fn stress_from_displacement(&self, displacement: &ArrayD<f64>) -> ArrayD<f64>;
+    fn stress_from_displacement(&self, displacement: &Array3<f64>) -> Array3<f64>;
 
     /// Compute strain tensor from displacement field
     ///
     /// εᵢⱼ = ½(∂uᵢ/∂xⱼ + ∂uⱼ/∂xᵢ)
-    fn strain_from_displacement(&self, displacement: &ArrayD<f64>) -> ArrayD<f64>;
+    fn strain_from_displacement(&self, displacement: &Array3<f64>) -> Array3<f64>;
 
     /// Compute elastic energy
     ///
     /// E = ∫ (½ρ|∂u/∂t|² + ½σ:ε) dV
-    fn elastic_energy(&self, displacement: &ArrayD<f64>, velocity: &ArrayD<f64>) -> f64;
+    fn elastic_energy(&self, displacement: &Array3<f64>, velocity: &Array3<f64>) -> f64;
 
     /// Get P-wave (longitudinal) speed (m/s)
-    fn p_wave_speed(&self) -> ArrayD<f64> {
+    fn p_wave_speed(&self) -> Array3<f64> {
         let lambda = self.lame_lambda();
         let mu = self.lame_mu();
         let rho = self.density();
-        ((lambda + 2.0 * mu) / rho).mapv(f64::sqrt)
+        let two_mu = mu.mapv(|x| 2.0 * x);
+        let lambda_plus_2mu = lambda.zip_map(&two_mu, |a, b| a + b);
+        let cp_sq = lambda_plus_2mu.zip_map(&rho, |a, b| a / b);
+        cp_sq.mapv(f64::sqrt)
     }
 
     /// Get S-wave (shear) speed (m/s)
-    fn s_wave_speed(&self) -> ArrayD<f64> {
+    fn s_wave_speed(&self) -> Array3<f64> {
         let mu = self.lame_mu();
         let rho = self.density();
-        (mu / rho).mapv(f64::sqrt)
+        let cp_sq = mu.zip_map(&rho, |a, b| a / b);
+        cp_sq.mapv(f64::sqrt)
     }
 }
 
@@ -90,41 +94,45 @@ pub trait ElasticWaveEquation: WaveEquation {
 /// but enforces identical mathematical requirements.
 pub trait AutodiffElasticWaveEquation: AutodiffWaveEquation {
     /// Get Lamé first parameter λ(x) (Pa)
-    fn lame_lambda(&self) -> ArrayD<f64>;
+    fn lame_lambda(&self) -> Array3<f64>;
 
     /// Get Lamé second parameter μ(x) (shear modulus) (Pa)
-    fn lame_mu(&self) -> ArrayD<f64>;
+    fn lame_mu(&self) -> Array3<f64>;
 
     /// Get density field ρ(x) [kg/m³]
-    fn density(&self) -> ArrayD<f64>;
+    fn density(&self) -> Array3<f64>;
 
     /// Compute stress tensor from displacement field
     ///
     /// σᵢⱼ = λδᵢⱼ∇·u + μ(∂uᵢ/∂xⱼ + ∂uⱼ/∂xᵢ)
-    fn stress_from_displacement(&self, displacement: &ArrayD<f64>) -> ArrayD<f64>;
+    fn stress_from_displacement(&self, displacement: &Array3<f64>) -> Array3<f64>;
 
     /// Compute strain tensor from displacement field
     ///
     /// εᵢⱼ = ½(∂uᵢ/∂xⱼ + ∂uⱼ/∂xᵢ)
-    fn strain_from_displacement(&self, displacement: &ArrayD<f64>) -> ArrayD<f64>;
+    fn strain_from_displacement(&self, displacement: &Array3<f64>) -> Array3<f64>;
 
     /// Compute elastic energy
     ///
     /// E = ∫ (½ρ|∂u/∂t|² + ½σ:ε) dV
-    fn elastic_energy(&self, displacement: &ArrayD<f64>, velocity: &ArrayD<f64>) -> f64;
+    fn elastic_energy(&self, displacement: &Array3<f64>, velocity: &Array3<f64>) -> f64;
 
     /// Get P-wave (longitudinal) speed (m/s)
-    fn p_wave_speed(&self) -> ArrayD<f64> {
+    fn p_wave_speed(&self) -> Array3<f64> {
         let lambda = self.lame_lambda();
         let mu = self.lame_mu();
         let rho = self.density();
-        ((lambda + 2.0 * mu) / rho).mapv(f64::sqrt)
+        let two_mu = mu.mapv(|x| 2.0 * x);
+        let lambda_plus_2mu = lambda.zip_map(&two_mu, |a, b| a + b);
+        let cp_sq = lambda_plus_2mu.zip_map(&rho, |a, b| a / b);
+        cp_sq.mapv(f64::sqrt)
     }
 
     /// Get S-wave (shear) speed (m/s)
-    fn s_wave_speed(&self) -> ArrayD<f64> {
+    fn s_wave_speed(&self) -> Array3<f64> {
         let mu = self.lame_mu();
         let rho = self.density();
-        (mu / rho).mapv(f64::sqrt)
+        let cp_sq = mu.zip_map(&rho, |a, b| a / b);
+        cp_sq.mapv(f64::sqrt)
     }
 }

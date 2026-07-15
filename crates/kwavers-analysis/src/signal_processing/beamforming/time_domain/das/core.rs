@@ -4,7 +4,7 @@ use crate::signal_processing::beamforming::time_domain::delay_reference::{
     relative_delays_s, DelayReference,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Validate the common DAS input contract and return `(n_elements, n_samples)`.
 ///
@@ -16,7 +16,7 @@ fn validate_das_inputs(
     delays_s: &[f64],
     weights: &[f64],
 ) -> KwaversResult<(usize, usize)> {
-    let (n_elements, channels, n_samples) = sensor_data.dim();
+    let [n_elements, channels, n_samples] = sensor_data.shape();
 
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
@@ -157,10 +157,10 @@ pub fn delay_and_sum(
 /// SSOT for the summation step: `output[j] = Σᵢ wᵢ · aligned[[i, j]]`, shape
 /// `(1, 1, n_samples)`. Shared by [`delay_and_sum`] and coherence-factor
 /// weighting so the two never drift. `weights.len()` must equal
-/// `aligned.nrows()` (guaranteed by [`align_channels`] validation upstream).
+/// `aligned.shape()[0]` (guaranteed by [`align_channels`] validation upstream).
 #[must_use]
 pub fn sum_aligned(aligned: &Array2<f64>, weights: &[f64]) -> Array3<f64> {
-    let (n_elements, n_samples) = aligned.dim();
+    let [n_elements, n_samples] = aligned.shape();
     let mut output = Array3::<f64>::zeros((1, 1, n_samples));
     for elem_idx in 0..n_elements {
         let w = weights[elem_idx];

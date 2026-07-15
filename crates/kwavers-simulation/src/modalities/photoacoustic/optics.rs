@@ -40,8 +40,9 @@ use kwavers_medium::Medium;
 use kwavers_solver::forward::optical::diffusion::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
 };
-use ndarray::Array3;
-use rayon::prelude::*;
+use leto::Array3 as LetoArray3;
+use leto::Array3;
+use moirai_parallel::{map_collect_with, Adaptive};
 
 /// Initialize optical properties based on tissue type and geometry
 ///
@@ -150,7 +151,7 @@ pub fn compute_fluence_at_wavelength(
     optical_properties: &Array3<OpticalPropertyData>,
     laser_fluence: f64,
     _wavelength_nm: f64,
-) -> KwaversResult<Array3<f64>> {
+) -> KwaversResult<LetoArray3<f64>> {
     let (nx, ny, nz) = grid.dimensions();
 
     // Configure diffusion solver with tissue-air boundary conditions
@@ -174,7 +175,7 @@ pub fn compute_fluence_at_wavelength(
 
     // Create source term: uniform illumination from top surface (z=0)
     // Source units: W/m³ for steady-state (or J/m³ for pulsed)
-    let mut source = Array3::zeros((nx, ny, nz));
+    let mut source = LetoArray3::zeros([nx, ny, nz]);
 
     // Top surface illumination (first layer in z)
     let source_strength = laser_fluence / grid.dz; // Convert surface fluence to volumetric source
@@ -185,15 +186,14 @@ pub fn compute_fluence_at_wavelength(
     }
 
     // Solve diffusion equation
-    let fluence = solver.solve(&source)?;
-
-    Ok(fluence)
+    Ok(solver.solve_leto(&source)?)
 }
 
 /// Compute fluence for all wavelengths in parallel
 ///
-/// Leverages Rayon for parallel computation across wavelengths, enabling efficient
-/// multi-spectral photoacoustic imaging simulations.
+/// Leverages the Atlas execution provider for parallel computation across
+/// wavelengths, enabling efficient multi-spectral photoacoustic imaging
+/// simulations.
 ///
 /// # Arguments
 ///
@@ -216,7 +216,7 @@ pub fn compute_fluence_at_wavelength(
 /// ```rust,no_run
 /// # use kwavers_simulation::modalities::photoacoustic::optics::*;
 /// # use kwavers_grid::Grid;
-/// # use ndarray::Array3;
+/// # use leto::Array3;
 /// # use kwavers_medium::properties::OpticalPropertyData;
 /// # fn main() -> kwavers_core::error::KwaversResult<()> {
 /// # let grid = Grid::new(32, 32, 16, 0.001, 0.001, 0.001)?;
@@ -240,13 +240,13 @@ pub fn compute_multi_wavelength_fluence(
     optical_properties: &Array3<OpticalPropertyData>,
     laser_fluence: f64,
     wavelengths: &[f64],
-) -> KwaversResult<Vec<Array3<f64>>> {
-    // Parallel computation over wavelengths using Rayon
-    let fluence_fields: Result<Vec<_>, _> = wavelengths
-        .par_iter()
-        .map(|&wavelength| {
+) -> KwaversResult<Vec<LetoArray3<f64>>> {
+    // Parallel computation over wavelengths through the Atlas execution provider.
+    let fluence_fields: Result<Vec<_>, _> =
+        map_collect_with::<Adaptive, _, _, _>(wavelengths, |&wavelength| {
             compute_fluence_at_wavelength(grid, optical_properties, laser_fluence, wavelength)
         })
+        .into_iter()
         .collect();
 
     fluence_fields
@@ -271,7 +271,7 @@ mod tests {
 
         let properties = initialize_optical_properties(&grid, &medium).unwrap();
 
-        assert_eq!(properties.dim(), (32, 32, 16));
+        assert_eq!(properties.shape(), [32, 32, 16]);
 
         // Check that we have heterogeneous properties (not all the same)
         let first_val = properties[[0, 0, 0]].absorption_coefficient;
@@ -299,7 +299,7 @@ mod tests {
 
         let fluence = compute_fluence_at_wavelength(&grid, &properties, 1e6, 750.0).unwrap();
 
-        assert_eq!(fluence.dim(), (16, 16, 8));
+        assert_eq!(fluence.shape(), [16, 16, 8]);
 
         // Check that fluence decreases with depth (fundamental property)
         let surface_fluence = fluence[[8, 8, 0]];
@@ -334,7 +334,7 @@ mod tests {
 
         assert_eq!(fluence_fields.len(), 3);
         for fluence in &fluence_fields {
-            assert_eq!(fluence.dim(), (8, 8, 4));
+            assert_eq!(fluence.shape(), [8, 8, 4]);
         }
     }
 }

@@ -1,14 +1,14 @@
 //! Comprehensive validation suite and report generation.
 
 use super::{TheoremValidation, TheoremValidator};
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::thermodynamic::{HEAT_CAPACITY_RATIO_DIATOMIC, ROOM_TEMPERATURE_K};
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 use std::f64::consts::PI;
 
 impl TheoremValidator {
@@ -45,10 +45,12 @@ impl TheoremValidator {
         let amplitude = 1.0;
 
         let time_signal = Array1::from_vec(
+            n_samples,
             (0..n_samples)
                 .map(|n| amplitude * (TWO_PI * k as f64 * n as f64 / n_samples as f64).sin())
                 .collect(),
-        );
+        )
+        .expect("invariant: shape matches data length");
 
         let mut freq_signal = Array1::from_elem(n_samples, Complex64::new(0.0, 0.0));
         let peak_magnitude = n_samples as f64 * amplitude / 2.0;

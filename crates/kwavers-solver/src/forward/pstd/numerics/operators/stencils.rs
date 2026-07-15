@@ -4,7 +4,7 @@
 //! Based on: Fornberg, B. (1988). "Generation of finite difference formulas on
 //! arbitrarily spaced grids." Mathematics of computation, 51(184), 699-706.
 
-use ndarray::Array1;
+use leto::Array1;
 
 use kwavers_core::error::{KwaversError, ValidationError};
 
@@ -18,7 +18,7 @@ pub struct StencilWeights {
 
 /// Compute derivative stencils for given order and accuracy
 /// # Errors
-/// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+/// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
 ///
 pub fn compute_derivative_stencils(
     order: usize,

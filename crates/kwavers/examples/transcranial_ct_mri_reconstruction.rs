@@ -67,7 +67,7 @@ mod fwi_demo {
     use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
     use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
     use kwavers_source::{GridSource, SourceMode};
-    use ndarray::{Array2, Array3};
+    use leto::{Array2, Array3};
     use std::f64::consts::PI;
     use std::path::PathBuf;
     use std::time::Instant;
@@ -447,11 +447,11 @@ mod fwi_demo {
                 [0.0, 0.0, 0.0, 1.0],
             ]
         };
-        let dyn_arr: ndarray::ArrayD<f64> = obj.into_volume().into_ndarray::<f64>().ok()?;
+        let dyn_arr: ArrayD<f64> = obj.into_volume().into_ndarray::<f64>().ok()?;
         if dyn_arr.shape().len() < 3 {
             return None;
         }
-        let data = dyn_arr.into_dimensionality::<ndarray::Ix3>().ok()?;
+        let data = dyn_arr.into_dimensionality::<Ix3>().ok()?;
         Some(NiftiVolume {
             data,
             spacing_mm,

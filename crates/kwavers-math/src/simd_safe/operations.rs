@@ -1,6 +1,6 @@
 //! Main SIMD operations structure with architecture dispatch
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// SIMD lane width for f64, selected at compile time per target ISA.
 ///
@@ -29,7 +29,7 @@ impl SimdOps {
     #[inline]
     #[must_use]
     pub fn add_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
-        let shape = a.dim();
+        let shape = a.shape();
         let mut result = Array3::zeros(shape);
 
         #[cfg(target_arch = "x86_64")]
@@ -56,7 +56,7 @@ impl SimdOps {
     #[inline]
     #[must_use]
     pub fn scale_field(field: &Array3<f64>, scalar: f64) -> Array3<f64> {
-        let shape = field.dim();
+        let shape = field.shape();
         let mut result = Array3::zeros(shape);
 
         #[cfg(target_arch = "x86_64")]
@@ -104,7 +104,7 @@ impl SimdOps {
     #[inline]
     #[must_use]
     pub fn multiply_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
-        let shape = a.dim();
+        let shape = a.shape();
         let mut result = Array3::zeros(shape);
 
         #[cfg(target_arch = "x86_64")]
@@ -131,7 +131,7 @@ impl SimdOps {
     #[inline]
     #[must_use]
     pub fn subtract_fields(a: &Array3<f64>, b: &Array3<f64>) -> Array3<f64> {
-        let shape = a.dim();
+        let shape = a.shape();
         let mut result = Array3::zeros(shape);
 
         #[cfg(target_arch = "x86_64")]

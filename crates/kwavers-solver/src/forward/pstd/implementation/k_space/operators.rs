@@ -1,9 +1,109 @@
 //! PSTD k-Space Operators Implementation
 
 use super::grid::PSTDKSGrid;
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
 use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use leto::{Array1, Array3 as LetoArray3};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
+
+#[derive(Clone, Copy)]
+enum SpectralAxis {
+    X,
+    Y,
+    Z,
+}
+
+impl SpectralAxis {
+    fn index(self, linear_index: usize, ny: usize, nz: usize) -> usize {
+        match self {
+            Self::X => linear_index / (ny * nz),
+            Self::Y => (linear_index / nz) % ny,
+            Self::Z => linear_index % nz,
+        }
+    }
+}
+
+fn apply_helmholtz_multiplier(field: &mut Array3<Complex64>, k_mag: &Array3<f64>, k0_sq: f64) {
+    assert_eq!(
+        field.shape(),
+        k_mag.shape(),
+        "invariant: PSTD Helmholtz field shape matches k-space magnitude grid"
+    );
+
+    if let (Some(field_values), Some(k_values)) = (field.as_slice_mut(), k_mag.as_slice()) {
+        enumerate_mut_with::<Adaptive, _, _>(field_values, |index, value| {
+            let k = k_values[index];
+            *value *= k.mul_add(-k, k0_sq);
+        });
+    } else {
+        let [nx, ny, nz] = field.shape();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let k_value = k_mag[[i, j, k]];
+                    field[[i, j, k]] *= k_value.mul_add(-k_value, k0_sq);
+                }
+            }
+        }
+    }
+}
+
+fn apply_spectral_axis_multiplier(
+    field: &mut Array3<Complex64>,
+    axis_values: &Array1<f64>,
+    axis: SpectralAxis,
+) {
+    let [nx, ny, nz] = field.shape();
+    let expected_axis_len = match axis {
+        SpectralAxis::X => nx,
+        SpectralAxis::Y => ny,
+        SpectralAxis::Z => nz,
+    };
+    assert_eq!(
+        axis_values.shape()[0],
+        expected_axis_len,
+        "invariant: PSTD spectral axis vector length matches selected field dimension"
+    );
+
+    if let (Some(field_values), Some(axis_slice)) = (field.as_slice_mut(), axis_values.as_slice()) {
+        enumerate_mut_with::<Adaptive, _, _>(field_values, |linear_index, value| {
+            let axis_index = axis.index(linear_index, ny, nz);
+            *value *= Complex64::new(0.0, axis_slice[axis_index]);
+        });
+    } else {
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let axis_index = match axis {
+                        SpectralAxis::X => i,
+                        SpectralAxis::Y => j,
+                        SpectralAxis::Z => k,
+                    };
+                    field[[i, j, k]] *= Complex64::new(0.0, axis_values[axis_index]);
+                }
+            }
+        }
+    }
+}
+
+fn leto_complex_field(field: &Array3<Complex64>) -> LetoArray3<Complex64> {
+    let [nx, ny, nz] = field.shape();
+    LetoArray3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
+        .expect("PSTD complex field length must match Leto field shape")
+}
+
+fn ndarray_real_field(field: LetoArray3<f64>) -> Array3<f64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
+        .expect("Leto real field length must match PSTD field shape")
+}
+
+fn ndarray_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
+    let [nx, ny, nz] = field.shape();
+    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
+        .expect("Leto complex field length must match PSTD field shape")
+}
 
 /// k-Space operators for PSTD spectral computations
 #[derive(Debug, Clone)]
@@ -51,21 +151,17 @@ impl PSTDKSOperators {
 
     /// Apply Helmholtz operator: (∇² + k₀²)p in wavenumber domain
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn apply_helmholtz(
         &self,
-        field: &Array3<f64>,
+        field: &LetoArray3<f64>,
         wavenumber: f64,
     ) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
         let k0_sq = wavenumber.powi(2);
 
-        Zip::from(&mut k_field)
-            .and(&self.k_grid.k_mag)
-            .par_for_each(|val, &k_mag| {
-                *val *= k_mag.mul_add(-k_mag, k0_sq); // real-scalar multiply: 2 mults vs complex×complex (4+2)
-            });
+        apply_helmholtz_multiplier(&mut k_field, &self.k_grid.k_mag, k0_sq);
 
         self.inverse_fft_3d(&k_field)
     }
@@ -73,17 +169,17 @@ impl PSTDKSOperators {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn forward_fft_3d(&self, input: &Array3<f64>) -> KwaversResult<Array3<Complex64>> {
+    pub fn forward_fft_3d(&self, input: &LetoArray3<f64>) -> KwaversResult<Array3<Complex64>> {
         let output = self.fft_processor.forward(input);
-        Ok(output)
+        Ok(ndarray_complex_field(output))
     }
     /// Inverse fft 3d.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn inverse_fft_3d(&self, input: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
-        let output = self.fft_processor.inverse(input);
-        Ok(output)
+        let output = self.fft_processor.inverse(&leto_complex_field(input));
+        Ok(ndarray_real_field(output))
     }
 
     // ── Spectral gradient operators ──────────────────────────────────────────
@@ -93,52 +189,31 @@ impl PSTDKSOperators {
     /// Used to convert a velocity-source mask into its pressure-equivalent
     /// contribution for the FullKSpace pressure-only wave equation.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    /// - Returns [`KwaversError::InternalError`] if `kx` is not contiguous in memory.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub fn spectral_grad_x(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn spectral_grad_x(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
-        let kx_s = self
-            .k_grid
-            .kx
-            .as_slice()
-            .ok_or_else(|| KwaversError::InternalError("kx must be contiguous".into()))?;
-        Zip::indexed(k_field.view_mut())
-            .par_for_each(|(i, _, _), v| *v *= Complex64::new(0.0, kx_s[i]));
+        apply_spectral_axis_multiplier(&mut k_field, &self.k_grid.kx, SpectralAxis::X);
         self.inverse_fft_3d(&k_field)
     }
 
     /// Spectral y-derivative: `IFFT(i·ky · FFT(field))`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    /// - Returns [`KwaversError::InternalError`] if `ky` is not contiguous in memory.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub fn spectral_grad_y(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn spectral_grad_y(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
-        let ky_s = self
-            .k_grid
-            .ky
-            .as_slice()
-            .ok_or_else(|| KwaversError::InternalError("ky must be contiguous".into()))?;
-        Zip::indexed(k_field.view_mut())
-            .par_for_each(|(_, j, _), v| *v *= Complex64::new(0.0, ky_s[j]));
+        apply_spectral_axis_multiplier(&mut k_field, &self.k_grid.ky, SpectralAxis::Y);
         self.inverse_fft_3d(&k_field)
     }
 
     /// Spectral z-derivative: `IFFT(i·kz · FFT(field))`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
-    /// - Returns [`KwaversError::InternalError`] if `kz` is not contiguous in memory.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub fn spectral_grad_z(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
+    pub fn spectral_grad_z(&self, field: &LetoArray3<f64>) -> KwaversResult<Array3<f64>> {
         let mut k_field = self.forward_fft_3d(field)?;
-        let kz_s = self
-            .k_grid
-            .kz
-            .as_slice()
-            .ok_or_else(|| KwaversError::InternalError("kz must be contiguous".into()))?;
-        Zip::indexed(k_field.view_mut())
-            .par_for_each(|(_, _, k), v| *v *= Complex64::new(0.0, kz_s[k]));
+        apply_spectral_axis_multiplier(&mut k_field, &self.k_grid.kz, SpectralAxis::Z);
         self.inverse_fft_3d(&k_field)
     }
 }

@@ -20,21 +20,20 @@ kwavers-mesh = { path = "../kwavers-mesh" }
 kwavers-medium = { path = "../kwavers-medium" }
 kwavers-field = { path = "../kwavers-field" }
 kwavers-signal = { path = "../kwavers-signal" }
-kwavers-physics = { path = "../kwavers-physics" }
-kwavers-solver = { path = "../kwavers-solver" }
+kwavers-physics = { path = "../kwavers-physics", features = ["clinical-imaging"] }
+kwavers-solver = { path = "../kwavers-solver", features = ["clinical-imaging"] }
+leto = { workspace = true }
 # Concrete GPU backend (the GPU-PSTD adapter routes through it). Optional —
 # only pulled by the `gpu` feature.
 kwavers-gpu = { path = "../kwavers-gpu", optional = true }
-ndarray = { version = "0.16", features = ["rayon", "serde"] }
-num-complex = "0.4"
-rayon = "1.10"
+moirai-parallel = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 toml = "0.8"
 log = "0.4"
 
 [features]
-gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-core/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
+gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
 nifti = ["kwavers-core/nifti"]
 
 [dev-dependencies]

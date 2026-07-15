@@ -1,8 +1,8 @@
 //! SaftProcessor struct and reconstruction logic.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::{Array3, Array4};
 use log::info;
-use ndarray::{Array3, Array4};
 use std::f64::consts::PI;
 
 use super::super::{BeamformingAlgorithm3D, BeamformingConfig3D};
@@ -137,7 +137,7 @@ impl SaftProcessor {
             self.beamforming_config.element_spacing_3d.0,
             self.beamforming_config.element_spacing_3d.1,
         );
-        let n_rf_samples = rf_data_f64.dim().2;
+        let n_rf_samples = rf_data_f64.shape()[2];
 
         for i in 0..nx {
             let x = i as f64 * dx;
@@ -227,7 +227,7 @@ impl SaftProcessor {
             ));
         }
 
-        let channels = rf_data.dim().1;
+        let channels = rf_data.shape()[1];
         let expected_channels = self.beamforming_config.num_elements_3d.0
             * self.beamforming_config.num_elements_3d.1
             * self.beamforming_config.num_elements_3d.2;
@@ -239,7 +239,7 @@ impl SaftProcessor {
             )));
         }
 
-        if rf_data.dim().2 == 0 {
+        if rf_data.shape()[2] == 0 {
             return Err(KwaversError::InvalidInput(
                 "RF data must contain at least one sample per channel".to_owned(),
             ));

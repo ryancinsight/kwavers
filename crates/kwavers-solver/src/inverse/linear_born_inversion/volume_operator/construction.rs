@@ -1,6 +1,6 @@
 //! Construction and distance-table precomputation for [`super::VolumeOperator`].
 
-use rayon::prelude::*;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive, ParallelSlice};
 use std::f64::consts::TAU;
 
 use super::super::LinearBornInversionConfig;
@@ -34,22 +34,23 @@ impl<'a> VolumeOperator<'a> {
         // Each element's n_active distances form one contiguous chunk.
         let mut elem_dist = vec![0.0f64; element_count * n_active];
         if n_active > 0 {
-            elem_dist
-                .par_chunks_mut(n_active)
-                .enumerate()
-                .for_each(|(elem_idx, chunk)| {
+            for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+                &mut elem_dist,
+                n_active,
+                |elem_idx, chunk| {
                     let elem = &elements[elem_idx];
                     for (col, voxel) in active.iter().enumerate() {
                         chunk[col] = distance(
                             elem.x_m, elem.y_m, elem.z_m, voxel.x_m, voxel.y_m, voxel.z_m,
                         );
                     }
-                });
+                },
+            );
         }
         // Parallelise the sqrt table: n_elements × n_active entries.
         // Serial `iter().map(sqrt)` is a bottleneck at clinical grid sizes
         // (1024-element × 50 K active voxels ≈ 51 M entries).
-        let elem_sqrt_dist: Vec<f64> = elem_dist.par_iter().map(|d| d.sqrt()).collect();
+        let elem_sqrt_dist: Vec<f64> = elem_dist.par().map_collect(|d| d.sqrt());
 
         Self {
             active,

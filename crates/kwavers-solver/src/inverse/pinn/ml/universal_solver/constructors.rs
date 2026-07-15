@@ -4,7 +4,6 @@
 
 use super::solver::UniversalPINNSolver;
 use crate::inverse::pinn::ml::physics::PhysicsDomainRegistry;
-use burn::tensor::backend::AutodiffBackend;
 use kwavers_core::constants::fundamental::{
     SOUND_SPEED_AIR, VACUUM_PERMEABILITY, VACUUM_PERMITTIVITY,
 };
@@ -13,7 +12,11 @@ use kwavers_core::constants::tissue_acoustics::DENSITY_AIR;
 use kwavers_core::error::KwaversResult;
 use std::collections::HashMap;
 
-impl<B: AutodiffBackend> UniversalPINNSolver<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> UniversalPINNSolver<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new universal PINN solver
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -32,7 +35,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
     /// Registers acoustic wave, electromagnetic (electrostatic, magnetostatic,
     /// quasi-static), and thermal domains.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn with_all_domains() -> KwaversResult<Self> {
         let mut solver = Self::new()?;
@@ -77,7 +80,7 @@ impl<B: AutodiffBackend> UniversalPINNSolver<B> {
 
     /// Create universal solver for cavitation-sonoluminescence-electromagnetic coupling.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn with_cavitation_sonoluminescence_coupling() -> KwaversResult<Self> {
         let mut solver = Self::new()?;

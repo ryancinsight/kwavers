@@ -3,12 +3,12 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_TI
 use kwavers_core::constants::thermodynamic::SPECIFIC_HEAT_WATER;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX};
-use ndarray::Array3;
+use leto::Array3;
 
 impl MultiphysicsFieldCoupler {
     /// Apply weak coupling (single pass)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_weak_coupling(
         &self,
@@ -24,7 +24,7 @@ impl MultiphysicsFieldCoupler {
 
     /// Apply strong coupling (iterative)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn apply_strong_coupling(
         &self,
@@ -70,7 +70,7 @@ impl MultiphysicsFieldCoupler {
     fn couple_acoustic_to_optical(&self, fields: &mut [Array3<f64>], dt: f64) -> KwaversResult<()> {
         let (pressure, intensity) = read_write_fields::<PRESSURE_IDX, LIGHT_IDX>(fields)?;
 
-        for ((i, j, k), &p) in pressure.indexed_iter() {
+        for ([i, j, k], &p) in pressure.indexed_iter() {
             let delta_n = 1e-12 * p;
             let modulation = (self.coupling_strength * delta_n).mul_add(dt, 1.0);
             intensity[[i, j, k]] *= modulation;
@@ -85,7 +85,7 @@ impl MultiphysicsFieldCoupler {
 
         let absorption_coefficient = 10.0; // 10 m⁻¹ (typical for tissue)
 
-        for ((i, j, k), &i_val) in intensity.indexed_iter() {
+        for ([i, j, k], &i_val) in intensity.indexed_iter() {
             let heat_source = absorption_coefficient * i_val;
             let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
             temperature[[i, j, k]] += delta_t;
@@ -100,7 +100,7 @@ impl MultiphysicsFieldCoupler {
 
         let absorption_coefficient = 0.5; // 0.5 Np/m (typical for tissue)
 
-        for ((i, j, k), &p) in pressure.indexed_iter() {
+        for ([i, j, k], &p) in pressure.indexed_iter() {
             let intensity = p * p / (DENSITY_WATER_NOMINAL * SOUND_SPEED_TISSUE);
             let heat_source = absorption_coefficient * intensity;
             let delta_t = heat_source * dt / (DENSITY_WATER_NOMINAL * SPECIFIC_HEAT_WATER);
@@ -139,7 +139,7 @@ impl MultiphysicsFieldCoupler {
     fn apply_relaxation(&self, previous: &[Array3<f64>], current: &mut [Array3<f64>]) {
         let omega = 0.5;
         for (prev_field, curr_field) in previous.iter().zip(current.iter_mut()) {
-            for ((i, j, k), &prev_val) in prev_field.indexed_iter() {
+            for ([i, j, k], &prev_val) in prev_field.indexed_iter() {
                 let curr_val = curr_field[[i, j, k]];
                 curr_field[[i, j, k]] = omega * curr_val + (1.0 - omega) * prev_val;
             }
@@ -262,11 +262,11 @@ fn validate_coupled_shapes<const READ: usize, const WRITE: usize>(
     read: &Array3<f64>,
     write: &Array3<f64>,
 ) -> KwaversResult<()> {
-    if read.dim() != write.dim() {
+    if read.shape() != write.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "MultiphysicsFieldCoupler edge {READ}->{WRITE} requires matching shapes, got read {:?} and write {:?}",
-            read.dim(),
-            write.dim()
+            read.shape(),
+            write.shape()
         )));
     }
     Ok(())

@@ -1,8 +1,7 @@
+use apollo::fft_1d_leto;
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::fft::fft_1d_array;
 use kwavers_math::signal::window::hann;
 use kwavers_math::special::bessel::jn;
-use ndarray::Array1;
 
 /// Evaluate the normalised amplitude of the nth harmonic at nonlinear parameter σ.
 ///
@@ -100,7 +99,9 @@ pub fn hann_windowed_harmonic_amplitudes(
             .zip(window.iter())
             .map(|(&sample, &weight)| sample * weight)
             .collect();
-        let spectrum = fft_1d_array(&Array1::from_vec(windowed));
+        let fft_input = leto::Array1::from_shape_vec([n_samples], windowed)
+            .expect("windowed trace length must match Leto FFT shape");
+        let spectrum = fft_1d_leto(fft_input.view());
         for harmonic in 1..=n_harmonics {
             let bin = (harmonic as f64 * fundamental_hz / df_hz).round();
             let amp = if bin.is_finite() && bin >= 0.0 {

@@ -7,7 +7,7 @@
 use super::super::SensorRecorder;
 use crate::recorder::velocity_statistics::{SampledVelocityStats, VelocityComponentStats};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array1;
+use leto::Array1;
 
 /// Per-statistic fill function: writes one velocity-component statistic at the
 /// sampled sensor positions into the output vector.

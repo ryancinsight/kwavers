@@ -5,7 +5,7 @@ use super::types::TranscranialSafetyConstraints;
 use crate::acoustics::analysis::calculate_mechanical_index;
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BRAIN, SOUND_SPEED_BRAIN};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::Array3;
+use leto::Array3;
 
 impl TreatmentPlanner {
     /// Validate safety constraints
@@ -29,7 +29,7 @@ impl TreatmentPlanner {
         constraints: &TranscranialSafetyConstraints,
     ) -> KwaversResult<()> {
         // Check temperature limits
-        for &temp in temperature {
+        for &temp in temperature.iter() {
             if !temp.is_finite() {
                 return Err(constraint_violation(
                     "Brain temperature field contains a nonfinite value",
@@ -81,7 +81,7 @@ fn mechanical_index_from_harmonic_intensity_field(
 fn peak_pressure_from_harmonic_intensity_field(acoustic_field: &Array3<f64>) -> Option<f64> {
     let mut max_intensity = 0.0_f64;
 
-    for &intensity in acoustic_field {
+    for &intensity in acoustic_field.iter() {
         if !intensity.is_finite() || intensity < 0.0 {
             return None;
         }
@@ -105,7 +105,7 @@ mod tests {
     fn mechanical_index_from_intensity_matches_harmonic_pressure_contract() {
         let pressure_pa = MPA_TO_PA;
         let intensity = pressure_pa.powi(2) / (2.0 * DENSITY_BRAIN * SOUND_SPEED_BRAIN);
-        let field = Array3::from_elem((2, 2, 2), intensity);
+        let field = Array3::from_elem([2, 2, 2], intensity);
 
         let mi = mechanical_index_from_harmonic_intensity_field(&field, MHZ_TO_HZ);
 
@@ -114,9 +114,9 @@ mod tests {
 
     #[test]
     fn mechanical_index_from_intensity_rejects_invalid_domains() {
-        let valid = Array3::from_elem((1, 1, 1), 1.0);
-        let negative = Array3::from_elem((1, 1, 1), -1.0);
-        let nonfinite = Array3::from_elem((1, 1, 1), f64::NAN);
+        let valid = Array3::from_elem([1, 1, 1], 1.0);
+        let negative = Array3::from_elem([1, 1, 1], -1.0);
+        let nonfinite = Array3::from_elem([1, 1, 1], f64::NAN);
 
         assert!(mechanical_index_from_harmonic_intensity_field(&valid, 0.0).is_infinite());
         assert!(mechanical_index_from_harmonic_intensity_field(&valid, f64::NAN).is_infinite());
@@ -128,8 +128,8 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_accepts_safe_finite_fields() {
-        let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
-        let acoustic_field = Array3::from_elem((2, 2, 2), 1.0);
+        let temperature = Array3::from_elem([2, 2, 2], BODY_TEMPERATURE_C);
+        let acoustic_field = Array3::from_elem([2, 2, 2], 1.0);
         let constraints = default_constraints();
         let mi = mechanical_index_from_harmonic_intensity_field(&acoustic_field, MHZ_TO_HZ);
 
@@ -147,8 +147,8 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_rejects_nonfinite_temperature() {
-        let temperature = Array3::from_elem((2, 2, 2), f64::NAN);
-        let acoustic_field = Array3::from_elem((2, 2, 2), 1.0);
+        let temperature = Array3::from_elem([2, 2, 2], f64::NAN);
+        let acoustic_field = Array3::from_elem([2, 2, 2], 1.0);
 
         let result = TreatmentPlanner::validate_safety_fields(
             &temperature,
@@ -163,8 +163,8 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_rejects_invalid_frequency() {
-        let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
-        let acoustic_field = Array3::from_elem((2, 2, 2), 1.0);
+        let temperature = Array3::from_elem([2, 2, 2], BODY_TEMPERATURE_C);
+        let acoustic_field = Array3::from_elem([2, 2, 2], 1.0);
 
         let result = TreatmentPlanner::validate_safety_fields(
             &temperature,
@@ -179,8 +179,8 @@ mod tests {
 
     #[test]
     fn validate_safety_fields_rejects_negative_intensity() {
-        let temperature = Array3::from_elem((2, 2, 2), BODY_TEMPERATURE_C);
-        let acoustic_field = Array3::from_elem((2, 2, 2), -1.0);
+        let temperature = Array3::from_elem([2, 2, 2], BODY_TEMPERATURE_C);
+        let acoustic_field = Array3::from_elem([2, 2, 2], -1.0);
 
         let result = TreatmentPlanner::validate_safety_fields(
             &temperature,

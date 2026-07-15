@@ -7,7 +7,8 @@ use kwavers_core::constants::numerical::{MHZ_TO_HZ, PRESSURE_LIMIT};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 
-use ndarray::{Array3, Zip};
+use crate::parallel::for_each_indexed_mut;
+use leto::Array3;
 use std::f64;
 
 /// Represents a nonlinear wave model solver.
@@ -145,12 +146,12 @@ impl NonlinearWave {
         let ky = grid.compute_ky();
         let kz = grid.compute_kz();
 
-        let mut k_squared = Array3::<f64>::zeros((grid.nx, grid.ny, grid.nz));
+        let mut k_squared = Array3::<f64>::zeros([grid.nx, grid.ny, grid.nz]);
 
         let kx_s = kx.as_slice().expect("kx contiguous");
         let ky_s = ky.as_slice().expect("ky contiguous");
         let kz_s = kz.as_slice().expect("kz contiguous");
-        Zip::indexed(&mut k_squared).par_for_each(|(i, j, k), val| {
+        for_each_indexed_mut(k_squared.view_mut(), |(i, j, k), val| {
             *val = kz_s[k].mul_add(kz_s[k], kx_s[i].mul_add(kx_s[i], ky_s[j] * ky_s[j]));
         });
 
@@ -247,7 +248,7 @@ mod tests {
         let mut w = NonlinearWave::new(&grid, 1e-7);
         w.precompute_k_squared(&grid);
         let k2 = w.k_squared.as_ref().unwrap();
-        assert_eq!(k2.dim(), (8, 8, 8));
+        assert_eq!(k2.shape(), [8, 8, 8]);
         assert_eq!(k2[[0, 0, 0]], 0.0, "DC bin k²[0,0,0] must be zero");
         for &v in k2.iter() {
             assert!(v >= 0.0, "k² must be non-negative everywhere (got {v})");

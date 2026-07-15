@@ -1,8 +1,12 @@
 //! `ElasticSwePMLBoundary` — pre-computed PML attenuation field and damping application.
 
 use super::config::SwePmlConfig;
+use kwavers_core::utils::iterators::{for_each_indexed_mut, for_each_indexed_pair_mut};
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3, Zip};
+use leto::{Array1, Array3};
+use moirai_parallel::{for_each_chunk_triple_mut_enumerated_with, Adaptive};
+
+const PML_CHUNK: usize = 4096;
 
 /// PML boundary condition calculator.
 ///
@@ -76,19 +80,7 @@ impl ElasticSwePMLBoundary {
         vz: &mut Array3<f64>,
         dt: f64,
     ) {
-        let sigma_v = self.sigma.view();
-        Zip::indexed(vx.view_mut())
-            .and(vy.view_mut())
-            .and(vz.view_mut())
-            .par_for_each(|(i, j, k), vx_e, vy_e, vz_e| {
-                let sigma = sigma_v[[i, j, k]];
-                if sigma > 0.0 {
-                    let d = (-sigma * dt).exp();
-                    *vx_e *= d;
-                    *vy_e *= d;
-                    *vz_e *= d;
-                }
-            });
+        apply_velocity_damping(vx, vy, vz, &self.sigma, dt);
     }
 
     /// Per-axis σ profiles matching the scalar `compute_attenuation_field` profile.
@@ -162,16 +154,13 @@ impl ElasticSwePMLBoundary {
     /// Parallelised elementwise: each cell independently maps σ > 0 → 1.0.
     #[must_use]
     pub fn get_mask(&self) -> Array3<f64> {
-        let (nx, ny, nz) = self.sigma.dim();
+        let [nx, ny, nz] = self.sigma.shape();
         let mut mask = Array3::<f64>::zeros((nx, ny, nz));
-        let sigma_v = self.sigma.view();
-        Zip::from(mask.view_mut())
-            .and(sigma_v)
-            .par_for_each(|m, &s| {
-                if s > 0.0 {
-                    *m = 1.0;
-                }
-            });
+        for_each_indexed_pair_mut(mask.view_mut(), self.sigma.view(), |_idx, m, &s| {
+            if s > 0.0 {
+                *m = 1.0;
+            }
+        });
         mask
     }
 
@@ -211,7 +200,7 @@ impl ElasticSwePMLBoundary {
         let pml_y = ny > 1;
         let pml_z = nz > 1;
 
-        Zip::indexed(sigma.view_mut()).par_for_each(|(i, j, k), s| {
+        for_each_indexed_mut(sigma.view_mut(), |(i, j, k), s| {
             let mut max_sigma = 0.0_f64;
 
             // X-direction PML (left and right faces)
@@ -251,5 +240,76 @@ impl ElasticSwePMLBoundary {
         });
 
         sigma
+    }
+}
+
+fn apply_velocity_damping(
+    vx: &mut Array3<f64>,
+    vy: &mut Array3<f64>,
+    vz: &mut Array3<f64>,
+    sigma: &Array3<f64>,
+    dt: f64,
+) {
+    assert_eq!(
+        vx.shape(),
+        sigma.shape(),
+        "invariant: PML vx/sigma shape mismatch"
+    );
+    assert_eq!(
+        vx.shape(),
+        vy.shape(),
+        "invariant: PML vx/vy shape mismatch"
+    );
+    assert_eq!(
+        vx.shape(),
+        vz.shape(),
+        "invariant: PML vx/vz shape mismatch"
+    );
+
+    match (
+        vx.as_slice_mut(),
+        vy.as_slice_mut(),
+        vz.as_slice_mut(),
+        sigma.as_slice(),
+    ) {
+        (Some(vx), Some(vy), Some(vz), Some(sigma)) => {
+            for_each_chunk_triple_mut_enumerated_with::<Adaptive, _, _, _, _>(
+                vx,
+                vy,
+                vz,
+                PML_CHUNK,
+                |chunk_index, vx_chunk, vy_chunk, vz_chunk| {
+                    let start = chunk_index * PML_CHUNK;
+                    for offset in 0..(vx_chunk.len()) {
+                        let sigma_value = sigma[start + offset];
+                        if sigma_value > 0.0 {
+                            let damping = (-sigma_value * dt).exp();
+                            vx_chunk[offset] *= damping;
+                            vy_chunk[offset] *= damping;
+                            vz_chunk[offset] *= damping;
+                        }
+                    }
+                },
+            );
+        }
+        _ => {
+            // Index-based PML velocity damping over three mutable views; correct
+            // for arbitrarily strided sub-region views (leto indexes by [i,j,k]).
+            let sigma_v = sigma.view();
+            let [nx, ny, nz] = vx.shape();
+            for i in 0..nx {
+                for j in 0..ny {
+                    for k in 0..nz {
+                        let sigma_value = sigma_v[[i, j, k]];
+                        if sigma_value > 0.0 {
+                            let damping = (-sigma_value * dt).exp();
+                            vx[[i, j, k]] *= damping;
+                            vy[[i, j, k]] *= damping;
+                            vz[[i, j, k]] *= damping;
+                        }
+                    }
+                }
+            }
+        }
     }
 }

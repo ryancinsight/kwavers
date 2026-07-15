@@ -1,14 +1,94 @@
-//! `GpuThermalAcousticSolver` — struct, construction, and time-stepping.
+//! Provider-generic thermal-acoustic solver wrapper and WGPU implementation.
 //!
 //! SRP: changes when the pipeline layout, workgroup dispatch, or time-step
 //! protocol changes.
 
-use super::buffers::GpuThermalAcousticBuffers;
+use super::buffers::{ThermalAcousticBufferProvider, WgpuThermalAcousticBuffers};
 use super::config::GpuThermalAcousticConfig;
 use super::shader::thermal_acoustic_wgsl;
+use crate::backend::{
+    init::GpuProviderContext,
+    provider::{GpuKernelProvider, GpuProviderBackend},
+};
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::error::KwaversResult;
+use kwavers_solver::backend::traits::BackendCapabilities;
 
-/// GPU-accelerated thermal-acoustic coupling solver.
+/// Provider contract for thermal-acoustic solver execution.
+pub trait ThermalAcousticSolverProvider: GpuKernelProvider<Scalar = f32> {
+    /// Buffer provider used by this solver provider.
+    type Buffers: ThermalAcousticBufferProvider<Scalar = f32>;
+
+    /// Execute one time step of the coupled thermal-acoustic simulation.
+    ///
+    /// # Errors
+    ///
+    /// Returns a GPU error when command encoding or submission fails.
+    fn step(&self) -> KwaversResult<()>;
+
+    /// Return the thermal-acoustic configuration.
+    fn config(&self) -> GpuThermalAcousticConfig;
+
+    /// Borrow the provider-owned buffers.
+    fn buffers(&self) -> &Self::Buffers;
+}
+
+/// Provider-generic GPU-accelerated thermal-acoustic coupling solver.
+#[derive(Debug)]
+pub struct GpuThermalAcousticSolver<P = WgpuThermalAcousticSolverProvider>
+where
+    P: ThermalAcousticSolverProvider,
+{
+    provider: P,
+}
+
+impl GpuThermalAcousticSolver<WgpuThermalAcousticSolverProvider> {
+    /// Create a WGPU-backed thermal-acoustic solver.
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    pub fn new(config: GpuThermalAcousticConfig) -> KwaversResult<Self> {
+        WgpuThermalAcousticSolverProvider::new(config).map(Self::from_provider)
+    }
+}
+
+impl<P> GpuThermalAcousticSolver<P>
+where
+    P: ThermalAcousticSolverProvider,
+{
+    /// Build a solver wrapper from a concrete provider implementation.
+    #[must_use]
+    pub const fn from_provider(provider: P) -> Self {
+        Self { provider }
+    }
+
+    /// Borrow the concrete solver provider.
+    #[must_use]
+    pub const fn provider(&self) -> &P {
+        &self.provider
+    }
+
+    /// Execute one time step of the coupled thermal-acoustic simulation.
+    ///
+    /// # Errors
+    /// - Propagates any [`KwaversError`] returned by called functions.
+    pub fn step(&self) -> KwaversResult<()> {
+        self.provider.step()
+    }
+
+    /// Return the thermal-acoustic configuration.
+    #[must_use]
+    pub fn config(&self) -> GpuThermalAcousticConfig {
+        self.provider.config()
+    }
+
+    /// Borrow the provider-owned buffers.
+    #[must_use]
+    pub fn buffers(&self) -> &P::Buffers {
+        self.provider.buffers()
+    }
+}
+
+/// WGPU implementation of the thermal-acoustic solver provider.
 ///
 /// Three compute pipelines are held — one per pass — so that wgpu can insert
 /// correct pipeline barriers between them via separate `ComputePass` objects.
@@ -19,9 +99,10 @@ use kwavers_core::error::KwaversResult;
 /// | `velocity_pipeline`      | `update_velocity`  | 2    |
 /// | `thermal_pipeline`       | `update_thermal`   | 3    |
 #[derive(Debug)]
-pub struct GpuThermalAcousticSolver {
+pub struct WgpuThermalAcousticSolverProvider {
+    pub(super) context: GpuProviderContext<WgpuDevice>,
     pub(super) config: GpuThermalAcousticConfig,
-    pub(super) buffers: GpuThermalAcousticBuffers,
+    pub(super) buffers: WgpuThermalAcousticBuffers,
     /// Pass 1: p_curr and Q_ac from p_prev + ux/uy/uz_prev.
     pub(super) pressure_pipeline: wgpu::ComputePipeline,
     /// Pass 2: ux/uy/uz_curr from p_curr (committed by Pass 1) + _prev.
@@ -32,18 +113,16 @@ pub struct GpuThermalAcousticSolver {
     pub(super) workgroup_size: [u32; 3],
 }
 
-impl GpuThermalAcousticSolver {
-    /// New.
+impl WgpuThermalAcousticSolverProvider {
+    /// Create a WGPU thermal-acoustic solver provider.
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
-    ///
-    pub fn new(
-        device: &wgpu::Device,
-        queue: &wgpu::Queue,
-        config: GpuThermalAcousticConfig,
-    ) -> KwaversResult<Self> {
+    pub fn new(config: GpuThermalAcousticConfig) -> KwaversResult<Self> {
         config.validate()?;
-        let buffers = GpuThermalAcousticBuffers::new(device, queue, &config)?;
+        let context = GpuProviderContext::<WgpuDevice>::new()?;
+        let device = context.device();
+        let queue = context.queue();
+        let buffers = WgpuThermalAcousticBuffers::new(device, queue, &config)?;
 
         let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("Thermal-Acoustic Fused Kernel"),
@@ -69,33 +148,81 @@ impl GpuThermalAcousticSolver {
                 cache: None,
             })
         };
+        let pressure_pipeline = make_pipe("update_pressure");
+        let velocity_pipeline = make_pipe("update_velocity");
+        let thermal_pipeline = make_pipe("update_thermal");
 
         Ok(Self {
+            context,
             config,
             buffers,
-            pressure_pipeline: make_pipe("update_pressure"),
-            velocity_pipeline: make_pipe("update_velocity"),
-            thermal_pipeline: make_pipe("update_thermal"),
+            pressure_pipeline,
+            velocity_pipeline,
+            thermal_pipeline,
             bind_group,
             workgroup_size: [8, 8, 4],
         })
     }
+}
 
-    /// Execute one time step of the coupled thermal-acoustic simulation.
-    ///
-    /// Encodes three sequential compute passes separated by pipeline barriers:
-    ///
-    /// 1. `update_pressure` — writes `p_curr`, `Q_ac` from `_prev` buffers.
-    /// 2. `update_velocity` — writes `ux/uy/uz_curr` from `p_curr` (Pass 1 barrier).
-    /// 3. `update_thermal`  — writes `T_curr` from `T_prev` Laplacian + `Q_ac`.
-    ///
-    /// wgpu inserts a full memory barrier between any two `ComputePass` objects
-    /// within the same `CommandEncoder`, ensuring all writes from pass N are
-    /// visible to pass N+1.
-    ///
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
-    pub fn step(&self, device: &wgpu::Device, queue: &wgpu::Queue) -> KwaversResult<()> {
+impl GpuProviderBackend for WgpuThermalAcousticSolverProvider {
+    type Device = WgpuDevice;
+
+    fn hephaestus_device(&self) -> &Self::Device {
+        self.context.hephaestus_device()
+    }
+
+    fn device_name(&self) -> &str {
+        self.context.device_name()
+    }
+
+    fn synchronize(&self) -> KwaversResult<()> {
+        self.context.synchronize()
+    }
+}
+
+impl GpuKernelProvider for WgpuThermalAcousticSolverProvider {
+    type Scalar = f32;
+
+    fn capabilities(&self) -> BackendCapabilities {
+        let limits = self.context.hephaestus_device().device_limits();
+        BackendCapabilities {
+            supports_fft: false,
+            supports_f64: false,
+            supports_f32: true,
+            supports_async: true,
+            max_parallelism: limits.max_compute_invocations_per_workgroup as usize,
+            supports_unified_memory: false,
+        }
+    }
+
+    fn is_available(&self) -> bool {
+        true
+    }
+
+    fn available_memory(&self) -> usize {
+        match usize::try_from(
+            self.context
+                .hephaestus_device()
+                .device_limits()
+                .max_buffer_size,
+        ) {
+            Ok(bytes) => bytes,
+            Err(_) => usize::MAX,
+        }
+    }
+
+    fn estimate_peak_performance(&self) -> f64 {
+        0.0
+    }
+}
+
+impl ThermalAcousticSolverProvider for WgpuThermalAcousticSolverProvider {
+    type Buffers = WgpuThermalAcousticBuffers;
+
+    fn step(&self) -> KwaversResult<()> {
+        let device = self.context.device();
+        let queue = self.context.queue();
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("Thermal-Acoustic Step Encoder"),
         });
@@ -141,10 +268,11 @@ impl GpuThermalAcousticSolver {
         Ok(())
     }
 
-    pub fn config(&self) -> GpuThermalAcousticConfig {
+    fn config(&self) -> GpuThermalAcousticConfig {
         self.config
     }
-    pub fn buffers(&self) -> &GpuThermalAcousticBuffers {
+
+    fn buffers(&self) -> &Self::Buffers {
         &self.buffers
     }
 }
@@ -202,7 +330,7 @@ fn build_bgl(device: &wgpu::Device) -> wgpu::BindGroupLayout {
 fn build_bind_group(
     device: &wgpu::Device,
     layout: &wgpu::BindGroupLayout,
-    buf: &GpuThermalAcousticBuffers,
+    buf: &WgpuThermalAcousticBuffers,
 ) -> wgpu::BindGroup {
     device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("Thermal-Acoustic Bind Group"),

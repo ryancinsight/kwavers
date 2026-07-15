@@ -2,15 +2,15 @@ use super::linear::LinearInterpolator;
 use super::traits::Interpolator;
 use super::trilinear::NumericsTrilinearInterpolator;
 use approx::assert_abs_diff_eq;
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 
 #[test]
 fn test_linear_interpolator_simple() {
     let dx = 0.1;
     let interp = LinearInterpolator::new(dx);
 
-    let data = Array1::from_vec(vec![0.0, 0.2, 0.4, 0.6, 0.8]);
-    let target = Array1::from_vec(vec![0.05]);
+    let data = Array1::from_vec(5, vec![0.0, 0.2, 0.4, 0.6, 0.8]).unwrap();
+    let target = Array1::from_vec(1, vec![0.05]).unwrap();
     let result = interp.interpolate_1d(data.view(), target.view()).unwrap();
 
     assert_abs_diff_eq!(result[0], 0.1, epsilon = 1e-10);
@@ -21,8 +21,8 @@ fn test_linear_interpolator_exact_at_grid_points() {
     let dx = 1.0;
     let interp = LinearInterpolator::new(dx);
 
-    let data = Array1::from_vec(vec![1.0, 2.0, 3.0, 4.0]);
-    let target = Array1::from_vec(vec![2.0]);
+    let data = Array1::from_vec(4, vec![1.0, 2.0, 3.0, 4.0]).unwrap();
+    let target = Array1::from_vec(1, vec![2.0]).unwrap();
     let result = interp.interpolate_1d(data.view(), target.view()).unwrap();
 
     assert_abs_diff_eq!(result[0], 3.0, epsilon = 1e-10);
@@ -46,7 +46,7 @@ fn test_trilinear_linear_function() {
     let dx = 1.0;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let mut data = Array3::zeros((4, 4, 4));
+    let mut data = Array3::zeros([4, 4, 4]);
     for i in 0..4 {
         for j in 0..4 {
             for k in 0..4 {
@@ -69,7 +69,7 @@ fn test_trilinear_at_corner() {
     let dx = 0.1;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let mut data = Array3::zeros((3, 3, 3));
+    let mut data = Array3::zeros([3, 3, 3]);
     data[[1, 1, 1]] = 5.0;
 
     let result = interp
@@ -84,7 +84,7 @@ fn test_interpolation_out_of_bounds() {
     let dx = 0.1;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let data = Array3::zeros((5, 5, 5));
+    let data = Array3::zeros([5, 5, 5]);
     let result = interp.interpolate_point(data.view(), 1.0, 0.0, 0.0);
 
     assert!(result.is_err());
@@ -95,12 +95,11 @@ fn test_trilinear_3d_batch() {
     let dx = 1.0;
     let interp = NumericsTrilinearInterpolator::new(dx, dx, dx);
 
-    let data =
-        Array3::from_shape_vec((2, 2, 2), vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
+    let data = Array3::from_vec([2, 2, 2], vec![0.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0]).unwrap();
 
-    let target_x = Array1::from_vec(vec![0.5]);
-    let target_y = Array1::from_vec(vec![0.5]);
-    let target_z = Array1::from_vec(vec![0.5]);
+    let target_x = Array1::from_vec(1, vec![0.5]).unwrap();
+    let target_y = Array1::from_vec(1, vec![0.5]).unwrap();
+    let target_z = Array1::from_vec(1, vec![0.5]).unwrap();
 
     let result = interp
         .interpolate_3d(

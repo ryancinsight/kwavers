@@ -2,7 +2,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Conservative coupling interface for multi-rate integration

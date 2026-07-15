@@ -11,7 +11,7 @@ use kwavers_analysis::signal_processing::pam::{
 use kwavers_core::constants::SOUND_SPEED_WATER;
 use kwavers_transducer::beamforming::BeamformingCoreConfig;
 use kwavers_transducer::passive_acoustic_mapping::PamArrayGeometry as ArrayGeometry;
-use ndarray::{Array3, Axis};
+use leto::Array3;
 
 fn linear_array_positions(elements: usize, pitch_m: f64) -> ArrayGeometry {
     ArrayGeometry::Linear {
@@ -184,7 +184,7 @@ fn pam_time_exposure_acoustics_outputs_single_time_plane() {
         .process(&sensor_data, sample_rate)
         .expect("PAM process (TEA)");
 
-    assert_eq!(map.shape(), &[1, 1, 1]);
+    assert_eq!(map.shape(), [1, 1, 1]);
 
     let v = map[[0, 0, 0]];
     assert!(v.is_finite());
@@ -208,16 +208,17 @@ fn synth_impulses_has_one_impulse_per_element() {
     let data =
         synth_sensor_data_impulses(&geometry, n_samples, focal, sample_rate, SOUND_SPEED_WATER);
 
-    // Count impulses per element channel.
+    // Count impulses per element channel. `data` is (n_elements, 1, n_samples);
+    // the channel is the last-axis time series at [elem, 0, :].
     for elem in 0..elements {
-        let channel = data.index_axis(Axis(0), elem);
         let mut count = 0usize;
-        for v in channel.iter() {
-            if *v == 1.0 {
+        for t in 0..n_samples {
+            let v = data[[elem, 0, t]];
+            if v == 1.0 {
                 count += 1;
             } else {
                 // enforce exact 0/1 outputs from the generator
-                assert!(*v == 0.0, "unexpected non-binary sample: {v}");
+                assert!(v == 0.0, "unexpected non-binary sample: {v}");
             }
         }
         assert_eq!(

@@ -3,7 +3,7 @@
 //! This module defines parameter containers that reduce coupling between
 //! components following SOLID principles.
 
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 
 /// Re-exported from [`super::fields`] — single canonical definition.
 pub use super::fields::Complex3D;
@@ -41,7 +41,6 @@ pub use super::fields::Complex3D;
 /// correction factor that eliminates temporal dispersion at all CFL values.
 /// Use `Array3::ones(shape)` for unit kappa (no correction, preserves the
 /// O(dt²) leapfrog accuracy).
-#[derive(Debug)]
 pub struct StressUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,
@@ -75,7 +74,6 @@ pub struct StressUpdateParams<'a> {
 /// `i · k_α[i]`. For a **staggered** scheme pass
 /// `i · k_α[i] · exp(+ i · k_α[i] · Δα / 2)` — matches KWave.jl
 /// `pstd_elastic_2d`'s `ddx_k_shift_pos` used during the velocity update.
-#[derive(Debug)]
 pub struct VelocityUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,
     pub vy_fft: &'a Complex3D,

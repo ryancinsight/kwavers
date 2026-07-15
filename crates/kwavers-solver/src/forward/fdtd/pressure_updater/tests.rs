@@ -4,7 +4,17 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
-use ndarray::{Array3, Zip};
+use leto::Array3 as LetoArray3;
+use leto::Array3;
+
+fn leto_to_ndarray3(field: &LetoArray3<f64>) -> Array3<f64> {
+    let shape = field.shape();
+    let mut copied = Array3::zeros((shape[0], shape[1], shape[2]));
+    for (dst, src) in copied.iter_mut().zip(field.iter()) {
+        *dst = *src;
+    }
+    copied
+}
 
 /// Westervelt correction must produce non-zero perturbation after two history steps.
 ///
@@ -37,7 +47,7 @@ fn test_westervelt_correction_nonzero_after_history() {
     let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
 
     solver.fields.p.fill(1e6_f64);
-    solver.p_prev = Some(solver.fields.p.clone());
+    solver.p_prev = Some(leto_to_ndarray3(&solver.fields.p));
     solver.p_prev2 = Some(Array3::zeros((n, n, n)));
 
     let p_before = solver.fields.p[[1, 1, 1]];
@@ -198,10 +208,13 @@ fn test_staggered_divergence_uses_scratch_buffer() {
         .unwrap();
 
     let mut expected = dvz.clone();
-    Zip::from(&mut expected)
-        .and(&dvx)
-        .and(&dvy)
-        .for_each(|d, &dx_v, &dy_v| *d += dx_v + dy_v);
+    leto_ops::zip2_mut_with(
+        &mut expected.view_mut(),
+        &dvx.view(),
+        &dvy.view(),
+        |d, dx_v, dy_v| *d += *dx_v + *dy_v,
+    )
+    .expect("invariant: divergence field shapes asserted equal");
 
     assert_eq!(solver.divergence_scratch, expected);
 }

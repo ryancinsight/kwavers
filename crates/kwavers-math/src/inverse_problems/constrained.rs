@@ -14,7 +14,8 @@
 //! unconstrained minimiser onto the box, and projected gradient descent converges
 //! to it.
 
-use ndarray::{Array3, Zip};
+use crate::parallel::zip_mut_ref;
+use leto::Array3;
 
 /// Pointwise box constraints `lower ≤ m(r) ≤ upper` on a model field.
 #[derive(Debug, Clone, Copy)]
@@ -102,9 +103,7 @@ where
     constraints.project(&mut model); // start feasible
     for _ in 0..iterations {
         let grad = gradient(&model);
-        Zip::from(&mut model)
-            .and(&grad)
-            .for_each(|m, &g| *m -= step * g);
+        zip_mut_ref(model.view_mut(), grad.view(), |m, &g| *m -= step * g);
         constraints.project(&mut model);
     }
     model
@@ -113,7 +112,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn new_orders_bounds() {
@@ -128,8 +127,7 @@ mod tests {
         assert_eq!(c.project_value(1800.0), 1650.0); // above → upper
         assert_eq!(c.project_value(1540.0), 1540.0); // inside → unchanged
 
-        let mut field =
-            Array3::from_shape_vec((2, 1, 2), vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
+        let mut field = Array3::from_vec([2, 1, 2], vec![1200.0, 1540.0, 1800.0, 1500.0]).unwrap();
         c.project(&mut field);
         assert_eq!(
             field.iter().cloned().collect::<Vec<_>>(),
@@ -143,7 +141,7 @@ mod tests {
         // minimiser is clip(t, [lo, hi]) element-wise.
         let c = BoxConstraints::sound_speed_tissue(); // [1400, 1650]
                                                       // target field: below / inside / above the box
-        let target = Array3::from_shape_vec((3, 1, 1), vec![1000.0, 1500.0, 2000.0]).unwrap();
+        let target = Array3::from_vec([3, 1, 1], vec![1000.0, 1500.0, 2000.0]).unwrap();
         let t = target.clone();
         let start = Array3::from_elem((3, 1, 1), 1540.0);
 

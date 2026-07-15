@@ -2,16 +2,31 @@
 //!
 //! # References
 //! - Raissi et al. (2019): "Physics-informed neural networks". *J. Comput. Phys.*, 378, 686–707.
+//!
+//! ## Weight-gradient contract
+//!
+//! Every function here returns a **`Var`**, not a plain `Tensor`: each value
+//! is built purely from finite-difference arithmetic on top of independent
+//! forward passes (`forward_fn(&Var::new(perturbed_input, false))`), never
+//! through a `Var::grad()` extraction. `Var::grad()` reads a plain
+//! accumulator buffer (`Var`'s `grad: Option<Arc<GradBuffer<T,B>>>` field
+//! has no `BackwardNode`/`.creator`), so any value built from it is
+//! permanently detached from the network's weight graph — a subsequent
+//! `.backward()` on a loss containing that value contributes exactly zero
+//! gradient to the weights, silently making a "physics loss" term
+//! training-inert. Pure multi-forward-pass FD combination avoids this
+//! entirely: each perturbed forward pass shares the *same* weight `Var`
+//! leaves (`self.layer.weight`, etc.), so ordinary FD arithmetic (`add`,
+//! `sub`, `scalar_mul`) on their outputs preserves a live `.creator` chain
+//! back to those weights, verified empirically (coeus-nn diagnostic,
+//! since removed): an FD combination of forward passes yields a nonzero
+//! weight gradient after `backward()`, while combining a `.grad()`-derived
+//! value the same way yields exactly zero.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
-
-use super::spatial::compute_divergence_2d;
+use coeus_autograd::Var;
 
 /// 2D gradient component pair `(∂/∂x, ∂/∂y)`, each `[batch, 1]`.
-type GradientPair2D<B> = (
-    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
-    Tensor<<B as AutodiffBackend>::InnerBackend, 2>,
-);
+type GradientPair2D<B> = (Var<f32, B>, Var<f32, B>);
 
 /// Compute second-order spatial derivative ∂²u/∂xᵢ² via central finite differences.
 ///
@@ -22,7 +37,8 @@ type GradientPair2D<B> = (
 /// - `spatial_dim`: Spatial dimension to differentiate twice (1 for x, 2 for y).
 ///
 /// # Returns
-/// Tensor `[batch, 1]` containing the second derivative.
+/// `Var` `[batch, 1]` containing the second derivative, still connected to
+/// the network's weight graph (see module-level weight-gradient contract).
 ///
 /// # Mathematical Note
 /// Central finite-difference approximation (ε = 1e-4):
@@ -32,16 +48,16 @@ type GradientPair2D<B> = (
 /// Truncation error O(ε²).
 /// # Errors
 /// - Returns [`Err`] if an internal constraint is violated.
-///
 pub fn compute_second_derivative_2d<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
+    input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
     spatial_dim: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
+) -> Result<Var<f32, B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2>,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B>,
 {
     if !(1..=2).contains(&spatial_dim) {
         return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
@@ -50,48 +66,44 @@ where
         )));
     }
 
-    let eps = 1e-4;
-    let batch = input.dims()[0];
+    let eps = 1e-4_f32;
+    let batch = input.shape()[0];
+    let backend = B::default();
 
-    let t_col = input.clone().slice([0..batch, 0..1]);
-    let x_col = input.clone().slice([0..batch, 1..2]);
-    let y_col = input.clone().slice([0..batch, 2..3]);
+    let raw = input.as_slice();
+    let mut plus = raw.iter().cloned().collect::<Vec<_>>();
+    let mut minus = raw.iter().cloned().collect::<Vec<_>>();
+    for row in 0..batch {
+        plus[row * 3 + spatial_dim] += eps;
+        minus[row * 3 + spatial_dim] -= eps;
+    }
+    let input_plus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &plus, &backend);
+    let input_minus = coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &minus, &backend);
 
-    let (input_plus, input_minus) = if spatial_dim == 1 {
-        let x_plus = x_col.clone().add_scalar(eps);
-        let x_minus = x_col.clone().sub_scalar(eps);
-        (
-            Tensor::cat(vec![t_col.clone(), x_plus, y_col.clone()], 1),
-            Tensor::cat(vec![t_col.clone(), x_minus, y_col.clone()], 1),
-        )
-    } else {
-        let y_plus = y_col.clone().add_scalar(eps);
-        let y_minus = y_col.clone().sub_scalar(eps);
-        (
-            Tensor::cat(vec![t_col.clone(), x_col.clone(), y_plus], 1),
-            Tensor::cat(vec![t_col.clone(), x_col.clone(), y_minus], 1),
-        )
-    };
+    let output = forward_fn(&Var::new(input.clone(), false));
+    let u = coeus_autograd::slice(
+        &output,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
-    let output = forward_fn(input.clone());
-    let u = output
-        .clone()
-        .slice([0..output.dims()[0], output_component..output_component + 1]);
+    let output_plus = forward_fn(&Var::new(input_plus, false));
+    let u_plus = coeus_autograd::slice(
+        &output_plus,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
-    let output_plus = forward_fn(input_plus);
-    let u_plus = output_plus.clone().slice([
-        0..output_plus.dims()[0],
-        output_component..output_component + 1,
-    ]);
+    let output_minus = forward_fn(&Var::new(input_minus, false));
+    let u_minus = coeus_autograd::slice(
+        &output_minus,
+        &[(0, batch), (output_component, output_component + 1)],
+    );
 
-    let output_minus = forward_fn(input_minus);
-    let u_minus = output_minus.clone().slice([
-        0..output_minus.dims()[0],
-        output_component..output_component + 1,
-    ]);
-
-    let d2u = (u_plus + u_minus - u * 2.0) / (eps * eps);
-    Ok(d2u.inner())
+    let two_u = coeus_autograd::scalar_mul(&u, 2.0);
+    let d2u = coeus_autograd::scalar_mul(
+        &coeus_autograd::sub(&coeus_autograd::add(&u_plus, &u_minus), &two_u),
+        1.0 / (eps * eps),
+    );
+    Ok(d2u)
 }
 
 /// Compute scalar Laplacian ∇²u = ∂²u/∂x² + ∂²u/∂y².
@@ -102,76 +114,119 @@ where
 /// - `output_component`: Output component.
 ///
 /// # Returns
-/// Tensor `[batch, 1]` containing the Laplacian.
+/// `Var` `[batch, 1]` containing the Laplacian.
 ///
 /// # Mathematical Note
 /// ```text
 /// ∇²u = ∂²u/∂x² + ∂²u/∂y²
 /// ```
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
-///
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_laplacian_2d<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
+    input: &coeus_tensor::Tensor<f32, B>,
     output_component: usize,
-) -> Result<Tensor<B::InnerBackend, 2>, kwavers_core::error::KwaversError>
+) -> Result<Var<f32, B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B> + Clone,
 {
     let d2u_dx2 = compute_second_derivative_2d(forward_fn.clone(), input, output_component, 1)?;
     let d2u_dy2 = compute_second_derivative_2d(forward_fn, input, output_component, 2)?;
-    Ok(d2u_dx2 + d2u_dy2)
+    Ok(coeus_autograd::add(&d2u_dx2, &d2u_dy2))
 }
 
 /// Compute gradient of divergence ∇(∇·u) = [∂(∇·u)/∂x, ∂(∇·u)/∂y] for the P-wave term.
 ///
 /// # Arguments
 /// - `forward_fn`: Forward pass function.
-/// - `input`: Input tensor `[batch, 3]`.
+/// - `input`: Input tensor `[batch, 3]` with columns `[t, x, y]`; `output_component`
+///   0 is `u_x`, 1 is `u_y`.
 ///
 /// # Returns
 /// Tuple `(∂(∇·u)/∂x, ∂(∇·u)/∂y)`.
 ///
 /// # Mathematical Specification
-/// Elastic wave P-wave term (Achenbach 1973):
+/// Elastic wave P-wave term (Achenbach 1973), expanded directly into raw
+/// second partials of the displacement components (never routed through
+/// `compute_divergence_2d`'s `Var::grad()` extraction — see module-level
+/// weight-gradient contract):
 /// ```text
-/// (λ + 2μ)∇(∇·u) = (λ + 2μ)[∂(∇·u)/∂x, ∂(∇·u)/∂y]
+/// ∇·u = ∂u_x/∂x + ∂u_y/∂y
+/// ∂(∇·u)/∂x = ∂²u_x/∂x² + ∂²u_y/∂x∂y
+/// ∂(∇·u)/∂y = ∂²u_x/∂x∂y + ∂²u_y/∂y²
 /// ```
-/// Each partial derivative is approximated via forward finite difference (ε = 1e-5)
-/// applied to `compute_divergence_2d` to avoid nested `InnerBackend` tensor arithmetic.
+/// The mixed partial ∂²uᵢ/∂x∂y uses the standard 4-point central stencil:
+/// ```text
+/// ∂²f/∂x∂y ≈ [f(x+ε,y+ε) − f(x+ε,y−ε) − f(x−ε,y+ε) + f(x−ε,y−ε)] / (4ε²)
+/// ```
+/// Truncation error O(ε²), matching [`compute_second_derivative_2d`].
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
-///
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 pub fn compute_gradient_of_divergence_2d<B, F>(
     forward_fn: F,
-    input: &Tensor<B, 2>,
+    input: &coeus_tensor::Tensor<f32, B>,
 ) -> Result<GradientPair2D<B>, kwavers_core::error::KwaversError>
 where
-    B: AutodiffBackend,
-    F: Fn(Tensor<B, 2>) -> Tensor<B, 2> + Clone,
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B> + Clone,
 {
-    let eps = 1e-5;
-    let batch = input.dims()[0];
+    let d2ux_dx2 = compute_second_derivative_2d(forward_fn.clone(), input, 0, 1)?;
+    let d2uy_dy2 = compute_second_derivative_2d(forward_fn.clone(), input, 1, 2)?;
+    let d2ux_dxdy = compute_mixed_partial_2d(forward_fn.clone(), input, 0)?;
+    let d2uy_dxdy = compute_mixed_partial_2d(forward_fn, input, 1)?;
 
-    let div_center = compute_divergence_2d(forward_fn.clone(), input)?;
-
-    // ∂(∇·u)/∂x via forward finite difference
-    let mut input_x_plus = input.clone();
-    let x_col = input_x_plus.clone().slice([0..batch, 0..1]);
-    let x_col_plus = x_col.add_scalar(eps);
-    input_x_plus = input_x_plus.slice_assign([0..batch, 0..1], x_col_plus);
-    let div_x_plus = compute_divergence_2d(forward_fn.clone(), &input_x_plus)?;
-    let ddiv_dx = (div_x_plus - div_center.clone()) / eps;
-
-    // ∂(∇·u)/∂y via forward finite difference
-    let mut input_y_plus = input.clone();
-    let y_col = input_y_plus.clone().slice([0..batch, 1..2]);
-    let y_col_plus = y_col.add_scalar(eps);
-    input_y_plus = input_y_plus.slice_assign([0..batch, 1..2], y_col_plus);
-    let div_y_plus = compute_divergence_2d(forward_fn, &input_y_plus)?;
-    let ddiv_dy = (div_y_plus - div_center) / eps;
+    let ddiv_dx = coeus_autograd::add(&d2ux_dx2, &d2uy_dxdy);
+    let ddiv_dy = coeus_autograd::add(&d2ux_dxdy, &d2uy_dy2);
 
     Ok((ddiv_dx, ddiv_dy))
+}
+
+/// Compute mixed partial ∂²u/∂x∂y for output component `output_component`
+/// via the standard 4-point central finite-difference stencil, entirely on
+/// forward-pass outputs (weight-gradient-preserving, see module docs).
+fn compute_mixed_partial_2d<B, F>(
+    forward_fn: F,
+    input: &coeus_tensor::Tensor<f32, B>,
+    output_component: usize,
+) -> Result<Var<f32, B>, kwavers_core::error::KwaversError>
+where
+    B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default,
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    F: Fn(&Var<f32, B>) -> Var<f32, B>,
+{
+    let eps = 1e-4_f32;
+    let batch = input.shape()[0];
+    let backend = B::default();
+    let raw = input.as_slice();
+
+    let perturb = |dx: f32, dy: f32| {
+        let mut v = raw.iter().cloned().collect::<Vec<_>>();
+        for row in 0..batch {
+            v[row * 3 + 1] += dx;
+            v[row * 3 + 2] += dy;
+        }
+        coeus_tensor::Tensor::from_slice_on(vec![batch, 3], &v, &backend)
+    };
+    let component_of = |output: &Var<f32, B>| {
+        coeus_autograd::slice(
+            output,
+            &[(0, batch), (output_component, output_component + 1)],
+        )
+    };
+
+    let u_pp = component_of(&forward_fn(&Var::new(perturb(eps, eps), false)));
+    let u_pm = component_of(&forward_fn(&Var::new(perturb(eps, -eps), false)));
+    let u_mp = component_of(&forward_fn(&Var::new(perturb(-eps, eps), false)));
+    let u_mm = component_of(&forward_fn(&Var::new(perturb(-eps, -eps), false)));
+
+    let sum_diag = coeus_autograd::add(&u_pp, &u_mm);
+    let sum_anti = coeus_autograd::add(&u_pm, &u_mp);
+    let numerator = coeus_autograd::sub(&sum_diag, &sum_anti);
+    Ok(coeus_autograd::scalar_mul(
+        &numerator,
+        1.0 / (4.0 * eps * eps),
+    ))
 }

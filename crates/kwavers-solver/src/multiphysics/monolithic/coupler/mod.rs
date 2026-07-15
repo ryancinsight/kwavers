@@ -15,7 +15,7 @@
 
 use crate::integration::nonlinear::{GMRESConfig, GMRESSolver};
 use crate::plugin::Plugin;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::config::{NewtonKrylovConfig, PhysicsCoefficients};

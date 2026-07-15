@@ -137,7 +137,7 @@ mod tests {
         //
         // Analytical reference: Fornberg (1988) Tables of FD weights.
         use kwavers_math::numerics::operators::{CentralDifference4, DifferentialOperator};
-        use ndarray::Array3;
+        use leto::Array3;
         use std::f64::consts::PI;
 
         let nx = 32usize;

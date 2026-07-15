@@ -1,11 +1,12 @@
 use super::*;
+use leto::Array3;
 
 #[test]
 fn scattering_potential_matches_slowness_square_contract() {
-    let slowness = Array3::from_shape_vec((2, 1, 1), vec![0.0005, 0.00025]).unwrap();
+    let slowness = Array3::from_shape_vec([2, 1, 1], vec![0.0005, 0.00025]).unwrap();
     let potential = real_scattering_potential(4.0, &slowness, 0.00025).unwrap();
 
-    assert_eq!(potential.len(), 2);
+    assert_eq!((potential.len()), 2);
     assert_eq!(
         potential[0],
         16.0 * (0.0005_f64.powi(2) - 0.00025_f64.powi(2))
@@ -15,7 +16,7 @@ fn scattering_potential_matches_slowness_square_contract() {
 
 #[test]
 fn pstd_scattering_potential_uses_leapfrog_temporal_mass_symbol() {
-    let slowness = Array3::from_shape_vec((2, 1, 1), vec![0.0005, 0.00025]).unwrap();
+    let slowness = Array3::from_shape_vec([2, 1, 1], vec![0.0005, 0.00025]).unwrap();
     let omega = 4.0;
     let time_step = 0.25;
     let temporal_mass = pstd_temporal_angular_frequency_squared(omega, time_step).unwrap();

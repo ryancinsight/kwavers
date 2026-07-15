@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use super::*;
 use crate::therapy::theranostic_guidance::config::AnatomyKind;
@@ -61,7 +61,7 @@ fn peak_pressure_exposure_responds_to_internal_gas_scattering() {
 }
 
 fn prepared_fixture(speed: Array2<f64>) -> PreparedTheranosticSlice {
-    let (nx, ny) = speed.dim();
+    let [nx, ny] = speed.shape();
     let mut target_mask = Array2::from_elem((nx, ny), false);
     for ix in 13..15 {
         for iy in 13..15 {
@@ -489,7 +489,7 @@ fn focused_bowl_arc(count: usize, radius_m: f64, half_angle_rad: f64) -> Vec<Poi
 
 fn arg_max_2d(field: &Array2<f64>) -> (usize, usize, f64) {
     let mut best = (0usize, 0usize, f64::NEG_INFINITY);
-    for ((ix, iy), &v) in field.indexed_iter() {
+    for ([ix, iy], &v) in field.indexed_iter() {
         if v > best.2 {
             best = (ix, iy, v);
         }

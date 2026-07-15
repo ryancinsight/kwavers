@@ -1,7 +1,7 @@
 //! Mass-continuity residual checks.
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute the maximum pointwise mass continuity residual.
 ///
@@ -59,7 +59,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn small_grid() -> Grid {
         Grid::new(6, 6, 6, 1e-3, 1e-3, 1e-3).unwrap()

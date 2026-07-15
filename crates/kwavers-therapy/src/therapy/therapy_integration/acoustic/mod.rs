@@ -42,7 +42,7 @@
 //! ```
 
 use kwavers_simulation::backends::acoustic::AcousticSolverBackend;
-use ndarray::Array3;
+use leto::Array3;
 
 mod constructors;
 mod fields;

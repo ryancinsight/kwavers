@@ -1,12 +1,13 @@
 //! Thermal-strain elastography bindings.
 
+use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 use kwavers_physics::acoustics::imaging::modalities::elastography::thermal_strain::TrackingParams;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     ThermalStrainConfig, ThermalStrainImager,
 };
 use kwavers_physics::analytical::elastography;
-use ndarray::Array3;
-use numpy::{IntoPyArray, PyArray3, PyReadonlyArray3};
+use numpy::ndarray::Array3;
+use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -47,8 +48,8 @@ pub fn thermal_strain_rf_fixture(
     let tracked = Array3::from_shape_vec((n_lines, 1, nz), tracked)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        reference.into_pyarray(py).unbind(),
-        tracked.into_pyarray(py).unbind(),
+        reference.to_pyarray(py).unbind(),
+        tracked.to_pyarray(py).unbind(),
     ))
 }
 
@@ -131,14 +132,16 @@ pub fn thermal_strain_reconstruct(
     };
     let imager = ThermalStrainImager::new(config, tracking, sampling_rate)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let reference = reference.as_array().to_owned();
-    let tracked = tracked.as_array().to_owned();
+    let reference = nd_to_leto3(reference.as_array().to_owned());
+    let tracked = nd_to_leto3(tracked.as_array().to_owned());
     let result = imager
         .reconstruct_temperature(&reference, &tracked)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        result.displacement.into_pyarray(py).unbind(),
-        result.strain.into_pyarray(py).unbind(),
-        result.temperature_change.into_pyarray(py).unbind(),
+        leto3_to_nd3(result.displacement).to_pyarray(py).unbind(),
+        leto3_to_nd3(result.strain).to_pyarray(py).unbind(),
+        leto3_to_nd3(result.temperature_change)
+            .to_pyarray(py)
+            .unbind(),
     ))
 }

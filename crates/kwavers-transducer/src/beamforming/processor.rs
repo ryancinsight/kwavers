@@ -3,8 +3,9 @@
 // Import config from domain layer (single source of truth for configuration)
 use crate::beamforming::BeamformingConfig;
 use kwavers_core::error::KwaversResult;
-use kwavers_math::linear_algebra::{EigenDecomposition, LinearAlgebra};
-use ndarray::{Array1, Array2, Array3};
+use kwavers_math::linear_algebra::LinearAlgebraExt;
+use leto::{Array1, Array2, Array3};
+use leto_ops::inv;
 
 /// Beamforming processor for array algorithms
 #[derive(Debug)]
@@ -50,8 +51,8 @@ impl BeamformingProcessor {
     pub fn eigendecomposition(
         &self,
         matrix: &Array2<f64>,
-    ) -> KwaversResult<(ndarray::Array1<f64>, Array2<f64>)> {
-        EigenDecomposition::eigendecomposition(matrix)
+    ) -> KwaversResult<(leto::Array1<f64>, Array2<f64>)> {
+        matrix.eig()
     }
 
     /// Compute matrix inverse
@@ -59,7 +60,7 @@ impl BeamformingProcessor {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn matrix_inverse(&self, matrix: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-        LinearAlgebra::matrix_inverse(matrix)
+        Ok(inv(&matrix.view())?)
     }
 
     /// Compute geometric **propagation delays / time-of-flight (TOF)** (seconds) from each sensor
@@ -115,7 +116,8 @@ impl BeamformingProcessor {
         delays: &[f64],
         weights: &[f64],
     ) -> KwaversResult<Array3<f64>> {
-        let (n_elements, _channels, n_samples) = sensor_data.dim();
+        let shape = sensor_data.shape();
+        let (n_elements, _channels, n_samples) = (shape[0], shape[1], shape[2]);
 
         if delays.len() != n_elements || weights.len() != n_elements {
             return Err(kwavers_core::error::KwaversError::InvalidInput(format!(
@@ -136,7 +138,7 @@ impl BeamformingProcessor {
         // For some localization objectives you may want earliest-arrival alignment or a fixed sensor reference.
         let max_delay = delays.iter().copied().fold(f64::NEG_INFINITY, f64::max);
 
-        let mut output = Array3::zeros((1, 1, n_samples));
+        let mut output = Array3::zeros([1, 1, n_samples]);
         for (elem_idx, &delay) in delays.iter().enumerate() {
             let relative_delay = max_delay - delay;
             let delay_samples = (relative_delay * sample_rate).round().max(0.0) as usize;
@@ -169,7 +171,7 @@ impl BeamformingProcessor {
     /// - Applies diagonal loading `δI` for robustness.
     /// - Applies the resulting weights across time to produce `(1, 1, n_samples)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`kwavers_core::error::KwaversError`] returned by called functions.
     ///
     pub fn mvdr_unsteered_weights_time_series(
         &self,
@@ -192,7 +194,7 @@ impl BeamformingProcessor {
         }
 
         // Compute sample covariance R = (1/N) Σ x(n)x^T(n)
-        let mut covariance = Array2::zeros((n_elements, n_elements));
+        let mut covariance = Array2::zeros([n_elements, n_elements]);
         for t in 0..n_samples {
             for i in 0..n_elements {
                 for j in 0..n_elements {
@@ -200,7 +202,9 @@ impl BeamformingProcessor {
                 }
             }
         }
-        covariance /= n_samples as f64;
+        for val in covariance.iter_mut() {
+            *val /= n_samples as f64;
+        }
 
         // Diagonal loading: R' = R + δI
         for i in 0..n_elements {
@@ -211,9 +215,27 @@ impl BeamformingProcessor {
         let inv_cov = self.matrix_inverse(&covariance)?;
 
         // Uniform steering normalized to unity gain
-        let a = Array1::from_vec(vec![1.0 / (n_elements as f64).sqrt(); n_elements]);
-        let inv_cov_a = inv_cov.dot(&a);
-        let denominator = a.dot(&inv_cov_a);
+        let a = Array1::from_vec(
+            [n_elements],
+            vec![1.0 / (n_elements as f64).sqrt(); n_elements],
+        )
+        .unwrap();
+        let inv_cov_a = {
+            let mut result = Array1::zeros([n_elements]);
+            for i in 0..n_elements {
+                let mut sum = 0.0;
+                for j in 0..n_elements {
+                    sum += inv_cov[[i, j]] * a[j];
+                }
+                result[i] = sum;
+            }
+            result
+        };
+        let denominator = a
+            .iter()
+            .zip(inv_cov_a.iter())
+            .map(|(x, y)| x * y)
+            .sum::<f64>();
 
         if denominator.abs() < 1e-12 {
             // Fallback on numerical issues
@@ -227,10 +249,11 @@ impl BeamformingProcessor {
             );
         }
 
-        let weights = inv_cov_a.mapv(|x| x / denominator);
+        let weights_arr = inv_cov_a.mapv(|x| x / denominator);
+        let weights: Vec<f64> = weights_arr.into_vec();
 
         // Apply weights across time
-        let mut output = Array3::<f64>::zeros((1, 1, n_samples));
+        let mut output = Array3::<f64>::zeros([1, 1, n_samples]);
         for t in 0..n_samples {
             let mut beamformed_value = 0.0;
             for i in 0..n_elements {

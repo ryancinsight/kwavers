@@ -8,7 +8,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_physics::acoustics::bubble_dynamics::BubbleParameters;
 use kwavers_physics::factory::models::BubbleModel;
-use ndarray::{Array4, Axis};
+use leto::Array4;
 
 // ── Helpers ───────────────────────────────────────────────────────────────
 
@@ -28,9 +28,11 @@ fn water(grid: &Grid) -> HomogeneousMedium {
 fn field_array(grid: &Grid) -> Array4<f64> {
     let n_fields = 6;
     let mut f = Array4::zeros((n_fields, grid.nx, grid.ny, grid.nz));
-    f.index_axis_mut(Axis(0), UnifiedFieldType::Pressure.index())
+    f.index_axis_mut::<3>(0, UnifiedFieldType::Pressure.index())
+        .expect("invariant: axis 0 in range for Array4")
         .fill(50_000.0);
-    f.index_axis_mut(Axis(0), UnifiedFieldType::BubbleRadius.index())
+    f.index_axis_mut::<3>(0, UnifiedFieldType::BubbleRadius.index())
+        .expect("invariant: axis 0 in range for Array4")
         .fill(5e-6);
     f
 }
@@ -201,10 +203,10 @@ fn nucleation_false_seeds_exactly_one_bubble() {
 
     if let Some(BubbleEngine::KmOrRp { field, .. }) = &plugin.engine {
         assert_eq!(
-            field.bubbles.len(),
+            (field.bubbles.len()),
             1,
             "nucleation=false must seed exactly 1 bubble; got {}",
-            field.bubbles.len()
+            (field.bubbles.len())
         );
     } else {
         panic!("expected KmOrRp engine");
@@ -225,9 +227,9 @@ fn nucleation_true_seeds_multiple_bubbles() {
 
     if let Some(BubbleEngine::KmOrRp { field, .. }) = &plugin.engine {
         assert!(
-            field.bubbles.len() > 1,
+            (field.bubbles.len()) > 1,
             "nucleation=true must seed more than 1 bubble; got {}",
-            field.bubbles.len()
+            (field.bubbles.len())
         );
     } else {
         panic!("expected KmOrRp engine");

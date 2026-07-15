@@ -3,8 +3,8 @@
 //! Westervelt harmonic evolution).
 
 use kwavers_physics::analytical::wave;
-use ndarray::Array2;
-use numpy::{IntoPyArray, PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::ndarray::Array2;
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -38,7 +38,7 @@ pub fn fubini_harmonic_spectrum(
     sigma: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
     let result = wave::fubini_harmonic_spectrum(n_max, sigma);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the shock formation distance for a finite-amplitude plane wave.
@@ -94,7 +94,7 @@ pub fn tone_burst_waveform(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::tone_burst_waveform(t_s, amplitude_pa, freq_hz, n_cycles);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Generate a centered Hann-windowed tone burst on an existing time axis.
@@ -114,7 +114,7 @@ pub fn centered_hann_tone_burst_waveform(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::centered_hann_tone_burst_waveform(t_s, amplitude_pa, freq_hz, n_cycles);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Superimpose Hann-windowed tone bursts at arbitrary start times (pulse train).
@@ -151,7 +151,7 @@ pub fn pulse_train_waveform(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::pulse_train_waveform(t_s, amplitude_pa, freq_hz, n_cycles, ts_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Goldberg shock parameter sweep over pulse durations.
@@ -189,7 +189,7 @@ pub fn goldberg_shock_parameter_sweep(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::goldberg_shock_parameter_sweep(pnp_pa, freq_hz, c, rho, beta, tau_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Shock-enhanced absorption gain factor (phenomenological model).
@@ -216,7 +216,7 @@ pub fn shock_enhanced_absorption_gain(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::shock_enhanced_absorption_gain(s_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Effective pressure amplitude of a shock-distorted waveform.
@@ -245,7 +245,7 @@ pub fn shock_waveform_pressure(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::shock_waveform_pressure(pnp_pa, ppp_pa, s_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Shock-enhanced volumetric heat-source density.
@@ -281,7 +281,7 @@ pub fn shock_heat_source_density(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::shock_heat_source_density(p_s, s_s, alpha_np_m, rho, c);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Rectangular-envelope Fubini waveform for a shock-formed millisecond pulse.
@@ -318,7 +318,7 @@ pub fn shock_vapor_pulse_waveform(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result =
         wave::shock_vapor_pulse_waveform(t_s, p0_pa, f0, duration_s, t_start, sigma, n_max);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Reconstruct the Fubini time-domain waveform from its harmonic series.
@@ -351,7 +351,7 @@ pub fn fubini_waveform(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = wave::fubini_waveform(t_s, p0_pa, freq_hz, sigma, n_max);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Extract Hann-windowed harmonic amplitudes from row-major time traces.
@@ -387,7 +387,7 @@ pub fn hann_windowed_harmonic_amplitudes(
     .map_err(PyValueError::new_err)?;
     let arr2d = Array2::from_shape_vec((n_traces, n_harmonics), amplitudes)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray(py).unbind())
+    Ok(arr2d.to_pyarray(py).unbind())
 }
 
 /// Compute Westervelt harmonic pressure evolution along a propagation axis.
@@ -429,5 +429,5 @@ pub fn westervelt_harmonic_evolution(
     let flat: Vec<f64> = rows.into_iter().flatten().collect();
     let arr2d = Array2::from_shape_vec((nz, n_max), flat)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.into_pyarray(py).unbind())
+    Ok(arr2d.to_pyarray(py).unbind())
 }

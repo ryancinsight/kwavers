@@ -1,6 +1,7 @@
 //! Annulus, bowl, and per-element source tests for [`KWaveArray`].
 
 use super::super::{DiscSourceProfile, KWaveArray};
+use crate::transducers::physics::{PlanarApertureGeometry, PlanarApertureShape};
 
 /// Annulus has strictly fewer active cells than the full bowl of the same
 /// outer diameter, and the surface-area formula satisfies the closed form:
@@ -57,7 +58,7 @@ fn test_build_per_element_source_superposition() {
     // per-cell signal built as Σᵢ Wᵢ[c] · sᵢ[t], setting s1 = s2 = s
     // must reproduce the shared-signal result (W_sum[c] · s[t]).
     use kwavers_grid::Grid;
-    use ndarray::Array2;
+    use leto::Array2;
 
     let dx = 5.0e-4;
     let grid = Grid::new(61, 61, 61, dx, dx, dx).expect("grid");
@@ -83,7 +84,7 @@ fn test_build_per_element_source_superposition() {
         .expect("build per-element source");
     let w_sum = arr.get_array_weighted_mask(&grid);
 
-    let (nx, ny, nz) = mask_unit.dim();
+    let [nx, ny, nz] = mask_unit.shape();
     let mut active_cells = Vec::new();
     for k in 0..nz {
         for j in 0..ny {
@@ -125,7 +126,7 @@ fn test_disc_source_profile_radial_power_contract() {
 #[test]
 fn test_profiled_disc_enters_per_element_source_weights() {
     use kwavers_grid::Grid;
-    use ndarray::Array2;
+    use leto::Array2;
 
     let dx = 5.0e-4;
     let grid = Grid::new(61, 61, 61, dx, dx, dx).expect("grid");
@@ -154,14 +155,14 @@ fn test_profiled_disc_enters_per_element_source_weights() {
         weight_delta > 1.0,
         "profiled disc must change the finite-source weight map"
     );
-    assert!(profiled_weights.sum() > 0.0);
+    assert!(profiled_weights.iter().sum::<f64>() > 0.0);
 
     let signal = Array2::<f64>::ones((1, 1));
     let (mask, per_cell) = profiled
         .build_per_element_source(&grid, &signal)
         .expect("profiled source");
     let active_cells = KWaveArray::active_cells_fortran_order(&mask);
-    assert_eq!(active_cells.len(), per_cell.nrows());
+    assert_eq!(active_cells.len(), per_cell.shape()[0]);
     assert!(!active_cells.is_empty());
     for (row, &(i, j, k)) in active_cells.iter().enumerate() {
         assert!(
@@ -173,11 +174,41 @@ fn test_profiled_disc_enters_per_element_source_weights() {
 }
 
 #[test]
+fn profiled_disc_clips_at_the_domain_boundary_without_distant_tail_sources() {
+    // A clipped aperture keeps finite BLI support; an aperture beyond that BLI
+    // window must not be projected onto a boundary cell by the sinc tail.
+    use kwavers_grid::Grid;
+
+    let spacing = 0.25e-3;
+    let grid = Grid::new(17, 17, 1, spacing, spacing, spacing).expect("grid");
+    let mut array = KWaveArray::new();
+    array.add_profiled_disc_element(
+        (-0.10e-3, 1.0e-3, 0.0),
+        0.80e-3,
+        Some((-0.10e-3, 1.0e-3, 1.0)),
+        DiscSourceProfile::uniform(),
+    );
+    array.add_profiled_disc_element(
+        (100.0e-3, 1.0e-3, 0.0),
+        0.20e-3,
+        Some((100.0e-3, 1.0e-3, 1.0)),
+        DiscSourceProfile::uniform(),
+    );
+
+    let mut has_support = [false; 2];
+    array.for_each_element_weighted_cell(&grid, |element, _, _, _, weight| {
+        has_support[element] |= weight != 0.0;
+    });
+
+    assert_eq!(has_support, [true, false]);
+}
+
+#[test]
 fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
     // Regression: per-element source assembly must preserve the weighted-mask
     // superposition contract without requiring one dense 3-D mask per element.
     use kwavers_grid::Grid;
-    use ndarray::Array2;
+    use leto::Array2;
 
     let dx = 5.0e-4;
     let grid = Grid::new(41, 41, 9, dx, dx, dx).expect("grid");
@@ -200,7 +231,7 @@ fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
     let weighted = arr.get_array_weighted_mask(&grid);
     let active_cells = KWaveArray::active_cells_fortran_order(&mask);
 
-    assert_eq!(active_cells.len(), per_cell.nrows());
+    assert_eq!(active_cells.len(), per_cell.shape()[0]);
     assert!(!active_cells.is_empty());
     for (row, &(i, j, k)) in active_cells.iter().enumerate() {
         let expected = weighted[[i, j, k]];
@@ -210,4 +241,63 @@ fn test_many_profiled_discs_per_element_source_matches_weighted_mask() {
             "row {row} cell ({i},{j},{k}): got {got}, expected {expected}"
         );
     }
+}
+
+#[test]
+fn planar_quadrants_conserve_area_and_keep_signals_independent() {
+    use kwavers_grid::Grid;
+    use leto::Array2;
+
+    let dx = 2.5e-4;
+    let grid = Grid::new(81, 81, 9, dx, dx, dx).expect("grid");
+    let center = [40.0 * dx, 40.0 * dx, 4.0 * dx];
+    let inner = 0.75e-3;
+    let outer = 2.0e-3;
+    let span = std::f64::consts::FRAC_PI_2;
+    let mut array = KWaveArray::new();
+    for quadrant in 0..4 {
+        let geometry = PlanarApertureGeometry::oriented(
+            center,
+            [0.0, 0.0, 1.0],
+            [1.0, 0.0, 0.0],
+            PlanarApertureShape::AnnularSector {
+                inner_radius_m: inner,
+                outer_radius_m: outer,
+                start_angle_rad: quadrant as f64 * span,
+                span_angle_rad: span,
+            },
+        )
+        .expect("valid quadrant");
+        array.add_planar_aperture_element(geometry);
+    }
+
+    let signals = Array2::<f64>::from_shape_fn(
+        (4, 4),
+        |[row, column]| {
+            if row == column {
+                1.0
+            } else {
+                0.0
+            }
+        },
+    );
+    let (_, per_cell) = array
+        .build_per_element_source(&grid, &signals)
+        .expect("sector source");
+    let expected_quadrant_mass = 0.5 * (outer * outer - inner * inner) * span / (dx * dx);
+    let operation_bound = 64.0 * f64::EPSILON * per_cell.shape()[0] as f64;
+    for quadrant in 0..4 {
+        let realized: f64 = (0..per_cell.shape()[0])
+            .map(|row| per_cell[[row, quadrant]])
+            .sum();
+        assert!(
+            (realized - expected_quadrant_mass).abs()
+                <= operation_bound * expected_quadrant_mass.max(1.0),
+            "quadrant {quadrant}: realized {realized}, expected {expected_quadrant_mass}"
+        );
+    }
+    assert!(
+        (array.compute_total_surface_area() - 4.0 * expected_quadrant_mass * dx * dx).abs()
+            <= 16.0 * f64::EPSILON * (outer * outer).max(1.0)
+    );
 }

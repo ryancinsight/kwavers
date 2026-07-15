@@ -4,7 +4,7 @@ use super::CPMLBoundary;
 use crate::traits::{AbsorbingBoundary, BoundaryCondition, BoundaryDirections};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::GridTopology;
-use ndarray::{Array3, ArrayViewMut3, Zip};
+use leto::{Array3, ArrayViewMut3};
 
 // Implement new BoundaryCondition trait system
 impl BoundaryCondition for CPMLBoundary {
@@ -18,7 +18,7 @@ impl BoundaryCondition for CPMLBoundary {
 
     fn apply_scalar_spatial(
         &mut self,
-        field: ArrayViewMut3<f64>,
+        mut field: ArrayViewMut3<f64>,
         grid: &dyn GridTopology,
         _time_step: usize,
         dt: f64,
@@ -31,23 +31,27 @@ impl BoundaryCondition for CPMLBoundary {
         };
 
         // Apply damping using sigma profiles
-        Zip::indexed(field).par_for_each(|(i, j, k), val| {
-            let s_x = self.profiles.sigma_x[i];
-            let s_y = self.profiles.sigma_y[j];
-            let s_z = self.profiles.sigma_z[k];
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        leto_ops::indexed_map_inplace(&mut field, |[i, j, k], val| {
+            let s_x = sigma_x[i];
+            let s_y = sigma_y[j];
+            let s_z = sigma_z[k];
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
                 *val *= (-sigma_total * dt * 0.5).exp();
             }
-        });
+        })
+        .expect("invariant: valid CPML boundary-condition field layout");
 
         Ok(())
     }
 
     fn apply_scalar_frequency(
         &mut self,
-        field: &mut Array3<num_complex::Complex<f64>>,
+        field: &mut Array3<kwavers_math::fft::Complex64>,
         grid: &dyn GridTopology,
         _time_step: usize,
         dt: f64,
@@ -59,10 +63,13 @@ impl BoundaryCondition for CPMLBoundary {
             self.estimate_dt_from_spacing(&spacing)
         };
 
-        Zip::indexed(field).par_for_each(|(i, j, k), val| {
-            let s_x = self.profiles.sigma_x[i];
-            let s_y = self.profiles.sigma_y[j];
-            let s_z = self.profiles.sigma_z[k];
+        let sigma_x = &self.profiles.sigma_x;
+        let sigma_y = &self.profiles.sigma_y;
+        let sigma_z = &self.profiles.sigma_z;
+        leto_ops::indexed_map_inplace(&mut field.view_mut(), |[i, j, k], val| {
+            let s_x = sigma_x[i];
+            let s_y = sigma_y[j];
+            let s_z = sigma_z[k];
             let sigma_total = s_x + s_y + s_z;
 
             if sigma_total > 0.0 {
@@ -70,7 +77,8 @@ impl BoundaryCondition for CPMLBoundary {
                 val.re *= decay;
                 val.im *= decay;
             }
-        });
+        })
+        .expect("invariant: valid CPML boundary-condition field layout");
 
         Ok(())
     }

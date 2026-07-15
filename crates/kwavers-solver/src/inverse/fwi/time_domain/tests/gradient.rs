@@ -3,7 +3,7 @@ use crate::inverse::seismic::parameters::FwiParameters;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array2, Array3, Zip};
+use leto::{Array2, Array3};
 
 /// Verify the post-correlation velocity-gradient scaling applies the
 /// per-voxel `-2 / (ρ(x) · c(x)³)` factor exactly.
@@ -34,7 +34,10 @@ fn test_fwi_velocity_gradient_scaling_applies_per_voxel_factor() {
     // Fabricate a deterministic correlation field `I(x)` with sign + magnitude
     // variation so the scaling factor is observable per-voxel.
     let mut correlation = Array3::zeros(dims);
-    for ((ix, iy, iz), value) in correlation.indexed_iter_mut() {
+    for ([ix, iy, iz], value) in correlation
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let sign = if (ix + iy + iz) % 2 == 0 { 1.0 } else { -1.0 };
         *value = sign * (1.0 + ix as f64 + 0.5 * iy as f64 + 0.25 * iz as f64);
     }
@@ -54,7 +57,7 @@ fn test_fwi_velocity_gradient_scaling_applies_per_voxel_factor() {
 
     // Per-voxel expected value: g(x) = -2 / (ρ(x) · c³) · I(x).
     let c_cubed = c0.powi(3);
-    for ((ix, iy, iz), &i_val) in correlation.indexed_iter() {
+    for ([ix, iy, iz], &i_val) in correlation.indexed_iter() {
         let rho = density[[ix, iy, iz]];
         let expected = -2.0 / (rho * c_cubed) * i_val;
         let actual = scaled[[ix, iy, iz]];
@@ -100,7 +103,7 @@ fn test_fwi_velocity_gradient_scaling_rejects_non_physical_inputs() {
     let density = Array3::from_elem(dims, 2000.0_f64);
 
     // Shape mismatch.
-    let bad_density = Array3::from_elem((3, 3, 3), 2000.0_f64);
+    let bad_density = Array3::from_elem([3, 3, 3], 2000.0_f64);
     assert!(apply_velocity_gradient_scaling(
         correlation.view_mut(),
         model.view(),
@@ -216,7 +219,10 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
     // point scatterer in transmission does not). Hard-zeroed within 2 cells of
     // every face so it never overlaps the source, the receiver plane, or the PML.
     let mut delta_m = Array3::zeros(dims);
-    for ((ix, iy, iz), value) in delta_m.indexed_iter_mut() {
+    for ([ix, iy, iz], value) in delta_m
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let near_boundary =
             ix < 2 || iy < 2 || iz < 2 || ix >= nx - 2 || iy >= ny - 2 || iz >= nz - 2;
         if near_boundary {
@@ -239,9 +245,10 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
     // "True" model carries the slab; the starting model is homogeneous, so the
     // data misfit — and therefore the gradient — is non-trivial at `m`.
     let mut true_model = Array3::from_elem(dims, c0);
-    Zip::from(&mut true_model)
-        .and(&delta_m)
-        .for_each(|c, &d| *c += 100.0 * d);
+    leto_ops::zip_mut_with(&mut true_model.view_mut(), &delta_m.view(), |c, d| {
+        *c += 100.0 * *d
+    })
+    .expect("invariant: FWI field shapes match");
     let model = Array3::from_elem(dims, c0);
 
     let observed = processor
@@ -280,15 +287,20 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
     // by a transverse ramp in y. It overlaps a different sub-volume, so its
     // directional derivative is independent of δm_a's.
     let mut delta_m_b = delta_m.clone();
-    for ((_, iy, _), value) in delta_m_b.indexed_iter_mut() {
+    for ([_, iy, _], value) in delta_m_b
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         *value *= (iy as f64) / (ny as f64);
     }
 
     // Directional derivative g · δm for a direction.
     let directional = |dir: &Array3<f64>| -> f64 {
-        Zip::from(&gradient)
-            .and(dir)
-            .fold(0.0, |acc, &g, &d| acc + g * d)
+        gradient
+            .iter()
+            .zip(dir.iter())
+            .map(|(&g, &d)| g * d)
+            .sum::<f64>()
     };
 
     // Richardson-extrapolated central finite-difference slope dJ/ds along `dir`,
@@ -299,9 +311,10 @@ fn test_fwi_adjoint_gradient_is_valid_descent_direction() {
         let central = |eps: f64| -> f64 {
             let objective_at = |scale: f64| -> f64 {
                 let mut perturbed = model.clone();
-                Zip::from(&mut perturbed)
-                    .and(dir)
-                    .for_each(|c, &d| *c += scale * d);
+                leto_ops::zip_mut_with(&mut perturbed.view_mut(), &dir.view(), |c, d| {
+                    *c += scale * *d
+                })
+                .expect("invariant: FWI field shapes match");
                 let synth = processor
                     .generate_synthetic_data(&perturbed, &geometry, &grid)
                     .expect("forward at perturbed model");
@@ -392,7 +405,10 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
     // Homogeneous velocity model: 1500 m/s + 5% Gaussian-ish perturbation
     // around the centre so the gradient is non-trivial.
     let mut model = Array3::from_elem(dims, SOUND_SPEED_WATER_SIM);
-    for ((ix, iy, iz), value) in model.indexed_iter_mut() {
+    for ([ix, iy, iz], value) in model
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let r2 = (ix as f64 - 3.5).powi(2) + (iy as f64 - 3.5).powi(2) + (iz as f64 - 3.5).powi(2);
         *value += 75.0 * (-r2 / 4.0).exp();
     }
@@ -438,7 +454,7 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
     let (synth_const, history_const) = baseline
         .forward_model(&model, &geometry, &grid)
         .expect("baseline forward");
-    let observed = Array2::zeros(synth_const.dim()); // arbitrary "data" so residual is non-zero
+    let observed = Array2::zeros(synth_const.shape()); // arbitrary "data" so residual is non-zero
     let residual = baseline
         .compute_adjoint_source(&observed, &synth_const)
         .expect("residual");
@@ -512,7 +528,10 @@ fn test_fwi_heterogeneous_density_gradient_differs_from_baseline() {
 /// axis and diagonal (so all TV difference directions are exercised).
 fn directional_tv_test_model(dims: (usize, usize, usize)) -> Array3<f64> {
     let mut m = Array3::<f64>::zeros(dims);
-    for ((i, j, k), v) in m.indexed_iter_mut() {
+    for ([i, j, k], v) in m
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         let (a, b, c) = (i as f64 * 0.3, j as f64 * 0.4, k as f64 * 0.25);
         // Smooth, non-separable pattern: gradients are O(0.1) everywhere, keeping
         // the Huber weight W well above the ε² floor so the functional is smooth.
@@ -529,7 +548,7 @@ fn directional_tv_test_model(dims: (usize, usize, usize)) -> Array3<f64> {
 fn test_directional_tv_gradient_is_zero_for_constant_field() {
     use super::super::gradient::{directional_tv_gradient, AXIS_TV_DIRECTIONS, FDTV_DIRECTIONS};
 
-    let model = Array3::from_elem((6, 5, 4), 1537.0_f64);
+    let model = Array3::from_elem([6, 5, 4], 1537.0_f64);
     for dirs in [&AXIS_TV_DIRECTIONS[..], &FDTV_DIRECTIONS[..]] {
         let g = directional_tv_gradient(&model, dirs);
         let max_abs = g.iter().fold(0.0_f64, |a, &x| a.max(x.abs()));
@@ -601,7 +620,10 @@ fn test_fdtv_functional_exceeds_axis_only_for_diagonal_structure() {
     // signal that the axis-only stencil ignores.
     let dims = (6, 6, 3);
     let mut model = Array3::<f64>::zeros(dims);
-    for ((i, j, _), v) in model.indexed_iter_mut() {
+    for ([i, j, _], v) in model
+        .indexed_iter_mut()
+        .expect("invariant: owned array yields indexed iterator")
+    {
         *v = i as f64 + j as f64;
     }
 

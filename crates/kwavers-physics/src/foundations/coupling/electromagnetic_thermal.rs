@@ -21,7 +21,7 @@ use kwavers_core::constants::thermodynamic::{
     BODY_TEMPERATURE_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
-use ndarray::ArrayD;
+use leto::Array3;
 
 /// Electromagnetic-thermal coupling for photothermal effects
 pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
@@ -31,10 +31,10 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
     /// Optical heating rate Q = μ_a Φ (W/m³)
     fn optical_heating_rate(
         &self,
-        fluence_rate: &ArrayD<f64>,
+        fluence_rate: &Array3<f64>,
         position: &[f64],
         wavelength: f64,
-    ) -> ArrayD<f64> {
+    ) -> Array3<f64> {
         let mu_a = self.optical_absorption_coefficient(position, wavelength);
         fluence_rate.mapv(|dphi_dt| mu_a * dphi_dt)
     }
@@ -55,11 +55,11 @@ pub trait ElectromagneticThermalCoupling: MultiPhysicsCoupling {
     /// Bioheat equation source term (including perfusion)
     fn bioheat_source(
         &self,
-        fluence_rate: &ArrayD<f64>,
+        fluence_rate: &Array3<f64>,
         temperature: f64,
         position: &[f64],
         wavelength: f64,
-    ) -> ArrayD<f64> {
+    ) -> Array3<f64> {
         let optical_heating = self.optical_heating_rate(fluence_rate, position, wavelength);
         let perfusion = self.perfusion_cooling(temperature, position);
         optical_heating.mapv(|q_opt| q_opt - perfusion)

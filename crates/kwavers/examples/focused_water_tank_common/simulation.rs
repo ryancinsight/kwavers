@@ -16,8 +16,8 @@ use kwavers_solver::forward::pstd::dg::{
 };
 use kwavers_solver::forward::pstd::PSTDSolver;
 use kwavers_solver::interface::solver::Solver;
-use ndarray::Array1;
-use ndarray::{Array2, Array3};
+use leto::Array1;
+use leto::{Array2, Array3};
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -50,7 +50,10 @@ pub fn run_dg_axial_field() -> Result<AxialField> {
     let solver = DGSolver::new(config, grid)?;
     let mut pressure = Array3::<f64>::zeros((DG_ELEMENTS, n_nodes, 1));
     let mut velocity = Array3::<f64>::zeros((DG_ELEMENTS, n_nodes, 1));
-    let mut workspace = AcousticDg1DWorkspace::new(pressure.dim());
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     let source_weights = dg_source_weights(&xi_nodes, &weights);
     let density = physics::RHO0 * physics::DX;
     let dt_sub = physics::DT / DG_SUBSTEPS_PER_STEP as f64;
@@ -168,7 +171,10 @@ fn run_dg_tensor_field(name: &'static str, nz: usize) -> Result<SolverField> {
     };
     let solver = DGSolver::new(config, Arc::clone(&grid))?;
     let mut state = Array3::<f64>::zeros(solver.acoustic_tensor_state_shape()?);
-    let mut workspace = AcousticDgTensorWorkspace::new(state.dim());
+    let mut workspace = AcousticDgTensorWorkspace::new({
+        let s = state.shape();
+        (s[0], s[1], s[2])
+    });
     let sources = dg_tensor_sources(&solver, nz)?;
     let dt_sub = physics::DT / DG_TENSOR_SUBSTEPS_PER_STEP as f64;
     let mut pressure = Array3::<f64>::zeros((physics::NX, physics::NY, nz));
@@ -291,11 +297,25 @@ fn run_dg_tensor_field_with_cpml(name: &'static str, nz: usize) -> Result<Solver
     })
 }
 
-fn update_peak(name: &'static str, peak: &mut Array2<f64>, pressure: &Array3<f64>) {
-    let z = physics::FOCUS_Z.min(pressure.shape()[2] - 1);
+trait PressureGrid3 {
+    fn nz(&self) -> usize;
+    fn at(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl PressureGrid3 for leto::Array3<f64> {
+    fn nz(&self) -> usize {
+        self.shape()[2]
+    }
+    fn at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
+
+fn update_peak<P: PressureGrid3>(name: &'static str, peak: &mut Array2<f64>, pressure: &P) {
+    let z = physics::FOCUS_Z.min(pressure.nz() - 1);
     for i in 0..physics::NX {
         for j in 0..physics::NY {
-            let value = pressure[[i, j, z]];
+            let value = pressure.at(i, j, z);
             assert!(
                 value.is_finite(),
                 "{name} pressure field contains non-finite values"
@@ -343,7 +363,7 @@ fn dg_tensor_sources(solver: &DGSolver, nz: usize) -> Result<Vec<DgTensorSource>
 
 fn apply_dg_tensor_source_rhs(rhs: &mut Array3<f64>, sources: &[DgTensorSource], t: f64) {
     for source in sources {
-        rhs[(source.elem, source.node, ACOUSTIC_PRESSURE_VAR)] +=
+        rhs[[source.elem, source.node, ACOUSTIC_PRESSURE_VAR]] +=
             source.weight * physics::OMEGA * physics::element_pressure_at(&source.element, t);
     }
 }
@@ -378,17 +398,17 @@ fn apply_dg_source(
 ) {
     let drive = physics::OMEGA * physics::focused_aperture_pressure_at(t);
     for &(elem, node, weight) in source_weights {
-        pressure[(elem, node, 0)] += dt * drive * weight;
+        pressure[[elem, node, 0]] += dt * drive * weight;
     }
 }
 
 fn sample_dg_pressure(pressure: &Array3<f64>, xi_nodes: &Array1<f64>, coordinate: f64) -> f64 {
     if coordinate <= 0.0 {
-        return pressure[(0, 0, 0)];
+        return pressure[[0, 0, 0]];
     }
     let max_coordinate = 2.0 * DG_ELEMENTS as f64;
     if coordinate >= max_coordinate {
-        return pressure[(DG_ELEMENTS - 1, xi_nodes.len() - 1, 0)];
+        return pressure[[DG_ELEMENTS - 1, xi_nodes.len() - 1, 0]];
     }
     let elem = ((coordinate / 2.0).floor() as usize).min(DG_ELEMENTS - 1);
     if coordinate.fract() == 0.0 && elem > 0 && (coordinate as usize).is_multiple_of(2) {
@@ -410,7 +430,7 @@ fn lagrange_value(pressure: &Array3<f64>, xi_nodes: &Array1<f64>, elem: usize, x
                 basis *= (xi - xi_nodes[other]) / (xi_nodes[node] - xi_nodes[other]);
             }
         }
-        value += basis * pressure[(elem, node, 0)];
+        value += basis * pressure[[elem, node, 0]];
     }
     value
 }

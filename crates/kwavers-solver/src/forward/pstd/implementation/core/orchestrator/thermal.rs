@@ -43,8 +43,32 @@ use kwavers_core::error::KwaversResult;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::conservation::acoustic_heat_source;
 use kwavers_physics::acoustics::mechanics::absorption::AbsorptionMode;
-use ndarray::{Array2, Array3, Zip};
+use leto::{Array2, Array3};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::{fmt, sync::Arc};
+
+fn copy_scaled_absorption_field(dst: &mut Array3<f64>, alpha_si: &Array3<f64>, factor: f64) {
+    assert_eq!(
+        dst.shape(),
+        alpha_si.shape(),
+        "invariant: PSTD absorption destination shape matches alpha_si shape"
+    );
+
+    if let (Some(dst_values), Some(alpha_values)) = (dst.as_slice_mut(), alpha_si.as_slice()) {
+        enumerate_mut_with::<Adaptive, _, _>(dst_values, |index, value| {
+            *value = alpha_values[index] * factor;
+        });
+    } else {
+        let [nx, ny, nz] = dst.shape();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    dst[[i, j, k]] = alpha_si[[i, j, k]] * factor;
+                }
+            }
+        }
+    }
+}
 
 /// Input bundle for the coupled PSTD acoustic + thermal time loop.
 ///
@@ -62,7 +86,7 @@ pub struct ThermalOrchestrationInput<'a> {
     pub thermal_medium: &'a dyn Medium,
     /// Center angular frequency [rad/s] used once to populate `alpha_np_m`.
     pub omega_c: f64,
-    /// Thermal time step [s].
+    /// Thermal time step \[s\].
     pub dt_thermal: f64,
     /// Acoustic steps between thermal updates. Must be at least one.
     pub n_acoustic_per_thermal: usize,
@@ -122,22 +146,18 @@ impl PSTDSolver {
                 if let Some(ref kernel) = self.absorption {
                     let omega_sq = omega_c * omega_c;
                     let alpha_si = &kernel.alpha_si;
-                    let shape = alpha_si.dim();
+                    let shape = alpha_si.shape();
                     let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
-                    Zip::from(buf)
-                        .and(alpha_si)
-                        .par_for_each(|a, &si| *a = si * omega_sq);
+                    copy_scaled_absorption_field(buf, alpha_si, omega_sq);
                 }
             }
             Mode::PowerLaw(y) => {
                 if let Some(ref kernel) = self.absorption {
                     let omega_y = omega_c.powf(y);
                     let alpha_si = &kernel.alpha_si;
-                    let shape = alpha_si.dim();
+                    let shape = alpha_si.shape();
                     let buf = self.alpha_np_m.get_or_insert_with(|| Array3::zeros(shape));
-                    Zip::from(buf)
-                        .and(alpha_si)
-                        .par_for_each(|a, &si| *a = si * omega_y);
+                    copy_scaled_absorption_field(buf, alpha_si, omega_y);
                 }
             }
         }
@@ -156,7 +176,7 @@ impl PSTDSolver {
     /// Returns `None` when thermal coupling has not been requested (lossless path or
     /// before `populate_alpha_np_m_at_frequency` / `set_alpha_np_m` is called).
     #[must_use]
-    pub fn alpha_np_m(&self) -> Option<ndarray::ArrayView3<'_, f64>> {
+    pub fn alpha_np_m(&self) -> Option<leto::ArrayView3<'_, f64>> {
         self.alpha_np_m.as_ref().map(|a| a.view())
     }
 
@@ -169,17 +189,21 @@ impl PSTDSolver {
     /// Pass the returned array to `ThermalDiffusionSolver::update()` as `external_source`.
     #[must_use]
     pub fn compute_acoustic_heat_source(&self) -> Array3<f64> {
+        let [nx, ny, nz] = self.fields.p.shape();
         match self.alpha_np_m.as_ref() {
-            None => Array3::zeros(self.fields.p.dim()),
-            Some(alpha) => acoustic_heat_source(
-                &self.fields.p,
-                &self.fields.ux,
-                &self.fields.uy,
-                &self.fields.uz,
-                &self.materials.rho0,
-                &self.materials.c0,
-                alpha,
-            ),
+            None => Array3::zeros((nx, ny, nz)),
+            Some(alpha) => {
+                let alpha_leto = alpha.clone();
+                acoustic_heat_source(
+                    &self.fields.p,
+                    &self.fields.ux,
+                    &self.fields.uy,
+                    &self.fields.uz,
+                    &self.materials.rho0,
+                    &self.materials.c0,
+                    &alpha_leto,
+                )
+            }
         }
     }
 
@@ -192,7 +216,7 @@ impl PSTDSolver {
     ///   `n_acoustic_per_thermal` acoustic steps.
     /// - `thermal_medium`: medium supplying `thermal_diffusivity` to the thermal solver.
     /// - `omega_c`: center angular frequency [rad/s]; used once to populate `alpha_np_m`.
-    /// - `dt_thermal`: thermal time step [s].  Typically
+    /// - `dt_thermal`: thermal time step \[s\].  Typically
     ///   `n_acoustic_per_thermal * dt_acoustic`.
     /// - `n_acoustic_per_thermal`: number of acoustic steps between thermal updates.
     ///   Must be ≥ 1.

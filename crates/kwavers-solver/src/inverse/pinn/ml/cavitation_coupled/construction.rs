@@ -6,13 +6,16 @@ use super::domain::CavitationCoupledDomain;
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, PinnCouplingInterface, PinnPhysicsCouplingType,
 };
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::constants::cavitation::SURFACE_TENSION_WATER;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_physics::bubble_dynamics::{BubbleState, KellerMiksisModel};
 use std::collections::HashMap;
 
-impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> CavitationCoupledDomain<B>
+where
+    B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+{
     /// Create a cavitation-coupled domain.
     pub fn new(
         config: CavitationCouplingConfig,
@@ -94,32 +97,26 @@ impl<B: AutodiffBackend> CavitationCoupledDomain<B> {
     ///
     pub fn detect_nucleation_sites(
         &mut self,
-        pressure_field: &Tensor<B, 2>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        z: Option<&Tensor<B, 2>>,
+        pressure_field: &Var<f32, B>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        z: Option<&Var<f32, B>>,
     ) -> Vec<(f64, f64, f64)> {
         // Blake threshold: R_n = 5 μm, σ = SURFACE_TENSION_WATER (water at 20°C), P_0 = 1 atm
         let p_blake = Self::blake_threshold(5e-6, SURFACE_TENSION_WATER, ATMOSPHERIC_PRESSURE);
 
-        let pressure_data = pressure_field.clone().into_data();
-        let pressure_slice = pressure_data.as_slice::<f32>().unwrap();
+        let pressure_slice = pressure_field.tensor.as_slice();
+        let x_slice = x.tensor.as_slice();
+        let y_slice = y.tensor.as_slice();
 
-        let x_data = x.clone().into_data();
-        let x_slice = x_data.as_slice::<f32>().unwrap();
-
-        let y_data = y.clone().into_data();
-        let y_slice = y_data.as_slice::<f32>().unwrap();
-
-        let z_vec: Vec<f32> = if let Some(z_tensor) = z {
-            let z_data = z_tensor.clone().into_data();
-            z_data.as_slice::<f32>().unwrap().to_vec()
+        let z_vec: Vec<f32> = if let Some(z_var) = z {
+            z_var.tensor.as_slice().to_vec()
         } else {
-            vec![0.0; pressure_slice.len()]
+            vec![0.0; (pressure_slice.len())]
         };
 
         let mut sites = Vec::new();
-        for i in 0..pressure_slice.len() {
+        for i in 0..(pressure_slice.len()) {
             let p = pressure_slice[i] as f64;
             if p < 0.0 && p.abs() > p_blake.abs() {
                 sites.push((x_slice[i] as f64, y_slice[i] as f64, z_vec[i] as f64));

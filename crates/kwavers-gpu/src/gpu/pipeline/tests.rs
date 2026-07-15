@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array4;
+use leto::Array4 as LetoArray4;
 
 #[test]
 fn test_pipeline_creation() {
@@ -49,7 +49,7 @@ fn test_data_submission() {
     let mut pipeline = RealtimeImagingPipeline::new(config).unwrap();
     pipeline.start().unwrap();
 
-    let rf_data = Array4::from_elem((4, 32, 1024, 1), 1.0);
+    let rf_data = LetoArray4::from_elem([4, 32, 1024, 1], 1.0);
     pipeline.submit_rf_data(rf_data).unwrap();
 
     pipeline.stop().unwrap();
@@ -69,14 +69,15 @@ fn test_frame_processing() {
     let mut pipeline = RealtimeImagingPipeline::new(config).unwrap();
     pipeline.start().unwrap();
 
-    let rf_data = Array4::from_elem((2, 16, 512, 1), 1.0);
+    let rf_data = LetoArray4::from_elem([2, 16, 512, 1], 1.0);
     pipeline.submit_rf_data(rf_data).unwrap();
     pipeline.process_pipeline().unwrap();
 
     let processed = pipeline.get_processed_frame();
 
     let frame = processed.unwrap();
-    assert_eq!(frame.dim(), (16, 512, 1));
+    assert_eq!(frame.shape(), [16, 512, 1]);
+    assert!(frame.iter().all(|&value| (0.0..=1.0).contains(&value)));
 
     pipeline.stop().unwrap();
 }

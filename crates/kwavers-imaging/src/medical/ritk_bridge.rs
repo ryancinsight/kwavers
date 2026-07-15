@@ -1,23 +1,17 @@
 //! Canonical ritk-io → kwavers volume bridge.
 //!
-//! All medical image formats (DICOM, NIfTI, and the other formats ritk-io
-//! supports) are decoded by ritk-io — ritk is the single source of truth for
-//! medical image I/O. This module owns the *one* conversion from a ritk-core
-//! `Image<NdArray, 3>` (a burn-tensor-backed image with ITK-style
-//! origin/spacing/direction metadata) into kwavers' canonical
-//! `(x, y, z)`-ordered `Array3<f64>` plus voxel spacing and affine. Both the
-//! DICOM and CT/NIfTI loaders route through [`image_to_volume`].
+//! Medical image formats are decoded by ritk-io — ritk is the single source of
+//! truth for medical image I/O. This module owns the conversion from RITK image
+//! metadata and row-major `[depth, rows, cols]` host data into kwavers'
+//! canonical `(x, y, z)` `Array3<f64>` plus voxel spacing and affine.
+//!
+//! NIfTI and DICOM route through the native Coeus-backed RITK image path.
 
-use burn::backend::NdArray;
-use burn::tensor::TensorData;
+use coeus_core::SequentialBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
-use ritk_core::Image;
-
-/// CPU backend used by the host-side adapters. ritk-io readers are generic over
-/// `Backend`; `NdArray` avoids GPU staging round-trips for pure-CPU consumers,
-/// and the `f32 → f64` conversion happens during the host-side copy.
-pub(crate) type AdapterBackend = NdArray;
+use leto::Array3;
+use ritk_image::native::Image as NativeImage;
+use ritk_spatial::{Direction, Point, Spacing};
 
 /// A ritk-decoded volume in kwavers' canonical conventions.
 #[derive(Debug, Clone)]
@@ -35,34 +29,53 @@ pub(crate) struct RitkVolume {
     pub intensity_range: (f64, f64),
 }
 
-/// Convert a ritk-core image into a kwavers [`RitkVolume`].
+/// Convert a native Coeus-backed RITK image into a kwavers [`RitkVolume`].
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::InternalError`] if ritk-io returns a non-contiguous
-/// `f32` tensor or a tensor whose length does not match the reported shape.
-pub(crate) fn image_to_volume(image: &Image<AdapterBackend, 3>) -> KwaversResult<RitkVolume> {
+/// Returns [`KwaversError::InternalError`] if the native RITK image is not
+/// contiguous host-addressable data or if its length does not match the shape.
+pub(crate) fn native_image_to_volume(
+    image: &NativeImage<f32, SequentialBackend, 3>,
+) -> KwaversResult<RitkVolume> {
     let [depth, rows, cols] = image.shape();
-    let spacing_mm = image.spacing().to_array();
-    let origin_mm = image.origin().to_array();
-
-    let tensor_data: TensorData = image.data().clone().into_data();
-    let values = tensor_data.as_slice::<f32>().map_err(|err| {
+    let values = image.data_slice().map_err(|err| {
         KwaversError::InternalError(format!(
-            "ritk-io tensor data is not contiguous f32: {err:?}"
+            "native ritk image data is not contiguous f32: {err}"
         ))
     })?;
+    image_components_to_volume(
+        [depth, rows, cols],
+        image.spacing(),
+        image.origin(),
+        image.direction(),
+        values,
+        "native ritk image",
+    )
+}
+
+fn image_components_to_volume(
+    [depth, rows, cols]: [usize; 3],
+    spacing: &Spacing<3>,
+    origin: &Point<3>,
+    direction: &Direction<3>,
+    values: &[f32],
+    source_label: &str,
+) -> KwaversResult<RitkVolume> {
+    let spacing_mm = spacing.to_array();
+    let origin_mm = origin.to_array();
+
     let expected_len = depth * rows * cols;
     if values.len() != expected_len {
         return Err(KwaversError::InternalError(format!(
-            "ritk-io tensor length {} does not match {depth}×{rows}×{cols} = {expected_len}",
+            "{source_label} length {} does not match {depth}×{rows}×{cols} = {expected_len}",
             values.len()
         )));
     }
 
     // Repack ritk-io's `[depth, rows, cols]` (z, y, x) layout into kwavers'
     // `(x, y, z)` indexing while tracking the intensity range.
-    let mut voxels = Array3::<f64>::zeros((cols, rows, depth));
+    let mut voxels = Array3::<f64>::zeros([cols, rows, depth]);
     let mut min_val = f64::INFINITY;
     let mut max_val = f64::NEG_INFINITY;
     for z in 0..depth {
@@ -86,7 +99,6 @@ pub(crate) fn image_to_volume(image: &Image<AdapterBackend, 3>) -> KwaversResult
 
     // Affine: direction × diag(spacing_mm) for the linear part, origin_mm for
     // the translation column (millimetres, per NIfTI/DICOM convention).
-    let direction = image.direction();
     let mut affine = [[0.0_f64; 4]; 4];
     for i in 0..3 {
         for j in 0..3 {

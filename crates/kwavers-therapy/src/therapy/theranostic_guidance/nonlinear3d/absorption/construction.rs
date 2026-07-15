@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_AIR;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use rayon::prelude::*;
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 use super::spectrum::build_k_power_spectrum;
 use super::{AbsorptionBuilder, FractionalLaplacianAbsorption};
@@ -78,16 +78,13 @@ impl FractionalLaplacianAbsorption {
         // `α₀_omega = α₀_f / ω_ref^y`. We use `α₀_omega` here so that the
         // analytical plane-wave decay `α(ω) = α₀_omega · ω^y` evaluates
         // exactly to `α₀_f · f_MHz^y` Np/m at the test frequency.
-        let dt_tau: Vec<f64> = (0..cells)
-            .into_par_iter()
-            .map(|i| {
-                let alpha0_f = input.attenuation_np_per_m_mhz[i];
-                let alpha0_omega = alpha0_f / omega_ref.powf(y_exponent);
-                let c = input.speed_m_s[i].max(SOUND_SPEED_AIR);
-                let tau = 2.0 * alpha0_omega * c.powf(y_exponent + 1.0);
-                input.dt_s * tau
-            })
-            .collect();
+        let dt_tau: Vec<f64> = map_collect_index_with::<Adaptive, _, _>(cells, |i| {
+            let alpha0_f = input.attenuation_np_per_m_mhz[i];
+            let alpha0_omega = alpha0_f / omega_ref.powf(y_exponent);
+            let c = input.speed_m_s[i].max(SOUND_SPEED_AIR);
+            let tau = 2.0 * alpha0_omega * c.powf(y_exponent + 1.0);
+            input.dt_s * tau
+        });
 
         // η Kramers-Kronig dispersion is dropped — see module docs for the
         // von-Neumann stability argument. For y = 2 this is exact (η ≡ 0);

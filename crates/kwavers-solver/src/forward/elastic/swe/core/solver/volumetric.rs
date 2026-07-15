@@ -8,12 +8,12 @@ use super::super::super::types::{
 };
 use super::definition::ElasticWaveSolver;
 use kwavers_core::error::{KwaversResult, NumericalError};
-use ndarray::Array3;
+use leto::Array3;
 
 impl ElasticWaveSolver {
     /// Propagate volumetric waves with body forces.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_volumetric_waves_with_body_forces(
         &self,
@@ -90,7 +90,7 @@ impl ElasticWaveSolver {
     }
     /// Propagate volumetric waves with sources.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn propagate_volumetric_waves_with_sources(
         &self,
@@ -101,13 +101,15 @@ impl ElasticWaveSolver {
         let (nx, ny, nz) = self.grid.dimensions();
         let mut initial_field = ElasticWaveField::new(nx, ny, nz);
         for disp in initial_displacements {
-            if disp.dim() != (nx, ny, nz) {
+            if disp.shape() != [nx, ny, nz] {
                 return Err(NumericalError::InvalidOperation(
                     "Initial displacement shape does not match grid".to_owned(),
                 )
                 .into());
             }
-            initial_field.uz.zip_mut_with(disp, |a, &b| *a += b);
+            for (a, b) in initial_field.uz.iter_mut().zip(disp.iter()) {
+                *a += b;
+            }
         }
         let integrator =
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
@@ -211,7 +213,7 @@ impl ElasticWaveSolver {
         history: &[ElasticWaveField],
     ) -> WaveFrontTracker {
         let (nx, ny, nz) = self.grid.dimensions();
-        let mut arrival_times = Array3::<f64>::from_elem((nx, ny, nz), f64::NAN);
+        let mut arrival_times = Array3::<f64>::from_elem([nx, ny, nz], f64::NAN);
         let mut amplitudes = Array3::<f64>::zeros((nx, ny, nz));
         let mut tracking_quality = Array3::<f64>::zeros((nx, ny, nz));
 

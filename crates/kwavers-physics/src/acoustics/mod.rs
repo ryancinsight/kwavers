@@ -25,6 +25,7 @@ pub mod analysis;
 pub mod analytical;
 pub mod bubble_dynamics;
 pub mod conservation;
+#[cfg(feature = "clinical-imaging")]
 pub mod imaging;
 pub mod mechanics;
 pub mod skull;

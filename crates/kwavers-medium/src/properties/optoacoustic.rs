@@ -292,9 +292,13 @@ mod tests {
     fn center_frequencies_ordered_cs_highest() {
         // The tighter (higher-frequency) focus follows the more efficient, faster
         // absorber: CS (15 MHz) > CNT = CNP (5 MHz) > HSM (3 MHz).
-        assert!(CS_PDMS.center_frequency > CNT_PDMS.center_frequency);
+        const {
+            assert!(CS_PDMS.center_frequency > CNT_PDMS.center_frequency);
+        }
         assert!((CNT_PDMS.center_frequency - CNP_PDMS.center_frequency).abs() < 1e-3);
-        assert!(CNP_PDMS.center_frequency > HSM.center_frequency);
+        const {
+            assert!(CNP_PDMS.center_frequency > HSM.center_frequency);
+        }
         assert_eq!(CS_PDMS.center_frequency, 15.0e6);
     }
 

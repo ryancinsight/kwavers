@@ -2,7 +2,7 @@ use super::emission::{
     COMPRESSION_REFRACTIVE_COEFFICIENT, REFERENCE_TEMPERATURE, THERMAL_REFRACTIVE_COEFFICIENT,
 };
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
 
 /// Cherenkov radiation model with refractive index and coherence parameters
@@ -141,7 +141,7 @@ impl CherenkovModel {
     ) -> Array1<f64> {
         let ft = self.frank_tamm_factor(velocity);
         if ft == 0.0 {
-            return Array1::zeros(wavelengths.len());
+            return Array1::zeros([wavelengths.len()]);
         }
         let scale = self.coherence_factor * charge.abs() * ft;
         wavelengths.mapv(|lambda| {

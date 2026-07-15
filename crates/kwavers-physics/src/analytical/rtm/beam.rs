@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
-use rayon::prelude::*;
+use moirai_parallel::{for_each_chunk_pair_mut_enumerated_with, Adaptive};
 use std::f64::consts::PI;
 
 /// 2-D focused Gaussian beam field in the presence of a skull layer and
@@ -17,10 +17,9 @@ use std::f64::consts::PI;
 ///
 /// ## Parallelism
 ///
-/// The outer loop over lateral positions x is embarrassingly parallel — each
-/// x-row writes to an independent `[nz]`-element slice.  Rayon
-/// `par_chunks_mut(nz)` distributes rows across threads.  `f64::sin_cos`
-/// computes both sin and cos in a single instruction.
+/// The outer loop over lateral positions x is embarrassingly parallel: each
+/// x-row writes to an independent `[nz]`-element slice scheduled through
+/// Moirai. `f64::sin_cos` computes both sin and cos in a single instruction.
 ///
 /// Output: two flattened row-major Vecs (real, imag) of size NX × NZ.
 ///
@@ -59,11 +58,12 @@ pub fn focused_gaussian_beam_2d(
     let mut imag_out = vec![0.0_f64; nx * nz];
 
     // Each ix row writes to an independent nz-element slice → race-free.
-    real_out
-        .par_chunks_mut(nz)
-        .zip(imag_out.par_chunks_mut(nz))
-        .zip(x_arr.par_iter())
-        .for_each(|((re_row, im_row), &x)| {
+    for_each_chunk_pair_mut_enumerated_with::<Adaptive, _, _, _>(
+        &mut real_out,
+        &mut imag_out,
+        nz,
+        |ix, re_row, im_row| {
+            let x = x_arr[ix];
             let dx = x - x_f;
             let dx2 = dx * dx;
             for (iz, (re, im)) in re_row.iter_mut().zip(im_row.iter_mut()).enumerate() {
@@ -80,6 +80,7 @@ pub fn focused_gaussian_beam_2d(
                 *re = field.re;
                 *im = field.im;
             }
-        });
+        },
+    );
     (real_out, imag_out)
 }

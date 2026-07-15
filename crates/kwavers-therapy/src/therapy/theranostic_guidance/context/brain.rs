@@ -7,7 +7,7 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult},
 };
 use kwavers_transducer::transducers::focused::BowlAngularBounds;
-use ndarray::{s, Array2, Array3};
+use leto::{Array2, Array3, SliceArg};
 
 use super::super::geometry::{
     focused_bowl_cap_points, FocusedBowlCapSpec, FocusedBowlVertexDirection,
@@ -27,7 +27,7 @@ pub fn build_brain_placement_context(
     target_fraction_xyz: Option<[f64; 3]>,
 ) -> KwaversResult<PlacementContext> {
     validate_spacing(spacing_mm)?;
-    let (nx, ny, nz) = ct_volume_hu.dim();
+    let [nx, ny, nz] = ct_volume_hu.shape();
     if slice_index >= nz {
         return Err(KwaversError::InvalidInput(format!(
             "brain placement slice {slice_index} out of bounds for {nz} slices"
@@ -84,8 +84,22 @@ pub fn build_brain_placement_context(
     let body_surface_points_m =
         surface_points_3d(&body, sx, sy, sz, Some(calvarium_range), surface_stride);
 
-    let slice = ct_volume_hu.slice(s![.., .., slice_index]).to_owned();
-    let body_slice = body.slice(s![.., .., slice_index]).to_owned();
+    let slice = ct_volume_hu
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
+    let body_slice = body
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
     let target_mask = synthetic_focus_mask(&body_slice, sx.max(sy), (center.x_m, center.y_m));
     let skin_contact_m = nearest_surface_point(&body_surface_points_m, center).unwrap_or(center);
 
@@ -122,21 +136,22 @@ fn point_from_index(
 }
 
 fn synthetic_focus_mask(body: &Array2<bool>, spacing_m: f64, focus: (f64, f64)) -> Array2<bool> {
-    let (nx, ny) = body.dim();
+    let [nx, ny] = body.shape();
     let cx = (nx - 1) as f64 * 0.5 + focus.0 / spacing_m;
     let cy = (ny - 1) as f64 * 0.5 + focus.1 / spacing_m;
     let rx = 6.0e-3 / spacing_m;
     let ry = 8.0e-3 / spacing_m;
-    Array2::from_shape_fn((nx, ny), |(ix, iy)| {
+    Array2::from_shape_fn((nx, ny), |[ix, iy]| {
         body[[ix, iy]] && ((ix as f64 - cx) / rx).powi(2) + ((iy as f64 - cy) / ry).powi(2) <= 1.0
     })
 }
 
 fn axial_areas(mask: &Array3<bool>) -> Vec<usize> {
-    let (_, _, nz) = mask.dim();
+    let [_, _, nz] = mask.shape();
     (0..nz)
         .map(|iz| {
-            mask.slice(s![.., .., iz])
+            mask.slice_with::<2>(&[SliceArg::All, SliceArg::All, SliceArg::Index(iz as isize)])
+                .expect("invariant: axis index in bounds")
                 .iter()
                 .filter(|active| **active)
                 .count()
@@ -151,14 +166,14 @@ fn centroid_3d(
     sz: f64,
     z_range: Option<std::ops::RangeInclusive<usize>>,
 ) -> Option<Point3> {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     let mut sum = Point3 {
         x_m: 0.0,
         y_m: 0.0,
         z_m: 0.0,
     };
     let mut count = 0.0;
-    for ((ix, iy, iz), active) in mask.indexed_iter() {
+    for ([ix, iy, iz], active) in mask.indexed_iter() {
         if *active && z_range.as_ref().is_none_or(|range| range.contains(&iz)) {
             sum.x_m += (ix as f64 - (nx - 1) as f64 * 0.5) * sx;
             sum.y_m += (iy as f64 - (ny - 1) as f64 * 0.5) * sy;
@@ -181,9 +196,9 @@ fn calvarium_radius(
     center: Point3,
     z_range: std::ops::RangeInclusive<usize>,
 ) -> f64 {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     mask.indexed_iter()
-        .filter_map(|((ix, iy, iz), active)| {
+        .filter_map(|([ix, iy, iz], active)| {
             if *active && z_range.contains(&iz) {
                 let point = Point3 {
                     x_m: (ix as f64 - (nx - 1) as f64 * 0.5) * sx,

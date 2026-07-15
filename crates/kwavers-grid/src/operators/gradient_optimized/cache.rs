@@ -2,14 +2,14 @@
 
 use super::super::coefficients::{FDCoefficients, FdAccuracyOrder};
 use crate::Grid;
-use num_traits::Float;
+use eunomia::FloatElement;
 use std::sync::{Arc, RwLock};
 
 /// Gradient cache for performance optimization
 #[derive(Debug)]
 pub struct GradientCache<T>
 where
-    T: Float + Clone + Send + Sync,
+    T: FloatElement + Clone + Send + Sync,
 {
     /// Cached coefficients for different spatial orders
     pub(super) coefficients_cache: RwLock<Vec<Vec<T>>>,
@@ -23,7 +23,7 @@ where
 
 impl<T> GradientCache<T>
 where
-    T: Float + Clone + Send + Sync,
+    T: FloatElement + Clone + Send + Sync,
 {
     /// Create a new gradient cache
     /// # Panics
@@ -33,9 +33,9 @@ where
         Self {
             coefficients_cache: RwLock::new(Vec::new()),
             spacing_inverses: (
-                T::one() / T::from(grid.dx).unwrap(),
-                T::one() / T::from(grid.dy).unwrap(),
-                T::one() / T::from(grid.dz).unwrap(),
+                T::from_f64(1.0) / T::from_f64(grid.dx),
+                T::from_f64(1.0) / T::from_f64(grid.dy),
+                T::from_f64(1.0) / T::from_f64(grid.dz),
             ),
             cache_hits: Arc::new(RwLock::new(0)),
             cache_misses: Arc::new(RwLock::new(0)),

@@ -21,7 +21,9 @@ use kwavers_core::constants::ct_acoustics::HU_ABDOMEN_BODY_THRESHOLD;
 use kwavers_core::constants::fundamental::{SOUND_SPEED_AIR, SOUND_SPEED_TISSUE};
 use kwavers_core::constants::tissue_acoustics::{SOUND_SPEED_KIDNEY, SOUND_SPEED_LIVER};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{s, Array2, Array3, Axis, Zip};
+use leto::{Array2, Array3, SliceArg};
+
+use crate::parallel::{zip_three_mut_two_refs, zip_two_mut_four_refs};
 
 /// Abdominal acoustic-property maps: `(sound speed, attenuation, body mask,
 /// organ mask, target mask)`, all sharing the input CT shape.
@@ -109,33 +111,98 @@ pub fn prepare_abdominal_slice(
             "grid_size must be at least 2, got {grid_size}"
         )));
     }
-    if ct_volume_hu.dim() != label_volume.dim() {
+    if ct_volume_hu.shape() != label_volume.shape() {
         return Err(KwaversError::InvalidInput(format!(
             "CT shape {:?} does not match segmentation shape {:?}",
-            ct_volume_hu.dim(),
-            label_volume.dim()
+            ct_volume_hu.shape(),
+            label_volume.shape()
         )));
     }
     let slice_index = largest_target_slice(label_volume)?;
-    let ct_slice = ct_volume_hu.slice(s![.., .., slice_index]).to_owned();
-    let label_slice = label_volume.slice(s![.., .., slice_index]).to_owned();
+    let ct_slice = ct_volume_hu
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
+    let label_slice = label_volume
+        .slice_with::<2>(&[
+            SliceArg::All,
+            SliceArg::All,
+            SliceArg::Index(slice_index as isize),
+        ])
+        .expect("invariant: axis index in bounds")
+        .to_contiguous();
     let treatment_target = largest_connected_target_component(&label_slice)?;
     let target_seed = target_seed_index(&treatment_target)?;
     let body_component = connected_body_component(&ct_slice, &label_slice, target_seed)?;
     let bbox = square_bbox_from_mask(&body_component, 6)?;
     let ct_crop = ct_slice
-        .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
-        .to_owned();
+        .slice_with::<2>(&[
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
+        ])
+        .expect("invariant: bbox within slice")
+        .to_contiguous();
     let body_crop = body_component
-        .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
-        .to_owned();
+        .slice_with::<2>(&[
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
+        ])
+        .expect("invariant: bbox within slice")
+        .to_contiguous();
     let mut label_crop = label_slice
-        .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
-        .to_owned();
+        .slice_with::<2>(&[
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
+        ])
+        .expect("invariant: bbox within slice")
+        .to_contiguous();
     let target_crop = treatment_target
-        .slice(s![bbox.0..=bbox.1, bbox.2..=bbox.3])
-        .to_owned();
-    for ((ix, iy), label) in label_crop.indexed_iter_mut() {
+        .slice_with::<2>(&[
+            SliceArg::Range {
+                start: Some(bbox.0 as isize),
+                end: Some((bbox.1 + 1) as isize),
+                step: 1,
+            },
+            SliceArg::Range {
+                start: Some(bbox.2 as isize),
+                end: Some((bbox.3 + 1) as isize),
+                step: 1,
+            },
+        ])
+        .expect("invariant: bbox within slice")
+        .to_contiguous();
+    for ([ix, iy], label) in label_crop
+        .indexed_iter_mut()
+        .expect("invariant: label crop layout iterable")
+    {
         if *label == 2 && !target_crop[[ix, iy]] {
             *label = 1;
         }
@@ -160,7 +227,7 @@ pub fn prepare_abdominal_slice(
         target_mask: target,
         spacing_m,
         source_slice_index: slice_index,
-        source_dimensions: [ct_volume_hu.dim().0, ct_volume_hu.dim().1],
+        source_dimensions: [ct_volume_hu.shape()[0], ct_volume_hu.shape()[1]],
         source_spacing_m: [spacing_mm[0] * 1.0e-3, spacing_mm[1] * 1.0e-3],
         crop_bounds_index: [bbox.0, bbox.1, bbox.2, bbox.3],
     })
@@ -168,12 +235,14 @@ pub fn prepare_abdominal_slice(
 
 /// Index of the axial (z) slice that contains the most label-2 (tumour) voxels.
 ///
-/// Iterates z-slices via [`ndarray::Axis`] view and returns the index of the
+/// Iterates z-slices via [`Axis`] view and returns the index of the
 /// slice with the maximum label-2 count.  Returns [`KwaversError::InvalidInput`]
 /// when no label-2 cell exists in the volume.
 pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> {
     label
-        .axis_iter(Axis(2))
+        .view()
+        .axis_iter::<2>(2)
+        .expect("invariant: axis 2 in bounds")
         .enumerate()
         .map(|(z, slice)| (z, slice.iter().filter(|&&v| v == 2).count()))
         .filter(|&(_, count)| count > 0)
@@ -188,7 +257,7 @@ pub(crate) fn largest_target_slice(label: &Array3<i16>) -> KwaversResult<usize> 
 pub(crate) fn largest_connected_target_component(
     label: &Array2<i16>,
 ) -> KwaversResult<Array2<bool>> {
-    let (nx, ny) = label.dim();
+    let [nx, ny] = label.shape();
     let mut visited = Array2::<bool>::from_elem((nx, ny), false);
     let mut best = Vec::new();
     for ix in 0..nx {
@@ -233,9 +302,10 @@ fn organ_reference_speed(anatomy: AnatomyKind) -> f64 {
 
 /// Derive voxel-wise acoustic property maps from HU values and segmentation labels.
 ///
-/// All output arrays share the shape of `ct`.  The computation uses two
-/// [`ndarray::Zip`] passes over the output and input arrays simultaneously,
-/// eliminating per-element random indexing and enabling LLVM auto-vectorisation.
+/// All output arrays share the shape of `ct`. The computation uses two
+/// provider-owned Moirai-backed passes over the output and input arrays
+/// simultaneously, eliminating per-element random indexing while keeping a
+/// sequential fallback for non-standard ndarray layouts.
 ///
 /// # Tissue classification hierarchy (evaluated top-to-bottom; later rules override)
 ///
@@ -252,7 +322,7 @@ fn abdominal_properties(
     label: &Array2<i16>,
     body_support: &Array2<bool>,
 ) -> AbdominalMaps {
-    let (nx, ny) = ct.dim();
+    let [nx, ny] = ct.shape();
     let c_organ = organ_reference_speed(anatomy);
     let mut speed = Array2::<f64>::from_elem((nx, ny), SOUND_SPEED_AIR);
     let mut attenuation = Array2::<f64>::from_elem((nx, ny), ABDOM_DEFAULT_ATTENUATION_DB_CM_MHZ);
@@ -260,24 +330,27 @@ fn abdominal_properties(
     let mut organ = Array2::<bool>::from_elem((nx, ny), false);
     let mut target = Array2::<bool>::from_elem((nx, ny), false);
     // Pass 1: classify each voxel into anatomical masks.
-    Zip::from(&mut body)
-        .and(&mut organ)
-        .and(&mut target)
-        .and(body_support)
-        .and(label)
-        .for_each(|bod, org, tgt, &support, &lab| {
+    zip_three_mut_two_refs(
+        body.view_mut(),
+        organ.view_mut(),
+        target.view_mut(),
+        body_support.view(),
+        label.view(),
+        |bod, org, tgt, &support, &lab| {
             *org = lab == 1 || lab == 2;
             *tgt = lab == 2;
             *bod = support || *org || *tgt;
-        });
+        },
+    );
     // Pass 2: map masks + HU to acoustic properties.
-    Zip::from(&mut speed)
-        .and(&mut attenuation)
-        .and(&body)
-        .and(&organ)
-        .and(&target)
-        .and(ct)
-        .for_each(|spd, att, &bod, &org, &tgt, &hu| {
+    zip_two_mut_four_refs(
+        speed.view_mut(),
+        attenuation.view_mut(),
+        body.view(),
+        organ.view(),
+        target.view(),
+        ct.view(),
+        |spd, att, &bod, &org, &tgt, &hu| {
             if bod {
                 *spd = SOFT_TISSUE_HU_BASE_SPEED_M_S
                     + ABDOM_BG_SPEED_SLOPE_M_S_PER_HU
@@ -303,7 +376,8 @@ fn abdominal_properties(
                         * (hu - ABDOM_CALCIFICATION_HU_THRESHOLD).clamp(0.0, ABDOM_CALC_HU_RANGE);
                 *att = ABDOM_CALC_ATTENUATION_DB_CM_MHZ;
             }
-        });
+        },
+    );
     (speed, attenuation, body, organ, target)
 }
 
@@ -320,7 +394,7 @@ fn target_component(
     seed_x: usize,
     seed_y: usize,
 ) -> Vec<(usize, usize)> {
-    let (nx, ny) = label.dim();
+    let [nx, ny] = label.shape();
     let mut component = Vec::new();
     let mut queue = VecDeque::from([(seed_x, seed_y)]);
     visited[[seed_x, seed_y]] = true;
@@ -337,7 +411,7 @@ fn target_component(
 }
 
 fn target_seed_index(target: &Array2<bool>) -> KwaversResult<(usize, usize)> {
-    for ((ix, iy), active) in target.indexed_iter() {
+    for ([ix, iy], active) in target.indexed_iter() {
         if *active {
             return Ok((ix, iy));
         }
@@ -352,7 +426,7 @@ fn connected_body_component(
     label: &Array2<i16>,
     seed: (usize, usize),
 ) -> KwaversResult<Array2<bool>> {
-    let (nx, ny) = ct.dim();
+    let [nx, ny] = ct.shape();
     let mut component = Array2::<bool>::from_elem((nx, ny), false);
     if !is_abdominal_body_candidate(ct[[seed.0, seed.1]], label[[seed.0, seed.1]]) {
         return Err(KwaversError::InvalidInput(
@@ -386,8 +460,8 @@ fn is_abdominal_body_candidate(hu: f64, label: i16) -> bool {
 }
 
 fn resample_mask_any(input: &Array2<bool>, size: usize) -> Array2<bool> {
-    let (nx, ny) = input.dim();
-    Array2::from_shape_fn((size, size), |(ix, iy)| {
+    let [nx, ny] = input.shape();
+    Array2::from_shape_fn((size, size), |[ix, iy]| {
         let x0 = (ix * nx) / size;
         let x1 = (((ix + 1) * nx).saturating_sub(1)) / size;
         let y0 = (iy * ny) / size;
@@ -448,10 +522,10 @@ fn square_bbox_from_mask(
     mask: &Array2<bool>,
     margin: usize,
 ) -> KwaversResult<(usize, usize, usize, usize)> {
-    let (nx, ny) = mask.dim();
+    let [nx, ny] = mask.shape();
     let bbox = mask
         .indexed_iter()
-        .filter_map(|((ix, iy), &active)| active.then_some((ix, iy)))
+        .filter_map(|([ix, iy], &active)| active.then_some((ix, iy)))
         .fold(None::<(usize, usize, usize, usize)>, |acc, (ix, iy)| {
             Some(match acc {
                 None => (ix, ix, iy, iy),

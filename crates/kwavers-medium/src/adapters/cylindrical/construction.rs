@@ -1,7 +1,7 @@
 //! `CylindricalMediumProjection::new` — samples the 3D medium at the
 //! `θ = 0` plane and caches the resulting 2D property arrays.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::CylindricalMediumProjection;
 use crate::Medium;
@@ -32,7 +32,7 @@ impl<'a, M: Medium> CylindricalMediumProjection<'a, M> {
         let is_homogeneous = medium.is_homogeneous();
 
         // Allocate 2D arrays
-        let shape = (topology.nz, topology.nr);
+        let shape = [topology.nz, topology.nr];
         let mut sound_speed_2d = Array2::zeros(shape);
         let mut density_2d = Array2::zeros(shape);
         let mut absorption_2d = Array2::zeros(shape);

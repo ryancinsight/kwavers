@@ -2,8 +2,8 @@
 
 use super::{IterativeSolver, SolverConfig};
 use crate::linear_algebra::sparse::CompressedSparseRowMatrix;
-use ndarray::Array1;
-use num_complex::Complex64;
+use eunomia::Complex64;
+use leto::Array1;
 
 #[test]
 fn test_bicgstab_complex_identity() {
@@ -11,7 +11,7 @@ fn test_bicgstab_complex_identity() {
     a.set_diagonal(0, Complex64::new(1.0, 0.0));
     a.set_diagonal(1, Complex64::new(1.0, 0.0));
 
-    let b = Array1::from_vec(vec![Complex64::new(1.0, 1.0), Complex64::new(2.0, 2.0)]);
+    let b = Array1::from_vec(2, vec![Complex64::new(1.0, 1.0), Complex64::new(2.0, 2.0)]).unwrap();
 
     let solver = IterativeSolver::create(SolverConfig::default());
     let x = solver.bicgstab_complex(&a, b.view(), None).unwrap();
@@ -27,7 +27,7 @@ fn test_bicgstab_complex_diagonal() {
     a.set_diagonal(0, Complex64::new(2.0, 1.0));
     a.set_diagonal(1, Complex64::new(3.0, 2.0));
 
-    let b = Array1::from_vec(vec![Complex64::new(2.0, 1.0), Complex64::new(3.0, 2.0)]);
+    let b = Array1::from_vec(2, vec![Complex64::new(2.0, 1.0), Complex64::new(3.0, 2.0)]).unwrap();
 
     let solver = IterativeSolver::create(SolverConfig::default());
     let x = solver.bicgstab_complex(&a, b.view(), None).unwrap();

@@ -4,13 +4,13 @@ use crate::forward::nonlinear::kzk::constants::{
 };
 use crate::forward::nonlinear::kzk::KZKConfig;
 use crate::validation::measure_beam_radius;
+use apollo::Complex64;
 use approx::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::constants::SOUND_SPEED_WATER;
-use kwavers_math::fft::Complex64;
-use ndarray::Array2;
+use leto::Array2;
 use std::f64::consts::PI;
 
 #[test]
@@ -205,7 +205,7 @@ fn test_fft_round_trip() {
     }
 
     // Convert to complex
-    let mut complex_data = Array2::zeros((64, 64));
+    let mut complex_data = Array2::from_elem([64, 64], Complex64::new(0.0, 0.0));
     for i in 0..64 {
         for j in 0..64 {
             complex_data[[i, j]] = Complex64::new(original[[i, j]], 0.0);
@@ -214,7 +214,7 @@ fn test_fft_round_trip() {
 
     // Forward then inverse FFT
     let scratch_ptr = op.scratch.as_ptr();
-    let mut recovered = Array2::zeros((64, 64));
+    let mut recovered = Array2::from_elem([64, 64], Complex64::new(0.0, 0.0));
     op.fft_round_trip_into(&complex_data, &mut recovered);
     assert_eq!(op.scratch.as_ptr(), scratch_ptr);
 

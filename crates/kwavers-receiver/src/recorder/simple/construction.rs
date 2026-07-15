@@ -8,20 +8,39 @@ use crate::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use crate::recorder::pressure_statistics::PressureFieldStatistics;
 use crate::recorder::velocity_statistics::VelocityComponentStats;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3 as LetoArray3};
 
 use super::SensorRecorder;
+
+#[doc(hidden)]
+pub trait SensorMask3 {
+    fn shape3(&self) -> [usize; 3];
+    fn value_at(&self, i: usize, j: usize, k: usize) -> bool;
+}
+
+impl SensorMask3 for LetoArray3<bool> {
+    fn shape3(&self) -> [usize; 3] {
+        self.shape()
+    }
+
+    fn value_at(&self, i: usize, j: usize, k: usize) -> bool {
+        self[[i, j, k]]
+    }
+}
 
 impl SensorRecorder {
     /// Create a basic pressure-only recorder.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn new(
-        sensor_mask: Option<&Array3<bool>>,
+    pub fn new<M>(
+        sensor_mask: Option<&M>,
         shape: (usize, usize, usize),
         expected_steps: usize,
-    ) -> KwaversResult<Self> {
+    ) -> KwaversResult<Self>
+    where
+        M: SensorMask3,
+    {
         Self::with_modes(sensor_mask, shape, expected_steps, &[])
     }
 
@@ -34,18 +53,21 @@ impl SensorRecorder {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn with_modes(
-        sensor_mask: Option<&Array3<bool>>,
+    pub fn with_modes<M>(
+        sensor_mask: Option<&M>,
         shape: (usize, usize, usize),
         expected_steps: usize,
         modes: &[RecordingMode],
-    ) -> KwaversResult<Self> {
+    ) -> KwaversResult<Self>
+    where
+        M: SensorMask3,
+    {
         let sensor_indices = Self::build_sensor_indices(sensor_mask, shape)?;
 
         let pressure = if sensor_indices.is_empty() {
             None
         } else {
-            Some(Array2::zeros((sensor_indices.len(), expected_steps)))
+            Some(Array2::zeros([sensor_indices.len(), expected_steps]))
         };
 
         let needs_stats = modes.iter().any(|m| {
@@ -98,17 +120,20 @@ impl SensorRecorder {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn with_spec(
-        sensor_mask: Option<&Array3<bool>>,
+    pub fn with_spec<M>(
+        sensor_mask: Option<&M>,
         shape: (usize, usize, usize),
         expected_steps: usize,
         spec: SensorRecordSpec,
-    ) -> KwaversResult<Self> {
+    ) -> KwaversResult<Self>
+    where
+        M: SensorMask3,
+    {
         let sensor_indices = Self::build_sensor_indices(sensor_mask, shape)?;
         let n = sensor_indices.len();
 
         let pressure = if spec.records_pressure() && n > 0 {
-            Some(Array2::zeros((n, expected_steps)))
+            Some(Array2::zeros([n, expected_steps]))
         } else {
             None
         };
@@ -121,7 +146,7 @@ impl SensorRecorder {
 
         let alloc_ts = |needs: bool| -> Option<Array2<f64>> {
             if needs && n > 0 {
-                Some(Array2::zeros((n, expected_steps)))
+                Some(Array2::zeros([n, expected_steps]))
             } else {
                 None
             }
@@ -147,17 +172,17 @@ impl SensorRecorder {
             iy_data: alloc_ts(spec.contains(SensorRecordField::IntensityY)),
             iz_data: alloc_ts(spec.contains(SensorRecordField::IntensityZ)),
             ix_sum: if spec.records_intensity_x() {
-                Some(Array1::zeros(n))
+                Some(Array1::zeros([n]))
             } else {
                 None
             },
             iy_sum: if spec.records_intensity_y() {
-                Some(Array1::zeros(n))
+                Some(Array1::zeros([n]))
             } else {
                 None
             },
             iz_sum: if spec.records_intensity_z() {
-                Some(Array1::zeros(n))
+                Some(Array1::zeros([n]))
             } else {
                 None
             },
@@ -179,7 +204,7 @@ impl SensorRecorder {
         let pressure = if indices.is_empty() {
             None
         } else {
-            Some(Array2::zeros((indices.len(), expected_steps)))
+            Some(Array2::zeros([indices.len(), expected_steps]))
         };
         Ok(Self {
             sensor_indices: indices,
@@ -212,16 +237,20 @@ impl SensorRecorder {
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub(super) fn build_sensor_indices(
-        sensor_mask: Option<&Array3<bool>>,
+    pub(super) fn build_sensor_indices<M>(
+        sensor_mask: Option<&M>,
         shape: (usize, usize, usize),
-    ) -> KwaversResult<Vec<(usize, usize, usize)>> {
+    ) -> KwaversResult<Vec<(usize, usize, usize)>>
+    where
+        M: SensorMask3,
+    {
         let Some(mask) = sensor_mask else {
             return Ok(Vec::new());
         };
-        let mask_dim = mask.dim();
-        if mask_dim != shape {
-            if mask_dim == (1, 1, 1) && !mask[[0, 0, 0]] {
+        let mask_dim = mask.shape3();
+        let expected_shape = [shape.0, shape.1, shape.2];
+        if mask_dim != expected_shape {
+            if mask_dim == [1, 1, 1] && !mask.value_at(0, 0, 0) {
                 return Ok(Vec::new());
             }
             return Err(KwaversError::Validation(
@@ -238,7 +267,7 @@ impl SensorRecorder {
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    if mask[[i, j, k]] {
+                    if mask.value_at(i, j, k) {
                         indices.push((i, j, k));
                     }
                 }

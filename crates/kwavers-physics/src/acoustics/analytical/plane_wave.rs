@@ -3,7 +3,7 @@
 use super::utils::DISPERSION_CORRECTION_SECOND_ORDER;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Plane wave analytical solutions
 #[derive(Debug)]
@@ -19,7 +19,7 @@ impl PlaneWaveSolution {
         time: f64,
         direction: (f64, f64, f64),
     ) -> Array3<f64> {
-        let mut field = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut field = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         if !positive_finite(frequency)
             || !amplitude.is_finite()
             || !positive_finite(sound_speed)
@@ -175,7 +175,7 @@ mod tests {
             0.0,
             (1.0, 0.0, 0.0),
         );
-        assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+        assert_eq!(field.shape(), [grid.nx, grid.ny, grid.nz]);
     }
 
     #[test]
@@ -190,7 +190,7 @@ mod tests {
             (0.0, 0.0, 0.0),
         );
 
-        assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+        assert_eq!(field.shape(), [grid.nx, grid.ny, grid.nz]);
         assert!(field.iter().all(|value| *value == 0.0));
     }
 
@@ -242,7 +242,7 @@ mod tests {
         ];
 
         for field in invalid_cases {
-            assert_eq!(field.dim(), (grid.nx, grid.ny, grid.nz));
+            assert_eq!(field.shape(), [grid.nx, grid.ny, grid.nz]);
             assert!(field.iter().all(|value| value.is_finite() && *value == 0.0));
         }
     }

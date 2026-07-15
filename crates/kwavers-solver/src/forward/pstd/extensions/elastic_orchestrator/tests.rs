@@ -6,8 +6,8 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_grid::Grid;
-use ndarray::{Array1, Array3};
-use num_complex::Complex;
+use kwavers_math::fft::Complex64;
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 
 /// `μ ≡ 0` ⇒ persistent shear stress stays zero through propagation.
@@ -27,16 +27,16 @@ fn pstd_orchestrator_keeps_shear_stress_zero_when_mu_is_zero() {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL * cp * cp),
-        lame_mu: Array3::zeros((nx, ny, nz)),
-        density: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL),
+        lame_lambda: Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL * cp * cp),
+        lame_mu: Array3::zeros([nx, ny, nz]),
+        density: Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
     let amp = 1e-6;
     let signal: Array1<f64> =
         Array1::from_iter((0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * (n as f64) * dt).sin()));
-    let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut src_mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     src_mask[[3, 5, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {
         mask: src_mask,
@@ -48,7 +48,7 @@ fn pstd_orchestrator_keeps_shear_stress_zero_when_mu_is_zero() {
 
     let _ = orch.propagate(n_steps, Some(&source), None).unwrap();
 
-    let zero = Complex::new(0.0_f64, 0.0_f64);
+    let zero = Complex64::new(0.0_f64, 0.0_f64);
     for x in orch
         .spectral_stress
         .txy
@@ -120,9 +120,9 @@ fn split_field_pml_quiescent_state_stays_zero() {
     let dt = 0.3 * dx / cp;
     let grid = Grid::new(nx, nx, nx, dx, dx, dx).unwrap();
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp),
-        lame_mu: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL * cp * cp * 0.5),
-        density: Array3::from_elem((nx, nx, nx), DENSITY_WATER_NOMINAL),
+        lame_lambda: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL * cp * cp),
+        lame_mu: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL * cp * cp * 0.5),
+        density: Array3::from_elem([nx, nx, nx], DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
     orch.set_split_field_pml((2, 2, 2), cp, 1e-4);
@@ -163,14 +163,14 @@ fn split_field_pml_zero_thickness_reproduces_standard_leapfrog() {
     let mu = 500.0 * cp * cp;
     let rho = DENSITY_WATER_NOMINAL;
     let make_medium = || ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, nx, nx), lam),
-        lame_mu: Array3::from_elem((nx, nx, nx), mu),
-        density: Array3::from_elem((nx, nx, nx), rho),
+        lame_lambda: Array3::from_elem([nx, nx, nx], lam),
+        lame_mu: Array3::from_elem([nx, nx, nx], mu),
+        density: Array3::from_elem([nx, nx, nx], rho),
     };
     let make_source = || {
         let signal =
             Array1::from_iter((0..n_steps).map(|n| amp * (PI * MHZ_TO_HZ * n as f64 * dt).sin()));
-        let mut mask = Array3::<bool>::from_elem((nx, nx, nx), false);
+        let mut mask = Array3::<bool>::from_elem([nx, nx, nx], false);
         mask[[1, 1, 1]] = true;
         ElasticPstdVelocitySource {
             mask,
@@ -256,9 +256,9 @@ fn split_field_pml_attenuates_outgoing_wave() {
 
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), lam),
-        lame_mu: Array3::zeros((nx, ny, nz)),
-        density: Array3::from_elem((nx, ny, nz), rho),
+        lame_lambda: Array3::from_elem([nx, ny, nz], lam),
+        lame_mu: Array3::zeros([nx, ny, nz]),
+        density: Array3::from_elem([nx, ny, nz], rho),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
     orch.set_split_field_pml((thickness, 0, 0), cp, r0);
@@ -267,7 +267,7 @@ fn split_field_pml_attenuates_outgoing_wave() {
     // maintains a sustained field while the PML absorbs the outgoing wave.
     let signal =
         Array1::from_iter((0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * n as f64 * dt).sin()));
-    let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut src_mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     src_mask[[nx / 2, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {
         mask: src_mask,
@@ -311,9 +311,9 @@ fn split_field_pml_attenuates_outgoing_wave() {
 fn quiescent_acoustic_fluid_remains_quiescent() {
     let grid = Grid::new(8, 8, 4, 1e-3, 1e-3, 1e-3).unwrap();
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((8, 8, 4), 1.5e9),
-        lame_mu: Array3::zeros((8, 8, 4)),
-        density: Array3::from_elem((8, 8, 4), DENSITY_WATER_NOMINAL),
+        lame_lambda: Array3::from_elem([8, 8, 4], 1.5e9),
+        lame_mu: Array3::zeros([8, 8, 4]),
+        density: Array3::from_elem([8, 8, 4], DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, 1e-7).unwrap();
     let _ = orch.propagate(20, None, None).unwrap();
@@ -343,16 +343,16 @@ fn acoustic_fluid_pulse_propagates_finite_field() {
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
 
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL * cp * cp),
-        lame_mu: Array3::zeros((nx, ny, nz)),
-        density: Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL),
+        lame_lambda: Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL * cp * cp),
+        lame_mu: Array3::zeros([nx, ny, nz]),
+        density: Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
     let amp = 1e-6;
     let signal: Array1<f64> =
         Array1::from_iter((0..n_steps).map(|n| amp * (TWO_PI * MHZ_TO_HZ * (n as f64) * dt).sin()));
-    let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut src_mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     src_mask[[3, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {
         mask: src_mask,
@@ -362,14 +362,14 @@ fn acoustic_fluid_pulse_propagates_finite_field() {
         mode: ElasticPstdSourceMode::Additive,
     };
 
-    let mut sensor_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut sensor_mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     sensor_mask[[8, ny / 2, nz / 2]] = true;
     let data = orch
         .propagate(n_steps, Some(&source), Some(&sensor_mask))
         .unwrap();
 
     let vx_trace = data.vx.expect("vx recorded");
-    assert_eq!(vx_trace.shape(), &[1, n_steps]);
+    assert_eq!(vx_trace.shape(), [1, n_steps]);
     let peak = vx_trace.iter().map(|x| x.abs()).fold(0.0_f64, f64::max);
     assert!(peak.is_finite(), "peak must be finite");
     assert!(peak > 0.0, "downstream sensor must record a non-zero pulse");

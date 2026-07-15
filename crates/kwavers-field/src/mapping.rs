@@ -5,40 +5,43 @@
 //! from incorrect field indexing.
 
 pub use crate::UnifiedFieldType;
+use leto::{Array4, ArrayView3, ArrayViewMut3};
 
 /// Type-safe field accessor to prevent index confusion
 #[derive(Debug)]
 pub struct FieldAccessor<'a> {
-    fields: &'a ndarray::Array4<f64>,
+    fields: &'a Array4<f64>,
 }
 
 impl<'a> FieldAccessor<'a> {
     #[must_use]
-    pub fn new(fields: &'a ndarray::Array4<f64>) -> Self {
+    pub fn new(fields: &'a Array4<f64>) -> Self {
         Self { fields }
     }
 
     /// Get a specific field by type
     #[must_use]
-    pub fn get(&self, field_type: UnifiedFieldType) -> ndarray::ArrayView3<'a, f64> {
-        self.fields.index_axis(ndarray::Axis(0), field_type.index())
+    pub fn get(&self, field_type: UnifiedFieldType) -> ArrayView3<'a, f64> {
+        self.fields
+            .index_axis::<3>(0, field_type.index())
+            .expect("field index is always valid for a correctly shaped fields array")
     }
 
     /// Get pressure field
     #[must_use]
-    pub fn pressure(&self) -> ndarray::ArrayView3<'a, f64> {
+    pub fn pressure(&self) -> ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Pressure)
     }
 
     /// Get temperature field
     #[must_use]
-    pub fn temperature(&self) -> ndarray::ArrayView3<'a, f64> {
+    pub fn temperature(&self) -> ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Temperature)
     }
 
     /// Get density field
     #[must_use]
-    pub fn density(&self) -> ndarray::ArrayView3<'a, f64> {
+    pub fn density(&self) -> ArrayView3<'a, f64> {
         self.get(UnifiedFieldType::Density)
     }
 }
@@ -46,37 +49,34 @@ impl<'a> FieldAccessor<'a> {
 /// Type-safe mutable field accessor
 #[derive(Debug)]
 pub struct FieldAccessorMut<'a> {
-    fields: &'a mut ndarray::Array4<f64>,
+    fields: &'a mut Array4<f64>,
 }
 
 impl<'a> FieldAccessorMut<'a> {
     #[must_use]
-    pub fn new(fields: &'a mut ndarray::Array4<f64>) -> Self {
+    pub fn new(fields: &'a mut Array4<f64>) -> Self {
         Self { fields }
     }
 
     /// Get a specific field mutably by type
-    #[must_use]
-    pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ndarray::ArrayViewMut3<'_, f64> {
+    pub fn get_mut(&mut self, field_type: UnifiedFieldType) -> ArrayViewMut3<'_, f64> {
         self.fields
-            .index_axis_mut(ndarray::Axis(0), field_type.index())
+            .index_axis_mut::<3>(0, field_type.index())
+            .expect("field index is always valid for a correctly shaped fields array")
     }
 
     /// Get pressure field mutably
-    #[must_use]
-    pub fn pressure_mut(&mut self) -> ndarray::ArrayViewMut3<'_, f64> {
+    pub fn pressure_mut(&mut self) -> ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Pressure)
     }
 
     /// Get temperature field mutably
-    #[must_use]
-    pub fn temperature_mut(&mut self) -> ndarray::ArrayViewMut3<'_, f64> {
+    pub fn temperature_mut(&mut self) -> ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Temperature)
     }
 
     /// Get density field mutably
-    #[must_use]
-    pub fn density_mut(&mut self) -> ndarray::ArrayViewMut3<'_, f64> {
+    pub fn density_mut(&mut self) -> ArrayViewMut3<'_, f64> {
         self.get_mut(UnifiedFieldType::Density)
     }
 }

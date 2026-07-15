@@ -3,7 +3,7 @@
 use kwavers_physics::acoustics::therapy::neuromodulation::{
     bls_capacitance, quasistatic_deflection, rest_gap,
 };
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -25,7 +25,7 @@ pub fn bls_deflection_curve(
         .iter()
         .map(|&pac| quasistatic_deflection(pac, qm0, delta))
         .collect();
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Curved-dome bilayer membrane capacitance C_m(Z) (Plaksin Eq. 8).
@@ -45,5 +45,5 @@ pub fn bilayer_capacitance_curve(
         .iter()
         .map(|&zi| bls_capacitance(zi, cm0_uf_cm2, radius_a_m, gap_delta_m))
         .collect();
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }

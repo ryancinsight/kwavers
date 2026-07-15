@@ -1,11 +1,11 @@
 //! Trainer step, convergence, and Helmholtz-path tests (Phase C-2).
 
-use burn::tensor::{Tensor, TensorData};
+use coeus_autograd::Var;
 
 use super::super::config::ParamFieldPINNConfig;
 use super::super::network::ParamFieldPINNNetwork;
 use super::super::training::{FieldSurrogateTrainingConfig, ParamFieldPINNTrainer, TrainingBatch};
-use super::AB;
+use super::B;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Synthetic data helper
@@ -16,24 +16,14 @@ use super::AB;
 ///
 /// Targets are normalised to `[0, 1]` so they live within the network's
 /// `tanh`-friendly range.
-fn make_synthetic_batch(
-    device: &<AB as burn::tensor::backend::Backend>::Device,
-    rng_seed: u64,
-    n: usize,
-) -> TrainingBatch<AB> {
-    use burn::tensor::Distribution;
-    // Inputs: uniform in [-1, 1]^5
-    let inputs = Tensor::<AB, 2>::random([n, 5], Distribution::Uniform(-1.0, 1.0), device);
-    // Pull data back to host to compute targets analytically.
-    let host_data: Vec<f32> = inputs
-        .clone()
-        .into_data()
-        .convert::<f32>()
-        .into_vec()
-        .unwrap();
+fn make_synthetic_batch(backend: &B, rng_seed: u64, n: usize) -> TrainingBatch<B> {
+    let _ = rng_seed; // kept for future deterministic seeding
+                      // Inputs: uniform in [-1, 1]^5
+    let host_data: Vec<f32> = (0..n * 5)
+        .map(|_| rand::random::<f32>() * 2.0 - 1.0)
+        .collect();
     let mut targets = vec![0.0_f32; n * 3];
     let mut f0_vec = vec![0.0_f32; n];
-    let _ = rng_seed; // kept for future deterministic seeding
     for i in 0..n {
         let x = host_data[i * 5];
         let y = host_data[i * 5 + 1];
@@ -48,13 +38,26 @@ fn make_synthetic_batch(
         // Map f0_norm in [-1, 1] back to physical Hz in [0.5, 1.0] MHz
         f0_vec[i] = 0.75e6 + 0.25e6 * f0_norm;
     }
-    let targets = Tensor::<AB, 2>::from_data(TensorData::new(targets, [n, 3]), device);
-    let f0_phys = Tensor::<AB, 1>::from_data(TensorData::new(f0_vec, [n]), device);
+    let inputs = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n, 5], &host_data, backend),
+        false,
+    );
+    let targets = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n, 3], &targets, backend),
+        false,
+    );
+    let f0_phys = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n], &f0_vec, backend),
+        false,
+    );
     // Synthetic batch is treated as drawn from a single virtual
     // kernel; the per-group prominence loop then collapses to the
     // same batch-wide aggregation Phase C-9 exercised, keeping the
     // training-loss-decreases test sensitive to gradient flow.
-    let group_ids = Tensor::<AB, 1>::from_data(TensorData::new(vec![0.0_f32; n], [n]), device);
+    let group_ids = Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![n], &vec![0.0_f32; n], backend),
+        false,
+    );
     TrainingBatch {
         inputs,
         targets,
@@ -72,18 +75,18 @@ fn make_synthetic_batch(
 
 #[test]
 fn test_trainer_step_returns_finite_metrics() {
+    let backend = B::default();
     let cfg = ParamFieldPINNConfig {
         hidden_layers: vec![32, 32],
         ..ParamFieldPINNConfig::default()
     };
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
+    let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
     let train_cfg = FieldSurrogateTrainingConfig {
         helmholtz_weight: 0.0, // pure-data step for this smoke test
         ..FieldSurrogateTrainingConfig::default()
     };
-    let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
-    let batch = make_synthetic_batch(&device, 0, 64);
+    let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
+    let batch = make_synthetic_batch(&backend, 0, 64);
     let m = trainer.step(batch);
     assert!(
         m.data.is_finite() && m.data >= 0.0,
@@ -96,30 +99,30 @@ fn test_trainer_step_returns_finite_metrics() {
 
 #[test]
 fn test_trainer_data_loss_decreases_over_50_steps() {
+    let backend = B::default();
     let cfg = ParamFieldPINNConfig {
         hidden_layers: vec![32, 32],
         ..ParamFieldPINNConfig::default()
     };
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
+    let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
     let train_cfg = FieldSurrogateTrainingConfig {
         learning_rate: 5.0e-2, // larger LR for the small synthetic problem
         helmholtz_weight: 0.0,
         ..FieldSurrogateTrainingConfig::default()
     };
-    let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
+    let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
 
     // Average over the first 5 / last 5 steps to suppress per-batch
     // stochastic variance from the random input sampling.
     let n_steps = 100usize;
     let mut history = Vec::with_capacity(n_steps);
     for step in 0..n_steps {
-        let batch = make_synthetic_batch(&device, step as u64, 128);
+        let batch = make_synthetic_batch(&backend, step as u64, 128);
         history.push(trainer.step(batch).data);
     }
     let first_avg: f32 = history[..5].iter().sum::<f32>() / 5.0;
     let last_avg: f32 = history[n_steps - 5..].iter().sum::<f32>() / 5.0;
-    // Plain SGD on a smooth Gaussian regression converges slowly;
+    // Plain Adam on a smooth Gaussian regression converges quickly;
     // require a 20% drop on the smoothed loss as the regression-
     // is-progressing signal.
     assert!(
@@ -137,23 +140,23 @@ fn test_trainer_with_peak_prominence_weight_runs_finite_and_propagates_gradient(
     // Peak-prominence path: `(max(pred_pmax) − max(target_pmax))²`
     // must stay finite over multiple steps and actually drive the
     // network's batch-max prediction toward the batch-max target.
+    let backend = B::default();
     let cfg = ParamFieldPINNConfig {
         hidden_layers: vec![16, 16],
         ..ParamFieldPINNConfig::default()
     };
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
+    let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
     let train_cfg = FieldSurrogateTrainingConfig {
         learning_rate: 5.0e-2,
         helmholtz_weight: 0.0,
         peak_prominence_weight: 1.0,
         ..FieldSurrogateTrainingConfig::default()
     };
-    let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
+    let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
     let mut first_prom = 0.0_f32;
     let mut last_prom = 0.0_f32;
     for step in 0..30 {
-        let batch = make_synthetic_batch(&device, step as u64, 128);
+        let batch = make_synthetic_batch(&backend, step as u64, 128);
         let m = trainer.step(batch);
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(
@@ -180,12 +183,12 @@ fn test_trainer_with_helmholtz_weight_runs_finite() {
     // The Helmholtz loss path executes 7 forward passes per step.
     // This test exercises that path on a tiny network and verifies
     // both loss components stay finite over 5 steps.
+    let backend = B::default();
     let cfg = ParamFieldPINNConfig {
         hidden_layers: vec![16, 16],
         ..ParamFieldPINNConfig::default()
     };
-    let device = Default::default();
-    let net = ParamFieldPINNNetwork::<AB>::new(&cfg, &device).unwrap();
+    let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
     // The Helmholtz residual is dimensionless O(1); weight 1.0
     // makes it co-dominant with the data loss. Smaller weights
     // (0.01–0.1) are typical when both must coexist.
@@ -194,9 +197,9 @@ fn test_trainer_with_helmholtz_weight_runs_finite() {
         helmholtz_weight: 0.1,
         ..FieldSurrogateTrainingConfig::default()
     };
-    let mut trainer = ParamFieldPINNTrainer::<AB>::new(net, train_cfg).unwrap();
+    let mut trainer = ParamFieldPINNTrainer::<B>::new(net, train_cfg).unwrap();
     for step in 0..5 {
-        let batch = make_synthetic_batch(&device, step as u64, 32);
+        let batch = make_synthetic_batch(&backend, step as u64, 32);
         let m = trainer.step(batch);
         assert!(m.data.is_finite(), "data loss not finite at step {step}");
         assert!(

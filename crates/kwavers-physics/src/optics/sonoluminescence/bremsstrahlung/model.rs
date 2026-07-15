@@ -1,6 +1,6 @@
 //! Bremsstrahlung emission model.
 
-use ndarray::Array1;
+use leto::Array1;
 
 use super::constants::c_ff_per_sr;
 use super::gaunt::gaunt_factor_thermal;

@@ -440,7 +440,7 @@ fn multi_relaxation_mode_realizes_spectrum_at_drive_frequency() {
 #[test]
 fn stratified_exponent_matches_per_tissue_uniform_operator() {
     use kwavers_medium::heterogeneous::HeterogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     let grid = Grid::new(16, 16, 16, 1e-4, 1e-4, 1e-4).unwrap();
     let (rho, c, alpha0) = (DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, 0.5);
@@ -449,7 +449,7 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
 
     // Deterministic, non-DC input fields shared by all three solvers.
     let pattern = |scale: f64| {
-        Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+        Array3::from_shape_fn([nx, ny, nz], |[i, j, k]| {
             scale
                 * ((TWO_PI * i as f64 / nx as f64).sin()
                     + (TWO_PI * j as f64 / ny as f64).cos()
@@ -466,7 +466,11 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
         solver.div_u.assign(&rho_total);
         solver.fields.p.fill(0.0);
         solver.apply_absorption_to_pressure().unwrap();
-        solver.fields.p.clone()
+        let mut pressure = Array3::zeros([nx, ny, nz]);
+        for (dst, src) in pressure.iter_mut().zip(solver.fields.p.iter()) {
+            *dst = *src;
+        }
+        pressure
     };
 
     // Uniform single-exponent references (config exponent drives the symbol).
@@ -492,7 +496,11 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
     het.use_trilinear_interpolation = false; // piecewise-constant exponent lookup
     het.absorption.fill(alpha0);
     het.alpha0.fill(alpha0);
-    for ((i, _, _), a) in het.alpha_power.indexed_iter_mut() {
+    for ([i, _, _], a) in het
+        .alpha_power
+        .indexed_iter_mut()
+        .expect("invariant: alpha_power field is materialized")
+    {
         *a = if i < nx / 2 { ya } else { yb };
     }
     let cfg = PSTDConfig {
@@ -516,7 +524,7 @@ fn stratified_exponent_matches_per_tissue_uniform_operator() {
         .chain(p_b.iter())
         .fold(0.0_f64, |m, &v| m.max(v.abs()))
         .max(1e-30);
-    for ((i, j, k), &ps) in p_s.indexed_iter() {
+    for ([i, j, k], &ps) in p_s.indexed_iter() {
         let expected = if i < nx / 2 {
             p_a[[i, j, k]]
         } else {

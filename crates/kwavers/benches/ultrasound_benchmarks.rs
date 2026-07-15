@@ -32,7 +32,7 @@ fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>
     derivative[0] = (field[1] - field[0]) / dx;
     derivative[field.len() - 1] = (field[field.len() - 1] - field[field.len() - 2]) / dx;
 }
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 
 /// Benchmark 1D wave equation accuracy and performance
@@ -51,11 +51,13 @@ fn bench_1d_wave_equation(c: &mut Criterion) {
                 let dt = dx / wave_speed * 0.9; // Slightly below CFL
 
                 // Create spatial grid
-                let x: Array1<f64> = Array1::linspace(0.0, (grid_size - 1) as f64 * dx, grid_size);
+                let x: Array1<f64> = Array1::from_shape_fn(grid_size, |[i]| {
+                    0.0 + i as f64 * ((grid_size - 1) as f64 * dx - 0.0) / (grid_size - 1) as f64
+                });
 
                 // Initial conditions
                 let mut u_current: Array1<f64> =
-                    (&x * 2.0 * PI / wavelength).mapv(f64::sin) * amplitude;
+                    &(&(&(&x * 2.0) * PI) / wavelength).mapv(f64::sin) * amplitude;
                 let mut u_previous: Array1<f64> = u_current.clone();
 
                 // Time stepping (100 steps)
@@ -157,11 +159,13 @@ fn bench_derivative_computation(c: &mut Criterion) {
         group.bench_function(format!("finite_diff_{}", grid_size), |b| {
             b.iter(|| {
                 // Create test field with known derivative
-                let x: Array1<f64> = Array1::linspace(0.0, 10.0, grid_size);
+                let x: Array1<f64> = Array1::from_shape_fn(grid_size, |[i]| {
+                    0.0 + i as f64 * (10.0 - 0.0) / (grid_size - 1) as f64
+                });
                 let field: Array1<f64> = (&x * &x).mapv(f64::sin); // sin(x²)
 
                 // Analytical derivative: 2x * cos(x²)
-                let analytical_derivative: Array1<f64> = (&x * 2.0) * (&x * &x).mapv(f64::cos);
+                let analytical_derivative: Array1<f64> = &(&x * 2.0) * &(&x * &x).mapv(f64::cos);
 
                 // Numerical derivative
                 let mut numerical_derivative = Array1::<f64>::zeros(grid_size);
@@ -214,14 +218,16 @@ fn bench_clinical_workflow(c: &mut Criterion) {
             // - Clinical reporting with diagnostic thresholds
             // - Quality metrics (SNR, CNR, confidence intervals)
             // Current: mean/std only for benchmark timing
-            let mean_stiffness = elasticity_map.youngs_modulus.mean().unwrap();
+            let sample_count = elasticity_map.youngs_modulus.iter().count();
+            let mean_stiffness =
+                elasticity_map.youngs_modulus.iter().copied().sum::<f64>() / sample_count as f64;
             let std_stiffness = {
                 let variance = elasticity_map
                     .youngs_modulus
                     .iter()
                     .map(|&x| (x - mean_stiffness).powi(2))
                     .sum::<f64>()
-                    / elasticity_map.youngs_modulus.len() as f64;
+                    / sample_count as f64;
                 variance.sqrt()
             };
 
@@ -267,8 +273,10 @@ fn bench_physics_validation(c: &mut Criterion) {
                 };
 
                 // Numerical solution
-                let x: Array1<f64> = Array1::linspace(0.0, wavelength, size);
-                let mut u_current: Array1<f64> = (&x * 2.0 * PI / wavelength).mapv(f64::sin);
+                let x: Array1<f64> = Array1::from_shape_fn(size, |[i]| {
+                    0.0 + i as f64 * (wavelength - 0.0) / (size - 1) as f64
+                });
+                let mut u_current: Array1<f64> = (&(&(&x * 2.0) * PI) / wavelength).mapv(f64::sin);
                 let mut u_previous: Array1<f64> = u_current.clone();
 
                 let steps = (final_time / dt) as usize;

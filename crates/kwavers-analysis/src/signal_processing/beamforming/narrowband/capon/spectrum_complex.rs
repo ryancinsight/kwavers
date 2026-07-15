@@ -6,10 +6,9 @@ use crate::signal_processing::beamforming::narrowband::snapshots::{
     SnapshotSelection,
 };
 use crate::signal_processing::beamforming::narrowband::steering::NarrowbandSteering;
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use kwavers_math::linear_algebra::ComplexLinearAlgebra;
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
 
 /// Compute the narrowband Capon/MVDR spatial spectrum using complex snapshots and Hermitian covariance.
 ///
@@ -30,7 +29,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
 ) -> KwaversResult<f64> {
     cfg.validate()?;
 
-    let (n_sensors, channels, n_samples) = sensor_data.dim();
+    let [n_sensors, channels, n_samples] = sensor_data.shape();
     if channels != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "capon_spatial_spectrum_point_complex_baseband expects sensor_data shape (n_sensors, 1, n_samples); got channels={channels}"
@@ -100,7 +99,7 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
     // 3) Diagonal loading.
     if cfg.diagonal_loading > 0.0 {
         for i in 0..n_sensors {
-            r[(i, i)] += Complex64::new(cfg.diagonal_loading, 0.0);
+            r[[i, i]] += Complex64::new(cfg.diagonal_loading, 0.0);
         }
     }
 
@@ -111,7 +110,8 @@ pub fn capon_spatial_spectrum_point_complex_baseband(
         .into_array();
 
     // 5) Compute denom = aᴴ R^{-1} a via linear solve R y = a.
-    let y = ComplexLinearAlgebra::solve_linear_system_complex(&r, &a)?;
+    let y =
+        kwavers_math::linear_algebra::ComplexLinearAlgebra::solve_linear_system_complex(&r, &a)?;
 
     let mut denom = Complex64::new(0.0, 0.0);
     for i in 0..n_sensors {

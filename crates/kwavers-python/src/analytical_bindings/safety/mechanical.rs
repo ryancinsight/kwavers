@@ -1,7 +1,7 @@
 //! Mechanical-index and cavitation-risk safety bindings.
 
 use kwavers_physics::analytical::safety;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -45,7 +45,7 @@ pub fn mechanical_index_field(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::mechanical_index_field(p_s, f_hz);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute the Mechanical Index for one pressure over a frequency sweep.
@@ -67,7 +67,7 @@ pub fn mechanical_index_frequency_sweep(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::mechanical_index_frequency_sweep(p_neg_pa, f_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Compute cavitation-risk probability from Mechanical Index.
@@ -93,5 +93,5 @@ pub fn mechanical_index_cavitation_risk(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::mechanical_index_cavitation_risk(mi_s, threshold_mi, slope);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

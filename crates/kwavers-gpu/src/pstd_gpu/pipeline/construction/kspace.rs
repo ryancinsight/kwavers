@@ -55,40 +55,40 @@ pub(in crate::pstd_gpu) fn precompute_kspace_shifts(
     let (sz_pos, sz_neg) = generate_shift_1d(nz, dk_z, dz);
 
     let mut shifts_all: Vec<f32> = Vec::with_capacity(4 * (nx + ny + nz));
-    for c in &sx_pos {
+    for c in sx_pos.iter() {
         shifts_all.push(c.re as f32);
     }
-    for c in &sx_pos {
+    for c in sx_pos.iter() {
         shifts_all.push(c.im as f32);
     }
-    for c in &sx_neg {
+    for c in sx_neg.iter() {
         shifts_all.push(c.re as f32);
     }
-    for c in &sx_neg {
+    for c in sx_neg.iter() {
         shifts_all.push(c.im as f32);
     }
-    for c in &sy_pos {
+    for c in sy_pos.iter() {
         shifts_all.push(c.re as f32);
     }
-    for c in &sy_pos {
+    for c in sy_pos.iter() {
         shifts_all.push(c.im as f32);
     }
-    for c in &sy_neg {
+    for c in sy_neg.iter() {
         shifts_all.push(c.re as f32);
     }
-    for c in &sy_neg {
+    for c in sy_neg.iter() {
         shifts_all.push(c.im as f32);
     }
-    for c in &sz_pos {
+    for c in sz_pos.iter() {
         shifts_all.push(c.re as f32);
     }
-    for c in &sz_pos {
+    for c in sz_pos.iter() {
         shifts_all.push(c.im as f32);
     }
-    for c in &sz_neg {
+    for c in sz_neg.iter() {
         shifts_all.push(c.re as f32);
     }
-    for c in &sz_neg {
+    for c in sz_neg.iter() {
         shifts_all.push(c.im as f32);
     }
 

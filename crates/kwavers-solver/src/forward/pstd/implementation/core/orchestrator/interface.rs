@@ -2,6 +2,7 @@ use super::PSTDSolver;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::Array3;
 use std::sync::Arc;
 
 impl crate::interface::Solver for PSTDSolver {
@@ -30,21 +31,15 @@ impl crate::interface::Solver for PSTDSolver {
         PSTDSolver::step_forward(self)
     }
 
-    fn pressure_field(&self) -> &ndarray::Array3<f64> {
+    fn pressure_field(&self) -> &Array3<f64> {
         &self.fields.p
     }
 
-    fn recorded_sensor_pressure(&self) -> Option<ndarray::Array2<f64>> {
+    fn recorded_sensor_pressure(&self) -> Option<leto::Array2<f64>> {
         self.sensor_recorder.extract_pressure_data()
     }
 
-    fn velocity_fields(
-        &self,
-    ) -> (
-        &ndarray::Array3<f64>,
-        &ndarray::Array3<f64>,
-        &ndarray::Array3<f64>,
-    ) {
+    fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
         (&self.fields.ux, &self.fields.uy, &self.fields.uz)
     }
 

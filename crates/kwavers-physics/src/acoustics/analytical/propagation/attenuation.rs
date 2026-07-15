@@ -36,7 +36,7 @@
 
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Attenuation calculator for wave propagation in absorbing media
 #[derive(Debug)]
@@ -134,7 +134,7 @@ impl AttenuationCalculator {
         source_position: [f64; 3],
         grid_spacing: [f64; 3],
     ) {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         for i in 0..nx {
             for j in 0..ny {
@@ -151,7 +151,7 @@ impl AttenuationCalculator {
                         )
                         .sqrt();
 
-                    field[(i, j, k)] *= (-self.absorption_coefficient * distance).exp();
+                    field[[i, j, k]] *= (-self.absorption_coefficient * distance).exp();
                 }
             }
         }

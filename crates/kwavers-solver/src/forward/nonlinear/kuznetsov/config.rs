@@ -171,7 +171,7 @@ impl KuznetsovConfig {
 
     /// Validate configuration parameters
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
     ///
     pub fn validate(&self, grid: &Grid) -> Result<(), KwaversError> {
         // Check CFL factor

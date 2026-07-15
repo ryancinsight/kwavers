@@ -28,8 +28,9 @@
 //! Pierce (1989) Ch. 1.
 
 use super::core::DGSolver;
+use super::rk_update::{update_euler, update_ssp_final, update_ssp_second};
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 mod tensor;
 pub use tensor::{
@@ -61,7 +62,7 @@ impl AcousticDg1DWorkspace {
     }
 
     fn ensure_dim(&mut self, dim: (usize, usize, usize)) {
-        if self.p_original.dim() != dim {
+        if self.p_original.shape() != [dim.0, dim.1, dim.2] {
             *self = Self::new(dim);
         }
     }
@@ -86,7 +87,11 @@ impl DGSolver {
         workspace: &mut AcousticDg1DWorkspace,
     ) -> KwaversResult<()> {
         validate_acoustic_inputs(self.n_nodes, pressure, velocity, density)?;
-        workspace.ensure_dim(pressure.dim());
+        workspace.ensure_dim((
+            pressure.shape()[0],
+            pressure.shape()[1],
+            pressure.shape()[2],
+        ));
         workspace.p_original.assign(pressure);
         workspace.u_original.assign(velocity);
 
@@ -97,14 +102,18 @@ impl DGSolver {
             &mut workspace.p_rhs,
             &mut workspace.u_rhs,
         )?;
-        Zip::from(&mut workspace.p_stage)
-            .and(&workspace.p_original)
-            .and(&workspace.p_rhs)
-            .for_each(|stage, &p0, &rhs| *stage = p0 + dt * rhs);
-        Zip::from(&mut workspace.u_stage)
-            .and(&workspace.u_original)
-            .and(&workspace.u_rhs)
-            .for_each(|stage, &u0, &rhs| *stage = u0 + dt * rhs);
+        update_euler(
+            &mut workspace.p_stage,
+            &workspace.p_original,
+            &workspace.p_rhs,
+            dt,
+        );
+        update_euler(
+            &mut workspace.u_stage,
+            &workspace.u_original,
+            &workspace.u_rhs,
+            dt,
+        );
 
         self.compute_acoustic_rhs_1d_into(
             &workspace.p_stage,
@@ -113,20 +122,18 @@ impl DGSolver {
             &mut workspace.p_rhs,
             &mut workspace.u_rhs,
         )?;
-        Zip::from(&mut workspace.p_stage)
-            .and(&workspace.p_original)
-            .and(&workspace.p_rhs)
-            .for_each(|stage, &p0, &rhs| {
-                let p1 = *stage;
-                *stage = 0.75 * p0 + 0.25 * (p1 + dt * rhs);
-            });
-        Zip::from(&mut workspace.u_stage)
-            .and(&workspace.u_original)
-            .and(&workspace.u_rhs)
-            .for_each(|stage, &u0, &rhs| {
-                let u1 = *stage;
-                *stage = 0.75 * u0 + 0.25 * (u1 + dt * rhs);
-            });
+        update_ssp_second(
+            &mut workspace.p_stage,
+            &workspace.p_original,
+            &workspace.p_rhs,
+            dt,
+        );
+        update_ssp_second(
+            &mut workspace.u_stage,
+            &workspace.u_original,
+            &workspace.u_rhs,
+            dt,
+        );
 
         self.compute_acoustic_rhs_1d_into(
             &workspace.p_stage,
@@ -135,20 +142,20 @@ impl DGSolver {
             &mut workspace.p_rhs,
             &mut workspace.u_rhs,
         )?;
-        Zip::from(pressure)
-            .and(&workspace.p_original)
-            .and(&workspace.p_stage)
-            .and(&workspace.p_rhs)
-            .for_each(|p_new, &p0, &p2, &rhs| {
-                *p_new = (1.0 / 3.0) * p0 + (2.0 / 3.0) * (p2 + dt * rhs);
-            });
-        Zip::from(velocity)
-            .and(&workspace.u_original)
-            .and(&workspace.u_stage)
-            .and(&workspace.u_rhs)
-            .for_each(|u_new, &u0, &u2, &rhs| {
-                *u_new = (1.0 / 3.0) * u0 + (2.0 / 3.0) * (u2 + dt * rhs);
-            });
+        update_ssp_final(
+            pressure,
+            &workspace.p_original,
+            &workspace.p_stage,
+            &workspace.p_rhs,
+            dt,
+        );
+        update_ssp_final(
+            velocity,
+            &workspace.u_original,
+            &workspace.u_stage,
+            &workspace.u_rhs,
+            dt,
+        );
         Ok(())
     }
 
@@ -165,12 +172,12 @@ impl DGSolver {
         velocity_rhs: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         validate_acoustic_inputs(self.n_nodes, pressure, velocity, density)?;
-        if pressure_rhs.dim() != pressure.dim() || velocity_rhs.dim() != pressure.dim() {
+        if pressure_rhs.shape() != pressure.shape() || velocity_rhs.shape() != pressure.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "acoustic RHS output dimension mismatch: pressure={:?}, p_rhs={:?}, u_rhs={:?}",
-                pressure.dim(),
-                pressure_rhs.dim(),
-                velocity_rhs.dim()
+                pressure.shape(),
+                pressure_rhs.shape(),
+                velocity_rhs.shape()
             )));
         }
 
@@ -186,11 +193,11 @@ impl DGSolver {
                 let mut du = 0.0;
                 let mut dp = 0.0;
                 for j in 0..self.n_nodes {
-                    du += self.diff_matrix[[i, j]] * velocity[(elem, j, 0)];
-                    dp += self.diff_matrix[[i, j]] * pressure[(elem, j, 0)];
+                    du += self.diff_matrix[[i, j]] * velocity[[elem, j, 0]];
+                    dp += self.diff_matrix[[i, j]] * pressure[[elem, j, 0]];
                 }
-                pressure_rhs[(elem, i, 0)] -= bulk * du;
-                velocity_rhs[(elem, i, 0)] -= inv_density * dp;
+                pressure_rhs[[elem, i, 0]] -= bulk * du;
+                velocity_rhs[[elem, i, 0]] -= inv_density * dp;
             }
         }
 
@@ -199,20 +206,20 @@ impl DGSolver {
             let right_elem = (elem + 1) % n_elements;
 
             let left_ext = AcousticState {
-                pressure: pressure[(left_elem, self.n_nodes - 1, 0)],
-                velocity: velocity[(left_elem, self.n_nodes - 1, 0)],
+                pressure: pressure[[left_elem, self.n_nodes - 1, 0]],
+                velocity: velocity[[left_elem, self.n_nodes - 1, 0]],
             };
             let left_int = AcousticState {
-                pressure: pressure[(elem, 0, 0)],
-                velocity: velocity[(elem, 0, 0)],
+                pressure: pressure[[elem, 0, 0]],
+                velocity: velocity[[elem, 0, 0]],
             };
             let right_int = AcousticState {
-                pressure: pressure[(elem, self.n_nodes - 1, 0)],
-                velocity: velocity[(elem, self.n_nodes - 1, 0)],
+                pressure: pressure[[elem, self.n_nodes - 1, 0]],
+                velocity: velocity[[elem, self.n_nodes - 1, 0]],
             };
             let right_ext = AcousticState {
-                pressure: pressure[(right_elem, 0, 0)],
-                velocity: velocity[(right_elem, 0, 0)],
+                pressure: pressure[[right_elem, 0, 0]],
+                velocity: velocity[[right_elem, 0, 0]],
             };
 
             let flux_left = lax_friedrichs_acoustic_flux(
@@ -239,12 +246,12 @@ impl DGSolver {
 
             for i in 0..self.n_nodes {
                 if n_face > 0 {
-                    pressure_rhs[(elem, i, 0)] += self.lift_matrix[[i, 0]] * p_res_left;
-                    velocity_rhs[(elem, i, 0)] += self.lift_matrix[[i, 0]] * u_res_left;
+                    pressure_rhs[[elem, i, 0]] += self.lift_matrix[[i, 0]] * p_res_left;
+                    velocity_rhs[[elem, i, 0]] += self.lift_matrix[[i, 0]] * u_res_left;
                 }
                 if n_face > 1 {
-                    pressure_rhs[(elem, i, 0)] += self.lift_matrix[[i, 1]] * p_res_right;
-                    velocity_rhs[(elem, i, 0)] += self.lift_matrix[[i, 1]] * u_res_right;
+                    pressure_rhs[[elem, i, 0]] += self.lift_matrix[[i, 1]] * p_res_right;
+                    velocity_rhs[[elem, i, 0]] += self.lift_matrix[[i, 1]] * u_res_right;
                 }
             }
         }
@@ -269,17 +276,17 @@ fn validate_acoustic_inputs(
             "acoustic DG density must be finite and positive, got {density}"
         )));
     }
-    if pressure.dim() != velocity.dim() {
+    if pressure.shape() != velocity.shape() {
         return Err(KwaversError::InvalidInput(format!(
             "acoustic DG pressure/velocity dimension mismatch: {:?} vs {:?}",
-            pressure.dim(),
-            velocity.dim()
+            pressure.shape(),
+            velocity.shape()
         )));
     }
     if pressure.shape()[1] != n_nodes || pressure.shape()[2] != 1 {
         return Err(KwaversError::InvalidInput(format!(
             "acoustic DG expects line coefficients (n_elements, {n_nodes}, 1), got {:?}",
-            pressure.dim()
+            pressure.shape()
         )));
     }
     Ok(())
@@ -331,8 +338,8 @@ mod tests {
     #[test]
     fn constant_acoustic_state_has_zero_rhs() {
         let solver = make_solver();
-        let pressure = Array3::from_elem((4, 3, 1), 2.0);
-        let velocity = Array3::from_elem((4, 3, 1), -0.25);
+        let pressure = Array3::from_elem([4, 3, 1], 2.0);
+        let velocity = Array3::from_elem([4, 3, 1], -0.25);
         let mut pressure_rhs = Array3::zeros((4, 3, 1));
         let mut velocity_rhs = Array3::zeros((4, 3, 1));
 
@@ -354,10 +361,10 @@ mod tests {
     #[test]
     fn periodic_acoustic_rhs_preserves_component_masses() {
         let solver = make_solver();
-        let pressure = Array3::from_shape_fn((4, 3, 1), |(elem, node, _)| {
+        let pressure = Array3::from_shape_fn((4, 3, 1), |[elem, node, _]| {
             (elem as f64 + node as f64).sin()
         });
-        let velocity = Array3::from_shape_fn((4, 3, 1), |(elem, node, _)| {
+        let velocity = Array3::from_shape_fn((4, 3, 1), |[elem, node, _]| {
             (0.3 * elem as f64 + 0.7 * node as f64).cos()
         });
         let mut pressure_rhs = Array3::zeros((4, 3, 1));
@@ -385,11 +392,11 @@ mod tests {
         );
     }
 
-    fn weighted_sum(values: &Array3<f64>, weights: &ndarray::Array1<f64>) -> f64 {
+    fn weighted_sum(values: &Array3<f64>, weights: &leto::Array1<f64>) -> f64 {
         let mut sum = 0.0;
-        for elem in 0..values.dim().0 {
-            for node in 0..values.dim().1 {
-                sum += weights[node] * values[(elem, node, 0)];
+        for elem in 0..values.shape()[0] {
+            for node in 0..values.shape()[1] {
+                sum += weights[node] * values[[elem, node, 0]];
             }
         }
         sum

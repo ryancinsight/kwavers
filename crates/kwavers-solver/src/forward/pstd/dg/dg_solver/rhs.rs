@@ -17,7 +17,7 @@
 //! §4; Kopriva (2009) §3.4.
 
 use super::topology::{CoefficientLayout, DgTopology};
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 pub(super) struct RhsOperator<'a> {
     pub(super) n_nodes: usize,
@@ -54,9 +54,9 @@ fn compute_line_rhs(operator: &RhsOperator<'_>, coeffs: &Array3<f64>, rhs: &mut 
             for i in 0..operator.n_nodes {
                 let mut du = 0.0;
                 for j in 0..operator.n_nodes {
-                    du += operator.d_matrix[[i, j]] * coeffs[(elem, j, var)];
+                    du += operator.d_matrix[[i, j]] * coeffs[[elem, j, var]];
                 }
-                rhs[(elem, i, var)] -= operator.wave_speed * du;
+                rhs[[elem, i, var]] -= operator.wave_speed * du;
             }
         }
     }
@@ -66,10 +66,10 @@ fn compute_line_rhs(operator: &RhsOperator<'_>, coeffs: &Array3<f64>, rhs: &mut 
             let left_elem = if elem == 0 { n_elements - 1 } else { elem - 1 };
             let right_elem = (elem + 1) % n_elements;
 
-            let u_minus_left = coeffs[(left_elem, operator.n_nodes - 1, var)];
-            let u_plus_left = coeffs[(elem, 0, var)];
-            let u_minus_right = coeffs[(elem, operator.n_nodes - 1, var)];
-            let u_plus_right = coeffs[(right_elem, 0, var)];
+            let u_minus_left = coeffs[[left_elem, operator.n_nodes - 1, var]];
+            let u_plus_left = coeffs[[elem, 0, var]];
+            let u_minus_right = coeffs[[elem, operator.n_nodes - 1, var]];
+            let u_plus_right = coeffs[[right_elem, 0, var]];
 
             let flux_left = lax_friedrichs_flux(operator.wave_speed, u_minus_left, u_plus_left);
             let flux_right = lax_friedrichs_flux(operator.wave_speed, u_minus_right, u_plus_right);
@@ -78,10 +78,10 @@ fn compute_line_rhs(operator: &RhsOperator<'_>, coeffs: &Array3<f64>, rhs: &mut 
 
             for i in 0..operator.n_nodes {
                 if n_face > 0 {
-                    rhs[(elem, i, var)] += operator.lift[[i, 0]] * face_res_left;
+                    rhs[[elem, i, var]] += operator.lift[[i, 0]] * face_res_left;
                 }
                 if n_face > 1 {
-                    rhs[(elem, i, var)] += operator.lift[[i, 1]] * face_res_right;
+                    rhs[[elem, i, var]] += operator.lift[[i, 1]] * face_res_right;
                 }
             }
         }
@@ -109,9 +109,9 @@ fn compute_tensor_rhs(
                     for j in 0..operator.n_nodes {
                         let source_node = topology.node_with_axis(node, axis, j);
                         du += operator.d_matrix[[node_coords[axis], j]]
-                            * coeffs[(elem, source_node, var)];
+                            * coeffs[[elem, source_node, var]];
                     }
-                    rhs[(elem, node, var)] -= operator.wave_speed * axis_scale * du;
+                    rhs[[elem, node, var]] -= operator.wave_speed * axis_scale * du;
                 }
             }
         }
@@ -150,10 +150,10 @@ fn add_axis_surface_flux(
         let left_node = topology.node_with_axis(transverse, axis, 0);
         let right_node = topology.node_with_axis(transverse, axis, operator.n_nodes - 1);
 
-        let u_minus_left = coeffs[(left_elem, right_node, var)];
-        let u_plus_left = coeffs[(elem, left_node, var)];
-        let u_minus_right = coeffs[(elem, right_node, var)];
-        let u_plus_right = coeffs[(right_elem, left_node, var)];
+        let u_minus_left = coeffs[[left_elem, right_node, var]];
+        let u_plus_left = coeffs[[elem, left_node, var]];
+        let u_minus_right = coeffs[[elem, right_node, var]];
+        let u_plus_right = coeffs[[right_elem, left_node, var]];
 
         let flux_left = lax_friedrichs_flux(operator.wave_speed, u_minus_left, u_plus_left);
         let flux_right = lax_friedrichs_flux(operator.wave_speed, u_minus_right, u_plus_right);
@@ -162,7 +162,7 @@ fn add_axis_surface_flux(
 
         for i in 0..operator.n_nodes {
             let lifted_node = topology.node_with_axis(transverse, axis, i);
-            rhs[(elem, lifted_node, var)] += operator.axis_scales[axis]
+            rhs[[elem, lifted_node, var]] += operator.axis_scales[axis]
                 * (operator.lift[[i, 0]] * face_res_left + operator.lift[[i, 1]] * face_res_right);
         }
     }

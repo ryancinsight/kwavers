@@ -2,7 +2,7 @@
 //! (ADR 033 increment 2).
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{l2_misfit, sample_receivers, ElasticFwi, ReceiverTraces};
 use crate::forward::elastic::swe::{ElasticPointForce, ElasticWaveField};
@@ -64,9 +64,10 @@ impl ElasticFwi {
         let wmax = illum.iter().fold(0.0_f64, |m, &v| m.max(v));
         if wmax > 0.0 {
             let floor = self.config.precond_eps * wmax;
-            ndarray::Zip::from(&mut grad)
-                .and(&illum)
-                .for_each(|g, &w| *g /= w + floor);
+            leto_ops::zip_mut_with(&mut grad.view_mut(), &illum.view(), |g, w| {
+                *g /= *w + floor;
+            })
+            .expect("invariant: gradient and illumination field shapes asserted equal");
         }
         self.mute_acquisition_imprint(&mut grad);
         Ok((j, grad))
@@ -81,7 +82,7 @@ impl ElasticFwi {
         if r == 0 {
             return;
         }
-        let (nx, ny, nz) = grad.dim();
+        let [nx, ny, nz] = grad.shape();
         let r2 = (r * r) as i64;
         let centers = self
             .config
@@ -170,8 +171,8 @@ fn k_mu_kernel(
     (dx, dy, dz): (f64, f64, f64),
 ) -> (Array3<f64>, Array3<f64>) {
     let n = fwd.len();
-    let dim = fwd[0].ux.dim();
-    let (nx, ny, nz) = dim;
+    let dim = fwd[0].ux.shape();
+    let [nx, ny, nz] = dim;
     let mut grad = Array3::<f64>::zeros(dim);
     let mut illum = Array3::<f64>::zeros(dim);
 

@@ -3,9 +3,24 @@
 //! Models the frequency-dependent behavior of transducers including
 //! bandwidth, sensitivity, and impedance characteristics.
 
+use eunomia::Complex64;
 use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
+
+fn linspace(start: f64, end: f64, num_points: usize) -> Array1<f64> {
+    if num_points == 0 {
+        return Array1::zeros([0]);
+    }
+    if num_points == 1 {
+        return Array1::from_vec([1], vec![start]).expect("linspace shape must match");
+    }
+    let step = (end - start) / (num_points - 1) as f64;
+    Array1::from_vec(
+        [num_points],
+        (0..num_points).map(|i| start + step * i as f64).collect(),
+    )
+    .expect("linspace shape must match")
+}
 
 /// Frequency response characteristics of a transducer
 ///
@@ -65,12 +80,12 @@ impl FrequencyResponse {
         // Create frequency vector (0.5 to 1.5 times center frequency)
         let freq_min = 0.5 * center_freq;
         let freq_max = 1.5 * center_freq;
-        let frequencies = Array1::linspace(freq_min, freq_max, num_points);
+        let frequencies = linspace(freq_min, freq_max, num_points);
 
         // Calculate normalized frequency
-        let mut magnitude = Array1::zeros(num_points);
-        let mut phase = Array1::zeros(num_points);
-        let mut impedance = Array1::zeros(num_points);
+        let mut magnitude = Array1::zeros([num_points]);
+        let mut phase = Array1::zeros([num_points]);
+        let mut impedance = Array1::zeros([num_points]);
 
         // Effective bandwidth factor
         let _bandwidth_factor = coupling.powi(2) / mechanical_q.sqrt();
@@ -100,7 +115,9 @@ impl FrequencyResponse {
         // Normalize magnitude
         let max_mag = magnitude.iter().fold(0.0_f64, |a: f64, &b| a.max(b));
         if max_mag > 0.0 {
-            magnitude /= max_mag;
+            for value in magnitude.iter_mut() {
+                *value /= max_mag;
+            }
         }
 
         // Find bandwidth points

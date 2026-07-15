@@ -39,7 +39,9 @@
 //! - Temkin, S. (2001). *Elements of Acoustics*. Acoustical Society of America.
 
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
-use ndarray::{Array3, Zip};
+use leto::Array3;
+
+use crate::parallel::{zip_mut_ref, zip_two_mut_four_refs};
 
 /// Volumetric ARF field accumulator and body-force extractor.
 ///
@@ -64,14 +66,14 @@ pub struct VolumetricArfField {
     /// ARF body force density F(x) = 2·α·I/c [N/m³].
     arf_density: Array3<f64>,
     /// Grid shape (nx, ny, nz).
-    shape: (usize, usize, usize),
+    shape: [usize; 3],
 }
 
 impl VolumetricArfField {
     /// Create a new accumulator for a grid of given dimensions.
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
-        let shape = (nx, ny, nz);
+        let shape = [nx, ny, nz];
         Self {
             p_sq_sum: Array3::zeros(shape),
             n_samples: 0,
@@ -92,15 +94,19 @@ impl VolumetricArfField {
     /// passed to [`new`][VolumetricArfField::new].
     pub fn accumulate(&mut self, pressure: &Array3<f64>) {
         debug_assert_eq!(
-            pressure.dim(),
+            pressure.shape(),
             self.shape,
             "pressure shape {:?} ≠ accumulator shape {:?}",
-            pressure.dim(),
+            pressure.shape(),
             self.shape
         );
-        Zip::from(&mut self.p_sq_sum)
-            .and(pressure)
-            .par_for_each(|acc, &p| *acc += p * p);
+        zip_mut_ref(
+            self.p_sq_sum.view_mut(),
+            pressure.view(),
+            |acc: &mut f64, &p: &f64| {
+                *acc += p * p;
+            },
+        );
         self.n_samples += 1;
     }
 
@@ -137,13 +143,14 @@ impl VolumetricArfField {
             }));
         }
         let scale = 1.0 / self.n_samples as f64;
-        Zip::from(&mut self.intensity)
-            .and(&mut self.arf_density)
-            .and(&self.p_sq_sum)
-            .and(absorption)
-            .and(sound_speed)
-            .and(density)
-            .par_for_each(|intensity, arf, &p_sq, &alpha, &c, &rho| {
+        zip_two_mut_four_refs(
+            self.intensity.view_mut(),
+            self.arf_density.view_mut(),
+            self.p_sq_sum.view(),
+            absorption.view(),
+            sound_speed.view(),
+            density.view(),
+            |intensity, arf, &p_sq, &alpha, &c, &rho| {
                 let p_sq_mean = p_sq * scale;
                 if c > 0.0 && rho > 0.0 {
                     // I(x) = ⟨p²⟩ / (ρ·c)  [W/m²]
@@ -154,7 +161,8 @@ impl VolumetricArfField {
                     *intensity = 0.0;
                     *arf = 0.0;
                 }
-            });
+            },
+        );
         Ok(())
     }
 
@@ -197,7 +205,7 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Uniform pressure field: I = p² / (ρ·c); F = 2·α·I / c.
     ///
@@ -217,16 +225,16 @@ mod tests {
         let alpha = 5.0_f64;
 
         let mut arf = VolumetricArfField::new(nx, ny, nz);
-        let pressure = Array3::from_elem((nx, ny, nz), p_val);
+        let pressure = Array3::from_elem([nx, ny, nz], p_val);
 
         // Accumulate same field 10 times (time average = p² invariant)
         for _ in 0..10 {
             arf.accumulate(&pressure);
         }
 
-        let absorption = Array3::from_elem((nx, ny, nz), alpha);
-        let sound_speed = Array3::from_elem((nx, ny, nz), c);
-        let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
+        let absorption = Array3::from_elem([nx, ny, nz], alpha);
+        let sound_speed = Array3::from_elem([nx, ny, nz], c);
+        let density = Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL);
 
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 
@@ -250,12 +258,12 @@ mod tests {
     fn test_zero_absorption_yields_zero_arf() {
         let (nx, ny, nz) = (4, 4, 4);
         let mut arf = VolumetricArfField::new(nx, ny, nz);
-        let pressure = Array3::from_elem((nx, ny, nz), 500.0_f64);
+        let pressure = Array3::from_elem([nx, ny, nz], 500.0_f64);
         arf.accumulate(&pressure);
 
-        let absorption = Array3::zeros((nx, ny, nz));
-        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
-        let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
+        let absorption = Array3::zeros([nx, ny, nz]);
+        let sound_speed = Array3::from_elem([nx, ny, nz], SOUND_SPEED_WATER_SIM);
+        let density = Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL);
 
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 
@@ -277,9 +285,9 @@ mod tests {
     #[test]
     fn test_finalize_before_accumulate_is_error() {
         let mut arf = VolumetricArfField::new(2, 2, 2);
-        let absorption = Array3::zeros((2, 2, 2));
-        let sound_speed = Array3::from_elem((2, 2, 2), SOUND_SPEED_WATER_SIM);
-        let density = Array3::from_elem((2, 2, 2), DENSITY_WATER_NOMINAL);
+        let absorption = Array3::zeros([2, 2, 2]);
+        let sound_speed = Array3::from_elem([2, 2, 2], SOUND_SPEED_WATER_SIM);
+        let density = Array3::from_elem([2, 2, 2], DENSITY_WATER_NOMINAL);
         let result = arf.finalize(&absorption, &sound_speed, &density);
         assert!(
             result.is_err(),
@@ -295,11 +303,11 @@ mod tests {
     fn test_reset_preserves_last_finalized() {
         let (nx, ny, nz) = (2, 2, 2);
         let mut arf = VolumetricArfField::new(nx, ny, nz);
-        let pressure = Array3::from_elem((nx, ny, nz), 200.0_f64);
+        let pressure = Array3::from_elem([nx, ny, nz], 200.0_f64);
         arf.accumulate(&pressure);
-        let absorption = Array3::from_elem((nx, ny, nz), 2.0);
-        let sound_speed = Array3::from_elem((nx, ny, nz), SOUND_SPEED_WATER_SIM);
-        let density = Array3::from_elem((nx, ny, nz), DENSITY_WATER_NOMINAL);
+        let absorption = Array3::from_elem([nx, ny, nz], 2.0);
+        let sound_speed = Array3::from_elem([nx, ny, nz], SOUND_SPEED_WATER_SIM);
+        let density = Array3::from_elem([nx, ny, nz], DENSITY_WATER_NOMINAL);
         arf.finalize(&absorption, &sound_speed, &density).unwrap();
 
         let intensity_before = arf.intensity()[[0, 0, 0]];

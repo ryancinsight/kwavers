@@ -1,7 +1,7 @@
 //! Haar wavelet transform implementation.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::core::WaveletTransform;
 
@@ -11,7 +11,7 @@ impl WaveletTransform {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn haar_forward(&self, data: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = data.dim();
+        let [nx, ny, nz] = data.shape();
 
         // Apply 1D Haar transform in each direction
         for level in 0..self.levels {

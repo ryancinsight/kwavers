@@ -1,7 +1,7 @@
 //! Blood-brain-barrier permeability and closure bindings.
 
 use kwavers_physics::analytical::bbb as bbb_mod;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -31,7 +31,7 @@ pub fn bbb_permeability_hill(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = bbb_mod::bbb_permeability_hill(d_s, d50, hill_n);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Inertial-cavitation damage probability via logistic dose response.
@@ -57,7 +57,7 @@ pub fn bbb_inertial_damage_probability(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = bbb_mod::bbb_inertial_damage_probability(d_s, damage_threshold, slope);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// BBB closure kinetics post-sonication: bi-exponential permeability decay.
@@ -87,7 +87,7 @@ pub fn bbb_closure_kinetics(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = bbb_mod::bbb_closure_kinetics(t_s, tau_close, perm_peak);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Bi-exponential post-sonication BBB closure (book §23.6) with explicit fast and
@@ -126,5 +126,5 @@ pub fn bbb_closure_permeability(
         .iter()
         .map(|&t| closure(t, p_peak, tau_fast_h, tau_slow_h))
         .collect();
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }

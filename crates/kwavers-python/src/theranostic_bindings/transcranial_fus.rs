@@ -19,12 +19,15 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
-use numpy::{IntoPyArray, PyReadonlyArray2, PyReadonlyArray3};
+use numpy::{PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
 
 use super::helpers::kwavers_to_py;
+use crate::breast_fwi_bindings::complex_compat::{
+    leto2_to_nd2, leto3_to_nd3, nd_to_leto2, nd_to_leto3,
+};
 use crate::ritk_image::load_ritk_nifti;
 
 // ── NIfTI-file entry point ────────────────────────────────────────────────────
@@ -75,7 +78,9 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
 ) -> PyResult<Bound<'py, PyDict>> {
     // Load CT volume.
     let (mut ct, spacing_mm) = load_ritk_nifti(Path::new(ct_nifti_path))?;
-    ct.mapv_inplace(|hu| hu.clamp(-1024.0, 3071.0));
+    for hu in ct.iter_mut() {
+        *hu = hu.clamp(-1024.0, 3071.0);
+    }
 
     let spacing_m = [
         spacing_mm[0] * 1.0e-3,
@@ -92,7 +97,7 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
         let (seg, _) = load_ritk_nifti(Path::new(seg_path))?;
         seg.mapv(|v| v > 0.5)
     } else {
-        ndarray::Array3::from_elem(ct.dim(), false)
+        leto::Array3::from_elem(ct.shape(), false)
     };
 
     // Derive target index from brain centroid.
@@ -209,10 +214,10 @@ pub fn run_transcranial_fus_planning_from_arrays<'py>(
     duty_cycle: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
     // Marshal arrays into owned ndarray storage before releasing GIL.
-    let ct = ct_hu.as_array().to_owned();
-    let skull = skull_mask.as_array().to_owned();
-    let brain = brain_mask.as_array().to_owned();
-    let tumor = tumor_mask.as_array().to_owned();
+    let ct = nd_to_leto3(ct_hu.as_array().to_owned());
+    let skull = nd_to_leto3(skull_mask.as_array().to_owned());
+    let brain = nd_to_leto3(brain_mask.as_array().to_owned());
+    let tumor = nd_to_leto3(tumor_mask.as_array().to_owned());
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
     let target = [target_index.0, target_index.1, target_index.2];
 
@@ -256,14 +261,14 @@ pub fn gbm_subspot_raster_py<'py>(
     spacing_m: (f64, f64, f64),
     pitch_m: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let tumor = tumor_mask.as_array().to_owned();
+    let tumor = nd_to_leto3(tumor_mask.as_array().to_owned());
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
     let spots = py
         .detach(|| gbm_subspot_raster(&tumor, spacing, pitch_m))
         .map_err(kwavers_to_py)?;
     let covered_fraction = gbm_subspot_covered_fraction(&tumor, &spots, spacing, pitch_m);
     let out = PyDict::new(py);
-    out.set_item("indices", spots.into_pyarray(py))?;
+    out.set_item("indices", leto2_to_nd2(spots).to_pyarray(py))?;
     out.set_item("covered_fraction", covered_fraction)?;
     Ok(out)
 }
@@ -298,8 +303,8 @@ pub fn bbb_opening_from_subspots_py<'py>(
     d50: f64,
     hill_n: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
-    let tumor = tumor_mask.as_array().to_owned();
-    let spots = subspot_indices.as_array().to_owned();
+    let tumor = nd_to_leto3(tumor_mask.as_array().to_owned());
+    let spots = nd_to_leto2(subspot_indices.as_array().to_owned());
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
     let (dose, permeability, stable, inertial) = py.detach(|| {
         bbb_opening_dose(
@@ -316,16 +321,22 @@ pub fn bbb_opening_from_subspots_py<'py>(
     });
     let opened = permeability
         .indexed_iter()
-        .map(|((ix, iy, iz), &p)| p >= 0.50 && tumor[[ix, iy, iz]]);
-    let opened_mask = ndarray::Array3::from_shape_vec(tumor.dim(), opened.collect())
+        .map(|([ix, iy, iz], &p)| p >= 0.50 && tumor[[ix, iy, iz]]);
+    let opened_mask = leto::Array3::from_shape_vec(tumor.shape(), opened.collect())
         .map_err(|err| pyo3::exceptions::PyRuntimeError::new_err(err.to_string()))?;
 
     let out = PyDict::new(py);
-    out.set_item("dose", dose.into_pyarray(py))?;
-    out.set_item("permeability", permeability.into_pyarray(py))?;
-    out.set_item("stable_cavitation_probability", stable.into_pyarray(py))?;
-    out.set_item("inertial_cavitation_risk", inertial.into_pyarray(py))?;
-    out.set_item("opened_mask", opened_mask.into_pyarray(py))?;
+    out.set_item("dose", leto3_to_nd3(dose).to_pyarray(py))?;
+    out.set_item("permeability", leto3_to_nd3(permeability).to_pyarray(py))?;
+    out.set_item(
+        "stable_cavitation_probability",
+        leto3_to_nd3(stable).to_pyarray(py),
+    )?;
+    out.set_item(
+        "inertial_cavitation_risk",
+        leto3_to_nd3(inertial).to_pyarray(py),
+    )?;
+    out.set_item("opened_mask", leto3_to_nd3(opened_mask).to_pyarray(py))?;
     Ok(out)
 }
 
@@ -386,9 +397,9 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
     baseline_c: f64,
 ) -> PyResult<Bound<'py, PyDict>> {
     // Marshal to owned arrays before releasing GIL.
-    let intensity = intensity_w_m2.as_array().to_owned();
-    let skull = skull_mask.as_array().to_owned();
-    let brain = brain_mask.as_array().to_owned();
+    let intensity = nd_to_leto3(intensity_w_m2.as_array().to_owned());
+    let skull = nd_to_leto3(skull_mask.as_array().to_owned());
+    let brain = nd_to_leto3(brain_mask.as_array().to_owned());
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
 
     // Release GIL for Pennes time-stepping.
@@ -408,14 +419,17 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
     let out = PyDict::new(py);
     out.set_item(
         "peak_temperature_c",
-        result.peak_temperature_c.into_pyarray(py),
+        leto3_to_nd3(result.peak_temperature_c).to_pyarray(py),
     )?;
     out.set_item(
         "final_temperature_c",
-        result.final_temperature_c.into_pyarray(py),
+        leto3_to_nd3(result.final_temperature_c).to_pyarray(py),
     )?;
-    out.set_item("cem43_min", result.cem43_min.into_pyarray(py))?;
-    out.set_item("lesion_mask", result.lesion_mask.into_pyarray(py))?;
+    out.set_item("cem43_min", leto3_to_nd3(result.cem43_min).to_pyarray(py))?;
+    out.set_item(
+        "lesion_mask",
+        leto3_to_nd3(result.lesion_mask).to_pyarray(py),
+    )?;
     Ok(out)
 }
 
@@ -428,49 +442,69 @@ fn plan_to_pydict<'py>(
     target_fraction_xyz: Option<(f64, f64, f64)>,
 ) -> PyResult<Bound<'py, PyDict>> {
     let out = PyDict::new(py);
-    out.set_item("pressure_pa", plan.pressure_pa.clone().into_pyarray(py))?;
+    out.set_item(
+        "pressure_pa",
+        leto3_to_nd3(plan.pressure_pa.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "intensity_w_m2",
-        plan.intensity_w_m2.clone().into_pyarray(py),
+        leto3_to_nd3(plan.intensity_w_m2.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "mechanical_index",
-        plan.mechanical_index.clone().into_pyarray(py),
+        leto3_to_nd3(plan.mechanical_index.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "cavitation_probability",
-        plan.cavitation_probability.clone().into_pyarray(py),
+        leto3_to_nd3(plan.cavitation_probability.clone()).to_pyarray(py),
     )?;
-    out.set_item("phases_rad", plan.phases_rad.clone().into_pyarray(py))?;
-    out.set_item("delays_s", plan.delays_s.clone().into_pyarray(py))?;
+    let phases_rad: numpy::ndarray::Array1<_> = plan
+        .phases_rad
+        .clone()
+        .try_into()
+        .expect("invariant: contiguous phases");
+    let delays_s: numpy::ndarray::Array1<_> = plan
+        .delays_s
+        .clone()
+        .try_into()
+        .expect("invariant: contiguous delays");
+    out.set_item("phases_rad", phases_rad.to_pyarray(py))?;
+    out.set_item("delays_s", delays_s.to_pyarray(py))?;
     out.set_item(
         "skull_lengths_m",
-        plan.skull_lengths_m.clone().into_pyarray(py),
+        numpy::ndarray::Array1::try_from(plan.skull_lengths_m.clone())
+            .expect("invariant: contiguous skull lengths")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "amplitude_weights",
-        plan.amplitude_weights.clone().into_pyarray(py),
+        numpy::ndarray::Array1::try_from(plan.amplitude_weights.clone())
+            .expect("invariant: contiguous amplitude weights")
+            .to_pyarray(py),
     )?;
     out.set_item(
         "element_positions_m",
-        plan.element_positions_m.clone().into_pyarray(py),
+        leto2_to_nd2(plan.element_positions_m.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "subspot_indices",
-        plan.subspot_indices.clone().into_pyarray(py),
+        leto2_to_nd2(plan.subspot_indices.clone()).to_pyarray(py),
     )?;
-    out.set_item("bbb_dose", plan.bbb_dose.clone().into_pyarray(py))?;
+    out.set_item(
+        "bbb_dose",
+        leto3_to_nd3(plan.bbb_dose.clone()).to_pyarray(py),
+    )?;
     out.set_item(
         "bbb_permeability",
-        plan.bbb_permeability.clone().into_pyarray(py),
+        leto3_to_nd3(plan.bbb_permeability.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "bbb_stable_cavitation",
-        plan.bbb_stable_cavitation.clone().into_pyarray(py),
+        leto3_to_nd3(plan.bbb_stable_cavitation.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "bbb_inertial_risk",
-        plan.bbb_inertial_risk.clone().into_pyarray(py),
+        leto3_to_nd3(plan.bbb_inertial_risk.clone()).to_pyarray(py),
     )?;
     out.set_item(
         "focus_index",
@@ -490,13 +524,13 @@ fn plan_to_pydict<'py>(
 
 /// Compute the centroid of the brain mask as integer voxel indices.
 /// Falls back to the array centre if the mask is empty.
-fn brain_centroid(brain_mask: &ndarray::Array3<bool>) -> [usize; 3] {
-    let (nx, ny, nz) = brain_mask.dim();
+fn brain_centroid(brain_mask: &leto::Array3<bool>) -> [usize; 3] {
+    let [nx, ny, nz] = brain_mask.shape();
     let mut sx = 0.0_f64;
     let mut sy = 0.0_f64;
     let mut sz = 0.0_f64;
     let mut n = 0_usize;
-    for ((ix, iy, iz), &active) in brain_mask.indexed_iter() {
+    for ([ix, iy, iz], &active) in brain_mask.indexed_iter() {
         if active {
             sx += ix as f64;
             sy += iy as f64;

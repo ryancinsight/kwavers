@@ -11,7 +11,7 @@
 //! computation. The cost is a full `(n,n,n)` complex grid instead of `(n,n,n/2+1)`.
 
 use kwavers_math::fft::{fft_3d_array_into, fftfreq, ifft_3d_array_into, Complex64};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Build the `|k|^power` spectral-filter array of full-spectrum shape `(n, n, n)`
 /// matching the complex FFT output layout. All three axes use `fftfreq` (cycles
@@ -21,7 +21,7 @@ pub(super) fn build_k_power_spectrum(n: usize, spacing_m: f64, power: f64) -> Ar
     let ky = fftfreq(n, spacing_m);
     let kz = fftfreq(n, spacing_m);
     let two_pi = std::f64::consts::TAU;
-    Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
+    Array3::from_shape_fn((n, n, n), |[ix, iy, iz]| {
         let kx_v = two_pi * kx[ix];
         let ky_v = two_pi * ky[iy];
         let kz_v = two_pi * kz[iz];
@@ -43,11 +43,13 @@ pub(super) fn spectral_filter(n: usize, field: &[f64], weights: &Array3<f64>) ->
         .as_slice_mut()
         .expect("Array3<f64>::zeros is contiguous")
         .copy_from_slice(field);
-    let mut spectrum = Array3::<Complex64>::zeros((n, n, n));
+    let spatial = spatial.into();
+    let mut spectrum = Array3::<Complex64>::zeros((n, n, n)).into();
     fft_3d_array_into(&spatial, &mut spectrum);
     spectrum.iter_mut().zip(weights.iter()).for_each(|(z, &w)| {
         *z *= w;
     });
+    let mut spatial = Array3::<f64>::zeros((n, n, n)).into();
     ifft_3d_array_into(&mut spectrum, &mut spatial);
     spatial
         .as_slice()

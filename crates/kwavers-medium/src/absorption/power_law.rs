@@ -120,20 +120,70 @@ impl PowerLawModel {
     /// Apply power law absorption in frequency domain
     pub fn apply_frequency_domain(
         &self,
-        spectrum: &mut ndarray::Array3<num_complex::Complex<f64>>,
+        spectrum: &mut leto::Array3<eunomia::Complex64>,
         frequencies: &[f64],
         distance: f64,
     ) {
-        use ndarray::Zip;
+        assert_eq!(
+            spectrum.shape()[0],
+            frequencies.len(),
+            "invariant: power-law absorption frequency count must match spectrum axis 0"
+        );
 
-        Zip::from(spectrum.outer_iter_mut())
-            .and(frequencies)
-            .for_each(|mut slice, &freq| {
-                if freq > 0.0 {
-                    let alpha = self.config.absorption_at_frequency(freq);
-                    let attenuation = (-alpha * distance).exp();
-                    slice.par_mapv_inplace(|c| c * attenuation);
+        let [_, ny, nz] = spectrum.shape();
+        for (i, &freq) in frequencies.iter().enumerate() {
+            if freq > 0.0 {
+                let alpha = self.config.absorption_at_frequency(freq);
+                let attenuation = (-alpha * distance).exp();
+                for j in 0..ny {
+                    for k in 0..nz {
+                        spectrum[[i, j, k]] *= attenuation;
+                    }
                 }
-            });
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use approx::assert_relative_eq;
+    use eunomia::Complex;
+    use leto::Array3;
+
+    #[test]
+    fn apply_frequency_domain_scales_frequency_planes() {
+        let config = PowerLawAbsorption {
+            alpha_0: 1.0,
+            y: 1.0,
+            f_ref: REFERENCE_FREQUENCY_HZ,
+            dispersion_correction: false,
+        };
+        let model = PowerLawModel::new(config);
+        let initial = Complex::new(2.0, -1.0);
+        let mut spectrum = Array3::from_elem([2, 2, 1], initial);
+        let distance = 0.25;
+
+        model.apply_frequency_domain(&mut spectrum, &[0.0, MHZ_TO_HZ], distance);
+
+        assert_eq!(spectrum[[0, 0, 0]], initial);
+        assert_eq!(spectrum[[0, 1, 0]], initial);
+
+        let attenuation = (-config.absorption_at_frequency(MHZ_TO_HZ) * distance).exp();
+        let expected = initial * attenuation;
+        for j in 0..2 {
+            assert_relative_eq!(spectrum[[1, j, 0]].re, expected.re, epsilon = 1e-12);
+            assert_relative_eq!(spectrum[[1, j, 0]].im, expected.im, epsilon = 1e-12);
+        }
+    }
+
+    #[test]
+    #[should_panic(expected = "power-law absorption frequency count")]
+    fn apply_frequency_domain_rejects_frequency_axis_mismatch() {
+        let model = PowerLawModel::new(PowerLawAbsorption::default());
+        let mut spectrum = Array3::from_elem([2, 1, 1], Complex::new(1.0, 0.0));
+
+        model.apply_frequency_domain(&mut spectrum, &[MHZ_TO_HZ], 1.0);
     }
 }

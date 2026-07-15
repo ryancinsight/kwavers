@@ -4,7 +4,8 @@ use crate::plugin::{PluginMetadata, PluginState};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::frequency_operator::FrequencyOperator;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -102,12 +103,68 @@ impl KzkSolverPlugin {
         Ok(())
     }
 
+    /// Propagate through the full volume, capturing the field at every z-plane.
+    ///
+    /// Returns a 3-D pressure volume of shape `(nx, ny, nz)` built from the
+    /// per-plane fundamental harmonic at each propagation step.
+    ///
+    /// # Errors
+    ///
+    /// - Returns [`Err`] if the frequency-domain operators have not been initialized.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
+    pub fn propagate_volume(
+        &mut self,
+        initial_field: &Array3<f64>,
+        grid: &Grid,
+        medium: &dyn Medium,
+    ) -> KwaversResult<Array3<f64>> {
+        let operators =
+            self.frequency_operators
+                .as_ref()
+                .ok_or(kwavers_core::error::KwaversError::Physics(
+                    kwavers_core::error::PhysicsError::InvalidParameter {
+                        parameter: "frequency_operators".to_owned(),
+                        value: 0.0,
+                        reason: "KZK operators not initialized - call initialize_operators first"
+                            .to_owned(),
+                    },
+                ))?;
+
+        let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
+        let num_harmonics = initial_field.shape()[2];
+        let dz = grid.dz;
+
+        let density = kwavers_medium::density_at(medium, 0.0, 0.0, 0.0, grid);
+        let c0 = kwavers_medium::sound_speed_at(medium, 0.0, 0.0, 0.0, grid);
+        let beta = kwavers_medium::AcousticProperties::nonlinearity_coefficient(
+            medium, 0.0, 0.0, 0.0, grid,
+        );
+
+        let mut field = initial_field.clone();
+        let mut volume = Array3::<f64>::zeros((nx, ny, nz));
+
+        for iz in 0..nz {
+            for ih in 0..num_harmonics {
+                for i in 0..nx {
+                    for j in 0..ny {
+                        volume[[i, j, iz]] += field[[i, j, ih]];
+                    }
+                }
+            }
+            self.apply_linear_step(&mut field, operators, dz / 2.0)?;
+            self.apply_nonlinear_step(&mut field, beta, density, c0, dz, grid)?;
+            self.apply_linear_step(&mut field, operators, dz / 2.0)?;
+        }
+
+        Ok(volume)
+    }
+
     /// Solve KZK equation using Strang operator splitting.
     ///
     /// Based on Tavakkoli et al. (1998): "A new algorithm for computational simulation"
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn solve(
         &mut self,
         initial_field: &Array3<f64>,
@@ -188,19 +245,23 @@ impl KzkSolverPlugin {
         step_size: f64,
         _grid: &Grid,
     ) -> KwaversResult<()> {
-        use ndarray::Zip;
-
         let nonlinear_factor = beta / (2.0 * density * c0.powi(3));
-
-        Zip::from(field.view_mut()).par_for_each(|p| {
-            let p0 = *p;
+        let update_pressure = |p0: f64| {
             let denominator = (nonlinear_factor * p0).mul_add(-step_size, 1.0);
             if denominator.abs() > 0.1 {
-                *p = p0 / denominator;
+                p0 / denominator
             } else {
-                *p = p0.signum() * p0.abs().min(1.0 / (nonlinear_factor * step_size));
+                p0.signum() * p0.abs().min(1.0 / (nonlinear_factor * step_size))
             }
-        });
+        };
+
+        if let Some(values) = field.as_slice_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(values, |_idx, p| {
+                *p = update_pressure(*p);
+            });
+        } else {
+            field.iter_mut().for_each(|p| *p = update_pressure(*p));
+        }
 
         Ok(())
     }
@@ -212,7 +273,7 @@ impl KzkSolverPlugin {
     /// x_shock = ρc³ / (β ω p₀)
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn shock_formation_distance(
         &self,
         source_pressure: f64,

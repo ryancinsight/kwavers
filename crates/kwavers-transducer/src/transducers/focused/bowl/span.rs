@@ -97,13 +97,13 @@ impl BowlAngularBounds {
         }
     }
 
-    /// Lower polar-angle bound [rad].
+    /// Lower polar-angle bound \[rad\].
     #[must_use]
     pub fn theta_min_rad(self) -> f64 {
         self.theta_min_rad
     }
 
-    /// Upper polar-angle bound [rad].
+    /// Upper polar-angle bound \[rad\].
     #[must_use]
     pub fn theta_max_rad(self) -> f64 {
         self.theta_max_rad

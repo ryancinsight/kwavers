@@ -25,7 +25,7 @@
 //!   spaced grids", Mathematics of Computation, 51(184), 699-706.
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Numerical operators for nonlinear wave propagation
 ///
@@ -218,7 +218,7 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let ops = NumericsOperators::new(grid);
 
-        let u = Array3::from_elem((10, 10, 10), 1.0);
+        let u = Array3::from_elem([10, 10, 10], 1.0);
         let lap = ops.laplacian(5, 5, 5, &u);
 
         // Laplacian of constant field should be zero
@@ -271,7 +271,7 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let ops = NumericsOperators::new(grid);
 
-        let u = Array3::from_elem((10, 10, 10), 1.0);
+        let u = Array3::from_elem([10, 10, 10], 1.0);
 
         // Boundary points should return 0
         let lap_boundary = ops.laplacian(0, 5, 5, &u);
@@ -320,8 +320,8 @@ mod tests {
         let grid = Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
         let ops = NumericsOperators::new(grid);
 
-        let u1 = Array3::from_elem((10, 10, 10), 1.0);
-        let u2 = Array3::from_elem((10, 10, 10), 1.0);
+        let u1 = Array3::from_elem([10, 10, 10], 1.0);
+        let u2 = Array3::from_elem([10, 10, 10], 1.0);
 
         // Points within 2 grid points of boundary should return 0
         let div_boundary = ops.divergence_product(1, 5, 5, &u1, &u2);

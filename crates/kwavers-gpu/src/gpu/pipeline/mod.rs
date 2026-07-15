@@ -2,7 +2,7 @@
 
 use crate::gpu::memory::UnifiedMemoryManager;
 use kwavers_math::fft::Complex64;
-use ndarray::{Array1, Array3, Array4};
+use leto::{Array3 as LetoArray3, Array4 as LetoArray4};
 use std::cell::RefCell;
 use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
@@ -14,7 +14,7 @@ mod streaming;
 mod tests;
 
 thread_local! {
-    pub(super) static HILBERT_SPECTRUM: RefCell<Array1<Complex64>> = RefCell::new(Array1::zeros(0));
+    pub(super) static HILBERT_SPECTRUM: RefCell<Vec<Complex64>> = const { RefCell::new(Vec::new()) };
 }
 
 /// Configuration for real-time imaging pipeline
@@ -32,8 +32,8 @@ pub struct RealtimePipelineConfig {
 #[derive(Debug)]
 pub struct RealtimeImagingPipeline {
     pub(super) config: RealtimePipelineConfig,
-    pub(super) input_buffer: Arc<Mutex<VecDeque<Array4<f32>>>>,
-    pub(super) output_buffer: Arc<Mutex<VecDeque<Array3<f32>>>>,
+    pub(super) input_buffer: Arc<Mutex<VecDeque<LetoArray4<f32>>>>,
+    pub(super) output_buffer: Arc<Mutex<VecDeque<LetoArray3<f32>>>>,
     pub(super) gpu_memory: Option<UnifiedMemoryManager>,
     pub(super) stats: PipelineStats,
     pub(super) state: PipelineState,

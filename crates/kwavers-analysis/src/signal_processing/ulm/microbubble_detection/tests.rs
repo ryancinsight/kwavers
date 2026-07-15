@@ -2,8 +2,8 @@ use super::clutter::{svht_threshold, UlmSvdClutterFilter};
 use super::localize::{gauss_newton_fit_2d, GaussianLocalizer};
 use super::types::{GaussianLocalizationConfig, SvdClutterConfig};
 use kwavers_core::constants::numerical::TWO_PI;
-use kwavers_math::linear_algebra::LinearAlgebra;
-use ndarray::Array2;
+use leto::{Array1, Array2};
+use leto_ops::svd_decompose;
 
 /// Generate a deterministic pseudo-noise matrix using a simple LCG for portability.
 fn make_noise_matrix(rows: usize, cols: usize, seed: u64) -> Array2<f64> {
@@ -26,7 +26,8 @@ fn test_svht_noise_only() {
     let n_px = 50usize;
     let n_t = 100usize;
     let noise = make_noise_matrix(n_px, n_t, 42);
-    let (_u, sigma, _vt) = LinearAlgebra::svd(&noise).unwrap();
+    let svd = svd_decompose(&noise.view()).unwrap();
+    let sigma = Array1::from_vec(svd.singular_values.len(), svd.singular_values).unwrap();
 
     let k = svht_threshold(&sigma, n_px, n_t);
     assert!(k <= 5, "SVHT on noise should give k≈0, got k={k}");

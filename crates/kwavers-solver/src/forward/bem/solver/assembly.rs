@@ -1,12 +1,12 @@
 use super::BemSolver;
 use crate::forward::bem::integrals::{compute_nonsingular_integrals, compute_singular_integrals};
 use kwavers_core::error::KwaversResult;
+use kwavers_math::fft::Complex64;
 use kwavers_math::linear_algebra::sparse::{
     solver::{IterativeSolver, SolverConfig, SparsePreconditioner},
     CompressedSparseRowMatrix,
 };
-use ndarray::Array1;
-use num_complex::Complex64;
+use leto::Array1;
 
 impl BemSolver {
     /// Assemble BEM system matrices

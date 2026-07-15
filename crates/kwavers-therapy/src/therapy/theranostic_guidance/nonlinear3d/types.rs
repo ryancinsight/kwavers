@@ -4,7 +4,7 @@
 //! that all existing `use super::types::{GridIndex, flat_index, grid_point_m}`
 //! imports in sibling modules continue to compile unchanged.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 

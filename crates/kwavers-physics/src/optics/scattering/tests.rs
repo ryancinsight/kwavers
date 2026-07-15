@@ -8,8 +8,8 @@
 //! machine precision.
 
 use super::*;
+use eunomia::Complex64;
 use kwavers_core::constants::numerical::TWO_PI;
-use num_complex::Complex64;
 
 fn params_for(x: f64, m: Complex64) -> MieParameters {
     let wavelength = 1.0_f64;

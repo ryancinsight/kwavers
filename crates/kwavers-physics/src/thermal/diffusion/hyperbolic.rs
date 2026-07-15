@@ -6,7 +6,7 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::{Array3, Zip};
+use leto::Array3;
 use std::ops::Range;
 
 /// Parameters for the Cattaneo-Vernotte hyperbolic heat update.
@@ -49,7 +49,7 @@ impl CattaneoVernotte {
     /// Create a solver with the given hyperbolic parameters, zero-initialising the
     /// heat-flux and divergence fields to the grid shape.
     pub fn new(params: HyperbolicParameters, grid: &Grid) -> Self {
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
         Self {
             params,
             heat_flux_x: Array3::zeros(shape),
@@ -91,7 +91,7 @@ impl CattaneoVernotte {
     /// result to avoid one full-volume allocation per step.
     #[must_use]
     pub fn heat_flux_divergence(&self, grid: &Grid) -> Array3<f64> {
-        let mut div = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut div = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         Self::fill_heat_flux_divergence(
             &self.heat_flux_x,
             &self.heat_flux_y,
@@ -128,9 +128,10 @@ impl CattaneoVernotte {
             &mut self.divergence,
         );
 
-        Zip::indexed(temperature)
-            .and(&self.divergence)
-            .par_for_each(|(i, j, k), t, &div| {
+        crate::parallel::for_each_indexed_pair_mut(
+            temperature.view_mut(),
+            self.divergence.view(),
+            |(i, j, k), t, &div| {
                 let x = i as f64 * grid.dx;
                 let y = j as f64 * grid.dy;
                 let z = k as f64 * grid.dz;
@@ -139,7 +140,8 @@ impl CattaneoVernotte {
                 let cp = medium.specific_heat(x, y, z, grid);
 
                 *t -= dt * div / (rho * cp);
-            });
+            },
+        );
 
         Ok(())
     }
@@ -156,7 +158,7 @@ impl CattaneoVernotte {
         let relax = dt / tau;
         let denominator = 1.0 + relax;
 
-        Zip::indexed(flux).par_for_each(|(i, j, k), q| {
+        crate::parallel::for_each_indexed_mut(flux.view_mut(), |(i, j, k), q| {
             if !Self::has_centered_neighbor::<AXIS>(i, j, k, grid) {
                 *q = 0.0;
                 return;
@@ -185,7 +187,7 @@ impl CattaneoVernotte {
         let y_range = Self::centered_axis_range(grid.ny);
         let z_range = Self::centered_axis_range(grid.nz);
 
-        Zip::indexed(divergence).par_for_each(|(i, j, k), div| {
+        crate::parallel::for_each_indexed_mut(divergence.view_mut(), |(i, j, k), div| {
             if !x_range.contains(&i) || !y_range.contains(&j) || !z_range.contains(&k) {
                 *div = 0.0;
                 return;
@@ -286,7 +288,7 @@ mod tests {
         );
         let workspace_ptr = solver.divergence.as_ptr();
         let mut temperature =
-            Array3::from_shape_fn((grid.nx, grid.ny, grid.nz), |(i, _, _)| (i * i) as f64);
+            Array3::from_shape_fn([grid.nx, grid.ny, grid.nz], |[i, _, _]| (i * i) as f64);
         let center_before = temperature[[2, 0, 0]];
         let dt = 0.1;
         let relax = dt / solver.params.relaxation_time;
@@ -313,9 +315,15 @@ mod tests {
         let grid = Grid::new(5, 5, 5, 1.0, 1.0, 1.0).expect("valid grid");
         let mut solver = CattaneoVernotte::new(HyperbolicParameters::default(), &grid);
 
-        Zip::indexed(&mut solver.heat_flux_x).par_for_each(|(i, _, _), q| *q = i as f64);
-        Zip::indexed(&mut solver.heat_flux_y).par_for_each(|(_, j, _), q| *q = (2 * j) as f64);
-        Zip::indexed(&mut solver.heat_flux_z).par_for_each(|(_, _, k), q| *q = (3 * k) as f64);
+        crate::parallel::for_each_indexed_mut(solver.heat_flux_x.view_mut(), |(i, _, _), q| {
+            *q = i as f64;
+        });
+        crate::parallel::for_each_indexed_mut(solver.heat_flux_y.view_mut(), |(_, j, _), q| {
+            *q = (2 * j) as f64;
+        });
+        crate::parallel::for_each_indexed_mut(solver.heat_flux_z.view_mut(), |(_, _, k), q| {
+            *q = (3 * k) as f64;
+        });
 
         let owned = solver.heat_flux_divergence(&grid);
         CattaneoVernotte::fill_heat_flux_divergence(

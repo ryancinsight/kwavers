@@ -1,7 +1,7 @@
 use super::physics;
 use super::{AxialField, ProfileSet, SolverField, WaterTankOutput};
 use anyhow::Result;
-use ndarray::Array2;
+use leto::Array2;
 use std::fs::File;
 use std::io::Write;
 use std::ops::Range;

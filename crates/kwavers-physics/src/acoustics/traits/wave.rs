@@ -2,7 +2,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::Source;
-use ndarray::{Array3, Array4};
+use leto::{Array3, Array4};
 use std::fmt::Debug;
 
 /// Trait for acoustic wave propagation models.
@@ -15,7 +15,7 @@ pub trait AcousticWaveModel: Debug + Send + Sync {
     /// # Arguments
     ///
     /// * `fields` - A mutable reference to a 4D array representing the simulation fields.
-    ///   The pressure field, typically at `fields.index_axis(Axis(0), PRESSURE_IDX)`, is updated in place.
+    ///   The pressure field, typically at `fields.index_axis(0, PRESSURE_IDX)`, is updated in place.
     /// * `prev_pressure` - A reference to the 3D pressure field from the previous time step.
     /// * `source` - A trait object implementing `Source`, defining the acoustic source.
     /// * `grid` - A reference to the `Grid` structure.

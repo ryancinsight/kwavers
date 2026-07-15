@@ -1,6 +1,6 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::fmt::Debug;
 
 /// Trait for acoustic scattering models.

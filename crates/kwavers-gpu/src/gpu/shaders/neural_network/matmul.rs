@@ -59,8 +59,8 @@ impl NeuralNetworkShader {
             );
         }
 
-        let device = self.device.device();
-        let queue = self.device.queue();
+        let device = self.device.wgpu_device();
+        let queue = self.device.wgpu_queue();
 
         let weights_i32: Vec<i32> = weights.iter().map(|&w| w as i32).collect();
         let biases_i32: Vec<i32> = biases.iter().map(|&b| b as i32).collect();
@@ -158,7 +158,7 @@ impl NeuralNetworkShader {
         buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
             let _ = sender.send(result);
         });
-        let _ = device.poll(wgpu::PollType::Wait);
+        let _ = device.poll(wgpu::PollType::wait_indefinitely());
 
         receiver
             .recv()

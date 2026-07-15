@@ -31,23 +31,45 @@
 //! - Treeby & Cox (2010). k-Wave MATLAB toolbox documentation, `sensor.record`.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array3, Zip};
+use leto::Array1;
+use leto::Array3 as LetoArray3;
 
-use super::helpers::{fill_field_at_positions, validate_sample_output_len};
+use super::helpers::validate_sample_output_len;
+
+#[doc(hidden)]
+pub trait VelocityArray3Access {
+    fn shape3(&self) -> [usize; 3];
+    fn as_slice_opt(&self) -> Option<&[f64]>;
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a>;
+}
+
+impl VelocityArray3Access for leto::Array3<f64> {
+    fn shape3(&self) -> [usize; 3] {
+        self.shape()
+    }
+
+    fn as_slice_opt(&self) -> Option<&[f64]> {
+        self.as_slice()
+    }
+
+    fn iter_values<'a>(&'a self) -> Box<dyn Iterator<Item = &'a f64> + 'a> {
+        Box::new(self.iter())
+    }
+}
 
 /// Per-component velocity statistics accumulator.
 ///
 /// Stores running max, min, and squared sum for one velocity component
-/// (ux, uy, or uz). All operations are parallelised over the spatial
-/// domain via rayon.
+/// (ux, uy, or uz). Standard-layout updates are provider-parallelized over the
+/// spatial domain through Moirai.
 #[derive(Debug, Clone)]
 pub struct VelocityComponentStats {
     /// Element-wise maximum u_α over all recorded time steps.
-    pub u_max: Array3<f64>,
+    pub u_max: LetoArray3<f64>,
     /// Element-wise minimum u_α over all recorded time steps.
-    pub u_min: Array3<f64>,
+    pub u_min: LetoArray3<f64>,
     /// Running sum of u_α² for RMS computation.
-    u_squared_sum: Array3<f64>,
+    u_squared_sum: LetoArray3<f64>,
     /// Number of time steps accumulated.
     pub time_step_count: usize,
     shape: (usize, usize, usize),
@@ -58,9 +80,9 @@ impl VelocityComponentStats {
     #[must_use]
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
-            u_max: Array3::from_elem((nx, ny, nz), f64::NEG_INFINITY),
-            u_min: Array3::from_elem((nx, ny, nz), f64::INFINITY),
-            u_squared_sum: Array3::zeros((nx, ny, nz)),
+            u_max: LetoArray3::from_elem([nx, ny, nz], f64::NEG_INFINITY),
+            u_min: LetoArray3::from_elem([nx, ny, nz], f64::INFINITY),
+            u_squared_sum: LetoArray3::zeros([nx, ny, nz]),
             time_step_count: 0,
             shape: (nx, ny, nz),
         }
@@ -68,32 +90,56 @@ impl VelocityComponentStats {
 
     /// Accumulate one time step of data.
     ///
-    /// Updates max, min, and squared sum element-wise.  O(N³) but fully
-    /// parallelised via rayon — no allocation.
+    /// Updates max, min, and squared sum element-wise. O(N^3), with Moirai
+    /// chunk dispatch for standard layouts and no allocation.
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
     #[inline]
-    pub fn update(&mut self, field: &Array3<f64>) {
+    pub fn update<F: VelocityArray3Access>(&mut self, field: &F) {
         debug_assert_eq!(
-            field.dim(),
-            self.shape,
+            field.shape3(),
+            [self.shape.0, self.shape.1, self.shape.2],
             "velocity field shape mismatch in VelocityComponentStats::update"
         );
 
-        Zip::from(&mut self.u_max)
-            .and(&mut self.u_min)
-            .and(&mut self.u_squared_sum)
-            .and(field)
-            .par_for_each(|u_max, u_min, sq_sum, &u| {
-                if u > *u_max {
-                    *u_max = u;
+        match (
+            self.u_max.as_slice_mut(),
+            self.u_min.as_slice_mut(),
+            self.u_squared_sum.as_slice_mut(),
+            field.as_slice_opt(),
+        ) {
+            (Some(u_max), Some(u_min), Some(u_squared_sum), Some(field)) => {
+                for lane in 0..u_max.len() {
+                    let u = field[lane];
+                    if u > u_max[lane] {
+                        u_max[lane] = u;
+                    }
+                    if u < u_min[lane] {
+                        u_min[lane] = u;
+                    }
+                    u_squared_sum[lane] += u * u;
                 }
-                if u < *u_min {
-                    *u_min = u;
+            }
+            _ => {
+                for (((u_max, u_min), sq_sum), u) in self
+                    .u_max
+                    .iter_mut()
+                    .zip(self.u_min.iter_mut())
+                    .zip(self.u_squared_sum.iter_mut())
+                    .zip(field.iter_values())
+                {
+                    let u = *u;
+                    if u > *u_max {
+                        *u_max = u;
+                    }
+                    if u < *u_min {
+                        *u_min = u;
+                    }
+                    *sq_sum += u * u;
                 }
-                *sq_sum += u * u;
-            });
+            }
+        }
 
         self.time_step_count += 1;
     }
@@ -102,12 +148,16 @@ impl VelocityComponentStats {
     ///
     /// Returns a zero array when no steps have been accumulated.
     #[must_use]
-    pub fn u_rms(&self) -> Array3<f64> {
+    pub fn u_rms(&self) -> LetoArray3<f64> {
         if self.time_step_count == 0 {
-            return Array3::zeros(self.shape);
+            return LetoArray3::zeros([self.shape.0, self.shape.1, self.shape.2]);
         }
         let n = self.time_step_count as f64;
-        self.u_squared_sum.mapv(|sq| (sq / n).sqrt())
+        let mut out = LetoArray3::<f64>::zeros([self.shape.0, self.shape.1, self.shape.2]);
+        for (dst, &sq) in out.iter_mut().zip(self.u_squared_sum.iter()) {
+            *dst = (sq / n).sqrt();
+        }
+        out
     }
 
     // ── Sensor-position sampling ─────────────────────────────────────────────
@@ -118,7 +168,7 @@ impl VelocityComponentStats {
     ///
     #[must_use]
     pub fn sample_max(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_max(positions, &mut out);
         out
     }
@@ -132,7 +182,11 @@ impl VelocityComponentStats {
         positions: &[(usize, usize, usize)],
         out: &mut Array1<f64>,
     ) -> KwaversResult<()> {
-        fill_field_at_positions(&self.u_max, positions, out)
+        validate_sample_output_len(positions, out)?;
+        for (row, &(i, j, k)) in positions.iter().enumerate() {
+            out[row] = self.u_max[[i, j, k]];
+        }
+        Ok(())
     }
 
     /// Sample the per-component min at sensor positions.
@@ -141,7 +195,7 @@ impl VelocityComponentStats {
     ///
     #[must_use]
     pub fn sample_min(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_min(positions, &mut out);
         out
     }
@@ -155,7 +209,11 @@ impl VelocityComponentStats {
         positions: &[(usize, usize, usize)],
         out: &mut Array1<f64>,
     ) -> KwaversResult<()> {
-        fill_field_at_positions(&self.u_min, positions, out)
+        validate_sample_output_len(positions, out)?;
+        for (row, &(i, j, k)) in positions.iter().enumerate() {
+            out[row] = self.u_min[[i, j, k]];
+        }
+        Ok(())
     }
 
     /// Sample the per-component RMS at sensor positions.
@@ -164,7 +222,7 @@ impl VelocityComponentStats {
     ///
     #[must_use]
     pub fn sample_rms(&self, positions: &[(usize, usize, usize)]) -> Array1<f64> {
-        let mut out = Array1::zeros(positions.len());
+        let mut out = Array1::zeros([positions.len()]);
         let _ = self.fill_rms(positions, &mut out);
         out
     }

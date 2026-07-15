@@ -1,7 +1,7 @@
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::constants::REFERENCE_FREQUENCY_HZ;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 use super::SpatiallyVaryingAbsorption;
 
@@ -16,11 +16,11 @@ impl SpatiallyVaryingAbsorption {
         gamma_field: Array3<f64>,
         f_ref: f64,
     ) -> KwaversResult<Self> {
-        if alpha_0_field.dim() != gamma_field.dim() {
+        if alpha_0_field.shape() != gamma_field.shape() {
             return Err(KwaversError::InvalidInput(format!(
                 "Field dimension mismatch: alpha_0 {:?} vs gamma {:?}",
-                alpha_0_field.dim(),
-                gamma_field.dim()
+                alpha_0_field.shape(),
+                gamma_field.shape()
             )));
         }
 
@@ -67,8 +67,8 @@ impl SpatiallyVaryingAbsorption {
         alpha_0: f64,
         gamma: f64,
     ) -> KwaversResult<Self> {
-        let alpha_0_field = Array3::from_elem((nx, ny, nz), alpha_0);
-        let gamma_field = Array3::from_elem((nx, ny, nz), gamma);
+        let alpha_0_field = Array3::from_elem([nx, ny, nz], alpha_0);
+        let gamma_field = Array3::from_elem([nx, ny, nz], gamma);
         Self::new(alpha_0_field, gamma_field, REFERENCE_FREQUENCY_HZ)
     }
     /// With temperature dependence.
@@ -80,7 +80,7 @@ impl SpatiallyVaryingAbsorption {
         temperature_field: Array3<f64>,
         coefficient: f64,
     ) -> KwaversResult<Self> {
-        if temperature_field.dim() != self.alpha_0_field.dim() {
+        if temperature_field.shape() != self.alpha_0_field.shape() {
             return Err(KwaversError::InvalidInput(
                 "Temperature field dimension mismatch".to_owned(),
             ));

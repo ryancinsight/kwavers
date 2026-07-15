@@ -38,7 +38,7 @@ use kwavers_solver::forward::elastic::{
     ElasticWaveConfig, HyperelasticModel, NonlinearElasticWaveSolver, NonlinearSWEConfig,
 };
 use kwavers_solver::inverse::elastography::{NonlinearInversion, NonlinearInversionConfig};
-use ndarray::Array3;
+use leto::Array3;
 
 /// Benchmark hyperelastic constitutive model evaluation
 pub fn bench_hyperelastic_models(c: &mut Criterion) {
@@ -75,7 +75,7 @@ pub fn bench_harmonic_detection(c: &mut Criterion) {
     let nz = 8;
     let n_times = 128;
 
-    let mut time_series = ndarray::Array4::<f64>::zeros((nx, ny, nz, n_times));
+    let mut time_series = leto::Array4::<f64>::zeros((nx, ny, nz, n_times));
 
     // Add fundamental (50 Hz) and second harmonic (100 Hz)
     let fundamental_freq = 50.0;
@@ -202,7 +202,7 @@ pub fn bench_end_to_end_workflow(c: &mut Criterion) {
 
             // Step 2: Convert to time series format
             let n_times = displacement_history.len();
-            let mut time_series = ndarray::Array4::<f64>::zeros((12, 12, 12, n_times));
+            let mut time_series = leto::Array4::<f64>::zeros((12, 12, 12, n_times));
 
             for t in 0..n_times {
                 let magnitude = displacement_history[t].displacement_magnitude();

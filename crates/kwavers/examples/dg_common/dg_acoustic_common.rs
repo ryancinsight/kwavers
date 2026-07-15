@@ -11,7 +11,7 @@ use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 use std::f64::consts::PI;
 use std::sync::Arc;
 pub const ELEMENTS: usize = 12;
@@ -59,6 +59,14 @@ pub struct EmbeddedGaussianSeries {
     pub common_pressure_lines: Vec<NamedLine>,
     pub common_error_lines: Vec<NamedLine>,
 }
+
+struct DgGaussianRun {
+    pressure: Array3<f64>,
+    mass_error: f64,
+    xi_nodes: Array1<f64>,
+    weights: Array1<f64>,
+}
+
 pub fn run_native_acoustic_diagnostic() -> KwaversResult<NativeAcousticDiagnostic> {
     let n_nodes = POLYNOMIAL_ORDER + 1;
     let (xi_nodes, weights) = gauss_lobatto_quadrature(n_nodes)?;
@@ -74,7 +82,10 @@ pub fn run_native_acoustic_diagnostic() -> KwaversResult<NativeAcousticDiagnosti
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, grid)?;
-    let mut workspace = AcousticDg1DWorkspace::new(pressure.dim());
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     for _ in 0..STEPS {
         solver.step_acoustic_1d_ssp_rk3(
             &mut pressure,
@@ -107,32 +118,32 @@ pub fn run_embedded_gaussian_solver_matrix() -> KwaversResult<EmbeddedGaussianMa
 }
 
 pub fn run_embedded_gaussian_series() -> KwaversResult<EmbeddedGaussianSeries> {
-    let (dg_pressure, dg_mass_error, xi_nodes, weights) = run_dg_gaussian()?;
+    let dg_run = run_dg_gaussian()?;
     let fdtd_line = run_fdtd_gaussian(KSpaceCorrectionMode::None)?;
     let kspace_line = run_fdtd_gaussian(KSpaceCorrectionMode::Spectral)?;
     let pstd_line = run_pstd_gaussian()?;
     let final_time = STEPS as f64 * DT;
     let exact_uniform = exact_uniform_gaussian_line(final_time);
-    let exact_dg = exact_dg_gaussian_pressure(&xi_nodes, final_time);
+    let exact_dg = exact_dg_gaussian_pressure(&dg_run.xi_nodes, final_time);
     let common_samples = sampling::common_gaussian_samples(
-        &dg_pressure,
-        &xi_nodes,
+        &dg_run.pressure,
+        &dg_run.xi_nodes,
         &fdtd_line,
         &kspace_line,
         &pstd_line,
     )?;
 
     let matrix = EmbeddedGaussianMatrix {
-        dg_exact_l2: relative_l2(&dg_pressure, &exact_dg, &weights),
+        dg_exact_l2: relative_l2(&dg_run.pressure, &exact_dg, &dg_run.weights),
         fdtd_exact_l2: relative_l2_line(&fdtd_line, &exact_uniform),
         kspace_exact_l2: relative_l2_line(&kspace_line, &exact_uniform),
         pstd_exact_l2: relative_l2_line(&pstd_line, &exact_uniform),
         fdtd_pstd_l2: relative_l2_line(&fdtd_line, &pstd_line),
         kspace_pstd_l2: relative_l2_line(&kspace_line, &pstd_line),
-        dg_pressure_mass_error: dg_mass_error,
+        dg_pressure_mass_error: dg_run.mass_error,
     };
 
-    let dg_exact = dg_line(&exact_dg, &xi_nodes);
+    let dg_exact = dg_line(&exact_dg, &dg_run.xi_nodes);
     let uniform_exact = uniform_line(&exact_uniform);
     let pressure_lines = vec![
         NamedLine {
@@ -141,7 +152,7 @@ pub fn run_embedded_gaussian_series() -> KwaversResult<EmbeddedGaussianSeries> {
         },
         NamedLine {
             name: "DG",
-            samples: dg_line(&dg_pressure, &xi_nodes),
+            samples: dg_line(&dg_run.pressure, &dg_run.xi_nodes),
         },
         NamedLine {
             name: "FDTD",
@@ -228,8 +239,8 @@ pub fn gaussian_embedded_source(grid: &Grid) -> GridSource {
         let ux_x = x + 0.5;
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                pressure[(i, j, k)] = gaussian_profile(x);
-                ux[(i, j, k)] = 0.5 * DT / DENSITY * gaussian_derivative(ux_x);
+                pressure[[i, j, k]] = gaussian_profile(x);
+                ux[[i, j, k]] = 0.5 * DT / DENSITY * gaussian_derivative(ux_x);
             }
         }
     }
@@ -241,14 +252,14 @@ pub fn gaussian_embedded_source(grid: &Grid) -> GridSource {
     }
 }
 
-fn run_dg_gaussian() -> KwaversResult<(Array3<f64>, f64, Array1<f64>, Array1<f64>)> {
+fn run_dg_gaussian() -> KwaversResult<DgGaussianRun> {
     let n_nodes = POLYNOMIAL_ORDER + 1;
     let (xi_nodes, weights) = gauss_lobatto_quadrature(n_nodes)?;
     let mut pressure = Array3::zeros((ELEMENTS, n_nodes, 1));
     let mut velocity = Array3::zeros((ELEMENTS, n_nodes, 1));
     for elem in 0..ELEMENTS {
         for node in 0..n_nodes {
-            pressure[(elem, node, 0)] = gaussian_profile(physical_coordinate(elem, xi_nodes[node]));
+            pressure[[elem, node, 0]] = gaussian_profile(physical_coordinate(elem, xi_nodes[node]));
         }
     }
     let initial_mass = weighted_mass(&pressure, &weights);
@@ -260,7 +271,10 @@ fn run_dg_gaussian() -> KwaversResult<(Array3<f64>, f64, Array1<f64>, Array1<f64
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, grid)?;
-    let mut workspace = AcousticDg1DWorkspace::new(pressure.dim());
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     for _ in 0..STEPS {
         solver.step_acoustic_1d_ssp_rk3(
             &mut pressure,
@@ -271,7 +285,12 @@ fn run_dg_gaussian() -> KwaversResult<(Array3<f64>, f64, Array1<f64>, Array1<f64
         )?;
     }
     let mass_error = (weighted_mass(&pressure, &weights) - initial_mass).abs();
-    Ok((pressure, mass_error, xi_nodes, weights))
+    Ok(DgGaussianRun {
+        pressure,
+        mass_error,
+        xi_nodes,
+        weights,
+    })
 }
 
 fn run_fdtd_gaussian(kspace_correction: KSpaceCorrectionMode) -> KwaversResult<Array1<f64>> {
@@ -343,7 +362,7 @@ fn evolve_characteristic(
         let coeffs = solver.modal_coefficients_mut().expect("coefficients");
         for elem in 0..ELEMENTS {
             for node in 0..xi_nodes.len() {
-                coeffs[(elem, node, 0)] = initial(physical_coordinate(elem, xi_nodes[node]));
+                coeffs[[elem, node, 0]] = initial(physical_coordinate(elem, xi_nodes[node]));
             }
         }
     }
@@ -359,7 +378,7 @@ fn initial_standing_wave(xi_nodes: &Array1<f64>, k: f64) -> (Array3<f64>, Array3
     let velocity = Array3::zeros((ELEMENTS, xi_nodes.len(), 1));
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
-            pressure[(elem, node, 0)] = (k * physical_coordinate(elem, xi_nodes[node])).sin();
+            pressure[[elem, node, 0]] = (k * physical_coordinate(elem, xi_nodes[node])).sin();
         }
     }
     (pressure, velocity)
@@ -375,8 +394,8 @@ fn exact_standing_wave(
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
             let phase = k * physical_coordinate(elem, xi_nodes[node]);
-            pressure[(elem, node, 0)] = phase.sin() * (k * displacement).cos();
-            velocity[(elem, node, 0)] =
+            pressure[[elem, node, 0]] = phase.sin() * (k * displacement).cos();
+            velocity[[elem, node, 0]] =
                 -phase.cos() * (k * displacement).sin() / (DENSITY * SOUND_SPEED);
         }
     }
@@ -384,11 +403,11 @@ fn exact_standing_wave(
 }
 
 fn reflect_coefficients(coeffs: &Array3<f64>) -> Array3<f64> {
-    let mut reflected = Array3::zeros(coeffs.raw_dim());
-    let n_nodes = coeffs.dim().1;
+    let mut reflected = Array3::zeros(coeffs.shape());
+    let n_nodes = coeffs.shape()[1];
     for elem in 0..ELEMENTS {
         for node in 0..n_nodes {
-            reflected[(elem, node, 0)] = coeffs[(ELEMENTS - 1 - elem, n_nodes - 1 - node, 0)];
+            reflected[[elem, node, 0]] = coeffs[[ELEMENTS - 1 - elem, n_nodes - 1 - node, 0]];
         }
     }
     reflected
@@ -399,8 +418,8 @@ fn pressure_velocity_from_characteristics(
     w_minus: &Array3<f64>,
 ) -> (Array3<f64>, Array3<f64>) {
     (
-        0.5 * (w_plus + w_minus),
-        (w_plus - w_minus) / (2.0 * DENSITY * SOUND_SPEED),
+        &(w_plus + w_minus) * 0.5,
+        &(w_plus - w_minus) / (2.0 * DENSITY * SOUND_SPEED),
     )
 }
 pub fn physical_coordinate(elem: usize, xi: f64) -> f64 {
@@ -423,13 +442,13 @@ pub fn exact_gaussian_pressure(x: f64, time: f64) -> f64 {
     0.5 * (gaussian_profile(x - SOUND_SPEED * time) + gaussian_profile(x + SOUND_SPEED * time))
 }
 fn exact_uniform_gaussian_line(time: f64) -> Array1<f64> {
-    Array1::from_shape_fn(2 * ELEMENTS, |i| exact_gaussian_pressure(i as f64, time))
+    Array1::from_shape_fn(2 * ELEMENTS, |[i]| exact_gaussian_pressure(i as f64, time))
 }
 fn exact_dg_gaussian_pressure(xi_nodes: &Array1<f64>, time: f64) -> Array3<f64> {
     let mut pressure = Array3::zeros((ELEMENTS, xi_nodes.len(), 1));
     for elem in 0..ELEMENTS {
         for node in 0..xi_nodes.len() {
-            pressure[(elem, node, 0)] =
+            pressure[[elem, node, 0]] =
                 exact_gaussian_pressure(physical_coordinate(elem, xi_nodes[node]), time);
         }
     }
@@ -440,7 +459,7 @@ pub fn weighted_mass(values: &Array3<f64>, weights: &Array1<f64>) -> f64 {
     let mut mass = 0.0;
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
-            mass += weights[node] * values[(elem, node, 0)];
+            mass += weights[node] * values[[elem, node, 0]];
         }
     }
     mass
@@ -451,9 +470,9 @@ pub fn relative_l2(actual: &Array3<f64>, expected: &Array3<f64>, weights: &Array
     let mut expected_sq = 0.0;
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
-            let diff = actual[(elem, node, 0)] - expected[(elem, node, 0)];
+            let diff = actual[[elem, node, 0]] - expected[[elem, node, 0]];
             diff_sq += weights[node] * diff * diff;
-            expected_sq += weights[node] * expected[(elem, node, 0)] * expected[(elem, node, 0)];
+            expected_sq += weights[node] * expected[[elem, node, 0]] * expected[[elem, node, 0]];
         }
     }
     diff_sq.sqrt() / expected_sq.sqrt().max(f64::EPSILON)
@@ -474,8 +493,8 @@ fn acoustic_energy(pressure: &Array3<f64>, velocity: &Array3<f64>, weights: &Arr
     let mut energy = 0.0;
     for elem in 0..ELEMENTS {
         for node in 0..weights.len() {
-            let p = pressure[(elem, node, 0)];
-            let u = velocity[(elem, node, 0)];
+            let p = pressure[[elem, node, 0]];
+            let u = velocity[[elem, node, 0]];
             energy += weights[node]
                 * (p * p / (2.0 * DENSITY * SOUND_SPEED * SOUND_SPEED) + 0.5 * DENSITY * u * u);
         }

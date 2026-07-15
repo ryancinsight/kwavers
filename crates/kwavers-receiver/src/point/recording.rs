@@ -1,6 +1,6 @@
 use super::PointSensor;
 use kwavers_grid::Grid;
-use ndarray::ArrayView3;
+use leto::ArrayView3;
 
 impl PointSensor {
     /// Record field values at all sensor locations for current timestep.

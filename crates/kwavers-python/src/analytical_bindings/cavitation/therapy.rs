@@ -1,6 +1,6 @@
 //! Histotripsy therapy-delivery PyO3 wrappers.
 
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -48,9 +48,9 @@ pub fn sonication_schedule(
     let subspot_i64: Vec<i64> = s.subspot.iter().map(|&v| v as i64).collect();
     let repetition_i64: Vec<i64> = s.repetition.iter().map(|&v| v as i64).collect();
     Ok((
-        s.onset_s.into_pyarray(py).unbind(),
-        subspot_i64.into_pyarray(py).unbind(),
-        repetition_i64.into_pyarray(py).unbind(),
+        s.onset_s.to_pyarray(py).unbind(),
+        subspot_i64.to_pyarray(py).unbind(),
+        repetition_i64.to_pyarray(py).unbind(),
         s.pulse_duration_s,
         s.repetition_time_s,
         s.sonication_duration_s,
@@ -286,7 +286,7 @@ pub fn scale_measured_emission_spectrum(
         receive_fraction,
         susceptibility,
     );
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Convert delivered cumulative histotripsy dose samples to kill fractions.
@@ -303,7 +303,7 @@ pub fn delivered_histotripsy_progress(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let out =
         kwavers_physics::analytical::cavitation::delivered_histotripsy_progress(d, d0, weibull_k);
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Compare a modeled cavitation-cloud erosion curve with a k-wave or experimental reference.

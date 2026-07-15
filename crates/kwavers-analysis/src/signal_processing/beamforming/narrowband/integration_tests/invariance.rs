@@ -11,7 +11,7 @@ use crate::signal_processing::beamforming::{
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn pipeline_is_invariant_to_global_time_shift() {
@@ -43,7 +43,7 @@ fn pipeline_is_invariant_to_global_time_shift() {
     let mut data_shifted = Array3::<f64>::zeros((n_sensors, 1, n_samples));
     for sensor in 0..n_sensors {
         for t in shift..n_samples {
-            data_shifted[(sensor, 0, t - shift)] = data_original[(sensor, 0, t)];
+            data_shifted[[sensor, 0, t - shift]] = data_original[[sensor, 0, t]];
         }
     }
 

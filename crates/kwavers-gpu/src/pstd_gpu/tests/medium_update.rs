@@ -21,15 +21,34 @@ fn test_medium_variable_update_preserves_static_buffers_and_disables_source_corr
     solver.update_medium_variable(&new_c0, &new_rho);
     solver.disable_source_correction();
 
-    let c0_sq: Vec<f32> = read_buffer(&solver.device, &solver.queue, &solver.buf_c0_sq, total);
-    let rho0: Vec<f32> = read_buffer(&solver.device, &solver.queue, &solver.buf_rho0, total);
-    let rho0_inv: Vec<f32> =
-        read_buffer(&solver.device, &solver.queue, &solver.buf_rho0_inv, total);
-    let bon_a: Vec<f32> = read_buffer(&solver.device, &solver.queue, &solver.buf_bon_a, total);
+    let c0_sq: Vec<f32> = read_buffer(
+        solver.state.device(),
+        solver.state.queue(),
+        &solver.state.medium_buffers.c0_sq,
+        total,
+    );
+    let rho0: Vec<f32> = read_buffer(
+        solver.state.device(),
+        solver.state.queue(),
+        &solver.state.medium_buffers.rho0,
+        total,
+    );
+    let rho0_inv: Vec<f32> = read_buffer(
+        solver.state.device(),
+        solver.state.queue(),
+        &solver.state.medium_buffers.rho0_inv,
+        total,
+    );
+    let bon_a: Vec<f32> = read_buffer(
+        solver.state.device(),
+        solver.state.queue(),
+        &solver.state.medium_buffers.bon_a,
+        total,
+    );
     let source_kappa: Vec<f32> = read_buffer(
-        &solver.device,
-        &solver.queue,
-        &solver.buf_source_kappa,
+        solver.state.device(),
+        solver.state.queue(),
+        &solver.state.medium_buffers.source_kappa,
         total,
     );
 

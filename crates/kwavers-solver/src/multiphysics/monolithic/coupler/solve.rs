@@ -3,11 +3,12 @@ use super::super::residual_metric::norm;
 use super::super::state_vector::{flatten_fields, sorted_field_keys, unflatten_fields};
 use super::MonolithicCoupler;
 use crate::integration::nonlinear::GMRESSolver;
+use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
+use leto::Array3;
 use log::{debug, warn};
-use ndarray::Array3;
 use std::collections::HashMap;
 use std::time::Instant;
 
@@ -48,8 +49,8 @@ impl MonolithicCoupler {
         let mut u_prev = self
             .u_prev_scratch
             .take()
-            .filter(|scratch| scratch.dim() == u_current.dim())
-            .unwrap_or_else(|| Array3::zeros(u_current.dim()));
+            .filter(|scratch| scratch.shape() == u_current.shape())
+            .unwrap_or_else(|| Array3::zeros(u_current.shape()));
         u_prev.assign(&u_current);
         let dims = grid.dimensions();
 
@@ -65,7 +66,7 @@ impl MonolithicCoupler {
         }
 
         if self.du_scratch.is_none() {
-            self.du_scratch = Some(Array3::zeros(u_current.dim()));
+            self.du_scratch = Some(Array3::zeros(u_current.shape()));
         }
         let mut du = self.du_scratch.take().unwrap();
         let mut rhs_scratch = self.rhs_scratch.take();
@@ -104,12 +105,12 @@ impl MonolithicCoupler {
                 .take()
                 .unwrap_or_else(|| GMRESSolver::new(self.gmres_config.clone()));
 
-            let rhs = rhs_scratch.get_or_insert_with(|| Array3::zeros(f.dim()));
-            if rhs.dim() != f.dim() {
-                *rhs = Array3::zeros(f.dim());
+            let rhs = rhs_scratch.get_or_insert_with(|| Array3::zeros(f.shape()));
+            if rhs.shape() != f.shape() {
+                *rhs = Array3::zeros(f.shape());
             }
             rhs.assign(&f);
-            rhs.par_mapv_inplace(|value| -value);
+            scale_inplace(rhs, -1.0);
 
             du.fill(0.0);
 
@@ -145,9 +146,11 @@ impl MonolithicCoupler {
                 1.0
             };
 
-            u_current.zip_mut_with(&du, |u_value, &delta| {
-                *u_value += step_size * delta;
-            });
+            for (u_value, delta) in u_current.iter_mut().zip(du.iter()) {
+                {
+                    *u_value += step_size * delta;
+                };
+            }
 
             if self.newton_config.verbose {
                 debug!("  Step size: {:.4}", step_size);

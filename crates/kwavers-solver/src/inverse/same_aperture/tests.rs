@@ -1,4 +1,4 @@
-use ndarray::Array2;
+use leto::Array2;
 
 use super::{
     active_grid, build_fundamental_matrix, encode_measurements, fundamental_operator,
@@ -8,7 +8,7 @@ use super::{
 
 #[test]
 fn graph_laplacian_matches_edge_energy_identity() {
-    let mask = Array2::from_elem((2, 2), true);
+    let mask = Array2::from_elem([2, 2], true);
     let active = active_grid(&mask, 1.0);
     let values = [1.0_f32, 2.0, 4.0, 8.0];
     let mut laplacian = [0.0_f32; 4];
@@ -45,9 +45,9 @@ fn row_matrix_products_match_manual_linear_algebra() {
 
 #[test]
 fn finite_frequency_rows_are_normalized_and_input_sensitive() {
-    let mask = Array2::from_elem((3, 3), true);
+    let mask = Array2::from_elem([3, 3], true);
     let active = active_grid(&mask, 0.001);
-    let attenuation = Array2::from_shape_fn((3, 3), |(ix, iy)| 0.1 + 0.01 * (ix + iy) as f64);
+    let attenuation = Array2::from_shape_fn((3, 3), |[ix, iy]| 0.1 + 0.01 * (ix + iy) as f64);
     let medium = SameApertureMedium {
         attenuation_np_per_m_mhz: &attenuation,
         spacing_m: 0.001,
@@ -89,9 +89,9 @@ fn finite_frequency_rows_are_normalized_and_input_sensitive() {
 
 #[test]
 fn phase_speed_changes_pitch_catch_phase_without_changing_row_normalization() {
-    let mask = Array2::from_elem((4, 4), true);
+    let mask = Array2::from_elem([4, 4], true);
     let active = active_grid(&mask, 0.001);
-    let attenuation = Array2::from_elem((4, 4), 0.06);
+    let attenuation = Array2::from_elem([4, 4], 0.06);
     let medium = SameApertureMedium {
         attenuation_np_per_m_mhz: &attenuation,
         spacing_m: 0.001,
@@ -146,9 +146,9 @@ fn phase_speed_changes_pitch_catch_phase_without_changing_row_normalization() {
 
 #[test]
 fn matrix_free_operator_matches_materialized_rows() {
-    let mask = Array2::from_elem((4, 4), true);
+    let mask = Array2::from_elem([4, 4], true);
     let active = active_grid(&mask, 0.001);
-    let attenuation = Array2::from_shape_fn((4, 4), |(ix, iy)| 0.08 + 0.02 * (ix + iy) as f64);
+    let attenuation = Array2::from_shape_fn((4, 4), |[ix, iy]| 0.08 + 0.02 * (ix + iy) as f64);
     let medium = SameApertureMedium {
         attenuation_np_per_m_mhz: &attenuation,
         spacing_m: 0.001,
@@ -174,7 +174,7 @@ fn matrix_free_operator_matches_materialized_rows() {
     };
     let matrix = build_fundamental_matrix(medium, &therapy, &active, settings);
     let operator = fundamental_operator(medium, &therapy, &active, settings);
-    let x = (0..active.len())
+    let x = (0..(active.len()))
         .map(|idx| 0.25 + 0.03125 * idx as f32)
         .collect::<Vec<_>>();
     let y = (0..matrix.rows())
@@ -199,9 +199,9 @@ fn matrix_free_operator_matches_materialized_rows() {
 
 #[test]
 fn encoded_operator_matches_materialized_source_encoding() {
-    let mask = Array2::from_elem((4, 4), true);
+    let mask = Array2::from_elem([4, 4], true);
     let active = active_grid(&mask, 0.001);
-    let attenuation = Array2::from_shape_fn((4, 4), |(ix, iy)| 0.06 + 0.015 * (ix + iy) as f64);
+    let attenuation = Array2::from_shape_fn((4, 4), |[ix, iy]| 0.06 + 0.015 * (ix + iy) as f64);
     let medium = SameApertureMedium {
         attenuation_np_per_m_mhz: &attenuation,
         spacing_m: 0.001,
@@ -233,7 +233,7 @@ fn encoded_operator_matches_materialized_source_encoding() {
     let operator = fundamental_operator(medium, &therapy, &active, settings);
     let encoded = EncodedOperator::deterministic_signs(operator, 3);
     let encoded_matrix = encoded.materialize();
-    let x = (0..active.len())
+    let x = (0..(active.len()))
         .map(|idx| -0.25 + 0.041_666_668 * idx as f32)
         .collect::<Vec<_>>();
     let y = (0..encoded.rows())
@@ -270,7 +270,7 @@ fn encoded_operator_matches_materialized_source_encoding() {
 
 #[test]
 fn pcg_solves_regularized_identity_normal_equations() {
-    let mask = Array2::from_elem((1, 2), true);
+    let mask = Array2::from_elem([1, 2], true);
     let active = active_grid(&mask, 1.0);
     let mut matrix = RowMatrix::zeros(2, 2);
     matrix.row_mut(0).copy_from_slice(&[1.0, 0.0]);
@@ -289,12 +289,12 @@ fn pcg_solves_regularized_identity_normal_equations() {
 
     assert!((result.model[0] - 0.5).abs() <= 1.0e-6);
     assert!((result.model[1] + 1.0).abs() <= 1.0e-6);
-    assert!(result.objective_history.len() >= 2);
+    assert!((result.objective_history.len()) >= 2);
     assert!(result.objective_history[1] <= result.objective_history[0]);
 }
 
 fn assert_vec_close(actual: &[f32], expected: &[f32], tolerance: f32) {
-    assert_eq!(actual.len(), expected.len());
+    assert_eq!((actual.len()), (expected.len()));
     for (idx, (a, e)) in actual.iter().zip(expected.iter()).enumerate() {
         assert!(
             (*a - *e).abs() <= tolerance,

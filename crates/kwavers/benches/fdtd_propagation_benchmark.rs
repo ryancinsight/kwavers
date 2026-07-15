@@ -42,7 +42,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_source::GridSource;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 use std::time::Duration;
 
 /// Benchmark configuration

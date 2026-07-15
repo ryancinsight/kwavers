@@ -5,7 +5,7 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Apply 3D Gaussian filter for noise reduction
 ///
@@ -28,7 +28,7 @@ pub fn apply_gaussian_filter(
     sigma: f64,
     radius: usize,
 ) -> KwaversResult<Array3<f64>> {
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
 
     // Generate 1D Gaussian kernel
     let kernel = create_gaussian_kernel(radius, sigma);
@@ -131,7 +131,7 @@ pub fn apply_bilateral_filter(
     window_radius: usize,
     intensity_sigma_relative: f64,
 ) -> KwaversResult<Array3<f64>> {
-    let (nx, ny, nz) = image.dim();
+    let [nx, ny, nz] = image.shape();
     let mut filtered = image.clone();
 
     // Estimate intensity range for normalization

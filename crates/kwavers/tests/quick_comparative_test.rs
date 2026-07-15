@@ -10,6 +10,10 @@ use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::GridSource;
 
+fn leto_view3(field: &leto::Array3<f64>) -> leto::ArrayView3<'_, f64> {
+    field.view()
+}
+
 /// Quick comparison test - runs in under 10 seconds
 #[test]
 fn comparative_quick_test() {
@@ -149,8 +153,9 @@ fn run_fdtd_quick(
 
     let execution_time = start.elapsed();
     let final_field = solver.pressure_field();
-    let energy = calculate_energy_quick(final_field.view());
-    let stability = calculate_stability_quick(final_field.view());
+    let final_field_view = leto_view3(final_field);
+    let energy = calculate_energy_quick(final_field_view);
+    let stability = calculate_stability_quick(final_field_view);
 
     QuickTestResult {
         execution_time,
@@ -177,8 +182,9 @@ fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) ->
 
     let execution_time = start.elapsed();
     let final_field = solver.pressure_field();
-    let energy = calculate_energy_quick(final_field.view());
-    let stability = calculate_stability_quick(final_field.view());
+    let final_field_view = leto_view3(final_field);
+    let energy = calculate_energy_quick(final_field_view);
+    let stability = calculate_stability_quick(final_field_view);
 
     QuickTestResult {
         execution_time,
@@ -188,12 +194,12 @@ fn run_pstd_quick(grid: &Grid, medium: &HomogeneousMedium, time_steps: usize) ->
 }
 
 /// Quick energy calculation (sum of squares)
-fn calculate_energy_quick(field: ndarray::ArrayView3<f64>) -> f64 {
+fn calculate_energy_quick(field: leto::ArrayView3<f64>) -> f64 {
     field.iter().map(|&x| x * x).sum::<f64>().sqrt()
 }
 
 /// Quick stability calculation (checks for NaN/inf and gradient magnitude)
-fn calculate_stability_quick(field: ndarray::ArrayView3<f64>) -> f64 {
+fn calculate_stability_quick(field: leto::ArrayView3<f64>) -> f64 {
     // Check for invalid values
     let has_nan = field.iter().any(|&x| x.is_nan());
     let has_inf = field.iter().any(|&x| x.is_infinite());
@@ -206,10 +212,10 @@ fn calculate_stability_quick(field: ndarray::ArrayView3<f64>) -> f64 {
     let mut gradient_sum = 0.0;
     let mut value_count = 0;
 
-    let shape = field.dim();
-    for i in 1..shape.0.saturating_sub(1) {
-        for j in 1..shape.1.saturating_sub(1) {
-            for k in 1..shape.2.saturating_sub(1) {
+    let shape = field.shape();
+    for i in 1..shape[0].saturating_sub(1) {
+        for j in 1..shape[1].saturating_sub(1) {
+            for k in 1..shape[2].saturating_sub(1) {
                 let gx = (field[[i + 1, j, k]] - field[[i - 1, j, k]]).abs();
                 let gy = (field[[i, j + 1, k]] - field[[i, j - 1, k]]).abs();
                 let gz = (field[[i, j, k + 1]] - field[[i, j, k - 1]]).abs();

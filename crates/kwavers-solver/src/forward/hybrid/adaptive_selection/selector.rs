@@ -5,7 +5,7 @@ use super::metrics::{ComputationalMetrics, MaterialMetrics, SpectralMetrics};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4};
+use leto::{Array3, Array4};
 
 /// Method selection result
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -46,10 +46,12 @@ impl AdaptiveMethodSelector {
         dt: f64,
     ) -> KwaversResult<Array3<SelectedMethod>> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
-        let mut selection = Array3::from_elem((nx, ny, nz), SelectedMethod::Spectral);
+        let mut selection = Array3::from_elem([nx, ny, nz], SelectedMethod::Spectral);
 
         // Analyze field properties
-        let pressure_field = fields.index_axis(ndarray::Axis(0), 0);
+        let pressure_field = fields
+            .index_axis::<3>(0, 0)
+            .expect("invariant: pressure field index 0 within field stack");
 
         // Compute metrics for different regions
         for k in 0..nz {
@@ -73,7 +75,7 @@ impl AdaptiveMethodSelector {
     /// Select method for a single point
     fn select_for_point(
         &self,
-        field: ndarray::ArrayView3<f64>,
+        field: leto::ArrayView3<f64>,
         position: (usize, usize, usize),
         grid: &Grid,
         dt: f64,
@@ -108,11 +110,11 @@ impl AdaptiveMethodSelector {
     /// Extract local region around a point
     fn extract_region(
         &self,
-        field: ndarray::ArrayView3<f64>,
+        field: leto::ArrayView3<f64>,
         position: (usize, usize, usize),
     ) -> Array3<f64> {
         let (i, j, k) = position;
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         const REGION_SIZE: usize = 3;
 
         // Extract 3x3x3 region centered at position
@@ -221,7 +223,10 @@ impl AdaptiveMethodSelector {
         // threshold = 0.0: No hysteresis (fully responsive)
         // threshold = 1.0: Maximum hysteresis (very stable)
 
-        for ((i, j, k), current) in selection.indexed_iter_mut() {
+        for ([i, j, k], current) in selection
+            .indexed_iter_mut()
+            .expect("invariant: selection array yields indexed iterator")
+        {
             if *current != previous[[i, j, k]] {
                 // Prevent switching if hysteresis threshold indicates stability preference
                 // In proper implementation, would compare score differences to threshold

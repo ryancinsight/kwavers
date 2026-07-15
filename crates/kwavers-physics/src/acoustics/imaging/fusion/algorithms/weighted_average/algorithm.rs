@@ -5,8 +5,8 @@ use crate::acoustics::imaging::fusion::registration::{
 use crate::acoustics::imaging::fusion::types::FusedImageResult;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_imaging::fusion::RegistrationMethod;
-use ndarray::{Array3, CowArray};
-use std::collections::HashMap;
+use leto::Array3;
+use std::{borrow::Cow, collections::HashMap};
 
 use super::benchmarks::WeightedAverageBenchmarkCase;
 use super::references::WEIGHTED_AVERAGE_FUSION_REFERENCES;
@@ -57,15 +57,15 @@ pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<
         })
     })?;
 
-    let target_dims = reference_modality.data.dim();
+    let target_dims = reference_modality.data.shape();
     let _benchmark_case = FusionBenchmarkCase {
         name: "weighted_average_fusion",
-        fixed_shape: [target_dims.0, target_dims.1, target_dims.2],
-        moving_shape: [target_dims.0, target_dims.1, target_dims.2],
+        fixed_shape: target_dims,
+        moving_shape: target_dims,
     };
     let _algorithm_benchmark_case = WeightedAverageBenchmarkCase {
         name: "weighted_average_fusion_algorithm",
-        target_dims: [target_dims.0, target_dims.1, target_dims.2],
+        target_dims,
         modality_count: fusion.registered_data.len(),
     };
     let _ = (
@@ -111,21 +111,21 @@ pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<
             registration_result.affine_transform.clone(),
         );
 
-        let resampled_data = if modality.data.dim() == target_dims
+        let resampled_data = if modality.data.shape() == target_dims
             && registration_result.transform_matrix == identity_transform()
         {
-            CowArray::from(modality.data.view())
+            Cow::Borrowed(&modality.data)
         } else {
-            CowArray::from(registration_engine.resample_registered(
+            Cow::Owned(registration_engine.resample_registered(
                 &modality.data,
                 &registration_result,
                 target_dims,
             )?)
         };
 
-        for i in 0..target_dims.0 {
-            for j in 0..target_dims.1 {
-                for k in 0..target_dims.2 {
+        for i in 0..target_dims[0] {
+            for j in 0..target_dims[1] {
+                for k in 0..target_dims[2] {
                     let value = resampled_data[[i, j, k]];
                     fused_intensity[[i, j, k]] += value * weight;
                     confidence_map[[i, j, k]] += weight;
@@ -137,9 +137,9 @@ pub(crate) fn fuse_weighted_average(fusion: &MultiModalFusion) -> KwaversResult<
         }
     }
 
-    for i in 0..target_dims.0 {
-        for j in 0..target_dims.1 {
-            for k in 0..target_dims.2 {
+    for i in 0..target_dims[0] {
+        for j in 0..target_dims[1] {
+            for k in 0..target_dims[2] {
                 let conf = confidence_map[[i, j, k]];
                 if conf > 0.0 {
                     fused_intensity[[i, j, k]] /= conf;

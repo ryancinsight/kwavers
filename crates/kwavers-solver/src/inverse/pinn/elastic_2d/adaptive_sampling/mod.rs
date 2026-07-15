@@ -8,7 +8,5 @@ mod sampler;
 #[cfg(all(test, feature = "pinn"))]
 mod tests;
 
-#[cfg(feature = "pinn")]
 pub use batch::{extract_batch, BatchIterator};
-#[cfg(feature = "pinn")]
 pub use sampler::{AdaptiveSampler, ElasticAdaptiveSamplingStrategy};

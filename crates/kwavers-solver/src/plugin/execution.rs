@@ -6,7 +6,7 @@ use crate::plugin::{Plugin, PluginContext};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array4;
+use leto::Array4;
 
 /// Strategy for executing plugins
 pub trait ExecutionStrategy: Send + Sync {
@@ -49,26 +49,22 @@ impl ExecutionStrategy for SequentialStrategy {
     }
 }
 
-/// Parallel execution strategy
+/// Ordered plugin execution strategy.
 ///
-/// Note: This currently executes sequentially due to mutable field access constraints.
-/// True parallelism would require architectural changes (read/write phase separation).
+/// This intentionally executes plugins in order because each plugin receives
+/// mutable access to the shared field state. A real parallel implementation
+/// needs a read/compute/write phase split before it can preserve plugin
+/// semantics without aliasing the field buffers.
 #[derive(Debug)]
 pub struct ParallelStrategy {
-    // Future: thread_pool field will be added when parallel execution is implemented
+    _private: (),
 }
 
 impl ParallelStrategy {
-    /// Create a new parallel execution strategy
+    /// Create a new ordered plugin execution strategy.
     #[must_use]
     pub fn new() -> Self {
-        Self {}
-    }
-
-    /// Create with a specific thread pool (future implementation)
-    #[must_use]
-    pub fn with_thread_pool(_pool: rayon::ThreadPool) -> Self {
-        Self {}
+        Self { _private: () }
     }
 }
 
@@ -89,12 +85,6 @@ impl ExecutionStrategy for ParallelStrategy {
         t: f64,
         context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
-        // Note: Currently executes sequentially due to mutable field access
-        // True parallelism would require:
-        // 1. Read phase: plugins declare what they need to read
-        // 2. Compute phase: parallel computation
-        // 3. Write phase: merge results
-
         for plugin in plugins.iter_mut() {
             plugin.update(fields, grid, medium, dt, t, context)?;
         }

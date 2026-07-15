@@ -2,7 +2,7 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::config::HASConfig;
 use super::solver::HybridAngularSpectrumSolver;
@@ -21,7 +21,7 @@ pub struct HybridAngularSpectrum {
 impl HybridAngularSpectrum {
     /// Create a new HAS propagator.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by the solver constructor.
+    /// - Propagates any [`crate::KwaversError`] returned by the solver constructor.
     pub fn new(grid: &Grid, config: HASConfig) -> KwaversResult<Self> {
         let solver = HybridAngularSpectrumSolver::new(grid, &config)?;
         Ok(Self { config, solver })
@@ -31,7 +31,7 @@ impl HybridAngularSpectrum {
     ///
     /// Splits the distance into `ceil(distance / config.dz)` equal steps.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] when `distance < 0`.
+    /// - Returns [`crate::KwaversError::InvalidInput`] when `distance < 0`.
     pub fn propagate(&self, pressure: &Array3<f64>, distance: f64) -> KwaversResult<Array3<f64>> {
         if distance < 0.0 {
             return Err(KwaversError::InvalidInput(

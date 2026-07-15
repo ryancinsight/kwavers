@@ -6,7 +6,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Trait for discontinuity detection
 pub trait DiscontinuityDetection: Send + Sync {
@@ -30,7 +30,7 @@ pub trait SolutionCoupling: Send + Sync {
     /// `output` does NOT need to be pre-initialized; every element is written.
     /// This is the zero-allocation hot-path variant.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn couple_into(
         &self,
@@ -44,7 +44,7 @@ pub trait SolutionCoupling: Send + Sync {
     /// Convenience wrapper — allocates and returns the coupled field.
     /// Prefer [`Self::couple_into`] in time-step loops.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn couple(
         &self,

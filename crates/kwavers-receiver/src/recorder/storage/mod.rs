@@ -7,7 +7,7 @@ pub use file::FileStorage;
 pub use memory::MemoryStorage;
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Storage backend trait
 pub trait StorageBackend: Send + Sync {

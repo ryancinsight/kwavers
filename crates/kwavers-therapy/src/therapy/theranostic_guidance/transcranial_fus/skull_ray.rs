@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2, Array3};
 
 /// Per-element skull-path correction: `(phases_rad, delays_s, skull_lengths_m,
 /// amplitude_weights)`, one value per transducer element.
@@ -70,13 +70,13 @@ pub(super) fn skull_path_phase_correction(
         skull_mask,
         samples_per_ray,
     } = input;
-    let (nx, ny, nz) = ct_hu.dim();
-    if element_positions.ncols() != 3 {
+    let [nx, ny, nz] = ct_hu.shape();
+    if element_positions.shape()[1] != 3 {
         return Err(KwaversError::InvalidInput(
             "element_positions must have 3 columns".to_owned(),
         ));
     }
-    let n_elem = element_positions.nrows();
+    let n_elem = element_positions.shape()[0];
     let target_m = [0.0_f64, 0.0_f64, 0.0_f64];
     let samples = samples_per_ray.max(2);
     let segment_m = |start: [f64; 3], end: [f64; 3]| -> f64 {
@@ -160,7 +160,7 @@ pub(super) fn skull_path_phase_correction(
         amplitudes[elem_idx] = transmission * (-attenuation_np).exp();
     }
 
-    let mean_delay = delays.sum() / n_elem as f64;
+    let mean_delay = delays.iter().sum::<f64>() / n_elem as f64;
     let phases = Array1::from_shape_fn(n_elem, |i| {
         let relative = delays[i] - mean_delay;
         let raw = -TWO_PI * frequency_hz * relative;

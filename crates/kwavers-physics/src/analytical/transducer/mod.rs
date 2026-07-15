@@ -14,6 +14,7 @@ pub mod steering;
 pub use array_factor::{
     apodization_weights, apodization_window_response, beam_pattern_magnitude,
     circular_piston_directivity, grating_lobe_angles, linear_array_factor,
+    ApodizationWindowResponse,
 };
 pub use beam::{
     beam_pattern_2d, beam_pattern_2d_magnitude, circular_piston_onaxis, delay_law_focus_2d,
@@ -92,10 +93,12 @@ mod tests {
     fn apodization_response_matches_manual_dft_shift() {
         let n_elements = 4usize;
         let nfft = 8usize;
-        let (weights, freq, response_db) = apodization_window_response(n_elements, "uniform", nfft)
+        let response = apodization_window_response(n_elements, "uniform", nfft)
             .expect("invariant: nfft >= n_elements defines response");
 
-        assert_eq!(weights, vec![1.0; n_elements]);
+        assert_eq!(response.weights, vec![1.0; n_elements]);
+        let freq = &response.cycles_per_aperture;
+        let response_db = &response.response_db;
         assert_eq!(freq.len(), nfft);
         assert!((freq[0] + 2.0).abs() < 1e-12);
         assert!((freq[nfft - 1] - 2.0).abs() < 1e-12);
@@ -106,7 +109,7 @@ mod tests {
             let bin = (shifted_bin + nfft / 2) % nfft;
             let mut re = 0.0;
             let mut im = 0.0;
-            for (idx, &weight) in weights.iter().enumerate() {
+            for (idx, &weight) in response.weights.iter().enumerate() {
                 let phase = -2.0 * PI * bin as f64 * idx as f64 / nfft as f64;
                 re += weight * phase.cos();
                 im += weight * phase.sin();

@@ -3,7 +3,7 @@
 use super::super::*;
 use approx::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_all_operators_linear_function() {
@@ -13,7 +13,7 @@ fn test_all_operators_linear_function() {
     let op4 = CentralDifference4::new(dx, dx, dx).unwrap();
     let op6 = CentralDifference6::new(dx, dx, dx).unwrap();
 
-    let mut field = Array3::zeros((20, 20, 20));
+    let mut field = Array3::zeros([20, 20, 20]);
     for i in 0..20 {
         for j in 0..20 {
             for k in 0..20 {
@@ -51,7 +51,7 @@ fn test_convergence_order_second_order() {
         let dx = 1.0 / (nx as f64);
         let op = CentralDifference2::new(dx, dx, dx).unwrap();
 
-        let mut field = Array3::zeros((nx, 5, 5));
+        let mut field = Array3::zeros([nx, 5, 5]);
         for i in 0..nx {
             let x = (i as f64) * dx;
             for j in 0..5 {
@@ -104,7 +104,7 @@ fn test_convergence_order_fourth_order() {
         let dx = 1.0 / (nx as f64);
         let op = CentralDifference4::new(dx, dx, dx).unwrap();
 
-        let mut field = Array3::zeros((nx, 5, 5));
+        let mut field = Array3::zeros([nx, 5, 5]);
         for i in 0..nx {
             let x = (i as f64) * dx;
             for j in 0..5 {

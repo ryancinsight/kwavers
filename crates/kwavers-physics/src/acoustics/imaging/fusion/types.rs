@@ -4,7 +4,7 @@
 //! for clean architecture compliance. This module now only contains physics-specific
 //! internal representations.
 
-use ndarray::Array3;
+use leto::Array3;
 
 // Re-export domain types for backwards compatibility
 pub use kwavers_imaging::fusion::{AffineTransform, FusedImageResult};
@@ -86,13 +86,13 @@ mod tests {
 
     #[test]
     fn test_registered_modality_creation() {
-        let data = Array3::<f64>::zeros((8, 8, 4));
+        let data = Array3::<f64>::zeros([8, 8, 4]);
         let modality = RegisteredModality {
             data: data.clone(),
             quality_score: 0.85,
         };
 
-        assert_eq!(modality.data.dim(), (8, 8, 4));
+        assert_eq!(modality.data.shape(), [8, 8, 4]);
         assert!((modality.quality_score - 0.85).abs() < 1e-10);
     }
 }

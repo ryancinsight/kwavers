@@ -14,7 +14,7 @@ use kwavers_solver::plugin::PluginContext;
 use kwavers_solver::plugin::PluginManager;
 use kwavers_solver::plugin::PluginMetadata;
 use kwavers_solver::plugin::PluginState;
-use ndarray::Array4;
+use leto::Array4;
 use std::collections::HashMap;
 
 /// Custom plugin for modeling frequency-dependent absorption
@@ -103,8 +103,10 @@ impl Plugin for FrequencyAbsorptionPlugin {
             .unwrap_or(1.0);
 
         // Apply frequency-dependent absorption to pressure field
-        let mut pressure = fields.index_axis_mut(ndarray::Axis(0), 0);
-        pressure.mapv_inplace(|p| p * (-alpha * dt).exp());
+        let pressure = fields.index_axis_mut::<3>(0, 0).expect("index_axis");
+        for (_, p) in pressure.indexed_iter_mut().expect("indexed_iter_mut") {
+            *p = *p * (-alpha * dt).exp();
+        }
 
         println!("Applied absorption: α = {} at f = {} Hz", alpha, freq_hz);
         Ok(())
@@ -185,7 +187,7 @@ impl Plugin for StatisticsPlugin {
         t: f64,
         _context: &mut PluginContext<'_>,
     ) -> KwaversResult<()> {
-        let pressure = fields.index_axis(ndarray::Axis(0), 0);
+        let pressure = fields.index_axis::<3>(0, 0).expect("index_axis");
 
         // Update statistics
         self.max_pressure = self
@@ -258,7 +260,7 @@ fn main() -> KwaversResult<()> {
 
     // Initialize pressure field with a Gaussian pulse
     {
-        let mut pressure = fields.index_axis_mut(ndarray::Axis(0), 0);
+        let mut pressure = fields.index_axis_mut::<3>(0, 0).expect("index_axis");
         let center = (grid.nx / 2, grid.ny / 2, grid.nz / 2);
         for i in 0..grid.nx {
             for j in 0..grid.ny {

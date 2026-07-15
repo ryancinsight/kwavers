@@ -13,6 +13,10 @@ mod solver;
 #[cfg(test)]
 mod tests;
 
-pub use buffers::GpuThermalAcousticBuffers;
+pub use buffers::{
+    GpuThermalAcousticBuffers, ThermalAcousticBufferProvider, WgpuThermalAcousticBuffers,
+};
 pub use config::GpuThermalAcousticConfig;
-pub use solver::GpuThermalAcousticSolver;
+pub use solver::{
+    GpuThermalAcousticSolver, ThermalAcousticSolverProvider, WgpuThermalAcousticSolverProvider,
+};

@@ -1,6 +1,6 @@
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 use super::TimeCoupling;
@@ -75,7 +75,7 @@ impl TimeCoupling for AveragingStrategy {
                     //        (-2θ³ + 3θ²)p₁ + (θ³ - θ²)m₁
                     // where θ ∈ [0,1], p are positions, m are derivatives
 
-                    let (nx, ny, nz) = field.dim();
+                    let [nx, ny, nz] = field.shape();
                     let mut interpolated = Array3::zeros((nx, ny, nz));
 
                     // Interpolation parameter (midpoint for second-order)

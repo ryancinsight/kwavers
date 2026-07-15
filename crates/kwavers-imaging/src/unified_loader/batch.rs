@@ -1,7 +1,7 @@
 use super::UnifiedMedicalImageLoader;
 use crate::medical::MedicalImageMetadata;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 use std::path::Path;
 
 /// Medical image batch loader for processing multiple files

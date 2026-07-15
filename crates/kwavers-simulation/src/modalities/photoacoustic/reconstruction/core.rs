@@ -28,8 +28,8 @@
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
-use ndarray::Array3;
-use rayon::prelude::*;
+use leto::Array3;
+use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
 /// Reconstruct initial pressure `p₀(r)` from pressure snapshots via
 /// time-reversed delay-and-sum back-projection.
@@ -52,7 +52,7 @@ pub fn time_reversal_reconstruction(
     n_detectors: usize,
 ) -> KwaversResult<Array3<f64>> {
     let (nx, ny, nz) = grid.dimensions();
-    let mut reconstructed = Array3::<f64>::zeros((nx, ny, nz));
+    let mut reconstructed = Array3::<f64>::zeros([nx, ny, nz]);
     let detectors = compute_detector_positions(grid, n_detectors);
     let n_time = time_points.len().min(pressure_fields.len());
     if n_time == 0 {
@@ -92,62 +92,71 @@ pub fn time_reversal_reconstruction(
         ));
     }
 
-    out.par_iter_mut().enumerate().for_each(|(idx, out_cell)| {
-        let k = idx % nz;
-        let j = (idx / nz) % ny;
-        let i = idx / nxy;
-        let px = i as f64 * grid.dx;
-        let py = j as f64 * grid.dy;
-        let pz = k as f64 * grid.dz;
-        let mut sum = 0.0;
+    const RECONSTRUCTION_CHUNK_LEN: usize = 512;
+    for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+        out,
+        RECONSTRUCTION_CHUNK_LEN,
+        |chunk_idx, chunk| {
+            let base_idx = chunk_idx * RECONSTRUCTION_CHUNK_LEN;
+            for (offset, out_cell) in chunk.iter_mut().enumerate() {
+                let idx = base_idx + offset;
+                let k = idx % nz;
+                let j = (idx / nz) % ny;
+                let i = idx / nxy;
+                let px = i as f64 * grid.dx;
+                let py = j as f64 * grid.dy;
+                let pz = k as f64 * grid.dz;
+                let mut sum = 0.0;
 
-        for (d_idx, &(dx, dy, dz)) in detector_positions_m.iter().enumerate() {
-            let rx = px - dx;
-            let ry = py - dy;
-            let rz = pz - dz;
-            let dist = rz.mul_add(rz, rx.mul_add(rx, ry * ry)).sqrt();
-            let weight = 1.0 / dist.max(grid.dx);
+                for (d_idx, &(dx, dy, dz)) in detector_positions_m.iter().enumerate() {
+                    let rx = px - dx;
+                    let ry = py - dy;
+                    let rz = pz - dz;
+                    let dist = rz.mul_add(rz, rx.mul_add(rx, ry * ry)).sqrt();
+                    let weight = 1.0 / dist.max(grid.dx);
 
-            // Propagation delay in samples.
-            let delay_samples = dist / (speed_of_sound * dt_time.max(f64::MIN_POSITIVE));
+                    // Propagation delay in samples.
+                    let delay_samples = dist / (speed_of_sound * dt_time.max(f64::MIN_POSITIVE));
 
-            // Time-reversed sample index: TR convention maps forward delay τ
-            // to reversed index `n_time − 1 − round(τ/dt)`.
-            // (Xu & Wang 2005, Eq. 7.)
-            let val = if n_time >= 2 && inv_dt_time > 0.0 {
-                let fwd_pos = delay_samples;
-                if fwd_pos <= 0.0 {
-                    // Zero delay → last recorded sample (fully reversed).
-                    let tr_idx = n_time - 1;
-                    signals[d_idx * n_time + tr_idx]
-                } else if fwd_pos >= (n_time - 1) as f64 {
-                    // Delay beyond recording window → first recorded sample (reversed).
-                    signals[d_idx * n_time]
-                } else {
-                    // Linear interpolation at the time-reversed position.
-                    let i0 = fwd_pos.floor() as usize;
-                    let frac = fwd_pos - i0 as f64;
-                    // Reversed indices: forward i0 → reversed (n_time-1-i0).
-                    let tr_i0 = n_time - 1 - i0;
-                    // Guard against underflow when i0 == n_time-1.
-                    let tr_i1 = if i0 + 1 < n_time {
-                        n_time - 1 - (i0 + 1)
+                    // Time-reversed sample index: TR convention maps forward delay τ
+                    // to reversed index `n_time − 1 − round(τ/dt)`.
+                    // (Xu & Wang 2005, Eq. 7.)
+                    let val = if n_time >= 2 && inv_dt_time > 0.0 {
+                        let fwd_pos = delay_samples;
+                        if fwd_pos <= 0.0 {
+                            // Zero delay → last recorded sample (fully reversed).
+                            let tr_idx = n_time - 1;
+                            signals[d_idx * n_time + tr_idx]
+                        } else if fwd_pos >= (n_time - 1) as f64 {
+                            // Delay beyond recording window → first recorded sample (reversed).
+                            signals[d_idx * n_time]
+                        } else {
+                            // Linear interpolation at the time-reversed position.
+                            let i0 = fwd_pos.floor() as usize;
+                            let frac = fwd_pos - i0 as f64;
+                            // Reversed indices: forward i0 → reversed (n_time-1-i0).
+                            let tr_i0 = n_time - 1 - i0;
+                            // Guard against underflow when i0 == n_time-1.
+                            let tr_i1 = if i0 + 1 < n_time {
+                                n_time - 1 - (i0 + 1)
+                            } else {
+                                0
+                            };
+                            let v0 = signals[d_idx * n_time + tr_i0];
+                            let v1 = signals[d_idx * n_time + tr_i1];
+                            // Interpolate in reversed-time direction.
+                            v0.mul_add(1.0 - frac, v1 * frac)
+                        }
                     } else {
-                        0
+                        signals[d_idx * n_time]
                     };
-                    let v0 = signals[d_idx * n_time + tr_i0];
-                    let v1 = signals[d_idx * n_time + tr_i1];
-                    // Interpolate in reversed-time direction.
-                    v0.mul_add(1.0 - frac, v1 * frac)
-                }
-            } else {
-                signals[d_idx * n_time]
-            };
 
-            sum += val * weight;
-        }
-        *out_cell = sum;
-    });
+                    sum += val * weight;
+                }
+                *out_cell = sum;
+            }
+        },
+    );
     Ok(reconstructed)
 }
 
@@ -159,7 +168,7 @@ pub fn interpolate_detector_signal(
     y_det: f64,
     z_det: f64,
 ) -> f64 {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let x_clamp = x_det.clamp(0.0, (nx - 1) as f64);
     let y_clamp = y_det.clamp(0.0, (ny - 1) as f64);
     let z_clamp = z_det.clamp(0.0, (nz - 1) as f64);

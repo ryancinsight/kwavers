@@ -1,7 +1,7 @@
 //! IVUS therapy field and response bindings.
 
 use kwavers_physics::analytical::imaging;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1, PyReadonlyArray2};
+use numpy::{PyArray1, PyReadonlyArray1, PyReadonlyArray2, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -47,7 +47,7 @@ pub fn ivus_therapy_pressure_field(
             )
         })
         .map_err(PyValueError::new_err)?;
-    Ok(pressure.into_pyarray(py).unbind())
+    Ok(pressure.to_pyarray(py).unbind())
 }
 
 /// IVUS microbubble delivery fraction from acoustic radiation force.
@@ -91,19 +91,19 @@ pub fn ivus_microbubble_delivery_fraction(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let delivered = py
         .detach(|| {
-            imaging::ivus_microbubble_delivery_fraction(
-                range,
-                attenuation,
-                intensity,
-                wall,
-                target,
+            imaging::ivus_microbubble_delivery_fraction(imaging::IvusMicrobubbleDeliveryInput {
+                range_m: range,
+                attenuation_np_m: attenuation,
+                intensity_w_m2: intensity,
+                wall_mask: wall,
+                target_mask: target,
                 sound_speed_m_s,
                 radial_center_m,
                 radial_width_m,
-            )
+            })
         })
         .map_err(PyValueError::new_err)?;
-    Ok(delivered.into_pyarray(py).unbind())
+    Ok(delivered.to_pyarray(py).unbind())
 }
 
 /// IVUS therapy response fields and summary metrics.
@@ -198,12 +198,12 @@ pub fn ivus_therapy_response<'py>(
         .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("intensity_w_m2", response.intensity_w_m2.into_pyarray(py))?;
+    out.set_item("intensity_w_m2", response.intensity_w_m2.to_pyarray(py))?;
     out.set_item(
         "temperature_rise_k",
-        response.temperature_rise_k.into_pyarray(py),
+        response.temperature_rise_k.to_pyarray(py),
     )?;
-    out.set_item("deposition", response.deposition.into_pyarray(py))?;
+    out.set_item("deposition", response.deposition.to_pyarray(py))?;
     out.set_item("mechanical_index", response.mechanical_index)?;
     out.set_item(
         "target_to_offtarget_ratio",
@@ -317,13 +317,13 @@ pub fn ivus_therapy_fields<'py>(
         .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("pressure_pa", fields.pressure_pa.into_pyarray(py))?;
-    out.set_item("intensity_w_m2", fields.intensity_w_m2.into_pyarray(py))?;
+    out.set_item("pressure_pa", fields.pressure_pa.to_pyarray(py))?;
+    out.set_item("intensity_w_m2", fields.intensity_w_m2.to_pyarray(py))?;
     out.set_item(
         "temperature_rise_k",
-        fields.temperature_rise_k.into_pyarray(py),
+        fields.temperature_rise_k.to_pyarray(py),
     )?;
-    out.set_item("deposition", fields.deposition.into_pyarray(py))?;
+    out.set_item("deposition", fields.deposition.to_pyarray(py))?;
     out.set_item("mechanical_index", fields.mechanical_index)?;
     out.set_item(
         "target_to_offtarget_ratio",

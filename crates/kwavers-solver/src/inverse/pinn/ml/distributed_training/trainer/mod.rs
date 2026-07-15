@@ -6,22 +6,23 @@ use super::{
     CheckpointManager, DistributedPinnTrainer, DistributedTrainingConfig, PerformanceStats,
     TrainingCoordinator, TrainingState,
 };
-use crate::inverse::pinn::ml::{
-    BurnPINN2DConfig, BurnPINN2DWave, BurnTrainingMetrics2D, BurnWave2dGeometry,
-};
-use burn::tensor::backend::AutodiffBackend;
+use crate::inverse::pinn::ml::{PinnConfig2D, PinnWave2D, TrainingMetrics2D, WaveGeometry2D};
 use kwavers_core::error::KwaversResult;
 use log::info;
 
-impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> DistributedPinnTrainer<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub async fn new(
+    pub fn new(
         config: DistributedTrainingConfig,
-        base_config: BurnPINN2DConfig,
-        _geometry: BurnWave2dGeometry,
+        base_config: PinnConfig2D,
+        _geometry: WaveGeometry2D,
     ) -> KwaversResult<Self> {
         let decomposition = crate::inverse::pinn::ml::MultiGpuDecompositionStrategy::Spatial {
             dimensions: 2,
@@ -33,10 +34,10 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         };
 
         let multi_gpu_manager = if config.num_gpus > 1 {
-            Some(
-                crate::inverse::pinn::ml::MultiGpuManager::new(decomposition, load_balancer)
-                    .await?,
-            )
+            Some(crate::inverse::pinn::ml::MultiGpuManager::new(
+                decomposition,
+                load_balancer,
+            )?)
         } else {
             None
         };
@@ -44,8 +45,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         let mut model_replicas = Vec::new();
 
         for _gpu_id in 0..config.num_gpus {
-            let device = B::Device::default();
-            let model = BurnPINN2DWave::new(base_config.clone(), &device)?;
+            let model = PinnWave2D::new(base_config.clone())?;
             model_replicas.push(model);
         }
 
@@ -54,7 +54,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             checkpoint_manager: CheckpointManager::from_config(&config),
             training_state: TrainingState {
                 current_epoch: 0,
-                global_metrics: BurnTrainingMetrics2D {
+                global_metrics: TrainingMetrics2D {
                     total_loss: vec![],
                     data_loss: vec![],
                     pde_loss: vec![],
@@ -64,7 +64,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
                     epochs_completed: 0,
                 },
                 gpu_metrics: vec![
-                    BurnTrainingMetrics2D {
+                    TrainingMetrics2D {
                         total_loss: vec![],
                         data_loss: vec![],
                         pde_loss: vec![],
@@ -90,9 +90,9 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
 
     /// Train.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub async fn train(
+    pub fn train(
         &mut self,
         n_epochs: usize,
         collocation_points: &[(f64, f64, f64)],
@@ -105,16 +105,14 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
         for epoch in 0..n_epochs {
             let epoch_start = std::time::Instant::now();
 
-            let gpu_results = self
-                .train_epoch_distributed(
-                    collocation_points,
-                    boundary_points,
-                    initial_points,
-                    target_values,
-                )
-                .await?;
+            let gpu_results = self.train_epoch_distributed(
+                collocation_points,
+                boundary_points,
+                initial_points,
+                target_values,
+            )?;
 
-            self.aggregate_gradients_and_update(&gpu_results).await?;
+            self.aggregate_gradients_and_update(&gpu_results)?;
 
             self.coordinator.training_state.current_epoch = epoch + 1;
             self.coordinator
@@ -144,7 +142,7 @@ impl<B: AutodiffBackend> DistributedPinnTrainer<B> {
             if self.config.checkpoint_config.auto_save
                 && (epoch + 1) % self.config.checkpoint_config.interval == 0
             {
-                self.save_checkpoint().await?;
+                self.save_checkpoint()?;
             }
 
             if epoch % 10 == 0 {

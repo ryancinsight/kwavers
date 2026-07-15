@@ -119,8 +119,8 @@ fn apply_window(x: &mut [f64], center: usize, half: usize) {
 /// the symmetric time axis.
 ///
 /// # ⚠ Experimental — quantitative focusing not yet validated
-/// The signal-processing operators ([`conv_causal`], [`corr_causal`],
-/// [`apply_window`]) are unit-tested and correct. The iterative *structure* here
+/// The signal-processing operators (`conv_causal`, `corr_causal`,
+/// `apply_window`) are unit-tested and correct. The iterative *structure* here
 /// follows Wapenaar et al. (2014) / Thorbecke et al. (2017), but the focusing
 /// **amplitudes/window convention are NOT yet validated against an independent
 /// layered-medium reference** (the truncation-window geometry is convention-
@@ -129,7 +129,7 @@ fn apply_window(x: &mut [f64], center: usize, half: usize) {
 /// equations and the validation plan.
 ///
 /// # Panics
-/// - Panics if `reflection` is empty or `t_d_samples ≥ reflection.len()`.
+/// - Panics if `reflection` is empty or `t_d_samples ≥ (reflection.len())`.
 #[must_use]
 pub fn redatum(reflection: &[f64], cfg: &MarchenkoConfig) -> MarchenkoResult {
     let nt = reflection.len();
@@ -186,20 +186,20 @@ pub fn redatum(reflection: &[f64], cfg: &MarchenkoConfig) -> MarchenkoResult {
 /// must share the same length and focal configuration.
 ///
 /// # Errors
-/// - Propagates any [`KwaversError`] from the Wasserstein evaluation.
+/// - Propagates any [`crate::KwaversError`] from the Wasserstein evaluation.
 pub fn marchenko_wasserstein_misfit(
     reflection_obs: &[f64],
     reflection_mod: &[f64],
     cfg: &MarchenkoConfig,
 ) -> kwavers_core::error::KwaversResult<f64> {
     use crate::inverse::reconstruction::seismic::{MisfitFunction, MisfitType};
-    use ndarray::Array2;
+    use leto::Array2;
 
     let g_obs = redatum(reflection_obs, cfg).green_minus;
     let g_mod = redatum(reflection_mod, cfg).green_minus;
     let l = g_obs.len();
-    let obs = Array2::from_shape_vec((1, l), g_obs).expect("row vector shape");
-    let modeled = Array2::from_shape_vec((1, g_mod.len()), g_mod).expect("row vector shape");
+    let obs = Array2::from_shape_vec([1, l], g_obs).expect("row vector shape");
+    let modeled = Array2::from_shape_vec([1, (g_mod.len())], g_mod).expect("row vector shape");
     MisfitFunction::new(MisfitType::Wasserstein).compute(&obs, &modeled)
 }
 

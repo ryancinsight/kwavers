@@ -14,7 +14,7 @@ pub use super::detection::{
 mod tests {
     use super::*;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array1;
+    use leto::Array1;
 
     #[test]
     fn test_spectral_detector() {

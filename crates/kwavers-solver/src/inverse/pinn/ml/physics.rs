@@ -4,7 +4,7 @@
 //! within the PINN ecosystem, enabling rapid extension to new physics while maintaining
 //! a unified training and inference interface.
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use std::collections::HashMap;
 
@@ -33,7 +33,9 @@ impl Default for PDECharacteristics {
 }
 
 /// Physics domain trait defining the interface for any physics domain
-pub trait SimulationPhysicsDomain<B: AutodiffBackend>: std::fmt::Debug {
+pub trait SimulationPhysicsDomain<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>:
+    std::fmt::Debug
+{
     /// Get the physics domain name
     fn domain_name(&self) -> &'static str;
 
@@ -45,12 +47,12 @@ pub trait SimulationPhysicsDomain<B: AutodiffBackend>: std::fmt::Debug {
     /// Compute PDE residual for this physics domain
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2>;
+    ) -> Var<f32, B>;
 
     /// Get boundary condition specifications
     fn boundary_conditions(&self) -> Vec<PinnBoundaryConditionSpec>;
@@ -228,11 +230,11 @@ pub enum PinnPhysicsCouplingType {
 
 /// Physics domain registry for managing available physics domains
 #[derive(Debug)]
-pub struct PhysicsDomainRegistry<B: AutodiffBackend> {
+pub struct PhysicsDomainRegistry<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
     domains: HashMap<String, Box<dyn SimulationPhysicsDomain<B> + Send + Sync>>,
 }
 
-impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> PhysicsDomainRegistry<B> {
     /// Create a new empty registry
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
@@ -283,7 +285,7 @@ impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
 
     /// Remove a domain
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns [`crate::KwaversError::System`] if the precondition for a System-class constraint is violated.
     ///
     pub fn remove_domain(&mut self, name: &str) -> KwaversResult<()> {
         if self.domains.remove(name).is_some() {
@@ -298,7 +300,9 @@ impl<B: AutodiffBackend> PhysicsDomainRegistry<B> {
     }
 }
 
-impl<B: AutodiffBackend> Default for PhysicsDomainRegistry<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> Default
+    for PhysicsDomainRegistry<B>
+{
     fn default() -> Self {
         Self::new()
     }
@@ -310,8 +314,7 @@ mod tests {
 
     #[test]
     fn test_physics_domain_registry() {
-        use burn::backend::Autodiff;
-        let registry = PhysicsDomainRegistry::<Autodiff<burn::backend::NdArray<f32>>>::new();
+        let registry = PhysicsDomainRegistry::<coeus_core::MoiraiBackend>::new();
 
         // Test empty registry
         assert!(!registry.has_domain("test"));

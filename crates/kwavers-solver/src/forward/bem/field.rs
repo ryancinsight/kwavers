@@ -3,15 +3,15 @@
 //! Provides vertex normal computation and incident wave field generation
 //! for boundary element computations.
 
-use num_complex::Complex64;
+use kwavers_math::fft::Complex64;
 
 /// Solution of BEM system.
 #[derive(Debug, Clone)]
 pub struct BemSolution {
     /// Pressure on boundary nodes
-    pub boundary_pressure: ndarray::Array1<Complex64>,
+    pub boundary_pressure: leto::Array1<Complex64>,
     /// Normal velocity on boundary nodes
-    pub boundary_velocity: ndarray::Array1<Complex64>,
+    pub boundary_velocity: leto::Array1<Complex64>,
     /// Wavenumber used in solution
     pub wavenumber: f64,
 }

@@ -4,7 +4,7 @@ use super::model::SkullAttenuation;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 impl SkullAttenuation {
     /// Compute attenuation field for skull with enhanced physics
@@ -60,7 +60,7 @@ impl SkullAttenuation {
         // Compute total attenuation coefficient
         let alpha_total = self.total_coefficient(frequency);
 
-        let mut attenuation = Array3::ones(skull_mask.dim());
+        let mut attenuation = Array3::ones(skull_mask.shape());
 
         for i in 0..grid.nx {
             for j in 0..grid.ny {

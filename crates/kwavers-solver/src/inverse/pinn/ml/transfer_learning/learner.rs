@@ -2,14 +2,17 @@ use super::{
     DomainAdapter, SourceFeatures, TrainingData, TransferLearner, TransferLearningStats,
     TransferMetrics,
 };
-use burn::prelude::ToElement;
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 use kwavers_core::error::{KwaversError, KwaversResult};
 
-impl<B: AutodiffBackend> TransferLearner<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> TransferLearner<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     /// Create a new transfer learner
     pub fn new(
-        source_model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        source_model: crate::inverse::pinn::ml::PinnWave2D<B>,
         config: super::TransferLearningConfig,
     ) -> Self {
         Self {
@@ -22,13 +25,13 @@ impl<B: AutodiffBackend> TransferLearner<B> {
 
     /// Transfer model to target geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn transfer_to_geometry(
         &mut self,
-        target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         target_conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
-    ) -> KwaversResult<(crate::inverse::pinn::ml::BurnPINN2DWave<B>, TransferMetrics)> {
+    ) -> KwaversResult<(crate::inverse::pinn::ml::PinnWave2D<B>, TransferMetrics)> {
         let start_time = std::time::Instant::now();
 
         let source_features = self.extract_source_features()?;
@@ -87,8 +90,9 @@ impl<B: AutodiffBackend> TransferLearner<B> {
         let mut _layer_importance = Vec::new();
 
         for param in &params {
-            let magnitude_scalar = param.clone().powf_scalar(2.0).sum().sqrt().into_scalar();
-            let magnitude: f32 = magnitude_scalar.to_f32();
+            let squared = coeus_autograd::mul(param, param);
+            let magnitude_var = coeus_autograd::sqrt(&coeus_autograd::sum(&squared));
+            let magnitude: f32 = magnitude_var.tensor.as_slice()[0];
             _weight_magnitudes.push(magnitude);
             _layer_importance.push(magnitude * 0.5);
         }
@@ -107,7 +111,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     pub(super) fn initialize_target_model(
         &self,
         _source_features: &SourceFeatures,
-    ) -> KwaversResult<crate::inverse::pinn::ml::BurnPINN2DWave<B>> {
+    ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
         Ok(self.source_model.clone())
     }
 
@@ -117,7 +121,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn setup_domain_adapter(
         &mut self,
-        _target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        _target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> KwaversResult<()> {
         self.domain_adapter = Some(DomainAdapter {
             _layers: Vec::new(),
@@ -132,22 +136,22 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn apply_domain_adaptation(
         &self,
-        model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        _target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
-    ) -> KwaversResult<crate::inverse::pinn::ml::BurnPINN2DWave<B>> {
+        model: crate::inverse::pinn::ml::PinnWave2D<B>,
+        _target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
+    ) -> KwaversResult<crate::inverse::pinn::ml::PinnWave2D<B>> {
         Ok(model)
     }
 
     /// Fine-tune model on target geometry
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn fine_tune_model(
         &mut self,
-        mut model: crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        target_geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        mut model: crate::inverse::pinn::ml::PinnWave2D<B>,
+        target_geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         target_conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
-    ) -> KwaversResult<(crate::inverse::pinn::ml::BurnPINN2DWave<B>, usize)> {
+    ) -> KwaversResult<(crate::inverse::pinn::ml::PinnWave2D<B>, usize)> {
         let mut best_accuracy = 0.0;
         let mut patience_counter = 0;
         let mut convergence_epochs = 0;
@@ -179,11 +183,11 @@ impl<B: AutodiffBackend> TransferLearner<B> {
 
     /// Generate training data for target geometry
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn generate_training_data(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
         _conditions: &[crate::inverse::pinn::ml::BoundaryCondition2D],
     ) -> KwaversResult<TrainingData> {
         let collocation_points = self.generate_collocation_points(geometry);
@@ -199,7 +203,7 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     /// Generate collocation points within geometry
     pub(super) fn generate_collocation_points(
         &self,
-        geometry: &crate::inverse::pinn::ml::BurnWave2dGeometry,
+        geometry: &crate::inverse::pinn::ml::WaveGeometry2D,
     ) -> Vec<(f64, f64, f64)> {
         let mut points = Vec::new();
         let num_points = 500;
@@ -223,14 +227,14 @@ impl<B: AutodiffBackend> TransferLearner<B> {
     ///
     pub(super) fn fine_tune_step(
         &self,
-        model: &mut crate::inverse::pinn::ml::BurnPINN2DWave<B>,
+        model: &mut crate::inverse::pinn::ml::PinnWave2D<B>,
         training_data: &TrainingData,
     ) -> KwaversResult<f32> {
-        let device = model.device();
+        let backend = B::default();
 
-        let mut x_vec: Vec<f32> = Vec::with_capacity(training_data.collocation_points.len());
-        let mut y_vec: Vec<f32> = Vec::with_capacity(training_data.collocation_points.len());
-        let mut t_vec: Vec<f32> = Vec::with_capacity(training_data.collocation_points.len());
+        let mut x_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.len()));
+        let mut y_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.len()));
+        let mut t_vec: Vec<f32> = Vec::with_capacity((training_data.collocation_points.len()));
 
         for (x, y, t) in &training_data.collocation_points {
             x_vec.push(*x as f32);
@@ -238,26 +242,37 @@ impl<B: AutodiffBackend> TransferLearner<B> {
             t_vec.push(*t as f32);
         }
 
-        let batch_size = x_vec.len();
-        let x_tensor =
-            Tensor::<B, 1>::from_floats(x_vec.as_slice(), &device).reshape([batch_size, 1]);
-        let y_tensor =
-            Tensor::<B, 1>::from_floats(y_vec.as_slice(), &device).reshape([batch_size, 1]);
-        let t_tensor =
-            Tensor::<B, 1>::from_floats(t_vec.as_slice(), &device).reshape([batch_size, 1]);
+        let batch_size = (x_vec.len());
+        let x_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &x_vec, &backend),
+            false,
+        );
+        let y_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &y_vec, &backend),
+            false,
+        );
+        let t_var = Var::new(
+            coeus_tensor::Tensor::from_slice_on(vec![batch_size, 1], &t_vec, &backend),
+            false,
+        );
+
+        for p in model.parameters() {
+            p.zero_grad();
+        }
 
         let pde_residuals =
-            model.compute_pde_residual(x_tensor, y_tensor, t_tensor, self.config.wave_speed);
+            model.compute_pde_residual(&x_var, &y_var, &t_var, self.config.wave_speed);
 
-        let total_loss = pde_residuals.powf_scalar(2.0).mean() * 1e-12_f32;
+        let squared = coeus_autograd::mul(&pde_residuals, &pde_residuals);
+        let total_loss = coeus_autograd::scalar_mul(&coeus_autograd::mean(&squared), 1e-12);
 
-        let grads = total_loss.backward();
+        total_loss.backward();
 
         let optimizer =
-            crate::inverse::pinn::ml::burn_wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
-        *model = optimizer.step(model.clone(), &grads);
+            crate::inverse::pinn::ml::wave_equation_2d::SimpleOptimizer2D::new(1e-4_f32);
+        *model = optimizer.step(model.clone());
 
-        let loss_value = total_loss.into_scalar().to_f32();
+        let loss_value = total_loss.tensor.as_slice()[0];
         Ok(1.0 / (1.0 + loss_value))
     }
 

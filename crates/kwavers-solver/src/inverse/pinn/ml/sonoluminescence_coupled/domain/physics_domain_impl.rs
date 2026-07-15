@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use burn::tensor::{backend::AutodiffBackend, Tensor};
+use coeus_autograd::Var;
 
 use crate::inverse::pinn::ml::physics::{
     BoundaryPosition, InitialConditionSpec, PhysicsLossWeights, PhysicsValidationMetric,
@@ -13,19 +13,24 @@ use crate::inverse::pinn::ml::physics::{
 use super::super::config::SonoluminescenceCouplingType;
 use super::SonoluminescenceCoupledDomain;
 
-impl<B: AutodiffBackend> SimulationPhysicsDomain<B> for SonoluminescenceCoupledDomain<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> SimulationPhysicsDomain<B>
+    for SonoluminescenceCoupledDomain<B>
+where
+    B::DeviceBuffer<f32>:
+        coeus_core::CpuAddressableStorage<f32> + coeus_core::CpuAddressableStorageMut<f32>,
+{
     fn domain_name(&self) -> &'static str {
         "sonoluminescence_coupled"
     }
 
     fn pde_residual(
         &self,
-        model: &crate::inverse::pinn::ml::BurnPINN2DWave<B>,
-        x: &Tensor<B, 2>,
-        y: &Tensor<B, 2>,
-        t: &Tensor<B, 2>,
+        model: &crate::inverse::pinn::ml::PinnWave2D<B>,
+        x: &Var<f32, B>,
+        y: &Var<f32, B>,
+        t: &Var<f32, B>,
         physics_params: &PinnDomainPhysicsParameters,
-    ) -> Tensor<B, 2> {
+    ) -> Var<f32, B> {
         self.electromagnetic_residual_with_sources(model, x, y, t, physics_params)
     }
 

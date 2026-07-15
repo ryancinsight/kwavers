@@ -13,7 +13,7 @@
 //! same quantity reverse-mode autodiff would produce in the original paper) and
 //! the projection `(∂c_φ/∂φ)ᵀ g`.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// SE(2) rigid-body transform parameters.
 ///
@@ -69,7 +69,7 @@ pub(super) fn bilinear_with_gradient(
     geom: &PlaneGeometry,
     background: f64,
 ) -> (f64, f64, f64) {
-    let (nx, ny, _) = template.dim();
+    let [nx, ny, _] = template.shape();
     if fi < 0.0 || fj < 0.0 || fi > (nx - 1) as f64 || fj > (ny - 1) as f64 {
         return (background, 0.0, 0.0);
     }
@@ -103,9 +103,9 @@ pub(super) fn transform_template(
     geom: &PlaneGeometry,
     background: f64,
 ) -> Array3<f64> {
-    let (nx, ny, nz) = template.dim();
+    let [nx, ny, nz] = template.shape();
     let (s, c) = phi.theta_rad.sin_cos();
-    let mut out = Array3::from_elem((nx, ny, nz), background);
+    let mut out = Array3::from_elem([nx, ny, nz], background);
     for k in 0..nz {
         for j in 0..ny {
             for i in 0..nx {
@@ -149,9 +149,9 @@ pub(super) fn transform_with_jacobian(
     geom: &PlaneGeometry,
     background: f64,
 ) -> TransformWithJacobian {
-    let (nx, ny, nz) = template.dim();
+    let [nx, ny, nz] = template.shape();
     let (s, c) = phi.theta_rad.sin_cos();
-    let mut model = Array3::from_elem((nx, ny, nz), background);
+    let mut model = Array3::from_elem([nx, ny, nz], background);
     let mut d_theta = Array3::zeros((nx, ny, nz));
     let mut d_delta_x = Array3::zeros((nx, ny, nz));
     let mut d_delta_y = Array3::zeros((nx, ny, nz));
@@ -189,9 +189,9 @@ pub(super) fn transform_with_jacobian(
 /// Project a pixel-wise model gradient `g = ∂f/∂c_φ` onto the SE(2) parameter
 /// space: `(∂f/∂θ, ∂f/∂δ₁, ∂f/∂δ₂) = (⟨g, ∂c_φ/∂θ⟩, ⟨g, ∂c_φ/∂δ₁⟩, ⟨g, ∂c_φ/∂δ₂⟩)`.
 pub(super) fn project_gradient(g: &Array3<f64>, jac: &TransformWithJacobian) -> [f64; 3] {
-    let g_theta = (g * &jac.d_theta).sum();
-    let g_dx = (g * &jac.d_delta_x).sum();
-    let g_dy = (g * &jac.d_delta_y).sum();
+    let g_theta = (g * &jac.d_theta).iter().sum::<f64>();
+    let g_dx = (g * &jac.d_delta_x).iter().sum::<f64>();
+    let g_dy = (g * &jac.d_delta_y).iter().sum::<f64>();
     [g_theta, g_dx, g_dy]
 }
 
@@ -204,7 +204,7 @@ mod transform_tests {
     #[test]
     fn jacobian_matches_finite_difference() {
         let (nx, ny) = (24usize, 24);
-        let mut template = Array3::from_elem((nx, ny, 1), 1500.0_f64);
+        let mut template = Array3::from_elem([nx, ny, 1], 1500.0_f64);
         // Asymmetric smooth feature so all three parameters move c_φ.
         for j in 0..ny {
             for i in 0..nx {
@@ -226,7 +226,7 @@ mod transform_tests {
         let fd = |a: &RigidTransform, b: &RigidTransform, h: f64| {
             (&transform_template(&template, a, &geom, bg)
                 - &transform_template(&template, b, &geom, bg))
-                / (2.0 * h)
+                .mapv(|x| x / (2.0 * h))
         };
         let dtheta_fd = fd(
             &RigidTransform {

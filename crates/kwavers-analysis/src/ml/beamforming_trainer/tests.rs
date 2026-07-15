@@ -1,5 +1,5 @@
 use super::*;
-use ndarray::Array2;
+use leto::Array2;
 
 #[test]
 fn test_trainer_creation() {
@@ -54,7 +54,7 @@ fn test_trainer_simple_training() {
     let mut trainer = BeamformingTrainer::new(config, physics_loss).unwrap();
 
     let inputs = Array2::<f64>::zeros((100, 10));
-    let targets = Array2::<f64>::ones((100, 1)) * 0.5;
+    let targets = &Array2::<f64>::ones((100, 1)) * 0.5;
     let dataset = TrainingDataset::new(inputs, targets).unwrap();
 
     let h = trainer.train(&dataset, None).unwrap();

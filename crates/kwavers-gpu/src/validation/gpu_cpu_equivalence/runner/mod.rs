@@ -1,12 +1,24 @@
 use super::{EquivalenceReport, EquivalenceValidator};
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use kwavers_core::error::{KwaversError, ValidationError};
+use kwavers_core::error::{KwaversError, SystemError, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_signal::traits::Signal;
 use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver, KSpaceCorrectionMode};
 use kwavers_solver::interface::Solver;
-use ndarray::{Array2, Array3};
+use leto::Array3 as LetoArray3;
+use leto::{Array2 as NdArray2, Array3 as NdArray3};
+
+fn pressure_field_to_leto(pressure: &NdArray3<f64>) -> Result<LetoArray3<f64>, KwaversError> {
+    let [nx, ny, nz] = pressure.shape();
+    let leto_shape = [nx, ny, nz];
+    LetoArray3::from_shape_vec(leto_shape, pressure.iter().copied().collect()).map_err(|err| {
+        KwaversError::InvalidInput(format!(
+            "FDTD pressure field could not be represented as leto::Array3: {}",
+            err
+        ))
+    })
+}
 
 /// Calculate stable timestep based on CFL condition
 fn calculate_stable_dt(grid: &Grid, medium: &dyn Medium) -> f64 {
@@ -29,7 +41,7 @@ fn run_simulation_cpu(
     medium: &dyn Medium,
     nt: usize,
     config: &FdtdConfig,
-) -> Result<Array3<f64>, KwaversError> {
+) -> Result<LetoArray3<f64>, KwaversError> {
     use kwavers_signal::ToneBurst;
     use kwavers_source::grid_source::GridSource;
 
@@ -39,20 +51,20 @@ fn run_simulation_cpu(
     let nz = grid.nz;
 
     // Create pressure source mask (1.0 at x=0 boundary plane)
-    let mut p_mask = Array3::zeros((nx, ny, nz));
+    let mut p_mask = NdArray3::zeros((nx, ny, nz));
     for j in 0..ny {
         for k in 0..nz {
-            p_mask[(0, j, k)] = 1.0; // Source at x=0 boundary
+            p_mask[[0, j, k]] = 1.0; // Source at x=0 boundary
         }
     }
 
     // Create signal: 1 MHz tone burst with 5 cycles
     let signal = ToneBurst::new(MHZ_TO_HZ, 5.0, 1.0e-6, 1.0);
     let num_samples = nt + 1;
-    let mut signal_array = Array2::zeros((1, num_samples));
+    let mut signal_array = NdArray2::zeros((1, num_samples));
     for i in 0..num_samples {
         let t = i as f64 * config.dt;
-        signal_array[(0, i)] = signal.amplitude(t);
+        signal_array[[0, i]] = signal.amplitude(t);
     }
 
     // Create GridSource
@@ -70,75 +82,40 @@ fn run_simulation_cpu(
     let mut solver = FdtdSolver::new(config.clone(), grid, medium, grid_source)?;
     solver.run(nt)?;
 
-    Ok(solver.pressure_field().clone())
+    pressure_field_to_leto(solver.pressure_field())
 }
 
 /// Run GPU-accelerated FDTD simulation
 ///
-/// Executes the FDTD solver with GPU acceleration if available.
-/// Falls back to CPU if GPU is unavailable.
+/// The current FDTD solver GPU accelerator contract is still ndarray/f64,
+/// while Kwavers GPU execution is moving to provider-generic Leto/Hephaestus
+/// traits that can be implemented by WGPU, CUDA, or another Hephaestus device.
+/// Reporting this as unavailable is more accurate than comparing the CPU solver
+/// against itself.
+///
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns [`KwaversError::System`] until a real FDTD Leto/Hephaestus
+///   provider trait implementation is wired into this validation path.
 ///
 fn run_simulation_gpu(
-    grid: &Grid,
-    medium: &dyn Medium,
-    nt: usize,
-    config: &FdtdConfig,
-) -> Result<Array3<f64>, KwaversError> {
-    #[cfg(feature = "gpu")]
-    {
-        use crate::backend::GPUBackend;
-        use kwavers_signal::ToneBurst;
-        use kwavers_solver::backend::traits::ComputeBackend;
-        use kwavers_source::grid_source::GridSource;
-
-        if let Ok(backend) = GPUBackend::new() {
-            let nx = grid.nx;
-            let ny = grid.ny;
-            let nz = grid.nz;
-
-            let mut p_mask = Array3::zeros((nx, ny, nz));
-            for j in 0..ny {
-                for k in 0..nz {
-                    p_mask[(0, j, k)] = 1.0;
-                }
-            }
-
-            let signal = ToneBurst::new(MHZ_TO_HZ, 5.0, 1.0e-6, 1.0);
-            let num_samples = nt + 1;
-            let mut signal_array = Array2::zeros((1, num_samples));
-            for i in 0..num_samples {
-                let t = i as f64 * config.dt;
-                signal_array[(0, i)] = signal.amplitude(t);
-            }
-
-            let grid_source = GridSource {
-                p0: None,
-                u0: None,
-                p_mask: Some(p_mask),
-                p_signal: Some(signal_array),
-                p_mode: kwavers_source::grid_source::SourceMode::Additive,
-                u_mask: None,
-                u_signal: None,
-                u_mode: kwavers_source::grid_source::SourceMode::Additive,
-            };
-
-            let mut solver = FdtdSolver::new(config.clone(), grid, medium, grid_source)?;
-            solver.run(nt)?;
-            backend.synchronize()?;
-            return Ok(solver.pressure_field().clone());
-        }
-    }
-
-    // GPU unavailable or feature not enabled: fall back to CPU
-    run_simulation_cpu(grid, medium, nt, config)
+    _grid: &Grid,
+    _medium: &dyn Medium,
+    _nt: usize,
+    _config: &FdtdConfig,
+) -> Result<LetoArray3<f64>, KwaversError> {
+    Err(KwaversError::System(SystemError::FeatureNotAvailable {
+        feature: "FDTD provider-generic Leto/Hephaestus GPU equivalence".to_owned(),
+        reason:
+            "no real FDTD GPU provider trait implementation is wired; the previous path only ran the CPU solver"
+                .to_owned(),
+    }))
 }
 
 /// Validate GPU/CPU equivalence for acoustic wave simulation
 ///
-/// Runs the same simulation on both CPU and GPU backends (if available)
-/// and compares results using IEEE 754 compliant tolerances.
+/// Runs the CPU reference simulation and compares it with a real GPU provider
+/// only after an FDTD Leto/Hephaestus trait implementation is wired into this
+/// path.
 ///
 /// ## Mathematical Guarantee
 ///
@@ -154,7 +131,8 @@ fn run_simulation_gpu(
 ///
 /// ## Returns
 ///
-/// * `Ok(EquivalenceReport)` with detailed equivalence metrics
+/// * `Ok(EquivalenceReport)` with detailed equivalence metrics, or a failure
+///   reason when no real FDTD GPU provider trait implementation is available.
 /// * `Err(ValidationError)` if comparison cannot be performed
 ///
 /// ## Example

@@ -1,4 +1,4 @@
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_core::error::{KwaversError, KwaversResult, PhysicsError};
 use kwavers_physics::therapy::microbubble::Position3D;
@@ -20,7 +20,7 @@ pub fn sample_acoustic_field_at_position(
     pressure_field: &Array3<f64>,
     grid_spacing: (f64, f64, f64),
 ) -> KwaversResult<(f64, (f64, f64, f64))> {
-    let (nx, ny, nz) = pressure_field.dim();
+    let [nx, ny, nz] = pressure_field.shape();
     let (dx, dy, dz) = grid_spacing;
 
     let ix = (position.x / dx).round() as usize;

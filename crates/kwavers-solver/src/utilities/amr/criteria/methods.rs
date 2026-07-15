@@ -4,17 +4,20 @@
 //! `ErrorEstimator::estimate_error` in `mod.rs`.
 
 use super::ErrorEstimator;
+#[cfg(test)]
+use super::RefinementCriterion;
+use crate::workspace::inplace_ops::scale_inplace;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, Array3, Axis};
+use leto::{Array2, Array3};
 
 impl ErrorEstimator {
     /// Gradient-based error estimation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn gradient_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -41,8 +44,8 @@ impl ErrorEstimator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn curvature_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         // Compute Laplacian (curvature measure)
         for i in 1..nx - 1 {
@@ -72,7 +75,7 @@ impl ErrorEstimator {
     /// - Richardson (1911): "The approximate arithmetical solution by finite differences"
     /// - Berger & Oliger (1984): "Adaptive mesh refinement for hyperbolic PDEs"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn richardson_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use crate::utilities::amr::interpolation::AmrConservativeInterpolator;
@@ -81,8 +84,8 @@ impl ErrorEstimator {
         let coarse = interpolator.restrict(field);
         let prolonged = interpolator.prolongate(&coarse);
 
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         // 2nd order spatial discretization: scaling = 1 / (2^2 - 1) = 1/3
         let order: f64 = 2.0;
@@ -113,7 +116,7 @@ impl ErrorEstimator {
     /// - Harten (1995): "Multiresolution algorithms for the numerical solution of hyperbolic conservation laws"
     /// - Cohen et al. (2003): "Wavelet methods in numerical analysis"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn wavelet_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         use crate::utilities::amr::wavelet::{WaveletBasis, WaveletTransform};
@@ -121,8 +124,8 @@ impl ErrorEstimator {
         let wavelet = WaveletTransform::new(WaveletBasis::Daubechies(4), 2);
         let coeffs = wavelet.forward(field)?;
 
-        let (nx, ny, nz) = coeffs.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = coeffs.shape();
+        let mut error = Array3::zeros(field.shape());
 
         for i in 0..nx {
             for j in 0..ny {
@@ -144,7 +147,7 @@ impl ErrorEstimator {
 
         let max_error = error.iter().fold(0.0_f64, |max, &val| max.max(val));
         if max_error > 1e-10 {
-            error.par_mapv_inplace(|e| e / max_error);
+            scale_inplace(&mut error, 1.0 / max_error);
         }
 
         if self.smoothing > 0.0 {
@@ -163,11 +166,11 @@ impl ErrorEstimator {
     /// - Lohner (1987): "An adaptive finite element scheme for transient problems"
     /// - Berger & Colella (1989): "Local adaptive mesh refinement for shock hydrodynamics"
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn physics_error(&self, field: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = field.dim();
-        let mut error = Array3::zeros(field.dim());
+        let [nx, ny, nz] = field.shape();
+        let mut error = Array3::zeros(field.shape());
 
         let grad = self.gradient_error(field)?;
         let curv = self.curvature_error(field)?;
@@ -212,7 +215,7 @@ impl ErrorEstimator {
 
         let max_error = error.iter().fold(0.0_f64, |max, &val| max.max(val));
         if max_error > 1e-10 {
-            error.par_mapv_inplace(|e| e / max_error);
+            scale_inplace(&mut error, 1.0 / max_error);
         }
 
         Ok(error)
@@ -226,17 +229,27 @@ impl ErrorEstimator {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn smooth_field(&self, field: &mut Array3<f64>) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return Ok(());
         }
 
-        let mut prev_plane = field.index_axis(Axis(0), 0).to_owned();
-        let mut curr_plane = field.index_axis(Axis(0), 1).to_owned();
+        let mut prev_plane = field
+            .index_axis::<2>(0, 0)
+            .expect("invariant: plane index within axis-0 bounds")
+            .to_contiguous();
+        let mut curr_plane = field
+            .index_axis::<2>(0, 1)
+            .expect("invariant: plane index within axis-0 bounds")
+            .to_contiguous();
         let mut next_plane = Array2::<f64>::zeros((ny, nz));
 
         for i in 1..nx - 1 {
-            next_plane.assign(&field.index_axis(Axis(0), i + 1));
+            next_plane.assign(
+                &field
+                    .index_axis::<2>(0, i + 1)
+                    .expect("invariant: plane index within axis-0 bounds"),
+            );
 
             for j in 1..ny - 1 {
                 for k in 1..nz - 1 {
@@ -287,5 +300,27 @@ impl ErrorEstimator {
         }
 
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn physics_error_normalizes_by_maximum_indicator() {
+        let estimator = ErrorEstimator {
+            criterion: RefinementCriterion::Physics,
+            smoothing: 0.0,
+        };
+        let mut field = Array3::zeros((5, 5, 5));
+        field[[2, 2, 2]] = 10.0;
+        field[[2, 2, 3]] = 4.0;
+
+        let error = estimator.physics_error(&field).unwrap();
+        let max_error = error.iter().fold(0.0_f64, |max, &value| max.max(value));
+
+        assert_eq!(max_error, 1.0);
+        assert!(error[[2, 2, 2]] > 0.0);
     }
 }

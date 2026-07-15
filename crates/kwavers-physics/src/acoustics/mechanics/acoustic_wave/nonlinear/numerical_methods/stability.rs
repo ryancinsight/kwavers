@@ -1,7 +1,8 @@
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
+use leto::Array3;
 use log::warn;
-use ndarray::Array3;
+use moirai_parallel::{for_each_mut_with, Adaptive};
 use std::f64;
 
 use super::super::wave_model::NonlinearWave;
@@ -13,18 +14,22 @@ impl NonlinearWave {
     ///
     /// * `field` - Field to constrain (modified in place)
     pub(crate) fn apply_stability_constraints(&self, field: &mut Array3<f64>) {
-        // Clamp extreme values
-        use rayon::prelude::*;
-        field.par_iter_mut().for_each(|val| {
-            if val.abs() > self.max_pressure {
-                *val = val.signum() * self.max_pressure;
+        let max_pressure = self.max_pressure;
+        let clamp = |val: &mut f64| {
+            if val.abs() > max_pressure {
+                *val = val.signum() * max_pressure;
             }
             // Remove NaN or Inf values
             if !val.is_finite() {
                 *val = 0.0;
                 warn!("Non-finite value detected and zeroed in pressure field");
             }
-        });
+        };
+        if let Some(values) = field.as_slice_mut() {
+            for_each_mut_with::<Adaptive, _, _>(values, clamp);
+        } else {
+            field.iter_mut().for_each(clamp);
+        }
     }
 
     /// Computes adaptive time step based on CFL condition.
@@ -82,7 +87,7 @@ mod tests {
     use super::super::super::wave_model::NonlinearWave;
     use kwavers_grid::Grid;
     use kwavers_medium::HomogeneousMedium;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Values beyond `max_pressure` are clamped to ±max_pressure.
     #[test]

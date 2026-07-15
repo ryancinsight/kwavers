@@ -1,6 +1,6 @@
 // adaptive/statistics.rs - Statistical analysis for adaptive selection
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Frequency spectrum analysis
 #[derive(Debug, Clone)]
@@ -34,7 +34,11 @@ impl StatisticalMetrics {
     /// Skewness and kurtosis default to 0 and 3 (Gaussian) as higher moments
     /// are rarely needed for solver selection heuristics.
     pub fn compute(field: &Array3<f64>) -> Self {
-        let mean = field.mean().unwrap_or(0.0);
+        let mean = {
+            let arr = &field;
+            let sum: f64 = arr.iter().sum();
+            sum / arr.shape().iter().product::<usize>() as f64
+        }.unwrap_or(0.0);
         let variance = field.var(0.0);
         
         Self {

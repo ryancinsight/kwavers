@@ -7,7 +7,7 @@
 //! shift-monotonicity that gives the metrics that property.
 
 use super::types::{MisfitFunction, MisfitType};
-use ndarray::Array2;
+use leto::Array2;
 
 /// A single trace holding a unit impulse at sample `pos`.
 fn impulse_trace(n: usize, pos: usize) -> Array2<f64> {
@@ -62,7 +62,7 @@ fn wasserstein_is_monotone_in_shift() {
 #[test]
 fn correlation_misfit_is_zero_for_identical_data() {
     let m = MisfitFunction::new(MisfitType::Correlation);
-    let d = Array2::from_shape_fn((1, 32), |(_, j)| (j as f64 * 0.2).sin());
+    let d = Array2::from_shape_fn((1, 32), |[_, j]| (j as f64 * 0.2).sin());
     let j = m.compute(&d, &d).unwrap();
     assert!(j.abs() < 1e-12, "1 − C(d,d) = {j} must be 0");
 }
@@ -72,10 +72,10 @@ fn correlation_misfit_is_one_for_orthogonal_data() {
     // sin and cos over an integer number of periods are orthogonal ⇒ C = 0.
     let n = 200;
     let m = MisfitFunction::new(MisfitType::Correlation);
-    let obs = Array2::from_shape_fn((1, n), |(_, j)| {
+    let obs = Array2::from_shape_fn((1, n), |[_, j]| {
         (2.0 * std::f64::consts::PI * 4.0 * j as f64 / n as f64).sin()
     });
-    let syn = Array2::from_shape_fn((1, n), |(_, j)| {
+    let syn = Array2::from_shape_fn((1, n), |[_, j]| {
         (2.0 * std::f64::consts::PI * 4.0 * j as f64 / n as f64).cos()
     });
     let j = m.compute(&obs, &syn).unwrap();
@@ -85,7 +85,7 @@ fn correlation_misfit_is_one_for_orthogonal_data() {
 #[test]
 fn correlation_misfit_is_two_for_anticorrelated_data() {
     let m = MisfitFunction::new(MisfitType::Correlation);
-    let obs = Array2::from_shape_fn((1, 50), |(_, j)| (j as f64 * 0.3).sin());
+    let obs = Array2::from_shape_fn((1, 50), |[_, j]| (j as f64 * 0.3).sin());
     let syn = obs.mapv(|x| -x);
     let j = m.compute(&obs, &syn).unwrap();
     assert!(
@@ -100,9 +100,13 @@ fn correlation_adjoint_is_orthogonal_to_synthetic() {
     // correlation change), a defining property of the normalized correlation
     // gradient.
     let m = MisfitFunction::new(MisfitType::Correlation);
-    let obs = Array2::from_shape_fn((1, 40), |(_, j)| (j as f64 * 0.25).sin());
-    let syn = Array2::from_shape_fn((1, 40), |(_, j)| (j as f64 * 0.25 + 0.4).sin());
+    let obs = Array2::from_shape_fn((1, 40), |[_, j]| (j as f64 * 0.25).sin());
+    let syn = Array2::from_shape_fn((1, 40), |[_, j]| (j as f64 * 0.25 + 0.4).sin());
     let adj = m.compute_adjoint_source(&obs, &syn).unwrap();
-    let dot: f64 = adj.row(0).dot(&syn.row(0));
+    let dot: f64 = {
+        let a = adj.index_axis::<1>(0, 0).unwrap();
+        let b = syn.index_axis::<1>(0, 0).unwrap();
+        leto_ops::dot(&a, &b).unwrap()
+    };
     assert!(dot.abs() < 1e-9, "adjoint·syn = {dot} must vanish");
 }

@@ -27,13 +27,15 @@
 //! borrows.  The velocity-Verlet update reads `{ax,ay,az}` immutably and
 //! writes `{vx,vy,vz}` on the wave field — separate allocation entirely.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Reusable scratch arrays for one `TimeIntegrator` velocity-Verlet step.
 ///
 /// Construct once before the time loop with [`ElasticStepScratch::new`];
-/// pass `&mut scratch` to every [`TimeIntegrator::step`] or
-/// [`TimeIntegrator::step_with_body_forces`] call.
+/// pass `&mut scratch` to every
+/// [`crate::forward::elastic::swe::integration::integrator::TimeIntegrator::step`] or
+/// [`crate::forward::elastic::swe::integration::integrator::TimeIntegrator::step_with_body_forces`]
+/// call.
 ///
 /// **Do not** construct inside the time loop — that defeats the purpose and
 /// restores the per-step allocation cost.

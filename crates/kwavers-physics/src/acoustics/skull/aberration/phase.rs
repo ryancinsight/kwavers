@@ -1,7 +1,7 @@
 //! Volumetric phase-screen integration.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::model::AberrationCorrection;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -23,7 +23,7 @@ impl AberrationCorrection<'_> {
         let (nx, ny, nz) = (self.grid.nx, self.grid.ny, self.grid.nz);
         let dz = self.grid.dz;
         let k_water = TWO_PI * frequency / self.c_water;
-        let mut phases = Array3::zeros((nx, ny, nz));
+        let mut phases = Array3::zeros([nx, ny, nz]);
 
         for i in 0..nx {
             for j in 0..ny {

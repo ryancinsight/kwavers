@@ -3,7 +3,7 @@ use kwavers_core::constants::fundamental::ACOUSTIC_IMPEDANCE_WATER_NOMINAL;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 use kwavers_core::error::KwaversResult;
 use kwavers_source::Source;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Mock backend for testing trait interface
@@ -104,12 +104,12 @@ fn test_backend_field_access() {
 
     // Test field dimensions
     let p = backend.get_pressure_field();
-    assert_eq!(p.shape(), &[5, 5, 5]);
+    assert_eq!(p.shape(), [5, 5, 5]);
 
     let (vx, vy, vz) = backend.get_velocity_fields();
-    assert_eq!(vx.shape(), &[5, 5, 5]);
-    assert_eq!(vy.shape(), &[5, 5, 5]);
-    assert_eq!(vz.shape(), &[5, 5, 5]);
+    assert_eq!(vx.shape(), [5, 5, 5]);
+    assert_eq!(vy.shape(), [5, 5, 5]);
+    assert_eq!(vz.shape(), [5, 5, 5]);
 }
 
 #[test]

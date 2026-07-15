@@ -3,13 +3,14 @@
 //! Core time-reversal reconstruction implementation.
 
 use crate::plugin_based::PluginBasedSolver;
+use crate::workspace::inplace_ops::apply_inplace;
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_receiver::recorder::Recorder;
 use kwavers_source::{Source, TimeVaryingSource};
+use leto::{Array2, Array3};
 use log::{debug, info};
-use ndarray::{Array2, Array3};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -30,7 +31,7 @@ pub struct TimeReversalReconstructor {
 impl TimeReversalReconstructor {
     /// Create a new time-reversal reconstructor
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(config: TimeReversalConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -44,7 +45,7 @@ impl TimeReversalReconstructor {
 
     /// Perform time-reversal reconstruction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn reconstruct(
         &mut self,
@@ -91,7 +92,12 @@ impl TimeReversalReconstructor {
                 self.propagate_backwards(grid, solver, recorder, frequency, &reversed_signals)?;
 
             // Accumulate reconstruction
-            reconstruction += &iteration_result;
+            leto_ops::zip_mut_with(
+                &mut reconstruction.view_mut(),
+                &iteration_result.view(),
+                |a, b| *a += *b,
+            )
+            .expect("invariant: reconstruction and iteration result shapes asserted equal");
 
             // Check convergence for iterative methods
             if self.config.iterations > 1 {
@@ -112,7 +118,7 @@ impl TimeReversalReconstructor {
 
     /// Prepare time-reversed signals
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn prepare_reversed_signals(
         &mut self,
@@ -126,8 +132,10 @@ impl TimeReversalReconstructor {
         let mut reversed_signals = HashMap::new();
         for (sensor_idx, &(i, j, k)) in sensor_indices.iter().enumerate() {
             // Get signal for this sensor
-            let signal_row = pressure_data.row(sensor_idx);
-            let mut signal = signal_row.to_vec();
+            let signal_row = pressure_data
+                .index_axis::<1>(0, sensor_idx)
+                .expect("invariant: sensor index within pressure data axis 0");
+            let mut signal = signal_row.iter().cloned().collect::<Vec<_>>();
 
             // Reverse the signal in time
             signal.reverse();
@@ -176,7 +184,7 @@ impl TimeReversalReconstructor {
             reversed_signals.insert(sensor_idx, signal);
         }
 
-        debug!("Prepared {} reversed signals", reversed_signals.len());
+        debug!("Prepared {} reversed signals", (reversed_signals.len()));
         Ok(reversed_signals)
     }
 
@@ -192,7 +200,7 @@ impl TimeReversalReconstructor {
 
     /// Apply reversed sources to the solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn apply_reversed_sources(
         &self,
@@ -234,7 +242,7 @@ impl TimeReversalReconstructor {
 
     /// Propagate backwards in time
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn propagate_backwards(
         &self,
@@ -302,7 +310,7 @@ impl TimeReversalReconstructor {
 
     /// Post-process the reconstruction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     fn post_process(
         &self,
@@ -318,9 +326,28 @@ impl TimeReversalReconstructor {
         let max_val = reconstruction.iter().map(|&x| x.abs()).fold(0.0, f64::max);
 
         if max_val > 0.0 {
-            reconstruction.par_mapv_inplace(|x| x / max_val);
+            apply_inplace(&mut reconstruction, |x| x / max_val);
         }
 
         Ok(reconstruction)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn post_process_normalizes_reconstruction_by_max_abs_value() {
+        let reconstructor = TimeReversalReconstructor::new(TimeReversalConfig::default()).unwrap();
+        let grid = Grid::new(2, 2, 1, 1.0, 1.0, 1.0).unwrap();
+        let reconstruction = Array3::from_shape_vec([2, 2, 1], vec![-2.0, 1.0, 4.0, 0.0]).unwrap();
+
+        let normalized = reconstructor.post_process(reconstruction, &grid).unwrap();
+
+        assert_eq!(normalized[[0, 0, 0]], -0.5);
+        assert_eq!(normalized[[0, 1, 0]], 0.25);
+        assert_eq!(normalized[[1, 0, 0]], 1.0);
+        assert_eq!(normalized[[1, 1, 0]], 0.0);
     }
 }

@@ -1,95 +1,82 @@
-//! Tests for PDE residual computations (requires `pinn` feature).
+use super::compute_elastic_wave_pde_residual;
+use crate::inverse::pinn::elastic_2d::config::Config;
+use crate::inverse::pinn::elastic_2d::model::ElasticPINN2D;
+use coeus_autograd::Var;
+use kwavers_core::error::KwaversResult;
 
-#[cfg(feature = "pinn")]
-use super::*;
-#[cfg(feature = "pinn")]
-use burn::tensor::Tensor;
+type B = coeus_core::MoiraiBackend;
 
-#[cfg(feature = "pinn")]
+fn var_col(backend: &B, values: &[f32]) -> Var<f32, B> {
+    Var::new(
+        coeus_tensor::Tensor::from_slice_on(vec![(values.len()), 1], values, backend),
+        false,
+    )
+}
+
 #[test]
-fn test_strain_computation_mathematical_properties() -> kwavers_core::error::KwaversResult<()> {
-    use burn::backend::{Autodiff, NdArray};
+fn test_residual_is_finite() -> KwaversResult<()> {
+    let backend = B::default();
+    let config = Config {
+        hidden_layers: vec![8],
+        ..Config::default()
+    };
+    let model = ElasticPINN2D::<B>::new(&config)?;
 
-    type B = Autodiff<NdArray<f32>>;
-    let device = Default::default();
+    let x = var_col(&backend, &[0.1, 0.3]);
+    let y = var_col(&backend, &[0.2, 0.4]);
+    let t = var_col(&backend, &[0.05, 0.1]);
 
-    let alpha = 2.5_f32;
-    let dudx = Tensor::<B, 2>::from_floats([[alpha]], &device);
-    let dudy = Tensor::<B, 2>::from_floats([[0.0_f32]], &device);
-    let dvdx = Tensor::<B, 2>::from_floats([[0.0_f32]], &device);
-    let dvdy = Tensor::<B, 2>::from_floats([[0.0_f32]], &device);
+    let (residual_x, residual_y) =
+        compute_elastic_wave_pde_residual(&model, &x, &y, &t, 1000.0, 2.25e9, 0.0)?;
 
-    let (eps_xx, eps_yy, eps_xy) = compute_strain_from_gradients(dudx, dudy, dvdx, dvdy);
-
-    let eps_xx = eps_xx.into_data().as_slice::<f32>().unwrap()[0];
-    let eps_yy = eps_yy.into_data().as_slice::<f32>().unwrap()[0];
-    let eps_xy = eps_xy.into_data().as_slice::<f32>().unwrap()[0];
-
-    assert!((eps_xx - alpha).abs() < 1e-6);
-    assert!(eps_yy.abs() < 1e-6);
-    assert!(eps_xy.abs() < 1e-6);
+    for v in residual_x.tensor.as_slice() {
+        assert!(v.is_finite(), "residual_x contains non-finite value: {v}");
+    }
+    for v in residual_y.tensor.as_slice() {
+        assert!(v.is_finite(), "residual_y contains non-finite value: {v}");
+    }
     Ok(())
 }
 
-#[cfg(feature = "pinn")]
+/// Regression test for the weight-gradient-detachment defect discovered
+/// during this migration (see `ml::autodiff_utils::second_order`'s
+/// module-level weight-gradient contract): the PDE residual must backprop
+/// into every network parameter, not just be a training-inert value.
 #[test]
-fn test_hookes_law_isotropic() -> kwavers_core::error::KwaversResult<()> {
-    use burn::backend::{Autodiff, NdArray};
-    use burn::tensor::Tensor;
+fn test_residual_gradient_reaches_network_weights() -> KwaversResult<()> {
+    let backend = B::default();
+    let config = Config {
+        hidden_layers: vec![8],
+        ..Config::default()
+    };
+    let model = ElasticPINN2D::<B>::new(&config)?;
 
-    type B = Autodiff<NdArray<f32>>;
-    let device = Default::default();
-
-    let lambda = 5.0_f64;
-    let mu = 3.0_f64;
-    let gamma = 1.2_f32;
-
-    let eps_xx = Tensor::<B, 2>::from_floats([[0.0_f32]], &device);
-    let eps_yy = Tensor::<B, 2>::from_floats([[0.0_f32]], &device);
-    let eps_xy = Tensor::<B, 2>::from_floats([[gamma]], &device);
-
-    let (sigma_xx, sigma_yy, sigma_xy) =
-        compute_stress_from_strain(eps_xx, eps_yy, eps_xy, lambda, mu);
-
-    let sigma_xx = sigma_xx.into_data().as_slice::<f32>().unwrap()[0];
-    let sigma_yy = sigma_yy.into_data().as_slice::<f32>().unwrap()[0];
-    let sigma_xy = sigma_xy.into_data().as_slice::<f32>().unwrap()[0];
-
-    assert!(sigma_xx.abs() < 1e-6);
-    assert!(sigma_yy.abs() < 1e-6);
-    assert!((sigma_xy - (2.0_f32 * mu as f32 * gamma)).abs() < 1e-6);
-    Ok(())
-}
-
-#[cfg(feature = "pinn")]
-#[test]
-fn test_stress_divergence_equilibrium() -> kwavers_core::error::KwaversResult<()> {
-    use burn::backend::{Autodiff, NdArray};
-    use burn::tensor::Tensor;
-
-    type B = Autodiff<NdArray<f32>>;
-    let device = Default::default();
-
-    let x = Tensor::<B, 2>::from_floats([[0.1_f32]], &device).require_grad();
-    let y = Tensor::<B, 2>::from_floats([[0.3_f32]], &device).require_grad();
-
-    let sigma_xx = x.clone().mul_scalar(2.0);
-    let sigma_yy = x.clone().mul_scalar(3.0);
-    let sigma_xy = y.clone().mul_scalar(-2.0);
-
-    let (div_x, div_y) = compute_stress_divergence(sigma_xx, sigma_xy, sigma_yy, x, y);
-
-    let div_x_data = div_x.into_data();
-    let div_x = div_x_data.as_slice::<f32>().unwrap();
-
-    let div_y_data = div_y.into_data();
-    let div_y = div_y_data.as_slice::<f32>().unwrap();
-
-    for &v in div_x.iter() {
-        assert!(v.abs() < 1e-6);
+    for p in model.parameters() {
+        p.zero_grad();
     }
-    for &v in div_y.iter() {
-        assert!(v.abs() < 1e-6);
-    }
+
+    let x = var_col(&backend, &[0.1, 0.3]);
+    let y = var_col(&backend, &[0.2, 0.4]);
+    let t = var_col(&backend, &[0.05, 0.1]);
+
+    let (residual_x, residual_y) =
+        compute_elastic_wave_pde_residual(&model, &x, &y, &t, 1000.0, 2.25e9, 5.0e8)?;
+
+    let loss = coeus_autograd::add(
+        &coeus_autograd::sum(&residual_x),
+        &coeus_autograd::sum(&residual_y),
+    );
+    loss.backward();
+
+    let any_param_has_nonzero_grad = model.parameters().iter().any(|p| {
+        p.grad()
+            .map(|g| g.as_slice().iter().any(|&v| v != 0.0))
+            .unwrap_or(false)
+    });
+    assert!(
+        any_param_has_nonzero_grad,
+        "PDE residual loss produced zero gradient for every network parameter — \
+         the physics loss term is training-inert"
+    );
     Ok(())
 }

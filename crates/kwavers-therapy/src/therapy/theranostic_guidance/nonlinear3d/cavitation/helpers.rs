@@ -1,6 +1,6 @@
 //! Shared helpers for the cavitation forward and inverse modules.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::types::{flat_index, GridIndex};
 
@@ -34,7 +34,7 @@ pub(super) fn grid_index(flat: usize, n: usize) -> GridIndex {
 }
 
 pub(super) fn unflatten(values: &[f64], n: usize) -> Array3<f64> {
-    Array3::from_shape_fn((n, n, n), |(x, y, z)| {
+    Array3::from_shape_fn((n, n, n), |[x, y, z]| {
         values[flat_index(GridIndex { x, y, z }, n)]
     })
 }

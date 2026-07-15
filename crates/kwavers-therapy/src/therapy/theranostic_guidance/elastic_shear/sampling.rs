@@ -1,12 +1,12 @@
 //! Time-domain sampling, migration, and objective utilities.
 //!
-//! [`migrate_residual`] is parallelised with Rayon: each voxel's contribution
+//! [`migrate_residual`] is parallelised with Moirai: each voxel's contribution
 //! is independent (no shared mutable state), so the entire NX×NY grid is
 //! distributed across available cores.
 
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array2;
-use rayon::prelude::*;
+use leto::Array2;
+use moirai_parallel::{map_collect_index_with, Adaptive};
 
 use super::super::geometry::Point2;
 use super::super::medium::PreparedTheranosticSlice;
@@ -72,7 +72,7 @@ pub(super) fn time_steps(
 /// # Parallelism
 ///
 /// Each voxel is independent.  The flat index `ix * ny + iy` is mapped in
-/// parallel via Rayon, producing a row-major `Vec<f64>` that is assembled into
+/// parallel via Moirai, producing a row-major `Vec<f64>` that is assembled into
 /// an `Array2<f64>` with `from_shape_vec`.
 pub(super) fn migrate_residual(
     prepared: &PreparedTheranosticSlice,
@@ -83,39 +83,36 @@ pub(super) fn migrate_residual(
     receiver_points: &[Point2],
     shear_speed_m_s: f64,
 ) -> Array2<f64> {
-    let dims = prepared.ct_hu.dim();
-    let (nx, ny) = dims;
+    let dims = prepared.ct_hu.shape();
+    let [nx, ny] = dims;
     let spacing_m = prepared.spacing_m;
 
     // Flat row-major computation: flat_idx = ix * ny + iy.
-    let flat: Vec<f64> = (0..(nx * ny))
-        .into_par_iter()
-        .map(|flat_idx| {
-            let ix = flat_idx / ny;
-            let iy = flat_idx % ny;
+    let flat: Vec<f64> = map_collect_index_with::<Adaptive, _, _>(nx * ny, |flat_idx| {
+        let ix = flat_idx / ny;
+        let iy = flat_idx % ny;
 
-            if !prepared.body_mask[[ix, iy]] {
-                return 0.0;
-            }
-            let point = index_point_m(ix, iy, dims, spacing_m);
-            let source_distance = source_points
-                .iter()
-                .map(|source| distance(point, *source))
-                .fold(f64::INFINITY, f64::min)
-                .max(spacing_m);
-            receiver_points
-                .iter()
-                .enumerate()
-                .map(|(row, receiver)| {
-                    let receiver_distance = distance(point, *receiver).max(spacing_m);
-                    let sample = (source_distance + receiver_distance) / shear_speed_m_s / dt_s;
-                    let residual_value =
-                        arrival_residual_energy(residual, row, sample, dt_s, center_frequency_hz);
-                    residual_value / source_distance.sqrt()
-                })
-                .sum::<f64>()
-        })
-        .collect();
+        if !prepared.body_mask[[ix, iy]] {
+            return 0.0;
+        }
+        let point = index_point_m(ix, iy, dims, spacing_m);
+        let source_distance = source_points
+            .iter()
+            .map(|source| distance(point, *source))
+            .fold(f64::INFINITY, f64::min)
+            .max(spacing_m);
+        receiver_points
+            .iter()
+            .enumerate()
+            .map(|(row, receiver)| {
+                let receiver_distance = distance(point, *receiver).max(spacing_m);
+                let sample = (source_distance + receiver_distance) / shear_speed_m_s / dt_s;
+                let residual_value =
+                    arrival_residual_energy(residual, row, sample, dt_s, center_frequency_hz);
+                residual_value / source_distance.sqrt()
+            })
+            .sum::<f64>()
+    });
 
     Array2::from_shape_vec(dims, flat).expect("flat length equals nx * ny")
 }
@@ -125,12 +122,12 @@ pub(super) fn trace_energy(data: &Array2<f64>) -> f64 {
 }
 
 fn linear_sample(data: &Array2<f64>, row: usize, sample: f64) -> f64 {
-    if row >= data.nrows() || sample < 0.0 {
+    if row >= data.shape()[0] || sample < 0.0 {
         return 0.0;
     }
     let left = sample.floor() as usize;
     let right = left + 1;
-    if right >= data.ncols() {
+    if right >= data.shape()[1] {
         return 0.0;
     }
     let alpha = sample - left as f64;
@@ -163,7 +160,7 @@ fn arrival_half_window_samples(dt_s: f64, frequency_hz: f64) -> usize {
 mod tests {
     use super::*;
     use kwavers_solver::inverse::same_aperture::C_REF_M_S;
-    use ndarray::Array2;
+    use leto::Array2;
 
     #[test]
     fn residual_migration_samples_expected_arrival() {

@@ -33,7 +33,7 @@ impl GPUMemoryPool {
 
     /// Allocate memory block
     /// # Errors
-    /// - Returns [`KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
+    /// - Returns [`crate::KwaversError::ResourceLimitExceeded`] if the precondition for a ResourceLimitExceeded-class constraint is violated.
     ///
     pub fn allocate(&mut self, size: usize) -> KwaversResult<usize> {
         let aligned_size = size.div_ceil(self.alignment) * self.alignment;

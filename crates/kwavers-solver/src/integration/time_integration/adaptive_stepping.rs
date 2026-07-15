@@ -4,7 +4,30 @@
 //! error estimation and tolerance requirements.
 
 use super::traits::{ErrorEstimatorTrait, TimeStepper};
-use ndarray::{Array3, Zip};
+use leto::Array3;
+
+fn fold_abs_diffs<F>(
+    field_low: &Array3<f64>,
+    field_high: &Array3<f64>,
+    initial: f64,
+    mut fold: F,
+) -> (f64, f64)
+where
+    F: FnMut(f64, f64) -> f64,
+{
+    assert_eq!(
+        field_low.shape(),
+        field_high.shape(),
+        "invariant: error-estimator field shapes must match"
+    );
+
+    field_low
+        .iter()
+        .zip(field_high.iter())
+        .fold((initial, 0.0), |(accumulator, count), (&low, &high)| {
+            (fold(accumulator, (high - low).abs()), count + 1.0)
+        })
+}
 
 /// Adaptive time stepper wrapper
 ///
@@ -51,7 +74,7 @@ impl<T: TimeStepper> AdaptiveTimeStepper<T> {
 
     /// Perform adaptive time step with error control
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn adaptive_step<F>(
         &mut self,
@@ -162,14 +185,7 @@ impl ErrorEstimatorTrait for RichardsonErrorEstimator {
         _dt: f64,
     ) -> f64 {
         // Richardson extrapolation error estimate
-        let mut max_error: f64 = 0.0;
-
-        Zip::from(field_low)
-            .and(field_high)
-            .for_each(|&low, &high| {
-                let error = (high - low).abs();
-                max_error = max_error.max(error);
-            });
+        let (max_error, _) = fold_abs_diffs(field_low, field_high, 0.0, f64::max);
 
         // Scale by order-dependent factor
         let factor = 1.0 / (2.0_f64.powi(self.order as i32) - 1.0);
@@ -228,35 +244,18 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
     ) -> f64 {
         match self.norm_type {
             ErrorNorm::LInfinity => {
-                let mut max_error: f64 = 0.0;
-                Zip::from(field_low)
-                    .and(field_high)
-                    .for_each(|&low, &high| {
-                        max_error = max_error.max((high - low).abs());
-                    });
+                let (max_error, _) = fold_abs_diffs(field_low, field_high, 0.0, f64::max);
                 max_error
             }
             ErrorNorm::L2 => {
-                let mut sum_sq = 0.0;
-                let mut count = 0;
-                Zip::from(field_low)
-                    .and(field_high)
-                    .for_each(|&low, &high| {
-                        sum_sq += (high - low).powi(2);
-                        count += 1;
-                    });
-                (sum_sq / f64::from(count)).sqrt()
+                let (sum_sq, count) =
+                    fold_abs_diffs(field_low, field_high, 0.0, |sum, error| sum + error * error);
+                (sum_sq / count).sqrt()
             }
             ErrorNorm::L1 => {
-                let mut sum = 0.0;
-                let mut count = 0;
-                Zip::from(field_low)
-                    .and(field_high)
-                    .for_each(|&low, &high| {
-                        sum += (high - low).abs();
-                        count += 1;
-                    });
-                sum / f64::from(count)
+                let (sum, count) =
+                    fold_abs_diffs(field_low, field_high, 0.0, |sum, error| sum + error);
+                sum / count
             }
         }
     }
@@ -269,3 +268,96 @@ impl ErrorEstimatorTrait for EmbeddedRKErrorEstimator {
 
 /// Default error estimator
 pub type ErrorEstimator = RichardsonErrorEstimator;
+
+#[cfg(test)]
+mod tests {
+    use leto::Array3;
+
+    use super::{
+        EmbeddedRKErrorEstimator, ErrorEstimatorTrait, ErrorNorm, RichardsonErrorEstimator,
+    };
+
+    /// Build an owned f-contiguous (column-major) `Array3`, the leto-native
+    /// analogue of ndarray's `from_shape_fn(shape.f(), …)`: logical element
+    /// `[i, j, k]` holds `f([i, j, k])`, but the physical layout is
+    /// non-C-contiguous, so `as_slice()` returns `None`, exercising the
+    /// logical-iterator path.
+    fn from_shape_fn_fortran<F>(shape: [usize; 3], mut f: F) -> Array3<f64>
+    where
+        F: FnMut([usize; 3]) -> f64,
+    {
+        let layout = leto::Layout::f_contiguous(shape).expect("f-contiguous layout");
+        let [d0, d1, d2] = shape;
+        let mut data = vec![0.0_f64; d0 * d1 * d2];
+        for i in 0..d0 {
+            for j in 0..d1 {
+                for k in 0..d2 {
+                    data[i + j * d0 + k * d0 * d1] = f([i, j, k]);
+                }
+            }
+        }
+        leto::Array::new(layout, leto::VecStorage::new(data)).expect("valid f-contiguous array")
+    }
+
+    #[test]
+    fn richardson_error_uses_logical_order_for_nonstandard_layouts() {
+        let shape = (2, 3, 4);
+        let low = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (100 * i + 10 * j + k) as f64
+        });
+        let high = Array3::from_shape_fn(shape, |[i, j, k]| {
+            (100 * i + 10 * j + k) as f64 + (1 + i + j + k) as f64
+        });
+        let estimator = RichardsonErrorEstimator::new(2);
+
+        assert!(
+            low.as_slice().is_none(),
+            "test invariant: low field must use non-standard layout"
+        );
+        let error = estimator.estimate_local_error(&low, &high, 0.1);
+
+        let max_delta = Array3::from_shape_fn(shape, |[i, j, k]| (1 + i + j + k) as f64)
+            .iter()
+            .copied()
+            .fold(0.0, f64::max);
+        let factor = 1.0 / (2.0_f64.powi(2) - 1.0);
+        assert_eq!(error, max_delta * factor);
+    }
+
+    #[test]
+    fn embedded_error_norms_use_logical_order_for_nonstandard_layouts() {
+        let shape = (2, 3, 4);
+        let low = Array3::from_shape_fn(shape, |[i, j, k]| (100 * i + 10 * j + k) as f64);
+        let high = from_shape_fn_fortran([shape.0, shape.1, shape.2], |[i, j, k]| {
+            (100 * i + 10 * j + k) as f64 + (1 + i + j + k) as f64
+        });
+        let deltas: Vec<f64> = Array3::from_shape_fn(shape, |[i, j, k]| (1 + i + j + k) as f64)
+            .iter()
+            .copied()
+            .collect();
+
+        assert!(
+            high.as_slice().is_none(),
+            "test invariant: high field must use non-standard layout"
+        );
+
+        let max_expected = deltas.iter().copied().fold(0.0, f64::max);
+        let divisor = deltas.iter().fold(0.0, |count, _| count + 1.0);
+        let l2_expected = (deltas.iter().map(|delta| delta * delta).sum::<f64>() / divisor).sqrt();
+        let l1_expected = deltas.iter().sum::<f64>() / divisor;
+
+        assert_eq!(
+            EmbeddedRKErrorEstimator::new(ErrorNorm::LInfinity)
+                .estimate_local_error(&low, &high, 0.1),
+            max_expected
+        );
+        assert_eq!(
+            EmbeddedRKErrorEstimator::new(ErrorNorm::L2).estimate_local_error(&low, &high, 0.1),
+            l2_expected
+        );
+        assert_eq!(
+            EmbeddedRKErrorEstimator::new(ErrorNorm::L1).estimate_local_error(&low, &high, 0.1),
+            l1_expected
+        );
+    }
+}

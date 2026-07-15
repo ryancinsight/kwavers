@@ -26,7 +26,7 @@ use kwavers_solver::forward::pstd::dg::{DGConfig, DGSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::solver::Solver;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::{Array1, Array3};
+use leto::{Array1, Array3};
 use plotters::coord::types::RangedCoordf64;
 use plotters::prelude::*;
 use std::fs::{self, File};
@@ -119,7 +119,7 @@ fn run_dg_uniform(dt: f64, steps: usize) -> Result<(Array1<f64>, f64)> {
     let mut velocity = Array3::zeros((ELEMENTS, n_nodes, 1));
     for elem in 0..ELEMENTS {
         for node in 0..n_nodes {
-            pressure[(elem, node, 0)] = gaussian_profile(physical_coordinate(elem, xi_nodes[node]));
+            pressure[[elem, node, 0]] = gaussian_profile(physical_coordinate(elem, xi_nodes[node]));
         }
     }
     let initial_mass = weighted_mass(&pressure, &weights);
@@ -130,7 +130,10 @@ fn run_dg_uniform(dt: f64, steps: usize) -> Result<(Array1<f64>, f64)> {
         ..DGConfig::default()
     };
     let solver = DGSolver::new(config, grid)?;
-    let mut workspace = AcousticDg1DWorkspace::new(pressure.dim());
+    let mut workspace = AcousticDg1DWorkspace::new({
+        let s = pressure.shape();
+        (s[0], s[1], s[2])
+    });
     for _ in 0..steps {
         solver.step_acoustic_1d_ssp_rk3(
             &mut pressure,
@@ -205,8 +208,8 @@ fn gaussian_source(grid: &Grid, dt: f64) -> GridSource {
         let ux_x = x + 0.5;
         for j in 0..grid.ny {
             for k in 0..grid.nz {
-                pressure[(i, j, k)] = gaussian_profile(x);
-                ux[(i, j, k)] = 0.5 * dt / DENSITY * gaussian_derivative(ux_x);
+                pressure[[i, j, k]] = gaussian_profile(x);
+                ux[[i, j, k]] = 0.5 * dt / DENSITY * gaussian_derivative(ux_x);
             }
         }
     }
@@ -230,7 +233,7 @@ fn resample_dg_to_uniform(pressure: &Array3<f64>, xi_nodes: &Array1<f64>) -> Res
             for node in 0..xi_nodes.len() {
                 let dg_x = physical_coordinate(elem, xi_nodes[node]);
                 if periodic_distance(dg_x, x, domain) <= 1.0e-12 {
-                    sum += pressure[(elem, node, 0)];
+                    sum += pressure[[elem, node, 0]];
                     count += 1;
                 }
             }
@@ -243,13 +246,14 @@ fn resample_dg_to_uniform(pressure: &Array3<f64>, xi_nodes: &Array1<f64>) -> Res
     Ok(output)
 }
 
-fn center_line(field: &Array3<f64>) -> Array1<f64> {
-    let (_, ny, nz) = field.dim();
-    Array1::from_shape_fn(field.dim().0, |i| field[(i, ny / 2, nz / 2)])
+fn center_line(field: &leto::Array3<f64>) -> Array1<f64> {
+    let shape = field.shape();
+    let (nx, ny, nz) = (shape[0], shape[1], shape[2]);
+    Array1::from_shape_fn(nx, |[i]| field[[i, ny / 2, nz / 2]])
 }
 
 fn exact_uniform_line(final_time: f64) -> Array1<f64> {
-    Array1::from_shape_fn(2 * ELEMENTS, |i| {
+    Array1::from_shape_fn(2 * ELEMENTS, |[i]| {
         exact_gaussian_pressure(i as f64, final_time)
     })
 }
@@ -262,7 +266,7 @@ fn periodic_distance(a: f64, b: f64, domain: f64) -> f64 {
 fn relative_l2(actual: &Array1<f64>, expected: &Array1<f64>) -> f64 {
     let mut diff_sq = 0.0;
     let mut expected_sq = 0.0;
-    for (&actual, &expected) in actual.iter().zip(expected) {
+    for (&actual, &expected) in actual.iter().zip(expected.iter()) {
         let diff = actual - expected;
         diff_sq += diff * diff;
         expected_sq += expected * expected;

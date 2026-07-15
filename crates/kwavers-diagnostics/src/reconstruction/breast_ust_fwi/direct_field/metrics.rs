@@ -5,9 +5,9 @@ use super::grid::distance_m;
 use super::BreastUstDirectFieldDiagnostics;
 use crate::reconstruction::breast_ust_fwi::BreastUstPstdDatasetConfig;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::MultiRowRingArray;
-use ndarray::{s, Array3};
-use num_complex::Complex64;
+use leto::{Array3, SliceArg};
 
 pub(super) fn diagnostics_for_prediction(
     predicted: &Array3<Complex64>,
@@ -18,7 +18,8 @@ pub(super) fn diagnostics_for_prediction(
     frequency_bin_start_steps_per_frequency: &[usize],
     array: &MultiRowRingArray,
 ) -> KwaversResult<BreastUstDirectFieldDiagnostics> {
-    validate_array_shape(predicted.dim(), array)?;
+    let [predicted_f, predicted_t, predicted_r] = predicted.shape();
+    validate_array_shape((predicted_f, predicted_t, predicted_r), array)?;
     if !config.source_amplitude_pa.is_finite() || config.source_amplitude_pa <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "source_amplitude_pa must be positive and finite, got {}",
@@ -99,7 +100,7 @@ fn topology_pair_errors(
     array: &MultiRowRingArray,
     receiver_class: ReceiverClass,
 ) -> KwaversResult<TopologyPairErrors> {
-    let (frequency_count, transmission_count, receiver_count) = predicted.dim();
+    let [frequency_count, transmission_count, receiver_count] = predicted.shape();
     let circumferential_elements = array.circumferential_elements();
     let mut phase_sq = 0.0;
     let mut phase_max = 0.0;
@@ -110,8 +111,20 @@ fn topology_pair_errors(
 
     for frequency_index in 0..frequency_count {
         for transmit_index in 0..transmission_count {
-            let predicted_row = predicted.slice(s![frequency_index, transmit_index, ..]);
-            let observed_row = observed.slice(s![frequency_index, transmit_index, ..]);
+            let predicted_row = predicted
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
+            let observed_row = observed
+                .slice_with::<1>(&[
+                    SliceArg::Index(frequency_index as isize),
+                    SliceArg::Index(transmit_index as isize),
+                    SliceArg::All,
+                ])
+                .expect("frequency/transmit indices within observation cube");
             let scale = row_scale(predicted_row, observed_row)?;
             for receiver_index in 0..receiver_count {
                 let is_active = receiver_index % circumferential_elements == transmit_index;

@@ -57,7 +57,7 @@ mod tests {
             total_time += start.elapsed();
 
             // Verify the signal length is preserved
-            assert_eq!(signal.len(), n_samples);
+            assert_eq!((signal.len()), n_samples);
         }
 
         println!(

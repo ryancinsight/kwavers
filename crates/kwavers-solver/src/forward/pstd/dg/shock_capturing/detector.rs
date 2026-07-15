@@ -39,7 +39,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::{Array3, Array4};
+use leto::{Array3, Array4};
 
 use kwavers_core::constants::acoustic_parameters::AIR_POLYTROPIC_INDEX;
 use kwavers_core::constants::numerical::EPSILON;
@@ -77,8 +77,8 @@ impl ShockDetector {
 
     /// Detect shocks in the field using multiple indicators
     pub fn detect_shocks(&self, field: &Array3<f64>, grid: &Grid) -> Array3<bool> {
-        let (nx, ny, nz) = field.dim();
-        let mut shock_mask = Array3::from_elem((nx, ny, nz), false);
+        let [nx, ny, nz] = field.shape();
+        let mut shock_mask = Array3::from_elem([nx, ny, nz], false);
 
         // Modal decay indicator
         if self.use_modal_decay {
@@ -100,7 +100,7 @@ impl ShockDetector {
         grid: &Grid,
         shock_mask: &mut Array3<bool>,
     ) {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -122,7 +122,7 @@ impl ShockDetector {
 
     /// Apply jump-based shock detection
     fn apply_jump_detection(&self, field: &Array3<f64>, shock_mask: &mut Array3<bool>) {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         for i in 1..nx - 1 {
             for j in 1..ny - 1 {
@@ -152,7 +152,7 @@ impl ShockDetector {
         pressure: &Array3<f64>,
         density: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
         let mut indicator = Array3::zeros((nx, ny, nz));
 
         // Compute specific entropy s = p/ρ^γ
@@ -203,7 +203,7 @@ impl ShockDetector {
         pressure: &Array3<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = pressure.dim();
+        let [nx, ny, nz] = pressure.shape();
         let mut indicator = Array3::zeros((nx, ny, nz));
 
         // Use pressure jumps and gradients
@@ -254,7 +254,7 @@ impl ShockDetector {
         velocity: &Array4<f64>,
         grid: &Grid,
     ) -> KwaversResult<Array3<f64>> {
-        let (_, nx, ny, nz) = velocity.dim();
+        let [_, nx, ny, nz] = velocity.shape();
         let mut indicator = Array3::zeros((nx, ny, nz));
 
         // Compute velocity divergence
@@ -279,7 +279,7 @@ impl ShockDetector {
         // Normalize
         let max_div = indicator.iter().copied().fold(0.0_f64, f64::max);
         if max_div > 0.0 {
-            indicator /= max_div;
+            indicator.iter_mut().for_each(|value| *value /= max_div);
         }
 
         Ok(indicator)

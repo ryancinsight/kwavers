@@ -1,5 +1,6 @@
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 ///
 /// Contains the material properties and geometric information required for
@@ -56,7 +57,7 @@ impl FsiInterface {
     ///
     /// This ensures physically valid wave propagation modes.
     /// # Errors
-    /// - Returns [`KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InternalError`] if the precondition for a InternalError-class constraint is violated.
     ///
     pub fn new(spec: FsiInterfaceSpec) -> KwaversResult<Self> {
         let FsiInterfaceSpec {
@@ -99,7 +100,7 @@ impl FsiInterface {
         let normal = [normal[0] / len, normal[1] / len, normal[2] / len];
 
         // Initialize interface mask (false = no interface)
-        let interface_mask = Array3::from_elem((nx, ny, nz), false);
+        let interface_mask = Array3::from_elem([nx, ny, nz], false);
 
         Ok(Self {
             fluid_density,
@@ -114,24 +115,57 @@ impl FsiInterface {
 
     /// Set interface location from spatial predicate
     ///
-    /// Uses a level set function to determine interface location.
+    /// Uses a level set function to determine interface location. The FSI mask
+    /// fan-out routes through `moirai_parallel::enumerate_mut_with` without a
+    /// legacy array-parallel feature edge.
     pub fn set_interface_from_level_set<F>(&mut self, level_set: F)
     where
         F: Fn(usize, usize, usize) -> f64 + Sync,
     {
-        ndarray::Zip::indexed(&mut self.interface_mask).par_for_each(|(i, j, k), mask| {
-            // Interface where level set changes sign
-            let phi_ijk = level_set(i, j, k);
-            let is_interface = if i > 0 && j > 0 && k > 0 {
-                let phi_im = level_set(i - 1, j, k);
-                let phi_jm = level_set(i, j - 1, k);
-                let phi_km = level_set(i, j, k - 1);
-                (phi_ijk * phi_im < 0.0) || (phi_ijk * phi_jm < 0.0) || (phi_ijk * phi_km < 0.0)
-            } else {
-                false
-            };
-            *mask = is_interface;
-        });
+        let shape = self.interface_mask.shape();
+        let nx = shape[0];
+        let ny = shape[1];
+        let nz = shape[2];
+        debug_assert_eq!(nx * ny * nz, (self.interface_mask.len()));
+
+        if let Some(interface_mask) = self.interface_mask.as_slice_mut() {
+            enumerate_mut_with::<Adaptive, _, _>(interface_mask, |index, mask| {
+                let i = index / (ny * nz);
+                let j = (index % (ny * nz)) / nz;
+                let k = index % nz;
+                // Interface where level set changes sign
+                let phi_ijk = level_set(i, j, k);
+                *mask = if i > 0 && j > 0 && k > 0 {
+                    let phi_im = level_set(i - 1, j, k);
+                    let phi_jm = level_set(i, j - 1, k);
+                    let phi_km = level_set(i, j, k - 1);
+                    (phi_ijk * phi_im < 0.0) || (phi_ijk * phi_jm < 0.0) || (phi_ijk * phi_km < 0.0)
+                } else {
+                    false
+                };
+            });
+            return;
+        }
+
+        // Fallback when the mask is non-contiguous (rare): index-addressed loop,
+        // correct for arbitrary strides (leto indexes by [i,j,k]).
+        for i in 0..nx {
+            for j in 0..ny {
+                for k in 0..nz {
+                    let phi_ijk = level_set(i, j, k);
+                    self.interface_mask[[i, j, k]] = if i > 0 && j > 0 && k > 0 {
+                        let phi_im = level_set(i - 1, j, k);
+                        let phi_jm = level_set(i, j - 1, k);
+                        let phi_km = level_set(i, j, k - 1);
+                        (phi_ijk * phi_im < 0.0)
+                            || (phi_ijk * phi_jm < 0.0)
+                            || (phi_ijk * phi_km < 0.0)
+                    } else {
+                        false
+                    };
+                }
+            }
+        }
     }
 
     /// Acoustic impedance of fluid [Pa·s/m]

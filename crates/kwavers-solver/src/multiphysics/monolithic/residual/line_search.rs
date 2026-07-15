@@ -2,7 +2,7 @@ use super::super::coupler::MonolithicCoupler;
 use super::super::residual_metric::norm_squared;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::UnifiedFieldType;
-use ndarray::Array3;
+use leto::Array3;
 
 impl MonolithicCoupler {
     /// Find an adaptive Newton step size that reduces the residual norm.
@@ -16,7 +16,7 @@ impl MonolithicCoupler {
     /// alpha so the caller never applies an untested Newton step.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if `alpha_max` is outside `(0, 1]`.
+    /// - Returns [`crate::KwaversError::Validation`] if `alpha_max` is outside `(0, 1]`.
     /// - Propagates any residual-evaluation error from candidate states.
     #[allow(clippy::too_many_arguments)]
     pub(in crate::multiphysics::monolithic) fn line_search(
@@ -42,8 +42,8 @@ impl MonolithicCoupler {
         let mut trial_state = self
             .line_search_state_scratch
             .take()
-            .filter(|scratch| scratch.dim() == u.dim())
-            .unwrap_or_else(|| Array3::zeros(u.dim()));
+            .filter(|scratch| scratch.shape() == u.shape())
+            .unwrap_or_else(|| Array3::zeros(u.shape()));
 
         const BACKTRACK_TRIALS: usize = 5;
         let mut last_alpha = max_alpha;
@@ -51,9 +51,11 @@ impl MonolithicCoupler {
             let alpha = max_alpha * 2.0_f64.powi(-(k as i32));
             last_alpha = alpha;
             trial_state.assign(u);
-            trial_state.zip_mut_with(du, |candidate, &delta| {
-                *candidate += alpha * delta;
-            });
+            for (candidate, delta) in trial_state.iter_mut().zip(du.iter()) {
+                {
+                    *candidate += alpha * delta;
+                };
+            }
             let f_new = match self.compute_residual(&trial_state, u_prev, dt, dims, field_order) {
                 Ok(residual) => residual,
                 Err(error) => {

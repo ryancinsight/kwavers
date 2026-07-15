@@ -2,7 +2,7 @@ use super::*;
 use kwavers_physics::acoustics::bubble_dynamics::{
     EpsteinPlessetDissolution, GasDiffusionParams, ShellPermeationDissolution,
 };
-use ndarray::Array3;
+use leto::Array3;
 
 fn seeded_field(beta: f64, r0: f64) -> ResidualGasField {
     let mut f = ResidualGasField::new((2, 2, 2), r0);

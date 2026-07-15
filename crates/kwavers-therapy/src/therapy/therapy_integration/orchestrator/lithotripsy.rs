@@ -87,7 +87,7 @@ mod tests {
     use crate::therapy::lithotripsy::LithotripsyParameters;
     use kwavers_core::constants::numerical::MPA_TO_PA;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     #[test]
     fn test_lithotripsy_step_execution() {

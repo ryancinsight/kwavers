@@ -4,7 +4,7 @@
 //! representation without grid refinement.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Ghost cell configuration
 #[derive(Debug, Clone)]
@@ -61,7 +61,7 @@ impl GhostCellMethod {
         property: &Array3<f64>,
         geometry: &Array3<f64>,
     ) -> KwaversResult<Array3<f64>> {
-        let (nx, ny, nz) = property.dim();
+        let [nx, ny, nz] = property.shape();
         let mut smoothed = property.clone();
 
         // Extrapolation order (1 = linear, 2 = quadratic)
@@ -104,7 +104,7 @@ impl GhostCellMethod {
         k: usize,
     ) -> Vec<f64> {
         let mut values = Vec::new();
-        let (nx, ny, nz) = property.dim();
+        let [nx, ny, nz] = property.shape();
 
         // Check 6 neighboring cells (faces)
         let neighbors = [

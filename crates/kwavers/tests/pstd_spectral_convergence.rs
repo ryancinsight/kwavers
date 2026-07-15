@@ -22,7 +22,7 @@
 
 use kwavers_math::fft::Complex64;
 use kwavers_math::fft::{fft_1d_array, ifft_1d_array};
-use ndarray::Array1;
+use leto::Array1;
 use std::f64::consts::PI;
 
 /// Evaluate the exact manufactured solution p(x, t) = sin(2π x / L) cos(2π c t / L).
@@ -44,7 +44,7 @@ fn spectral_step_l2_error(n: usize, n_steps: usize, dt: f64, l: f64, c: f64) -> 
     let t_final = n_steps as f64 * dt;
 
     // Initial condition: p(x, 0) = sin(2π x / L)
-    let p_init: Array1<f64> = Array1::from_shape_fn(n, |i| {
+    let p_init: Array1<f64> = Array1::from_shape_fn(n, |[i]| {
         let x = i as f64 * dx;
         exact_solution(x, 0.0, l, c)
     });
@@ -65,7 +65,7 @@ fn spectral_step_l2_error(n: usize, n_steps: usize, dt: f64, l: f64, c: f64) -> 
     // Leapfrog time integration (2nd-order symplectic)
     // p_old ← p(-dt) ≈ p(0) - dt·∂p/∂t(0) = p(0) (since ∂p/∂t(0) = 0 for cos in time)
     let mut p_curr = p_init.clone();
-    let mut p_old = Array1::from_shape_fn(n, |i| {
+    let mut p_old = Array1::from_shape_fn(n, |[i]| {
         let x = i as f64 * dx;
         exact_solution(x, -dt, l, c)
     });
@@ -73,12 +73,12 @@ fn spectral_step_l2_error(n: usize, n_steps: usize, dt: f64, l: f64, c: f64) -> 
     for step in 0..n_steps {
         let _ = step;
         // Spectral Laplacian: ∇²p = IFFT(k² · FFT(p))
-        let p_hat = fft_1d_array(&p_curr);
+        let p_hat = fft_1d_array(&p_curr.clone().into());
         let lap_hat: Array1<Complex64> = Array1::from_shape_fn(n, |j| p_hat[j] * k2[j]);
-        let laplacian = ifft_1d_array(&lap_hat);
+        let laplacian = ifft_1d_array(&lap_hat.into());
 
         // Leapfrog: p_new = 2·p_curr - p_old + dt²·c²·∇²p
-        let p_new = Array1::from_shape_fn(n, |i| {
+        let p_new = Array1::from_shape_fn(n, |[i]| {
             2.0 * p_curr[i] - p_old[i] + dt * dt * c * c * laplacian[i]
         });
         p_old = p_curr;

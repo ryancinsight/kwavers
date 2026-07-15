@@ -3,7 +3,7 @@
 use super::*;
 use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_synthetic_aperture_config() {
@@ -52,7 +52,7 @@ fn test_barker_generation() {
     let code = processor.generate_code();
 
     assert_eq!(code.len(), 7);
-    for &val in &code {
+    for &val in code.iter() {
         assert!((val.re - 1.0).abs() < 1e-6 || (val.re + 1.0).abs() < 1e-6);
         assert!(val.im.abs() < 1e-6);
     }
@@ -96,8 +96,8 @@ fn test_plane_wave_compounding() {
 
     let compounded = compounding.compound(&images);
 
-    assert_eq!(compounded.nrows(), height);
-    assert_eq!(compounded.ncols(), width);
+    assert_eq!(compounded.shape()[0], height);
+    assert_eq!(compounded.shape()[1], width);
 
     assert!((compounded[[50, 50]] - 2.0).abs() < 1e-6);
 }

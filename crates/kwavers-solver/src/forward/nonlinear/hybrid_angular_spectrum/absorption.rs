@@ -33,7 +33,7 @@ use super::HASConfig;
 use kwavers_core::constants::acoustic_parameters::NP_TO_DB;
 use kwavers_core::constants::numerical::{CM_TO_M, MHZ_TO_HZ};
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array2, Array3};
+use leto::{Array2, Array3};
 
 /// Absorption operator implementing power-law frequency-dependent attenuation.
 #[derive(Debug)]
@@ -55,7 +55,7 @@ impl HasAbsorptionOperator {
     /// non-positive reference frequency or a negative attenuation coefficient.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `config` fails [`HASConfig::validate`].
+    /// - [`crate::KwaversError::InvalidInput`] if `config` fails [`HASConfig::validate`].
     pub fn new(config: &HASConfig) -> KwaversResult<Self> {
         config.validate()?;
         Ok(Self {
@@ -133,7 +133,7 @@ impl HasAbsorptionOperator {
                                                  // α_n = α₀ · n^y  (power-law frequency scaling)
             let alpha_n = alpha_np_f0 * harmonic_order.powf(self.power_law_exp);
             let decay = (-alpha_n * dz).exp();
-            plane.par_mapv_inplace(|v| v * decay);
+            plane.iter_mut().for_each(|v| *v *= decay);
         }
     }
 }
@@ -143,7 +143,7 @@ mod tests {
     use super::*;
     use approx::assert_abs_diff_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::Array2;
+    use leto::Array2;
 
     fn default_config() -> HASConfig {
         HASConfig::default()
@@ -161,7 +161,7 @@ mod tests {
         config.attenuation_coeff = 0.0;
         let op = HasAbsorptionOperator::new(&config).unwrap();
 
-        let pressure = Array3::from_shape_fn((4, 4, 4), |(i, j, k)| (i + j + k) as f64 + 1.0);
+        let pressure = Array3::from_shape_fn((4, 4, 4), |[i, j, k]| (i + j + k) as f64 + 1.0);
         let result = op.apply(&pressure, 0.05).unwrap();
 
         for ((_, &orig), &out) in pressure.indexed_iter().zip(result.iter()) {
@@ -190,7 +190,7 @@ mod tests {
         let dz = 0.01; // 1 cm
         let expected_factor = (-10.0_f64 * dz).exp(); // exp(-0.1)
 
-        let pressure = Array3::from_elem((3, 3, 3), 1.0_f64);
+        let pressure = Array3::from_elem([3, 3, 3], 1.0_f64);
         let result = op.apply(&pressure, dz).unwrap();
 
         assert_abs_diff_eq!(result[[1, 1, 1]], expected_factor, epsilon = 1e-12);
@@ -212,12 +212,12 @@ mod tests {
         let dz = 0.005;
 
         // CW path: apply() uses reference_frequency
-        let p3d = Array3::from_elem((4, 4, 1), 2.0_f64);
+        let p3d = Array3::from_elem([4, 4, 1], 2.0_f64);
         let cw_result = op.apply(&p3d, dz).unwrap();
         let cw_val = cw_result[[1, 1, 0]];
 
         // Broadband path with a single fundamental harmonic (n=1)
-        let mut harmonics = vec![Array2::from_elem((4, 4), 2.0_f64)];
+        let mut harmonics = vec![Array2::from_elem([4, 4], 2.0_f64)];
         op.apply_broadband(&mut harmonics, dz, f0);
         let bb_val = harmonics[0][[1, 1]];
 
@@ -240,8 +240,8 @@ mod tests {
         let f0 = config.reference_frequency;
 
         let mut harmonics = vec![
-            Array2::from_elem((2, 2), 1.0_f64), // fundamental (n=1)
-            Array2::from_elem((2, 2), 1.0_f64), // 2nd harmonic (n=2)
+            Array2::from_elem([2, 2], 1.0_f64), // fundamental (n=1)
+            Array2::from_elem([2, 2], 1.0_f64), // 2nd harmonic (n=2)
         ];
         op.apply_broadband(&mut harmonics, dz, f0);
 

@@ -1,13 +1,13 @@
 //! Lattice resampling kernels for nonlinear 3-D CT volume preparation.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
 
 use crate::therapy::theranostic_guidance::geometry::IndexBounds3;
 
 pub(super) fn resample_scalar(input: &Array3<f64>, bbox: IndexBounds3, n: usize) -> Array3<f64> {
-    Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
+    Array3::from_shape_fn((n, n, n), |[ix, iy, iz]| {
         let x = map_coord(ix, n, bbox.x0, bbox.x1);
         let y = map_coord(iy, n, bbox.y0, bbox.y1);
         let z = map_coord(iz, n, bbox.z0, bbox.z1);
@@ -16,7 +16,7 @@ pub(super) fn resample_scalar(input: &Array3<f64>, bbox: IndexBounds3, n: usize)
 }
 
 pub(super) fn resample_labels(input: &Array3<i16>, bbox: IndexBounds3, n: usize) -> Array3<i16> {
-    Array3::from_shape_fn((n, n, n), |(ix, iy, iz)| {
+    Array3::from_shape_fn((n, n, n), |[ix, iy, iz]| {
         let xr = map_range(ix, n, bbox.x0, bbox.x1);
         let yr = map_range(iy, n, bbox.y0, bbox.y1);
         let zr = map_range(iz, n, bbox.z0, bbox.z1);

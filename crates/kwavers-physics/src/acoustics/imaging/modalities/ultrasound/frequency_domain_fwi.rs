@@ -19,9 +19,9 @@
 
 use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_math::fft::Complex64;
 use kwavers_transducer::transducers::{ElementPosition, TransducerGeometry};
-use ndarray::Array3;
-use num_complex::Complex64;
+use leto::Array3;
 
 /// Paper model identifier for audit trails.
 pub const FREQUENCY_DOMAIN_FWI_MODEL: &str = "ali_2025_multi_row_ring_frequency_domain_ust_fwi";
@@ -202,7 +202,8 @@ pub fn ali_2025_frequency_sweep_hz() -> Vec<f64> {
 /// # Errors
 /// Returns an error if any voxel is nonpositive or nonfinite.
 pub fn sound_speed_to_slowness(sound_speed_m_s: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-    let mut slowness = Array3::zeros(sound_speed_m_s.dim());
+    let shape = sound_speed_m_s.shape();
+    let mut slowness = Array3::<f64>::zeros([shape[0], shape[1], shape[2]]);
     for (dst, &speed) in slowness.iter_mut().zip(sound_speed_m_s.iter()) {
         if !speed.is_finite() || speed <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
@@ -219,7 +220,8 @@ pub fn sound_speed_to_slowness(sound_speed_m_s: &Array3<f64>) -> KwaversResult<A
 /// # Errors
 /// Returns an error if any voxel is nonpositive or nonfinite.
 pub fn slowness_to_sound_speed(slowness_s_per_m: &Array3<f64>) -> KwaversResult<Array3<f64>> {
-    let mut sound_speed = Array3::zeros(slowness_s_per_m.dim());
+    let shape = slowness_s_per_m.shape();
+    let mut sound_speed = Array3::<f64>::zeros([shape[0], shape[1], shape[2]]);
     for (dst, &slowness) in sound_speed.iter_mut().zip(slowness_s_per_m.iter()) {
         if !slowness.is_finite() || slowness <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
@@ -298,14 +300,14 @@ pub fn sound_speed_rmse(
     reconstructed_m_s: &Array3<f64>,
     reference_m_s: &Array3<f64>,
 ) -> KwaversResult<f64> {
-    if reconstructed_m_s.dim() != reference_m_s.dim() {
+    if reconstructed_m_s.shape() != reference_m_s.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "RMSE volume shape mismatch: reconstructed {:?}, reference {:?}",
-            reconstructed_m_s.dim(),
-            reference_m_s.dim()
+            reconstructed_m_s.shape(),
+            reference_m_s.shape()
         )));
     }
-    let n = reconstructed_m_s.len();
+    let n = reconstructed_m_s.iter().count();
     if n == 0 {
         return Err(KwaversError::InvalidInput(
             "RMSE requires non-empty volumes".to_owned(),
@@ -331,14 +333,14 @@ pub fn sound_speed_pcc(
     reconstructed_m_s: &Array3<f64>,
     reference_m_s: &Array3<f64>,
 ) -> KwaversResult<f64> {
-    if reconstructed_m_s.dim() != reference_m_s.dim() {
+    if reconstructed_m_s.shape() != reference_m_s.shape() {
         return Err(KwaversError::DimensionMismatch(format!(
             "PCC volume shape mismatch: reconstructed {:?}, reference {:?}",
-            reconstructed_m_s.dim(),
-            reference_m_s.dim()
+            reconstructed_m_s.shape(),
+            reference_m_s.shape()
         )));
     }
-    let n_usize = reconstructed_m_s.len();
+    let n_usize = reconstructed_m_s.iter().count();
     if n_usize == 0 {
         return Err(KwaversError::InvalidInput(
             "PCC requires non-empty volumes".to_owned(),
@@ -372,7 +374,6 @@ pub fn sound_speed_pcc(
 mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-    use ndarray::Array3;
     use std::f64::consts::PI;
 
     #[test]
@@ -423,10 +424,10 @@ mod tests {
     #[test]
     fn sound_speed_metrics_match_definitions() {
         let reference =
-            Array3::from_shape_vec((1, 1, 3), vec![SOUND_SPEED_WATER_SIM, 1510.0, 1520.0])
+            Array3::from_shape_vec([1, 1, 3], vec![SOUND_SPEED_WATER_SIM, 1510.0, 1520.0])
                 .expect("shape");
         let reconstructed =
-            Array3::from_shape_vec((1, 1, 3), vec![1501.0, 1511.0, 1521.0]).expect("shape");
+            Array3::from_shape_vec([1, 1, 3], vec![1501.0, 1511.0, 1521.0]).expect("shape");
 
         let rmse = sound_speed_rmse(&reconstructed, &reference).expect("rmse");
         let pcc = sound_speed_pcc(&reconstructed, &reference).expect("pcc");

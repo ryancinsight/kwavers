@@ -40,7 +40,7 @@
 //! - **[`config`]**: Configuration parameters for meta-learning
 //! - **[`types`]**: Domain types (tasks, physics parameters, data)
 //! - **[`metrics`]**: Loss components and performance statistics
-//! - **[`gradient`]**: Gradient manipulation utilities for Burn framework
+//! - **[`gradient`]**: Flat per-parameter gradient manipulation utilities
 //! - **[`optimizer`]**: Meta-optimizer for outer-loop updates
 //! - **[`sampling`]**: Task sampling strategies (curriculum, diversity)
 //! - **[`learner`]**: Core MAML implementation
@@ -77,7 +77,6 @@
 //!
 //! ```rust,ignore
 //! use kwavers_solver::inverse::pinn::ml::meta_learning::*;
-//! use burn::backend::Autodiff;
 //!
 //! // Configure meta-learning
 //! let config = MetaLearningConfig {
@@ -96,7 +95,7 @@
 //! };
 //!
 //! // Create meta-learner
-//! let mut meta_learner = MetaLearner::new(config, &device)?;
+//! let mut meta_learner = MetaLearner::new(config)?;
 //!
 //! // Add tasks to task pool
 //! for task in task_distribution {
@@ -134,7 +133,7 @@
 //!     id: "acoustic_wave_rect_1".to_string(),
 //!     pde_type: PdeType::Wave,
 //!     physics_params: params,
-//!     geometry: Arc::new(BurnWave2dGeometry::rectangular(0.0, 1.0, 0.0, 1.0)),
+//!     geometry: Arc::new(WaveGeometry2D::rectangular(0.0, 1.0, 0.0, 1.0)),
 //!     boundary_conditions: vec![],
 //!     training_data: None,
 //!     validation_data: TaskData {
@@ -176,14 +175,14 @@
 //! # Current Limitations
 //!
 //! - First-order MAML only: inner-loop uses `total_loss.backward()` (reverse-mode AD
-//!   via Burn), but second-order meta-gradients (∂²L/∂θ∂θ') require Hessian-vector
-//!   products which Burn does not yet expose.
+//!   via `coeus_autograd`), but second-order meta-gradients (∂²L/∂θ∂θ') require
+//!   Hessian-vector products which `coeus_autograd` does not yet expose.
 //! - Limited to 2D wave equations in current PINN implementation.
 //! - Memory scales with M (number of tasks) due to independent model copies.
 //!
 //! # Future Improvements
 //!
-//! - [ ] Second-order MAML with Hessian-vector products once Burn supports them
+//! - [ ] Second-order MAML with Hessian-vector products once `coeus_autograd` supports them
 //! - [ ] Support for arbitrary neural network architectures
 //! - [ ] Multi-physics coupling scenarios
 //! - [ ] Adaptive learning rate scheduling
@@ -201,7 +200,6 @@ pub mod types;
 
 // Public API re-exports
 pub use config::MetaLearningConfig;
-pub use gradient::{GradientApplicator, GradientExtractor};
 pub use learner::MetaLearner;
 pub use metrics::{MetaLearningStats, MetaLoss};
 pub use optimizer::{MetaLrSchedule, MetaOptimizer};

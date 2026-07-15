@@ -1,6 +1,6 @@
 //! Public types for elastic shear FWI reconstruction.
 
-use ndarray::Array2;
+use leto::Array2;
 
 pub const THERANOSTIC_ELASTIC_SHEAR_MODEL: &str =
     "iterative_nonlinear_elastic_pstd_fwi_residual_migration";

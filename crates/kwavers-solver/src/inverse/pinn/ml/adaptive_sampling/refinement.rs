@@ -1,5 +1,4 @@
 use super::{AdaptiveCollocationSampler, HighResidualRegion};
-use burn::tensor::{backend::AutodiffBackend, Tensor};
 use kwavers_core::error::KwaversResult;
 use rand::Rng;
 
@@ -8,14 +7,16 @@ use rand::Rng;
 type GridCellAccumulator =
     std::collections::HashMap<(usize, usize, usize), (Vec<f32>, Vec<f32>, Vec<f32>, Vec<f32>)>;
 
-impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
+impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
+    AdaptiveCollocationSampler<B>
+{
     /// Adaptive refinement.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn adaptive_refinement(&mut self) -> KwaversResult<()> {
-        let priorities_data: Vec<f32> = self.priorities.to_data().to_vec().unwrap_or_default();
-        let points_data: Vec<f32> = self.active_points.to_data().to_vec().unwrap_or_default();
+        let priorities_data: Vec<f32> = self.priorities.clone();
+        let points_data: Vec<f32> = self.active_points.clone();
 
         let mut indexed_priorities: Vec<(usize, f32)> = priorities_data
             .iter()
@@ -47,7 +48,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         for (i, &priority) in priorities_data.iter().enumerate().take(self.total_points) {
             if !high_priority_indices.contains(&i) && !low_priority_indices.contains(&i) {
                 let base_idx = i * 3;
-                if base_idx + 2 < points_data.len() {
+                if base_idx + 2 < (points_data.len()) {
                     new_points.push(points_data[base_idx]);
                     new_points.push(points_data[base_idx + 1]);
                     new_points.push(points_data[base_idx + 2]);
@@ -59,7 +60,7 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let mut refined_points = Vec::new();
         for &idx in &high_priority_indices {
             let base_idx = idx * 3;
-            if base_idx + 2 < points_data.len() {
+            if base_idx + 2 < (points_data.len()) {
                 let parent_x = points_data[base_idx];
                 let parent_y = points_data[base_idx + 1];
                 let parent_t = points_data[base_idx + 2];
@@ -79,9 +80,9 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         }
 
         new_points.extend_from_slice(&refined_points);
-        new_priorities.extend(vec![1.0; refined_points.len() / 3]);
+        new_priorities.extend(vec![1.0; (refined_points.len()) / 3]);
 
-        let new_total = new_points.len() / 3;
+        let new_total = (new_points.len()) / 3;
         if new_total > self.total_points {
             new_points.truncate(self.total_points * 3);
             new_priorities.truncate(self.total_points);
@@ -103,11 +104,10 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
             }
         }
 
-        let device = self.active_points.device();
-        self.active_points = Tensor::from_data(new_points.as_slice(), &device);
-        self.priorities = Tensor::from_data(new_priorities.as_slice(), &device);
+        self.active_points = new_points;
+        self.priorities = new_priorities;
 
-        self.stats.points_refined = refined_points.len() / 3;
+        self.stats.points_refined = (refined_points.len()) / 3;
         self.stats.points_coarsened = coarsening_count;
 
         Ok(())
@@ -118,16 +118,14 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         const MIN_POINTS_PER_REGION: usize = 3;
         const TOP_REGION_FRACTION: f32 = 0.3;
 
-        let points_data = self.active_points.clone().into_data();
-        let points_vec: Vec<f32> = points_data.to_vec().unwrap_or_default();
-        let priorities_data = self.priorities.clone().into_data();
-        let priorities_vec: Vec<f32> = priorities_data.to_vec().unwrap_or_default();
+        let points_vec: Vec<f32> = self.active_points.clone();
+        let priorities_vec: Vec<f32> = self.priorities.clone();
 
-        if points_vec.len() < 3 || points_vec.len() / 3 != priorities_vec.len() {
+        if (points_vec.len()) < 3 || (points_vec.len()) / 3 != (priorities_vec.len()) {
             return self.create_fallback_regions();
         }
 
-        let num_points = points_vec.len() / 3;
+        let num_points = (points_vec.len()) / 3;
 
         let mut grid_cells: GridCellAccumulator = std::collections::HashMap::new();
 
@@ -156,14 +154,14 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         let mut regions = Vec::new();
 
         for ((_gx, _gy, _gt), (xs, ys, ts, prios)) in grid_cells.iter() {
-            if xs.len() < MIN_POINTS_PER_REGION {
+            if (xs.len()) < MIN_POINTS_PER_REGION {
                 continue;
             }
 
-            let mean_x: f32 = xs.iter().sum::<f32>() / xs.len() as f32;
-            let mean_y: f32 = ys.iter().sum::<f32>() / ys.len() as f32;
-            let mean_t: f32 = ts.iter().sum::<f32>() / ts.len() as f32;
-            let mean_priority: f32 = prios.iter().sum::<f32>() / prios.len() as f32;
+            let mean_x: f32 = xs.iter().sum::<f32>() / (xs.len()) as f32;
+            let mean_y: f32 = ys.iter().sum::<f32>() / (ys.len()) as f32;
+            let mean_t: f32 = ts.iter().sum::<f32>() / (ts.len()) as f32;
+            let mean_priority: f32 = prios.iter().sum::<f32>() / (prios.len()) as f32;
 
             let cell_size = 1.0 / GRID_SIZE as f32;
 
@@ -181,9 +179,9 @@ impl<B: AutodiffBackend> AdaptiveCollocationSampler<B> {
         regions.sort_by(|a, b| b.residual_magnitude.total_cmp(&a.residual_magnitude));
 
         if !regions.is_empty() {
-            let keep_count = ((regions.len() as f32 * TOP_REGION_FRACTION).ceil() as usize)
+            let keep_count = (((regions.len()) as f32 * TOP_REGION_FRACTION).ceil() as usize)
                 .max(2)
-                .min(regions.len());
+                .min((regions.len()));
             regions.truncate(keep_count);
         }
 

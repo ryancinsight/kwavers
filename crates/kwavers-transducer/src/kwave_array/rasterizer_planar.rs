@@ -21,8 +21,10 @@
 //! discrete mass equals `A / dx²` up to round-off.
 
 use super::math::{apply_matrix, euler_xyz_rotation_matrix, DISC_SAMPLE_UPSAMPLING_RATE};
-use super::{DiscSourceProfile, ElementShape, KWaveArray};
+use super::{DiscSourceProfile, ElementShape, KWaveArray, KWaveElement};
+use crate::transducers::physics::PlanarApertureGeometry;
 use kwavers_core::constants::numerical::TWO_PI;
+use leto::Array3;
 
 impl KWaveArray {
     // ─── Rect ──────────────────────────────────────────────────────────────
@@ -30,7 +32,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
@@ -68,7 +70,7 @@ impl KWaveArray {
     #[allow(clippy::too_many_arguments)]
     pub(super) fn rasterize_rect_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         width: f64,
@@ -151,7 +153,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_disc(
         &self,
-        mask: &mut ndarray::Array3<bool>,
+        mask: &mut Array3<bool>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -178,7 +180,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_disc_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -196,7 +198,7 @@ impl KWaveArray {
 
     pub(super) fn rasterize_profiled_disc_weighted(
         &self,
-        mask: &mut ndarray::Array3<f64>,
+        mask: &mut Array3<f64>,
         grid: &kwavers_grid::Grid,
         center: (f64, f64, f64),
         diameter: f64,
@@ -305,6 +307,146 @@ impl KWaveArray {
         }
     }
 
+    // ─── Validated planar aperture ─────────────────────────────────────────
+
+    pub(super) fn rasterize_planar_aperture(
+        &self,
+        mask: &mut Array3<bool>,
+        grid: &kwavers_grid::Grid,
+        geometry: PlanarApertureGeometry,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+        self.rasterize_planar_aperture_points(grid, geometry, |point, scale| {
+            self.map_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                true,
+                |i, j, k, _| mask[[i, j, k]] = true,
+            );
+        });
+    }
+
+    pub(super) fn rasterize_planar_aperture_weighted(
+        &self,
+        mask: &mut Array3<f64>,
+        grid: &kwavers_grid::Grid,
+        geometry: PlanarApertureGeometry,
+    ) {
+        let x_vec = grid.x_coordinates();
+        let y_vec = grid.y_coordinates();
+        let z_vec = grid.z_coordinates();
+        self.rasterize_planar_aperture_points(grid, geometry, |point, scale| {
+            self.map_area_conserving_surface_sample(
+                grid,
+                &x_vec,
+                &y_vec,
+                &z_vec,
+                point,
+                scale,
+                |i, j, k, weight| mask[[i, j, k]] += weight,
+            );
+        });
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn map_area_conserving_surface_sample<F>(
+        &self,
+        grid: &kwavers_grid::Grid,
+        x_vec: &leto::Array1<f64>,
+        y_vec: &leto::Array1<f64>,
+        z_vec: &leto::Array1<f64>,
+        point: [f64; 3],
+        scale: f64,
+        visit: F,
+    ) where
+        F: FnMut(usize, usize, usize, f64),
+    {
+        let mut kernel_sum = 0.0;
+        self.map_surface_sample(
+            grid,
+            x_vec,
+            y_vec,
+            z_vec,
+            point,
+            1.0,
+            false,
+            |_, _, _, weight| kernel_sum += weight,
+        );
+        if kernel_sum == 0.0 {
+            return;
+        }
+        self.map_surface_sample(
+            grid,
+            x_vec,
+            y_vec,
+            z_vec,
+            point,
+            scale / kernel_sum,
+            false,
+            visit,
+        );
+    }
+
+    /// Emit equal-area polar samples whose total BLI mass is `area / dx^2`.
+    pub(super) fn rasterize_planar_aperture_points<F>(
+        &self,
+        grid: &kwavers_grid::Grid,
+        geometry: PlanarApertureGeometry,
+        mut visit: F,
+    ) where
+        F: FnMut([f64; 3], f64),
+    {
+        let (inner, outer, start, span) = geometry.shape().radial_and_angular_bounds();
+        let area = geometry.shape().area_m2();
+        let grid_area = grid.dx * grid.dy;
+        let mass = area / grid_area;
+        let target = (mass * DISC_SAMPLE_UPSAMPLING_RATE).ceil().max(1.0) as usize;
+        let radial_width = outer - inner;
+        let mean_radius =
+            2.0 * (outer.powi(3) - inner.powi(3)) / (3.0 * (outer * outer - inner * inner));
+        let angular_length = (mean_radius * span).max(f64::MIN_POSITIVE);
+        let radial_count = ((target as f64 * radial_width / angular_length)
+            .sqrt()
+            .ceil() as usize)
+            .clamp(1, target);
+        let angular_count = target.div_ceil(radial_count);
+        let sample_count = radial_count * angular_count;
+        let scale = mass / sample_count as f64;
+        let squared_span = outer * outer - inner * inner;
+        let center = geometry.center_m();
+        let first = geometry.first_axis();
+        let normal = geometry.normal();
+        let second = [
+            normal[1].mul_add(first[2], -(normal[2] * first[1])),
+            normal[2].mul_add(first[0], -(normal[0] * first[2])),
+            normal[0].mul_add(first[1], -(normal[1] * first[0])),
+        ];
+
+        for radial_index in 0..radial_count {
+            let radial_fraction = (radial_index as f64 + 0.5) / radial_count as f64;
+            let radius = (inner * inner + radial_fraction * squared_span).sqrt();
+            for angular_index in 0..angular_count {
+                let angle = start + span * (angular_index as f64 + 0.5) / angular_count as f64;
+                let x = radius * angle.cos();
+                let y = radius * angle.sin();
+                visit(
+                    [
+                        y.mul_add(second[0], x.mul_add(first[0], center[0])),
+                        y.mul_add(second[1], x.mul_add(first[1], center[1])),
+                        y.mul_add(second[2], x.mul_add(first[2], center[2])),
+                    ],
+                    scale,
+                );
+            }
+        }
+    }
+
     // ─── Per-element dispatcher ────────────────────────────────────────────
 
     /// Emit BLI-weighted grid-cell contributions for a single element.
@@ -313,7 +455,7 @@ impl KWaveArray {
     /// without materializing a full-grid temporary mask for each element.
     pub(super) fn rasterize_element_weighted_cells<F>(
         &self,
-        element: &ElementShape,
+        element: &KWaveElement,
         grid: &kwavers_grid::Grid,
         mut visit: F,
     ) where
@@ -322,6 +464,17 @@ impl KWaveArray {
         let x_vec = grid.x_coordinates();
         let y_vec = grid.y_coordinates();
         let z_vec = grid.z_coordinates();
+        if let KWaveElement::PlanarAperture(geometry) = element {
+            self.rasterize_planar_aperture_points(grid, *geometry, |point, scale| {
+                self.map_area_conserving_surface_sample(
+                    grid, &x_vec, &y_vec, &z_vec, point, scale, &mut visit,
+                );
+            });
+            return;
+        }
+        let KWaveElement::Shape(element) = element else {
+            unreachable!("invariant: planar apertures return before shape dispatch")
+        };
         let mut visit_point = |point, scale| {
             self.map_surface_sample(
                 grid,

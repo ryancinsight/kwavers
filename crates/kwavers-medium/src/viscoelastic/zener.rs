@@ -1,7 +1,7 @@
 //! Zener / standard-linear-solid viscoelastic model (single relaxation arm).
 
 use super::{recover_complex_modulus, DispersionSample};
-use num_complex::Complex64;
+use eunomia::Complex64;
 
 /// Standard linear solid (**Zener**) viscoelastic model — a spring in parallel
 /// with a Maxwell (spring + dashpot) arm.

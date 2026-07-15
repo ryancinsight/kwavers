@@ -1,7 +1,7 @@
 //! Bubble and population emission simulation PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -77,10 +77,10 @@ pub fn simulate_bubble_emission(
     };
     let tr = cavitation::simulate_bubble_emission(&cfg);
     Ok((
-        tr.time.into_pyarray(py).unbind(),
-        tr.radius.into_pyarray(py).unbind(),
-        tr.wall_velocity.into_pyarray(py).unbind(),
-        tr.emission.into_pyarray(py).unbind(),
+        tr.time.to_pyarray(py).unbind(),
+        tr.radius.to_pyarray(py).unbind(),
+        tr.wall_velocity.to_pyarray(py).unbind(),
+        tr.emission.to_pyarray(py).unbind(),
         tr.max_compression,
         tr.max_mach,
         tr.collapse_count,
@@ -164,10 +164,10 @@ pub fn simulate_coated_bubble_emission(
     };
     let tr = cavitation::simulate_coated_bubble_emission(&cfg);
     Ok((
-        tr.time.into_pyarray(py).unbind(),
-        tr.radius.into_pyarray(py).unbind(),
-        tr.wall_velocity.into_pyarray(py).unbind(),
-        tr.emission.into_pyarray(py).unbind(),
+        tr.time.to_pyarray(py).unbind(),
+        tr.radius.to_pyarray(py).unbind(),
+        tr.wall_velocity.to_pyarray(py).unbind(),
+        tr.emission.to_pyarray(py).unbind(),
         tr.max_compression,
         tr.max_mach,
         tr.collapse_count,
@@ -270,8 +270,8 @@ pub fn simulate_population_emission(
     let stable = result.bands.stable_emission();
     let total = result.bands.fundamental + stable + result.bands.broadband;
     Ok((
-        result.freqs_hz.into_pyarray(py).unbind(),
-        result.psd.into_pyarray(py).unbind(),
+        result.freqs_hz.to_pyarray(py).unbind(),
+        result.psd.to_pyarray(py).unbind(),
         result.bands.fundamental,
         result.bands.subharmonic,
         result.bands.ultraharmonic,
@@ -379,15 +379,15 @@ pub fn population_emission_sweep(
         .ok_or_else(|| PyRuntimeError::new_err("invalid population emission sweep parameters"))?;
 
     Ok((
-        sweep.harmonic.into_pyarray(py).unbind(),
-        sweep.subharmonic.into_pyarray(py).unbind(),
-        sweep.ultraharmonic.into_pyarray(py).unbind(),
-        sweep.stable.into_pyarray(py).unbind(),
-        sweep.inertial.into_pyarray(py).unbind(),
-        sweep.signal.into_pyarray(py).unbind(),
-        sweep.n_active.into_pyarray(py).unbind(),
-        sweep.max_compression.into_pyarray(py).unbind(),
-        sweep.max_mach.into_pyarray(py).unbind(),
+        sweep.harmonic.to_pyarray(py).unbind(),
+        sweep.subharmonic.to_pyarray(py).unbind(),
+        sweep.ultraharmonic.to_pyarray(py).unbind(),
+        sweep.stable.to_pyarray(py).unbind(),
+        sweep.inertial.to_pyarray(py).unbind(),
+        sweep.signal.to_pyarray(py).unbind(),
+        sweep.n_active.to_pyarray(py).unbind(),
+        sweep.max_compression.to_pyarray(py).unbind(),
+        sweep.max_mach.to_pyarray(py).unbind(),
     ))
 }
 
@@ -448,8 +448,8 @@ pub fn volume_emission_spectrum(
         .ok_or_else(|| PyRuntimeError::new_err("invalid V_s emission spectrum parameters"))?;
 
     Ok((
-        spectrum.freqs_hz.into_pyarray(py).unbind(),
-        spectrum.psd.into_pyarray(py).unbind(),
+        spectrum.freqs_hz.to_pyarray(py).unbind(),
+        spectrum.psd.to_pyarray(py).unbind(),
         spectrum.n_active,
     ))
 }
@@ -526,11 +526,11 @@ pub fn volume_emission_sweep(
         .ok_or_else(|| PyRuntimeError::new_err("invalid V_s emission sweep parameters"))?;
 
     Ok((
-        sweep.harmonic.into_pyarray(py).unbind(),
-        sweep.subharmonic.into_pyarray(py).unbind(),
-        sweep.ultraharmonic.into_pyarray(py).unbind(),
-        sweep.stable.into_pyarray(py).unbind(),
-        sweep.inertial.into_pyarray(py).unbind(),
-        sweep.n_active.into_pyarray(py).unbind(),
+        sweep.harmonic.to_pyarray(py).unbind(),
+        sweep.subharmonic.to_pyarray(py).unbind(),
+        sweep.ultraharmonic.to_pyarray(py).unbind(),
+        sweep.stable.to_pyarray(py).unbind(),
+        sweep.inertial.to_pyarray(py).unbind(),
+        sweep.n_active.to_pyarray(py).unbind(),
     ))
 }

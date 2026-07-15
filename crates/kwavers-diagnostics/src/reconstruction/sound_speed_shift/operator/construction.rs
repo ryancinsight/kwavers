@@ -1,6 +1,6 @@
 //! Construction of the speed-shift operator from acquisition geometry.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_solver::inverse::same_aperture::active_grid;
@@ -20,7 +20,10 @@ impl SoundSpeedShiftOperator {
     ) -> KwaversResult<Self> {
         validate_inputs(samples, active_mask, config)?;
         let active = active_grid(active_mask, config.spacing_m);
-        let shape = active_mask.dim();
+        let shape = {
+            let [rows, cols] = active_mask.shape();
+            (rows, cols)
+        };
         let active_lookup = active_lookup(&active, shape);
         let mut rows = RayRowStorage::new();
 

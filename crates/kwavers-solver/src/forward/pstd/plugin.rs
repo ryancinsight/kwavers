@@ -1,6 +1,6 @@
 //! Spectral solver plugin implementation
 
-use ndarray::Array4;
+use leto::Array4;
 use std::fmt::Debug;
 
 use super::{PSTDConfig, PSTDSolver};
@@ -10,6 +10,22 @@ use kwavers_field::mapping::UnifiedFieldType;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::GridSource;
+
+fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
+    for (dst_value, src_value) in dst
+        .as_slice_mut()
+        .expect("leto PSTD field must be contiguous")
+        .iter_mut()
+        .zip(src.iter())
+    {
+        *dst_value = *src_value;
+    }
+}
+
+fn copy_leto_into_ndarray(dst: &mut leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
+    leto_ops::zip_mut_with(dst, &src.view(), |d, s| *d = *s)
+        .expect("invariant: dst and src share shape");
+}
 
 /// PSTD solver plugin
 #[derive(Debug)]
@@ -109,10 +125,12 @@ impl crate::plugin::Plugin for PSTDPlugin {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        solver
-            .fields
-            .p
-            .assign(&fields.index_axis(ndarray::Axis(0), pressure_idx));
+        copy_ndarray_view_into_leto(
+            &mut solver.fields.p,
+            fields
+                .index_axis::<3>(0, pressure_idx)
+                .expect("invariant: pressure field index within unified field array"),
+        );
 
         if self.ivp_seeded {
             // Steady state: velocity is genuine evolving state, sync it in. The
@@ -121,18 +139,24 @@ impl crate::plugin::Plugin for PSTDPlugin {
             // pressure here. Re-splitting ρ = p/c² equally every step destroys the
             // directional density information and collapses the wave amplitude
             // (the historical bug this replaces).
-            solver
-                .fields
-                .ux
-                .assign(&fields.index_axis(ndarray::Axis(0), vx_idx));
-            solver
-                .fields
-                .uy
-                .assign(&fields.index_axis(ndarray::Axis(0), vy_idx));
-            solver
-                .fields
-                .uz
-                .assign(&fields.index_axis(ndarray::Axis(0), vz_idx));
+            copy_ndarray_view_into_leto(
+                &mut solver.fields.ux,
+                fields
+                    .index_axis::<3>(0, vx_idx)
+                    .expect("invariant: velocity-x field index within unified field array"),
+            );
+            copy_ndarray_view_into_leto(
+                &mut solver.fields.uy,
+                fields
+                    .index_axis::<3>(0, vy_idx)
+                    .expect("invariant: velocity-y field index within unified field array"),
+            );
+            copy_ndarray_view_into_leto(
+                &mut solver.fields.uz,
+                fields
+                    .index_axis::<3>(0, vz_idx)
+                    .expect("invariant: velocity-z field index within unified field array"),
+            );
         } else {
             // First step: the field array carries the zero-velocity IVP initial
             // pressure (`fields.p` just synced). PSTD's state is the partial
@@ -148,18 +172,30 @@ impl crate::plugin::Plugin for PSTDPlugin {
         solver.step_forward()?;
 
         // Sync back to global fields
-        fields
-            .index_axis_mut(ndarray::Axis(0), pressure_idx)
-            .assign(&solver.fields.p);
-        fields
-            .index_axis_mut(ndarray::Axis(0), vx_idx)
-            .assign(&solver.fields.ux);
-        fields
-            .index_axis_mut(ndarray::Axis(0), vy_idx)
-            .assign(&solver.fields.uy);
-        fields
-            .index_axis_mut(ndarray::Axis(0), vz_idx)
-            .assign(&solver.fields.uz);
+        copy_leto_into_ndarray(
+            &mut fields
+                .index_axis_mut::<3>(0, pressure_idx)
+                .expect("invariant: pressure field index within unified field array"),
+            &solver.fields.p,
+        );
+        copy_leto_into_ndarray(
+            &mut fields
+                .index_axis_mut::<3>(0, vx_idx)
+                .expect("invariant: velocity-x field index within unified field array"),
+            &solver.fields.ux,
+        );
+        copy_leto_into_ndarray(
+            &mut fields
+                .index_axis_mut::<3>(0, vy_idx)
+                .expect("invariant: velocity-y field index within unified field array"),
+            &solver.fields.uy,
+        );
+        copy_leto_into_ndarray(
+            &mut fields
+                .index_axis_mut::<3>(0, vz_idx)
+                .expect("invariant: velocity-z field index within unified field array"),
+            &solver.fields.uz,
+        );
 
         Ok(())
     }

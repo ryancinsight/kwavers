@@ -1,4 +1,4 @@
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 use super::sampling::CollocationSampler;
 
@@ -19,9 +19,12 @@ impl std::fmt::Debug for AdaptiveRefinement {
             .field("sampler", &"CollocationSampler")
             .field(
                 "points",
-                &format!("{}x{}", self.points.nrows(), self.points.ncols()),
+                &format!("{}x{}", self.points.shape()[0], self.points.shape()[1]),
             )
-            .field("residuals", &format!("{} values", self.residuals.len()))
+            .field(
+                "residuals",
+                &format!("{} values", self.residuals.shape()[0]),
+            )
             .field("threshold", &self.threshold)
             .finish()
     }
@@ -30,11 +33,11 @@ impl std::fmt::Debug for AdaptiveRefinement {
 impl AdaptiveRefinement {
     #[must_use]
     pub fn new(sampler: CollocationSampler, initial_points: Array2<f64>, threshold: f64) -> Self {
-        let n_points = initial_points.nrows();
+        let n_points = initial_points.shape()[0];
         Self {
             sampler,
             points: initial_points,
-            residuals: Array1::zeros(n_points),
+            residuals: Array1::zeros([n_points]),
             threshold,
         }
     }
@@ -45,8 +48,8 @@ impl AdaptiveRefinement {
     ///
     pub fn update_residuals(&mut self, residuals: Array1<f64>) {
         assert_eq!(
-            residuals.len(),
-            self.points.nrows(),
+            residuals.shape()[0],
+            self.points.shape()[0],
             "Residual count mismatch"
         );
         self.residuals = residuals;
@@ -63,15 +66,15 @@ impl AdaptiveRefinement {
             ChaCha8Rng::from_entropy()
         };
 
-        let mut refined_points = self.points.clone().to_owned();
-        let dim = self.points.ncols();
+        let mut refined_points = self.points.clone();
+        let dim = self.points.shape()[1];
 
         for (i, &residual) in self.residuals.iter().enumerate() {
             if residual > self.threshold {
                 let n_new = (refinement_factor * residual / self.threshold).ceil() as usize;
 
                 for _ in 0..n_new {
-                    let mut new_point = Array1::zeros(dim);
+                    let mut new_point = Array1::zeros([dim]);
 
                     let perturbation_scale = 0.1;
                     for d in 0..dim {
@@ -79,14 +82,15 @@ impl AdaptiveRefinement {
                         new_point[d] = self.points[[i, d]] + delta;
                     }
 
-                    let mut temp = Array2::zeros((refined_points.nrows() + 1, dim));
-                    for row in 0..refined_points.nrows() {
+                    let current_rows = refined_points.shape()[0];
+                    let mut temp = Array2::zeros([current_rows + 1, dim]);
+                    for row in 0..current_rows {
                         for col in 0..dim {
                             temp[[row, col]] = refined_points[[row, col]];
                         }
                     }
                     for col in 0..dim {
-                        temp[[refined_points.nrows(), col]] = new_point[col];
+                        temp[[current_rows, col]] = new_point[col];
                     }
                     refined_points = temp;
                 }
@@ -94,7 +98,7 @@ impl AdaptiveRefinement {
         }
 
         self.points = refined_points.clone();
-        self.residuals = Array1::zeros(self.points.nrows());
+        self.residuals = Array1::zeros([self.points.shape()[0]]);
 
         refined_points
     }

@@ -1,7 +1,7 @@
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use kwavers_source::{GridSource, SourceMode};
-use ndarray::Array3;
+use leto::Array3;
 
 mod inject;
 mod registration;
@@ -12,7 +12,7 @@ mod scaling;
 pub(super) fn collect_pressure_indices_fortran(
     mask: &Array3<f64>,
 ) -> Vec<(usize, usize, usize, f64)> {
-    let (nx, ny, nz) = mask.dim();
+    let [nx, ny, nz] = mask.shape();
     let mut indices = Vec::new();
     for k in 0..nz {
         for j in 0..ny {
@@ -65,11 +65,11 @@ pub struct SourceHandler {
 impl SourceHandler {
     /// New.
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(source: GridSource, grid: &Grid) -> KwaversResult<Self> {
-        let shape = (grid.nx, grid.ny, grid.nz);
+        let shape = [grid.nx, grid.ny, grid.nz];
 
         if source.p_signal.is_some() && source.p_mask.is_none() {
             return Err(KwaversError::Validation(
@@ -92,13 +92,13 @@ impl SourceHandler {
         let mut p_indices = Vec::new();
         let mut source_propagation_dim = 0.0;
         if let Some(mask) = &source.p_mask {
-            if mask.dim() != shape {
+            if mask.shape() != shape {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Pressure source mask shape mismatch: expected {:?}, got {:?}",
                             shape,
-                            mask.dim()
+                            mask.shape()
                         ),
                     },
                 ));
@@ -106,7 +106,7 @@ impl SourceHandler {
             p_indices = collect_pressure_indices_fortran(mask);
 
             if !p_indices.is_empty() {
-                let (nx, ny, nz) = shape;
+                let [nx, ny, nz] = shape;
 
                 let mut x_set = std::collections::HashSet::new();
                 let mut y_set = std::collections::HashSet::new();
@@ -129,13 +129,13 @@ impl SourceHandler {
                 }
 
                 let mut source_fill_dims = 0;
-                if nx > 1 && x_set.len() > nx / 2 {
+                if nx > 1 && (x_set.len()) > nx / 2 {
                     source_fill_dims += 1;
                 }
-                if ny > 1 && y_set.len() > ny / 2 {
+                if ny > 1 && (y_set.len()) > ny / 2 {
                     source_fill_dims += 1;
                 }
-                if nz > 1 && z_set.len() > nz / 2 {
+                if nz > 1 && (z_set.len()) > nz / 2 {
                     source_fill_dims += 1;
                 }
 
@@ -145,18 +145,18 @@ impl SourceHandler {
 
         let mut u_indices = Vec::new();
         if let Some(mask) = &source.u_mask {
-            if mask.dim() != shape {
+            if mask.shape() != shape {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Velocity source mask shape mismatch: expected {:?}, got {:?}",
                             shape,
-                            mask.dim()
+                            mask.shape()
                         ),
                     },
                 ));
             }
-            for ((i, j, k), &val) in mask.indexed_iter() {
+            for ([i, j, k], &val) in mask.indexed_iter() {
                 if val != 0.0 {
                     u_indices.push((i, j, k, val));
                 }
@@ -180,12 +180,12 @@ impl SourceHandler {
             }
 
             let num_sources_signal = signal.shape()[0];
-            if num_sources_signal != 1 && num_sources_signal != p_indices.len() {
+            if num_sources_signal != 1 && num_sources_signal != (p_indices.len()) {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Pressure source signal shape mismatch: expected [1|{}, time], got [{}, time]",
-                            p_indices.len(),
+                            (p_indices.len()),
                             num_sources_signal
                         ),
                     },
@@ -221,12 +221,12 @@ impl SourceHandler {
             }
 
             let num_sources_signal = signal.shape()[1];
-            if num_sources_signal != 1 && num_sources_signal != u_indices.len() {
+            if num_sources_signal != 1 && num_sources_signal != (u_indices.len()) {
                 return Err(KwaversError::Validation(
                     ValidationError::ConstraintViolation {
                         message: format!(
                             "Velocity source signal shape mismatch: expected [3, 1|{}, time], got [3, {}, time]",
-                            u_indices.len(),
+                            (u_indices.len()),
                             num_sources_signal
                         ),
                     },

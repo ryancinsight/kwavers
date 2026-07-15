@@ -24,7 +24,7 @@
 
 use kwavers_core::error::KwaversResult;
 use kwavers_physics::cavitation_control::FeedbackController;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::config::AcousticTherapyParams;
 use super::super::state::AcousticField;
@@ -83,18 +83,22 @@ pub fn update_cavitation_control(
     // Process the acoustic signal through the feedback controller
     // Use pressure field as the input signal for cavitation detection and control
     let signal = acoustic_field.pressure.as_slice().unwrap();
-    let array_view = ndarray::ArrayView1::from(signal);
+    let array_view = leto::ArrayView1::new(
+        leto::Layout::c_contiguous([signal.len()])
+            .expect("invariant: 1-D contiguous layout is always valid"),
+        signal,
+    );
     let control_output = cavitation_controller.process(&array_view);
 
     // Extract cavitation activity using detector-based approach
     // Use the control output to determine cavitation activity levels
-    let mut cavitation_activity = Array3::zeros(acoustic_field.pressure.dim());
+    let mut cavitation_activity = Array3::zeros(acoustic_field.pressure.shape());
 
     // Map control output to cavitation activity based on detected intensity
     // High intensity indicates active cavitation, use threshold-based mapping
     let cavitation_threshold = acoustic_params.pnp * 0.1; // 10% of peak pressure
 
-    for ((i, j, k), pressure_val) in acoustic_field.pressure.indexed_iter() {
+    for ([i, j, k], pressure_val) in acoustic_field.pressure.indexed_iter() {
         // Calculate cavitation activity based on pressure amplitude and control feedback
         let pressure_amplitude = pressure_val.abs();
         if pressure_amplitude > cavitation_threshold {
@@ -144,6 +148,7 @@ mod tests {
             duty_cycle: 0.01,
             focal_depth: 0.05,
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         // Update cavitation control
@@ -184,6 +189,7 @@ mod tests {
             duty_cycle: 0.01,
             focal_depth: 0.05,
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         // Update cavitation control
@@ -242,6 +248,7 @@ mod tests {
             duty_cycle: 0.01,
             focal_depth: 0.05,
             treatment_volume: 1.0,
+            use_nonlinear_field: false,
         };
 
         // Update cavitation control
@@ -250,8 +257,8 @@ mod tests {
                 .unwrap();
 
         // Center should have higher activity than edges
-        let center_activity = activity[(5, 5, 5)];
-        let edge_activity = activity[(0, 0, 0)];
+        let center_activity = activity[[5, 5, 5]];
+        let edge_activity = activity[[0, 0, 0]];
         assert!(center_activity >= edge_activity);
 
         // All activity values should be in valid range

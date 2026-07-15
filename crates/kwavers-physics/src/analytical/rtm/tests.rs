@@ -1,6 +1,6 @@
+use eunomia::Complex64;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use num_complex::Complex64;
 
 use super::*;
 

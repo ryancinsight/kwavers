@@ -1,6 +1,6 @@
 //! Electronic steering calibration for abdominal nonlinear histotripsy solves.
 
-use ndarray::Array3;
+use leto::Array3;
 
 use super::super::AnatomyKind;
 use super::encoding::SourceEncoding;
@@ -25,7 +25,7 @@ pub(crate) fn calibrate_electronic_steering(
         return unchanged_outcome(aperture, nominal_focus);
     }
 
-    let n = volume.body_mask.dim().0;
+    let n = volume.body_mask.shape()[0];
     let cells = n * n * n;
     let background_speed = flatten(&volume.background_sound_speed_m_s);
     let density = flatten(&volume.density_kg_m3);

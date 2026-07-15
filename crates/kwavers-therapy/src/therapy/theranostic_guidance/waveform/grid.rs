@@ -17,7 +17,7 @@
 //! - Treeby & Cox (2010), J. Acoust. Soc. Am. 128:2741 — k-Wave padded simulation domain.
 //! - Komatitsch & Martin (2007), Geophysics 72:SM155, §2 — CPML on outer strip.
 
-use ndarray::Array2;
+use leto::Array2;
 
 use super::super::config::TheranosticInverseConfig;
 use super::super::medium::PreparedTheranosticSlice;
@@ -39,7 +39,7 @@ pub(super) fn acoustic_grid(
     baseline_speed: &Array2<f64>,
     true_speed: &Array2<f64>,
 ) -> PaddedSimulation {
-    let (nx_b_coarse, ny_b_coarse) = prepared.sound_speed_m_s.dim();
+    let [nx_b_coarse, ny_b_coarse] = prepared.sound_speed_m_s.shape();
     let dx_coarse = prepared.spacing_m;
     let (_, cmax_body) = speed_bounds(baseline_speed, true_speed);
     let cmin_water = SOUND_SPEED_WATER_SIM.min(cmax_body);
@@ -108,22 +108,6 @@ pub(super) fn acoustic_grid(
     let cmax = cmax_body.max(SOUND_SPEED_WATER_SIM);
     // CFL stability: λ_CFL = c·dt/dx ≤ 1/√2 (von Neumann, Fornberg 1988, §4).
     let dt_s = 0.35 * dx / (std::f64::consts::SQRT_2 * cmax);
-
-    // Padded domain extent (diagonal half-extent) drives the two-way travel
-    // time budget. Water sound speed governs propagation in the coupling
-    // margin where the aperture lives.
-    let aperture_extent = layout
-        .therapy_elements
-        .iter()
-        .chain(layout.imaging_receivers.iter())
-        .map(|point| point.x_m.hypot(point.y_m))
-        .fold(0.0, f64::max);
-    let domain_half_x = (nx.saturating_sub(1) as f64) * 0.5 * dx;
-    let domain_half_y = (ny.saturating_sub(1) as f64) * 0.5 * dx;
-    let domain_extent = domain_half_x.hypot(domain_half_y);
-    let travel_time_s = 2.0 * (aperture_extent + domain_extent) / SOUND_SPEED_WATER_SIM.max(1.0);
-    let pulse_time_s = 5.0 / frequency_hz;
-    let time_steps = (((travel_time_s + pulse_time_s) / dt_s).ceil() as usize).max(96);
 
     let focus = layout.focus_m;
 
@@ -208,6 +192,11 @@ pub(super) fn acoustic_grid(
         .map(|point| point_to_padded_cell(*point, nx, ny, dx))
         .collect();
 
+    let travel_time_s =
+        acoustic_recording_window_s(layout, body_half_x, body_half_y, &source_delays_s);
+    let pulse_time_s = 5.0 / frequency_hz;
+    let time_steps = (((travel_time_s + pulse_time_s) / dt_s).ceil() as usize).max(96);
+
     // Carrying-medium reference speed (currently unused except via the public
     // medium helper invariants; keep the call to maintain semantic parity in
     // case future regression tests probe these helpers indirectly).
@@ -242,6 +231,61 @@ pub(super) fn acoustic_grid(
     }
 }
 
+fn acoustic_recording_window_s(
+    layout: &super::super::geometry::DeviceLayout,
+    body_half_x: f64,
+    body_half_y: f64,
+    source_delays_s: &[f64],
+) -> f64 {
+    let body_corners = [
+        Point2 {
+            x_m: -body_half_x,
+            y_m: -body_half_y,
+        },
+        Point2 {
+            x_m: -body_half_x,
+            y_m: body_half_y,
+        },
+        Point2 {
+            x_m: body_half_x,
+            y_m: -body_half_y,
+        },
+        Point2 {
+            x_m: body_half_x,
+            y_m: body_half_y,
+        },
+    ];
+    let receivers = layout
+        .therapy_elements
+        .iter()
+        .chain(layout.imaging_receivers.iter())
+        .copied()
+        .collect::<Vec<_>>();
+    let mut max_distance_m = 0.0_f64;
+    for source in &layout.therapy_elements {
+        for corner in body_corners {
+            max_distance_m = max_distance_m.max(point_distance(*source, corner));
+            for receiver in &receivers {
+                max_distance_m = max_distance_m
+                    .max(point_distance(*source, corner) + point_distance(corner, *receiver));
+            }
+        }
+        for receiver in &receivers {
+            max_distance_m = max_distance_m.max(point_distance(*source, *receiver));
+        }
+    }
+    let max_source_delay_s = source_delays_s
+        .iter()
+        .copied()
+        .filter(|value| value.is_finite())
+        .fold(0.0_f64, f64::max);
+    max_source_delay_s + max_distance_m / SOUND_SPEED_WATER_SIM.max(1.0)
+}
+
+fn point_distance(lhs: Point2, rhs: Point2) -> f64 {
+    (lhs.x_m - rhs.x_m).hypot(lhs.y_m - rhs.y_m)
+}
+
 /// Build a padded simulation for a **passive cavitation emission**.
 ///
 /// Unlike [`acoustic_grid`] (a focused transmit from the aperture with
@@ -268,7 +312,7 @@ pub(super) fn passive_emission_grid(
     // Size the FDTD for the highest spectral line so every cavitation band is
     // numerically resolved.
     let max_line_hz = CAV_MAX_LINE_MULTIPLE * fundamental_hz;
-    let (nx_b_coarse, ny_b_coarse) = prepared.sound_speed_m_s.dim();
+    let [nx_b_coarse, ny_b_coarse] = prepared.sound_speed_m_s.shape();
     let dx_coarse = prepared.spacing_m;
     let medium_speed = &prepared.sound_speed_m_s;
     let cmax_body = medium_speed
@@ -402,10 +446,10 @@ fn upsample_field(coarse: &Array2<f64>, refinement: usize) -> Array2<f64> {
     if refinement <= 1 {
         return coarse.clone();
     }
-    let (nx_c, ny_c) = coarse.dim();
+    let [nx_c, ny_c] = coarse.shape();
     let nx_r = nx_c * refinement;
     let ny_r = ny_c * refinement;
-    Array2::from_shape_fn((nx_r, ny_r), |(ix, iy)| {
+    Array2::from_shape_fn((nx_r, ny_r), |[ix, iy]| {
         coarse[[ix / refinement, iy / refinement]]
     })
 }
@@ -422,7 +466,7 @@ fn build_padded_alpha_field_refined(
     refinement: usize,
 ) -> Vec<f32> {
     let f0_mhz = frequency_hz * 1.0e-6;
-    let (nx_b_c, ny_b_c) = prepared.attenuation_np_per_m_mhz.dim();
+    let [nx_b_c, ny_b_c] = prepared.attenuation_np_per_m_mhz.shape();
     let nx_b = nx_b_c * refinement;
     let ny_b = ny_b_c * refinement;
     let dx = prepared.spacing_m / refinement as f64;
@@ -528,9 +572,9 @@ fn embed_with_water(
     ny: usize,
     offset: (usize, usize),
 ) -> Array2<f64> {
-    let (nx_b, ny_b) = body.dim();
+    let [nx_b, ny_b] = body.shape();
     let (ox, oy) = offset;
-    Array2::from_shape_fn((nx, ny), |(ix, iy)| {
+    Array2::from_shape_fn((nx, ny), |[ix, iy]| {
         if ix >= ox && iy >= oy && ix < ox + nx_b && iy < oy + ny_b {
             body[[ix - ox, iy - oy]]
         } else {
@@ -594,7 +638,7 @@ fn build_padded_alpha_field(
 ) -> Vec<f32> {
     let f0_mhz = config.frequencies_hz[0] * 1.0e-6;
     let dx = prepared.spacing_m;
-    let (nx_b, ny_b) = prepared.sound_speed_m_s.dim();
+    let [nx_b, ny_b] = prepared.sound_speed_m_s.shape();
     let (ox, oy) = offset;
     let mut out = vec![0.0_f32; nx * ny];
     for ix in 0..nx {

@@ -32,8 +32,20 @@
 
 use super::super::SensorRecorder;
 use crate::recorder::fields::SensorRecordField;
+use crate::recorder::velocity_statistics::VelocityArray3Access;
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2, Array3};
+use leto::{Array1, Array2};
+
+#[doc(hidden)]
+pub trait VelocitySamples3 {
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64;
+}
+
+impl VelocitySamples3 for leto::Array3<f64> {
+    fn value_at(&self, i: usize, j: usize, k: usize) -> f64 {
+        self[[i, j, k]]
+    }
+}
 
 impl SensorRecorder {
     /// Record one time step of velocity data.
@@ -45,13 +57,11 @@ impl SensorRecorder {
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    pub fn record_velocity_step(
-        &mut self,
-        ux: &Array3<f64>,
-        uy: &Array3<f64>,
-        uz: &Array3<f64>,
-    ) -> KwaversResult<()> {
-        // Full-grid statistics (O(N³), parallelised inside accumulator).
+    pub fn record_velocity_step<U>(&mut self, ux: &U, uy: &U, uz: &U) -> KwaversResult<()>
+    where
+        U: VelocitySamples3 + VelocityArray3Access,
+    {
+        // Full-grid statistics (O(N^3), provider-parallelized inside accumulator).
         if let Some(ref mut s) = self.ux_stats {
             s.update(ux);
         }
@@ -74,17 +84,17 @@ impl SensorRecorder {
         // Staggered velocity time series.
         if let Some(ref mut buf) = self.ux_data {
             for (row, &(i, j, k)) in self.sensor_indices.iter().enumerate() {
-                buf[[row, col]] = ux[[i, j, k]];
+                buf[[row, col]] = ux.value_at(i, j, k);
             }
         }
         if let Some(ref mut buf) = self.uy_data {
             for (row, &(i, j, k)) in self.sensor_indices.iter().enumerate() {
-                buf[[row, col]] = uy[[i, j, k]];
+                buf[[row, col]] = uy.value_at(i, j, k);
             }
         }
         if let Some(ref mut buf) = self.uz_data {
             for (row, &(i, j, k)) in self.sensor_indices.iter().enumerate() {
-                buf[[row, col]] = uz[[i, j, k]];
+                buf[[row, col]] = uz.value_at(i, j, k);
             }
         }
 
@@ -166,12 +176,18 @@ impl SensorRecorder {
 /// is algebraically identical to materialising the full collocated field and
 /// sampling it, but eliminates the full-grid transient allocation.
 #[inline]
-fn sample_collocated_velocity(u: &Array3<f64>, axis: usize, i: usize, j: usize, k: usize) -> f64 {
-    let current = u[[i, j, k]];
+fn sample_collocated_velocity<U: VelocitySamples3>(
+    u: &U,
+    axis: usize,
+    i: usize,
+    j: usize,
+    k: usize,
+) -> f64 {
+    let current = u.value_at(i, j, k);
     let previous = match axis {
-        0 if i > 0 => u[[i - 1, j, k]],
-        1 if j > 0 => u[[i, j - 1, k]],
-        2 if k > 0 => u[[i, j, k - 1]],
+        0 if i > 0 => u.value_at(i - 1, j, k),
+        1 if j > 0 => u.value_at(i, j - 1, k),
+        2 if k > 0 => u.value_at(i, j, k - 1),
         _ => 0.0,
     };
     0.5 * (previous + current)
@@ -182,11 +198,11 @@ fn sample_collocated_velocity(u: &Array3<f64>, axis: usize, i: usize, j: usize, 
 /// The pressure value is read from the already-recorded `pressure` column `col`
 /// (populated by the preceding `record_step` call), then multiplied by the
 /// velocity component at each sensor grid point.
-fn record_intensity_component(
+fn record_intensity_component<U: VelocitySamples3>(
     pressure: Option<&Array2<f64>>,
     data: &mut Option<Array2<f64>>,
     sum: &mut Option<Array1<f64>>,
-    velocity: &Array3<f64>,
+    velocity: &U,
     sensor_indices: &[(usize, usize, usize)],
     col: usize,
 ) {
@@ -195,7 +211,7 @@ fn record_intensity_component(
     };
 
     for (row, &(i, j, k)) in sensor_indices.iter().enumerate() {
-        let intensity = pressure[[row, col]] * velocity[[i, j, k]];
+        let intensity = pressure[[row, col]] * velocity.value_at(i, j, k);
         if let Some(buf) = data.as_mut() {
             buf[[row, col]] = intensity;
         }

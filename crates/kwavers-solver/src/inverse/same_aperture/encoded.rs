@@ -10,7 +10,7 @@
 //! `B^T B = A^T C^T C A` exactly for the selected encoding; it is a compressed
 //! linear inverse, not nonlinear full-waveform inversion.
 
-use rayon::prelude::*;
+use moirai_parallel::{fold_reduce_with, for_each_chunk_mut_enumerated_with, Adaptive};
 
 use super::linear_operator::LinearOperator;
 use super::row_matrix::RowMatrix;
@@ -108,11 +108,11 @@ impl<O: LinearOperator + Sync> EncodedOperator<O> {
     #[must_use]
     pub fn materialize(&self) -> RowMatrix {
         let mut matrix = RowMatrix::zeros(self.rows(), self.cols());
-        matrix
-            .data
-            .par_chunks_mut(self.cols())
-            .enumerate()
-            .for_each(|(row, values)| self.row_values(row, values));
+        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
+            &mut matrix.data,
+            self.cols(),
+            |row, values| self.row_values(row, values),
+        );
         matrix
     }
 }
@@ -127,23 +127,23 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
     }
 
     fn matvec(&self, x: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(x.len(), self.cols());
-        debug_assert_eq!(out.len(), self.rows());
+        debug_assert_eq!((x.len()), self.cols());
+        debug_assert_eq!((out.len()), self.rows());
         let mut inner_out = vec![0.0_f32; self.inner.rows()];
         self.inner.matvec(x, &mut inner_out);
-        out.par_iter_mut().enumerate().for_each(|(encoded, dst)| {
+        for (encoded, dst) in out.iter_mut().enumerate() {
             let mut sum = 0.0_f32;
             for idx in self.spec.group_range(encoded) {
                 let entry = self.spec.entries[idx];
                 sum += entry.sign * inner_out[entry.source_row];
             }
             *dst = sum;
-        });
+        }
     }
 
     fn t_matvec(&self, y: &[f32], out: &mut [f32]) {
-        debug_assert_eq!(y.len(), self.rows());
-        debug_assert_eq!(out.len(), self.cols());
+        debug_assert_eq!((y.len()), self.rows());
+        debug_assert_eq!((out.len()), self.cols());
         let mut lifted = vec![0.0_f32; self.inner.rows()];
         for (encoded, value) in y.iter().copied().enumerate() {
             for idx in self.spec.group_range(encoded) {
@@ -156,7 +156,7 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
 
     fn row_values(&self, row: usize, out: &mut [f32]) {
         debug_assert!(row < self.rows());
-        debug_assert_eq!(out.len(), self.cols());
+        debug_assert_eq!((out.len()), self.cols());
         let mut scratch = vec![0.0_f32; self.cols()];
         self.row_values_with_scratch(row, out, &mut scratch);
     }
@@ -167,49 +167,44 @@ impl<O: LinearOperator + Sync> LinearOperator for EncodedOperator<O> {
     ///
     /// `(B^T B)_{jj} = sum_i B_{ij}^2`. Each encoded row `i` contributes
     /// its squared column values to the accumulator. Rows are independent,
-    /// so the sum parallelizes with Rayon's fold-reduce pattern.
-    /// Each Rayon thread maintains a partial `cols`-length accumulator,
+    /// so the sum parallelizes with Moirai's fold-reduce pattern.
+    /// Each worker chunk maintains a partial `cols`-length accumulator,
     /// avoiding contention. The final reduce sums partial accumulators.
     ///
     /// Total memory: `O(threads * cols)` — e.g. 8 threads × 4096 cols × 4 B ≈ 128 KB.
     fn normal_diag(&self) -> Vec<f32> {
-        use rayon::prelude::*;
         let cols = self.cols();
-        (0..self.rows())
-            .into_par_iter()
-            .fold(
-                || vec![0.0_f32; cols],
-                |mut acc, encoded| {
-                    let mut row = vec![0.0_f32; cols];
-                    let mut scratch = vec![0.0_f32; cols];
-                    self.row_values_with_scratch(encoded, &mut row, &mut scratch);
-                    for (dst, v) in acc.iter_mut().zip(row.iter()) {
-                        *dst += v * v;
-                    }
-                    acc
-                },
-            )
-            .reduce(
-                || vec![0.0_f32; cols],
-                |mut a, b| {
-                    for (av, bv) in a.iter_mut().zip(b.iter()) {
-                        *av += bv;
-                    }
-                    a
-                },
-            )
+        fold_reduce_with::<Adaptive, _, _, _, _>(
+            self.rows(),
+            || vec![0.0_f32; cols],
+            |mut acc, encoded| {
+                let mut row = vec![0.0_f32; cols];
+                let mut scratch = vec![0.0_f32; cols];
+                self.row_values_with_scratch(encoded, &mut row, &mut scratch);
+                for (dst, v) in acc.iter_mut().zip(row.iter()) {
+                    *dst += v * v;
+                }
+                acc
+            },
+            |mut a, b| {
+                for (av, bv) in a.iter_mut().zip(b.iter()) {
+                    *av += bv;
+                }
+                a
+            },
+        )
     }
 
     fn storage_values(&self) -> usize {
-        self.inner.storage_values() + self.spec.entries.len() * 2 + 3
+        self.inner.storage_values() + (self.spec.entries.len()) * 2 + 3
     }
 }
 
 impl<O: LinearOperator + Sync> EncodedOperator<O> {
     fn row_values_with_scratch(&self, row: usize, out: &mut [f32], scratch: &mut [f32]) {
         debug_assert!(row < self.rows());
-        debug_assert_eq!(out.len(), self.cols());
-        debug_assert_eq!(scratch.len(), self.cols());
+        debug_assert_eq!((out.len()), self.cols());
+        debug_assert_eq!((scratch.len()), self.cols());
         out.fill(0.0);
         for idx in self.spec.group_range(row) {
             let entry = self.spec.entries[idx];
@@ -226,7 +221,7 @@ pub fn encode_measurements<O: LinearOperator + Sync>(
     operator: &EncodedOperator<O>,
     data: &[f32],
 ) -> Vec<f32> {
-    debug_assert_eq!(data.len(), operator.encoding_spec().original_rows());
+    debug_assert_eq!((data.len()), operator.encoding_spec().original_rows());
     let mut encoded = vec![0.0_f32; operator.rows()];
     for (row, dst) in encoded.iter_mut().enumerate() {
         *dst = operator

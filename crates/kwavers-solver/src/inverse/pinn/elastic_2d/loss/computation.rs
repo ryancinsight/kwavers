@@ -3,13 +3,10 @@
 //! This module implements the loss computation logic for Physics-Informed
 //! Neural Networks, including PDE residuals, boundary conditions, and data fitting.
 
-#[cfg(feature = "pinn")]
-use burn::tensor::{backend::AutodiffBackend, ElementConversion, Tensor};
+use coeus_autograd::Var;
 
-#[cfg(feature = "pinn")]
 use crate::inverse::pinn::elastic_2d::config::LossWeights;
 
-#[cfg(feature = "pinn")]
 use super::data::ElasticPinnLossComponents;
 
 // ============================================================================
@@ -17,14 +14,12 @@ use super::data::ElasticPinnLossComponents;
 // ============================================================================
 
 /// Computes all loss components for PINN training
-#[cfg(feature = "pinn")]
 #[derive(Debug)]
 pub struct LossComputer {
     /// Loss weights
     pub weights: LossWeights,
 }
 
-#[cfg(feature = "pinn")]
 impl LossComputer {
     /// Create new loss computer with given weights
     pub fn new(weights: LossWeights) -> Self {
@@ -41,14 +36,14 @@ impl LossComputer {
     /// # Returns
     ///
     /// Mean squared residual
-    pub fn pde_loss<B: AutodiffBackend>(
+    pub fn pde_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        residual_x: Tensor<B, 2>,
-        residual_y: Tensor<B, 2>,
-    ) -> Tensor<B, 1> {
-        let loss_x = residual_x.powf_scalar(2.0).mean();
-        let loss_y = residual_y.powf_scalar(2.0).mean();
-        (loss_x + loss_y) * 0.5
+        residual_x: &Var<f32, B>,
+        residual_y: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let loss_x = coeus_autograd::mean(&coeus_autograd::mul(residual_x, residual_x));
+        let loss_y = coeus_autograd::mean(&coeus_autograd::mul(residual_y, residual_y));
+        coeus_autograd::scalar_mul(&coeus_autograd::add(&loss_x, &loss_y), 0.5)
     }
 
     /// Compute boundary condition loss
@@ -61,12 +56,13 @@ impl LossComputer {
     /// # Returns
     ///
     /// Mean squared error
-    pub fn boundary_loss<B: AutodiffBackend>(
+    pub fn boundary_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        predicted: Tensor<B, 2>,
-        target: Tensor<B, 2>,
-    ) -> Tensor<B, 1> {
-        (predicted - target).powf_scalar(2.0).mean()
+        predicted: &Var<f32, B>,
+        target: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let diff = coeus_autograd::sub(predicted, target);
+        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
     }
 
     /// Compute initial condition loss
@@ -81,16 +77,18 @@ impl LossComputer {
     /// # Returns
     ///
     /// Combined MSE for displacement and velocity
-    pub fn initial_loss<B: AutodiffBackend>(
+    pub fn initial_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        predicted_u: Tensor<B, 2>,
-        predicted_v: Tensor<B, 2>,
-        target_u: Tensor<B, 2>,
-        target_v: Tensor<B, 2>,
-    ) -> Tensor<B, 1> {
-        let loss_u = (predicted_u - target_u).powf_scalar(2.0).mean();
-        let loss_v = (predicted_v - target_v).powf_scalar(2.0).mean();
-        (loss_u + loss_v) * 0.5
+        predicted_u: &Var<f32, B>,
+        predicted_v: &Var<f32, B>,
+        target_u: &Var<f32, B>,
+        target_v: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let diff_u = coeus_autograd::sub(predicted_u, target_u);
+        let diff_v = coeus_autograd::sub(predicted_v, target_v);
+        let loss_u = coeus_autograd::mean(&coeus_autograd::mul(&diff_u, &diff_u));
+        let loss_v = coeus_autograd::mean(&coeus_autograd::mul(&diff_v, &diff_v));
+        coeus_autograd::scalar_mul(&coeus_autograd::add(&loss_u, &loss_v), 0.5)
     }
 
     /// Compute data fitting loss
@@ -103,12 +101,13 @@ impl LossComputer {
     /// # Returns
     ///
     /// Mean squared error
-    pub fn data_loss<B: AutodiffBackend>(
+    pub fn data_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        predicted: Tensor<B, 2>,
-        observed: Tensor<B, 2>,
-    ) -> Tensor<B, 1> {
-        (predicted - observed).powf_scalar(2.0).mean()
+        predicted: &Var<f32, B>,
+        observed: &Var<f32, B>,
+    ) -> Var<f32, B> {
+        let diff = coeus_autograd::sub(predicted, observed);
+        coeus_autograd::mean(&coeus_autograd::mul(&diff, &diff))
     }
 
     /// Compute total weighted loss
@@ -123,38 +122,48 @@ impl LossComputer {
     /// # Returns
     ///
     /// Weighted sum of all losses
-    pub fn total_loss<B: AutodiffBackend>(
+    pub fn total_loss<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        pde: Tensor<B, 1>,
-        boundary: Tensor<B, 1>,
-        initial: Tensor<B, 1>,
-        data: Option<Tensor<B, 1>>,
-    ) -> Tensor<B, 1> {
-        let mut total = pde * self.weights.pde
-            + boundary * self.weights.boundary
-            + initial * self.weights.initial;
+        pde: &Var<f32, B>,
+        boundary: &Var<f32, B>,
+        initial: &Var<f32, B>,
+        data: Option<&Var<f32, B>>,
+    ) -> Var<f32, B> {
+        let mut total = coeus_autograd::add(
+            &coeus_autograd::scalar_mul(pde, self.weights.pde as f32),
+            &coeus_autograd::add(
+                &coeus_autograd::scalar_mul(boundary, self.weights.boundary as f32),
+                &coeus_autograd::scalar_mul(initial, self.weights.initial as f32),
+            ),
+        );
 
         if let Some(data_loss) = data {
-            total = total + data_loss * self.weights.data;
+            total = coeus_autograd::add(
+                &total,
+                &coeus_autograd::scalar_mul(data_loss, self.weights.data as f32),
+            );
         }
 
         total
     }
 
     /// Extract scalar loss values for logging
-    pub fn extract_components<B: AutodiffBackend>(
+    pub fn extract_components<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>(
         &self,
-        pde: &Tensor<B, 1>,
-        boundary: &Tensor<B, 1>,
-        initial: &Tensor<B, 1>,
-        data: Option<&Tensor<B, 1>>,
-        total: &Tensor<B, 1>,
-    ) -> ElasticPinnLossComponents {
-        let pde_val: f64 = pde.clone().into_scalar().elem();
-        let boundary_val: f64 = boundary.clone().into_scalar().elem();
-        let initial_val: f64 = initial.clone().into_scalar().elem();
-        let data_val: f64 = data.map(|d| d.clone().into_scalar().elem()).unwrap_or(0.0);
-        let total_val: f64 = total.clone().into_scalar().elem();
+        pde: &Var<f32, B>,
+        boundary: &Var<f32, B>,
+        initial: &Var<f32, B>,
+        data: Option<&Var<f32, B>>,
+        total: &Var<f32, B>,
+    ) -> ElasticPinnLossComponents
+    where
+        B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
+    {
+        let pde_val = pde.tensor.as_slice()[0] as f64;
+        let boundary_val = boundary.tensor.as_slice()[0] as f64;
+        let initial_val = initial.tensor.as_slice()[0] as f64;
+        let data_val = data.map(|d| d.tensor.as_slice()[0] as f64).unwrap_or(0.0);
+        let total_val = total.tensor.as_slice()[0] as f64;
 
         ElasticPinnLossComponents {
             pde: pde_val,
@@ -166,11 +175,10 @@ impl LossComputer {
     }
 }
 
-#[cfg(all(test, feature = "pinn"))]
+#[cfg(test)]
 mod tests {
     use super::*;
 
-    #[cfg(feature = "pinn")]
     #[test]
     fn test_loss_computer_creation() {
         use crate::inverse::pinn::elastic_2d::config::LossWeights;

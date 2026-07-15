@@ -2,7 +2,7 @@ use super::*;
 use crate::cpml::{CPMLBoundary, CPMLConfig};
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_grid::{CartesianTopology, Grid};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_field_updater_creation() {
@@ -20,7 +20,7 @@ fn test_gradient_updater() {
     let mut grad_updater = GradientFieldUpdater::new(&topo);
 
     // Create test field with linear gradient in x
-    let mut field = Array3::zeros((32, 32, 32));
+    let mut field = Array3::zeros([32, 32, 32]);
     for i in 0..32 {
         for j in 0..32 {
             for k in 0..32 {
@@ -48,9 +48,9 @@ fn test_divergence_computation() {
     let topo = CartesianTopology::new([16, 16, 16], [0.1, 0.1, 0.1], [0.0, 0.0, 0.0]).unwrap();
 
     // Create uniform expansion field: v = (x, y, z)
-    let mut vx = Array3::zeros((16, 16, 16));
-    let mut vy = Array3::zeros((16, 16, 16));
-    let mut vz = Array3::zeros((16, 16, 16));
+    let mut vx = Array3::zeros([16, 16, 16]);
+    let mut vy = Array3::zeros([16, 16, 16]);
+    let mut vz = Array3::zeros([16, 16, 16]);
 
     for i in 0..16 {
         for j in 0..16 {

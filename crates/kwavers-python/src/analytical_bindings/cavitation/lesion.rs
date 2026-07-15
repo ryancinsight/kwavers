@@ -1,7 +1,7 @@
 //! Lesion-state and histotripsy-dose PyO3 wrappers.
 
 use kwavers_physics::analytical::cavitation;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -34,7 +34,7 @@ pub fn fractionation_backscatter_coefficient(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let out =
         cavitation::fractionation_backscatter_coefficient(f, sigma_intact, sigma_liquefied, gamma);
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Acoustic impedance of partially fractionated tissue (lesion-rim echo).
@@ -63,7 +63,7 @@ pub fn fractionation_acoustic_impedance(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let out = cavitation::fractionation_acoustic_impedance(f, z_intact, z_liquefied);
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Size boiling-histotripsy lesion and pulse count from a resolved pressure
@@ -156,7 +156,7 @@ pub fn boiling_time_profile_from_pressure(
             delta_t_k,
         )
     });
-    Ok(out.into_pyarray(py).unbind())
+    Ok(out.to_pyarray(py).unbind())
 }
 
 /// Lacuna gas void fraction in fractionated tissue from first-order gas-evolution

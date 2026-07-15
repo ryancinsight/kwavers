@@ -79,7 +79,9 @@ pub mod wall_filter;
 #[cfg(test)]
 mod cw_vector_tests;
 
-pub use autocorrelation::{AutocorrelationConfig, AutocorrelationEstimator};
+pub use autocorrelation::{
+    AutocorrelationConfig, AutocorrelationEstimate, AutocorrelationEstimator,
+};
 pub use book_fixture::{continuous_wave_vector_flow_fixture, ContinuousWaveVectorFlowFixture};
 pub use color_flow::{ColorFlowConfig, ColorFlowImaging, VelocityMap};
 pub use continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};

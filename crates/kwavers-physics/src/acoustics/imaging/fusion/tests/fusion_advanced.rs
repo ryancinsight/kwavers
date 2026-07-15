@@ -1,7 +1,7 @@
 //! Custom weights, probabilistic, and non-rigid fusion tests.
 
 use super::super::*;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_fusion_with_custom_weights() {
@@ -16,7 +16,7 @@ fn test_fusion_with_custom_weights() {
     };
 
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))
@@ -46,7 +46,7 @@ fn test_probabilistic_fusion_uncertainty() {
     };
 
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))
@@ -63,7 +63,7 @@ fn test_probabilistic_fusion_uncertainty() {
 
     // Probabilistic fusion should always provide uncertainty
     let uncertainty = result.uncertainty_map.unwrap();
-    assert_eq!(uncertainty.dim(), shape);
+    assert_eq!(uncertainty.shape(), shape);
 
     // Should have non-zero uncertainty due to variance between modalities
     for value in uncertainty.iter() {
@@ -80,7 +80,7 @@ fn test_nonrigid_fusion_succeeds() {
         ..Default::default()
     };
     let mut fusion = MultiModalFusion::new(config);
-    let shape = (4, 4, 2);
+    let shape = [4, 4, 2];
 
     fusion
         .register_ultrasound(&Array3::from_elem(shape, 1.0))
@@ -96,8 +96,8 @@ fn test_nonrigid_fusion_succeeds() {
     let fused = fusion.fuse().expect("NonRigid fusion should succeed");
     // Confidence map must span the fused image shape.
     assert_eq!(
-        fused.confidence_map.dim(),
-        fused.intensity_image.dim(),
+        fused.confidence_map.shape(),
+        fused.intensity_image.shape(),
         "confidence_map and intensity_image must have identical dimensions"
     );
 }

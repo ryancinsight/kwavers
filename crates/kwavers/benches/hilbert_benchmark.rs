@@ -3,7 +3,7 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 #[cfg(feature = "gpu")]
 use kwavers_gpu::gpu::pipeline::{RealtimeImagingPipeline, RealtimePipelineConfig};
 #[cfg(feature = "gpu")]
-use ndarray::Array4;
+use leto::Array4;
 
 #[cfg(feature = "gpu")]
 fn bench_pipeline_process(c: &mut Criterion) {

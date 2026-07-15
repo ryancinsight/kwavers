@@ -15,7 +15,7 @@
 //! - `kwavers_simulation` — orchestration, backends, modalities, result I/O (`io`)
 //! - `kwavers_analysis` — signal processing, beamforming, validation, ML, performance
 //! - `kwavers_diagnostics` / `kwavers_therapy` — clinical diagnostic imaging / therapy
-//! - `kwavers_gpu` (feature `"gpu"`) — WGPU compute backend
+//! - `kwavers_gpu` (feature `"gpu"`) - Hephaestus-backed provider-generic GPU backend
 //!
 //! This crate carries only the binary (`main.rs`), the cross-cutting integration
 //! tests / examples / benches, and the small application utilities below.
@@ -44,6 +44,7 @@
 
 use std::collections::HashMap;
 
+mod parallel;
 pub mod theranostic;
 
 /// Initialize logging for the kwavers application.

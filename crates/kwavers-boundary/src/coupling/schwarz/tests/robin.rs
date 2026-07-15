@@ -2,7 +2,7 @@
 
 use super::super::SchwarzBoundary;
 use crate::coupling::types::{BoundaryDirections, BoundaryTransmissionCondition};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_schwarz_robin_condition() {
@@ -10,8 +10,8 @@ fn test_schwarz_robin_condition() {
     let ny = 10;
     let nz = 10;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 10.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 20.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 10.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 20.0);
 
     let alpha = 0.5;
     let beta = 0.0;
@@ -43,8 +43,8 @@ fn test_schwarz_robin_with_nonzero_beta() {
     let ny = 8;
     let nz = 8;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 5.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 10.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 5.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 10.0);
 
     let alpha = 1.0;
     let beta = 2.0;
@@ -69,8 +69,8 @@ fn test_schwarz_robin_zero_alpha() {
     let ny = 5;
     let nz = 5;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 15.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 25.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 15.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 25.0);
 
     let boundary = SchwarzBoundary::new(1.0, BoundaryDirections::all())
         .with_transmission_condition(BoundaryTransmissionCondition::Robin {
@@ -96,8 +96,8 @@ fn test_schwarz_robin_analytical_validation() {
     let ny = 5;
     let nz = 5;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 300.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 350.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 300.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 350.0);
 
     let alpha = 0.1;
     let beta = 0.0;
@@ -130,8 +130,8 @@ fn test_schwarz_robin_energy_stability() {
     let ny = 8;
     let nz = 8;
 
-    let mut interface_field = Array3::<f64>::ones((nx, ny, nz)) * 5.0;
-    let neighbor_field = Array3::<f64>::ones((nx, ny, nz)) * 10.0;
+    let mut interface_field = Array3::<f64>::from_elem((nx, ny, nz), 5.0);
+    let neighbor_field = Array3::<f64>::from_elem((nx, ny, nz), 10.0);
 
     let alpha = 1.0;
 

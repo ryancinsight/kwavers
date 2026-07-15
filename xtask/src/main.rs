@@ -15,6 +15,7 @@ mod architecture;
 use architecture::validate_architecture;
 
 mod fixes;
+mod migration_audit;
 
 #[derive(Parser)]
 #[command(name = "xtask")]
@@ -101,6 +102,14 @@ enum Command {
         #[arg(long, default_value_t = 600)]
         timeout_secs: u64,
     },
+    /// Audit legacy nalgebra/ndarray/burn/tokio/rayon migration surface.
+    LegacyMigrationAudit,
+    /// Refresh the legacy migration allowlist baseline file.
+    RefreshLegacyAllowlist,
+    /// Audit direct Burn migration surface during the Coeus cleanup.
+    BurnMigrationAudit,
+    /// Refresh the Burn migration allowlist baseline file.
+    RefreshBurnAllowlist,
 }
 
 fn main() -> Result<()> {
@@ -128,6 +137,16 @@ fn main() -> Result<()> {
             component,
             timeout_secs,
         } => validate_parity(skip_build, standalone_only, component, timeout_secs),
+        Command::LegacyMigrationAudit => {
+            migration_audit::print_legacy_migration_audit(&workspace_root())
+        }
+        Command::RefreshLegacyAllowlist => {
+            migration_audit::refresh_legacy_allowlist(&workspace_root())
+        }
+        Command::BurnMigrationAudit => {
+            migration_audit::print_burn_migration_audit(&workspace_root())
+        }
+        Command::RefreshBurnAllowlist => migration_audit::refresh_burn_allowlist(&workspace_root()),
     }
 }
 

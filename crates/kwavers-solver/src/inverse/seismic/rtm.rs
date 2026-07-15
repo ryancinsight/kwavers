@@ -6,7 +6,8 @@
 use super::parameters::{ImagingCondition, RtmSettings};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 /// Reverse Time Migration processor
 /// Follows Single Responsibility Principle - only handles RTM computations
@@ -37,12 +38,12 @@ impl RtmProcessor {
     /// desired correlation lag.
     ///
     /// For full time-domain multi-shot RTM with internally driven propagation,
-    /// use [`ReverseTimeMigration::migrate_shot`] from the
+    /// use [`crate::inverse::reconstruction::seismic::ReverseTimeMigration::migrate_shot`] from the
     /// `reconstruction::seismic::rtm` module, which performs 4th-order FD
     /// propagation and time-step accumulation internally.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     /// Reference: Baysal et al. (1983), *Geophysics* **48**(11), 1514–1524.
     pub fn migrate(
@@ -92,14 +93,25 @@ impl RtmProcessor {
         source_wavefield: &Array3<f64>,
         receiver_wavefield: &Array3<f64>,
     ) {
-        use ndarray::Zip;
-
-        Zip::from(image)
-            .and(source_wavefield)
-            .and(receiver_wavefield)
-            .par_for_each(|img, &src, &rcv| {
-                *img += src * rcv;
+        if let (Some(image), Some(source), Some(receiver)) = (
+            image.as_slice_mut(),
+            source_wavefield.as_slice(),
+            receiver_wavefield.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(image, |index, img| {
+                *img += source[index] * receiver[index];
             });
+        } else {
+            leto_ops::zip2_mut_with(
+                &mut image.view_mut(),
+                &source_wavefield.view(),
+                &receiver_wavefield.view(),
+                |img, src, rcv| {
+                    *img += *src * *rcv;
+                },
+            )
+            .expect("invariant: RTM correlation field shapes asserted equal");
+        }
     }
 
     /// Apply source-illumination-compensated imaging condition.
@@ -138,26 +150,37 @@ impl RtmProcessor {
         source_wavefield: &Array3<f64>,
         receiver_wavefield: &Array3<f64>,
     ) -> KwaversResult<()> {
-        use ndarray::Zip;
-
-        // Source illumination: Φ(x) = S²(x)
-        let mut source_illumination = Array3::zeros(source_wavefield.dim());
-        Zip::from(&mut source_illumination)
-            .and(source_wavefield)
-            .par_for_each(|phi, &src| *phi = src * src);
-
         // I_norm(x) = S(x)·R(x) / (Φ(x) + ε)
-        Zip::from(image)
-            .and(source_wavefield)
-            .and(receiver_wavefield)
-            .and(&source_illumination)
-            .par_for_each(|img, &src, &rcv, &phi| {
+        if let (Some(image), Some(source), Some(receiver)) = (
+            image.as_slice_mut(),
+            source_wavefield.as_slice(),
+            receiver_wavefield.as_slice(),
+        ) {
+            enumerate_mut_with::<Adaptive, _, _>(image, |index, img| {
+                let src = source[index];
+                let phi = src * src;
                 *img = if phi > f64::EPSILON {
-                    src * rcv / phi
+                    src * receiver[index] / phi
                 } else {
                     0.0
                 };
             });
+        } else {
+            leto_ops::zip2_mut_with(
+                &mut image.view_mut(),
+                &source_wavefield.view(),
+                &receiver_wavefield.view(),
+                |img, src, rcv| {
+                    let phi = *src * *src;
+                    *img = if phi > f64::EPSILON {
+                        *src * *rcv / phi
+                    } else {
+                        0.0
+                    };
+                },
+            )
+            .expect("invariant: RTM normalized correlation field shapes asserted equal");
+        }
 
         Ok(())
     }
@@ -217,7 +240,7 @@ impl Default for RtmProcessor {
 mod tests {
     use super::*;
     use kwavers_grid::Grid;
-    use ndarray::Array3;
+    use leto::Array3;
 
     /// Zero-lag imaging condition: I(x) = S(x)·R(x).
     ///
@@ -234,7 +257,7 @@ mod tests {
             .migrate(&source_field, &receiver_field, &grid)
             .unwrap();
 
-        assert_eq!(image.dim(), (10, 10, 10));
+        assert_eq!(image.shape(), [10, 10, 10]);
         // I(x) = 1·1 = 1 everywhere.
         assert!(
             image.iter().all(|&v| (v - 1.0).abs() < f64::EPSILON),
@@ -262,8 +285,8 @@ mod tests {
         let processor = RtmProcessor::new(settings);
         let grid = Grid::new(5, 5, 5, 1e-3, 1e-3, 1e-3).unwrap();
 
-        let source_field = Array3::from_elem((5, 5, 5), 3.0_f64);
-        let receiver_field = Array3::from_elem((5, 5, 5), 6.0_f64);
+        let source_field = Array3::from_elem([5, 5, 5], 3.0_f64);
+        let receiver_field = Array3::from_elem([5, 5, 5], 6.0_f64);
 
         let image = processor
             .migrate(&source_field, &receiver_field, &grid)

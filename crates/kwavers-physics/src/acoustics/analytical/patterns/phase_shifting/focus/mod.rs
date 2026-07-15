@@ -6,7 +6,7 @@
 //! - Ebbini & Cain (1989): "Multiple-focus ultrasound phased-array pattern synthesis"
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 use crate::phase_modulation::phase_shifting::core::{
     calculate_wavelength, wrap_phase, MAX_FOCAL_POINTS, MIN_FOCAL_DISTANCE,
@@ -37,13 +37,13 @@ impl DynamicFocusing {
     ///
     #[must_use]
     pub fn new(element_positions: Array2<f64>, frequency: f64) -> Self {
-        let num_elements = element_positions.nrows();
+        let num_elements = element_positions.shape()[0];
         Self {
             element_positions,
             frequency,
             focal_points: Vec::new(),
-            phase_distribution: Array1::zeros(num_elements),
-            amplitude_weights: Array1::ones(num_elements),
+            phase_distribution: Array1::zeros([num_elements]),
+            amplitude_weights: Array1::ones([num_elements]),
         }
     }
 
@@ -117,11 +117,11 @@ impl DynamicFocusing {
                 )
                 .sqrt();
 
-            for i in 0..self.element_positions.nrows() {
-                let pos = self.element_positions.row(i);
-                let dx = focal_point[0] - pos[0];
-                let dy = focal_point[1] - pos[1];
-                let dz = focal_point[2] - pos[2];
+            for i in 0..self.element_positions.shape()[0] {
+                let pos = self.element_positions.index_axis(0, i).unwrap();
+                let dx = focal_point[0] - pos[[0]];
+                let dy = focal_point[1] - pos[[1]];
+                let dz = focal_point[2] - pos[[2]];
                 let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
                 // Superposition of phases
@@ -131,7 +131,7 @@ impl DynamicFocusing {
         }
 
         // Wrap phases
-        for phase in &mut self.phase_distribution {
+        for phase in self.phase_distribution.iter_mut() {
             *phase = wrap_phase(*phase);
         }
 
@@ -167,11 +167,11 @@ impl DynamicFocusing {
         let mut sum_real = 0.0;
         let mut sum_imag = 0.0;
 
-        for i in 0..self.element_positions.nrows() {
-            let pos = self.element_positions.row(i);
-            let dx = x - pos[0];
-            let dy = y - pos[1];
-            let dz = z - pos[2];
+        for i in 0..self.element_positions.shape()[0] {
+            let pos = self.element_positions.index_axis(0, i).unwrap();
+            let dx = x - pos[[0]];
+            let dy = y - pos[[1]];
+            let dz = z - pos[[2]];
             let distance = dz.mul_add(dz, dx.mul_add(dx, dy * dy)).sqrt();
 
             let phase = self.phase_distribution[i] + k * distance;
@@ -181,7 +181,7 @@ impl DynamicFocusing {
             sum_imag += amplitude * phase.sin();
         }
 
-        sum_imag.mul_add(sum_imag, sum_real.powi(2)) / self.element_positions.nrows() as f64
+        sum_imag.mul_add(sum_imag, sum_real.powi(2)) / self.element_positions.shape()[0] as f64
     }
 }
 
@@ -190,10 +190,10 @@ mod tests {
     use super::*;
     use approx::assert_relative_eq;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use ndarray::arr2;
 
     fn linear_array() -> Array2<f64> {
-        arr2(&[[-0.001, 0.0, 0.0], [0.0, 0.0, 0.0], [0.001, 0.0, 0.0]])
+        let data = vec![-0.001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.001, 0.0, 0.0];
+        Array2::from_shape_vec([3, 3], data).expect("valid 3x3 array")
     }
 
     #[test]

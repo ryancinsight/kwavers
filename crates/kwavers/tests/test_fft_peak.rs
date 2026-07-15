@@ -1,5 +1,5 @@
 use kwavers_math::fft::{Complex64, Fft3d, Fft3dInOutExt, Shape3D};
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_fft_peak_scaling() {
@@ -8,10 +8,10 @@ fn test_fft_peak_scaling() {
     let nz = 64;
     let shape = Shape3D::new(nx, ny, nz).expect("valid shape");
     let processor = Fft3d::new(shape);
-    let mut real_in = Array3::<f64>::zeros((nx, ny, nz));
+    let mut real_in = Array3::<f64>::zeros([nx, ny, nz]);
     real_in[[nx / 2, ny / 2, nz / 2]] = 1.0;
 
-    let mut complex_out = Array3::<Complex64>::zeros((nx, ny, nz));
+    let mut complex_out = Array3::<Complex64>::zeros([nx, ny, nz]);
     processor.forward_into(&real_in, &mut complex_out);
 
     let dx = 1e-3;
@@ -43,8 +43,8 @@ fn test_fft_peak_scaling() {
         }
     }
 
-    let mut real_out = Array3::<f64>::zeros((nx, ny, nz));
-    let mut scratch = Array3::<Complex64>::zeros((nx, ny, nz));
+    let mut real_out = Array3::<f64>::zeros([nx, ny, nz]);
+    let mut scratch = Array3::<Complex64>::zeros([nx, ny, nz]);
     processor.inverse_into(&complex_out, &mut real_out, &mut scratch);
 
     let peak = real_out.iter().fold(0.0f64, |m, &v| m.max(v.abs()));

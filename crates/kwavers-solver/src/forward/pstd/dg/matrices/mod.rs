@@ -50,7 +50,7 @@ use super::basis::{fourier_theta, validate_fourier_nodes, BasisType};
 use kwavers_core::error::KwaversResult;
 use kwavers_core::error::{KwaversError, NumericalError};
 use kwavers_math::special::legendre::legendre_poly_and_deriv;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 
 /// Compute mass matrix using quadrature
 /// M_ij = integral(phi_i * phi_j)
@@ -76,7 +76,7 @@ pub fn compute_mass_matrix(
 /// Compute stiffness matrix
 /// S_ij = integral(phi_i * phi'_j)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn compute_stiffness_matrix(
     vandermonde: &Array2<f64>,
@@ -106,7 +106,7 @@ pub fn compute_stiffness_matrix(
 
 /// Compute differentiation matrix D_ij = l'_j(x_i)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any [`crate::KwaversError`] returned by called functions.
 ///
 pub fn compute_diff_matrix(
     vandermonde: &Array2<f64>,
@@ -114,7 +114,7 @@ pub fn compute_diff_matrix(
     basis_type: BasisType,
 ) -> KwaversResult<Array2<f64>> {
     let n = nodes.len();
-    let n_modes = vandermonde.ncols();
+    let n_modes = vandermonde.shape()[1];
     let mut vr = Array2::zeros((n, n_modes));
 
     match basis_type {
@@ -159,8 +159,10 @@ pub fn compute_diff_matrix(
     // Compute V^-1
     let v_inv = matrix_inverse(vandermonde)?;
 
-    // D = Vr * V_inv
-    let d = vr.dot(&v_inv);
+    // D = Vr · V_inv  (dense matrix–matrix product)
+    let mut d = Array2::<f64>::zeros((vr.shape()[0], v_inv.shape()[1]));
+    leto_ops::matmul(&vr.view(), &v_inv.view(), &mut d.view_mut())
+        .expect("invariant: DG derivative matrix Vr·V⁻¹ conforms");
 
     Ok(d)
 }
@@ -189,12 +191,12 @@ pub fn compute_lift_matrix(
 
 /// Simple matrix inversion using Gauss-Jordan elimination
 /// # Errors
-/// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-/// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
+/// - Returns [`crate::KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
+/// - Returns [`crate::KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
 ///
 pub fn matrix_inverse(a: &Array2<f64>) -> KwaversResult<Array2<f64>> {
-    let n = a.nrows();
-    if a.ncols() != n {
+    let n = a.shape()[0];
+    if a.shape()[1] != n {
         return Err(KwaversError::DimensionMismatch(
             "Matrix must be square for inversion".to_owned(),
         ));

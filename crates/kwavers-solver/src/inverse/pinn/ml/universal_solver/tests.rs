@@ -6,7 +6,7 @@ use std::time::Duration;
 
 #[test]
 fn test_universal_solver_creation() {
-    let solver = UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new();
+    let solver = UniversalPINNSolver::<coeus_core::MoiraiBackend>::new();
     let solver = solver.unwrap();
     assert!(solver.available_domains().is_empty());
 }
@@ -22,7 +22,7 @@ fn test_geometry_creation() {
 fn test_geometry_with_obstacle() {
     let geometry = UniversalSolverGeometry2D::rectangle(0.0, 2.0, 0.0, 1.0)
         .with_circle_obstacle((0.5, 0.5), 0.1);
-    assert_eq!(geometry.features.len(), 1);
+    assert_eq!((geometry.features.len()), 1);
     match &geometry.features[0] {
         GeometricFeature::Circle { center, radius } => {
             assert_eq!(*center, (0.5, 0.5));
@@ -34,8 +34,7 @@ fn test_geometry_with_obstacle() {
 
 #[test]
 fn test_point_in_geometry() {
-    let solver =
-        UniversalPINNSolver::<burn::backend::Autodiff<burn::backend::NdArray<f32>>>::new().unwrap();
+    let solver = UniversalPINNSolver::<coeus_core::MoiraiBackend>::new().unwrap();
     let geometry = UniversalSolverGeometry2D::rectangle(0.0, 1.0, 0.0, 1.0)
         .with_circle_obstacle((0.5, 0.5), 0.2);
 

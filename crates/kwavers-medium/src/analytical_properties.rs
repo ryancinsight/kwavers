@@ -6,7 +6,7 @@
 
 use kwavers_core::constants::optical::VACUUM_IMPEDANCE;
 use kwavers_core::constants::{DENSITY_WATER, SOUND_SPEED_WATER};
-use ndarray::Array2;
+use leto::Array2;
 
 /// Medium properties for wave propagation
 #[derive(Debug, Clone)]

@@ -1,7 +1,7 @@
 //! Interpolation operator trait.
 
 use kwavers_core::error::KwaversResult;
-use ndarray::{Array1, Array3, ArrayView1, ArrayView3};
+use leto::{Array1, Array3, ArrayView1, ArrayView3};
 
 /// Trait for all spatial interpolation operators.
 ///

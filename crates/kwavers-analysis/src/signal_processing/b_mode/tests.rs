@@ -3,7 +3,7 @@
 use super::detection::{envelope, log_compress};
 use super::scan_conversion::{CartesianGrid, ScanConverter, ScanGeometry};
 use super::tgc::TgcConfig;
-use ndarray::{Array1, Array2};
+use leto::{Array1, Array2};
 use std::f64::consts::PI;
 
 // ── Time-gain compensation ────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ fn tgc_flattens_attenuated_echoes() {
     let cfg = tgc_config();
     let n = 8000;
     // Equal reflectors attenuated by the round-trip law: a(i) = 10^(−A(z)/20).
-    let attenuated = Array1::from_shape_fn(n, |i| {
+    let attenuated = Array1::from_shape_fn(n, |[i]| {
         let z_cm = cfg.depth_m(i) * 100.0;
         let a_db = 2.0 * cfg.attenuation_db_cm_mhz * cfg.frequency_mhz * z_cm;
         10.0_f64.powf(-a_db / 20.0)
@@ -66,7 +66,7 @@ fn envelope_of_tone_equals_amplitude() {
     let n = 1024;
     let amp = 2.5;
     let f = 0.1; // cycles/sample
-    let rf = Array1::from_shape_fn(n, |i| amp * (2.0 * PI * f * i as f64).cos());
+    let rf = Array1::from_shape_fn(n, |[i]| amp * (2.0 * PI * f * i as f64).cos());
     let env = envelope(&rf);
     // Interior envelope of a pure tone is the amplitude (edges ring from FFT).
     for i in 100..n - 100 {

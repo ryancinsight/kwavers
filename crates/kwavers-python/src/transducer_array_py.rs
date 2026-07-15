@@ -1,4 +1,4 @@
-use ndarray::Array1;
+use leto::Array1;
 use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
@@ -211,7 +211,7 @@ impl TransducerArray2D {
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        self.input_signal = Some(signal_arr);
+        self.input_signal = Some(signal_arr.into());
         Ok(())
     }
 

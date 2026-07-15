@@ -7,7 +7,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_field::indices::{LIGHT_IDX, PRESSURE_IDX, TEMPERATURE_IDX, TOTAL_FIELDS};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::sync::Arc;
 
 /// Unified multi-physics solver
@@ -52,7 +52,7 @@ impl CoupledMultiPhysicsSolver {
 
     /// Step the multi-physics simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn step(&mut self, dt: f64) -> KwaversResult<()> {
         // Apply field coupling

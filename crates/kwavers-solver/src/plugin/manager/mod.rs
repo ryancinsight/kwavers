@@ -8,7 +8,7 @@ use crate::plugin::{Plugin, PluginFields};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 /// Per-plugin and total execution timings.
@@ -63,7 +63,7 @@ pub struct PluginManager {
 impl std::fmt::Debug for PluginManager {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PluginManager")
-            .field("plugins_count", &self.plugins.len())
+            .field("plugins_count", &(self.plugins.len()))
             .field("execution_order", &self.execution_order)
             .field("execution_strategy", &"<dyn ExecutionStrategy>")
             .field("extra_fields", &self.extra_fields)
@@ -92,7 +92,7 @@ impl PluginManager {
 
     /// Initialize all plugins.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize_all(
         &mut self,
@@ -107,7 +107,7 @@ impl PluginManager {
 
     /// Initialize all plugins (alias for `initialize_all`).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn initialize(&mut self, grid: &Grid, medium: &dyn Medium) -> KwaversResult<()> {
         for plugin in &mut self.plugins {
@@ -118,7 +118,7 @@ impl PluginManager {
 
     /// Finalize all plugins.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn finalize(&mut self) -> KwaversResult<()> {
         for plugin in &mut self.plugins {

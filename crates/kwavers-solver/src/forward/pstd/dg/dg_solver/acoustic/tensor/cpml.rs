@@ -36,9 +36,10 @@
 //! recursive-convolution post-updates and preserves the formal third-order
 //! accuracy of the stepper.
 
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 use super::super::super::core::DGSolver;
+use super::super::super::rk_update::{update_euler, update_ssp_final, update_ssp_second};
 use super::boundary::add_axis_surface_flux;
 use super::{velocity_var, AcousticDgTensorWorkspace, ACOUSTIC_PRESSURE_VAR};
 use crate::forward::pstd::dg::cpml::{
@@ -68,40 +69,40 @@ impl DGSolver {
         memory_rhs: &mut Array3<f64>,
     ) -> KwaversResult<()> {
         let topology = super::validate_tensor_state(self, state, density)?;
-        let expected_field = state.dim();
-        let expected_memory = (expected_field.0, expected_field.1, DG_CPML_MEMORY_VARS);
-        if rhs.dim() != expected_field {
+        let expected_field = state.shape();
+        let expected_memory = [expected_field[0], expected_field[1], DG_CPML_MEMORY_VARS];
+        if rhs.shape() != expected_field {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML field RHS shape {:?} does not match state {:?}",
-                rhs.dim(),
+                rhs.shape(),
                 expected_field
             )));
         }
-        if memory_state.dim() != expected_memory {
+        if memory_state.shape() != expected_memory {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML memory state shape {:?} does not match expected {:?}",
-                memory_state.dim(),
+                memory_state.shape(),
                 expected_memory
             )));
         }
-        if memory_rhs.dim() != expected_memory {
+        if memory_rhs.shape() != expected_memory {
             return Err(KwaversError::InvalidInput(format!(
                 "DG CPML memory RHS shape {:?} does not match expected {:?}",
-                memory_rhs.dim(),
+                memory_rhs.shape(),
                 expected_memory
             )));
         }
         for (axis, profile) in profiles.axes.iter().enumerate() {
             let expected = topology.element_counts[axis] * self.n_nodes;
-            if profile.sigma.len() != expected
-                || profile.kappa.len() != expected
-                || profile.alpha.len() != expected
+            if (profile.sigma.len()) != expected
+                || (profile.kappa.len()) != expected
+                || (profile.alpha.len()) != expected
             {
                 return Err(KwaversError::InvalidInput(format!(
                     "DG CPML profile axis {axis} length mismatch: σ={}, κ={}, α={}, expected {}",
-                    profile.sigma.len(),
-                    profile.kappa.len(),
-                    profile.alpha.len(),
+                    (profile.sigma.len()),
+                    (profile.kappa.len()),
+                    (profile.alpha.len()),
                     expected
                 )));
             }
@@ -122,9 +123,9 @@ impl DGSolver {
         // 8 bytes). The CPML branch trades this extra working memory for a
         // clean per-axis separation that the standard RHS does not need.
         let mut surface_rhs_per_axis: [Array3<f64>; 3] = [
-            Array3::zeros(state.dim()),
-            Array3::zeros(state.dim()),
-            Array3::zeros(state.dim()),
+            Array3::zeros(state.shape()),
+            Array3::zeros(state.shape()),
+            Array3::zeros(state.shape()),
         ];
         for (axis, rhs_axis) in surface_rhs_per_axis.iter_mut().enumerate() {
             if !topology.active_axes[axis] {
@@ -168,9 +169,9 @@ impl DGSolver {
                     for j in 0..self.n_nodes {
                         let source_node = topology.node_with_axis(node, axis, j);
                         du += self.diff_matrix[[node_coords[axis], j]]
-                            * state[(elem, source_node, velocity_var)];
+                            * state[[elem, source_node, velocity_var]];
                         dp += self.diff_matrix[[node_coords[axis], j]]
-                            * state[(elem, source_node, ACOUSTIC_PRESSURE_VAR)];
+                            * state[[elem, source_node, ACOUSTIC_PRESSURE_VAR]];
                     }
                     axis_du[axis * nodes_per_element + node] = axis_scales[axis] * du;
                     axis_dp[axis * nodes_per_element + node] = axis_scales[axis] * dp;
@@ -190,8 +191,8 @@ impl DGSolver {
                 }
                 let velocity_var = velocity_var(axis);
                 for node in 0..nodes_per_element {
-                    let surface_p = surface_rhs_per_axis[axis][(elem, node, ACOUSTIC_PRESSURE_VAR)];
-                    let surface_u = surface_rhs_per_axis[axis][(elem, node, velocity_var)];
+                    let surface_p = surface_rhs_per_axis[axis][[elem, node, ACOUSTIC_PRESSURE_VAR]];
+                    let surface_u = surface_rhs_per_axis[axis][[elem, node, velocity_var]];
                     axis_du[axis * nodes_per_element + node] += -surface_p / bulk;
                     axis_dp[axis * nodes_per_element + node] += -surface_u / inv_density;
                 }
@@ -214,18 +215,18 @@ impl DGSolver {
                     let raw_dp = axis_dp[axis * nodes_per_element + node];
                     let pi = pressure_memory_index(axis);
                     let vi = velocity_memory_index(axis);
-                    let psi_p = memory_state[(elem, node, pi)];
-                    let psi_u = memory_state[(elem, node, vi)];
+                    let psi_p = memory_state[[elem, node, pi]];
+                    let psi_u = memory_state[[elem, node, vi]];
 
                     // Field RHS: stretched derivative.
-                    rhs[(elem, node, ACOUSTIC_PRESSURE_VAR)] -= bulk * (raw_du / kappa + psi_p);
-                    rhs[(elem, node, velocity_var)] -= inv_density * (raw_dp / kappa + psi_u);
+                    rhs[[elem, node, ACOUSTIC_PRESSURE_VAR]] -= bulk * (raw_du / kappa + psi_p);
+                    rhs[[elem, node, velocity_var]] -= inv_density * (raw_dp / kappa + psi_u);
 
                     // Memory RHS: first-order auxiliary ODE.
                     let decay = sigma / kappa + alpha;
                     let drive = sigma / (kappa * kappa);
-                    memory_rhs[(elem, node, pi)] = -decay * psi_p - drive * raw_du;
-                    memory_rhs[(elem, node, vi)] = -decay * psi_u - drive * raw_dp;
+                    memory_rhs[[elem, node, pi]] = -decay * psi_p - drive * raw_du;
+                    memory_rhs[[elem, node, vi]] = -decay * psi_u - drive * raw_dp;
                 }
             }
         }
@@ -286,8 +287,8 @@ impl DGSolver {
         F: FnMut(f64, &mut Array3<f64>),
     {
         super::validate_tensor_state(self, state, density)?;
-        workspace.ensure_dim(state.dim());
-        memory.ensure_dim(state.dim().0, state.dim().1);
+        workspace.ensure_dim((state.shape()[0], state.shape()[1], state.shape()[2]));
+        memory.ensure_dim(state.shape()[0], state.shape()[1]);
         workspace.original.assign(state);
         memory.original.assign(&memory.state);
 
@@ -301,14 +302,13 @@ impl DGSolver {
             &mut memory.rhs,
         )?;
         add_source_rhs(t, &mut workspace.rhs);
-        Zip::from(&mut workspace.stage)
-            .and(&workspace.original)
-            .and(&workspace.rhs)
-            .for_each(|stage, &q0, &rhs| *stage = q0 + dt * rhs);
-        Zip::from(&mut memory.stage)
-            .and(&memory.original)
-            .and(&memory.rhs)
-            .for_each(|stage, &psi0, &rhs| *stage = psi0 + dt * rhs);
+        update_euler(
+            &mut workspace.stage,
+            &workspace.original,
+            &workspace.rhs,
+            dt,
+        );
+        update_euler(&mut memory.stage, &memory.original, &memory.rhs, dt);
 
         // Stage 2: q^{(2)} = 3/4 q^n + 1/4 (q^{(1)} + dt·R(q^{(1)}))
         self.compute_acoustic_tensor_rhs_with_cpml_into(
@@ -320,20 +320,13 @@ impl DGSolver {
             &mut memory.rhs,
         )?;
         add_source_rhs(t + dt, &mut workspace.rhs);
-        Zip::from(&mut workspace.stage)
-            .and(&workspace.original)
-            .and(&workspace.rhs)
-            .for_each(|stage, &q0, &rhs| {
-                let q1 = *stage;
-                *stage = 0.75 * q0 + 0.25 * (q1 + dt * rhs);
-            });
-        Zip::from(&mut memory.stage)
-            .and(&memory.original)
-            .and(&memory.rhs)
-            .for_each(|stage, &psi0, &rhs| {
-                let psi1 = *stage;
-                *stage = 0.75 * psi0 + 0.25 * (psi1 + dt * rhs);
-            });
+        update_ssp_second(
+            &mut workspace.stage,
+            &workspace.original,
+            &workspace.rhs,
+            dt,
+        );
+        update_ssp_second(&mut memory.stage, &memory.original, &memory.rhs, dt);
 
         // Stage 3: q^{n+1} = 1/3 q^n + 2/3 (q^{(2)} + dt·R(q^{(2)}))
         self.compute_acoustic_tensor_rhs_with_cpml_into(
@@ -345,20 +338,20 @@ impl DGSolver {
             &mut memory.rhs,
         )?;
         add_source_rhs(t + 0.5 * dt, &mut workspace.rhs);
-        Zip::from(state)
-            .and(&workspace.original)
-            .and(&workspace.stage)
-            .and(&workspace.rhs)
-            .for_each(|q_new, &q0, &q2, &rhs| {
-                *q_new = (1.0 / 3.0) * q0 + (2.0 / 3.0) * (q2 + dt * rhs);
-            });
-        Zip::from(&mut memory.state)
-            .and(&memory.original)
-            .and(&memory.stage)
-            .and(&memory.rhs)
-            .for_each(|psi_new, &psi0, &psi2, &rhs| {
-                *psi_new = (1.0 / 3.0) * psi0 + (2.0 / 3.0) * (psi2 + dt * rhs);
-            });
+        update_ssp_final(
+            state,
+            &workspace.original,
+            &workspace.stage,
+            &workspace.rhs,
+            dt,
+        );
+        update_ssp_final(
+            &mut memory.state,
+            &memory.original,
+            &memory.stage,
+            &memory.rhs,
+            dt,
+        );
         Ok(())
     }
 }

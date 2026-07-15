@@ -1,6 +1,13 @@
 use super::*;
 use kwavers_core::constants::numerical::TWO_PI;
-use ndarray::Array2;
+use leto::Array2;
+
+/// Population standard deviation (ddof = 0) over all elements.
+fn population_std(a: &Array2<f64>) -> f64 {
+    let n = a.size() as f64;
+    let mean = a.iter().sum::<f64>() / n;
+    (a.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / n).sqrt()
+}
 
 #[test]
 fn test_config_validation() {
@@ -44,8 +51,8 @@ fn test_filter_with_synthetic_data() {
     let filtered = filter.filter(&data).unwrap();
 
     // Check that filtering reduced high-amplitude components
-    let original_std = data.std(0.0);
-    let filtered_std = filtered.std(0.0);
+    let original_std = population_std(&data);
+    let filtered_std = population_std(&filtered);
     assert!(filtered_std < original_std);
 }
 
@@ -67,7 +74,7 @@ fn test_auto_rank_selection() {
     let filter = SignalSvdClutterFilter::new(config).unwrap();
     let filtered = filter.filter(&data).unwrap();
 
-    assert_eq!(filtered.dim(), data.dim());
+    assert_eq!(filtered.shape(), data.shape());
 }
 
 #[test]
@@ -79,7 +86,7 @@ fn test_power_doppler_computation() {
     let n_pixels = 10;
     let n_frames = 100;
     let filtered =
-        Array2::<f64>::from_shape_fn((n_pixels, n_frames), |(i, t)| ((i + t) as f64).sin());
+        Array2::<f64>::from_shape_fn((n_pixels, n_frames), |[i, t]| ((i + t) as f64).sin());
 
     let power_doppler = filter.compute_power_doppler(&filtered);
 
@@ -120,5 +127,5 @@ fn test_ensemble_length_validation() {
     // Sufficient ensemble
     let good_data = Array2::<f64>::zeros((10, 150));
     let filtered_good = filter.filter(&good_data).unwrap();
-    assert_eq!(filtered_good.dim(), good_data.dim());
+    assert_eq!(filtered_good.shape(), good_data.shape());
 }

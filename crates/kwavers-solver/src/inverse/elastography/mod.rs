@@ -237,7 +237,7 @@ mod tests {
         let map = inversion
             .reconstruct(&displacement, &grid)
             .expect("Linear inversion pipeline should succeed");
-        assert_eq!(map.shear_wave_speed.dim(), (20, 20, 20));
+        assert_eq!(map.shear_wave_speed.shape(), [20, 20, 20]);
     }
 
     #[test]

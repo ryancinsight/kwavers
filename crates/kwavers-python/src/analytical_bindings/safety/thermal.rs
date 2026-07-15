@@ -1,7 +1,7 @@
 //! Thermal-index and CEM43 safety bindings.
 
 use kwavers_physics::analytical::safety;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -69,7 +69,7 @@ pub fn cem43_cumulative(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = safety::cem43_cumulative(t_s, dt_s);
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Chapter 7 closed-loop focal-temperature and CEM43 dose fixture.
@@ -93,27 +93,27 @@ pub fn closed_loop_cem43_fixture<'py>(
     .map_err(PyValueError::new_err)?;
 
     let out = PyDict::new(py);
-    out.set_item("time_s", fixture.time_s.into_pyarray(py))?;
+    out.set_item("time_s", fixture.time_s.to_pyarray(py))?;
     out.set_item(
         "fixed_temperature_c",
-        fixture.fixed_temperature_c.into_pyarray(py),
+        fixture.fixed_temperature_c.to_pyarray(py),
     )?;
     out.set_item(
         "feedback_temperature_c",
-        fixture.feedback_temperature_c.into_pyarray(py),
+        fixture.feedback_temperature_c.to_pyarray(py),
     )?;
     out.set_item(
         "underdrive_temperature_c",
-        fixture.underdrive_temperature_c.into_pyarray(py),
+        fixture.underdrive_temperature_c.to_pyarray(py),
     )?;
-    out.set_item("fixed_cem43_min", fixture.fixed_cem43_min.into_pyarray(py))?;
+    out.set_item("fixed_cem43_min", fixture.fixed_cem43_min.to_pyarray(py))?;
     out.set_item(
         "feedback_cem43_min",
-        fixture.feedback_cem43_min.into_pyarray(py),
+        fixture.feedback_cem43_min.to_pyarray(py),
     )?;
     out.set_item(
         "underdrive_cem43_min",
-        fixture.underdrive_cem43_min.into_pyarray(py),
+        fixture.underdrive_cem43_min.to_pyarray(py),
     )?;
     Ok(out)
 }

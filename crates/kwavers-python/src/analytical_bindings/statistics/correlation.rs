@@ -2,7 +2,7 @@
 
 use super::arrays::as_slices;
 use kwavers_math::statistics;
-use numpy::{IntoPyArray, PyArray1, PyReadonlyArray1};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -30,7 +30,7 @@ pub fn phase_shift_correlation_curve(
     let result = py
         .detach(|| statistics::phase_shift_correlation_curve(phase_rad))
         .map_err(PyValueError::new_err)?;
-    Ok(result.into_pyarray(py).unbind())
+    Ok(result.to_pyarray(py).unbind())
 }
 
 /// Phase error in degrees for a target same-frequency sinusoid Pearson

@@ -3,8 +3,9 @@
 //! Implements the angular spectrum method for beam diffraction.
 //! Reference: Vecchio & Lewin (1994) "Finite amplitude acoustic propagation"
 
-use kwavers_math::fft::{fft_1d_complex, ifft_1d_complex, Complex64};
-use ndarray::{Array1, Array2, ArrayViewMut2};
+use apollo::{fft_1d_complex, ifft_1d_complex, Complex64};
+use leto::Array1 as LetoArray1;
+use leto::{Array2, ArrayViewMut2};
 
 use super::KZKConfig;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -24,11 +25,19 @@ impl std::fmt::Debug for KzkDiffractionOperator {
         f.debug_struct("KzkDiffractionOperator")
             .field(
                 "kx2",
-                &format!("Array2<f64> {}x{}", self.kx2.nrows(), self.kx2.ncols()),
+                &format!(
+                    "Array2<f64> {}x{}",
+                    self.kx2.shape()[0],
+                    self.kx2.shape()[1]
+                ),
             )
             .field(
                 "ky2",
-                &format!("Array2<f64> {}x{}", self.ky2.nrows(), self.ky2.ncols()),
+                &format!(
+                    "Array2<f64> {}x{}",
+                    self.ky2.shape()[0],
+                    self.ky2.shape()[1]
+                ),
             )
             .field("fft_plan", &"<Apollo FFT plan>")
             .field("config", &self.config)
@@ -80,11 +89,17 @@ impl KzkDiffractionOperator {
         let ny = self.config.ny;
 
         // Convert to complex for FFT
-        let complex_field = Array1::from_shape_fn(nx * ny, |idx| {
-            let i = idx % nx;
-            let j = idx / nx;
-            Complex64::new(slice[[i, j]], 0.0)
-        });
+        let complex_field = LetoArray1::from_shape_vec(
+            [nx * ny],
+            (0..nx * ny)
+                .map(|idx| {
+                    let i = idx % nx;
+                    let j = idx / nx;
+                    Complex64::new(slice[[i, j]], 0.0)
+                })
+                .collect(),
+        )
+        .expect("KZK diffraction line shape must match its Leto FFT shape");
 
         // Forward FFT (1D of size nx * ny as in original implementation)
         let mut transformed = fft_1d_complex(&complex_field);

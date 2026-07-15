@@ -5,7 +5,7 @@
 
 use crate::core::CoreMedium;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 /// Trait for bubble dynamics properties
 pub trait BubbleProperties: CoreMedium {

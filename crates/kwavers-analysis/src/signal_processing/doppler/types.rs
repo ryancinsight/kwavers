@@ -1,6 +1,6 @@
 //! Common types for Doppler velocity estimation
 
-use ndarray::Array2;
+use leto::Array2;
 use serde::{Deserialize, Serialize};
 
 /// Flow direction classification
@@ -85,7 +85,7 @@ impl DopplerResult {
     /// Get velocity at a specific location
     #[must_use]
     pub fn velocity_at(&self, depth: usize, beam: usize) -> Option<VelocityEstimate> {
-        if depth < self.velocity.nrows() && beam < self.velocity.ncols() {
+        if depth < self.velocity.shape()[0] && beam < self.velocity.shape()[1] {
             Some(VelocityEstimate::new(
                 self.velocity[[depth, beam]],
                 self.variance[[depth, beam]],

@@ -6,8 +6,9 @@
 //! correction operators, applies initial pressure/velocity conditions,
 //! and pre-allocates Westervelt and divergence/gradient scratch buffers.
 
+use leto::Array3;
 use log::info;
-use ndarray::{Array3, Zip};
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::central_diff::CentralDifferenceOperator;
 use super::{FdtdMetrics, GenericFdtdSolver};
@@ -16,7 +17,7 @@ use kwavers_core::error::{ConfigError, KwaversError, KwaversResult};
 use kwavers_field::wave::WaveFields;
 use kwavers_grid::Grid;
 use kwavers_math::numerics::operators::StaggeredGridOperator;
-use kwavers_medium::{MaterialFields, Medium};
+use kwavers_medium::{material_fields::GenericMaterialFields, Medium};
 use kwavers_physics::acoustics::mechanics::acoustic_wave::AcousticSpatialOrder;
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::grid_source::GridSource;
@@ -25,11 +26,86 @@ use super::super::config::{FdtdConfig, KSpaceCorrectionMode};
 use super::super::kspace_correction::KSpaceFdtdOperators;
 use super::super::source_handler::SourceHandler;
 
+fn fill_rho_c_squared(output: &mut Array3<f64>, rho0: &Array3<f64>, c0: &Array3<f64>) {
+    assert_eq!(
+        output.shape(),
+        rho0.shape(),
+        "invariant: FDTD rho*c^2 output shape matches density field"
+    );
+    assert_eq!(
+        output.shape(),
+        c0.shape(),
+        "invariant: FDTD rho*c^2 output shape matches sound-speed field"
+    );
+
+    if let (Some(output_values), Some(rho_values), Some(c_values)) =
+        (output.as_slice_mut(), rho0.as_slice(), c0.as_slice())
+    {
+        enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
+            let c = c_values[index];
+            *value = rho_values[index] * c * c;
+        });
+    } else {
+        let [nx, ny, nz] = output.shape();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    let c = c0[[i, j, k]];
+                    output[[i, j, k]] = rho0[[i, j, k]] * c * c;
+                }
+            }
+        }
+    }
+}
+
+fn fill_nonlinear_coeff(
+    output: &mut Array3<f64>,
+    beta: &Array3<f64>,
+    rho0: &Array3<f64>,
+    c2: &Array3<f64>,
+) {
+    assert_eq!(
+        output.shape(),
+        beta.shape(),
+        "invariant: FDTD nonlinear coefficient shape matches beta field"
+    );
+    assert_eq!(
+        output.shape(),
+        rho0.shape(),
+        "invariant: FDTD nonlinear coefficient shape matches density field"
+    );
+    assert_eq!(
+        output.shape(),
+        c2.shape(),
+        "invariant: FDTD nonlinear coefficient shape matches squared sound-speed field"
+    );
+
+    if let (Some(output_values), Some(beta_values), Some(rho_values), Some(c2_values)) = (
+        output.as_slice_mut(),
+        beta.as_slice(),
+        rho0.as_slice(),
+        c2.as_slice(),
+    ) {
+        enumerate_mut_with::<Adaptive, _, _>(output_values, |index, value| {
+            *value = beta_values[index] / (rho_values[index] * c2_values[index]);
+        });
+    } else {
+        let [nx, ny, nz] = output.shape();
+        for k in 0..nz {
+            for j in 0..ny {
+                for i in 0..nx {
+                    output[[i, j, k]] = beta[[i, j, k]] / (rho0[[i, j, k]] * c2[[i, j, k]]);
+                }
+            }
+        }
+    }
+}
+
 impl GenericFdtdSolver<Array3<f64>> {
     /// Create a new FDTD solver
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         config: FdtdConfig,
@@ -56,7 +132,10 @@ impl GenericFdtdSolver<Array3<f64>> {
         // Initialize fields
         let shape = (grid.nx, grid.ny, grid.nz);
         let mut fields = WaveFields::new(shape);
-        let mut materials = MaterialFields::new(shape);
+        let mut materials = GenericMaterialFields {
+            rho0: Array3::zeros(shape),
+            c0: Array3::zeros(shape),
+        };
 
         // Pre-compute material properties
         for k in 0..grid.nz {
@@ -71,12 +150,7 @@ impl GenericFdtdSolver<Array3<f64>> {
 
         // Pre-compute rho * c^2 element-wise
         let mut rho_c_squared = Array3::<f64>::zeros(shape);
-        Zip::from(&mut rho_c_squared)
-            .and(&materials.rho0)
-            .and(&materials.c0)
-            .for_each(|rho_c_sq, &rho, &c| {
-                *rho_c_sq = rho * c * c;
-            });
+        fill_rho_c_squared(&mut rho_c_squared, &materials.rho0, &materials.c0);
 
         // Precompute k-Wave compatible pressure and velocity source scaling
         let mut source_handler = source_handler;
@@ -87,7 +161,7 @@ impl GenericFdtdSolver<Array3<f64>> {
         // c_ref = mean sound speed over all grid cells (same convention as PSTD).
         let mut kspace_ops = if config.kspace_correction == KSpaceCorrectionMode::Spectral {
             let c_sum: f64 = materials.c0.iter().sum();
-            let c_ref = c_sum / materials.c0.len() as f64;
+            let c_ref = c_sum / (materials.c0.len()) as f64;
             Some(KSpaceFdtdOperators::new(
                 grid.nx, grid.ny, grid.nz, grid.dx, grid.dy, grid.dz, c_ref, config.dt,
             ))
@@ -111,7 +185,11 @@ impl GenericFdtdSolver<Array3<f64>> {
             && !source_handler.has_initial_velocity()
             && matches!(config.kspace_correction, KSpaceCorrectionMode::Spectral)
         {
-            let rho0_ref = materials.rho0.mean().unwrap_or(DENSITY_WATER_NOMINAL);
+            let rho0_ref = if materials.rho0.is_empty() {
+                DENSITY_WATER_NOMINAL
+            } else {
+                materials.rho0.iter().copied().sum::<f64>() / (materials.rho0.len()) as f64
+            };
             let Some(kspace_ops) = kspace_ops.as_mut() else {
                 return Err(KwaversError::Config(ConfigError::InvalidValue {
                     parameter: "kspace_correction".to_owned(),
@@ -151,10 +229,8 @@ impl GenericFdtdSolver<Array3<f64>> {
             // Reduces per-element inner-loop reads from 5 to 3, cutting memory traffic ~40%.
             // beta and c2 are intermediate; only nl_coeff is retained in the struct.
             // Correct leapfrog Westervelt: Δp = Δt² · (β/ρ₀c₀²) · ∂²(p²)/∂t²
-            let nl = ndarray::Zip::from(&beta)
-                .and(&materials.rho0)
-                .and(&c2)
-                .map_collect(|&b, &rho, &c| b / (rho * c));
+            let mut nl = Array3::<f64>::zeros(shape);
+            fill_nonlinear_coeff(&mut nl, &beta, &materials.rho0, &c2);
             (
                 Some(Array3::<f64>::zeros(shape)),
                 Some(Array3::<f64>::zeros(shape)),

@@ -9,7 +9,7 @@ use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::KwaversResult;
 use kwavers_math::geometry::delays;
 use kwavers_math::geometry::distance3;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Steering vector calculation methods
 #[derive(Debug, Clone, PartialEq)]
@@ -36,8 +36,8 @@ impl SteeringVector {
         frequency: f64,
         sensor_positions: &[[f64; 3]],
         speed_of_sound: f64,
-    ) -> KwaversResult<Array1<num_complex::Complex<f64>>> {
-        use num_complex::Complex;
+    ) -> KwaversResult<Array1<eunomia::Complex64>> {
+        use eunomia::Complex;
 
         let phase_delays = delays::plane_wave_phase_delays(
             sensor_positions,
@@ -65,8 +65,8 @@ impl SteeringVector {
         frequency: f64,
         sensor_positions: &[[f64; 3]],
         speed_of_sound: f64,
-    ) -> KwaversResult<Array1<num_complex::Complex<f64>>> {
-        use num_complex::Complex;
+    ) -> KwaversResult<Array1<eunomia::Complex64>> {
+        use eunomia::Complex;
 
         if !frequency.is_finite() || frequency <= 0.0 {
             return Err(kwavers_core::error::KwaversError::InvalidInput(

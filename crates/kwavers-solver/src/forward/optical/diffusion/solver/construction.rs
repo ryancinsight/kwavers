@@ -3,7 +3,7 @@
 //! operator and preconditioner kernels.
 
 use anyhow::Result;
-use ndarray::Array3;
+use leto::Array3;
 
 use super::{
     DiffusionBoundaryCondition, DiffusionBoundaryConditions, DiffusionSolver, DiffusionSolverConfig,
@@ -44,7 +44,7 @@ impl DiffusionSolver {
 
     /// Create solver from spatially-varying optical property map.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn new(
         grid: Grid,
@@ -53,7 +53,7 @@ impl DiffusionSolver {
     ) -> Result<Self> {
         let (nx, ny, nz) = grid.dimensions();
 
-        if optical_properties.dim() != (nx, ny, nz) {
+        if optical_properties.shape() != [nx, ny, nz] {
             anyhow::bail!(
                 "Optical property map dimensions {:?} do not match grid dimensions ({}, {}, {})",
                 optical_properties.shape(),
@@ -99,7 +99,7 @@ impl DiffusionSolver {
         config: DiffusionSolverConfig,
     ) -> Result<Self> {
         let (nx, ny, nz) = grid.dimensions();
-        let optical_map = Array3::from_elem((nx, ny, nz), optical_properties);
+        let optical_map = Array3::from_elem([nx, ny, nz], optical_properties);
         Self::new(grid, optical_map, config)
     }
 }

@@ -1,7 +1,7 @@
 use super::model::CherenkovModel;
+use crate::optics::sonoluminescence::spectral::SpectralRange;
 use approx;
 use kwavers_core::constants::fundamental::SPEED_OF_LIGHT;
-use ndarray::Array1;
 use std::f64::consts::PI;
 
 #[test]
@@ -114,14 +114,19 @@ fn test_cherenkov_spectral_emission() {
     let model = CherenkovModel::new(1.5, 50.0);
     let velocity = model.critical_velocity * 2.0;
 
-    let wavelengths = Array1::linspace(200e-9, 800e-9, 100); // Visible spectrum
+    let wavelengths = SpectralRange {
+        lambda_min: 200e-9,
+        lambda_max: 800e-9,
+        n_points: 100,
+    }
+    .wavelengths();
     let spectrum = model.emission_spectrum(velocity, 1.0, &wavelengths);
 
     // Should have emission
-    assert!(spectrum.sum() > 0.0);
+    assert!(spectrum.iter().copied().sum::<f64>() > 0.0);
 
     // Should be broader than single wavelength
-    let peak_intensity = spectrum.fold(0.0f64, |max, &val| max.max(val));
+    let peak_intensity = spectrum.iter().copied().fold(0.0_f64, f64::max);
     assert!(peak_intensity > 0.0);
 
     // Find peak wavelength

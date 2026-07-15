@@ -9,7 +9,7 @@
 //!    48(11), 1514-1524.
 
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 
 pub mod eikonal;
 pub mod kirchhoff;
@@ -79,8 +79,8 @@ pub fn compute_illumination_compensation(
 
 /// Apply Laplacian filter for artifact removal
 pub fn apply_laplacian_filter(image: &Array3<f64>, grid: &Grid) -> Array3<f64> {
-    let (nx, ny, nz) = image.dim();
-    let mut filtered = Array3::zeros((nx, ny, nz));
+    let [nx, ny, nz] = image.shape();
+    let mut filtered = Array3::zeros([nx, ny, nz]);
 
     for i in 1..nx - 1 {
         for j in 1..ny - 1 {

@@ -42,8 +42,8 @@ impl FDTDConfig {
     ///
     /// Checks CFL condition: c×dt/dx ≤ 1
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if wave speed, steps, or grid size are invalid.
-    /// - Returns [`KwaversError::InvalidInput`] if CFL > 1.0.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if wave speed, steps, or grid size are invalid.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if CFL > 1.0.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.wave_speed <= 0.0 {

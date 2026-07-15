@@ -1,5 +1,5 @@
 use kwavers_core::constants::optical::WIEN_CONSTANT;
-use ndarray::Array1;
+use leto::Array1;
 
 /// Spectral statistics
 #[derive(Debug, Clone)]

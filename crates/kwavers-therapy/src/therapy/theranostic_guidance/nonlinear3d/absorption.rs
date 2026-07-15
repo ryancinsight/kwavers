@@ -80,7 +80,7 @@
 //! - Hamilton & Blackstock 1998 §3.6 (Stokes-Kirchhoff limit `y = 2`).
 //! - Connor & Hynynen 2002 (skull `y ≈ 1.9 – 2.0`).
 
-use ndarray::Array3;
+use leto::Array3;
 
 mod apply;
 mod construction;

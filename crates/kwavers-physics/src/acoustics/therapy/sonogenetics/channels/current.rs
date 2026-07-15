@@ -1,6 +1,6 @@
 //! Ion-current equation for opened mechanosensitive channels.
 
-use ndarray::Array3;
+use leto::Array3;
 
 /// Compute per-voxel ion current from channel open probability.
 ///

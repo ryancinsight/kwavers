@@ -2,7 +2,7 @@ use super::MonolithicCoupler;
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::UnifiedFieldType;
 use kwavers_grid::Grid;
-use ndarray::Array3;
+use leto::Array3;
 use std::collections::HashMap;
 
 impl MonolithicCoupler {
@@ -37,11 +37,11 @@ impl MonolithicCoupler {
 
         let expected = grid.dimensions();
         for (&field_type, field) in fields {
-            if field.dim() != expected {
+            if field.shape() != [expected.0, expected.1, expected.2] {
                 return Err(KwaversError::Validation(
                     ValidationError::DimensionMismatch {
-                        expected: format!("{expected:?}"),
-                        actual: format!("{} {:?}", field_type.name(), field.dim()),
+                        expected: format!("{:?}", [expected.0, expected.1, expected.2]),
+                        actual: format!("{} {:?}", field_type.name(), field.shape()),
                     },
                 ));
             }

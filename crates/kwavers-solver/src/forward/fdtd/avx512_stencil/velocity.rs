@@ -16,7 +16,7 @@
 
 use super::FdtdAvx512StencilProcessor;
 use kwavers_core::error::{KwaversError, KwaversResult};
-use ndarray::Array3;
+use leto::Array3;
 
 impl FdtdAvx512StencilProcessor {
     /// Update velocity field with AVX-512 acceleration.
@@ -26,9 +26,9 @@ impl FdtdAvx512StencilProcessor {
     /// * `p`   — current pressure field
     /// * `dim` — spatial dimension: 0 (x), 1 (y), 2 (z)
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub fn update_velocity_avx512(
         &self,
@@ -36,7 +36,7 @@ impl FdtdAvx512StencilProcessor {
         p: &Array3<f64>,
         dim: usize,
     ) -> KwaversResult<()> {
-        if p.dim() != (self.nx, self.ny, self.nz) {
+        if p.shape() != [self.nx, self.ny, self.nz] {
             return Err(KwaversError::InvalidInput(
                 "Pressure field dimensions mismatch".to_owned(),
             ));
@@ -69,7 +69,7 @@ impl FdtdAvx512StencilProcessor {
     /// # Safety
     ///
     /// Preconditions (all verified by `update_velocity_avx512` before calling):
-    /// 1. `u.dim() == p.dim() == (self.nx, self.ny, self.nz)`.
+    /// 1. `u.shape() == p.shape() == (self.nx, self.ny, self.nz)`.
     /// 2. `dim ∈ {0, 1, 2}`.
     /// 3. AVX-512F is available.
     /// 4. Both arrays are standard-layout (C-order, contiguous).
@@ -78,7 +78,7 @@ impl FdtdAvx512StencilProcessor {
     /// allocated region (same argument as for the pressure kernel).
     /// `u_ptr` is an exclusive mutable pointer; `p_ptr` is immutable read-only.
     /// # Errors
-    /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
+    /// - Returns [`crate::KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -103,7 +103,10 @@ impl FdtdAvx512StencilProcessor {
         }
 
         let p_ptr = p.as_ptr();
-        let u_ptr = u.as_mut_ptr();
+        let u_ptr = u
+            .as_slice_memory_order_mut()
+            .expect("invariant: AVX-512 velocity output field must be contiguous")
+            .as_mut_ptr();
         let coeff_vec = _mm512_set1_pd(self.velocity_coeff);
 
         let stride_xy = self.ny as isize;

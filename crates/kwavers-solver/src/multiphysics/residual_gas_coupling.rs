@@ -5,7 +5,7 @@
 //! solver's per-voxel medium arrays: the Wood (1930) sound-speed collapse and
 //! the Commander–Prosperetti (1989) excess attenuation, both as functions of the
 //! local gas void fraction `β(x)` (from a
-//! [`ResidualGasField`](kwavers_simulation-style field) or any β map). The
+//! `ResidualGasField`(kwavers_simulation-style field) or any β map). The
 //! returned arrays feed the heterogeneous-medium update path
 //! (`ArrayAccess::sound_speed_array_mut` / `absorption_array_mut`) and the PSTD
 //! absorption-operator re-initialisation, so the subsequent pulse is physically
@@ -16,7 +16,7 @@ use kwavers_physics::acoustics::bubble_dynamics::{
     commander_prosperetti_attenuation, wood_sound_speed,
 };
 use kwavers_physics::acoustics::mechanics::absorption::np_m_to_power_law_db_cm;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 
 /// Liquid/gas acoustic properties for the residual-gas medium coupling.
 #[derive(Debug, Clone, Copy)]
@@ -27,13 +27,13 @@ pub struct BubblyMediumProps {
     pub rho_gas: f64,
     /// Liquid dynamic viscosity [Pa·s] (damping in the attenuation model).
     pub mu_liquid: f64,
-    /// Ambient pressure [Pa].
+    /// Ambient pressure \[Pa\].
     pub p0: f64,
     /// Gas polytropic exponent.
     pub polytropic: f64,
-    /// Representative residual-bubble radius [m].
+    /// Representative residual-bubble radius \[m\].
     pub bubble_radius: f64,
-    /// Drive frequency [Hz] for the attenuation model.
+    /// Drive frequency \[Hz\] for the attenuation model.
     pub frequency: f64,
 }
 
@@ -80,35 +80,39 @@ pub fn apply_residual_gas_shielding(
     void_fraction: ArrayView3<'_, f64>,
     props: &BubblyMediumProps,
 ) -> ShieldedMedium {
-    let dim = base_sound_speed.dim();
-    let mut sound_speed = base_sound_speed.to_owned();
-    let mut absorption = base_absorption.to_owned();
-    if base_absorption.dim() != dim || base_density.dim() != dim || void_fraction.dim() != dim {
+    let dim = base_sound_speed.shape();
+    let mut sound_speed = base_sound_speed.to_contiguous();
+    let mut absorption = base_absorption.to_contiguous();
+    if base_absorption.shape() != dim || base_density.shape() != dim || void_fraction.shape() != dim
+    {
         return ShieldedMedium {
             sound_speed,
             absorption,
         };
     }
-    ndarray::Zip::from(&mut sound_speed)
-        .and(&mut absorption)
-        .and(base_density)
-        .and(void_fraction)
-        .for_each(|c, a, &rho, &beta| {
-            if beta > 0.0 {
-                let c_base_local = *c; // local liquid sound speed before modification
-                *a += commander_prosperetti_attenuation(
-                    props.frequency,
-                    beta,
-                    props.bubble_radius,
-                    c_base_local,
-                    rho,
-                    props.mu_liquid,
-                    props.p0,
-                    props.polytropic,
-                );
-                *c = wood_sound_speed(beta, c_base_local, rho, props.c_gas, props.rho_gas);
+    for k in 0..dim[2] {
+        for j in 0..dim[1] {
+            for i in 0..dim[0] {
+                let beta = void_fraction[[i, j, k]];
+                if beta > 0.0 {
+                    let rho = base_density[[i, j, k]];
+                    let c_base_local = sound_speed[[i, j, k]];
+                    absorption[[i, j, k]] += commander_prosperetti_attenuation(
+                        props.frequency,
+                        beta,
+                        props.bubble_radius,
+                        c_base_local,
+                        rho,
+                        props.mu_liquid,
+                        props.p0,
+                        props.polytropic,
+                    );
+                    sound_speed[[i, j, k]] =
+                        wood_sound_speed(beta, c_base_local, rho, props.c_gas, props.rho_gas);
+                }
             }
-        });
+        }
+    }
     ShieldedMedium {
         sound_speed,
         absorption,
@@ -137,23 +141,26 @@ pub fn apply_residual_gas_wood_in_place(
     void_fraction: ArrayView3<'_, f64>,
     props: &BubblyMediumProps,
 ) -> bool {
-    let dim = void_fraction.dim();
-    let base_rho = medium.density_array().to_owned();
-    if base_rho.dim() != dim {
+    let dim = void_fraction.shape();
+    let base_rho = medium.density_array().to_contiguous();
+    if base_rho.shape() != dim {
         return false;
     }
     if let Some(mut c_arr) = medium.sound_speed_array_mut() {
-        if c_arr.dim() == dim {
-            // The current array value equals the base liquid speed (not yet
-            // modified), so use it directly as the host sound speed.
-            ndarray::Zip::from(&mut c_arr)
-                .and(&base_rho)
-                .and(void_fraction)
-                .for_each(|c, &rho, &beta| {
-                    if beta > 0.0 {
-                        *c = wood_sound_speed(beta, *c, rho, props.c_gas, props.rho_gas);
+        if c_arr.shape() == dim {
+            for k in 0..dim[2] {
+                for j in 0..dim[1] {
+                    for i in 0..dim[0] {
+                        let beta = void_fraction[[i, j, k]];
+                        if beta > 0.0 {
+                            let rho = base_rho[[i, j, k]];
+                            let c = c_arr[[i, j, k]];
+                            c_arr[[i, j, k]] =
+                                wood_sound_speed(beta, c, rho, props.c_gas, props.rho_gas);
+                        }
                     }
-                });
+                }
+            }
             return true;
         }
     }
@@ -210,13 +217,13 @@ pub fn apply_residual_gas_shielding_in_place(
     alpha_power: f64,
     props: &BubblyMediumProps,
 ) -> bool {
-    let dim = void_fraction.dim();
+    let dim = void_fraction.shape();
     // Snapshot the base liquid sound speed and density BEFORE mutation: the
     // Commander–Prosperetti attenuation depends on the local liquid sound speed,
     // which the Wood step overwrites.
-    let base_c = medium.sound_speed_array().to_owned();
-    let base_rho = medium.density_array().to_owned();
-    if base_c.dim() != dim || base_rho.dim() != dim {
+    let base_c = medium.sound_speed_array().to_contiguous();
+    let base_rho = medium.density_array().to_contiguous();
+    if base_c.shape() != dim || base_rho.shape() != dim {
         return false;
     }
 
@@ -226,26 +233,30 @@ pub fn apply_residual_gas_shielding_in_place(
     // Absorption: add the Commander–Prosperetti excess (converted to the medium's
     // power-law prefactor units) using the base liquid sound speed snapshot.
     if let Some(mut a_arr) = medium.absorption_array_mut() {
-        if a_arr.dim() == dim {
-            ndarray::Zip::from(&mut a_arr)
-                .and(&base_c)
-                .and(&base_rho)
-                .and(void_fraction)
-                .for_each(|a, &c0, &rho, &beta| {
-                    if beta > 0.0 {
-                        let alpha_np_m = commander_prosperetti_attenuation(
-                            props.frequency,
-                            beta,
-                            props.bubble_radius,
-                            c0,
-                            rho,
-                            props.mu_liquid,
-                            props.p0,
-                            props.polytropic,
-                        );
-                        *a += np_m_to_power_law_db_cm(alpha_np_m, props.frequency, alpha_power);
+        if a_arr.shape() == dim {
+            for k in 0..dim[2] {
+                for j in 0..dim[1] {
+                    for i in 0..dim[0] {
+                        let beta = void_fraction[[i, j, k]];
+                        if beta > 0.0 {
+                            let c0 = base_c[[i, j, k]];
+                            let rho = base_rho[[i, j, k]];
+                            let alpha_np_m = commander_prosperetti_attenuation(
+                                props.frequency,
+                                beta,
+                                props.bubble_radius,
+                                c0,
+                                rho,
+                                props.mu_liquid,
+                                props.p0,
+                                props.polytropic,
+                            );
+                            a_arr[[i, j, k]] +=
+                                np_m_to_power_law_db_cm(alpha_np_m, props.frequency, alpha_power);
+                        }
                     }
-                });
+                }
+            }
             applied = true;
         }
     }
@@ -265,12 +276,12 @@ pub fn two_way_transmission(absorption_1d: &[f64], dx_m: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use ndarray::Array3;
+    use leto::Array3;
 
     fn base(nx: usize) -> (Array3<f64>, Array3<f64>, Array3<f64>) {
-        let c = Array3::from_elem((nx, 1, 1), 1481.0); // water
-        let a = Array3::from_elem((nx, 1, 1), 2.5); // base absorption [Np/m]
-        let rho = Array3::from_elem((nx, 1, 1), 998.0);
+        let c = Array3::from_elem([nx, 1, 1], 1481.0); // water
+        let a = Array3::from_elem([nx, 1, 1], 2.5); // base absorption [Np/m]
+        let rho = Array3::from_elem([nx, 1, 1], 998.0);
         (c, a, rho)
     }
 

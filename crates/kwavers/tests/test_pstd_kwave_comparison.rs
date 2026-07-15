@@ -46,7 +46,7 @@ use kwavers_solver::forward::pstd::implementation::core::orchestrator::PSTDSolve
 use kwavers_source::{
     GridSource, InjectionMode, PlaneWaveSource, PlaneWaveSourceConfig, SourceField,
 };
-use ndarray::Array3;
+use leto::Array3;
 use plotters::prelude::*;
 use std::sync::Arc;
 
@@ -128,7 +128,7 @@ fn save_dalembert_figure(
                 ShapeStyle::from(&RED).stroke_width(2),
             ))?
             .label("Analytical (d'Alembert)")
-            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 18, y)], &RED));
+            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 18, y)], RED));
 
         // PSTD numerical — blue, drawn on top.
         chart
@@ -140,12 +140,12 @@ fn save_dalembert_figure(
                 ShapeStyle::from(&BLUE).stroke_width(1),
             ))?
             .label("PSTD numerical")
-            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 18, y)], &BLUE));
+            .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 18, y)], BLUE));
 
         chart
             .configure_series_labels()
             .background_style(WHITE.mix(0.85))
-            .border_style(&BLACK)
+            .border_style(BLACK)
             .draw()?;
     }
 
@@ -203,7 +203,7 @@ fn save_kspace_figure(c0: f64, dt: f64, dx: f64) -> Result<(), Box<dyn std::erro
             ShapeStyle::from(&BLUE).stroke_width(2),
         ))?
         .label("κ(k)")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
 
     // 80 % Nyquist marker.
     let arg_80 = c0 * (0.8 * k_max) * dt / 2.0;
@@ -234,7 +234,7 @@ fn save_kspace_figure(c0: f64, dt: f64, dx: f64) -> Result<(), Box<dyn std::erro
     chart
         .configure_series_labels()
         .background_style(WHITE.mix(0.85))
-        .border_style(&BLACK)
+        .border_style(BLACK)
         .draw()?;
 
     root.present()?;
@@ -290,7 +290,7 @@ fn save_energy_figure(
             ShapeStyle::from(&BLACK).stroke_width(1),
         ))?
         .label("E₀ (initial)")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLACK));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLACK));
 
     // Energy vs step.
     chart
@@ -299,12 +299,12 @@ fn save_energy_figure(
             ShapeStyle::from(&BLUE).stroke_width(2),
         ))?
         .label("E(t) PSTD")
-        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &BLUE));
+        .legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], BLUE));
 
     chart
         .configure_series_labels()
         .background_style(WHITE.mix(0.85))
-        .border_style(&BLACK)
+        .border_style(BLACK)
         .draw()?;
 
     root.present()?;

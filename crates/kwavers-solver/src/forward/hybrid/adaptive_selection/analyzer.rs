@@ -1,7 +1,7 @@
 // adaptive_selection/analyzer.rs - Field analysis for method selection
 
 use kwavers_grid::Grid;
-use ndarray::{Array3, ArrayView3};
+use leto::{Array3, ArrayView3};
 
 /// Field analyzer for adaptive selection
 #[derive(Debug)]
@@ -15,7 +15,7 @@ impl FieldAnalyzer {
 
     /// Analyze field smoothness
     pub fn analyze_smoothness(&self, field: ArrayView3<f64>) -> f64 {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut total_variation = 0.0;
         let mut count = 0;
 
@@ -42,8 +42,8 @@ impl FieldAnalyzer {
 
     /// Detect discontinuities
     pub fn detect_discontinuities(&self, field: ArrayView3<f64>, threshold: f64) -> Array3<bool> {
-        let (nx, ny, nz) = field.dim();
-        let mut discontinuities = Array3::from_elem((nx, ny, nz), false);
+        let [nx, ny, nz] = field.shape();
+        let mut discontinuities = Array3::from_elem([nx, ny, nz], false);
 
         for k in 1..nz - 1 {
             for j in 1..ny - 1 {

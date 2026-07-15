@@ -4,7 +4,7 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
-use ndarray::Array3;
+use leto::Array3;
 
 #[test]
 fn test_elastic_wave_solver_recording() -> KwaversResult<()> {
@@ -30,6 +30,6 @@ fn test_elastic_wave_solver_recording() -> KwaversResult<()> {
     initial_field.uz[[5, 5, 5]] = 1.0;
     let _final_field = solver.propagate(&initial_field, 1e-4, None)?;
     let data = solver.extract_recorded_data().unwrap();
-    assert_eq!(data.shape(), &[1, 5]);
+    assert_eq!(data.shape(), [1, 5]);
     Ok(())
 }

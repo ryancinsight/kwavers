@@ -19,7 +19,7 @@ use kwavers_medium::HomogeneousMedium;
 use kwavers_receiver::recorder::fields::{SensorRecordField, SensorRecordSpec};
 use kwavers_receiver::recorder::simple::SensorRecorder;
 use kwavers_source::GridSource;
-use ndarray::Array3;
+use leto::Array3;
 
 fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> PSTDSolver {
     let config = PSTDConfig {
@@ -39,7 +39,7 @@ fn build_with_velocity(nx: usize, ny: usize, nz: usize, nt: usize, dt: f64) -> P
     let source = GridSource::new_empty();
     let mut solver = PSTDSolver::new(config, grid.clone(), &medium, source).unwrap();
 
-    let mut mask = Array3::<bool>::from_elem((nx, ny, nz), false);
+    let mut mask = Array3::<bool>::from_elem([nx, ny, nz], false);
     mask[[nx / 2, ny / 2, nz / 2]] = true;
 
     let spec = SensorRecordSpec::from_fields(&[
@@ -118,8 +118,8 @@ fn test_checkpoint_velocity_recording_survives_resume() {
 
     // GridDimension invariant.
     assert_eq!(
-        ref_ux.dim(),
-        resumed_ux.dim(),
+        ref_ux.shape(),
+        resumed_ux.shape(),
         "ux shape mismatch after checkpoint resume"
     );
 

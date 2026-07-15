@@ -60,7 +60,7 @@ fn test_normalize_weights_zero() {
     normalize_weights(&mut weights);
 
     // Should become uniform
-    for &w in &weights {
+    for &w in weights.iter() {
         assert!((w - 0.25).abs() < 1e-6);
     }
 }

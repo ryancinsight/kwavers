@@ -4,7 +4,7 @@ use crate::bubble_dynamics::bubble_state::BubbleParameters;
 use crate::bubble_dynamics::keller_miksis::KellerMiksisModel;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 use kwavers_core::constants::thermodynamic::HEAT_CAPACITY_RATIO_DIATOMIC;
-use ndarray::Array3;
+use leto::Array3;
 
 #[cfg(test)]
 #[allow(clippy::module_inception)]
@@ -13,7 +13,7 @@ mod tests {
 
     #[test]
     fn test_emission_calculation() {
-        let shape = (10, 10, 10);
+        let shape = [10, 10, 10];
         let mut emission = SonoluminescenceEmission::new(shape, EmissionParameters::default());
 
         // Create test fields
@@ -45,7 +45,7 @@ mod tests {
 
     #[test]
     fn test_spectrum_calculation() {
-        let emission = SonoluminescenceEmission::new((1, 1, 1), EmissionParameters::default());
+        let emission = SonoluminescenceEmission::new([1, 1, 1], EmissionParameters::default());
 
         let spectrum = emission.calculate_spectrum_at_point(
             10000.0,              // 10,000 K
@@ -76,7 +76,7 @@ mod tests {
         };
 
         let mut integrated = IntegratedSonoluminescence::new(
-            (1, 1, 1),
+            [1, 1, 1],
             params.clone(),
             EmissionParameters::default(),
         );
@@ -141,13 +141,13 @@ mod tests {
         let params = BubbleParameters::default();
         let bubble_model = KellerMiksisModel::new(params.clone());
         let mut integrated = IntegratedSonoluminescence::new(
-            (5, 5, 5),
+            [5, 5, 5],
             params.clone(),
             EmissionParameters::default(),
         );
 
         // Set some acoustic pressure
-        let acoustic_pressure = Array3::from_elem((5, 5, 5), 1e5); // 1 bar
+        let acoustic_pressure = Array3::from_elem([5, 5, 5], 1e5); // 1 bar
         integrated.set_acoustic_pressure(acoustic_pressure);
 
         // Run a few simulation steps

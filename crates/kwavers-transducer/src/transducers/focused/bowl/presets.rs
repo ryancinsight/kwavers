@@ -184,7 +184,7 @@ impl BowlConfig {
         )
     }
 
-    /// Return a config using the requested discretization element size [m].
+    /// Return a config using the requested discretization element size \[m\].
     #[must_use]
     pub fn with_element_size(mut self, element_size_m: f64) -> Self {
         self.element_size = Some(element_size_m);

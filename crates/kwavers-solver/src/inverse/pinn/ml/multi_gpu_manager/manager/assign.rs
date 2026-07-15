@@ -18,7 +18,7 @@ impl MultiGpuManager {
     }
 
     fn assign_work_static(&mut self, work_units: Vec<WorkUnit>) -> KwaversResult<()> {
-        let n_gpus = self.devices.len();
+        let n_gpus = (self.devices.len());
         for (i, work_unit) in work_units.into_iter().enumerate() {
             let gpu_id = i % n_gpus;
             let mut assigned_work = work_unit;

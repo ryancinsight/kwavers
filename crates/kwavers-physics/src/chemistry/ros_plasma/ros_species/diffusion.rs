@@ -2,7 +2,7 @@
 
 use super::concentrations::ROSConcentrations;
 use super::types::ROSSpecies;
-use ndarray::Array3;
+use leto::Array3;
 
 impl ROSConcentrations {
     /// Apply diffusion using simple forward Euler

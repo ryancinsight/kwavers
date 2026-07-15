@@ -1,21 +1,20 @@
 //! Coordinate conversions and field/region accessor methods.
 
-use ndarray::Array3;
-
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::Array3 as LetoArray3;
 
 use super::BrainAtlas;
 
 impl BrainAtlas {
     /// Clone the reference image (template).
     #[must_use]
-    pub fn reference_image(&self) -> Array3<f64> {
+    pub fn reference_image(&self) -> LetoArray3<f64> {
         self.reference_image.clone()
     }
 
     /// Borrow the reference image without allocating.
     #[must_use]
-    pub fn reference_image_ref(&self) -> &Array3<f64> {
+    pub fn reference_image_ref(&self) -> &LetoArray3<f64> {
         &self.reference_image
     }
 

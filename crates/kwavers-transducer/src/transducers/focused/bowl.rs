@@ -8,7 +8,8 @@ use kwavers_core::{
     error::{KwaversError, KwaversResult, ValidationError},
 };
 use kwavers_grid::Grid;
-use ndarray::{Array3, Zip};
+use leto::Array3;
+use moirai_parallel::{enumerate_mut_with, Adaptive};
 
 use super::cap::{SphericalCapConfig, SphericalCapLayout};
 use super::validation::{
@@ -154,7 +155,7 @@ impl BowlTransducer {
         })
     }
 
-    /// Borrow the generated element center positions [m].
+    /// Borrow the generated element center positions \[m\].
     #[must_use]
     pub fn element_positions(&self) -> &[[f64; 3]] {
         &self.element_positions
@@ -166,7 +167,7 @@ impl BowlTransducer {
         &self.element_normals
     }
 
-    /// Borrow equal surface-area weights [m²] represented by each element.
+    /// Borrow equal surface-area weights \[m²\] represented by each element.
     #[must_use]
     pub fn element_areas(&self) -> &[f64] {
         &self.element_areas
@@ -266,11 +267,17 @@ impl BowlTransducer {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn generate_source(&self, grid: &Grid, time: f64) -> KwaversResult<Array3<f64>> {
-        let mut source = Array3::zeros((grid.nx, grid.ny, grid.nz));
+        let mut source = Array3::zeros([grid.nx, grid.ny, grid.nz]);
         let omega = TWO_PI * self.config.frequency;
         let focus_delays = self.calculate_focus_delays();
 
-        Zip::indexed(&mut source).par_for_each(|(ix, iy, iz), cell| {
+        let source_data = source
+            .as_slice_mut()
+            .expect("invariant: freshly allocated Array3 is contiguous");
+        enumerate_mut_with::<Adaptive, _, _>(source_data, |idx, cell| {
+            let iz = idx % grid.nz;
+            let iy = (idx / grid.nz) % grid.ny;
+            let ix = idx / (grid.ny * grid.nz);
             let point = [
                 (ix as f64).mul_add(grid.dx, grid.origin[0]),
                 (iy as f64).mul_add(grid.dy, grid.origin[1]),

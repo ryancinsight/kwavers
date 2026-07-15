@@ -2,19 +2,19 @@
 
 use super::types::WENOLimiter;
 use kwavers_core::error::KwaversResult;
-use ndarray::Array3;
+use leto::Array3;
 
 impl WENOLimiter {
     /// WENO5 limiting implementation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
     pub(super) fn weno5_limit(
         &self,
         field: &mut Array3<f64>,
         shock_indicator: &Array3<f64>,
     ) -> KwaversResult<()> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
 
         // Process each direction
         for direction in 0..3 {

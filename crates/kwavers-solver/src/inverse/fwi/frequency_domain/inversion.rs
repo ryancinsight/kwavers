@@ -8,7 +8,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::imaging::modalities::ultrasound::frequency_domain_fwi::{
     slowness_to_sound_speed, sound_speed_to_slowness, MultiRowRingArray,
 };
-use ndarray::{Array3, Zip};
+use leto::Array3;
 
 /// Reconstruct a sound-speed volume from ring-array frequency-domain data.
 ///
@@ -31,15 +31,15 @@ pub fn invert(
     for iteration in 0..config.iterations {
         if iteration > 0 {
             let mut diff = gradient.clone();
-            Zip::from(&mut diff)
-                .and(&previous_gradient)
-                .for_each(|value, &previous| *value -= previous);
+            for (value, &previous) in diff.iter_mut().zip(previous_gradient.iter()) {
+                *value -= previous;
+            }
             let beta = (dot(&gradient, &diff)
                 / dot(&previous_gradient, &previous_gradient).max(f64::EPSILON))
             .max(0.0);
-            Zip::from(&mut direction)
-                .and(&gradient)
-                .for_each(|dir, &grad| *dir = -grad + beta * *dir);
+            for (dir, &grad) in direction.iter_mut().zip(gradient.iter()) {
+                *dir = -grad + beta * *dir;
+            }
             if dot(&direction, &gradient) >= 0.0 {
                 direction.assign(&gradient.mapv(|value| -value));
             }
@@ -54,9 +54,9 @@ pub fn invert(
         for search_step in 0..8 {
             let step = config.initial_step_s_per_m * 0.5_f64.powi(search_step) / direction_scale;
             let mut candidate = slowness.clone();
-            Zip::from(&mut candidate)
-                .and(&direction)
-                .for_each(|value, &dir| *value += step * dir);
+            for (value, &dir) in candidate.iter_mut().zip(direction.iter()) {
+                *value += step * dir;
+            }
             clamp_slowness(&mut candidate, config);
             let (candidate_objective, candidate_gradient) =
                 objective_and_gradient(&candidate, observations, array, config)?;
@@ -81,10 +81,10 @@ pub fn invert(
     Ok(InversionResult {
         sound_speed_m_s: slowness_to_sound_speed(&slowness)?,
         objective_history: history,
-        frequencies_used: observations.len(),
+        frequencies_used: (observations.len()),
         transmissions_used: observations
             .first()
-            .map(|obs| obs.observed_pressure.nrows())
+            .map(|obs| obs.observed_pressure.shape()[0])
             .unwrap_or(0),
         receivers_used: array.element_count(),
         model_family: FREQUENCY_DOMAIN_FWI_SOLVER_MODEL,
@@ -94,5 +94,7 @@ pub fn invert(
 pub(super) fn clamp_slowness(slowness: &mut Array3<f64>, config: &Config) {
     let min_slowness = 1.0 / config.max_sound_speed_m_s;
     let max_slowness = 1.0 / config.min_sound_speed_m_s;
-    slowness.mapv_inplace(|value| value.clamp(min_slowness, max_slowness));
+    for value in slowness.iter_mut() {
+        *value = value.clamp(min_slowness, max_slowness);
+    }
 }

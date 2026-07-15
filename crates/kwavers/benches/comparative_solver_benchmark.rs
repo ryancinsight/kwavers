@@ -10,7 +10,11 @@ use kwavers_solver::forward::fdtd::{FdtdConfig, FdtdSolver};
 use kwavers_solver::forward::pstd::{PSTDConfig, PSTDSolver};
 use kwavers_solver::interface::Solver;
 use kwavers_source::GridSource;
-use ndarray::{Array2, Array3, ArrayView3};
+use leto::{Array2, Array3, ArrayView3};
+
+fn leto_view3(field: &leto::Array3<f64>) -> ArrayView3<'_, f64> {
+    field.view()
+}
 
 /// Benchmark configuration
 #[derive(Debug, Clone)]
@@ -100,9 +104,11 @@ fn run_fdtd_benchmark(
 
     // Calculate metrics
     let final_field = solver.pressure_field();
-    let memory_usage = final_field.len() * std::mem::size_of::<f64>();
-    let final_energy = calculate_energy(final_field.view());
-    let stability_metric = calculate_stability(final_field.view());
+    let shape = final_field.shape();
+    let memory_usage = shape[0] * shape[1] * shape[2] * std::mem::size_of::<f64>();
+    let final_field_view = leto_view3(final_field);
+    let final_energy = calculate_energy(final_field_view);
+    let stability_metric = calculate_stability(final_field_view);
 
     BenchmarkResult {
         solver_name: "FDTD".to_string(),
@@ -139,9 +145,11 @@ fn run_pstd_benchmark(
 
     // Calculate metrics
     let final_field = solver.pressure_field();
-    let memory_usage = final_field.len() * std::mem::size_of::<f64>();
-    let final_energy = calculate_energy(final_field.view());
-    let stability_metric = calculate_stability(final_field.view());
+    let shape = final_field.shape();
+    let memory_usage = shape[0] * shape[1] * shape[2] * std::mem::size_of::<f64>();
+    let final_field_view = leto_view3(final_field);
+    let final_energy = calculate_energy(final_field_view);
+    let stability_metric = calculate_stability(final_field_view);
 
     BenchmarkResult {
         solver_name: "PSTD".to_string(),
@@ -174,7 +182,7 @@ fn calculate_stability(field: ArrayView3<f64>) -> f64 {
     } else {
         // RMS gradient as stability proxy
         let mut gradient_sum = 0.0;
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         if nx < 3 || ny < 3 || nz < 3 {
             return 1.0;
         }
