@@ -1,5 +1,14 @@
 # Gap Audit
 
+- Closed 2026-07-14: Kwavers declared Gaia from Git and corrected it only via
+  a workspace-root source patch. Cargo ignores that patch when a downstream
+  package is isolated, causing LeoNeuro SemVer packaging to select historical
+  Gaia without Eunomia. Gaia is now a direct Atlas path dependency and
+  `kwavers-mesh` resolves it locally. Evidence tier: locked dependency-graph
+  resolution, warning-denied package diagnostics, and 9/9 value-semantic
+  package tests. Residual: isolated packaging now reaches Moirai's independent
+  Themis Git-version mismatch; its owner is Moirai, not this dependency edge.
+
 - Closed 2026-07-14: forward PSTD consumers unconditionally compiled clinical
   image I/O and registration because both `kwavers-physics` and
   `kwavers-solver` declared `kwavers-imaging` unconditionally. ADR-036 makes

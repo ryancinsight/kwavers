@@ -2,11 +2,15 @@
 
 ## Owner: Codex — Atlas-local Gaia dependency [patch]
 
-- [ ] Replace the transitive Gaia Git declaration with the live Atlas path.
-- [ ] Delete the redundant Gaia source patch and verify the resolved graph.
-- [ ] Run the affected Kwavers and LeoNeuro SemVer gates; record exact results.
+- [x] Replace the transitive Gaia Git declaration with the live Atlas path.
+- [x] Delete the redundant Gaia source patch and verify the resolved graph.
+- [x] Run the affected Kwavers and LeoNeuro SemVer gates; record exact results.
 
-**Current phase:** Execution. **Target:** Kwavers 4.0.0 / LeoNeuro 0.4.0.
+**Current phase:** Closure. **Target:** Kwavers 4.0.0 / LeoNeuro 0.4.0.
+**Evidence:** locked offline metadata reports `gaia` at `D:\atlas\repos\gaia`;
+`kwavers-mesh` Clippy passes with `-D warnings`; Nextest passes 9/9. LeoNeuro
+SemVer packaging passes the former Gaia/Eunomia failure and stops at Moirai's
+separate `themis ^0.10` / pinned `0.9.17` source mismatch.
 
 ## Owner: Codex — clinical-imaging dependency boundary [major]
 

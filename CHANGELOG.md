@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-07-14) - Atlas-local Gaia resolution [patch]
+
+- Declared Gaia as the live Atlas path dependency instead of relying on a
+  workspace-root Git source patch. Downstream package consumers now resolve
+  Gaia's local Eunomia dependency without selecting a historical Git revision.
+
 ### Added (2026-07-14) - planar sector BLI rasterization [minor]
 
 - Added one validated `PlanarApertureGeometry` contract shared by frequency-domain

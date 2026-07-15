@@ -40,7 +40,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 bytemuck = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-gaia = { git = "https://github.com/ryancinsight/gaia", default-features = false }
+gaia = { path = "../gaia", default-features = false }
 tempfile = "3.10"
 proptest = "1.0"
 walkdir = "2.4"
@@ -100,9 +100,6 @@ opt-level = 3
 lto = true
 codegen-units = 1
 strip = true  # Strip symbols for smaller Python wheels
-
-[patch."https://github.com/ryancinsight/gaia"]
-gaia = { path = "../gaia" }
 
 [patch."https://github.com/ryancinsight/leto.git"]
 leto = { path = "../leto/crates/leto" }

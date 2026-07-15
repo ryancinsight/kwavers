@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — in-progress
+## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — review
 
 - Owner: Codex; scope: workspace manifest, dependency records, and LeoNeuro
   SemVer integration.
@@ -10,6 +10,11 @@
 - Acceptance: Kwavers declares the live Atlas Gaia checkout directly, deletes
   the redundant Gaia source patch, and LeoNeuro's historical SemVer comparison
   resolves through the local Gaia-to-Eunomia graph.
+- Evidence: locked offline metadata resolves `gaia` at `D:\atlas\repos\gaia`;
+  warning-denied `kwavers-mesh` Clippy passes; Nextest passes 9/9. The isolated
+  LeoNeuro package now passes Gaia resolution and stops at the independent
+  Moirai-to-Themis Git edge (`themis ^0.10` versus 0.9.17 at its pinned Git
+  revision). That residual belongs to Moirai portability, not Kwavers.
 
 ## KW-ARCH-036 — Clinical-imaging dependency boundary [major] — review
 
