@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — in-progress
+
+- Owner: Codex; scope: promote real-RF analytic-baseband demodulation into a
+  direct `kwavers-analysis` API, then provide a transmit-aware complex DAS
+  kernel consumed by LeoNeuro's active sector ensemble.
+- Acceptance: one validated Kwavers contract converts real RF channels to
+  complex baseband without the narrowband-snapshot adapter; complex DAS uses
+  the same per-pixel transmit delays and apodization law as real DAS. LeoNeuro
+  can compose those primitives without reimplementing demodulation, delay, or
+  complex interpolation.
+- Driver: KW-IMG-043 closes real active B-mode. LeoNeuro's remaining
+  color/power/PW/fUS sector modes require complex slow-time I/Q and cannot use
+  a real B-mode result as a substitute.
+
 ## KW-IMG-043 — Active transmit-event imaging contract [minor] — done
 
 - Owner: Codex; scope: `kwavers-phantom` transmit-event RF synthesis,
