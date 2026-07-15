@@ -33,7 +33,7 @@ impl LiteratureValidator {
         let nx = pressure_field.shape()[0];
         let ny = pressure_field.shape()[1];
         let nz = pressure_field.shape()[2];
-        let center = (nx / 2, ny / 2, nz / 2);
+        let center = [nx / 2, ny / 2, nz / 2];
 
         let computed_waveform: Vec<f64> = vec![pressure_field[center]];
 
@@ -195,7 +195,11 @@ impl LiteratureValidator {
             "Convergence order: {:.2} (expected {:.2}), slope {}",
             observed_order.abs(),
             expected_order,
-            if result.passed { "verified" } else { "mismatch" }
+            if result.passed {
+                "verified"
+            } else {
+                "mismatch"
+            }
         );
 
         result
@@ -257,16 +261,28 @@ impl LiteratureValidator {
         let mut failed = 0;
 
         for result in results {
-            let status = if result.passed { "✅ PASS" } else { "❌ FAIL" };
+            let status = if result.passed {
+                "✅ PASS"
+            } else {
+                "❌ FAIL"
+            };
             report.push_str(&format!(
                 "| {} | {} | {:.2e} | {} |\n",
                 result.case_name, status, result.relative_error, result.notes
             ));
 
-            if result.passed { passed += 1; } else { failed += 1; }
+            if result.passed {
+                passed += 1;
+            } else {
+                failed += 1;
+            }
         }
 
-        report.push_str(&format!("\n**Summary**: {}/{} passed\n", passed, passed + failed));
+        report.push_str(&format!(
+            "\n**Summary**: {}/{} passed\n",
+            passed,
+            passed + failed
+        ));
         report
     }
 }

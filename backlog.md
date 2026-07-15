@@ -6,7 +6,8 @@
   providers declared by `Cargo.toml`, root Cargo-deny policy, stale
   architecture-workflow cleanup, portable hosted CPU code generation, explicit
   CUDA-runtime compilation, native Nextest invocation, WGPU 30 provider
-  alignment, and Leto API migration required by the public `full` build.
+  alignment, Leto API migration required by the public `full` build, and the
+  native solver literature-validation module targeted by CI.
 - Acceptance: every Cargo job materializes the manifest-declared sibling
   providers at the `codex/kwavers-atlas-integration` submodule revisions before
   resolving the workspace; no workflow invokes the deleted
@@ -17,7 +18,9 @@
   root policy against the Kwavers manifest and rejects unapproved sources,
   licenses, and advisories. The public `full` package build uses the same WGPU
   30 immediate-data ABI as its Hephaestus provider and all Leto operations
-  propagate their fallible view/index contracts.
+  propagate their fallible view/index contracts. Solver literature validation
+  is a compiled native module with value-semantic reference regressions rather
+  than an empty test filter.
 - Driver: PR #288 fails before compilation because `../apollo` and the other
   Atlas path providers are absent in GitHub Actions. The architecture workflow
   separately invokes a script deleted in commit `91514cad2`.
@@ -59,7 +62,13 @@
   views, and fallible axes without ndarray fallback adapters. Workspace Rustdoc
   compiles under the legacy warning baseline while the deployable public
   `kwavers` facade remains warning-denied; the extensive physics Rustdoc-link
-  cleanup remains tracked ratchet work rather than a CI suppression.
+  cleanup remains tracked ratchet work rather than a CI suppression. The first
+  repaired remote run proved the solver workflow's `validation::literature`
+  filter selected no module. Its source and tests existed but `validation::mod`
+  omitted the module declaration. Restoring the native edge corrected the
+  nested `TWO_PI` scope and Leto three-axis index; nine literature regressions
+  now pass locally, including an exact Treeby snapshot and multi-time
+  dimension-contract rejection.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 

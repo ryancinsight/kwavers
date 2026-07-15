@@ -28,6 +28,9 @@
   warning-denied Rustdoc gate for the deployable public `kwavers` facade; the
   recorded legacy physics documentation-link baseline remains separate ratchet
   work.
+- Restored the solver literature-validation module targeted by CI, corrected
+  its nested angular-frequency constant scope and Leto three-axis indexing, and
+  added exact single-snapshot and dimension-contract regressions.
 
 ### Fixed (2026-07-15) - Atlas-path CI setup [patch]
 

@@ -1,8 +1,12 @@
-use kwavers_core::constants::fundamental::{ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
-use kwavers_core::constants::tissue_acoustics::SOFT_TISSUE_ABSORPTION_POWER_Y;
-use kwavers_core::constants::numerical::MHZ_TO_HZ;
-use super::types::{treeby_2010, pinton_2009, LiteratureValidationResult};
+use super::types::{pinton_2009, treeby_2010, LiteratureValidationResult};
 use super::validator::LiteratureValidator;
+use kwavers_core::constants::fundamental::{
+    ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
+};
+use kwavers_core::constants::numerical::MHZ_TO_HZ;
+use kwavers_core::constants::tissue_acoustics::SOFT_TISSUE_ABSORPTION_POWER_Y;
+use kwavers_core::error::{KwaversError, ValidationError};
+use leto::Array3;
 
 #[test]
 fn test_relative_l2_error() {
@@ -54,10 +58,18 @@ fn test_convergence_rate_analysis() {
 
 #[test]
 fn test_absorption_power_law() {
-    let freqs = vec![MHZ_TO_HZ, 2.0 * MHZ_TO_HZ, 3.0 * MHZ_TO_HZ, 4.0 * MHZ_TO_HZ, 5.0 * MHZ_TO_HZ];
+    let freqs = vec![
+        MHZ_TO_HZ,
+        2.0 * MHZ_TO_HZ,
+        3.0 * MHZ_TO_HZ,
+        4.0 * MHZ_TO_HZ,
+        5.0 * MHZ_TO_HZ,
+    ];
     let alpha: Vec<f64> = freqs
         .iter()
-        .map(|&f: &f64| ACOUSTIC_ABSORPTION_TISSUE * (f / MHZ_TO_HZ).powf(SOFT_TISSUE_ABSORPTION_POWER_Y))
+        .map(|&f: &f64| {
+            ACOUSTIC_ABSORPTION_TISSUE * (f / MHZ_TO_HZ).powf(SOFT_TISSUE_ABSORPTION_POWER_Y)
+        })
         .collect();
 
     let validator = LiteratureValidator::new();
@@ -74,4 +86,36 @@ fn validation_result_builder() {
 
     assert_eq!(result.relative_error, 0.01);
     assert_eq!(result.absolute_error, 0.001);
+}
+
+#[test]
+fn treeby_plane_wave_matches_single_snapshot_reference() {
+    let time = 0.0;
+    let amplitude = 1.0e5;
+    let expected = treeby_2010::analytical_pressure(time, amplitude);
+    let field = Array3::from_elem([3, 3, 3], expected);
+
+    let result = LiteratureValidator::new()
+        .validate_treeby_plane_wave(&field, &[time], 1.0e-8)
+        .expect("single snapshot matches the Treeby reference");
+
+    assert_eq!(result.relative_error, 0.0);
+    assert_eq!(result.absolute_error, 0.0);
+    assert!(result.passed);
+}
+
+#[test]
+fn treeby_plane_wave_rejects_multiple_snapshot_times() {
+    let field = Array3::zeros([3, 3, 3]);
+    let error = LiteratureValidator::new()
+        .validate_treeby_plane_wave(&field, &[0.0, 1.0e-8], 1.0e-8)
+        .expect_err("one spatial snapshot cannot validate multiple times");
+
+    match error {
+        KwaversError::Validation(ValidationError::DimensionMismatch { expected, actual }) => {
+            assert_eq!(expected, "2");
+            assert_eq!(actual, "1");
+        }
+        other => panic!("expected snapshot-time dimension mismatch, got {other:?}"),
+    }
 }

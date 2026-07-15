@@ -1,10 +1,10 @@
 //! Literature validation types and reference constants.
 
 use std::collections::HashMap;
-use kwavers_core::constants::numerical::{TWO_PI};
-
 /// Reference values from Treeby et al. (2010) k-Wave paper
 pub mod treeby_2010 {
+    use kwavers_core::constants::numerical::TWO_PI;
+
     pub const SOUND_SPEED: f64 = kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     pub const DENSITY: f64 = kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
     pub const FREQUENCY: f64 = kwavers_core::constants::numerical::MHZ_TO_HZ;

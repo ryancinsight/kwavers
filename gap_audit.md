@@ -53,7 +53,13 @@
   recorded legacy baseline, while the deployable `kwavers` facade stays
   warning-denied. This change corrects every public-facade link reached by the
   full build; the broader physics documentation ratchet remains a separate
-  cleanup item.
+  cleanup item. The first remote run also exposed a stale solver-validation
+  workflow target: `validation::literature` existed on disk but was absent from
+  the parent module, making Nextest reject the empty filter. The restored
+  module edge compiled its latent nested-constant and Leto-index defects;
+  nine value-semantic literature regressions now pass locally, including an
+  exact Treeby snapshot and multi-time dimension rejection. Residual: the
+  re-triggered remote matrix remains the final integration gate.
 
 - Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
   resolved a crate-local policy instead of one scoped to the deployable Kwavers

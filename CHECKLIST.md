@@ -23,6 +23,8 @@
       `full` package build.
 - [x] Run focused value-semantic Nextest regressions and the portable `full`
       package build on the corrected PR head.
+- [x] Restore the missing `validation::literature` module edge exposed by the
+      solver-validation workflow and verify its reference regressions.
 - [ ] Push the repair, run GitHub Actions on its new head, then merge only
       after the matrix is green.
 
@@ -63,7 +65,13 @@ replacing WGPU 26 push constants with the WGPU 30 immediate-data API used by
 Hephaestus and correcting Leto view/shape/result boundaries in
 `kwavers-analysis`. The public facade Rustdoc is warning-denied; workspace
 Rustdoc retains its documented brownfield warning baseline while proving every
-crate compiles. The new remote matrix remains the merge gate.
+crate compiles. The first corrected remote run also proved the solver workflow
+still selected a literature-validation module that existed on disk but was not
+declared by `validation::mod`. Restoring that native module edge uncovered and
+corrected its stale nested constant scope and Leto three-axis index. The
+literature suite now has nine value-semantic regressions, including a Treeby
+single-snapshot reference and multiple-time rejection. The new remote matrix
+remains the merge gate.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 
