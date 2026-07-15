@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-DOP-041 — Doppler autocorrelation signal-power contract [minor] — in progress
+## KW-DOP-041 — Doppler autocorrelation signal-power contract [minor] — done
 
 - Owner: Codex; scope: `kwavers-analysis` autocorrelation provider/export and
   synchronized PM artifacts.
@@ -10,6 +10,11 @@
 - Driver: LeoNeuro's private reference GUI currently recomputes power and uses
   the opposite lag-one phase order in Python. The provider must own the full
   map contract before its Python conversion boundary can delete that solver.
+- Evidence: `estimate_with_power` owns all three maps and the tuple API
+  delegates without a second traversal. Locked offline focused Nextest passes
+  5/5; default-feature Clippy passes; Rustdoc completes with a documented
+  pre-existing unresolved-link baseline. LeoNeuro's PyO3 consumer verifies the
+  sign and map values independently.
 
 ## KW-RAY-040 — Layered focus-path contract [minor] — in-progress
 

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added (2026-07-15) - Doppler autocorrelation map contract [minor]
+
+- Added `AutocorrelationEstimate` and `estimate_with_power`, which return
+  velocity, normalized coherence loss, and lag-zero signal power from one
+  canonical Kasai traversal. The existing velocity/variance tuple API delegates
+  to that result. Coherent-I/Q regression coverage pins the lag convention,
+  sign, power, and variance semantics for direct consumers such as LeoNeuro.
+
 ### Added (2026-07-15) - layered propagation path [minor]
 
 - Added `RayleighPropagationPath`, a validated ordered straight-ray contract

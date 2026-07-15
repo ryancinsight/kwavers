@@ -113,6 +113,22 @@ pub struct AutocorrelationEstimator {
     config: AutocorrelationConfig,
 }
 
+/// Doppler maps computed from one lag-one autocorrelation traversal.
+///
+/// All arrays have shape `(n_depths, n_beams)`. `power` is the lag-zero power
+/// `mean(|I_n|²)` over the same `N - 1` samples used by
+/// `R₁ = mean(I_n * conj(I_{n+1}))`; this shared window keeps the normalized
+/// variance denominator physically consistent with the returned power map.
+#[derive(Debug, Clone)]
+pub struct AutocorrelationEstimate {
+    /// Axial velocity map in metres per second.
+    pub velocity: Array2<f64>,
+    /// Normalized coherence-loss map `max(0, 1 - |R₁| / R₀)`.
+    pub variance: Array2<f64>,
+    /// Lag-zero I/Q signal-power map.
+    pub power: Array2<f64>,
+}
+
 impl AutocorrelationEstimator {
     /// Create a new autocorrelation estimator
     #[must_use]
@@ -152,6 +168,24 @@ impl AutocorrelationEstimator {
         &self,
         iq_data: &ArrayView3<Complex64>,
     ) -> KwaversResult<(Array2<f64>, Array2<f64>)> {
+        let estimate = self.estimate_with_power(iq_data)?;
+        Ok((estimate.velocity, estimate.variance))
+    }
+
+    /// Estimate velocity, normalized variance, and lag-zero signal power.
+    ///
+    /// The returned phase convention follows
+    /// `R₁ = mean(I_n * conj(I_{n+1}))`. A positive slow-time phase progression
+    /// consequently produces a negative estimated velocity.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Validation`] when the I/Q ensemble is shorter
+    /// than two pulses or does not match the configured ensemble size.
+    pub fn estimate_with_power(
+        &self,
+        iq_data: &ArrayView3<Complex64>,
+    ) -> KwaversResult<AutocorrelationEstimate> {
         let [ensemble_size, n_depths, n_beams] = iq_data.shape();
 
         if ensemble_size < 2 {
@@ -177,17 +211,23 @@ impl AutocorrelationEstimator {
 
         let mut velocity = Array2::<f64>::zeros((n_depths, n_beams));
         let mut variance = Array2::<f64>::zeros((n_depths, n_beams));
+        let mut power = Array2::<f64>::zeros((n_depths, n_beams));
 
         // Process each spatial location
         for depth in 0..n_depths {
             for beam in 0..n_beams {
-                let (v, var) = self.estimate_at_point(iq_data, depth, beam);
+                let (v, var, pwr) = self.estimate_at_point(iq_data, depth, beam);
                 velocity[[depth, beam]] = v;
                 variance[[depth, beam]] = var;
+                power[[depth, beam]] = pwr;
             }
         }
 
-        Ok((velocity, variance))
+        Ok(AutocorrelationEstimate {
+            velocity,
+            variance,
+            power,
+        })
     }
 
     /// Estimate velocity at a single spatial point
@@ -196,7 +236,7 @@ impl AutocorrelationEstimator {
         iq_data: &ArrayView3<Complex64>,
         depth: usize,
         beam: usize,
-    ) -> (f64, f64) {
+    ) -> (f64, f64, f64) {
         let ensemble_size = iq_data.shape()[0];
 
         // Compute lag-1 autocorrelation: R₁ = Σ(I_n * conj(I_{n+1}))
@@ -232,7 +272,7 @@ impl AutocorrelationEstimator {
             1.0 // High variance if no signal
         };
 
-        (velocity, normalized_variance)
+        (velocity, normalized_variance, power)
     }
 
     /// Convert Doppler phase shift to velocity
@@ -346,20 +386,60 @@ mod tests {
         // Create zero I/Q data
         let iq_data = Array3::<Complex64>::zeros((10, 16, 8));
 
-        let result = estimator.estimate(&iq_data.view());
-        let (velocity, variance) = result.expect("Zero signal should not error");
+        let estimate = estimator
+            .estimate_with_power(&iq_data.view())
+            .expect("zero signal satisfies the estimator shape contract");
 
         // Zero signal should give zero velocity
         assert!(
-            velocity.iter().all(|&v| v == 0.0),
+            estimate.velocity.iter().all(|&v| v == 0.0),
             "Zero signal should give zero velocity"
         );
 
         // Zero signal should give high variance (no correlation)
         assert!(
-            variance.iter().all(|&var| var > 0.5),
+            estimate.variance.iter().all(|&var| var > 0.5),
             "Zero signal should give high variance"
         );
+        assert!(
+            estimate.power.iter().all(|&power| power == 0.0),
+            "zero I/Q must have zero lag-zero power"
+        );
+    }
+
+    #[test]
+    fn estimate_with_power_preserves_coherent_iq_contract() {
+        const ENSEMBLE_SIZE: usize = 8;
+        let phase_step = PI / 3.0;
+        let config = AutocorrelationConfig {
+            center_frequency: 5.0 * MHZ_TO_HZ,
+            prf: 4e3,
+            speed_of_sound: SOUND_SPEED_TISSUE,
+            beam_angle: 0.0,
+            ensemble_size: ENSEMBLE_SIZE,
+            ..Default::default()
+        };
+        let iq_data = Array3::from_shape_fn((ENSEMBLE_SIZE, 2, 3), |[pulse, _, _]| {
+            let phase = phase_step * pulse as f64;
+            Complex64::new(phase.cos(), phase.sin())
+        });
+
+        let estimate = AutocorrelationEstimator::new(config.clone())
+            .estimate_with_power(&iq_data.view())
+            .expect("coherent I/Q satisfies the estimator contract");
+        let expected_velocity =
+            -phase_step * config.speed_of_sound * config.prf / (FOUR_PI * config.center_frequency);
+        // Each cell performs seven complex products/additions plus
+        // normalization; γ_128 = 128ε / (1 - 128ε) conservatively includes
+        // the phase conversion and scalar rescaling roundoff.
+        let roundoff = 128.0 * f64::EPSILON;
+        let epsilon = roundoff / (1.0 - roundoff);
+
+        for ([depth, beam], velocity) in estimate.velocity.indexed_iter() {
+            assert_relative_eq!(*velocity, expected_velocity, epsilon = epsilon);
+            assert_relative_eq!(estimate.variance[[depth, beam]], 0.0, epsilon = epsilon);
+            assert_relative_eq!(estimate.power[[depth, beam]], 1.0, epsilon = epsilon);
+        }
     }
 
     #[test]

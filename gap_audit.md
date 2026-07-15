@@ -1,5 +1,16 @@
 # Gap Audit
 
+- Closed 2026-07-15: the autocorrelation provider exposed velocity and
+  normalized variance but forced each consumer that needed a Doppler power map
+  to duplicate lag-zero reduction. `AutocorrelationEstimate` now owns all three
+  maps from the same lag window, and the legacy tuple delegates to it. A
+  coherent complex-I/Q oracle establishes `R1 = mean(I_n * conj(I_n+1))`, its
+  negative velocity sign for positive phase progression, unit power, and zero
+  coherence loss. Evidence tier: value-semantic provider test, focused locked
+  Nextest 5/5, default-feature warning-denied Clippy, and Rustdoc. Residual:
+  all-feature Clippy is independently blocked in `wgpu-hal` 30.0.0 by the
+  workspace `windows` 0.61/0.62 Direct3D type split before this crate builds.
+
 - Closed 2026-07-15: layered field evaluation kept its ordered segment path
   private to `RayleighIntegralSpec`, forcing LeoNeuro/Python focus control to
   reimplement or omit the same physics. `RayleighPropagationPath` now owns

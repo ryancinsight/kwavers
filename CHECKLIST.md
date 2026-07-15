@@ -2,11 +2,11 @@
 
 ## Owner: Codex — Doppler autocorrelation signal-power contract [minor]
 
-- [ ] Publish a native Doppler estimate that carries velocity, normalized
+- [x] Publish a native Doppler estimate that carries velocity, normalized
   variance, and lag-zero signal power from one validated Kasai traversal.
-- [ ] Preserve the existing velocity/variance tuple API by delegating it to the
+- [x] Preserve the existing velocity/variance tuple API by delegating it to the
   authoritative estimate, without duplicating the lag traversal.
-- [ ] Add a coherent-IQ value oracle and synchronize the provider contract
+- [x] Add a coherent-IQ value oracle and synchronize the provider contract
   documentation and PM evidence.
 
 **Current phase:** Execution. **Target:** Kwavers 4.1.0 / LeoNeuro 0.4.0.
@@ -15,6 +15,16 @@ autocorrelation or power reduction; the sign convention remains
 `R1 = mean(I_n * conj(I_n+1))`, and coherent unit-magnitude IQ has unit power
 and zero normalized variance. Planned gate: locked package Nextest, Clippy,
 Rustdoc, and source-residue audit.
+
+**Closure evidence:** `AutocorrelationEstimate` returns velocity, normalized
+coherence loss, and lag-zero power from the one existing lag-one traversal;
+the tuple surface delegates to it. The coherent-I/Q contract pins Kwavers'
+negative velocity sign for a positive phase progression, unit power, and zero
+variance. Locked offline Nextest passes 5/5 autocorrelation tests; default
+feature warning-denied Clippy passes. Rustdoc builds with 57 pre-existing
+unresolved-link warnings outside Doppler; the new Doppler documentation emits
+none. All-feature Clippy remains blocked before `kwavers-analysis` by the
+existing Windows `wgpu-hal` 30.0.0 / `windows` 0.61–0.62 type split.
 
 ## Owner: Codex — Layered focus-path contract [minor]
 
