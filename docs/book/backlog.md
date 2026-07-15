@@ -176,7 +176,7 @@ claimed struct name) before implementing. Confirmed corrections below.
 - ✅ **Complete tissue-varying CT→simulation-medium modeling** — `[minor]` (2026-06-11). Extended
   the CT-derived model to a *complete* acoustic medium: `HuAcousticModel` now also maps the power-law
   **exponent** y (soft 1.1 Duck → skull 1.0 Connor&Hynynen) and **nonlinearity** B/A (6.5→8.0),
-  blended by bone fraction. New `kwavers_physics::…::heterogeneous::CtMediumBuilder` assembles a
+  blended by bone fraction. `kwavers_medium::CtMediumBuilder` assembles a
   solver-ready `HeterogeneousMedium` (impl `Medium`) mapping EVERY acoustic field — ρ, c, α₀, y, B/A —
   per voxel from HU, broadcasting non-acoustic fields from a configurable homogeneous background via
   `from_homogeneous` (SSOT, no new Medium impl). So bone and soft tissue now attenuate with their own
