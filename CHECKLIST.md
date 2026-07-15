@@ -26,7 +26,9 @@ and Atlas `main`'s incompatible Apollo 0.14. YAML parsing and local
 provider-path resolution pass. Architecture run `29444236283` then materializes
 every provider and identifies the independent Linux `CPU_SET` mutability error
 in the explicit CPU-affinity branch, followed by two manual NUMA-mask ceiling
-divisions; both corrections are awaiting their rerun.
+divisions. The migration audit now excludes NumPy's PyO3 facade while retaining
+direct ndarray detection, then removes 1,477 stale allowlist entries. All
+corrections are awaiting their rerun.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 

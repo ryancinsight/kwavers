@@ -10,7 +10,8 @@
   workflow no longer invokes its deleted validation script, native test jobs
   use Nextest, Linux CPU-affinity configuration passes the mutable CPU set
   required by `libc::CPU_SET`, and NUMA mask capacity uses the standard
-  overflow-safe ceiling division.
+  overflow-safe ceiling division. The migration audit distinguishes the NumPy
+  PyO3 facade from direct ndarray use and deletes obsolete baseline entries.
 
 ### Fixed (2026-07-15) - coherent active complex DAS [patch]
 

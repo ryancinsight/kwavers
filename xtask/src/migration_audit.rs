@@ -298,10 +298,7 @@ pub(crate) fn scan_legacy_migration_surface(root: &Path) -> Result<LegacyMigrati
         } else if path.extension().and_then(|ext| ext.to_str()) == Some("rs") {
             let text = fs::read_to_string(path)
                 .with_context(|| format!("failed reading {}", path.display()))?;
-            let count = LEGACY_SOURCE_TOKENS
-                .iter()
-                .map(|token| text.matches(token).count())
-                .sum::<usize>();
+            let count = legacy_source_reference_count(&text);
             if count > 0 {
                 source_references.push(SourceReference {
                     path: relative(root, path),
@@ -322,6 +319,21 @@ pub(crate) fn scan_legacy_migration_surface(root: &Path) -> Result<LegacyMigrati
         source_references,
         atlas_manifest_references,
     })
+}
+
+fn legacy_source_reference_count(text: &str) -> usize {
+    LEGACY_SOURCE_TOKENS
+        .iter()
+        .map(|token| {
+            text.match_indices(token)
+                // NumPy's PyO3 facade re-exports ndarray types. It is an FFI
+                // boundary, not a direct legacy-compute dependency.
+                .filter(|(offset, _)| {
+                    *token != "ndarray::" || !text[..*offset].ends_with("numpy::")
+                })
+                .count()
+        })
+        .sum()
 }
 
 pub(crate) fn scan_burn_migration_surface(root: &Path) -> Result<BurnMigrationReport> {
@@ -597,6 +609,30 @@ mod tests {
         assert!(report.manifest_dependencies.is_empty());
         assert!(report.source_references.is_empty());
         assert!(report.by_crate.is_empty());
+
+        fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn legacy_audit_excludes_numpy_facade_but_tracks_direct_ndarray() {
+        let root = temp_root();
+        let source = root.join("crates/kwavers-python/src/binding.rs");
+        fs::create_dir_all(source.parent().unwrap()).unwrap();
+        fs::write(
+            &source,
+            "use numpy::ndarray::Array1;\nuse ndarray::Array2;\n",
+        )
+        .unwrap();
+
+        let report = scan_legacy_migration_surface(&root).unwrap();
+
+        assert_eq!(
+            report.source_references,
+            vec![SourceReference {
+                path: PathBuf::from("crates/kwavers-python/src/binding.rs"),
+                count: 1,
+            }]
+        );
 
         fs::remove_dir_all(root).unwrap();
     }

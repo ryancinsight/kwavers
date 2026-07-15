@@ -22,7 +22,10 @@
   architecture rerun materializes all 12 providers and exposes the first real
   source error: Linux `CPU_SET` receives an immutable set in the explicit-CPU
   branch. Strict Clippy then finds two manual NUMA-mask ceiling divisions.
-  Local manifest-path resolution finds all 12 sibling providers.
+  The legacy audit also misclassifies NumPy's PyO3 ndarray facade as direct
+  ndarray use; it now distinguishes those boundaries and removes 1,477 stale
+  allowlist entries. Local manifest-path resolution finds all 12 sibling
+  providers.
   Re-open trigger: any coordinated-provider checkout, manifest
   resolution, or subsequent CI-job failure on the repaired PR head.
 

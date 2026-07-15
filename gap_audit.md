@@ -12,10 +12,13 @@
   pins incompatible Apollo 0.14. The subsequent Architecture rerun
   `29444236283` completes provider checkout and finds the independent Linux
   `CPU_SET` mutability defect in Kwavers' explicit-affinity branch. Strict
-  Clippy then identifies two manual NUMA-mask ceiling divisions. Evidence tier:
-  authoritative Actions logs plus local manifest-path resolution and YAML
-  parsing. Residual: the corrected PR head must complete the full remote matrix
-  before closure.
+  Clippy then identifies two manual NUMA-mask ceiling divisions. The migration
+  audit's substring matcher additionally misclassifies `numpy::ndarray` in the
+  sanctioned PyO3 facade as direct legacy ndarray; the classifier now separates
+  them, with a direct-vs-facade regression and regenerated stale baseline.
+  Evidence tier: authoritative Actions logs plus local manifest-path resolution,
+  YAML parsing, and local audit execution. Residual: the corrected PR head must
+  complete the full remote matrix before closure.
 
 - Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
   channel, so complex DAS must restore that phase after fractional interpolation
