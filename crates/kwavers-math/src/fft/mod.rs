@@ -244,13 +244,15 @@ pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex64> {
 }
 
 /// Forward 3-D FFT of a real Leto array into caller-owned storage.
+/// Routes to Apollo's zero-alloc `fft_3d_array_into`, avoiding intermediate
+/// allocation and element-wise conversion.
 pub fn fft_3d_array_into(field: &Array3<f64>, out: &mut Array3<Complex64>) {
     assert_eq!(
         field.shape(),
         out.shape(),
         "fft_3d_array_into: input and output shapes must match"
     );
-    out.assign(&fft_3d_array(field));
+    apollo::fft_3d_array_into(field, out);
 }
 
 /// Inverse 3-D FFT of a complex Leto array, returning the real component.
@@ -261,13 +263,15 @@ pub fn ifft_3d_array(field_hat: &Array3<Complex64>) -> Array3<f64> {
 }
 
 /// Inverse 3-D FFT into caller-owned real storage.
+/// Routes to Apollo's zero-alloc `ifft_3d_array_into`, avoiding intermediate
+/// allocation and element-wise copy.
 pub fn ifft_3d_array_into(field_hat: &mut Array3<Complex64>, out: &mut Array3<f64>) {
     assert_eq!(
         field_hat.shape(),
         out.shape(),
         "ifft_3d_array_into: input and output shapes must match"
     );
-    out.assign(&ifft_3d_array(field_hat));
+    apollo::ifft_3d_array_into(field_hat, out);
 }
 
 /// Forward 3-D complex FFT, allocating output.
