@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## KW-IMG-043 — Active transmit-event imaging contract [minor] — in-progress
+
+- Owner: Codex; scope: `kwavers-phantom` transmit-event RF synthesis,
+  `kwavers-analysis` transmit-aware imaging DAS, focused regressions, and
+  synchronized provider artifacts.
+- Acceptance: one validated plane-wave or virtual-source event supplies the
+  same transmit travel time to synthetic RF generation and DAS reconstruction;
+  no consumer reproduces transmit-time or spreading arithmetic.
+- Driver: LeoNeuro's reference sector imager has plane/diverging transmit
+  timing, but the provider pair only supports monostatic RF plus receive-only
+  DAS. This provider gap blocks a native replacement of that Python solver.
+
 ## KW-IQ-042 — Complex I/Q SVD clutter contract [minor] — done
 
 - Owner: Codex; scope: `kwavers-analysis` I/Q SVD provider, its public export,
