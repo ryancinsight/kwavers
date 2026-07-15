@@ -59,7 +59,10 @@
   module edge compiled its latent nested-constant and Leto-index defects;
   nine value-semantic literature regressions now pass locally, including an
   exact Treeby snapshot and multi-time dimension rejection. Residual: the
-  re-triggered remote matrix remains the final integration gate.
+  re-triggered remote matrix remains the final integration gate. Its
+  architecture job also missed the fontconfig development package required by
+  the public full-feature facade; it now matches the package contract used by
+  the existing Cargo CI jobs.
 
 - Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
   resolved a crate-local policy instead of one scoped to the deployable Kwavers

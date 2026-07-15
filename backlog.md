@@ -68,7 +68,9 @@
   omitted the module declaration. Restoring the native edge corrected the
   nested `TWO_PI` scope and Leto three-axis index; nine literature regressions
   now pass locally, including an exact Treeby snapshot and multi-time
-  dimension-contract rejection.
+  dimension-contract rejection. The architecture job's first full-facade build
+  also lacked the fontconfig development package already present in the other
+  Cargo CI jobs; its system prerequisites now match that established contract.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 

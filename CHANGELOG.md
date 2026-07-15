@@ -31,6 +31,8 @@
 - Restored the solver literature-validation module targeted by CI, corrected
   its nested angular-frequency constant scope and Leto three-axis indexing, and
   added exact single-snapshot and dimension-contract regressions.
+- Declared the fontconfig development prerequisite for the architecture job,
+  matching the existing Cargo CI jobs that build the public feature surface.
 
 ### Fixed (2026-07-15) - Atlas-path CI setup [patch]
 

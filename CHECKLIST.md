@@ -71,7 +71,10 @@ declared by `validation::mod`. Restoring that native module edge uncovered and
 corrected its stale nested constant scope and Leto three-axis index. The
 literature suite now has nine value-semantic regressions, including a Treeby
 single-snapshot reference and multiple-time rejection. The new remote matrix
-remains the merge gate.
+remains the merge gate. Its architecture job also lacked the
+`libfontconfig1-dev` system contract required by the public full-feature
+facade; it now uses the same prerequisite already declared by the other Cargo
+CI jobs.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 
