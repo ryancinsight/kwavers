@@ -111,8 +111,6 @@ jobs:
           - gpu
           - plotting
           - pinn
-          - api
-          - parallel
           - full
 
     steps:

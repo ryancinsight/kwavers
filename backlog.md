@@ -6,15 +6,18 @@
   providers declared by `Cargo.toml`, stale architecture-workflow cleanup, and
   native Nextest invocation.
 - Acceptance: every Cargo job materializes the manifest-declared sibling
-  providers before resolving the workspace; no workflow invokes the deleted
-  `scripts/validate_architecture.sh`; native test jobs use Nextest, with
-  doctests retaining Rustdoc's supported runner.
+  providers at the coordinated Atlas submodule revisions before resolving the
+  workspace; no workflow invokes the deleted `scripts/validate_architecture.sh`;
+  native test jobs use Nextest, with doctests retaining Rustdoc's supported
+  runner.
 - Driver: PR #288 fails before compilation because `../apollo` and the other
   Atlas path providers are absent in GitHub Actions. The architecture workflow
   separately invokes a script deleted in commit `91514cad2`.
 - Evidence: GitHub Actions run `29443042765` reports the missing
-  `apollo/crates/apollo-fft/Cargo.toml`; local manifest-path resolution finds
-  all 12 sibling providers. Re-open trigger: any provider checkout, manifest
+  `apollo/crates/apollo-fft/Cargo.toml`; the first repair run proves that
+  provider defaults are insufficient (`apollo-fft` 0.17.0 conflicts with
+  RITK's `^0.15.0`). Local manifest-path resolution finds all 12 sibling
+  providers. Re-open trigger: any coordinated-provider checkout, manifest
   resolution, or subsequent CI-job failure on the repaired PR head.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done

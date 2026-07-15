@@ -12,14 +12,16 @@
 - [ ] Push the CI repair and verify all GitHub Actions checks on its new head.
 
 **Current phase:** Closure. **Target:** Kwavers 4.1.0.
-**Acceptance:** GitHub Actions resolves the same Atlas sibling-path graph as
-the local checkout before Cargo starts, and no active workflow calls deleted
-validation infrastructure.
+**Acceptance:** GitHub Actions resolves the same coordinated Atlas
+sibling-path graph as the local checkout before Cargo starts, and no active
+workflow calls deleted validation infrastructure.
 
 **Current evidence:** Actions run `29443042765` fails before compilation on
 the absent `../apollo` provider; the local manifest-derived provider set is
 `apollo, coeus, eunomia, gaia, hephaestus, hermes, leto, melinoe, mnemosyne,
-moirai, ritk, themis`. YAML parsing and local provider-path resolution pass.
+moirai, ritk, themis`. The provider action now uses Atlas's submodule commits
+after the first rerun selected incompatible provider defaults. YAML parsing and
+local provider-path resolution pass.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 
