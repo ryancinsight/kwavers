@@ -14,7 +14,7 @@
 //! For each pixel `p` and sensor `s` at position `r_s`,
 //!
 //! ```text
-//! τ_{s,p} = ‖r_p − r_s‖ / c            (one-way time of flight)
+//! τ_{s,p} = τ_tx(p) + ‖r_p − r_s‖ / c  (active-imaging time of flight)
 //! k_{s,p} = τ_{s,p} · f_s              (fractional sample index)
 //! image[p] = (1 / N_active(p)) · Σ_s w_s · linterp(sensor_data[s, ·], k_{s,p})
 //! ```
@@ -23,7 +23,7 @@
 //! are excluded from both the sum and `N_active(p)`. When `N_active(p) = 0` the
 //! pixel value is zero.
 
-use leto::{Array1, ArrayView2};
+use leto::{Array1, ArrayView1, ArrayView2};
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 
@@ -92,6 +92,48 @@ pub fn beamform_image_das(
     grid_points: ArrayView2<'_, f64>,
     config: &ImagingDasConfig,
 ) -> KwaversResult<Array1<f64>> {
+    let transmit_delays_s = Array1::<f64>::zeros(grid_points.shape()[0]);
+    beamform_image_das_with_transmit_delays(
+        sensor_data,
+        sensor_positions,
+        grid_points,
+        transmit_delays_s.view(),
+        config,
+    )
+}
+
+/// Active-imaging DAS reconstruction with a shared transmit arrival per pixel.
+///
+/// `transmit_delays_s[p]` is the non-negative transmit travel time for
+/// `grid_points[p]`. It is deliberately a per-pixel array rather than a
+/// wavefront enum so synthetic, measured, and refracting transmit models can
+/// reuse this receive-DAS kernel without duplicating interpolation or
+/// apodization. The total sample index is
+/// `fs · (transmit_delays_s[p] + ‖pixel - sensor‖ / c)`.
+///
+/// # Errors
+/// Returns [`KwaversError::InvalidInput`] for the [`beamform_image_das`]
+/// validation failures, a transmit-delay length mismatch, or a non-finite or
+/// negative transmit delay.
+pub fn beamform_image_das_with_transmit_delays(
+    sensor_data: ArrayView2<'_, f64>,
+    sensor_positions: ArrayView2<'_, f64>,
+    grid_points: ArrayView2<'_, f64>,
+    transmit_delays_s: ArrayView1<'_, f64>,
+    config: &ImagingDasConfig,
+) -> KwaversResult<Array1<f64>> {
+    if !config.sound_speed.is_finite() || config.sound_speed <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "imaging_das: sound_speed must be finite and > 0; got {}",
+            config.sound_speed
+        )));
+    }
+    if !config.sampling_frequency.is_finite() || config.sampling_frequency <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "imaging_das: sampling_frequency must be finite and > 0; got {}",
+            config.sampling_frequency
+        )));
+    }
     let [n_sensors, n_samples] = sensor_data.shape();
     if n_sensors == 0 || n_samples == 0 {
         return Err(KwaversError::InvalidInput(format!(
@@ -125,6 +167,23 @@ pub fn beamform_image_das(
             "imaging_das: grid_points must contain only finite coordinates".to_owned(),
         ));
     }
+    let transmit_delay_count = transmit_delays_s.shape()[0];
+    if transmit_delay_count != grid_points.shape()[0] {
+        return Err(KwaversError::InvalidInput(format!(
+            "imaging_das: transmit_delays_s must have one delay per grid point; got {} delays for {} points",
+            transmit_delay_count,
+            grid_points.shape()[0]
+        )));
+    }
+    if !transmit_delays_s
+        .iter()
+        .all(|delay| delay.is_finite() && *delay >= 0.0)
+    {
+        return Err(KwaversError::InvalidInput(
+            "imaging_das: transmit_delays_s must contain only finite non-negative values"
+                .to_owned(),
+        ));
+    }
 
     let weights = apodization_weights(n_sensors, config.apodization);
     let inv_c = 1.0 / config.sound_speed;
@@ -151,7 +210,7 @@ pub fn beamform_image_das(
             let dy = py - sy;
             let dz = pz - sz;
             let dist = (dx * dx + dy * dy + dz * dz).sqrt();
-            let sample_idx = dist * inv_c * fs;
+            let sample_idx = (transmit_delays_s[pix] + dist * inv_c) * fs;
 
             if !(0.0..=last_sample_f).contains(&sample_idx) {
                 continue;
@@ -202,7 +261,7 @@ mod tests {
     use super::*;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
-    use leto::Array2;
+    use leto::{Array1, Array2};
 
     /// Analytical sanity check: a single Gaussian pulse emitted from a point
     /// scatterer arrives at every sensor with a TOF equal to the source–sensor
@@ -293,6 +352,68 @@ mod tests {
             *peak_val > 0.95,
             "peak image value {peak_val} should be ≈ 1.0 (sum of 8 pulse peaks / 8)"
         );
+    }
+
+    #[test]
+    fn transmit_delay_localizes_an_active_plane_wave_echo() {
+        let sound_speed = 1500.0;
+        let sampling_frequency = 1.5e6;
+        let mut sensor_data = Array2::<f64>::zeros((2, 32));
+        // A +z plane event and a 10 mm receive path each consume ten samples.
+        sensor_data[[0, 20]] = 1.0;
+        sensor_data[[1, 20]] = 1.0;
+        let sensors = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 0.0, 0.0, 0.0, 0.0]).unwrap();
+        let grid = Array2::from_shape_vec((2, 3), vec![0.0, 0.0, 10e-3, 0.0, 0.0, 11e-3]).unwrap();
+        let transmit_delays_s =
+            Array1::from_vec([2], vec![10e-3 / sound_speed, 11e-3 / sound_speed]).unwrap();
+        let config = ImagingDasConfig::new(
+            sound_speed,
+            sampling_frequency,
+            ImagingDasApodization::Rectangular,
+        )
+        .unwrap();
+
+        let image = beamform_image_das_with_transmit_delays(
+            sensor_data.view(),
+            sensors.view(),
+            grid.view(),
+            transmit_delays_s.view(),
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(image[[0]], 1.0);
+        assert_eq!(image[[1]], 0.0);
+    }
+
+    #[test]
+    fn rejects_invalid_transmit_delays() {
+        let sensor_data = Array2::from_shape_vec((1, 2), vec![0.0, 1.0]).unwrap();
+        let positions = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
+        let grid = Array2::from_shape_vec((1, 3), vec![0.0, 0.0, 0.0]).unwrap();
+        let delays = Array1::from_vec([1], vec![-1.0e-6]).unwrap();
+        let config = ImagingDasConfig::new(
+            SOUND_SPEED_WATER_SIM,
+            MHZ_TO_HZ,
+            ImagingDasApodization::Rectangular,
+        )
+        .unwrap();
+
+        let error = beamform_image_das_with_transmit_delays(
+            sensor_data.view(),
+            positions.view(),
+            grid.view(),
+            delays.view(),
+            &config,
+        )
+        .unwrap_err();
+        match error {
+            KwaversError::InvalidInput(message) => assert_eq!(
+                message,
+                "imaging_das: transmit_delays_s must contain only finite non-negative values"
+            ),
+            other => panic!("expected invalid transmit delay error, got {other:?}"),
+        }
     }
 
     #[test]

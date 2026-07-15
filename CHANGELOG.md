@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added (2026-07-15) - active transmit-event imaging contract [minor]
+
+- Added validated three-dimensional `TransmitWavefront` plane-wave and
+  virtual-source events to point-scatterer RF synthesis. Added
+  `beamform_image_das_with_transmit_delays`, which retains canonical receive
+  DAS while accepting the matching transmit arrival for every image point.
+
 ### Added (2026-07-15) - complex I/Q SVD clutter contract [minor]
 
 - Added `IqSvdClutterFilter`, which implements fUS complex-I/Q rank truncation

@@ -1,7 +1,7 @@
 //! Value-semantic tests for point-scatterer RF synthesis. Expected delays and
 //! amplitudes are derived analytically from the monostatic echo model.
 
-use super::{RfSynthesisConfig, ScattererCloud};
+use super::{RfSynthesisConfig, ScattererCloud, TransmitWavefront};
 
 const C: f64 = 1540.0; // m/s
 const FS: f64 = 40e6; // 40 MHz
@@ -226,4 +226,60 @@ fn deeper_scatterer_is_attenuated_more() {
         far / near,
         spreading_ratio
     );
+}
+
+#[test]
+fn plane_wave_event_uses_one_way_transmit_and_receive_paths() {
+    let depth = 0.01925; // 1000 samples at 2·depth/c under the test clock.
+    let amplitude = 3.0;
+    let cloud = ScattererCloud::from_points(&[[0.0, 0.0, depth]], &[amplitude]).unwrap();
+    let transmit = TransmitWavefront::plane([0.0, 0.0, 0.0], [0.0, 0.0, 4.0]).unwrap();
+    let rf = cloud
+        .synthesize_rf_with_transmit(&[[0.0, 0.0, 0.0]], &[1.0], &cfg(2048), transmit)
+        .unwrap();
+
+    let delay = ((depth + depth) * FS / C).round() as usize;
+    // A plane event has unit transmit spreading; only the receive leg spreads.
+    let expected_amplitude = amplitude / depth;
+    // The path uses one normalization, two `hypot`s, and two scale operations;
+    // γ₆ bounds their roundoff relative to the closed-form amplitude.
+    assert!(
+        (rf[[0, delay]] - expected_amplitude).abs()
+            <= 6.0 * f64::EPSILON * expected_amplitude.abs()
+    );
+    assert_eq!(
+        transmit.arrival_time_s([0.0, 0.0, depth], C).unwrap(),
+        depth / C
+    );
+}
+
+#[test]
+fn virtual_source_event_preserves_total_path_and_two_leg_spreading() {
+    let source = [0.0, 0.0, -0.01];
+    let target = [0.0, 0.0, 0.02];
+    let amplitude = 2.0;
+    let cloud = ScattererCloud::from_points(&[target], &[amplitude]).unwrap();
+    let transmit = TransmitWavefront::diverging(source).unwrap();
+    let rf = cloud
+        .synthesize_rf_with_transmit(&[[0.0, 0.0, 0.0]], &[1.0], &cfg(4096), transmit)
+        .unwrap();
+
+    let transmit_distance = 0.03;
+    let receive_distance = 0.02;
+    let delay = ((transmit_distance + receive_distance) * FS / C).round() as usize;
+    let expected_amplitude = amplitude / (transmit_distance * receive_distance);
+    // γ₇ covers the two path norms, reciprocal products, and final scaling.
+    assert!(
+        (rf[[0, delay]] - expected_amplitude).abs()
+            <= 7.0 * f64::EPSILON * expected_amplitude.abs()
+    );
+}
+
+#[test]
+fn transmit_event_rejects_degenerate_or_noncausal_geometry() {
+    assert!(TransmitWavefront::plane([0.0; 3], [0.0; 3]).is_err());
+    let plane = TransmitWavefront::plane([0.0; 3], [0.0, 0.0, 1.0]).unwrap();
+    assert!(plane.arrival_time_s([0.0, 0.0, -1.0e-3], C).is_err());
+    let source = TransmitWavefront::diverging([0.0; 3]).unwrap();
+    assert!(source.arrival_time_s([0.0; 3], C).is_err());
 }

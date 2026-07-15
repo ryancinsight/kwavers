@@ -1,5 +1,30 @@
 # Project Checklist
 
+## Owner: Codex — Active transmit-event imaging contract [minor]
+
+- [x] Add validated three-dimensional plane-wave and virtual-source events to
+      point-scatterer RF synthesis.
+- [x] Extend active-imaging DAS with one validated transmit arrival per pixel
+      while keeping its receive interpolation and apodization authoritative.
+- [x] Prove closed-form RF timing/spreading, active-event localization, and
+      invalid event/delay rejection; run focused provider gates.
+
+**Current phase:** Execution. **Target:** Kwavers 4.1.0 / LeoNeuro 0.4.0.
+**Acceptance:** `TransmitWavefront` is the single active-event law for
+three-dimensional phantom RF: plane waves have unit transmit spreading,
+virtual sources have `1/r_tx`, and both use `r_tx + r_rx` for timing and
+attenuation. `beamform_image_das_with_transmit_delays` receives the matching
+per-pixel arrival vector rather than embedding a geometry-specific event type.
+
+**Closure evidence:** locked offline Nextest passes 12/12 scatterer RF tests
+and 6/6 imaging-DAS tests, including closed-form plane/virtual-source timing
+and amplitude, active plane-wave localization, and invalid geometry/delay
+rejection. Warning-denied Clippy passes. Package Rustdoc completes with one
+pre-existing Phantom and 57 pre-existing Analysis unresolved links; this
+contract emits none. The LeoNeuro sector B-mode consumer is the next dependent
+increment; complex I/Q beamforming remains a separate explicitly unclosed
+contract.
+
 ## Owner: Codex — Complex I/Q SVD clutter contract [minor]
 
 - [x] Implement the Kwavers `[slow_time, angle, range]` I/Q realification and

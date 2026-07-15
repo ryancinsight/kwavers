@@ -1,5 +1,18 @@
 # Gap Audit
 
+- Closed 2026-07-15: active sector imaging needed the same plane-wave or
+  virtual-source transmit arrival in its phantom RF and its receive-DAS
+  reconstruction, but Kwavers exposed only monostatic RF and receive-only DAS.
+  `TransmitWavefront` now validates three-dimensional plane and diverging
+  events, their physical total path, and their spreading; the generalized DAS
+  receives a validated transmit-delay vector for each image point. The existing
+  `kwavers-transducer::ultrafast` APIs stay as specialized 2-D linear-array
+  delay processors rather than becoming an invalid 3-D abstraction. Evidence
+  tier: closed-form point-scatterer timing/spreading plus active-event
+  localization and invalid-input regressions (12/12 + 6/6 locked Nextest).
+  Residual: complex I/Q beamforming and slow-time ensemble synthesis require a
+  separate provider contract; real DAS output is not treated as I/Q.
+
 - Closed 2026-07-15: the fUS reference performed complex NumPy SVD and power
   reduction because Kwavers' existing clutter filter accepts only centred real
   slow-time matrices. `IqSvdClutterFilter` now owns the uncentred complex I/Q

@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-IMG-043 — Active transmit-event imaging contract [minor] — in-progress
+## KW-IMG-043 — Active transmit-event imaging contract [minor] — done
 
 - Owner: Codex; scope: `kwavers-phantom` transmit-event RF synthesis,
   `kwavers-analysis` transmit-aware imaging DAS, focused regressions, and
@@ -11,6 +11,16 @@
 - Driver: LeoNeuro's reference sector imager has plane/diverging transmit
   timing, but the provider pair only supports monostatic RF plus receive-only
   DAS. This provider gap blocks a native replacement of that Python solver.
+- Decision: the existing `kwavers-transducer::ultrafast` processors are
+  two-dimensional delay utilities tied to linear-array coordinates. The new
+  `TransmitWavefront` is the validated three-dimensional point-scatterer event
+  contract; DAS remains generic over one transmit delay per pixel so measured
+  or refracting events do not fork its receive kernel.
+- Evidence: plane-wave and virtual-source closed-form RF regressions pass
+  12/12 in `kwavers-phantom`; transmit-aware DAS localization and invalid-delay
+  regressions pass 6/6 in `kwavers-analysis`. Warning-denied Clippy passes;
+  package Rustdoc completes with one pre-existing Phantom and 57 pre-existing
+  Analysis unresolved links, none from this contract.
 
 ## KW-IQ-042 — Complex I/Q SVD clutter contract [minor] — done
 
