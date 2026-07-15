@@ -7,16 +7,18 @@
   kernel consumed by LeoNeuro's active sector ensemble.
 - Acceptance: one validated Kwavers contract converts real RF channels to
   complex baseband without the narrowband-snapshot adapter; complex DAS uses
-  the same per-pixel transmit delays and apodization law as real DAS. LeoNeuro
-  can compose those primitives without reimplementing demodulation, delay, or
+  the same per-pixel transmit delays and apodization law as real DAS and
+  restores the carrier phase removed by demodulation. LeoNeuro can compose
+  those primitives without reimplementing demodulation, delay, rephasing, or
   complex interpolation.
 - Driver: KW-IMG-043 closes real active B-mode. LeoNeuro's remaining
   color/power/PW/fUS sector modes require complex slow-time I/Q and cannot use
   a real B-mode result as a substitute.
-- Evidence: the bin-centred analytic-baseband identity and exact complex
-  fractional-delay interpolation pass in the locked provider regression suite;
-  the former snapshot adapter delegates its RF-to-I/Q work to the same API.
-  The direct primitives do not invent inter-frame phase or scatterer motion.
+- Evidence: the bin-centred analytic-baseband identity and a fractional-delay
+  complex-I/Q regression now prove both interpolation and restoration of
+  `exp(j 2πf₀τ)` before summation; the former snapshot adapter delegates its
+  RF-to-I/Q work to the same API. The direct primitives do not invent
+  inter-frame phase or scatterer motion.
 
 ## KW-IMG-045 — Frame-resolved physical I/Q ensemble [minor] — todo
 

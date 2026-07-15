@@ -1,17 +1,18 @@
 # Gap Audit
 
-- Closed 2026-07-15: the prior analytic-baseband code was private to a
-  decimated narrowband snapshot adapter, and imaging DAS discarded complex
-  phase. `demodulate_rf_to_iq` now owns the finite, Nyquist-valid real-RF to
-  analytic-baseband transform; complex active DAS shares the real kernel's
-  geometry, transmit-delay, receive interpolation, apodization, and active
-  aperture law. The former snapshot path delegates to that provider surface,
-  deleting its duplicate FFT/Hilbert implementation. Evidence tier:
-  value-semantic bin-centred analytic-baseband and exact complex
-  fractional-delay regressions plus focused locked Nextest (11/11), warning-
-  denied Clippy, Rustdoc, and doctests. Residual: slow-time frames must arise
-  from explicit physical scatterer states; no API synthesizes an arbitrary
-  inter-frame phase progression.
+- Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
+  channel, so complex DAS must restore that phase after fractional interpolation
+  and before coherent summation. `demodulate_rf_to_iq` owns the finite,
+  Nyquist-valid real-RF transform; complex active DAS now requires its carrier,
+  shares the real kernel's geometry/transmit-delay/apodization law, and
+  rephases every physical path. The snapshot path delegates to that provider
+  surface, deleting its duplicate FFT/Hilbert implementation. Evidence tier:
+  a fractional-delay complex-I/Q value regression plus exact Nyquist rejection;
+  `kwavers-analysis` Nextest passes 711/711 and warning-denied Clippy passes.
+  Rustdoc completes with 57 existing unresolved links outside this contract,
+  and doctests pass 1/1 with 21 intentionally ignored. Residual: slow-time
+  frames must arise from explicit physical scatterer states; no API synthesizes
+  arbitrary inter-frame phase progression.
 
 - Closed 2026-07-15: active sector imaging needed the same plane-wave or
   virtual-source transmit arrival in its phantom RF and its receive-DAS

@@ -24,6 +24,7 @@
 //! pixel value is zero.
 
 use eunomia::Complex64;
+use kwavers_core::constants::numerical::TWO_PI;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, ArrayView1, ArrayView2};
 
@@ -128,24 +129,29 @@ pub fn beamform_image_das_with_transmit_delays(
         grid_points,
         transmit_delays_s,
         config,
+        0.0,
     )
 }
 
 /// Complex active-imaging DAS reconstruction.
 ///
 /// This is the complex-I/Q counterpart of [`beamform_image_das`]. It preserves
-/// coherent phase through fractional interpolation and applies the same
-/// geometry, transmit-delay, and apodization contract as the real kernel.
+/// coherent phase through fractional interpolation and carrier rephasing. The
+/// `center_frequency_hz` must be the frequency removed when the channel data
+/// became baseband I/Q; DAS restores `exp(j 2π f₀ τ)` for each physical total
+/// delay `τ` before summation.
 ///
 /// # Errors
 ///
 /// Returns the same validation errors as [`beamform_image_das`], including
-/// non-finite real or imaginary channel samples.
+/// non-finite real or imaginary channel samples, plus an invalid or
+/// Nyquist-or-higher baseband carrier frequency.
 pub fn beamform_complex_image_das(
     sensor_data: ArrayView2<'_, Complex64>,
     sensor_positions: ArrayView2<'_, f64>,
     grid_points: ArrayView2<'_, f64>,
     config: &ImagingDasConfig,
+    center_frequency_hz: f64,
 ) -> KwaversResult<Array1<Complex64>> {
     let transmit_delays_s = zero_transmit_delays(grid_points.shape()[0])?;
     beamform_complex_image_das_with_transmit_delays(
@@ -154,6 +160,7 @@ pub fn beamform_complex_image_das(
         grid_points,
         transmit_delays_s.view(),
         config,
+        center_frequency_hz,
     )
 }
 
@@ -161,27 +168,31 @@ pub fn beamform_complex_image_das(
 ///
 /// `transmit_delays_s[p]` has the identical physical interpretation as in
 /// [`beamform_image_das_with_transmit_delays`]. Complex linear interpolation
-/// occurs before coherent summation, so an I/Q phase ramp remains phase
-/// coherent at fractional receive delays.
+/// occurs before carrier rephasing and coherent summation, so a demodulated
+/// I/Q phase ramp remains coherent at fractional receive delays. The carrier
+/// frequency must match the prior analytic demodulation.
 ///
 /// # Errors
 ///
 /// Returns the same validation errors as
 /// [`beamform_image_das_with_transmit_delays`], including a non-finite real or
-/// imaginary channel component.
+/// imaginary channel component and an invalid baseband carrier frequency.
 pub fn beamform_complex_image_das_with_transmit_delays(
     sensor_data: ArrayView2<'_, Complex64>,
     sensor_positions: ArrayView2<'_, f64>,
     grid_points: ArrayView2<'_, f64>,
     transmit_delays_s: ArrayView1<'_, f64>,
     config: &ImagingDasConfig,
+    center_frequency_hz: f64,
 ) -> KwaversResult<Array1<Complex64>> {
+    validate_baseband_carrier_frequency(center_frequency_hz, config.sampling_frequency)?;
     beamform_with_transmit_delays(
         sensor_data,
         sensor_positions,
         grid_points,
         transmit_delays_s,
         config,
+        center_frequency_hz,
     )
 }
 
@@ -189,6 +200,7 @@ trait DasSample: Copy {
     fn is_finite(self) -> bool;
     fn zero() -> Self;
     fn interpolate_weighted(self, next: Self, fraction: f64, weight: f64) -> Self;
+    fn rephase_baseband(self, phase_radians: f64) -> Self;
     fn add(self, rhs: Self) -> Self;
     fn normalize(self, active_count: usize) -> Self;
 }
@@ -204,6 +216,10 @@ impl DasSample for f64 {
 
     fn interpolate_weighted(self, next: Self, fraction: f64, weight: f64) -> Self {
         weight * ((1.0 - fraction) * self + fraction * next)
+    }
+
+    fn rephase_baseband(self, _phase_radians: f64) -> Self {
+        self
     }
 
     fn add(self, rhs: Self) -> Self {
@@ -228,6 +244,10 @@ impl DasSample for Complex64 {
         (self * (1.0 - fraction) + next * fraction) * weight
     }
 
+    fn rephase_baseband(self, phase_radians: f64) -> Self {
+        self * Complex64::cis(phase_radians)
+    }
+
     fn add(self, rhs: Self) -> Self {
         self + rhs
     }
@@ -243,6 +263,7 @@ fn beamform_with_transmit_delays<S: DasSample>(
     grid_points: ArrayView2<'_, f64>,
     transmit_delays_s: ArrayView1<'_, f64>,
     config: &ImagingDasConfig,
+    center_frequency_hz: f64,
 ) -> KwaversResult<Array1<S>> {
     if !config.sound_speed.is_finite() || config.sound_speed <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
@@ -335,7 +356,8 @@ fn beamform_with_transmit_delays<S: DasSample>(
             let dy = py - sy;
             let dz = pz - sz;
             let dist = (dx * dx + dy * dy + dz * dz).sqrt();
-            let sample_idx = (transmit_delays_s[pix] + dist * inv_c) * fs;
+            let total_delay_s = transmit_delays_s[pix] + dist * inv_c;
+            let sample_idx = total_delay_s * fs;
 
             if !(0.0..=last_sample_f).contains(&sample_idx) {
                 continue;
@@ -346,7 +368,9 @@ fn beamform_with_transmit_delays<S: DasSample>(
             let frac = sample_idx - lo as f64;
             let v_lo = sensor_data[[s, lo]];
             let v_hi = sensor_data[[s, hi]];
-            let interp = v_lo.interpolate_weighted(v_hi, frac, weights[s]);
+            let interp = v_lo
+                .interpolate_weighted(v_hi, frac, weights[s])
+                .rephase_baseband(TWO_PI * center_frequency_hz * total_delay_s);
             acc = acc.add(interp);
             n_active += 1;
         }
@@ -360,6 +384,23 @@ fn beamform_with_transmit_delays<S: DasSample>(
 
     Array1::from_shape_vec([n_pixels], image)
         .map_err(|error| KwaversError::InvalidInput(format!("imaging_das: output shape: {error}")))
+}
+
+fn validate_baseband_carrier_frequency(
+    center_frequency_hz: f64,
+    sampling_frequency_hz: f64,
+) -> KwaversResult<()> {
+    if !center_frequency_hz.is_finite() || center_frequency_hz <= 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "imaging_das: center_frequency_hz must be finite and > 0; got {center_frequency_hz}"
+        )));
+    }
+    if center_frequency_hz >= 0.5 * sampling_frequency_hz {
+        return Err(KwaversError::InvalidInput(format!(
+            "imaging_das: center_frequency_hz must be below Nyquist; got {center_frequency_hz} for sampling frequency {sampling_frequency_hz}"
+        )));
+    }
+    Ok(())
 }
 
 fn zero_transmit_delays(pixel_count: usize) -> KwaversResult<Array1<f64>> {
@@ -526,17 +567,21 @@ mod tests {
     }
 
     #[test]
-    fn complex_transmit_das_interpolates_iq_before_coherent_sum() {
+    fn complex_transmit_das_interpolates_and_rephases_baseband() {
         let sensor_data = Array2::from_shape_vec(
-            [1, 2],
-            vec![Complex64::new(1.0, 2.0), Complex64::new(5.0, -2.0)],
+            [1, 3],
+            vec![
+                Complex64::new(0.0, 0.0),
+                Complex64::new(1.0, 2.0),
+                Complex64::new(5.0, -2.0),
+            ],
         )
         .unwrap();
         let positions = Array2::from_shape_vec([1, 3], vec![0.0, 0.0, 0.0]).unwrap();
         let grid = Array2::from_shape_vec([1, 3], vec![0.0, 0.0, 0.0]).unwrap();
-        let delays = Array1::from_vec([1], vec![0.5]).unwrap();
+        let delays = Array1::from_vec([1], vec![0.375]).unwrap();
         let config =
-            ImagingDasConfig::new(1500.0, 1.0, ImagingDasApodization::Rectangular).unwrap();
+            ImagingDasConfig::new(1500.0, 4.0, ImagingDasApodization::Rectangular).unwrap();
 
         let image = beamform_complex_image_das_with_transmit_delays(
             sensor_data.view(),
@@ -544,18 +589,43 @@ mod tests {
             grid.view(),
             delays.view(),
             &config,
+            1.0,
         )
         .unwrap();
 
-        assert_eq!(image[[0]], Complex64::new(3.0, 0.0));
+        // Linear interpolation produces 3 + 0j at 1.5 samples. Baseband
+        // rephasing restores exp(j 2π × 1 Hz × 0.375 s) = exp(j 3π/4).
+        let expected = Complex64::new(-3.0 / 2.0_f64.sqrt(), 3.0 / 2.0_f64.sqrt());
+        // Two weighted products, one sum, and a complex phasor product give a
+        // conservative gamma_64 roundoff bound for this fixed fixture.
+        let scaled_epsilon = 64.0 * f64::EPSILON;
+        let bound = scaled_epsilon / (1.0 - scaled_epsilon);
+        assert!((image[[0]] - expected).norm() <= bound * expected.norm());
         let non_finite =
             Array2::from_shape_vec([1, 1], vec![Complex64::new(f64::NAN, 0.0)]).unwrap();
-        let error =
-            beamform_complex_image_das(non_finite.view(), positions.view(), grid.view(), &config)
-                .unwrap_err();
+        let error = beamform_complex_image_das(
+            non_finite.view(),
+            positions.view(),
+            grid.view(),
+            &config,
+            1.0,
+        )
+        .unwrap_err();
         assert_eq!(
             error.to_string(),
             "Invalid input: imaging_das: sensor_data must contain only finite values"
+        );
+        let carrier_error = beamform_complex_image_das(
+            sensor_data.view(),
+            positions.view(),
+            grid.view(),
+            &config,
+            2.0,
+        )
+        .unwrap_err();
+        assert_eq!(
+            carrier_error.to_string(),
+            "Invalid input: imaging_das: center_frequency_hz must be below Nyquist; got 2 for sampling frequency 4"
         );
     }
 

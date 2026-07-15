@@ -34,14 +34,17 @@ contract.
       delete its duplicate Hilbert/downconversion implementation.
 - [x] Add the complex active-DAS API through the same geometry, transmit-delay,
       interpolation, and apodization kernel as real DAS.
+- [x] Require the analytic-demodulation carrier and rephase each complex DAS
+      sample by its validated physical total delay before summation.
 
-**Closure evidence:** locked offline Nextest passes the bin-centred unit-I/Q
-baseband identity, exact complex fractional-delay interpolation, invalid-input
-contracts, and legacy-snapshot delegation (11/11 focused tests). `cargo check`,
-warning-denied Clippy, Rustdoc, and doctests pass. Rustdoc reports 57 existing
-Analysis unresolved links outside these files. The next increment owns explicit
-physical scatterer evolution across slow-time frames; this contract does not
-simulate phase animation.
+**Closure evidence:** the fractional-delay complex-DAS regression reconstructs
+the interpolated baseband sample after its analytical `exp(j 2πf₀τ)` carrier
+phase restoration and exact Nyquist rejection. `kwavers-analysis` Nextest
+passes 711/711; warning-denied Clippy passes; Rustdoc completes with 57
+pre-existing unresolved links outside this contract; doctests pass 1/1 with 21
+intentionally ignored. The next increment owns explicit physical scatterer
+evolution across slow-time frames; this contract does not simulate phase
+animation.
 
 ## Owner: Codex — Complex I/Q SVD clutter contract [minor]
 

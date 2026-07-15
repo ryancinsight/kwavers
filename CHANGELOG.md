@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-07-15) - coherent active complex DAS [patch]
+
+- Complex active DAS now requires the carrier frequency removed by analytic
+  demodulation and restores its per-path phase before summation. This corrects
+  baseband defocus from summing channel I/Q samples without `exp(j 2π f₀ τ)`.
+
 ### Added (2026-07-15) - active complex I/Q imaging primitives [minor]
 
 - Added `IqDemodulationConfig` and `demodulate_rf_to_iq` for validated
