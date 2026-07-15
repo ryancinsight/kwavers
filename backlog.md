@@ -18,9 +18,11 @@
   `apollo/crates/apollo-fft/Cargo.toml`; the first repair run proves that
   provider defaults are insufficient (`apollo-fft` 0.17.0 conflicts with
   RITK's `^0.15.0`), while Atlas `main` pins incompatible Apollo 0.14. The
-  committed Kwavers Atlas integration branch pins Apollo 0.15. Local
-  manifest-path resolution finds all 12 sibling providers. Re-open trigger:
-  any coordinated-provider checkout, manifest
+  committed Kwavers Atlas integration branch pins Apollo 0.15. The next
+  architecture rerun materializes all 12 providers and exposes the first real
+  source error: Linux `CPU_SET` receives an immutable set in the explicit-CPU
+  branch. Local manifest-path resolution finds all 12 sibling providers.
+  Re-open trigger: any coordinated-provider checkout, manifest
   resolution, or subsequent CI-job failure on the repaired PR head.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done

@@ -9,9 +9,12 @@
   revisions before Cargo runs, and stale native `cargo test` invocations move
   to Nextest. The first repair runs confirm provider defaults are incompatible
   (`apollo-fft` 0.17.0 versus RITK's required `^0.15.0`) and Atlas `main`
-  pins incompatible Apollo 0.14. Evidence tier: authoritative Actions log
-  `29443042765` plus local manifest-path resolution and YAML parsing. Residual:
-  the repaired PR head must complete the full remote matrix before closure.
+  pins incompatible Apollo 0.14. The subsequent Architecture rerun
+  `29444236283` completes provider checkout and finds the independent Linux
+  `CPU_SET` mutability defect in Kwavers' explicit-affinity branch. Evidence
+  tier: authoritative Actions logs plus local manifest-path resolution and YAML
+  parsing. Residual: the corrected PR head must complete the full remote matrix
+  before closure.
 
 - Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
   channel, so complex DAS must restore that phase after fractional interpolation

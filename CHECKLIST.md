@@ -23,7 +23,9 @@ the absent `../apollo` provider; the local manifest-derived provider set is
 moirai, ritk, themis`. The provider action uses the committed Kwavers Atlas
 integration pin after the first reruns selected incompatible provider defaults
 and Atlas `main`'s incompatible Apollo 0.14. YAML parsing and local
-provider-path resolution pass.
+provider-path resolution pass. Architecture run `29444236283` then materializes
+every provider and identifies the independent Linux `CPU_SET` mutability error
+in the explicit CPU-affinity branch; the correction is awaiting its rerun.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 

@@ -88,7 +88,7 @@ fn set_current_thread_affinity(affinity: &ThreadAffinity) -> KwaversResult<()> {
         } else if let Some(ref cpus) = affinity.cpus {
             CPU_ZERO(&mut set);
             for &cpu in cpus {
-                CPU_SET(cpu, &set);
+                CPU_SET(cpu, &mut set);
             }
         } else {
             CPU_ZERO(&mut set);

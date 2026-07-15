@@ -7,8 +7,9 @@
 - GitHub Actions now materializes the Atlas sibling providers declared by the
   workspace manifest at the `codex/kwavers-atlas-integration` coordinated
   submodule revisions before Cargo resolves path dependencies. The architecture
-  workflow no longer invokes its deleted validation script, and native test
-  jobs use Nextest.
+  workflow no longer invokes its deleted validation script, native test jobs
+  use Nextest, and Linux CPU-affinity configuration passes the mutable CPU set
+  required by `libc::CPU_SET`.
 
 ### Fixed (2026-07-15) - coherent active complex DAS [patch]
 
