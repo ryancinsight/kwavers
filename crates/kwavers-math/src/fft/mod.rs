@@ -759,10 +759,7 @@ mod r2c_optimized_tests {
         fft.forward_r2c_into(&real, &mut half_new);
         let mut full = real.mapv(|v| Complex64::new(v, 0.0));
         fft_3d_complex_inplace(&mut full);
-        let ref_half = full
-            .slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
-            .unwrap()
-            .clone();
+        let ref_half = full.slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)]).unwrap();
         let fwd_err = half_new
             .iter()
             .zip(ref_half.iter())

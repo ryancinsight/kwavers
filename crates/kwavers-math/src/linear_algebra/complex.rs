@@ -160,7 +160,7 @@ mod tests {
         for i in 0..2 {
             let mut sum = Complex64::new(0.0, 0.0);
             for j in 0..2 {
-                sum = sum + a_sl[i * 2 + j] * x_sl[j];
+                sum += a_sl[i * 2 + j] * x_sl[j];
             }
             assert!((sum - b_sl[i]).norm() < 1e-10);
         }
