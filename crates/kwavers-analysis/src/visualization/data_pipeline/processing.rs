@@ -73,13 +73,14 @@ impl ProcessingStage {
 
     /// Compute gradient magnitude
     fn gradient_magnitude(&self, data: &mut Array3<f64>) {
-        let shape = data.dim();
+        let [nx, ny, nz] = data.shape();
+        let shape = [nx, ny, nz];
         let mut gradient = Array3::zeros(shape);
 
         // Compute central differences for gradient
-        for i in 1..shape.0 - 1 {
-            for j in 1..shape.1 - 1 {
-                for k in 1..shape.2 - 1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let dx = (data[[i + 1, j, k]] - data[[i - 1, j, k]]) / 2.0;
                     let dy = (data[[i, j + 1, k]] - data[[i, j - 1, k]]) / 2.0;
                     let dz = (data[[i, j, k + 1]] - data[[i, j, k - 1]]) / 2.0;
@@ -102,12 +103,12 @@ impl ProcessingStage {
         // interactive slicing and measurement tools for clinical workflows.
         //
         // Provides computationally efficient 3×3×3 local averaging for visualization
-        let shape = data.dim();
+        let [nx, ny, nz] = data.shape();
         let mut smoothed = data.clone();
 
-        for i in 1..shape.0 - 1 {
-            for j in 1..shape.1 - 1 {
-                for k in 1..shape.2 - 1 {
+        for i in 1..nx - 1 {
+            for j in 1..ny - 1 {
+                for k in 1..nz - 1 {
                     let mut sum = 0.0;
                     let mut count = 0;
 

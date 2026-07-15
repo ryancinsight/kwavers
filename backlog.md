@@ -1,16 +1,26 @@
 # Backlog / Strategy
 
-## KW-CI-046 — Atlas-path CI setup [patch] — in-progress
+## KW-CI-046 — Atlas-path CI and security audit [patch] — in-progress
 
 - Owner: Codex; scope: reusable GitHub Actions setup for the sibling Atlas path
-  providers declared by `Cargo.toml`, stale architecture-workflow cleanup, and
-  native Nextest invocation.
+  providers declared by `Cargo.toml`, root Cargo-deny policy, stale
+  architecture-workflow cleanup, portable hosted CPU code generation, explicit
+  CUDA-runtime compilation, native Nextest invocation, WGPU 30 provider
+  alignment, Leto API migration required by the public `full` build, and the
+  native solver literature-validation module targeted by CI.
 - Acceptance: every Cargo job materializes the manifest-declared sibling
   providers at the `codex/kwavers-atlas-integration` submodule revisions before
   resolving the workspace; no workflow invokes the deleted
   `scripts/validate_architecture.sh`;
   native test jobs use Nextest, with doctests retaining Rustdoc's supported
-  runner.
+  runner; hosted CPU jobs never use `target-cpu=native`; CUDA runtime code
+  compiles against its required toolkit; and the security job evaluates the
+  root policy against the Kwavers manifest and rejects unapproved sources,
+  licenses, and advisories. The public `full` package build uses the same WGPU
+  30 immediate-data ABI as its Hephaestus provider and all Leto operations
+  propagate their fallible view/index contracts. Solver literature validation
+  is a compiled native module with value-semantic reference regressions rather
+  than an empty test filter.
 - Driver: PR #288 fails before compilation because `../apollo` and the other
   Atlas path providers are absent in GitHub Actions. The architecture workflow
   separately invokes a script deleted in commit `91514cad2`.
@@ -25,9 +35,40 @@
   The legacy audit also misclassifies NumPy's PyO3 ndarray facade as direct
   ndarray use; it now distinguishes those boundaries and removes 1,477 stale
   allowlist entries. Local manifest-path resolution finds all 12 sibling
-  providers.
+  providers. The root `deny.toml` now uses strict registry/Git allowlists,
+  records only exact license exceptions for `cuda-oxide`, `colored`, and
+  `epaint`, removes unused direct DICOM 0.8 workspace pins, and updates the
+  lock graph through RITK DICOM 0.10 and patched advisory releases. Local
+  Cargo-deny licenses, advisories, and sources checks pass. The two remaining
+  yanked notices are non-advisory `spin` 0.9.8 (Flume 0.11.1) and 0.10.0
+  (Burn) transitive constraints.
   Re-open trigger: any coordinated-provider checkout, manifest
   resolution, or subsequent CI-job failure on the repaired PR head.
+  The first rerun additionally proves that the old committed native-CPU flag
+  can SIGILL on hosted runners and that a CPU runner cannot build the explicit
+  CUDA runtime. Both are environmental configuration defects, not acceptable
+  reasons to suppress the checks: portable CPU workflow legs now compile the
+  supported feature surface while a CUDA 13.2 container compiles the runtime
+  provider. The resulting GPU PINN compile also exposed a source defect: it
+  interpreted Coeus `[out, in]` weights as `[in, out]`, read device tensors as
+  host slices, hid constructor errors behind `.ok()`, and returned a fixed
+  uncertainty vector. The corrected implementation uses Coeus backend
+  readback, authoritative weight orientation, propagated construction errors,
+  and an analytical half-step quantization bound. The direct WGPU 26
+  dependency is now removed: Kwavers uses the WGPU 30 provider selected by
+  Hephaestus, with former push-constant kernels expressed through WGPU
+  immediate data and map-range failures propagated as typed GPU errors. The
+  Leto call sites exposed by the public `full` build now use native shapes,
+  views, and fallible axes without ndarray fallback adapters. Workspace Rustdoc
+  compiles under the legacy warning baseline while the deployable public
+  `kwavers` facade remains warning-denied; the extensive physics Rustdoc-link
+  cleanup remains tracked ratchet work rather than a CI suppression. The first
+  repaired remote run proved the solver workflow's `validation::literature`
+  filter selected no module. Its source and tests existed but `validation::mod`
+  omitted the module declaration. Restoring the native edge corrected the
+  nested `TWO_PI` scope and Leto three-axis index; nine literature regressions
+  now pass locally, including an exact Treeby snapshot and multi-time
+  dimension-contract rejection.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 

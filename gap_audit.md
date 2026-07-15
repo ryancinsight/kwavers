@@ -20,6 +20,61 @@
   YAML parsing, and local audit execution. Residual: the corrected PR head must
   complete the full remote matrix before closure.
 
+- In progress 2026-07-15: the repaired workflow reached two independent
+  infrastructure defects. The committed global `target-cpu=native` flag made
+  the hosted xtask binary fault with SIGILL, and the generic `--all-features`
+  CPU workflow selected the explicit CUDA runtime without its required CUDA
+  13.2 toolkit. The policy now targets a portable CPU baseline with runtime
+  dispatch and retains CUDA compilation in its own CUDA 13.2 container job.
+  This is not a reduced feature check. The CPU feature matrix exercises the
+  deployable public `kwavers` surface; the CUDA runtime receives its required
+  toolchain. That compile path exposed additional GPU PINN defects: transposed
+  Coeus linear weights, invalid direct host access to device storage, silent
+  construction fallback, incorrect activation metadata, and a constant
+  uncertainty output. The repair preserves `[out, in]` weights and transposes
+  only at Coeus matmul, uses backend `copy_to_host`, propagates errors, and
+  bounds each prediction by affine propagation of the symmetric-int8 half-step
+  error through 1-Lipschitz activations. Evidence tier: authoritative Actions
+  failure logs; focused `pinn,gpu` compilation; four value-semantic
+  regressions. A strict full-facade Clippy invocation also exposed 81 existing
+  `kwavers-solver` findings; two in the touched quantization constructor are
+  corrected with `to_vec`, leaving 79 outside this repair. CI now denies
+  warnings for the clean `kwavers-core` crate and the deployable `kwavers`
+  facade without dependency linting; the legacy solver findings remain a
+  tracked ratchet debt. The public `full` package build additionally exposed
+  stale Leto view/axis APIs and a direct WGPU 26 versus Hephaestus WGPU 30
+  split. Kwavers now uses WGPU 30 throughout, maps former push-constant kernels
+  to immediate data, propagates readback map/range errors, and uses Leto's
+  fallible native views and axes. Evidence tier: locked full-package
+  compilation plus the focused PINN value regressions. Residual: the new remote
+  matrix remains pending. Workspace Rustdoc has a large pre-existing
+  broken-link baseline concentrated in `kwavers-physics`; its CI command now
+  proves all workspace crates document successfully without elevating that
+  recorded legacy baseline, while the deployable `kwavers` facade stays
+  warning-denied. This change corrects every public-facade link reached by the
+  full build; the broader physics documentation ratchet remains a separate
+  cleanup item. The first remote run also exposed a stale solver-validation
+  workflow target: `validation::literature` existed on disk but was absent from
+  the parent module, making Nextest reject the empty filter. The restored
+  module edge compiled its latent nested-constant and Leto-index defects;
+  nine value-semantic literature regressions now pass locally, including an
+  exact Treeby snapshot and multi-time dimension rejection. Residual: the
+  re-triggered remote matrix remains the final integration gate.
+
+- Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
+  resolved a crate-local policy instead of one scoped to the deployable Kwavers
+  graph. The root policy now rejects unknown registries and Git sources, permits
+  only Crates.io plus the required Consus and cutile origins, and carries exact
+  license exceptions for `cuda-oxide@0.4.0`, `colored@3.1.1`, and
+  `epaint@0.25.0`. Unused direct DICOM 0.8 workspace pins are removed; the lock
+  now resolves RITK's DICOM 0.10 graph and fixed advisory releases. Evidence
+  tier: Cargo-deny license/advisory/source checks and a locked all-feature
+  `kwavers-core` compile plus 69 focused Nextest cases. Residual: `spin` 0.9.8
+  (Flume 0.11.1) and `spin` 0.10.0 (Burn) are yanked but have no advisory; both
+  remain warnings until their upstream constraints change. The broader
+  all-feature workspace check remains independently blocked by two
+  `kwavers-solver` generic-backend compile errors.
+
 - Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
   channel, so complex DAS must restore that phase after fractional interpolation
   and before coherent summation. `demodulate_rf_to_iq` owns the finite,

@@ -35,7 +35,7 @@
 /// Returns whether the compiled crate can expose Apollo GPU FFT execution.
 ///
 /// This is a capability predicate, not a numerical substitute. Callers that
-/// need a plan must construct an Apollo [`FftBackend`] implementation and
+/// need a plan must construct an Apollo `FftBackend` implementation and
 /// handle adapter/device failure.
 #[must_use]
 pub fn gpu_fft_available() -> bool {

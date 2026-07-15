@@ -17,8 +17,8 @@ pub trait PstdPipelineProvider {
     /// Create a pipeline layout for PSTD compute kernels.
     fn pipeline_layout(
         &self,
-        bind_group_layouts: &[&Self::BindGroupLayout],
-        push_constant_bytes: usize,
+        bind_group_layouts: &[Option<&Self::BindGroupLayout>],
+        immediate_data_bytes: usize,
         label: &'static str,
     ) -> Self::PipelineLayout;
 
@@ -60,18 +60,15 @@ impl PstdPipelineProvider for WgpuPstdPipelineFactory<'_> {
 
     fn pipeline_layout(
         &self,
-        bind_group_layouts: &[&Self::BindGroupLayout],
-        push_constant_bytes: usize,
+        bind_group_layouts: &[Option<&Self::BindGroupLayout>],
+        immediate_data_bytes: usize,
         label: &'static str,
     ) -> Self::PipelineLayout {
         self.device
             .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some(label),
                 bind_group_layouts,
-                push_constant_ranges: &[wgpu::PushConstantRange {
-                    stages: wgpu::ShaderStages::COMPUTE,
-                    range: 0..push_constant_bytes as u32,
-                }],
+                immediate_size: immediate_data_bytes as u32,
             })
     }
 

@@ -87,7 +87,9 @@ impl GpuBufferData {
                 })?
                 .map_err(|e| crate::gpu::map_buffer_async_error("primary buffer readback", e))?;
 
-            let data = buffer_slice.get_mapped_range();
+            let data = buffer_slice.get_mapped_range().map_err(|error| {
+                crate::gpu::map_buffer_range_error("primary buffer readback", error)
+            })?;
             let result = bytemuck::cast_slice(&data).to_vec();
             drop(data);
             self.buffer.unmap();
@@ -136,7 +138,9 @@ impl GpuBufferData {
             })?
             .map_err(|e| crate::gpu::map_buffer_async_error("staging buffer readback", e))?;
 
-        let data = buffer_slice.get_mapped_range();
+        let data = buffer_slice.get_mapped_range().map_err(|error| {
+            crate::gpu::map_buffer_range_error("staging buffer readback", error)
+        })?;
         let result = bytemuck::cast_slice(&data).to_vec();
 
         drop(data);

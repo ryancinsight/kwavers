@@ -208,15 +208,20 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let bgl_absorb = bind_group_layouts.absorb_layout();
 
         // ── Pipeline layouts ──────────────────────────────────────────────────
-        let push_constant_bytes = std::mem::size_of::<PstdParams>();
+        let immediate_data_bytes = std::mem::size_of::<PstdParams>();
         let pipeline_layout = pipelines.pipeline_layout(
-            &[&bgl_fields, &bgl_kspace, &bgl_sensor],
-            push_constant_bytes,
+            &[Some(&bgl_fields), Some(&bgl_kspace), Some(&bgl_sensor)],
+            immediate_data_bytes,
             "pstd_pipeline_layout",
         );
         let pipeline_layout_absorb = pipelines.pipeline_layout(
-            &[&bgl_fields, &bgl_kspace, &bgl_sensor, &bgl_absorb],
-            push_constant_bytes,
+            &[
+                Some(&bgl_fields),
+                Some(&bgl_kspace),
+                Some(&bgl_sensor),
+                Some(&bgl_absorb),
+            ],
+            immediate_data_bytes,
             "pstd_pipeline_layout_absorb",
         );
 

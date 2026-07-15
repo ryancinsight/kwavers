@@ -23,7 +23,8 @@ pub fn neper_per_rad_s_m_to_db_per_mhz_cm(neper: f64, power_law_exponent: f64) -
         * REFERENCE_ANGULAR_FREQUENCY_RAD_S.powf(power_law_exponent)
 }
 
-/// Convert temporal frequency [Hz] and sound speed [m/s] to wavenumber [rad/m].
+/// Convert temporal frequency in hertz and sound speed in metres per second to
+/// wavenumber in radians per metre.
 ///
 /// # Errors
 /// Returns [`KwaversError::InvalidInput`] when `frequency_hz` is negative,

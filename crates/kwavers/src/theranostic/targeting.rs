@@ -19,7 +19,7 @@ use leto::Array3;
 pub struct TargetSelection {
     /// Target voxel index `(i, j, k)` in the reconstruction grid.
     pub voxel: (usize, usize, usize),
-    /// Physical focal position `[x, y, z]` [m] for array steering.
+    /// Physical focal position `[x, y, z]` in metres for array steering.
     pub position_m: [f64; 3],
     /// Score value at the selected voxel (units of the score field).
     pub score: f64,

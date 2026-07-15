@@ -13,7 +13,7 @@ use super::DelaySumGPU;
 #[cfg(feature = "gpu")]
 use kwavers_analysis::signal_processing::beamforming::three_dimensional::Beamforming3dApodizationWindow;
 #[cfg(feature = "gpu")]
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 #[cfg(feature = "gpu")]
 use leto::{Array3, Array4};
 #[cfg(feature = "gpu")]
@@ -230,14 +230,23 @@ impl<'a> DelaySumGPU<'a> {
         self.queue.submit(Some(encoder.finish()));
 
         let buffer_slice = staging_buffer.slice(..);
-        buffer_slice.map_async(wgpu::MapMode::Read, |_| {});
+        let (sender, receiver) = std::sync::mpsc::channel();
+        buffer_slice.map_async(wgpu::MapMode::Read, move |result| {
+            let _ = sender.send(result);
+        });
 
         let _ = self.device.poll(wgpu::PollType::wait_indefinitely());
+        receiver
+            .recv()
+            .map_err(|error| KwaversError::GpuError(format!("delay-sum map callback: {error}")))?
+            .map_err(|error| crate::gpu::map_buffer_async_error("delay-sum readback", error))?;
 
         // Scope the mapped view so it is dropped before `unmap` (wgpu rejects
         // unmapping a buffer that still has an accessible mapped view).
         let result_volume = {
-            let data = buffer_slice.get_mapped_range();
+            let data = buffer_slice
+                .get_mapped_range()
+                .map_err(|error| crate::gpu::map_buffer_range_error("delay-sum readback", error))?;
             let result_f32: &[f32] = bytemuck::cast_slice(&data);
             Array3::from_shape_fn([vol_x, vol_y, vol_z], |[x, y, z]| {
                 result_f32[x + y * vol_x + z * vol_x * vol_y]

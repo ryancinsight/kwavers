@@ -105,8 +105,8 @@ impl NumericsTrilinearInterpolator {
 ///
 /// Used as the single authoritative implementation for all index-space trilinear
 /// interpolation in the codebase (resampling kernels, ray-integral attenuation,
-/// CT preprocessing). Physical-coordinate callers that own a [`Grid`] should use
-/// [`domain::medium::heterogeneous::interpolation::NumericsTrilinearInterpolator`] instead.
+/// CT preprocessing). Physical-coordinate callers should use the domain
+/// medium trilinear interpolator instead.
 #[must_use]
 pub fn trilinear_index_space(input: &Array3<f64>, x: f64, y: f64, z: f64) -> f64 {
     let [nx, ny, nz] = input.shape();

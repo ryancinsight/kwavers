@@ -73,7 +73,7 @@ impl FallbackRenderer {
         }
 
         // Normalize field values to 0-9 range for ASCII display
-        let slice = field.index_axis::<2>(2, z_slice);
+        let slice = field.index_axis::<2>(2, z_slice)?;
         let min_val = slice.iter().fold(f64::INFINITY, |a, &b| a.min(b));
         let max_val = slice.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
 
@@ -121,7 +121,7 @@ impl FallbackRenderer {
         writeln!(file, "# Shape: {:?}", field.shape())?;
 
         // Write data in simple format
-        for ((i, j, k), &value) in field.indexed_iter() {
+        for ([i, j, k], &value) in field.indexed_iter() {
             writeln!(file, "{} {} {} {:.6e}", i, j, k, value)?;
         }
 

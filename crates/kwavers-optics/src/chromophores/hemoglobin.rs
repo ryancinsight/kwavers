@@ -21,7 +21,7 @@ impl HemoglobinDatabase {
     /// Values are molar extinction coefficients in M⁻¹·cm⁻¹ for the hemoglobin
     /// **tetramer** — the per-heme OMLC/Prahl values × 4, since a tetramer
     /// carries four heme groups. Concentrations are therefore tetramer-molar, to
-    /// match `typical_blood_parameters()` (whole-blood [Hb] ≈ 2.3 mmol/L
+    /// match `typical_blood_parameters()` (whole-blood Hb is approximately 2.3 mmol/L
     /// tetramer; tetramer molar mass ≈ 64 500 g/mol). Beer-Lambert:
     ///
     /// ```text
@@ -121,7 +121,7 @@ impl HemoglobinDatabase {
     }
     /// Extinction pair.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`anyhow::Error`] returned by called functions.
     ///
     pub fn extinction_pair(&self, wavelength_nm: f64) -> Result<(f64, f64)> {
         let hbo2 = self.hbo2_extinction(wavelength_nm)?;
@@ -130,7 +130,7 @@ impl HemoglobinDatabase {
     }
     /// Absorption coefficient.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any [`anyhow::Error`] returned by called functions.
     ///
     pub fn absorption_coefficient(
         &self,

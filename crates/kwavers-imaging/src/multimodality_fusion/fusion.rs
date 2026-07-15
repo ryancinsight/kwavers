@@ -21,7 +21,7 @@ impl FusionEngine {
 
     /// Perform image fusion
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn fuse(
         &self,

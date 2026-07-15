@@ -38,7 +38,7 @@ pub struct Ellipse {
     pub x0: f64,
     /// Centre `y₀`.
     pub y0: f64,
-    /// Rotation `φ` [rad], counter-clockwise from `+x`.
+    /// Rotation `φ` in radians, counter-clockwise from `+x`.
     pub phi: f64,
 }
 

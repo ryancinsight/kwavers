@@ -1,0 +1,53 @@
+# Kwavers supply-chain policy. CI audits the deployable kwavers application
+# graph rather than unrelated workspace members.
+
+[graph]
+all-features = true
+
+[advisories]
+unmaintained = "workspace"
+yanked = "warn"
+ignore = []
+
+[licenses]
+allow = [
+    "0BSD",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "IJG",
+    "ISC",
+    "MIT",
+    "Unicode-3.0",
+    "Zlib",
+]
+confidence-threshold = 0.8
+
+[[licenses.exceptions]]
+allow = ["MPL-2.0"]
+crate = "colored@3.1.1"
+
+[[licenses.exceptions]]
+allow = ["GPL-3.0-or-later"]
+crate = "cuda-oxide@0.4.0"
+
+[[licenses.exceptions]]
+allow = ["OFL-1.1", "LicenseRef-UFL-1.0"]
+crate = "epaint@0.25.0"
+
+[bans]
+multiple-versions = "warn"
+wildcards = "warn"
+highlight = "all"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = [
+    "https://github.com/NVlabs/cutile-rs",
+    "https://github.com/ryancinsight/consus",
+]

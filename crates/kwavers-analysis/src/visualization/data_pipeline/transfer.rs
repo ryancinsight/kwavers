@@ -188,9 +188,9 @@ impl DataPipeline {
             data
         };
 
-        let dims = view.dim();
+        let [nx, ny, nz] = view.shape();
         self.field_dimensions
-            .insert(field_type, (dims.0 as u32, dims.1 as u32, dims.2 as u32));
+            .insert(field_type, (nx as u32, ny as u32, nz as u32));
 
         let min_val = view.iter().fold(f64::INFINITY, |a, &b| a.min(b)) as f32;
         let max_val = view.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b)) as f32;
@@ -226,7 +226,7 @@ impl DataPipeline {
             .write_buffer(buffer, 0, bytemuck::cast_slice(&data_f32));
 
         if self.transfer_options.mode == TransferMode::Blocking {
-            let _ = self.device.poll(PollType::wait_indefinitely());
+            let _ = self.device.poll(PollType::wait());
         }
 
         let elapsed = start.elapsed();

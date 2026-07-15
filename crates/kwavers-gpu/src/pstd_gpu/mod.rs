@@ -81,7 +81,7 @@ pub struct GpuPstdRunProfile {
 }
 
 // â”€â”€â”€ Params push-constant struct (must match PstdParams in pstd.wgsl) â”€â”€â”€â”€â”€â”€â”€â”€
-// 14 Ã— u32/f32 = 56 bytes. max_push_constant_size must be â‰¥ 56.
+// 14 Ã— u32/f32 = 56 bytes. max_immediate_size must be at least 56.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct PstdParams {

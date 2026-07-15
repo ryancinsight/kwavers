@@ -57,6 +57,13 @@ pub(crate) fn map_buffer_async_error(
     KwaversError::GpuError(format!("{context}: {err}"))
 }
 
+pub(crate) fn map_buffer_range_error(
+    context: &'static str,
+    err: wgpu::MapRangeError,
+) -> KwaversError {
+    KwaversError::GpuError(format!("{context}: {err}"))
+}
+
 /// GPU device capabilities
 #[derive(Debug, Clone)]
 pub struct CoreGpuCapabilities {
@@ -166,7 +173,7 @@ impl CoreGpuContext<WgpuDevice> {
             DevicePreference::HighPerformance,
             &[
                 DeviceFeature::MappablePrimaryBuffers,
-                DeviceFeature::PushConstants,
+                DeviceFeature::ImmediateData,
             ],
             Self::required_limits(),
         )
@@ -182,7 +189,7 @@ impl CoreGpuContext<WgpuDevice> {
             max_compute_workgroup_size_x: 256,
             max_compute_workgroup_size_y: 256,
             max_compute_workgroup_size_z: 64,
-            max_push_constant_size: 128,
+            max_immediate_size: 128,
         }
     }
 

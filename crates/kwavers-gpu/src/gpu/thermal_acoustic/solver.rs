@@ -134,8 +134,8 @@ impl WgpuThermalAcousticSolverProvider {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Thermal-Acoustic Pipeline Layout"),
-            bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bgl)],
+            immediate_size: 0,
         });
 
         let make_pipe = |entry: &'static str| {

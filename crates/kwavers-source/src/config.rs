@@ -47,7 +47,7 @@ pub struct DomainSourceParameters {
 ///
 /// `Diameter` preserves the historical meaning of [`DomainSourceParameters::radius`]
 /// as the projected aperture radius. The angular variants route configured
-/// simulations through the same [`crate::transducers::focused::BowlTransducer`]
+/// simulations through the same focused-bowl transducer constructors
 /// constructors used by direct Rust callers, avoiding duplicated clinical
 /// geometry outside the source boundary.
 #[derive(Debug, Clone, Copy, Default, Serialize, Deserialize, PartialEq)]
@@ -60,14 +60,14 @@ pub enum FocusedBowlAperture {
     Hemisphere,
     /// Cover `0 <= theta <= theta_max_rad`.
     PolarSpan {
-        /// Maximum polar angle from the vertex-to-focus axis [rad].
+        /// Maximum polar angle from the vertex-to-focus axis in radians.
         theta_max_rad: f64,
     },
     /// Cover `theta_min_rad <= theta <= theta_max_rad`.
     PolarBounds {
-        /// Minimum polar angle from the vertex-to-focus axis [rad].
+        /// Minimum polar angle from the vertex-to-focus axis in radians.
         theta_min_rad: f64,
-        /// Maximum polar angle from the vertex-to-focus axis [rad].
+        /// Maximum polar angle from the vertex-to-focus axis in radians.
         theta_max_rad: f64,
     },
     /// Cover normalized aperture-axis projection bounds.
@@ -80,17 +80,17 @@ pub enum FocusedBowlAperture {
     /// Use `position` as an axis reference rather than the bowl vertex and
     /// construct the source vertex from the explicit curvature radius.
     AxisReferencePolarBounds {
-        /// Curvature radius from the acoustic focus to the bowl surface [m].
+        /// Curvature radius from the acoustic focus to the bowl surface in metres.
         radius_of_curvature_m: f64,
-        /// Minimum polar angle from the vertex-to-focus axis [rad].
+        /// Minimum polar angle from the vertex-to-focus axis in radians.
         theta_min_rad: f64,
-        /// Maximum polar angle from the vertex-to-focus axis [rad].
+        /// Maximum polar angle from the vertex-to-focus axis in radians.
         theta_max_rad: f64,
     },
     /// Use `position` as an axis reference and construct a hemispherical
     /// focused-bowl aperture from an explicit curvature radius.
     AxisReferenceHemisphere {
-        /// Curvature radius from the acoustic focus to the bowl surface [m].
+        /// Curvature radius from the acoustic focus to the bowl surface in metres.
         radius_of_curvature_m: f64,
     },
 }

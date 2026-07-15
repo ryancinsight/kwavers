@@ -10,7 +10,7 @@ use super::encode::StepCtx;
 impl WgpuPstdState {
     /// Encode one dispatch into `cpass` (3-group pipeline layout).
     ///
-    /// Push constants carry `params` inline — no `write_buffer()` per dispatch.
+    /// Immediate data carries `params` inline — no `write_buffer()` per dispatch.
     /// Bind groups: fields(0), kspace+medium(1), sensor(2).
     #[inline]
     pub(super) fn dispatch(
@@ -23,7 +23,7 @@ impl WgpuPstdState {
         _label: &str,
     ) {
         cpass.set_pipeline(pipeline);
-        cpass.set_push_constants(0, bytemuck::bytes_of(params));
+        cpass.set_immediates(0, bytemuck::bytes_of(params));
         cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
         cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);
@@ -45,7 +45,7 @@ impl WgpuPstdState {
         _label: &str,
     ) {
         cpass.set_pipeline(pipeline);
-        cpass.set_push_constants(0, bytemuck::bytes_of(params));
+        cpass.set_immediates(0, bytemuck::bytes_of(params));
         cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
         cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);
@@ -67,7 +67,7 @@ impl WgpuPstdState {
         _label: &str,
     ) {
         cpass.set_pipeline(pipeline);
-        cpass.set_push_constants(0, bytemuck::bytes_of(params));
+        cpass.set_immediates(0, bytemuck::bytes_of(params));
         cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
         cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);

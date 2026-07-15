@@ -17,7 +17,7 @@ pub struct BatchFieldHandle {
 impl BatchFieldHandle {
     /// Create batch allocation for wave simulation.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn for_wave_simulation(nx: usize, ny: usize, nz: usize) -> KwaversResult<Self> {
         let primary_config = BatchFieldConfig::for_3d_fields(nx, ny, nz, 4);

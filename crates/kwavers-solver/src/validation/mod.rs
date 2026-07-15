@@ -1,6 +1,7 @@
 pub mod config;
 pub mod contract;
 pub mod kwave_comparison;
+pub mod literature;
 pub mod numerical_accuracy;
 pub mod physics_benchmarks;
 

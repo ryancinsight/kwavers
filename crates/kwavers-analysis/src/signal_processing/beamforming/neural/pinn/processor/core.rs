@@ -97,16 +97,21 @@ impl NeuralBeamformingProcessor {
     ) -> KwaversResult<NeuralPinnBeamformingResult> {
         let start_time = std::time::Instant::now();
 
-        let (frames, channels, samples, _) = rf_data.dim();
+        let [frames, channels, samples, _] = rf_data.shape();
 
         let mut volume = Array3::<f32>::zeros((frames, channels, samples));
 
         for frame_idx in 0..frames {
-            let frame_data = rf_data.slice(s![frame_idx, .., .., 0..1]);
+            let frame_data = rf_data.slice_with::<3>(&[
+                leto::SliceArg::Index(frame_idx as isize),
+                leto::SliceArg::All,
+                leto::SliceArg::All,
+                leto::SliceArg::All,
+            ])?;
             let frame_result = self.process_frame(&frame_data)?;
-            volume
-                .index_axis_mut(0, frame_idx)
-                .assign(&frame_result.index_axis(2, 0));
+            let mut volume_frame = volume.index_axis_mut::<2>(0, frame_idx)?;
+            let result_frame = frame_result.index_axis::<2>(2, 0)?;
+            volume_frame.assign(&result_frame);
         }
 
         let uncertainty = self.compute_uncertainty(&volume)?;
@@ -161,7 +166,7 @@ impl NeuralBeamformingProcessor {
     // --- Private helpers ---
 
     fn process_frame(&mut self, frame_data: &ArrayView3<f32>) -> KwaversResult<Array3<f32>> {
-        let (channels, samples, _) = frame_data.dim();
+        let [channels, samples, _] = frame_data.shape();
         let mut output = Array3::<f32>::zeros((channels, samples, 1));
 
         for channel in 0..channels {
@@ -259,15 +264,7 @@ impl NeuralBeamformingProcessor {
                     ..Default::default()
                 };
 
-                let uncertainty = provider
-                    .estimate_uncertainty(volume, &uncertainty_config)
-                    .unwrap_or_else(|_| {
-                        let mut u = Array3::<f32>::zeros(volume.dim());
-                        for ((i, j, k), value) in volume.indexed_iter() {
-                            u[[i, j, k]] = 1.0 / (value.abs() + 1.0);
-                        }
-                        u
-                    });
+                let uncertainty = provider.estimate_uncertainty(volume, &uncertainty_config)?;
 
                 self.metrics.uncertainty_computation_time =
                     uncertainty_start.elapsed().as_secs_f64() * 1000.0;
@@ -277,8 +274,8 @@ impl NeuralBeamformingProcessor {
         }
 
         let uncertainty_start = std::time::Instant::now();
-        let mut uncertainty = Array3::<f32>::zeros(volume.dim());
-        for ((i, j, k), value) in volume.indexed_iter() {
+        let mut uncertainty = Array3::<f32>::zeros(volume.shape());
+        for ([i, j, k], value) in volume.indexed_iter() {
             uncertainty[[i, j, k]] = 1.0 / (value.abs() + 1.0);
         }
         self.metrics.uncertainty_computation_time =
@@ -287,8 +284,8 @@ impl NeuralBeamformingProcessor {
     }
 
     fn compute_confidence(&self, uncertainty: &Array3<f32>) -> KwaversResult<Array3<f32>> {
-        let mut confidence = Array3::<f32>::zeros(uncertainty.dim());
-        for ((i, j, k), &uncert) in uncertainty.indexed_iter() {
+        let mut confidence = Array3::<f32>::zeros(uncertainty.shape());
+        for ([i, j, k], &uncert) in uncertainty.indexed_iter() {
             confidence[[i, j, k]] = 1.0 / (1.0 + uncert);
         }
         Ok(confidence)

@@ -31,7 +31,6 @@ leto-ops = { path = "../leto/crates/leto-ops", default-features = false, feature
 eunomia = { path = "../eunomia/crates/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
-dicom = "0.8.0"
 nifti = "0.17.0"
 anyhow = "1.0"
 thiserror = "2.0"
@@ -61,10 +60,6 @@ onnx-ir = "0.20.1"
 openjpeg-sys = "1.0"
 openjp2 = { version = "0.6.1", default-features = false, features = ["std"] }
 jpeg2k = { version = "0.10.1", default-features = false, features = ["openjp2"] }
-dicom-core = "0.8"
-dicom-ul = "0.8"
-dicom-pixeldata = { version = "0.8", features = ["native"] }
-dicom-transfer-syntax-registry = { version = "0.8", features = ["native", "jpegxl", "charls", "openjp2"] }
 consus-hdf5 = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 consus-core = { git = "https://github.com/ryancinsight/consus", features = ["std"] }
 consus-compression = { git = "https://github.com/ryancinsight/consus", features = ["std", "deflate"] }

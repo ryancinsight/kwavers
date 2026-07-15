@@ -46,7 +46,7 @@ pub struct PulseFrame {
     /// Therapy frames fire the full active aperture (all elements supplied to the
     /// scheduler); imaging frames fire one rotating sparse subset.
     pub tx_elements: Vec<usize>,
-    /// Wall-clock start time of this pulse [s], accumulated from the per-kind
+    /// Wall-clock start time of this pulse in seconds, accumulated from the per-kind
     /// pulse-repetition intervals.
     pub time_s: f64,
 }
@@ -88,7 +88,7 @@ pub fn sparse_transmit_subsets(n_elements: usize, n_subsets: usize) -> Vec<Vec<u
 ///   [`sparse_transmit_subsets`]); imaging frames are skipped if empty.
 /// - `therapy_per_cycle`, `imaging_per_cycle` — frames of each kind per cycle.
 /// - `n_cycles`       — number of therapy/imaging cycles.
-/// - `therapy_pri_s`, `imaging_pri_s` — pulse-repetition intervals [s].
+/// - `therapy_pri_s`, `imaging_pri_s` — pulse-repetition intervals in seconds.
 ///
 /// # Guarantees (verified in tests)
 /// - Frame count is `n_cycles * (therapy_per_cycle + imaging_per_cycle)` (minus

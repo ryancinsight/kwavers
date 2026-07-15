@@ -97,7 +97,7 @@ impl CEUSOrchestrators {
     /// physics assembly layer. An empty registry is therefore a configuration
     /// state, not a placeholder implementation.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn create_default(
         &self,

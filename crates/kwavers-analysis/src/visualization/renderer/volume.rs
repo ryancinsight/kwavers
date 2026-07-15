@@ -75,7 +75,7 @@ impl VolumeRenderer {
         _grid: &Grid,
         samples: usize,
     ) -> KwaversResult<Vec<u8>> {
-        let (nx, ny, nz) = field.dim();
+        let [nx, ny, nz] = field.shape();
         let mut image = vec![0u8; nx * ny * 4]; // RGBA
 
         let global_max = field

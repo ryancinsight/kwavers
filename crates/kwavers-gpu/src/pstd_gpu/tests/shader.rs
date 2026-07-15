@@ -42,7 +42,7 @@ fn test_pstd_shader_push_constant_abi_matches_rust() {
 
     assert!(
         !struct_block.contains("dx:"),
-        "WGSL PstdParams must not add fields absent from Rust push constants"
+        "WGSL PstdParams must not add fields absent from Rust immediate data"
     );
     assert!(
         src.contains("precomp_source_kappa"),

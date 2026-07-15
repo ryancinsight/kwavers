@@ -1,16 +1,19 @@
 use super::quantization::WaveQuantizer2D;
 #[cfg(feature = "gpu")]
 use super::types::PinnNeuralNetwork;
+#[cfg(not(feature = "gpu"))]
 use super::types::{QuantizedNetwork, WaveInferenceMemoryPool2D};
 // `ActivationType` is only referenced by the scalar CPU fallback
 // (`forward_quantized_single`), which is compiled out when the `simd` feature
 // provides the vectorised path.
 #[cfg(not(feature = "simd"))]
+#[cfg(all(not(feature = "gpu"), not(feature = "simd")))]
 use super::types::ActivationType;
 use crate::inverse::pinn::ml::wave_equation_2d::model::PinnWave2D;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use std::sync::Arc;
 
-#[cfg(feature = "simd")]
+#[cfg(all(not(feature = "gpu"), feature = "simd"))]
 use super::backend::simd::SimdExecutor;
 
 #[derive(Debug)]
@@ -18,17 +21,19 @@ pub struct RealTimePINNInference<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuB
 where
     B::DeviceBuffer<f32>: coeus_core::CpuAddressableStorage<f32>,
 {
-    /// Original PINN (used as fallback)
+    /// Trained PINN retained while its quantized inference form is prepared.
     _pinn: PinnWave2D<B>,
     /// Quantized neural network for fast inference
-    quantized_network: QuantizedNetwork,
-    /// GPU-accelerated inference engine
+    #[cfg(not(feature = "gpu"))]
+    quantized_network: Arc<QuantizedNetwork>,
+    /// Provider-backed inference engine.
     #[cfg(feature = "gpu")]
-    gpu_engine: Option<PinnNeuralNetwork<B>>,
+    gpu_engine: PinnNeuralNetwork<B>,
     /// Memory pool for tensor reuse
+    #[cfg(not(feature = "gpu"))]
     memory_pool: WaveInferenceMemoryPool2D,
     /// SIMD-enabled CPU inference
-    #[cfg(feature = "simd")]
+    #[cfg(all(not(feature = "gpu"), feature = "simd"))]
     simd_executor: SimdExecutor,
     /// Type-level marker for non-SIMD builds (zero-sized, no runtime cost).
     #[cfg(not(feature = "simd"))]
@@ -47,29 +52,36 @@ where
         let layer_sizes = WaveQuantizer2D::extract_layer_sizes(&pinn);
         let activations = WaveQuantizer2D::extract_activations(&pinn);
 
-        let quantized_network =
-            WaveQuantizer2D::quantize_network(&pinn, &layer_sizes, &activations)?;
+        let quantized_network = Arc::new(WaveQuantizer2D::quantize_network(
+            &pinn,
+            &layer_sizes,
+            &activations,
+        )?);
+        #[cfg(not(feature = "gpu"))]
         let memory_pool = Self::create_memory_pool(&layer_sizes);
 
-        #[cfg(feature = "simd")]
+        #[cfg(all(not(feature = "gpu"), feature = "simd"))]
         let simd_executor = SimdExecutor::new(16);
 
         #[cfg(feature = "gpu")]
-        let gpu_engine = PinnNeuralNetwork::new(&quantized_network).ok();
+        let gpu_engine = PinnNeuralNetwork::new(Arc::clone(&quantized_network))?;
 
         Ok(Self {
             _pinn: pinn,
+            #[cfg(not(feature = "gpu"))]
             quantized_network,
             #[cfg(feature = "gpu")]
             gpu_engine,
+            #[cfg(not(feature = "gpu"))]
             memory_pool,
-            #[cfg(feature = "simd")]
+            #[cfg(all(not(feature = "gpu"), feature = "simd"))]
             simd_executor,
             #[cfg(not(feature = "simd"))]
             _simd: std::marker::PhantomData,
         })
     }
 
+    #[cfg(not(feature = "gpu"))]
     fn create_memory_pool(layer_sizes: &[usize]) -> WaveInferenceMemoryPool2D {
         let mut buffers = Vec::new();
         let mut buffer_sizes = Vec::new();
@@ -95,29 +107,27 @@ where
         t: &[f32],
     ) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
         #[cfg(feature = "gpu")]
-        if let Some(ref gpu_engine) = self.gpu_engine {
-            return gpu_engine.predict(x, y, t);
-        }
+        return self.gpu_engine.predict(x, y, t);
 
-        #[cfg(feature = "simd")]
+        #[cfg(all(not(feature = "gpu"), feature = "simd"))]
         return self
             .simd_executor
             .predict(&self.quantized_network, &mut self.memory_pool, x, y, t);
 
-        #[cfg(not(feature = "simd"))]
+        #[cfg(all(not(feature = "gpu"), not(feature = "simd")))]
         self.predict_quantized_cpu(x, y, t)
     }
 
-    #[cfg(not(feature = "simd"))]
+    #[cfg(all(not(feature = "gpu"), not(feature = "simd")))]
     fn predict_quantized_cpu(
         &mut self,
         x: &[f32],
         y: &[f32],
         t: &[f32],
     ) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
-        let batch_size = (x.len());
+        let batch_size = x.len();
+        let uncertainties = self.quantized_network.prediction_error_bounds(x, y, t)?;
         let mut predictions = vec![0.0; batch_size];
-        let uncertainties = vec![0.02; batch_size];
 
         for i in 0..batch_size {
             let prediction = self.forward_quantized_single(&[x[i], y[i], t[i]])?;
@@ -127,7 +137,7 @@ where
         Ok((predictions, uncertainties))
     }
 
-    #[cfg(not(feature = "simd"))]
+    #[cfg(all(not(feature = "gpu"), not(feature = "simd")))]
     fn forward_quantized_single(&mut self, input: &[f32]) -> KwaversResult<f32> {
         let num_layers = (self.quantized_network.weights.len());
 

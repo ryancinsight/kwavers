@@ -7,7 +7,7 @@
 
 // ── HU classification thresholds ─────────────────────────────────────────────
 
-/// Hounsfield unit threshold below which tissue is classified as soft tissue / brain [HU].
+/// Hounsfield unit threshold below which tissue is classified as soft tissue / brain.
 ///
 /// Above this value, bone fraction is interpolated linearly to cortical bone.
 ///
@@ -15,12 +15,12 @@
 pub const HU_BONE_THRESHOLD: f64 = 300.0; // Hounsfield units
 
 /// Hounsfield unit threshold separating in-body tissue from background air in
-/// transcranial CT segmentation [HU].
+/// transcranial CT segmentation, measured in Hounsfield units.
 ///
 /// Reference: Aubry et al. (2003). J. Acoust. Soc. Am. 113(1):84–93.
 pub const HU_BRAIN_BODY_THRESHOLD: f64 = -300.0; // Hounsfield units
 
-/// Hounsfield unit threshold separating abdominal organ tissue from background [HU].
+/// Hounsfield unit threshold separating abdominal organ tissue from background.
 ///
 /// Lower than `HU_BRAIN_BODY_THRESHOLD` (−300 HU) to accommodate the larger
 /// perinephric / retroperitoneal fat fraction in abdominal CT scans.
@@ -30,7 +30,7 @@ pub const HU_ABDOMEN_BODY_THRESHOLD: f64 = -450.0; // Hounsfield units
 
 // ── Skull CT interpolation model ─────────────────────────────────────────────
 
-/// Hounsfield unit range for skull bone-fraction interpolation [HU].
+/// Hounsfield unit range for skull bone-fraction interpolation.
 ///
 /// `bone_fraction = (HU − HU_BONE_THRESHOLD) / HU_SKULL_RANGE`, clamped to [0, 1].
 ///

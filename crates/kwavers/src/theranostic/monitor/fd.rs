@@ -2,7 +2,7 @@
 //!
 //! Reconstructs the monitored slice's sound speed from the multistatic
 //! frequency-domain data of a ring of array elements, using the repo's
-//! [`frequency_domain`] FWI engine with a [`SpectralConvergentBornOperator`]
+//! frequency-domain FWI engine with a `DenseConvergentBornOperator`
 //! forward model. Because the lesion is a small perturbation on a known
 //! background (the pre-therapy reconstruction), inverting the perturbed data
 //! *warm-started from that background* isolates the lesion Δc — and CBS keeps the
@@ -39,11 +39,11 @@ use std::sync::Arc;
 pub struct FdMonitorConfig {
     /// Circumferential elements on the single-row imaging ring.
     pub ring_elements: usize,
-    /// Ring diameter [m]; must enclose the slice volume.
+    /// Ring diameter in metres; must enclose the slice volume.
     pub ring_diameter_m: f64,
-    /// Reconstruction voxel spacing [m].
+    /// Reconstruction voxel spacing in metres.
     pub spacing_m: f64,
-    /// Imaging frequencies [Hz] (ascending → multiscale continuation).
+    /// Imaging frequencies in hertz (ascending → multiscale continuation).
     pub frequencies_hz: Vec<f64>,
     /// Homogeneous reference sound speed [m/s] (skull carried in the model).
     pub reference_sound_speed_m_s: f64,

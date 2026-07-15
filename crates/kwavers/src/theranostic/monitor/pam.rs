@@ -10,7 +10,7 @@
 //!
 //! # Why a bespoke aligner
 //!
-//! The repo's [`BeamformingProcessor::delay_and_sum_with`] beamforms to a single
+//! The repository's `BeamformingProcessor::delay_and_sum_with` beamforms to a single
 //! focal point and aligns to the **latest** arrival (advance by `max−τ_i`), which
 //! is the wrong sign for focusing time-of-flight emission data at a pixel (its
 //! own docstring flags this for transient localization). PAM here grid-searches
@@ -25,9 +25,9 @@ use leto::{Array2, Array3};
 pub struct PamMonitorConfig {
     /// Background sound speed for time-of-flight [m/s].
     pub sound_speed_m_s: f64,
-    /// Physical position of pixel `(0, 0)` `[x0, y_slice, z0]` [m].
+    /// Physical position of pixel `(0, 0)` `[x0, y_slice, z0]` in metres.
     pub origin_m: [f64; 3],
-    /// Pixel spacing [m].
+    /// Pixel spacing in metres.
     pub spacing_m: f64,
     /// Image pixels along x.
     pub nx: usize,

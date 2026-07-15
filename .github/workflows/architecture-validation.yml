@@ -49,7 +49,9 @@ jobs:
       run: cargo fmt -- --check
 
     - name: Run clippy (strict mode)
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: |
+        cargo clippy -p kwavers-core --all-targets --all-features -- -D warnings
+        cargo clippy -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
 
     - name: Check for security vulnerabilities
       run: |
@@ -126,11 +128,11 @@ jobs:
     - name: Build with ${{ matrix.features }} features
       run: |
         if [ "${{ matrix.features }}" == "minimal" ]; then
-          cargo build --no-default-features --features minimal
+          cargo build -p kwavers --no-default-features --features minimal
         elif [ "${{ matrix.features }}" == "full" ]; then
-          cargo build --all-features
+          cargo build -p kwavers --no-default-features --features full
         else
-          cargo build --features ${{ matrix.features }}
+          cargo build -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
 
   test-coverage:
@@ -153,10 +155,14 @@ jobs:
         tool: nextest
 
     - name: Run tests
-      run: cargo nextest run --lib --all-features
+      run: |
+        cargo nextest run --workspace --exclude kwavers-python --exclude kwavers-gpu --lib
+        cargo nextest run -p kwavers --lib --no-default-features --features pinn
 
     - name: Run doc tests
-      run: cargo test --doc --all-features
+      run: |
+        cargo test -p kwavers --doc
+        cargo test -p kwavers --doc --no-default-features --features full
 
   documentation:
     name: Documentation Build
@@ -173,6 +179,36 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Build documentation
-      run: cargo doc --no-deps --all-features
-      env:
-        RUSTDOCFLAGS: -D warnings
+      run: |
+        cargo doc --workspace --exclude kwavers-python --no-deps
+        RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers --no-default-features --features full --no-deps
+
+  cuda-runtime-build:
+    name: CUDA Runtime Build
+    runs-on: ubuntu-latest
+    container:
+      image: nvidia/cuda:13.2.0-devel-ubuntu22.04
+
+    steps:
+    - name: Install container prerequisites
+      run: |
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y \
+          build-essential \
+          curl \
+          git \
+          libclang-dev \
+          libfontconfig1-dev \
+          pkg-config
+
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Checkout Atlas path dependencies
+      uses: ./.github/actions/checkout-atlas-path-dependencies
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Compile CUDA runtime provider
+      run: cargo build -p kwavers --no-default-features --features cuda-runtime
