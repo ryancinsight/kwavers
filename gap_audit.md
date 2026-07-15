@@ -1,5 +1,15 @@
 # Gap Audit
 
+- In progress 2026-07-15: GitHub Actions checked out Kwavers alone even though
+  the workspace declares live sibling Atlas paths such as `../apollo`. PR #288
+  therefore failed before compilation in every Cargo job; the architecture
+  workflow also called the deleted `scripts/validate_architecture.sh`. One
+  composite setup action now derives and checks out the manifest-declared
+  providers before Cargo runs, and stale native `cargo test` invocations move
+  to Nextest. Evidence tier: authoritative Actions log
+  `29443042765` plus local manifest-path resolution and YAML parsing. Residual:
+  the repaired PR head must complete the full remote matrix before closure.
+
 - Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
   channel, so complex DAS must restore that phase after fractional interpolation
   and before coherent summation. `demodulate_rf_to_iq` owns the finite,

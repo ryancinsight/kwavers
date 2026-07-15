@@ -1,0 +1,27 @@
+name: Checkout Atlas path dependencies
+description: Materialize the sibling Atlas providers declared by the workspace manifest.
+
+runs:
+  using: composite
+  steps:
+    - name: Checkout sibling providers
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        workspace_parent="$(dirname "$GITHUB_WORKSPACE")"
+        mapfile -t providers < <(
+          sed -nE 's|.*path = "\.\./([^/"]+).*|\1|p' Cargo.toml \
+            | grep -v '^kwavers-' \
+            | sort -u
+        )
+
+        for provider in "${providers[@]}"; do
+          destination="$workspace_parent/$provider"
+          if [[ -e "$destination" ]]; then
+            test -f "$destination/Cargo.toml"
+            continue
+          fi
+
+          git clone --depth 1 "https://github.com/ryancinsight/$provider.git" "$destination"
+        done

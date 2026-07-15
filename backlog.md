@@ -1,5 +1,22 @@
 # Backlog / Strategy
 
+## KW-CI-046 — Atlas-path CI setup [patch] — in-progress
+
+- Owner: Codex; scope: reusable GitHub Actions setup for the sibling Atlas path
+  providers declared by `Cargo.toml`, stale architecture-workflow cleanup, and
+  native Nextest invocation.
+- Acceptance: every Cargo job materializes the manifest-declared sibling
+  providers before resolving the workspace; no workflow invokes the deleted
+  `scripts/validate_architecture.sh`; native test jobs use Nextest, with
+  doctests retaining Rustdoc's supported runner.
+- Driver: PR #288 fails before compilation because `../apollo` and the other
+  Atlas path providers are absent in GitHub Actions. The architecture workflow
+  separately invokes a script deleted in commit `91514cad2`.
+- Evidence: GitHub Actions run `29443042765` reports the missing
+  `apollo/crates/apollo-fft/Cargo.toml`; local manifest-path resolution finds
+  all 12 sibling providers. Re-open trigger: any provider checkout, manifest
+  resolution, or subsequent CI-job failure on the repaired PR head.
+
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 
 - Owner: Codex; scope: promote real-RF analytic-baseband demodulation into a

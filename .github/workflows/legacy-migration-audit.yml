@@ -45,6 +45,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
+
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
 
@@ -82,6 +85,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Checkout Atlas path dependencies
+        uses: ./.github/actions/checkout-atlas-path-dependencies
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable

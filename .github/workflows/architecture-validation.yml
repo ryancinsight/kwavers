@@ -19,6 +19,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Checkout Atlas path dependencies
+      uses: ./.github/actions/checkout-atlas-path-dependencies
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
       with:
@@ -41,12 +44,6 @@ jobs:
       with:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
-
-    - name: Make validation script executable
-      run: chmod +x scripts/validate_architecture.sh
-
-    - name: Run architecture validation
-      run: ./scripts/validate_architecture.sh
 
     - name: Check formatting
       run: cargo fmt -- --check
@@ -122,6 +119,9 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Checkout Atlas path dependencies
+      uses: ./.github/actions/checkout-atlas-path-dependencies
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
@@ -143,11 +143,19 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Checkout Atlas path dependencies
+      uses: ./.github/actions/checkout-atlas-path-dependencies
+
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
 
+    - name: Install nextest
+      uses: taiki-e/install-action@v2
+      with:
+        tool: nextest
+
     - name: Run tests
-      run: cargo test --lib --all-features
+      run: cargo nextest run --lib --all-features
 
     - name: Run doc tests
       run: cargo test --doc --all-features
@@ -159,6 +167,9 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+
+    - name: Checkout Atlas path dependencies
+      uses: ./.github/actions/checkout-atlas-path-dependencies
 
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed (2026-07-15) - Atlas-path CI setup [patch]
+
+- GitHub Actions now materializes the Atlas sibling providers declared by the
+  workspace manifest before Cargo resolves path dependencies. The architecture
+  workflow no longer invokes its deleted validation script, and native test
+  jobs use Nextest.
+
 ### Fixed (2026-07-15) - coherent active complex DAS [patch]
 
 - Complex active DAS now requires the carrier frequency removed by analytic

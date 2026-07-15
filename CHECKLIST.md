@@ -1,5 +1,26 @@
 # Project Checklist
 
+## Owner: Codex — Atlas-path CI setup [patch]
+
+- [x] Identify the common missing-provider failure across the PR #288 Actions
+      matrix and the independently stale architecture-script invocation.
+- [x] Add one composite setup action that derives sibling provider names from
+      the workspace manifest, materializes them beside the checkout, and is
+      used by every Cargo job in the active PR workflows.
+- [x] Replace native test jobs with Nextest while preserving doctests under
+      Rustdoc's supported runner.
+- [ ] Push the CI repair and verify all GitHub Actions checks on its new head.
+
+**Current phase:** Closure. **Target:** Kwavers 4.1.0.
+**Acceptance:** GitHub Actions resolves the same Atlas sibling-path graph as
+the local checkout before Cargo starts, and no active workflow calls deleted
+validation infrastructure.
+
+**Current evidence:** Actions run `29443042765` fails before compilation on
+the absent `../apollo` provider; the local manifest-derived provider set is
+`apollo, coeus, eunomia, gaia, hephaestus, hermes, leto, melinoe, mnemosyne,
+moirai, ritk, themis`. YAML parsing and local provider-path resolution pass.
+
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 
 - [x] Add validated three-dimensional plane-wave and virtual-source events to
