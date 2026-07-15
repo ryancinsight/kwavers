@@ -8,8 +8,9 @@
   workspace manifest at the `codex/kwavers-atlas-integration` coordinated
   submodule revisions before Cargo resolves path dependencies. The architecture
   workflow no longer invokes its deleted validation script, native test jobs
-  use Nextest, and Linux CPU-affinity configuration passes the mutable CPU set
-  required by `libc::CPU_SET`.
+  use Nextest, Linux CPU-affinity configuration passes the mutable CPU set
+  required by `libc::CPU_SET`, and NUMA mask capacity uses the standard
+  overflow-safe ceiling division.
 
 ### Fixed (2026-07-15) - coherent active complex DAS [patch]
 

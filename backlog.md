@@ -21,7 +21,8 @@
   committed Kwavers Atlas integration branch pins Apollo 0.15. The next
   architecture rerun materializes all 12 providers and exposes the first real
   source error: Linux `CPU_SET` receives an immutable set in the explicit-CPU
-  branch. Local manifest-path resolution finds all 12 sibling providers.
+  branch. Strict Clippy then finds two manual NUMA-mask ceiling divisions.
+  Local manifest-path resolution finds all 12 sibling providers.
   Re-open trigger: any coordinated-provider checkout, manifest
   resolution, or subsequent CI-job failure on the repaired PR head.
 

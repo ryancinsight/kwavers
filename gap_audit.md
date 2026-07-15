@@ -11,8 +11,9 @@
   (`apollo-fft` 0.17.0 versus RITK's required `^0.15.0`) and Atlas `main`
   pins incompatible Apollo 0.14. The subsequent Architecture rerun
   `29444236283` completes provider checkout and finds the independent Linux
-  `CPU_SET` mutability defect in Kwavers' explicit-affinity branch. Evidence
-  tier: authoritative Actions logs plus local manifest-path resolution and YAML
+  `CPU_SET` mutability defect in Kwavers' explicit-affinity branch. Strict
+  Clippy then identifies two manual NUMA-mask ceiling divisions. Evidence tier:
+  authoritative Actions logs plus local manifest-path resolution and YAML
   parsing. Residual: the corrected PR head must complete the full remote matrix
   before closure.
 

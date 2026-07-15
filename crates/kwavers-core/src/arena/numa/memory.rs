@@ -21,7 +21,7 @@ pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> Kwa
     const MPOL_BIND: i32 = 2;
     const MPOL_MF_STRICT: u32 = 1;
 
-    let mut nodemask: Vec<u64> = vec![0; (MAX_NUMA_NODES + 63) / 64];
+    let mut nodemask: Vec<u64> = vec![0; MAX_NUMA_NODES.div_ceil(64)];
     nodemask[node / 64] |= 1u64 << (node % 64);
 
     let result = libc::syscall(
@@ -78,7 +78,7 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
 
     unsafe {
         let topology = NumaTopology::detect();
-        let mut nodemask: Vec<u64> = vec![0; (MAX_NUMA_NODES + 63) / 64];
+        let mut nodemask: Vec<u64> = vec![0; MAX_NUMA_NODES.div_ceil(64)];
         for node in 0..topology.node_count {
             nodemask[node / 64] |= 1u64 << (node % 64);
         }

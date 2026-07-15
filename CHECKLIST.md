@@ -25,7 +25,8 @@ integration pin after the first reruns selected incompatible provider defaults
 and Atlas `main`'s incompatible Apollo 0.14. YAML parsing and local
 provider-path resolution pass. Architecture run `29444236283` then materializes
 every provider and identifies the independent Linux `CPU_SET` mutability error
-in the explicit CPU-affinity branch; the correction is awaiting its rerun.
+in the explicit CPU-affinity branch, followed by two manual NUMA-mask ceiling
+divisions; both corrections are awaiting their rerun.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 
