@@ -1,5 +1,14 @@
 # Project Checklist
 
+## Owner: Codex — Layered focus-path contract [minor]
+
+- [ ] Expose Kwavers' validated straight-ray phase accumulation.
+- [ ] Route LeoNeuro focus controls through the provider contract.
+- [ ] Remove the duplicate reference-Python layered phase calculation.
+- [ ] Run focused provider, consumer, and Python parity gates; synchronize PM artifacts.
+
+**Current phase:** Execution. **Target:** Kwavers 4.0.0 / LeoNeuro 0.4.0.
+
 ## Owner: Codex — Atlas-local Gaia dependency [patch]
 
 - [x] Replace the transitive Gaia Git declaration with the live Atlas path.

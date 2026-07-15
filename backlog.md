@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## KW-RAY-040 — Layered focus-path contract [minor] — in-progress
+
+- Owner: Codex; scope: `kwavers-transducer` layered Rayleigh propagation API,
+  LeoNeuro focus integration, reference-Python parity, tests, and PM records.
+- Driver: the provider's Rayleigh kernel integrates each straight-ray layer, but
+  LeoNeuro focus steering currently receives only one sound speed while the
+  reference script separately recreates the layered phase law.
+- Acceptance: Kwavers exposes the validated segmentwise propagation phase;
+  LeoNeuro focuses through that provider contract; the reference delegates
+  instead of retaining an independent layered phase implementation.
+
 ## KW-DEP-039 — Make Gaia an Atlas-local dependency [patch] — review
 
 - Owner: Codex; scope: workspace manifest, dependency records, and LeoNeuro
