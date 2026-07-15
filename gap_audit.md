@@ -1,5 +1,18 @@
 # Gap Audit
 
+- Closed 2026-07-15: the fUS reference performed complex NumPy SVD and power
+  reduction because Kwavers' existing clutter filter accepts only centred real
+  slow-time matrices. `IqSvdClutterFilter` now owns the uncentred complex I/Q
+  contract by exact realification; every complex singular mode maps to a paired
+  real mode, so a rank cut removes `2k` singular values. The provider returns
+  filtered I/Q and `Σ_t |I/Q|²` together. The stale Demené reference now names
+  IEEE TMI 34(11), 2271-2285 (2015), DOI 10.1109/TMI.2015.2428634. Evidence
+tier: realification identity, 3/3 locked value-semantic provider tests,
+warning-denied Clippy, package Rustdoc with its 57 pre-existing unresolved links
+outside the I/Q files, and LeoNeuro's independent 14/14 CPython boundary/
+reference suite. Residual: this is the fUS I/Q domain contract; a generic public
+complex SVD remains outside its justified scope.
+
 - Closed 2026-07-15: the autocorrelation provider exposed velocity and
   normalized variance but forced each consumer that needed a Doppler power map
   to duplicate lag-zero reduction. `AutocorrelationEstimate` now owns all three

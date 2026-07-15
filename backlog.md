@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-IQ-042 — Complex I/Q SVD clutter contract [minor] — in-progress
+## KW-IQ-042 — Complex I/Q SVD clutter contract [minor] — done
 
 - Owner: Codex; scope: `kwavers-analysis` I/Q SVD provider, its public export,
   value-semantic regressions, and synchronized PM artifacts.
@@ -12,6 +12,12 @@
 - Driver: LeoNeuro's tracked reference currently executes NumPy complex SVD and
   its own power reduction. Leto supplies the authoritative real rank-revealing
   SVD; the fUS-domain realification belongs in Kwavers, not a consumer fallback.
+- Evidence: `IqSvdClutterFilter` realifies the full complex matrix, removes
+  paired modes, and reconstructs filtered I/Q plus unnormalized power without
+  temporal centering. Locked offline focused Nextest passes 3/3; default-feature
+  warning-denied Clippy passes; package Rustdoc completes with the existing 57
+  unresolved-link warnings outside the I/Q files. LeoNeuro's rebuilt CPython
+  boundary/reference suite independently passes 14/14.
 
 ## KW-DOP-041 — Doppler autocorrelation signal-power contract [minor] — done
 

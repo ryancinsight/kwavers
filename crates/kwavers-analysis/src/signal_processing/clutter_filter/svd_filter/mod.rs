@@ -15,7 +15,8 @@
 //!
 //! - Demené, C., et al. (2015). "Spatiotemporal clutter filtering of ultrafast
 //!   ultrasound data highly increases Doppler and fUltrasound sensitivity."
-//!   *Scientific Reports*, 5, 11203. DOI: 10.1038/srep11203
+//!   *IEEE Transactions on Medical Imaging*, 34(11), 2271-2285.
+//!   DOI: 10.1109/TMI.2015.2428634
 //!
 //! - Baranger, J., et al. (2018). "Adaptive spatiotemporal SVD clutter filtering."
 //!   *IEEE Trans. Medical Imaging*, 37(7), 1574-1586. DOI: 10.1109/TMI.2018.2789499
@@ -24,8 +25,12 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::{Array1, Array2};
 use leto_ops::svd_rank_revealing;
 
+mod iq;
+
 #[cfg(test)]
 mod tests;
+
+pub use iq::{IqSvdClutterFilter, IqSvdClutterResult};
 
 /// Configuration for SVD clutter filter
 #[derive(Debug, Clone)]

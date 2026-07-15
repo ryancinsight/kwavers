@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added (2026-07-15) - complex I/Q SVD clutter contract [minor]
+
+- Added `IqSvdClutterFilter`, which implements fUS complex-I/Q rank truncation
+  through the exact paired realification over Leto's rank-revealing SVD. One
+  call returns the uncentred filtered I/Q cube and unnormalized power-Doppler
+  map, eliminating consumer-owned NumPy SVD and power reduction.
+
 ### Added (2026-07-15) - Doppler autocorrelation map contract [minor]
 
 - Added `AutocorrelationEstimate` and `estimate_with_power`, which return

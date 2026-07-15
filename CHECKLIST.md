@@ -2,11 +2,11 @@
 
 ## Owner: Codex — Complex I/Q SVD clutter contract [minor]
 
-- [ ] Implement the Kwavers `[slow_time, angle, range]` I/Q realification and
+- [x] Implement the Kwavers `[slow_time, angle, range]` I/Q realification and
       paired-rank reconstruction over Leto's rank-revealing SVD.
-- [ ] Return the unnormalized power map with the filtered I/Q cube from the
+- [x] Return the unnormalized power map with the filtered I/Q cube from the
       same provider call, without a temporal-centering path.
-- [ ] Add complex rank/power/invalid-input regressions; run focused package
+- [x] Add complex rank/power/invalid-input regressions; run focused package
       gates and synchronize provider evidence.
 
 **Current phase:** Execution. **Target:** Kwavers 4.1.0 / LeoNeuro 0.4.0.
@@ -15,6 +15,16 @@ realification `[[Re(IQ), -Im(IQ)], [Im(IQ), Re(IQ)]]`, which is the exact real
 representation of complex rank-`k` truncation. The implementation must not
 replace the complex SVD with independent real/imaginary filters or restore a
 temporal mean.
+
+**Closure evidence:** `IqSvdClutterFilter` maps complex I/Q to the exact
+paired real representation, zeroes `2 × rank_cut` singular values from Leto's
+rank-revealing SVD, and reconstructs only the complex filtered cube plus its
+`Σ_t |I/Q|²` power map. It rejects zero, overlarge, non-finite, and empty
+inputs. The provider's complex phase/power, stationary rank-one/DC, and invalid
+input regressions pass 3/3 under locked offline Nextest; default-feature
+warning-denied Clippy passes; package Rustdoc completes with 57 pre-existing
+unresolved links outside the I/Q files. Evidence tier: realification identity
+plus value-semantic provider and independent CPython consumer tests.
 
 ## Owner: Codex — Doppler autocorrelation signal-power contract [minor]
 
