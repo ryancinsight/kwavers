@@ -1,5 +1,21 @@
 # Project Checklist
 
+## Owner: Codex — Complex I/Q SVD clutter contract [minor]
+
+- [ ] Implement the Kwavers `[slow_time, angle, range]` I/Q realification and
+      paired-rank reconstruction over Leto's rank-revealing SVD.
+- [ ] Return the unnormalized power map with the filtered I/Q cube from the
+      same provider call, without a temporal-centering path.
+- [ ] Add complex rank/power/invalid-input regressions; run focused package
+      gates and synchronize provider evidence.
+
+**Current phase:** Execution. **Target:** Kwavers 4.1.0 / LeoNeuro 0.4.0.
+**Acceptance:** `rank_cut = k` removes the first `2k` singular values of the
+realification `[[Re(IQ), -Im(IQ)], [Im(IQ), Re(IQ)]]`, which is the exact real
+representation of complex rank-`k` truncation. The implementation must not
+replace the complex SVD with independent real/imaginary filters or restore a
+temporal mean.
+
 ## Owner: Codex — Doppler autocorrelation signal-power contract [minor]
 
 - [x] Publish a native Doppler estimate that carries velocity, normalized
