@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added (2026-07-15) - layered propagation path [minor]
+
+- Added `RayleighPropagationPath`, a validated ordered straight-ray contract
+  for segmentwise phase and amplitude attenuation. `RayleighIntegralSpec` now
+  consumes that path, so field evaluation and consumers such as LeoNeuro focus
+  control use one provider-owned propagation law.
+
 ### Fixed (2026-07-14) - Atlas-local Gaia resolution [patch]
 
 - Declared Gaia as the live Atlas path dependency instead of relying on a

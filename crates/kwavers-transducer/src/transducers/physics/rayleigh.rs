@@ -293,10 +293,10 @@ impl PlanarAperture {
     }
 }
 
-/// Homogeneous-medium and disk-quadrature parameters for the Rayleigh integral.
+/// Disk-quadrature parameters coupled to a validated propagation path.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RayleighIntegralSpec {
-    layers: Vec<RayleighLayer>,
+    path: RayleighPropagationPath,
     radial_order: usize,
     azimuthal_order: usize,
 }
@@ -307,6 +307,17 @@ pub struct RayleighLayer {
     wavenumber_rad_m: f64,
     attenuation_np_m: f64,
     thickness_m: Option<f64>,
+}
+
+/// Validated straight-ray acoustic propagation path.
+///
+/// Finite layers consume their configured thickness in order; the final
+/// semi-infinite layer receives the remaining distance. The contract models
+/// phase and attenuation only: interface reflection and refraction remain
+/// outside the straight-ray Rayleigh approximation.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RayleighPropagationPath {
+    layers: Vec<RayleighLayer>,
 }
 
 impl RayleighLayer {
@@ -342,42 +353,31 @@ impl RayleighLayer {
     }
 }
 
-impl RayleighIntegralSpec {
-    /// Construct a propagation specification.
-    ///
-    /// `radial_order` is the Gauss-Legendre order in normalized squared radius;
-    /// `azimuthal_order` is the periodic trapezoidal order around each ring.
+impl RayleighPropagationPath {
+    /// Construct a homogeneous semi-infinite propagation path.
     ///
     /// # Errors
     ///
     /// Returns [`KwaversError::Config`] unless the wavenumber is finite and
-    /// positive, attenuation is finite and non-negative, radial order is
-    /// positive, and azimuthal order is at least three.
-    pub fn new(
-        wavenumber_rad_m: f64,
-        attenuation_np_m: f64,
-        radial_order: usize,
-        azimuthal_order: usize,
-    ) -> KwaversResult<Self> {
-        let layer = RayleighLayer::new(wavenumber_rad_m, attenuation_np_m, None)?;
-        Self::layered(vec![layer], radial_order, azimuthal_order)
+    /// positive and attenuation is finite and non-negative.
+    pub fn homogeneous(wavenumber_rad_m: f64, attenuation_np_m: f64) -> KwaversResult<Self> {
+        Self::layered(vec![RayleighLayer::new(
+            wavenumber_rad_m,
+            attenuation_np_m,
+            None,
+        )?])
     }
 
-    /// Construct an ordered straight-ray layered propagation specification.
+    /// Construct an ordered straight-ray layered propagation path.
     ///
     /// The final layer must be semi-infinite and every preceding layer must
-    /// carry a finite thickness. Phase and attenuation integrate segmentwise;
-    /// interface reflection and refraction are outside this approximation.
+    /// carry a finite thickness.
     ///
     /// # Errors
     ///
     /// Returns [`KwaversError::Config`] for an empty or structurally invalid
-    /// layer sequence, or invalid quadrature work.
-    pub fn layered(
-        layers: Vec<RayleighLayer>,
-        radial_order: usize,
-        azimuthal_order: usize,
-    ) -> KwaversResult<Self> {
+    /// layer sequence.
+    pub fn layered(layers: Vec<RayleighLayer>) -> KwaversResult<Self> {
         if layers.is_empty() {
             return Err(invalid("layers", "0".to_owned(), "at least one layer"));
         }
@@ -401,6 +401,102 @@ impl RayleighIntegralSpec {
                 "only final layer is semi-infinite",
             ));
         }
+        Ok(Self { layers })
+    }
+
+    /// Integrate phase and amplitude attenuation along one straight-ray path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] when `range_m` is not finite or is
+    /// negative.
+    pub fn propagation_terms(&self, range_m: f64) -> KwaversResult<(f64, f64)> {
+        if !range_m.is_finite() || range_m < 0.0 {
+            return Err(invalid("range_m", range_m.to_string(), "finite and >= 0"));
+        }
+        let mut remaining = range_m;
+        let mut phase = 0.0;
+        let mut attenuation = 0.0;
+        for layer in &self.layers {
+            let segment = layer
+                .thickness_m
+                .map_or(remaining, |thickness| remaining.min(thickness));
+            phase = layer.wavenumber_rad_m.mul_add(segment, phase);
+            attenuation = layer.attenuation_np_m.mul_add(segment, attenuation);
+            remaining -= segment;
+            if remaining <= 0.0 {
+                break;
+            }
+        }
+        Ok((phase, attenuation))
+    }
+
+    fn wavenumber_rad_m(&self) -> f64 {
+        self.layers[0].wavenumber_rad_m
+    }
+
+    fn attenuation_np_m(&self) -> f64 {
+        self.layers[0].attenuation_np_m
+    }
+}
+
+impl RayleighIntegralSpec {
+    /// Construct a propagation specification.
+    ///
+    /// `radial_order` is the Gauss-Legendre order in normalized squared radius;
+    /// `azimuthal_order` is the periodic trapezoidal order around each ring.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] unless the wavenumber is finite and
+    /// positive, attenuation is finite and non-negative, radial order is
+    /// positive, and azimuthal order is at least three.
+    pub fn new(
+        wavenumber_rad_m: f64,
+        attenuation_np_m: f64,
+        radial_order: usize,
+        azimuthal_order: usize,
+    ) -> KwaversResult<Self> {
+        Self::from_path(
+            RayleighPropagationPath::homogeneous(wavenumber_rad_m, attenuation_np_m)?,
+            radial_order,
+            azimuthal_order,
+        )
+    }
+
+    /// Construct an ordered straight-ray layered propagation specification.
+    ///
+    /// The final layer must be semi-infinite and every preceding layer must
+    /// carry a finite thickness. Phase and attenuation integrate segmentwise;
+    /// interface reflection and refraction are outside this approximation.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] for an empty or structurally invalid
+    /// layer sequence, or invalid quadrature work.
+    pub fn layered(
+        layers: Vec<RayleighLayer>,
+        radial_order: usize,
+        azimuthal_order: usize,
+    ) -> KwaversResult<Self> {
+        Self::from_path(
+            RayleighPropagationPath::layered(layers)?,
+            radial_order,
+            azimuthal_order,
+        )
+    }
+
+    /// Construct an integral specification from a validated propagation path.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::Config`] for invalid or excessive quadrature
+    /// work.
+    pub fn from_path(
+        path: RayleighPropagationPath,
+        radial_order: usize,
+        azimuthal_order: usize,
+    ) -> KwaversResult<Self> {
         if radial_order == 0 {
             return Err(invalid("radial_order", radial_order.to_string(), "> 0"));
         }
@@ -426,7 +522,7 @@ impl RayleighIntegralSpec {
             ));
         }
         Ok(Self {
-            layers,
+            path,
             radial_order,
             azimuthal_order,
         })
@@ -435,31 +531,13 @@ impl RayleighIntegralSpec {
     /// Acoustic wavenumber in radians per metre.
     #[must_use]
     pub fn wavenumber_rad_m(&self) -> f64 {
-        self.layers[0].wavenumber_rad_m
+        self.path.wavenumber_rad_m()
     }
 
     /// Amplitude attenuation coefficient in nepers per metre.
     #[must_use]
     pub fn attenuation_np_m(&self) -> f64 {
-        self.layers[0].attenuation_np_m
-    }
-
-    fn path_terms(&self, range_m: f64) -> (f64, f64) {
-        let mut remaining = range_m;
-        let mut phase = 0.0;
-        let mut attenuation = 0.0;
-        for layer in &self.layers {
-            let segment = layer
-                .thickness_m
-                .map_or(remaining, |thickness| remaining.min(thickness));
-            phase = layer.wavenumber_rad_m.mul_add(segment, phase);
-            attenuation = layer.attenuation_np_m.mul_add(segment, attenuation);
-            remaining -= segment;
-            if remaining <= 0.0 {
-                break;
-            }
-        }
-        (phase, attenuation)
+        self.path.attenuation_np_m()
     }
 }
 
@@ -518,7 +596,7 @@ pub fn rayleigh_pressure(
                         ),
                     );
                     let range = norm(subtract(point, surface_point));
-                    let (phase, attenuation) = spec.path_terms(range);
+                    let (phase, attenuation) = spec.path.propagation_terms(range)?;
                     let amplitude = area_weight * (-attenuation).exp() / range;
                     integral += Complex64::from_polar(amplitude, phase);
                 }
@@ -800,19 +878,15 @@ mod tests {
 
     #[test]
     fn layered_path_integrates_each_segment_exactly() {
-        let spec = RayleighIntegralSpec::layered(
-            vec![
-                RayleighLayer::new(2.0, 3.0, Some(0.25)).unwrap(),
-                RayleighLayer::new(5.0, 7.0, None).unwrap(),
-            ],
-            1,
-            6,
-        )
+        let path = RayleighPropagationPath::layered(vec![
+            RayleighLayer::new(2.0, 3.0, Some(0.25)).unwrap(),
+            RayleighLayer::new(5.0, 7.0, None).unwrap(),
+        ])
         .unwrap();
-        let (short_phase, short_attenuation) = spec.path_terms(0.1);
+        let (short_phase, short_attenuation) = path.propagation_terms(0.1).unwrap();
         assert!((short_phase - 0.2).abs() <= f64::EPSILON * 0.2);
         assert!((short_attenuation - 0.3).abs() <= f64::EPSILON * 0.3);
-        let (long_phase, long_attenuation) = spec.path_terms(1.0);
+        let (long_phase, long_attenuation) = path.propagation_terms(1.0).unwrap();
         assert!((long_phase - 4.25).abs() <= 2.0 * f64::EPSILON * 4.25);
         assert!((long_attenuation - 6.0).abs() <= 2.0 * f64::EPSILON * 6.0);
     }
@@ -821,7 +895,57 @@ mod tests {
     fn layered_path_requires_one_final_half_space() {
         let finite = RayleighLayer::new(2.0, 0.0, Some(0.25)).unwrap();
         let half_space = RayleighLayer::new(3.0, 0.0, None).unwrap();
-        assert!(RayleighIntegralSpec::layered(vec![finite], 1, 6).is_err());
-        assert!(RayleighIntegralSpec::layered(vec![half_space, finite], 1, 6).is_err());
+        let final_half_space = RayleighLayer::new(4.0, 0.0, None).unwrap();
+        let finite_final = RayleighPropagationPath::layered(vec![finite])
+            .expect_err("a finite final layer has no propagation half-space");
+        let non_final_half_space =
+            RayleighPropagationPath::layered(vec![half_space, final_half_space])
+                .expect_err("a semi-infinite layer cannot precede another layer");
+        for (error, value, constraint) in [
+            (
+                finite_final,
+                "finite final layer",
+                "final layer is semi-infinite",
+            ),
+            (
+                non_final_half_space,
+                "non-final semi-infinite layer",
+                "only final layer is semi-infinite",
+            ),
+        ] {
+            match error {
+                KwaversError::Config(ConfigError::InvalidValue {
+                    parameter,
+                    value: actual_value,
+                    constraint: actual_constraint,
+                }) => {
+                    assert_eq!(parameter, "layers");
+                    assert_eq!(actual_value, value);
+                    assert_eq!(actual_constraint, constraint);
+                }
+                other => panic!("expected layered-path configuration error, got {other:?}"),
+            }
+        }
+    }
+
+    #[test]
+    fn propagation_terms_reject_invalid_range() {
+        let path = RayleighPropagationPath::homogeneous(1.0, 0.0).unwrap();
+        for range_m in [-1.0, f64::NAN] {
+            let error = path
+                .propagation_terms(range_m)
+                .expect_err("invalid propagation range must be rejected");
+            match error {
+                KwaversError::Config(ConfigError::InvalidValue {
+                    parameter,
+                    constraint,
+                    ..
+                }) => {
+                    assert_eq!(parameter, "range_m");
+                    assert_eq!(constraint, "finite and >= 0");
+                }
+                other => panic!("expected invalid range configuration error, got {other:?}"),
+            }
+        }
     }
 }

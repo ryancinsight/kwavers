@@ -2,12 +2,18 @@
 
 ## Owner: Codex — Layered focus-path contract [minor]
 
-- [ ] Expose Kwavers' validated straight-ray phase accumulation.
-- [ ] Route LeoNeuro focus controls through the provider contract.
-- [ ] Remove the duplicate reference-Python layered phase calculation.
-- [ ] Run focused provider, consumer, and Python parity gates; synchronize PM artifacts.
+- [x] Expose Kwavers' validated straight-ray phase accumulation.
+- [x] Route LeoNeuro focus controls through the provider contract.
+- [x] Remove the duplicate reference-Python layered phase calculation.
+- [ ] Run consumer and Python wheel gates; synchronize cross-repository evidence.
 
-**Current phase:** Execution. **Target:** Kwavers 4.0.0 / LeoNeuro 0.4.0.
+**Current phase:** Provider closure. **Target:** Kwavers 4.1.0 / LeoNeuro 0.4.0.
+**Provider evidence:** `RayleighPropagationPath` validates layer ordering and
+range inputs, and supplies the same segmentwise phase/attenuation terms to the
+Rayleigh integral. Locked offline `kwavers-transducer` Nextest passes 217/217
+with one existing skip; warning-denied all-target/all-feature Clippy and
+warning-clean package Rustdoc pass. Evidence tier: exact path/error contracts
+plus locked package integration.
 
 ## Owner: Codex — Atlas-local Gaia dependency [patch]
 

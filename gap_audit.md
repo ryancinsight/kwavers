@@ -1,5 +1,14 @@
 # Gap Audit
 
+- Closed 2026-07-15: layered field evaluation kept its ordered segment path
+  private to `RayleighIntegralSpec`, forcing LeoNeuro/Python focus control to
+  reimplement or omit the same physics. `RayleighPropagationPath` now owns
+  layer-order validation plus phase/attenuation accumulation, while
+  `RayleighIntegralSpec` consumes that path directly. Evidence tier: exact
+  segment/error contracts, locked 217/217 `kwavers-transducer` Nextest, and
+  warning-denied Clippy/Rustdoc. Consumer wheel verification remains tracked in
+  `KW-RAY-040` until the LeoNeuro gate completes.
+
 - Closed 2026-07-14: Kwavers declared Gaia from Git and corrected it only via
   a workspace-root source patch. Cargo ignores that patch when a downstream
   package is isolated, causing LeoNeuro SemVer packaging to select historical
