@@ -87,7 +87,7 @@ impl GpuDeviceProvider for WgpuDevice {
             max_compute_invocations_per_workgroup: 256,
             max_compute_workgroup_storage_size: base.max_compute_workgroup_storage_size,
             max_storage_buffers_per_shader_stage: base.max_storage_buffers_per_shader_stage,
-            max_push_constant_size: 0,
+            max_immediate_size: 0,
         }
     }
 
@@ -137,7 +137,7 @@ impl GpuDeviceProvider for CudaDevice {
             max_compute_invocations_per_workgroup: base.max_compute_invocations_per_workgroup,
             max_compute_workgroup_storage_size: base.max_compute_workgroup_storage_size,
             max_storage_buffers_per_shader_stage: None,
-            max_push_constant_size: 0,
+            max_immediate_size: 0,
         }
     }
 
@@ -308,7 +308,7 @@ pub(crate) const fn minimal_compute_limits() -> DeviceLimits {
         max_compute_invocations_per_workgroup: 256,
         max_compute_workgroup_storage_size: 16 * 1024,
         max_storage_buffers_per_shader_stage: Some(8),
-        max_push_constant_size: 0,
+        max_immediate_size: 0,
     }
 }
 

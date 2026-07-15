@@ -119,7 +119,9 @@ impl PstdCommandProvider for WgpuPstdCommandProvider<'_> {
         rx.recv()
             .expect("invariant: WGPU map callback must run after provider poll_wait")
             .expect("PSTD staging buffer map failed");
-        let mapped = slice.get_mapped_range();
+        let mapped = slice
+            .get_mapped_range()
+            .expect("invariant: successful map callback yields an accessible PSTD buffer range");
         let result = bytemuck::cast_slice(&mapped).to_vec();
         drop(mapped);
         buffer.unmap();

@@ -14,7 +14,7 @@ impl StaggeredGridOperator {
     /// Zero heap allocation. `dst` must have shape `(nx-1, ny, nz)`.
     /// `dst[i,j,k] = (field[i+1,j,k] − field[i,j,k]) / Δx`
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -70,7 +70,7 @@ impl StaggeredGridOperator {
     /// Zero heap allocation. `dst` must have shape `(nx, ny-1, nz)`.
     /// `dst[i,j,k] = (field[i,j+1,k] − field[i,j,k]) / Δy`
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -126,7 +126,7 @@ impl StaggeredGridOperator {
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz-1)`.
     /// `dst[i,j,k] = (field[i,j,k+1] − field[i,j,k]) / Δz`
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -181,7 +181,7 @@ impl StaggeredGridOperator {
     ///
     /// `∂u/∂x|_{i+1/2,j,k} ≈ (u[i+1,j,k] - u[i,j,k]) / Δx`
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn apply_forward_x(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
@@ -199,7 +199,7 @@ impl StaggeredGridOperator {
     }
     /// Apply forward y.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn apply_forward_y(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();
@@ -217,7 +217,7 @@ impl StaggeredGridOperator {
     }
     /// Apply forward z.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn apply_forward_z(&self, field: ArrayView3<f64>) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = field.shape();

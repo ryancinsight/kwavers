@@ -122,7 +122,7 @@ impl WgpuFdtd {
     fn build(grid: &Grid) -> KwaversResult<Self> {
         let context = GpuProviderContext::<WgpuDevice>::with_features_and_limits(
             WgpuDevice::acquisition_preference(),
-            &[DeviceFeature::PushConstants],
+            &[DeviceFeature::ImmediateData],
             fdtd_required_limits(),
         )?;
         let device = context.device();
@@ -217,15 +217,10 @@ impl WgpuFdtd {
             ],
         });
 
-        let push_range = wgpu::PushConstantRange {
-            stages: wgpu::ShaderStages::COMPUTE,
-            range: 0..16, // GridParams: nx, ny, nz (u32), dt (f32) = 16 bytes
-        };
-
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fdtd_layout"),
-            bind_group_layouts: &[&bgl],
-            push_constant_ranges: &[push_range],
+            bind_group_layouts: &[Some(&bgl)],
+            immediate_size: 16, // GridParams: nx, ny, nz (u32), dt (f32)
         });
 
         let velocity_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -313,7 +308,9 @@ impl WgpuFdtd {
             .map_err(|e| KwaversError::GpuError(format!("readback channel: {e}")))?
             .map_err(|e| KwaversError::GpuError(format!("readback map: {e}")))?;
 
-        let data = slice.get_mapped_range();
+        let data = slice
+            .get_mapped_range()
+            .map_err(|error| crate::gpu::map_buffer_range_error("FDTD pressure readback", error))?;
         let floats: &[f32] = bytemuck::cast_slice(&data);
         let result_values = floats.to_vec();
         drop(data);
@@ -342,7 +339,7 @@ impl WgpuFdtd {
             });
             pass.set_pipeline(&self.velocity_pipeline);
             pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.set_push_constants(0, bytemuck::cast_slice(&push));
+            pass.set_immediates(0, bytemuck::cast_slice(&push));
             pass.dispatch_workgroups(wg_x, wg_y, wg_z);
         } // compute pass ends → implicit pipeline barrier
 
@@ -354,7 +351,7 @@ impl WgpuFdtd {
             });
             pass.set_pipeline(&self.pressure_pipeline);
             pass.set_bind_group(0, &self.bind_group, &[]);
-            pass.set_push_constants(0, bytemuck::cast_slice(&push));
+            pass.set_immediates(0, bytemuck::cast_slice(&push));
             pass.dispatch_workgroups(wg_x, wg_y, wg_z);
         }
     }
@@ -450,7 +447,7 @@ impl FdtdGpuProvider for WgpuFdtd {
 
 fn fdtd_required_limits() -> DeviceLimits {
     DeviceLimits {
-        max_push_constant_size: 128,
+        max_immediate_size: 128,
         ..WgpuDevice::required_limits()
     }
 }

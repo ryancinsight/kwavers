@@ -141,7 +141,7 @@ pub const FFT_K_SCALING: f64 = 2.0 * std::f64::consts::PI;
 /// ```
 /// The outer coefficients (+1, +1) are unity; only the middle coefficient (−2)
 /// is non-unity and is written as a literal `2.0` at each use site.
-/// `SECOND_ORDER_DIFF_COEFF = 1.0` is the coefficient of f[n] and f[n-2].
+/// `SECOND_ORDER_DIFF_COEFF = 1.0` is the coefficient of `f[n]` and `f[n-2]`.
 pub const SECOND_ORDER_DIFF_COEFF: f64 = 1.0;
 
 /// Third-order backward difference interior coefficient.

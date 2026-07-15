@@ -118,7 +118,9 @@ impl NeuralNetworkShader {
                 })
             })?;
 
-        let data = buffer_slice.get_mapped_range();
+        let data = buffer_slice.get_mapped_range().map_err(|error| {
+            crate::gpu::map_buffer_range_error("neural activation readback", error)
+        })?;
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging_buf.unmap();

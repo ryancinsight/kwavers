@@ -11,7 +11,7 @@ use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 pub(super) fn pstd_test_provider(label: &str) -> Option<GpuProviderContext<WgpuDevice>> {
     GpuProviderContext::<WgpuDevice>::with_features_and_limits(
         WgpuDevice::acquisition_preference(),
-        &[DeviceFeature::PushConstants],
+        &[DeviceFeature::ImmediateData],
         pstd_test_required_limits(),
     )
     .map_err(|error| {
@@ -74,7 +74,7 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
 
 fn pstd_test_required_limits() -> hephaestus_core::DeviceLimits {
     hephaestus_core::DeviceLimits {
-        max_push_constant_size: 128,
+        max_immediate_size: 128,
         ..WgpuDevice::required_limits()
     }
 }
@@ -113,7 +113,9 @@ pub(super) fn read_buffer<T: bytemuck::Pod>(
         .expect("buffer readback callback")
         .expect("buffer map");
 
-    let mapped = slice.get_mapped_range();
+    let mapped = slice
+        .get_mapped_range()
+        .expect("map_async success must expose the staging-buffer range");
     let data = bytemuck::cast_slice(&mapped).to_vec();
     drop(mapped);
     staging.unmap();

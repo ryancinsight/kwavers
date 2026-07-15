@@ -37,7 +37,7 @@ impl SimdExecutor {
     ) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
         let batch_size = (x.len());
         let mut predictions = vec![0.0; batch_size];
-        let uncertainties = vec![0.01; batch_size];
+        let uncertainties = network.prediction_error_bounds(x, y, t)?;
 
         let chunk_size = self.lanes;
 

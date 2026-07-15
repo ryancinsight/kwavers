@@ -86,15 +86,15 @@ impl WgpuBeamformingProvider {
 
         let pipeline_layout = raw_device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("3D Beamforming Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         });
 
         let dynamic_focus_pipeline_layout =
             raw_device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Dynamic-Focus Pipeline Layout"),
-                bind_group_layouts: &[&dynamic_focus_bind_group_layout],
-                push_constant_ranges: &[],
+                bind_group_layouts: &[Some(&dynamic_focus_bind_group_layout)],
+                immediate_size: 0,
             });
 
         let delay_sum_pipeline =
@@ -188,7 +188,7 @@ fn beamforming_required_limits() -> DeviceLimits {
         max_compute_invocations_per_workgroup: base.max_compute_invocations_per_workgroup.max(512),
         max_compute_workgroup_storage_size: base.max_compute_workgroup_storage_size,
         max_storage_buffers_per_shader_stage: base.max_storage_buffers_per_shader_stage,
-        max_push_constant_size: base.max_push_constant_size,
+        max_immediate_size: base.max_immediate_size,
     }
 }
 

@@ -58,7 +58,7 @@ var<storage, read_write> velocity: array<vec3<f32>>;
 @group(0) @binding(2)
 var<storage, read> medium: array<vec2<f32>>;
 
-var<push_constant> params: GridParams;
+var<immediate> params: GridParams;
 
 fn index_3d(x: u32, y: u32, z: u32) -> u32 {
     return x + y * params.nx + z * params.nx * params.ny;

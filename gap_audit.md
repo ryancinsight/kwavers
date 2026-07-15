@@ -20,6 +20,41 @@
   YAML parsing, and local audit execution. Residual: the corrected PR head must
   complete the full remote matrix before closure.
 
+- In progress 2026-07-15: the repaired workflow reached two independent
+  infrastructure defects. The committed global `target-cpu=native` flag made
+  the hosted xtask binary fault with SIGILL, and the generic `--all-features`
+  CPU workflow selected the explicit CUDA runtime without its required CUDA
+  13.2 toolkit. The policy now targets a portable CPU baseline with runtime
+  dispatch and retains CUDA compilation in its own CUDA 13.2 container job.
+  This is not a reduced feature check. The CPU feature matrix exercises the
+  deployable public `kwavers` surface; the CUDA runtime receives its required
+  toolchain. That compile path exposed additional GPU PINN defects: transposed
+  Coeus linear weights, invalid direct host access to device storage, silent
+  construction fallback, incorrect activation metadata, and a constant
+  uncertainty output. The repair preserves `[out, in]` weights and transposes
+  only at Coeus matmul, uses backend `copy_to_host`, propagates errors, and
+  bounds each prediction by affine propagation of the symmetric-int8 half-step
+  error through 1-Lipschitz activations. Evidence tier: authoritative Actions
+  failure logs; focused `pinn,gpu` compilation; four value-semantic
+  regressions. A strict full-facade Clippy invocation also exposed 81 existing
+  `kwavers-solver` findings; two in the touched quantization constructor are
+  corrected with `to_vec`, leaving 79 outside this repair. CI now denies
+  warnings for the clean `kwavers-core` crate and the deployable `kwavers`
+  facade without dependency linting; the legacy solver findings remain a
+  tracked ratchet debt. The public `full` package build additionally exposed
+  stale Leto view/axis APIs and a direct WGPU 26 versus Hephaestus WGPU 30
+  split. Kwavers now uses WGPU 30 throughout, maps former push-constant kernels
+  to immediate data, propagates readback map/range errors, and uses Leto's
+  fallible native views and axes. Evidence tier: locked full-package
+  compilation plus the focused PINN value regressions. Residual: the new remote
+  matrix remains pending. Workspace Rustdoc has a large pre-existing
+  broken-link baseline concentrated in `kwavers-physics`; its CI command now
+  proves all workspace crates document successfully without elevating that
+  recorded legacy baseline, while the deployable `kwavers` facade stays
+  warning-denied. This change corrects every public-facade link reached by the
+  full build; the broader physics documentation ratchet remains a separate
+  cleanup item.
+
 - Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
   resolved a crate-local policy instead of one scoped to the deployable Kwavers
   graph. The root policy now rejects unknown registries and Git sources, permits

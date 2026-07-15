@@ -149,8 +149,8 @@ impl UncertaintyQuantifier {
                     .into_iter()
                     .next()
                     .unwrap_or_else(|| MlPredictionWithUncertainty {
-                        mean_prediction: Array2::zeros(inputs.dim()),
-                        uncertainty: Array2::zeros(inputs.dim()),
+                        mean_prediction: Array2::zeros(inputs.shape()),
+                        uncertainty: Array2::zeros(inputs.shape()),
                         confidence_intervals: HashMap::new(),
                         reliability_score: 0.5,
                     }))

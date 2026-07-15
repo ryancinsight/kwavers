@@ -34,8 +34,8 @@ var<storage, read_write> field_rhoz: array<f32>;
 @group(0) @binding(7)
 var<storage, read> precomp_source_kappa: array<f32>;
 
-// ─── Push constants: per-dispatch params ─────────────────────────────────────
-// Replaces the group(1) uniform buffer. Push constants are embedded directly
+// ─── Immediate data: per-dispatch params ─────────────────────────────────────
+// Replaces the group(1) uniform buffer. Immediate data is embedded directly
 // in the command buffer — no PCIe transfer, no write_buffer() overhead.
 
 struct PstdParams {
@@ -55,7 +55,7 @@ struct PstdParams {
     absorbing:  u32, // 1 = apply frequency-centred absorption decay to density
 }
 
-var<push_constant> params: PstdParams;
+var<immediate> params: PstdParams;
 
 // ─── Bind Group 1: K-space + medium scalars (8 storage) ──────────────────────
 // kspace2_re/im removed: kspace_shift_apply now writes in-place to kspace_re/im.

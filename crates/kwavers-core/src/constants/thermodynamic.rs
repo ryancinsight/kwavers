@@ -21,7 +21,7 @@ pub const HEAT_CAPACITY_RATIO_MONATOMIC: f64 = 5.0 / 3.0;
 /// Room temperature in Kelvin.
 pub const ROOM_TEMPERATURE_K: f64 = 293.15;
 
-/// Bubble-dynamics reference temperature [K].
+/// Bubble-dynamics reference temperature in kelvin.
 ///
 /// Sonoluminescence and Cherenkov emission models initialize the bubble interior
 /// at 300 K (≈ 27°C) per Brenner et al. (2002) Rev. Mod. Phys. 74(2):425–484.

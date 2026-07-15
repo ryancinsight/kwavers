@@ -31,7 +31,7 @@ log = "0.4"
 # GPU stack - optional, pulled in by the `gpu` feature. The implemented provider
 # is WGPU because current production kernels are WGSL; CUDA belongs behind the
 # same Hephaestus provider traits when real CUDA kernels are added.
-wgpu = { version = "26.0", features = ["wgsl"], optional = true }
+wgpu = { version = "30.0.0", default-features = false, features = ["wgsl", "vulkan", "metal"], optional = true }
 pollster = { version = "0.4", optional = true }
 hephaestus-core = { workspace = true, optional = true }
 hephaestus-wgpu = { workspace = true, optional = true }

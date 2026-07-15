@@ -10,6 +10,25 @@
   direct DICOM 0.8 workspace pins and updated the lock graph through RITK's
   DICOM 0.10 security release and fixed advisory versions.
 
+### Fixed (2026-07-15) - portable CUDA-aware CI and GPU PINN inference [patch]
+
+- Removed globally committed native-CPU code generation, so hosted jobs use a
+  portable ISA baseline. CPU feature verification now targets the deployable
+  Kwavers surface while CUDA runtime compilation runs in a CUDA 13.2 toolkit
+  container.
+- Corrected real-time GPU PINN quantization: Coeus linear weights retain their
+  `[out, in]` orientation, output uses backend host transfer, construction
+  errors propagate, activations mirror `PinnWave2D`, and uncertainty is the
+  propagated symmetric-int8 half-step bound rather than a fixed value.
+- Aligned the WGPU leaf provider with Hephaestus WGPU 30: former push-constant
+  kernels use immediate data, pipeline layouts use WGPU 30 bind-group slots,
+  and readback propagates map/range failures. The public `full` package now
+  compiles through native Leto view and axis APIs without ndarray adapters.
+- The CI documentation lane compiles the entire workspace and retains a
+  warning-denied Rustdoc gate for the deployable public `kwavers` facade; the
+  recorded legacy physics documentation-link baseline remains separate ratchet
+  work.
+
 ### Fixed (2026-07-15) - Atlas-path CI setup [patch]
 
 - GitHub Actions now materializes the Atlas sibling providers declared by the

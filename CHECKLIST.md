@@ -12,14 +12,27 @@
 - [x] Add the repository-root Cargo-deny policy with exact license exceptions,
       strict source allowlists, and the deployable Kwavers manifest as its
       graph root.
-- [ ] Push the CI repair and verify all GitHub Actions checks on its new head.
+- [x] Remove the repository-wide native-CPU codegen flag that faults on
+      heterogeneous hosted runners; preserve CUDA compilation in a CUDA 13.2
+      build job instead of silently omitting it.
+- [x] Correct GPU PINN quantized inference: preserve Coeus linear-weight
+      orientation, transfer output through the backend, propagate construction
+      errors, and derive a per-sample int8 quantization bound.
+- [x] Align the WGPU leaf provider with Hephaestus WGPU 30 immediate-data
+      semantics and complete the Leto API migration exposed by the public
+      `full` package build.
+- [x] Run focused value-semantic Nextest regressions and the portable `full`
+      package build on the corrected PR head.
+- [ ] Push the repair, run GitHub Actions on its new head, then merge only
+      after the matrix is green.
 
 **Current phase:** Closure. **Target:** Kwavers 4.1.0.
 **Acceptance:** GitHub Actions resolves the same
 `codex/kwavers-atlas-integration` sibling-path graph as the local checkout
 before Cargo starts, the security job evaluates the authoritative root policy
-against `crates/kwavers/Cargo.toml`, and no active workflow calls deleted
-validation infrastructure.
+against `crates/kwavers/Cargo.toml`, hosted CPU runners do not compile with an
+unsupported native ISA, and CUDA runtime compilation remains a separate real
+CUDA-toolkit build rather than an unavailable all-feature CPU job.
 
 **Current evidence:** Actions run `29443042765` fails before compilation on
 the absent `../apollo` provider; the local manifest-derived provider set is
@@ -37,7 +50,20 @@ Crates.io registry plus the required Consus and cutile Git sources, and narrows
 non-permissive license exceptions to `cuda-oxide`, `colored`, and `epaint`.
 `cargo deny` reports licenses, advisories, and sources clean; the remaining
 `spin` 0.9.8/0.10.0 yanked notices are non-advisory transitive constraints from
-Flume and Burn.
+Flume and Burn. The current Actions rerun exposed the committed
+`target-cpu=native` setting as a SIGILL in the hosted audit binary and the
+architecture all-feature job as a CUDA-toolkit configuration error. The
+corrected workflow uses portable CPU builds plus an explicit CUDA 13.2 compile
+job. The same full-feature path exposed GPU PINN weight transposition,
+host-readback, activation, and hardcoded-uncertainty defects; the provider now
+uses Coeus backend transfer and a half-step quantization-error propagation
+bound. Focused `pinn,gpu` compilation and four value-semantic Nextest
+regressions pass locally. The public `full` build now also compiles after
+replacing WGPU 26 push constants with the WGPU 30 immediate-data API used by
+Hephaestus and correcting Leto view/shape/result boundaries in
+`kwavers-analysis`. The public facade Rustdoc is warning-denied; workspace
+Rustdoc retains its documented brownfield warning baseline while proving every
+crate compiles. The new remote matrix remains the merge gate.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 

@@ -1,7 +1,6 @@
-[build]
-# Emit AVX2/FMA/AVX-512 for all Zip/par_for_each kernels.
-# Without this flag LLVM targets the x86-64 baseline (SSE2 only).
-rustflags = ["-C", "target-cpu=native"]
+# This repository is built on heterogeneous CI and distributed to machines with
+# different ISA extensions. Hot kernels select their supported ISA at runtime;
+# local `target-cpu=native` experiments belong in an untracked user Cargo config.
 
 [env]
 # Native DICOM codecs (`openjpeg-sys`, `charls-sys`) require a working C/C++

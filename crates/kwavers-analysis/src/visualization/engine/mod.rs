@@ -166,8 +166,8 @@ impl VisualizationEngine {
                 let transfer_start = Instant::now();
                 for (i, &field_type) in field_types.iter().enumerate() {
                     if i < fields.shape()[3] {
-                        let field = fields.index_axis::<3>(3, i);
-                        pipeline.upload_field(&field.to_owned(), field_type).await?;
+                        let field = fields.index_axis::<3>(3, i)?.to_contiguous();
+                        pipeline.upload_field(&field, field_type).await?;
                     }
                 }
                 let transfer_time =
@@ -197,7 +197,7 @@ impl VisualizationEngine {
             warn!("Multi-field rendering requires GPU visualization feature");
             // Render first field as fallback
             if !field_types.is_empty() && fields.shape()[3] > 0 {
-                let field = fields.index_axis::<3>(3, 0).to_owned();
+                let field = fields.index_axis::<3>(3, 0)?.to_contiguous();
                 super::fallback::render_field(&field, field_types[0], grid)?;
             }
         }

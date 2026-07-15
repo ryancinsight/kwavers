@@ -284,7 +284,9 @@ impl WgpuBackendBufferManager {
             })?;
 
         // Read data
-        let data_view = buffer_slice.get_mapped_range();
+        let data_view = buffer_slice.get_mapped_range().map_err(|error| {
+            crate::gpu::map_buffer_range_error("backend buffer readback", error)
+        })?;
         let data_f32: &[f32] = bytemuck::cast_slice(&data_view);
         let data = data_f32.to_vec();
 

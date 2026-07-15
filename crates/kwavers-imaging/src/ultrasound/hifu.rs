@@ -88,7 +88,7 @@ impl DomainHIFUTreatmentPlan {
 
     /// Validate treatment plan against safety constraints
     /// # Errors
-    /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
+    /// - Returns `KwaversError::Validation` if a validation-class constraint is violated.
     ///
     pub fn validate(
         &self,

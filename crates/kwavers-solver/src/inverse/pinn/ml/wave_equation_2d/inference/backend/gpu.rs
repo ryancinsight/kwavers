@@ -5,7 +5,9 @@ use super::super::types::QuantizedNetwork;
 #[cfg(feature = "gpu")]
 use coeus_autograd::Var;
 #[cfg(feature = "gpu")]
-use kwavers_core::error::{KwaversError, KwaversResult};
+use kwavers_core::error::KwaversResult;
+#[cfg(feature = "gpu")]
+use std::sync::Arc;
 
 #[cfg(feature = "gpu")]
 impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
@@ -13,7 +15,8 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
     /// # Errors
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     ///
-    pub fn new(network: &QuantizedNetwork) -> KwaversResult<Self> {
+    pub fn new(network: Arc<QuantizedNetwork>) -> KwaversResult<Self> {
+        network.prediction_error_bounds(&[], &[], &[])?;
         let backend = B::default();
         let mut weights = Vec::new();
         let mut biases = Vec::new();
@@ -22,11 +25,11 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
             let scale = network.weight_scales[i];
             let f32_weights: Vec<f32> = layer_weights.iter().map(|&w| w as f32 * scale).collect();
 
-            let input_dim = if i == 0 { 3 } else { network.layer_sizes[i] };
+            let input_dim = network.layer_sizes[i];
             let output_dim = network.layer_sizes[i + 1];
 
             let weight_tensor = coeus_tensor::Tensor::from_slice_on(
-                vec![input_dim, output_dim],
+                vec![output_dim, input_dim],
                 &f32_weights,
                 &backend,
             );
@@ -43,16 +46,10 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
             biases.push(bias_tensor);
         }
 
-        let activation_str = if !network.activations.is_empty() {
-            format!("{:?}", network.activations[0]).to_lowercase()
-        } else {
-            "tanh".to_string()
-        };
-
         Ok(Self {
             weights,
             biases,
-            activation: activation_str,
+            quantized_network: network,
         })
     }
     /// Predict.
@@ -60,12 +57,8 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn predict(&self, x: &[f32], y: &[f32], t: &[f32]) -> KwaversResult<(Vec<f32>, Vec<f32>)> {
-        let batch_size = (x.len());
-        if (y.len()) != batch_size || (t.len()) != batch_size {
-            return Err(KwaversError::InvalidInput(
-                "Input coordinate arrays must have the same length".into(),
-            ));
-        }
+        let batch_size = x.len();
+        let uncertainties = self.quantized_network.prediction_error_bounds(x, y, t)?;
 
         let backend = B::default();
         let mut input_data = Vec::with_capacity(batch_size * 3);
@@ -83,21 +76,51 @@ impl<B: coeus_ops::BackendOps<f32> + Default> PinnNeuralNetwork<B> {
         for (layer_idx, (weight, bias)) in self.weights.iter().zip(&self.biases).enumerate() {
             let weight_var = Var::new(weight.clone(), false);
             let bias_var = Var::new(bias.clone(), false);
-            let out = coeus_autograd::matmul(&input, &weight_var);
+            let transposed_weight = coeus_autograd::transpose_2d(&weight_var);
+            let out = coeus_autograd::matmul(&input, &transposed_weight);
             input = coeus_autograd::add(&out, &bias_var);
 
-            if layer_idx < (self.weights.len()) - 1 {
-                input = match self.activation.as_str() {
-                    "relu" => coeus_autograd::relu(&input),
-                    "sigmoid" => coeus_autograd::sigmoid(&input),
-                    _ => coeus_autograd::tanh(&input),
-                };
-            }
+            input = match self.quantized_network.activations[layer_idx] {
+                super::super::types::ActivationType::Tanh => coeus_autograd::tanh(&input),
+                super::super::types::ActivationType::Relu => coeus_autograd::relu(&input),
+                super::super::types::ActivationType::Linear => input,
+            };
         }
 
-        let predictions: Vec<f32> = input.tensor.as_slice().to_vec();
-        let uncertainties = vec![0.1; batch_size];
+        let mut predictions = vec![0.0; batch_size];
+        backend.copy_to_host(input.tensor.storage(), &mut predictions);
 
         Ok((predictions, uncertainties))
+    }
+}
+
+#[cfg(all(test, feature = "gpu"))]
+mod tests {
+    use super::{PinnNeuralNetwork, QuantizedNetwork};
+    use crate::inverse::pinn::ml::wave_equation_2d::inference::ActivationType;
+    use coeus_core::SequentialBackend;
+    use std::sync::Arc;
+
+    #[test]
+    fn provider_predict_preserves_linear_weight_orientation_and_error_bound() {
+        let scale = 1.0 / 127.0;
+        let network = Arc::new(QuantizedNetwork {
+            weights: vec![vec![127, -127, 0]],
+            weight_scales: vec![scale],
+            biases: vec![vec![0]],
+            bias_scales: vec![0.0],
+            layer_sizes: vec![3, 1],
+            activations: vec![ActivationType::Linear],
+        });
+        let predictor =
+            PinnNeuralNetwork::<SequentialBackend>::new(network).expect("valid quantized network");
+
+        let (predictions, bounds) = predictor
+            .predict(&[2.0], &[-3.0], &[0.5])
+            .expect("valid coordinate batch");
+        let expected_bound = (2.0 + 3.0 + 0.5) * scale * 0.5;
+
+        assert_eq!(predictions, vec![5.0]);
+        assert!((bounds[0] - expected_bound).abs() <= expected_bound * f32::EPSILON);
     }
 }

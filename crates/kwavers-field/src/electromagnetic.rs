@@ -55,7 +55,7 @@ impl EMFields {
 
     /// Validate field shapes are consistent
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate_shapes(&self) -> Result<(), String> {
         let e_shape = self.electric.shape();

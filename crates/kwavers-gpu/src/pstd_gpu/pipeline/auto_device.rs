@@ -16,7 +16,7 @@ impl PstdAutoDeviceProvider for WgpuPstdStateProvider {
     fn acquire_auto_context() -> Result<Self::Context, String> {
         GpuProviderContext::<WgpuDevice>::with_features_and_limits(
             WgpuDevice::acquisition_preference(),
-            &[DeviceFeature::PushConstants],
+            &[DeviceFeature::ImmediateData],
             pstd_required_limits(),
         )
         .map_err(|e| format!("GPU device creation failed: {e}"))
@@ -48,7 +48,7 @@ where
 
 fn pstd_required_limits() -> hephaestus_core::DeviceLimits {
     hephaestus_core::DeviceLimits {
-        max_push_constant_size: 128,
+        max_immediate_size: 128,
         ..WgpuDevice::required_limits()
     }
 }

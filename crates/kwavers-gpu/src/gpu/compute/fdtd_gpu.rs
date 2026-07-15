@@ -130,8 +130,8 @@ impl WgpuFdtdPressureDispatcher {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("fdtd_pipeline_layout"),
-            bind_group_layouts: &[&bgl0, &bgl1],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bgl0), Some(&bgl1)],
+            immediate_size: 0,
         });
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -276,7 +276,9 @@ impl WgpuFdtdPressureDispatcher {
             .map_err(|e| KwaversError::GpuError(format!("GPU map_async failed: {e}")))?
             .map_err(|e| crate::gpu::map_buffer_async_error("FDTD readback", e))?;
 
-        let data = slice.get_mapped_range();
+        let data = slice
+            .get_mapped_range()
+            .map_err(|error| crate::gpu::map_buffer_range_error("FDTD readback", error))?;
         let result: Vec<f32> = bytemuck::cast_slice(&data).to_vec();
         drop(data);
         staging.unmap();

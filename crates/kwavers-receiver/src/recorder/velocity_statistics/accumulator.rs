@@ -229,7 +229,7 @@ impl VelocityComponentStats {
 
     /// Fill caller-owned storage with per-component RMS at sensor positions.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn fill_rms(
         &self,

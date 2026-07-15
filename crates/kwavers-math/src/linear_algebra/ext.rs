@@ -14,17 +14,17 @@ pub fn norm_l2(array: &leto::Array3<f64>) -> f64 {
 pub trait LinearAlgebraExt<T> {
     /// Solve linear system `self x = b`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the underlying solver.
+    /// - Propagates any `KwaversError` from the underlying solver.
     fn solve_into(&self, b: Array1<T>) -> KwaversResult<Array1<T>>;
 
     /// Compute matrix inverse.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the underlying solver.
+    /// - Propagates any `KwaversError` from the underlying solver.
     fn inv(&self) -> KwaversResult<Array2<T>>;
 
     /// Eigendecomposition.
     /// # Errors
-    /// - Propagates any [`KwaversError`] from the underlying solver.
+    /// - Propagates any `KwaversError` from the underlying solver.
     fn eig(&self) -> KwaversResult<(Array1<T>, Array2<T>)>;
 }
 

@@ -163,8 +163,8 @@ impl WgpuAcousticFieldProvider {
 
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Acoustic Field Pipeline Layout"),
-            bind_group_layouts: &[&bind_group_layout],
-            push_constant_ranges: &[],
+            bind_group_layouts: &[Some(&bind_group_layout)],
+            immediate_size: 0,
         });
 
         let pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -386,7 +386,9 @@ impl AcousticFieldProvider for WgpuAcousticFieldProvider {
                 })
             })?;
 
-        let data = buffer_slice.get_mapped_range();
+        let data = buffer_slice.get_mapped_range().map_err(|error| {
+            crate::gpu::map_buffer_range_error("acoustic field readback", error)
+        })?;
         let result_f32: &[f32] = bytemuck::cast_slice(&data);
         let result_values = result_f32.to_vec();
 

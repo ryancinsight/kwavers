@@ -4759,7 +4759,7 @@ dependencies = [
  "pollster 0.4.0",
  "rand 0.8.7",
  "tracing",
- "wgpu 26.0.1",
+ "wgpu 30.0.0",
 ]
 
 [[package]]

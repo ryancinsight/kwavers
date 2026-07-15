@@ -14,7 +14,7 @@ impl StaggeredGridOperator {
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
     /// At i=0: forward difference (no i-1 point).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -83,7 +83,7 @@ impl StaggeredGridOperator {
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.
@@ -152,7 +152,7 @@ impl StaggeredGridOperator {
     ///
     /// Zero heap allocation. `dst` must have shape `(nx, ny, nz)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.

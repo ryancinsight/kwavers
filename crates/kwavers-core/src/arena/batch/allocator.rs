@@ -55,7 +55,7 @@ impl BatchFieldAllocator {
 
     /// Pre-allocate buffers for common configurations.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn preallocate(
         &mut self,

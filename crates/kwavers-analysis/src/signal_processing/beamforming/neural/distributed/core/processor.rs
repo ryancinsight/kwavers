@@ -165,7 +165,7 @@ impl DistributedNeuralBeamformingProcessor {
         rf_data: &Array4<f32>,
     ) -> KwaversResult<DistributedNeuralBeamformingResult> {
         let start_time = std::time::Instant::now();
-        let (frames, channels, samples, trailing) = rf_data.dim();
+        let [frames, channels, samples, trailing] = rf_data.shape();
 
         if trailing != 1 {
             return Err(KwaversError::InvalidInput(format!(
@@ -243,7 +243,12 @@ impl DistributedNeuralBeamformingProcessor {
                             return Ok::<Option<DistributedChunkResult>, KwaversError>(None);
                         }
 
-                        let chunk_view = rf_data.slice(s![range.start..range.end, .., .., ..]);
+                        let chunk_view = rf_data.slice(&[
+                            (range.start, range.end, 1),
+                            (0, channels, 1),
+                            (0, samples, 1),
+                            (0, trailing, 1),
+                        ])?;
                         let result = processor.process_volume_view(chunk_view)?;
 
                         Ok(Some(DistributedChunkResult {
@@ -260,17 +265,17 @@ impl DistributedNeuralBeamformingProcessor {
                 .collect();
 
             for chunk in round_results?.into_iter().flatten() {
-                let chunk_frames = chunk.volume.dim().0;
+                let chunk_frames = chunk.volume.shape()[0];
                 let end = chunk.start + chunk_frames;
 
                 final_volume
-                    .slice_mut(s![chunk.start..end, .., ..])
+                    .slice_mut(&[(chunk.start, end, 1), (0, channels, 1), (0, samples, 1)])?
                     .assign(&chunk.volume);
                 final_uncertainty
-                    .slice_mut(s![chunk.start..end, .., ..])
+                    .slice_mut(&[(chunk.start, end, 1), (0, channels, 1), (0, samples, 1)])?
                     .assign(&chunk.uncertainty);
                 final_confidence
-                    .slice_mut(s![chunk.start..end, .., ..])
+                    .slice_mut(&[(chunk.start, end, 1), (0, channels, 1), (0, samples, 1)])?
                     .assign(&chunk.confidence);
 
                 processor_times[chunk.processor_index] += chunk.processing_time_ms;

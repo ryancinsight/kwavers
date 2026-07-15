@@ -288,7 +288,9 @@ impl WgpuThermalAcousticBuffers {
             result
                 .map_err(|e| crate::gpu::map_buffer_async_error("thermal acoustic readback", e))?;
 
-            let data = slice.get_mapped_range();
+            let data = slice.get_mapped_range().map_err(|error| {
+                crate::gpu::map_buffer_range_error("thermal acoustic readback", error)
+            })?;
             let float_data: &[f32] = bytemuck::cast_slice(&data);
             let output = LetoArray3::from_shape_vec(dims, float_data.to_vec())
                 .map_err(|e| KwaversError::GpuError(format!("Array creation error: {}", e)))?;

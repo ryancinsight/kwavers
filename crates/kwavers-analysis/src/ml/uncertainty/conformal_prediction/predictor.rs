@@ -95,7 +95,7 @@ impl MlConformalPredictor {
 
         let quantile = self.compute_quantile(self.config.confidence_level);
 
-        let uncertainty = Array2::from_elem(prediction.dim(), quantile as f32);
+        let uncertainty = Array2::from_elem(prediction.shape(), quantile as f32);
 
         let lower_bound = &prediction - &uncertainty;
         let upper_bound = &prediction + &uncertainty;

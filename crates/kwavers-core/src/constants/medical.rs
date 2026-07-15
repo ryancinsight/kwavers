@@ -106,9 +106,9 @@ pub const BLOOD_SPECIFIC_HEAT: f64 = 3617.0;
 /// Typical HIFU focal intensity (W/cm²)
 pub const HIFU_FOCAL_INTENSITY: f64 = 1000.0;
 
-/// IEC 62359:2017 reference acoustic power for TIS computation [W].
+/// IEC 62359:2017 reference acoustic power for TIS computation, in watts.
 ///
-/// The standard defines TIS = W_stp [mW] / (210 · f_MHz), so
+/// The standard defines TIS = W_stp in milliwatts / (210 · f_MHz), so
 /// W_stp_reference = 40 mW (the lowest acoustic output considered in the standard).
 ///
 /// Reference: IEC 62359:2017 §8.3; AIUM/NEMA UD-3:2012.
@@ -117,7 +117,7 @@ pub const IEC_REFERENCE_ACOUSTIC_POWER_W: f64 = 0.040; // W (= 40 mW)
 /// IEC 62359 (2017) §8.3.2 — Thermal Index soft tissue (TIS) formula divisor
 /// (mW · MHz)⁻¹.
 ///
-/// TIS = W_stp [mW] / (IEC_TIS_DIVISOR · f_MHz)
+/// TIS = W_stp in milliwatts / (IEC_TIS_DIVISOR · f_MHz)
 ///
 /// Reference: IEC 62359 (2017). *Ultrasonics — Field characterization —
 /// Test methods for the determination of thermal and mechanical indices
@@ -126,7 +126,7 @@ pub const IEC_TIS_DIVISOR: f64 = 210.0;
 
 /// IEC 62359 (2017) §8.4 — Thermal Index bone (TIB) formula divisor (mW · MHz).
 ///
-/// TIB = W [mW] · f_MHz / IEC_TIB_DIVISOR
+/// TIB = W in milliwatts · f_MHz / IEC_TIB_DIVISOR
 ///
 /// Reference: IEC 62359 (2017). *Ultrasonics — Field characterization —
 /// Test methods for the determination of thermal and mechanical indices
@@ -134,9 +134,9 @@ pub const IEC_TIS_DIVISOR: f64 = 210.0;
 pub const IEC_TIB_DIVISOR: f64 = 40.0;
 
 /// IEC 62359 (2017) §8.5 — Thermal Index cranial bone (TIC) reference-power
-/// coefficient [mW · cm⁻¹].
+/// coefficient in milliwatts per centimetre.
 ///
-/// TIC = W_0 [mW] / (IEC_TIC_COEFFICIENT_MW_PER_CM · D_eq [cm]), where D_eq is the
+/// TIC = W_0 in milliwatts / (IEC_TIC_COEFFICIENT_MW_PER_CM · D_eq in centimetres), where D_eq is the
 /// equivalent aperture diameter √(4·A_aprt/π). Unlike TIS/TIB, TIC carries **no**
 /// frequency weighting: cranial heating occurs at the skin–skull interface and is
 /// governed by total source power spread over the aperture, not focal absorption.

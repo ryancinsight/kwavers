@@ -85,7 +85,7 @@ pub struct MedicalImageMetadata {
 pub trait MedicalImageLoader: Send + Sync {
     /// Load image from file
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn load(&mut self, path: &str) -> KwaversResult<Array3<f64>>;
 

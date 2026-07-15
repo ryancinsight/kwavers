@@ -322,7 +322,7 @@ impl MultiGpuContext<WgpuDevice> {
             DevicePreference::HighPerformance,
             &[
                 DeviceFeature::MappablePrimaryBuffers,
-                DeviceFeature::PushConstants,
+                DeviceFeature::ImmediateData,
             ],
             CoreGpuContext::required_limits(),
         )

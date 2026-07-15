@@ -137,7 +137,7 @@
 //! let result = processor.process_volume(&rf_data)?;
 //!
 //! // Access results
-//! println!("Volume shape: {:?}", result.volume.dim());
+//! println!("Volume shape: {:?}", result.volume.shape());
 //! println!("Uncertainty range: [{:.3}, {:.3}]",
 //!          result.uncertainty.iter().fold(f32::INFINITY, |a, &b| a.min(b)),
 //!          result.uncertainty.iter().fold(f32::NEG_INFINITY, |a, &b| a.max(b)));
