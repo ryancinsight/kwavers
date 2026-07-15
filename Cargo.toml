@@ -82,7 +82,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 # kernels (PSTD phase-velocity, KZK conservation) ~5–10× faster than opt-level=0.
 opt-level = 1
 
-# Optimise *dependencies* (ndarray, rustfft/apollo-fft, and workspace crates like
+# Optimise *dependencies* (apollo-fft, hermes-simd, and workspace crates like
 # kwavers-solver/kwavers-math when they are dependencies of the crate under test)
 # at -O3 in dev/test builds, while the crate under active development keeps the
 # fast opt-level=1 codegen above. Dependencies are compiled once and cached, so
