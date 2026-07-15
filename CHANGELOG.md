@@ -33,6 +33,8 @@
   added exact single-snapshot and dimension-contract regressions.
 - Declared the fontconfig development prerequisite for the architecture job,
   matching the existing Cargo CI jobs that build the public feature surface.
+- Removed no-op Leto `Array3` conversions in the FD monitor surfaced by the
+  warning-denied public-facade check.
 
 ### Fixed (2026-07-15) - Atlas-path CI setup [patch]
 

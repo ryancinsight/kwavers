@@ -62,7 +62,10 @@
   re-triggered remote matrix remains the final integration gate. Its
   architecture job also missed the fontconfig development package required by
   the public full-feature facade; it now matches the package contract used by
-  the existing Cargo CI jobs.
+  the existing Cargo CI jobs. The subsequent strict facade check identifies
+  three no-op Leto `Array3` conversions in the FD monitor; they are removed
+  rather than suppressed. Residual: rerun the full remote matrix against the
+  corrected PR head.
 
 - Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
   resolved a crate-local policy instead of one scoped to the deployable Kwavers

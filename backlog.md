@@ -71,6 +71,9 @@
   dimension-contract rejection. The architecture job's first full-facade build
   also lacked the fontconfig development package already present in the other
   Cargo CI jobs; its system prerequisites now match that established contract.
+  The strict rerun also identifies and removes three no-op Leto `Array3`
+  conversions in the touched FD monitor, preserving the public facade's
+  warning-denied contract.
 
 ## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 
