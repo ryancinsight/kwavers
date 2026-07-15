@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## KW-DOP-041 — Doppler autocorrelation signal-power contract [minor] — in progress
+
+- Owner: Codex; scope: `kwavers-analysis` autocorrelation provider/export and
+  synchronized PM artifacts.
+- Acceptance: one Kasai traversal returns velocity, normalized variance, and
+  lag-zero signal power; the existing tuple API delegates to that authoritative
+  result; a coherent-IQ oracle pins sign, power, and variance semantics.
+- Driver: LeoNeuro's private reference GUI currently recomputes power and uses
+  the opposite lag-one phase order in Python. The provider must own the full
+  map contract before its Python conversion boundary can delete that solver.
+
 ## KW-RAY-040 — Layered focus-path contract [minor] — in-progress
 
 - Owner: Codex; scope: `kwavers-transducer` layered Rayleigh propagation API,
