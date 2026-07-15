@@ -23,9 +23,9 @@
 //! are excluded from both the sum and `N_active(p)`. When `N_active(p) = 0` the
 //! pixel value is zero.
 
-use leto::{Array1, ArrayView1, ArrayView2};
-
+use eunomia::Complex64;
 use kwavers_core::error::{KwaversError, KwaversResult};
+use leto::{Array1, ArrayView1, ArrayView2};
 
 /// Apodization windows supported by the imaging-DAS primitive.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
@@ -92,7 +92,7 @@ pub fn beamform_image_das(
     grid_points: ArrayView2<'_, f64>,
     config: &ImagingDasConfig,
 ) -> KwaversResult<Array1<f64>> {
-    let transmit_delays_s = Array1::<f64>::zeros(grid_points.shape()[0]);
+    let transmit_delays_s = zero_transmit_delays(grid_points.shape()[0])?;
     beamform_image_das_with_transmit_delays(
         sensor_data,
         sensor_positions,
@@ -122,6 +122,128 @@ pub fn beamform_image_das_with_transmit_delays(
     transmit_delays_s: ArrayView1<'_, f64>,
     config: &ImagingDasConfig,
 ) -> KwaversResult<Array1<f64>> {
+    beamform_with_transmit_delays(
+        sensor_data,
+        sensor_positions,
+        grid_points,
+        transmit_delays_s,
+        config,
+    )
+}
+
+/// Complex active-imaging DAS reconstruction.
+///
+/// This is the complex-I/Q counterpart of [`beamform_image_das`]. It preserves
+/// coherent phase through fractional interpolation and applies the same
+/// geometry, transmit-delay, and apodization contract as the real kernel.
+///
+/// # Errors
+///
+/// Returns the same validation errors as [`beamform_image_das`], including
+/// non-finite real or imaginary channel samples.
+pub fn beamform_complex_image_das(
+    sensor_data: ArrayView2<'_, Complex64>,
+    sensor_positions: ArrayView2<'_, f64>,
+    grid_points: ArrayView2<'_, f64>,
+    config: &ImagingDasConfig,
+) -> KwaversResult<Array1<Complex64>> {
+    let transmit_delays_s = zero_transmit_delays(grid_points.shape()[0])?;
+    beamform_complex_image_das_with_transmit_delays(
+        sensor_data,
+        sensor_positions,
+        grid_points,
+        transmit_delays_s.view(),
+        config,
+    )
+}
+
+/// Complex active-imaging DAS with a shared transmit arrival per pixel.
+///
+/// `transmit_delays_s[p]` has the identical physical interpretation as in
+/// [`beamform_image_das_with_transmit_delays`]. Complex linear interpolation
+/// occurs before coherent summation, so an I/Q phase ramp remains phase
+/// coherent at fractional receive delays.
+///
+/// # Errors
+///
+/// Returns the same validation errors as
+/// [`beamform_image_das_with_transmit_delays`], including a non-finite real or
+/// imaginary channel component.
+pub fn beamform_complex_image_das_with_transmit_delays(
+    sensor_data: ArrayView2<'_, Complex64>,
+    sensor_positions: ArrayView2<'_, f64>,
+    grid_points: ArrayView2<'_, f64>,
+    transmit_delays_s: ArrayView1<'_, f64>,
+    config: &ImagingDasConfig,
+) -> KwaversResult<Array1<Complex64>> {
+    beamform_with_transmit_delays(
+        sensor_data,
+        sensor_positions,
+        grid_points,
+        transmit_delays_s,
+        config,
+    )
+}
+
+trait DasSample: Copy {
+    fn is_finite(self) -> bool;
+    fn zero() -> Self;
+    fn interpolate_weighted(self, next: Self, fraction: f64, weight: f64) -> Self;
+    fn add(self, rhs: Self) -> Self;
+    fn normalize(self, active_count: usize) -> Self;
+}
+
+impl DasSample for f64 {
+    fn is_finite(self) -> bool {
+        f64::is_finite(self)
+    }
+
+    fn zero() -> Self {
+        0.0
+    }
+
+    fn interpolate_weighted(self, next: Self, fraction: f64, weight: f64) -> Self {
+        weight * ((1.0 - fraction) * self + fraction * next)
+    }
+
+    fn add(self, rhs: Self) -> Self {
+        self + rhs
+    }
+
+    fn normalize(self, active_count: usize) -> Self {
+        self / active_count as f64
+    }
+}
+
+impl DasSample for Complex64 {
+    fn is_finite(self) -> bool {
+        self.re.is_finite() && self.im.is_finite()
+    }
+
+    fn zero() -> Self {
+        Self::new(0.0, 0.0)
+    }
+
+    fn interpolate_weighted(self, next: Self, fraction: f64, weight: f64) -> Self {
+        (self * (1.0 - fraction) + next * fraction) * weight
+    }
+
+    fn add(self, rhs: Self) -> Self {
+        self + rhs
+    }
+
+    fn normalize(self, active_count: usize) -> Self {
+        self / active_count as f64
+    }
+}
+
+fn beamform_with_transmit_delays<S: DasSample>(
+    sensor_data: ArrayView2<'_, S>,
+    sensor_positions: ArrayView2<'_, f64>,
+    grid_points: ArrayView2<'_, f64>,
+    transmit_delays_s: ArrayView1<'_, f64>,
+    config: &ImagingDasConfig,
+) -> KwaversResult<Array1<S>> {
     if !config.sound_speed.is_finite() || config.sound_speed <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "imaging_das: sound_speed must be finite and > 0; got {}",
@@ -152,7 +274,7 @@ pub fn beamform_image_das_with_transmit_delays(
             grid_points.shape()
         )));
     }
-    if !sensor_data.iter().all(|v| v.is_finite()) {
+    if !sensor_data.iter().all(|sample| sample.is_finite()) {
         return Err(KwaversError::InvalidInput(
             "imaging_das: sensor_data must contain only finite values".to_owned(),
         ));
@@ -191,14 +313,17 @@ pub fn beamform_image_das_with_transmit_delays(
     let last_sample_f = (n_samples - 1) as f64;
 
     let n_pixels = grid_points.shape()[0];
-    let mut image = Array1::<f64>::zeros(n_pixels);
+    let mut image = Vec::new();
+    image.try_reserve_exact(n_pixels).map_err(|_| {
+        KwaversError::InvalidInput("imaging_das: output allocation failed".to_owned())
+    })?;
 
     for pix in 0..n_pixels {
         let px = grid_points[[pix, 0]];
         let py = grid_points[[pix, 1]];
         let pz = grid_points[[pix, 2]];
 
-        let mut acc = 0.0_f64;
+        let mut acc = S::zero();
         let mut n_active = 0_usize;
 
         for s in 0..n_sensors {
@@ -221,18 +346,31 @@ pub fn beamform_image_das_with_transmit_delays(
             let frac = sample_idx - lo as f64;
             let v_lo = sensor_data[[s, lo]];
             let v_hi = sensor_data[[s, hi]];
-            let interp = (1.0 - frac) * v_lo + frac * v_hi;
-
-            acc += weights[s] * interp;
+            let interp = v_lo.interpolate_weighted(v_hi, frac, weights[s]);
+            acc = acc.add(interp);
             n_active += 1;
         }
 
         if n_active > 0 {
-            image[pix] = acc / n_active as f64;
+            image.push(acc.normalize(n_active));
+        } else {
+            image.push(S::zero());
         }
     }
 
-    Ok(image)
+    Array1::from_shape_vec([n_pixels], image)
+        .map_err(|error| KwaversError::InvalidInput(format!("imaging_das: output shape: {error}")))
+}
+
+fn zero_transmit_delays(pixel_count: usize) -> KwaversResult<Array1<f64>> {
+    let mut delays = Vec::new();
+    delays.try_reserve_exact(pixel_count).map_err(|_| {
+        KwaversError::InvalidInput("imaging_das: transmit-delay allocation failed".to_owned())
+    })?;
+    delays.resize(pixel_count, 0.0);
+    Array1::from_shape_vec([pixel_count], delays).map_err(|error| {
+        KwaversError::InvalidInput(format!("imaging_das: transmit-delay shape: {error}"))
+    })
 }
 
 fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
@@ -259,6 +397,7 @@ fn apodization_weights(n: usize, kind: ImagingDasApodization) -> Vec<f64> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use eunomia::Complex64;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
     use kwavers_core::constants::numerical::MHZ_TO_HZ;
     use leto::{Array1, Array2};
@@ -384,6 +523,40 @@ mod tests {
 
         assert_eq!(image[[0]], 1.0);
         assert_eq!(image[[1]], 0.0);
+    }
+
+    #[test]
+    fn complex_transmit_das_interpolates_iq_before_coherent_sum() {
+        let sensor_data = Array2::from_shape_vec(
+            [1, 2],
+            vec![Complex64::new(1.0, 2.0), Complex64::new(5.0, -2.0)],
+        )
+        .unwrap();
+        let positions = Array2::from_shape_vec([1, 3], vec![0.0, 0.0, 0.0]).unwrap();
+        let grid = Array2::from_shape_vec([1, 3], vec![0.0, 0.0, 0.0]).unwrap();
+        let delays = Array1::from_vec([1], vec![0.5]).unwrap();
+        let config =
+            ImagingDasConfig::new(1500.0, 1.0, ImagingDasApodization::Rectangular).unwrap();
+
+        let image = beamform_complex_image_das_with_transmit_delays(
+            sensor_data.view(),
+            positions.view(),
+            grid.view(),
+            delays.view(),
+            &config,
+        )
+        .unwrap();
+
+        assert_eq!(image[[0]], Complex64::new(3.0, 0.0));
+        let non_finite =
+            Array2::from_shape_vec([1, 1], vec![Complex64::new(f64::NAN, 0.0)]).unwrap();
+        let error =
+            beamform_complex_image_das(non_finite.view(), positions.view(), grid.view(), &config)
+                .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: imaging_das: sensor_data must contain only finite values"
+        );
     }
 
     #[test]

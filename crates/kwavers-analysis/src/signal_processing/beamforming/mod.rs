@@ -244,6 +244,7 @@ pub mod test_utilities;
 // Re-exports for convenience
 pub use adaptive::{AdaptiveTimeDomainBeamformer, EigenspaceMV, MinimumVariance, MUSIC};
 pub use imaging_das::{
+    beamform_complex_image_das, beamform_complex_image_das_with_transmit_delays,
     beamform_image_das, beamform_image_das_with_transmit_delays, ImagingDasApodization,
     ImagingDasConfig,
 };

@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Added (2026-07-15) - active complex I/Q imaging primitives [minor]
+
+- Added `IqDemodulationConfig` and `demodulate_rf_to_iq` for validated
+  FFT/Hilbert analytic-baseband conversion of real RF channel records. Added
+  transmit-aware complex DAS through the same receive kernel as real DAS, and
+  routed the legacy decimated snapshot adapter through the new canonical API.
+
 ### Added (2026-07-15) - active transmit-event imaging contract [minor]
 
 - Added validated three-dimensional `TransmitWavefront` plane-wave and

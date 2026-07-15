@@ -25,6 +25,24 @@ contract emits none. The LeoNeuro sector B-mode consumer is the next dependent
 increment; complex I/Q beamforming remains a separate explicitly unclosed
 contract.
 
+## Owner: Codex — Active complex-I/Q imaging primitives [minor]
+
+- [x] Promote the FFT/Hilbert analytic-baseband conversion to the direct
+      `demodulate_rf_to_iq` provider API with validated Nyquist and RF-domain
+      inputs.
+- [x] Route the legacy decimated snapshot extractor through that API and
+      delete its duplicate Hilbert/downconversion implementation.
+- [x] Add the complex active-DAS API through the same geometry, transmit-delay,
+      interpolation, and apodization kernel as real DAS.
+
+**Closure evidence:** locked offline Nextest passes the bin-centred unit-I/Q
+baseband identity, exact complex fractional-delay interpolation, invalid-input
+contracts, and legacy-snapshot delegation (11/11 focused tests). `cargo check`,
+warning-denied Clippy, Rustdoc, and doctests pass. Rustdoc reports 57 existing
+Analysis unresolved links outside these files. The next increment owns explicit
+physical scatterer evolution across slow-time frames; this contract does not
+simulate phase animation.
+
 ## Owner: Codex — Complex I/Q SVD clutter contract [minor]
 
 - [x] Implement the Kwavers `[slow_time, angle, range]` I/Q realification and

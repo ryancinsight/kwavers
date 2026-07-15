@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — in-progress
+## KW-IMG-044 — Active complex-I/Q imaging primitives [minor] — done
 
 - Owner: Codex; scope: promote real-RF analytic-baseband demodulation into a
   direct `kwavers-analysis` API, then provide a transmit-aware complex DAS
@@ -13,6 +13,21 @@
 - Driver: KW-IMG-043 closes real active B-mode. LeoNeuro's remaining
   color/power/PW/fUS sector modes require complex slow-time I/Q and cannot use
   a real B-mode result as a substitute.
+- Evidence: the bin-centred analytic-baseband identity and exact complex
+  fractional-delay interpolation pass in the locked provider regression suite;
+  the former snapshot adapter delegates its RF-to-I/Q work to the same API.
+  The direct primitives do not invent inter-frame phase or scatterer motion.
+
+## KW-IMG-045 — Frame-resolved physical I/Q ensemble [minor] — todo
+
+- Owner: Codex; scope: consume the direct I/Q primitives from LeoNeuro using
+  explicit physical scatterer states for each slow-time frame.
+- Acceptance: a color/power/PW/fUS sector sequence derives its frame-to-frame
+  phase from submitted scatterer position and reflectivity evolution, then
+  applies the provider I/Q demodulator and complex DAS. No deterministic
+  phase-animation surrogate remains in the Python reference path.
+- Driver: KW-IMG-044 makes individual real-RF frames complex-I/Q capable but
+  deliberately does not claim a physical slow-time evolution law.
 
 ## KW-IMG-043 — Active transmit-event imaging contract [minor] — done
 

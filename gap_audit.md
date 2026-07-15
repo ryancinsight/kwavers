@@ -1,5 +1,18 @@
 # Gap Audit
 
+- Closed 2026-07-15: the prior analytic-baseband code was private to a
+  decimated narrowband snapshot adapter, and imaging DAS discarded complex
+  phase. `demodulate_rf_to_iq` now owns the finite, Nyquist-valid real-RF to
+  analytic-baseband transform; complex active DAS shares the real kernel's
+  geometry, transmit-delay, receive interpolation, apodization, and active
+  aperture law. The former snapshot path delegates to that provider surface,
+  deleting its duplicate FFT/Hilbert implementation. Evidence tier:
+  value-semantic bin-centred analytic-baseband and exact complex
+  fractional-delay regressions plus focused locked Nextest (11/11), warning-
+  denied Clippy, Rustdoc, and doctests. Residual: slow-time frames must arise
+  from explicit physical scatterer states; no API synthesizes an arbitrary
+  inter-frame phase progression.
+
 - Closed 2026-07-15: active sector imaging needed the same plane-wave or
   virtual-source transmit arrival in its phantom RF and its receive-DAS
   reconstruction, but Kwavers exposed only monostatic RF and receive-only DAS.
