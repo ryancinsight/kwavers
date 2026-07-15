@@ -5,10 +5,11 @@
   therefore failed before compilation in every Cargo job; the architecture
   workflow also called the deleted `scripts/validate_architecture.sh`. One
   composite setup action now derives and checks out the manifest-declared
-  providers at Atlas's coordinated submodule revisions before Cargo runs, and
-  stale native `cargo test` invocations move to Nextest. The first repair run
-  confirms provider defaults are incompatible (`apollo-fft` 0.17.0 versus
-  RITK's required `^0.15.0`). Evidence tier: authoritative Actions log
+  providers at `codex/kwavers-atlas-integration`'s coordinated submodule
+  revisions before Cargo runs, and stale native `cargo test` invocations move
+  to Nextest. The first repair runs confirm provider defaults are incompatible
+  (`apollo-fft` 0.17.0 versus RITK's required `^0.15.0`) and Atlas `main`
+  pins incompatible Apollo 0.14. Evidence tier: authoritative Actions log
   `29443042765` plus local manifest-path resolution and YAML parsing. Residual:
   the repaired PR head must complete the full remote matrix before closure.
 

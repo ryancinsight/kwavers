@@ -1,6 +1,12 @@
 name: Checkout Atlas path dependencies
 description: Materialize the sibling Atlas providers at the coordinated Atlas revisions.
 
+inputs:
+  atlas_ref:
+    description: Atlas branch carrying the Kwavers-compatible provider graph.
+    required: false
+    default: codex/kwavers-atlas-integration
+
 runs:
   using: composite
   steps:
@@ -11,7 +17,8 @@ runs:
 
         workspace_parent="$(dirname "$GITHUB_WORKSPACE")"
         atlas_checkout="$RUNNER_TEMP/atlas"
-        git clone --depth 1 https://github.com/ryancinsight/atlas.git "$atlas_checkout"
+        git clone --depth 1 --branch "${{ inputs.atlas_ref }}" \
+          https://github.com/ryancinsight/atlas.git "$atlas_checkout"
         mapfile -t providers < <(
           sed -nE 's|.*path = "\.\./([^/"]+).*|\1|p' Cargo.toml \
             | grep -v '^kwavers-' \
