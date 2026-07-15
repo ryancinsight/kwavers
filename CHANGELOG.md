@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-07-15) - security policy and dependency graph [patch]
+
+- Added the repository-root Cargo-deny policy and made CI audit the deployable
+  Kwavers manifest with strict registry/Git source allowlists and exact
+  `cuda-oxide`, `colored`, and `epaint` license exceptions. Removed unused
+  direct DICOM 0.8 workspace pins and updated the lock graph through RITK's
+  DICOM 0.10 security release and fixed advisory versions.
+
 ### Fixed (2026-07-15) - Atlas-path CI setup [patch]
 
 - GitHub Actions now materializes the Atlas sibling providers declared by the

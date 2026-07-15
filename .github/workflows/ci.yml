@@ -157,7 +157,7 @@ jobs:
         run: cargo install cargo-deny
 
       - name: Run security audit
-        run: cargo deny check
+        run: cargo deny --config deny.toml --manifest-path crates/kwavers/Cargo.toml check
 
   memory-safety:
     name: Memory Safety (Miri)

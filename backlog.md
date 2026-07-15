@@ -1,16 +1,17 @@
 # Backlog / Strategy
 
-## KW-CI-046 — Atlas-path CI setup [patch] — in-progress
+## KW-CI-046 — Atlas-path CI and security audit [patch] — in-progress
 
 - Owner: Codex; scope: reusable GitHub Actions setup for the sibling Atlas path
-  providers declared by `Cargo.toml`, stale architecture-workflow cleanup, and
-  native Nextest invocation.
+  providers declared by `Cargo.toml`, root Cargo-deny policy, stale
+  architecture-workflow cleanup, and native Nextest invocation.
 - Acceptance: every Cargo job materializes the manifest-declared sibling
   providers at the `codex/kwavers-atlas-integration` submodule revisions before
   resolving the workspace; no workflow invokes the deleted
   `scripts/validate_architecture.sh`;
   native test jobs use Nextest, with doctests retaining Rustdoc's supported
-  runner.
+  runner; the security job evaluates the root policy against the Kwavers
+  manifest and rejects unapproved sources, licenses, and advisories.
 - Driver: PR #288 fails before compilation because `../apollo` and the other
   Atlas path providers are absent in GitHub Actions. The architecture workflow
   separately invokes a script deleted in commit `91514cad2`.
@@ -25,7 +26,13 @@
   The legacy audit also misclassifies NumPy's PyO3 ndarray facade as direct
   ndarray use; it now distinguishes those boundaries and removes 1,477 stale
   allowlist entries. Local manifest-path resolution finds all 12 sibling
-  providers.
+  providers. The root `deny.toml` now uses strict registry/Git allowlists,
+  records only exact license exceptions for `cuda-oxide`, `colored`, and
+  `epaint`, removes unused direct DICOM 0.8 workspace pins, and updates the
+  lock graph through RITK DICOM 0.10 and patched advisory releases. Local
+  Cargo-deny licenses, advisories, and sources checks pass. The two remaining
+  yanked notices are non-advisory `spin` 0.9.8 (Flume 0.11.1) and 0.10.0
+  (Burn) transitive constraints.
   Re-open trigger: any coordinated-provider checkout, manifest
   resolution, or subsequent CI-job failure on the repaired PR head.
 

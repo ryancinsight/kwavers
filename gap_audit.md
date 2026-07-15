@@ -20,6 +20,20 @@
   YAML parsing, and local audit execution. Residual: the corrected PR head must
   complete the full remote matrix before closure.
 
+- Closed 2026-07-15: Kwavers had no repository-root Cargo-deny policy and CI
+  resolved a crate-local policy instead of one scoped to the deployable Kwavers
+  graph. The root policy now rejects unknown registries and Git sources, permits
+  only Crates.io plus the required Consus and cutile origins, and carries exact
+  license exceptions for `cuda-oxide@0.4.0`, `colored@3.1.1`, and
+  `epaint@0.25.0`. Unused direct DICOM 0.8 workspace pins are removed; the lock
+  now resolves RITK's DICOM 0.10 graph and fixed advisory releases. Evidence
+  tier: Cargo-deny license/advisory/source checks and a locked all-feature
+  `kwavers-core` compile plus 69 focused Nextest cases. Residual: `spin` 0.9.8
+  (Flume 0.11.1) and `spin` 0.10.0 (Burn) are yanked but have no advisory; both
+  remain warnings until their upstream constraints change. The broader
+  all-feature workspace check remains independently blocked by two
+  `kwavers-solver` generic-backend compile errors.
+
 - Corrected 2026-07-15: analytic baseband removes `exp(j 2πf₀τ)` from every
   channel, so complex DAS must restore that phase after fractional interpolation
   and before coherent summation. `demodulate_rf_to_iq` owns the finite,

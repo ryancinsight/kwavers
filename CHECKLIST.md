@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — Atlas-path CI setup [patch]
+## Owner: Codex — Atlas-path CI and security audit [patch]
 
 - [x] Identify the common missing-provider failure across the PR #288 Actions
       matrix and the independently stale architecture-script invocation.
@@ -9,13 +9,17 @@
       used by every Cargo job in the active PR workflows.
 - [x] Replace native test jobs with Nextest while preserving doctests under
       Rustdoc's supported runner.
+- [x] Add the repository-root Cargo-deny policy with exact license exceptions,
+      strict source allowlists, and the deployable Kwavers manifest as its
+      graph root.
 - [ ] Push the CI repair and verify all GitHub Actions checks on its new head.
 
 **Current phase:** Closure. **Target:** Kwavers 4.1.0.
 **Acceptance:** GitHub Actions resolves the same
 `codex/kwavers-atlas-integration` sibling-path graph as the local checkout
-before Cargo starts, and no active workflow calls deleted validation
-infrastructure.
+before Cargo starts, the security job evaluates the authoritative root policy
+against `crates/kwavers/Cargo.toml`, and no active workflow calls deleted
+validation infrastructure.
 
 **Current evidence:** Actions run `29443042765` fails before compilation on
 the absent `../apollo` provider; the local manifest-derived provider set is
@@ -28,7 +32,12 @@ every provider and identifies the independent Linux `CPU_SET` mutability error
 in the explicit CPU-affinity branch, followed by two manual NUMA-mask ceiling
 divisions. The migration audit now excludes NumPy's PyO3 facade while retaining
 direct ndarray detection, then removes 1,477 stale allowlist entries. All
-corrections are awaiting their rerun.
+corrections are awaiting their rerun. The root policy allows only the resolved
+Crates.io registry plus the required Consus and cutile Git sources, and narrows
+non-permissive license exceptions to `cuda-oxide`, `colored`, and `epaint`.
+`cargo deny` reports licenses, advisories, and sources clean; the remaining
+`spin` 0.9.8/0.10.0 yanked notices are non-advisory transitive constraints from
+Flume and Burn.
 
 ## Owner: Codex — Active transmit-event imaging contract [minor]
 
