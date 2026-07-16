@@ -144,8 +144,8 @@ pub fn reconstruct(
     cfg: &FdMonitorConfig,
 ) -> KwaversResult<Array3<f64>> {
     let config = build_config(cfg)?;
-    let medium_slice = medium_slice.clone().into();
-    let background = background.clone().into();
+    let medium_slice = medium_slice.clone();
+    let background = background.clone();
     let mut observations = Vec::with_capacity(cfg.frequencies_hz.len());
     for &frequency_hz in &cfg.frequencies_hz {
         let pressure = simulate_frequency_observation(&medium_slice, array, frequency_hz, &config)?;
@@ -248,8 +248,7 @@ mod tests {
         let config = build_config(&cfg);
         assert!(config.is_ok(), "CBS config must build");
         let slice = slice_with_bump(20, 1500.0, 60.0, 1);
-        let obs =
-            simulate_frequency_observation(&slice.into(), &array, 3.0e5, &config.unwrap()).unwrap();
+        let obs = simulate_frequency_observation(&slice, &array, 3.0e5, &config.unwrap()).unwrap();
         assert_eq!(obs.shape(), [cfg.ring_elements, cfg.ring_elements]);
         assert!(obs.iter().all(|z| z.re.is_finite() && z.im.is_finite()));
         assert!(obs.iter().any(|z| z.norm() > 0.0), "data must be nonzero");
