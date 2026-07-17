@@ -177,8 +177,12 @@ impl ElasticFwi {
     ) -> KwaversResult<ReceiverTraces> {
         let mut solver = ElasticWaveSolver::new(grid, base_medium, swe_config)?;
         solver.set_mu(mu_true)?;
-        let history = solver.propagate_point_forces(config.n_steps, config.dt, &config.source)?;
-        Ok(sample_receivers(&history, &config.receivers))
+        solver.propagate_point_forces_recording(
+            config.n_steps,
+            config.dt,
+            &config.source,
+            &config.receivers,
+        )
     }
 
     /// Current shear-modulus estimate `μ` \\[Pa\].
@@ -195,12 +199,12 @@ impl ElasticFwi {
     /// Propagates solver errors; errors if `mu` does not match the grid shape.
     pub fn forward_misfit(&mut self, mu: &Array3<f64>) -> KwaversResult<f64> {
         self.solver.set_mu(mu)?;
-        let history = self.solver.propagate_point_forces(
+        let syn = self.solver.propagate_point_forces_recording(
             self.config.n_steps,
             self.config.dt,
             &self.config.source,
+            &self.config.receivers,
         )?;
-        let syn = sample_receivers(&history, &self.config.receivers);
         Ok(l2_misfit(&syn, &self.observed, self.config.dt))
     }
 }

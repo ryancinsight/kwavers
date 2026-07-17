@@ -73,6 +73,65 @@ impl ElasticWaveSolver {
         dt: f64,
         forces: &[ElasticPointForce],
     ) -> KwaversResult<Vec<ElasticWaveField>> {
+        let mut history = Vec::with_capacity(n_steps);
+        self.propagate_point_forces_observing(n_steps, dt, forces, |field| {
+            history.push(field.clone());
+        })?;
+        Ok(history)
+    }
+
+    /// Propagate point forces and record displacement only at `receivers`.
+    ///
+    /// This is the sensor-only counterpart to [`Self::propagate_point_forces`].
+    /// It retains `O(receivers × n_steps)` displacement traces rather than
+    /// cloning six full wave-field arrays at every time step. Objective-only
+    /// inverse evaluations use this path; adjoint kernels continue to request
+    /// the full displacement history they require.
+    ///
+    /// # Errors
+    /// Returns [`NumericalError::InvalidOperation`] for invalid propagation
+    /// inputs or a receiver index outside the solver grid.
+    #[cfg(feature = "clinical-imaging")]
+    pub(crate) fn propagate_point_forces_recording(
+        &self,
+        n_steps: usize,
+        dt: f64,
+        forces: &[ElasticPointForce],
+        receivers: &[(usize, usize, usize)],
+    ) -> KwaversResult<Vec<Vec<[f64; 3]>>> {
+        let (nx, ny, nz) = self.grid.dimensions();
+        for &(i, j, k) in receivers {
+            if i >= nx || j >= ny || k >= nz {
+                return Err(NumericalError::InvalidOperation(format!(
+                    "receiver index ({i}, {j}, {k}) is outside grid ({nx}, {ny}, {nz})"
+                ))
+                .into());
+            }
+        }
+
+        let mut traces = vec![Vec::with_capacity(n_steps); receivers.len()];
+        self.propagate_point_forces_observing(n_steps, dt, forces, |field| {
+            for (trace, &(i, j, k)) in traces.iter_mut().zip(receivers) {
+                trace.push([
+                    field.ux[[i, j, k]],
+                    field.uy[[i, j, k]],
+                    field.uz[[i, j, k]],
+                ]);
+            }
+        })?;
+        Ok(traces)
+    }
+
+    fn propagate_point_forces_observing<F>(
+        &self,
+        n_steps: usize,
+        dt: f64,
+        forces: &[ElasticPointForce],
+        mut observe: F,
+    ) -> KwaversResult<()>
+    where
+        F: FnMut(&ElasticWaveField),
+    {
         if dt <= 0.0 {
             return Err(NumericalError::InvalidOperation("dt must be positive".to_owned()).into());
         }
@@ -90,7 +149,6 @@ impl ElasticWaveSolver {
             TimeIntegrator::new(&self.grid, &self.lambda, &self.mu, &self.density, &self.pml);
         let mut scratch = ElasticStepScratch::new(nx, ny, nz);
         let mut field = ElasticWaveField::new(nx, ny, nz);
-        let mut history = Vec::with_capacity(n_steps);
 
         for step in 0..n_steps {
             for f in forces {
@@ -105,8 +163,57 @@ impl ElasticWaveSolver {
             }
             integrator.step(&mut field, dt, None, &mut scratch)?;
             field.time += dt;
-            history.push(field.clone());
+            observe(&field);
         }
-        Ok(history)
+        Ok(())
+    }
+}
+
+#[cfg(all(test, feature = "clinical-imaging"))]
+mod tests {
+    use super::*;
+    use crate::forward::elastic::swe::ElasticWaveConfig;
+    use kwavers_grid::Grid;
+    use kwavers_medium::homogeneous::HomogeneousMedium;
+
+    #[test]
+    fn sensor_only_recording_matches_full_history_sampling() {
+        let grid = Grid::new(12, 12, 1, 1.0e-3, 1.0e-3, 1.0e-3).expect("grid");
+        let medium = HomogeneousMedium::elastic_homogeneous(1000.0, 3.464_101_6, 2.0, &grid)
+            .expect("medium");
+        let config = ElasticWaveConfig {
+            pml_thickness: 2,
+            ..ElasticWaveConfig::default()
+        };
+        let solver = ElasticWaveSolver::new(&grid, &medium, config).expect("solver");
+        let n_steps = 8;
+        let mut force = ElasticPointForce::zeros((4, 4, 0), n_steps);
+        force.fy[0] = 1.0e6;
+        let receivers = [(5, 4, 0), (6, 4, 0)];
+        let dt = solver.recommended_timestep(0.3);
+
+        let history = solver
+            .propagate_point_forces(n_steps, dt, &[force.clone()])
+            .expect("history");
+        let recorded = solver
+            .propagate_point_forces_recording(n_steps, dt, &[force], &receivers)
+            .expect("recording");
+        let expected = receivers
+            .iter()
+            .map(|&(i, j, k)| {
+                history
+                    .iter()
+                    .map(|field| {
+                        [
+                            field.ux[[i, j, k]],
+                            field.uy[[i, j, k]],
+                            field.uz[[i, j, k]],
+                        ]
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .collect::<Vec<_>>();
+
+        assert_eq!(recorded, expected);
     }
 }

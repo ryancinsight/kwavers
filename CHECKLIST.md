@@ -1,19 +1,26 @@
 # Project Checklist
 
-## Owner: Codex — Serialize full workspace test processes [patch]
+## Owner: Codex — Elide elastic-FWI objective histories [patch]
 
-- [x] Trace the hosted failure to
-      `fwi_outperforms_linear_inversion` timing out at 90 seconds while the
-      workspace test matrix ran other solver-heavy tests concurrently.
-- [x] Serialize the full workspace lib test processes in the Architecture
-      Validation workflow without changing assertions or timeout values.
+- [x] Falsify the scheduling diagnosis: hosted Test Suite Coverage job
+      `87949355634` used `--test-threads=1` and still terminated
+      `fwi_outperforms_linear_inversion` at 90.010 seconds.
+- [x] Route observed-data synthesis and objective-only forward misfits through
+      direct receiver recording, retaining full wave-field histories only for
+      the forward/adjoint gradient kernel.
+- [x] Assert exact receiver-trace equivalence between sensor-only recording and
+      full-history sampling.
+- [x] Verify `rustup run nightly cargo nextest run --locked -p
+      kwavers-solver --features clinical-imaging --lib
+      inverse::elastography::elastic_fwi::tests::fwi_outperforms_linear_inversion
+      --status-level pass`: 1/1 passed in 29.123 seconds.
 - [ ] Re-run the hosted matrix and confirm the FWI contract completes under
-      the existing timeout policy.
+      the unchanged timeout policy.
 
-**Theorem:** serial test-process scheduling removes inter-test CPU contention;
-it does not alter solver inputs, execution order within a test, assertions, or
-timeout values. Therefore a green rerun is evidence for the same value-semantic
-contract under a bounded scheduling regime.
+**Theorem:** L2 objective evaluation depends only on receiver displacements.
+Recording each receiver after the same integrator step yields exactly the trace
+that full-history sampling would produce, while eliminating `O(n_steps × field)`
+history retention from synthesis and every line-search objective evaluation.
 
 ## Owner: Codex — Align Hephaestus device-limit contract [patch]
 

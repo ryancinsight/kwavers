@@ -1,16 +1,26 @@
 # Backlog / Strategy
 
-## KW-CI-057 — Serialize full workspace test processes [patch] — in-progress
+## KW-SOL-058 — Elide elastic-FWI objective histories [patch] — in-progress
 
-- Owner: Codex; scope: `.github/workflows/architecture-validation.yml` and
+- Owner: Codex; scope:
+  `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
+  `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/mod.rs`, and
   synchronized PM evidence.
-- Acceptance: the full workspace lib suite runs with `nextest
-  --test-threads=1`, preserving the existing test assertions and timeout
-  contract while eliminating runner-level solver oversubscription.
-- Evidence: hosted job `87949355634` ran 5,342 tests before
-  `fwi_outperforms_linear_inversion` reached its 90-second override while
-  other solver-heavy tests were active; the workflow change must be verified
-  by a fresh PR run.
+- Acceptance: observed-data synthesis and objective-only FWI forward runs
+  retain receiver traces directly, preserve exact trace values relative to the
+  full-history propagator, and complete the lesion-reconstruction contract
+  under the existing CI timeout.
+- Evidence: hosted job `87949355634` timed out the FWI contract at 90.010 s
+  despite `--test-threads=1`. The new exact trace-equivalence regression passes,
+  and the full FWI contract passes locally in 29.123 s; a fresh hosted matrix
+  remains the closure gate.
+
+## KW-CI-057 — Serialize full workspace test processes [patch] — superseded
+
+- The workflow serialization landed, but job `87949355634` still timed out
+  `fwi_outperforms_linear_inversion` at 90.010 s. The timeout is a real
+  allocation/performance defect, now owned by KW-SOL-058 rather than a runner
+  oversubscription issue.
 
 ## KW-GPU-056 — Align Hephaestus device-limit contract [patch] — in-progress
 

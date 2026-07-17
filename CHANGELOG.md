@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Fixed (2026-07-17) - Elastic FWI objective memory [patch]
+
+- Record receiver displacements directly for elastic-FWI observed-data
+  synthesis and objective-only forward misfits, retaining full histories only
+  for adjoint-gradient evaluation. The exact FWI regression now completes in
+  29.123 seconds locally without changing its solver inputs or assertions.
+
 ### Fixed (2026-07-17) - Serialize solver-heavy test processes [patch]
 
 - Serialize the Architecture Validation workspace lib test processes to avoid

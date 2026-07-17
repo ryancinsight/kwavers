@@ -5242,17 +5242,24 @@ Two residual clusters, NOT migration-correctness defects:
   allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
   buffers across timesteps) and verify no accuracy regression on the elastic_fwi
   convergence tests. Dedicated effort; do not rush.
-## State refresh (2026-07-17) — FWI suite scheduling defect
+## State refresh (2026-07-17) — elastic-FWI objective history defect
 
-- **Finding:** hosted Test Suite Coverage job `87949355634` ran 5,342/5,630
-  tests, then terminated
+- **Finding:** hosted Test Suite Coverage job `87949355634` ran with
+  `--test-threads=1`, reached 5,339/5,630 tests, then terminated
   `inverse::elastography::elastic_fwi::tests::fwi_outperforms_linear_inversion`
-  at 90.010 seconds while other solver-heavy tests were active. This is a
-  scheduling/oversubscription failure, not an assertion failure.
-- **Correction:** the Architecture Validation workspace lib suite now invokes
-  `cargo nextest ... --test-threads=1`; solver inputs, assertions, and timeout
-  values remain unchanged.
-- **Evidence tier:** hosted failure transcript plus configuration-level
-  reasoning; a fresh hosted run is required for closure.
-- **Residual:** the new head must complete the full matrix before the Kwavers
-  parent gitlink advances.
+  at 90.010 seconds. Serial test scheduling therefore does not explain the
+  timeout.
+- **Root cause:** observed-data synthesis and each objective-only forward
+  misfit cloned six `Array3<f64>` field components at every time step before
+  sampling a small receiver set. The adjoint path needs displacement histories;
+  the objective path does not.
+- **Correction:** `ElasticWaveSolver::propagate_point_forces_recording`
+  executes the same propagation loop and records receiver displacement directly.
+  FWI synthesis and forward misfit now use it, while gradient evaluation retains
+  full histories. A focused regression proves the recorded traces are exactly
+  equal to traces sampled from the full history.
+- **Evidence tier:** value-semantic differential regression plus empirical
+  timing. The focused clinical FWI contract passed 1/1 in 29.123 seconds under
+  the unchanged solver inputs and assertions.
+- **Residual:** a fresh hosted matrix must confirm the result before Kwavers
+  merges and its Atlas parent gitlink advances.
