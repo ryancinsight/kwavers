@@ -12,6 +12,8 @@
 
 - Installed OpenSSL development headers in the CUDA build container so the
   current RITK/DICOM provider graph can build `openssl-sys` through `pkg-config`.
+- Installed the `clang` executable selected by `openssl-sys` for header
+  expansion; `libclang-dev` supplies headers but not that compiler binary.
 - Scoped the plotting benchmark job to the Rust `kwavers` package. The job no
   longer attempts to link the PyO3 extension as a benchmark target.
 

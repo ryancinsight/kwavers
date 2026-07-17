@@ -29,7 +29,9 @@
   pass. The CI action previously consumed a stale Atlas integration branch
   whose RITK pin predated the repair; it now resolves the Atlas default graph.
   The CUDA container now installs the missing OpenSSL development package used
-  by the current RITK/DICOM graph. The benchmark workflow now invokes the
+  by the current RITK/DICOM graph. Its `openssl-sys` build selects `CC=clang`,
+  so the container also installs the compiler executable in addition to
+  `libclang-dev`. The benchmark workflow now invokes the
   Rust `kwavers` package explicitly rather than attempting to link the PyO3
   extension as a benchmark executable. Evidence tier: native compilation and
   value-semantic tests.

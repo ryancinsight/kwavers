@@ -8,6 +8,7 @@
 - [x] Run the GPU-enabled `kwavers-math` Nextest suite, docs, and doctests.
 - [x] Make CI resolve Atlas path providers from the current default branch.
 - [x] Install OpenSSL development headers in the CUDA CI container.
+- [x] Install the `clang` executable required by `openssl-sys` header expansion.
 - [x] Scope plotting benchmarks to the Rust `kwavers` package.
 
 **Evidence:** `cargo nextest run -p kwavers-math --features gpu --locked` passes
@@ -19,6 +20,8 @@ not published to crates.io; source review classifies the public removal as
 [major]. The pre-change CI provider branch pinned RITK before its repair;
 the action now resolves the verified Atlas default graph. The CUDA job now
 installs the missing `libssl-dev` package required by its RITK/DICOM graph.
+It also installs `clang`, which the OpenSSL build script selects through `CC`;
+`libclang-dev` alone does not provide that executable.
 The benchmark job retains real Criterion execution while excluding the PyO3
 extension, which is not a standalone benchmark executable.
 

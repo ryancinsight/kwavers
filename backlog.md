@@ -11,6 +11,7 @@
   and doctests pass. CI resolves Atlas path dependencies from `main` rather
   than the stale integration branch whose RITK pin preceded the repair. Its
   CUDA container now installs `libssl-dev` for the RITK/DICOM OpenSSL build.
+  It also installs the `clang` executable selected by the OpenSSL build script.
   The plotting benchmark job executes only the `kwavers` package, avoiding
   an invalid PyO3 extension link while preserving Criterion execution.
 
