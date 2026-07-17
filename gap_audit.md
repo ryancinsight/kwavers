@@ -26,6 +26,12 @@
   deleted, leaving only runnable provider-aware validation workflows. Evidence
   tier: repository file inventory and authoritative Actions status.
 
+- Review 2026-07-17: supported Cargo workflows had live-resolution commands
+  without `--locked` and malformed step indentation in the build, convergence,
+  validation, and coverage jobs. Both YAML documents now parse and all graph-
+  consuming commands carry `--locked`; the change is workflow-only. Evidence
+  tier: local YAML parser and diff checks. Residual: hosted rerun evidence.
+
 - Review 2026-07-17: hosted Architecture Validation still checked the
   pre-format finite-window PSTD test at job `87924378467`; the local source is
   now canonical under nightly rustfmt. The CUDA job previously failed because

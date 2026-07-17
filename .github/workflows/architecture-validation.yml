@@ -53,8 +53,8 @@ jobs:
 
     - name: Run clippy (strict mode)
       run: |
-        cargo clippy -p kwavers-core --all-targets --all-features -- -D warnings
-        cargo clippy -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
+        cargo clippy --locked -p kwavers-core --all-targets --all-features -- -D warnings
+        cargo clippy --locked -p kwavers --all-targets --no-default-features --features full --no-deps -- -D warnings
 
     - name: Check for security vulnerabilities
       run: |
@@ -131,11 +131,11 @@ jobs:
     - name: Build with ${{ matrix.features }} features
       run: |
         if [ "${{ matrix.features }}" == "minimal" ]; then
-          cargo build -p kwavers --no-default-features --features minimal
+          cargo build --locked -p kwavers --no-default-features --features minimal
         elif [ "${{ matrix.features }}" == "full" ]; then
-          cargo build -p kwavers --no-default-features --features full
+          cargo build --locked -p kwavers --no-default-features --features full
         else
-          cargo build -p kwavers --no-default-features --features ${{ matrix.features }}
+          cargo build --locked -p kwavers --no-default-features --features ${{ matrix.features }}
         fi
 
   test-coverage:
@@ -159,13 +159,13 @@ jobs:
 
     - name: Run tests
       run: |
-        cargo nextest run --workspace --exclude kwavers-python --exclude kwavers-gpu --lib
-        cargo nextest run -p kwavers --lib --no-default-features --features pinn
+        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib
+        cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
 
     - name: Run doc tests
       run: |
-        cargo test -p kwavers --doc
-        cargo test -p kwavers --doc --no-default-features --features full
+        cargo test --locked -p kwavers --doc
+        cargo test --locked -p kwavers --doc --no-default-features --features full
 
   documentation:
     name: Documentation Build
@@ -183,8 +183,8 @@ jobs:
 
     - name: Build documentation
       run: |
-        cargo doc --workspace --exclude kwavers-python --no-deps
-        RUSTDOCFLAGS="-D warnings" cargo doc -p kwavers --no-default-features --features full --no-deps
+        cargo doc --locked --workspace --exclude kwavers-python --no-deps
+        RUSTDOCFLAGS="-D warnings" cargo doc --locked -p kwavers --no-default-features --features full --no-deps
 
   cuda-runtime-build:
     name: CUDA Runtime Build
@@ -215,4 +215,4 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Compile CUDA runtime provider
-      run: cargo build -p kwavers --no-default-features --features cuda-runtime
+      run: cargo build --locked -p kwavers --no-default-features --features cuda-runtime

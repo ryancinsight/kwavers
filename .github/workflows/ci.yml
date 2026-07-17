@@ -40,7 +40,7 @@ jobs:
           key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Check PINN feature compilation
-        run: cargo check --features pinn --lib
+        run: cargo check --locked --features pinn --lib
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -48,16 +48,16 @@ jobs:
           tool: nextest
 
       - name: Run PINN tests
-        run: cargo nextest run --features pinn --lib
+        run: cargo nextest run --locked --features pinn --lib
 
       - name: Run PINN validation framework tests
-        run: cargo nextest run --test validation_integration_test
+        run: cargo nextest run --locked --test validation_integration_test
 
       - name: Run PINN convergence studies
-        run: cargo nextest run --test pinn_convergence_studies
+        run: cargo nextest run --locked --test pinn_convergence_studies
 
       - name: Run clippy on PINN code
-        run: cargo clippy --features pinn --lib -- -D warnings
+        run: cargo clippy --locked --features pinn --lib -- -D warnings
         continue-on-error: true
 
   quality:
@@ -92,10 +92,10 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Run clippy (allowed to fail)
-        run: cargo clippy --lib --features="plotting" || true
+        run: cargo clippy --locked --lib --features="plotting" || true
 
       - name: Run xtask metrics
-        run: cargo run -p xtask -- metrics
+        run: cargo run --locked -p xtask -- metrics
 
   build:
     name: Build & Test
@@ -129,7 +129,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
-        run: cargo build --release --verbose --features="plotting"
+        run: cargo build --locked --release --verbose --features="plotting"
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -137,10 +137,10 @@ jobs:
           tool: nextest
 
       - name: Run tests
-        run: cargo nextest run --profile ci --lib --release --verbose --features="plotting"
+        run: cargo nextest run --locked --profile ci --lib --release --verbose --features="plotting"
 
       - name: Run doc tests
-        run: cargo test --doc --verbose
+        run: cargo test --locked --doc --verbose
 
   security:
     name: Security Audit
@@ -213,7 +213,7 @@ jobs:
           key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run benchmarks
-        run: cargo bench --features="plotting"
+        run: cargo bench --locked --features="plotting"
 
   coverage:
     name: Code Coverage
@@ -236,7 +236,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --out xml --features="plotting" --timeout 300
+        run: cargo tarpaulin --locked --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -276,10 +276,10 @@ jobs:
           key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run convergence studies
-        run: cargo nextest run --test pinn_convergence_studies --features pinn
+        run: cargo nextest run --locked --test pinn_convergence_studies --features pinn
 
       - name: Run validation integration tests
-        run: cargo nextest run --test validation_integration_test
+        run: cargo nextest run --locked --test validation_integration_test
 
   validation:
     name: Solver Validation Suite
@@ -315,16 +315,16 @@ jobs:
           key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: k-Wave analytical comparison tests
-        run: cargo nextest run -p kwavers-solver --lib validation::kwave_comparison
+        run: cargo nextest run --locked -p kwavers-solver --lib validation::kwave_comparison
 
       - name: Literature validation tests
-        run: cargo nextest run -p kwavers-solver --lib validation::literature
+        run: cargo nextest run --locked -p kwavers-solver --lib validation::literature
 
       - name: Numerical accuracy tests
-        run: cargo nextest run -p kwavers-solver --lib validation::numerical_accuracy
+        run: cargo nextest run --locked -p kwavers-solver --lib validation::numerical_accuracy
 
       - name: Physics benchmarks
-        run: cargo nextest run -p kwavers-solver --lib validation::physics_benchmarks
+        run: cargo nextest run --locked -p kwavers-solver --lib validation::physics_benchmarks
 
       - name: GPU/CPU equivalence build check
-        run: cargo check -p kwavers-gpu --features gpu --lib
+        run: cargo check --locked -p kwavers-gpu --features gpu --lib

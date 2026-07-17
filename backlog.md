@@ -12,6 +12,18 @@
 - Driver: the workflow was inherited from the old PINN service layout and has
   no live repository inputs.
 
+## KW-CI-052 — Lock and parse supported Cargo workflows [patch] — ✅ review
+
+- Owner: Codex; scope: `.github/workflows/ci.yml` and
+  `.github/workflows/architecture-validation.yml`.
+- Acceptance: all Cargo graph-consuming commands use `--locked`, the workflow
+  YAML parses, and no command is hidden behind a malformed step indentation.
+- Evidence: local PyYAML parsing reports `yaml-ok`; the diff is workflow-only
+  and `git diff --check` is clean. The hosted matrix is the remaining
+  verification tier.
+- Driver: the prior CI definition allowed live provider resolution and had
+  indentation errors in the build/convergence/validation steps.
+
 ## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — ✅ review
 
 - Owner: Codex; scope: the finite-window PSTD test formatting and CUDA

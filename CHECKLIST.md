@@ -25,6 +25,18 @@
   but no referenced deployment artifacts; Actions run `29593287070` reports a
   workflow-file failure before creating jobs.
 
+## Owner: Codex — Make Cargo CI locked and parseable [patch]
+
+- [x] Add `--locked` to Cargo build, check, clippy, nextest, doc, benchmark,
+  and coverage invocations in the supported workflows.
+- [x] Correct the malformed build, convergence, validation, and coverage step
+  indentation that prevented GitHub Actions from parsing the pipeline.
+- [x] Parse both workflow YAML documents locally after the edit.
+
+**Current evidence:** PyYAML parses `ci.yml` and `architecture-validation.yml`
+  successfully; the workflow diff contains no source or test changes. Hosted
+  verification is pending on the new branch head.
+
 ## Owner: Codex — Align Apollo provider lock [patch]
 
 - [x] Synchronize `Cargo.lock` from Apollo `0.23.0` to the merged provider

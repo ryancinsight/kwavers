@@ -19,6 +19,12 @@
 - Remove the stale PINN deployment workflow that referenced absent Docker and
   Kubernetes artifacts and could not be parsed by GitHub Actions.
 
+### Fixed (2026-07-17) - Cargo workflow determinism [patch]
+
+- Make supported Cargo jobs resolve the committed lock graph with `--locked`.
+- Correct malformed GitHub Actions step indentation in build, convergence,
+  validation, and coverage jobs.
+
 ### Breaking (2026-07-17) - GPU PSTD output contract [major]
 
 - `GpuPstdSolver::run` now requires `PstdOutputRequest` and returns
