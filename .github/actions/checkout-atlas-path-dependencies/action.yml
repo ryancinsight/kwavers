@@ -3,9 +3,9 @@ description: Materialize the sibling Atlas providers at the coordinated Atlas re
 
 inputs:
   atlas_ref:
-    description: Atlas branch carrying the Kwavers-compatible provider graph.
+    description: Atlas default branch carrying the Kwavers-compatible provider graph.
     required: false
-    default: codex/kwavers-atlas-integration
+    default: main
 
 runs:
   using: composite

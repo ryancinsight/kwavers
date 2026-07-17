@@ -8,7 +8,8 @@
   typed Hephaestus `WgpuDevice`, construct Apollo's `WgpuBackend`, and preserve
   value-semantic spectrum parity plus reusable-buffer round-trip coverage.
   GPU-enabled Nextest passes 265/265; warning-denied all-feature Clippy, docs,
-  and doctests pass.
+  and doctests pass. CI resolves Atlas path dependencies from `main` rather
+  than the stale integration branch whose RITK pin preceded the repair.
 
 ## KW-GRID-048 — Checked grid cardinality [minor] — done
 

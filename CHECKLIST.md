@@ -6,6 +6,7 @@
       the Apollo provider.
 - [x] Run the all-feature Kwavers Clippy frontier after the native cutover.
 - [x] Run the GPU-enabled `kwavers-math` Nextest suite, docs, and doctests.
+- [x] Make CI resolve Atlas path providers from the current default branch.
 
 **Evidence:** `cargo nextest run -p kwavers-math --features gpu --locked` passes
 265/265, including Apollo WGPU spectrum parity and reusable-buffer round-trip
@@ -13,7 +14,8 @@ contracts; warning-denied all-feature Kwavers Clippy, `cargo doc`, and
 `cargo test --doc` pass. `cargo semver-checks check-release --package
 kwavers-math` cannot obtain an automated baseline because `kwavers-math` is
 not published to crates.io; source review classifies the public removal as
-[major].
+[major]. The pre-change CI provider branch pinned RITK before its repair;
+the action now resolves the verified Atlas default graph.
 
 ## Owner: Codex — Checked grid cardinality [minor]
 

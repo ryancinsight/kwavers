@@ -26,7 +26,9 @@
   Apollo's `WgpuBackend`, and propagate GPU execution errors. GPU-enabled
   Nextest passes 265/265, including spectrum parity and reusable-buffer
   round-trip contracts; warning-denied all-feature Clippy, docs, and doctests
-  pass. Evidence tier: native compilation and value-semantic tests.
+  pass. The CI action previously consumed a stale Atlas integration branch
+  whose RITK pin predated the repair; it now resolves the Atlas default graph.
+  Evidence tier: native compilation and value-semantic tests.
 
 - Closed 2026-07-17: `Grid` dimensions are public for interoperability, so
   callers that allocate one value per grid point can use `Grid::checked_size`
