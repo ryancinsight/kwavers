@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — Checked grid cardinality [minor]
+
+- [x] Expose `Grid::checked_size` as the single checked `nx × ny × nz`
+      cardinality contract for downstream allocation boundaries.
+- [x] Add an exact overflow regression for externally mutated public grid
+      dimensions.
+- [x] Reject non-finite spacing before deriving the grid's wave-number scale.
+- [x] Run the focused locked offline Nextest regression.
+
+**Current evidence:** `cargo nextest run --offline --locked -p kwavers-grid
+checked_size_rejects_unaddressable_dimensions` passes. Evidence tier:
+value-semantic regression and native compilation.
+
 ## Owner: Codex — Signed pulsed-wave spectral Doppler [minor]
 
 - [x] Add one centered two-sided PW spectrum contract over the existing

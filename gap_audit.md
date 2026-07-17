@@ -20,6 +20,13 @@
 
 # Gap Audit
 
+- Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
+  while public dimensions can be mutated after construction. `Grid::checked_size`
+  now supplies the fallible cardinality contract at allocation boundaries, and
+  construction rejects non-finite spacing before deriving `k_max`; exact
+  overflow and non-finite-spacing regressions pass under locked offline Nextest.
+  Evidence tier: native compilation and value-semantic regression.
+
 - In progress 2026-07-16: `PulsedWaveDoppler` previously returned only a
   one-sided magnitude waveform, discarding reverse-flow bins. The provider now
   has `signed_spectrum`, whose centered two-sided frequency, velocity, and

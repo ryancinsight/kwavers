@@ -50,8 +50,8 @@ pub enum GridError {
     #[error("Grid dimensions must be positive, got nx={nx}, ny={ny}, nz={nz}")]
     ZeroDimension { nx: usize, ny: usize, nz: usize },
 
-    /// Grid spacing must be positive
-    #[error("Grid spacing must be positive, got dx={dx}, dy={dy}, dz={dz}")]
+    /// Grid spacing must be finite and positive
+    #[error("Grid spacing must be finite and positive, got dx={dx}, dy={dy}, dz={dz}")]
     NonPositiveSpacing { dx: f64, dy: f64, dz: f64 },
 
     /// Grid is too large for available memory

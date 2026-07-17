@@ -116,7 +116,8 @@ impl Grid {
         if nx == 0 || ny == 0 || nz == 0 {
             return Err(GridError::ZeroDimension { nx, ny, nz });
         }
-        if dx <= 0.0 || dy <= 0.0 || dz <= 0.0 {
+        if !(dx.is_finite() && dx > 0.0 && dy.is_finite() && dy > 0.0 && dz.is_finite() && dz > 0.0)
+        {
             return Err(GridError::NonPositiveSpacing { dx, dy, dz });
         }
 
@@ -195,6 +196,18 @@ impl Grid {
     #[inline]
     pub fn size(&self) -> usize {
         self.nx * self.ny * self.nz
+    }
+
+    /// Return the total number of grid points when the dimensions fit in `usize`.
+    ///
+    /// Callers that allocate an array indexed by all grid points must use this
+    /// checked form at their fallible allocation boundary. `Grid` dimensions are
+    /// public for interoperability, so an instance can be externally mutated
+    /// after construction.
+    #[must_use]
+    #[inline]
+    pub fn checked_size(&self) -> Option<usize> {
+        self.nx.checked_mul(self.ny)?.checked_mul(self.nz)
     }
 
     /// Get dimensions as a tuple
@@ -292,6 +305,7 @@ impl Grid {
 #[cfg(test)]
 mod tests {
     use super::{Grid, GridDimension};
+    use crate::error::GridError;
 
     #[test]
     fn coordinate_accessors_use_grid_origin() {
@@ -322,6 +336,33 @@ mod tests {
         assert_eq!(grid.position_to_indices(1.41, -1.09, 2.11), Some((2, 3, 4)));
         assert_eq!(grid.position_to_indices(0.99, -2.0, 0.5), None);
         assert_eq!(grid.position_to_indices(1.0, -2.31, 0.5), None);
+    }
+
+    #[test]
+    fn checked_size_rejects_unaddressable_dimensions() {
+        let grid =
+            Grid::new(usize::MAX, 2, 1, 1.0, 1.0, 1.0).expect("individual dimensions remain valid");
+        assert_eq!(grid.checked_size(), None);
+    }
+
+    #[test]
+    fn grid_rejects_non_finite_spacing() {
+        for spacing in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY] {
+            let error = Grid::new(1, 1, 1, spacing, 1.0, 1.0)
+                .expect_err("grid spacing must be finite and positive");
+            match error {
+                GridError::NonPositiveSpacing { dx, dy, dz } => {
+                    if spacing.is_nan() {
+                        assert!(dx.is_nan());
+                    } else {
+                        assert_eq!(dx, spacing);
+                    }
+                    assert_eq!(dy, 1.0);
+                    assert_eq!(dz, 1.0);
+                }
+                other => panic!("expected spacing validation error, got {other:?}"),
+            }
+        }
     }
 
     fn assert_sequence_close(actual: &[f64], expected: &[f64]) {
