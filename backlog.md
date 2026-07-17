@@ -1,5 +1,19 @@
 # Backlog / Strategy
 
+## KW-SOL-054 — Repair AVX-512 FDTD layout contract [patch] — in-progress
+
+- Owner: Codex; scope: `crates/kwavers-solver/src/forward/fdtd/avx512_stencil/`
+  and synchronized PM evidence.
+- Acceptance: pressure and velocity AVX-512 kernels use Leto C-order strides,
+  cover all interior vector tails, validate raw-pointer layout preconditions,
+  and match analytical uniform/linear reference fields on an AVX-512 host.
+- Evidence: Architecture Validation job `87932791305` observed the old kernel
+  write `0` at interior `[8, 8, 8]` for a uniform `7.5` field. On an AVX-512
+  host, the focused Nextest suite passes all seven cases and package test
+  compilation passes. A fresh hosted matrix remains required before merge;
+  all-feature Clippy is temporarily graph-blocked by the fresh Moirai
+  `broadcast.rs` borrow error.
+
 ## KW-CI-053 — Update GPU PSTD parity contract [patch] — ✅ review
 
 - Owner: Codex; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` and its PM

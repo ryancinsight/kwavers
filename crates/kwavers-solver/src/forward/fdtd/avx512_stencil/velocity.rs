@@ -14,7 +14,7 @@
 //! u_new = u + coeff × (p_plus − p_minus)
 //! ```
 
-use super::FdtdAvx512StencilProcessor;
+use super::{FdtdAvx512StencilProcessor, AVX512_F64_LANES};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -36,9 +36,14 @@ impl FdtdAvx512StencilProcessor {
         p: &Array3<f64>,
         dim: usize,
     ) -> KwaversResult<()> {
-        if p.shape() != [self.nx, self.ny, self.nz] {
+        if p.shape() != [self.nx, self.ny, self.nz] || u.shape() != p.shape() {
             return Err(KwaversError::InvalidInput(
-                "Pressure field dimensions mismatch".to_owned(),
+                "Velocity and pressure fields must match processor dimensions".to_owned(),
+            ));
+        }
+        if !p.layout().is_c_contiguous() || !u.layout().is_c_contiguous() {
+            return Err(KwaversError::InvalidInput(
+                "AVX-512 velocity fields must use C-contiguous Leto layouts".to_owned(),
             ));
         }
         if dim > 2 {
@@ -49,7 +54,14 @@ impl FdtdAvx512StencilProcessor {
 
         #[cfg(target_arch = "x86_64")]
         {
-            // SAFETY: dimension-match and dim-range validated above.
+            if !is_x86_feature_detected!("avx512f") {
+                return Err(KwaversError::FeatureNotAvailable(
+                    "AVX-512F not detected at runtime".to_owned(),
+                ));
+            }
+
+            // SAFETY: dimensions, C-contiguous layouts, and dim are validated above;
+            // AVX-512F is detected immediately before this target-feature call.
             #[allow(unsafe_code)]
             unsafe {
                 self.update_velocity_avx512_unsafe(u, p, dim)?;
@@ -71,7 +83,7 @@ impl FdtdAvx512StencilProcessor {
     /// Preconditions (all verified by `update_velocity_avx512` before calling):
     /// 1. `u.shape() == p.shape() == (self.nx, self.ny, self.nz)`.
     /// 2. `dim ∈ {0, 1, 2}`.
-    /// 3. AVX-512F is available.
+    /// 3. AVX-512F is available (checked immediately before the call).
     /// 4. Both arrays are standard-layout (C-order, contiguous).
     ///
     /// Loop bounds guarantee all pointer offsets ±stride remain within the
@@ -85,6 +97,7 @@ impl FdtdAvx512StencilProcessor {
     ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f")]
     unsafe fn update_velocity_avx512_unsafe(
         &self,
         u: &mut Array3<f64>,
@@ -96,12 +109,6 @@ impl FdtdAvx512StencilProcessor {
             _mm512_sub_pd,
         };
 
-        if !is_x86_feature_detected!("avx512f") {
-            return Err(KwaversError::FeatureNotAvailable(
-                "AVX-512F not available".to_owned(),
-            ));
-        }
-
         let p_ptr = p.as_ptr();
         let u_ptr = u
             .as_slice_memory_order_mut()
@@ -109,31 +116,39 @@ impl FdtdAvx512StencilProcessor {
             .as_mut_ptr();
         let coeff_vec = _mm512_set1_pd(self.velocity_coeff);
 
-        let stride_xy = self.ny as isize;
-        let stride_z = (self.nx * self.ny) as isize;
+        let row_stride = self.nz;
+        let plane_stride = self.ny * row_stride;
 
         // Choose stencil stride based on spatial dimension.
-        // dim=0 → stride=1 (x), dim=1 → stride=nx (y), dim=2 → stride=nx×ny (z).
-        let stride: isize = match dim {
-            0 => 1,
-            1 => stride_xy,
-            2 => stride_z,
+        // Leto C order makes z unit-stride: x=ny*nz, y=nz, z=1.
+        let stride = match dim {
+            0 => plane_stride,
+            1 => row_stride,
+            2 => 1,
             _ => unreachable!(),
         };
 
-        // Interior update — 8-wide AVX-512 central-difference momentum equation.
-        // Loop bounds bound all ±stride pointer offsets within the allocated region.
-        for z in 1..self.nz - 1 {
+        for x in 1..self.nx - 1 {
             for y in 1..self.ny - 1 {
-                for x in (1..self.nx - 1).step_by(8) {
-                    let idx = (z * self.nx * self.ny + y * self.nx + x) as isize;
-                    let p_plus = _mm512_loadu_pd(p_ptr.offset(idx + stride));
-                    let p_minus = _mm512_loadu_pd(p_ptr.offset(idx - stride));
+                let row_base = x * plane_stride + y * row_stride;
+                let mut z = 1;
+
+                while z + AVX512_F64_LANES < self.nz {
+                    let idx = row_base + z;
+                    let p_plus = _mm512_loadu_pd(p_ptr.add(idx + stride));
+                    let p_minus = _mm512_loadu_pd(p_ptr.add(idx - stride));
                     let grad = _mm512_sub_pd(p_plus, p_minus);
                     let u_update = _mm512_mul_pd(coeff_vec, grad);
-                    let u_val = _mm512_loadu_pd(u_ptr.offset(idx));
+                    let u_val = _mm512_loadu_pd(u_ptr.add(idx));
                     let u_new = _mm512_add_pd(u_val, u_update);
-                    _mm512_storeu_pd(u_ptr.offset(idx), u_new);
+                    _mm512_storeu_pd(u_ptr.add(idx), u_new);
+                    z += AVX512_F64_LANES;
+                }
+
+                for z in z..self.nz - 1 {
+                    let idx = row_base + z;
+                    let gradient = *p_ptr.add(idx + stride) - *p_ptr.add(idx - stride);
+                    *u_ptr.add(idx) += self.velocity_coeff * gradient;
                 }
             }
         }

@@ -1,5 +1,26 @@
 # Project Checklist
 
+## Owner: Codex — Repair AVX-512 FDTD layout contract [patch]
+
+- [x] Trace hosted Architecture Validation failure
+      `pressure_update_keeps_interior_constant_for_uniform_field` to the
+      AVX-512 raw-pointer stride and incomplete-tail implementation.
+- [x] Align pressure and velocity kernels with Leto C order, validate
+      C-contiguous inputs, and retain scalar tails after vector lanes.
+- [x] Add full-interior stationarity and all-axis linear-gradient contracts.
+- [x] Verify rustfmt, package test compilation, and focused AVX-512 Nextest
+      cases on an AVX-512 host.
+- [ ] Obtain a fresh green hosted matrix for the repaired PR head.
+
+**Current evidence:** hosted job `87932791305` failed at
+`avx512_stencil/tests.rs:76` with interior value `0` instead of `7.5`.
+Leto constructs owned `Array3` values with C-contiguous layouts; the fixed
+kernel therefore uses strides `ny*nz`, `nz`, and `1` for x/y/z. `rustup run
+stable cargo check -p kwavers-solver --tests --locked` and the seven focused
+AVX-512 Nextest cases pass. All-feature Clippy is externally build-blocked by
+the fresh Moirai `broadcast.rs` borrow error and will be rerun after that peer
+increment compiles.
+
 ## Owner: Codex — Update GPU PSTD parity contract [patch]
 
 - [x] Replace every stale five-argument `GpuPstdSolver::run` call in

@@ -20,6 +20,16 @@
 
 # Gap Audit
 
+- Review 2026-07-17: the AVX-512 FDTD kernels treated Leto `Array3<[x, y, z]>`
+  as if x were unit-stride and skipped right-edge interior tails. Hosted job
+  `87932791305` observed the resulting uniform-pressure defect. Pressure and
+  velocity now use C-order strides `(ny*nz, nz, 1)`, retain scalar tails, and
+  validate C-contiguous inputs before raw-pointer dispatch. Full-interior and
+  three-axis analytical contracts cover the regression. Local package test
+  compilation and seven focused AVX-512 Nextest cases pass. Residual: the
+  fresh hosted matrix remains pending; all-feature Clippy awaits a peer repair
+  to Moirai `broadcast.rs` before the shared provider graph can compile.
+
 - Review 2026-07-17: the provider-owned GPU PSTD output contract exposed three
   stale ignored parity tests still assigning the old five-argument `Vec<f32>`
   return. All calls now pass `PstdOutputRequest::SensorTraces` and consume

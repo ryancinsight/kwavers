@@ -29,6 +29,9 @@ mod pressure;
 mod tests;
 mod velocity;
 
+/// Number of `f64` elements processed by one AVX-512 register.
+pub(super) const AVX512_F64_LANES: usize = 8;
+
 /// AVX-512 stencil processor configuration
 #[derive(Debug, Clone, Copy)]
 pub struct FdtdAvx512Config {

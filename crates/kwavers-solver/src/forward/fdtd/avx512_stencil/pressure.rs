@@ -18,7 +18,7 @@
 //! v_p_new = coeff_central×v_p + (coeff×laplacian − v_p_prev)
 //! ```
 
-use super::FdtdAvx512StencilProcessor;
+use super::{FdtdAvx512StencilProcessor, AVX512_F64_LANES};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -26,7 +26,9 @@ impl FdtdAvx512StencilProcessor {
     /// Update pressure field with AVX-512 acceleration.
     ///
     /// Processes interior data in 8×tile×tile spatial tiles to maximise L1 cache
-    /// utilisation. Dirichlet (zero) boundary conditions are applied on all six faces.
+    /// utilisation. The eight-wide vector lane follows Leto's unit-stride final
+    /// axis; scalar tails preserve every interior cell. The zero-initialised output
+    /// provides Dirichlet boundary conditions on all six faces.
     ///
     /// # Arguments
     /// * `p_curr` — current pressure field (time step n)
@@ -57,12 +59,27 @@ impl FdtdAvx512StencilProcessor {
                 "Field dimensions do not match processor configuration".to_owned(),
             ));
         }
+        if !p_curr.layout().is_c_contiguous()
+            || !p_prev.layout().is_c_contiguous()
+            || !u_div.layout().is_c_contiguous()
+        {
+            return Err(KwaversError::InvalidInput(
+                "AVX-512 pressure fields must use C-contiguous Leto layouts".to_owned(),
+            ));
+        }
 
         let mut p_new = Array3::zeros(shape);
 
         #[cfg(target_arch = "x86_64")]
         {
-            // SAFETY: dimension-match and AVX-512 availability validated above.
+            if !is_x86_feature_detected!("avx512f") {
+                return Err(KwaversError::FeatureNotAvailable(
+                    "AVX-512F not detected at runtime".to_owned(),
+                ));
+            }
+
+            // SAFETY: field dimensions and C-contiguous layouts are validated above;
+            // AVX-512F is detected immediately before this target-feature call.
             #[allow(unsafe_code)]
             unsafe {
                 self.update_pressure_avx512_unsafe(p_curr, p_prev, u_div, &mut p_new)?;
@@ -84,13 +101,14 @@ impl FdtdAvx512StencilProcessor {
     /// Preconditions (all verified by `update_pressure_avx512` before calling):
     /// 1. `p_curr.shape() == p_prev.shape() == u_div.shape() == p_new.shape() == (self.nx, self.ny, self.nz)`
     /// 2. `(self.nx, self.ny, self.nz) >= (4, 4, 4)` (enforced by constructor).
-    /// 3. AVX-512F is available (checked at construction time on x86_64).
+    /// 3. AVX-512F is available (checked immediately before the call).
     /// 4. All arrays are standard-layout (C-order, row-major, contiguous allocation).
     ///
-    /// Loop bounds guarantee all pointer offsets ± (1, nx, nx×ny) remain within the
+    /// Loop bounds guarantee all pointer offsets ± (1, nz, ny×nz) remain within the
     /// allocated region:
-    /// - Interior loop: `x ∈ [1, nx−1)` step 8 ⇒ `idx+7 < nx×ny×nz`.
-    /// - Neighbor offsets ±1, ±nx, ±(nx×ny) are bounded analogously.
+    /// - Interior vector lanes satisfy `z+7 < nz−1`; scalar tails cover the
+    ///   remaining `z ∈ [1, nz−1)` cells.
+    /// - Neighbor offsets ±1, ±nz, ±(ny×nz) are bounded analogously.
     ///
     /// `p_new` is exclusively owned (no aliasing); `p_curr`/`p_prev`/`u_div` are immutable.
     /// # Errors
@@ -98,6 +116,7 @@ impl FdtdAvx512StencilProcessor {
     ///
     #[allow(unsafe_code)]
     #[cfg(target_arch = "x86_64")]
+    #[target_feature(enable = "avx512f")]
     unsafe fn update_pressure_avx512_unsafe(
         &self,
         p_curr: &Array3<f64>,
@@ -118,7 +137,7 @@ impl FdtdAvx512StencilProcessor {
 
         let p_curr_ptr = p_curr.as_ptr();
         let p_prev_ptr = p_prev.as_ptr();
-        let _u_div_ptr = u_div.as_ptr();
+        let _ = u_div;
         let p_new_ptr = p_new
             .as_slice_memory_order_mut()
             .expect("invariant: AVX-512 stencil output field must be contiguous")
@@ -127,70 +146,63 @@ impl FdtdAvx512StencilProcessor {
         let coeff_central = _mm512_set1_pd(self.pressure_central_coeff);
         let coeff = _mm512_set1_pd(self.pressure_coeff);
 
-        let tile_size = self.config.tile_size.min(8);
-        let stride_xy = self.ny as isize;
-        let stride_z = (self.nx * self.ny) as isize;
+        let tile_size = self.config.tile_size.min(AVX512_F64_LANES);
+        let row_stride = self.nz;
+        let plane_stride = self.ny * row_stride;
 
-        // Interior update — 8-wide AVX-512 leapfrog stencil.
-        // Loop bounds ensure all pointer offsets stay within the allocated region
-        // (see Safety contract above).
-        for z_tile in (1..self.nz - 1).step_by(tile_size) {
+        // Array3 uses C order: `[x, y, z]` maps to
+        // `x * (ny * nz) + y * nz + z`, so `z` is the vector-contiguous axis.
+        for x_tile in (1..self.nx - 1).step_by(tile_size) {
+            let x_end = (x_tile + tile_size).min(self.nx - 1);
             for y_tile in (1..self.ny - 1).step_by(tile_size) {
-                for x_base in (1..self.nx - 1).step_by(8) {
-                    let idx = (z_tile * self.nx * self.ny + y_tile * self.nx + x_base) as isize;
+                let y_end = (y_tile + tile_size).min(self.ny - 1);
+                for x in x_tile..x_end {
+                    for y in y_tile..y_end {
+                        let row_base = x * plane_stride + y * row_stride;
+                        let mut z = 1;
 
-                    let p_curr_vec = _mm512_loadu_pd(p_curr_ptr.offset(idx));
-                    let p_prev_vec = _mm512_loadu_pd(p_prev_ptr.offset(idx));
+                        while z + AVX512_F64_LANES < self.nz {
+                            let idx = row_base + z;
+                            let p_curr_vec = _mm512_loadu_pd(p_curr_ptr.add(idx));
+                            let p_prev_vec = _mm512_loadu_pd(p_prev_ptr.add(idx));
+                            let p_x_minus = _mm512_loadu_pd(p_curr_ptr.add(idx - plane_stride));
+                            let p_x_plus = _mm512_loadu_pd(p_curr_ptr.add(idx + plane_stride));
+                            let p_y_minus = _mm512_loadu_pd(p_curr_ptr.add(idx - row_stride));
+                            let p_y_plus = _mm512_loadu_pd(p_curr_ptr.add(idx + row_stride));
+                            let p_z_minus = _mm512_loadu_pd(p_curr_ptr.add(idx - 1));
+                            let p_z_plus = _mm512_loadu_pd(p_curr_ptr.add(idx + 1));
 
-                    // x-neighbors (stride 1)
-                    let p_x_minus = _mm512_loadu_pd(p_curr_ptr.offset(idx - 1));
-                    let p_x_plus = _mm512_loadu_pd(p_curr_ptr.offset(idx + 1));
-                    // y-neighbors (stride nx)
-                    let p_y_minus = _mm512_loadu_pd(p_curr_ptr.offset(idx - stride_xy));
-                    let p_y_plus = _mm512_loadu_pd(p_curr_ptr.offset(idx + stride_xy));
-                    // z-neighbors (stride nx×ny)
-                    let p_z_minus = _mm512_loadu_pd(p_curr_ptr.offset(idx - stride_z));
-                    let p_z_plus = _mm512_loadu_pd(p_curr_ptr.offset(idx + stride_z));
+                            let mut neighbor_sum = _mm512_add_pd(p_x_minus, p_x_plus);
+                            neighbor_sum = _mm512_add_pd(neighbor_sum, p_y_minus);
+                            neighbor_sum = _mm512_add_pd(neighbor_sum, p_y_plus);
+                            neighbor_sum = _mm512_add_pd(neighbor_sum, p_z_minus);
+                            neighbor_sum = _mm512_add_pd(neighbor_sum, p_z_plus);
 
-                    // Laplacian = Σ six neighbors
-                    let mut laplacian = _mm512_add_pd(p_x_minus, p_x_plus);
-                    laplacian = _mm512_add_pd(laplacian, p_y_minus);
-                    laplacian = _mm512_add_pd(laplacian, p_y_plus);
-                    laplacian = _mm512_add_pd(laplacian, p_z_minus);
-                    laplacian = _mm512_add_pd(laplacian, p_z_plus);
+                            let p_new_vec = _mm512_fmadd_pd(
+                                coeff_central,
+                                p_curr_vec,
+                                _mm512_sub_pd(_mm512_mul_pd(coeff, neighbor_sum), p_prev_vec),
+                            );
+                            _mm512_storeu_pd(p_new_ptr.add(idx), p_new_vec);
+                            z += AVX512_F64_LANES;
+                        }
 
-                    let laplacian_term = _mm512_mul_pd(coeff, laplacian);
-
-                    // Leapfrog: p^(n+1) = coeff_central×p^n + (coeff×∇²p^n − p^(n-1))
-                    let p_new_vec = _mm512_fmadd_pd(
-                        coeff_central,
-                        p_curr_vec,
-                        _mm512_sub_pd(laplacian_term, p_prev_vec),
-                    );
-
-                    _mm512_storeu_pd(p_new_ptr.offset(idx), p_new_vec);
+                        for z in z..self.nz - 1 {
+                            let idx = row_base + z;
+                            let neighbor_sum = *p_curr_ptr.add(idx - plane_stride)
+                                + *p_curr_ptr.add(idx + plane_stride)
+                                + *p_curr_ptr.add(idx - row_stride)
+                                + *p_curr_ptr.add(idx + row_stride)
+                                + *p_curr_ptr.add(idx - 1)
+                                + *p_curr_ptr.add(idx + 1);
+                            *p_new_ptr.add(idx) = self.pressure_central_coeff.mul_add(
+                                *p_curr_ptr.add(idx),
+                                self.pressure_coeff
+                                    .mul_add(neighbor_sum, -*p_prev_ptr.add(idx)),
+                            );
+                        }
+                    }
                 }
-            }
-        }
-
-        // Dirichlet (zero) boundary conditions on all six faces.
-        // Boundary write ranges are disjoint from the interior loop region.
-        for i in 0..self.nx {
-            for j in 0..self.ny {
-                *p_new_ptr.add(j * self.nx + i) = 0.0;
-                *p_new_ptr.add((self.nz - 1) * self.nx * self.ny + j * self.nx + i) = 0.0;
-            }
-        }
-        for i in 0..self.nx {
-            for k in 0..self.nz {
-                *p_new_ptr.add(k * self.nx * self.ny + i) = 0.0;
-                *p_new_ptr.add(k * self.nx * self.ny + (self.ny - 1) * self.nx + i) = 0.0;
-            }
-        }
-        for j in 0..self.ny {
-            for k in 0..self.nz {
-                *p_new_ptr.add(k * self.nx * self.ny + j * self.nx) = 0.0;
-                *p_new_ptr.add(k * self.nx * self.ny + j * self.nx + self.nx - 1) = 0.0;
             }
         }
 

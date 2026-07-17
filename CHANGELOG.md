@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Fixed (2026-07-17) - AVX-512 FDTD layout contract [patch]
+
+- Correct AVX-512 FDTD pressure and velocity kernels to follow Leto's
+  C-contiguous `[x, y, z]` stride order, retain scalar right-edge tails, and
+  reject incompatible layouts before raw-pointer dispatch.
+- Add full-interior pressure stationarity and all-axis linear-gradient velocity
+  contracts; a local AVX-512 host executes both regression paths.
+
 ### Fixed (2026-07-17) - GPU PSTD parity contract [patch]
 
 - Update the ignored GPU parity tests to request `SensorTraces` explicitly and

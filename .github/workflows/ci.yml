@@ -236,7 +236,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --locked -p kwavers --exclude kwavers-python --out xml --features="plotting" --timeout 300
+        run: cargo tarpaulin --locked -p kwavers --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
