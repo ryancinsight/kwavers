@@ -184,6 +184,8 @@ impl CoreGpuContext<WgpuDevice> {
         DeviceLimits {
             max_buffer_size: baseline.max_buffer_size,
             max_storage_buffers_per_shader_stage: baseline.max_storage_buffers_per_shader_stage,
+            max_buffers_and_acceleration_structures_per_shader_stage: baseline
+                .max_buffers_and_acceleration_structures_per_shader_stage,
             max_compute_workgroup_storage_size: 16384,
             max_compute_invocations_per_workgroup: 256,
             max_compute_workgroup_size_x: 256,

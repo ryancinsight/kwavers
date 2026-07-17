@@ -188,6 +188,8 @@ fn beamforming_required_limits() -> DeviceLimits {
         max_compute_invocations_per_workgroup: base.max_compute_invocations_per_workgroup.max(512),
         max_compute_workgroup_storage_size: base.max_compute_workgroup_storage_size,
         max_storage_buffers_per_shader_stage: base.max_storage_buffers_per_shader_stage,
+        max_buffers_and_acceleration_structures_per_shader_stage: base
+            .max_buffers_and_acceleration_structures_per_shader_stage,
         max_immediate_size: base.max_immediate_size,
     }
 }
