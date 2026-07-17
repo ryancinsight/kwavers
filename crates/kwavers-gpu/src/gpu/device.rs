@@ -327,6 +327,16 @@ mod provider_capability_tests {
             "WGPU provider preserves the core atomic capability previously reported by CoreGpuContext"
         );
     }
+
+    #[test]
+    fn baseline_limits_preserve_combined_binding_capacity() {
+        let limits = minimal_compute_limits();
+        assert_eq!(limits.max_storage_buffers_per_shader_stage, Some(8));
+        assert_eq!(
+            limits.max_buffers_and_acceleration_structures_per_shader_stage,
+            Some(8)
+        );
+    }
 }
 
 #[cfg(all(test, feature = "cuda-provider"))]

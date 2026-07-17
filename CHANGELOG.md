@@ -7,6 +7,7 @@
 - Populate `max_buffers_and_acceleration_structures_per_shader_stage` in all
   explicit Kwavers GPU device-limit builders, preserving WGPU aggregate limits
   and CUDA's `None` capability contract after the Hephaestus provider update.
+- Add a value-semantic regression for the baseline aggregate binding budget.
 
 ### Fixed (2026-07-17) - AVX-512 FDTD layout contract [patch]
 
