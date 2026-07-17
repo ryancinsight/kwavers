@@ -1,7 +1,6 @@
 //! Unit tests for `BrainAtlas`.
 
 use leto::Array3 as LetoArray3;
-use leto::Array3;
 
 use super::BrainAtlas;
 
@@ -43,7 +42,7 @@ fn test_mm_to_voxel_conversion() {
 #[test]
 fn test_invalid_annotation_shape_is_rejected() {
     let image = LetoArray3::zeros([4, 4, 4]);
-    let annotation = Array3::zeros((4, 4, 3));
+    let annotation = LetoArray3::zeros((4, 4, 3));
     let result = BrainAtlas::with_annotation(image, annotation, [0.1, 0.1, 0.1], [0.0; 3]);
     assert!(result.is_err());
 }

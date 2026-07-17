@@ -18,7 +18,6 @@ mod query;
 mod tests;
 
 use leto::Array3 as LetoArray3;
-use leto::Array3;
 
 /// Brain atlas reference data.
 #[derive(Debug, Clone)]
@@ -26,7 +25,7 @@ pub struct BrainAtlas {
     /// Reference image (template).
     pub(super) reference_image: LetoArray3<f64>,
     /// Brain region annotations.
-    pub(super) annotation: Array3<u32>,
+    pub(super) annotation: LetoArray3<u32>,
     /// Voxel size (mm).
     pub(super) voxel_size: [f64; 3],
     /// Brain center coordinates (mm).

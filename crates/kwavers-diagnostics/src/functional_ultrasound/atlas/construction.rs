@@ -2,7 +2,6 @@
 
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-use leto::Array3;
 
 use super::BrainAtlas;
 
@@ -22,7 +21,7 @@ impl BrainAtlas {
     ) -> KwaversResult<Self> {
         Self::with_annotation(
             reference_image,
-            Array3::zeros((0, 0, 0)),
+            LetoArray3::zeros((0, 0, 0)),
             voxel_size,
             brain_center,
         )
@@ -44,7 +43,7 @@ impl BrainAtlas {
     /// any reference image value is non-finite.
     pub fn with_annotation(
         reference_image: LetoArray3<f64>,
-        annotation: Array3<u32>,
+        annotation: LetoArray3<u32>,
         voxel_size: [f64; 3],
         brain_center: [f64; 3],
     ) -> KwaversResult<Self> {
@@ -73,7 +72,7 @@ impl BrainAtlas {
         }
 
         let annotation = if annotation.is_empty() {
-            Array3::zeros(shape)
+            LetoArray3::zeros(shape)
         } else if annotation.shape() == [shape.0, shape.1, shape.2] {
             annotation
         } else {
@@ -116,7 +115,7 @@ impl BrainAtlas {
         let (nx, ny, nz) = DEFAULT_SHAPE;
         let mut reference_image =
             LetoArray3::zeros([DEFAULT_SHAPE.0, DEFAULT_SHAPE.1, DEFAULT_SHAPE.2]);
-        let mut annotation = Array3::zeros(DEFAULT_SHAPE);
+        let mut annotation = LetoArray3::zeros(DEFAULT_SHAPE);
 
         for i in 0..nx {
             for j in 0..ny {

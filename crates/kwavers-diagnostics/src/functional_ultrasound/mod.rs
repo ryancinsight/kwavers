@@ -40,7 +40,6 @@ pub use tracking::TrackingFilter;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use leto::Array3 as LetoArray3;
-use leto::Array3;
 use ritk_registration::{AffineTransform, ImageRegistration};
 
 /// Affine transformation matrix (3×4) for image registration
@@ -158,7 +157,7 @@ impl FunctionalUltrasoundGPS {
     /// # Errors
     /// - Propagates any [`KwaversError`] returned by called functions.
     ///
-    pub fn segment_vasculature(&mut self, registered_image: &Array3<f64>) -> KwaversResult<()> {
+    pub fn segment_vasculature(&mut self, registered_image: &LetoArray3<f64>) -> KwaversResult<()> {
         let segmentation = VesselSegmentation::segment(registered_image)?;
         self.vasculature = Some(segmentation);
         Ok(())
