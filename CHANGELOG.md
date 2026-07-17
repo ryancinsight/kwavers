@@ -10,6 +10,10 @@
 
 ### Fixed
 
+- Removed the redundant temporary Leto fields and same-type complex copies from
+  the Apollo 3-D axis-transform facade. Viscoacoustic derivatives now execute
+  directly over their caller-owned `eunomia::Complex64` storage, and the locked
+  graph resolves Apollo 0.24.0.
 - Installed OpenSSL development headers in the CUDA build container so the
   current RITK/DICOM provider graph can build `openssl-sys` through `pkg-config`.
 - Installed the `clang` executable selected by `openssl-sys` for header

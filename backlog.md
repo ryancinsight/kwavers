@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## KW-FFT-050 — Direct Apollo axis FFT storage [patch] — review
+
+- Owner: Codex; scope: `kwavers-math::fft` axis-transform facade, locked
+  provider graph, and synchronized Kwavers artifacts.
+- Driver: each viscoacoustic derivative copied a full `Array3<Complex64>` into
+  and out of Apollo despite both sides using Leto storage and
+  `eunomia::Complex64`. The three velocity gradients and three divergence
+  derivatives therefore created twelve temporary full fields and performed
+  twenty-four avoidable full-buffer copies per solver step.
+- Acceptance: the facade delegates directly to Apollo's axis plan methods, the
+  locked graph resolves Apollo 0.24.0, and
+  `decay_matches_dispersion_3d_diagonal` passes under the unchanged Nextest
+  timeout and workload. Evidence: the exact regression completes below the
+  60-second cap.
+
 ## KW-FFT-049 — Retire stale Apollo GPU probe [major] — done
 
 - Owner: Codex; scope: `kwavers-math::fft` GPU facade, its public migration

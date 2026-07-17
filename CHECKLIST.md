@@ -1,5 +1,16 @@
 # Project Checklist
 
+## Owner: Codex — Direct Apollo axis FFT storage [patch]
+
+- [x] Remove the redundant Leto/`eunomia::Complex64` conversion and allocation
+      around Apollo's axis-transform plan APIs.
+- [x] Update the locked graph to the current Apollo 0.24.0 provider.
+- [x] Compile `kwavers-math` through the locked offline provider graph.
+- [x] Run the exact 3-D viscoacoustic decay regression through Nextest without
+      changing its grid, time steps, or timeout. Evidence: the unchanged
+      `decay_matches_dispersion_3d_diagonal` regression completes below the
+      60-second cap.
+
 ## Owner: Codex — Retire stale Apollo GPU probe [major]
 
 - [x] Delete the uncalled `gpu_fft_available` facade that no longer exists in

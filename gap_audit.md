@@ -20,6 +20,17 @@
 
 # Gap Audit
 
+- Closed 2026-07-17: `kwavers-math`'s 3-D axis-transform facade allocated and
+  copied an Apollo buffer around every forward and inverse pass, even though
+  Kwavers and Apollo both use Leto storage and `eunomia::Complex64`. One
+  viscoacoustic step performs six derivatives, so the old path created twelve
+  temporary full fields and performed twenty-four full-buffer copies. The
+  facade now delegates directly to Apollo's axis plan methods. The locked
+  graph resolves Apollo 0.24.0; `kwavers-math` locked offline compilation and
+  the exact `decay_matches_dispersion_3d_diagonal` Nextest regression complete
+  below the unchanged 60-second cap. Evidence tier: native compilation and
+  value-semantic regression execution.
+
 - Closed 2026-07-17: Kwavers exposed an obsolete boolean GPU FFT probe after
   Apollo moved device acquisition to the Hephaestus provider. The probe and
   public re-export are deleted. GPU tests now acquire `WgpuDevice`, construct
