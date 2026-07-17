@@ -29,7 +29,8 @@
 #![cfg(feature = "gpu")]
 
 use kwavers_gpu::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdOutputRequest, SolverParams,
+    WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
@@ -172,7 +173,9 @@ fn test_pstd_gpu_cpu_parity_64() {
 
     // Run with a single sensor at grid centre, no sources (free decay from initial state)
     let cx = (n / 2 * n * n + n / 2 * n + n / 2) as u32;
-    let gpu_sensor: Vec<f32> = gpu_solver.run(&[cx], &[], &[], &[], &[]);
+    let gpu_sensor = gpu_solver
+        .run(&[cx], &[], &[], &[], &[], PstdOutputRequest::SensorTraces)
+        .sensor_data;
 
     // CPU reference
     let cpu_p = run_cpu_pstd(n, dx, c0, rho0, nt);
@@ -238,7 +241,9 @@ fn test_pstd_gpu_cpu_parity_128_heterogeneous() {
 
     // Sensor at grid centre
     let cx = (n / 2 * n * n + n / 2 * n + n / 2) as u32;
-    let gpu_sensor: Vec<f32> = gpu_solver.run(&[cx], &[], &[], &[], &[]);
+    let gpu_sensor = gpu_solver
+        .run(&[cx], &[], &[], &[], &[], PstdOutputRequest::SensorTraces)
+        .sensor_data;
 
     // CPU reference (homogeneous at c_ref for baseline comparison)
     let cpu_p = run_cpu_pstd(n, dx, c_ref, rho0, nt);
@@ -295,7 +300,9 @@ fn test_energy_conservation_gpu_1000steps() {
 
     // Sample pressure at grid centre over all time steps
     let cx = (n / 2 * n * n + n / 2 * n + n / 2) as u32;
-    let sensor_data: Vec<f32> = gpu_solver.run(&[cx], &[], &[], &[], &[]);
+    let sensor_data = gpu_solver
+        .run(&[cx], &[], &[], &[], &[], PstdOutputRequest::SensorTraces)
+        .sensor_data;
 
     // The sensor records nt values (one per step) for the single sensor point
     assert_eq!(

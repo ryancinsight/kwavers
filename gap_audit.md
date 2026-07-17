@@ -20,6 +20,13 @@
 
 # Gap Audit
 
+- Review 2026-07-17: the provider-owned GPU PSTD output contract exposed three
+  stale ignored parity tests still assigning the old five-argument `Vec<f32>`
+  return. All calls now pass `PstdOutputRequest::SensorTraces` and consume
+  `PstdRunResult::sensor_data` directly. Hosted job `87936633879` supplied the
+  exact compiler evidence; package-scoped nightly rustfmt is clean. Residual:
+  focused Nextest and the fresh hosted rerun.
+
 - Review 2026-07-17: `.github/workflows/deploy.yml` was obsolete. It referenced
   absent `Dockerfile` and `k8s` artifacts and combined `uses` with `run` in one
   step; Actions run `29593287070` failed at workflow parsing. The workflow is

@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## KW-CI-053 — Update GPU PSTD parity contract [patch] — ✅ review
+
+- Owner: Codex; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` and its PM
+  evidence only.
+- Acceptance: ignored GPU parity tests call the provider-owned six-argument
+  `GpuPstdSolver::run` API with `SensorTraces` and consume `sensor_data`; no
+  compatibility wrapper or test simplification is introduced.
+- Evidence: hosted job `87936633879` gave the exact E0061/E0308 diagnostics;
+  package-scoped nightly rustfmt passes after the direct call-site migration.
+- Residual: focused Nextest and the fresh hosted matrix must complete.
+
 ## KW-CI-051 — Remove obsolete deployment workflow [patch] — ✅ review
 
 - Owner: Codex; scope: `.github/workflows/deploy.yml` only.

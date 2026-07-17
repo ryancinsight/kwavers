@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-07-17) - GPU PSTD parity contract [patch]
+
+- Update the ignored GPU parity tests to request `SensorTraces` explicitly and
+  read `PstdRunResult::sensor_data` after the provider-owned output contract
+  removed the obsolete five-argument `Vec` return shape.
+
 ### Changed
 
 - Synchronize `Cargo.lock` to Apollo `0.24.0` after the provider graph refresh;

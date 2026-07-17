@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: Codex — Update GPU PSTD parity contract [patch]
+
+- [x] Replace every stale five-argument `GpuPstdSolver::run` call in
+      `gpu_pstd_parity.rs` with `PstdOutputRequest::SensorTraces`.
+- [x] Assert through the provider-owned `PstdRunResult::sensor_data` field;
+      retain the existing ignored GPU workloads and numerical thresholds.
+- [x] Run package-scoped nightly rustfmt and review the hosted compiler
+      diagnostic that exposed the stale calls.
+
+**Current evidence:** hosted Validate Clean Architecture job `87936633879`
+reported six type/signature errors at lines 175, 241, and 298; the corrected
+file is rustfmt-clean. Focused Nextest is queued behind shared local builds and
+the hosted rerun is the compile/test evidence.
+
 ## Owner: Codex — Restore hosted CI format and CUDA prerequisites [patch]
 
 - [x] Format the finite-window PSTD integration test with the repository
