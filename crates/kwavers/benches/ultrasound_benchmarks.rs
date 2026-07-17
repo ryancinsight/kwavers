@@ -18,8 +18,13 @@
 //! - **Scalability**: Weak/strong scaling with grid size
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use kwavers_analysis::signal_processing::beamforming::utils::{
+    SteeringVector, SteeringVectorMethod,
+};
+use kwavers_analysis::signal_processing::beamforming::MinimumVariance;
 use kwavers_grid::Grid;
 use kwavers_imaging::ultrasound::elastography::InversionMethod;
+use kwavers_math::fft::Complex64;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::imaging::elastography::ShearWaveElastography;
 use kwavers_solver::forward::elastic::ElasticWaveConfig;
@@ -319,6 +324,39 @@ fn bench_physics_validation(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark the 8-element MVDR solve without coupling a wall-clock bound to
+/// correctness tests. Criterion owns statistical timing and reports the
+/// distribution under the selected execution environment.
+fn bench_mvdr_weights(c: &mut Criterion) {
+    let num_sensors = 8;
+    let sensor_positions: Vec<[f64; 3]> = (0..num_sensors)
+        .map(|i| [i as f64 * 0.001, 0.0, 0.0])
+        .collect();
+    let mut covariance = leto::Array2::<Complex64>::zeros((num_sensors, num_sensors));
+    for i in 0..num_sensors {
+        covariance[[i, i]] = Complex64::new(1.0, 0.0);
+    }
+    let steering_vector = SteeringVector::compute(
+        &SteeringVectorMethod::PlaneWave,
+        [0.0, 0.0, 1.0],
+        1e6,
+        &sensor_positions,
+        1500.0,
+    )
+    .expect("MVDR steering vector");
+    let steering_vector = steering_vector.mapv(|c| Complex64::new(c.re, c.im));
+    let mvdr = MinimumVariance::with_diagonal_loading(0.01);
+
+    c.bench_function("mvdr_weights_8", |b| {
+        b.iter(|| {
+            let weights = mvdr
+                .compute_weights(black_box(&covariance), black_box(&steering_vector))
+                .expect("MVDR weights");
+            black_box(weights);
+        });
+    });
+}
+
 criterion_group!(
     benches,
     bench_1d_wave_equation,
@@ -326,6 +364,7 @@ criterion_group!(
     bench_memory_scaling,
     bench_derivative_computation,
     bench_clinical_workflow,
-    bench_physics_validation
+    bench_physics_validation,
+    bench_mvdr_weights
 );
 criterion_main!(benches);

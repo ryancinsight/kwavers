@@ -321,51 +321,6 @@ fn validate_spatial_smoothing() {
 }
 
 // ============================================================================
-// MVDR BEAMFORMING PERFORMANCE VALIDATION
-// ============================================================================
-
-#[test]
-fn validate_mvdr_performance() {
-    // Performance benchmark for MVDR beamforming
-    // Target: <100μs per weight calculation for 8-element array
-
-    let num_sensors = 8;
-    let sensor_positions: Vec<[f64; 3]> = (0..num_sensors)
-        .map(|i| [i as f64 * 0.001, 0.0, 0.0])
-        .collect();
-
-    let mvdr = MinimumVariance::with_diagonal_loading(0.01);
-    let mut covariance = Array2::<Complex64>::zeros((num_sensors, num_sensors));
-    for i in 0..num_sensors {
-        covariance[[i, i]] = Complex64::new(1.0, 0.0);
-    }
-    let steering_vector = nc_to_ec(
-        SteeringVector::compute(
-            &SteeringVectorMethod::PlaneWave,
-            [0.0, 0.0, 1.0],
-            1e6,
-            &sensor_positions,
-            1500.0,
-        )
-        .unwrap(),
-    );
-
-    let start = std::time::Instant::now();
-    for _ in 0..100 {
-        let _ = mvdr
-            .compute_weights(&covariance, &steering_vector)
-            .expect("MVDR weights");
-    }
-    let time_per_calc = start.elapsed().as_micros() as f64 / 100.0;
-
-    assert!(
-        time_per_calc < 1000.0,
-        "MVDR calculation should be <1000μs, got {:.2}μs",
-        time_per_calc
-    );
-}
-
-// ============================================================================
 // LIGHT PHYSICS VALIDATION
 // ============================================================================
 
