@@ -20,16 +20,25 @@
 
 # Gap Audit
 
+- Closed 2026-07-17: Kwavers exposed an obsolete boolean GPU FFT probe after
+  Apollo moved device acquisition to the Hephaestus provider. The probe and
+  public re-export are deleted. GPU tests now acquire `WgpuDevice`, construct
+  Apollo's `WgpuBackend`, and propagate GPU execution errors. GPU-enabled
+  Nextest passes 265/265, including spectrum parity and reusable-buffer
+  round-trip contracts; warning-denied all-feature Clippy, docs, and doctests
+  pass. Evidence tier: native compilation and value-semantic tests.
+
 - Closed 2026-07-17: `Grid` dimensions are public for interoperability, so
   callers that allocate one value per grid point can use `Grid::checked_size`
   after external mutation. Construction rejects non-finite spacing before
   deriving `k_max`; 40/40 package tests, warning-denied Clippy, docs, and
   doctests pass. Evidence tier: native compilation and value-semantic tests.
-- Residual verification risk: `cargo semver-checks` cannot compile its
-  temporary baseline because it resolves Apollo's Git Leto beside the normal
-  workspace Leto. The normal locked graph proves one Leto instance; restore
-  the isolated baseline's workspace patching before treating the SemVer gate
-  as satisfied.
+- Residual verification risk: `cargo semver-checks check-release --package
+  kwavers-math` cannot obtain a registry baseline because `kwavers-math` is
+  unpublished. The earlier temporary-baseline path additionally resolved
+  Apollo's Git Leto beside the normal workspace Leto. The normal locked graph
+  proves one Leto instance; restore isolated-baseline workspace patching before
+  treating the SemVer gate as satisfied.
 
 - In progress 2026-07-16: `PulsedWaveDoppler` previously returned only a
   one-sided magnitude waveform, discarding reverse-flow bins. The provider now

@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — Retire stale Apollo GPU probe [major]
+
+- [x] Delete the uncalled `gpu_fft_available` facade that no longer exists in
+      the Apollo provider.
+- [x] Run the all-feature Kwavers Clippy frontier after the native cutover.
+- [x] Run the GPU-enabled `kwavers-math` Nextest suite, docs, and doctests.
+
+**Evidence:** `cargo nextest run -p kwavers-math --features gpu --locked` passes
+265/265, including Apollo WGPU spectrum parity and reusable-buffer round-trip
+contracts; warning-denied all-feature Kwavers Clippy, `cargo doc`, and
+`cargo test --doc` pass. `cargo semver-checks check-release --package
+kwavers-math` cannot obtain an automated baseline because `kwavers-math` is
+not published to crates.io; source review classifies the public removal as
+[major].
+
 ## Owner: Codex — Checked grid cardinality [minor]
 
 - [x] Expose `Grid::checked_size` as the fallible `nx × ny × nz` cardinality
@@ -9,8 +24,9 @@
 
 **Evidence:** `cargo nextest run -p kwavers-grid --locked` passes 40/40;
 warning-denied Clippy, docs, and doctests pass. `cargo semver-checks` cannot
-build its temporary baseline because it resolves Apollo's Git Leto beside the
-workspace Leto and cannot type-check `kwavers-math`.
+obtain a registry baseline because `kwavers-math` is unpublished; the earlier
+temporary-baseline path also resolved Apollo's Git Leto beside the workspace
+Leto and could not type-check `kwavers-math`.
 
 ## Owner: Codex — Signed pulsed-wave spectral Doppler [minor]
 

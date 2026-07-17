@@ -167,8 +167,8 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
         p_curr
             .slice_with_mut::<1>(&[
                 SliceArg::All,
-                SliceArg::Index(0 as isize),
-                SliceArg::Index(0 as isize),
+                SliceArg::Index(0_isize),
+                SliceArg::Index(0_isize),
             ])
             .expect("slice_with_mut")
             .indexed_iter_mut()
@@ -181,8 +181,8 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
         p_prev
             .slice_with_mut::<1>(&[
                 SliceArg::All,
-                SliceArg::Index(0 as isize),
-                SliceArg::Index(0 as isize),
+                SliceArg::Index(0_isize),
+                SliceArg::Index(0_isize),
             ])
             .expect("slice_with_mut")
             .indexed_iter_mut()
@@ -224,8 +224,8 @@ fn test_wave_dispersion() -> Result<(), Box<dyn std::error::Error>> {
         p_curr
             .slice_with::<1>(&[
                 SliceArg::All,
-                SliceArg::Index(0 as isize),
-                SliceArg::Index(0 as isize),
+                SliceArg::Index(0_isize),
+                SliceArg::Index(0_isize),
             ])
             .expect("slice_with")
             .iter()

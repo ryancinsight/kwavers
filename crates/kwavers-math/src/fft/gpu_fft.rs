@@ -32,23 +32,6 @@
 //! convolution with `M = next_power_of_two(2N - 1)`, giving `O(N log N)` for
 //! every positive axis length.
 
-/// Returns whether the compiled crate can expose Apollo GPU FFT execution.
-///
-/// This is a capability predicate, not a numerical substitute. Callers that
-/// need a plan must construct an Apollo `FftBackend` implementation and
-/// handle adapter/device failure.
-#[must_use]
-pub fn gpu_fft_available() -> bool {
-    #[cfg(feature = "gpu")]
-    {
-        apollo::gpu_fft_available()
-    }
-    #[cfg(not(feature = "gpu"))]
-    {
-        false
-    }
-}
-
 #[cfg(feature = "gpu")]
 pub use apollo::{FftBackend, GpuFft3d, GpuFft3dBuffers, WgpuBackend};
 
@@ -56,16 +39,20 @@ pub use apollo::{FftBackend, GpuFft3d, GpuFft3dBuffers, WgpuBackend};
 mod tests {
     use super::{FftBackend, WgpuBackend};
     use crate::fft::{fft_3d_array, Shape3D};
+    use hephaestus_core::HephaestusError;
+    use hephaestus_wgpu::WgpuDevice;
     use leto::Array3;
 
     fn try_plan(shape: Shape3D) -> Option<apollo::GpuFft3d> {
-        let backend = match WgpuBackend::try_default() {
-            Ok(backend) => backend,
-            Err(error) => {
-                eprintln!("Apollo WGPU FFT backend unavailable in this environment: {error}");
+        let device = match WgpuDevice::try_default("kwavers-math-gpu-fft-tests") {
+            Err(HephaestusError::AdapterUnavailable { .. }) => {
+                eprintln!("Hephaestus WGPU adapter unavailable in this environment");
                 return None;
             }
+            Err(error) => panic!("Hephaestus WGPU device acquisition failed: {error}"),
+            Ok(device) => device,
         };
+        let backend = WgpuBackend::new(device);
 
         let capabilities = backend.capabilities();
         assert!(capabilities.supports_3d);
@@ -90,7 +77,9 @@ mod tests {
             (i as f64 + 1.0) - 0.25 * (j as f64) + 0.125 * (k as f64)
         });
 
-        let gpu = plan.forward(&field);
+        let gpu = plan
+            .forward(&field)
+            .expect("valid field shape must execute the Apollo GPU FFT plan");
         let cpu = fft_3d_array(&field);
 
         assert_eq!(gpu.len(), 2 * shape.volume());
@@ -120,15 +109,18 @@ mod tests {
             ((i * 7 + j * 3 + k) as f64).sin()
         });
         let mut spectrum = vec![0.0_f32; 2 * shape.volume()];
-        let mut buffers = apollo::GpuFft3dBuffers::new(&plan);
+        let mut buffers = apollo::GpuFft3dBuffers::new(&plan)
+            .expect("validated plan must allocate its typed GPU FFT buffers");
         let mut out = Array3::<f64>::from_shape_vec(
             [shape.nx, shape.ny, shape.nz],
             vec![0.0; shape.volume()],
         )
         .expect("zeroed Leto output must match the plan shape");
 
-        plan.forward_into_with_buffers(&field, &mut spectrum, &mut buffers);
-        plan.inverse_with_buffers(&spectrum, &mut out, &mut buffers);
+        plan.forward_into_with_buffers(&field, &mut spectrum, &mut buffers)
+            .expect("valid field shape must execute the Apollo GPU FFT plan");
+        plan.inverse_with_buffers(&spectrum, &mut out, &mut buffers)
+            .expect("plan spectrum must invert through the Apollo GPU FFT plan");
 
         for (idx, (actual, expected)) in out
             .as_slice_memory_order()

@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+## KW-FFT-049 — Retire stale Apollo GPU probe [major] — done
+
+- Owner: Codex; scope: `kwavers-math::fft` GPU facade, its public migration
+  note, and the all-feature Clippy frontier.
+- Closure: no `gpu_fft_available` wrapper remains. The GPU tests acquire a
+  typed Hephaestus `WgpuDevice`, construct Apollo's `WgpuBackend`, and preserve
+  value-semantic spectrum parity plus reusable-buffer round-trip coverage.
+  GPU-enabled Nextest passes 265/265; warning-denied all-feature Clippy, docs,
+  and doctests pass.
+
 ## KW-GRID-048 — Checked grid cardinality [minor] — done
 
 - Owner: Codex; scope: `kwavers-grid::Grid`, its core error text, and

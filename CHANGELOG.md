@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Breaking
+
+- Removed `kwavers_math::fft::gpu_fft_available`. Apollo owns no boolean
+  device-discovery facade: callers construct `WgpuBackend` from a
+  provider-acquired `WgpuDevice`, then handle plan creation errors directly.
+
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
 - Added `Grid::checked_size`, the fallible cardinality contract for consumers

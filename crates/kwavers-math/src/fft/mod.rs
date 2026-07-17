@@ -84,7 +84,6 @@ pub static FFT_CACHE_2D: FftCache2d = FftCache2d;
 /// Process-wide cached 3-D FFT plan provider. See [`FftCache3d`].
 pub static FFT_CACHE_3D: FftCache3d = FftCache3d;
 
-pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;
 pub use utils::{analytic_signal_1d, apply_spectral_response_1d};
 
