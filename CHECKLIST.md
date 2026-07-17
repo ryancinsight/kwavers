@@ -1,5 +1,21 @@
 # Project Checklist
 
+## Owner: Codex — Consolidate continuous medium access [patch]
+
+- [x] Generalize `density_at`, `sound_speed_at`, `absorption_at`, and
+      `nonlinearity_at` over `CoreMedium`, preserving `dyn Medium` callers.
+- [x] Rewrite point-wise interface detection to use the canonical generic
+      entry points.
+- [x] Delete the four `*_at_core` wrappers and their public re-exports; source
+      search reports zero remaining references.
+- [x] Run `cargo nextest run --locked -p kwavers-medium --lib`: 187/187 tests
+      pass in 5.276 seconds (nextest run `580663cd-1bff-42b8-97d3-d185749a1fc9`).
+
+**Theorem:** `Medium` is a blanket refinement of `CoreMedium`; therefore every
+trait-object or concrete medium accepted by the former API is accepted by the
+single generic API. The coordinate-to-index mapping and property dispatch are
+unchanged, so the refactor removes duplicate symbols without changing values.
+
 ## Owner: Codex — Elide elastic-FWI objective histories [patch]
 
 - [x] Falsify the scheduling diagnosis: hosted Test Suite Coverage job

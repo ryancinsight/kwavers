@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+### Removed (2026-07-17) - Continuous medium access wrappers [patch]
+
+- Consolidate continuous-coordinate medium accessors over `CoreMedium` and
+  remove the redundant `density_at_core`, `sound_speed_at_core`,
+  `absorption_at_core`, and `nonlinearity_at_core` exports. Existing concrete
+  and trait-object callers use the same zero-copy coordinate mapping.
+
 ### Fixed (2026-07-17) - Elastic FWI objective memory [patch]
 
 - Record receiver displacements directly for elastic-FWI observed-data

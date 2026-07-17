@@ -1,5 +1,15 @@
 # Backlog / Strategy
 
+## KW-MED-059 — Consolidate continuous medium access [patch] — ✅ done
+
+- Owner: Codex; scope: `crates/kwavers-medium/src/{wrapper.rs,interface.rs,lib.rs}`.
+- Acceptance: one generic `CoreMedium` entry point serves both concrete and
+  trait-object callers; the four `*_at_core` compatibility forwarders and their
+  re-exports are deleted; interface detection compiles and its value semantics
+  remain unchanged.
+- Evidence: source search reports no `*_at_core` references; package check
+  passes; locked nightly Nextest runs 187/187 tests in 5.276 seconds.
+
 ## KW-SOL-058 — Elide elastic-FWI objective histories [patch] — in-progress
 
 - Owner: Codex; scope:

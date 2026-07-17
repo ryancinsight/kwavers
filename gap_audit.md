@@ -20,6 +20,14 @@
 
 # Gap Audit
 
+- Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
+  continuous-coordinate accessor as a `dyn Medium` function and a
+  `*_at_core` generic forwarder. The canonical functions now carry the
+  `CoreMedium` bound, point-wise interface detection calls them directly, and
+  the compatibility-shaped exports are deleted. Evidence tier: type-level
+  equivalence plus source residue scan; package check passes and locked nightly
+  Nextest runs 187/187 tests in 5.276 seconds.
+
 - Review 2026-07-17: the Atlas main pointer advanced Hephaestus with the
   aggregate `DeviceLimits` field
   `max_buffers_and_acceleration_structures_per_shader_stage`. Four Kwavers GPU
