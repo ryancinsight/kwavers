@@ -20,6 +20,16 @@
 
 # Gap Audit
 
+- Review 2026-07-17: the Atlas main pointer advanced Hephaestus with the
+  aggregate `DeviceLimits` field
+  `max_buffers_and_acceleration_structures_per_shader_stage`. Four Kwavers GPU
+  requirement builders still used the old struct shape, blocking hosted
+  Architecture Validation job `87946612531`. WGPU, CUDA, baseline, and
+  beamforming builders now propagate the field explicitly. The provider-limit
+  lift theorem is structural: WGPU preserves the aggregate budget, and CUDA
+  preserves capability absence as `None`; Hephaestus remains the sole mapping
+  owner. Hosted and focused feature verification remain open.
+
 - Review 2026-07-17: the AVX-512 FDTD kernels treated Leto `Array3<[x, y, z]>`
   as if x were unit-stride and skipped right-edge interior tails. Hosted job
   `87932791305` observed the resulting uniform-pressure defect. Pressure and
@@ -27,8 +37,7 @@
   validate C-contiguous inputs before raw-pointer dispatch. Full-interior and
   three-axis analytical contracts cover the regression. Local package test
   compilation and seven focused AVX-512 Nextest cases pass. Residual: the
-  fresh hosted matrix remains pending; all-feature Clippy awaits a peer repair
-  to Moirai `broadcast.rs` before the shared provider graph can compile.
+  fresh hosted matrix remains pending.
 
 - Review 2026-07-17: the provider-owned GPU PSTD output contract exposed three
   stale ignored parity tests still assigning the old five-argument `Vec<f32>`

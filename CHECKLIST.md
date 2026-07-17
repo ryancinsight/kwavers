@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — Align Hephaestus device-limit contract [patch]
+
+- [x] Trace hosted `DeviceLimits` construction failures to the provider API
+      field `max_buffers_and_acceleration_structures_per_shader_stage`.
+- [x] Propagate the aggregate limit through WGPU, CUDA, baseline, and
+      beamforming requirement builders without introducing a local adapter.
+- [ ] Verify the GPU feature and refreshed hosted Architecture Validation
+      matrix.
+
+**Theorem:** each Kwavers requirement builder is a field-preserving lift of the
+Hephaestus limit vocabulary. WGPU copies the provider aggregate budget, while
+CUDA maps the unavailable shader-stage budget to `None`; therefore no builder
+can silently erase the new contract field. The remaining evidence is compile
+and feature-test validation against the current provider graph.
+
 ## Owner: Codex — Repair AVX-512 FDTD layout contract [patch]
 
 - [x] Trace hosted Architecture Validation failure
@@ -17,9 +32,7 @@
 Leto constructs owned `Array3` values with C-contiguous layouts; the fixed
 kernel therefore uses strides `ny*nz`, `nz`, and `1` for x/y/z. `rustup run
 stable cargo check -p kwavers-solver --tests --locked` and the seven focused
-AVX-512 Nextest cases pass. All-feature Clippy is externally build-blocked by
-the fresh Moirai `broadcast.rs` borrow error and will be rerun after that peer
-increment compiles.
+AVX-512 Nextest cases pass. The fresh hosted matrix remains the merge gate.
 
 ## Owner: Codex — Update GPU PSTD parity contract [patch]
 

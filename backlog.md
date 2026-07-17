@@ -1,5 +1,16 @@
 # Backlog / Strategy
 
+## KW-GPU-056 — Align Hephaestus device-limit contract [patch] — in-progress
+
+- Owner: Codex; scope: `crates/kwavers-gpu/src/gpu/` and
+  `crates/kwavers-gpu/src/beamforming/three_dimensional/provider.rs`.
+- Acceptance: every explicit `hephaestus_core::DeviceLimits` initializer carries
+  the aggregate buffer/acceleration-structure limit; WGPU preserves the
+  provider baseline and CUDA reports `None` for the non-applicable capability.
+- Evidence: hosted Architecture Validation job `87946612531` reported four
+  `E0063` diagnostics after Hephaestus added the field. Focused GPU check and
+  feature validation must pass on the refreshed provider graph.
+
 ## KW-SOL-054 — Repair AVX-512 FDTD layout contract [patch] — in-progress
 
 - Owner: Codex; scope: `crates/kwavers-solver/src/forward/fdtd/avx512_stencil/`
@@ -10,9 +21,7 @@
 - Evidence: Architecture Validation job `87932791305` observed the old kernel
   write `0` at interior `[8, 8, 8]` for a uniform `7.5` field. On an AVX-512
   host, the focused Nextest suite passes all seven cases and package test
-  compilation passes. A fresh hosted matrix remains required before merge;
-  all-feature Clippy is temporarily graph-blocked by the fresh Moirai
-  `broadcast.rs` borrow error.
+  compilation passes. A fresh hosted matrix remains required before merge.
 
 ## KW-CI-053 — Update GPU PSTD parity contract [patch] — ✅ review
 
