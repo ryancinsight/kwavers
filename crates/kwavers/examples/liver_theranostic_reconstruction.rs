@@ -465,7 +465,9 @@ fn straight_ray(s: (f64, f64), r: (f64, f64)) -> Option<(GaiaRay, f64)> {
         receiver.z - origin.z,
     );
     let length = direction.norm();
-    GaiaRay::try_from_direction(origin, direction).map(|ray| (ray, length))
+    GaiaRay::try_new(origin, direction)
+        .ok()
+        .map(|ray| (ray, length))
 }
 
 fn rasterise_ray(
