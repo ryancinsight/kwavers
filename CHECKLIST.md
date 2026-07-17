@@ -13,6 +13,18 @@
   rewrite. The dependency change addresses the hosted failure recorded in
   Actions job `87918394437`; the new workflow head is pending rerun evidence.
 
+## Owner: Codex — Remove obsolete deployment workflow [patch]
+
+- [x] Confirm the deployment workflow has no `Dockerfile` or `k8s` artifacts in
+  the repository and contains an invalid combined `uses`/`run` step.
+- [x] Delete the stale workflow so the hosted matrix contains only runnable
+  validation jobs.
+- [x] Record the removal and its evidence in the project PM artifacts.
+
+**Current evidence:** `git ls-files` contains `.github/workflows/deploy.yml`
+  but no referenced deployment artifacts; Actions run `29593287070` reports a
+  workflow-file failure before creating jobs.
+
 ## Owner: Codex — Align Apollo provider lock [patch]
 
 - [x] Synchronize `Cargo.lock` from Apollo `0.23.0` to the merged provider

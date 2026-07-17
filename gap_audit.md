@@ -20,6 +20,12 @@
 
 # Gap Audit
 
+- Review 2026-07-17: `.github/workflows/deploy.yml` was obsolete. It referenced
+  absent `Dockerfile` and `k8s` artifacts and combined `uses` with `run` in one
+  step; Actions run `29593287070` failed at workflow parsing. The workflow is
+  deleted, leaving only runnable provider-aware validation workflows. Evidence
+  tier: repository file inventory and authoritative Actions status.
+
 - Review 2026-07-17: hosted Architecture Validation still checked the
   pre-format finite-window PSTD test at job `87924378467`; the local source is
   now canonical under nightly rustfmt. The CUDA job previously failed because

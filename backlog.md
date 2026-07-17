@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## KW-CI-051 — Remove obsolete deployment workflow [patch] — ✅ review
+
+- Owner: Codex; scope: `.github/workflows/deploy.yml` only.
+- Acceptance: no workflow references absent deployment artifacts or invalid
+  step syntax; the supported CI surface remains architecture validation,
+  migration audit, and the provider-aware build/test workflow.
+- Evidence: the repository contains no `Dockerfile` or `k8s` tree, and Actions
+  run `29593287070` failed at workflow parsing before creating jobs. The stale
+  workflow is deleted without changing simulation or deployment code.
+- Driver: the workflow was inherited from the old PINN service layout and has
+  no live repository inputs.
+
 ## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — ✅ review
 
 - Owner: Codex; scope: the finite-window PSTD test formatting and CUDA

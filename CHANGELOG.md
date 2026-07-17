@@ -14,6 +14,11 @@
 - Install the OpenSSL development metadata required by `openssl-sys` in the
   CUDA runtime container; no simulation code or test oracle changes.
 
+### Removed (2026-07-17) - obsolete deployment workflow [patch]
+
+- Remove the stale PINN deployment workflow that referenced absent Docker and
+  Kubernetes artifacts and could not be parsed by GitHub Actions.
+
 ### Breaking (2026-07-17) - GPU PSTD output contract [major]
 
 - `GpuPstdSolver::run` now requires `PstdOutputRequest` and returns
