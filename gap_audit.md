@@ -28,7 +28,9 @@
   round-trip contracts; warning-denied all-feature Clippy, docs, and doctests
   pass. The CI action previously consumed a stale Atlas integration branch
   whose RITK pin predated the repair; it now resolves the Atlas default graph.
-  Evidence tier: native compilation and value-semantic tests.
+  The CUDA container now installs the missing OpenSSL development package used
+  by the current RITK/DICOM graph. Evidence tier: native compilation and
+  value-semantic tests.
 
 - Closed 2026-07-17: `Grid` dimensions are public for interoperability, so
   callers that allocate one value per grid point can use `Grid::checked_size`

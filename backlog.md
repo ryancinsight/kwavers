@@ -9,7 +9,8 @@
   value-semantic spectrum parity plus reusable-buffer round-trip coverage.
   GPU-enabled Nextest passes 265/265; warning-denied all-feature Clippy, docs,
   and doctests pass. CI resolves Atlas path dependencies from `main` rather
-  than the stale integration branch whose RITK pin preceded the repair.
+  than the stale integration branch whose RITK pin preceded the repair. Its
+  CUDA container now installs `libssl-dev` for the RITK/DICOM OpenSSL build.
 
 ## KW-GRID-048 — Checked grid cardinality [minor] — done
 

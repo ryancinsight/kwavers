@@ -8,6 +8,11 @@
   device-discovery facade: callers construct `WgpuBackend` from a
   provider-acquired `WgpuDevice`, then handle plan creation errors directly.
 
+### Fixed
+
+- Installed OpenSSL development headers in the CUDA build container so the
+  current RITK/DICOM provider graph can build `openssl-sys` through `pkg-config`.
+
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
 - Added `Grid::checked_size`, the fallible cardinality contract for consumers
