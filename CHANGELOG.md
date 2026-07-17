@@ -18,6 +18,7 @@
   longer attempts to link the PyO3 extension as a benchmark target.
 - Scoped the stable, beta, and nightly plotting build/test matrix to `kwavers`
   for the same standalone-extension linker boundary.
+- Installed Fontconfig development headers for the workspace test-coverage job.
 
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
