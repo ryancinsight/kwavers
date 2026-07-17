@@ -26,7 +26,9 @@
   `CoreMedium` bound, point-wise interface detection calls them directly, and
   the compatibility-shaped exports are deleted. Evidence tier: type-level
   equivalence plus source residue scan; package check passes and locked nightly
-  Nextest runs 187/187 tests in 5.276 seconds.
+  Nextest runs 187/187 tests in 1.801 seconds. Because the deleted symbols were
+  public, ADR 038 classifies the change as [major] and `kwavers-medium` is now
+  4.0.0; no compatibility re-export is retained.
 
 - Review 2026-07-17: the Atlas main pointer advanced Hephaestus with the
   aggregate `DeviceLimits` field

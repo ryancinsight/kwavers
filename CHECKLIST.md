@@ -1,6 +1,6 @@
 # Project Checklist
 
-## Owner: Codex — Consolidate continuous medium access [patch]
+## Owner: Codex — Consolidate continuous medium access [major]
 
 - [x] Generalize `density_at`, `sound_speed_at`, `absorption_at`, and
       `nonlinearity_at` over `CoreMedium`, preserving `dyn Medium` callers.
@@ -9,7 +9,9 @@
 - [x] Delete the four `*_at_core` wrappers and their public re-exports; source
       search reports zero remaining references.
 - [x] Run `cargo nextest run --locked -p kwavers-medium --lib`: 187/187 tests
-      pass in 5.276 seconds (nextest run `580663cd-1bff-42b8-97d3-d185749a1fc9`).
+      pass in 1.801 seconds (nextest run `1b1623f6-b915-4455-9e91-8cc50f7cc5bb`).
+- [x] Record ADR 038 and bump `kwavers-medium` to 4.0.0 for the public symbol
+      removal.
 
 **Theorem:** `Medium` is a blanket refinement of `CoreMedium`; therefore every
 trait-object or concrete medium accepted by the former API is accepted by the

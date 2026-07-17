@@ -2,12 +2,14 @@
 
 ## Unreleased
 
-### Removed (2026-07-17) - Continuous medium access wrappers [patch]
+### Breaking (2026-07-17) - Continuous medium access wrappers [major]
 
 - Consolidate continuous-coordinate medium accessors over `CoreMedium` and
   remove the redundant `density_at_core`, `sound_speed_at_core`,
   `absorption_at_core`, and `nonlinearity_at_core` exports. Existing concrete
   and trait-object callers use the same zero-copy coordinate mapping.
+- Bump `kwavers-medium` from 3.0.0 to 4.0.0; external callers must use the
+  canonical generic accessors. See ADR 038.
 
 ### Fixed (2026-07-17) - Elastic FWI objective memory [patch]
 

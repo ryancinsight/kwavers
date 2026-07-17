@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-MED-059 — Consolidate continuous medium access [patch] — ✅ done
+## KW-MED-059 — Consolidate continuous medium access [major] — ✅ done
 
 - Owner: Codex; scope: `crates/kwavers-medium/src/{wrapper.rs,interface.rs,lib.rs}`.
 - Acceptance: one generic `CoreMedium` entry point serves both concrete and
@@ -8,7 +8,9 @@
   re-exports are deleted; interface detection compiles and its value semantics
   remain unchanged.
 - Evidence: source search reports no `*_at_core` references; package check
-  passes; locked nightly Nextest runs 187/187 tests in 5.276 seconds.
+  passes; locked nightly Nextest runs 187/187 tests in 1.801 seconds.
+- Versioning: `kwavers-medium` 3.0.0 → 4.0.0; ADR 038 records the public
+  removal and value-preservation theorem.
 
 ## KW-SOL-058 — Elide elastic-FWI objective histories [patch] — in-progress
 
