@@ -19,6 +19,8 @@
 - Scoped the stable, beta, and nightly plotting build/test matrix to `kwavers`
   for the same standalone-extension linker boundary.
 - Installed Fontconfig development headers for the workspace test-coverage job.
+- Scoped Tarpaulin coverage to `kwavers`, avoiding an invalid PyO3 extension
+  test link while retaining the facade's coverage measurement.
 
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
