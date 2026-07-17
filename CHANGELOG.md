@@ -5,10 +5,8 @@
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
 - Added `Grid::checked_size`, the fallible cardinality contract for consumers
-  that allocate one value per grid point. This prevents externally mutated,
-  unaddressable dimensions from silently overflowing allocation arithmetic.
-  Grid construction now also rejects non-finite spacing before deriving the
-  wave-number scale.
+  that allocate one value per grid point. Grid construction rejects
+  non-finite spacing before deriving the wave-number scale.
 
 ### Fixed (2026-07-16) - solver lint and native imaging cutover [patch]
 

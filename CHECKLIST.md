@@ -2,16 +2,15 @@
 
 ## Owner: Codex — Checked grid cardinality [minor]
 
-- [x] Expose `Grid::checked_size` as the single checked `nx × ny × nz`
-      cardinality contract for downstream allocation boundaries.
-- [x] Add an exact overflow regression for externally mutated public grid
-      dimensions.
-- [x] Reject non-finite spacing before deriving the grid's wave-number scale.
-- [x] Run the focused locked offline Nextest regression.
+- [x] Expose `Grid::checked_size` as the fallible `nx × ny × nz` cardinality
+      contract for downstream allocation boundaries.
+- [x] Add exact overflow and non-finite-spacing regressions.
+- [x] Run locked Nextest, warning-denied Clippy, docs, and doctest gates.
 
-**Current evidence:** `cargo nextest run --offline --locked -p kwavers-grid
-checked_size_rejects_unaddressable_dimensions` passes. Evidence tier:
-value-semantic regression and native compilation.
+**Evidence:** `cargo nextest run -p kwavers-grid --locked` passes 40/40;
+warning-denied Clippy, docs, and doctests pass. `cargo semver-checks` cannot
+build its temporary baseline because it resolves Apollo's Git Leto beside the
+workspace Leto and cannot type-check `kwavers-math`.
 
 ## Owner: Codex — Signed pulsed-wave spectral Doppler [minor]
 

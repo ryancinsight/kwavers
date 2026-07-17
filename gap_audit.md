@@ -20,12 +20,16 @@
 
 # Gap Audit
 
-- Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
-  while public dimensions can be mutated after construction. `Grid::checked_size`
-  now supplies the fallible cardinality contract at allocation boundaries, and
-  construction rejects non-finite spacing before deriving `k_max`; exact
-  overflow and non-finite-spacing regressions pass under locked offline Nextest.
-  Evidence tier: native compilation and value-semantic regression.
+- Closed 2026-07-17: `Grid` dimensions are public for interoperability, so
+  callers that allocate one value per grid point can use `Grid::checked_size`
+  after external mutation. Construction rejects non-finite spacing before
+  deriving `k_max`; 40/40 package tests, warning-denied Clippy, docs, and
+  doctests pass. Evidence tier: native compilation and value-semantic tests.
+- Residual verification risk: `cargo semver-checks` cannot compile its
+  temporary baseline because it resolves Apollo's Git Leto beside the normal
+  workspace Leto. The normal locked graph proves one Leto instance; restore
+  the isolated baseline's workspace patching before treating the SemVer gate
+  as satisfied.
 
 - In progress 2026-07-16: `PulsedWaveDoppler` previously returned only a
   one-sided magnitude waveform, discarding reverse-flow bins. The provider now

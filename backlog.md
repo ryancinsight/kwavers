@@ -1,5 +1,14 @@
 # Backlog / Strategy
 
+## KW-GRID-048 — Checked grid cardinality [minor] — done
+
+- Owner: Codex; scope: `kwavers-grid::Grid`, its core error text, and
+  synchronized Kwavers artifacts.
+- Closure: `Grid::new` rejects non-finite spacing and `checked_size` returns
+  `None` for an externally-mutated dimension product that overflows. Locked
+  Nextest passes 40/40; warning-denied Clippy, docs, and doctests pass. The
+  isolated SemVer baseline remains blocked by its duplicate Leto graph.
+
 ## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — review
 
 - Owner: Codex; scope: `kwavers-analysis` pulsed-wave Doppler spectrum contract,
