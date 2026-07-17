@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## KW-CI-057 — Serialize full workspace test processes [patch] — in-progress
+
+- Owner: Codex; scope: `.github/workflows/architecture-validation.yml` and
+  synchronized PM evidence.
+- Acceptance: the full workspace lib suite runs with `nextest
+  --test-threads=1`, preserving the existing test assertions and timeout
+  contract while eliminating runner-level solver oversubscription.
+- Evidence: hosted job `87949355634` ran 5,342 tests before
+  `fwi_outperforms_linear_inversion` reached its 90-second override while
+  other solver-heavy tests were active; the workflow change must be verified
+  by a fresh PR run.
+
 ## KW-GPU-056 — Align Hephaestus device-limit contract [patch] — in-progress
 
 - Owner: Codex; scope: `crates/kwavers-gpu/src/gpu/` and

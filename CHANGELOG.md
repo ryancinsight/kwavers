@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixed (2026-07-17) - Serialize solver-heavy test processes [patch]
+
+- Serialize the Architecture Validation workspace lib test processes to avoid
+  inter-test compute-pool oversubscription that timed out the elastic FWI
+  regression without changing its inputs, assertions, or timeout contract.
+
 ### Fixed (2026-07-17) - Hephaestus device-limit contract [patch]
 
 - Populate `max_buffers_and_acceleration_structures_per_shader_stage` in all

@@ -1,5 +1,20 @@
 # Project Checklist
 
+## Owner: Codex — Serialize full workspace test processes [patch]
+
+- [x] Trace the hosted failure to
+      `fwi_outperforms_linear_inversion` timing out at 90 seconds while the
+      workspace test matrix ran other solver-heavy tests concurrently.
+- [x] Serialize the full workspace lib test processes in the Architecture
+      Validation workflow without changing assertions or timeout values.
+- [ ] Re-run the hosted matrix and confirm the FWI contract completes under
+      the existing timeout policy.
+
+**Theorem:** serial test-process scheduling removes inter-test CPU contention;
+it does not alter solver inputs, execution order within a test, assertions, or
+timeout values. Therefore a green rerun is evidence for the same value-semantic
+contract under a bounded scheduling regime.
+
 ## Owner: Codex — Align Hephaestus device-limit contract [patch]
 
 - [x] Trace hosted `DeviceLimits` construction failures to the provider API

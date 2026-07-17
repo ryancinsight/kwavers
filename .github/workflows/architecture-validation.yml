@@ -162,7 +162,10 @@ jobs:
 
     - name: Run tests
       run: |
-        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib
+        # Full-wave solver tests share compute-heavy kernels. Serializing the
+        # test processes prevents runner oversubscription without changing
+        # assertions or the committed per-test timeout contract.
+        cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
 
     - name: Run doc tests

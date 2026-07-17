@@ -5242,3 +5242,17 @@ Two residual clusters, NOT migration-correctness defects:
   allocation/conversion (route facade `_into` through apollo `_into`, reuse scratch
   buffers across timesteps) and verify no accuracy regression on the elastic_fwi
   convergence tests. Dedicated effort; do not rush.
+## State refresh (2026-07-17) — FWI suite scheduling defect
+
+- **Finding:** hosted Test Suite Coverage job `87949355634` ran 5,342/5,630
+  tests, then terminated
+  `inverse::elastography::elastic_fwi::tests::fwi_outperforms_linear_inversion`
+  at 90.010 seconds while other solver-heavy tests were active. This is a
+  scheduling/oversubscription failure, not an assertion failure.
+- **Correction:** the Architecture Validation workspace lib suite now invokes
+  `cargo nextest ... --test-threads=1`; solver inputs, assertions, and timeout
+  values remain unchanged.
+- **Evidence tier:** hosted failure transcript plus configuration-level
+  reasoning; a fresh hosted run is required for closure.
+- **Residual:** the new head must complete the full matrix before the Kwavers
+  parent gitlink advances.
