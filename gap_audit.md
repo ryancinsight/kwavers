@@ -73,6 +73,45 @@
   construction rejects non-finite spacing before deriving `k_max`; exact
   overflow and non-finite-spacing regressions pass under locked offline Nextest.
   Evidence tier: native compilation and value-semantic regression.
+- Closed 2026-07-17: `kwavers-math`'s 3-D axis-transform facade allocated and
+  copied an Apollo buffer around every forward and inverse pass, even though
+  Kwavers and Apollo both use Leto storage and `eunomia::Complex64`. One
+  viscoacoustic step performs six derivatives, so the old path created twelve
+  temporary full fields and performed twenty-four full-buffer copies. The
+  facade now delegates directly to Apollo's axis plan methods. The locked
+  graph resolves Apollo 0.24.0; `kwavers-math` locked offline compilation and
+  the exact `decay_matches_dispersion_3d_diagonal` Nextest regression complete
+  below the unchanged 60-second cap. Evidence tier: native compilation and
+  value-semantic regression execution.
+
+- Closed 2026-07-17: Kwavers exposed an obsolete boolean GPU FFT probe after
+  Apollo moved device acquisition to the Hephaestus provider. The probe and
+  public re-export are deleted. GPU tests now acquire `WgpuDevice`, construct
+  Apollo's `WgpuBackend`, and propagate GPU execution errors. GPU-enabled
+  Nextest passes 265/265, including spectrum parity and reusable-buffer
+  round-trip contracts; warning-denied all-feature Clippy, docs, and doctests
+  pass. The CI action previously consumed a stale Atlas integration branch
+  whose RITK pin predated the repair; it now resolves the Atlas default graph.
+  The CUDA container now installs the missing OpenSSL development package used
+  by the current RITK/DICOM graph. Its `openssl-sys` build selects `CC=clang`,
+  so the container also installs the compiler executable in addition to
+  `libclang-dev`. The benchmark workflow now invokes the
+  Rust `kwavers` package explicitly rather than attempting to link the PyO3
+  extension as a benchmark executable; its stable/beta/nightly plotting
+  build/test matrix uses the same package boundary. Evidence tier: native compilation and
+  value-semantic tests.
+
+- Closed 2026-07-17: `Grid` dimensions are public for interoperability, so
+  callers that allocate one value per grid point can use `Grid::checked_size`
+  after external mutation. Construction rejects non-finite spacing before
+  deriving `k_max`; 40/40 package tests, warning-denied Clippy, docs, and
+  doctests pass. Evidence tier: native compilation and value-semantic tests.
+- Residual verification risk: `cargo semver-checks check-release --package
+  kwavers-math` cannot obtain a registry baseline because `kwavers-math` is
+  unpublished. The earlier temporary-baseline path additionally resolved
+  Apollo's Git Leto beside the normal workspace Leto. The normal locked graph
+  proves one Leto instance; restore isolated-baseline workspace patching before
+  treating the SemVer gate as satisfied.
 
 - In progress 2026-07-16: `PulsedWaveDoppler` previously returned only a
   one-sided magnitude waveform, discarding reverse-flow bins. The provider now

@@ -47,19 +47,56 @@
 cross the local 10-second slow marker and one crosses 30 seconds. This is
 runtime evidence only; the existing performance residual remains recorded in
 `gap_audit.md` and no workload or assertion was changed.
+## Owner: Codex — Direct Apollo axis FFT storage [patch]
+
+- [x] Remove the redundant Leto/`eunomia::Complex64` conversion and allocation
+      around Apollo's axis-transform plan APIs.
+- [x] Update the locked graph to the current Apollo 0.24.0 provider.
+- [x] Compile `kwavers-math` through the locked offline provider graph.
+- [x] Run the exact 3-D viscoacoustic decay regression through Nextest without
+      changing its grid, time steps, or timeout. Evidence: the unchanged
+      `decay_matches_dispersion_3d_diagonal` regression completes below the
+      60-second cap.
+
+## Owner: Codex — Retire stale Apollo GPU probe [major]
+
+- [x] Delete the uncalled `gpu_fft_available` facade that no longer exists in
+      the Apollo provider.
+- [x] Run the all-feature Kwavers Clippy frontier after the native cutover.
+- [x] Run the GPU-enabled `kwavers-math` Nextest suite, docs, and doctests.
+- [x] Make CI resolve Atlas path providers from the current default branch.
+- [x] Install OpenSSL development headers in the CUDA CI container.
+- [x] Install the `clang` executable required by `openssl-sys` header expansion.
+- [x] Scope plotting benchmarks to the Rust `kwavers` package.
+
+**Evidence:** `cargo nextest run -p kwavers-math --features gpu --locked` passes
+265/265, including Apollo WGPU spectrum parity and reusable-buffer round-trip
+contracts; warning-denied all-feature Kwavers Clippy, `cargo doc`, and
+`cargo test --doc` pass. `cargo semver-checks check-release --package
+kwavers-math` cannot obtain an automated baseline because `kwavers-math` is
+not published to crates.io; source review classifies the public removal as
+[major]. The pre-change CI provider branch pinned RITK before its repair;
+the action now resolves the verified Atlas default graph. The CUDA job now
+installs the missing `libssl-dev` package required by its RITK/DICOM graph.
+It also installs `clang`, which the OpenSSL build script selects through `CC`;
+`libclang-dev` alone does not provide that executable.
+The benchmark job retains real Criterion execution while excluding the PyO3
+extension, which is not a standalone benchmark executable.
+The plotting build/test matrix applies the same package boundary on stable,
+beta, and nightly.
 
 ## Owner: Codex — Checked grid cardinality [minor]
 
-- [x] Expose `Grid::checked_size` as the single checked `nx × ny × nz`
-      cardinality contract for downstream allocation boundaries.
-- [x] Add an exact overflow regression for externally mutated public grid
-      dimensions.
-- [x] Reject non-finite spacing before deriving the grid's wave-number scale.
-- [x] Run the focused locked offline Nextest regression.
+- [x] Expose `Grid::checked_size` as the fallible `nx × ny × nz` cardinality
+      contract for downstream allocation boundaries.
+- [x] Add exact overflow and non-finite-spacing regressions.
+- [x] Run locked Nextest, warning-denied Clippy, docs, and doctest gates.
 
-**Current evidence:** `cargo nextest run --offline --locked -p kwavers-grid
-checked_size_rejects_unaddressable_dimensions` passes. Evidence tier:
-value-semantic regression and native compilation.
+**Evidence:** `cargo nextest run -p kwavers-grid --locked` passes 40/40;
+warning-denied Clippy, docs, and doctests pass. `cargo semver-checks` cannot
+obtain a registry baseline because `kwavers-math` is unpublished; the earlier
+temporary-baseline path also resolved Apollo's Git Leto beside the workspace
+Leto and could not type-check `kwavers-math`.
 
 ## Owner: Codex — Signed pulsed-wave spectral Doppler [minor]
 

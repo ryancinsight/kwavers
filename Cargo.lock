@@ -4786,6 +4786,8 @@ dependencies = [
  "apollo-fft",
  "approx",
  "eunomia",
+ "hephaestus-core",
+ "hephaestus-wgpu",
  "hermes-simd",
  "kwavers-core",
  "leto",

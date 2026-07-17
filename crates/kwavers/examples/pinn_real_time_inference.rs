@@ -181,7 +181,7 @@ fn run_performance_benchmark() -> KwaversResult<()> {
         let _result = simulate_inference(&test_input);
 
         let elapsed = start.elapsed().as_micros();
-        total_time += elapsed as u128;
+        total_time += elapsed;
     }
 
     let avg_latency = total_time as f64 / num_samples as f64;
