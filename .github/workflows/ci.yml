@@ -242,7 +242,10 @@ jobs:
         uses: codecov/codecov-action@v3
         with:
           file: ./cobertura.xml
-          fail_ci_if_error: true
+          # Coverage generation above is the reproducible source gate. Codecov
+          # ingestion is an external service and may rate-limit tokenless uploads;
+          # preserve the report without turning transport failure into a source failure.
+          fail_ci_if_error: false
 
   pinn-convergence:
     name: PINN Convergence Analysis
