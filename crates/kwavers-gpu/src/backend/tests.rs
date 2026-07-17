@@ -55,11 +55,6 @@ fn solver_compute_backend_uses_provider_native_scalar() {
 }
 
 #[test]
-fn wgpu_pipeline_manager_name_is_provider_specific() {
-    assert!(std::mem::size_of::<crate::backend::pipeline::WgpuPipelineManager>() > 0);
-}
-
-#[test]
 fn gpu_provider_identity_is_separate_from_kernel_dispatch() {
     fn assert_provider<P>()
     where
@@ -209,7 +204,7 @@ fn spatial_derivative_shader_has_real_finite_difference_body() {
     let shader = include_str!("shaders/operators.wgsl");
 
     assert!(shader.contains("derivative_params.direction == 0u"));
-    assert!(shader.contains("input_a[idx + yz] - input_a[idx]"));
+    assert!(shader.contains("input[idx + yz] - input[idx]"));
     assert!(!shader.contains("placeholder"));
     assert!(!shader.contains("copy input to output"));
 }

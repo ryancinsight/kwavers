@@ -1,5 +1,14 @@
 ## State refresh (2026-07-16) — kwavers Batch #1 closure: Rayon → Moirai migration complete
 
+- **KW-GPU-060 — backend kernel ownership CLOSED [major] (2026-07-17).**
+  Kwavers deletes its duplicate WGPU backend buffer pool, raw transfer/readback
+  path, pipeline manager, and unsafe non-owning device pointer. The WGPU
+  provider now uses Hephaestus typed buffers, `MulOp`, and
+  `WgslMultiStorageKernel`; Leto remains the dense host-array boundary. GPU
+  backend Nextest passes 45/45 and CUDA-provider backend Nextest passes 50/50;
+  warning-denied Clippy, Rustdoc, and doctests pass. Residual: CUDA owns only
+  its real Hephaestus elementwise operation, not spatial derivatives.
+
 - **kwavers Batch #1 — CLOSED** per clean legacy migration audit.
   - Source-level scoped audits under `crates/kwavers*/src` report zero direct
     `rayon::`, `use rayon`, `par_for_each`, `into_par_iter()`, or `ndarray::Zip`
@@ -2334,17 +2343,12 @@ do not assert an unconfirmed physics error.
   run nightly cargo check -p kwavers-gpu --features cuda-provider
   --all-targets`, focused thermal-acoustic/provider nextest under `gpu`
   (38/38) and `cuda-provider` (45/45), and clippy for both feature sets pass.
-- **Backend buffer-manager provider seam - RESOLVED [patch].**
-  `kwavers-gpu::backend::GpuBackendBufferManager<P>` now delegates to
-  `BackendBufferProvider`. WGPU buffer pooling, allocation, array upload, and
-  readback live in `WgpuBackendBufferManager`, so the generic backend
-  buffer-manager wrapper no longer exposes `wgpu::Buffer` methods. Evidence
-  tier: type-level/compile-time validation plus focused GPU test; `cargo check
-  -p kwavers-gpu --features gpu` passes, `cargo clippy -p kwavers-gpu
-  --features gpu --lib -- -D warnings` passes, and `cargo nextest run -p
-  kwavers-gpu --features gpu
-  backend_buffer_manager_wrapper_is_generic_over_provider_trait --status-level
-  fail --no-fail-fast` passes 1/1.
+- **Backend buffer-manager provider seam - superseded by KW-GPU-060 [major].**
+  The former local `GpuBackendBufferManager<P>` and
+  `WgpuBackendBufferManager` were transitional duplication. They are deleted;
+  Hephaestus now owns typed buffers, transfer, pooling, and operation dispatch
+  below the Leto host-array boundary. See ADR 039 for the current contract and
+  verification.
 - **PSTD buffer allocation provider seam - RESOLVED [patch].**
   `GpuPstdSolver::new` and the run-cache rebuild path now delegate owned
   storage/staging buffer allocation through `PstdBufferProvider`. The WGPU

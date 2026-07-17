@@ -1,84 +1,13 @@
-// GPU Operators Compute Shader (WGSL)
+// GPU spatial-derivative compute shader.
 //
-// Implements common array operations for ultrasound simulation:
-// - Element-wise multiplication
-// - Element-wise addition/subtraction
-// - Scalar multiplication
-// - Spatial derivatives (k-space operators)
-//
-// Optimized for parallel execution on GPU
+// Elementwise and generic storage operations are dispatched by Hephaestus.
+// This source retains only the finite-difference operation specific to Kwavers.
 
-// Element-wise multiply: out = a * b
-@group(0) @binding(0)
-var<storage, read> input_a: array<f32>;
-
-@group(0) @binding(1)
-var<storage, read> input_b: array<f32>;
-
-@group(0) @binding(2)
-var<storage, read_write> output: array<f32>;
-
-@compute @workgroup_size(256, 1, 1)
-fn elementwise_multiply(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-
-    // Bounds check
-    if (idx >= arrayLength(&input_a)) {
-        return;
-    }
-
-    // Perform multiplication
-    output[idx] = input_a[idx] * input_b[idx];
-}
-
-// Element-wise addition: out = a + b
-@compute @workgroup_size(256, 1, 1)
-fn elementwise_add(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-
-    if (idx >= arrayLength(&input_a)) {
-        return;
-    }
-
-    output[idx] = input_a[idx] + input_b[idx];
-}
-
-// Element-wise subtraction: out = a - b
-@compute @workgroup_size(256, 1, 1)
-fn elementwise_subtract(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-
-    if (idx >= arrayLength(&input_a)) {
-        return;
-    }
-
-    output[idx] = input_a[idx] - input_b[idx];
-}
-
-// Scalar multiplication: out = a * scalar
 @group(0) @binding(0)
 var<storage, read> input: array<f32>;
 
 @group(0) @binding(1)
-var<storage, read_write> output_scalar: array<f32>;
-
-struct ScalarParams {
-    value: f32,
-}
-
-@group(0) @binding(2)
-var<uniform> params: ScalarParams;
-
-@compute @workgroup_size(256, 1, 1)
-fn scalar_multiply(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-
-    if (idx >= arrayLength(&input)) {
-        return;
-    }
-
-    output_scalar[idx] = input[idx] * params.value;
-}
+var<storage, read_write> output: array<f32>;
 
 struct DerivativeParams {
     nx: u32,
@@ -87,12 +16,12 @@ struct DerivativeParams {
     direction: u32,
 }
 
-@group(0) @binding(3)
+@group(0) @binding(2)
 var<uniform> derivative_params: DerivativeParams;
 
-// Spatial derivative using second-order central finite differences.
-// The original k-space derivative belongs in Apollo FFT-backed kernels.
-// Spatial boundary samples use first-order one-sided differences.
+// Second-order central differences in the interior and first-order one-sided
+// differences at domain boundaries. Grid spacing is intentionally absent: this
+// backend contract computes an index-space derivative.
 @compute @workgroup_size(256, 1, 1)
 fn spatial_derivative(@builtin(global_invocation_id) global_id: vec3<u32>) {
     let idx = global_id.x;
@@ -112,11 +41,11 @@ fn spatial_derivative(@builtin(global_invocation_id) global_id: vec3<u32>) {
         if (derivative_params.nx < 2u) {
             output[idx] = 0.0;
         } else if (x == 0u) {
-            output[idx] = input_a[idx + yz] - input_a[idx];
+            output[idx] = input[idx + yz] - input[idx];
         } else if (x + 1u == derivative_params.nx) {
-            output[idx] = input_a[idx] - input_a[idx - yz];
+            output[idx] = input[idx] - input[idx - yz];
         } else {
-            output[idx] = 0.5 * (input_a[idx + yz] - input_a[idx - yz]);
+            output[idx] = 0.5 * (input[idx + yz] - input[idx - yz]);
         }
         return;
     }
@@ -125,11 +54,11 @@ fn spatial_derivative(@builtin(global_invocation_id) global_id: vec3<u32>) {
         if (derivative_params.ny < 2u) {
             output[idx] = 0.0;
         } else if (y == 0u) {
-            output[idx] = input_a[idx + derivative_params.nz] - input_a[idx];
+            output[idx] = input[idx + derivative_params.nz] - input[idx];
         } else if (y + 1u == derivative_params.ny) {
-            output[idx] = input_a[idx] - input_a[idx - derivative_params.nz];
+            output[idx] = input[idx] - input[idx - derivative_params.nz];
         } else {
-            output[idx] = 0.5 * (input_a[idx + derivative_params.nz] - input_a[idx - derivative_params.nz]);
+            output[idx] = 0.5 * (input[idx + derivative_params.nz] - input[idx - derivative_params.nz]);
         }
         return;
     }
@@ -138,118 +67,14 @@ fn spatial_derivative(@builtin(global_invocation_id) global_id: vec3<u32>) {
         if (derivative_params.nz < 2u) {
             output[idx] = 0.0;
         } else if (z == 0u) {
-            output[idx] = input_a[idx + 1u] - input_a[idx];
+            output[idx] = input[idx + 1u] - input[idx];
         } else if (z + 1u == derivative_params.nz) {
-            output[idx] = input_a[idx] - input_a[idx - 1u];
+            output[idx] = input[idx] - input[idx - 1u];
         } else {
-            output[idx] = 0.5 * (input_a[idx + 1u] - input_a[idx - 1u]);
+            output[idx] = 0.5 * (input[idx + 1u] - input[idx - 1u]);
         }
         return;
     }
 
     output[idx] = 0.0;
-}
-// 3D element-wise multiply with proper indexing
-struct GridParams {
-    nx: u32,
-    ny: u32,
-    nz: u32,
-}
-
-@group(0) @binding(3)
-var<uniform> grid: GridParams;
-
-@compute @workgroup_size(8, 8, 4)
-fn elementwise_multiply_3d(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let x = global_id.x;
-    let y = global_id.y;
-    let z = global_id.z;
-
-    // Bounds check
-    if (x >= grid.nx || y >= grid.ny || z >= grid.nz) {
-        return;
-    }
-
-    // 3D to 1D index conversion
-    let idx = x + y * grid.nx + z * grid.nx * grid.ny;
-
-    // Perform multiplication
-    output[idx] = input_a[idx] * input_b[idx];
-}
-
-// Fused multiply-add: out = a * b + c
-@group(0) @binding(0)
-var<storage, read> fma_a: array<f32>;
-
-@group(0) @binding(1)
-var<storage, read> fma_b: array<f32>;
-
-@group(0) @binding(2)
-var<storage, read> fma_c: array<f32>;
-
-@group(0) @binding(3)
-var<storage, read_write> fma_out: array<f32>;
-
-@compute @workgroup_size(256, 1, 1)
-fn fused_multiply_add(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-
-    if (idx >= arrayLength(&fma_a)) {
-        return;
-    }
-
-    // FMA is often a single instruction on GPU
-    fma_out[idx] = fma(fma_a[idx], fma_b[idx], fma_c[idx]);
-}
-
-// Absolute value
-@compute @workgroup_size(256, 1, 1)
-fn absolute_value(@builtin(global_invocation_id) global_id: vec3<u32>) {
-    let idx = global_id.x;
-
-    if (idx >= arrayLength(&input)) {
-        return;
-    }
-
-    output_scalar[idx] = abs(input[idx]);
-}
-
-// Maximum reduction (find max value in array)
-@group(0) @binding(0)
-var<storage, read> reduction_input: array<f32>;
-
-@group(0) @binding(1)
-var<storage, read_write> reduction_output: array<f32>;
-
-var<workgroup> shared_data: array<f32, 256>;
-
-@compute @workgroup_size(256, 1, 1)
-fn max_reduction(@builtin(global_invocation_id) global_id: vec3<u32>,
-                 @builtin(local_invocation_id) local_id: vec3<u32>) {
-    let idx = global_id.x;
-    let local_idx = local_id.x;
-
-    // Load data into shared memory
-    if (idx < arrayLength(&reduction_input)) {
-        shared_data[local_idx] = reduction_input[idx];
-    } else {
-        shared_data[local_idx] = -3.40282e38;  // -FLT_MAX
-    }
-
-    workgroupBarrier();
-
-    // Tree reduction
-    var stride = 128u;
-    while (stride > 0u) {
-        if (local_idx < stride) {
-            shared_data[local_idx] = max(shared_data[local_idx], shared_data[local_idx + stride]);
-        }
-        workgroupBarrier();
-        stride = stride / 2u;
-    }
-
-    // Write result
-    if (local_idx == 0u) {
-        reduction_output[global_id.x / 256u] = shared_data[0];
-    }
 }

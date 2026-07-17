@@ -11,6 +11,13 @@
 - Bump `kwavers-medium` from 3.0.0 to 4.0.0; external callers must use the
   canonical generic accessors. See ADR 038.
 
+### Breaking (2026-07-17) - Hephaestus backend-kernel ownership [major]
+
+- Remove the obsolete public Kwavers WGPU backend buffer and pipeline managers.
+  `WgpuComputeProvider` now uses Hephaestus typed buffers, transfers, and WGSL
+  dispatch; Leto remains the host-array interface. `kwavers-gpu` advances from
+  3.0.0 to 4.0.0. See ADR 039.
+
 ### Fixed (2026-07-17) - Elastic FWI objective memory [patch]
 
 - Record receiver displacements directly for elastic-FWI observed-data

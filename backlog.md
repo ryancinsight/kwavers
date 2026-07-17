@@ -821,7 +821,23 @@ sites, enumerated in
 clippy now passes with `rustup run nightly cargo clippy -p kwavers-solver --lib
 --no-deps -- -D warnings` after the Atlas provider graph refresh.
 
-## TODO: kwavers-gpu kernel-buffer provider trait migration [arch]
+## KW-GPU-060 — Hephaestus backend-kernel ownership [major] — review
+
+- Owner: Codex; scope: `crates/kwavers-gpu/src/backend/{provider,buffers.rs,pipeline,shaders/operators.wgsl,mod.rs,tests.rs}`, `docs/adr/039-hephaestus-backend-kernel-ownership.md`, and synchronized package metadata.
+- Acceptance: `WgpuComputeProvider` uses Hephaestus typed transfer plus
+  `binary_elementwise_into` and `WgslMultiStorageKernel`; the local backend
+  buffer/pipeline managers and their unsafe device-pointer ownership are
+  deleted; Leto remains only at the host-array boundary; WGPU value regressions
+  preserve exact multiplication and affine derivatives.
+- Driver: the LeoNeuro GPU path must select Hephaestus as device-execution
+  owner rather than duplicating it beneath Leto host arrays.
+- Evidence: offline GPU and CUDA-provider compilation pass; warning-denied
+  Clippy passes for both feature sets; GPU backend Nextest passes 45/45 and
+  CUDA-provider backend Nextest passes 50/50. The WGPU cases execute exact
+  multiplication plus all three affine spatial derivatives on a real adapter.
+- Residual: current Hephaestus `WgslMultiStorageKernel` is WGPU-specific. A
+  CUDA spatial-derivative implementation remains unavailable until a real CUDA
+  kernel exists; CUDA therefore remains outside the composite provider trait.
 
 Lift concrete WGPU buffer allocation, pipeline execution, and shader dispatch
 behind a Hephaestus-owned provider trait so WGPU and CUDA can implement the

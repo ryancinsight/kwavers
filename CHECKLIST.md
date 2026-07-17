@@ -4011,6 +4011,16 @@ Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
       kwavers-gpu --features cuda-provider provider --status-level fail
       --no-fail-fast --offline` passed 7/7, and the stale CUDA-compute claim
       audit returned no hits.
+- [x] [major] Hephaestus backend-kernel ownership (KW-GPU-060): delete the
+      duplicated `backend::buffers` and `backend::pipeline` WGPU layers;
+      route exact multiplication through Hephaestus `MulOp` and spatial
+      derivatives through `WgslMultiStorageKernel`; retain Leto only as the
+      dense host-array boundary; delete the unsafe non-owning device-pointer
+      manager. ADR 039 records the public removal and verification plan.
+      Offline GPU/CUDA checks and warning-denied Clippy pass. GPU Nextest passes
+      45/45 and CUDA-provider Nextest passes 50/50; the GPU provider executes
+      exact multiplication and affine derivatives on a real adapter. Rustdoc
+      and doctest gates pass.
 - [ ] [arch] GPU kernel-buffer provider trait migration: lift concrete
       WGPU buffer allocation, pipeline execution, and shader dispatch behind a
       Hephaestus-owned provider trait so WGPU and CUDA can implement the same

@@ -14,12 +14,10 @@
 //! ├─────────────────────────────────────┤
 //! │  Initialization  │  Device Manager  │
 //! ├──────────────────┼──────────────────┤
-//! │  Buffer Manager  │  Pipeline Mgr    │
-//! ├──────────────────┼──────────────────┤
-//! │  Provider Dispatch (WGPU/CUDA seam) │
-//! │  Compute Shaders (WGSL today)       │
-//! │  - FFT           - Operators        │
-//! │  - Utils         - K-space          │
+//! │ Provider Dispatch (WGPU/CUDA seam)  │
+//! ├─────────────────────────────────────┤
+//! │ Hephaestus typed buffers and kernels│
+//! │ Compute Shaders (WGSL today)        │
 //! └─────────────────────────────────────┘
 //! ```
 //!
@@ -27,8 +25,8 @@
 //!
 //! - **Provider-generic:** WGPU is the default provider; CUDA uses the same trait seam
 //! - **Explicit availability:** device acquisition failures are surfaced to callers
-//! - **Memory management:** Efficient buffer pooling and reuse
-//! - **Pipeline caching:** Compile shaders once, reuse for performance
+//! - **Memory management:** Hephaestus typed transfer and pooled buffers
+//! - **Pipeline caching:** Hephaestus caches monomorphized kernel pipelines
 //!
 //! ## Usage
 //!
@@ -60,11 +58,9 @@
 //! - k-Wave GPU: CUDA implementation patterns
 //! - WebGPU API: <https://www.w3.org/TR/webgpu/>
 
-pub mod buffers;
 pub mod init;
 pub mod performance_monitor;
 pub mod physics_kernels;
-pub mod pipeline;
 pub mod provider;
 pub mod realtime_loop;
 
@@ -77,8 +73,6 @@ use physics_kernels::PhysicsKernelRegistry;
 use realtime_loop::{RealtimeConfig, RealtimeSimulationOrchestrator};
 use std::collections::HashMap;
 
-// Re-export key Phase 4 types for public API
-pub use buffers::{BackendBufferProvider, GpuBackendBufferManager, WgpuBackendBufferManager};
 pub use performance_monitor::{BudgetAnalysis, GpuStepMetrics};
 pub use physics_kernels::{PhysicsKernel, WorkgroupConfig};
 #[cfg(feature = "cuda-provider")]
