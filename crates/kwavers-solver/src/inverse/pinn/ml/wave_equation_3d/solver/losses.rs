@@ -213,7 +213,7 @@ where
         }
 
         let backend = B::default();
-        let n = (bc_points_x.len());
+        let n = bc_points_x.len();
         let mk = |v: &[f32]| {
             Var::new(
                 coeus_tensor::Tensor::from_slice_on(vec![n, 1], v, &backend),

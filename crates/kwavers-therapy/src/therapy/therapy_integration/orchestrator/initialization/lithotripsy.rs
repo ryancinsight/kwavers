@@ -27,10 +27,8 @@ use crate::therapy::lithotripsy::stone_fracture::StoneMaterial;
 use crate::therapy::lithotripsy::{LithotripsyParameters, LithotripsySimulator};
 use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
-#[cfg(feature = "nifti")]
 use kwavers_imaging::medical::{CTImageLoader, MedicalImageLoader};
 use leto::Array3;
-#[cfg(feature = "nifti")]
 use log::info;
 use log::warn;
 
@@ -98,40 +96,25 @@ fn create_stone_geometry(config: &TherapySessionConfig, grid: &Grid) -> Array3<f
 fn load_ct_imaging_data(config: &TherapySessionConfig) -> KwaversResult<Array3<f64>> {
     if let Some(ct_path) = &config.imaging_data_path {
         if ct_path.ends_with(".nii") || ct_path.ends_with(".nii.gz") {
-            #[cfg(feature = "nifti")]
-            {
-                let mut loader = CTImageLoader::new();
-                match loader.load(ct_path) {
-                    Ok(ct_data) => {
-                        let metadata = loader.ct_metadata().unwrap();
-                        info!(
-                            "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
-                            format_args!(
-                                "{}×{}×{}",
-                                metadata.dimensions.0, metadata.dimensions.1, metadata.dimensions.2
-                            ),
-                            metadata.voxel_spacing_mm.0,
-                            metadata.hu_range.0,
-                            metadata.hu_range.1
-                        );
-                        return Ok(ct_data);
-                    }
-                    Err(e) => {
-                        warn!(
-                            "Failed to load NIFTI CT data: {}. Using synthetic fallback.",
-                            e
-                        );
-                    }
+            let mut loader = CTImageLoader::new();
+            match loader.load(ct_path) {
+                Ok(ct_data) => {
+                    let metadata = loader.ct_metadata().expect("loaded CT carries metadata");
+                    info!(
+                        "Loaded CT scan: {} voxels, {:.2}mm spacing, HU range [{:.0}, {:.0}]",
+                        format_args!(
+                            "{}×{}×{}",
+                            metadata.dimensions.0, metadata.dimensions.1, metadata.dimensions.2
+                        ),
+                        metadata.voxel_spacing_mm.0,
+                        metadata.hu_range.0,
+                        metadata.hu_range.1
+                    );
+                    return Ok(ct_data);
                 }
-            }
-
-            #[cfg(not(feature = "nifti"))]
-            {
-                warn!(
-                    "NIFTI feature not enabled. Rebuild with --features nifti to load {}. \
-                     Using synthetic fallback.",
-                    ct_path
-                );
+                Err(error) => {
+                    warn!("Failed to load NIFTI CT data: {error}. Using synthetic fallback.");
+                }
             }
         } else if ct_path.ends_with(".dcm") {
             warn!(

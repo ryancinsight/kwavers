@@ -1,5 +1,5 @@
 #[cfg(feature = "gpu")]
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 #[cfg(feature = "gpu")]
 use kwavers_gpu::gpu::pipeline::{RealtimeImagingPipeline, RealtimePipelineConfig};
 #[cfg(feature = "gpu")]

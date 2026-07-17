@@ -151,7 +151,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> MetaLearne
                     if (poly.len()) < 2 {
                         return;
                     }
-                    let n_edges = (poly.len());
+                    let n_edges = poly.len();
                     let n = (base_count / n_edges.max(1)).max(10);
                     for i in 0..n_edges {
                         let (x0, y0) = poly[i];

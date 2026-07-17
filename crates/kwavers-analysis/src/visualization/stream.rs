@@ -226,9 +226,8 @@ impl VizStreamInner {
             .recv_async()
             .await
             .map_err(|err| format!("receive failed: {err}"))
-            .map(|frame| {
+            .inspect(|frame| {
                 self.record_consumed(frame.age());
-                frame
             })
     }
 
@@ -236,9 +235,8 @@ impl VizStreamInner {
         self.rx
             .recv()
             .map_err(|err| format!("receive failed: {err}"))
-            .map(|frame| {
+            .inspect(|frame| {
                 self.record_consumed(frame.age());
-                frame
             })
     }
 

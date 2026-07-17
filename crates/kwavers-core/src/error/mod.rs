@@ -165,11 +165,6 @@ pub enum KwaversError {
     #[error("I/O error")]
     Io(#[from] std::io::Error),
 
-    /// NIFTI format errors
-    #[cfg(feature = "nifti")]
-    #[error("NIFTI format error")]
-    Nifti(#[from] nifti::error::NiftiError),
-
     /// DICOM format errors (always present; DICOM I/O lives in ritk-io,
     /// which is now a mandatory dep — no feature gate required).
     #[error("DICOM format error: {0}")]

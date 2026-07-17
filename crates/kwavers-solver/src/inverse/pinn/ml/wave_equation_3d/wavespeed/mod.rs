@@ -100,7 +100,7 @@ where
             }));
         }
 
-        let data_cpu = Arc::new(slice.iter().cloned().collect::<Vec<_>>());
+        let data_cpu = Arc::new(slice.to_vec());
 
         Ok(Self {
             grid,

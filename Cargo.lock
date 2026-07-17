@@ -159,7 +159,7 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "apollo-fft"
-version = "0.20.0"
+version = "0.22.0"
 dependencies = [
  "apollo-fft-macros",
  "apollo-leto-interop",
@@ -1194,7 +1194,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-autograd"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "apollo-fft",
  "coeus-core",
@@ -1208,7 +1208,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-core"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "bytemuck",
  "eunomia",
@@ -1222,7 +1222,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-leto"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "coeus-core",
  "leto",
@@ -1231,7 +1231,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-nn"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -1244,7 +1244,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-ops"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -1260,7 +1260,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-optim"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "coeus-autograd",
  "coeus-core",
@@ -1271,7 +1271,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-sparse"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "coeus-core",
  "coeus-tensor",
@@ -1281,7 +1281,7 @@ dependencies = [
 
 [[package]]
 name = "coeus-tensor"
-version = "0.8.0"
+version = "0.9.0"
 dependencies = [
  "bytemuck",
  "coeus-core",
@@ -3255,6 +3255,7 @@ name = "gaia"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "approx",
  "aquamarine",
  "eunomia",
  "geometry-predicates",
@@ -4544,6 +4545,7 @@ dependencies = [
  "flate2",
  "flume",
  "gaia",
+ "hephaestus-wgpu",
  "image",
  "kwavers-analysis",
  "kwavers-boundary",
@@ -4579,8 +4581,10 @@ dependencies = [
  "rand_chacha 0.3.1",
  "rand_distr 0.4.3",
  "ritk-core",
+ "ritk-image",
  "ritk-io",
  "ritk-registration",
+ "ritk-spatial",
  "rkyv 0.7.46",
  "serde",
  "serde_json",

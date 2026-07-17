@@ -92,7 +92,7 @@ where
         let mut metrics = TrainingMetrics::new();
         let backend = B::default();
 
-        let n_data = (x_data.len());
+        let n_data = x_data.len();
         let x_data_vec: Vec<f32> = x_data.iter().map(|&v| v as f32).collect();
         let t_data_vec: Vec<f32> = t_data.iter().map(|&v| v as f32).collect();
         let u_data_vec: Vec<f32> = u_data.iter().map(|&v| v as f32).collect();

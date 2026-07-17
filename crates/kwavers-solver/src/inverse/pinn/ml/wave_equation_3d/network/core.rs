@@ -101,7 +101,7 @@ where
     }
 
     pub fn hidden_layer_count(&self) -> usize {
-        (self.hidden_layers.len())
+        self.hidden_layers.len()
     }
 
     /// Flatten all layer parameters (weights and biases) in forward order.

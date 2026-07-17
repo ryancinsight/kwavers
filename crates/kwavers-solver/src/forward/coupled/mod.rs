@@ -32,8 +32,8 @@ mod tests {
 
     #[test]
     fn test_coupled_module_exports() {
-        // Verify module structure is correct
-        let _coupler = ThermalAcousticCoupler::new_default();
-        assert!(true);
+        let coupler = ThermalAcousticCoupler::new_default();
+        assert!(coupler.config.dt > 0.0);
+        assert!(coupler.config.enable_temperature_coupling);
     }
 }

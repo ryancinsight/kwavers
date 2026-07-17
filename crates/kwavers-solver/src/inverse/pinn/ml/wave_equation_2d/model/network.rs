@@ -184,7 +184,7 @@ where
             ));
         }
 
-        let n = (x.len());
+        let n = x.len();
         let backend = B::default();
 
         let x_vec: Vec<f32> = x.iter().map(|&v| v as f32).collect();
@@ -263,7 +263,7 @@ where
 
         let x_slice = x.tensor.as_slice();
         let y_slice = y.tensor.as_slice();
-        let batch_size = (x_slice.len());
+        let batch_size = x_slice.len();
         let c_values: Vec<f32> = (0..batch_size)
             .map(|i| self.get_wave_speed_with_default(x_slice[i], y_slice[i], wave_speed as f32))
             .collect();

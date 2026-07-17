@@ -87,10 +87,9 @@ fn test_density_water_nominal_is_1000() {
 ///
 #[test]
 fn test_specific_heat_water_within_literature_range() {
-    assert!(
-        SPECIFIC_HEAT_WATER > 4150.0 && SPECIFIC_HEAT_WATER < 4220.0,
-        "SPECIFIC_HEAT_WATER ({SPECIFIC_HEAT_WATER}) outside NIST range [4150, 4220] J/(kg·K)"
-    );
+    const {
+        assert!(SPECIFIC_HEAT_WATER > 4150.0 && SPECIFIC_HEAT_WATER < 4220.0);
+    };
 }
 
 /// Weak coupling must evaluate the three physical coupling edges without

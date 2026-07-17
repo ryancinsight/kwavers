@@ -112,10 +112,14 @@ fn generate_training_data(
     }
 
     (
-        Array1::from_vec(x_data.len(), x_data).unwrap(),
-        Array1::from_vec(y_data.len(), y_data).unwrap(),
-        Array1::from_vec(t_data.len(), t_data).unwrap(),
-        Array2::from_shape_vec((n_data_points, 1), u_data).unwrap(),
+        Array1::from_vec(x_data.len(), x_data)
+            .expect("invariant: x sample count equals vector length"),
+        Array1::from_vec(y_data.len(), y_data)
+            .expect("invariant: y sample count equals vector length"),
+        Array1::from_vec(t_data.len(), t_data)
+            .expect("invariant: time sample count equals vector length"),
+        Array2::from_shape_vec((n_data_points, 1), u_data)
+            .expect("invariant: generated wave samples match grid shape"),
     )
 }
 
@@ -369,9 +373,12 @@ fn pinn_2d_benchmark(c: &mut Criterion) {
                         t_test.push(rand::random::<f64>() * config.total_time);
                     }
 
-                    let x_test = Array1::from_vec(x_test);
-                    let y_test = Array1::from_vec(y_test);
-                    let t_test = Array1::from_vec(t_test);
+                    let x_test = Array1::from_vec(x_test.len(), x_test)
+                        .expect("invariant: x test count equals vector length");
+                    let y_test = Array1::from_vec(y_test.len(), y_test)
+                        .expect("invariant: y test count equals vector length");
+                    let t_test = Array1::from_vec(t_test.len(), t_test)
+                        .expect("invariant: time test count equals vector length");
 
                     // Make predictions
                     let predictions = trainer
@@ -579,9 +586,12 @@ fn accuracy_benchmark(c: &mut Criterion) {
                 u_analytical.push(analytical_solution_2d(x, y, t, wave_speed));
             }
 
-            let x_test = Array1::from_vec(x_test);
-            let y_test = Array1::from_vec(y_test);
-            let t_test = Array1::from_vec(t_test);
+            let x_test = Array1::from_vec(x_test.len(), x_test)
+                .expect("invariant: x test count equals vector length");
+            let y_test = Array1::from_vec(y_test.len(), y_test)
+                .expect("invariant: y test count equals vector length");
+            let t_test = Array1::from_vec(t_test.len(), t_test)
+                .expect("invariant: time test count equals vector length");
 
             // Make predictions
             let predictions = trainer

@@ -152,7 +152,7 @@ where
     let metrics = compute_validation_metrics(&fdtd_solution, &pinn_prediction)?;
     let correlation = compute_correlation(&fdtd_solution, &pinn_prediction)?;
     let mean_relative_error = compute_mean_relative_error(&fdtd_solution, &pinn_prediction)?;
-    let num_points = (fdtd_solution.len());
+    let num_points = fdtd_solution.len();
     let speedup_factor = if pinn_time > 0.0 {
         fdtd_time / pinn_time
     } else {

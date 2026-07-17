@@ -170,10 +170,10 @@ impl MetaOptimizer {
         self._iteration_count += 1;
 
         if (self._m.len()) != (params.len()) {
-            self._m = vec![None; (params.len())];
+            self._m = vec![None; params.len()];
         }
         if (self._v.len()) != (params.len()) {
-            self._v = vec![None; (params.len())];
+            self._v = vec![None; params.len()];
         }
 
         let beta1 = self._beta1 as f32;

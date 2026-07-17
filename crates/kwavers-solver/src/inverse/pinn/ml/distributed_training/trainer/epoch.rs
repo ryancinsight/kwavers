@@ -71,7 +71,7 @@ where
 
         let mut results: Vec<(TrainingMetrics2D, Vec<f32>)> = Vec::new();
 
-        let n_replicas = (self.coordinator.model_replicas.len());
+        let n_replicas = self.coordinator.model_replicas.len();
         for replica_idx in 0..n_replicas {
             let backend = B::default();
 
@@ -158,7 +158,7 @@ where
         &mut self,
         gpu_results: &[(TrainingMetrics2D, Vec<f32>)],
     ) -> KwaversResult<()> {
-        let n_gpus = (gpu_results.len());
+        let n_gpus = gpu_results.len();
 
         let mut total_loss = 0.0_f64;
         let mut data_loss = 0.0_f64;

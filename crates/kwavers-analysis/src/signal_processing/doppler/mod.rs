@@ -85,7 +85,7 @@ pub use autocorrelation::{
 pub use book_fixture::{continuous_wave_vector_flow_fixture, ContinuousWaveVectorFlowFixture};
 pub use color_flow::{ColorFlowConfig, ColorFlowImaging, VelocityMap};
 pub use continuous_wave::{ContinuousWaveDoppler, CwDopplerConfig, CwSpectrum};
-pub use pulsed_wave::{PWDConfig, PulsedWaveDoppler, SpectralWaveform};
+pub use pulsed_wave::{PWDConfig, PulsedWaveDoppler, SignedSpectralWaveform, SpectralWaveform};
 pub use spectral::{SpectralAnalysis, SpectralConfig};
 pub use types::{DopplerResult, FlowDirection, VelocityEstimate};
 pub use vector_flow::{VectorFlowEstimator, VectorVelocity};

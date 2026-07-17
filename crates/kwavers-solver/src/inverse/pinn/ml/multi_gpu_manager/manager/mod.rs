@@ -53,7 +53,7 @@ impl MultiGpuManager {
         }
 
         let communication_channels = Self::initialize_communication_channels(&devices);
-        let device_count = (devices.len());
+        let device_count = devices.len();
 
         Ok(Self {
             devices,

@@ -6,7 +6,7 @@ impl QuantizedModel {
             .iter()
             .map(|tensor| match &tensor.data {
                 QuantizedData::F32(v) => (v.len()) * 4,
-                QuantizedData::I8(v) => (v.len()),
+                QuantizedData::I8(v) => v.len(),
             })
             .sum::<usize>()
     }

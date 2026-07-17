@@ -19,8 +19,10 @@ fn test_linear_array_phase_accuracy() {
     let wavelength = c0 / frequency;
     let dx = wavelength / 16.0;
 
-    let mut config = PstdConfig::default();
-    config.dt = super::CFL_NUMBER * dx / c0;
+    let config = PstdConfig {
+        dt: super::CFL_NUMBER * dx / c0,
+        ..PstdConfig::default()
+    };
 
     let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid);
@@ -28,8 +30,10 @@ fn test_linear_array_phase_accuracy() {
     // Create linear array source (multiple point sources along x-axis)
     let num_elements = 8;
     let element_spacing = wavelength; // λ spacing
-    let mut source_data = kwavers_source::GridSource::default();
-    source_data.p_mask = Some(Array3::zeros((n, n, 1)));
+    let mut source_data = kwavers_source::GridSource {
+        p_mask: Some(Array3::zeros((n, n, 1))),
+        ..kwavers_source::GridSource::default()
+    };
 
     let center_x = n / 2;
     let center_y = n / 2;

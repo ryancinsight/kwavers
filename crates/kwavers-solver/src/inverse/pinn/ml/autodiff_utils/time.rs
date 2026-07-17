@@ -92,8 +92,8 @@ where
     let backend = B::default();
 
     let raw = input.as_slice();
-    let mut plus = raw.iter().cloned().collect::<Vec<_>>();
-    let mut minus = raw.iter().cloned().collect::<Vec<_>>();
+    let mut plus = raw.to_vec();
+    let mut minus = raw.to_vec();
     for row in 0..batch {
         plus[row * 3] += eps;
         minus[row * 3] -= eps;

@@ -111,7 +111,7 @@ fn demonstrate_delay_and_sum() -> KwaversResult<()> {
         "  Reconstruction rate: {:.1} volumes/sec",
         1000.0 / processing_time
     );
-    let (nx, ny, nz) = volume.dim();
+    let [nx, ny, nz] = volume.shape();
     println!("  Volume dimensions: {}×{}×{}", nx, ny, nz);
     println!(
         "  Volume range: {:.3} to {:.3}",
@@ -172,7 +172,8 @@ fn demonstrate_dynamic_focusing() -> KwaversResult<()> {
         let processing_time = start_time.elapsed().as_secs_f64() * 1000.0;
 
         // Calculate basic quality metrics
-        let mean_signal = volume.mean().unwrap_or(0.0);
+        let mean_signal = leto::mean_all(&volume)
+            .expect("invariant: beamforming configuration produces a non-empty volume");
         let max_signal = volume.iter().copied().fold(f32::NEG_INFINITY, f32::max);
         let dynamic_range = if mean_signal != 0.0 {
             20.0 * (max_signal / mean_signal.abs()).log10()
@@ -416,7 +417,7 @@ fn cpu_beamforming_delay_and_sum(
     rf_data: &Array4<f32>,
     config: &BeamformingConfig3D,
 ) -> KwaversResult<Array3<f32>> {
-    let (frames, channels, samples, _) = rf_data.dim();
+    let [frames, channels, samples, _] = rf_data.shape();
     let (vol_x, vol_y, vol_z) = config.volume_dims;
 
     let mut volume = Array3::<f32>::zeros((vol_x, vol_y, vol_z));

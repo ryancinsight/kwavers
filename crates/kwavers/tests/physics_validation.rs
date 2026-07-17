@@ -172,7 +172,8 @@ mod finite_difference_tests {
         let dx = 0.01;
         let k = 2.0 * std::f64::consts::PI; // wavenumber
 
-        let x: Array1<f64> = Array1::linspace(0.0, dx * n as f64, n);
+        let x: Array1<f64> =
+            Array1::from_shape_fn(n, |[index]| dx * n as f64 * index as f64 / (n - 1) as f64);
         let u: Array1<f64> = x.mapv(|xi| (k * xi).sin());
 
         // Compute Laplacian using 2nd order FD
@@ -209,7 +210,8 @@ mod finite_difference_tests {
         let dx = 0.01;
         let k = 2.0 * std::f64::consts::PI;
 
-        let x: Array1<f64> = Array1::linspace(0.0, dx * n as f64, n);
+        let x: Array1<f64> =
+            Array1::from_shape_fn(n, |[index]| dx * n as f64 * index as f64 / (n - 1) as f64);
         let u: Array1<f64> = x.mapv(|xi| (k * xi).sin());
 
         // 4th order coefficients

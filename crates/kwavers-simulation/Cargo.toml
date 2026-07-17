@@ -34,7 +34,7 @@ log = "0.4"
 
 [features]
 gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver/gpu"]
-nifti = ["kwavers-core/nifti"]
+
 
 [dev-dependencies]
 approx = "0.5"

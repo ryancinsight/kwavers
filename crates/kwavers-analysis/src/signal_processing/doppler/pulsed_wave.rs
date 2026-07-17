@@ -94,6 +94,22 @@ impl Default for PWDConfig {
 /// or equivalently velocity `v[k] = f_d[k] · c / (2 · f₀ · cos θ)`.
 pub type SpectralWaveform = Array1<f64>;
 
+/// Centered, two-sided pulsed-wave Doppler spectrum.
+///
+/// `frequency_hz`, `velocity_m_s`, and `power` share the same ascending signed
+/// Doppler-bin order. The first bin is the most negative observable frequency;
+/// the final bin is the largest positive frequency below Nyquist. Unlike the
+/// legacy one-sided magnitude waveform, this type retains reverse-flow energy.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SignedSpectralWaveform {
+    /// Signed Doppler frequency bins in hertz.
+    pub frequency_hz: Array1<f64>,
+    /// Signed beam-projected velocity bins in metres per second.
+    pub velocity_m_s: Array1<f64>,
+    /// Squared complex-FFT magnitudes at the matching signed bins.
+    pub power: Array1<f64>,
+}
+
 /// Pulsed-wave Doppler processor
 #[derive(Debug, Clone)]
 pub struct PulsedWaveDoppler {
@@ -125,51 +141,67 @@ impl PulsedWaveDoppler {
     /// velocity `v = f_d · c / (2 · f₀ · cos θ)`.
     ///
     /// # Errors
-    /// Returns `InvalidInput` if `fft_size < 2` or the ensemble is empty.
+    /// Returns `InvalidInput` if `fft_size < 2`, the ensemble is empty, or the
+    /// ensemble is longer than `fft_size`. The latter is rejected rather than
+    /// silently discarding acquired pulses.
     pub fn extract_waveform(
         &self,
         iq_ensemble: ArrayView1<Complex64>,
     ) -> KwaversResult<SpectralWaveform> {
-        let ensemble_len = iq_ensemble.size();
+        let spectrum = fft_1d_complex(&self.windowed_iq(iq_ensemble)?);
 
-        if ensemble_len == 0 {
-            return Err(KwaversError::InvalidInput(
-                "I/Q ensemble must be non-empty".to_owned(),
-            ));
-        }
-
-        let fft_size = self.config.fft_size;
-        if fft_size < 2 {
-            return Err(KwaversError::InvalidInput(
-                "fft_size must be ≥ 2".to_owned(),
-            ));
-        }
-
-        // ── Step 1: High-pass wall filter — subtract ensemble mean ────────────
-        // Removes DC clutter from slow-moving vessel walls and stationary tissue.
-        let mean: Complex64 = iq_ensemble.iter().sum::<Complex64>() / ensemble_len as f64;
-        let filtered: Vec<Complex64> = iq_ensemble.iter().map(|&s| s - mean).collect();
-
-        // ── Step 2: Hann window + zero-pad to fft_size ────────────────────────
-        // Window length = min(ensemble_len, fft_size); zero-pad remaining.
-        let win_len = ensemble_len.min(fft_size);
-        let mut windowed = Array1::<Complex64>::zeros([fft_size]);
-
-        for n in 0..win_len {
-            let w = 0.5 * (1.0 - (TWO_PI * n as f64 / (win_len - 1).max(1) as f64).cos());
-            windowed[n] = filtered[n] * w;
-        }
-
-        // ── Step 3: FFT ───────────────────────────────────────────────────────
-        let spectrum = fft_1d_complex(&windowed);
-
-        // ── Step 4: One-sided magnitude spectrum ──────────────────────────────
+        // One-sided magnitude spectrum.
         // Length = fft_size/2 + 1; bin k → f_d = k·f_prf/fft_size.
-        let out_len = fft_size / 2 + 1;
+        let out_len = self.config.fft_size / 2 + 1;
         let waveform: SpectralWaveform =
             Array1::from_shape_fn([out_len], |idx| spectrum[idx[0]].norm());
 
         Ok(waveform)
+    }
+
+    /// Extract a centered, signed Doppler-power spectrum from range-gated I/Q.
+    ///
+    /// The shared preprocessing removes static clutter, applies a Hann window,
+    /// and zero-pads before an FFT. The returned bins use the conventional
+    /// centered order `[-f_prf/2, ..., 0, ..., +f_prf/2)`, preserving both
+    /// approaching and receding flow components.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] for empty or overlong I/Q, invalid
+    /// physical Doppler parameters, or a beam angle perpendicular to flow.
+    pub fn signed_spectrum(
+        &self,
+        iq_ensemble: ArrayView1<Complex64>,
+    ) -> KwaversResult<SignedSpectralWaveform> {
+        let velocity_per_hz = self.signed_velocity_per_hz()?;
+        let fft_size = self.config.fft_size;
+        let fft_size_i32 = i32::try_from(fft_size).map_err(|_| {
+            KwaversError::InvalidInput("fft_size exceeds signed spectral indexing range".to_owned())
+        })?;
+        let spectrum = fft_1d_complex(&self.windowed_iq(iq_ensemble)?);
+        let midpoint = fft_size_i32 / 2;
+        let bin_width_hz = self.config.prf / f64::from(fft_size_i32);
+        let frequency_hz = Array1::from_shape_vec(
+            [fft_size],
+            (-midpoint..(fft_size_i32 - midpoint))
+                .map(|signed_bin| f64::from(signed_bin) * bin_width_hz)
+                .collect(),
+        )
+        .map_err(|error| {
+            KwaversError::InvalidInput(format!("invalid signed spectrum shape: {error}"))
+        })?;
+        let velocity_m_s = frequency_hz.mapv(|frequency_hz| frequency_hz * velocity_per_hz);
+        let power = Array1::from_shape_fn([fft_size], |index| {
+            let source_index = (index[0] + fft_size - fft_size / 2) % fft_size;
+            spectrum[source_index].norm_sqr()
+        });
+
+        Ok(SignedSpectralWaveform {
+            frequency_hz,
+            velocity_m_s,
+            power,
+        })
     }
 
     /// Velocity axis corresponding to `extract_waveform` output (m/s).
@@ -180,7 +212,7 @@ impl PulsedWaveDoppler {
     pub fn velocity_axis(&self) -> Array1<f64> {
         let fft_size = self.config.fft_size;
         let out_len = fft_size / 2 + 1;
-        let cos_theta = self.config.beam_angle.cos().max(1e-6); // avoid division by zero
+        let cos_theta = self.config.beam_angle.cos().abs().max(f64::EPSILON);
         let df_to_v = self.config.c_sound / (2.0 * self.config.center_frequency * cos_theta);
         let df = self.config.prf / fft_size as f64;
 
@@ -196,8 +228,85 @@ impl PulsedWaveDoppler {
     /// Above this velocity, Doppler aliasing occurs (Evans & McDicken 2000, §3.5).
     #[must_use]
     pub fn max_velocity(&self) -> f64 {
-        let cos_theta = self.config.beam_angle.cos().max(1e-6);
+        let cos_theta = self.config.beam_angle.cos().abs().max(f64::EPSILON);
         self.config.prf * self.config.c_sound / (4.0 * self.config.center_frequency * cos_theta)
+    }
+
+    fn windowed_iq(&self, iq_ensemble: ArrayView1<Complex64>) -> KwaversResult<Array1<Complex64>> {
+        let ensemble_len = iq_ensemble.size();
+        if ensemble_len == 0 {
+            return Err(KwaversError::InvalidInput(
+                "I/Q ensemble must be non-empty".to_owned(),
+            ));
+        }
+        let fft_size = self.config.fft_size;
+        if fft_size < 2 {
+            return Err(KwaversError::InvalidInput(
+                "fft_size must be ≥ 2".to_owned(),
+            ));
+        }
+        if ensemble_len > fft_size {
+            return Err(KwaversError::InvalidInput(
+                "I/Q ensemble length must not exceed fft_size".to_owned(),
+            ));
+        }
+
+        // Subtracting the ensemble mean removes the zero-frequency tissue term
+        // before the spectral window is applied.
+        let ensemble_len_f64 = f64::from(u32::try_from(ensemble_len).map_err(|_| {
+            KwaversError::InvalidInput("I/Q ensemble exceeds supported window length".to_owned())
+        })?);
+        let mean: Complex64 = iq_ensemble.iter().sum::<Complex64>() / ensemble_len_f64;
+        let window_denominator =
+            f64::from(u32::try_from((ensemble_len - 1).max(1)).map_err(|_| {
+                KwaversError::InvalidInput(
+                    "I/Q ensemble exceeds supported window length".to_owned(),
+                )
+            })?);
+        let mut windowed = Vec::with_capacity(fft_size);
+        for n in 0..fft_size {
+            if n >= ensemble_len {
+                windowed.push(Complex64::new(0.0, 0.0));
+                continue;
+            }
+            let sample_index = f64::from(u32::try_from(n).map_err(|_| {
+                KwaversError::InvalidInput(
+                    "I/Q ensemble exceeds supported window length".to_owned(),
+                )
+            })?);
+            let window = 0.5 * (1.0 - (TWO_PI * sample_index / window_denominator).cos());
+            windowed.push((iq_ensemble[n] - mean) * window);
+        }
+        Array1::from_shape_vec([fft_size], windowed)
+            .map_err(|error| KwaversError::InvalidInput(format!("invalid window shape: {error}")))
+    }
+
+    fn signed_velocity_per_hz(&self) -> KwaversResult<f64> {
+        for (name, value) in [
+            ("center_frequency", self.config.center_frequency),
+            ("prf", self.config.prf),
+            ("c_sound", self.config.c_sound),
+            ("sample_volume_depth", self.config.sample_volume_depth),
+            ("sample_volume_length", self.config.sample_volume_length),
+        ] {
+            if !(value.is_finite() && value > 0.0) {
+                return Err(KwaversError::InvalidInput(format!(
+                    "{name} must be finite and positive"
+                )));
+            }
+        }
+        if !self.config.beam_angle.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "beam_angle must be finite".to_owned(),
+            ));
+        }
+        let beam_alignment = self.config.beam_angle.cos();
+        if beam_alignment.abs() <= f64::EPSILON {
+            return Err(KwaversError::InvalidInput(
+                "beam_angle must not be perpendicular to flow".to_owned(),
+            ));
+        }
+        Ok(self.config.c_sound / (2.0 * self.config.center_frequency * beam_alignment))
     }
 }
 
@@ -285,6 +394,21 @@ mod tests {
         assert_eq!(waveform.len(), config.fft_size / 2 + 1);
     }
 
+    #[test]
+    fn waveform_rejects_an_ensemble_longer_than_its_fft() {
+        let pwd = PulsedWaveDoppler::new(PWDConfig {
+            fft_size: 8,
+            ..Default::default()
+        });
+        let ensemble = Array1::<Complex64>::zeros([9]);
+
+        let error = pwd.extract_waveform(ensemble.view()).unwrap_err();
+        let KwaversError::InvalidInput(message) = error else {
+            panic!("expected an invalid I/Q ensemble error");
+        };
+        assert_eq!(message, "I/Q ensemble length must not exceed fft_size");
+    }
+
     /// **Test: waveform is non-negative (magnitude spectrum)**
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -302,6 +426,73 @@ mod tests {
         for (k, &v) in waveform.iter().enumerate() {
             assert!(v >= 0.0, "Waveform[{k}] = {v} < 0 (magnitude must be ≥ 0)");
         }
+    }
+
+    #[test]
+    fn signed_spectrum_retains_reverse_flow_energy_and_velocity_axis() {
+        let config = PWDConfig {
+            fft_size: 64,
+            prf: 4_096.0,
+            center_frequency: 5.0 * MHZ_TO_HZ,
+            c_sound: SOUND_SPEED_TISSUE,
+            beam_angle: 0.0,
+            ..Default::default()
+        };
+        let signed_bin = -7_i32;
+        let fft_size = u32::try_from(config.fft_size)
+            .expect("invariant: test FFT size fits the documented provider range");
+        let doppler_frequency_hz = f64::from(signed_bin) * config.prf / f64::from(fft_size);
+        let ensemble = Array1::<Complex64>::from_shape_fn([config.fft_size], |index| {
+            let sample =
+                f64::from(u32::try_from(index[0]).expect("invariant: test FFT index fits u32"));
+            let phase = TWO_PI * doppler_frequency_hz * sample / config.prf;
+            Complex64::new(phase.cos(), phase.sin())
+        });
+        let spectrum = PulsedWaveDoppler::new(config.clone())
+            .signed_spectrum(ensemble.view())
+            .unwrap();
+        let (peak_index, peak_power) = spectrum
+            .power
+            .iter()
+            .copied()
+            .enumerate()
+            .max_by(|(_, left), (_, right)| left.total_cmp(right))
+            .unwrap();
+        let expected_velocity_m_s =
+            doppler_frequency_hz * config.c_sound / (2.0 * config.center_frequency);
+        // A radix-2 FFT applies O(N log₂N) floating-point operations per bin.
+        // γ₁₀₂₄ bounds this 64-sample spectral-axis comparison conservatively.
+        let roundoff = 1024.0 * f64::EPSILON;
+        let velocity_bound = expected_velocity_m_s.abs() * roundoff / (1.0 - roundoff);
+
+        assert_eq!(peak_index, 25);
+        assert!(peak_power > 0.0);
+        assert_eq!(spectrum.frequency_hz[0], -config.prf / 2.0);
+        assert_eq!(
+            spectrum.frequency_hz[spectrum.frequency_hz.len() - 1],
+            config.prf / 2.0 - config.prf / f64::from(fft_size)
+        );
+        assert!(spectrum.velocity_m_s[peak_index] < 0.0);
+        assert!(
+            (spectrum.velocity_m_s[peak_index] - expected_velocity_m_s).abs() <= velocity_bound
+        );
+    }
+
+    #[test]
+    fn signed_spectrum_rejects_perpendicular_beam_geometry() {
+        let config = PWDConfig {
+            beam_angle: std::f64::consts::FRAC_PI_2,
+            ..Default::default()
+        };
+        let ensemble = Array1::<Complex64>::zeros([2]);
+
+        let error = PulsedWaveDoppler::new(config)
+            .signed_spectrum(ensemble.view())
+            .unwrap_err();
+        let KwaversError::InvalidInput(message) = error else {
+            panic!("expected a perpendicular beam-angle error");
+        };
+        assert_eq!(message, "beam_angle must not be perpendicular to flow");
     }
 
     /// **Test: velocity axis has correct length and maximum velocity (Nyquist)**

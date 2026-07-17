@@ -21,7 +21,6 @@ use leto::Array3;
 /// **Dealiasing note.** The 2/3-rule filter preserves mode m when
 /// `k_m = 2πm/(N·Δx) ≤ 2π/(3·Δx)`, i.e., m ≤ N/3. For N=32 and m=1
 /// (fundamental mode), this holds trivially.
-
 /// Spectral derivative of sin(k₁·x) equals k₁·cos(k₁·x) to machine precision
 /// for the fundamental mode (m=1, exactly DFT-representable, passes 2/3 dealiasing).
 #[test]

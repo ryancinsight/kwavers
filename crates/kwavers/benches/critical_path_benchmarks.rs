@@ -209,7 +209,7 @@ fn bench_field_operations(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("scalar_multiply", size), &size, |b, _| {
             b.iter(|| {
                 for x in field1.iter_mut() {
-                    *x = *x * black_box(scalar);
+                    *x *= black_box(scalar);
                 }
             })
         });

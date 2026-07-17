@@ -300,7 +300,6 @@ impl kwavers_imaging::CEUSOrchestrator for ContrastEnhancedUltrasound {
 
         let frequency = kwavers_core::constants::numerical::MHZ_TO_HZ; // Default 1 MHz
         self.simulate_acoustic_response(max_pressure, frequency, _time)
-            .map(Into::into)
     }
 
     fn get_perfusion_data(&self) -> KwaversResult<leto::Array3<f64>> {

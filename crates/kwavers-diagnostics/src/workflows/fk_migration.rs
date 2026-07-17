@@ -59,13 +59,13 @@ pub fn fk_stolt_migration(data: &Array2<f64>, dx: f64, dt: f64, sound_speed: f64
     for ([i, j], &val) in data.indexed_iter() {
         s0[[i, j]] = Complex64::new(val, 0.0);
     }
-    let s = fft_2d_complex(&s0.into());
+    let s = fft_2d_complex(&s0);
 
     let kx: Vec<f64> = (0..nx).map(|i| ang_bin(i, nx, dx)).collect();
     let omega_bin_scale = (nt as f64) * dt / TAU; // ω → continuous bin index
 
     // remap onto the image spectrum R(k_x, k_z)
-    let mut r: LetoArray2<Complex64> = Array2::<Complex64>::zeros((nx, nt)).into();
+    let mut r: LetoArray2<Complex64> = Array2::<Complex64>::zeros((nx, nt));
     for i in 0..nx {
         let kx2 = kx[i] * kx[i];
         for l in 0..nt {

@@ -32,8 +32,10 @@ fn test_kspace_shift_operators_match_pstd() {
     );
 
     let medium = HomogeneousMedium::water(&grid);
-    let mut pstd_config = PSTDConfig::default();
-    pstd_config.dt = dt;
+    let pstd_config = PSTDConfig {
+        dt,
+        ..PSTDConfig::default()
+    };
     let pstd = PSTDSolver::new(pstd_config, grid, &medium, GridSource::default()).unwrap();
 
     for i in 0..(pstd.ddx_k_shift_pos.len()) {

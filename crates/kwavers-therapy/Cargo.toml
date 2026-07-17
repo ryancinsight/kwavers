@@ -27,7 +27,6 @@ log = "0.4"
 tracing = { workspace = true }
 
 [features]
-nifti = ["kwavers-core/nifti"]
 
 [dev-dependencies]
 approx = "0.5"

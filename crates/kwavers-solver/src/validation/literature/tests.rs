@@ -35,13 +35,13 @@ fn test_linear_regression() {
 fn test_treeby_parameters() {
     assert_eq!(treeby_2010::SOUND_SPEED, SOUND_SPEED_WATER_SIM);
     assert_eq!(treeby_2010::DENSITY, DENSITY_WATER_NOMINAL);
-    assert!(treeby_2010::MAX_PHASE_VELOCITY_ERROR <= 0.001);
+    const { assert!(treeby_2010::MAX_PHASE_VELOCITY_ERROR <= 0.001) };
 }
 
 #[test]
 fn test_pinton_parameters() {
-    assert!(pinton_2009::SHEAR_SPEED > 0.0);
-    assert!(pinton_2009::COMPRESSIONAL_SPEED > pinton_2009::SHEAR_SPEED);
+    const { assert!(pinton_2009::SHEAR_SPEED > 0.0) };
+    const { assert!(pinton_2009::COMPRESSIONAL_SPEED > pinton_2009::SHEAR_SPEED) };
 }
 
 #[test]

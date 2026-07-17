@@ -37,7 +37,7 @@ impl WaveGeometry2D {
             }
             WaveGeometry2D::Polygonal { vertices, holes } => {
                 let mut inside = false;
-                let n = (vertices.len());
+                let n = vertices.len();
                 let mut j = n - 1;
                 for i in 0..n {
                     let vi = vertices[i];
@@ -52,7 +52,7 @@ impl WaveGeometry2D {
                 if inside {
                     for hole in holes {
                         let mut hole_inside = false;
-                        let m = (hole.len());
+                        let m = hole.len();
                         let mut k = m - 1;
                         for i in 0..m {
                             let vi = hole[i];

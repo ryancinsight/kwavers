@@ -94,7 +94,7 @@ impl TestElasticMedium {
 // Implement required traits for TestElasticMedium
 use kwavers_medium::{
     AcousticProperties, ArrayAccess, BubbleProperties, BubbleState, CoreMedium, ElasticArrayAccess,
-    ElasticProperties, OpticalProperties, ThermalField, ThermalProperties, ViscousProperties,
+    ElasticProperties, MediumOpticalProperties, ThermalField, ThermalProperties, ViscousProperties,
 };
 
 impl CoreMedium for TestElasticMedium {
@@ -246,7 +246,7 @@ impl ThermalField for TestElasticMedium {
 
 // Medium trait is automatically implemented via blanket impl
 
-impl OpticalProperties for TestElasticMedium {
+impl MediumOpticalProperties for TestElasticMedium {
     fn optical_absorption_coefficient(&self, _x: f64, _y: f64, _z: f64, _grid: &Grid) -> f64 {
         0.01 // 1/m
     }

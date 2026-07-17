@@ -252,7 +252,7 @@ fn test_wave_propagation() {
 
     // Set Gaussian pulse in pressure field (leto indexed_iter_mut; ndarray Zip retired)
     {
-        let mut pressure_slice = initial_fields
+        let pressure_slice = initial_fields
             .index_axis_mut::<3>(0, 0)
             .expect("invariant: pressure component at axis-0 index 0");
         for (idx, p) in pressure_slice

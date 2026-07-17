@@ -70,7 +70,7 @@ fn test_nonlinear_solver_creation() {
 /// - `max_abs_u = 1.0 × 10⁻³ m = u_ref` → `max_u_over_ref = 1.0`
 /// - `c_max = 1500 × 1.1 = 1650 m/s`
 /// - `dt_cfl = 0.45 × 0.001 / 1650 ≈ 2.727 × 10⁻⁷ s < max_dt`
-/// → `dt = dt_cfl` (cap does not apply)
+///   → `dt = dt_cfl` (cap does not apply)
 #[test]
 fn cfl_time_step_matches_analytical_formula() {
     let grid = Grid::new(16, 16, 16, 0.001, 0.001, 0.001).unwrap();
@@ -105,7 +105,7 @@ fn cfl_time_step_matches_analytical_formula() {
 ///
 /// With Δx = 0.1 m (100 mm):
 /// - `dt_cfl = 0.45 × 0.1 / 1650 ≈ 2.727 × 10⁻⁵ s >> max_dt = 9.0 × 10⁻⁷ s`
-/// → `dt = max_dt = 9.0 × 10⁻⁷ s`
+///   → `dt = max_dt = 9.0 × 10⁻⁷ s`
 #[test]
 fn cfl_time_step_capped_by_max_dt_for_coarse_grid() {
     let dx_coarse = 0.1_f64; // 100 mm → dt_cfl >> max_dt

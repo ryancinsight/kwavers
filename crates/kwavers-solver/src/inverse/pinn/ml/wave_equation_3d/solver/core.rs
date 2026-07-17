@@ -91,7 +91,7 @@ where
     /// - Returns [`crate::KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     /// - Propagates any [`crate::KwaversError`] returned by called functions.
     pub fn predict(&self, x: &[f32], y: &[f32], z: &[f32], t: &[f32]) -> KwaversResult<Vec<f32>> {
-        let n = (x.len());
+        let n = x.len();
         if n == 0 {
             return Err(KwaversError::InvalidInput(
                 "Prediction inputs must be non-empty".into(),
@@ -176,7 +176,7 @@ where
                 },
             ));
         }
-        Ok(slice.iter().cloned().collect::<Vec<_>>())
+        Ok(slice.to_vec())
     }
 }
 

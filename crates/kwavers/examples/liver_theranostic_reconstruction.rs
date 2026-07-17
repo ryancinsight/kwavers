@@ -104,6 +104,13 @@ const NX: usize = 80;
 const NY: usize = 5;
 const NZ: usize = 80;
 
+type FwiShot = (
+    FwiGeometry,
+    Array2<f64>,
+    (usize, usize),
+    Vec<(usize, usize, usize)>,
+);
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tissue acoustic constants
 // ─────────────────────────────────────────────────────────────────────────────
@@ -258,88 +265,82 @@ fn build_synthetic_abdomen() -> LiverPhantom {
 /// slice with the largest liver-segmentation area as the focal section for
 /// therapy planning.
 fn load_liver_ct(ct_path: &str, seg_path: &str) -> Option<LiverPhantom> {
-    #[cfg(feature = "nifti")]
-    {
-        use nifti::{IntoNdArray, NiftiObject, ReaderOptions};
+    use ritk_io::domain::ImageReader;
+    use ritk_io::format::nifti::native::NiftiReader;
 
-        let ct_obj = ReaderOptions::new().read_file(ct_path).ok()?;
-        let ct_dims = ct_obj.header().dim;
-        let (vnx, vny, vnz) = (
-            ct_dims[1] as usize,
-            ct_dims[2] as usize,
-            ct_dims[3] as usize,
-        );
-        let ct_vol: ArrayD<f64> = ct_obj.into_volume().into_ndarray::<f64>().ok()?;
+    let reader = NiftiReader::new(coeus_core::SequentialBackend);
+    let ct_obj = reader.read(ct_path).ok()?;
+    let ct_dims = ct_obj.shape();
+    let (vnx, vny, vnz) = (ct_dims[0], ct_dims[1], ct_dims[2]);
 
-        let seg_vol: Option<ArrayD<f64>> =
-            ReaderOptions::new().read_file(seg_path).ok().and_then(|s| {
-                let d = s.header().dim;
-                if d[1] as usize == vnx && d[2] as usize == vny && d[3] as usize == vnz {
-                    s.into_volume().into_ndarray::<f64>().ok()
-                } else {
-                    None
-                }
-            });
+    // Convert f32 to f64 for kwavers computations
+    let ct_flat: Vec<f64> = ct_obj.data_vec().into_iter().map(f64::from).collect();
+    let ct_vol = leto::Array3::from_shape_vec(ct_dims, ct_flat).ok()?;
 
-        // Pick the axial slice (z-index) with the largest liver area (label ≥ 1).
-        let focal_z = if let Some(seg) = seg_vol.as_ref() {
-            let mut best_k = vnz / 2;
-            let mut best_area = 0usize;
-            for k in 0..vnz {
-                let mut area = 0usize;
-                for i in 0..vnx {
-                    for j in 0..vny {
-                        if seg[[i, j, k]] >= 1.0 {
-                            area += 1;
-                        }
+    let seg_vol = {
+        let seg_obj = reader.read(seg_path).ok()?;
+        let seg_dims = seg_obj.shape();
+        if seg_dims == ct_dims {
+            let seg_flat: Vec<f64> = seg_obj.data_vec().into_iter().map(f64::from).collect();
+            leto::Array3::from_shape_vec(seg_dims, seg_flat).ok()
+        } else {
+            None
+        }
+    };
+
+    // Pick the axial slice (z-index) with the largest liver area (label ≥ 1).
+    let focal_z = if let Some(seg) = seg_vol.as_ref() {
+        let mut best_k = vnz / 2;
+        let mut best_area = 0usize;
+        for k in 0..vnz {
+            let mut area = 0usize;
+            for i in 0..vnx {
+                for j in 0..vny {
+                    if seg[[i, j, k]] >= 1.0 {
+                        area += 1;
                     }
-                }
-                if area > best_area {
-                    best_area = area;
-                    best_k = k;
                 }
             }
-            best_k
-        } else {
-            vnz / 2
-        };
+            if area > best_area {
+                best_area = area;
+                best_k = k;
+            }
+        }
+        best_k
+    } else {
+        vnz / 2
+    };
 
-        let sx = vnx as f64 / NX as f64;
-        let sy = vny as f64 / NZ as f64;
-        let mut hu = Array3::<f64>::from_elem((NX, NY, NZ), 0.0);
-        let mut mask = Array3::<f64>::zeros((NX, NY, NZ));
-        for i in 0..NX {
-            for k in 0..NZ {
-                let si = ((i as f64 + 0.5) * sx) as usize;
-                let sj = ((k as f64 + 0.5) * sy) as usize;
-                let si = si.min(vnx - 1);
-                let sj = sj.min(vny - 1);
-                let voxel = ct_vol[[si, sj, focal_z]];
+    let sx = vnx as f64 / NX as f64;
+    let sy = vny as f64 / NZ as f64;
+    let mut hu = Array3::<f64>::from_elem((NX, NY, NZ), 0.0);
+    let mut mask = Array3::<f64>::zeros((NX, NY, NZ));
+    for i in 0..NX {
+        for k in 0..NZ {
+            let si = ((i as f64 + 0.5) * sx) as usize;
+            let sj = ((k as f64 + 0.5) * sy) as usize;
+            let si = si.min(vnx - 1);
+            let sj = sj.min(vny - 1);
+            let voxel = ct_vol[[si, sj, focal_z]];
+            for j in 0..NY {
+                hu[[i, j, k]] = voxel;
+            }
+            if let Some(seg) = seg_vol.as_ref() {
+                let m = seg[[si, sj, focal_z]];
                 for j in 0..NY {
-                    hu[[i, j, k]] = voxel;
-                }
-                if let Some(seg) = seg_vol.as_ref() {
-                    let m = seg[[si, sj, focal_z]];
-                    for j in 0..NY {
-                        mask[[i, j, k]] = m;
-                    }
+                    mask[[i, j, k]] = m;
                 }
             }
         }
-        let sound_speed = hu.mapv(hu_to_sound_speed);
-        let density = hu.mapv(hu_to_density);
-        return Some(LiverPhantom {
-            hu,
-            sound_speed,
-            density,
-            liver_mask: seg_vol.is_some().then_some(mask),
-        });
     }
-    #[cfg(not(feature = "nifti"))]
-    {
-        let _ = (ct_path, seg_path);
-        None
-    }
+    let sound_speed = hu.mapv(hu_to_sound_speed);
+    let density = hu.mapv(hu_to_density);
+    Some(LiverPhantom {
+        hu,
+        sound_speed,
+        density,
+        liver_mask: seg_vol.is_some().then_some(mask),
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -502,12 +503,7 @@ struct StraightRayObservation {
 }
 
 fn extract_rays(
-    shots: &[(
-        FwiGeometry,
-        Array2<f64>,
-        (usize, usize),
-        Vec<(usize, usize, usize)>,
-    )],
+    shots: &[FwiShot],
     water_shots: &[Array2<f64>],
     dt: f64,
     f0: f64,
@@ -521,8 +517,9 @@ fn extract_rays(
         rcvs.iter()
             .enumerate()
             .filter_map(|(r_idx, &(rx_ix, _, rx_iz))| {
-                let trace: Vec<f64> = obs.row(r_idx).to_vec();
-                let water_trace: Vec<f64> = water_obs.row(r_idx).to_vec();
+                let trace: Vec<f64> = obs.rows().ok()?.nth(r_idx)?.iter().copied().collect();
+                let water_trace: Vec<f64> =
+                    water_obs.rows().ok()?.nth(r_idx)?.iter().copied().collect();
                 let t_obs = extract_tof(&trace, &wavelet, dt);
                 let t_water = extract_tof(&water_trace, &wavelet, dt);
                 let (ray, length_voxels) =
@@ -692,10 +689,10 @@ fn pick_focal_point(mask: Option<&Array3<f64>>) -> (usize, usize) {
     if let Some(m) = mask {
         // Prefer tumour voxels (label ≥ 1.5); fall back to all-liver (≥ 0.5).
         for threshold in [1.5_f64, 0.5_f64] {
-            let mut sum_i = 0.0;
-            let mut sum_k = 0.0;
-            let mut count = 0.0;
-            for ((i, _j, k), &v) in m.indexed_iter() {
+            let mut sum_i = 0.0_f64;
+            let mut sum_k = 0.0_f64;
+            let mut count = 0.0_f64;
+            for ([i, _j, k], &v) in m.indexed_iter() {
                 if v >= threshold {
                     sum_i += i as f64;
                     sum_k += k as f64;
@@ -768,7 +765,7 @@ fn viridis_rgba(v01: f64) -> [u8; 4] {
 
 /// Render a 3-D field's y=0 plane to an `UPSCALE`×-upsampled RGBA frame.
 fn field_to_frame(field: &Array3<f64>, lo: f64, hi: f64) -> RgbaImage {
-    let (nx, _ny, nz) = field.dim();
+    let [nx, _ny, nz] = field.shape();
     let span = (hi - lo).max(f64::EPSILON);
     let w = (nx * UPSCALE) as u32;
     let h = (nz * UPSCALE) as u32;
@@ -818,7 +815,7 @@ fn field_to_frame(field: &Array3<f64>, lo: f64, hi: f64) -> RgbaImage {
 fn bmode_compress(reflectivity: &Array3<f64>, dynamic_range_db: f64) -> Array3<f64> {
     let env_max = reflectivity.iter().map(|v| v.abs()).fold(0.0_f64, f64::max);
     if env_max < f64::EPSILON {
-        return Array3::zeros(reflectivity.dim());
+        return Array3::zeros(reflectivity.shape());
     }
     let inv_max = 1.0 / env_max;
     reflectivity.mapv(|v| {
@@ -831,7 +828,7 @@ fn bmode_compress(reflectivity: &Array3<f64>, dynamic_range_db: f64) -> Array3<f
 /// Greyscale rendering for B-mode output (replaces the perceptual colour ramp
 /// with the diagnostic-ultrasound convention).
 fn field_to_frame_gray(field01: &Array3<f64>) -> RgbaImage {
-    let (nx, _ny, nz) = field01.dim();
+    let [nx, _ny, nz] = field01.shape();
     let w = (nx * UPSCALE) as u32;
     let h = (nz * UPSCALE) as u32;
     let mut img = RgbaImage::new(w, h);
@@ -902,8 +899,8 @@ fn quality_report(true_model: &Array3<f64>, recon: &Array3<f64>) {
         .map(|(&t, &r)| (t - r).abs())
         .fold(0.0_f64, f64::max);
 
-    let mean_t = true_model.sum() / n;
-    let mean_r = recon.sum() / n;
+    let mean_t = true_model.iter().copied().sum::<f64>() / n;
+    let mean_r = recon.iter().copied().sum::<f64>() / n;
     let cov = true_model
         .iter()
         .zip(recon.iter())
@@ -1051,12 +1048,7 @@ fn main() -> KwaversResult<()> {
     // per-call peak allocation is bounded (forward_model_sensor_only, ~55 MB —
     // safe for n_shots × available scheduling lanes on a workstation).
     let t0 = Instant::now();
-    let shots: Vec<(
-        FwiGeometry,
-        Array2<f64>,
-        (usize, usize),
-        Vec<(usize, usize, usize)>,
-    )> = map_collect_with::<Adaptive, _, _, _>(&tx, |&(ix, iz)| {
+    let shots: Vec<FwiShot> = map_collect_with::<Adaptive, _, _, _>(&tx, |&(ix, iz)| {
         let (geom, rcvs) = build_shot_geometry(ix, iz, &ring, nt, dt, f0);
         let obs = fwi.generate_synthetic_data(&phantom.sound_speed, &geom, &grid)?;
         Ok::<_, kwavers_core::error::KwaversError>((geom, obs, (ix, iz), rcvs))
@@ -1125,9 +1117,11 @@ fn main() -> KwaversResult<()> {
     let smooth_prior = gaussian_blur(&phantom.sound_speed, 3.0);
     let mut rtm_snapshot = Array3::<f64>::zeros((NX, NY, NZ));
     for (_geom, obs, _, rcvs) in &shots {
-        for (r_idx, &(rx_ix, _, rx_iz)) in rcvs.iter().enumerate() {
-            let trace = obs.row(r_idx);
-            let rms = (trace.iter().map(|&v| v * v).sum::<f64>() / trace.len() as f64).sqrt();
+        let traces = obs
+            .rows()
+            .expect("invariant: recorded trace matrix has a valid receiver axis");
+        for (trace, &(rx_ix, _, rx_iz)) in traces.zip(rcvs) {
+            let rms = (trace.iter().map(|&v| v * v).sum::<f64>() / trace.shape()[0] as f64).sqrt();
             rtm_snapshot[[rx_ix, 0, rx_iz]] += rms;
         }
     }
@@ -1441,8 +1435,8 @@ fn metrics(truth: &Array3<f64>, recon: &Array3<f64>) -> (f64, f64) {
         .sum::<f64>()
         / n)
         .sqrt();
-    let mt = truth.sum() / n;
-    let mr = recon.sum() / n;
+    let mt = truth.iter().copied().sum::<f64>() / n;
+    let mr = recon.iter().copied().sum::<f64>() / n;
     let cov = truth
         .iter()
         .zip(recon.iter())
@@ -1466,7 +1460,7 @@ fn metrics(truth: &Array3<f64>, recon: &Array3<f64>) -> (f64, f64) {
 /// CT-derived smooth prior for FWI and the RTM background velocity, following
 /// Guasch (2020) §Methods.
 fn gaussian_blur(field: &Array3<f64>, sigma: f64) -> Array3<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     let radius = (3.0 * sigma).ceil() as isize;
     let raw: Vec<f64> = (-radius..=radius)
         .map(|k| (-0.5 * (k as f64 / sigma).powi(2)).exp())
@@ -1488,7 +1482,7 @@ fn gaussian_blur(field: &Array3<f64>, sigma: f64) -> Array3<f64> {
         }
         acc
     });
-    let tmp = Array3::<f64>::from_shape_vec(field.dim(), tmp_values)
+    let tmp = Array3::<f64>::from_shape_vec(field.shape(), tmp_values)
         .expect("invariant: flat Moirai x-pass preserves field shape length");
 
     // Z-pass.
@@ -1504,6 +1498,6 @@ fn gaussian_blur(field: &Array3<f64>, sigma: f64) -> Array3<f64> {
         }
         acc
     });
-    Array3::<f64>::from_shape_vec(field.dim(), out_values)
+    Array3::<f64>::from_shape_vec(field.shape(), out_values)
         .expect("invariant: flat Moirai z-pass preserves field shape length")
 }

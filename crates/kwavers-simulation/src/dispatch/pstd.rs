@@ -21,23 +21,12 @@ use kwavers_source::{GridSource, Source as KwaversSource};
 
 fn embed_leto3(
     arr: &leto::Array3<f64>,
-    pnx: usize,
-    pny: usize,
-    pnz: usize,
-    nx: usize,
-    ny: usize,
-    nz: usize,
-    px: usize,
-    py: usize,
-    pz: usize,
+    padded_shape: [usize; 3],
+    offset: [usize; 3],
 ) -> leto::Array3<f64> {
-    let mut out = leto::Array3::<f64>::zeros([pnx, pny, pnz]);
-    for i in 0..nx {
-        for j in 0..ny {
-            for k in 0..nz {
-                out[[i + px, j + py, k + pz]] = arr[[i, j, k]];
-            }
-        }
+    let mut out = leto::Array3::<f64>::zeros(padded_shape);
+    for ([i, j, k], &value) in arr.indexed_iter() {
+        out[[i + offset[0], j + offset[1], k + offset[2]]] = value;
     }
     out
 }
@@ -184,14 +173,15 @@ pub(crate) fn prepare_solver(
         let px_embed = if pad_x { p } else { 0 };
         let py = if pad_y { p } else { 0 };
         let pz_embed = if pad_z_two_sided { p } else { 0 };
-        let p = px_embed;
+        let offset = [px_embed, py, pz_embed];
+        let padded_shape = [pnx, pny, pnz];
 
         let mut padded_mask = Array3::<bool>::from_elem((pnx, pny, pnz), false);
         padded_mask
             .slice_with_mut::<3>(&[
                 SliceArg::Range {
-                    start: Some(p as isize),
-                    end: Some((nx + p) as isize),
+                    start: Some(px_embed as isize),
+                    end: Some((nx + px_embed) as isize),
                     step: 1,
                 },
                 SliceArg::Range {
@@ -213,26 +203,26 @@ pub(crate) fn prepare_solver(
                 .grid_source
                 .p0
                 .as_ref()
-                .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
+                .map(|a| embed_leto3(a, padded_shape, offset)),
             u0: req.grid_source.u0.as_ref().map(|(ux, uy, uz)| {
                 (
-                    embed_leto3(ux, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
-                    embed_leto3(uy, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
-                    embed_leto3(uz, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed),
+                    embed_leto3(ux, padded_shape, offset),
+                    embed_leto3(uy, padded_shape, offset),
+                    embed_leto3(uz, padded_shape, offset),
                 )
             }),
             p_mask: req
                 .grid_source
                 .p_mask
                 .as_ref()
-                .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
+                .map(|a| embed_leto3(a, padded_shape, offset)),
             p_signal: req.grid_source.p_signal.clone(),
             p_mode: req.grid_source.p_mode,
             u_mask: req
                 .grid_source
                 .u_mask
                 .as_ref()
-                .map(|a| embed_leto3(a, pnx, pny, pnz, nx, ny, nz, p, py, pz_embed)),
+                .map(|a| embed_leto3(a, padded_shape, offset)),
             u_signal: req.grid_source.u_signal.clone(),
             u_mode: req.grid_source.u_mode,
         };
@@ -335,52 +325,36 @@ pub(crate) fn extract_result(
     let full_data = solver
         .sensor_recorder
         .recorded_pressure_view()
-        .and_then(|d| d.try_into().ok())
         .ok_or_else(|| KwaversError::Io(std::io::Error::other("No sensor data recorded")))?;
     let sensor_data = trim_initial_recorder_view(full_data, time_steps, record_start_index);
 
     let ux_data = solver
         .sensor_recorder
         .recorded_ux_view()
-        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let uy_data = solver
         .sensor_recorder
         .recorded_uy_view()
-        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let uz_data = solver
         .sensor_recorder
         .recorded_uz_view()
-        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let ix_data = solver
         .sensor_recorder
         .recorded_ix_view()
-        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let iy_data = solver
         .sensor_recorder
         .recorded_iy_view()
-        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
     let iz_data = solver
         .sensor_recorder
         .recorded_iz_view()
-        .and_then(|d| d.try_into().ok())
         .map(|d| trim_initial_recorder_view(d, time_steps, record_start_index));
-    let i_avg_x = solver
-        .sensor_recorder
-        .extract_i_avg_x()
-        .and_then(|d| d.try_into().ok());
-    let i_avg_y = solver
-        .sensor_recorder
-        .extract_i_avg_y()
-        .and_then(|d| d.try_into().ok());
-    let i_avg_z = solver
-        .sensor_recorder
-        .extract_i_avg_z()
-        .and_then(|d| d.try_into().ok());
+    let i_avg_x = solver.sensor_recorder.extract_i_avg_x();
+    let i_avg_y = solver.sensor_recorder.extract_i_avg_y();
+    let i_avg_z = solver.sensor_recorder.extract_i_avg_z();
     let velocity_stats = solver.sensor_recorder.extract_sampled_velocity_stats();
     let full_grid_stats = extract_full_grid_stats(&solver.sensor_recorder);
 

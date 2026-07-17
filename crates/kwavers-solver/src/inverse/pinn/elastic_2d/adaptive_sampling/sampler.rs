@@ -73,7 +73,7 @@ impl AdaptiveSampler {
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
     ///
     pub fn resample(&mut self, residuals: &[f64]) -> KwaversResult<Vec<usize>> {
-        let n_candidates = (residuals.len());
+        let n_candidates = residuals.len();
         if n_candidates == 0 {
             return Err(KwaversError::InvalidInput(
                 "No candidate points for resampling".into(),
@@ -107,7 +107,7 @@ impl AdaptiveSampler {
                 if n_keep > 0 && !self.current_indices.is_empty() {
                     let mut old = self.current_indices.clone();
                     old.shuffle(&mut self.rng);
-                    selected.extend_from_slice(&old[..n_keep.min((old.len()))]);
+                    selected.extend_from_slice(&old[..n_keep.min(old.len())]);
                 }
                 selected.extend(self.weighted_sample(&probs, n_new)?);
                 self.current_indices = selected.clone();
@@ -130,7 +130,7 @@ impl AdaptiveSampler {
                 candidates.sort_by(|a, b| b.1.total_cmp(&a.1));
                 let k = ((top_k_ratio * (candidates.len()) as f64) as usize)
                     .max(self.n_points)
-                    .min((candidates.len()));
+                    .min(candidates.len());
                 candidates.truncate(k);
                 let mut indices: Vec<usize> = candidates.into_iter().map(|(i, _)| i).collect();
                 indices.shuffle(&mut self.rng);
@@ -170,7 +170,7 @@ impl AdaptiveSampler {
         if n_samples == 0 {
             return Ok(Vec::new());
         }
-        let n = (probs.len());
+        let n = probs.len();
         if n_samples > n {
             return Err(KwaversError::InvalidInput(format!(
                 "Cannot sample {} points from {} candidates",
@@ -196,7 +196,7 @@ impl AdaptiveSampler {
         let mut indices = self.current_indices.clone();
         indices.shuffle(&mut self.rng);
         let batch_size = if self.batch_size == 0 {
-            (indices.len())
+            indices.len()
         } else {
             self.batch_size
         };

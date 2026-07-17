@@ -69,9 +69,9 @@ fn p_wave_arrival_time_matches_analytical() {
 
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), lambda).into(),
-        lame_mu: Array3::from_elem((nx, ny, nz), mu).into(),
-        density: Array3::from_elem((nx, ny, nz), rho).into(),
+        lame_lambda: Array3::from_elem((nx, ny, nz), lambda),
+        lame_mu: Array3::from_elem((nx, ny, nz), mu),
+        density: Array3::from_elem((nx, ny, nz), rho),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
@@ -96,8 +96,8 @@ fn p_wave_arrival_time_matches_analytical() {
         .expect("index_axis")
         .fill(true);
     let source = ElasticPstdVelocitySource {
-        mask: src_mask.into(),
-        ux: Some(signal.into()),
+        mask: src_mask,
+        ux: Some(signal),
         uy: None,
         uz: None,
         mode: ElasticPstdSourceMode::Additive,
@@ -110,7 +110,7 @@ fn p_wave_arrival_time_matches_analytical() {
     sensor_mask[[sensor_x, ny / 2, nz / 2]] = true;
 
     let data = orch
-        .propagate(nt, Some(&source), Some(&sensor_mask.clone().into()))
+        .propagate(nt, Some(&source), Some(&sensor_mask.clone()))
         .unwrap();
 
     let trace = data.vx.expect("vx recorded");
@@ -192,9 +192,9 @@ fn acoustic_fluid_limit_zero_shear_stress_after_propagation() {
 
     let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
     let medium = ElasticPstdMedium {
-        lame_lambda: Array3::from_elem((nx, ny, nz), lambda).into(),
-        lame_mu: Array3::zeros((nx, ny, nz)).into(), // μ = 0 — acoustic-fluid limit
-        density: Array3::from_elem((nx, ny, nz), rho).into(),
+        lame_lambda: Array3::from_elem((nx, ny, nz), lambda),
+        lame_mu: Array3::zeros((nx, ny, nz)), // μ = 0 — acoustic-fluid limit
+        density: Array3::from_elem((nx, ny, nz), rho),
     };
     let mut orch = ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap();
 
@@ -207,8 +207,8 @@ fn acoustic_fluid_limit_zero_shear_stress_after_propagation() {
     let mut src_mask = Array3::<bool>::from_elem((nx, ny, nz), false);
     src_mask[[8, ny / 2, nz / 2]] = true;
     let source = ElasticPstdVelocitySource {
-        mask: src_mask.into(),
-        ux: Some(signal.into()),
+        mask: src_mask,
+        ux: Some(signal),
         uy: None,
         uz: None,
         mode: ElasticPstdSourceMode::Additive,
@@ -222,7 +222,7 @@ fn acoustic_fluid_limit_zero_shear_stress_after_propagation() {
         }
     }
     let _ = orch
-        .propagate(nt, Some(&source), Some(&sensor_mask.clone().into()))
+        .propagate(nt, Some(&source), Some(&sensor_mask.clone()))
         .unwrap();
 
     let stress = orch.spectral_stress();
@@ -311,15 +311,15 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
     let make_orch = || -> ElasticPstdOrchestrator {
         let grid = Grid::new(nx, ny, nz, dx, dx, dx).unwrap();
         let medium = ElasticPstdMedium {
-            lame_lambda: Array3::from_elem((nx, ny, nz), lambda).into(),
-            lame_mu: Array3::from_elem((nx, ny, nz), mu).into(),
-            density: Array3::from_elem((nx, ny, nz), rho).into(),
+            lame_lambda: Array3::from_elem((nx, ny, nz), lambda),
+            lame_mu: Array3::from_elem((nx, ny, nz), mu),
+            density: Array3::from_elem((nx, ny, nz), rho),
         };
         ElasticPstdOrchestrator::new(&grid, medium, dt).unwrap()
     };
     let make_source = || ElasticPstdVelocitySource {
-        mask: src_mask.clone().into(),
-        ux: Some(signal.clone().into()),
+        mask: src_mask.clone(),
+        ux: Some(signal.clone()),
         uy: None,
         uz: None,
         mode: ElasticPstdSourceMode::Additive,
@@ -328,7 +328,7 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
     // Baseline: NO PML.
     let mut orch_baseline = make_orch();
     let baseline = orch_baseline
-        .propagate(nt, Some(&make_source()), Some(&sensor_mask.clone().into()))
+        .propagate(nt, Some(&make_source()), Some(&sensor_mask.clone()))
         .unwrap();
     let baseline_peak = baseline
         .vx
@@ -342,7 +342,7 @@ fn pml_attenuates_field_in_absorbing_layer_vs_without_pml() {
     let mut orch_pml = make_orch();
     orch_pml.set_pml((pml_thickness, 0, 0), cp, 1e-4);
     let pml_data = orch_pml
-        .propagate(nt, Some(&make_source()), Some(&sensor_mask.clone().into()))
+        .propagate(nt, Some(&make_source()), Some(&sensor_mask.clone()))
         .unwrap();
     let pml_peak = pml_data
         .vx

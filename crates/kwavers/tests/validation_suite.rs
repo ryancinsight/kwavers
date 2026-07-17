@@ -221,24 +221,7 @@ mod bubble_dynamics_validation {
         // Should still be stable with high viscosity
         assert!(high_visc_analysis.is_stable);
 
-        // Test case 2: Low surface tension (less stable)
-        let low_sigma_params = BubbleParameters {
-            r0: 1e-4,
-            p0: 101325.0,
-            rho_liquid: 1000.0,
-            sigma: 0.001, // Very low surface tension
-            mu_liquid: 0.001,
-            gamma: 1.4,
-            ..Default::default()
-        };
-
-        let low_sigma_solver = EpsteinPlessetStabilitySolver::new(low_sigma_params);
-        let low_sigma_analysis = low_sigma_solver.analyze_stability();
-
-        // May be unstable with very low surface tension
-        // (This depends on the specific parameter values and Epstein-Plesset criteria)
-
-        // Test case 3: Very small bubble (surface effects dominate)
+        // Test case 2: Very small bubble (surface effects dominate)
         let small_bubble_params = BubbleParameters {
             r0: 1e-6, // 1 μm bubble
             p0: 101325.0,

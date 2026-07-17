@@ -3,33 +3,38 @@ use crate::inverse::pinn::ml::wave_equation_2d::inference::types::{
     ActivationType, QuantizedNetwork, WaveInferenceMemoryPool2D,
 };
 
-/// Reference scalar implementation for validation
+/// Reference scalar implementation for validation.
+#[derive(Clone, Copy)]
+struct QuantizedMatmulShape {
+    batch_size: usize,
+    input_size: usize,
+    output_size: usize,
+}
+
 fn matmul_scalar_quantized(
     input: &[f32],
     weights: &[i8],
     weight_scale: f32,
     biases: &[i8],
     bias_scale: f32,
-    batch_size: usize,
-    input_size: usize,
-    output_size: usize,
+    shape: QuantizedMatmulShape,
 ) -> Vec<f32> {
-    let mut output = vec![0.0; batch_size * output_size];
+    let mut output = vec![0.0; shape.batch_size * shape.output_size];
 
-    for batch_idx in 0..batch_size {
-        for out_idx in 0..output_size {
+    for batch_idx in 0..shape.batch_size {
+        for out_idx in 0..shape.output_size {
             let mut sum = 0.0;
 
-            for i in 0..input_size {
-                let input_val = input[batch_idx * input_size + i];
-                let weight_val = weights[out_idx * input_size + i] as f32 * weight_scale;
+            for i in 0..shape.input_size {
+                let input_val = input[batch_idx * shape.input_size + i];
+                let weight_val = weights[out_idx * shape.input_size + i] as f32 * weight_scale;
                 sum += input_val * weight_val;
             }
 
             let bias_val = biases[out_idx] as f32 * bias_scale;
             sum += bias_val;
 
-            output[batch_idx * output_size + out_idx] = sum;
+            output[batch_idx * shape.output_size + out_idx] = sum;
         }
     }
 
@@ -73,9 +78,11 @@ fn test_matmul_simd_3x3() {
         weight_scale,
         &biases,
         bias_scale,
-        batch_size,
-        input_size,
-        output_size,
+        QuantizedMatmulShape {
+            batch_size,
+            input_size,
+            output_size,
+        },
     );
 
     assert_eq!((simd_result.len()), (scalar_result.len()));
@@ -126,9 +133,11 @@ fn test_matmul_simd_3x8() {
         weight_scale,
         &biases,
         bias_scale,
-        batch_size,
-        input_size,
-        output_size,
+        QuantizedMatmulShape {
+            batch_size,
+            input_size,
+            output_size,
+        },
     );
 
     assert_eq!((simd_result.len()), (scalar_result.len()));
@@ -183,9 +192,11 @@ fn test_matmul_simd_16x16() {
         weight_scale,
         &biases,
         bias_scale,
-        batch_size,
-        input_size,
-        output_size,
+        QuantizedMatmulShape {
+            batch_size,
+            input_size,
+            output_size,
+        },
     );
 
     assert_eq!((simd_result.len()), (scalar_result.len()));
@@ -238,9 +249,11 @@ fn test_matmul_simd_32x1() {
         weight_scale,
         &biases,
         bias_scale,
-        batch_size,
-        input_size,
-        output_size,
+        QuantizedMatmulShape {
+            batch_size,
+            input_size,
+            output_size,
+        },
     );
 
     assert_eq!((simd_result.len()), (scalar_result.len()));

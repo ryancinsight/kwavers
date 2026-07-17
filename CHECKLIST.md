@@ -1,5 +1,44 @@
 # Project Checklist
 
+## Owner: Codex — Signed pulsed-wave spectral Doppler [minor]
+
+- [x] Add one centered two-sided PW spectrum contract over the existing
+      mean-removal, Hann-window, and Apollo complex-FFT preprocessing path.
+- [x] Preserve negative Doppler bins and derive their signed velocity axis from
+      `f_d · c / (2 f₀ cos θ)` without a positive-cosine fallback.
+- [x] Reject an I/Q ensemble longer than its FFT instead of truncating acquired
+      pulses; add reverse-flow, perpendicular-beam, and truncation regressions.
+- [x] Compile `kwavers-analysis`, run its warning-denied Clippy surface, and
+      execute the focused pulsed-wave Nextest regressions.
+- [x] Verify the package Rustdoc command completes; its 57 unresolved-link
+      warnings are pre-existing outside the pulsed-wave contract.
+- [x] Compile the locked `kwavers --all-features` facade after the active RITK
+      provider migration advanced past its filter API change.
+
+**Current evidence:** the coherent offline lock resolves; `kwavers-analysis`
+compiles, normal warning-denied Clippy passes, focused PW Nextest passes 8/8,
+and locked `kwavers --all-features` compilation passes. The facade inherits
+non-fatal warnings from active RITK and Hephaestus provider work. Evidence
+tier: compiler diagnostics and value-semantic PW regressions.
+
+## Owner: Codex — Solver all-feature lint ratchet [patch]
+
+- [x] Resolve the coherent offline lock graph and apply the machine-applicable
+      solver corrections reported through `kwavers-analysis --all-features`.
+- [x] Run warning-denied solver Clippy across all targets for the independently
+      buildable `pinn,gpu,async-runtime,nightly,simd,test-util` feature set.
+- [x] Complete package-wide locked full-feature compilation.
+- [x] Finish the independently buildable solver Nextest suite: 844 runnable
+      tests pass and 4 are ignored under the committed timeout profile.
+
+- [ ] Complete warning-denied `kwavers --all-features --all-targets` Clippy;
+      current all-target compile work is reconciling stale test/example APIs.
+
+**Current evidence:** locked `kwavers --all-features` compilation and
+package Nextest pass. The all-target gate currently exposes stale test/example
+call sites from provider migration; RITK and Hephaestus also emit non-fatal
+dependency warnings.
+
 ## Owner: Codex — Atlas-path CI and security audit [patch]
 
 - [x] Identify the common missing-provider failure across the PR #288 Actions
@@ -6982,3 +7021,20 @@ Verify each gap is real first.
 - [x] [patch] Structural splits: enforce 500-line limit on `abdominal.rs`, `gpu_pstd.rs`, `fwi/time_domain/tests.rs`, and `breast_ust_fwi/dataset.rs`; each split into SRP child modules behind unchanged parent facades; no re-export shims.
 - [x] [patch] Physics validation correctness: remove `#[ignore]` from `test_keller_miksis_equilibrium` (fix by selecting `use_thermal_effects: false` polytropic closure, tighten tolerance 1e4→1.0 m/s²); remove `#[ignore]` from `test_oneil_solution` (fix relative epsilon, near-field>far-field check, temporal periodicity); fix `test_nonlinear_3d` CT-array ownership (remove unused `approx` import, extend Kuznetsov energy conservation check).
 - [x] [patch] CT array early-drop memory fix: change `run_theranostic_nonlinear_3d` CT parameters from `&Array3<f64>` to `Array3<f64>` (by-value); add `drop(ct_hu); drop(label_volume);` after `prepare_volume`; update PyO3 binding and two pipeline test call sites. Resolves OOM abort on 512×512×300 brain scans (~600 MB) held live across the Westervelt FWI loop.
+
+## Session 2026-07-16 — Batch #1 Rayon → Moirai closure
+
+- [x] [patch] Close kwavers Batch #1 (Rayon → Moirai migration).
+  - Confirmed zero direct Rayon/ndarray-parallel source hits under `crates/kwavers*/src`.
+  - `cargo run --bin xtask -- legacy-migration-audit` reports 0 Rayon, 0 ndarray,
+    0 nalgebra, 0 burn, 0 tokio surface items.
+  - `cargo run --bin xtask -- refresh-legacy-allowlist` regenerated the allowlist.
+  - `cargo check -p kwavers-math` passes.
+  - Required stale provider version-constraint fixes in `repos/ritk/Cargo.toml`
+    (moirai 0.3.0→0.4.0, leto 0.36.0→0.37.0, leto-ops 0.36.0→0.37.0,
+    hephaestus-core 0.13.0→0.15.0, hephaestus-wgpu 0.13.0→0.15.0,
+    apollo-fft 0.17.0→0.18.0) and `repos/coeus/Cargo.toml` (leto 0.36.0→0.37.0,
+    leto-ops 0.36.0→0.37.0, hephaestus-core 0.14.0→0.15.0,
+    hephaestus-wgpu 0.14.0→0.15.0, hephaestus-cuda 0.14.0→0.15.0).
+  - Residual: `ritk-io`/`ritk-filter` remain blocked by pre-existing RITK Batch #3
+    Burn → Coeus tensor type mismatches, outside Batch #1 scope.

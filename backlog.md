@@ -1,5 +1,40 @@
 # Backlog / Strategy
 
+## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — review
+
+- Owner: Codex; scope: `kwavers-analysis` pulsed-wave Doppler spectrum contract,
+  its value-semantic regressions, and synchronized provider artifacts.
+- Acceptance: a physical complex-I/Q trace produces a two-sided spectrum with
+  explicit negative and positive velocity bins; reverse-flow energy remains in
+  the returned spectrum, invalid Doppler geometry is rejected rather than
+  mapped through an artificial positive angle cosine, and an FFT shorter than
+  the acquired ensemble fails rather than silently discarding pulses.
+- Driver: LeoNeuro's physical moving-scatterer sector ensemble requires a PW
+  provider that retains reverse-flow bins; the former one-sided magnitude API
+  discarded that physical degree of freedom.
+- Evidence: the locked Atlas graph resolves, `kwavers-analysis` compiles, its
+  normal warning-denied Clippy surface passes, and the focused PW Nextest
+  regression passes 8/8. The package's all-feature Clippy reaches the separate
+  `kwavers-solver` lint ratchet below.
+
+## KW-LINT-047 — Solver all-feature lint ratchet [patch] — in-progress
+
+- Owner: Codex; scope: coherent offline `Cargo.lock` feature resolution plus
+  `crates/kwavers-solver` machine-applicable Clippy corrections exposed through
+  `kwavers-analysis --all-features`.
+- Acceptance: the solver compiles under its complete feature set and its
+  warning-denied Clippy gate has no remaining source diagnostics; behavior is
+  unchanged and existing solver regressions retain their value semantics.
+- Driver: 79 source diagnostics prevented the public analysis package from
+  completing its all-feature warning-denied gate.
+- Evidence: the complete solver feature set compiles, warning-denied solver
+  Clippy passes across all targets, and its full Nextest suite passes 844
+  runnable tests with 4 ignored after two invalid test oracles were corrected.
+  The locked `kwavers --all-features` facade check passes. The all-target gate
+  is reconciling stale test and example APIs exposed by concurrent provider
+  migration. Current RITK and Hephaestus dependency warnings remain outside
+  this crate's lint scope.
+
 ## KW-CI-046 — Atlas-path CI and security audit [patch] — in-progress
 
 - Owner: Codex; scope: reusable GitHub Actions setup for the sibling Atlas path
@@ -8090,3 +8125,30 @@ k-wave-python has partial PR coverage (2D/3D TR point sensors closed); remaining
   - Single-cell injection per element (not "all skin cells in cone with 1/sqrt(r) decay") - amplitude-only Dirichlet does not encode wavefront curvature.
   - Per-element focal-law delays: delta_n = (max_e|F-e| - |F-e_n|)/c_ref + r_{n->s_n}/c_ref so all elements arrive at focus coherently at T_focal.
   - Analytical Rayleigh-Sommerfeld bowl backend reports true focal-spot Pa rather than normalised peak; current padded-domain backend normalises peak to drive - this is a measurement-fidelity gap to address before any production clinical inference depends on absolute exposure values.
+
+## CLOSED: kwavers Batch #1 — Rayon → Moirai migration [patch] (2026-07-16)
+
+Closed the workspace-wide Batch #1 migration from direct ndarray/Rayon
+`Zip::par_for_each`/`par_iter` patterns to `moirai-parallel`. Source-level
+scoped audits under `crates/kwavers*/src` report zero direct `rayon::`,
+`use rayon`, `par_for_each`, `into_par_iter()`, or `ndarray::Zip` parallel
+iterator usage. The top-level `kwavers` direct Rayon dependency and the
+`parallel = ["ndarray/rayon"]` feature were removed in earlier slices; this
+closure confirms the audit surface is clean.
+
+Required workspace provider-version alignment to unblock the audit:
+- `repos/ritk/Cargo.toml`: moirai `0.3.0` → `0.4.0`, leto `0.36.0` → `0.37.0`,
+  leto-ops `0.36.0` → `0.37.0`, hephaestus-core `0.13.0` → `0.15.0`,
+  hephaestus-wgpu `0.13.0` → `0.15.0`, apollo-fft `0.17.0` → `0.18.0`.
+- `repos/coeus/Cargo.toml`: leto `0.36.0` → `0.37.0`, leto-ops `0.36.0` →
+  `0.37.0`, hephaestus-core `0.14.0` → `0.15.0`, hephaestus-wgpu `0.14.0` →
+  `0.15.0`, hephaestus-cuda `0.14.0` → `0.15.0`.
+
+Verification:
+- `cargo run --bin xtask -- legacy-migration-audit` reports 0 Rayon, 0 ndarray,
+  0 nalgebra, 0 burn, 0 tokio surface items.
+- `cargo run --bin xtask -- refresh-legacy-allowlist` regenerated the allowlist.
+- `cargo check -p kwavers-math` passes.
+
+Residual: `ritk-io`/`ritk-filter` remain blocked by pre-existing RITK Batch #3
+Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.

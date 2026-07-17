@@ -100,8 +100,7 @@ impl BreastUstPstdDataset {
                             SliceArg::All,
                         ])
                         .expect("frequency index within observation cube")
-                        .to_contiguous()
-                        .into(),
+                        .to_contiguous(),
                 )
             })
             .collect()
@@ -232,8 +231,8 @@ fn run_pstd_transmit(
     )?;
     let density = Array3::from_elem((nx, ny, nz), config.density_kg_m3);
     let medium = HeterogeneousFactory::from_arrays(
-        sound_speed_m_s.clone().into(),
-        density.into(),
+        sound_speed_m_s.clone(),
+        density,
         None,
         None,
         None,
@@ -246,8 +245,8 @@ fn run_pstd_transmit(
         p_mask[[i, j, k]] += 1.0;
     }
     let source = GridSource {
-        p_mask: Some(p_mask.into()),
-        p_signal: Some(tone_signal(frequency_hz, steps, config).into()),
+        p_mask: Some(p_mask),
+        p_signal: Some(tone_signal(frequency_hz, steps, config)),
         p_mode: SourceMode::Additive,
         ..GridSource::new_empty()
     };

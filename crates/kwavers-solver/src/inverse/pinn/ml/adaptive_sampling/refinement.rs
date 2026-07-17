@@ -181,7 +181,7 @@ impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default>
         if !regions.is_empty() {
             let keep_count = (((regions.len()) as f32 * TOP_REGION_FRACTION).ceil() as usize)
                 .max(2)
-                .min((regions.len()));
+                .min(regions.len());
             regions.truncate(keep_count);
         }
 

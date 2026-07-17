@@ -219,7 +219,7 @@ fn main() -> Result<()> {
         println!(
             "  Fluence computed: max = {:.2e} W/m², mean = {:.2e} W/m²",
             fluence.iter().cloned().fold(f64::NEG_INFINITY, f64::max),
-            if fluence.len() == 0 {
+            if fluence.is_empty() {
                 0.0
             } else {
                 fluence.iter().sum::<f64>() / fluence.len() as f64

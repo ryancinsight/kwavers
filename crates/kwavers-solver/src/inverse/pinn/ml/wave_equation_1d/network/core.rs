@@ -171,7 +171,7 @@ where
             ));
         }
 
-        let n = (x.len());
+        let n = x.len();
         let x_vec: Vec<f32> = x.iter().map(|&v| v as f32).collect();
         let t_vec: Vec<f32> = t.iter().map(|&v| v as f32).collect();
 

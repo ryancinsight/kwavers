@@ -38,39 +38,53 @@ use kwavers_solver::inverse::pinn::ml::field_surrogate::{
 
 type AB = MoiraiBackend;
 
-fn make_penttinen_kernel(
-    f0: f64,
-    pnp: f64,
-    nx: usize,
-    ny: usize,
-    nz: usize,
-    dx_m: f64,
-    c0: f64,
-    fnum: f64,
-) -> FocalKernel {
+#[derive(Clone, Copy)]
+struct PenttinenKernelGrid {
+    shape: [usize; 3],
+    spacing_m: f64,
+    sound_speed_m_per_s: f64,
+    f_number: f64,
+}
+
+fn make_penttinen_kernel(f0: f64, pnp: f64, grid: PenttinenKernelGrid) -> FocalKernel {
+    let [nx, ny, nz] = grid.shape;
     let focus = (nx / 2, ny / 2, nz / 2);
-    let lam = c0 / f0;
-    let fwhm_lat = 1.41 * lam * fnum;
-    let fwhm_ax = 7.0 * lam * fnum * fnum;
+    let lam = grid.sound_speed_m_per_s / f0;
+    let fwhm_lat = 1.41 * lam * grid.f_number;
+    let fwhm_ax = 7.0 * lam * grid.f_number * grid.f_number;
     let sx = fwhm_ax / 2.355;
     let sy = fwhm_lat / 2.355;
     let sz = fwhm_lat / 2.355;
     let mut field = Array3::<f64>::zeros((nx, ny, nz));
-    for ((i, j, k), v) in field.indexed_iter_mut() {
-        let dx_phys = ((i as f64) - (focus.0 as f64)) * dx_m;
-        let dy_phys = ((j as f64) - (focus.1 as f64)) * dx_m;
-        let dz_phys = ((k as f64) - (focus.2 as f64)) * dx_m;
+    for ([i, j, k], v) in field
+        .indexed_iter_mut()
+        .expect("invariant: freshly allocated field has a non-aliasing layout")
+    {
+        let dx_phys = ((i as f64) - (focus.0 as f64)) * grid.spacing_m;
+        let dy_phys = ((j as f64) - (focus.1 as f64)) * grid.spacing_m;
+        let dz_phys = ((k as f64) - (focus.2 as f64)) * grid.spacing_m;
         let r2 = (dx_phys / sx).powi(2) + (dy_phys / sy).powi(2) + (dz_phys / sz).powi(2);
         *v = pnp * (-0.5 * r2).exp();
     }
-    FocalKernel::new(field, dx_m, focus, f0, pnp, 1.0e6, fwhm_lat, fwhm_ax)
+    FocalKernel::new(
+        field,
+        grid.spacing_m,
+        focus,
+        f0,
+        pnp,
+        1.0e6,
+        fwhm_lat,
+        fwhm_ax,
+    )
 }
 
 fn main() {
-    let c0 = 1500.0_f64;
-    let fnum = 1.0_f64;
-    let dx_m = 0.5e-3_f64;
-    let (nx, ny, nz) = (96usize, 64usize, 64usize);
+    let grid = PenttinenKernelGrid {
+        shape: [96, 64, 64],
+        spacing_m: 0.5e-3,
+        sound_speed_m_per_s: 1500.0,
+        f_number: 1.0,
+    };
 
     // Phase D-1: when `FIELD_SURROGATE_KERNEL_DIR` is set to a
     // directory containing `kernel_*.npz` files (produced by
@@ -89,10 +103,10 @@ fn main() {
                      files; falling back to Penttinen-Gaussian proxy"
                 );
                 vec![
-                    make_penttinen_kernel(0.5e6, 15.0e6, nx, ny, nz, dx_m, c0, fnum),
-                    make_penttinen_kernel(0.5e6, 30.0e6, nx, ny, nz, dx_m, c0, fnum),
-                    make_penttinen_kernel(1.0e6, 15.0e6, nx, ny, nz, dx_m, c0, fnum),
-                    make_penttinen_kernel(1.0e6, 30.0e6, nx, ny, nz, dx_m, c0, fnum),
+                    make_penttinen_kernel(0.5e6, 15.0e6, grid),
+                    make_penttinen_kernel(0.5e6, 30.0e6, grid),
+                    make_penttinen_kernel(1.0e6, 15.0e6, grid),
+                    make_penttinen_kernel(1.0e6, 30.0e6, grid),
                 ]
             } else {
                 println!(
@@ -104,10 +118,10 @@ fn main() {
             }
         }
         Err(_) => vec![
-            make_penttinen_kernel(0.5e6, 15.0e6, nx, ny, nz, dx_m, c0, fnum),
-            make_penttinen_kernel(0.5e6, 30.0e6, nx, ny, nz, dx_m, c0, fnum),
-            make_penttinen_kernel(1.0e6, 15.0e6, nx, ny, nz, dx_m, c0, fnum),
-            make_penttinen_kernel(1.0e6, 30.0e6, nx, ny, nz, dx_m, c0, fnum),
+            make_penttinen_kernel(0.5e6, 15.0e6, grid),
+            make_penttinen_kernel(0.5e6, 30.0e6, grid),
+            make_penttinen_kernel(1.0e6, 15.0e6, grid),
+            make_penttinen_kernel(1.0e6, 30.0e6, grid),
         ],
     };
     // Phase C-8 outcome: the signed-log1p target transform was
@@ -268,8 +282,8 @@ fn main() {
         let f0_norm = 2.0_f32 * (f0 as f32 - f0_min) / (f0_max - f0_min) - 1.0;
         let mut input_data = vec![0.0_f32; n_samples * 5];
         let mut target_data = vec![0.0_f32; n_samples];
-        let lam = c0 / f0;
-        let fwhm_ax = 7.0 * lam * fnum * fnum;
+        let lam = grid.sound_speed_m_per_s / f0;
+        let fwhm_ax = 7.0 * lam * grid.f_number * grid.f_number;
         let sx = (fwhm_ax / 2.355) as f32;
         for i in 0..n_samples {
             let xi = -1.0_f32 + 2.0 * (i as f32) / (n_samples - 1) as f32;

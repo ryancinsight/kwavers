@@ -22,6 +22,7 @@
 
 #![cfg(feature = "gpu")]
 
+use hephaestus_wgpu::WgpuDevice;
 use kwavers_math::fft::{
     fft_1d_array,
     gpu_fft::{FftBackend, GpuFft3d, WgpuBackend},
@@ -35,8 +36,8 @@ use leto::{Array1, Array3};
 /// Returns `None` if no suitable Hephaestus-backed adapter is available.
 fn try_gpu_fft_plan(nx: usize, ny: usize, nz: usize) -> Option<GpuFft3d> {
     let shape = Shape3D::new(nx, ny, nz).expect("test dimensions must be positive");
-    let backend = match WgpuBackend::try_default() {
-        Ok(backend) => backend,
+    let backend = match WgpuDevice::try_default("kwavers-gpu-fft-arbitrary-size") {
+        Ok(device) => WgpuBackend::new(device),
         Err(error) => {
             eprintln!("Skipping GPU FFT test: Apollo WGPU backend unavailable: {error}");
             return None;
@@ -63,11 +64,15 @@ fn test_signal_1d(n: usize) -> Vec<f64> {
 
 /// CPU reference 1-D DFT via the Apollo FFT cache (f64 precision).
 fn cpu_fft_1d(signal: &[f64]) -> Array1<Complex64> {
-    fft_1d_array(&Array1::from_vec(signal.to_vec()))
+    let values = signal.to_vec();
+    fft_1d_array(
+        &Array1::from_vec(values.len(), values)
+            .expect("invariant: signal length equals its owned values"),
+    )
 }
 
 fn leto_field(field: &Array3<f64>) -> leto::Array3<f64> {
-    let (nx, ny, nz) = field.dim();
+    let [nx, ny, nz] = field.shape();
     leto::Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
         .expect("test field must map to Leto storage with identical shape")
 }
@@ -90,16 +95,19 @@ fn roundtrip_1d_in_3d(n: usize, tol: f64) {
     let nx = n;
     let ny = 4;
     let nz = 4;
-    let original: Array3<f64> = Array3::from_shape_fn((nx, ny, nz), |(i, j, k)| {
+    let original: Array3<f64> = Array3::from_shape_fn((nx, ny, nz), |[i, j, k]| {
         use std::f64::consts::TAU;
         (TAU * 3.0 * i as f64 / nx as f64).cos()
             + 0.5 * (TAU * 7.0 * j as f64 / ny as f64).sin()
             + 0.25 * (TAU * 5.0 * k as f64 / nz as f64).cos()
     });
 
-    let spectrum = gpu.forward(&leto_field(&original));
+    let spectrum = gpu
+        .forward(&leto_field(&original))
+        .expect("GPU plan must transform a shape-validated field");
     let mut reconstructed = leto_zeros(nx, ny, nz);
-    gpu.inverse(&spectrum, &mut reconstructed);
+    gpu.inverse(spectrum.as_slice(), &mut reconstructed)
+        .expect("GPU plan must invert its own spectrum");
 
     let max_err = original
         .iter()
@@ -127,8 +135,10 @@ fn cross_validate_1d(n: usize, rel_tol: f64) {
     let signal_scale = signal.iter().copied().map(f64::abs).fold(0.0_f64, f64::max);
     let abs_tol = 4.0 * signal.len() as f64 * f32::EPSILON as f64 * signal_scale;
 
-    let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| signal[i]);
-    let spec = gpu.forward(&leto_field(&arr));
+    let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| signal[i]);
+    let spec = gpu
+        .forward(&leto_field(&arr))
+        .expect("GPU plan must transform a shape-validated field");
 
     let mut max_rel_err = 0.0_f64;
     let mut max_abs_err = 0.0_f64;
@@ -259,8 +269,10 @@ fn test_parseval_n30() {
     };
 
     let signal = test_signal_1d(n);
-    let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |(i, _, _)| signal[i]);
-    let spec = gpu.forward(&leto_field(&arr));
+    let arr: Array3<f64> = Array3::from_shape_fn((n, 1, 1), |[i, _, _]| signal[i]);
+    let spec = gpu
+        .forward(&leto_field(&arr))
+        .expect("GPU plan must transform a shape-validated field");
 
     let time_energy: f64 = signal.iter().map(|x| x * x).sum::<f64>();
     let freq_energy: f64 = (0..n)

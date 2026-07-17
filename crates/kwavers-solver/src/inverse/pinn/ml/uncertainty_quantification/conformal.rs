@@ -62,7 +62,7 @@ where
             ));
         }
 
-        let mut scores: Vec<f32> = Vec::with_capacity((calibration_inputs.len()));
+        let mut scores: Vec<f32> = Vec::with_capacity(calibration_inputs.len());
 
         for (input, target) in calibration_inputs.iter().zip(calibration_targets.iter()) {
             let score = self.compute_nonconformity_score(input, *target)?;
@@ -76,7 +76,7 @@ where
         }
 
         scores.sort_by(|a, b| a.total_cmp(b));
-        let n = (scores.len());
+        let n = scores.len();
         let k = (((n as f64 + 1.0) * (1.0 - self.alpha)).ceil() as usize).clamp(1, n);
         let q_hat = scores[k - 1];
 

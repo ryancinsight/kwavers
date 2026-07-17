@@ -85,3 +85,26 @@
 - [CMUT vs PMUT: Micromachined and Flexible Transducers for IVUS](cmut_vs_pmut.md)
 - [Optically-Generated Focused Ultrasound for Ultrahigh-Precision Neuromodulation](optoacoustic_focused_ultrasound.md)
 
+---
+
+# Part VI — Atlas Stack Integration (Migration Reference)
+
+This part documents the migration from ndarray/nalgebra to the Atlas stack crates:
+
+- [Migration Overview: ndarray/nalgebra → Leto](migration_overview.md)
+- [Linear Algebra: Leto and Leto-Ops](migration_linalg.md)
+- [Geometry: Leto for Point, Vector, Isometry](migration_geometry.md)
+- [SIMD: Hermes for Vectorized Operations](migration_simd.md)
+- [Memory: Mnemosyne and Themis](migration_memory.md)
+- [Concurrency: Moirai for Parallel Execution](migration_concurrency.md)
+- [FFT: Apollo for Spectral Methods](migration_fft.md)
+- [Python Integration: PyO3 and NumPy Boundary](migration_python.md)
+
+---
+
+# Appendix
+
+- [Migration Quick Reference](migration_quick_reference.md)
+- [Atlas Crate Dependencies](atlas_dependencies.md)
+- [Glossary](appendix_glossary.md)
+

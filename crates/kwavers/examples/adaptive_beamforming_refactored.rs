@@ -7,9 +7,8 @@
 //! # Refactoring Results
 //! - ✅ **Monolithic File Eliminated**: Split 2193-line file into focused submodules
 //! - ✅ **Code Duplication Removed**: Single source of truth for each algorithm
-//! - ✅ **Feature-Gated Migration**: Legacy code available with `--features legacy_algorithms`
-//! - ✅ **API Consistency Maintained**: All tests pass with identical results
-//! - ✅ **Zero Breaking Changes**: Backwards compatibility preserved
+//! - ✅ **Single Current API**: Analysis-layer MVDR owns adaptive weighting
+//! - ✅ **Migration Complete**: Obsolete transducer algorithm paths are deleted
 //!
 //! # Architecture Overview
 //! ```text
@@ -22,7 +21,7 @@
 //! ├── past.rs            # PAST subspace tracker
 //! ├── opast.rs           # OPAST subspace tracker
 //! ├── algorithms/        # Algorithm traits and utilities
-//! └── [legacy] algorithms_old.rs  # Feature-gated legacy code
+//! └── neural.rs           # Neural/ML beamforming extension seam
 //! ```
 //!
 //! Run with: `cargo run --example adaptive_beamforming_refactored`
@@ -35,14 +34,12 @@ fn main() {
     println!("  • Eliminated monolithic algorithms_old.rs (2193 lines)");
     println!("  • Split into focused submodules (<500 lines each)");
     println!("  • Removed code duplication across algorithms");
-    println!("  • Feature-gated legacy implementations");
-    println!("  • Maintained 100% backwards compatibility");
+    println!("  • Deleted obsolete transducer algorithm paths");
+    println!("  • Kept one analysis-layer adaptive API");
 
     println!("\n✓ QUALITY ASSURANCE:");
-    println!("  • All 60 tests pass (32 default + 28 legacy)");
-    println!("  • No compilation warnings or errors");
-    println!("  • Clippy clean with strict settings");
-    println!("  • Zero breaking changes for consumers");
+    println!("  • See the package Nextest suite for current coverage");
+    println!("  • Validate with cargo check and Clippy before release");
 
     println!("\n✓ ARCHITECTURAL IMPROVEMENTS:");
     println!("  • Single source of truth per algorithm");
@@ -51,10 +48,8 @@ fn main() {
     println!("  • Better code organization");
 
     println!("\n✓ MIGRATION PATH:");
-    println!("  • Default build: Clean, modern API");
-    println!("  • Legacy support: --features legacy_algorithms");
-    println!("  • Gradual deprecation: Legacy code marked deprecated");
-    println!("  • Future removal: Planned for next major version");
+    println!("  • Use kwavers_analysis::...::adaptive::MinimumVariance");
+    println!("  • Use transducer beamforming only for sensor hardware interfaces");
 
     println!("\n🎉 Adaptive beamforming refactoring successfully completed!");
     println!("   ADR-001 implementation validates architectural principles.");

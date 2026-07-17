@@ -15,7 +15,7 @@
 //! - Real-time processing interfaces
 //! - Physical sensor array characteristics
 //!
-//! **Analysis Layer Algorithms:** `kwavers_analysis::signal_processing::beamforming`
+//! **Analysis Layer Algorithms:** `kwavers::analysis::signal_processing::beamforming`
 //! - General-purpose beamforming algorithms (DAS, MVDR, MUSIC, etc.)
 //! - Mathematical optimizations and transformations
 //! - Advanced signal processing techniques (adaptive, frequency-domain)

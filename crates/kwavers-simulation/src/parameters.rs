@@ -54,7 +54,6 @@ pub enum OutputFormat {
     NumPy,
     VTK,
     Binary,
-    #[cfg(feature = "nifti")]
     NIFTI,
 }
 

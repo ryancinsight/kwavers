@@ -76,7 +76,7 @@ fn spectral_gradient_of_constant_is_zero() {
     let n = 16usize;
     let dx = 0.001_f64;
     let grid = Grid::new(n, n, n, dx, dx, dx).unwrap();
-    let field = leto::Array3::from_elem([n, n, n], 3.14_f64);
+    let field = leto::Array3::from_elem([n, n, n], std::f64::consts::PI);
 
     let (gx, gy, gz) = numerical::compute_gradient(&field, &grid);
 

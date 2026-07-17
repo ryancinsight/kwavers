@@ -73,9 +73,9 @@ fn spectral_step_l2_error(n: usize, n_steps: usize, dt: f64, l: f64, c: f64) -> 
     for step in 0..n_steps {
         let _ = step;
         // Spectral Laplacian: ∇²p = IFFT(k² · FFT(p))
-        let p_hat = fft_1d_array(&p_curr.clone().into());
+        let p_hat = fft_1d_array(&p_curr);
         let lap_hat: Array1<Complex64> = Array1::from_shape_fn(n, |j| p_hat[j] * k2[j]);
-        let laplacian = ifft_1d_array(&lap_hat.into());
+        let laplacian = ifft_1d_array(&lap_hat);
 
         // Leapfrog: p_new = 2·p_curr - p_old + dt²·c²·∇²p
         let p_new = Array1::from_shape_fn(n, |[i]| {

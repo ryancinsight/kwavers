@@ -69,12 +69,16 @@ fn test_fused_update() {
 #[test]
 fn test_tiling_matches_naive() {
     let n = 17usize;
-    let mut config_tiled = FdtdSimdStencilConfig::default();
-    config_tiled.tile_size = 8;
+    let config_tiled = FdtdSimdStencilConfig {
+        tile_size: 8,
+        ..FdtdSimdStencilConfig::default()
+    };
     let mut processor_tiled = FdtdSimdStencilProcessor::new(n, n, n, config_tiled).unwrap();
 
-    let mut config_naive = FdtdSimdStencilConfig::default();
-    config_naive.tile_size = 256;
+    let config_naive = FdtdSimdStencilConfig {
+        tile_size: 256,
+        ..FdtdSimdStencilConfig::default()
+    };
     let mut processor_naive = FdtdSimdStencilProcessor::new(n, n, n, config_naive).unwrap();
 
     let pressure = Array3::from_elem([n, n, n], 1000.0_f64);

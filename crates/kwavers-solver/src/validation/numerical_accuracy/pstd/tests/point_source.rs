@@ -21,17 +21,21 @@ fn test_point_source_phase_accuracy() {
     let dx = wavelength / 16.0; // 16 PPW
     let k_num: f64 = TWO_PI / wavelength;
 
-    let mut config = PstdConfig::default();
-    config.dt = super::CFL_NUMBER * dx / c0;
-    config.nt = 500;
+    let config = PstdConfig {
+        dt: super::CFL_NUMBER * dx / c0,
+        nt: 500,
+        ..PstdConfig::default()
+    };
 
     let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, c0, &grid);
 
     // Create point source at center
     let source_pos = (n / 2, n / 2, 0);
-    let mut source_data = kwavers_source::GridSource::default();
-    source_data.p_mask = Some(Array3::zeros((n, n, 1)));
+    let mut source_data = kwavers_source::GridSource {
+        p_mask: Some(Array3::zeros((n, n, 1))),
+        ..kwavers_source::GridSource::default()
+    };
     if let Some(ref mut mask) = source_data.p_mask {
         mask[[source_pos.0, source_pos.1, source_pos.2]] = 1.0;
     }

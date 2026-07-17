@@ -179,7 +179,7 @@ mod tests {
     #[test]
     fn symmetric_quantization_preserves_signed_values_with_half_step_error() {
         let values = [-3.0_f32, -0.2, 1.0, 2.5];
-        let backend = SequentialBackend::default();
+        let backend = SequentialBackend;
         let tensor = Tensor::from_slice_on([values.len()], &values, &backend);
         let (quantized, scale) =
             WaveQuantizer2D::quantize_tensor(&tensor).expect("finite tensor must quantize");

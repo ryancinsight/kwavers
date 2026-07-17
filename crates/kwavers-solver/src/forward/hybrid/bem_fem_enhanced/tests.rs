@@ -166,9 +166,11 @@ fn test_validation_rejects_invalid_frequency_and_mesh_bounds() {
     let bad_frequency = solver.validate(0.0).unwrap_err();
     assert!(format!("{bad_frequency}").contains("finite and positive"));
 
-    let mut bad_config = EnhancedBemFemConfig::default();
-    bad_config.min_element_size = 0.2;
-    bad_config.max_element_size = 0.1;
+    let bad_config = EnhancedBemFemConfig {
+        min_element_size: 0.2,
+        max_element_size: 0.1,
+        ..EnhancedBemFemConfig::default()
+    };
     let mut solver = EnhancedBemFemSolver::new(bad_config);
     let bad_mesh = solver.validate(1000.0).unwrap_err();
     assert!(format!("{bad_mesh}").contains("element bounds"));

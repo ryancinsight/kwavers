@@ -131,8 +131,10 @@ fn kh_plugin_initialises_and_advances() {
 
 #[test]
 fn rp_plugin_initialises_and_advances() {
-    let mut params = BubbleParameters::default();
-    params.driving_amplitude = 30_000.0;
+    let params = BubbleParameters {
+        driving_amplitude: 30_000.0,
+        ..BubbleParameters::default()
+    };
     let config = BubbleDynamicsConfig {
         model: BubbleModel::RayleighPlesset,
         nucleation: false,

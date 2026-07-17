@@ -26,8 +26,10 @@ fn test_avx512_invalid_dimensions() {
 
 #[test]
 fn test_avx512_invalid_tile_size() {
-    let mut config = FdtdAvx512Config::default();
-    config.tile_size = 7;
+    let config = FdtdAvx512Config {
+        tile_size: 7,
+        ..FdtdAvx512Config::default()
+    };
     let result = FdtdAvx512StencilProcessor::new(32, 32, 32, config);
     assert!(result.is_err());
 }

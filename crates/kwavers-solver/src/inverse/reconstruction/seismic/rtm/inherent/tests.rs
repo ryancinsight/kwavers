@@ -4,7 +4,7 @@
 //! imaging condition; no empirical tolerances or magic numbers.
 
 #[cfg(test)]
-mod tests {
+mod cases {
     use leto::{Array2, Array3, Array4};
 
     use crate::inverse::reconstruction::seismic::config::{
@@ -15,8 +15,10 @@ mod tests {
     use kwavers_grid::Grid;
 
     fn rtm_with_condition(condition: RtmImagingCondition) -> ReverseTimeMigration {
-        let mut config = SeismicImagingConfig::default();
-        config.rtm_imaging_condition = condition;
+        let config = SeismicImagingConfig {
+            rtm_imaging_condition: condition,
+            ..SeismicImagingConfig::default()
+        };
         ReverseTimeMigration::new(config, Array3::from_elem([3, 3, 3], SOUND_SPEED_WATER_SIM))
     }
 

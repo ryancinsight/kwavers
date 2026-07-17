@@ -114,7 +114,7 @@ where
     /// Number of intermediate hidden layers (excluding input + output).
     #[must_use]
     pub fn hidden_layer_count(&self) -> usize {
-        (self.hidden_layers.len())
+        self.hidden_layers.len()
     }
 
     /// Flatten all layer + activation parameters in forward order.

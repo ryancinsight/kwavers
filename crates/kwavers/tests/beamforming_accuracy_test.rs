@@ -9,13 +9,6 @@ use std::f64::consts::PI;
 
 use kwavers_analysis::signal_processing::beamforming::adaptive::MinimumVariance;
 
-#[cfg(feature = "legacy_algorithms")]
-use kwavers_transducer::beamforming::adaptive::legacy::LCMV;
-#[cfg(feature = "legacy_algorithms")]
-use kwavers_transducer::beamforming::adaptive::{
-    LegacyMinimumVariance, SourceEstimationCriterion, MUSIC,
-};
-
 /// Create a simple test covariance matrix
 fn create_test_covariance(n: usize) -> Array2<Complex64> {
     let mut r = Array2::zeros((n, n));
@@ -87,84 +80,5 @@ mod tests {
         for &w in weights.iter() {
             assert!(w.is_finite());
         }
-    }
-
-    /// Test LCMV basic functionality
-    #[cfg(feature = "legacy_algorithms")]
-    #[test]
-    fn test_lcmv_basic() {
-        let n = 8;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
-
-        let mut lcmv = LCMV::new();
-        lcmv.add_constraint(&steering, Complex64::new(1.0, 0.0));
-
-        let weights = lcmv.compute_weights(&cov);
-
-        // Basic validation - weights should be finite and correct size
-        assert_eq!(weights.len(), n);
-        for &w in weights.iter() {
-            assert!(w.is_finite());
-        }
-    }
-
-    /// Test MUSIC basic functionality
-    #[cfg(feature = "legacy_algorithms")]
-    #[test]
-    fn test_music_basic() {
-        let n = 8;
-        let cov = create_test_covariance(n);
-        let steering = create_steering_vector(n, 0.0);
-
-        let music = MUSIC::new(1);
-        let spectrum = music.pseudospectrum(&cov, &steering);
-
-        // Pseudospectrum should be positive
-        assert!(spectrum >= 0.0);
-        assert!(spectrum.is_finite());
-    }
-
-    /// Test MUSIC source estimation
-    #[cfg(feature = "legacy_algorithms")]
-    #[test]
-    fn test_music_source_estimation() {
-        let n = 8;
-        let cov = create_test_covariance(n);
-        let num_snapshots = 100;
-
-        // Test AIC vs MDL
-        let _ =
-            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::AIC)
-                .expect_err("strict SSOT must error without complex eigendecomposition");
-
-        let _ =
-            MUSIC::new_with_source_estimation(&cov, num_snapshots, SourceEstimationCriterion::MDL)
-                .expect_err("strict SSOT must error without complex eigendecomposition");
-    }
-
-    /// Test condition number computation
-    ///
-    /// Strict SSOT note: the condition-number helper was part of legacy MVDR surfaces that relied on
-    /// non-SSOT eigendecomposition. Until SSOT provides complex Hermitian eigendecomposition (or an
-    /// SSOT-conditioned estimator), this test is gated behind `legacy_algorithms`.
-    #[cfg(feature = "legacy_algorithms")]
-    #[test]
-    fn test_covariance_condition_number() {
-        let n = 8;
-        let cov = create_test_covariance(n);
-
-        let condition_number = LegacyMinimumVariance::covariance_condition_number(&cov);
-
-        // Should be finite and positive
-        assert!(condition_number > 0.0);
-        assert!(condition_number.is_finite());
-
-        // For well-conditioned synthetic data, should be reasonable
-        assert!(
-            condition_number < 1000.0,
-            "Condition number too high: {}",
-            condition_number
-        );
     }
 }

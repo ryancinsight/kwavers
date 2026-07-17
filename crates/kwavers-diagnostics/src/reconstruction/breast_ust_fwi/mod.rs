@@ -171,7 +171,7 @@ pub fn reconstruct_breast_ust_sound_speed_volume(
     initial_sound_speed_m_s: &Array3<f64>,
     config: &FrequencyDomainFwiConfig,
 ) -> KwaversResult<BreastUstFwiImage> {
-    let initial_sound_speed_m_s = initial_sound_speed_m_s.clone().into();
+    let initial_sound_speed_m_s = initial_sound_speed_m_s.clone();
     let solver_result =
         frequency_domain::invert(observations, array, &initial_sound_speed_m_s, config)?;
     let [nx, ny, nz] = solver_result.sound_speed_m_s.shape();

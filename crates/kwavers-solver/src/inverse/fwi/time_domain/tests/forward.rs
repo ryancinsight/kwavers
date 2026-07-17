@@ -20,11 +20,14 @@ fn test_forward_model_objective_vanishes_for_self_data() {
 
     let mut p_mask = Array3::zeros((3, 3, 3));
     p_mask[[1, 1, 1]] = 1.0;
-    let mut source = GridSource::default();
-    source.p_mask = Some(p_mask);
-    source.p_signal =
-        Some(Array2::from_shape_vec([1, 3], vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
-    source.p_mode = SourceMode::Dirichlet;
+    let source = GridSource {
+        p_mask: Some(p_mask),
+        p_signal: Some(
+            Array2::from_shape_vec([1, 3], vec![1.0, 0.0, 0.0]).expect("shape must be valid"),
+        ),
+        p_mode: SourceMode::Dirichlet,
+        ..GridSource::default()
+    };
 
     let mut sensor_mask = Array3::from_elem([3, 3, 3], false);
     sensor_mask[[2, 2, 2]] = true;
@@ -55,11 +58,14 @@ fn test_generate_synthetic_data_matches_canonical_forward_model() {
 
     let mut p_mask = Array3::zeros((3, 3, 3));
     p_mask[[1, 1, 1]] = 1.0;
-    let mut source = GridSource::default();
-    source.p_mask = Some(p_mask);
-    source.p_signal =
-        Some(Array2::from_shape_vec([1, 3], vec![1.0, 0.0, 0.0]).expect("shape must be valid"));
-    source.p_mode = SourceMode::Dirichlet;
+    let source = GridSource {
+        p_mask: Some(p_mask),
+        p_signal: Some(
+            Array2::from_shape_vec([1, 3], vec![1.0, 0.0, 0.0]).expect("shape must be valid"),
+        ),
+        p_mode: SourceMode::Dirichlet,
+        ..GridSource::default()
+    };
 
     let mut sensor_mask = Array3::from_elem([3, 3, 3], false);
     sensor_mask[[2, 2, 2]] = true;

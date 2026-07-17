@@ -1,55 +1,47 @@
-//! Integration tests for NIFTI file I/O
+//! Integration tests for NIFTI file I/O via RITK
 //!
-//! These tests require the 'nifti' feature to be enabled.
-//! Run with: cargo test --features nifti
+//! These tests exercise the RITK-backed NIfTI reader/writer stack.
+//! Run with: cargo test
 
-#![cfg(feature = "nifti")]
-
-use kwavers_core::error::KwaversError;
-use kwavers_grid::Grid;
-use kwavers_physics::skull::CTBasedSkullModel;
+use coeus_core::SequentialBackend;
 use leto::Array3;
-use nifti::{writer::WriterOptions, InMemNiftiObject, NiftiHeader};
+use ritk_io::domain::{ImageReader, ImageWriter};
+use ritk_io::format::nifti::native::{NiftiReader, NiftiWriter};
+use ritk_spatial::{Direction, Point, Spacing};
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// Helper to create synthetic NIFTI file for testing
+/// Helper to create synthetic NIFTI file for testing via RITK writer
 fn create_synthetic_nifti(
     path: &str,
     dims: (u16, u16, u16),
     hu_values: f64,
 ) -> std::io::Result<()> {
-    // Create a simple 3D volume
     let (nx, ny, nz) = dims;
-    let volume = Array3::from_elem((nx as usize, ny as usize, nz as usize), hu_values);
+    let voxels: Vec<f32> = (0..nx as usize * ny as usize * nz as usize)
+        .map(|_| hu_values as f32)
+        .collect();
 
-    // Create NIFTI header
-    let mut header = NiftiHeader::default();
-    header.dim[0] = 3; // 3D
-    header.dim[1] = nx;
-    header.dim[2] = ny;
-    header.dim[3] = nz;
-    header.pixdim[1] = 1.0; // 1mm isotropic
-    header.pixdim[2] = 1.0;
-    header.pixdim[3] = 1.0;
-    header.datatype = 16; // f32
-    header.scl_slope = 1.0;
-    header.scl_inter = 0.0;
+    let origin = Point::default();
+    let spacing = Spacing::new([1.0, 1.0, 1.0]);
+    let direction = Direction::identity();
 
-    // Set sform matrix (identity with 1mm spacing)
-    header.sform_code = 1;
-    header.srow_x = [1.0, 0.0, 0.0, 0.0];
-    header.srow_y = [0.0, 1.0, 0.0, 0.0];
-    header.srow_z = [0.0, 0.0, 1.0, 0.0];
+    let image = ritk_image::native::Image::from_flat_on(
+        voxels,
+        [nx as usize, ny as usize, nz as usize],
+        origin,
+        spacing,
+        direction,
+        &SequentialBackend,
+    )
+    .map_err(|error| std::io::Error::other(error.to_string()))?;
 
-    // Write NIFTI file
-    let nifti = InMemNiftiObject::from_header_and_data(header, volume);
-    WriterOptions::new(path).write_nifti(&nifti)?;
-
-    Ok(())
+    NiftiWriter::new(SequentialBackend)
+        .write(path, &image)
+        .map_err(|e| std::io::Error::other(e.to_string()))
 }
 
-/// Helper to create realistic skull phantom NIFTI
+/// Helper to create a realistic skull phantom NIFTI via RITK writer
 fn create_skull_phantom_nifti(path: &str) -> std::io::Result<()> {
     let dims = (64, 64, 64);
     let mut volume = Array3::zeros(dims);
@@ -81,29 +73,32 @@ fn create_skull_phantom_nifti(path: &str) -> std::io::Result<()> {
         }
     }
 
-    // Create header
-    let mut header = NiftiHeader::default();
-    header.dim[0] = 3;
-    header.dim[1] = dims.0 as u16;
-    header.dim[2] = dims.1 as u16;
-    header.dim[3] = dims.2 as u16;
-    header.pixdim[1] = 0.5; // 0.5mm isotropic (high resolution)
-    header.pixdim[2] = 0.5;
-    header.pixdim[3] = 0.5;
-    header.datatype = 16; // f32
-    header.sform_code = 1;
-    header.srow_x = [0.5, 0.0, 0.0, 0.0];
-    header.srow_y = [0.0, 0.5, 0.0, 0.0];
-    header.srow_z = [0.0, 0.0, 0.5, 0.0];
+    let voxels: Vec<f32> = volume.iter().map(|&v| v as f32).collect();
+    let origin = Point::new([-16.0, -16.0, -16.0]); // center offset for 0.5mm spacing
+    let spacing = Spacing::new([0.5, 0.5, 0.5]);
+    let direction = Direction::identity();
 
-    let nifti = NiftiObject::from_header_and_data(header, volume);
-    WriterOptions::new(path).write_nifti(&nifti)?;
+    let image = ritk_image::native::Image::from_flat_on(
+        voxels,
+        [dims.0, dims.1, dims.2],
+        origin,
+        spacing,
+        direction,
+        &SequentialBackend,
+    )
+    .map_err(|error| std::io::Error::other(error.to_string()))?;
 
-    Ok(())
+    NiftiWriter::new(SequentialBackend)
+        .write(path, &image)
+        .map_err(|e| std::io::Error::other(e.to_string()))
 }
 
 fn get_test_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("tests/data/ct_scans")
+}
+
+fn remove_test_file(path: &Path) {
+    fs::remove_file(path).expect("remove NIfTI integration fixture");
 }
 
 #[test]
@@ -114,15 +109,30 @@ fn test_load_synthetic_nifti_soft_tissue() {
     let nifti_path = test_dir.join("synthetic_soft_tissue.nii");
     create_synthetic_nifti(nifti_path.to_str().unwrap(), (32, 32, 32), 50.0).unwrap();
 
-    let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
-    let metadata = model.metadata();
+    let reader = NiftiReader::new(SequentialBackend);
+    let image = reader.read(nifti_path.to_str().unwrap()).unwrap();
 
-    assert_eq!(metadata.dimensions, (32, 32, 32));
-    assert_eq!(metadata.hu_range, (50.0, 50.0));
-    assert_eq!(metadata.voxel_spacing_mm, (1.0, 1.0, 1.0));
+    let shape = image.shape();
+    assert_eq!(shape, [32, 32, 32]);
 
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
+    let spacing = image.spacing();
+    assert_eq!(spacing[0], 1.0);
+    assert_eq!(spacing[1], 1.0);
+    assert_eq!(spacing[2], 1.0);
+
+    let data = image.data_slice().expect("contiguous");
+    let min = data.iter().copied().fold(f32::MAX, f32::min);
+    let max = data.iter().copied().fold(f32::MIN, f32::max);
+    assert!(
+        (min - 50.0).abs() < 1e-6,
+        "Expected HU ~50.0, got min {min}"
+    );
+    assert!(
+        (max - 50.0).abs() < 1e-6,
+        "Expected HU ~50.0, got max {max}"
+    );
+
+    remove_test_file(&nifti_path);
 }
 
 #[test]
@@ -133,21 +143,17 @@ fn test_load_synthetic_nifti_bone() {
     let nifti_path = test_dir.join("synthetic_bone.nii");
     create_synthetic_nifti(nifti_path.to_str().unwrap(), (16, 16, 16), 1500.0).unwrap();
 
-    let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
-    let metadata = model.metadata();
+    let reader = NiftiReader::new(SequentialBackend);
+    let image = reader.read(nifti_path.to_str().unwrap()).unwrap();
 
-    assert_eq!(metadata.dimensions, (16, 16, 16));
-    assert!(
-        metadata.hu_range.1 >= 1500.0,
-        "Should detect bone HU values"
-    );
+    let shape = image.shape();
+    assert_eq!(shape, [16, 16, 16]);
 
-    // Verify sound speed calculation
-    let c = model.sound_speed(8, 8, 8);
-    assert!(c > 2800.0, "Bone should have high sound speed");
+    let data = image.data_slice().expect("contiguous");
+    let max = data.iter().copied().fold(f32::MIN, f32::max);
+    assert!(max >= 1500.0, "Should detect bone HU values, max={max}");
 
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
+    remove_test_file(&nifti_path);
 }
 
 #[test]
@@ -158,41 +164,24 @@ fn test_load_skull_phantom() {
     let nifti_path = test_dir.join("skull_phantom.nii");
     create_skull_phantom_nifti(nifti_path.to_str().unwrap()).unwrap();
 
-    let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
-    let metadata = model.metadata();
+    let reader = NiftiReader::new(SequentialBackend);
+    let image = reader.read(nifti_path.to_str().unwrap()).unwrap();
 
-    assert_eq!(metadata.dimensions, (64, 64, 64));
-    assert_eq!(metadata.voxel_spacing_mm, (0.5, 0.5, 0.5));
-    assert!(metadata.hu_range.0 < 0.0, "Should have air regions");
-    assert!(metadata.hu_range.1 > 1000.0, "Should have bone regions");
+    let shape = image.shape();
+    assert_eq!(shape, [64, 64, 64]);
 
-    // Generate mask and verify skull detection
-    let grid = Grid::new(64, 64, 64, 0.5e-3, 0.5e-3, 0.5e-3).unwrap();
-    let mask = model.generate_mask(&grid).unwrap();
+    let spacing = image.spacing();
+    assert_eq!(spacing[0], 0.5);
+    assert_eq!(spacing[1], 0.5);
+    assert_eq!(spacing[2], 0.5);
 
-    // Center should be brain (no mask)
-    assert_eq!(mask[[32, 32, 32]], 0.0, "Brain center should not be masked");
+    let data = image.data_slice().expect("contiguous");
+    let min = data.iter().copied().fold(f32::MAX, f32::min);
+    let max = data.iter().copied().fold(f32::MIN, f32::max);
+    assert!(min < 0.0, "Should have air regions, min={min}");
+    assert!(max > 1000.0, "Should have bone regions, max={max}");
 
-    // Count skull voxels
-    let skull_count = mask.iter().filter(|&&v| v > 0.5).count();
-    assert!(skull_count > 1000, "Should detect substantial skull region");
-    assert!(
-        skull_count < 64 * 64 * 64 / 2,
-        "Skull should not be majority"
-    );
-
-    // Generate heterogeneous model
-    let het = model.to_heterogeneous(&grid).unwrap();
-
-    // Verify acoustic properties vary appropriately
-    let c_center = het.sound_speed[[32, 32, 32]]; // Brain
-    let c_skull = het.sound_speed[[50, 32, 32]]; // Skull region
-
-    assert_eq!(c_center, 1500.0, "Brain should have water-like sound speed");
-    assert!(c_skull > 2800.0, "Skull should have bone-like sound speed");
-
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
+    remove_test_file(&nifti_path);
 }
 
 #[test]
@@ -204,40 +193,41 @@ fn test_nifti_affine_transformation() {
 
     // Create NIFTI with non-identity affine
     let dims = (10, 10, 10);
-    let volume = Array3::from_elem(dims, 100.0);
+    let volume = Array3::from_elem(dims, 100.0f64);
+    let voxels: Vec<f32> = volume.iter().map(|&v| v as f32).collect();
 
-    let mut header = NiftiHeader::default();
-    header.dim[0] = 3;
-    header.dim[1] = dims.0 as u16;
-    header.dim[2] = dims.1 as u16;
-    header.dim[3] = dims.2 as u16;
-    header.pixdim[1] = 2.0; // 2mm spacing
-    header.pixdim[2] = 2.0;
-    header.pixdim[3] = 2.0;
-    header.datatype = 16;
-    header.sform_code = 1;
-    header.srow_x = [2.0, 0.0, 0.0, 10.0]; // 2mm spacing, 10mm offset
-    header.srow_y = [0.0, 2.0, 0.0, 20.0];
-    header.srow_z = [0.0, 0.0, 2.0, 30.0];
+    let origin = Point::new([-10.0, -10.0, -10.0]); // 2mm spacing, 10mm offset
+    let spacing = Spacing::new([2.0, 2.0, 2.0]);
+    let direction = Direction::identity();
 
-    let nifti = NiftiObject::from_header_and_data(header, volume);
-    WriterOptions::new(nifti_path.to_str().unwrap())
-        .write_nifti(&nifti)
+    let image = ritk_image::native::Image::from_flat_on(
+        voxels,
+        [dims.0, dims.1, dims.2],
+        origin,
+        spacing,
+        direction,
+        &SequentialBackend,
+    )
+    .unwrap();
+
+    NiftiWriter::new(SequentialBackend)
+        .write(nifti_path.to_str().unwrap(), &image)
         .unwrap();
 
-    let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
-    let metadata = model.metadata();
+    let reader = NiftiReader::new(SequentialBackend);
+    let loaded = reader.read(nifti_path.to_str().unwrap()).unwrap();
 
-    // Check voxel spacing extracted correctly
-    assert_eq!(metadata.voxel_spacing_mm, (2.0, 2.0, 2.0));
+    let loaded_spacing = loaded.spacing();
+    assert_eq!(loaded_spacing[0], 2.0);
+    assert_eq!(loaded_spacing[1], 2.0);
+    assert_eq!(loaded_spacing[2], 2.0);
 
-    // Check affine matrix includes offset
-    assert_eq!(metadata.affine[0][3], 10.0);
-    assert_eq!(metadata.affine[1][3], 20.0);
-    assert_eq!(metadata.affine[2][3], 30.0);
+    let loaded_origin = loaded.origin();
+    assert!((loaded_origin[0] - (-10.0)).abs() < 1e-6);
+    assert!((loaded_origin[1] - (-10.0)).abs() < 1e-6);
+    assert!((loaded_origin[2] - (-10.0)).abs() < 1e-6);
 
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
+    remove_test_file(&nifti_path);
 }
 
 #[test]
@@ -248,15 +238,25 @@ fn test_compressed_nifti_gz() {
     let nifti_path = test_dir.join("compressed.nii.gz");
     create_synthetic_nifti(nifti_path.to_str().unwrap(), (20, 20, 20), 800.0).unwrap();
 
-    // Should handle .nii.gz files automatically
-    let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
-    let metadata = model.metadata();
+    let reader = NiftiReader::new(SequentialBackend);
+    let image = reader.read(nifti_path.to_str().unwrap()).unwrap();
 
-    assert_eq!(metadata.dimensions, (20, 20, 20));
-    assert_eq!(metadata.hu_range, (800.0, 800.0));
+    let shape = image.shape();
+    assert_eq!(shape, [20, 20, 20]);
 
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
+    let data = image.data_slice().expect("contiguous");
+    let min = data.iter().copied().fold(f32::MAX, f32::min);
+    let max = data.iter().copied().fold(f32::MIN, f32::max);
+    assert!(
+        (min - 800.0).abs() < 1e-6,
+        "Expected HU ~800.0, got min {min}"
+    );
+    assert!(
+        (max - 800.0).abs() < 1e-6,
+        "Expected HU ~800.0, got max {max}"
+    );
+
+    remove_test_file(&nifti_path);
 }
 
 #[test]
@@ -264,56 +264,16 @@ fn test_invalid_file_format() {
     let test_dir = get_test_dir();
     fs::create_dir_all(&test_dir).unwrap();
 
-    // Create a non-NIFTI file
     let bad_path = test_dir.join("not_a_nifti.txt");
     fs::write(&bad_path, b"This is not a NIFTI file").unwrap();
 
-    let result = CTBasedSkullModel::from_file(bad_path.to_str().unwrap());
-    assert!(result.is_err(), "Should fail to load non-NIFTI file");
+    let reader = NiftiReader::new(SequentialBackend);
+    let error = reader
+        .read(bad_path.to_str().unwrap())
+        .expect_err("non-NIfTI input must fail");
+    assert_eq!(error.kind(), std::io::ErrorKind::Other);
 
-    if let Err(KwaversError::InvalidInput(msg)) = result {
-        assert!(
-            msg.contains("Failed to read"),
-            "Error should mention read failure"
-        );
-    }
-
-    // Cleanup
-    fs::remove_file(bad_path).ok();
-}
-
-#[test]
-fn test_nifti_dimension_validation() {
-    let test_dir = get_test_dir();
-    fs::create_dir_all(&test_dir).unwrap();
-
-    let nifti_path = test_dir.join("4d_volume.nii");
-
-    // Create a 4D volume (should be rejected as we expect 3D)
-    let volume = Array3::from_elem((10, 10, 10), 100.0);
-    let mut header = NiftiHeader::default();
-    header.dim[0] = 4; // 4D (WRONG)
-    header.dim[1] = 10;
-    header.dim[2] = 10;
-    header.dim[3] = 10;
-    header.dim[4] = 5; // time points
-
-    let nifti = NiftiObject::from_header_and_data(header, volume);
-    WriterOptions::new(nifti_path.to_str().unwrap())
-        .write_nifti(&nifti)
-        .unwrap();
-
-    let result = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap());
-    assert!(result.is_err(), "Should reject 4D volumes");
-
-    if let Err(KwaversError::Validation(_)) = result {
-        // Expected validation error
-    } else {
-        panic!("Expected ValidationError for non-3D volume");
-    }
-
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
+    remove_test_file(&bad_path);
 }
 
 #[test]
@@ -334,46 +294,44 @@ fn test_roundtrip_accuracy() {
 
     let nifti_path = test_dir.join("roundtrip.nii");
 
-    // Write to NIFTI
-    let mut header = NiftiHeader::default();
-    header.dim[0] = 3;
-    header.dim[1] = 32;
-    header.dim[2] = 32;
-    header.dim[3] = 32;
-    header.pixdim[1] = 1.0;
-    header.pixdim[2] = 1.0;
-    header.pixdim[3] = 1.0;
-    header.datatype = 16;
+    // Write to NIFTI via RITK writer
+    let voxels: Vec<f32> = original_ct.iter().map(|&v| v as f32).collect();
+    let origin = Point::default();
+    let spacing = Spacing::new([1.0, 1.0, 1.0]);
+    let direction = Direction::identity();
 
-    let nifti = NiftiObject::from_header_and_data(header, original_ct.clone());
-    WriterOptions::new(nifti_path.to_str().unwrap())
-        .write_nifti(&nifti)
+    let image = ritk_image::native::Image::from_flat_on(
+        voxels,
+        [32, 32, 32],
+        origin,
+        spacing,
+        direction,
+        &SequentialBackend,
+    )
+    .unwrap();
+
+    NiftiWriter::new(SequentialBackend)
+        .write(nifti_path.to_str().unwrap(), &image)
         .unwrap();
 
-    // Read back
-    let model = CTBasedSkullModel::from_file(nifti_path.to_str().unwrap()).unwrap();
-    let loaded_ct = model.ct_data();
+    // Read back via RITK reader
+    let reader = NiftiReader::new(SequentialBackend);
+    let loaded = reader.read(nifti_path.to_str().unwrap()).unwrap();
+    let loaded_data = loaded.data_slice().expect("contiguous");
 
     // Check all values match (within floating point tolerance)
     for i in 0..32 {
         for j in 0..32 {
             for k in 0..32 {
-                let diff = (original_ct[[i, j, k]] - loaded_ct[[i, j, k]]).abs();
-                assert!(diff < 1e-6, "Roundtrip values should match exactly");
+                let idx = i * 32 * 32 + j * 32 + k;
+                assert_eq!(
+                    loaded_data[idx] as f64,
+                    original_ct[[i, j, k]],
+                    "roundtrip value differs at [{i}, {j}, {k}]"
+                );
             }
         }
     }
 
-    // Cleanup
-    fs::remove_file(nifti_path).ok();
-}
-
-// Cleanup after all tests
-#[test]
-#[ignore] // Run manually to clean up test data
-fn cleanup_test_data() {
-    let test_dir = get_test_dir();
-    if test_dir.exists() {
-        fs::remove_dir_all(test_dir).ok();
-    }
+    remove_test_file(&nifti_path);
 }

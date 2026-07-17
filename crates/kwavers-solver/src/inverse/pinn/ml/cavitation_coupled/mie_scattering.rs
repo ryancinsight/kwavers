@@ -297,7 +297,7 @@ mod tests {
         for n in 0..=n_max_extra {
             let a_n = mie_coefficient(n, k_l64, k_b64, rho_l64, rho_b64, r64);
             let sign = if n % 2 == 0 { 1.0_f64 } else { -1.0_f64 };
-            sum = sum + a_n * ((2 * n + 1) as f64 * sign);
+            sum += a_n * ((2 * n + 1) as f64 * sign);
         }
         let f_extra_64 = sum * (i * 2.0_f64 / k_l64);
         let f_extra = Complex::new(f_extra_64.re as f32, f_extra_64.im as f32);

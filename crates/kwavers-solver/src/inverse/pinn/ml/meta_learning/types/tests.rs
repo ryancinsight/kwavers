@@ -4,6 +4,7 @@ use super::task::{TaskData, TaskDataStatistics};
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER_SIM,
 };
+use kwavers_core::constants::tissue_acoustics::DENSITY_AIR;
 
 #[test]
 fn test_pde_type_complexity() {
@@ -32,7 +33,7 @@ fn test_pde_type_linearity() {
 fn test_physics_parameters_default() {
     let params = MetaLearningPhysicsParameters::default();
     assert_eq!(params.wave_speed, SOUND_SPEED_AIR);
-    assert_eq!(params.density, 1.2);
+    assert_eq!(params.density, DENSITY_AIR);
     assert!(params.viscosity.is_none());
 }
 

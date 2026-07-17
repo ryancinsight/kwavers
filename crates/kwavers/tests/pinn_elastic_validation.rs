@@ -30,8 +30,6 @@ use kwavers_physics::foundations::wave_equation::{
     AutodiffElasticWaveEquation, AutodiffWaveEquation, Domain, WaveEquationBoundary,
 };
 use kwavers_solver::inverse::pinn::elastic_2d::{Config, ElasticPINN2D, ElasticPINN2DSolver};
-use leto::Array2;
-
 // Import validation framework
 mod elastic_wave_validation_framework;
 use elastic_wave_validation_framework::{
@@ -305,10 +303,6 @@ fn test_pinn_plane_wave_s_wave() {
 
     let solver = create_homogeneous_solver(lambda, mu, rho);
 
-    // Create plane S-wave propagating in x-direction (polarized in y)
-    let wave_vector = [2.0 * std::f64::consts::PI, 0.0];
-    let amplitude = 1e-6;
-
     // ✅ Task 4 Complete: Autodiff stress gradients implemented
     // S-wave test follows same pattern as P-wave test above.
     // Key difference: S-wave propagates perpendicular to displacement direction.
@@ -328,10 +322,6 @@ fn test_pinn_oblique_plane_wave() {
     let solver = create_homogeneous_solver(lambda, mu, rho);
 
     // Oblique propagation at 45 degrees
-    let k = 2.0 * std::f64::consts::PI;
-    let wave_vector = [k / std::f64::consts::SQRT_2, k / std::f64::consts::SQRT_2];
-    let amplitude = 1e-6;
-
     // ✅ Task 4 Complete: Autodiff stress gradients implemented
     // Oblique wave test combines P and S components at arbitrary propagation angle.
     // The autodiff functions handle this automatically - no special case needed.
@@ -458,12 +448,21 @@ fn test_pinn_soft_material() {
 fn test_validation_result_construction() {
     let success = ValidationResult::success("test", "All checks passed");
     assert!(success.passed);
+    assert_eq!(success.error_l2, 0.0);
+    assert_eq!(success.error_linf, 0.0);
+    assert_eq!(success.tolerance, 0.0);
 
     let failure = ValidationResult::failure("test", 1e-3, 1e-2, 1e-6, "Error too large");
     assert!(!failure.passed);
+    assert_eq!(failure.error_l2, 1e-3);
+    assert_eq!(failure.error_linf, 1e-2);
+    assert_eq!(failure.tolerance, 1e-6);
 
     let metrics = ValidationResult::with_metrics("test", 1e-8, 1e-7, 1e-6);
     assert!(!metrics.passed); // L∞ exceeds tolerance
+    assert_eq!(metrics.error_l2, 1e-8);
+    assert_eq!(metrics.error_linf, 1e-7);
+    assert_eq!(metrics.tolerance, 1e-6);
 }
 
 #[test]
@@ -474,6 +473,9 @@ fn test_plane_wave_properties() {
 
     let p_wave = PlaneWaveSolution::p_wave([1.0, 0.0], 1e-6, lambda, mu, rho);
     let s_wave = PlaneWaveSolution::s_wave([1.0, 0.0], 1e-6, lambda, mu, rho);
+
+    assert_eq!(p_wave.wave_type, WaveType::PWave);
+    assert_eq!(s_wave.wave_type, WaveType::SWave);
 
     // P-wave faster than S-wave
     assert!(p_wave.speed() > s_wave.speed());
@@ -487,4 +489,12 @@ fn test_plane_wave_properties() {
     let s_pol = s_wave.polarization();
     let dot = s_pol[0] * 1.0 + s_pol[1] * 0.0;
     assert!(dot.abs() < 1e-10);
+
+    assert_eq!(p_wave.displacement(0.0, 0.0, 0.0), [1e-6, 0.0]);
+    assert_eq!(p_wave.velocity(0.0, 0.0, 0.0), [0.0, 0.0]);
+    assert_eq!(p_wave.displacement_gradient(0.0, 0.0, 0.0), [[0.0; 2]; 2]);
+    assert_eq!(
+        p_wave.acceleration(0.0, 0.0, 0.0),
+        [-1e-6 * p_wave.speed().powi(2), 0.0]
+    );
 }

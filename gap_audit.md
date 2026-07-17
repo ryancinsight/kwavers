@@ -1,4 +1,46 @@
+## State refresh (2026-07-16) — kwavers Batch #1 closure: Rayon → Moirai migration complete
+
+- **kwavers Batch #1 — CLOSED** per clean legacy migration audit.
+  - Source-level scoped audits under `crates/kwavers*/src` report zero direct
+    `rayon::`, `use rayon`, `par_for_each`, `into_par_iter()`, or `ndarray::Zip`
+    parallel iterator usage.
+  - `cargo run --bin xtask -- legacy-migration-audit` reports 0 Rayon, 0 ndarray,
+    0 nalgebra, 0 burn, 0 tokio surface items.
+  - `cargo run --bin xtask -- refresh-legacy-allowlist` regenerated the allowlist.
+  - `cargo check -p kwavers-math` passes.
+  - Workspace provider version-constraint fixes required to unblock the audit:
+    - `repos/ritk/Cargo.toml`: moirai `0.3.0` → `0.4.0`, leto `0.36.0` → `0.37.0`,
+      leto-ops `0.36.0` → `0.37.0`, hephaestus-core `0.13.0` → `0.15.0`,
+      hephaestus-wgpu `0.13.0` → `0.15.0`, apollo-fft `0.17.0` → `0.18.0`.
+    - `repos/coeus/Cargo.toml`: leto `0.36.0` → `0.37.0`,
+      leto-ops `0.36.0` → `0.37.0`, hephaestus-core `0.14.0` → `0.15.0`,
+      hephaestus-wgpu `0.14.0` → `0.15.0`, hephaestus-cuda `0.14.0` → `0.15.0`.
+  - Residual: the active RITK provider migration emits compiler warnings under
+    Kwavers' full facade build; it no longer blocks compilation.
+
 # Gap Audit
+
+- In progress 2026-07-16: `PulsedWaveDoppler` previously returned only a
+  one-sided magnitude waveform, discarding reverse-flow bins. The provider now
+  has `signed_spectrum`, whose centered two-sided frequency, velocity, and
+  power axes preserve both signs, reject perpendicular beam geometry, and
+  reject an ensemble longer than its FFT instead of silently truncating pulses.
+  The coherent offline lock now resolves; `kwavers-analysis` compiles, normal
+  warning-denied Clippy passes, focused PW Nextest passes 8/8, and locked
+  `kwavers --all-features` compilation passes. The facade reports only current
+  upstream RITK and Hephaestus warnings. Evidence tier: compiler diagnostics
+  and value-semantic provider regression.
+
+- In progress 2026-07-16: the coherent all-feature graph exposed 79 solver
+  source diagnostics. Machine-applicable corrections plus test-only contract
+  repairs now make warning-denied Clippy pass for solver's independently
+  buildable `pinn,gpu,async-runtime,nightly,simd,test-util` feature set. The
+  full solver suite passes 844 runnable tests with 4 ignored. The locked
+  `kwavers --all-features` facade compiles and package Nextest passes. The
+  all-target gate is reconciling stale test/example call sites surfaced by
+  concurrent provider migration. Current RITK and Hephaestus dependency
+  warnings remain outside Kwavers' source lint surface. Evidence tier:
+  compiler linting and value-semantic regression tests.
 
 - In progress 2026-07-15: GitHub Actions checked out Kwavers alone even though
   the workspace declares live sibling Atlas paths such as `../apollo`. PR #288

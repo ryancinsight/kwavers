@@ -11,8 +11,8 @@ This example is an architecture-focused tour of the adaptive beamforming stack a
 | Component | API | Value |
 |---|---|---|
 | Architecture | `adaptive_beamforming::{adaptive, conventional, subspace, tapering, past, opast}` | Focused modules replace the old 2193-line implementation |
-| Migration | `--features legacy_algorithms` | Keeps the legacy path available behind an opt-in feature flag |
-| Verification | `println!` status summary | Reports 60 passing tests, no warnings, and zero breaking changes |
+| API ownership | `kwavers_analysis::...::adaptive::MinimumVariance` | Analysis owns adaptive weighting; transducer owns hardware interfaces |
+| Verification | Package Nextest and strict Clippy | Validates the current source graph |
 
 ## Key Code Snippet
 

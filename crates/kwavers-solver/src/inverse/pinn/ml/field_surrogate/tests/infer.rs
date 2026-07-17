@@ -45,10 +45,12 @@ fn test_infer_grid_rejects_focus_out_of_bounds() {
     let cfg = ParamFieldPINNConfig::default();
     let net = ParamFieldPINNNetwork::<B>::new(&cfg).unwrap();
 
-    let mut params = GridQueryParams::default();
-    params.shape = (4, 4, 4);
-    params.focus_idx = (4, 0, 0); // out of bounds
-    params.coord_half_m = (1e-3, 1e-3, 1e-3);
+    let params = GridQueryParams {
+        shape: (4, 4, 4),
+        focus_idx: (4, 0, 0), // out of bounds
+        coord_half_m: (1e-3, 1e-3, 1e-3),
+        ..GridQueryParams::default()
+    };
     assert!(infer_grid(&net, &params).is_err());
 }
 

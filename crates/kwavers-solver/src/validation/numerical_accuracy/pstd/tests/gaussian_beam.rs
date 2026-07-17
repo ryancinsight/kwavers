@@ -35,8 +35,10 @@ fn test_gaussian_beam_phase_accuracy() {
     // 16 PPW → < 1% PSTD phase error (Treeby & Cox 2010, Table 1)
     let dx = wavelength / 16.0;
 
-    let mut config = PstdConfig::default();
-    config.dt = super::CFL_NUMBER * dx / c0;
+    let config = PstdConfig {
+        dt: super::CFL_NUMBER * dx / c0,
+        ..PstdConfig::default()
+    };
 
     let grid = Grid::new(n, n, 1, dx, dx, dx).unwrap();
     let medium = HomogeneousMedium::from_minimal(rho0, c0, &grid);

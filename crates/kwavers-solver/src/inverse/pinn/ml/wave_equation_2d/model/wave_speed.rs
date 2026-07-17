@@ -72,7 +72,7 @@ impl<B: BackendOps<f32> + Default> WaveSpeedFn<B> {
             ));
         }
 
-        let data_cpu = Arc::new(slice.iter().cloned().collect::<Vec<_>>());
+        let data_cpu = Arc::new(slice.to_vec());
         let func = Arc::new(move |x: f32, y: f32| -> f32 {
             let x = x.clamp(0.0, 1.0);
             let y = y.clamp(0.0, 1.0);

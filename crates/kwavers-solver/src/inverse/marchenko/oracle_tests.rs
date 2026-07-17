@@ -164,9 +164,7 @@ fn redatum_matches_engine_green_function() {
     // onto that axis at indices centre..centre+nt.
     let center = res.center;
     let mut g_true_axis = vec![0.0; res.green_minus.len()];
-    for t in 0..nt {
-        g_true_axis[center + t] = g_true[t];
-    }
+    g_true_axis[center..(center + nt)].copy_from_slice(&g_true);
     let lo = center + t_d.saturating_sub(WAVELET_LEN);
     let hi = (center + nt).min(res.green_minus.len());
 

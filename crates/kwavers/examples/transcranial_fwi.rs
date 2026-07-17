@@ -82,6 +82,7 @@ use kwavers_solver::inverse::fwi::time_domain::{FwiGeometry, FwiProcessor};
 use kwavers_solver::inverse::seismic::parameters::{FwiParameters, RegularizationParameters};
 use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2, Array3};
+use ritk_io::domain::ImageReader;
 use std::f64::consts::PI;
 use std::time::Instant;
 
@@ -259,65 +260,51 @@ fn build_skull_phantom() -> SkullPhantom {
 ///
 /// # Returns
 ///
-/// `None` if the file cannot be opened or if the `nifti` feature is disabled.
-/// The example falls back to the synthetic phantom in that case.
-///
-/// # Feature gate
-///
-/// Requires `--features nifti` (already a direct kwavers dependency).
+/// `None` if the file cannot be opened. The example falls back to the synthetic
+/// phantom in that case.
 fn load_ct_slice(
     ct_nifti_path: &str,
     _mri_nifti_path: &str,
     _slice_index: usize,
 ) -> Option<SkullPhantom> {
-    #[cfg(feature = "nifti")]
-    {
-        use nifti::{IntoNdArray, NiftiObject, NiftiVolume, ReaderOptions};
+    use ritk_io::format::nifti::native::NiftiReader;
 
-        let obj = ReaderOptions::new().read_file(ct_nifti_path).ok()?;
-        let header = obj.header();
-        let pixdim = header.pixdim; // voxel spacing [mm]
-        let _voxel_spacing_mm = [pixdim[1], pixdim[2], pixdim[3]];
+    let reader = NiftiReader::new(coeus_core::SequentialBackend);
+    let obj = reader.read(ct_nifti_path).ok()?;
+    let spacing = obj.spacing();
+    let _voxel_spacing_mm = [spacing[0], spacing[1], spacing[2]];
+    let dims = obj.shape();
+    let volume = obj.data_vec();
+    let (vol_nx, vol_ny, vol_nz) = (dims[0], dims[1], dims[2]);
 
-        let volume = obj.into_volume();
-        let dims = volume.dim(); // [nx, ny, nz, ...]
-        let (vol_nx, vol_ny, vol_nz) = (dims[0] as usize, dims[1] as usize, dims[2] as usize);
+    // Convert f32 to f64 for kwavers computations
+    let data: Vec<f64> = volume.iter().map(|&x| x as f64).collect();
 
-        // into_ndarray yields ArrayD<T>; we request f64 directly.
-        let data: ArrayD<f64> = volume.into_ndarray::<f64>().ok()?;
+    let coronal_idx = vol_ny / 2; // mid-coronal slice
 
-        let coronal_idx = vol_ny / 2; // mid-coronal slice
+    // Resample to simulation grid via nearest-neighbour
+    let mut hu = Array3::<f64>::from_elem((NX, NY, NZ), HU_WATER);
+    let scale_x = vol_nx as f64 / NX as f64;
+    let scale_z = vol_nz as f64 / NZ as f64;
 
-        // Resample to simulation grid via nearest-neighbour
-        let mut hu = Array3::<f64>::from_elem((NX, NY, NZ), HU_WATER);
-        let scale_x = vol_nx as f64 / NX as f64;
-        let scale_z = vol_nz as f64 / NZ as f64;
-
-        for i in 0..NX {
-            for k in 0..NZ {
-                let src_i = ((i as f64 * scale_x) as usize).min(vol_nx - 1);
-                let src_k = ((k as f64 * scale_z) as usize).min(vol_nz - 1);
-                for j in 0..NY {
-                    hu[[i, j, k]] = data[[src_i, coronal_idx, src_k]];
-                }
+    for i in 0..NX {
+        for k in 0..NZ {
+            let src_i = ((i as f64 * scale_x) as usize).min(vol_nx - 1);
+            let src_k = ((k as f64 * scale_z) as usize).min(vol_nz - 1);
+            let voxel = data[src_i * vol_ny * vol_nz + coronal_idx * vol_nz + src_k];
+            for j in 0..NY {
+                hu[[i, j, k]] = voxel;
             }
         }
-
-        let sound_speed = hu.mapv(hu_to_sound_speed);
-        let density = hu.mapv(hu_to_density);
-        return Some(SkullPhantom {
-            hu,
-            sound_speed,
-            density,
-        });
     }
 
-    // nifti feature not enabled — fall back to synthetic phantom
-    #[cfg(not(feature = "nifti"))]
-    {
-        let _ = ct_nifti_path;
-        None
-    }
+    let sound_speed = hu.mapv(hu_to_sound_speed);
+    let density = hu.mapv(hu_to_density);
+    Some(SkullPhantom {
+        hu,
+        sound_speed,
+        density,
+    })
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

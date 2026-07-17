@@ -17,7 +17,7 @@ categories = ["science", "simulation", "medical"]
 # It depends on the layer crates directly so those targets can use them.
 
 # Foundation layer. `channels`+`registration` are always-on (flume/
-# ritk-registration); `gpu` and `nifti` are forwarded from this crate's features.
+# ritk-registration); GPU execution is forwarded from this crate's features.
 kwavers-core = { path = "../kwavers-core", features = ["channels", "registration"] }
 kwavers-optics = { path = "../kwavers-optics" }
 kwavers-math = { path = "../kwavers-math" }
@@ -41,9 +41,6 @@ kwavers-therapy = { path = "../kwavers-therapy" }
 # allocation profiling); concrete provider paths activate via `kwavers-gpu`
 # features and remain owned by the leaf GPU crate.
 kwavers-gpu = { path = "../kwavers-gpu" }
-
-# Optional NIfTI reader for real CT/MRI example I/O (enabled by the `nifti` feature).
-nifti = { workspace = true, optional = true }
 
 # Essential numerical computing
 moirai-parallel = { workspace = true }
@@ -136,7 +133,10 @@ plotters = { version = "0.3", default-features = false, features = [
 coeus-core = { workspace = true }
 coeus-autograd = { workspace = true }
 coeus-tensor = { workspace = true }
+ritk-image = { workspace = true }
+ritk-spatial = { workspace = true }
 tempfile = { workspace = true }
+hephaestus-wgpu = { workspace = true }
 
 # Concurrency testing (Sprint 138 - Persona Requirements)
 loom = "0.7"
@@ -150,7 +150,7 @@ cuda-runtime = ["cuda-provider", "kwavers-gpu/cuda-runtime"]
 plotting = ["dep:plotly", "kwavers-analysis/plotting"]
 # Additional features referenced in code
 dicom = []             # No-op alias retained for back-compat; DICOM I/O is unconditional via ritk-io.
-nifti = ["dep:nifti", "kwavers-core/nifti", "kwavers-simulation/nifti", "kwavers-therapy/nifti"]   # Medical imaging support (forwards to kwavers-core; dep:nifti for example NIfTI I/O)
+
 nightly = []           # Nightly Rust features
 simd = []              # SIMD acceleration support
 fpu = []               # FPU acceleration support
@@ -165,18 +165,15 @@ zero-copy = ["dep:rkyv"]             # Zero-copy serialization
 # Sprint 142-143 - Physics-Informed Neural Networks
 pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn", "kwavers-diagnostics/pinn"]                            # Physics-informed neural networks
 experimental_neural = ["pinn"]        # Gate experimental neural beamforming atop PINN deps
-# Adaptive Beamforming Refactor - Sprint ADR-001
-legacy_algorithms = []               # Legacy beamforming algorithms (deprecated)
 opast = []                           # OPAST benchmarks (Criterion)
 # Sprint 159 - Enterprise API for production deployment
 # Feature flags for conditional compilation (used in tests/examples)
 em_pinn_module_exists = []          # Conditional feature for electromagnetic PINN tests
-ai_integration_module_exists = []   # Conditional feature for AI integration tests
 # NOTE: ritk-core and ritk-io are now mandatory dependencies (see [dependencies]),
 # so the former `ritk` feature is a no-op alias retained only for callers that
 # still pass `--features ritk` on the CLI. New code should not gate on it.
 ritk = []
-full = ["gpu", "plotting", "dicom", "nifti", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
+full = ["gpu", "plotting", "dicom", "advanced-visualization", "gpu-visualization", "async-runtime", "structured-logging", "zero-copy", "pinn"]
 
 # SRS NFR-002 Compliant Test Configuration Strategy
 # ================================================
@@ -390,12 +387,10 @@ required-features = ["pinn"]
 [[example]]
 name = "liver_theranostic_reconstruction"
 path = "examples/liver_theranostic_reconstruction.rs"
-required-features = ["nifti"]
 
 [[example]]
 name = "transcranial_ct_mri_reconstruction"
 path = "examples/transcranial_ct_mri_reconstruction.rs"
-required-features = ["nifti"]
 
 [[example]]
 name = "brain_theranostic_monitor"

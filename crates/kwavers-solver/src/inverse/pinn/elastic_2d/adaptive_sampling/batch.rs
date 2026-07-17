@@ -28,7 +28,7 @@ impl Iterator for BatchIterator {
         if self.position >= (self.indices.len()) {
             return None;
         }
-        let end = (self.position + self.batch_size).min((self.indices.len()));
+        let end = (self.position + self.batch_size).min(self.indices.len());
         let batch = self.indices[self.position..end].to_vec();
         self.position = end;
         Some(batch)
@@ -59,7 +59,7 @@ where
     let x = coeus_autograd::index_select(&data.x, 0, &idx_var);
     let y = coeus_autograd::index_select(&data.y, 0, &idx_var);
     let t = coeus_autograd::index_select(&data.t, 0, &idx_var);
-    let n = (indices.len());
+    let n = indices.len();
     let source_x = Var::new(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend), false);
     let source_y = Var::new(coeus_tensor::Tensor::zeros_on(vec![n, 1], &backend), false);
     Ok(CollocationData {

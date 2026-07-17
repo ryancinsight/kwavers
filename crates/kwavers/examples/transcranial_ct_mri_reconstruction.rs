@@ -30,10 +30,10 @@
 //!
 //! Defaults to the bundled RIRE patient 109 sample (real head CT + co-registered T1
 //! MR): `data/cfb_gbm_sample/{ct,t1}.nii.gz`. Override with `KWAVERS_CT_PATH` /
-//! `KWAVERS_MRI_PATH`. The `.nii.gz` files are not tracked by git; if absent (or the
-//! `nifti` feature is off) the example prints instructions and exits.
+//! `KWAVERS_MRI_PATH`. The `.nii.gz` files are not tracked by git; if absent, the
+//! example prints instructions and exits.
 //!
-//! Run: `cargo run --release --example transcranial_ct_mri_reconstruction --features nifti`
+//! Run: `cargo run --release --example transcranial_ct_mri_reconstruction`
 //!
 //! References:
 //! - West J. et al. (1997). RIRE intermodality registration. JCAT 21(4).
@@ -46,16 +46,6 @@ fn main() -> KwaversResult<()> {
     run()
 }
 
-#[cfg(not(feature = "nifti"))]
-fn run() -> KwaversResult<()> {
-    println!(
-        "transcranial_ct_mri_reconstruction requires the `nifti` feature.\n\
-         Re-run: cargo run --release --example transcranial_ct_mri_reconstruction --features nifti"
-    );
-    Ok(())
-}
-
-#[cfg(feature = "nifti")]
 mod fwi_demo {
     use kwavers_core::constants::hu_mapping::HuAcousticModel;
     use kwavers_core::error::KwaversResult;
@@ -118,7 +108,7 @@ mod fwi_demo {
         };
         println!(
             "Loaded CT {:?} spacing {:.3}×{:.3}×{:.3} mm  HU [{:.0}, {:.0}]",
-            ct.data.dim(),
+            ct.data.shape(),
             ct.spacing_mm[0],
             ct.spacing_mm[1],
             ct.spacing_mm[2],
@@ -168,7 +158,7 @@ mod fwi_demo {
         // Inversion start: known medium with the brain flattened to a constant.
         let mut initial = true_c.clone();
         let mut reference = true_c.clone();
-        for ((i, j, k), &is_brain) in brain.indexed_iter() {
+        for ([i, j, k], &is_brain) in brain.indexed_iter() {
             if is_brain {
                 initial[[i, j, k]] = C_BRAIN_FLAT;
             }
@@ -295,7 +285,7 @@ mod fwi_demo {
                     resample_mri_to_ct_grid(&ct, &mri, &ct_slice, slice_index);
                 println!(
                     "\n── validation vs MRI {:?} (in-bounds coverage {:.0}%) ──",
-                    mri.data.dim(),
+                    mri.data.shape(),
                     coverage * 100.0
                 );
                 if coverage < 0.5 {
@@ -335,17 +325,17 @@ mod fwi_demo {
 
         // ── Figures (PGM: dev-dep `image` carries no PNG encoder) ────────────
         let out_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("test-figures");
-        std::fs::create_dir_all(&out_dir).ok();
+        std::fs::create_dir_all(&out_dir)?;
         save_pgm(
             &out_dir.join("transcranial_ct_true_speed.pgm"),
             &slice_xy(&true_c),
-        );
+        )?;
         save_pgm(
             &out_dir.join("transcranial_fwi_reconstruction.pgm"),
             &slice_xy(&recon),
-        );
+        )?;
         if let Some(mri_slice) = mri_grid {
-            save_pgm(&out_dir.join("transcranial_mri_reference.pgm"), &mri_slice);
+            save_pgm(&out_dir.join("transcranial_mri_reference.pgm"), &mri_slice)?;
         }
         println!("\nFigures (PGM) written to {}", out_dir.display());
         Ok(())
@@ -393,7 +383,7 @@ mod fwi_demo {
 
     /// Extract the z=0 plane of a `(n,n,1)` field as a 2-D array.
     fn slice_xy(v: &Array3<f64>) -> Array2<f64> {
-        let (nx, ny, _) = v.dim();
+        let [nx, ny, _] = v.shape();
         let mut out = Array2::zeros((nx, ny));
         for i in 0..nx {
             for j in 0..ny {
@@ -412,48 +402,31 @@ mod fwi_demo {
     }
 
     fn load_nifti(path: &str) -> Option<NiftiVolume> {
-        use nifti::{IntoNdArray, NiftiObject, ReaderOptions};
-        let obj = ReaderOptions::new().read_file(path).ok()?;
-        let header = obj.header();
-        let pixdim = header.pixdim;
-        let spacing_mm = [pixdim[1] as f64, pixdim[2] as f64, pixdim[3] as f64];
-        let affine = if header.sform_code > 0 {
-            [
-                [
-                    header.srow_x[0] as f64,
-                    header.srow_x[1] as f64,
-                    header.srow_x[2] as f64,
-                    header.srow_x[3] as f64,
-                ],
-                [
-                    header.srow_y[0] as f64,
-                    header.srow_y[1] as f64,
-                    header.srow_y[2] as f64,
-                    header.srow_y[3] as f64,
-                ],
-                [
-                    header.srow_z[0] as f64,
-                    header.srow_z[1] as f64,
-                    header.srow_z[2] as f64,
-                    header.srow_z[3] as f64,
-                ],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        } else {
-            [
-                [spacing_mm[0], 0.0, 0.0, 0.0],
-                [0.0, spacing_mm[1], 0.0, 0.0],
-                [0.0, 0.0, spacing_mm[2], 0.0],
-                [0.0, 0.0, 0.0, 1.0],
-            ]
-        };
-        let dyn_arr: ArrayD<f64> = obj.into_volume().into_ndarray::<f64>().ok()?;
-        if dyn_arr.shape().len() < 3 {
-            return None;
-        }
-        let data = dyn_arr.into_dimensionality::<Ix3>().ok()?;
+        use ritk_io::domain::ImageReader;
+        use ritk_io::format::nifti::native::NiftiReader;
+
+        let reader = NiftiReader::new(coeus_core::SequentialBackend);
+        let obj = reader.read(path).ok()?;
+        let shape = obj.shape();
+        let spacing = obj.spacing();
+        let origin = obj.origin();
+        let direction = obj.direction();
+        let spacing_mm = [spacing[0], spacing[1], spacing[2]];
+        let affine = std::array::from_fn(|row| {
+            std::array::from_fn(|column| {
+                if column < 3 {
+                    direction[(row, column)] * spacing[column]
+                } else {
+                    origin[row]
+                }
+            })
+        });
+
+        let flat_f64 = obj.data_vec().into_iter().map(f64::from).collect();
+        let leto_array = leto::Array3::from_shape_vec(shape, flat_f64).ok()?;
+
         Some(NiftiVolume {
-            data,
+            data: leto_array,
             spacing_mm,
             affine,
         })
@@ -466,7 +439,7 @@ mod fwi_demo {
         slice_index: usize,
     ) -> (Array2<f64>, f64) {
         use kwavers_math::numerics::operators::interpolation::trilinear_index_space;
-        let grid = ct_slice.hu.dim().0;
+        let [grid, _] = ct_slice.hu.shape();
         let [x0, x1, y0, y1] = ct_slice.crop_bounds_index;
         let scale_x = if grid > 1 {
             (x1 - x0) as f64 / (grid - 1) as f64
@@ -479,7 +452,7 @@ mod fwi_demo {
             0.0
         };
         let mri_inv = invert_affine(&mri.affine);
-        let (mnx, mny, mnz) = mri.data.dim();
+        let [mnx, mny, mnz] = mri.data.shape();
         let mut out = Array2::<f64>::zeros((grid, grid));
         let mut in_bounds = 0usize;
         for ix in 0..grid {
@@ -562,26 +535,23 @@ mod fwi_demo {
     }
 
     /// Write a normalized 8-bit grayscale PGM (P5) — min→black, max→white.
-    fn save_pgm(path: &std::path::Path, field: &Array2<f64>) {
+    fn save_pgm(path: &std::path::Path, field: &Array2<f64>) -> std::io::Result<()> {
         use std::io::Write;
-        let (nx, ny) = field.dim();
+        let [nx, ny] = field.shape();
         let lo = field.iter().copied().fold(f64::INFINITY, f64::min);
         let hi = field.iter().copied().fold(f64::NEG_INFINITY, f64::max);
         let span = (hi - lo).max(1.0e-12);
         let mut buf = Vec::with_capacity(nx * ny + 32);
-        write!(buf, "P5\n{nx} {ny}\n255\n").ok();
+        write!(buf, "P5\n{nx} {ny}\n255\n")?;
         for iy in 0..ny {
             for ix in 0..nx {
                 buf.push(((field[[ix, iy]] - lo) / span * 255.0).clamp(0.0, 255.0) as u8);
             }
         }
-        if let Err(e) = std::fs::write(path, &buf) {
-            eprintln!("Warning: could not write {}: {e}", path.display());
-        }
+        std::fs::write(path, &buf)
     }
 }
 
-#[cfg(feature = "nifti")]
 fn run() -> KwaversResult<()> {
     fwi_demo::run()
 }

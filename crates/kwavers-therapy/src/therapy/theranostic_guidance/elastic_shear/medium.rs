@@ -27,9 +27,9 @@ pub(super) fn elastic_medium(
         DENSITY_WATER_NOMINAL * shear_speed * shear_speed
     });
     ElasticPstdMedium {
-        lame_lambda: Array3::zeros(shape).into(),
-        lame_mu: lame_mu.into(),
-        density: density.into(),
+        lame_lambda: Array3::zeros(shape),
+        lame_mu,
+        density,
     }
 }
 

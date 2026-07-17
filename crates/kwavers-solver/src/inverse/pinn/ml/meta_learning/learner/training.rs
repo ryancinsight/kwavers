@@ -94,7 +94,7 @@ where
         };
 
         self.stats.meta_epochs_completed += 1;
-        self.stats.total_tasks_processed += (tasks.len());
+        self.stats.total_tasks_processed += tasks.len();
         self.stats.average_meta_loss = (self.stats.average_meta_loss + meta_loss.total_loss) / 2.0;
         self.stats.best_generalization_score = self
             .stats

@@ -31,7 +31,7 @@ leto-ops = { path = "../leto/crates/leto-ops", default-features = false, feature
 eunomia = { path = "../eunomia/crates/eunomia", default-features = false, features = ["std"] }
 pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
-nifti = "0.17.0"
+
 anyhow = "1.0"
 thiserror = "2.0"
 tracing = "0.1"

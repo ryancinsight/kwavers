@@ -126,10 +126,10 @@ impl MlQuantizer {
     ) -> KwaversResult<QuantizedTensor> {
         match &self.scheme {
             QuantizationScheme::None => Ok(QuantizedTensor {
-                data: QuantizedData::F32(data.iter().cloned().collect::<Vec<_>>()),
+                data: QuantizedData::F32(data.to_vec()),
                 scale: 1.0,
                 zero_point: 0,
-                shape: shape.iter().cloned().collect::<Vec<_>>(),
+                shape: shape.to_vec(),
             }),
             QuantizationScheme::Dynamic8Bit | QuantizationScheme::Static8Bit { .. } => {
                 let abs_max = data.iter().map(|x| x.abs()).fold(0.0f32, f32::max);
@@ -142,7 +142,7 @@ impl MlQuantizer {
                     data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: shape.iter().cloned().collect::<Vec<_>>(),
+                    shape: shape.to_vec(),
                 })
             }
             QuantizationScheme::MixedPrecision { weight_bits, .. } => {
@@ -162,7 +162,7 @@ impl MlQuantizer {
                     data: QuantizedData::I8(quantized_data),
                     scale,
                     zero_point: 0,
-                    shape: shape.iter().cloned().collect::<Vec<_>>(),
+                    shape: shape.to_vec(),
                 })
             }
             QuantizationScheme::Adaptive {
@@ -202,7 +202,7 @@ impl MlQuantizer {
                             data: QuantizedData::I8(test_quantized),
                             scale: test_scale,
                             zero_point: 0,
-                            shape: shape.iter().cloned().collect::<Vec<_>>(),
+                            shape: shape.to_vec(),
                         });
                     }
                     current_bits -= 1;
@@ -254,7 +254,7 @@ impl MlQuantizer {
 
             match &quant.data {
                 QuantizedData::F32(v) => quantized_bytes += (v.len()) * 4,
-                QuantizedData::I8(v) => quantized_bytes += (v.len()),
+                QuantizedData::I8(v) => quantized_bytes += v.len(),
             }
 
             for (o, q) in orig_floats.iter().zip(&dequant_floats) {

@@ -73,8 +73,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                     .map(|row| row[0])
                     .collect();
                 leto::Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
-            }
-            .into(),
+            },
             p_min: {
                 let v: Vec<f64> = sensor_data
                     .rows()
@@ -82,8 +81,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                     .map(|row| row[0])
                     .collect();
                 leto::Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
-            }
-            .into(),
+            },
             p_rms: {
                 let v: Vec<f64> = sensor_data
                     .rows()
@@ -91,8 +89,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                     .map(|row| row[0])
                     .collect();
                 leto::Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
-            }
-            .into(),
+            },
             p_final: {
                 let v: Vec<f64> = sensor_data
                     .rows()
@@ -100,8 +97,7 @@ pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult>
                     .map(|row| row[0])
                     .collect();
                 leto::Array1::from_vec(v.len(), v).expect("invariant: length matches row count")
-            }
-            .into(),
+            },
         })
     } else {
         None

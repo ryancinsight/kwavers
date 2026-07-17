@@ -60,8 +60,8 @@ pub struct QuantizedTensor {
 impl QuantizedTensor {
     pub fn len(&self) -> usize {
         match &self.data {
-            QuantizedData::F32(v) => (v.len()),
-            QuantizedData::I8(v) => (v.len()),
+            QuantizedData::F32(v) => v.len(),
+            QuantizedData::I8(v) => v.len(),
         }
     }
 

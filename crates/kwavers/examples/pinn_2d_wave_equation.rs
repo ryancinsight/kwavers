@@ -71,10 +71,14 @@ fn generate_training_data(
     }
 
     (
-        Array1::from_vec(x_data),
-        Array1::from_vec(y_data),
-        Array1::from_vec(t_data),
-        Array2::from_shape_vec((n_samples, 1), u_data).unwrap(),
+        Array1::from_vec(x_data.len(), x_data)
+            .expect("invariant: x sample count equals vector length"),
+        Array1::from_vec(y_data.len(), y_data)
+            .expect("invariant: y sample count equals vector length"),
+        Array1::from_vec(t_data.len(), t_data)
+            .expect("invariant: time sample count equals vector length"),
+        Array2::from_shape_vec((n_samples, 1), u_data)
+            .expect("invariant: generated wave samples match grid shape"),
     )
 }
 
@@ -106,9 +110,12 @@ fn generate_test_grid(
     }
 
     (
-        Array1::from_vec(x_test),
-        Array1::from_vec(y_test),
-        Array1::from_vec(t_test),
+        Array1::from_vec(x_test.len(), x_test)
+            .expect("invariant: x test count equals vector length"),
+        Array1::from_vec(y_test.len(), y_test)
+            .expect("invariant: y test count equals vector length"),
+        Array1::from_vec(t_test.len(), t_test)
+            .expect("invariant: time test count equals vector length"),
     )
 }
 
@@ -282,9 +289,12 @@ fn main() -> KwaversResult<()> {
     let test_points = vec![(0.25, 0.25, 0.0), (0.5, 0.5, 0.005), (0.75, 0.75, 0.01)];
 
     for (x, y, t) in test_points {
-        let x_point = Array1::from_vec(vec![x]);
-        let y_point = Array1::from_vec(vec![y]);
-        let t_point = Array1::from_vec(vec![t]);
+        let x_point =
+            Array1::from_vec(1, vec![x]).expect("invariant: single x prediction coordinate");
+        let y_point =
+            Array1::from_vec(1, vec![y]).expect("invariant: single y prediction coordinate");
+        let t_point =
+            Array1::from_vec(1, vec![t]).expect("invariant: single time prediction coordinate");
 
         let pred = trainer.pinn().predict(&x_point, &y_point, &t_point)?;
         let analytical = analytical_solution_2d(x, y, t, wave_speed);

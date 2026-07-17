@@ -105,7 +105,7 @@ impl Plugin for FrequencyAbsorptionPlugin {
         // Apply frequency-dependent absorption to pressure field
         let pressure = fields.index_axis_mut::<3>(0, 0).expect("index_axis");
         for (_, p) in pressure.indexed_iter_mut().expect("indexed_iter_mut") {
-            *p = *p * (-alpha * dt).exp();
+            *p *= (-alpha * dt).exp();
         }
 
         println!("Applied absorption: α = {} at f = {} Hz", alpha, freq_hz);

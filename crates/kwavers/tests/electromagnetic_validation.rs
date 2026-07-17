@@ -10,11 +10,8 @@
 //! - Boundary condition implementations
 //! - Material interface handling
 //!
-//! NOTE: This test file is currently DISABLED because it references modules that
-//! do not exist in the codebase (kwavers_analysis::ml::pinn::*). The electromagnetic PINN
-//! functionality was planned but not implemented. To enable these tests:
-//! 1. Implement the electromagnetic module in solver::inverse::pinn::ml
-//! 2. Or refactor imports to use existing PINN architecture
+//! The electromagnetic domain is owned by `kwavers_solver::inverse::pinn::ml`.
+//! These integration tests exercise that current provider surface directly.
 
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 use coeus_autograd::Var;
@@ -22,7 +19,8 @@ use coeus_autograd::Var;
 use kwavers_solver::inverse::pinn::ml::electromagnetic::{EMProblemType, ElectromagneticDomain};
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 use kwavers_solver::inverse::pinn::ml::physics::{
-    BoundaryConditionSpec, BoundaryPosition, PhysicsDomain, PhysicsParameters,
+    BoundaryPosition, PinnBoundaryConditionSpec, PinnDomainPhysicsParameters,
+    SimulationPhysicsDomain,
 };
 #[cfg(all(feature = "pinn", feature = "em_pinn_module_exists"))]
 use kwavers_solver::inverse::pinn::ml::PinnEMSource;
@@ -105,7 +103,7 @@ fn validate_electrostatic_poisson_equation() {
         false,
     );
 
-    let physics_params = PhysicsParameters {
+    let physics_params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         domain_params: HashMap::new(),
         boundary_values: HashMap::new(),
@@ -113,20 +111,19 @@ fn validate_electrostatic_poisson_equation() {
     };
 
     // Test charge density computation (should return zeros for now)
-    let rho = kwavers_analysis::ml::pinn::electromagnetic::residuals::compute_charge_density(
+    let rho = kwavers_solver::inverse::pinn::ml::electromagnetic::residuals::compute_charge_density(
         &x,
         &y,
         &physics_params,
     );
     assert_eq!(
-        rho.shape().dims,
+        rho.tensor.shape(),
         &[4, 1],
         "Charge density should match input shape"
     );
 
     // All values should be zero (no charge sources implemented yet)
-    let rho_data_binding = rho.to_data();
-    let rho_data = rho_data_binding.as_slice::<f32>().unwrap();
+    let rho_data = rho.tensor.as_slice();
     for &val in rho_data {
         assert!(
             (val as f64).abs() < 1e-10,
@@ -162,7 +159,7 @@ fn validate_magnetostatic_vector_potential() {
         false,
     );
 
-    let physics_params = PhysicsParameters {
+    let physics_params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         domain_params: HashMap::new(),
         boundary_values: HashMap::new(),
@@ -170,20 +167,20 @@ fn validate_magnetostatic_vector_potential() {
     };
 
     // Test z-component current density computation
-    let j_z = kwavers_analysis::ml::pinn::electromagnetic::residuals::compute_current_density_z(
-        &x,
-        &y,
-        &physics_params,
-    );
+    let j_z =
+        kwavers_solver::inverse::pinn::ml::electromagnetic::residuals::compute_current_density_z(
+            &x,
+            &y,
+            &physics_params,
+        );
     assert_eq!(
-        j_z.shape().dims,
+        j_z.tensor.shape(),
         &[4, 1],
         "Current density should match input shape"
     );
 
     // All values should be zero (no current sources implemented yet)
-    let jz_data_binding = j_z.to_data();
-    let jz_data = jz_data_binding.as_slice::<f32>().unwrap();
+    let jz_data = j_z.tensor.as_slice();
     for &val in jz_data {
         assert!(
             (val as f64).abs() < 1e-10,
@@ -317,7 +314,7 @@ fn validate_perfect_electric_conductor_boundary() {
     // Should contain Dirichlet boundary condition
     let has_dirichlet = bc_specs
         .iter()
-        .any(|spec| matches!(spec, BoundaryConditionSpec::Dirichlet { .. }));
+        .any(|spec| matches!(spec, PinnBoundaryConditionSpec::Dirichlet { .. }));
     assert!(
         has_dirichlet,
         "PEC should generate Dirichlet boundary condition"
@@ -351,7 +348,7 @@ fn validate_perfect_magnetic_conductor_boundary() {
     // Should contain Neumann boundary condition
     let has_neumann = bc_specs
         .iter()
-        .any(|spec| matches!(spec, BoundaryConditionSpec::Neumann { .. }));
+        .any(|spec| matches!(spec, PinnBoundaryConditionSpec::Neumann { .. }));
     assert!(
         has_neumann,
         "PMC should generate Neumann boundary condition"
@@ -556,8 +553,6 @@ fn validate_problem_type_consistency() {
 fn validate_pinn_integration_interface() {
     // Test integration with PINN framework physics domain interface
 
-    use kwavers_analysis::ml::pinn::physics::PhysicsDomain;
-
     let domain = ElectromagneticDomain::<TestBackend>::default();
 
     // Test physics domain interface compliance
@@ -602,7 +597,7 @@ fn validate_physics_parameter_handling() {
     assert_eq!(domain.conductivity, 0.0);
 
     // Test physics parameter integration
-    let mut physics_params = PhysicsParameters {
+    let mut physics_params = PinnDomainPhysicsParameters {
         material_properties: HashMap::new(),
         boundary_values: HashMap::new(),
         initial_values: HashMap::new(),

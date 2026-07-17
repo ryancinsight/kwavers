@@ -10,19 +10,27 @@ fn test_default_config_validates() {
 
 #[test]
 fn test_invalid_config_rejected() {
-    let mut bad = ParamFieldPINNConfig::default();
-    bad.hidden_layers.clear();
+    let bad = ParamFieldPINNConfig {
+        hidden_layers: Vec::new(),
+        ..ParamFieldPINNConfig::default()
+    };
     assert!(bad.validate().is_err());
 
-    let mut bad = ParamFieldPINNConfig::default();
-    bad.hidden_layers = vec![64, 0, 64];
+    let bad = ParamFieldPINNConfig {
+        hidden_layers: vec![64, 0, 64],
+        ..ParamFieldPINNConfig::default()
+    };
     assert!(bad.validate().is_err());
 
-    let mut bad = ParamFieldPINNConfig::default();
-    bad.learning_rate = 0.0;
+    let bad = ParamFieldPINNConfig {
+        learning_rate: 0.0,
+        ..ParamFieldPINNConfig::default()
+    };
     assert!(bad.validate().is_err());
 
-    let mut bad = ParamFieldPINNConfig::default();
-    bad.batch_size = 0;
+    let bad = ParamFieldPINNConfig {
+        batch_size: 0,
+        ..ParamFieldPINNConfig::default()
+    };
     assert!(bad.validate().is_err());
 }

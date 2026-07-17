@@ -114,10 +114,14 @@ where
     }
 
     (
-        Array1::from_vec(x_data),
-        Array1::from_vec(y_data),
-        Array1::from_vec(t_data),
-        Array2::from_shape_vec((n_samples, 1), u_data).unwrap(),
+        Array1::from_vec(x_data.len(), x_data)
+            .expect("invariant: x sample count equals vector length"),
+        Array1::from_vec(y_data.len(), y_data)
+            .expect("invariant: y sample count equals vector length"),
+        Array1::from_vec(t_data.len(), t_data)
+            .expect("invariant: time sample count equals vector length"),
+        Array2::from_shape_vec((n_samples, 1), u_data)
+            .expect("invariant: generated displacement samples match grid shape"),
     )
 }
 
@@ -164,9 +168,12 @@ where
     }
 
     (
-        Array1::from_vec(x_test),
-        Array1::from_vec(y_test),
-        Array1::from_vec(t_test),
+        Array1::from_vec(x_test.len(), x_test)
+            .expect("invariant: x test count equals vector length"),
+        Array1::from_vec(y_test.len(), y_test)
+            .expect("invariant: y test count equals vector length"),
+        Array1::from_vec(t_test.len(), t_test)
+            .expect("invariant: time test count equals vector length"),
         c_test,
     )
 }

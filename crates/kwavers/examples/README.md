@@ -38,7 +38,6 @@ This directory contains comprehensive examples demonstrating the interdisciplina
 | [`pinn_2d_wave_equation.rs`](pinn_2d_wave_equation.rs) | PINN wave equation | Neural PDE solving | `pinn` feature |
 | [`pinn_advanced_physics.rs`](pinn_advanced_physics.rs) | Advanced PINN physics | Multi-physics coupling | `pinn` feature |
 | [`pinn_gpu_training.rs`](pinn_gpu_training.rs) | GPU-accelerated PINN | Real-time training | `pinn` + `gpu` |
-| [`ai_integration_simple_test.rs`](ai_integration_simple_test.rs) | AI beamforming integration | Clinical AI workflows | `pinn` feature |
 
 ### 🧬 **Medical & Biological**
 | Example | Description | Features |
@@ -133,8 +132,8 @@ cargo check --examples
 # Run example-specific tests
 cargo test --example <name>
 
-# Test with specific features
-cargo test --example ai_integration_test --features pinn
+# Compile PINN examples
+cargo check -p kwavers --examples --features pinn
 ```
 
 ## 📚 Documentation

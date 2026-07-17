@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Fixed (2026-07-16) - solver lint and native imaging cutover [patch]
+
+- Corrected 79 solver diagnostics, replaced two invalid numerical test oracles
+  with exact value-semantic contracts, and kept the full solver feature suite
+  green.
+- Removed retired direct NIfTI feature gates from the facade and its clinical
+  examples; medical image I/O now remains unconditionally owned by native RITK
+  providers.
+- Removed redundant same-type Leto conversions from simulation, diagnostics,
+  therapy, examples, and tests. PSTD source embedding now accepts a padded
+  shape and offset value rather than ten scalar parameters.
+
+### Added (2026-07-16) - signed pulsed-wave spectral Doppler [minor]
+
+- Added `SignedSpectralWaveform` and `PulsedWaveDoppler::signed_spectrum`.
+  The provider now returns centered two-sided frequency, velocity, and power
+  bins from range-gated I/Q, retaining reverse-flow energy and rejecting a
+  perpendicular beam-angle geometry instead of silently forcing a positive
+  cosine. Both spectral APIs now reject an I/Q ensemble longer than the
+  configured FFT instead of discarding acquired pulses.
+
 ### Fixed (2026-07-15) - security policy and dependency graph [patch]
 
 - Added the repository-root Cargo-deny policy and made CI audit the deployable

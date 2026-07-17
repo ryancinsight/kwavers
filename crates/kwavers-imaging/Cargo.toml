@@ -8,7 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
-kwavers-core = { path = "../kwavers-core", features = ["registration", "nifti"] }
+kwavers-core = { path = "../kwavers-core", features = ["registration"] }
 kwavers-grid = { path = "../kwavers-grid" }
 kwavers-medium = { path = "../kwavers-medium" }
 coeus-core = { workspace = true }

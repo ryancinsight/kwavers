@@ -33,7 +33,7 @@ where
         let start_time = Instant::now();
         let mut metrics = TrainingMetrics3D::default();
 
-        let n_data = (x_data.len());
+        let n_data = x_data.len();
         if n_data == 0 {
             return Err(KwaversError::InvalidInput(
                 "Training data must be non-empty".into(),

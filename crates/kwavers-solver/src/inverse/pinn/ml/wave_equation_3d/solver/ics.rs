@@ -75,7 +75,7 @@ where
             ));
         }
 
-        let n_ic = (v_ic.len());
+        let n_ic = v_ic.len();
         let backend = B::default();
         Ok(Var::new(
             coeus_tensor::Tensor::from_slice_on(vec![n_ic, 1], &v_ic, &backend),
@@ -121,7 +121,7 @@ where
             ));
         }
 
-        let n_ic = (x_ic.len());
+        let n_ic = x_ic.len();
         let t_ic = vec![min_t; n_ic];
 
         let backend = B::default();

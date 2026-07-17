@@ -337,7 +337,9 @@ impl HybridSolver {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::forward::hybrid::config::{HybridConfig, HybridDecompositionStrategy};
+    use crate::forward::hybrid::config::{
+        HybridConfig, HybridDecompositionStrategy, HybridValidationConfig,
+    };
     use kwavers_boundary::{DomainPMLBoundary, DomainPmlConfig};
     use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
     use kwavers_field::mapping::UnifiedFieldType;
@@ -374,9 +376,14 @@ mod tests {
         let grid = Grid::new(6, 6, 6, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
         let medium =
             HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM, &grid);
-        let mut config = HybridConfig::default();
-        config.decomposition_strategy = HybridDecompositionStrategy::Static;
-        config.validation.enable_validation = false;
+        let config = HybridConfig {
+            decomposition_strategy: HybridDecompositionStrategy::Static,
+            validation: HybridValidationConfig {
+                enable_validation: false,
+                ..HybridValidationConfig::default()
+            },
+            ..HybridConfig::default()
+        };
         let mut solver = HybridSolver::new(config, &grid, &medium).unwrap();
         let before = solver.source_mask_scratch.as_ptr();
         let source = PointSource::new((1.0e-3, 2.0e-3, 3.0e-3), Arc::new(ConstantSignal(1.0)));

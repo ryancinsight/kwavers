@@ -194,9 +194,9 @@ fn test_correction_methods_consistency() {
 /// The domain is periodic.  The pulse can reach the sensor via two paths:
 ///   - Direct (positive):  96 cells = 0.096 m  ← shorter, pulse arrives here first
 ///   - Wrapped (negative): 256−96 = 160 cells = 0.160 m
-/// Placing the source at the domain centre (i_src=128) and the sensor 96 cells
-/// to the right (i_snr=224) guarantees that the direct path is shorter than the
-/// wrapped path (96 < 160), so the recorded peak corresponds to the direct propagation.
+///     Placing the source at the domain centre (i_src=128) and the sensor 96 cells
+///     to the right (i_snr=224) guarantees that the direct path is shorter than the
+///     wrapped path (96 < 160), so the recorded peak corresponds to the direct propagation.
 ///
 /// Expected arrival: t_exact = L/c_ref.
 /// k-PSTD dispersion-free → t_numerical = (peak_step)·dt ≈ t_exact.

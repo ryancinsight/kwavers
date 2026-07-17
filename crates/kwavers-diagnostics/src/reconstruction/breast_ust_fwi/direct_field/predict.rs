@@ -171,8 +171,8 @@ pub(super) fn source_kappa_filtered_source_weights(
     source_indices: &[(usize, usize, usize)],
 ) -> KwaversResult<Array3<Complex64>> {
     validate_sampling(sound_speed_m_s, spacing_m, time_step_s)?;
-    let mask = source_mask(shape, source_indices)?.into();
-    let mut spectrum = Array3::<Complex64>::zeros(shape.dimensions()).into();
+    let mask = source_mask(shape, source_indices)?;
+    let mut spectrum = Array3::<Complex64>::zeros(shape.dimensions());
     fft_3d_complex_into(&mask, &mut spectrum);
     for ix in 0..shape.nx {
         for iy in 0..shape.ny {
@@ -208,8 +208,8 @@ fn pstd_periodic_frequency_bin(
     receiver_indices: &[(usize, usize, usize)],
     source_amplitude_pa: f64,
 ) -> KwaversResult<Vec<Complex64>> {
-    let mask = source_mask(shape, source_indices)?.into();
-    let mut source_hat = Array3::<Complex64>::zeros(shape.dimensions()).into();
+    let mask = source_mask(shape, source_indices)?;
+    let mut source_hat = Array3::<Complex64>::zeros(shape.dimensions());
     fft_3d_complex_into(&mask, &mut source_hat);
     for ix in 0..shape.nx {
         for iy in 0..shape.ny {

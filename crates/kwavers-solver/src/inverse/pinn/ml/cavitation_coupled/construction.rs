@@ -112,7 +112,7 @@ where
         let z_vec: Vec<f32> = if let Some(z_var) = z {
             z_var.tensor.as_slice().to_vec()
         } else {
-            vec![0.0; (pressure_slice.len())]
+            vec![0.0; pressure_slice.len()]
         };
 
         let mut sites = Vec::new();

@@ -152,38 +152,25 @@ mod tests {
         }
     }
 
-    /// For a pure temporal cosine Ez(t) = cos(ω·t), the Laplacian is zero and:
-    ///   R = ε·μ·(−ω²cos(ωt)) + μ·σ·(−ω·sin(ωt))
-    /// which is non-zero for ω > 0. This confirms the residual correctly
-    /// detects a field that does NOT satisfy the free-space (σ=0) wave equation.
+    /// For a pure temporal quadratic `Ez(t) = t²` with normalized `ε = μ = 1`
+    /// and `σ = 0`, the spatial Laplacian and first temporal derivative vanish
+    /// at `t = 0`, while the centered second difference is exactly `2`.
+    /// Therefore the residual must equal `2`.
     /// # Panics
     /// - Panics if an internal precondition is violated.
     ///
     #[test]
-    fn test_wave_propagation_residual_temporal_cosine_nonzero() {
+    fn test_wave_propagation_residual_temporal_quadratic_matches_exact_fd_value() {
         let h = EPS_FD_F32;
-        let omega = 2.0_f32 * std::f32::consts::PI * 1e9_f32; // 1 GHz
-        let t0 = 1e-10_f32; // arbitrary time sample
-                            // free space ε₀μ₀ — sourced from SSOT to avoid drift in dimensional checks.
-        let eps_mu = (kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY
-            * kwavers_core::constants::fundamental::VACUUM_PERMEABILITY)
-            as f32;
-        let mu_sigma = 0.0_f32; // lossless
+        let temporal_field = |time: f32| time * time;
+        let t0 = 0.0_f32;
+        let d2_dt2 =
+            (temporal_field(t0 + h) - 2.0 * temporal_field(t0) + temporal_field(t0 - h)) / (h * h);
+        let d_dt = (temporal_field(t0 + h) - temporal_field(t0 - h)) / (2.0 * h);
+        let residual = d2_dt2 - 0.0_f32 * d_dt;
 
-        // FD approximation of ∂²cos/∂t² at t0
-        let d2_dt2 = ((omega * (t0 + h)).cos() - 2.0 * (omega * t0).cos()
-            + (omega * (t0 - h)).cos())
-            / (h * h);
-
-        // Laplacian = 0 (no spatial variation)
-        let residual = eps_mu * d2_dt2 - mu_sigma * (omega * t0).sin() - 0.0_f32 - 0.0_f32;
-
-        // Expect non-zero (this field does not satisfy the wave equation unless c²k²=ω²)
-        assert!(
-            residual.abs() > 1e-6,
-            "temporal cosine residual must be non-zero, got {}",
-            residual
-        );
+        assert_eq!(d2_dt2, 2.0);
+        assert_eq!(residual, 2.0);
     }
 
     /// Finite-difference step must lie well above the f32 cancellation floor.

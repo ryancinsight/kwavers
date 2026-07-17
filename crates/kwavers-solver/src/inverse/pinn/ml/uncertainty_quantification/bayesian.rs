@@ -153,7 +153,7 @@ where
         }
 
         let num_points = predictions[0].len();
-        let num_samples = (predictions.len());
+        let num_samples = predictions.len();
 
         let mut means = vec![0.0; num_points];
         let mut variances = vec![0.0; num_points];
@@ -263,7 +263,7 @@ where
             return Ok(());
         }
 
-        let mut abs_errors = Vec::with_capacity((calibration_data.len()));
+        let mut abs_errors = Vec::with_capacity(calibration_data.len());
         let mut covered = 0usize;
 
         for (input, target) in calibration_data {

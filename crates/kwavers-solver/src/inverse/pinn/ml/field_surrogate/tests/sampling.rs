@@ -1,7 +1,7 @@
 //! `KernelCubeSampler` sampling-mode tests (Phase C-4).
 //!
 //! Verifies that:
-//! * `Uniform` sampling produces a near-uniform empirical voxel
+//! * `Uniform` sampling produces a near-uniform empirical kernel-group
 //!   frequency across the dataset.
 //! * `ImportanceByMagnitude` produces an empirical frequency
 //!   proportional to `|p|^exponent + ε`.
@@ -89,25 +89,44 @@ fn test_set_sampling_switches_mode_idempotently() {
     assert!(matches!(sampler.sampling, SamplingMode::Uniform));
     // Switching back into importance mode must rebuild the table.
     sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.0 });
-    assert_eq!((sampler.len()), (sampler.len())); // still consistent
+    let first_importance = sampler.batch::<B>(7, 256);
+    let first_targets = first_importance.targets.tensor.as_slice().to_vec();
+
+    sampler.set_sampling(SamplingMode::Uniform);
+    sampler.set_sampling(SamplingMode::ImportanceByMagnitude { exponent: 1.0 });
+    let rebuilt_importance = sampler.batch::<B>(7, 256);
+    assert_eq!(
+        rebuilt_importance.targets.tensor.as_slice(),
+        first_targets.as_slice()
+    );
 }
 
 #[test]
-fn test_uniform_sampling_empirical_histogram_is_flat() {
+fn test_uniform_sampling_empirical_group_histogram_is_flat() {
     let sampler = make_cube_sampler();
-    let counts = vec![0usize; (sampler.len())];
-    let n_batches = 50usize;
-    let batch_size = 256usize;
+    let n_batches = 128usize;
+    let batch_size = 512usize;
+    let total_samples = n_batches * batch_size;
+    let expected_per_group = total_samples / sampler.num_groups();
+    let max_deviation = total_samples / 100;
+    let mut counts = vec![0usize; sampler.num_groups()];
+
     for step in 0..n_batches {
-        let _batch = sampler.batch::<B>(step as u64, batch_size);
-        // We can't easily recover the chosen indices from the tensor,
-        // but we can verify the call doesn't panic and produces a
-        // tensor of the right shape. Empirical-histogram-flatness is
-        // exercised by the importance-sampling test below where it
-        // matters more.
-        drop(_batch);
+        let batch = sampler.batch::<B>(step as u64, batch_size);
+        for group in batch.group_ids.tensor.as_slice() {
+            let group_index = *group as usize;
+            assert!(((*group - group_index as f32).abs()) < f32::EPSILON);
+            counts[group_index] += 1;
+        }
     }
-    let _ = counts; // placeholder for future histogram instrumentation
+
+    for (group_index, count) in counts.into_iter().enumerate() {
+        let deviation = count.abs_diff(expected_per_group);
+        assert!(
+            deviation <= max_deviation,
+            "uniform group {group_index} count {count} deviates by {deviation} from {expected_per_group}; limit {max_deviation}"
+        );
+    }
 }
 
 #[test]
@@ -126,17 +145,10 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
     // Just confirm the call succeeds (the batch is shape [1, 5]).
     assert_eq!(batch.inputs.tensor.shape(), &[1, 5]);
 
-    // Sanity check: the top-N voxels by magnitude account for
-    // > 50 % of cumulative probability mass under exponent=2.
-    let total = (sampler.len());
-    let n_focal = (total / 64).max(1); // ~1.5 % of voxels closest to peak
-                                       // Without direct access to private fields, this test verifies
-                                       // that the empirical distribution is *non-uniform* by running
-                                       // many batches and checking the highest |p| input row appears
-                                       // disproportionately often. We do this by checking that
-                                       // sampling 10 batches × 256 produces inputs whose mean magnitude
-                                       // exceeds the dataset average — which it must, by construction,
-                                       // for any exponent > 0.
+    // Without direct access to private fields, this test verifies that the
+    // empirical distribution is non-uniform by measuring output magnitude.
+    // A positive magnitude exponent must raise the sampled mean above the
+    // unweighted kernel mean.
     let mut mean_abs_x_pred = 0.0_f64;
     let n_batches = 10usize;
     let batch_size = 256usize;
@@ -157,7 +169,6 @@ fn test_importance_sampling_concentrates_on_high_magnitude_voxels() {
         mean_abs_x_pred > 0.30,
         "importance sampling did not concentrate on focal voxels: mean |p_max| = {mean_abs_x_pred:.3}"
     );
-    let _ = n_focal;
 }
 
 #[test]

@@ -51,8 +51,8 @@ impl EdgeRuntime {
         kernel: &ExecutionKernel,
     ) -> KwaversResult<Vec<f32>> {
         match kernel.io_spec.input_dtype {
-            DataType::Float32 => Ok(input.iter().cloned().collect::<Vec<_>>()),
-            DataType::Float16 => Ok(input.iter().cloned().collect::<Vec<_>>()),
+            DataType::Float32 => Ok(input.to_vec()),
+            DataType::Float16 => Ok(input.to_vec()),
             DataType::Int8 => {
                 let scale = input.iter().map(|x| x.abs()).fold(0.0, f32::max) / 127.0;
                 Ok(input
@@ -178,7 +178,7 @@ impl EdgeRuntime {
         match self.hardware_caps.architecture {
             Architecture::ARM | Architecture::ARM64 => self.neon_dequantize(quantized_output),
             Architecture::RISCV => self.riscv_dequantize(quantized_output),
-            _ => Ok(quantized_output.iter().cloned().collect::<Vec<_>>()),
+            _ => Ok(quantized_output.to_vec()),
         }
     }
     /// Neon dequantize.
@@ -186,13 +186,13 @@ impl EdgeRuntime {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn neon_dequantize(&self, input: &[f32]) -> KwaversResult<Vec<f32>> {
-        Ok(input.iter().cloned().collect::<Vec<_>>())
+        Ok(input.to_vec())
     }
     /// Riscv dequantize.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub(super) fn riscv_dequantize(&self, input: &[f32]) -> KwaversResult<Vec<f32>> {
-        Ok(input.iter().cloned().collect::<Vec<_>>())
+        Ok(input.to_vec())
     }
 }
