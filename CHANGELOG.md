@@ -6,6 +6,9 @@
 
 - Synchronize `Cargo.lock` to Apollo `0.24.0` after the provider graph refresh;
   the focused GPU/simulation/solver suite remains green.
+- Declare Leto, Leto Ops, and Eunomia through their Atlas Git sources while the
+  workspace root patches those sources to the local Atlas checkouts. This keeps
+  direct consumers and Apollo FFT on one type identity during SemVer packaging.
 
 ### Fixed (2026-07-17) - hosted CI prerequisites [patch]
 

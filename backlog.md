@@ -8201,7 +8201,7 @@ Verification:
 
 Residual: `ritk-io`/`ritk-filter` remain blocked by pre-existing RITK Batch #3
 Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
-## KW-GPU-048 — GPU PSTD output and dispatch honesty [major] — blocked
+## KW-GPU-048 — GPU PSTD output and dispatch honesty [major] — review
 
 - Owner: Codex; scope: `kwavers-gpu` PSTD output contract,
   `kwavers-simulation` GPU adapter and runner dispatch, `kwavers-solver`
@@ -8220,6 +8220,6 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   commit `cf4df20`; Kwavers keeps its ordinary provider limit at 8 and requests
   24/32 only for the PSTD layouts. The remaining capability gap is a GPU
   peak-over-time field on domains larger than 256 cells per axis. The release
-  SemVer gate is blocked by its isolated baseline/current rustdoc build
-  resolving both local and git Eunomia revisions through Gaia (56
-  `RealField`/Leto trait-bound errors); reopen after the stack lock converges.
+  SemVer gate now passes against `main` with `--release-type major` after
+  Leto, Gaia, and Kwavers declare the common Leto/Eunomia Git sources and use
+  Atlas-root patches only for local integration.

@@ -7110,8 +7110,8 @@ Verify each gap is real first.
 - [x] Record the breaking output contract in ADR-037 and add exact transfer
       plus selection regressions.
 - [x] Run feature-configured Nextest, Clippy, and Rustdoc gates.
-- [ ] Run the release SemVer gate against the published `kwavers-gpu` baseline
-      after the shared Atlas dependency graph has one Eunomia revision.
+- [x] Run the release SemVer gate against the `kwavers-gpu` `main` baseline
+      with the portable Leto/Eunomia source graph.
 
 **Current evidence:** `cargo nextest run --locked -p kwavers-gpu --features gpu`
 passes 144/144 tests (one skipped) with the serialized `gpu` test group; the
@@ -7120,7 +7120,7 @@ Clippy passes for the scoped all-target/all-feature packages, and all-feature
 Rustdoc is warning-clean. The Hephaestus provider-limit regression passes 2/2
 and is merged as `cf4df20`. Evidence tier: type-level output selection plus
 value-semantic CPU and real-provider GPU regressions. The release SemVer check
-cannot build its isolated baseline/current rustdoc pair: Gaia resolves both
-local and Git Eunomia revisions, producing 56 `RealField`/Leto trait-bound
-errors. This is a cross-repository graph blocker; it does not invalidate the
-runtime or documentation evidence.
+passes with `--baseline-rev main --release-type major --only-explicit-features
+--features gpu`. Leto, Gaia, and Kwavers now declare Leto/Eunomia through the
+same Git sources, and their integration roots patch those sources to local
+Atlas checkouts only for in-tree development.

@@ -63,9 +63,9 @@
   envelope; its GPU grid contract remains power-of-two with each axis at most
   256. Those limits cannot support LeoNeuro's long CT-frame treatment domain
   and must not be represented as a planning backend. Release SemVer checking
-  remains open against the published baseline: `cargo semver-checks` cannot
-  build the isolated current/baseline rustdoc pair while Gaia resolves both
-  local and git Eunomia revisions (56 `RealField`/Leto trait-bound errors).
+  now passes against `main` with `--release-type major`; Leto, Gaia, and
+  Kwavers declare one Git source for Leto/Eunomia while Atlas integration
+  roots patch that source to the local checkout.
 
 - Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
   while public dimensions can be mutated after construction. `Grid::checked_size`
