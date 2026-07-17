@@ -40,7 +40,7 @@ jobs:
           key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Check PINN feature compilation
-        run: cargo check --locked --features pinn --lib
+        run: cargo check --locked -p kwavers --features pinn --lib
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -48,16 +48,16 @@ jobs:
           tool: nextest
 
       - name: Run PINN tests
-        run: cargo nextest run --locked --features pinn --lib
+        run: cargo nextest run --locked -p kwavers --features pinn --lib
 
       - name: Run PINN validation framework tests
-        run: cargo nextest run --locked --test validation_integration_test
+        run: cargo nextest run --locked -p kwavers --test validation_integration_test
 
       - name: Run PINN convergence studies
-        run: cargo nextest run --locked --test pinn_convergence_studies
+        run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies
 
       - name: Run clippy on PINN code
-        run: cargo clippy --locked --features pinn --lib -- -D warnings
+        run: cargo clippy --locked -p kwavers --features pinn --lib -- -D warnings
         continue-on-error: true
 
   quality:
@@ -92,7 +92,7 @@ jobs:
         run: cargo fmt -- --check
 
       - name: Run clippy (allowed to fail)
-        run: cargo clippy --locked --lib --features="plotting" || true
+        run: cargo clippy --locked -p kwavers --lib --features="plotting" || true
 
       - name: Run xtask metrics
         run: cargo run --locked -p xtask -- metrics
@@ -179,11 +179,11 @@ jobs:
         run: cargo +nightly miri setup
 
       - name: Run miri on configuration tests
-        run: cargo +nightly miri test --lib configuration::builder::tests
+        run: cargo +nightly miri test --locked -p kwavers --lib configuration::builder::tests
         continue-on-error: true # Allow to continue while fixing UB
 
       - name: Run miri on other safe tests
-        run: cargo +nightly miri test --lib --exclude configuration::builder::tests
+        run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
         continue-on-error: true
 
   benchmarks:
@@ -236,7 +236,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --locked -p kwavers --out xml --features="plotting" --timeout 300
+        run: cargo tarpaulin --locked -p kwavers --exclude kwavers-python --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -276,10 +276,10 @@ jobs:
           key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run convergence studies
-        run: cargo nextest run --locked --test pinn_convergence_studies --features pinn
+        run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
 
       - name: Run validation integration tests
-        run: cargo nextest run --locked --test validation_integration_test
+        run: cargo nextest run --locked -p kwavers --test validation_integration_test
 
   validation:
     name: Solver Validation Suite
