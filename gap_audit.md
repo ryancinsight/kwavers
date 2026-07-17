@@ -29,7 +29,9 @@
   pass. The CI action previously consumed a stale Atlas integration branch
   whose RITK pin predated the repair; it now resolves the Atlas default graph.
   The CUDA container now installs the missing OpenSSL development package used
-  by the current RITK/DICOM graph. Evidence tier: native compilation and
+  by the current RITK/DICOM graph. The benchmark workflow now invokes the
+  Rust `kwavers` package explicitly rather than attempting to link the PyO3
+  extension as a benchmark executable. Evidence tier: native compilation and
   value-semantic tests.
 
 - Closed 2026-07-17: `Grid` dimensions are public for interoperability, so

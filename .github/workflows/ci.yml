@@ -213,7 +213,7 @@ jobs:
           key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run benchmarks
-        run: cargo bench --features="plotting"
+        run: cargo bench -p kwavers --features="plotting"
 
   coverage:
     name: Code Coverage
