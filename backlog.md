@@ -1,5 +1,45 @@
 # Backlog / Strategy
 
+## KW-FFT-050 — Direct Apollo axis FFT storage [patch] — review
+
+- Owner: Codex; scope: `kwavers-math::fft` axis-transform facade, locked
+  provider graph, and synchronized Kwavers artifacts.
+- Driver: each viscoacoustic derivative copied a full `Array3<Complex64>` into
+  and out of Apollo despite both sides using Leto storage and
+  `eunomia::Complex64`. The three velocity gradients and three divergence
+  derivatives therefore created twelve temporary full fields and performed
+  twenty-four avoidable full-buffer copies per solver step.
+- Acceptance: the facade delegates directly to Apollo's axis plan methods, the
+  locked graph resolves Apollo 0.24.0, and
+  `decay_matches_dispersion_3d_diagonal` passes under the unchanged Nextest
+  timeout and workload. Evidence: the exact regression completes below the
+  60-second cap.
+
+## KW-FFT-049 — Retire stale Apollo GPU probe [major] — done
+
+- Owner: Codex; scope: `kwavers-math::fft` GPU facade, its public migration
+  note, and the all-feature Clippy frontier.
+- Closure: no `gpu_fft_available` wrapper remains. The GPU tests acquire a
+  typed Hephaestus `WgpuDevice`, construct Apollo's `WgpuBackend`, and preserve
+  value-semantic spectrum parity plus reusable-buffer round-trip coverage.
+  GPU-enabled Nextest passes 265/265; warning-denied all-feature Clippy, docs,
+  and doctests pass. CI resolves Atlas path dependencies from `main` rather
+  than the stale integration branch whose RITK pin preceded the repair. Its
+  CUDA container now installs `libssl-dev` for the RITK/DICOM OpenSSL build.
+  It also installs the `clang` executable selected by the OpenSSL build script.
+  The plotting benchmark job executes only the `kwavers` package, avoiding
+  an invalid PyO3 extension link while preserving Criterion execution; the
+  stable/beta/nightly plotting build/test matrix uses the same boundary.
+
+## KW-GRID-048 — Checked grid cardinality [minor] — done
+
+- Owner: Codex; scope: `kwavers-grid::Grid`, its core error text, and
+  synchronized Kwavers artifacts.
+- Closure: `Grid::new` rejects non-finite spacing and `checked_size` returns
+  `None` for an externally-mutated dimension product that overflows. Locked
+  Nextest passes 40/40; warning-denied Clippy, docs, and doctests pass. The
+  isolated SemVer baseline remains blocked by its duplicate Leto graph.
+
 ## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — review
 
 - Owner: Codex; scope: `kwavers-analysis` pulsed-wave Doppler spectrum contract,

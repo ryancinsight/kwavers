@@ -129,7 +129,7 @@ jobs:
           key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build
-        run: cargo build --release --verbose --features="plotting"
+        run: cargo build -p kwavers --release --verbose --features="plotting"
 
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -137,10 +137,10 @@ jobs:
           tool: nextest
 
       - name: Run tests
-        run: cargo nextest run --profile ci --lib --release --verbose --features="plotting"
+        run: cargo nextest run -p kwavers --profile ci --lib --release --verbose --features="plotting"
 
       - name: Run doc tests
-        run: cargo test --doc --verbose
+        run: cargo test --doc -p kwavers --verbose
 
   security:
     name: Security Audit
@@ -213,7 +213,7 @@ jobs:
           key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Run benchmarks
-        run: cargo bench --features="plotting"
+        run: cargo bench -p kwavers --features="plotting"
 
   coverage:
     name: Code Coverage
@@ -236,7 +236,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --out xml --features="plotting" --timeout 300
+        run: cargo tarpaulin -p kwavers --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3

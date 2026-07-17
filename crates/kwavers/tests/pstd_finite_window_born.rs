@@ -17,30 +17,15 @@ fn finite_window_born_is_linear_in_slowness_squared_contrast() {
     let small = contrast_volume(0.01);
     let double = contrast_volume(0.02);
 
-    let base_data = simulate_pstd_finite_window_born_observation(
-        &base.clone(),
-        &array,
-        200_000.0,
-        config,
-        4,
-    )
-    .expect("base data");
-    let small_data = simulate_pstd_finite_window_born_observation(
-        &small.clone(),
-        &array,
-        200_000.0,
-        config,
-        4,
-    )
-    .expect("small contrast");
-    let double_data = simulate_pstd_finite_window_born_observation(
-        &double.clone(),
-        &array,
-        200_000.0,
-        config,
-        4,
-    )
-    .expect("double contrast");
+    let base_data =
+        simulate_pstd_finite_window_born_observation(&base.clone(), &array, 200_000.0, config, 4)
+            .expect("base data");
+    let small_data =
+        simulate_pstd_finite_window_born_observation(&small.clone(), &array, 200_000.0, config, 4)
+            .expect("small contrast");
+    let double_data =
+        simulate_pstd_finite_window_born_observation(&double.clone(), &array, 200_000.0, config, 4)
+            .expect("double contrast");
 
     let mut max_reference: f64 = 0.0;
     let mut max_error: f64 = 0.0;
@@ -96,22 +81,12 @@ fn second_order_correction_is_quadratic_in_contrast() {
     let double = contrast_volume(0.02);
 
     // First-order predictions at each contrast.
-    let first_small = simulate_pstd_finite_window_born_observation(
-        &small.clone(),
-        &array,
-        200_000.0,
-        config,
-        4,
-    )
-    .expect("first-order small");
-    let first_double = simulate_pstd_finite_window_born_observation(
-        &double.clone(),
-        &array,
-        200_000.0,
-        config,
-        4,
-    )
-    .expect("first-order double");
+    let first_small =
+        simulate_pstd_finite_window_born_observation(&small.clone(), &array, 200_000.0, config, 4)
+            .expect("first-order small");
+    let first_double =
+        simulate_pstd_finite_window_born_observation(&double.clone(), &array, 200_000.0, config, 4)
+            .expect("first-order double");
 
     // Second-order predictions at each contrast.
     let second_small = simulate_pstd_finite_window_born_second_order_observation(

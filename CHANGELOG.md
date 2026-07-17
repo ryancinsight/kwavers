@@ -2,13 +2,35 @@
 
 ## Unreleased
 
+### Breaking
+
+- Removed `kwavers_math::fft::gpu_fft_available`. Apollo owns no boolean
+  device-discovery facade: callers construct `WgpuBackend` from a
+  provider-acquired `WgpuDevice`, then handle plan creation errors directly.
+
+### Fixed
+
+- Removed the redundant temporary Leto fields and same-type complex copies from
+  the Apollo 3-D axis-transform facade. Viscoacoustic derivatives now execute
+  directly over their caller-owned `eunomia::Complex64` storage, and the locked
+  graph resolves Apollo 0.24.0.
+- Installed OpenSSL development headers in the CUDA build container so the
+  current RITK/DICOM provider graph can build `openssl-sys` through `pkg-config`.
+- Installed the `clang` executable selected by `openssl-sys` for header
+  expansion; `libclang-dev` supplies headers but not that compiler binary.
+- Scoped the plotting benchmark job to the Rust `kwavers` package. The job no
+  longer attempts to link the PyO3 extension as a benchmark target.
+- Scoped the stable, beta, and nightly plotting build/test matrix to `kwavers`
+  for the same standalone-extension linker boundary.
+- Installed Fontconfig development headers for the workspace test-coverage job.
+- Scoped Tarpaulin coverage to `kwavers`, avoiding an invalid PyO3 extension
+  test link while retaining the facade's coverage measurement.
+
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
 - Added `Grid::checked_size`, the fallible cardinality contract for consumers
-  that allocate one value per grid point. This prevents externally mutated,
-  unaddressable dimensions from silently overflowing allocation arithmetic.
-  Grid construction now also rejects non-finite spacing before deriving the
-  wave-number scale.
+  that allocate one value per grid point. Grid construction rejects
+  non-finite spacing before deriving the wave-number scale.
 
 ### Fixed (2026-07-16) - solver lint and native imaging cutover [patch]
 

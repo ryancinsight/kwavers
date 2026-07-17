@@ -18,9 +18,11 @@ serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 rand = "0.8"
 apollo = { workspace = true }
+hephaestus-core = { workspace = true, optional = true }
+hephaestus-wgpu = { workspace = true, optional = true }
 
 [features]
-gpu = ["apollo/wgpu"]
+gpu = ["apollo/wgpu", "dep:hephaestus-core", "dep:hephaestus-wgpu"]
 
 [dev-dependencies]
 approx = "0.5"

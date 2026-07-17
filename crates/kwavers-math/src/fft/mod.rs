@@ -84,7 +84,6 @@ pub static FFT_CACHE_2D: FftCache2d = FftCache2d;
 /// Process-wide cached 3-D FFT plan provider. See [`FftCache3d`].
 pub static FFT_CACHE_3D: FftCache3d = FftCache3d;
 
-pub use gpu_fft::gpu_fft_available;
 pub use kspace::KSpaceCalculator;
 pub use utils::{analytic_signal_1d, apply_spectral_response_1d};
 
@@ -317,21 +316,18 @@ pub fn ifft_3d_complex_inplace(data: &mut Array3<Complex64>) {
 
 /// Forward 3-D complex FFT along one axis in place.
 ///
-/// This preserves the Leto-facing Kwavers contract while Apollo owns the
-/// Leto-backed axis transform implementation.
+/// Kwavers and Apollo share Leto storage and `eunomia::Complex64`, so this
+/// delegates directly without allocating or converting the caller's field.
 pub fn fft_3d_axis_complex_inplace(plan: &Fft3d, data: &mut Array3<Complex64>, axis: usize) {
-    let mut apollo_data = to_apollo_complex_3d(data);
-    plan.forward_axis_complex_inplace(&mut apollo_data, axis);
-    copy_from_apollo_complex_3d(&apollo_data, data);
+    plan.forward_axis_complex_inplace(data, axis);
 }
 
 /// Inverse 3-D complex FFT along one axis in place.
 ///
-/// This is the axis-transform counterpart to [`ifft_3d_complex_inplace`].
+/// This preserves the direct zero-copy contract of
+/// [`fft_3d_axis_complex_inplace`].
 pub fn ifft_3d_axis_complex_inplace(plan: &Fft3d, data: &mut Array3<Complex64>, axis: usize) {
-    let mut apollo_data = to_apollo_complex_3d(data);
-    plan.inverse_axis_complex_inplace(&mut apollo_data, axis);
-    copy_from_apollo_complex_3d(&apollo_data, data);
+    plan.inverse_axis_complex_inplace(data, axis);
 }
 
 /// Full-spectrum (nx, ny, nz) complex-to-complex 3-D transforms with caller-owned
