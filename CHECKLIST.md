@@ -2,11 +2,11 @@
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor]
 
-- [ ] Centralize the GPU PSTD dimension contract at a 1,024-point maximum.
-- [ ] Expand the shared-memory FFT and root table without changing the
+- [x] Centralize the GPU PSTD dimension contract at a 1,024-point maximum.
+- [x] Expand the shared-memory FFT and root table without changing the
       64-thread dispatch shape.
-- [ ] Require the 12 KiB Hephaestus workgroup-storage capability at acquisition.
-- [ ] Add exact accepted/rejected dimension and host/shader storage contracts.
+- [x] Require the 12 KiB Hephaestus workgroup-storage capability at acquisition.
+- [x] Add exact accepted/rejected dimension and host/shader storage contracts.
 - [ ] Run GPU-feature Nextest and the Leo consumer gate.
 
 ## Owner: Codex — Consolidate continuous medium access [major]
