@@ -24,6 +24,8 @@ It also installs `clang`, which the OpenSSL build script selects through `CC`;
 `libclang-dev` alone does not provide that executable.
 The benchmark job retains real Criterion execution while excluding the PyO3
 extension, which is not a standalone benchmark executable.
+The plotting build/test matrix applies the same package boundary on stable,
+beta, and nightly.
 
 ## Owner: Codex — Checked grid cardinality [minor]
 

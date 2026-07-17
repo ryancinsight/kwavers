@@ -13,7 +13,8 @@
   CUDA container now installs `libssl-dev` for the RITK/DICOM OpenSSL build.
   It also installs the `clang` executable selected by the OpenSSL build script.
   The plotting benchmark job executes only the `kwavers` package, avoiding
-  an invalid PyO3 extension link while preserving Criterion execution.
+  an invalid PyO3 extension link while preserving Criterion execution; the
+  stable/beta/nightly plotting build/test matrix uses the same boundary.
 
 ## KW-GRID-048 — Checked grid cardinality [minor] — done
 

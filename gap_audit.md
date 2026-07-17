@@ -33,7 +33,8 @@
   so the container also installs the compiler executable in addition to
   `libclang-dev`. The benchmark workflow now invokes the
   Rust `kwavers` package explicitly rather than attempting to link the PyO3
-  extension as a benchmark executable. Evidence tier: native compilation and
+  extension as a benchmark executable; its stable/beta/nightly plotting
+  build/test matrix uses the same package boundary. Evidence tier: native compilation and
   value-semantic tests.
 
 - Closed 2026-07-17: `Grid` dimensions are public for interoperability, so

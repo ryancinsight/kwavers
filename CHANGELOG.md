@@ -16,6 +16,8 @@
   expansion; `libclang-dev` supplies headers but not that compiler binary.
 - Scoped the plotting benchmark job to the Rust `kwavers` package. The job no
   longer attempts to link the PyO3 extension as a benchmark target.
+- Scoped the stable, beta, and nightly plotting build/test matrix to `kwavers`
+  for the same standalone-extension linker boundary.
 
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
