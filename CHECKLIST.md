@@ -1,5 +1,16 @@
 # Project Checklist
 
+## Owner: Codex — Align Apollo provider lock [patch]
+
+- [x] Synchronize `Cargo.lock` from Apollo `0.23.0` to the merged provider
+  version `0.24.0` after Atlas integration branch refresh.
+- [x] Run the focused locked Kwavers GPU/simulation/solver Nextest suite.
+
+**Current evidence:** 1,036/1,036 tests pass with four skipped; three tests
+cross the local 10-second slow marker and one crosses 30 seconds. This is
+runtime evidence only; the existing performance residual remains recorded in
+`gap_audit.md` and no workload or assertion was changed.
+
 ## Owner: Codex — Checked grid cardinality [minor]
 
 - [x] Expose `Grid::checked_size` as the single checked `nx × ny × nz`

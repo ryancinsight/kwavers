@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## KW-CI-049 — Align Apollo provider lock [patch] — ✅ review
+
+- Owner: Codex; scope: `Cargo.lock` and provider-graph synchronization.
+- Acceptance: the lock records Apollo `0.24.0`, the version supplied by the
+  merged Apollo PR #45, and the focused locked suite remains value-semantic
+  green.
+- Evidence: lock-only diff; `cargo nextest run --locked -p kwavers-gpu
+  -p kwavers-simulation -p kwavers-solver` passes 1,036/1,036 with four
+  skipped tests.
+- Residual: three existing solver tests are slow; one exceeded 30 seconds in
+  this run and requires a separate profile-guided optimization item.
+
 ## KW-DOP-045 — Signed pulsed-wave spectral Doppler [minor] — review
 
 - Owner: Codex; scope: `kwavers-analysis` pulsed-wave Doppler spectrum contract,

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Changed
+
+- Synchronize `Cargo.lock` to Apollo `0.24.0` after the provider graph refresh;
+  the focused GPU/simulation/solver suite remains green.
+
 ### Breaking (2026-07-17) - GPU PSTD output contract [major]
 
 - `GpuPstdSolver::run` now requires `PstdOutputRequest` and returns

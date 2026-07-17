@@ -20,6 +20,12 @@
 
 # Gap Audit
 
+- Review 2026-07-17: the Atlas integration branch now supplies merged Apollo
+  `157467e` (`apollo-fft 0.24.0`) and RITK `a5e375f`; Kwavers `Cargo.lock` was
+  synchronized to Apollo `0.24.0`. The focused locked suite passes 1,036/1,036
+  with four skipped tests. Three existing solver tests are slow, including one
+  above 30 seconds; this is a performance residual, not a test relaxation.
+
 - Review 2026-07-17: `SolverType::PstdGpu` silently dispatched the CPU
   PSTD implementation, while `GpuPstdSimulationAdapter` published fabricated
   all-zero pressure and velocity fields. GPU PSTD now has an explicit
