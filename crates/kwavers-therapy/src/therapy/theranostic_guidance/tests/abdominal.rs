@@ -1,5 +1,6 @@
 use leto::Array3;
 
+use super::super::geometry::build_device_layout;
 use super::super::{
     build_abdominal_placement_context, placement_metrics, prepare_abdominal_slice,
     run_theranostic_inverse, run_theranostic_nonlinear_3d, AnatomyKind, Nonlinear3dConfig,
@@ -10,6 +11,19 @@ use super::helpers::{
     connected_mask_components, distance_2d, nearest_mask_distance_m, skin_normal_projection_2d,
     skin_normal_projection_3d,
 };
+
+fn device_layout_for_prepared_slice(
+    prepared: &super::super::PreparedTheranosticSlice,
+    config: &TheranosticInverseConfig,
+) -> super::super::DeviceLayout {
+    build_device_layout(
+        config,
+        &prepared.body_mask,
+        &prepared.target_mask,
+        prepared.spacing_m,
+    )
+    .expect("prepared abdominal fixture must admit a device layout")
+}
 
 #[test]
 fn abdominal_theranostic_inverse_recovers_lesion_support() {
@@ -286,7 +300,6 @@ fn peak_index(image: &leto::Array2<f64>, mask: &leto::Array2<bool>) -> Option<[u
 
 #[test]
 fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
-    // Reduced from 96×96 to 64×64 to keep the test under 30 s.
     // Tumor placed at x=38 (body far edge x=58): depth=(58-41)*1.5mm=25.5mm>20mm.
     // roi_voxels=40 ensures the full body skin boundary is visible to the detector.
     let mut ct = Array3::<f64>::from_elem((64, 64, 3), -950.0);
@@ -319,19 +332,18 @@ fn abdominal_preprocessing_keeps_external_skin_between_target_and_aperture() {
         prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.5, 1.5, 3.0], 40).unwrap();
     let mut config = TheranosticInverseConfig::new(AnatomyKind::Liver);
     config.element_count = 32;
-    config.receiver_offsets = vec![8];
-    config.frequencies_hz = vec![500_000.0];
-    config.iterations = 3;
-    let result = run_theranostic_inverse(prepared, &config).unwrap();
-    let target_depth_m = distance_2d(result.layout.skin_contact_m, result.layout.focus_m);
-    let max_aperture_skin_projection_m = result
-        .layout
+    // This contract is solely CT preprocessing plus placement: it does not
+    // observe a reconstructed field. Calling the full inverse here executed
+    // unrelated acoustic solves while leaving both asserted geometry values
+    // unchanged. The lesion-recovery contract above retains end-to-end inverse
+    // coverage; this test exercises the canonical layout operation directly.
+    let layout = device_layout_for_prepared_slice(&prepared, &config);
+    let target_depth_m = distance_2d(layout.skin_contact_m, layout.focus_m);
+    let max_aperture_skin_projection_m = layout
         .therapy_elements
         .iter()
-        .chain(result.layout.imaging_receivers.iter())
-        .map(|point| {
-            skin_normal_projection_2d(*point, result.layout.skin_contact_m, result.layout.focus_m)
-        })
+        .chain(layout.imaging_receivers.iter())
+        .map(|point| skin_normal_projection_2d(*point, layout.skin_contact_m, layout.focus_m))
         .fold(f64::NEG_INFINITY, f64::max);
 
     assert!(
@@ -378,15 +390,9 @@ fn abdominal_preprocessing_selects_one_connected_treatment_component() {
         prepare_abdominal_slice(AnatomyKind::Liver, &ct, &label, [1.0, 1.0, 2.5], 64).unwrap();
     let mut config = TheranosticInverseConfig::new(AnatomyKind::Liver);
     config.element_count = 32;
-    config.receiver_offsets = vec![8];
-    config.frequencies_hz = vec![500_000.0];
-    config.iterations = 2;
-    let result = run_theranostic_inverse(prepared.clone(), &config).unwrap();
-    let focus_distance = nearest_mask_distance_m(
-        &prepared.target_mask,
-        prepared.spacing_m,
-        result.layout.focus_m,
-    );
+    let layout = device_layout_for_prepared_slice(&prepared, &config);
+    let focus_distance =
+        nearest_mask_distance_m(&prepared.target_mask, prepared.spacing_m, layout.focus_m);
 
     assert_eq!(
         connected_mask_components(&prepared.target_mask),
