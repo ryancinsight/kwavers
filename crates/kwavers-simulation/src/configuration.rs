@@ -43,7 +43,7 @@ pub struct Configuration {
 impl Configuration {
     /// Load configuration from TOML file
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn from_file<P: AsRef<Path>>(path: P) -> kwavers_core::error::KwaversResult<Self> {
         let contents = std::fs::read_to_string(path.as_ref()).map_err(|_e| {
@@ -63,7 +63,7 @@ impl Configuration {
 
     /// Save configuration to TOML file
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn to_file<P: AsRef<Path>>(&self, path: P) -> kwavers_core::error::KwaversResult<()> {
         let contents = toml::to_string_pretty(self).map_err(|e| {
@@ -127,7 +127,7 @@ impl Configuration {
 
     /// Validate cross-component dependencies
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     fn validate_cross_dependencies(&self) -> kwavers_core::error::KwaversResult<()> {
         let mut multi_error = kwavers_core::error::MultiError::new();

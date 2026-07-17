@@ -37,7 +37,7 @@ type ElasticResidual2D<B> = (Var<f32, B>, Var<f32, B>);
 ///
 /// # Returns
 /// Tuple `(ε_xx, ε_yy, ε_xy)`, each of shape `[batch, 1]` — detached values,
-/// see the type-level doc on [`StrainTensor2D`].
+/// see the type-level doc on `StrainTensor2D`.
 ///
 /// # Mathematical Note
 /// For displacement field u = [u_x, u_y]:
@@ -82,7 +82,7 @@ where
 ///
 /// # Returns
 /// Tuple `(residual_x, residual_y)` for each vector component; zero for an
-/// exact solution. Both are live `Var`s — see [`ElasticResidual2D`].
+/// exact solution. Both are live `Var`s — see `ElasticResidual2D`.
 ///
 /// # Mathematical Specification
 /// Isotropic elastic wave equation (Achenbach 1973, §1.2):

@@ -45,7 +45,7 @@ where
 impl GpuThermalAcousticSolver<WgpuThermalAcousticSolverProvider> {
     /// Create a WGPU-backed thermal-acoustic solver.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     pub fn new(config: GpuThermalAcousticConfig) -> KwaversResult<Self> {
         WgpuThermalAcousticSolverProvider::new(config).map(Self::from_provider)
     }
@@ -70,7 +70,7 @@ where
     /// Execute one time step of the coupled thermal-acoustic simulation.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     pub fn step(&self) -> KwaversResult<()> {
         self.provider.step()
     }
@@ -116,7 +116,7 @@ pub struct WgpuThermalAcousticSolverProvider {
 impl WgpuThermalAcousticSolverProvider {
     /// Create a WGPU thermal-acoustic solver provider.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     pub fn new(config: GpuThermalAcousticConfig) -> KwaversResult<Self> {
         config.validate()?;
         let context = GpuProviderContext::<WgpuDevice>::new()?;

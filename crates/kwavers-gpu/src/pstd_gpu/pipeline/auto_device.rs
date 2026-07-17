@@ -3,7 +3,10 @@
 //! SRP: changes when adapter selection policy or device descriptor changes.
 
 use super::super::{
-    state::{PstdAutoDeviceProvider, WgpuPstdStateProvider},
+    state::{
+        PstdAutoDeviceProvider, WgpuPstdStateProvider,
+        ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE, LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE,
+    },
     GpuPstdSolver,
 };
 use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
@@ -13,11 +16,11 @@ use hephaestus_wgpu::WgpuDevice;
 use kwavers_grid::Grid;
 
 impl PstdAutoDeviceProvider for WgpuPstdStateProvider {
-    fn acquire_auto_context() -> Result<Self::Context, String> {
+    fn acquire_auto_context(absorbing: bool) -> Result<Self::Context, String> {
         GpuProviderContext::<WgpuDevice>::with_features_and_limits(
             WgpuDevice::acquisition_preference(),
             &[DeviceFeature::ImmediateData],
-            pstd_required_limits(),
+            pstd_required_limits(absorbing),
         )
         .map_err(|e| format!("GPU device creation failed: {e}"))
     }
@@ -40,15 +43,40 @@ where
         pml: PmlArrays<'_>,
         absorption: AbsorptionArrays<'_>,
     ) -> Result<Self, String> {
-        let context = P::acquire_auto_context()?;
+        let context = P::acquire_auto_context(solver.absorbing)?;
 
         Self::new(context, grid, medium, solver, pml, absorption)
     }
 }
 
-fn pstd_required_limits() -> hephaestus_core::DeviceLimits {
+fn pstd_required_limits(absorbing: bool) -> hephaestus_core::DeviceLimits {
     hephaestus_core::DeviceLimits {
+        max_storage_buffers_per_shader_stage: Some(if absorbing {
+            ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE
+        } else {
+            LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE
+        }),
         max_immediate_size: 128,
         ..WgpuDevice::required_limits()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        pstd_required_limits, ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE,
+        LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE,
+    };
+
+    #[test]
+    fn pstd_device_limits_match_the_enabled_pipeline_bindings() {
+        assert_eq!(
+            pstd_required_limits(false).max_storage_buffers_per_shader_stage,
+            Some(LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE)
+        );
+        assert_eq!(
+            pstd_required_limits(true).max_storage_buffers_per_shader_stage,
+            Some(ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE)
+        );
     }
 }

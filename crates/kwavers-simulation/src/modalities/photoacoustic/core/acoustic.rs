@@ -51,7 +51,7 @@ impl PhotoacousticSimulator {
 
     /// Run multi-wavelength photoacoustic simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn simulate_multi_wavelength(&self) -> KwaversResult<Vec<(Array3<f64>, InitialPressure)>> {
         let fluence_fields = self.compute_multi_wavelength_fluence()?;
@@ -76,7 +76,7 @@ impl PhotoacousticSimulator {
     /// 3. Reconstruct initial pressure using universal back-projection
     /// 4. Compute SNR from reconstructed image
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn simulate(
         &mut self,

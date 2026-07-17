@@ -154,8 +154,8 @@ where
     ///
     /// # Arguments
     ///
-    /// * `x` - Spatial coordinates (m) [n_points]
-    /// * `t` - Time coordinates (s) [n_points]
+    /// * `x` - Spatial coordinates (m), `n_points` values.
+    /// * `t` - Time coordinates (s), `n_points` values.
     ///
     /// # Returns
     ///

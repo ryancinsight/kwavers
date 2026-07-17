@@ -20,6 +20,27 @@
 
 # Gap Audit
 
+- Review 2026-07-17: `SolverType::PstdGpu` silently dispatched the CPU
+  PSTD implementation, while `GpuPstdSimulationAdapter` published fabricated
+  all-zero pressure and velocity fields. GPU PSTD now has an explicit
+  sensor-only versus sensor-plus-final-fields output request; the adapter maps
+  the actual GPU field buffers back to host arrays, and `SimulationRunner`
+  rejects its unsupported GPU request mapping instead of substituting CPU
+  execution. Evidence tier: output typestate plus value-semantic CPU and real
+  provider GPU regressions. Feature-configured Nextest passes 144/144 tests
+  (one skipped) under a serialized WGPU test group; the default scoped suite
+  passes 1036/1036 (four skipped), warning-denied Clippy passes, and all-feature
+  Rustdoc is warning-clean. Hephaestus commit `cf4df20` now raises the WGPU
+  aggregate buffer limit only when the requested storage limit requires it;
+  Kwavers' ordinary device path remains at eight storage bindings. Residual:
+  the adapter reads only the final state, not a peak-over-time pressure
+  envelope; its GPU grid contract remains power-of-two with each axis at most
+  256. Those limits cannot support LeoNeuro's long CT-frame treatment domain
+  and must not be represented as a planning backend. Release SemVer checking
+  remains open against the published baseline: `cargo semver-checks` cannot
+  build the isolated current/baseline rustdoc pair while Gaia resolves both
+  local and git Eunomia revisions (56 `RealField`/Leto trait-bound errors).
+
 - Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
   while public dimensions can be mutated after construction. `Grid::checked_size`
   now supplies the fallible cardinality contract at allocation boundaries, and

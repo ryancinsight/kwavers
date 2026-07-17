@@ -89,7 +89,7 @@ impl<'a, M: Medium> SimulationBuilder<'a, M> {
 
     /// Build the simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn build(self) -> KwaversResult<CoreSimulation<'a, M>> {
         let grid = self

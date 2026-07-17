@@ -91,7 +91,7 @@ impl WgpuPstdState {
                 self.dispatch_absorb(
                     cpass,
                     &ctx.params(step, ax),
-                    &self.pipelines.absorb_accum_div_u,
+                    &self.absorption_pipelines().accum_div_u,
                     bg,
                     ew,
                     "abs_accum",
@@ -104,7 +104,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipelines.absorb_prep_l1_kspace,
+                &self.absorption_pipelines().prep_l1_kspace,
                 bg,
                 ew,
                 "abs_prep_l1",
@@ -113,7 +113,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipelines.absorb_mul_nabla,
+                &self.absorption_pipelines().mul_nabla,
                 bg,
                 ew,
                 "abs_n1",
@@ -122,7 +122,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipelines.absorb_copy_to_scratch,
+                &self.absorption_pipelines().copy_to_scratch,
                 bg,
                 ew,
                 "abs_cp_l1",
@@ -132,7 +132,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 1),
-                &self.pipelines.absorb_prep_l2_kspace,
+                &self.absorption_pipelines().prep_l2_kspace,
                 bg,
                 ew,
                 "abs_prep_l2",
@@ -141,7 +141,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 1),
-                &self.pipelines.absorb_mul_nabla,
+                &self.absorption_pipelines().mul_nabla,
                 bg,
                 ew,
                 "abs_n2",
@@ -150,7 +150,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 1),
-                &self.pipelines.absorb_copy_to_scratch,
+                &self.absorption_pipelines().copy_to_scratch,
                 bg,
                 ew,
                 "abs_cp_l2",

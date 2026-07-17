@@ -144,7 +144,7 @@ impl ConfigurationBuilder {
     /// This method runs validation to ensure the configuration is complete
     /// and consistent before returning it.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn build(self) -> KwaversResult<Configuration> {
         self.config.validate()?;

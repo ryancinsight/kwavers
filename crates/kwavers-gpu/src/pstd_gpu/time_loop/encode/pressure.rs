@@ -29,7 +29,7 @@ impl WgpuPstdState {
             self.dispatch_absorb(
                 cpass,
                 &ctx.params(step, 0),
-                &self.pipelines.absorb_pressure_correction,
+                &self.absorption_pipelines().pressure_correction,
                 bg,
                 ew,
                 "abs_pres_corr",

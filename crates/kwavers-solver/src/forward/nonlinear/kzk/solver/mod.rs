@@ -239,7 +239,7 @@ impl KZKSolver {
     /// * `frequency` — operating frequency (Hz)
     /// * `focal_depth` — geometric focal distance from the source plane (m).
     ///   When `focal_depth → ∞`, the phase reduces to zero and the source
-    ///   behaves identically to [`set_source`].
+    ///   behaves identically to [`Self::set_source`].
     pub fn set_focused_source(&mut self, source: Array2<f64>, frequency: f64, focal_depth: f64) {
         self.config.frequency = frequency;
         self.complex_diffraction = ParabolicDiffractionOperator::new(&self.config);

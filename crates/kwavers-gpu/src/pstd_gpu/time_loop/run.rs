@@ -3,7 +3,10 @@
 //! SRP: changes when the batch strategy, TDR throttle, or sensor I/O format changes.
 
 use super::super::{
-    state::{PstdRunInputs, PstdRunScalars, PstdRunState, PstdStateProvider, WgpuPstdState},
+    state::{
+        PstdFinalFields, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunScalars,
+        PstdRunState, PstdStateProvider, WgpuPstdState,
+    },
     GpuPstdSolver, PstdParams,
 };
 use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
@@ -53,7 +56,7 @@ impl PstdRunScalars {
 }
 
 impl PstdRunState for WgpuPstdState {
-    fn run_pstd(&mut self, scalars: PstdRunScalars, inputs: PstdRunInputs<'_>) -> Vec<f32> {
+    fn run_pstd(&mut self, scalars: PstdRunScalars, inputs: PstdRunInputs<'_>) -> PstdRunResult {
         let n_sensors = inputs.sensor_indices.len();
         let n_src = inputs.source_indices.len();
         let n_vel_x = inputs.vel_x_indices.len();
@@ -83,6 +86,10 @@ impl PstdRunState for WgpuPstdState {
                 n_src_safe,
                 n_vel_safe,
             );
+        }
+
+        if inputs.output_request.includes_final_fields() {
+            self.ensure_field_staging_buffer(scalars.total_points());
         }
 
         let buf_sensor_data = self
@@ -141,21 +148,44 @@ impl PstdRunState for WgpuPstdState {
             }
         }
 
-        if n_sensors == 0 {
-            return Vec::new();
-        }
-
-        let sensor_bytes = (n_sensors * scalars.nt * std::mem::size_of::<f32>()) as u64;
-        let staging = self
-            .run_cache
-            .staging_buf
-            .as_ref()
-            .expect("staging buffer allocated in cache miss path");
-
-        commands.copy_buffer(buf_sensor_data, staging, sensor_bytes, "sensor_copy");
-
         let gpu_t0 = std::time::Instant::now();
-        let result: Vec<f32> = commands.read_mapped(staging, sensor_bytes);
+        let sensor_data = if n_sensors == 0 {
+            Vec::new()
+        } else {
+            let sensor_bytes = (n_sensors * scalars.nt * std::mem::size_of::<f32>()) as u64;
+            let staging = self
+                .run_cache
+                .staging_buf
+                .as_ref()
+                .expect("invariant: sensor cache allocates a staging buffer");
+            commands.copy_buffer(buf_sensor_data, staging, sensor_bytes, "sensor_copy");
+            commands.read_mapped(staging, sensor_bytes)
+        };
+
+        let final_fields = if inputs.output_request.includes_final_fields() {
+            let field_bytes = (scalars.total_points() * std::mem::size_of::<f32>()) as u64;
+            let staging = self
+                .run_cache
+                .field_staging_buf
+                .as_ref()
+                .expect("invariant: full-field request allocates a staging buffer");
+            let read_field = |field: &wgpu::Buffer, label| {
+                commands.copy_buffer(field, staging, field_bytes, label);
+                commands.read_mapped(staging, field_bytes)
+            };
+            Some(PstdFinalFields {
+                pressure: read_field(&self.field_buffers.p, "final_pressure_copy"),
+                velocity_x: read_field(&self.field_buffers.ux, "final_velocity_x_copy"),
+                velocity_y: read_field(&self.field_buffers.uy, "final_velocity_y_copy"),
+                velocity_z: read_field(&self.field_buffers.uz, "final_velocity_z_copy"),
+            })
+        } else {
+            if n_sensors == 0 {
+                commands.poll_wait();
+            }
+            None
+        };
+
         let gpu_wait_ns = gpu_t0.elapsed().as_nanos() as u64;
         let _ = (cpu_encode_ns, gpu_wait_ns);
         #[cfg(test)]
@@ -166,7 +196,10 @@ impl PstdRunState for WgpuPstdState {
             gpu_wait_ns as f64 / 1e6,
         );
 
-        result
+        PstdRunResult {
+            sensor_data,
+            final_fields,
+        }
     }
 }
 
@@ -177,8 +210,7 @@ where
 {
     /// Run the GPU PSTD time loop.
     ///
-    /// Returns `sensor_data` as a flat `Vec<f32>` in row-major order
-    /// `[sensor_id * nt + step]`.
+    /// Returns the requested host outputs.
     ///
     /// # Arguments
     /// * `sensor_indices` - flat grid indices of sensor points.
@@ -195,7 +227,8 @@ where
         source_signals: &[f32],
         vel_x_indices: &[u32],
         vel_x_signals: &[f32],
-    ) -> Vec<f32> {
+        output_request: PstdOutputRequest,
+    ) -> PstdRunResult {
         let scalars = PstdRunScalars {
             nx: self.nx,
             ny: self.ny,
@@ -211,6 +244,7 @@ where
             source_signals,
             vel_x_indices,
             vel_x_signals,
+            output_request,
         };
 
         self.state.run_pstd(scalars, inputs)

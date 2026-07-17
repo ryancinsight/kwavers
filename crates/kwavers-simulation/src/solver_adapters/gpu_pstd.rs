@@ -13,8 +13,8 @@
 //! |---|---|
 //! | `run(nt)` | Builds GPU arrays, calls `GpuPstdSolver::with_auto_device` + `run()`; stores sensor traces |
 //! | `step_forward()` | Returns `Err(FeatureNotAvailable)` — batch-only arch |
-//! | `pressure_field()` | Returns zero array — GPU fields are not downloaded mid-run |
-//! | `velocity_fields()` | Returns zero arrays — same reason |
+//! | `pressure_field()` | Returns the final host-read pressure field after `run()` |
+//! | `velocity_fields()` | Returns final host-read staggered velocity fields after `run()` |
 //! | `recorded_sensor_pressure()` | Returns sensor traces after `run()` completes |
 //! | `add_source(Box<dyn Source>)` | Extracts spatial mask via `Source::create_mask`; signal not set |
 //! | `add_sensor(&GridSensorSet)` | Converts `GridPoint` list to boolean sensor mask |
@@ -45,7 +45,8 @@ use medium::GpuMediumSnapshot;
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest,
+    SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -78,8 +79,10 @@ pub struct GpuPstdSimulationAdapter {
     pub(self) sensor_mask: Array3<bool>,
     /// Sensor traces recorded by the most-recent `run()` call.
     pub(self) recorded: Option<Array2<f64>>,
-    pub(self) pressure_zero: Array3<f64>,
-    pub(self) vel_zero: Array3<f64>,
+    pub(self) pressure: Array3<f64>,
+    pub(self) velocity_x: Array3<f64>,
+    pub(self) velocity_y: Array3<f64>,
+    pub(self) velocity_z: Array3<f64>,
     pub(self) current_step: usize,
     pub(self) computation_time: Duration,
 }
@@ -138,8 +141,10 @@ impl GpuPstdSimulationAdapter {
             source: GridSource::new_empty(),
             sensor_mask: Array3::from_elem(shape, false),
             recorded: None,
-            pressure_zero: Array3::zeros(shape),
-            vel_zero: Array3::zeros(shape),
+            pressure: Array3::zeros(shape),
+            velocity_x: Array3::zeros(shape),
+            velocity_y: Array3::zeros(shape),
+            velocity_z: Array3::zeros(shape),
             current_step: 0,
             computation_time: Duration::ZERO,
         })
@@ -151,6 +156,39 @@ impl GpuPstdSimulationAdapter {
     /// carries spatial masks, not temporal signals). Call before `run()`.
     pub fn set_grid_source(&mut self, source: GridSource) {
         self.source = source;
+    }
+
+    fn host_field(
+        shape: (usize, usize, usize),
+        values: Vec<f32>,
+        field_name: &str,
+    ) -> KwaversResult<Array3<f64>> {
+        Array3::from_shape_vec(shape, values.into_iter().map(f64::from).collect()).map_err(
+            |error| {
+                KwaversError::InvalidInput(format!(
+                    "GPU PSTD {field_name} readback does not match the simulation grid: {error}"
+                ))
+            },
+        )
+    }
+
+    fn store_final_fields(&mut self, fields: PstdFinalFields) -> KwaversResult<()> {
+        let PstdFinalFields {
+            pressure,
+            velocity_x,
+            velocity_y,
+            velocity_z,
+        } = fields;
+        let shape = (self.grid.nx, self.grid.ny, self.grid.nz);
+        let pressure = Self::host_field(shape, pressure, "pressure")?;
+        let velocity_x = Self::host_field(shape, velocity_x, "x-velocity")?;
+        let velocity_y = Self::host_field(shape, velocity_y, "y-velocity")?;
+        let velocity_z = Self::host_field(shape, velocity_z, "z-velocity")?;
+        self.pressure = pressure;
+        self.velocity_x = velocity_x;
+        self.velocity_y = velocity_y;
+        self.velocity_z = velocity_z;
+        Ok(())
     }
 
     /// Build all GPU arrays and run the PSTD time loop.
@@ -351,17 +389,30 @@ impl GpuPstdSimulationAdapter {
 
         // ── Run GPU time loop ─────────────────────────────────────────────────
         let t0 = Instant::now();
-        let sensor_f32 =
-            gpu_solver.run(&sensor_indices, &source_indices, &source_signals, &[], &[]);
+        let result = gpu_solver.run(
+            &sensor_indices,
+            &source_indices,
+            &source_signals,
+            &[],
+            &[],
+            PstdOutputRequest::SensorTracesAndFinalFields,
+        );
         self.computation_time += t0.elapsed();
         self.current_step += nt;
+
+        let final_fields = result.final_fields.ok_or_else(|| {
+            KwaversError::InternalError(
+                "GPU PSTD final-field request completed without field readback".to_owned(),
+            )
+        })?;
+        self.store_final_fields(final_fields)?;
 
         // ── Widen f32 → f64 and store ─────────────────────────────────────────
         let n_sensors = sensor_indices.len();
         let mut out = Array2::<f64>::zeros((n_sensors, nt));
         for s in 0..n_sensors {
             for t in 0..nt {
-                out[[s, t]] = sensor_f32[s * nt + t] as f64;
+                out[[s, t]] = f64::from(result.sensor_data[s * nt + t]);
             }
         }
         self.recorded = Some(out);
@@ -433,18 +484,13 @@ impl Solver for GpuPstdSimulationAdapter {
         ))
     }
 
-    /// Returns a zero pressure field.
-    ///
-    /// GPU fields remain on VRAM throughout the simulation and are not
-    /// downloaded to the CPU.  The zero return is not an approximation — it is
-    /// a documented contract: FWI adjoint passes and any caller that needs the
-    /// instantaneous pressure field must use the CPU PSTD solver.
+    /// Returns the final GPU-read pressure field from the most recent batch.
     fn pressure_field(&self) -> &Array3<f64> {
-        &self.pressure_zero
+        &self.pressure
     }
 
     fn velocity_fields(&self) -> (&Array3<f64>, &Array3<f64>, &Array3<f64>) {
-        (&self.vel_zero, &self.vel_zero, &self.vel_zero)
+        (&self.velocity_x, &self.velocity_y, &self.velocity_z)
     }
 
     fn recorded_sensor_pressure(&self) -> Option<Array2<f64>> {
@@ -457,8 +503,20 @@ impl Solver for GpuPstdSimulationAdapter {
             current_step: self.current_step,
             computation_time: self.computation_time,
             memory_usage: self.medium.c0_flat.len() * std::mem::size_of::<f32>() * 6,
-            max_pressure: 0.0, // GPU fields not downloaded mid-run
-            max_velocity: 0.0,
+            max_pressure: self
+                .pressure
+                .iter()
+                .fold(0.0_f64, |max_pressure, &pressure| {
+                    max_pressure.max(pressure.abs())
+                }),
+            max_velocity: self
+                .velocity_x
+                .iter()
+                .chain(self.velocity_y.iter())
+                .chain(self.velocity_z.iter())
+                .fold(0.0_f64, |max_velocity, &velocity| {
+                    max_velocity.max(velocity.abs())
+                }),
         }
     }
 

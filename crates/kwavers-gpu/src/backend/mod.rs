@@ -55,10 +55,10 @@
 //! ## References
 //!
 //! - Hephaestus: local Atlas GPU provider crates
-//! - WGPU: https://wgpu.rs/
-//! - WGSL Spec: https://www.w3.org/TR/WGSL/
+//! - WGPU: <https://wgpu.rs/>
+//! - WGSL Spec: <https://www.w3.org/TR/WGSL/>
 //! - k-Wave GPU: CUDA implementation patterns
-//! - WebGPU API: https://www.w3.org/TR/webgpu/
+//! - WebGPU API: <https://www.w3.org/TR/webgpu/>
 
 pub mod buffers;
 pub mod init;

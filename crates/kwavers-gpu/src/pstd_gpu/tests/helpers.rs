@@ -3,6 +3,7 @@
 use super::super::{
     AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
 };
+use crate::pstd_gpu::state::LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE;
 use crate::{backend::init::GpuProviderContext, gpu::GpuDeviceProvider};
 use hephaestus_core::DeviceFeature;
 use hephaestus_wgpu::WgpuDevice;
@@ -74,6 +75,7 @@ pub(super) fn make_small_test_solver() -> Option<GpuPstdSolver> {
 
 fn pstd_test_required_limits() -> hephaestus_core::DeviceLimits {
     hephaestus_core::DeviceLimits {
+        max_storage_buffers_per_shader_stage: Some(LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE),
         max_immediate_size: 128,
         ..WgpuDevice::required_limits()
     }

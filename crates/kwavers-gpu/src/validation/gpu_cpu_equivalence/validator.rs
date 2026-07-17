@@ -72,7 +72,7 @@ impl EquivalenceValidator {
     ///
     /// Computes error metrics and returns a report with pass/fail status.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn validate_arrays(
         &self,

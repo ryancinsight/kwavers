@@ -117,7 +117,7 @@ impl PmlConfig {
 /// the frequency-domain solve from the time step `dt`.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct HelmholtzConfig {
-    /// Source frequency [Hz] for wavenumber derivation.
+    /// Source frequency in hertz for wavenumber derivation.
     /// `k = 2π · frequency / cₘₐₓ`.
     /// When `None`, falls back to `k = 2π / (cₘₐₓ · dt)`.
     pub frequency: Option<f64>,
@@ -210,14 +210,14 @@ impl NonlinearConfig {
 pub struct PoroelasticConfig {
     /// Porosity (0 < φ < 1).
     pub porosity: f64,
-    /// Intrinsic permeability [m²].
+    /// Intrinsic permeability in square metres.
     pub permeability: f64,
     /// Tortuosity (α ≥ 1).  Derived from porosity when `None`:
     /// `tortuosity = 1.0 / porosity.sqrt()`.
     pub tortuosity: Option<f64>,
     /// Fluid density [kg/m³].
     pub fluid_density: f64,
-    /// Fluid bulk modulus [Pa].
+    /// Fluid bulk modulus in pascals.
     pub fluid_bulk_modulus: f64,
     /// Fluid dynamic viscosity [Pa·s].
     pub fluid_viscosity: f64,
@@ -244,7 +244,7 @@ impl PoroelasticConfig {
         self
     }
 
-    /// Builder: set permeability [m²].
+    /// Builder: set permeability in square metres.
     #[must_use]
     pub fn with_permeability(mut self, permeability: f64) -> Self {
         self.permeability = permeability;
@@ -321,11 +321,11 @@ pub struct ThermalConfig {
     pub initial_temperature_c: f64,
     /// Track CEM43 thermal dose field.
     pub track_thermal_dose: bool,
-    /// Center frequency [Hz] for α(ω_c) computation.
+    /// Center frequency in hertz for α(ω_c) computation.
     pub center_frequency_hz: f64,
     /// Acoustic steps per thermal update (≥ 1).
     pub n_acoustic_per_thermal: usize,
-    /// Thermal time step [s]. `None` → `n_acoustic_per_thermal * dt_acoustic`.
+    /// Thermal time step in seconds. `None` uses `n_acoustic_per_thermal * dt_acoustic`.
     pub dt_thermal: Option<f64>,
 }
 

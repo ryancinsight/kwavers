@@ -34,8 +34,8 @@ use leto::Array3 as LetoArray3;
 
 /// Provider execution seam for FDTD pressure transfer and stepping.
 ///
-/// This trait is generic over the Hephaestus provider through
-/// [`GpuKernelProvider::Device`]. WGPU implements it with real WGSL kernels;
+/// This trait is generic over the Hephaestus provider through its associated
+/// device type. WGPU implements it with real WGSL kernels;
 /// CUDA must add a separate real implementation before satisfying this trait.
 pub trait FdtdGpuProvider: GpuKernelProvider {
     /// Build the provider-specific FDTD solver for `grid`.

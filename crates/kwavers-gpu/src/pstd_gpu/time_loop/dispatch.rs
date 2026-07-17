@@ -34,6 +34,7 @@ impl WgpuPstdState {
     ///
     /// Used by fractional-Laplacian absorption shaders. The shared pipeline
     /// layout still requires group(2); the absorption kernels do not read it.
+    /// Construction creates group(3) only for an absorption-enabled solver.
     #[inline]
     pub(super) fn dispatch_absorb(
         &self,
@@ -49,7 +50,10 @@ impl WgpuPstdState {
         cpass.set_bind_group(0, &self.permanent_bind_groups.fields, &[]);
         cpass.set_bind_group(1, &self.permanent_bind_groups.kspace, &[]);
         cpass.set_bind_group(2, bg_sensor, &[]);
-        cpass.set_bind_group(3, &self.permanent_bind_groups.absorb, &[]);
+        let absorption = self.permanent_bind_groups.absorb.as_ref().expect(
+            "invariant: absorption dispatch requires an absorption-enabled PSTD bind group",
+        );
+        cpass.set_bind_group(3, absorption, &[]);
         cpass.dispatch_workgroups(workgroups, 1, 1);
     }
 

@@ -5,7 +5,7 @@
 //! ```
 //!
 //! The physics and finite-difference numerics live in
-//! [`crate::inverse::pinn::ml::autodiff_utils::elastic`], shared with every
+//! `autodiff_utils::elastic`, shared with every
 //! other elastic-wave PINN in this crate. This module adapts
 //! `ElasticPINN2D`'s three-separate-`Var` `forward(x, y, t)` signature to
 //! that shared utility's single-tensor `forward_fn` convention — see

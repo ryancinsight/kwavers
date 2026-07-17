@@ -10,7 +10,7 @@ use std::io::{self, Write};
 
 /// Save pressure data.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates errors returned by called functions.
 ///
 pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving pressure data to {}", filename);
@@ -44,7 +44,7 @@ pub fn save_pressure_data(recorder: &Recorder, time: &Time, filename: &str) -> i
 
 /// Save light data.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates errors returned by called functions.
 ///
 pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::Result<()> {
     info!("Saving light data to {}", filename);
@@ -78,7 +78,7 @@ pub fn save_light_data(recorder: &Recorder, time: &Time, filename: &str) -> io::
 
 /// Generate summary.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates errors returned by called functions.
 ///
 pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
     info!("Generating summary to {}", filename);
@@ -121,7 +121,7 @@ pub fn generate_summary(recorder: &Recorder, filename: &str) -> io::Result<()> {
 /// Writes data as (x, y, z, value) rows for easy import into
 /// analysis tools (MATLAB, Python, R, etc.).
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates errors returned by called functions.
 ///
 pub fn save_data_csv(data: &Array3<f64>, filename: &str) -> io::Result<()> {
     info!("Saving data to CSV: {}", filename);

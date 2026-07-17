@@ -75,9 +75,9 @@ pub struct SimulationRunResult {
         Option<kwavers_receiver::recorder::velocity_statistics::SampledVelocityStats>,
     /// Full-grid pressure-statistics field.
     pub full_grid_stats: FullGridStats,
-    /// Final temperature field (nx, ny, nz) [K]. `None` for acoustic-only runs.
+    /// Final temperature field in kelvin. `None` for acoustic-only runs.
     pub thermal_temperature: Option<NdArray3<f64>>,
-    /// CEM43 thermal dose field (nx, ny, nz) [min].
+    /// CEM43 thermal dose field in minutes.
     pub thermal_dose: Option<NdArray3<f64>>,
 }
 

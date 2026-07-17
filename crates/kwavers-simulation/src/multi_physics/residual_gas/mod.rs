@@ -8,7 +8,7 @@
 //!
 //! [`ResidualGasField`] tracks the per-voxel gas void fraction `β(x)` and a
 //! representative residual-bubble radius, evolves them with any
-//! [`DissolutionModel`](kwavers_physics::acoustics::bubble_dynamics::DissolutionModel),
+//! [`DissolutionModel`],
 //! and produces the modified sound-speed and attenuation fields the solver
 //! applies to the next pulse.
 
@@ -51,7 +51,7 @@ impl ResidualGasField {
         self.void_fraction.view()
     }
 
-    /// Current representative residual-bubble radius [m].
+    /// Current representative residual-bubble radius in metres.
     #[must_use]
     pub fn representative_radius(&self) -> f64 {
         self.representative_radius_m
@@ -128,7 +128,7 @@ impl ResidualGasField {
         })
     }
 
-    /// Total residual gas volume `Σ β · dV` [m³] given the voxel volume.
+    /// Total residual gas volume `Σ β · dV` in cubic metres given the voxel volume.
     #[must_use]
     pub fn total_gas_volume(&self, dv_m3: f64) -> f64 {
         self.void_fraction.iter().sum::<f64>() * dv_m3.max(0.0)

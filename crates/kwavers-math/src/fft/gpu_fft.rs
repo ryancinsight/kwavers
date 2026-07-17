@@ -32,23 +32,6 @@
 //! convolution with `M = next_power_of_two(2N - 1)`, giving `O(N log N)` for
 //! every positive axis length.
 
-/// Returns whether the compiled crate can expose Apollo GPU FFT execution.
-///
-/// This is a capability predicate, not a numerical substitute. Callers that
-/// need a plan must construct an Apollo `FftBackend` implementation and
-/// handle adapter/device failure.
-#[must_use]
-pub fn gpu_fft_available() -> bool {
-    #[cfg(feature = "gpu")]
-    {
-        apollo::gpu_fft_available()
-    }
-    #[cfg(not(feature = "gpu"))]
-    {
-        false
-    }
-}
-
 #[cfg(feature = "gpu")]
 pub use apollo::{FftBackend, GpuFft3d, GpuFft3dBuffers, WgpuBackend};
 

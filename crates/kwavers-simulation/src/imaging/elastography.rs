@@ -40,7 +40,7 @@ impl ShearWaveElastography {
     /// * `method` - Inversion algorithm to use for reconstruction
     /// * `config` - Configuration for elastic wave simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn new<M: Medium + Clone + 'static>(
         grid: &Grid,
@@ -69,7 +69,7 @@ impl ShearWaveElastography {
     ///
     /// Vector of displacement fields at different time points
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn generate_shear_wave(
         &self,
@@ -101,7 +101,7 @@ impl ShearWaveElastography {
     ///
     /// Reconstructed elasticity map
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn reconstruct_elasticity(
         &self,

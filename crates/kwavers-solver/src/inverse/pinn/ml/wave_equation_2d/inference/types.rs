@@ -12,13 +12,13 @@ pub enum ActivationType {
 /// Quantized Neural Network for Real-Time Inference
 #[derive(Debug, Clone)]
 pub struct QuantizedNetwork {
-    /// Quantized weights for each layer [layer_idx][weight_idx]
+    /// Quantized weights for each layer, indexed by layer and weight.
     pub weights: Vec<Vec<i8>>,
-    /// Quantization scales for weights [layer_idx]
+    /// Quantization scales for each layer.
     pub weight_scales: Vec<f32>,
-    /// Quantized biases [layer_idx][bias_idx]
+    /// Quantized biases for each layer, indexed by layer and bias.
     pub biases: Vec<Vec<i8>>,
-    /// Bias quantization scales [layer_idx]
+    /// Bias quantization scales for each layer.
     pub bias_scales: Vec<f32>,
     /// Layer sizes [input_size, hidden_sizes..., output_size]
     pub layer_sizes: Vec<usize>,

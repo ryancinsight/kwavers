@@ -76,7 +76,7 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
 
     /// Initialize the simulation — creates the solver and prepares for execution
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn initialize(&mut self) -> KwaversResult<()> {
         self.progress_reporter.on_start(0, 0.0);
@@ -117,7 +117,7 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
 
     /// Run the simulation using the configured solver
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn run(&mut self, num_steps: usize, dt: f64) -> KwaversResult<SimulationResult> {
         // Auto-initialize if not already done
@@ -187,7 +187,7 @@ impl<'a, M: Medium> CoreSimulation<'a, M> {
 
     /// Enable a feature for this simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn enable_feature(&mut self, feature: SolverFeature) -> KwaversResult<()> {
         self.feature_manager.enable_feature(feature)?;

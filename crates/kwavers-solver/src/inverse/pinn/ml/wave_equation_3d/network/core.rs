@@ -138,7 +138,7 @@ where
 
     /// Forward pass through the network
     ///
-    /// u = NN(x, y, z, t) = tanh(W_L tanh(...tanh(W_1[x,y,z,t] + b_1)...) + b_L)
+    /// `u = NN(x, y, z, t) = tanh(W_L tanh(...tanh(W_1[x, y, z, t] + b_1)...) + b_L)`.
     pub fn forward(
         &self,
         x: &Var<f32, B>,

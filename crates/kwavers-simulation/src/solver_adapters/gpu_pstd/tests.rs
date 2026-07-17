@@ -1,6 +1,7 @@
 use super::GpuPstdSimulationAdapter;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER};
 use kwavers_core::error::KwaversError;
+use kwavers_gpu::pstd_gpu::PstdFinalFields;
 use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
@@ -49,8 +50,40 @@ fn constructs_for_valid_power_of_two_grid() {
     let adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
 
     assert_eq!(adapter.name(), "GpuPstd");
-    assert_eq!(adapter.pressure_field().dim(), (8, 8, 8));
+    assert_eq!(adapter.pressure_field().shape(), [8, 8, 8]);
     assert!(adapter.recorded_sensor_pressure().is_none());
+}
+
+#[test]
+fn final_field_readback_populates_solver_field_contract() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PstdGpu,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+    let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
+    let field_len = grid.nx * grid.ny * grid.nz;
+
+    adapter
+        .store_final_fields(PstdFinalFields {
+            pressure: (0..field_len).map(|index| index as f32).collect(),
+            velocity_x: (0..field_len).map(|index| (1000 + index) as f32).collect(),
+            velocity_y: (0..field_len).map(|index| (2000 + index) as f32).collect(),
+            velocity_z: (0..field_len).map(|index| (3000 + index) as f32).collect(),
+        })
+        .expect("field vectors match the adapter grid");
+
+    assert_eq!(adapter.pressure_field()[[0, 0, 0]], 0.0);
+    assert_eq!(adapter.pressure_field()[[7, 7, 7]], 511.0);
+    let (velocity_x, velocity_y, velocity_z) = adapter.velocity_fields();
+    assert_eq!(velocity_x[[7, 7, 7]], 1511.0);
+    assert_eq!(velocity_y[[7, 7, 7]], 2511.0);
+    assert_eq!(velocity_z[[7, 7, 7]], 3511.0);
+    let statistics = adapter.statistics();
+    assert_eq!(statistics.max_pressure, 511.0);
+    assert_eq!(statistics.max_velocity, 3511.0);
 }
 
 #[test]

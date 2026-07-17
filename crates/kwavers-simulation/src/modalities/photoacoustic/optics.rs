@@ -144,7 +144,7 @@ pub fn initialize_optical_properties(
 /// - Distance from source > 1/μₛ' (far from boundaries)
 /// - Valid for biological tissue in near-infrared (600-1000 nm)
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates errors returned by called functions.
 ///
 pub fn compute_fluence_at_wavelength(
     grid: &Grid,

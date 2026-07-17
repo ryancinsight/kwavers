@@ -67,7 +67,7 @@ where
 /// independent forward passes (never through a `Var::grad()` extraction),
 /// so a subsequent `.backward()` on a loss containing this value correctly
 /// updates the weights used inside `forward_fn` (see
-/// [`super::second_order`]'s module-level weight-gradient contract).
+/// `second_order`'s module-level weight-gradient contract).
 ///
 /// # Mathematical Note
 /// Central finite-difference approximation (ε = 1e-4):

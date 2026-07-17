@@ -18,7 +18,7 @@ pub struct WgpuPipelineManager {
 impl WgpuPipelineManager {
     /// Create a new WGPU pipeline manager and compile all shaders.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn new(device: &wgpu::Device) -> KwaversResult<Self> {
         let mut pipelines = HashMap::new();

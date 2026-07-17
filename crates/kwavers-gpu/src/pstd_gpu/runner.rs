@@ -17,8 +17,8 @@
 //! pressure recorded at each sensor index per step.
 
 use crate::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider, PstdRunState,
-    SolverParams, WgpuPstdStateProvider,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider,
+    PstdOutputRequest, PstdRunState, SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
@@ -36,7 +36,7 @@ use std::f64::consts::PI;
 pub struct GpuPstdRunConfig {
     /// Number of time steps to integrate.
     pub time_steps: usize,
-    /// Time step [s].
+    /// Time step in seconds.
     pub dt: f64,
     /// Power-law absorption coefficient [dB/(MHz·cm)]; `0.0` disables.
     pub alpha_coeff_db: f64,
@@ -371,13 +371,16 @@ where
     )
     .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
 
-    let sensor_data_f32 = solver.run(
-        &sensor_indices,
-        &source_indices,
-        &source_signals,
-        &vel_x_indices,
-        &vel_x_signals,
-    );
+    let sensor_data_f32 = solver
+        .run(
+            &sensor_indices,
+            &source_indices,
+            &source_signals,
+            &vel_x_indices,
+            &vel_x_signals,
+            PstdOutputRequest::SensorTraces,
+        )
+        .sensor_data;
 
     let n_sensors = sensor_indices.len();
     LetoArray2::from_shape_vec(

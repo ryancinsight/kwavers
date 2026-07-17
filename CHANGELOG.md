@@ -2,6 +2,32 @@
 
 ## Unreleased
 
+### Breaking (2026-07-17) - GPU PSTD output contract [major]
+
+- `GpuPstdSolver::run` now requires `PstdOutputRequest` and returns
+  `PstdRunResult`. `SensorTraces` retains sensor-only transfer; explicit
+  final-field output returns real pressure and staggered velocity fields.
+  `SimulationRunner` now returns `FeatureNotAvailable` for `PstdGpu` rather
+  than silently executing CPU PSTD.
+
+### Migration
+
+- Pass `PstdOutputRequest::SensorTraces` or
+  `PstdOutputRequest::SensorTracesAndFinalFields` to `GpuPstdSolver::run` and
+  read the corresponding `PstdRunResult` fields. Use the direct GPU adapter
+  until `SimulationRunner` can preserve its entire request contract.
+
+### Fixed (2026-07-17) - GPU provider ownership and documentation
+
+- Removed the obsolete Apollo GPU capability wrapper and migrated the Kwavers
+  call sites to provider-owned capability checks.
+- Moved the aggregate WGPU binding-limit correction into Hephaestus, preserving
+  the ordinary eight-binding Kwavers device contract while enabling the PSTD
+  24/32-binding layouts. Serialized real-device tests prevent concurrent DX12
+  adapter contexts from racing.
+- Corrected unresolved rustdoc links and unit annotations across the touched
+  GPU, simulation, and solver APIs; all-feature package Rustdoc is warning-clean.
+
 ### Added (2026-07-16) - checked grid cardinality [minor]
 
 - Added `Grid::checked_size`, the fallible cardinality contract for consumers

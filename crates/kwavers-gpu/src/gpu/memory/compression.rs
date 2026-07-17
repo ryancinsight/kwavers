@@ -26,7 +26,7 @@ impl MemoryCompression {
     ///
     /// Returns the compression ratio (compressed / original).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn compress(&mut self, handle: &MemoryHandle) -> KwaversResult<f64> {
         let key = format!(
@@ -44,7 +44,7 @@ impl MemoryCompression {
 
     /// Decompress the block referenced by `handle`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn decompress(&mut self, handle: &MemoryHandle) -> KwaversResult<()> {
         let key = format!(

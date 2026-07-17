@@ -13,6 +13,7 @@ use crate::pstd_gpu::state::{
     PstdStateBuilder, WgpuPstdAbsorptionBuffers, WgpuPstdFieldBuffers, WgpuPstdKspaceBuffers,
     WgpuPstdLayouts, WgpuPstdMediumBuffers, WgpuPstdPermanentBindGroups, WgpuPstdPipelines,
     WgpuPstdPmlShiftBuffers, WgpuPstdRunCache, WgpuPstdState, WgpuPstdStateProvider,
+    ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE,
 };
 use hephaestus_wgpu::WgpuDevice;
 use kwavers_core::constants::numerical::TWO_PI;
@@ -30,7 +31,12 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         absorption: AbsorptionArrays<'_>,
     ) -> Result<WgpuPstdState, String> {
         let MediumArrays { c0_flat, rho0_flat } = medium;
-        let SolverParams { dt, c_ref, .. } = solver;
+        let SolverParams {
+            dt,
+            c_ref,
+            absorbing,
+            ..
+        } = solver;
         let PmlArrays {
             x: pml_x,
             y: pml_y,
@@ -61,6 +67,17 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             return Err(format!(
                 "GpuPstdSolver FFT supports N≤256 per axis, got {}×{}×{}",
                 nx, ny, nz
+            ));
+        }
+        if absorbing
+            && context
+                .device()
+                .limits()
+                .max_buffers_and_acceleration_structures_per_shader_stage
+                < ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE
+        {
+            return Err(format!(
+                "GpuPstdSolver absorption requires at least {ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE} buffers per compute shader stage"
             ));
         }
 
@@ -205,7 +222,7 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let bgl_fields = bind_group_layouts.fields_layout();
         let bgl_kspace = bind_group_layouts.kspace_layout();
         let bgl_sensor = bind_group_layouts.sensor_layout();
-        let bgl_absorb = bind_group_layouts.absorb_layout();
+        let bgl_absorb = absorbing.then(|| bind_group_layouts.absorb_layout());
 
         // ── Pipeline layouts ──────────────────────────────────────────────────
         let immediate_data_bytes = std::mem::size_of::<PstdParams>();
@@ -214,23 +231,10 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             immediate_data_bytes,
             "pstd_pipeline_layout",
         );
-        let pipeline_layout_absorb = pipelines.pipeline_layout(
-            &[
-                Some(&bgl_fields),
-                Some(&bgl_kspace),
-                Some(&bgl_sensor),
-                Some(&bgl_absorb),
-            ],
-            immediate_data_bytes,
-            "pstd_pipeline_layout_absorb",
-        );
 
         // ── Compile compute pipelines ─────────────────────────────────────────
         let mk_pl = |entry: &'static str| -> wgpu::ComputePipeline {
             pipelines.compute_pipeline(&pipeline_layout, &shader, entry)
-        };
-        let mk_pl_absorb = |entry: &'static str| -> wgpu::ComputePipeline {
-            pipelines.compute_pipeline(&pipeline_layout_absorb, &shader, entry)
         };
 
         let pipeline_zero_fields = mk_pl("zero_acoustic_fields");
@@ -248,14 +252,31 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let pipeline_add_kspace_to_field_ux = mk_pl("add_kspace_to_field_ux");
         let pipeline_copy_field_to_k = mk_pl("copy_field_to_kspace");
 
-        let pipeline_absorb_mul_nabla = mk_pl_absorb("absorb_mul_nabla");
-        let pipeline_absorb_copy_to_scratch = mk_pl_absorb("absorb_copy_to_scratch");
-        let pipeline_absorb_accum_div_u = mk_pl_absorb("absorb_accum_div_u");
-        let pipeline_absorb_prep_l1_kspace = mk_pl_absorb("absorb_prep_l1_kspace");
-        let pipeline_absorb_prep_l2_kspace = mk_pl_absorb("absorb_prep_l2_kspace");
-        let pipeline_absorb_pressure_correction = mk_pl_absorb("absorb_pressure_correction");
-        let pipeline_absorb_save_kspace = mk_pl_absorb("absorb_save_kspace");
-        let pipeline_restore_and_shift = mk_pl_absorb("restore_and_shift_apply");
+        let absorption_pipelines = bgl_absorb.as_ref().map(|bgl_absorb| {
+            let pipeline_layout_absorb = pipelines.pipeline_layout(
+                &[
+                    Some(&bgl_fields),
+                    Some(&bgl_kspace),
+                    Some(&bgl_sensor),
+                    Some(bgl_absorb),
+                ],
+                immediate_data_bytes,
+                "pstd_pipeline_layout_absorb",
+            );
+            let mk_pl_absorb = |entry: &'static str| -> wgpu::ComputePipeline {
+                pipelines.compute_pipeline(&pipeline_layout_absorb, &shader, entry)
+            };
+            crate::pstd_gpu::state::WgpuPstdAbsorptionPipelines {
+                mul_nabla: mk_pl_absorb("absorb_mul_nabla"),
+                copy_to_scratch: mk_pl_absorb("absorb_copy_to_scratch"),
+                accum_div_u: mk_pl_absorb("absorb_accum_div_u"),
+                prep_l1_kspace: mk_pl_absorb("absorb_prep_l1_kspace"),
+                prep_l2_kspace: mk_pl_absorb("absorb_prep_l2_kspace"),
+                pressure_correction: mk_pl_absorb("absorb_pressure_correction"),
+                save_kspace: mk_pl_absorb("absorb_save_kspace"),
+                restore_and_shift: mk_pl_absorb("restore_and_shift_apply"),
+            }
+        });
         let pstd_pipelines = WgpuPstdPipelines {
             zero_fields: pipeline_zero_fields,
             zero_kspace: pipeline_zero_kspace,
@@ -271,14 +292,7 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             apply_source_kappa: pipeline_apply_source_kappa,
             add_kspace_to_field_ux: pipeline_add_kspace_to_field_ux,
             copy_field_to_k: pipeline_copy_field_to_k,
-            absorb_mul_nabla: pipeline_absorb_mul_nabla,
-            absorb_copy_to_scratch: pipeline_absorb_copy_to_scratch,
-            absorb_accum_div_u: pipeline_absorb_accum_div_u,
-            absorb_prep_l1_kspace: pipeline_absorb_prep_l1_kspace,
-            absorb_prep_l2_kspace: pipeline_absorb_prep_l2_kspace,
-            absorb_pressure_correction: pipeline_absorb_pressure_correction,
-            absorb_save_kspace: pipeline_absorb_save_kspace,
-            restore_and_shift: pipeline_restore_and_shift,
+            absorption: absorption_pipelines,
         };
 
         // ── Build permanent bind groups ───────────────────────────────────────
@@ -311,20 +325,22 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
                 alpha_decay: &medium_buffers.alpha_decay,
             },
         );
-        let bg_absorb = build_bg_absorb(
-            &bind_groups,
-            &bgl_absorb,
-            &AbsorbBuffers {
-                nabla1: &absorption_buffers.nabla1,
-                nabla2: &absorption_buffers.nabla2,
-                tau: &absorption_buffers.tau,
-                eta: &absorption_buffers.eta,
-                scratch_kre: &absorption_buffers.scratch_kre,
-                scratch_kim: &absorption_buffers.scratch_kim,
-                scratch_l1: &absorption_buffers.scratch_l1,
-                scratch_l2: &absorption_buffers.scratch_l2,
-            },
-        );
+        let bg_absorb = bgl_absorb.as_ref().map(|bgl_absorb| {
+            build_bg_absorb(
+                &bind_groups,
+                bgl_absorb,
+                &AbsorbBuffers {
+                    nabla1: &absorption_buffers.nabla1,
+                    nabla2: &absorption_buffers.nabla2,
+                    tau: &absorption_buffers.tau,
+                    eta: &absorption_buffers.eta,
+                    scratch_kre: &absorption_buffers.scratch_kre,
+                    scratch_kim: &absorption_buffers.scratch_kim,
+                    scratch_l1: &absorption_buffers.scratch_l1,
+                    scratch_l2: &absorption_buffers.scratch_l2,
+                },
+            )
+        });
         let permanent_bind_groups = WgpuPstdPermanentBindGroups {
             fields: bg_fields,
             kspace: bg_kspace,

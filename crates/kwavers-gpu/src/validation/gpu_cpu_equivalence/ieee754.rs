@@ -56,7 +56,7 @@ pub fn within_ulps(a: f64, b: f64, max_ulps: u64) -> bool {
 /// 3. Infinity handling
 /// 4. Basic arithmetic determinism
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates errors returned by called functions.
 ///
 pub fn verify_ieee754_compliance() -> Result<(), String> {
     let mut failures = Vec::new();

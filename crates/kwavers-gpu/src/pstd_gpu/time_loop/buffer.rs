@@ -52,6 +52,14 @@ pub(super) fn overwrite_packed_signal_tail(
 }
 
 impl WgpuPstdState {
+    pub(super) fn ensure_field_staging_buffer(&mut self, total_points: usize) {
+        if self.run_cache.field_staging_buf.is_none() {
+            let buffers = WgpuPstdBufferFactory::new(self.context.device());
+            self.run_cache.field_staging_buf =
+                Some(buffers.map_read_buffer::<f32>(total_points, "final_field_staging"));
+        }
+    }
+
     pub(super) fn build_run_cache(
         &mut self,
         nt: usize,

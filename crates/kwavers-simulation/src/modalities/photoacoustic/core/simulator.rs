@@ -31,7 +31,7 @@ pub struct PhotoacousticSimulator {
 impl PhotoacousticSimulator {
     /// Create new photoacoustic simulator
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn new(
         grid: Grid,
@@ -140,7 +140,7 @@ impl PhotoacousticSimulator {
     /// Compares computed pressure with analytical photoacoustic generation formula
     /// at the center of the grid.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn validate_analytical(&self) -> KwaversResult<f64> {
         let fluence = self.compute_fluence()?;

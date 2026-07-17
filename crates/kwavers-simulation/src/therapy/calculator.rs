@@ -82,7 +82,7 @@ impl TherapyCalculator {
 
     /// Calculate therapy effects
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn calculate(
         &mut self,

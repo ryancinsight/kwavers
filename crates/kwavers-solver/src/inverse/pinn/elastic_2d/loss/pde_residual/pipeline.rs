@@ -1,6 +1,6 @@
 //! Elastic-wave PDE residual for `ElasticPINN2D`.
 //!
-//! Thin adapter over [`crate::inverse::pinn::ml::autodiff_utils::elastic`]:
+//! Thin adapter over `autodiff_utils::elastic`:
 //! `ElasticPINN2D::forward` takes three separate leaf `Var`s `(x, y, t)`,
 //! while the shared autodiff utility expects a single `forward_fn(&Var) ->
 //! Var` closure over a combined `[batch, 3]` input (columns `[t, x, y]`, the

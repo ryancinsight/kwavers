@@ -116,16 +116,6 @@ pub fn run_with_thermal(
 
 // ── GPU PSTD ──────────────────────────────────────────────────────────────────
 
-/// Try GPU PSTD, fall back to CPU.
-#[cfg(feature = "gpu")]
-pub fn run_gpu_or_fallback(
-    req: &SimulationRunRequest<'_>,
-    sources: Vec<Box<dyn KwaversSource>>,
-) -> KwaversResult<SimulationRunResult> {
-    // TODO: integrate GPU PSTD dispatch
-    run(req, sources)
-}
-
 // ── Solver preparation ────────────────────────────────────────────────────────
 
 /// Build and configure a PSTD solver (without running it).

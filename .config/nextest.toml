@@ -63,6 +63,10 @@ elastic-fwi = { max-threads = 1 }
 # 2 gives each ~half the machine, so all finish well inside the *unchanged* 60 s
 # cap. This is a scheduler hint — the timeout and every assertion are untouched.
 heavy-sim = { max-threads = 2 }
+# WGPU device creation and queue polling are serialized on Windows because
+# concurrent DX12 adapter contexts can trigger a driver access violation even
+# when each test owns an independent Hephaestus device.
+gpu = { max-threads = 1 }
 
 # ── Elastic FWI / theranostic integration tests: full-wave physics, 90 s ceiling ─
 # These tests run the complete elastic PSTD wave equation + theranostic inverse
@@ -79,9 +83,17 @@ slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 filter = 'package(kwavers) & (binary(fdtd_pstd_comparison) | binary(property_based_tests) | binary(session2_source_injection_test) | binary(test_plane_wave_injection_fixed))'
 test-group = 'heavy-sim'
 
+[[profile.default.overrides]]
+filter = 'package(kwavers-gpu)'
+test-group = 'gpu'
+
 [[profile.ci.overrides]]
 filter = 'test(/integration/)'
 test-group = 'integration'
+
+[[profile.ci.overrides]]
+filter = 'package(kwavers-gpu)'
+test-group = 'gpu'
 
 [[profile.ci.overrides]]
 filter = 'test(abdominal_preprocessing_selects_one_connected_treatment_component) | test(abdominal_theranostic_inverse_recovers_lesion_support) | test(abdominal_preprocessing_keeps_external_skin_between_target_and_aperture) | test(brain_focused_bowl_layout_uses_requested_element_count) | test(recovers_stiff_inclusion) | test(fwi_outperforms_linear_inversion) | test(lbfgs_reconstructs_stiff_inclusion) | test(k_mu_gradient_3d_is_valid_descent_direction)'
@@ -91,6 +103,14 @@ slow-timeout = { period = "90s", terminate-after = 1, grace-period = "10s" }
 [[profile.local.overrides]]
 filter = 'test(/integration/)'
 test-group = 'integration'
+
+[[profile.local.overrides]]
+filter = 'package(kwavers-gpu)'
+test-group = 'gpu'
+
+[[profile.review30.overrides]]
+filter = 'package(kwavers-gpu)'
+test-group = 'gpu'
 
 [[profile.review30.overrides]]
 filter = 'test(/integration/)'

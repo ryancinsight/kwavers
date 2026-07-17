@@ -19,7 +19,8 @@ const FLUID_BULK_MODULUS_WATER: f64 = 2.25e9;
 /// Run a Biot poroelastic time-domain simulation.
 ///
 /// Derives the poroelastic material from either the optional
-/// [`PoroelasticConfig`] on the request or the `Medium` trait plus
+/// [`PoroelasticConfig`](crate::configs::PoroelasticConfig) on the request or
+/// the `Medium` trait plus
 /// SSOT constants.  Returns the CFL-stable `dt` as a single-value
 /// sensor data column for downstream frequency analysis.
 pub fn run(req: &SimulationRunRequest<'_>) -> KwaversResult<SimulationRunResult> {

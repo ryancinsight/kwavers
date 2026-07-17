@@ -240,7 +240,8 @@ where
     ///
     /// # Returns
     ///
-    /// Tuple of (total_loss, data_loss, pde_loss, bc_loss) where each is a scalar tensor [1]
+    /// Tuple of `(total_loss, data_loss, pde_loss, bc_loss)` where each is a
+    /// scalar tensor with shape `[1]`.
     #[allow(clippy::too_many_arguments)]
     #[allow(clippy::type_complexity)] // 4 independent scalar losses (total, data, pde, bc); no cohesive grouping
     pub fn compute_physics_loss(

@@ -5,6 +5,11 @@ use crate::backend::init::GpuProviderContext;
 use hephaestus_wgpu::WgpuDevice;
 use kwavers_grid::Grid;
 
+/// Storage-buffer bindings used by the three lossless PSTD bind groups.
+pub(super) const LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 24;
+/// Storage-buffer bindings used when fractional-Laplacian absorption is enabled.
+pub(super) const ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE: u32 = 32;
+
 /// Provider contract for PSTD solver state ownership.
 pub trait PstdStateProvider {
     /// Concrete state object owned by a PSTD solver for this provider.
@@ -30,7 +35,7 @@ pub trait PstdStateBuilder: PstdStateProvider {
 /// Provider contract for automatic PSTD GPU device acquisition.
 pub trait PstdAutoDeviceProvider: PstdStateBuilder {
     /// Acquire a provider-owned execution context for PSTD execution.
-    fn acquire_auto_context() -> Result<Self::Context, String>;
+    fn acquire_auto_context(absorbing: bool) -> Result<Self::Context, String>;
 }
 
 /// Scalar run metadata supplied by the public PSTD solver wrapper.
@@ -45,6 +50,25 @@ pub struct PstdRunScalars {
     pub absorbing: bool,
 }
 
+/// Host outputs requested from one GPU PSTD run.
+///
+/// `SensorTraces` keeps the field state resident on the provider. Requesting
+/// `SensorTracesAndFinalFields` additionally transfers the final pressure and
+/// staggered velocity fields after the final time step.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PstdOutputRequest {
+    /// Download only sensor pressure traces.
+    SensorTraces,
+    /// Download sensor traces and final pressure plus staggered velocity fields.
+    SensorTracesAndFinalFields,
+}
+
+impl PstdOutputRequest {
+    pub(super) const fn includes_final_fields(self) -> bool {
+        matches!(self, Self::SensorTracesAndFinalFields)
+    }
+}
+
 /// Borrowed PSTD run inputs supplied by the public solver wrapper.
 pub struct PstdRunInputs<'a> {
     pub sensor_indices: &'a [u32],
@@ -52,12 +76,35 @@ pub struct PstdRunInputs<'a> {
     pub source_signals: &'a [f32],
     pub vel_x_indices: &'a [u32],
     pub vel_x_signals: &'a [f32],
+    pub output_request: PstdOutputRequest,
+}
+
+/// Provider-read final acoustic state in row-major grid order.
+#[derive(Debug)]
+pub struct PstdFinalFields {
+    /// Final acoustic pressure field.
+    pub pressure: Vec<f32>,
+    /// Final staggered x-velocity field.
+    pub velocity_x: Vec<f32>,
+    /// Final staggered y-velocity field.
+    pub velocity_y: Vec<f32>,
+    /// Final staggered z-velocity field.
+    pub velocity_z: Vec<f32>,
+}
+
+/// Host result from one GPU PSTD batch.
+#[derive(Debug)]
+pub struct PstdRunResult {
+    /// Pressure traces in `[sensor * time_steps + step]` order.
+    pub sensor_data: Vec<f32>,
+    /// Final fields when requested by [`PstdOutputRequest`].
+    pub final_fields: Option<PstdFinalFields>,
 }
 
 /// Provider-state contract for executing a PSTD run.
 pub trait PstdRunState {
     /// Execute a PSTD run with provider-owned state.
-    fn run_pstd(&mut self, scalars: PstdRunScalars, inputs: PstdRunInputs<'_>) -> Vec<f32>;
+    fn run_pstd(&mut self, scalars: PstdRunScalars, inputs: PstdRunInputs<'_>) -> PstdRunResult;
 }
 
 /// Provider-state contract for updating PSTD medium-dependent buffers.
@@ -150,6 +197,7 @@ pub(super) struct WgpuPstdRunCache {
     pub(super) source_data_buf: Option<wgpu::Buffer>,
     pub(super) vel_x_data_buf: Option<wgpu::Buffer>,
     pub(super) staging_buf: Option<wgpu::Buffer>,
+    pub(super) field_staging_buf: Option<wgpu::Buffer>,
     pub(super) bg_sensor: Option<wgpu::BindGroup>,
     pub(super) bg_sensor_vel: Option<wgpu::BindGroup>,
     pub(super) n_sensors: usize,
@@ -162,12 +210,24 @@ pub(super) struct WgpuPstdPermanentBindGroups {
     pub(super) fields: wgpu::BindGroup,
     pub(super) kspace: wgpu::BindGroup,
     /// Absorption operator bind group.
-    pub(super) absorb: wgpu::BindGroup,
+    pub(super) absorb: Option<wgpu::BindGroup>,
 }
 
 /// WGPU-owned PSTD layout handles retained after construction.
 pub(super) struct WgpuPstdLayouts {
     pub(super) sensor: wgpu::BindGroupLayout,
+}
+
+/// WGPU-owned fractional-Laplacian absorption pipelines.
+pub(super) struct WgpuPstdAbsorptionPipelines {
+    pub(super) mul_nabla: wgpu::ComputePipeline,
+    pub(super) copy_to_scratch: wgpu::ComputePipeline,
+    pub(super) accum_div_u: wgpu::ComputePipeline,
+    pub(super) prep_l1_kspace: wgpu::ComputePipeline,
+    pub(super) prep_l2_kspace: wgpu::ComputePipeline,
+    pub(super) pressure_correction: wgpu::ComputePipeline,
+    pub(super) save_kspace: wgpu::ComputePipeline,
+    pub(super) restore_and_shift: wgpu::ComputePipeline,
 }
 
 /// WGPU-owned PSTD compute pipelines.
@@ -186,14 +246,8 @@ pub(super) struct WgpuPstdPipelines {
     pub(super) apply_source_kappa: wgpu::ComputePipeline,
     pub(super) add_kspace_to_field_ux: wgpu::ComputePipeline,
     pub(super) copy_field_to_k: wgpu::ComputePipeline,
-    pub(super) absorb_mul_nabla: wgpu::ComputePipeline,
-    pub(super) absorb_copy_to_scratch: wgpu::ComputePipeline,
-    pub(super) absorb_accum_div_u: wgpu::ComputePipeline,
-    pub(super) absorb_prep_l1_kspace: wgpu::ComputePipeline,
-    pub(super) absorb_prep_l2_kspace: wgpu::ComputePipeline,
-    pub(super) absorb_pressure_correction: wgpu::ComputePipeline,
-    pub(super) absorb_save_kspace: wgpu::ComputePipeline,
-    pub(super) restore_and_shift: wgpu::ComputePipeline,
+    /// Present only when the solver enables fractional-Laplacian absorption.
+    pub(super) absorption: Option<WgpuPstdAbsorptionPipelines>,
 }
 
 /// WGPU-owned PSTD solver state.
@@ -237,6 +291,13 @@ impl WgpuPstdState {
 
     pub(in crate::pstd_gpu) fn queue(&self) -> &wgpu::Queue {
         self.context.queue()
+    }
+
+    pub(super) fn absorption_pipelines(&self) -> &WgpuPstdAbsorptionPipelines {
+        self.pipelines
+            .absorption
+            .as_ref()
+            .expect("invariant: absorption dispatch requires absorption-enabled PSTD construction")
     }
 }
 

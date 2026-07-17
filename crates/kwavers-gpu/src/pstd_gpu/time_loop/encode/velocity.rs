@@ -1,4 +1,4 @@
-//! `encode_velocity_update`: shared FFT(p) cache + per-axis gradient/velocity dispatches.
+//! `encode_velocity_update`: per-axis gradient/velocity dispatches.
 
 use super::super::super::state::WgpuPstdState;
 use super::StepCtx;
@@ -8,9 +8,12 @@ impl WgpuPstdState {
     ///
     /// ## Algorithm
     ///
-    /// 1. Copy `field_p` → `kspace_re/im` and compute one forward FFT(p).
-    /// 2. Save FFT(p) to `absorb_scratch_kre/kim` (reused as a cache register).
-    /// 3. For each axis `ax ∈ {0,1,2}`:
+    /// Lossless runs perform one forward FFT for each axis. This keeps their
+    /// pipeline layout to the three groups they actually use, which is valid
+    /// on devices exposing the 24-buffer WebGPU baseline.
+    ///
+    /// Absorption-enabled runs reuse one forward FFT(p) through the absorption
+    /// scratch buffers. For each axis `ax ∈ {0,1,2}` they:
     ///    - **ax=0**: kspace already holds FFT(p); apply `kspace_shift_apply` in-place.
     ///    - **ax=1,2**: call `restore_and_shift_apply` — reads FFT(p) from
     ///      `absorb_scratch_kre/kim`, applies kappa × shift, writes directly to
@@ -20,7 +23,7 @@ impl WgpuPstdState {
     ///    - IFFT → gradient in `kspace_re`.
     ///    - `velocity_update`: accumulate PML-damped gradient into `ux/uy/uz`.
     ///
-    /// ## Traffic accounting (per step, element count = N = nx×ny×nz)
+    /// ## Absorption-enabled traffic accounting (per step, element count = N = nx×ny×nz)
     ///
     /// | Operation                        | Dispatches | Memory traffic |
     /// |----------------------------------|-----------|---------------|
@@ -43,6 +46,40 @@ impl WgpuPstdState {
     ) {
         let ew = ctx.elem_wg;
 
+        if ctx.absorbing == 0 {
+            for ax in 0u32..3u32 {
+                self.dispatch(
+                    cpass,
+                    &ctx.params(step, 0),
+                    &self.pipelines.copy_field_to_k,
+                    bg,
+                    ew,
+                    "cp_p",
+                );
+                self.fft_3d(cpass, bg, ctx, step);
+                self.dispatch(
+                    cpass,
+                    &ctx.params(step, ax),
+                    &self.pipelines.kspace_shift,
+                    bg,
+                    ew,
+                    "kshift_v",
+                );
+                self.ifft_3d(cpass, bg, ctx, step);
+                self.dispatch(
+                    cpass,
+                    &ctx.params(step, ax),
+                    &self.pipelines.vel_update,
+                    bg,
+                    ew,
+                    "vel_upd",
+                );
+            }
+            return;
+        }
+
+        let absorption = self.absorption_pipelines();
+
         // Step 1: copy field_p → kspace, compute one shared forward FFT(p).
         self.dispatch(
             cpass,
@@ -58,7 +95,7 @@ impl WgpuPstdState {
         self.dispatch_absorb(
             cpass,
             &ctx.params(step, 0),
-            &self.pipelines.absorb_save_kspace,
+            &absorption.save_kspace,
             bg,
             ew,
             "save_fftp",
@@ -84,7 +121,7 @@ impl WgpuPstdState {
                 self.dispatch_absorb(
                     cpass,
                     &ctx.params(step, ax),
-                    &self.pipelines.restore_and_shift,
+                    &absorption.restore_and_shift,
                     bg,
                     ew,
                     "restore_shift",

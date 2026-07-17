@@ -88,9 +88,13 @@ pub enum SolverType {
     PSTD,
     /// GPU-resident PSTD (requires `gpu` Cargo feature and a Hephaestus-backed provider).
     ///
-    /// Grid dimensions must be powers of two with each axis ≤ 256.  Returns
-    /// [`crate::KwaversError::FeatureNotAvailable`] when the `gpu` feature is disabled
-    /// or when the grid shape violates those constraints.
+    /// Grid dimensions must be powers of two with each axis ≤ 256. Lossless
+    /// PSTD requires 24 storage buffers per compute-shader stage; the
+    /// fractional-Laplacian absorption path requires 32. The
+    /// `kwavers_simulation::SimulationRunner` rejects this selection unless
+    /// its request-to-adapter contract is implemented; it never substitutes a
+    /// CPU PSTD run. Use `GpuPstdSimulationAdapter` directly for the current
+    /// GPU batch interface.
     PstdGpu,
     /// Hybrid solver combining PSTD and FDTD
     Hybrid,

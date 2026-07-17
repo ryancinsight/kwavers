@@ -3,8 +3,8 @@
 //! # Design
 //!
 //! All acoustic fields (p, ux, uy, uz, rhox, rhoy, rhoz) remain on the GPU
-//! throughout the simulation. Only the final sensor readings are downloaded
-//! at the end of the run, minimising PCIe traffic.
+//! throughout the simulation. The caller selects sensor-only output or an
+//! explicit final-state readback at the end of the run.
 //!
 //! # Bind group layout (â‰¤8 storage buffers per group)
 //!
@@ -15,6 +15,11 @@
 //! - group(3) 8 storage: pml_sgx, pml_sgy, pml_sgz, pml_xyz (packed),
 //!   shifts_all (packed), sensor_flat_indices, sensor_data,
 //!   source_data (packed)
+//!
+//! Lossless PSTD compiles only these three storage bind groups, requiring 24
+//! storage buffers per compute-shader stage. Fractional-Laplacian absorption
+//! compiles its additional eight-buffer group only when enabled and therefore
+//! requires a device exposing 32 storage buffers per compute-shader stage.
 //!
 //! # Packed buffer formats
 //!
@@ -55,8 +60,9 @@ pub use runner::{
     cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_provider, GpuPstdRunConfig,
 };
 pub use state::{
-    PstdAutoDeviceProvider, PstdMediumUpdateState, PstdRunInputs, PstdRunScalars, PstdRunState,
-    PstdStateBuilder, PstdStateProvider, WgpuPstdStateProvider,
+    PstdAutoDeviceProvider, PstdFinalFields, PstdMediumUpdateState, PstdOutputRequest,
+    PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState, PstdStateBuilder,
+    PstdStateProvider, WgpuPstdStateProvider,
 };
 
 /// Per-run timing profile for GPU PSTD execution.
@@ -103,8 +109,9 @@ pub(super) struct PstdParams {
 
 /// GPU-resident PSTD acoustic solver.
 ///
-/// Keeps all field data on the GPU throughout the time loop; sensor readings
-/// are downloaded in a single transfer after all time steps complete.
+/// Keeps all field data on the GPU throughout the time loop. Its
+/// [`Self::run`] caller explicitly chooses sensor-only output or a final-state
+/// readback after all time steps complete.
 // Provider-owned state keeps GPU handles alive for bind groups that outlive
 // construction and are driven by dispatch-only Rust paths.
 #[allow(dead_code)]

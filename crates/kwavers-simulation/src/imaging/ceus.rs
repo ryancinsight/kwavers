@@ -33,7 +33,7 @@ pub struct ContrastEnhancedUltrasound {
 impl ContrastEnhancedUltrasound {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn new(
         grid: &Grid,
@@ -64,7 +64,7 @@ impl ContrastEnhancedUltrasound {
     }
     /// Simulate imaging sequence.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates errors returned by called functions.
     ///
     pub fn simulate_imaging_sequence(
         &mut self,
