@@ -26,7 +26,7 @@ pub(super) struct KspaceBuffers<'a> {
     pub c0_sq: &'a wgpu::Buffer,
     pub rho0: &'a wgpu::Buffer,
     pub bon_a: &'a wgpu::Buffer,
-    pub alpha_decay: &'a wgpu::Buffer,
+    pub twiddle_fft: &'a wgpu::Buffer,
 }
 
 /// Group(2) absorption operator + scratch buffers, in binding-slot order.
@@ -126,7 +126,7 @@ pub(super) fn build_bg_fields(
 }
 
 /// Build group(1): k-space + medium (kspace_re, kspace_im, kappa, rho0_inv,
-/// c0_sq, rho0, bon_a, alpha_decay).
+/// c0_sq, rho0, bon_a, twiddle_fft).
 pub(super) fn build_bg_kspace(
     provider: &impl PstdBindGroupProvider<
         Buffer = wgpu::Buffer,
@@ -147,7 +147,7 @@ pub(super) fn build_bg_kspace(
             k.c0_sq,
             k.rho0,
             k.bon_a,
-            k.alpha_decay,
+            k.twiddle_fft,
         ],
     )
 }

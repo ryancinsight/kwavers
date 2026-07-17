@@ -6,7 +6,8 @@ use super::super::pipeline::{
     WgpuPstdPipelineFactory,
 };
 use super::super::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, SolverParams, WgpuPstdStateProvider,
+    validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
+    SolverParams, WgpuPstdStateProvider, GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
 };
 use super::helpers::pstd_test_provider;
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
@@ -57,6 +58,23 @@ fn pstd_bind_group_factory_is_generic_over_provider_trait() {
     }
 
     assert_provider::<WgpuPstdBindGroupFactory<'static>>();
+}
+
+#[test]
+fn pstd_dimension_contract_accepts_the_1024_point_fft_axis() {
+    validate_gpu_pstd_dimensions(1_024, 8, 8).expect("1,024-point FFT axis is supported");
+    assert_eq!(GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES, 12 * 1_024);
+}
+
+#[test]
+fn pstd_dimension_contract_rejects_an_axis_beyond_the_shared_fft() {
+    let error = validate_gpu_pstd_dimensions(2_048, 8, 8)
+        .expect_err("2,048-point FFT axis exceeds the shared-memory contract");
+
+    assert_eq!(
+        error.to_string(),
+        "Invalid input: GPU PSTD supports per-axis N ≤ 1024; got 2048×8×8"
+    );
 }
 
 /// Verify GpuPstdSolver can be constructed and runs without error.

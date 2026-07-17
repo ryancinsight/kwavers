@@ -32,7 +32,7 @@
 //!
 //! ## Grid constraints
 //!
-//! GPU PSTD requires power-of-two dimensions with each axis ≤ 256.
+//! GPU PSTD requires power-of-two dimensions with each axis ≤ 1,024.
 //! Construction fails with [`KwaversError::InvalidInput`] if these are
 //! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
 //! ...)` propagates that error to the caller.
@@ -45,8 +45,8 @@ use medium::GpuMediumSnapshot;
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest,
-    SolverParams, WgpuPstdStateProvider,
+    validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
+    PstdFinalFields, PstdOutputRequest, SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -96,7 +96,7 @@ impl GpuPstdSimulationAdapter {
     /// # Errors
     ///
     /// Returns [`KwaversError::InvalidInput`] when grid dimensions are not
-    /// power-of-two or exceed 256 per axis.
+    /// power-of-two or exceed 1,024 per axis.
     pub fn new<M: Medium>(
         config: &SolverConfiguration,
         grid: &Grid,
@@ -104,16 +104,7 @@ impl GpuPstdSimulationAdapter {
     ) -> KwaversResult<Self> {
         let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
 
-        if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD requires power-of-2 grid dimensions; got {nx}×{ny}×{nz}"
-            )));
-        }
-        if nx > 256 || ny > 256 || nz > 256 {
-            return Err(KwaversError::InvalidInput(format!(
-                "GPU PSTD supports per-axis N ≤ 256; got {nx}×{ny}×{nz}"
-            )));
-        }
+        validate_gpu_pstd_dimensions(nx, ny, nz)?;
         if !config.dt.is_finite() || config.dt <= 0.0 {
             return Err(KwaversError::InvalidInput(format!(
                 "GPU PSTD requires finite positive dt; got {}",

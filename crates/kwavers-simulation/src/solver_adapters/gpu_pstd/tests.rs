@@ -23,8 +23,24 @@ fn rejects_non_power_of_two_grid() {
 }
 
 #[test]
-fn rejects_axis_exceeding_256() {
-    let grid = Grid::new(512, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+fn accepts_the_1024_point_fft_axis() {
+    let grid = Grid::new(1024, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PstdGpu,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+
+    let adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium)
+        .expect("1024-point FFT axis is within the GPU PSTD contract");
+
+    assert_eq!(adapter.pressure_field().shape(), [1024, 8, 8]);
+}
+
+#[test]
+fn rejects_axis_exceeding_1024() {
+    let grid = Grid::new(2048, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
     let config = SolverConfiguration {
         solver_type: SolverType::PstdGpu,
@@ -34,7 +50,10 @@ fn rejects_axis_exceeding_256() {
 
     let err = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap_err();
 
-    assert!(matches!(err, KwaversError::InvalidInput(_)));
+    assert_eq!(
+        err.to_string(),
+        "Invalid input: GPU PSTD supports per-axis N ≤ 1024; got 2048×8×8"
+    );
 }
 
 #[test]

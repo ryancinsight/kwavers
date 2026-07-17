@@ -49,3 +49,15 @@ fn test_pstd_shader_push_constant_abi_matches_rust() {
         "validated phased-array GPU path requires precomp_source_kappa in the shader ABI"
     );
 }
+
+/// The host root table and shader workgroup arrays must describe the same
+/// 1,024-point FFT contract.
+#[test]
+fn pstd_shader_declares_the_1024_point_shared_fft_contract() {
+    let src = include_str!("../shaders/pstd.wgsl");
+
+    assert!(src.contains("const MAX_FFT_LENGTH: u32 = 1024u;"));
+    assert!(src.contains("var<workgroup> sm_re: array<f32, 1024>;"));
+    assert!(src.contains("var<workgroup> sm_tw_re: array<f32, 512>;"));
+    assert!(src.contains("let root_stride = MAX_FFT_LENGTH / n;"));
+}

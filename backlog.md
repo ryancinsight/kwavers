@@ -1,5 +1,17 @@
 # Backlog / Strategy
 
+## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
+
+- Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/` and GPU PSTD
+  consumer validation in `kwavers-simulation`.
+- Acceptance: the Hephaestus-acquired WGPU PSTD provider accepts every
+  power-of-two axis through 1,024, rejects 2,048 before allocation, and keeps
+  the final-field readback contract intact. The shader declares no more than
+  12 KiB of workgroup storage and the acquisition contract requires that
+  amount explicitly.
+- Evidence target: value-semantic dimension contracts, shader/host ABI
+  regression, GPU-feature Nextest, and a Leo consumer gate.
+
 ## KW-MED-059 — Consolidate continuous medium access [major] — ✅ done
 
 - Owner: Codex; scope: `crates/kwavers-medium/src/{wrapper.rs,interface.rs,lib.rs}`.

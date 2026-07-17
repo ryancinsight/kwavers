@@ -7,7 +7,7 @@ use super::super::{
         PstdAutoDeviceProvider, WgpuPstdStateProvider,
         ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE, LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE,
     },
-    GpuPstdSolver,
+    GpuPstdSolver, GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
 };
 use super::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 use crate::{backend::init::GpuProviderContext, gpu::GpuDeviceProvider};
@@ -56,6 +56,7 @@ fn pstd_required_limits(absorbing: bool) -> hephaestus_core::DeviceLimits {
         } else {
             LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE
         }),
+        max_compute_workgroup_storage_size: GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
         max_immediate_size: 128,
         ..WgpuDevice::required_limits()
     }
@@ -65,7 +66,7 @@ fn pstd_required_limits(absorbing: bool) -> hephaestus_core::DeviceLimits {
 mod tests {
     use super::{
         pstd_required_limits, ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE,
-        LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE,
+        GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES, LOSSLESS_PIPELINE_BUFFERS_PER_SHADER_STAGE,
     };
 
     #[test]
@@ -77,6 +78,10 @@ mod tests {
         assert_eq!(
             pstd_required_limits(true).max_storage_buffers_per_shader_stage,
             Some(ABSORPTION_PIPELINE_BUFFERS_PER_SHADER_STAGE)
+        );
+        assert_eq!(
+            pstd_required_limits(false).max_compute_workgroup_storage_size,
+            GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES
         );
     }
 }

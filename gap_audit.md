@@ -97,20 +97,18 @@
   sensor-only versus sensor-plus-final-fields output request; the adapter maps
   the actual GPU field buffers back to host arrays, and `SimulationRunner`
   rejects its unsupported GPU request mapping instead of substituting CPU
-  execution. Evidence tier: output typestate plus value-semantic CPU and real
-  provider GPU regressions. Feature-configured Nextest passes 144/144 tests
-  (one skipped) under a serialized WGPU test group; the default scoped suite
-  passes 1036/1036 (four skipped), warning-denied Clippy passes, and all-feature
-  Rustdoc is warning-clean. Hephaestus commit `cf4df20` now raises the WGPU
-  aggregate buffer limit only when the requested storage limit requires it;
-  Kwavers' ordinary device path remains at eight storage bindings. Residual:
-  the adapter reads only the final state, not a peak-over-time pressure
-  envelope; its GPU grid contract remains power-of-two with each axis at most
-  256. Those limits cannot support LeoNeuro's long CT-frame treatment domain
-  and must not be represented as a planning backend. Release SemVer checking
-  now passes against `main` with `--release-type major`; Leto, Gaia, and
-  Kwavers declare one Git source for Leto/Eunomia while Atlas integration
-  roots patch that source to the local checkout.
+  execution. The shared Hephaestus-acquired WGPU radix-2 FFT now accepts every
+  power-of-two axis through 1,024 using 12 KiB of workgroup storage, and rejects
+  a 2,048 axis before any provider allocation. Evidence tier: output typestate,
+  compile-time storage-limit contract, and value-semantic CPU/provider GPU
+  regressions. Residual: the adapter reads only the final state, not a
+  peak-over-time pressure envelope. Per-axis FFT support does not establish
+  that a complete long-domain three-dimensional grid fits host or device memory;
+  allocation capability remains a provider/runtime constraint and must be
+  validated for each treatment plan. Release SemVer checking now passes against
+  `main` with `--release-type major`; Leto, Gaia, and Kwavers declare one Git
+  source for Leto/Eunomia while Atlas integration roots patch that source to the
+  local checkout.
 
 - Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
   while public dimensions can be mutated after construction. `Grid::checked_size`

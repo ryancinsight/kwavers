@@ -6,14 +6,15 @@ use super::super::{
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
-fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
-    let n3 = 32 * 32 * 32;
+fn make_solver(shape: [usize; 3], nt: usize) -> Option<GpuPstdSolver> {
+    let [nx, ny, nz] = shape;
+    let n3 = nx * ny * nz;
     let c0v = vec![SOUND_SPEED_WATER_SIM as f32; n3];
     let rho0v = vec![1000.0f32; n3];
     let ones = vec![1.0f32; n3];
     let zeros = vec![0.0f32; n3];
     GpuPstdSolver::<WgpuPstdStateProvider>::with_auto_device(
-        &kwavers_grid::Grid::new(32, 32, 32, 1e-3, 1e-3, 1e-3).unwrap(),
+        &kwavers_grid::Grid::new(nx, ny, nz, 1e-3, 1e-3, 1e-3).unwrap(),
         MediumArrays {
             c0_flat: &c0v,
             rho0_flat: &rho0v,
@@ -42,6 +43,10 @@ fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
         },
     )
     .ok()
+}
+
+fn make_solver_32(nt: usize) -> Option<GpuPstdSolver> {
+    make_solver([32, 32, 32], nt)
 }
 
 /// Run a minimal simulation: one source point, one sensor point, 20 steps.
@@ -89,6 +94,40 @@ fn test_gpu_pstd_run_produces_output() {
     assert!(
         max_val.is_finite(),
         "sensor data contains non-finite values"
+    );
+}
+
+/// Exercise the largest supported FFT axis rather than only the small-grid
+/// smoke path. The 1,024×8×8 fixture uses 1,024-point X transforms while
+/// keeping the empirical GPU workload bounded.
+#[test]
+fn test_gpu_pstd_1024_axis_produces_final_pressure() {
+    let Some(mut solver) = make_solver([1_024, 8, 8], 8) else {
+        eprintln!("No GPU adapter — skipping 1,024-point FFT run test");
+        return;
+    };
+
+    let (nx, ny, nz) = (1_024usize, 8usize, 8usize);
+    let source_flat = (nx / 2) * ny * nz + (ny / 2) * nz + nz / 2;
+    let source_signals = vec![1.0f32; 8];
+
+    let result = solver.run(
+        &[source_flat as u32],
+        &[source_flat as u32],
+        &source_signals,
+        &[],
+        &[],
+        PstdOutputRequest::SensorTracesAndFinalFields,
+    );
+    let final_fields = result
+        .final_fields
+        .expect("full-field request must return the largest-axis pressure field");
+
+    assert_eq!(final_fields.pressure.len(), nx * ny * nz);
+    assert!(final_fields.pressure.iter().all(|value| value.is_finite()));
+    assert!(
+        final_fields.pressure.iter().any(|&value| value != 0.0),
+        "the largest supported FFT axis must not collapse a driven field to zero"
     );
 }
 

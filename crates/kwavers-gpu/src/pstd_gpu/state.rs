@@ -152,7 +152,7 @@ pub(super) struct WgpuPstdMediumBuffers {
     /// B/(2A) per voxel; 0.0 for linear simulations.
     pub(super) bon_a: wgpu::Buffer,
     /// FFT twiddle table for the current PSTD shader.
-    pub(super) alpha_decay: wgpu::Buffer,
+    pub(super) twiddle_fft: wgpu::Buffer,
     pub(super) source_kappa: wgpu::Buffer,
 }
 

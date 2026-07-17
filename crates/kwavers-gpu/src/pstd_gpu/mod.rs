@@ -55,6 +55,8 @@ mod time_loop;
 
 use std::marker::PhantomData;
 
+use kwavers_core::error::{KwaversError, KwaversResult};
+
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 pub use runner::{
     cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_provider, GpuPstdRunConfig,
@@ -64,6 +66,36 @@ pub use state::{
     PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState, PstdStateBuilder,
     PstdStateProvider, WgpuPstdStateProvider,
 };
+
+/// Largest power-of-two axis supported by the shared-memory GPU PSTD FFT.
+pub const MAX_GPU_PSTD_FFT_AXIS: usize = 1_024;
+
+/// Workgroup storage reserved by the 1,024-point complex FFT and its roots.
+pub const GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES: u32 = 12 * 1_024;
+
+/// Validate the GPU PSTD FFT dimensions before allocating device resources.
+///
+/// The radix-2 kernel uses 1,024 complex samples (8 KiB) and 512 complex
+/// roots (4 KiB), so every power-of-two axis through 1,024 fits in its 12 KiB
+/// workgroup allocation.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] when an axis is not a power of two or
+/// exceeds [`MAX_GPU_PSTD_FFT_AXIS`].
+pub fn validate_gpu_pstd_dimensions(nx: usize, ny: usize, nz: usize) -> KwaversResult<()> {
+    if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD requires power-of-2 grid dimensions; got {nx}×{ny}×{nz}"
+        )));
+    }
+    if nx > MAX_GPU_PSTD_FFT_AXIS || ny > MAX_GPU_PSTD_FFT_AXIS || nz > MAX_GPU_PSTD_FFT_AXIS {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD supports per-axis N ≤ {MAX_GPU_PSTD_FFT_AXIS}; got {nx}×{ny}×{nz}"
+        )));
+    }
+    Ok(())
+}
 
 /// Per-run timing profile for GPU PSTD execution.
 ///

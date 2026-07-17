@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added (2026-07-17) - GPU PSTD shared FFT lattice [minor]
+
+- Extend the Hephaestus-acquired WGPU PSTD radix-2 FFT from a 256-point
+  per-axis limit to every power-of-two axis through 1,024. One packed root
+  table and the 12 KiB workgroup allocation serve all supported sizes.
+- Publish the shared dimension validator and workgroup-storage requirement so
+  simulation consumers reject unsupported grids before provider allocation.
+
 ### Breaking (2026-07-17) - Continuous medium access wrappers [major]
 
 - Consolidate continuous-coordinate medium accessors over `CoreMedium` and

@@ -1,6 +1,6 @@
 [package]
 name = "kwavers-gpu"
-version = "4.0.0"
+version = "4.1.0"
 edition = "2021"
 description = "Hephaestus-backed provider-generic GPU compute backend for kwavers"
 license = "MIT OR Apache-2.0"

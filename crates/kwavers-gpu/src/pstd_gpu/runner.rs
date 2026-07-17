@@ -8,7 +8,7 @@
 //!
 //! # Constraints inherited from [`GpuPstdSolver`]
 //! - Grid dimensions must be powers of two.
-//! - Per-axis dimension ≤ 256.
+//! - Per-axis dimension ≤ 1,024.
 //! - Single precision throughout the GPU pipeline; sensor data widened to
 //!   `f64` on return.
 //!
@@ -17,8 +17,8 @@
 //! pressure recorded at each sensor index per step.
 
 use crate::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdAutoDeviceProvider,
-    PstdOutputRequest, PstdRunState, SolverParams, WgpuPstdStateProvider,
+    validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
+    PstdAutoDeviceProvider, PstdOutputRequest, PstdRunState, SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
@@ -72,7 +72,7 @@ impl Default for GpuPstdRunConfig {
 /// traces.
 ///
 /// # Errors
-/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 256.
+/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
 pub fn run_gpu_pstd(
@@ -89,7 +89,7 @@ pub fn run_gpu_pstd(
 /// provider.
 ///
 /// # Errors
-/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 256.
+/// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
 /// - Invalid medium, source, or sensor inputs return [`KwaversError::InvalidInput`].
 pub fn run_gpu_pstd_with_provider<P>(
@@ -106,7 +106,6 @@ where
     let nx = grid.nx;
     let ny = grid.ny;
     let nz = grid.nz;
-    let total = nx * ny * nz;
     let GpuPstdRunConfig {
         time_steps,
         dt,
@@ -118,16 +117,8 @@ where
         pml_alpha_xyz,
     } = config;
 
-    if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD requires power-of-2 grid dimensions; got {nx}x{ny}x{nz}"
-        )));
-    }
-    if nx > 256 || ny > 256 || nz > 256 {
-        return Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD supports per-axis N <= 256; got {nx}x{ny}x{nz}"
-        )));
-    }
+    validate_gpu_pstd_dimensions(nx, ny, nz)?;
+    let total = nx * ny * nz;
     if time_steps == 0 || !dt.is_finite() || dt <= 0.0 {
         return Err(KwaversError::InvalidInput(format!(
             "GPU PSTD requires time_steps > 0 and finite positive dt; got steps={time_steps} dt={dt}"

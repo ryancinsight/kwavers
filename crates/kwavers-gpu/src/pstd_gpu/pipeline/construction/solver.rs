@@ -1,4 +1,7 @@
-use super::super::super::{GpuPstdSolver, PstdParams};
+use super::super::super::{
+    validate_gpu_pstd_dimensions, GpuPstdSolver, PstdParams, GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
+    MAX_GPU_PSTD_FFT_AXIS,
+};
 use super::super::bind_groups::{
     build_bg_absorb, build_bg_fields, build_bg_kspace, AbsorbBuffers, FieldBuffers, KspaceBuffers,
 };
@@ -55,18 +58,16 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let nx = grid.nx;
         let ny = grid.ny;
         let nz = grid.nz;
-        let total = nx * ny * nz;
 
-        if !nx.is_power_of_two() || !ny.is_power_of_two() || !nz.is_power_of_two() {
+        validate_gpu_pstd_dimensions(nx, ny, nz).map_err(|error| error.to_string())?;
+        let total = nx * ny * nz;
+        if context.device().limits().max_compute_workgroup_storage_size
+            < GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES
+        {
             return Err(format!(
-                "GpuPstdSolver requires power-of-2 dimensions, got {}×{}×{}",
-                nx, ny, nz
-            ));
-        }
-        if nx > 256 || ny > 256 || nz > 256 {
-            return Err(format!(
-                "GpuPstdSolver FFT supports N≤256 per axis, got {}×{}×{}",
-                nx, ny, nz
+                "GpuPstdSolver requires {} bytes of workgroup storage, device provides {}",
+                GPU_PSTD_FFT_WORKGROUP_STORAGE_BYTES,
+                context.device().limits().max_compute_workgroup_storage_size
             ));
         }
         if absorbing
@@ -145,37 +146,23 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let buf_rho0 = mk_ro(rho0_flat, "rho0");
         let buf_bon_a = mk_ro(bon_a_flat, "bon_a");
 
-        // FFT twiddle factors: precomputed cos/sin tables for n=256,128,64,32.
-        // Stored in buf_alpha_decay (repurposed as twiddle table; absorption uses fractional-Laplacian).
-        let mut twiddle_data: Vec<f32> = vec![0.0f32; total];
-        for k in 0usize..128 {
-            let a = -TWO_PI * k as f64 / 256.0;
+        // A single 1,024-point root table serves every smaller power-of-two
+        // transform by striding its roots. Its first and second halves hold the
+        // real and imaginary components respectively.
+        let mut twiddle_data = vec![0.0f32; total.max(MAX_GPU_PSTD_FFT_AXIS)];
+        for k in 0usize..(MAX_GPU_PSTD_FFT_AXIS / 2) {
+            let a = -TWO_PI * k as f64 / MAX_GPU_PSTD_FFT_AXIS as f64;
             twiddle_data[k] = a.cos() as f32;
-            twiddle_data[128 + k] = a.sin() as f32;
+            twiddle_data[MAX_GPU_PSTD_FFT_AXIS / 2 + k] = a.sin() as f32;
         }
-        for k in 0usize..64 {
-            let a = -TWO_PI * k as f64 / 128.0;
-            twiddle_data[256 + k] = a.cos() as f32;
-            twiddle_data[320 + k] = a.sin() as f32;
-        }
-        for k in 0usize..32 {
-            let a = -TWO_PI * k as f64 / 64.0;
-            twiddle_data[384 + k] = a.cos() as f32;
-            twiddle_data[416 + k] = a.sin() as f32;
-        }
-        for k in 0usize..16 {
-            let a = -TWO_PI * k as f64 / 32.0;
-            twiddle_data[448 + k] = a.cos() as f32;
-            twiddle_data[464 + k] = a.sin() as f32;
-        }
-        let buf_alpha_decay = mk_ro(&twiddle_data, "twiddle_fft");
+        let buf_twiddle_fft = mk_ro(&twiddle_data, "twiddle_fft");
         let medium_buffers = WgpuPstdMediumBuffers {
             kappa: buf_kappa,
             rho0_inv: buf_rho0_inv,
             c0_sq: buf_c0_sq,
             rho0: buf_rho0,
             bon_a: buf_bon_a,
-            alpha_decay: buf_alpha_decay,
+            twiddle_fft: buf_twiddle_fft,
             source_kappa: buf_source_kappa,
         };
 
@@ -322,7 +309,7 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
                 c0_sq: &medium_buffers.c0_sq,
                 rho0: &medium_buffers.rho0,
                 bon_a: &medium_buffers.bon_a,
-                alpha_decay: &medium_buffers.alpha_decay,
+                twiddle_fft: &medium_buffers.twiddle_fft,
             },
         );
         let bg_absorb = bgl_absorb.as_ref().map(|bgl_absorb| {

@@ -251,22 +251,28 @@ fn run_pstd_transmit(
         ..GridSource::new_empty()
     };
 
-    // GPU PSTD path (compile-time `gpu` feature): all axes power-of-2 and
-    // ≤ 256 → drive the GPU-resident pipeline via the canonical kwavers entry.
-    // Falls back to the CPU PSTDSolver path on shape rejection or runtime error.
+    // GPU PSTD path (compile-time `gpu` feature): a compatible grid uses the
+    // Hephaestus-owned provider and surfaces provider failure to the caller.
+    // An incompatible grid selects the CPU PSTD implementation explicitly.
     #[cfg(feature = "gpu")]
     {
-        if nx.is_power_of_two()
-            && ny.is_power_of_two()
-            && nz.is_power_of_two()
-            && nx <= 256
-            && ny <= 256
-            && nz <= 256
-        {
-            if let Some(traces) =
-                try_run_gpu_pstd_transmit(&grid, &medium, &source, receiver_indices, steps, config)
-            {
-                return Ok(traces);
+        match kwavers_gpu::pstd_gpu::validate_gpu_pstd_dimensions(nx, ny, nz) {
+            Ok(()) => {
+                return run_gpu_pstd_transmit(
+                    &grid,
+                    &medium,
+                    &source,
+                    receiver_indices,
+                    steps,
+                    config,
+                );
+            }
+            Err(error) => {
+                tracing::debug!(
+                    grid = %format_args!("{nx}×{ny}×{nz}"),
+                    %error,
+                    "GPU PSTD shape is unsupported; selecting CPU PSTD"
+                );
             }
         }
     }
@@ -287,14 +293,14 @@ fn run_pstd_transmit(
 }
 
 #[cfg(feature = "gpu")]
-fn try_run_gpu_pstd_transmit(
+fn run_gpu_pstd_transmit(
     grid: &Grid,
     medium: &kwavers_medium::heterogeneous::HeterogeneousMedium,
     source: &GridSource,
     receiver_indices: &[(usize, usize, usize)],
     steps: usize,
     config: BreastUstPstdDatasetConfig,
-) -> Option<Array2<f64>> {
+) -> KwaversResult<Array2<f64>> {
     use kwavers_gpu::pstd_gpu::{run_gpu_pstd, GpuPstdRunConfig};
     let (nx, ny, nz) = (grid.nx, grid.ny, grid.nz);
     let mut sensor_mask = LetoArray3::<bool>::from_elem([nx, ny, nz], false);
@@ -318,9 +324,13 @@ fn try_run_gpu_pstd_transmit(
         pml_inside: config.cpml_thickness_cells > 0,
         pml_alpha_xyz: None,
     };
-    let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config).ok()?;
+    let traces = run_gpu_pstd(grid, medium, source, &sensor_mask, gpu_config)?;
     let [rows, cols] = traces.shape();
-    Array2::from_shape_vec((rows, cols), traces.into_vec()).ok()
+    Array2::from_shape_vec((rows, cols), traces.into_vec()).map_err(|error| {
+        KwaversError::InvalidInput(format!(
+            "GPU PSTD returned a trace shape incompatible with the clinical dataset: {error}"
+        ))
+    })
 }
 
 #[cfg(test)]

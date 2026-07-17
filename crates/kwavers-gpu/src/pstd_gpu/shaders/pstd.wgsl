@@ -82,10 +82,9 @@ var<storage, read> precomp_rho0: array<f32>;
 @group(1) @binding(6)
 var<storage, read> precomp_bon_a: array<f32>;
 
-// binding(7): per-voxel absorption decay factor = exp(-alpha_Np_m * c0 * dt)
-// Precomputed at the transmit centre frequency. 1.0 everywhere when absorbing=0.
+// binding(7): packed real/imaginary roots for the shared-memory FFT.
 @group(1) @binding(7)
-var<storage, read> precomp_alpha_decay: array<f32>;
+var<storage, read> precomp_twiddle_fft: array<f32>;
 
 // ─── Bind Group 2: PML + shift operators + sensor/source (8 storage) ─────────
 
@@ -122,12 +121,16 @@ var<storage, read> source_data: array<f32>;
 
 // ─── Shared memory for FFT ───────────────────────────────────────────────────
 
-var<workgroup> sm_re: array<f32, 256>;
-var<workgroup> sm_im: array<f32, 256>;
-// Precomputed radix-2 twiddles loaded from precomp_alpha_decay.
-// IFFT uses conjugates by negating the loaded imaginary component.
-var<workgroup> sm_tw_re: array<f32, 128>;
-var<workgroup> sm_tw_im: array<f32, 128>;
+const MAX_FFT_LENGTH: u32 = 1024u;
+const MAX_FFT_HALF_LENGTH: u32 = MAX_FFT_LENGTH >> 1u;
+
+var<workgroup> sm_re: array<f32, 1024>;
+var<workgroup> sm_im: array<f32, 1024>;
+// A single 1,024-point root table serves every smaller power-of-two transform
+// by striding its entries. IFFT uses conjugates by negating the loaded
+// imaginary component.
+var<workgroup> sm_tw_re: array<f32, 512>;
+var<workgroup> sm_tw_im: array<f32, 512>;
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -191,24 +194,14 @@ fn fft_1d_smem(
     if batch_id >= params.n_batches { return; }
 
     // ── Load twiddle factors into shared memory ───────────────────────────────
-    var tw_re_base: u32;
-    var tw_im_base: u32;
-    if n == 128u {
-        tw_re_base = 256u; tw_im_base = 320u;
-    } else if n == 64u {
-        tw_re_base = 384u; tw_im_base = 416u;
-    } else if n == 32u {
-        tw_re_base = 448u; tw_im_base = 464u;
-    } else {
-        // n == 256 (default)
-        tw_re_base = 0u; tw_im_base = 128u;
-    }
     let n_half = n >> 1u;
+    let root_stride = MAX_FFT_LENGTH / n;
     var tw_tid = local_tid;
     loop {
         if tw_tid >= n_half { break; }
-        sm_tw_re[tw_tid] = precomp_alpha_decay[tw_re_base + tw_tid];
-        sm_tw_im[tw_tid] = precomp_alpha_decay[tw_im_base + tw_tid];
+        let root_index = tw_tid * root_stride;
+        sm_tw_re[tw_tid] = precomp_twiddle_fft[root_index];
+        sm_tw_im[tw_tid] = precomp_twiddle_fft[MAX_FFT_HALF_LENGTH + root_index];
         tw_tid += 64u;
     }
 
