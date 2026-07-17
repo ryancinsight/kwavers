@@ -1,5 +1,18 @@
 # Project Checklist
 
+## Owner: Codex — Restore hosted CI format and CUDA prerequisites [patch]
+
+- [x] Format the finite-window PSTD integration test with the repository
+  rustfmt configuration so the clean-architecture workflow checks the same
+  source tree as local verification.
+- [x] Install `libssl-dev` in the CUDA 13.2 container before compiling the
+  provider graph; `openssl-sys` requires the `openssl.pc` metadata there.
+- [x] Verify the formatter output and review the workflow diff.
+
+**Current evidence:** file-scoped nightly rustfmt reports no diff after the
+  rewrite. The dependency change addresses the hosted failure recorded in
+  Actions job `87918394437`; the new workflow head is pending rerun evidence.
+
 ## Owner: Codex — Align Apollo provider lock [patch]
 
 - [x] Synchronize `Cargo.lock` from Apollo `0.23.0` to the merged provider

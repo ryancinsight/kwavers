@@ -1,5 +1,18 @@
 # Backlog / Strategy
 
+## KW-CI-050 — Restore hosted format and CUDA prerequisites [patch] — ✅ review
+
+- Owner: Codex; scope: the finite-window PSTD test formatting and CUDA
+  container prerequisites in `architecture-validation.yml`.
+- Acceptance: repository rustfmt passes for the corrected test and the CUDA
+  build image provides OpenSSL development metadata required by
+  `openssl-sys`; no test workload or assertion changes.
+- Evidence: file-scoped nightly rustfmt is clean after the mechanical rewrite;
+  `libssl-dev` is installed before the CUDA compile step. Hosted rerun is the
+  remaining external verification.
+- Driver: Architecture Validation jobs `87924378467` and `87918394437`
+  reported the exact stale-format and missing `openssl.pc` failures.
+
 ## KW-CI-049 — Align Apollo provider lock [patch] — ✅ review
 
 - Owner: Codex; scope: `Cargo.lock` and provider-graph synchronization.

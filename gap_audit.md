@@ -20,6 +20,14 @@
 
 # Gap Audit
 
+- Review 2026-07-17: hosted Architecture Validation still checked the
+  pre-format finite-window PSTD test at job `87924378467`; the local source is
+  now canonical under nightly rustfmt. The CUDA job previously failed because
+  the container lacked `openssl.pc` (`openssl-sys`); `libssl-dev` is now part of
+  the container prerequisite set. Evidence tier: authoritative Actions logs
+  plus local formatter output. Residual: the corrected head needs a fresh
+  hosted run.
+
 - Review 2026-07-17: the Atlas integration branch now supplies merged Apollo
   `157467e` (`apollo-fft 0.24.0`) and RITK `a5e375f`; Kwavers `Cargo.lock` was
   synchronized to Apollo `0.24.0`. The focused locked suite passes 1,036/1,036

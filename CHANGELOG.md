@@ -7,6 +7,13 @@
 - Synchronize `Cargo.lock` to Apollo `0.24.0` after the provider graph refresh;
   the focused GPU/simulation/solver suite remains green.
 
+### Fixed (2026-07-17) - hosted CI prerequisites [patch]
+
+- Restore repository rustfmt output for the finite-window PSTD integration
+  test.
+- Install the OpenSSL development metadata required by `openssl-sys` in the
+  CUDA runtime container; no simulation code or test oracle changes.
+
 ### Breaking (2026-07-17) - GPU PSTD output contract [major]
 
 - `GpuPstdSolver::run` now requires `PstdOutputRequest` and returns
