@@ -78,13 +78,10 @@ fn apply_shifted_spectral_gradient(
     }
 }
 
-fn ndarray_real_field(field: LetoArray3<f64>) -> Array3<f64> {
-    let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
-        .expect("Leto real field length must match FDTD field shape")
-}
-
-fn add_assign_ndarray(dst: &mut Array3<f64>, src: &Array3<f64>) {
+/// In-place accumulation: `dst += src` for Leto arrays.
+///
+/// Replaces the old `add_assign_ndarray` that bridged ndarray→Leto.
+fn add_assign(dst: &mut LetoArray3<f64>, src: &LetoArray3<f64>) {
     assert_eq!(
         dst.shape(),
         src.shape(),
@@ -320,9 +317,9 @@ impl KSpaceFdtdOperators {
             SpectralAxis::Z,
         );
 
-        self.grad_x = ndarray_real_field(self.fft.inverse(&self.grad_x_k));
-        self.grad_y = ndarray_real_field(self.fft.inverse(&self.grad_y_k));
-        self.grad_z = ndarray_real_field(self.fft.inverse(&self.grad_z_k));
+        self.grad_x = self.fft.inverse(&self.grad_x_k);
+        self.grad_y = self.fft.inverse(&self.grad_y_k);
+        self.grad_z = self.fft.inverse(&self.grad_z_k);
     }
 
     /// Compute spectral velocity divergence.
@@ -350,8 +347,8 @@ impl KSpaceFdtdOperators {
             &self.ddx_k_shift_neg,
             SpectralAxis::X,
         );
-        self.grad_x = ndarray_real_field(self.fft.inverse(&self.grad_x_k));
-        add_assign_ndarray(&mut self.divergence, &self.grad_x);
+        self.grad_x = self.fft.inverse(&self.grad_x_k);
+        add_assign(&mut self.divergence, &self.grad_x);
 
         // ∂uy/∂y
         self.field_k = self.fft.forward(uy);
@@ -362,8 +359,8 @@ impl KSpaceFdtdOperators {
             &self.ddy_k_shift_neg,
             SpectralAxis::Y,
         );
-        self.grad_y = ndarray_real_field(self.fft.inverse(&self.grad_y_k));
-        add_assign_ndarray(&mut self.divergence, &self.grad_y);
+        self.grad_y = self.fft.inverse(&self.grad_y_k);
+        add_assign(&mut self.divergence, &self.grad_y);
 
         // ∂uz/∂z
         self.field_k = self.fft.forward(uz);
@@ -374,7 +371,7 @@ impl KSpaceFdtdOperators {
             &self.ddz_k_shift_neg,
             SpectralAxis::Z,
         );
-        self.grad_z = ndarray_real_field(self.fft.inverse(&self.grad_z_k));
-        add_assign_ndarray(&mut self.divergence, &self.grad_z);
+        self.grad_z = self.fft.inverse(&self.grad_z_k);
+        add_assign(&mut self.divergence, &self.grad_z);
     }
 }

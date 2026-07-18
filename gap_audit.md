@@ -29,6 +29,46 @@
 
 # Gap Audit
 
+- Review 2026-07-17: the provider-owned GPU PSTD result exposed only sensor
+  traces and optional final fields, but the treatment-planning quantity is
+  `max_t |p|`, not the final pressure frame. The WGPU path now reserves one
+  requested output volume after its trace region, clears it at run start, and
+  applies a pointwise absolute-pressure maximum after each pressure update.
+  `PstdOutputRequest` independently selects final fields and the envelope;
+  sensor-only runs allocate neither the peak tail nor its staging buffer.
+  Evidence tier: compile-time 64-byte Rust/WGSL ABI assertion, exact request
+  and layout tests, plus a real WGPU burst test proving
+  `peak[i] >= abs(final_pressure[i])` at every voxel, with a finite-burst
+  witness that strictly distinguishes the envelope from final pressure, in
+  0.705 seconds.
+  Residual: the private full-wave consumer remains to be wired to the explicit
+  output API; allocation capacity remains device- and plan-dependent.
+
+- Review 2026-07-17: the ignored public GPU parity fixture compared a CPU final
+  pressure volume from a plane-wave source with a GPU sensor trace from a
+  source-free run, so its reported relative error did not measure provider
+  parity. The fixture now constructs one finite `GridSource`, medium, and
+  sensor for both paths, and deletes the source-free “energy” case whose zero
+  field passed vacuously. A real differential run exposed a second contract
+  defect: `alpha_coeff_db = 0.0` was documented as lossless but the GPU runner
+  enabled the medium's default water absorption. With the default `y = 1`, the
+  fractional dispersion `tan(πy/2)` became numerically unbounded. The runner
+  now makes explicit zero lossless, rejects enabled singular exponents, and
+  scans the full packed `B/A` field before nonlinear selection. Evidence tier:
+  exact runner value tests, a real WGPU FFT/derivative regression, and passing
+  source-filter plus early-leapfrog CPU/GPU differential tests. A following
+  128³ heterogeneous run showed the independent CPU oracle, not the
+  Hephaestus/WGPU provider, exceeded the unchanged 60-second Nextest cap. Its
+  FFT facade allocated and copied a full complex Leto volume around every
+  Apollo transform even though both boundaries use `eunomia::Complex64`; that
+  obsolete conversion is now deleted for all ranks, and the PSTD in/out paths
+  call their cached Apollo plans directly. Evidence tier: the exact r2c/c2r
+  round-trip regression passes. The unchanged 128³×100 parity contract is the
+  performance closure gate, currently graph-blocked before compilation because
+  the shared RITK checkout requires `apollo-fft ^0.24.0` while the local Apollo
+  provider checkout declares `0.25.0`; no unlocked resolution or compatibility
+  adapter is used.
+
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a
   `*_at_core` generic forwarder. The canonical functions now carry the
@@ -60,7 +100,7 @@
 
 - Review 2026-07-17: the provider-owned GPU PSTD output contract exposed three
   stale ignored parity tests still assigning the old five-argument `Vec<f32>`
-  return. All calls now pass `PstdOutputRequest::SensorTraces` and consume
+  return. All calls now pass the sensor-trace-only output request and consume
   `PstdRunResult::sensor_data` directly. Hosted job `87936633879` supplied the
   exact compiler evidence; package-scoped nightly rustfmt is clean. Residual:
   focused Nextest and the fresh hosted rerun.
@@ -119,15 +159,11 @@
   construction rejects non-finite spacing before deriving `k_max`; exact
   overflow and non-finite-spacing regressions pass under locked offline Nextest.
   Evidence tier: native compilation and value-semantic regression.
-- Closed 2026-07-17: `kwavers-math`'s 3-D axis-transform facade allocated and
-  copied an Apollo buffer around every forward and inverse pass, even though
-  Kwavers and Apollo both use Leto storage and `eunomia::Complex64`. One
-  viscoacoustic step performs six derivatives, so the old path created twelve
-  temporary full fields and performed twenty-four full-buffer copies. The
-  facade now delegates directly to Apollo's axis plan methods. The locked
-  graph resolves Apollo 0.24.0; `kwavers-math` locked offline compilation and
-  the exact `decay_matches_dispersion_3d_diagonal` Nextest regression complete
-  below the unchanged 60-second cap. Evidence tier: native compilation and
+- Closed 2026-07-17: `kwavers-math`'s 3-D axis-transform facade delegates
+  directly to Apollo's cached axis plan methods, so callers already sharing
+  the axis plan do not allocate or translate a second complex field. The
+  full-transform facade is audited separately above because it formerly kept
+  a distinct conversion path. Evidence tier: native compilation and
   value-semantic regression execution.
 
 - Closed 2026-07-17: Kwavers exposed an obsolete boolean GPU FFT probe after

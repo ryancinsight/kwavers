@@ -16,11 +16,13 @@ pub(in crate::pstd_gpu) trait PstdCommandProvider {
     /// Clear a device buffer range and submit the command.
     fn clear_buffer(&self, buffer: &Self::Buffer, size_bytes: u64, label: &'static str);
 
-    /// Copy one device buffer range into another and submit the command.
-    fn copy_buffer(
+    /// Copy a device buffer range into a staging range and submit the command.
+    fn copy_buffer_region(
         &self,
         source: &Self::Buffer,
+        source_offset_bytes: u64,
         destination: &Self::Buffer,
+        destination_offset_bytes: u64,
         size_bytes: u64,
         label: &'static str,
     );
@@ -92,17 +94,25 @@ impl PstdCommandProvider for WgpuPstdCommandProvider<'_> {
         self.queue.submit(std::iter::once(encoder.finish()));
     }
 
-    fn copy_buffer(
+    fn copy_buffer_region(
         &self,
         source: &Self::Buffer,
+        source_offset_bytes: u64,
         destination: &Self::Buffer,
+        destination_offset_bytes: u64,
         size_bytes: u64,
         label: &'static str,
     ) {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some(label) });
-        encoder.copy_buffer_to_buffer(source, 0, destination, 0, size_bytes);
+        encoder.copy_buffer_to_buffer(
+            source,
+            source_offset_bytes,
+            destination,
+            destination_offset_bytes,
+            size_bytes,
+        );
         self.queue.submit(std::iter::once(encoder.finish()));
     }
 

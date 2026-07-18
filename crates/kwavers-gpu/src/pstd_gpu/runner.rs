@@ -18,7 +18,8 @@
 
 use crate::pstd_gpu::{
     validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
-    PstdAutoDeviceProvider, PstdOutputRequest, PstdRunState, SolverParams, WgpuPstdStateProvider,
+    PstdAutoDeviceProvider, PstdOutputRequest, PstdRunResult, PstdRunState, SolverParams,
+    WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
@@ -27,7 +28,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
-use kwavers_source::GridSource;
+use kwavers_source::{GridSource, SourceMode};
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::f64::consts::PI;
 
@@ -38,9 +39,13 @@ pub struct GpuPstdRunConfig {
     pub time_steps: usize,
     /// Time step in seconds.
     pub dt: f64,
-    /// Power-law absorption coefficient [dB/(MHz·cm)]; `0.0` disables.
+    /// Power-law absorption coefficient [dB/(MHz·cm)]; `0.0` disables
+    /// fractional absorption even when the medium stores a material coefficient.
+    /// When enabled, nonzero per-voxel medium coefficients take precedence and
+    /// this value fills voxels without a material coefficient.
     pub alpha_coeff_db: f64,
-    /// Power-law absorption exponent `y` (typically 1.0–1.5).
+    /// Power-law absorption exponent `y`; an enabled fractional model cannot
+    /// use the singular value `1.0`.
     pub alpha_power: f64,
     /// CPML thickness in cells; `None` selects the automatic limit.
     pub pml_size: Option<usize>,
@@ -71,6 +76,11 @@ impl Default for GpuPstdRunConfig {
 /// Drive a GPU-resident PSTD acoustic simulation and return sensor pressure
 /// traces.
 ///
+/// A nonzero medium `B/A` coefficient enables the nonlinear equation of state.
+/// Fractional power-law absorption is controlled only by
+/// [`GpuPstdRunConfig::alpha_coeff_db`]; zero is lossless even when the medium
+/// stores a material absorption coefficient.
+///
 /// # Errors
 /// - GPU PSTD requires power-of-2 grid dimensions with each axis ≤ 1,024.
 /// - GPU device acquisition failures bubble up via the selected provider.
@@ -83,6 +93,34 @@ pub fn run_gpu_pstd(
     config: GpuPstdRunConfig,
 ) -> KwaversResult<LetoArray2<f64>> {
     run_gpu_pstd_with_provider::<WgpuPstdStateProvider>(grid, medium, source, sensor_mask, config)
+}
+
+/// Drive a GPU-resident PSTD simulation and return the explicitly requested
+/// provider outputs.
+///
+/// Use [`PstdOutputRequest::with_peak_pressure`] for a pointwise temporal
+/// pressure envelope; a final pressure field is not an equivalent substitute.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] for an invalid grid, source, medium,
+/// sensor mask, configuration, or provider acquisition failure.
+pub fn run_gpu_pstd_with_outputs(
+    grid: &Grid,
+    medium: &dyn Medium,
+    source: &GridSource,
+    sensor_mask: &LetoArray3<bool>,
+    config: GpuPstdRunConfig,
+    output_request: PstdOutputRequest,
+) -> KwaversResult<PstdRunResult> {
+    run_gpu_pstd_with_provider_outputs::<WgpuPstdStateProvider>(
+        grid,
+        medium,
+        source,
+        sensor_mask,
+        config,
+        output_request,
+    )
 }
 
 /// Drive a GPU-resident PSTD acoustic simulation with an explicit GPU state
@@ -99,6 +137,45 @@ pub fn run_gpu_pstd_with_provider<P>(
     sensor_mask: &LetoArray3<bool>,
     config: GpuPstdRunConfig,
 ) -> KwaversResult<LetoArray2<f64>>
+where
+    P: PstdAutoDeviceProvider,
+    P::State: PstdRunState,
+{
+    let time_steps = config.time_steps;
+    let sensor_data_f32 = run_gpu_pstd_with_provider_outputs::<P>(
+        grid,
+        medium,
+        source,
+        sensor_mask,
+        config,
+        PstdOutputRequest::sensor_traces(),
+    )?
+    .sensor_data;
+    let n_sensors = sensor_data_f32.len() / time_steps;
+    LetoArray2::from_shape_vec(
+        [n_sensors, time_steps],
+        sensor_data_f32.into_iter().map(f64::from).collect(),
+    )
+    .map_err(|err| {
+        KwaversError::InvalidInput(format!("GPU PSTD sensor trace shape mismatch: {err}"))
+    })
+}
+
+/// Drive a GPU-resident PSTD simulation with an explicit state provider and
+/// return the explicitly requested provider outputs.
+///
+/// # Errors
+///
+/// Returns [`KwaversError::InvalidInput`] for an invalid grid, source, medium,
+/// sensor mask, configuration, or provider acquisition failure.
+pub fn run_gpu_pstd_with_provider_outputs<P>(
+    grid: &Grid,
+    medium: &dyn Medium,
+    source: &GridSource,
+    sensor_mask: &LetoArray3<bool>,
+    config: GpuPstdRunConfig,
+    output_request: PstdOutputRequest,
+) -> KwaversResult<PstdRunResult>
 where
     P: PstdAutoDeviceProvider,
     P::State: PstdRunState,
@@ -200,47 +277,65 @@ where
         .filter(|&&d| d)
         .count()
         .max(1);
-    let dx_min = grid.dx.min(grid.dy).min(grid.dz);
-    let mass_source_scale = 2.0 * dt / (n_dim_active as f64 * c_ref * dx_min);
-    let density_scale = n_dim_active as f64 / 3.0;
-    let combined_scale = (mass_source_scale * density_scale) as f32;
-
     let mut source_indices: Vec<u32> = Vec::new();
     let mut source_signals: Vec<f32> = Vec::new();
+    let mut pressure_source_correction = false;
 
     if let (Some(p_mask), Some(p_signal)) = (&source.p_mask, &source.p_signal) {
-        let mask_flat = p_mask
-            .as_slice()
-            .ok_or_else(|| KwaversError::InvalidInput("p_mask must be C-contiguous".into()))?;
-        for (i, &v) in mask_flat.iter().enumerate() {
-            if v != 0.0 {
+        let mask_flat = p_mask.as_slice_memory_order().ok_or_else(|| {
+            KwaversError::InvalidInput("p_mask must be dense row-major array".into())
+        })?;
+        if mask_flat.len() != total {
+            return Err(KwaversError::InvalidInput(format!(
+                "p_mask has {} cells but grid has {total}",
+                mask_flat.len()
+            )));
+        }
+        let mut source_weights = Vec::new();
+        for (i, &weight) in mask_flat.iter().enumerate() {
+            if weight != 0.0 {
                 source_indices.push(i as u32);
+                source_weights.push(weight);
             }
         }
         let n_src = source_indices.len();
         let n_sig_rows = p_signal.shape()[0];
+        if n_src > 0 && n_sig_rows != 1 && n_sig_rows != n_src {
+            return Err(KwaversError::InvalidInput(format!(
+                "p_signal has {n_sig_rows} rows for {n_src} pressure-source cells; expected 1 or {n_src}"
+            )));
+        }
+        pressure_source_correction = source_correction(source.p_mode, "pressure")?;
         let n_sig_cols = p_signal.shape()[1].min(time_steps);
         source_signals = vec![0.0f32; n_src * time_steps];
-        for (src_idx, _) in source_indices.iter().enumerate() {
-            let sig_row = if n_sig_rows == 1 {
-                0
-            } else {
-                src_idx.min(n_sig_rows - 1)
-            };
+        for (src_idx, (&flat, &weight)) in source_indices.iter().zip(&source_weights).enumerate() {
+            let sig_row = if n_sig_rows == 1 { 0 } else { src_idx };
+            let ix = flat as usize / (ny * nz);
+            let iy = (flat as usize % (ny * nz)) / nz;
+            let iz = flat as usize % nz;
+            let c0 = medium.sound_speed(ix, iy, iz);
+            let mass_source_scale = 2.0 * dt / (n_dim_active as f64 * c0 * grid.dx);
             for step in 0..n_sig_cols {
                 source_signals[src_idx * time_steps + step] =
-                    (p_signal[[sig_row, step]] * combined_scale as f64) as f32;
+                    (p_signal[[sig_row, step]] * weight * mass_source_scale) as f32;
             }
         }
     }
 
     let mut vel_x_indices: Vec<u32> = Vec::new();
     let mut vel_x_signals: Vec<f32> = Vec::new();
+    let mut velocity_source_correction = false;
 
     if let (Some(u_mask), Some(u_signal)) = (&source.u_mask, &source.u_signal) {
-        let mask_flat = u_mask
-            .as_slice()
-            .ok_or_else(|| KwaversError::InvalidInput("u_mask must be C-contiguous".into()))?;
+        let mask_flat = u_mask.as_slice_memory_order().ok_or_else(|| {
+            KwaversError::InvalidInput("u_mask must be dense row-major array".into())
+        })?;
+        if mask_flat.len() != total {
+            return Err(KwaversError::InvalidInput(format!(
+                "u_mask has {} cells but grid has {total}",
+                mask_flat.len()
+            )));
+        }
         for (i, &v) in mask_flat.iter().enumerate() {
             if v != 0.0 {
                 vel_x_indices.push(i as u32);
@@ -248,32 +343,33 @@ where
         }
         let n_vel = vel_x_indices.len();
         let n_sig_srcs = u_signal.shape()[1];
+        if n_vel > 0 && n_sig_srcs != 1 && n_sig_srcs != n_vel {
+            return Err(KwaversError::InvalidInput(format!(
+                "u_signal has {n_sig_srcs} source rows for {n_vel} velocity-source cells; expected 1 or {n_vel}"
+            )));
+        }
+        velocity_source_correction = source_correction(source.u_mode, "velocity")?;
         let n_sig_cols = u_signal.shape()[2].min(time_steps);
         vel_x_signals = vec![0.0f32; n_vel * time_steps];
         for src_idx in 0..n_vel {
-            let sig_row = src_idx.min(n_sig_srcs.saturating_sub(1));
+            let sig_row = if n_sig_srcs == 1 { 0 } else { src_idx };
             for step in 0..n_sig_cols {
                 vel_x_signals[src_idx * time_steps + step] = u_signal[[0, sig_row, step]] as f32;
             }
         }
     }
 
-    let has_nonlinear = medium.nonlinearity(0, 0, 0) > 0.0;
-    let has_absorption =
-        alpha_coeff_db > 0.0 || medium.alpha_coefficient(0.0, 0.0, 0.0, grid) > 0.0;
+    let has_absorption = power_law_absorption_enabled(alpha_coeff_db, alpha_power)?;
 
-    let bon_a_flat: Vec<f32> = if has_nonlinear {
-        (0..total)
-            .map(|flat| {
-                let ix = flat / (ny * nz);
-                let iy = (flat % (ny * nz)) / nz;
-                let iz = flat % nz;
-                (medium.nonlinearity(ix, iy, iz) / 2.0) as f32
-            })
-            .collect()
-    } else {
-        vec![0.0f32; total]
-    };
+    let bon_a_flat: Vec<f32> = (0..total)
+        .map(|flat| {
+            let ix = flat / (ny * nz);
+            let iy = (flat % (ny * nz)) / nz;
+            let iz = flat % nz;
+            (medium.nonlinearity(ix, iy, iz) / 2.0) as f32
+        })
+        .collect();
+    let has_nonlinear = has_nonlinear_coefficient(&bon_a_flat);
 
     let (absorb_nabla1_flat, absorb_nabla2_flat, absorb_tau_flat, absorb_eta_flat) =
         if has_absorption {
@@ -315,7 +411,16 @@ where
                     n2[flat] = k_mag.powf(y - 1.0) as f32;
                 }
 
-                let alpha_db_cm = medium.absorption(ix, iy, iz);
+                // Match the CPU PowerLaw contract: an enabled run uses the
+                // medium's spatial coefficient when present, otherwise the
+                // explicit configuration coefficient.  A zero config never
+                // enters this branch, so it remains an unambiguous lossless run.
+                let medium_alpha_db_cm = medium.absorption(ix, iy, iz);
+                let alpha_db_cm = if medium_alpha_db_cm.abs() > 0.0 {
+                    medium_alpha_db_cm
+                } else {
+                    alpha_coeff_db
+                };
                 let alpha_0_si = power_law_db_cm_to_np_omega_m(alpha_db_cm, alpha_power);
                 let c0_local = medium.sound_speed(ix, iy, iz);
                 tau_v[flat] = (-2.0 * alpha_0_si * c0_local.powf(y - 1.0)) as f32;
@@ -362,25 +467,53 @@ where
     )
     .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
 
-    let sensor_data_f32 = solver
-        .run(
-            &sensor_indices,
-            &source_indices,
-            &source_signals,
-            &vel_x_indices,
-            &vel_x_signals,
-            PstdOutputRequest::SensorTraces,
-        )
-        .sensor_data;
+    Ok(solver.run(
+        &sensor_indices,
+        &source_indices,
+        &source_signals,
+        pressure_source_correction,
+        &vel_x_indices,
+        &vel_x_signals,
+        velocity_source_correction,
+        output_request,
+    ))
+}
 
-    let n_sensors = sensor_indices.len();
-    LetoArray2::from_shape_vec(
-        [n_sensors, time_steps],
-        sensor_data_f32.into_iter().map(f64::from).collect(),
-    )
-    .map_err(|err| {
-        KwaversError::InvalidInput(format!("GPU PSTD sensor trace shape mismatch: {err}"))
-    })
+fn source_correction(mode: SourceMode, source_kind: &str) -> KwaversResult<bool> {
+    match mode {
+        SourceMode::Additive => Ok(true),
+        SourceMode::AdditiveNoCorrection => Ok(false),
+        SourceMode::Dirichlet => Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD does not support Dirichlet {source_kind} sources"
+        ))),
+    }
+}
+
+/// Whether any packed `B/A / 2` coefficient enables the nonlinear equation.
+fn has_nonlinear_coefficient(coefficients: &[f32]) -> bool {
+    coefficients.iter().any(|&coefficient| coefficient != 0.0)
+}
+
+/// Validate whether the explicit GPU configuration enables fractional absorption.
+///
+/// The `y = 1` power law has a singular dispersion coefficient
+/// `tan(πy/2)`, so it is invalid only when the caller actually enables the
+/// fractional-Laplacian model.  This mirrors the CPU PSTD PowerLaw validation.
+fn power_law_absorption_enabled(alpha_coeff_db: f64, alpha_power: f64) -> KwaversResult<bool> {
+    if !alpha_coeff_db.is_finite() || alpha_coeff_db < 0.0 {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD alpha_coeff_db must be finite and non-negative; got {alpha_coeff_db}"
+        )));
+    }
+    if alpha_coeff_db == 0.0 {
+        return Ok(false);
+    }
+    if !alpha_power.is_finite() || (alpha_power - 1.0).abs() < 1e-12 {
+        return Err(KwaversError::InvalidInput(format!(
+            "GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got {alpha_power}"
+        )));
+    }
+    Ok(true)
 }
 
 fn collect_sensor_indices(sensor_mask: &LetoArray3<bool>) -> KwaversResult<Vec<u32>> {
@@ -414,7 +547,10 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
 
 #[cfg(test)]
 mod tests {
-    use super::{collect_sensor_indices, LetoArray3};
+    use super::{
+        collect_sensor_indices, has_nonlinear_coefficient, power_law_absorption_enabled,
+        source_correction, LetoArray3, SourceMode,
+    };
 
     #[test]
     fn collect_sensor_indices_preserves_row_major_positions() {
@@ -427,5 +563,50 @@ mod tests {
         let indices = collect_sensor_indices(&mask).expect("dense Leto mask is valid");
 
         assert_eq!(indices, vec![1, 4, 7]);
+    }
+
+    #[test]
+    fn zero_explicit_absorption_is_lossless_at_singular_default_exponent() {
+        assert_eq!(
+            power_law_absorption_enabled(0.0, 1.0)
+                .expect("zero coefficient disables fractional absorption"),
+            false
+        );
+    }
+
+    #[test]
+    fn enabled_absorption_rejects_singular_power_law_exponent() {
+        let error = power_law_absorption_enabled(0.0022, 1.0)
+            .expect_err("enabled fractional absorption cannot use y=1");
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got 1"
+        );
+    }
+
+    #[test]
+    fn source_mode_selects_the_physical_correction_and_rejects_dirichlet() {
+        assert_eq!(
+            source_correction(SourceMode::Additive, "pressure")
+                .expect("additive pressure source is supported"),
+            true
+        );
+        assert_eq!(
+            source_correction(SourceMode::AdditiveNoCorrection, "velocity")
+                .expect("uncorrected velocity source is supported"),
+            false
+        );
+        let error = source_correction(SourceMode::Dirichlet, "pressure")
+            .expect_err("Dirichlet pressure source must be rejected");
+        assert_eq!(
+            error.to_string(),
+            "Invalid input: GPU PSTD does not support Dirichlet pressure sources"
+        );
+    }
+
+    #[test]
+    fn nonlinear_selection_scans_every_packed_medium_cell() {
+        assert!(!has_nonlinear_coefficient(&[0.0, 0.0, 0.0]));
+        assert!(has_nonlinear_coefficient(&[0.0, 0.0, 2.6]));
     }
 }

@@ -159,7 +159,7 @@ checksum = "2a4385e2e34eb35d6b3efe798b9eb88096925d87726c0798709bf56d9ed84af3"
 
 [[package]]
 name = "apollo-fft"
-version = "0.24.0"
+version = "0.25.0"
 dependencies = [
  "apollo-fft-macros",
  "apollo-leto-interop",
@@ -4717,7 +4717,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-gpu"
-version = "4.1.0"
+version = "5.0.0"
 dependencies = [
  "approx",
  "bytemuck",
@@ -7301,7 +7301,7 @@ dependencies = [
 
 [[package]]
 name = "ritk-interpolation"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "burn",
@@ -7309,7 +7309,7 @@ dependencies = [
  "coeus-core",
  "coeus-ops",
  "coeus-tensor",
- "num-traits",
+ "eunomia",
  "ritk-core",
  "ritk-image",
  "ritk-macros",

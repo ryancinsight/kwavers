@@ -64,27 +64,49 @@ fn test_gpu_pstd_run_produces_output() {
     let n = 32usize;
     let src_flat = 16 * n * n + 16 * n + 16;
     let sns_flat = 20 * n * n + 16 * n + 16;
-    let source_signals: Vec<f32> = (0..20).map(|i| i as f32 / 20.0).collect();
+    let mut source_signals = vec![0.0f32; 20];
+    source_signals[..5].copy_from_slice(&[0.0, 0.5, 1.0, 0.5, 0.0]);
 
     let result = solver.run(
         &[sns_flat as u32],
         &[src_flat as u32],
         &source_signals,
+        true,
         &[],
         &[],
-        PstdOutputRequest::SensorTracesAndFinalFields,
+        false,
+        PstdOutputRequest::with_final_fields_and_peak_pressure(),
     );
     let data = result.sensor_data;
     let final_fields = result
         .final_fields
         .expect("full-field request must return GPU-read final fields");
+    let peak_pressure = result
+        .peak_pressure
+        .expect("peak request must return the GPU-resident pressure envelope");
 
     assert_eq!(data.len(), 20, "sensor data length");
     assert_eq!(final_fields.pressure.len(), n * n * n);
     assert_eq!(final_fields.velocity_x.len(), n * n * n);
     assert_eq!(final_fields.velocity_y.len(), n * n * n);
     assert_eq!(final_fields.velocity_z.len(), n * n * n);
+    assert_eq!(peak_pressure.len(), n * n * n);
     assert!(final_fields.pressure.iter().all(|value| value.is_finite()));
+    assert!(peak_pressure.iter().all(|value| value.is_finite()));
+    assert!(peak_pressure.iter().all(|value| *value >= 0.0));
+    for (&peak, &final_pressure) in peak_pressure.iter().zip(&final_fields.pressure) {
+        assert!(
+            peak >= final_pressure.abs(),
+            "the temporal pressure envelope must dominate the final frame"
+        );
+    }
+    assert!(
+        peak_pressure
+            .iter()
+            .zip(&final_fields.pressure)
+            .any(|(&peak, &final_pressure)| peak > final_pressure.abs()),
+        "a finite burst must distinguish max_t |p| from the final pressure frame"
+    );
     assert!(
         final_fields.pressure.iter().any(|&value| value != 0.0),
         "a driven GPU run must not return the retired all-zero final pressure field"
@@ -115,9 +137,11 @@ fn test_gpu_pstd_1024_axis_produces_final_pressure() {
         &[source_flat as u32],
         &[source_flat as u32],
         &source_signals,
+        true,
         &[],
         &[],
-        PstdOutputRequest::SensorTracesAndFinalFields,
+        false,
+        PstdOutputRequest::with_final_fields(),
     );
     let final_fields = result
         .final_fields
@@ -153,9 +177,11 @@ fn test_gpu_pstd_velocity_source_produces_output() {
             &[sns_flat as u32],
             &[],
             &[],
+            false,
             &[src_flat as u32],
             &vel_signals,
-            PstdOutputRequest::SensorTraces,
+            true,
+            PstdOutputRequest::sensor_traces(),
         )
         .sensor_data;
 
@@ -244,9 +270,11 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
             &indices,
             &[],
             &[],
+            false,
             &indices,
             &vel_signals,
-            PstdOutputRequest::SensorTraces,
+            true,
+            PstdOutputRequest::sensor_traces(),
         )
         .sensor_data;
     let max_abs = data.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
@@ -321,9 +349,11 @@ fn bench_gpu_pstd_bmode_grid() {
             &[sns as u32],
             &[src as u32],
             &sigs,
+            true,
             &[],
             &[],
-            PstdOutputRequest::SensorTraces,
+            false,
+            PstdOutputRequest::sensor_traces(),
         )
         .sensor_data;
     let elapsed = t0.elapsed();

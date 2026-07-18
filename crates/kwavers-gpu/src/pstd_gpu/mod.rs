@@ -59,7 +59,8 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 
 pub use pipeline::{AbsorptionArrays, MediumArrays, PmlArrays, SolverParams};
 pub use runner::{
-    cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_provider, GpuPstdRunConfig,
+    cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_outputs, run_gpu_pstd_with_provider,
+    run_gpu_pstd_with_provider_outputs, GpuPstdRunConfig,
 };
 pub use state::{
     PstdAutoDeviceProvider, PstdFinalFields, PstdMediumUpdateState, PstdOutputRequest,
@@ -118,8 +119,8 @@ pub struct GpuPstdRunProfile {
     pub n_vel_x: usize,
 }
 
-// â”€â”€â”€ Params push-constant struct (must match PstdParams in pstd.wgsl) â”€â”€â”€â”€â”€â”€â”€â”€
-// 14 Ã— u32/f32 = 56 bytes. max_immediate_size must be at least 56.
+// Immediate-data struct; must match `PstdParams` in `pstd.wgsl` exactly.
+// 16 x u32/f32 = 64 bytes. `max_immediate_size` must be at least 64 bytes.
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct PstdParams {
@@ -137,13 +138,17 @@ pub(super) struct PstdParams {
     pub(super) nt: u32,
     pub(super) nonlinear: u32, // 1 = BonA EOS active
     pub(super) absorbing: u32, // 1 = alpha-decay active
+    pub(super) peak_offset: u32,
+    pub(super) record_peak_pressure: u32,
 }
+
+const _: () = assert!(std::mem::size_of::<PstdParams>() == 64);
 
 /// GPU-resident PSTD acoustic solver.
 ///
 /// Keeps all field data on the GPU throughout the time loop. Its
-/// [`Self::run`] caller explicitly chooses sensor-only output or a final-state
-/// readback after all time steps complete.
+/// [`Self::run`] caller explicitly selects sensor traces, final-state fields,
+/// and/or the temporal peak-pressure envelope.
 // Provider-owned state keeps GPU handles alive for bind groups that outlive
 // construction and are driven by dispatch-only Rust paths.
 #[allow(dead_code)]

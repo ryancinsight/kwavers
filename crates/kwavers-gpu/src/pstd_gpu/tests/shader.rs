@@ -38,7 +38,11 @@ fn test_pstd_shader_push_constant_abi_matches_rust() {
     let struct_start = src
         .find("struct PstdParams")
         .expect("PstdParams push-constant struct must exist in WGSL");
-    let struct_block = &src[struct_start..src.len().min(struct_start + 500)];
+    let struct_end = src[struct_start..]
+        .find("\n}")
+        .map(|offset| struct_start + offset + 2)
+        .expect("PstdParams push-constant struct must close in WGSL");
+    let struct_block = &src[struct_start..struct_end];
 
     assert!(
         !struct_block.contains("dx:"),
@@ -48,6 +52,9 @@ fn test_pstd_shader_push_constant_abi_matches_rust() {
         src.contains("precomp_source_kappa"),
         "validated phased-array GPU path requires precomp_source_kappa in the shader ABI"
     );
+    assert_eq!(struct_block.matches(':').count(), 16);
+    assert!(struct_block.contains("peak_offset: u32"));
+    assert!(struct_block.contains("record_peak_pressure: u32"));
 }
 
 /// The host root table and shader workgroup arrays must describe the same
@@ -60,4 +67,16 @@ fn pstd_shader_declares_the_1024_point_shared_fft_contract() {
     assert!(src.contains("var<workgroup> sm_re: array<f32, 1024>;"));
     assert!(src.contains("var<workgroup> sm_tw_re: array<f32, 512>;"));
     assert!(src.contains("let root_stride = MAX_FFT_LENGTH / n;"));
+}
+
+#[test]
+fn pstd_shader_accumulates_peak_pressure_in_the_requested_output_region() {
+    let src = include_str!("../shaders/pstd.wgsl");
+    let peak_start = src
+        .find("fn accumulate_peak_pressure")
+        .expect("peak-pressure entry point must exist");
+    let peak_block = &src[peak_start..src.len().min(peak_start + 500)];
+
+    assert!(peak_block.contains("params.peak_offset + idx"));
+    assert!(peak_block.contains("max(sensor_data[output_idx], abs(field_p[idx]))"));
 }

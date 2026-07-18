@@ -1,6 +1,7 @@
 # PSTD Shader ABI
 
-This note records the storage-buffer contract for `kwavers/src/gpu/shaders/pstd.wgsl`.
+This note records the storage-buffer contract for
+`crates/kwavers-gpu/src/pstd_gpu/shaders/pstd.wgsl`.
 
 ## Bind Groups
 
@@ -30,18 +31,13 @@ This note records the storage-buffer contract for `kwavers/src/gpu/shaders/pstd.
 
 ## Twiddle Packing
 
-`precomp_alpha_decay` is repurposed for FFT twiddles when the absorption shader is not dispatched:
+`precomp_twiddle_fft` stores one 1,024-point root table. Every supported
+power-of-two transform uses the table with `root_stride = 1024 / n`:
 
 | Offset | Slice |
 |---:|---|
-| `0..128` | `cos(-2*pi*k/256)` |
-| `128..256` | `sin(-2*pi*k/256)` |
-| `256..320` | `cos(-2*pi*k/128)` |
-| `320..384` | `sin(-2*pi*k/128)` |
-| `384..416` | `cos(-2*pi*k/64)` |
-| `416..448` | `sin(-2*pi*k/64)` |
-| `448..464` | `cos(-2*pi*k/32)` |
-| `464..480` | `sin(-2*pi*k/32)` |
+| `0..512` | `cos(-2*pi*k/1024)` |
+| `512..1024` | `sin(-2*pi*k/1024)` |
 
 Inverse FFT dispatches use the same table with the imaginary component negated.
 
@@ -49,8 +45,20 @@ Inverse FFT dispatches use the same table with the imaginary component negated.
 
 `source_data` stores `[source_mask_indices | source_signals]` in one `f32` buffer. The indices are written as `bitcast<f32>(u32)` and read by the shader as `bitcast<u32>(source_data[src])`. The signal slice starts at `n_src` and is indexed as `source_data[n_src + src * nt + step]`.
 
+## Output Packing
+
+`sensor_data` reserves `max(n_sensors, 1) * nt` scalars for pressure traces;
+the minimum preserves a valid WGPU storage binding for a zero-sensor run. A
+peak-pressure request appends one `nx * ny * nz` region at
+`params.peak_offset`. After every pressure update, `accumulate_peak_pressure` writes
+`max(previous_peak, abs(field_p[idx]))` into that region. The GPU command path
+downloads only the appended region for a peak-only request; it never treats the
+final pressure frame as the envelope.
+
 ## Invariants
 
 - The WGSL `PstdParams` push-constant layout must match the Rust `PstdParams` struct.
 - `pml_xyz` stores `[pml_x | pml_y | pml_z]`, each of length `nx * ny * nz`.
 - `field_p` may be used as temporary storage only between sensor recording and `pressure_from_density`, which overwrites pressure before the next sensor read.
+- `PstdParams` contains 16 scalar fields (64 bytes) in identical Rust and WGSL
+  order, including `peak_offset` and `record_peak_pressure`.

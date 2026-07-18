@@ -52,20 +52,58 @@ pub struct PstdRunScalars {
 
 /// Host outputs requested from one GPU PSTD run.
 ///
-/// `SensorTraces` keeps the field state resident on the provider. Requesting
-/// `SensorTracesAndFinalFields` additionally transfers the final pressure and
-/// staggered velocity fields after the final time step.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PstdOutputRequest {
-    /// Download only sensor pressure traces.
-    SensorTraces,
-    /// Download sensor traces and final pressure plus staggered velocity fields.
-    SensorTracesAndFinalFields,
+/// Sensor traces are always available. Final fields and the pointwise temporal
+/// pressure envelope are independent because a final frame is not generally a
+/// peak-pressure field for a transient burst.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct PstdOutputRequest {
+    final_fields: bool,
+    peak_pressure: bool,
 }
 
 impl PstdOutputRequest {
+    /// Keep field state on the provider and download only sensor traces.
+    #[must_use]
+    pub const fn sensor_traces() -> Self {
+        Self {
+            final_fields: false,
+            peak_pressure: false,
+        }
+    }
+
+    /// Download sensor traces and final pressure plus staggered velocity fields.
+    #[must_use]
+    pub const fn with_final_fields() -> Self {
+        Self {
+            final_fields: true,
+            peak_pressure: false,
+        }
+    }
+
+    /// Download sensor traces and the pointwise `max_t |p|` pressure envelope.
+    #[must_use]
+    pub const fn with_peak_pressure() -> Self {
+        Self {
+            final_fields: false,
+            peak_pressure: true,
+        }
+    }
+
+    /// Download sensor traces, final fields, and the peak-pressure envelope.
+    #[must_use]
+    pub const fn with_final_fields_and_peak_pressure() -> Self {
+        Self {
+            final_fields: true,
+            peak_pressure: true,
+        }
+    }
+
     pub(super) const fn includes_final_fields(self) -> bool {
-        matches!(self, Self::SensorTracesAndFinalFields)
+        self.final_fields
+    }
+
+    pub(super) const fn includes_peak_pressure(self) -> bool {
+        self.peak_pressure
     }
 }
 
@@ -74,8 +112,12 @@ pub struct PstdRunInputs<'a> {
     pub sensor_indices: &'a [u32],
     pub source_indices: &'a [u32],
     pub source_signals: &'a [f32],
+    /// Whether the pressure source requires k-space correction.
+    pub pressure_source_correction: bool,
     pub vel_x_indices: &'a [u32],
     pub vel_x_signals: &'a [f32],
+    /// Whether the x-velocity source requires k-space correction.
+    pub velocity_source_correction: bool,
     pub output_request: PstdOutputRequest,
 }
 
@@ -99,6 +141,8 @@ pub struct PstdRunResult {
     pub sensor_data: Vec<f32>,
     /// Final fields when requested by [`PstdOutputRequest`].
     pub final_fields: Option<PstdFinalFields>,
+    /// Pointwise `max_t |p|` in row-major grid order when requested.
+    pub peak_pressure: Option<Vec<f32>>,
 }
 
 /// Provider-state contract for executing a PSTD run.
@@ -200,6 +244,9 @@ pub(super) struct WgpuPstdRunCache {
     pub(super) field_staging_buf: Option<wgpu::Buffer>,
     pub(super) bg_sensor: Option<wgpu::BindGroup>,
     pub(super) bg_sensor_vel: Option<wgpu::BindGroup>,
+    pub(super) output_storage_len: usize,
+    pub(super) peak_offset: usize,
+    pub(super) records_peak_pressure: bool,
     pub(super) n_sensors: usize,
     pub(super) n_src: usize,
     pub(super) n_vel_x: usize,
@@ -241,10 +288,12 @@ pub(super) struct WgpuPstdPipelines {
     pub(super) snapshot_rho0_plus_rho: wgpu::ComputePipeline,
     pub(super) pres_density: wgpu::ComputePipeline,
     pub(super) record: wgpu::ComputePipeline,
+    pub(super) peak_pressure: wgpu::ComputePipeline,
     pub(super) inject_src: wgpu::ComputePipeline,
     pub(super) inject_vel_x: wgpu::ComputePipeline,
     pub(super) apply_source_kappa: wgpu::ComputePipeline,
     pub(super) add_kspace_to_field_ux: wgpu::ComputePipeline,
+    pub(super) add_kspace_to_density: wgpu::ComputePipeline,
     pub(super) copy_field_to_k: wgpu::ComputePipeline,
     /// Present only when the solver enables fractional-Laplacian absorption.
     pub(super) absorption: Option<WgpuPstdAbsorptionPipelines>,
@@ -307,9 +356,44 @@ mod tests {
     use hephaestus_wgpu::WgpuDevice;
 
     use super::{
-        PstdAutoDeviceProvider, PstdMediumUpdateState, PstdRunInputs, PstdRunScalars, PstdRunState,
-        PstdStateBuilder, PstdStateProvider, WgpuPstdState, WgpuPstdStateProvider,
+        PstdAutoDeviceProvider, PstdMediumUpdateState, PstdOutputRequest, PstdRunInputs,
+        PstdRunScalars, PstdRunState, PstdStateBuilder, PstdStateProvider, WgpuPstdState,
+        WgpuPstdStateProvider,
     };
+
+    #[test]
+    fn pstd_output_request_selects_final_and_peak_independently() {
+        let traces = PstdOutputRequest::sensor_traces();
+        let final_fields = PstdOutputRequest::with_final_fields();
+        let peak_pressure = PstdOutputRequest::with_peak_pressure();
+        let both = PstdOutputRequest::with_final_fields_and_peak_pressure();
+
+        assert_eq!(
+            (
+                traces.includes_final_fields(),
+                traces.includes_peak_pressure(),
+            ),
+            (false, false)
+        );
+        assert_eq!(
+            (
+                final_fields.includes_final_fields(),
+                final_fields.includes_peak_pressure(),
+            ),
+            (true, false)
+        );
+        assert_eq!(
+            (
+                peak_pressure.includes_final_fields(),
+                peak_pressure.includes_peak_pressure(),
+            ),
+            (false, true)
+        );
+        assert_eq!(
+            (both.includes_final_fields(), both.includes_peak_pressure()),
+            (true, true)
+        );
+    }
 
     #[test]
     fn pstd_solver_state_is_provider_associated() {

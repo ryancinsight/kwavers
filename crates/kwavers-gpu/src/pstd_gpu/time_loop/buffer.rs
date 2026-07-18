@@ -14,6 +14,23 @@ pub(super) fn packed_signal_len(n_points: usize, signal_len: usize) -> usize {
     n_points.max(1) + signal_len.max(1)
 }
 
+/// Return `(sensor_trace_len, total_output_len)` for one run-cache layout.
+pub(super) fn output_storage_lengths(
+    n_sensors: usize,
+    nt: usize,
+    total_points: usize,
+    records_peak_pressure: bool,
+) -> (usize, usize) {
+    let sensor_trace_len = n_sensors.max(1) * nt;
+    let total_output_len = sensor_trace_len
+        + if records_peak_pressure {
+            total_points
+        } else {
+            0
+        };
+    (sensor_trace_len, total_output_len)
+}
+
 /// Rebuild the packed buffer from scratch for a cache miss.
 pub(super) fn rewrite_packed_source_buffer(
     buffer: &mut Vec<f32>,
@@ -63,6 +80,8 @@ impl WgpuPstdState {
     pub(super) fn build_run_cache(
         &mut self,
         nt: usize,
+        total_points: usize,
+        records_peak_pressure: bool,
         sensor_indices: &[u32],
         source_indices: &[u32],
         source_signals: &[f32],
@@ -72,8 +91,6 @@ impl WgpuPstdState {
         let n_sensors = sensor_indices.len();
         let n_src = source_indices.len();
         let n_vel_x = vel_x_indices.len();
-        let sensor_count = n_sensors.max(1);
-
         rewrite_packed_source_buffer(
             &mut self.scratch_source_data,
             source_indices,
@@ -87,11 +104,12 @@ impl WgpuPstdState {
             sensor_indices
         };
         let buffers = WgpuPstdBufferFactory::new(self.context.device());
-        let sensor_len = sensor_count * nt;
+        let (sensor_len, output_storage_len) =
+            output_storage_lengths(n_sensors, nt, total_points, records_peak_pressure);
 
         self.run_cache.sensor_indices_buf = Some(buffers.static_storage(si_data, "sensor_indices"));
         self.run_cache.sensor_data_buf =
-            Some(buffers.read_write_storage::<f32>(sensor_len, "sensor_data"));
+            Some(buffers.read_write_storage::<f32>(output_storage_len, "sensor_data"));
         self.run_cache.source_data_buf =
             Some(buffers.upload_storage(&self.scratch_source_data, "source_data"));
         self.run_cache.vel_x_data_buf =
@@ -137,6 +155,9 @@ impl WgpuPstdState {
         self.run_cache.n_sensors = n_sensors;
         self.run_cache.n_src = n_src;
         self.run_cache.n_vel_x = n_vel_x;
+        self.run_cache.output_storage_len = output_storage_len;
+        self.run_cache.peak_offset = sensor_len;
+        self.run_cache.records_peak_pressure = records_peak_pressure;
     }
 
     pub(super) fn refresh_signal_tails(
@@ -172,6 +193,12 @@ mod tests {
         assert_eq!(packed_signal_len(3, 0), 4);
         assert_eq!(packed_signal_len(0, 5), 6);
         assert_eq!(EMPTY_STORAGE_BUFFER_U32, [0]);
+    }
+
+    #[test]
+    fn peak_output_appends_exactly_one_pressure_volume() {
+        assert_eq!(output_storage_lengths(3, 11, 512, false), (33, 33));
+        assert_eq!(output_storage_lengths(3, 11, 512, true), (33, 545));
     }
 
     #[test]

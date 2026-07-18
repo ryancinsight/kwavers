@@ -29,6 +29,8 @@ pub(super) trait PstdPassProvider {
         sensor_bind_group: &Self::BindGroup,
         velocity_sensor_bind_group: &Self::BindGroup,
         step: u32,
+        pressure_source_active: bool,
+        velocity_source_active: bool,
     );
 }
 
@@ -73,20 +75,30 @@ impl<'solver> PstdPassProvider for WgpuPstdPassProvider<'solver> {
         sensor_bind_group: &Self::BindGroup,
         velocity_sensor_bind_group: &Self::BindGroup,
         step: u32,
+        pressure_source_active: bool,
+        velocity_source_active: bool,
     ) {
         self.state
             .encode_velocity_update(cpass, ctx, sensor_bind_group, step);
-        self.state.encode_source_injection(
+        self.state.encode_velocity_source_injection(
             cpass,
             ctx,
             sensor_bind_group,
             velocity_sensor_bind_group,
             step,
+            velocity_source_active,
         );
         self.state
             .encode_nonlinear_snapshot(cpass, ctx, sensor_bind_group, step);
         self.state
             .encode_density_update(cpass, ctx, sensor_bind_group, step);
+        self.state.encode_pressure_source_injection(
+            cpass,
+            ctx,
+            sensor_bind_group,
+            step,
+            pressure_source_active,
+        );
         self.state
             .encode_pressure_record(cpass, ctx, sensor_bind_group, step);
     }

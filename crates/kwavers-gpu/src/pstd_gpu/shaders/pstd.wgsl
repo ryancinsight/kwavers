@@ -53,6 +53,8 @@ struct PstdParams {
     nt:        u32,
     nonlinear: u32,  // 1 = apply BonA EOS correction in pressure step
     absorbing:  u32, // 1 = apply frequency-centred absorption decay to density
+    peak_offset: u32,
+    record_peak_pressure: u32,
 }
 
 var<immediate> params: PstdParams;
@@ -564,6 +566,20 @@ fn record_sensors(@builtin(global_invocation_id) gid: vec3<u32>) {
     sensor_data[s * params.nt + params.step] = field_p[flat];
 }
 
+// ─── Entry point: accumulate_peak_pressure ───────────────────────────────────
+//
+// The requested peak envelope is `max_t |p|`. It occupies the run-local output
+// buffer after the sensor-trace region so sensor-only runs retain their former
+// allocation and transfer contract.
+@compute @workgroup_size(256, 1, 1)
+fn accumulate_peak_pressure(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total || params.record_peak_pressure == 0u { return; }
+    let output_idx = params.peak_offset + idx;
+    sensor_data[output_idx] = max(sensor_data[output_idx], abs(field_p[idx]));
+}
+
 // ─── Entry point: zero_kspace ────────────────────────────────────────────────
 //
 // Zeroes kspace_re and kspace_im in one GPU pass.
@@ -601,7 +617,7 @@ fn zero_acoustic_fields(@builtin(global_invocation_id) gid: vec3<u32>) {
 
 // ─── Entry point: inject_pressure_source ─────────────────────────────────────
 //
-// Additive source injection into all three split density components.
+// Additive pressure-source injection into the k-space source work buffer.
 //
 // source_data layout (all f32):
 //   [0 .. n_src)           : bitcast<f32>(source_mask_index[i]) — flat grid indices
@@ -618,9 +634,7 @@ fn inject_pressure_source(@builtin(global_invocation_id) gid: vec3<u32>) {
     let flat = bitcast<u32>(source_data[src_pt]);
     let amp  = source_data[n_src + src_pt * params.nt + params.step];
 
-    field_rhox[flat] += amp;
-    field_rhoy[flat] += amp;
-    field_rhoz[flat] += amp;
+    kspace_re[flat] += amp;
 }
 
 // ─── Entry point: inject_velocity_x_source ───────────────────────────────────
@@ -665,6 +679,27 @@ fn add_kspace_to_field_ux(@builtin(global_invocation_id) gid: vec3<u32>) {
     if idx >= total { return; }
 
     field_ux[idx] += kspace_re[idx];
+}
+
+// ─── Entry point: add_kspace_to_density ─────────────────────────────────────
+//
+// The source work buffer holds the k-space-corrected additive mass source.
+// Each active split-density component receives the same increment, matching
+// the CPU PSTD source contract and preserving the total EOS contribution.
+@compute @workgroup_size(256, 1, 1)
+fn add_kspace_to_density(@builtin(global_invocation_id) gid: vec3<u32>) {
+    let idx = gid.x;
+    let total = params.nx * params.ny * params.nz;
+    if idx >= total { return; }
+
+    let source = kspace_re[idx];
+    field_rhox[idx] += source;
+    if params.ny > 1u {
+        field_rhoy[idx] += source;
+    }
+    if params.nz > 1u {
+        field_rhoz[idx] += source;
+    }
 }
 
 // ─── Bind Group 3: Fractional-Laplacian absorption operators ─────────────────

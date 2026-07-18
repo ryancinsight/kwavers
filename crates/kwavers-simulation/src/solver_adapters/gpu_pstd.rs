@@ -386,7 +386,7 @@ impl GpuPstdSimulationAdapter {
             &source_signals,
             &[],
             &[],
-            PstdOutputRequest::SensorTracesAndFinalFields,
+            PstdOutputRequest::with_final_fields(),
         );
         self.computation_time += t0.elapsed();
         self.current_step += nt;
