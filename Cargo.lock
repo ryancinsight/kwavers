@@ -846,7 +846,7 @@ dependencies = [
  "coeus-leto",
  "coeus-sparse",
  "coeus-tensor",
- "half",
+ "eunomia",
  "leto-ops",
  "melinoe",
  "smallvec",
