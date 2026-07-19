@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Breaking (2026-07-19) - Aequitas quantity provider [major]
+
+- Replace the `kwavers-physics` bubble-energy dependency on `uom` with the
+  first-party Aequitas dimensional-law provider. Public energy-balance methods
+  now accept and return Aequitas quantity types; callers construct and inspect
+  them with `from_unit::<Unit>` and `in_unit::<Unit>`.
+- Correct the temperature-update contract from heat capacity in J/K to
+  specific heat capacity in J/(kg·K). The complete update now evaluates
+  `ΔT = ΔE / (m c_v)` through dimensional arithmetic without raw unit
+  extraction. See ADR 040.
+
 ### Added (2026-07-17) - GPU PSTD shared FFT lattice [minor]
 
 - Extend the Hephaestus-acquired WGPU PSTD radix-2 FFT from a 256-point

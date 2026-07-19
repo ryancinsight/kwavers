@@ -1,9 +1,10 @@
 //! Core Energy Balance Calculator definition
 
+use aequitas::systems::si::{
+    quantities::{ThermalConductivity, ThermodynamicTemperature},
+    units::{Kelvin, WattPerMeterKelvin},
+};
 use kwavers_core::constants::thermodynamic::T_AMBIENT;
-use uom::si::f64::{ThermalConductivity, ThermodynamicTemperature};
-use uom::si::thermal_conductivity::watt_per_meter_kelvin;
-use uom::si::thermodynamic_temperature::kelvin;
 
 use crate::acoustics::bubble_dynamics::BubbleParameters;
 
@@ -58,10 +59,10 @@ impl EnergyBalanceCalculator {
     #[must_use]
     pub fn new(params: &BubbleParameters) -> Self {
         Self {
-            thermal_conductivity: ThermalConductivity::new::<watt_per_meter_kelvin>(
+            thermal_conductivity: ThermalConductivity::from_unit::<WattPerMeterKelvin>(
                 params.thermal_conductivity,
             ),
-            ambient_temperature: ThermodynamicTemperature::new::<kelvin>(T_AMBIENT),
+            ambient_temperature: ThermodynamicTemperature::from_unit::<Kelvin>(T_AMBIENT),
             enable_chemical_reactions: true,
             enable_plasma_effects: true,
             enable_radiation: true,
@@ -77,10 +78,10 @@ impl EnergyBalanceCalculator {
         enable_radiation: bool,
     ) -> Self {
         Self {
-            thermal_conductivity: ThermalConductivity::new::<watt_per_meter_kelvin>(
+            thermal_conductivity: ThermalConductivity::from_unit::<WattPerMeterKelvin>(
                 params.thermal_conductivity,
             ),
-            ambient_temperature: ThermodynamicTemperature::new::<kelvin>(T_AMBIENT),
+            ambient_temperature: ThermodynamicTemperature::from_unit::<Kelvin>(T_AMBIENT),
             enable_chemical_reactions: enable_chemical,
             enable_plasma_effects: enable_plasma,
             enable_radiation,

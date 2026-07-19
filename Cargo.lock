@@ -34,6 +34,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 
 [[package]]
+name = "aequitas"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/aequitas?rev=17312401f6e19b805e690ff2137b97cdb216e464#17312401f6e19b805e690ff2137b97cdb216e464"
+dependencies = [
+ "eunomia",
+ "typenum",
+]
+
+[[package]]
 name = "ahash"
 version = "0.7.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3528,6 +3537,7 @@ dependencies = [
 name = "kwavers-physics"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "anyhow",
  "apollo-fft",
  "approx",
@@ -3550,7 +3560,6 @@ dependencies = [
  "rand_distr 0.4.3",
  "ritk-registration",
  "serde",
- "uom",
 ]
 
 [[package]]
@@ -6920,9 +6929,9 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 
 [[package]]
 name = "typenum"
-version = "1.19.0"
+version = "1.20.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "562d481066bde0658276a35467c4af00bdc6ee726305698a55b86e61d7ad82bb"
+checksum = "b6f5e870be6c3b371b77fe0ee0bafb859fa4964b4404c27de1d380043c4dda20"
 
 [[package]]
 name = "unarray"
@@ -6959,16 +6968,6 @@ name = "unicode-xid"
 version = "0.2.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ebc1c04c71510c7f702b52b7c350734c9ff1295c464a03335b00bb84fc54f853"
-
-[[package]]
-name = "uom"
-version = "0.36.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ffd36e5350a65d112584053ee91843955826bf9e56ec0d1351214e01f6d7cd9c"
-dependencies = [
- "num-traits",
- "typenum",
-]
 
 [[package]]
 name = "url"
