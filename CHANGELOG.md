@@ -15,6 +15,9 @@
   specific heat capacity in J/(kg·K). The complete update now evaluates
   `ΔT = ΔE / (m c_v)` through dimensional arithmetic without raw unit
   extraction. See ADR 040.
+- Update the CT/NIfTI integration test to construct images through RITK's
+  current public `ritk_image::Image` re-export. This removes the obsolete
+  `native` module path that blocked the hosted all-target Clippy gate.
 
 ### Added (2026-07-17) - GPU PSTD shared FFT lattice [minor]
 
