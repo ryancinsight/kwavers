@@ -18,13 +18,17 @@ the mismatch.
 
 Aequitas owns the Atlas physical-quantity law over Eunomia scalar types. Its
 provider decision and comparison against `uom` 0.38.0 are recorded in
-[Aequitas ADR 0001](https://github.com/ryancinsight/aequitas/blob/17312401f6e19b805e690ff2137b97cdb216e464/docs/adr/0001-aequitas-quantity-law.md).
+[Aequitas ADR 0001](https://github.com/ryancinsight/aequitas/blob/49ee8004e008a480ac871c3782d00d921ba41c01/docs/adr/0001-aequitas-quantity-law.md).
 
 ## Decision
 
 - Pin Aequitas revision
-  `17312401f6e19b805e690ff2137b97cdb216e464` as the quantity provider for
+  `49ee8004e008a480ac871c3782d00d921ba41c01` as the quantity provider for
   `kwavers-physics`.
+- Resolve Eunomia through the same unqualified Git source as the workspace;
+  the lockfile remains the exact revision pin. This prevents duplicate package
+  identities and makes `--locked` resolution invariant across local patches
+  and hosted CI.
 - Remove the direct `uom` dependency and all `uom` call sites from that crate.
 - Express heat-transfer and temperature-update equations with Aequitas
   quantity arithmetic. Unit extraction occurs only at the `BubbleState` raw-SI

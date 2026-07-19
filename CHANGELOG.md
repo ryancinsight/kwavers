@@ -8,6 +8,9 @@
   first-party Aequitas dimensional-law provider. Public energy-balance methods
   now accept and return Aequitas quantity types; callers construct and inspect
   them with `from_unit::<Unit>` and `in_unit::<Unit>`.
+- Pin the Aequitas source-identity repair so Aequitas and Kwavers resolve the
+  same Eunomia package. Locked Linux CI no longer attempts to rewrite the
+  dependency graph before compilation.
 - Correct the temperature-update contract from heat capacity in J/K to
   specific heat capacity in J/(kg·K). The complete update now evaluates
   `ΔT = ΔE / (m c_v)` through dimensional arithmetic without raw unit
