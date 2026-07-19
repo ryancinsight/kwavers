@@ -29,7 +29,7 @@ moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false
 leto = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 eunomia = { git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
-pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 
 anyhow = "1.0"

@@ -10,7 +10,7 @@
 use coeus_core::SequentialBackend;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
-use ritk_image::native::Image as NativeImage;
+use ritk_image::Image as NativeImage;
 use ritk_spatial::{Direction, Point, Spacing};
 
 /// A ritk-decoded volume in kwavers' canonical conventions.
