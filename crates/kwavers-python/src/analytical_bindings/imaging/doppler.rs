@@ -163,10 +163,7 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
             .map_err(|e| PyRuntimeError::new_err(e.to_string()))?
             .to_pyarray(py),
     )?;
-    out.set_item(
-        "projected_velocity_m_s",
-        projected_velocity_m_s,
-    )?;
+    out.set_item("projected_velocity_m_s", projected_velocity_m_s)?;
     out.set_item(
         "true_velocity_m_s",
         [fixture.true_velocity_m_s.vx, fixture.true_velocity_m_s.vz].to_pyarray(py),
