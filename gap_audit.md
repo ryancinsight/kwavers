@@ -54,6 +54,13 @@
   checkout action now pins Atlas commit `58d7a6e`, whose provider gitlinks match
   the locally verified graph. Residual: the repaired hosted matrix must pass.
 
+- Structural boundary 2026-07-20: the Tyche migration touched a 794-line
+  clinical workflow example spanning modality execution, result storage, and
+  presentation. It is now a 451-line workflow root with 158/97/80-line modality,
+  presentation, and result leaves. The no-op cloned uncertainty maps and
+  `Box<dyn UncertaintyResult>` vector are deleted, and the CFL helper statically
+  dispatches over its medium. Default/GPU checks and warning-denied Clippy pass.
+
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a
   `*_at_core` generic forwarder. The canonical functions now carry the

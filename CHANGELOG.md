@@ -24,6 +24,10 @@
 - Pin hosted sibling-provider checkout to the immutable Atlas graph used by the
   lockfile. CI no longer resolves a moving `main` graph between PR publication
   and job execution.
+- Partition the touched comprehensive clinical workflow into root, modality,
+  presentation, and result concerns. Remove its unused cloned uncertainty maps
+  and `Box<dyn UncertaintyResult>` vector; its CFL helper now monomorphizes over
+  the concrete medium.
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 

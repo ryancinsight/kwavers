@@ -17,6 +17,8 @@
       scans, and Analysis semver classification.
 - [x] Pin hosted path-provider resolution to the immutable Atlas graph matching
       the committed lockfile.
+- [x] Partition the touched clinical workflow example and remove its unused
+      cloned/vtable uncertainty-report path.
 - [ ] Publish, pass hosted gates, and merge the integration.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor]
