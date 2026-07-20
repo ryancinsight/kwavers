@@ -11,7 +11,7 @@ use numpy::{PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 
-#[pyclass(name = "BreastFwiPstdDatasetConfig")]
+#[pyclass(name = "BreastFwiPstdDatasetConfig", from_py_object)]
 #[derive(Clone, Copy)]
 pub struct PyBreastFwiPstdDatasetConfig {
     pub(super) inner: BreastUstPstdDatasetConfig,

@@ -6,7 +6,7 @@ use pyo3::prelude::*;
 
 use super::helpers::{kwavers_to_py, points_to_array};
 
-#[pyclass(name = "MultiRowRingArray")]
+#[pyclass(name = "MultiRowRingArray", from_py_object)]
 #[derive(Clone)]
 pub struct PyMultiRowRingArray {
     pub(super) inner: MultiRowRingArray,

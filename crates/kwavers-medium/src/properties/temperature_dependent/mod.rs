@@ -52,18 +52,27 @@ impl TemperatureDependentMaterial {
         }
     }
 
-    #[must_use]
-    pub fn properties_at_temperature(&self, temperature: f64) -> MaterialPropertiesAtT {
+    /// Evaluate every property at `temperature` kelvin.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the thermal constitutive law rejects the supplied
+    /// temperature or its derived properties.
+    pub fn properties_at_temperature(
+        &self,
+        temperature: f64,
+    ) -> Result<MaterialPropertiesAtT, String> {
         let density = self.acoustic.density(temperature);
-        MaterialPropertiesAtT {
+        let thermal = self.thermal.properties_with_density(temperature, density)?;
+        Ok(MaterialPropertiesAtT {
             temperature,
             sound_speed: self.acoustic.sound_speed(temperature),
             density,
             impedance: self.acoustic.impedance(temperature),
-            thermal_conductivity: self.thermal.conductivity(temperature),
-            specific_heat: self.thermal.specific_heat(temperature),
-            thermal_diffusivity: self.thermal.thermal_diffusivity(temperature, density),
-        }
+            thermal_conductivity: thermal.conductivity(),
+            specific_heat: thermal.specific_heat(),
+            thermal_diffusivity: thermal.thermal_diffusivity(),
+        })
     }
 }
 

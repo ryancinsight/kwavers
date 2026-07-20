@@ -18,8 +18,8 @@
 
 use crate::pstd_gpu::{
     validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
-    PstdAutoDeviceProvider, PstdOutputRequest, PstdRunResult, PstdRunState, SolverParams,
-    WgpuPstdStateProvider,
+    PstdAutoDeviceProvider, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunState,
+    SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
@@ -421,16 +421,16 @@ where
     )
     .map_err(|e| KwaversError::InvalidInput(format!("GPU device init failed: {e}")))?;
 
-    Ok(solver.run(
-        &sensor_indices,
-        &pressure_source.indices,
-        &pressure_source.signals,
-        pressure_source.uses_kspace_correction,
-        &vel_x_indices,
-        &vel_x_signals,
+    Ok(solver.run(PstdRunInputs {
+        sensor_indices: &sensor_indices,
+        source_indices: &pressure_source.indices,
+        source_signals: &pressure_source.signals,
+        pressure_source_correction: pressure_source.uses_kspace_correction,
+        vel_x_indices: &vel_x_indices,
+        vel_x_signals: &vel_x_signals,
         velocity_source_correction,
         output_request,
-    ))
+    }))
 }
 
 /// Whether any packed `B/A / 2` coefficient enables the nonlinear equation.
@@ -510,11 +510,8 @@ mod tests {
 
     #[test]
     fn zero_explicit_absorption_is_lossless_at_singular_default_exponent() {
-        assert_eq!(
-            power_law_absorption_enabled(0.0, 1.0)
-                .expect("zero coefficient disables fractional absorption"),
-            false
-        );
+        assert!(!power_law_absorption_enabled(0.0, 1.0)
+            .expect("zero coefficient disables fractional absorption"));
     }
 
     #[test]

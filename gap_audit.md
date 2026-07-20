@@ -148,13 +148,15 @@
   its pressure statistic. Per-axis FFT support does not establish that a
   complete long-domain three-dimensional grid fits host or device memory;
   allocation capability remains a provider/runtime constraint and must be
-  validated for each treatment plan. Verification: the largest-axis WGPU
-  regression passes in 0.532 seconds, the GPU-featured simulation-adapter
-  selection passes 8/8, and the GPU-featured clinical dataset selection passes
-  4/4. Warning-denied Clippy and `kwavers-gpu` Rustdoc are clean. Release SemVer
-  checking remains a separate release gate. Leto, Gaia, and Kwavers declare one
-  Git source for Leto/Eunomia while Atlas integration roots patch that source to
-  the local checkout.
+  validated for each treatment plan. Verification on 2026-07-20: the complete
+  WGPU-featured `kwavers-gpu` and `kwavers-simulation` Nextest lane passes
+  259/259 tests, including the 1,024-point FFT, heterogeneous CPU/GPU
+  equivalence, transient peak envelope, and adapter source contracts.
+  Warning-denied all-feature Clippy is clean. The all-feature native-test link
+  additionally requires a CUDA import library; hosted CUDA verification owns
+  that environment-specific lane. The downstream consumer regression remains
+  blocked outside this repository's authorized scope. Release SemVer checking
+  remains a separate release gate.
 
 - Closed 2026-07-16: `Grid::size` is an unchecked legacy convenience method,
   while public dimensions can be mutated after construction. `Grid::checked_size`

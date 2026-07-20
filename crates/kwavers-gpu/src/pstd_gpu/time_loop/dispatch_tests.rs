@@ -1,8 +1,8 @@
 use super::super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 use super::*;
 use crate::pstd_gpu::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdParams, SolverParams,
-    WgpuPstdStateProvider,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdOutputRequest, PstdParams,
+    PstdRunInputs, PstdRunScalars, SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
@@ -104,9 +104,27 @@ fn pstd_copy_fft_inverse_roundtrip_preserves_pressure_field() {
         0,
         bytemuck::cast_slice(&pressure),
     );
-    solver
-        .state
-        .build_run_cache(1, total, false, &[], &[], &[], &[], &[]);
+    solver.state.build_run_cache(
+        PstdRunScalars {
+            nx: n,
+            ny: n,
+            nz: n,
+            nt: 1,
+            dt: 0.3e-3 / f64::from(c0),
+            nonlinear: false,
+            absorbing: false,
+        },
+        &PstdRunInputs {
+            sensor_indices: &[],
+            source_indices: &[],
+            source_signals: &[],
+            pressure_source_correction: false,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::sensor_traces(),
+        },
+    );
     let ctx = StepCtx {
         nx: n as u32,
         ny: n as u32,

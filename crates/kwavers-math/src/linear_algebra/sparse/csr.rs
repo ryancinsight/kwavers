@@ -1,4 +1,24 @@
 //! Compressed Sparse Row (CSR) matrix format
+//!
+//! This module provides [`CompressedSparseRowMatrix<T>`] for acoustic simulations
+//! requiring `Complex64` support and mutable in-place assembly (BEM/FEM).
+//!
+//! # Migration path to `leto::infrastructure::sparse`
+//!
+//! New code that only needs `f64` entries and read-only matvec should prefer
+//! [`leto::sparse::CsrArray<T>`](leto::infrastructure::sparse::CsrArray) which is
+//! the Atlas SSOT sparse substrate and participates in the coeus autodiff graph.
+//!
+//! Conversion bridges below (`From` impls) allow gradual per-callsite migration:
+//!
+//! ```ignore
+//! use leto::sparse::CsrArray;
+//! use kwavers_math::linear_algebra::sparse::CompressedSparseRowMatrix;
+//!
+//! let kw: CompressedSparseRowMatrix<f64> = build_matrix();
+//! let leto: CsrArray<f64> = CsrArray::from(&kw);  // zero-copy metadata
+//! let roundtrip: CompressedSparseRowMatrix<f64> = CompressedSparseRowMatrix::from(&leto);
+//! ```
 
 use kwavers_core::error::KwaversResult;
 use leto::{Array1, ArrayView1, ArrayView2};
@@ -310,6 +330,51 @@ impl<T> CompressedSparseRowMatrix<T> {
         }
     }
 }
+
+// ── Leto sparse interop ────────────────────────────────────────────────────────
+
+/// Convert a `CompressedSparseRowMatrix<f64>` into a leto `CsrArray<f64>`.
+///
+/// Triplets are reconstructed from the CSR storage, sorted by row and column,
+/// and fed into `CsrArray::from_coo` — a single allocation. This path is
+/// intentionally explicit (not zero-cost) to signal that it is a migration aid
+/// rather than a production hot-path: callers that need repeated matvec should
+/// hold the `CsrArray` directly.
+impl From<&CompressedSparseRowMatrix<f64>> for leto::CsrArray<f64> {
+    fn from(kw: &CompressedSparseRowMatrix<f64>) -> Self {
+        use leto::SparseStorageMut;
+        let mut coo = leto::CooArray::with_capacity(kw.rows, kw.cols, kw.nnz);
+        for row in 0..kw.rows {
+            for idx in kw.row_pointers[row]..kw.row_pointers[row + 1] {
+                coo.add(row, kw.col_indices[idx], kw.values[idx]);
+            }
+        }
+        leto::CsrArray::from_coo(coo)
+    }
+}
+
+/// Convert a leto `CsrArray<f64>` back into a `CompressedSparseRowMatrix<f64>`.
+///
+/// Useful when migrated code needs to hand a result back to an unconverted caller.
+impl From<&leto::CsrArray<f64>> for CompressedSparseRowMatrix<f64> {
+    fn from(csr: &leto::CsrArray<f64>) -> Self {
+        use leto::SparseStorage;
+        let rows = csr.nrows();
+        let cols = csr.ncols();
+        let mut out = CompressedSparseRowMatrix::with_capacity(rows, cols, csr.nnz());
+        for row in 0..rows {
+            out.row_pointers[row] = out.values.len();
+            for (col, &value) in csr.row_entries(row) {
+                out.values.push(value);
+                out.col_indices.push(col);
+                out.nnz += 1;
+            }
+        }
+        out.row_pointers[rows] = out.values.len();
+        out
+    }
+}
+
 #[cfg(test)]
 mod tests {
     //! CsrScalar-magnitude + cross-type default-equivalence regression pins.
@@ -435,5 +500,53 @@ mod tests {
             <eunomia::Complex64 as eunomia::ComplexField>::modulus_squared(z),
             25.0,
         );
+    }
+
+    // ── Leto interop bridge roundtrip ──────────────────────────────────────────
+
+    fn three_by_three_sample() -> super::CompressedSparseRowMatrix<f64> {
+        use super::CompressedSparseRowMatrix;
+        let mut m = CompressedSparseRowMatrix::create(3, 3);
+        m.add_value(0, 0, 1.0);
+        m.add_value(0, 2, 2.0);
+        m.add_value(1, 1, 3.0);
+        m.add_value(2, 0, 4.0);
+        m.add_value(2, 2, 5.0);
+        m
+    }
+
+    #[test]
+    fn kwavers_csr_to_leto_csr_preserves_entries() {
+        use leto::SparseStorage;
+        let kw = three_by_three_sample();
+        let leto_csr = leto::CsrArray::from(&kw);
+
+        assert_eq!(leto_csr.nrows(), 3);
+        assert_eq!(leto_csr.ncols(), 3);
+        assert_eq!(leto_csr.nnz(), 5);
+        assert_eq!(leto_csr.get(0, 0), Some(1.0));
+        assert_eq!(leto_csr.get(0, 2), Some(2.0));
+        assert_eq!(leto_csr.get(1, 1), Some(3.0));
+        assert_eq!(leto_csr.get(2, 0), Some(4.0));
+        assert_eq!(leto_csr.get(2, 2), Some(5.0));
+        assert_eq!(leto_csr.get(0, 1), None);
+    }
+
+    #[test]
+    fn leto_csr_to_kwavers_csr_roundtrip() {
+        use super::CompressedSparseRowMatrix;
+        let kw = three_by_three_sample();        let leto_csr = leto::CsrArray::from(&kw);
+        let back = CompressedSparseRowMatrix::from(&leto_csr);
+
+        assert_eq!(back.rows, kw.rows);
+        assert_eq!(back.cols, kw.cols);
+        assert_eq!(back.nnz, kw.nnz);
+        // Entries are sorted by column within each row after the roundtrip.
+        let (vals0, cols0) = back.get_row(0);
+        assert_eq!(vals0, &[1.0, 2.0]);
+        assert_eq!(cols0, &[0_usize, 2_usize]);
+        let (vals1, cols1) = back.get_row(1);
+        assert_eq!(vals1, &[3.0]);
+        assert_eq!(cols1, &[1_usize]);
     }
 }

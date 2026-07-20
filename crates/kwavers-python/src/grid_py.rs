@@ -16,7 +16,7 @@ use pyo3::prelude::*;
 /// ```python
 /// grid = Grid(nx=128, ny=128, nz=128, dx=0.1e-3, dy=0.1e-3, dz=0.1e-3)
 /// ```
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Grid {
     /// Internal kwavers grid

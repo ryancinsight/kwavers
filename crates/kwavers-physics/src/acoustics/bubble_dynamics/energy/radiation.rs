@@ -1,8 +1,9 @@
 //! Stefan-Boltzmann radiation losses
 
-use uom::si::f64::Power;
-use uom::si::power::watt;
-use uom::si::thermodynamic_temperature::kelvin;
+use aequitas::systems::si::{
+    quantities::Power,
+    units::{Kelvin, Watt},
+};
 
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
@@ -31,7 +32,7 @@ impl EnergyBalanceCalculator {
     #[must_use]
     pub fn calculate_radiation_losses(&self, state: &BubbleState) -> Power {
         if !self.enable_radiation || state.temperature < 5000.0 {
-            return Power::new::<watt>(0.0);
+            return Power::from_unit::<Watt>(0.0);
         }
 
         // Emissivity (assume blackbody for high-temperature plasma)
@@ -42,11 +43,11 @@ impl EnergyBalanceCalculator {
 
         // Temperature to the fourth power
         let t_bubble_4 = state.temperature.powi(4);
-        let t_ambient_4 = self.ambient_temperature.get::<kelvin>().powi(4);
+        let t_ambient_4 = self.ambient_temperature.in_unit::<Kelvin>().powi(4);
 
         // Radiation power (positive = energy loss from bubble)
         let radiation_power = area * EMISSIVITY * STEFAN_BOLTZMANN * (t_bubble_4 - t_ambient_4);
 
-        Power::new::<watt>(-radiation_power)
+        Power::from_unit::<Watt>(-radiation_power)
     }
 }

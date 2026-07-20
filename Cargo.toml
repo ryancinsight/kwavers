@@ -3,6 +3,9 @@ members = ["crates/kwavers", "xtask", "crates/kwavers-python", "crates/kwavers-c
 resolver = "2"
 
 [workspace.dependencies]
+num-complex = "0.4"
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "0f9d77ab00eacf4225c0c4a54c0de3c9f41999a9", default-features = false, features = ["std"] }
+proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus", rev = "335e5297b28c334987bd18bd85a09393a90dfe5f" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -28,7 +31,7 @@ moirai-parallel = { path = "../moirai/moirai-parallel", default-features = false
 leto = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 leto-ops = { git = "https://github.com/ryancinsight/leto.git", default-features = false, features = ["std"] }
 eunomia = { git = "https://github.com/ryancinsight/eunomia", default-features = false, features = ["std"] }
-pyo3 = { version = "0.22", features = ["extension-module", "abi3-py39"] }
+pyo3 = { version = "0.29", features = ["extension-module", "abi3-py39"] }
 numpy = "0.22"
 
 anyhow = "1.0"
@@ -145,5 +148,4 @@ hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
 melinoe = { path = "../melinoe" }
 
 [patch.crates-io]
-numpy = { path = "vendor/numpy-0.27.1" }
 melinoe = { path = "../melinoe" }

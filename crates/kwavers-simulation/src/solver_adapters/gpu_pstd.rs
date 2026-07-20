@@ -46,8 +46,8 @@ use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
     prepare_pstd_pressure_source, validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver,
-    MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest, PstdRunResult, SolverParams,
-    WgpuPstdStateProvider,
+    MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest, PstdRunInputs, PstdRunResult,
+    SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -453,16 +453,16 @@ impl GpuPstdSimulationAdapter {
 
         // ── Run GPU time loop ─────────────────────────────────────────────────
         let t0 = Instant::now();
-        let result = gpu_solver.run(
-            &sensor_indices,
-            &pressure_source.indices,
-            &pressure_source.signals,
-            pressure_source.uses_kspace_correction,
-            &[],
-            &[],
-            false,
+        let result = gpu_solver.run(PstdRunInputs {
+            sensor_indices: &sensor_indices,
+            source_indices: &pressure_source.indices,
+            source_signals: &pressure_source.signals,
+            pressure_source_correction: pressure_source.uses_kspace_correction,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
             output_request,
-        );
+        });
         self.store_sensor_data(&result.sensor_data, sensor_indices.len(), nt)?;
         self.computation_time += t0.elapsed();
         self.current_step += nt;

@@ -5,7 +5,7 @@
 use super::super::pipeline::{
     PstdBindGroupProvider, PstdBufferProvider, WgpuPstdBindGroupFactory, WgpuPstdBufferFactory,
 };
-use super::super::state::WgpuPstdState;
+use super::super::state::{PstdRunInputs, PstdRunScalars, WgpuPstdState};
 use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 
 const EMPTY_STORAGE_BUFFER_U32: [u32; 1] = [0];
@@ -77,35 +77,34 @@ impl WgpuPstdState {
         }
     }
 
-    pub(super) fn build_run_cache(
-        &mut self,
-        nt: usize,
-        total_points: usize,
-        records_peak_pressure: bool,
-        sensor_indices: &[u32],
-        source_indices: &[u32],
-        source_signals: &[f32],
-        vel_x_indices: &[u32],
-        vel_x_signals: &[f32],
-    ) {
-        let n_sensors = sensor_indices.len();
-        let n_src = source_indices.len();
-        let n_vel_x = vel_x_indices.len();
+    pub(super) fn build_run_cache(&mut self, scalars: PstdRunScalars, inputs: &PstdRunInputs<'_>) {
+        let n_sensors = inputs.sensor_indices.len();
+        let n_src = inputs.source_indices.len();
+        let n_vel_x = inputs.vel_x_indices.len();
+        let records_peak_pressure = inputs.output_request.includes_peak_pressure();
         rewrite_packed_source_buffer(
             &mut self.scratch_source_data,
-            source_indices,
-            source_signals,
+            inputs.source_indices,
+            inputs.source_signals,
         );
-        rewrite_packed_source_buffer(&mut self.scratch_vel_x_data, vel_x_indices, vel_x_signals);
+        rewrite_packed_source_buffer(
+            &mut self.scratch_vel_x_data,
+            inputs.vel_x_indices,
+            inputs.vel_x_signals,
+        );
 
-        let si_data: &[u32] = if sensor_indices.is_empty() {
+        let si_data: &[u32] = if inputs.sensor_indices.is_empty() {
             &EMPTY_STORAGE_BUFFER_U32
         } else {
-            sensor_indices
+            inputs.sensor_indices
         };
         let buffers = WgpuPstdBufferFactory::new(self.context.device());
-        let (sensor_len, output_storage_len) =
-            output_storage_lengths(n_sensors, nt, total_points, records_peak_pressure);
+        let (sensor_len, output_storage_len) = output_storage_lengths(
+            n_sensors,
+            scalars.nt,
+            scalars.total_points(),
+            records_peak_pressure,
+        );
 
         self.run_cache.sensor_indices_buf = Some(buffers.static_storage(si_data, "sensor_indices"));
         self.run_cache.sensor_data_buf =

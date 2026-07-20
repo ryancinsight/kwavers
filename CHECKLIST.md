@@ -17,13 +17,11 @@
       and PSTD full-spectrum scratch buffers.
 - [x] Verify source-filter and early-leapfrog CPU/GPU parity after the runner
       correction.
-- [ ] Verify the 100-step heterogeneous CPU/GPU contract, then run the
-      package GPU gate. Blocked locally while patched Leto and Hephaestus
-      manifests omit inherited `ndarray` and `num-complex` dependencies;
-      reopen after those provider manifests resolve, then reassess the
-      existing RITK/Apollo pin constraint.
+- [x] Verify the 100-step heterogeneous CPU/GPU contract and the complete
+      WGPU-featured package gate.
 - [ ] Add the private consumer's explicit peak-pressure integration regression.
-- [ ] Run full GPU-feature Nextest, Clippy, Rustdoc, and the consumer gate.
+- [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
+- [ ] Run the downstream consumer gate when that repository is in scope.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review
 

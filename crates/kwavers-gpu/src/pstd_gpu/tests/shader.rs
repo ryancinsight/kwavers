@@ -75,7 +75,11 @@ fn pstd_shader_accumulates_peak_pressure_in_the_requested_output_region() {
     let peak_start = src
         .find("fn accumulate_peak_pressure(")
         .expect("peak-pressure entry point must exist");
-    let peak_block = &src[peak_start..src.len().min(peak_start + 500)];
+    let peak_end = src[peak_start..]
+        .find("fn zero_kspace(")
+        .map(|offset| peak_start + offset)
+        .expect("the next shader entry point must delimit peak-pressure code");
+    let peak_block = &src[peak_start..peak_end];
 
     assert!(peak_block.contains("params.peak_offset + idx"));
     assert!(peak_block.contains("max(sensor_data[output_idx], abs(field_p[idx]))"));

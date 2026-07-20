@@ -215,6 +215,19 @@ jobs:
       - name: Run benchmarks
         run: cargo bench --locked -p kwavers --features="plotting"
 
+      - name: Save benchmark baseline
+        run: |
+          python3 .github/scripts/check_regressions.py save \
+            --workspace . \
+            --output .benchmarks/baseline.json
+
+      - name: Check benchmark regressions
+        run: |
+          python3 .github/scripts/check_regressions.py check \
+            --workspace . \
+            --baseline .benchmarks/baseline.json \
+            --threshold-pct 15
+
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest

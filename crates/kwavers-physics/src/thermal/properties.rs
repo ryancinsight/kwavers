@@ -2,10 +2,10 @@
 //!
 //! # Scope
 //!
-//! This module provides local scalar update laws for thermal therapy and
-//! thermometry workflows that need stable property updates from a reference
-//! state. It does not replace tissue-specific property tables; base values
-//! remain supplied by [`ThermalPropertyData`] or acoustic media records.
+//! This module composes the Proteus thermophysical response law with local
+//! perfusion, absorption, and acoustic updates used by thermal therapy and
+//! thermometry workflows. Tissue-specific base values remain supplied by
+//! [`ThermalPropertyData`] or acoustic media records.
 //!
 //! # Theorem: reference-state invariance
 //!
@@ -30,50 +30,16 @@
 //! - Gachouch, O. et al. (2025). A novel ultrasound thermometry method based on
 //!   thermal strain and short and constant acoustic bursts. *Sensors*, 25(2), 385.
 
-use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use aequitas::systems::si::quantities::{ReciprocalTemperature, ThermodynamicTemperature};
+use kwavers_core::constants::thermodynamic::{
+    BODY_TEMPERATURE_C, BODY_TEMPERATURE_K, KELVIN_OFFSET_C,
+};
 use kwavers_core::constants::tissue_thermal::{
     SOFT_TISSUE_ABSORPTION_COEFF_PER_C, SOFT_TISSUE_SOUND_SPEED_COEFF_PER_C,
     SPECIFIC_HEAT_COEFF_PER_C, THERMAL_CONDUCTIVITY_COEFF_PER_C,
 };
 use kwavers_medium::properties::ThermalPropertyData;
-
-/// Temperature-dependent thermal conductivity
-///
-/// # Formula
-///
-/// `k(T) = k0 * (1 + beta_k * (T - 37 °C))`.
-///
-/// # Proof of reference invariance
-///
-/// At `T = 37 °C`, the multiplier is `1 + beta_k * 0 = 1`, so `k(37) = k0`.
-///
-/// # Arguments
-///
-/// * `k0` - Base thermal conductivity (W/m/K)
-/// * `temperature` - Current temperature (°C)
-#[must_use]
-pub fn conductivity_vs_temperature(k0: f64, temperature: f64) -> f64 {
-    k0 * THERMAL_CONDUCTIVITY_COEFF_PER_C.mul_add(temperature - BODY_TEMPERATURE_C, 1.0)
-}
-
-/// Temperature-dependent specific heat
-///
-/// # Formula
-///
-/// `c_p(T) = c_p0 * (1 + beta_cp * (T - 37 °C))`.
-///
-/// # Proof of reference invariance
-///
-/// At `T = 37 °C`, the multiplier is one, so `c_p(37) = c_p0`.
-///
-/// # Arguments
-///
-/// * `c0` - Base specific heat capacity (J/kg/K)
-/// * `temperature` - Current temperature (°C)
-#[must_use]
-pub fn specific_heat_vs_temperature(c0: f64, temperature: f64) -> f64 {
-    c0 * SPECIFIC_HEAT_COEFF_PER_C.mul_add(temperature - BODY_TEMPERATURE_C, 1.0)
-}
+use proteus::{ConstantResponse, ConstitutiveLaw, LinearResponse, ResponseSet, TemperatureLaw};
 
 /// Temperature-dependent blood perfusion
 ///
@@ -113,26 +79,43 @@ pub fn perfusion_vs_temperature(w_b0: f64, temperature: f64) -> f64 {
 ///
 /// * `base_properties` - Base thermal properties at reference temperature
 /// * `temperature` - Current temperature (°C)
-/// # Panics
-/// - Panics if `Temperature-updated properties should be valid if base properties are valid`.
+/// # Errors
 ///
-#[must_use]
+/// Returns an error when the temperature is non-physical or an evaluated
+/// thermophysical property violates the Proteus contract.
+///
 pub fn update_properties(
     base_properties: &ThermalPropertyData,
     temperature: f64,
-) -> ThermalPropertyData {
+) -> Result<ThermalPropertyData, String> {
     let new_perfusion = base_properties
         .blood_perfusion
         .map(|w_b| perfusion_vs_temperature(w_b, temperature));
-
-    ThermalPropertyData::new(
-        conductivity_vs_temperature(base_properties.conductivity, temperature),
-        specific_heat_vs_temperature(base_properties.specific_heat, temperature),
-        base_properties.density, // Density assumed constant over typical temperature ranges
-        new_perfusion,
-        base_properties.blood_specific_heat, // Blood specific heat relatively constant
+    let responses = ResponseSet::new(
+        ConstantResponse,
+        LinearResponse::new(ReciprocalTemperature::from_base(SPECIFIC_HEAT_COEFF_PER_C))
+            .map_err(|error| error.to_string())?,
+        LinearResponse::new(ReciprocalTemperature::from_base(
+            THERMAL_CONDUCTIVITY_COEFF_PER_C,
+        ))
+        .map_err(|error| error.to_string())?,
+    );
+    let law = TemperatureLaw::new(
+        *base_properties.thermophysical(),
+        ThermodynamicTemperature::from_base(BODY_TEMPERATURE_K),
+        responses,
     )
-    .expect("Temperature-updated properties should be valid if base properties are valid")
+    .map_err(|error| error.to_string())?;
+    let temperature = ThermodynamicTemperature::from_base(temperature + KELVIN_OFFSET_C);
+    let thermophysical = law
+        .properties(&temperature)
+        .map_err(|error| error.to_string())?;
+
+    ThermalPropertyData::from_thermophysical(
+        thermophysical,
+        new_perfusion,
+        base_properties.blood_specific_heat,
+    )
 }
 
 /// Acoustic absorption coefficient temperature dependence
@@ -193,17 +176,19 @@ mod tests {
         let base = ThermalPropertyData::soft_tissue();
 
         // Test at elevated temperature
-        let props_45 = update_properties(&base, 45.0);
+        let props_45 = update_properties(&base, 45.0).expect("45 °C produces physical properties");
 
         // Conductivity should increase
-        assert!(props_45.conductivity > base.conductivity);
+        assert!(props_45.conductivity() > base.conductivity());
 
         // Specific heat should increase slightly
-        assert!(props_45.specific_heat > base.specific_heat);
+        assert!(props_45.specific_heat() > base.specific_heat());
 
         // Perfusion should decrease (approaching shutdown)
-        let base_perfusion = base.blood_perfusion.unwrap();
-        let new_perfusion = props_45.blood_perfusion.unwrap();
+        let base_perfusion = base.blood_perfusion.expect("soft tissue defines perfusion");
+        let new_perfusion = props_45
+            .blood_perfusion
+            .expect("updated soft tissue retains perfusion");
         assert!(new_perfusion < base_perfusion);
     }
 
@@ -240,11 +225,17 @@ mod tests {
 
     #[test]
     fn test_conductivity_increases_with_temperature() {
-        let k0 = 0.5;
-
-        let k_37 = conductivity_vs_temperature(k0, BODY_TEMPERATURE_C);
-        let k_45 = conductivity_vs_temperature(k0, 45.0);
-        let k_30 = conductivity_vs_temperature(k0, 30.0);
+        let base = ThermalPropertyData::soft_tissue();
+        let k0 = base.conductivity();
+        let k_37 = update_properties(&base, BODY_TEMPERATURE_C)
+            .expect("body temperature is physical")
+            .conductivity();
+        let k_45 = update_properties(&base, 45.0)
+            .expect("45 °C is physical")
+            .conductivity();
+        let k_30 = update_properties(&base, 30.0)
+            .expect("30 °C is physical")
+            .conductivity();
 
         assert_eq!(k_37, k0);
         assert_eq!(k_45, k0 * (1.0 + THERMAL_CONDUCTIVITY_COEFF_PER_C * 8.0));
@@ -289,16 +280,24 @@ mod tests {
     #[test]
     fn test_property_update_preserves_density() {
         let base = ThermalPropertyData::soft_tissue();
-        let updated = update_properties(&base, 40.0);
+        let updated = update_properties(&base, 40.0).expect("40 °C produces physical properties");
 
         // Density should not change with moderate temperature variations
-        assert_eq!(updated.density, base.density);
+        assert_eq!(updated.density(), base.density());
+    }
+
+    #[test]
+    fn property_update_rejects_non_physical_temperature() {
+        let base = ThermalPropertyData::soft_tissue();
+        let error = update_properties(&base, f64::NAN)
+            .expect_err("non-finite thermodynamic temperature must be rejected");
+        assert!(error.contains("Evaluation"));
     }
 
     #[test]
     fn test_property_update_preserves_blood_specific_heat() {
         let base = ThermalPropertyData::soft_tissue();
-        let updated = update_properties(&base, 40.0);
+        let updated = update_properties(&base, 40.0).expect("40 °C produces physical properties");
 
         // Blood specific heat relatively constant
         assert_eq!(updated.blood_specific_heat, base.blood_specific_heat);
@@ -309,30 +308,32 @@ mod tests {
         let base = ThermalPropertyData::soft_tissue();
 
         // Update to elevated temperature
-        let elevated = update_properties(&base, 45.0);
+        let elevated = update_properties(&base, 45.0).expect("45 °C produces physical properties");
 
         // Verify changes
-        assert!(elevated.conductivity > base.conductivity);
-        assert!(elevated.specific_heat > base.specific_heat);
+        assert!(elevated.conductivity() > base.conductivity());
+        assert!(elevated.specific_heat() > base.specific_heat());
 
         // Update back to reference temperature
-        let back_to_ref = update_properties(&base, BODY_TEMPERATURE_C);
+        let back_to_ref = update_properties(&base, BODY_TEMPERATURE_C)
+            .expect("body temperature produces reference properties");
 
         // The formulas are applied independently each time, so this just verifies
         // that applying the formula at reference temperature preserves values
         // (within numerical precision)
-        let ref_again = update_properties(&base, BODY_TEMPERATURE_C);
+        let ref_again = update_properties(&base, BODY_TEMPERATURE_C)
+            .expect("body temperature produces reference properties");
 
-        assert!((back_to_ref.conductivity - ref_again.conductivity).abs() < 1e-10);
-        assert!((back_to_ref.specific_heat - ref_again.specific_heat).abs() < 1e-10);
-        assert!((ref_again.conductivity - base.conductivity).abs() < 1e-10);
-        assert!((ref_again.specific_heat - base.specific_heat).abs() < 1e-10);
+        assert!((back_to_ref.conductivity() - ref_again.conductivity()).abs() < 1e-10);
+        assert!((back_to_ref.specific_heat() - ref_again.specific_heat()).abs() < 1e-10);
+        assert!((ref_again.conductivity() - base.conductivity()).abs() < 1e-10);
+        assert!((ref_again.specific_heat() - base.specific_heat()).abs() < 1e-10);
 
         // Verify that elevated temperature actually changed the properties
         let conductivity_change =
-            (elevated.conductivity - base.conductivity).abs() / base.conductivity;
+            (elevated.conductivity() - base.conductivity()).abs() / base.conductivity();
         let specific_heat_change =
-            (elevated.specific_heat - base.specific_heat).abs() / base.specific_heat;
+            (elevated.specific_heat() - base.specific_heat()).abs() / base.specific_heat();
 
         assert!(
             conductivity_change > 0.01,

@@ -10,6 +10,8 @@
   share one weighted pressure-source schedule using the uploaded local sound
   speed and BLI mask weights. Unsampled source objects and unsupported adapter
   velocity-source assembly now fail explicitly instead of dropping inputs.
+- Python bindings now resolve crates.io `numpy` 0.29 directly. The obsolete
+  vendored 0.27 patch and its migration allowlist entries are removed.
 
 ### Breaking (2026-07-17) - GPU PSTD peak-pressure output [major]
 
@@ -22,6 +24,35 @@
   sensor-only runs retain their former allocation and transfer contract. The
   real GPU regression verifies the envelope dominates the final pressure frame
   at every voxel. `kwavers-gpu` advances from 4.1.0 to 5.0.0. See ADR 040.
+
+### Breaking (2026-07-19) - Aequitas quantity provider [major]
+
+- Replace both Kwavers-owned thermal temperature polynomials with Proteus
+  `TemperatureLaw` composition. `TemperatureDependentThermal` and
+  `properties_at_temperature` now return `Result` for invalid thermodynamic
+  states, and `thermal::properties::update_properties` no longer panics.
+  The removed conductivity and specific-heat scalar helpers have no
+  compatibility aliases; callers evaluate the cohesive property bundle. See
+  ADR 042.
+- `ThermalPropertyData` now composes Proteus `ThermophysicalProperties`
+  instead of exposing duplicate raw density, heat-capacity, and conductivity
+  storage. Callers use the corresponding accessors; Proteus owns validation and
+  the thermal-diffusivity law while Kwavers retains tissue perfusion.
+- Replace the `kwavers-physics` bubble-energy dependency on `uom` with the
+  first-party Aequitas dimensional-law provider. Public energy-balance methods
+  now accept and return Aequitas quantity types; callers construct and inspect
+  them with `from_unit::<Unit>` and `in_unit::<Unit>`.
+- Pin the Aequitas source-identity repair so Aequitas and Kwavers resolve the
+  same Eunomia package. Locked Linux CI no longer attempts to rewrite the
+  dependency graph before compilation, and the supply-chain policy explicitly
+  admits the public Aequitas Git source.
+- Correct the temperature-update contract from heat capacity in J/K to
+  specific heat capacity in J/(kg·K). The complete update now evaluates
+  `ΔT = ΔE / (m c_v)` through dimensional arithmetic without raw unit
+  extraction. See ADR 040.
+- Update the CT/NIfTI integration test to construct images through RITK's
+  current public `ritk_image::Image` re-export. This removes the obsolete
+  `native` module path that blocked the hosted all-target Clippy gate.
 
 ### Added (2026-07-17) - GPU PSTD shared FFT lattice [minor]
 

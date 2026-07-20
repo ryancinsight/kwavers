@@ -20,7 +20,7 @@ use pyo3::prelude::*;
 /// Mirrors k-Wave's `sensor.record_start_index` (1-based).  The default `1`
 /// records from the first time step.  Setting it to `N` (1 ≤ N ≤ Nt) starts
 /// recording at step N and the output has `Nt - N + 1` columns.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Sensor {
     /// Sensor type

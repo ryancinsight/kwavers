@@ -21,7 +21,7 @@ use pyo3::prelude::*;
 /// - Ihlenburg (1998) "Finite Element Analysis of Acoustic Scattering" for Helmholtz FEM
 /// - Brebbia & Dominguez (1992) "Boundary Elements" for BEM
 /// - Hesthaven & Warburton (2007) "Nodal Discontinuous Galerkin Methods" for DG
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum SolverType {
     /// Finite Difference Time Domain solver

@@ -108,7 +108,8 @@ impl PennesSolver {
             .properties
             .blood_specific_heat
             .expect("blood_specific_heat validated in constructor");
-        let perfusion_term = w_b * c_b / (self.properties.density * self.properties.specific_heat);
+        let perfusion_term =
+            w_b * c_b / (self.properties.density() * self.properties.specific_heat());
 
         self.temperature_prev.assign(&self.temperature);
 
@@ -140,9 +141,9 @@ impl PennesSolver {
                         laplacian,
                         -(perfusion_term * (t - self.arterial_temperature)),
                     ) + self.metabolic_heat
-                        / (self.properties.density * self.properties.specific_heat)
+                        / (self.properties.density() * self.properties.specific_heat())
                         + heat_source[[i, j, k]]
-                            / (self.properties.density * self.properties.specific_heat);
+                            / (self.properties.density() * self.properties.specific_heat());
 
                     self.temperature[[i, j, k]] = self.dt.mul_add(dt_dt, t);
                 }

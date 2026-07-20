@@ -1,6 +1,6 @@
 //! PyO3 wrappers for static acoustic-lens helpers.
 
-use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray1};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -32,7 +32,7 @@ pub fn acoustic_lens_delay_profile(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let lens = AcousticLens::silicone(focal_length_m, aperture_m);
     let tau = lens.aperture_delay_profile(radii, medium_sound_speed);
-    Ok(numpy::ndarray::Array1::from(tau).to_pyarray(py).unbind())
+    Ok(PyArray1::from_vec(py, tau).unbind())
 }
 
 /// Fresnel zone-plate boundary radii within the aperture.
@@ -56,9 +56,7 @@ pub fn fresnel_zone_radii(
 ) -> PyResult<Py<PyArray1<f64>>> {
     use kwavers_transducer::transducers::physics::materials::FresnelZonePlate;
     let zp = FresnelZonePlate::new(focal_length_m, wavelength_m, aperture_radius_m);
-    Ok(numpy::ndarray::Array1::from(zp.zone_radii())
-        .to_pyarray(py)
-        .unbind())
+    Ok(PyArray1::from_vec(py, zp.zone_radii()).unbind())
 }
 
 /// Isoplanatic mechanical-steering pose curve for a single-element corrective
@@ -96,8 +94,8 @@ pub fn isoplanatic_steering_curve(
         }
     }
     Ok((
-        numpy::ndarray::Array1::from(thetas).to_pyarray(py).unbind(),
-        numpy::ndarray::Array1::from(tzs).to_pyarray(py).unbind(),
+        PyArray1::from_vec(py, thetas).unbind(),
+        PyArray1::from_vec(py, tzs).unbind(),
     ))
 }
 
@@ -128,5 +126,5 @@ pub fn corrective_lens_thickness(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let p = clt(phase, frequency_hz, c_water, c_lens, min_thickness_m);
-    Ok(numpy::ndarray::Array1::from(p).to_pyarray(py).unbind())
+    Ok(PyArray1::from_vec(py, p).unbind())
 }

@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-GPU-062 — GPU PSTD peak-pressure output [major] — in-progress
+## KW-GPU-062 — GPU PSTD peak-pressure output [major] — blocked
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
   ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`,
@@ -18,15 +18,16 @@
 - Evidence target: value-semantic output-selection and final-versus-peak
   invariants, a real WGPU burst regression, GPU-feature Nextest, and a
   downstream consumer regression.
-- Progress: the simulation adapter now requests the provider's explicit peak
+- Evidence: the simulation adapter requests the provider's explicit peak
   output, retains it separately from final fields, and shares the direct
   runner's weighted local-medium pressure-source schedule. It rejects both
   unsampled `Source` objects and unsupported velocity-source assembly rather
-  than discarding source information. Earlier focused GPU-feature Nextest
-  passed; the source and peak-output rerun plus the full package gate are
-  blocked until the patched Leto and Hephaestus manifests again resolve their
-  inherited `ndarray` and `num-complex` dependencies. Downstream integration
-  remains after that provider-graph verification.
+  than discarding source information. Warning-denied all-feature Clippy passes,
+  and the WGPU-featured Nextest lane passes 259/259 tests, including the
+  heterogeneous CPU/GPU contract and real peak-envelope runs.
+- Blocker: the downstream full-wave consumer is outside this repository's
+  authorized scope. Reopen when its checkout is available for the explicit
+  peak-pressure integration regression.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — review
 
@@ -8388,3 +8389,20 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   SemVer gate now passes against `main` with `--release-type major` after
   Leto, Gaia, and Kwavers declare the common Leto/Eunomia Git sources and use
   Atlas-root patches only for local integration.
+
+## KW-MAT-042 — Proteus temperature response [arch] [major] — done
+
+- Outcome: Proteus owns the shared constant, linear, and quadratic
+  thermophysical temperature response; Kwavers retains tissue catalogs,
+  perfusion, absorption, and acoustic behavior.
+- Scope: `kwavers-medium` temperature-dependent thermal properties,
+  `kwavers-physics` cohesive thermal updates, provider pins, ADR 042, tests,
+  and changelog. Acoustic response laws remain out of scope.
+- Acceptance oracle: both duplicate scalar temperature polynomials are absent;
+  reference-state values are invariant; invalid temperatures return errors;
+  combined diffusivity uses the acoustic density; affected package Clippy,
+  Nextest, doctests, Rustdoc, dependency, and SemVer gates pass.
+- Dependencies: Aequitas `0f9d77a`; Proteus `335e529`.
+- Evidence: focused warning-denied Clippy and 1,743 package tests pass; hosted
+  verification and SemVer evidence attach to the delivery pull request.
+- Decision: [ADR 042](docs/ADR/042-proteus-temperature-response.md).

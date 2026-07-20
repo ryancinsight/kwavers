@@ -21,7 +21,7 @@ use pyo3::prelude::*;
 /// - Initial pressure: p(x, 0) = p₀(x)
 ///
 /// Equivalent to k-Wave source struct.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Source {
     /// Source type identifier

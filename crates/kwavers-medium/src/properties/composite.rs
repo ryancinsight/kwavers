@@ -248,7 +248,7 @@ mod tests {
             .thermal(ThermalPropertyData::water())
             .build();
 
-        assert!(props.thermal.as_ref().unwrap().conductivity > 0.0);
+        assert!(props.thermal.as_ref().unwrap().conductivity() > 0.0);
         assert!(props.elastic.is_none());
     }
 
@@ -258,7 +258,7 @@ mod tests {
         let tissue = CompositeMaterialProperties::soft_tissue();
         let bone = CompositeMaterialProperties::bone();
 
-        assert!(water.thermal.as_ref().unwrap().conductivity > 0.0);
+        assert!(water.thermal.as_ref().unwrap().conductivity() > 0.0);
         assert!(tissue.electromagnetic.as_ref().unwrap().permittivity > 0.0);
         assert!(bone.elastic.as_ref().unwrap().mu > 0.0);
         assert!(bone.strength.as_ref().unwrap().yield_strength > 0.0);

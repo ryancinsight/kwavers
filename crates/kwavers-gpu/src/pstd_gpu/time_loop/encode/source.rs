@@ -3,6 +3,14 @@
 use super::super::super::{state::WgpuPstdState, PstdParams};
 use super::StepCtx;
 
+struct SourceInjection<'a> {
+    bind_group: &'a wgpu::BindGroup,
+    count: usize,
+    apply_correction: bool,
+    inject_pipeline: &'a wgpu::ComputePipeline,
+    add_pipeline: &'a wgpu::ComputePipeline,
+}
+
 impl WgpuPstdState {
     /// Encode a k-space-filtered additive source into its destination field.
     fn encode_source_injection(
@@ -10,12 +18,8 @@ impl WgpuPstdState {
         cpass: &mut wgpu::ComputePass<'_>,
         ctx: &StepCtx,
         bg: &wgpu::BindGroup,
-        source_bind_group: &wgpu::BindGroup,
         step: u32,
-        source_count: usize,
-        apply_correction: bool,
-        inject_pipeline: &wgpu::ComputePipeline,
-        add_pipeline: &wgpu::ComputePipeline,
+        injection: SourceInjection<'_>,
     ) {
         let ew = ctx.elem_wg;
         self.dispatch(
@@ -27,18 +31,18 @@ impl WgpuPstdState {
             "zero_ksp",
         );
         let source_params = PstdParams {
-            axis: source_count as u32,
+            axis: injection.count as u32,
             ..ctx.params(step, 0)
         };
         self.dispatch(
             cpass,
             &source_params,
-            inject_pipeline,
-            source_bind_group,
-            StepCtx::ceil_div(source_count, 256),
+            injection.inject_pipeline,
+            injection.bind_group,
+            StepCtx::ceil_div(injection.count, 256),
             "inject_source",
         );
-        if apply_correction {
+        if injection.apply_correction {
             self.fft_3d(cpass, bg, ctx, step);
             self.dispatch(
                 cpass,
@@ -53,7 +57,7 @@ impl WgpuPstdState {
         self.dispatch(
             cpass,
             &ctx.params(step, 0),
-            add_pipeline,
+            injection.add_pipeline,
             bg,
             ew,
             "add_source",
@@ -75,12 +79,14 @@ impl WgpuPstdState {
                 cpass,
                 ctx,
                 bg,
-                bg_vel,
                 step,
-                ctx.n_vel_x,
-                ctx.velocity_source_correction,
-                &self.pipelines.inject_vel_x,
-                &self.pipelines.add_kspace_to_field_ux,
+                SourceInjection {
+                    bind_group: bg_vel,
+                    count: ctx.n_vel_x,
+                    apply_correction: ctx.velocity_source_correction,
+                    inject_pipeline: &self.pipelines.inject_vel_x,
+                    add_pipeline: &self.pipelines.add_kspace_to_field_ux,
+                },
             );
         }
     }
@@ -99,12 +105,14 @@ impl WgpuPstdState {
                 cpass,
                 ctx,
                 bg,
-                bg,
                 step,
-                ctx.n_src,
-                ctx.pressure_source_correction,
-                &self.pipelines.inject_src,
-                &self.pipelines.add_kspace_to_density,
+                SourceInjection {
+                    bind_group: bg,
+                    count: ctx.n_src,
+                    apply_correction: ctx.pressure_source_correction,
+                    inject_pipeline: &self.pipelines.inject_src,
+                    add_pipeline: &self.pipelines.add_kspace_to_density,
+                },
             );
         }
     }

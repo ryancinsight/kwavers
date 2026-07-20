@@ -4,46 +4,37 @@
 
 use super::super::{
     state::{
-        PstdFinalFields, PstdOutputRequest, PstdRunInputs, PstdRunResult, PstdRunScalars,
-        PstdRunState, PstdStateProvider, WgpuPstdState,
+        PstdFinalFields, PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState,
+        PstdStateProvider, WgpuPstdState,
     },
     GpuPstdSolver, PstdParams,
 };
 use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 use super::encode::StepCtx;
-use super::passes::{PstdPassProvider, WgpuPstdPassProvider};
+use super::passes::{PstdPassProvider, SourceActivity, StepBindGroups, WgpuPstdPassProvider};
 
 impl PstdRunScalars {
     #[inline]
-    fn total_points(self) -> usize {
+    pub(super) fn total_points(self) -> usize {
         self.nx * self.ny * self.nz
     }
 
-    fn step_context(
-        self,
-        n_sensors: usize,
-        n_src: usize,
-        n_vel_x: usize,
-        pressure_source_correction: bool,
-        velocity_source_correction: bool,
-        peak_offset: usize,
-        record_peak_pressure: bool,
-    ) -> StepCtx {
+    fn step_context(self, inputs: &PstdRunInputs<'_>, peak_offset: usize) -> StepCtx {
         StepCtx {
             nx: self.nx as u32,
             ny: self.ny as u32,
             nz: self.nz as u32,
             dt: self.dt as f32,
-            n_sensors: n_sensors as u32,
+            n_sensors: inputs.sensor_indices.len() as u32,
             nt: self.nt as u32,
             nonlinear: u32::from(self.nonlinear),
             absorbing: u32::from(self.absorbing),
             peak_offset: peak_offset as u32,
-            record_peak_pressure: u32::from(record_peak_pressure),
-            n_src,
-            n_vel_x,
-            pressure_source_correction,
-            velocity_source_correction,
+            record_peak_pressure: u32::from(inputs.output_request.includes_peak_pressure()),
+            n_src: inputs.source_indices.len(),
+            n_vel_x: inputs.vel_x_indices.len(),
+            pressure_source_correction: inputs.pressure_source_correction,
+            velocity_source_correction: inputs.velocity_source_correction,
             elem_wg: StepCtx::ceil_div(self.total_points(), 256),
         }
     }
@@ -103,16 +94,7 @@ impl PstdRunState for WgpuPstdState {
             && self.run_cache.sensor_indices_buf.is_some();
 
         if !cache_valid {
-            self.build_run_cache(
-                scalars.nt,
-                scalars.total_points(),
-                records_peak_pressure,
-                inputs.sensor_indices,
-                inputs.source_indices,
-                inputs.source_signals,
-                inputs.vel_x_indices,
-                inputs.vel_x_signals,
-            );
+            self.build_run_cache(scalars, &inputs);
         } else {
             self.refresh_signal_tails(
                 inputs.source_signals,
@@ -153,15 +135,7 @@ impl PstdRunState for WgpuPstdState {
             passes.encode_zero_fields(cpass, &zero_params, bg_sensor, elem_wg);
         });
 
-        let ctx = scalars.step_context(
-            n_sensors,
-            n_src,
-            n_vel_x,
-            inputs.pressure_source_correction,
-            inputs.velocity_source_correction,
-            self.run_cache.peak_offset,
-            records_peak_pressure,
-        );
+        let ctx = scalars.step_context(&inputs, self.run_cache.peak_offset);
         let pressure_source_steps = active_source_steps(inputs.source_signals, n_src, scalars.nt);
         let velocity_source_steps = active_source_steps(inputs.vel_x_signals, n_vel_x, scalars.nt);
 
@@ -179,11 +153,15 @@ impl PstdRunState for WgpuPstdState {
                     passes.encode_time_step(
                         cpass,
                         &ctx,
-                        bg_sensor,
-                        bg_sensor_vel,
+                        StepBindGroups {
+                            sensor: bg_sensor,
+                            velocity_sensor: bg_sensor_vel,
+                        },
                         step as u32,
-                        pressure_source_steps[step],
-                        velocity_source_steps[step],
+                        SourceActivity {
+                            pressure: pressure_source_steps[step],
+                            velocity: velocity_source_steps[step],
+                        },
                     );
                 },
             );
@@ -277,27 +255,11 @@ where
     ///
     /// Returns the requested host outputs.
     ///
-    /// # Arguments
-    /// * `sensor_indices` - flat grid indices of sensor points.
-    /// * `source_indices` - flat grid indices of pressure source injection points.
-    /// * `source_signals` - source pressure amplitude per `(source_pt, step)`.
-    /// * `pressure_source_correction` - whether pressure sources require k-space correction.
-    /// * `vel_x_indices` - flat grid indices of `ux` velocity source points.
-    /// * `vel_x_signals` - `ux` velocity amplitude per `(source_pt, step)`.
-    /// * `velocity_source_correction` - whether velocity sources require k-space correction.
+    /// Borrowed inputs preserve the source, sensor, correction, and output
+    /// request contract as one operation-level value.
     /// # Panics
     /// Panics if the provider run cache is not populated after cache rebuild.
-    pub fn run(
-        &mut self,
-        sensor_indices: &[u32],
-        source_indices: &[u32],
-        source_signals: &[f32],
-        pressure_source_correction: bool,
-        vel_x_indices: &[u32],
-        vel_x_signals: &[f32],
-        velocity_source_correction: bool,
-        output_request: PstdOutputRequest,
-    ) -> PstdRunResult {
+    pub fn run(&mut self, inputs: PstdRunInputs<'_>) -> PstdRunResult {
         let scalars = PstdRunScalars {
             nx: self.nx,
             ny: self.ny,
@@ -306,16 +268,6 @@ where
             dt: self.dt,
             nonlinear: self.nonlinear,
             absorbing: self.absorbing,
-        };
-        let inputs = PstdRunInputs {
-            sensor_indices,
-            source_indices,
-            source_signals,
-            pressure_source_correction,
-            vel_x_indices,
-            vel_x_signals,
-            velocity_source_correction,
-            output_request,
         };
 
         self.state.run_pstd(scalars, inputs)

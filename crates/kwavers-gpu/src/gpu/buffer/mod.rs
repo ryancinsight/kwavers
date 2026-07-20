@@ -9,7 +9,7 @@
 //! # Examples
 //!
 //! ```no_run
-//! # use kwavers::gpu::buffer::{GpuBufferData, BufferUsage};
+//! # use kwavers_gpu::gpu::buffer::{BufferUsage, GpuBufferData};
 //! # async fn example(device: &wgpu::Device, queue: &wgpu::Queue) -> Result<(), Box<dyn std::error::Error>> {
 //! // Create a buffer with initial data
 //! let data = vec![1.0f32, 2.0, 3.0, 4.0];
