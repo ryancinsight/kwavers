@@ -19,9 +19,9 @@
   boundary, Miri, and security gates, then exposed a moving Atlas `main`
   checkout that made the lockfile stale before compilation. The reusable
   checkout action now pins Atlas commit `58d7a6e`; a fresh matrix is required.
-- The migrated comprehensive clinical workflow is partitioned into 451/158/97/80
+- The migrated comprehensive clinical workflow is partitioned into 466/149/146/80
   line concern leaves. Default and GPU builds plus warning-denied Clippy pass;
-  no no-op uncertainty clone or vtable path remains.
+  no no-op uncertainty clone, vtable path, or redundant CEUS map copy remains.
 - Hosted merge remains the terminal transition.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress

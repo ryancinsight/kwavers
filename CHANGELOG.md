@@ -27,7 +27,8 @@
 - Partition the touched comprehensive clinical workflow into root, modality,
   presentation, and result concerns. Remove its unused cloned uncertainty maps
   and `Box<dyn UncertaintyResult>` vector; its CFL helper now monomorphizes over
-  the concrete medium.
+  the concrete medium, and CEUS retains the provider-owned Leto perfusion map
+  without copying it through a second allocation.
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 

@@ -14,7 +14,7 @@ use kwavers_solver::forward::elastic::{ElasticWaveConfig, ElasticWaveSolver};
 use kwavers_solver::inverse::elastography::{
     NonlinearInversion, NonlinearInversionConfig, ShearWaveInversion, ShearWaveInversionConfig,
 };
-use leto::{Array3, Array4, SliceArg};
+use leto::{Array4, SliceArg};
 
 fn estimate_elastic_time_step<M: Medium>(
     grid: &Grid,
@@ -147,18 +147,9 @@ pub(super) fn perform_contrast_enhanced_ultrasound(
         .simulate_contrast_signal(&injection_profile, 30.0)?;
 
     let perfusion_model = CeusPerfusionModel::gamma_variate_model();
-    let perfusion_map_nd = workflow
+    let perfusion_map = workflow
         .ceus_system
         .estimate_perfusion(&contrast_signal, &perfusion_model)?;
-    let [nx, ny, nz] = perfusion_map_nd.shape();
-    let perfusion_map =
-        Array3::from_shape_vec([nx, ny, nz], perfusion_map_nd.iter().copied().collect()).map_err(
-            |error| {
-                KwaversError::InvalidInput(format!(
-                    "CEUS perfusion map must convert to Leto Array3: {error}"
-                ))
-            },
-        )?;
     let perfusion_metrics = workflow.calculate_perfusion_metrics(&perfusion_map)?;
 
     println!(

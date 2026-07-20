@@ -56,10 +56,12 @@
 
 - Structural boundary 2026-07-20: the Tyche migration touched a 794-line
   clinical workflow example spanning modality execution, result storage, and
-  presentation. It is now a 451-line workflow root with 158/97/80-line modality,
+  presentation. It is now a 466-line workflow root with 149/146/80-line modality,
   presentation, and result leaves. The no-op cloned uncertainty maps and
   `Box<dyn UncertaintyResult>` vector are deleted, and the CFL helper statically
-  dispatches over its medium. Default/GPU checks and warning-denied Clippy pass.
+  dispatches over its medium. CEUS now retains the provider-owned Leto map
+  without a collect-and-reconstruct copy. Default/GPU checks and warning-denied
+  Clippy pass.
 
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a
