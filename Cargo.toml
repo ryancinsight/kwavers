@@ -4,7 +4,8 @@ resolver = "2"
 
 [workspace.dependencies]
 num-complex = "0.4"
-aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "49ee8004e008a480ac871c3782d00d921ba41c01", default-features = false, features = ["std"] }
+aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "14a29eda31d312b3254b88cd1d5b48da2a21e59f", default-features = false, features = ["std"] }
+proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus", rev = "2b06be323c712e6643f266c49ad5caa7583c2066" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal

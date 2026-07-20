@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=49ee8004e008a480ac871c3782d00d921ba41c01#49ee8004e008a480ac871c3782d00d921ba41c01"
+source = "git+https://github.com/ryancinsight/aequitas?rev=14a29eda31d312b3254b88cd1d5b48da2a21e59f#14a29eda31d312b3254b88cd1d5b48da2a21e59f"
 dependencies = [
  "eunomia",
  "typenum",
@@ -3491,6 +3491,7 @@ dependencies = [
 name = "kwavers-medium"
 version = "4.0.0"
 dependencies = [
+ "aequitas",
  "approx",
  "eunomia",
  "kwavers-core",
@@ -3501,6 +3502,7 @@ dependencies = [
  "log",
  "moirai-parallel",
  "proptest",
+ "proteus",
  "serde",
 ]
 
@@ -5072,6 +5074,15 @@ dependencies = [
  "rusty-fork",
  "tempfile",
  "unarray",
+]
+
+[[package]]
+name = "proteus"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/proteus?rev=2b06be323c712e6643f266c49ad5caa7583c2066#2b06be323c712e6643f266c49ad5caa7583c2066"
+dependencies = [
+ "aequitas",
+ "eunomia",
 ]
 
 [[package]]

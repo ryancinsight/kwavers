@@ -4,6 +4,10 @@
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 
+- `ThermalPropertyData` now composes Proteus `ThermophysicalProperties`
+  instead of exposing duplicate raw density, heat-capacity, and conductivity
+  storage. Callers use the corresponding accessors; Proteus owns validation and
+  the thermal-diffusivity law while Kwavers retains tissue perfusion.
 - Replace the `kwavers-physics` bubble-energy dependency on `uom` with the
   first-party Aequitas dimensional-law provider. Public energy-balance methods
   now accept and return Aequitas quantity types; callers construct and inspect
