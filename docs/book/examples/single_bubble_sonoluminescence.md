@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example single_bubble_sonoluminescence`  
-**Source**: [`crates/kwavers/examples/single_bubble_sonoluminescence.rs`](../../../../crates/kwavers/examples/single_bubble_sonoluminescence.rs)
+**Source**: [`crates/kwavers/examples/single_bubble_sonoluminescence.rs`](../../../crates/kwavers/examples/single_bubble_sonoluminescence.rs)
 
 ## What This Example Demonstrates
 

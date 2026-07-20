@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example electromagnetic_simulation --features pinn`  
-**Source**: [`crates/kwavers/examples/electromagnetic_simulation.rs`](../../../../crates/kwavers/examples/electromagnetic_simulation.rs)
+**Source**: [`crates/kwavers/examples/electromagnetic_simulation.rs`](../../../crates/kwavers/examples/electromagnetic_simulation.rs)
 
 ## What This Example Demonstrates
 

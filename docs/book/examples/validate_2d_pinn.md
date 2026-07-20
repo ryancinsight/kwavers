@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example validate_2d_pinn --features pinn`  
-**Source**: [`crates/kwavers/examples/validate_2d_pinn.rs`](../../../../crates/kwavers/examples/validate_2d_pinn.rs)
+**Source**: [`crates/kwavers/examples/validate_2d_pinn.rs`](../../../crates/kwavers/examples/validate_2d_pinn.rs)
 
 ## What This Example Demonstrates
 

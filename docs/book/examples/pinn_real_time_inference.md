@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example pinn_real_time_inference --features pinn`  
-**Source**: [`crates/kwavers/examples/pinn_real_time_inference.rs`](../../../../crates/kwavers/examples/pinn_real_time_inference.rs)
+**Source**: [`crates/kwavers/examples/pinn_real_time_inference.rs`](../../../crates/kwavers/examples/pinn_real_time_inference.rs)
 
 ## What This Example Demonstrates
 

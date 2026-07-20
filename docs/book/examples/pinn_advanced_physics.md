@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example pinn_advanced_physics --features pinn -- --all`  
-**Source**: [`crates/kwavers/examples/pinn_advanced_physics.rs`](../../../../crates/kwavers/examples/pinn_advanced_physics.rs)
+**Source**: [`crates/kwavers/examples/pinn_advanced_physics.rs`](../../../crates/kwavers/examples/pinn_advanced_physics.rs)
 
 ## What This Example Demonstrates
 

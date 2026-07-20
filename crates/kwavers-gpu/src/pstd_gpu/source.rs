@@ -227,6 +227,29 @@ mod tests {
     }
 
     #[test]
+    fn schedule_normalizes_by_two_active_axes_when_x_is_singleton() {
+        let grid = Grid::new(1, 2, 2, 1.0, 1.0, 1.0).expect("two-dimensional grid is valid");
+        let source = GridSource {
+            p_mask: Some(
+                Array3::from_shape_vec([1, 2, 2], vec![1.0, 0.0, 0.0, 0.0])
+                    .expect("mask storage matches the grid"),
+            ),
+            p_signal: Some(
+                Array2::from_shape_vec([1, 1], vec![3.0])
+                    .expect("single signal sample has a matching shape"),
+            ),
+            p_mode: SourceMode::AdditiveNoCorrection,
+            ..GridSource::new_empty()
+        };
+
+        let schedule = prepare_pstd_pressure_source(&grid, &source, &[1_000.0; 4], 1.0, 1)
+            .expect("finite two-dimensional source schedule is valid");
+
+        assert_eq!(schedule.indices, vec![0]);
+        assert_eq!(schedule.signals, vec![0.003]);
+    }
+
+    #[test]
     fn schedule_rejects_signal_without_mask() {
         let grid =
             Grid::new(2, 1, 1, 1.0, 1.0, 1.0).expect("two-cell one-dimensional grid is valid");

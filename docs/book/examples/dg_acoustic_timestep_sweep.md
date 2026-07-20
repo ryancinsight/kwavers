@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example dg_acoustic_timestep_sweep`  
-**Source**: [`crates/kwavers/examples/dg_acoustic_timestep_sweep.rs`](../../../../crates/kwavers/examples/dg_acoustic_timestep_sweep.rs)
+**Source**: [`crates/kwavers/examples/dg_acoustic_timestep_sweep.rs`](../../../crates/kwavers/examples/dg_acoustic_timestep_sweep.rs)
 
 ## What This Example Demonstrates
 
@@ -21,10 +21,9 @@ This example performs a timestep refinement sweep for Discontinuous Galerkin (DG
 
 | Level | Description |
 |-------|-------------|
-| 1 | Coarsest timestep |
-| 2 | Medium timestep |
-| 3 | Fine timestep |
-| 4 | Very fine timestep |
+| 1 | 20 steps (coarsest timestep) |
+| 2 | 40 steps |
+| 3 | 80 steps (finest timestep) |
 
 ## Output Files
 
@@ -36,17 +35,13 @@ This example performs a timestep refinement sweep for Discontinuous Galerkin (DG
 ## Key Code Snippet
 
 ```rust
-// Test different timesteps
-let timesteps = compute_timestep_range()?;
-let mut results = Vec::new();
+const STEP_COUNTS: [usize; 3] = [20, 40, 80];
 
-for dt in timesteps {
-    let (_, error) = run_solver_with_timestep(dt)?;
-    results.push((dt, error));
-}
-
-// Plot sweep
-plot_timestep_sweep(&"timestep_sweep.png", &results)?;
+let rows = run_timestep_sweep()?;
+let out_dir = PathBuf::from("target/dg_acoustic_comparison");
+fs::create_dir_all(&out_dir)?;
+write_plot(&out_dir.join("timestep_sweep.png"), &rows)?;
+write_csv(&out_dir.join("timestep_sweep.csv"), &rows)?;
 ```
 
 ## Book Chapter

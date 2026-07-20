@@ -15,6 +15,12 @@
 - Hosted workflows now materialize path dependencies through the pinned
   Atlas-owned checkout action and exact Atlas gitlink graph. `Cargo.lock`
   retains that graph instead of inheriting mutable local provider revisions.
+- GPU PSTD pressure sources now inject into each split-density field only when
+  that axis is spatially active, matching the host's active-axis
+  normalization for singleton dimensions.
+- Example-book source links now resolve from their actual directory. The DG
+  artifact tables and snippets, seismic FWI snippet, and transcranial NIfTI
+  pipeline now match the runnable examples.
 
 ### Breaking (2026-07-17) - GPU PSTD peak-pressure output [major]
 

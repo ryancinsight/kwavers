@@ -56,6 +56,14 @@
   `9bfb722` and that exact provider graph; the consumer-local moving-`main`
   checkout action is deleted.
 
+- Review 2026-07-20: PR review found the singleton-x pressure-source case
+  normalized its schedule over the active y/z axes but injected into all three
+  split-density fields. The WGSL entry point now gates x, y, and z injection
+  independently, with host scaling and shader-structure regressions for a
+  `1 × 2 × 2` grid. The same review removed an orphaned, uncompiled conversion
+  leaf and corrected every example-book source-link depth plus the identified
+  DG, seismic, and transcranial content drift.
+
 - Review 2026-07-17: the ignored public GPU parity fixture compared a CPU final
   pressure volume from a plane-wave source with a GPU sensor trace from a
   source-free run, so its reported relative error did not measure provider

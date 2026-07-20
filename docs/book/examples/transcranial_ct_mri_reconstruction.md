@@ -2,41 +2,47 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example transcranial_ct_mri_reconstruction --features ritk`  
-**Source**: [`crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs`](../../../../crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs)
+**Source**: [`crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs`](../../../crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs)
 
 ## What This Example Demonstrates
 
-This example demonstrates transcranial CT/MRI reconstruction for focused ultrasound therapy planning. It uses RITK DICOM loading to create patient-specific models from medical imaging data.
+This example demonstrates transcranial CT/MRI reconstruction for focused ultrasound imaging. It loads co-registered NIfTI volumes through RITK, derives a CT acoustic model, reconstructs brain sound speed with masked FWI, and validates the result against MRI.
 
 ## Pipeline
 
 ```text
-DICOM Series  →  RITK Image  →  CT/MRI Processing  →  3D Model  →  Therapy Planning
+CT/MRI NIfTI  →  RITK Image  →  CT acoustic slice  →  masked FWI  →  MRI validation
 ```
 
 ## Features
 
 | Feature | Description |
 |---------|-------------|
-| DICOM Loading | Multi-slice CT/MRI series |
-| Image Processing | Slice extraction and 3D reconstruction |
-| Model Generation | Patient-specific skull and brain model |
-| Therapy Planning | Target localization and treatment planning |
+| NIfTI Loading | Co-registered CT and T1 MRI through RITK |
+| Image Processing | Head-slice selection and grid resampling |
+| Model Generation | CT-derived sound speed, density, and brain mask |
+| Reconstruction | Skull-frozen brain FWI with MRI correlation |
 
 ## Key Code Snippet
 
 ```rust
-// Load DICOM series
-let dicom_series = load_dicom_series("patient_001")?;
+let ct_path = std::env::var("KWAVERS_CT_PATH")
+    .unwrap_or_else(|_| "data/cfb_gbm_sample/ct.nii.gz".to_owned());
+let Some(ct) = load_nifti(&ct_path) else {
+    return Ok(());
+};
 
-// Create RITK image
-let image = NiftiReader::read("skull.nii.gz")?;
-
-// Generate 3D model
-let model = create_therapy_model(&image)?;
-
-// Plan therapy
-therapy_planner.plan(&model)?;
+let slice_index = select_head_slice(&ct.data)?;
+let ct_slice = resample_head_slice(&ct.data, ct.spacing_mm, slice_index, GRID)?;
+let acoustic = AcousticSlice::from_ct_hu(ct_slice.hu.clone(), ct_slice.spacing_m)?;
+let grid = Grid::new(
+    GRID + 2 * PAD,
+    GRID + 2 * PAD,
+    2,
+    ct_slice.spacing_m,
+    ct_slice.spacing_m,
+    ct_slice.spacing_m,
+)?;
 ```
 
 ## Book Chapter

@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example literature_validation_safe`  
-**Source**: [`crates/kwavers/examples/literature_validation_safe.rs`](../../../../crates/kwavers/examples/literature_validation_safe.rs)
+**Source**: [`crates/kwavers/examples/literature_validation_safe.rs`](../../../crates/kwavers/examples/literature_validation_safe.rs)
 
 ## What This Example Demonstrates
 

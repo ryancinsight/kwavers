@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example multiphysics_sonoluminescence --features pinn`  
-**Source**: [`crates/kwavers/examples/multiphysics_sonoluminescence.rs`](../../../../crates/kwavers/examples/multiphysics_sonoluminescence.rs)
+**Source**: [`crates/kwavers/examples/multiphysics_sonoluminescence.rs`](../../../crates/kwavers/examples/multiphysics_sonoluminescence.rs)
 
 ## What This Example Demonstrates
 

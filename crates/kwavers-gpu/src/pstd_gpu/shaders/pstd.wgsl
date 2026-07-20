@@ -693,7 +693,9 @@ fn add_kspace_to_density(@builtin(global_invocation_id) gid: vec3<u32>) {
     if idx >= total { return; }
 
     let source = kspace_re[idx];
-    field_rhox[idx] += source;
+    if params.nx > 1u {
+        field_rhox[idx] += source;
+    }
     if params.ny > 1u {
         field_rhoy[idx] += source;
     }

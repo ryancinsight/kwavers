@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example comprehensive_clinical_workflow --features gpu`  
-**Source**: [`crates/kwavers/examples/comprehensive_clinical_workflow.rs`](../../../../crates/kwavers/examples/comprehensive_clinical_workflow.rs)
+**Source**: [`crates/kwavers/examples/comprehensive_clinical_workflow.rs`](../../../crates/kwavers/examples/comprehensive_clinical_workflow.rs)
 
 ## What This Example Demonstrates
 

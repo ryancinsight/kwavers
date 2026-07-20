@@ -27,6 +27,34 @@ fn test_velocity_source_shader_uses_validated_kspace_path() {
     );
 }
 
+/// The split-density source must target only spatially active axes so the
+/// host's active-dimension normalization preserves the requested amplitude.
+#[test]
+fn pressure_source_injection_matches_active_dimension_scaling() {
+    let src = include_str!("../shaders/pstd.wgsl");
+    let add_start = src
+        .find("fn add_kspace_to_density(")
+        .expect("pressure-source density entry point must exist");
+    let add_end = src[add_start..]
+        .find("fn absorb_save_kspace(")
+        .map(|offset| add_start + offset)
+        .expect("the next shader entry point must delimit density injection");
+    let add_block = src[add_start..add_end].replace("\r\n", "\n");
+
+    for (axis, field) in [
+        ("nx", "field_rhox"),
+        ("ny", "field_rhoy"),
+        ("nz", "field_rhoz"),
+    ] {
+        assert!(
+            add_block.contains(&format!(
+                "if params.{axis} > 1u {{\n        {field}[idx] += source;"
+            )),
+            "{field} injection must be gated by the matching active axis"
+        );
+    }
+}
+
 /// Regression guard: the WGSL push-constant layout must stay aligned with
 /// the Rust-side `PstdParams` struct used for dispatch.
 /// # Panics

@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example sonoluminescence_comparison`  
-**Source**: [`crates/kwavers/examples/sonoluminescence_comparison.rs`](../../../../crates/kwavers/examples/sonoluminescence_comparison.rs)
+**Source**: [`crates/kwavers/examples/sonoluminescence_comparison.rs`](../../../crates/kwavers/examples/sonoluminescence_comparison.rs)
 
 ## What This Example Demonstrates
 

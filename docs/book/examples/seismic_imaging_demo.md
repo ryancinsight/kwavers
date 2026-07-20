@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example seismic_imaging_demo`  
-**Source**: [`crates/kwavers/examples/seismic_imaging_demo.rs`](../../../../crates/kwavers/examples/seismic_imaging_demo.rs)
+**Source**: [`crates/kwavers/examples/seismic_imaging_demo.rs`](../../../crates/kwavers/examples/seismic_imaging_demo.rs)
 
 ## What This Example Demonstrates
 
@@ -52,19 +52,23 @@ The phantom is a coronal cross-section of a human head modelled as concentric sh
 ## Key Code Snippet
 
 ```rust
-let domain: ElectromagneticDomain<Backend> = ElectromagneticDomain::new(
-    EMProblemType::Electrostatic,
-    8.854e-12,                   // Vacuum permittivity
-    4e-7 * std::f64::consts::PI, // Vacuum permeability
-    0.0,                         // No conductivity
-    vec![0.01, 0.01],            // 1cm x 1cm domain
-)
-.add_pec_boundary(BoundaryPosition::Top)
-.add_pec_boundary(BoundaryPosition::Bottom)
-.add_pec_boundary(BoundaryPosition::Left)
-.add_pec_boundary(BoundaryPosition::Right);
+let grid = Grid::new(NX, NY, NZ, DX, DX, DX)?;
+let fwi = FwiProcessor::new(FwiParameters {
+    max_iterations: 1,
+    frequency: F0_HZ,
+    nt: nt_fine,
+    dt,
+    n_trace: N_RECEIVERS,
+    n_depth: 1,
+    step_size: STEP_SIZE,
+    ..FwiParameters::default()
+});
 
-let geometry = UniversalSolverGeometry2D::rectangle(0.0, 0.01, 0.0, 0.01);
+for &element_index in &TRANSMIT_ELEMENT_INDICES {
+    let geometry = build_shot(element_index, F0_HZ, nt_fine, dt);
+    let observed = fwi.generate_synthetic_data(&true_model, &geometry, &grid)?;
+    shots.push((geometry, observed));
+}
 ```
 
 ## FWI Objective

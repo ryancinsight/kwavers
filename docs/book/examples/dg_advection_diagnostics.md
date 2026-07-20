@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example dg_advection_diagnostics`  
-**Source**: [`crates/kwavers/examples/dg_advection_diagnostics.rs`](../../../../crates/kwavers/examples/dg_advection_diagnostics.rs)
+**Source**: [`crates/kwavers/examples/dg_advection_diagnostics.rs`](../../../crates/kwavers/examples/dg_advection_diagnostics.rs)
 
 ## What This Example Demonstrates
 

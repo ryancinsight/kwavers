@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example transfer_learning_pinn --features pinn`  
-**Source**: [`crates/kwavers/examples/transfer_learning_pinn.rs`](../../../../crates/kwavers/examples/transfer_learning_pinn.rs)
+**Source**: [`crates/kwavers/examples/transfer_learning_pinn.rs`](../../../crates/kwavers/examples/transfer_learning_pinn.rs)
 
 ## What This Example Demonstrates
 

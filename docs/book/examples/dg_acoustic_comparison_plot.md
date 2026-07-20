@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example dg_acoustic_comparison_plot`  
-**Source**: [`crates/kwavers/examples/dg_acoustic_comparison_plot.rs`](../../../../crates/kwavers/examples/dg_acoustic_comparison_plot.rs)
+**Source**: [`crates/kwavers/examples/dg_acoustic_comparison_plot.rs`](../../../crates/kwavers/examples/dg_acoustic_comparison_plot.rs)
 
 ## What This Example Demonstrates
 
@@ -23,29 +23,19 @@ This example generates comparison plots for different acoustic solvers on a comm
 
 | File | Description |
 |------|-------------|
-| `pressure_traces.png` | Pressure field comparison over time |
-| `error_traces.png` | Error comparison for each solver |
-| `pressure_traces.csv` | Numerical pressure data |
-| `error_traces.csv` | Numerical error data |
+| `target/dg_acoustic_comparison/gaussian_pressure.png` | Native, common-quadrature, and uniform-grid pressure and error panels |
+| `target/dg_acoustic_comparison/gaussian_pressure.csv` | Pressure, absolute-error, and solver-matrix values used by the plot |
 
 ## Key Code Snippet
 
 ```rust
-// Generate pressure traces for each solver
-let solvers = vec![
-    ("Native DG", run_native_dg),
-    ("Common DG", run_common_dg),
-    ("Uniform DG", run_uniform_dg),
-    ("FDTD", run_fdtd),
-    ("k-space FDTD", run_kspace_fdtd),
-    ("PSTD", run_pstd),
-];
+let series = run_embedded_gaussian_series()?;
+let uniform = uniform_resampling(&series)?;
+let out_dir = PathBuf::from("target/dg_acoustic_comparison");
+fs::create_dir_all(&out_dir)?;
 
-for (name, solver) in solvers {
-    let (time, pressure) = solver.run()?;
-    plot_pressure_trace(&format!("pressure_{}.png", name), &time, &pressure);
-    plot_error_trace(&format!("error_{}.png", name), &time, &pressure);
-}
+write_plot(&out_dir.join("gaussian_pressure.png"), &series, &uniform)?;
+write_csv(&out_dir.join("gaussian_pressure.csv"), &series, &uniform)?;
 ```
 
 ## Book Chapter

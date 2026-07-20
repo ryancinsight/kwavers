@@ -23,6 +23,10 @@
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
 - [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
       reconcile `Cargo.lock` against that exact gitlink graph.
+- [x] Reconcile every PR review thread: remove the orphaned conversion leaf,
+      gate split-density source injection by its active axis, consolidate the
+      FDTD Leto array spelling, and align example-book links and snippets with
+      the runnable programs.
 - [ ] Run the downstream consumer gate when that repository is in scope.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review

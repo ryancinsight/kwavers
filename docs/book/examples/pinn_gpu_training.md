@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example pinn_gpu_training --features pinn,gpu`  
-**Source**: [`crates/kwavers/examples/pinn_gpu_training.rs`](../../../../crates/kwavers/examples/pinn_gpu_training.rs)
+**Source**: [`crates/kwavers/examples/pinn_gpu_training.rs`](../../../crates/kwavers/examples/pinn_gpu_training.rs)
 
 ## What This Example Demonstrates
 
