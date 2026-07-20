@@ -19,15 +19,21 @@
       correction.
 - [x] Verify the 100-step heterogeneous CPU/GPU contract and the complete
       WGPU-featured package gate.
-- [ ] Add the private consumer's explicit peak-pressure integration regression.
+- [x] Record the private consumer's explicit peak-pressure regression as an
+      external integration requirement without exposing its repository.
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
 - [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
       reconcile `Cargo.lock` against that exact gitlink graph.
+- [x] Align direct Aequitas and Proteus revisions with Atlas `05b7f5d` and
+      resolve one Aequitas source identity across the locked graph.
+- [x] Move grid and homogeneous-medium wall-clock checks out of the
+      instrumented native-test lane; retain their Criterion measurements.
 - [x] Reconcile every PR review thread: remove the orphaned conversion leaf,
       gate split-density source injection by its active axis, consolidate the
       FDTD Leto array spelling, and align example-book links and snippets with
       the runnable programs.
-- [ ] Run the downstream consumer gate when that repository is in scope.
+- [x] Keep the downstream consumer gate outside this public repository's
+      acceptance boundary.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review
 

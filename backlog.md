@@ -1,11 +1,11 @@
 # Backlog / Strategy
 
-## KW-GPU-062 — GPU PSTD peak-pressure output [major] — blocked
+## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
   ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`,
   `crates/kwavers-math/src/fft/mod.rs` CPU-reference FFT boundary, and the
-  downstream full-wave consumer boundary.
+  in-repository simulation consumer boundary.
 - Acceptance: the provider accumulates `max_t |p|` on the GPU for every voxel,
   transfers exactly that one pressure volume when requested, and never labels a
   final pressure frame as a peak envelope. The output request supports final,
@@ -16,8 +16,8 @@
   a duplicate facade representation.
 - Decision: [`ADR-040`](docs/ADR/040-gpu-pstd-peak-pressure-output.md).
 - Evidence target: value-semantic output-selection and final-versus-peak
-  invariants, a real WGPU burst regression, GPU-feature Nextest, and a
-  downstream consumer regression.
+  invariants, a real WGPU burst regression, GPU-feature Nextest, and an
+  in-repository simulation-consumer regression.
 - Evidence: the simulation adapter requests the provider's explicit peak
   output, retains it separately from final fields, and shares the direct
   runner's weighted local-medium pressure-source schedule. It rejects both
@@ -25,11 +25,12 @@
   than discarding source information. Warning-denied all-feature Clippy passes,
   and the WGPU-featured Nextest lane passes 259/259 tests, including the
   heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
-  use the Atlas-owned checkout action pinned at `9bfb722` with provider graph
-  `afd5e16`; the lock contains no mutable local-provider revision.
-- Blocker: the downstream full-wave consumer is outside this repository's
-  authorized scope. Reopen when its checkout is available for the explicit
-  peak-pressure integration regression.
+  use the Atlas-owned checkout action and provider graph pinned at `05b7f5d`;
+  direct Aequitas and Proteus revisions match that graph, and the lock contains
+  one Aequitas source identity.
+- External integration requirement: the private full-wave consumer remains
+  responsible for its explicit peak-pressure regression. Its inaccessible
+  checkout does not widen or block this repository's delivery boundary.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — review
 

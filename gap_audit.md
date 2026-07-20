@@ -49,12 +49,18 @@
 - Review 2026-07-20: local lock regeneration inherited mutable sibling
   Hephaestus and Gaia revisions, adding a second Aequitas source and deleting
   packages still required by the coordinated graph. Hosted `--locked` jobs
-  rejected the mismatch before compilation. Regeneration against detached
-  worktrees at every `afd5e16` gitlink removed Gaia's obsolete `aquamarine`
-  documentation closure and passes all-feature `cargo metadata --locked`.
-  All hosted workflows use the Atlas-owned checkout action pinned at
-  `9bfb722` and that exact provider graph; the consumer-local moving-`main`
-  checkout action is deleted.
+  rejected the mismatch before compilation. The workflows now materialize
+  every provider from Atlas merge `05b7f5d`; direct Aequitas and Proteus pins
+  match that graph, `Cargo.lock` resolves one Aequitas source identity, and the
+  consumer-local moving-`main` checkout action remains deleted.
+
+- Review 2026-07-20: Tarpaulin instrumentation made the test-suite
+  `test_grid_creation_performance` wall-clock assertion exceed its empirical
+  10 ms threshold while the constructed grid remained correct. Test-process
+  elapsed time is not a portable performance oracle. Grid and
+  homogeneous-medium construction remain measured by the Criterion
+  `testing_infrastructure` benchmark; the instrumented native test lane now
+  retains only value-semantic assertions.
 
 - Review 2026-07-20: PR review found the singleton-x pressure-source case
   normalized its schedule over the active y/z axes but injected into all three

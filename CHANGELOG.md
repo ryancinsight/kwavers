@@ -4,6 +4,12 @@
 
 ### Fixed
 
+- Grid and homogeneous-medium construction performance now remains in the
+  Criterion benchmark suite. Instrumented coverage no longer evaluates
+  wall-clock assertions whose result depends on Tarpaulin overhead.
+- Direct Aequitas and Proteus revisions now match the merged Atlas graph,
+  resolving one physical-quantity source identity across Kwavers, Proteus,
+  and Hephaestus.
 - `GpuPstdSimulationAdapter` now calls the full provider output contract,
   exposes an explicit `max_t |p|` readback, and never substitutes a final
   pressure field for a temporal envelope. The adapter and direct GPU runner
