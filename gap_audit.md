@@ -49,11 +49,12 @@
 - Review 2026-07-20: local lock regeneration inherited mutable sibling
   Hephaestus and Gaia revisions, adding a second Aequitas source and deleting
   packages still required by the coordinated graph. Hosted `--locked` jobs
-  rejected the mismatch before compilation. The lock now differs from the
-  verified default graph only by `kwavers-gpu` 5.0.0 and removal of the unused
-  NumPy patch. All hosted workflows use the Atlas-owned checkout action pinned
-  at `9bfb722` and the exact provider graph at `afd5e16`; the consumer-local
-  moving-`main` checkout action is deleted.
+  rejected the mismatch before compilation. Regeneration against detached
+  worktrees at every `afd5e16` gitlink removed Gaia's obsolete `aquamarine`
+  documentation closure and passes all-feature `cargo metadata --locked`.
+  All hosted workflows use the Atlas-owned checkout action pinned at
+  `9bfb722` and that exact provider graph; the consumer-local moving-`main`
+  checkout action is deleted.
 
 - Review 2026-07-17: the ignored public GPU parity fixture compared a CPU final
   pressure volume from a plane-wave source with a GPU sensor trace from a
