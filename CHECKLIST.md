@@ -21,6 +21,8 @@
       WGPU-featured package gate.
 - [ ] Add the private consumer's explicit peak-pressure integration regression.
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
+- [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
+      reconcile `Cargo.lock` against that exact gitlink graph.
 - [ ] Run the downstream consumer gate when that repository is in scope.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review

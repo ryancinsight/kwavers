@@ -24,7 +24,9 @@
   unsampled `Source` objects and unsupported velocity-source assembly rather
   than discarding source information. Warning-denied all-feature Clippy passes,
   and the WGPU-featured Nextest lane passes 259/259 tests, including the
-  heterogeneous CPU/GPU contract and real peak-envelope runs.
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
+  use the Atlas-owned checkout action pinned at `9bfb722` with provider graph
+  `afd5e16`; the lock contains no mutable local-provider revision.
 - Blocker: the downstream full-wave consumer is outside this repository's
   authorized scope. Reopen when its checkout is available for the explicit
   peak-pressure integration regression.

@@ -46,6 +46,15 @@
   remains to be wired to the explicit output API; allocation capacity remains
   device- and plan-dependent.
 
+- Review 2026-07-20: local lock regeneration inherited mutable sibling
+  Hephaestus and Gaia revisions, adding a second Aequitas source and deleting
+  packages still required by the coordinated graph. Hosted `--locked` jobs
+  rejected the mismatch before compilation. The lock now differs from the
+  verified default graph only by `kwavers-gpu` 5.0.0 and removal of the unused
+  NumPy patch. All hosted workflows use the Atlas-owned checkout action pinned
+  at `9bfb722` and the exact provider graph at `afd5e16`; the consumer-local
+  moving-`main` checkout action is deleted.
+
 - Review 2026-07-17: the ignored public GPU parity fixture compared a CPU final
   pressure volume from a plane-wave source with a GPU sensor trace from a
   source-free run, so its reported relative error did not measure provider

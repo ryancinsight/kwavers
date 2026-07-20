@@ -12,6 +12,9 @@
   velocity-source assembly now fail explicitly instead of dropping inputs.
 - Python bindings now resolve crates.io `numpy` 0.29 directly. The obsolete
   vendored 0.27 patch and its migration allowlist entries are removed.
+- Hosted workflows now materialize path dependencies through the pinned
+  Atlas-owned checkout action and exact Atlas gitlink graph. `Cargo.lock`
+  retains that graph instead of inheriting mutable local provider revisions.
 
 ### Breaking (2026-07-17) - GPU PSTD peak-pressure output [major]
 
