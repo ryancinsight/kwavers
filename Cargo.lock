@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=14a29eda31d312b3254b88cd1d5b48da2a21e59f#14a29eda31d312b3254b88cd1d5b48da2a21e59f"
+source = "git+https://github.com/ryancinsight/aequitas?rev=0f9d77ab00eacf4225c0c4a54c0de3c9f41999a9#0f9d77ab00eacf4225c0c4a54c0de3c9f41999a9"
 dependencies = [
  "eunomia",
  "typenum",
@@ -3558,6 +3558,7 @@ dependencies = [
  "leto",
  "log",
  "moirai-parallel",
+ "proteus",
  "rand 0.8.7",
  "rand_chacha 0.3.1",
  "rand_distr 0.4.3",
@@ -5079,7 +5080,7 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus?rev=2b06be323c712e6643f266c49ad5caa7583c2066#2b06be323c712e6643f266c49ad5caa7583c2066"
+source = "git+https://github.com/ryancinsight/proteus?rev=335e5297b28c334987bd18bd85a09393a90dfe5f#335e5297b28c334987bd18bd85a09393a90dfe5f"
 dependencies = [
  "aequitas",
  "eunomia",

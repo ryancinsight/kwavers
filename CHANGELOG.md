@@ -4,6 +4,13 @@
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 
+- Replace both Kwavers-owned thermal temperature polynomials with Proteus
+  `TemperatureLaw` composition. `TemperatureDependentThermal` and
+  `properties_at_temperature` now return `Result` for invalid thermodynamic
+  states, and `thermal::properties::update_properties` no longer panics.
+  The removed conductivity and specific-heat scalar helpers have no
+  compatibility aliases; callers evaluate the cohesive property bundle. See
+  ADR 042.
 - `ThermalPropertyData` now composes Proteus `ThermophysicalProperties`
   instead of exposing duplicate raw density, heat-capacity, and conductivity
   storage. Callers use the corresponding accessors; Proteus owns validation and
