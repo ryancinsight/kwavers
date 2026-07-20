@@ -101,6 +101,26 @@ fn test_conformity_score_computation() {
 }
 
 #[test]
+fn even_conformity_median_preserves_prediction_precision() {
+    let predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
+    let lower = 1.0_f32;
+    let upper = f32::from_bits(lower.to_bits() + 1);
+    let prediction = Array2::from_elem((1, 2), 0.0_f32);
+    let target = Array2::from_shape_vec((1, 2), vec![lower, upper]).unwrap();
+
+    let score = predictor
+        .compute_conformity_score(&prediction, &target)
+        .unwrap();
+    let expected = (lower + upper) / 2.0_f32;
+
+    assert_eq!(
+        score.to_bits(),
+        f64::from(expected).to_bits(),
+        "the conformity reduction must execute in the prediction precision"
+    );
+}
+
+#[test]
 fn test_quantile_computation() {
     let mut predictor = MlConformalPredictor::new(ConformalConfig::default()).unwrap();
     predictor.calibration_scores = vec![0.1, 0.2, 0.3, 0.4, 0.5];

@@ -302,7 +302,7 @@ impl MlConformalPredictor {
         validate_array_pair(prediction, target)?;
         let mut errors = Vec::with_capacity(prediction.len());
         for (&predicted, &observed) in prediction.iter().zip(target.iter()) {
-            errors.push(f64::from((predicted - observed).abs()));
+            errors.push((predicted - observed).abs());
         }
         errors.sort_by(|a, b| a.total_cmp(b));
 
@@ -312,7 +312,7 @@ impl MlConformalPredictor {
         } else {
             errors[mid]
         };
-        Ok(median)
+        Ok(f64::from(median))
     }
 
     fn compute_quantile(&self, confidence_level: f64) -> KwaversResult<f64> {
