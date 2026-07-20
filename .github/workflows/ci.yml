@@ -35,7 +35,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -88,7 +88,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -132,7 +132,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -228,7 +228,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -280,9 +280,9 @@ jobs:
         run: cargo tarpaulin --locked -p kwavers --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
-          file: ./cobertura.xml
+          files: ./cobertura.xml
           # Coverage generation above is the reproducible source gate. Codecov
           # ingestion is an external service and may rate-limit tokenless uploads;
           # preserve the report without turning transport failure into a source failure.
@@ -315,7 +315,7 @@ jobs:
           tool: nextest
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -358,7 +358,7 @@ jobs:
           tool: nextest
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
