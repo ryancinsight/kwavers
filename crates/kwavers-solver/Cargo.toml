@@ -37,6 +37,7 @@ parking_lot = "0.12"
 tracing = { version = "0.1", features = ["attributes"] }
 apollo = { workspace = true }
 eunomia = { workspace = true }
+tyche-core = { workspace = true, optional = true }
 
 # coeus ML stack — required only when the `pinn` feature is enabled.
 coeus-core = { workspace = true, optional = true }
@@ -62,6 +63,7 @@ pinn = [
     "dep:coeus-nn",
     "dep:coeus-optim",
     "dep:coeus-ops",
+    "dep:tyche-core",
 ]
 async-runtime = []
 clinical-imaging = ["dep:kwavers-imaging", "kwavers-physics/clinical-imaging"]

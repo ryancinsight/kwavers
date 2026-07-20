@@ -1,5 +1,22 @@
 # Project Checklist
 
+## Owner: /root — Integrate Tyche uncertainty ownership [major] [arch]
+
+- [x] File ADR 043 with provider boundary, public migration, proof obligations,
+      and rejected local-formula/compatibility alternatives.
+- [x] Replace both conformal ranks with Tyche corrected calibration in each
+      consumer's native score precision.
+- [x] Preserve every Analysis interval and borrow calibration scores with
+      `Cow`; represent undefined statistics with `Option`.
+- [x] Replace PINN variance and running-average formulas with Tyche moments.
+- [x] Replace pseudo-Sobol/bootstrap/Morris code with deterministic
+      const-generic Tyche correlation screening.
+- [x] Pass focused and full value-semantic tests plus warning-denied package
+      gates.
+- [x] Pass doctests, normal Rustdoc generation, dependency policy, residue
+      scans, and Analysis semver classification.
+- [ ] Publish, pass hosted gates, and merge the integration.
+
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor]
 
 - [x] Centralize the GPU PSTD dimension contract at a 1,024-point maximum.

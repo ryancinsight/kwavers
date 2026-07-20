@@ -1,45 +1,67 @@
-//! Result and summary types for conformal prediction
+//! Result and summary types for conformal prediction.
 
-use leto::{Array1, Array2};
+use leto::Array2;
+use std::borrow::Cow;
 use std::collections::HashMap;
 
-/// Conformal prediction result
+/// Conformal prediction result for every supplied prediction.
 #[derive(Debug)]
-pub struct ConformalResult {
-    /// Prediction intervals for each point
-    pub prediction_intervals: HashMap<String, (Array2<f32>, Array2<f32>)>,
-    /// Coverage probability achieved
-    pub coverage_probability: f64,
-    /// Conformity scores from calibration
-    pub conformity_scores: Array1<f64>,
+#[non_exhaustive]
+pub struct ConformalResult<'scores> {
+    /// Lower and upper arrays for every prediction, keyed by confidence level.
+    pub prediction_intervals: HashMap<String, PredictionIntervalBatch>,
+    /// Requested marginal coverage probability.
+    pub target_coverage_probability: f64,
+    /// Borrowed conformity scores from calibration.
+    pub conformity_scores: Cow<'scores, [f64]>,
 }
 
-/// Validation metrics for conformal prediction
+/// Aligned lower and upper arrays for one confidence level.
 #[derive(Debug)]
+#[non_exhaustive]
+pub struct PredictionIntervalBatch {
+    /// Lower endpoint arrays in input order.
+    pub lower: Vec<Array2<f32>>,
+    /// Upper endpoint arrays in input order.
+    pub upper: Vec<Array2<f32>>,
+}
+
+/// Validation metrics for conformal prediction.
+#[derive(Debug)]
+#[non_exhaustive]
 pub struct ConformalValidationMetrics {
-    /// Empirical coverage probability achieved
+    /// Empirical coverage probability achieved.
     pub empirical_coverage: f64,
-    /// Target coverage probability
+    /// Target coverage probability.
     pub target_coverage: f64,
-    /// Mean prediction interval width
+    /// Mean prediction interval width.
     pub mean_interval_width: f32,
-    /// Coverage efficiency (coverage / width)
-    pub coverage_efficiency: f64,
+    /// Coverage divided by width, or `None` for a zero-width interval.
+    pub coverage_efficiency: Option<f64>,
 }
 
-/// Calibration summary
+/// Calibration summary.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct CalibrationSummary {
+    /// Whether calibration has completed.
     pub is_calibrated: bool,
+    /// Number of calibration samples.
     pub num_calibration_samples: usize,
-    pub score_distribution: ScoreDistribution,
+    /// Score distribution, absent before calibration.
+    pub score_distribution: Option<ScoreDistribution>,
 }
 
-/// Distribution of conformity scores
+/// Distribution of conformity scores.
 #[derive(Debug)]
+#[non_exhaustive]
 pub struct ScoreDistribution {
+    /// Minimum score.
     pub min_score: f64,
+    /// Maximum score.
     pub max_score: f64,
+    /// Arithmetic mean.
     pub mean_score: f64,
+    /// Median score.
     pub median_score: f64,
 }

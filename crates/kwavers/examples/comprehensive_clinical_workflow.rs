@@ -23,7 +23,7 @@
 //! - **Clinical Validation**: Automated quality assurance and standards compliance
 
 use kwavers_analysis::ml::uncertainty::{
-    MlUncertaintyConfig, MlUncertaintyMethod, UncertaintyQuantifier,
+    MlUncertaintyConfig, MlUncertaintyMethod, Seed, UncertaintyQuantifier,
 };
 use kwavers_analysis::validation::clinical::{
     ClinicalValidator, ImageQualityMetrics, MeasurementAccuracy, SafetyIndices,
@@ -164,6 +164,7 @@ impl LiverAssessmentWorkflow {
             dropout_rate: 0.1,
             ensemble_size: 5,
             calibration_size: 100,
+            sensitivity_seed: Seed::new(0),
         };
         let uncertainty_analyzer = UncertaintyQuantifier::new(uncertainty_config)?;
 

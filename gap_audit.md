@@ -29,6 +29,24 @@
 
 # Gap Audit
 
+- Review 2026-07-20: Kwavers duplicated corrected conformal ranks and moments,
+  selected the reversed lower conformal tail in Analysis, discarded all but
+  the first interval request, and exposed squared correlation under Sobol
+  first/total names. Its nominal Morris path changed multiple parameters and
+  divided by a hard-coded count. ADR 043 assigns rank, moments, deterministic
+  Latin-hypercube sampling, and correlation screening to Tyche; the local
+  formulas and false method labels are removed. Residual: Tyche does not yet
+  provide genuine Morris or Saltelli/Sobol estimators, so those contracts stay
+  absent rather than being approximated downstream.
+
+- Verification boundary 2026-07-20: package-scoped formatting is clean, but
+  workspace-wide rustfmt hits Windows path error 206 before traversal.
+  Normal Rustdoc generation completes; strict warning-denied Rustdoc exposes
+  55 historical Analysis links and one solver link outside the changed Tyche
+  modules. Solver semver extraction is blocked by the existing all-features
+  clinical-imaging graph resolving path and Git Leto identities concurrently.
+  Analysis semver extraction completes and reports the intended major class.
+
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a
   `*_at_core` generic forwarder. The canonical functions now carry the

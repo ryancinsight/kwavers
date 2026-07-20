@@ -10,9 +10,9 @@ pub struct PinnUncertaintyConfig {
     /// Ensemble size for deep ensembles.
     pub ensemble_size: usize,
     /// Conformal prediction alpha (1-confidence level).
-    pub conformal_alpha: f64,
+    pub conformal_alpha: f32,
     /// Variance threshold for reliability assessment.
-    pub variance_threshold: f64,
+    pub variance_threshold: f32,
 }
 
 /// Prediction with uncertainty bounds.

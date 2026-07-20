@@ -1,5 +1,22 @@
 # Backlog / Strategy
 
+## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — ready-review
+
+- Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
+  ensemble statistics, Tyche dependency policy, ADR 043, and synchronized
+  public documentation.
+- Acceptance: one Tyche-owned corrected rank and moments implementation serves
+  both consumers; interval results borrow scores and retain every prediction;
+  sensitivity is const-generic, deterministic, allocation-free per sample, and
+  named squared correlation; pseudo-Sobol/Morris bodies have no residue.
+- Evidence: public Tyche revision `00ce951` is the single dependency in both
+  packages; focused Analysis and PINN suites pass 13/13 and 12/12; full
+  package suites pass 718/718 and 1,251/1,251. Warning-denied Clippy,
+  no-default checks, doctests, normal Rustdoc generation, the facade clinical
+  workflow example, and source policy pass. `cargo-semver-checks` runs 223
+  Analysis checks and identifies 10 major API breaks, matching ADR 043.
+- Hosted merge remains the terminal transition.
+
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/` and GPU PSTD

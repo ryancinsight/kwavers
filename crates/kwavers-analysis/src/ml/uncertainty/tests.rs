@@ -32,6 +32,7 @@ fn test_uncertainty_quantifier_creation() {
         dropout_rate: 0.1,
         ensemble_size: 5,
         calibration_size: 100,
+        sensitivity_seed: tyche_core::Seed::new(0),
     };
 
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
@@ -56,6 +57,7 @@ fn test_pinn_uncertainty_uses_solver_agnostic_predictor() {
         dropout_rate: 0.1,
         ensemble_size: 2,
         calibration_size: 4,
+        sensitivity_seed: tyche_core::Seed::new(0),
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
     let inputs =
@@ -83,6 +85,7 @@ fn test_pinn_uncertainty_rejects_missing_time_column() {
         dropout_rate: 0.1,
         ensemble_size: 2,
         calibration_size: 4,
+        sensitivity_seed: tyche_core::Seed::new(0),
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
     let inputs = leto::Array2::from_elem((2, 1), 1.0_f32);

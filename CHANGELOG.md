@@ -2,6 +2,26 @@
 
 ## Unreleased
 
+### Breaking (2026-07-20) - Tyche uncertainty provider [major] [arch]
+
+- Replace Analysis and PINN conformal-rank implementations with Tyche's
+  finite-sample corrected quantile. PINN miscoverage and reliability variance
+  thresholds are now `f32`, and the conformal constructor is fallible, matching
+  the model and score precision.
+- Preserve every requested prediction interval, borrow sorted calibration
+  scores through `Cow`, and represent pre-calibration distributions and
+  zero-width coverage efficiency with `Option`.
+- Replace cancellation-prone PINN second-moment variance and incorrectly
+  weighted running averages with Tyche Welford/population moments.
+- Replace runtime pseudo-Sobol maps and nondeterministic bootstrap/Morris code
+  with const-generic deterministic Tyche Latin-hypercube correlation screening.
+  Genuine Morris and Saltelli/Sobol methods remain provider work rather than
+  mislabeled Kwavers substitutes.
+- Add `MlUncertaintyConfig::sensitivity_seed`; migrate dynamic sensitivity
+  callers to a borrowed Tyche `ParameterSpace` and
+  `SensitivityReport<f64, PARAMETERS>`. See ADR 043 for the complete public
+  migration.
+
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 
 - Replace both Kwavers-owned thermal temperature polynomials with Proteus
