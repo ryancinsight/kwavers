@@ -1,7 +1,6 @@
 //! Plasma ionization energy rate during cavitation collapses
 
-use uom::si::f64::Power;
-use uom::si::power::watt;
+use aequitas::systems::si::{quantities::Power, units::Watt};
 
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleState, GasSpecies};
 use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
@@ -57,7 +56,7 @@ impl EnergyBalanceCalculator {
     #[must_use]
     pub fn calculate_plasma_ionization_rate(&self, state: &BubbleState) -> Power {
         if !self.enable_plasma_effects || state.temperature < 10_000.0 {
-            return Power::new::<watt>(0.0);
+            return Power::from_unit::<Watt>(0.0);
         }
 
         // Ionization energy [eV → J] for each species (NIST Atomic Spectra Database).
@@ -102,7 +101,7 @@ impl EnergyBalanceCalculator {
         let power_w = alpha * n_total * e_ion_j / TAU_EQ_S;
 
         // Sign: endothermic (negative = energy absorbed from bubble)
-        Power::new::<watt>(-power_w)
+        Power::from_unit::<Watt>(-power_w)
     }
 }
 
@@ -168,8 +167,7 @@ mod tests {
     fn test_plasma_below_threshold_returns_zero() {
         let state = make_state(9_999.0);
         let p = make_calc(true).calculate_plasma_ionization_rate(&state);
-        use uom::si::power::watt;
-        assert_eq!(p.get::<watt>(), 0.0);
+        assert_eq!(p.in_unit::<Watt>(), 0.0);
     }
 
     /// At T = 10 000 K with plasma effects disabled, result is zero.
@@ -180,8 +178,7 @@ mod tests {
     fn test_plasma_disabled_returns_zero() {
         let state = make_state(20_000.0);
         let p = make_calc(false).calculate_plasma_ionization_rate(&state);
-        use uom::si::power::watt;
-        assert_eq!(p.get::<watt>(), 0.0);
+        assert_eq!(p.in_unit::<Watt>(), 0.0);
     }
 
     /// At high temperature the ionization rate is negative (endothermic) and finite.
@@ -194,8 +191,7 @@ mod tests {
     fn test_plasma_at_20000k_endothermic_finite() {
         let state = make_state(20_000.0);
         let p = make_calc(true).calculate_plasma_ionization_rate(&state);
-        use uom::si::power::watt;
-        let watts = p.get::<watt>();
+        let watts = p.in_unit::<Watt>();
         // Must be endothermic (negative) and non-zero
         assert!(
             watts < 0.0,
@@ -215,14 +211,13 @@ mod tests {
     ///
     #[test]
     fn test_plasma_ionization_monotone_in_temperature() {
-        use uom::si::power::watt;
         let calc = make_calc(true);
         let p1 = calc
             .calculate_plasma_ionization_rate(&make_state(15_000.0))
-            .get::<watt>();
+            .in_unit::<Watt>();
         let p2 = calc
             .calculate_plasma_ionization_rate(&make_state(20_000.0))
-            .get::<watt>();
+            .in_unit::<Watt>();
         // Both are negative (endothermic); higher T → more ionization → larger |p|
         assert!(
             p2 < p1,

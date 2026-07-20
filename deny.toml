@@ -49,5 +49,6 @@ unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
     "https://github.com/NVlabs/cutile-rs",
+    "https://github.com/ryancinsight/aequitas",
     "https://github.com/ryancinsight/consus",
 ]

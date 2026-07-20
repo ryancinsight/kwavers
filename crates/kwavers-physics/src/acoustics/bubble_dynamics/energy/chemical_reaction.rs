@@ -1,7 +1,6 @@
 //! Chemical reaction enthalpy effects
 
-use uom::si::f64::Power;
-use uom::si::power::watt;
+use aequitas::systems::si::{quantities::Power, units::Watt};
 
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
@@ -55,7 +54,7 @@ impl EnergyBalanceCalculator {
     #[must_use]
     pub fn calculate_chemical_reaction_rate(&self, state: &BubbleState) -> Power {
         if !self.enable_chemical_reactions || state.temperature < 2000.0 {
-            return Power::new::<watt>(0.0);
+            return Power::from_unit::<Watt>(0.0);
         }
 
         // k(T) = A · exp(−Eₐ / RT)  [s⁻¹]
@@ -69,6 +68,6 @@ impl EnergyBalanceCalculator {
         let dissociation_rate_mol_per_s = rate_constant * n_vapor_moles;
 
         // Energy absorption rate: Q̇ = −ΔH · ṅ  [W] (negative = endothermic)
-        Power::new::<watt>(-dissociation_rate_mol_per_s * H_WATER_DISSOCIATION_J_MOL)
+        Power::from_unit::<Watt>(-dissociation_rate_mol_per_s * H_WATER_DISSOCIATION_J_MOL)
     }
 }

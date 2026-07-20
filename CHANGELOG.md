@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+### Breaking (2026-07-19) - Aequitas quantity provider [major]
+
+- Replace the `kwavers-physics` bubble-energy dependency on `uom` with the
+  first-party Aequitas dimensional-law provider. Public energy-balance methods
+  now accept and return Aequitas quantity types; callers construct and inspect
+  them with `from_unit::<Unit>` and `in_unit::<Unit>`.
+- Pin the Aequitas source-identity repair so Aequitas and Kwavers resolve the
+  same Eunomia package. Locked Linux CI no longer attempts to rewrite the
+  dependency graph before compilation, and the supply-chain policy explicitly
+  admits the public Aequitas Git source.
+- Correct the temperature-update contract from heat capacity in J/K to
+  specific heat capacity in J/(kg·K). The complete update now evaluates
+  `ΔT = ΔE / (m c_v)` through dimensional arithmetic without raw unit
+  extraction. See ADR 040.
+- Update the CT/NIfTI integration test to construct images through RITK's
+  current public `ritk_image::Image` re-export. This removes the obsolete
+  `native` module path that blocked the hosted all-target Clippy gate.
+
 ### Added (2026-07-17) - GPU PSTD shared FFT lattice [minor]
 
 - Extend the Hephaestus-acquired WGPU PSTD radix-2 FFT from a 256-point

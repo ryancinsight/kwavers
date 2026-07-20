@@ -26,7 +26,7 @@ fn create_synthetic_nifti(
     let spacing = Spacing::new([1.0, 1.0, 1.0]);
     let direction = Direction::identity();
 
-    let image = ritk_image::native::Image::from_flat_on(
+    let image = ritk_image::Image::from_flat_on(
         voxels,
         [nx as usize, ny as usize, nz as usize],
         origin,
@@ -78,7 +78,7 @@ fn create_skull_phantom_nifti(path: &str) -> std::io::Result<()> {
     let spacing = Spacing::new([0.5, 0.5, 0.5]);
     let direction = Direction::identity();
 
-    let image = ritk_image::native::Image::from_flat_on(
+    let image = ritk_image::Image::from_flat_on(
         voxels,
         [dims.0, dims.1, dims.2],
         origin,
@@ -200,7 +200,7 @@ fn test_nifti_affine_transformation() {
     let spacing = Spacing::new([2.0, 2.0, 2.0]);
     let direction = Direction::identity();
 
-    let image = ritk_image::native::Image::from_flat_on(
+    let image = ritk_image::Image::from_flat_on(
         voxels,
         [dims.0, dims.1, dims.2],
         origin,
@@ -300,7 +300,7 @@ fn test_roundtrip_accuracy() {
     let spacing = Spacing::new([1.0, 1.0, 1.0]);
     let direction = Direction::identity();
 
-    let image = ritk_image::native::Image::from_flat_on(
+    let image = ritk_image::Image::from_flat_on(
         voxels,
         [32, 32, 32],
         origin,

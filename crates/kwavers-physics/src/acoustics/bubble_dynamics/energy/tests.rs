@@ -3,10 +3,11 @@
 use super::*;
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::BubbleParameters;
+use aequitas::systems::si::{
+    quantities::{Power, Pressure},
+    units::{Pascal, Watt},
+};
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use uom::si::f64::{Power, Pressure};
-use uom::si::power::watt;
-use uom::si::pressure::pascal;
 
 #[test]
 fn test_energy_balance_equilibrium() {
@@ -15,13 +16,13 @@ fn test_energy_balance_equilibrium() {
     let state = BubbleState::new(&params);
 
     // At equilibrium with no wall motion, energy rate should be near zero
-    let pressure = Pressure::new::<pascal>(ATMOSPHERIC_PRESSURE);
-    let heat_rate = Power::new::<watt>(0.0);
-    let latent_rate = Power::new::<watt>(0.0);
+    let pressure = Pressure::from_unit::<Pascal>(ATMOSPHERIC_PRESSURE);
+    let heat_rate = Power::from_unit::<Watt>(0.0);
+    let latent_rate = Power::from_unit::<Watt>(0.0);
 
     let energy_rate = calculator.calculate_energy_rate(&state, pressure, heat_rate, latent_rate);
 
-    assert!(energy_rate.get::<watt>().abs() < 1e-10);
+    assert!(energy_rate.in_unit::<Watt>().abs() < 1e-10);
 }
 
 #[test]
@@ -37,7 +38,7 @@ fn test_heat_transfer_calculation() {
 
     // Heat rate is positive when bubble is hotter than liquid (heat flows out)
     // This is the standard convention: positive = heat out of bubble
-    assert!(heat_rate.get::<watt>() > 0.0);
+    assert!(heat_rate.in_unit::<Watt>() > 0.0);
 }
 
 #[test]
@@ -49,7 +50,7 @@ fn test_chemical_reaction_energy() {
     // At low temperature, no chemical reactions
     state.temperature = 1000.0;
     let reaction_rate_low = calculator.calculate_chemical_reaction_rate(&state);
-    assert_eq!(reaction_rate_low.get::<watt>(), 0.0);
+    assert_eq!(reaction_rate_low.in_unit::<Watt>(), 0.0);
 
     // At high temperature (T > 2000 K), chemical reactions occur
     state.temperature = 5000.0;
@@ -57,7 +58,7 @@ fn test_chemical_reaction_energy() {
     let reaction_rate_high = calculator.calculate_chemical_reaction_rate(&state);
 
     // Should be negative (endothermic, absorbs energy from bubble)
-    assert!(reaction_rate_high.get::<watt>() < 0.0);
+    assert!(reaction_rate_high.in_unit::<Watt>() < 0.0);
 }
 
 #[test]
@@ -69,7 +70,7 @@ fn test_plasma_ionization_energy() {
     // At low temperature, no ionization
     state.temperature = 5000.0;
     let ionization_rate_low = calculator.calculate_plasma_ionization_rate(&state);
-    assert_eq!(ionization_rate_low.get::<watt>(), 0.0);
+    assert_eq!(ionization_rate_low.in_unit::<Watt>(), 0.0);
 
     // At extreme temperature (T > 10000 K), ionization occurs
     state.temperature = 15_000.0;
@@ -77,7 +78,7 @@ fn test_plasma_ionization_energy() {
     let ionization_rate_high = calculator.calculate_plasma_ionization_rate(&state);
 
     // Should be negative (endothermic, absorbs energy)
-    assert!(ionization_rate_high.get::<watt>() < 0.0);
+    assert!(ionization_rate_high.in_unit::<Watt>() < 0.0);
 }
 
 #[test]
@@ -89,7 +90,7 @@ fn test_radiation_losses() {
     // At moderate temperature, negligible radiation
     state.temperature = 3000.0;
     let radiation_low = calculator.calculate_radiation_losses(&state);
-    assert_eq!(radiation_low.get::<watt>(), 0.0);
+    assert_eq!(radiation_low.in_unit::<Watt>(), 0.0);
 
     // At extreme temperature (T > 5000 K), significant radiation
     state.temperature = 10_000.0;
@@ -97,12 +98,12 @@ fn test_radiation_losses() {
     let radiation_high = calculator.calculate_radiation_losses(&state);
 
     // Should be negative (energy loss from bubble)
-    assert!(radiation_high.get::<watt>() < 0.0);
+    assert!(radiation_high.in_unit::<Watt>() < 0.0);
 
     // Stefan-Boltzmann: Q ∝ T⁴, so doubling temperature increases radiation by 16×
     state.temperature = 20_000.0;
     let radiation_double = calculator.calculate_radiation_losses(&state);
-    let ratio = radiation_double.get::<watt>() / radiation_high.get::<watt>();
+    let ratio = radiation_double.in_unit::<Watt>() / radiation_high.in_unit::<Watt>();
     assert!((ratio - 16.0).abs() < 2.0); // Within 2x tolerance (T⁴ dominates)
 }
 
@@ -131,17 +132,19 @@ fn test_complete_energy_balance() {
     );
 
     // Total should be finite and physical
-    let energy_watt = total_energy_rate.get::<watt>();
+    let energy_watt = total_energy_rate.in_unit::<Watt>();
     assert!(energy_watt.is_finite());
 
     // During violent compression, multiple energy sinks should be active
     let chemical = calculator
         .calculate_chemical_reaction_rate(&state)
-        .get::<watt>();
+        .in_unit::<Watt>();
     let plasma = calculator
         .calculate_plasma_ionization_rate(&state)
-        .get::<watt>();
-    let radiation = calculator.calculate_radiation_losses(&state).get::<watt>();
+        .in_unit::<Watt>();
+    let radiation = calculator
+        .calculate_radiation_losses(&state)
+        .in_unit::<Watt>();
 
     // All should be non-zero in this regime
     assert!(chemical < 0.0); // Energy absorption
@@ -162,19 +165,19 @@ fn test_energy_balance_options() {
     assert_eq!(
         calc_disabled
             .calculate_chemical_reaction_rate(&state)
-            .get::<watt>(),
+            .in_unit::<Watt>(),
         0.0
     );
     assert_eq!(
         calc_disabled
             .calculate_plasma_ionization_rate(&state)
-            .get::<watt>(),
+            .in_unit::<Watt>(),
         0.0
     );
     assert_eq!(
         calc_disabled
             .calculate_radiation_losses(&state)
-            .get::<watt>(),
+            .in_unit::<Watt>(),
         0.0
     );
 
@@ -187,19 +190,19 @@ fn test_energy_balance_options() {
     assert_ne!(
         calc_enabled
             .calculate_chemical_reaction_rate(&state)
-            .get::<watt>(),
+            .in_unit::<Watt>(),
         0.0
     );
     assert_ne!(
         calc_enabled
             .calculate_plasma_ionization_rate(&state)
-            .get::<watt>(),
+            .in_unit::<Watt>(),
         0.0
     );
     assert_ne!(
         calc_enabled
             .calculate_radiation_losses(&state)
-            .get::<watt>(),
+            .in_unit::<Watt>(),
         0.0
     );
 }

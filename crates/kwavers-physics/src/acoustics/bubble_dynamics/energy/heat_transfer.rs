@@ -1,17 +1,15 @@
 //! Fourier heat transfer integration and coordinate energy balances
 
-use uom::si::area::square_meter;
-use uom::si::energy::joule;
-use uom::si::f64::{
-    Area, HeatCapacity, Length, Mass, Power, Pressure, ThermodynamicTemperature, Time, Velocity,
+use aequitas::systems::si::{
+    quantities::{
+        Area, Length, Mass, Power, Pressure, SpecificHeatCapacity, ThermodynamicTemperature, Time,
+        Velocity,
+    },
+    units::{
+        JoulePerKilogramKelvin, Kelvin, Kilogram, Meter, MeterPerSecond, Pascal, Second,
+        SquareMeter, Watt,
+    },
 };
-use uom::si::heat_capacity::joule_per_kelvin;
-use uom::si::mass::kilogram;
-use uom::si::power::watt;
-use uom::si::pressure::pascal;
-use uom::si::thermal_conductivity::watt_per_meter_kelvin;
-use uom::si::thermodynamic_temperature::kelvin;
-use uom::si::time::second;
 
 use crate::acoustics::bubble_dynamics::bubble_state::BubbleState;
 use crate::acoustics::bubble_dynamics::energy::EnergyBalanceCalculator;
@@ -49,11 +47,10 @@ impl EnergyBalanceCalculator {
         latent_heat_rate: Power,
     ) -> Power {
         // Calculate volume rate of change
-        let wall_velocity =
-            Velocity::new::<uom::si::velocity::meter_per_second>(state.wall_velocity);
+        let wall_velocity = Velocity::from_unit::<MeterPerSecond>(state.wall_velocity);
 
         // Surface area = 4πr²
-        let surface_area = Area::new::<square_meter>(state.surface_area());
+        let surface_area = Area::from_unit::<SquareMeter>(state.surface_area());
 
         // dV/dt = surface_area * wall_velocity
         let volume_rate = surface_area * wall_velocity;
@@ -87,7 +84,7 @@ impl EnergyBalanceCalculator {
         thermal_diffusivity: f64,
     ) -> Power {
         // Convert to SI units
-        let pressure = Pressure::new::<pascal>(internal_pressure);
+        let pressure = Pressure::from_unit::<Pascal>(internal_pressure);
 
         // Calculate Peclet number
         let peclet =
@@ -97,7 +94,7 @@ impl EnergyBalanceCalculator {
         let heat_transfer_rate = self.calculate_heat_transfer_rate(state, peclet);
 
         // Calculate latent heat rate from mass transfer (H_VAP_WATER_100C = 2.257 MJ/kg at 100°C)
-        let latent_heat_rate = Power::new::<watt>(mass_transfer_rate * H_VAP_WATER_100C);
+        let latent_heat_rate = Power::from_unit::<Watt>(mass_transfer_rate * H_VAP_WATER_100C);
 
         // Calculate total energy rate
         self.calculate_energy_rate(state, pressure, heat_transfer_rate, latent_heat_rate)
@@ -114,21 +111,16 @@ impl EnergyBalanceCalculator {
         let nusselt = NUSSELT_PECLET_COEFF.mul_add(peclet_number.sqrt(), NUSSELT_BASE);
 
         // Heat transfer coefficient: h = Nu * k / r
-        let radius = Length::new::<uom::si::length::meter>(state.radius);
-        let k_value = self.thermal_conductivity.get::<watt_per_meter_kelvin>();
-        let r_value = radius.get::<uom::si::length::meter>();
-        let h_value = nusselt * k_value / r_value; // W/(m²·K)
+        let radius = Length::from_unit::<Meter>(state.radius);
+        let heat_transfer_coefficient = (self.thermal_conductivity / radius) * nusselt;
 
         // Temperature difference
-        let bubble_temperature = ThermodynamicTemperature::new::<kelvin>(state.temperature);
-        let delta_t_k =
-            bubble_temperature.get::<kelvin>() - self.ambient_temperature.get::<kelvin>();
+        let bubble_temperature = ThermodynamicTemperature::from_unit::<Kelvin>(state.temperature);
+        let delta_temperature = bubble_temperature - self.ambient_temperature;
 
         // Heat transfer rate: Q = h * A * ΔT
-        let area = Area::new::<square_meter>(state.surface_area());
-        let area_m2 = area.get::<square_meter>();
-
-        Power::new::<watt>(h_value * area_m2 * delta_t_k)
+        let area = Area::from_unit::<SquareMeter>(state.surface_area());
+        heat_transfer_coefficient * area * delta_temperature
     }
 
     /// Calculate Peclet number for heat transfer
@@ -148,27 +140,21 @@ impl EnergyBalanceCalculator {
         state: &mut BubbleState,
         energy_rate: Power,
         dt: Time,
-        heat_capacity: HeatCapacity,
+        specific_heat_capacity: SpecificHeatCapacity,
     ) -> ThermodynamicTemperature {
         // ΔT = (dU/dt * dt) / (m * cv)
         let energy_change = energy_rate * dt;
-        let mass = Mass::new::<kilogram>(state.mass());
-
-        // Calculate temperature change in Kelvin
-        let energy_joules = energy_change.get::<joule>();
-        let mass_kg = mass.get::<kilogram>();
-        let heat_cap_j_per_k = heat_capacity.get::<joule_per_kelvin>();
-        let temp_change_k = energy_joules / (mass_kg * heat_cap_j_per_k);
-
-        let current_temperature_k = state.temperature;
-        let temperature_k = current_temperature_k + temp_change_k;
+        let mass = Mass::from_unit::<Kilogram>(state.mass());
+        let temperature_change: ThermodynamicTemperature =
+            energy_change / (mass * specific_heat_capacity);
+        let current_temperature = ThermodynamicTemperature::from_unit::<Kelvin>(state.temperature);
+        let temperature = current_temperature + temperature_change;
 
         // Ensure temperature doesn't go below ambient (non-physical)
-        let ambient_k = self.ambient_temperature.get::<kelvin>();
-        if temperature_k < ambient_k {
+        if temperature < self.ambient_temperature {
             self.ambient_temperature
         } else {
-            ThermodynamicTemperature::new::<kelvin>(temperature_k)
+            temperature
         }
     }
 }
@@ -187,8 +173,8 @@ pub fn update_temperature_energy_balance(
     }
 
     // Convert to SI units
-    let pressure = Pressure::new::<pascal>(internal_pressure);
-    let time_step = Time::new::<second>(dt);
+    let pressure = Pressure::from_unit::<Pascal>(internal_pressure);
+    let time_step = Time::from_unit::<Second>(dt);
 
     // Calculate thermal diffusivity
     let thermal_diffusivity =
@@ -202,7 +188,7 @@ pub fn update_temperature_energy_balance(
     let heat_transfer_rate = calculator.calculate_heat_transfer_rate(state, peclet);
 
     // Calculate latent heat rate from mass transfer (H_VAP_WATER_100C = 2.257 MJ/kg at 100°C)
-    let latent_heat_rate = Power::new::<watt>(mass_transfer_rate * H_VAP_WATER_100C);
+    let latent_heat_rate = Power::from_unit::<Watt>(mass_transfer_rate * H_VAP_WATER_100C);
 
     // Calculate total energy rate
     let energy_rate =
@@ -212,12 +198,16 @@ pub fn update_temperature_energy_balance(
     let gamma = state.gas_species.gamma();
     let molecular_weight = state.gas_species.molecular_weight();
     let cv = R_GAS / molecular_weight / (gamma - 1.0);
-    let heat_capacity = HeatCapacity::new::<joule_per_kelvin>(cv);
+    let specific_heat_capacity = SpecificHeatCapacity::from_unit::<JoulePerKilogramKelvin>(cv);
 
     // Update temperature
-    let temperature =
-        calculator.update_temperature_from_energy(state, energy_rate, time_step, heat_capacity);
+    let temperature = calculator.update_temperature_from_energy(
+        state,
+        energy_rate,
+        time_step,
+        specific_heat_capacity,
+    );
 
-    state.temperature = temperature.get::<kelvin>();
+    state.temperature = temperature.in_unit::<Kelvin>();
     state.update_max_temperature();
 }
