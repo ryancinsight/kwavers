@@ -43,7 +43,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout Atlas path dependencies
         uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
@@ -88,7 +88,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Checkout Atlas path dependencies
         uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
