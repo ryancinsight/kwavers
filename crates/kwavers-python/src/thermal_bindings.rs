@@ -351,7 +351,9 @@ impl ThermalSimulation {
         // Convert final temperature field K → °C.
         let temp_celsius: Array3<f64> = solver.temperature().mapv(|t| t - KELVIN_OFFSET_C);
 
-        let time_vec = numpy::ndarray::Array1::linspace(dt, dt * time_steps as f64, time_steps);
+        let time_vec: Vec<f64> = (1..=time_steps)
+            .map(|i| i as f64 * dt)
+            .collect();
 
         let temperature_at_sensors: Option<Py<PyArray2<f64>>> = if n_sensors > 0 {
             let selected = sensor_data
@@ -371,7 +373,7 @@ impl ThermalSimulation {
             temperature: leto3_to_nd3(temp_celsius).to_pyarray(py).into(),
             temperature_at_sensors,
             thermal_dose: thermal_dose_out,
-            time: time_vec.to_pyarray(py).into(),
+            time: PyArray1::from_vec(py, time_vec).into(),
             time_steps,
             dt,
         })
