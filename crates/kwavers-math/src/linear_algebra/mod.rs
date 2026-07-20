@@ -6,12 +6,12 @@
 //! - `iterative`: iterative solvers (LSQR)
 //! - `norms`: vector norms
 //! - `numeric_ops`: generic float trait (`NumericOps`)
-//! - `ext`: fluent ndarray extension trait (`LinearAlgebraExt`) and `norm_l2`
+//! - `ext`: fluent `leto::Array` extension trait (`LinearAlgebraExt`) and `norm_l2`
 //! - `tolerance`: numerical tolerance constants
 //! - `sparse`: sparse matrix operations (CSR, COO)
 //!
 //! Note: Basic linear algebra operations (solve, inv, LU, QR, Cholesky, symmetric eigen)
-//! are provided by leto-ops and should be used directly instead of the deprecated
+//! are provided by `leto-ops` and should be used directly instead of the deprecated
 //! `basic` and `eigen` modules.
 
 pub mod complex;
