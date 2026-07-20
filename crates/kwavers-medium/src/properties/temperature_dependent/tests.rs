@@ -64,20 +64,52 @@ fn test_absorption_temperature_and_frequency_dependence() {
 #[test]
 fn test_thermal_conductivity_temperature_dependence() {
     let thermal = TemperatureDependentThermal::water();
-    let k_ref = thermal.conductivity(ROOM_TEMPERATURE_K);
-    let k_hot = thermal.conductivity(313.15);
+    let base = super::super::ThermalPropertyData::water();
+    let k_ref = thermal
+        .conductivity(ROOM_TEMPERATURE_K)
+        .expect("reference temperature is physical");
+    let k_hot = thermal
+        .conductivity(313.15)
+        .expect("elevated temperature is physical");
+    let delta = 313.15 - ROOM_TEMPERATURE_K;
+    let expected_factor = (-1.0e-5 * delta).mul_add(delta, 0.002_f64.mul_add(delta, 1.0));
+    let expected = base.conductivity() * expected_factor;
+    assert_eq!(k_ref.to_bits(), base.conductivity().to_bits());
+    assert_eq!(k_hot.to_bits(), expected.to_bits());
     assert!(k_hot > k_ref);
+}
+
+#[test]
+fn thermal_response_rejects_non_finite_inputs() {
+    let invalid_coefficient = TemperatureDependentThermal::new(
+        super::super::ThermalPropertyData::water(),
+        ROOM_TEMPERATURE_K,
+        f64::NAN,
+        0.0,
+        0.0,
+    );
+    assert!(invalid_coefficient.is_err());
+
+    let water = TemperatureDependentThermal::water();
+    assert!(water.properties(f64::NAN).is_err());
 }
 
 #[test]
 fn test_combined_material_properties() {
     let water = TemperatureDependentMaterial::water();
-    let props = water.properties_at_temperature(300.0);
+    let props = water
+        .properties_at_temperature(300.0)
+        .expect("300 K produces physical thermal properties");
 
     assert!(props.sound_speed > 1400.0 && props.sound_speed < 1600.0);
     assert!(props.density > 900.0 && props.density < 1100.0);
     assert!(props.impedance > 1.0e6 && props.impedance < 2.0e6);
     assert!(props.thermal_conductivity > 0.5 && props.thermal_conductivity < 0.7);
+    let expected_diffusivity = props.thermal_conductivity / (props.density * props.specific_heat);
+    assert_eq!(
+        props.thermal_diffusivity.to_bits(),
+        expected_diffusivity.to_bits()
+    );
 }
 
 #[test]

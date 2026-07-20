@@ -86,7 +86,22 @@ impl ThermalPropertyData {
             ThermalConductivity::from_base(conductivity),
         )
         .map_err(|error| error.to_string())?;
-        if conductivity == 0.0 {
+
+        Self::from_thermophysical(thermophysical, blood_perfusion, blood_specific_heat)
+    }
+
+    /// Construct from a validated Proteus thermophysical bundle.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when conductivity is zero or a supplied bioheat
+    /// parameter violates its physical domain.
+    pub fn from_thermophysical(
+        thermophysical: ThermophysicalProperties<f64>,
+        blood_perfusion: Option<f64>,
+        blood_specific_heat: Option<f64>,
+    ) -> Result<Self, String> {
+        if thermophysical.thermal_conductivity().quantity().into_base() == 0.0 {
             return Err("Thermal conductivity must be positive, got 0".to_owned());
         }
         if let Some(w_b) = blood_perfusion {
@@ -105,6 +120,12 @@ impl ThermalPropertyData {
             blood_perfusion,
             blood_specific_heat,
         })
+    }
+
+    /// Borrow the canonical Proteus thermophysical bundle.
+    #[must_use]
+    pub const fn thermophysical(&self) -> &ThermophysicalProperties<f64> {
+        &self.thermophysical
     }
 
     /// Thermal conductivity k (W/m/K).

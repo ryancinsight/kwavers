@@ -8358,3 +8358,20 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   SemVer gate now passes against `main` with `--release-type major` after
   Leto, Gaia, and Kwavers declare the common Leto/Eunomia Git sources and use
   Atlas-root patches only for local integration.
+
+## KW-MAT-042 — Proteus temperature response [arch] [major] — done
+
+- Outcome: Proteus owns the shared constant, linear, and quadratic
+  thermophysical temperature response; Kwavers retains tissue catalogs,
+  perfusion, absorption, and acoustic behavior.
+- Scope: `kwavers-medium` temperature-dependent thermal properties,
+  `kwavers-physics` cohesive thermal updates, provider pins, ADR 042, tests,
+  and changelog. Acoustic response laws remain out of scope.
+- Acceptance oracle: both duplicate scalar temperature polynomials are absent;
+  reference-state values are invariant; invalid temperatures return errors;
+  combined diffusivity uses the acoustic density; affected package Clippy,
+  Nextest, doctests, Rustdoc, dependency, and SemVer gates pass.
+- Dependencies: Aequitas `0f9d77a`; Proteus `335e529`.
+- Evidence: focused warning-denied Clippy and 1,743 package tests pass; hosted
+  verification and SemVer evidence attach to the delivery pull request.
+- Decision: [ADR 042](docs/ADR/042-proteus-temperature-response.md).

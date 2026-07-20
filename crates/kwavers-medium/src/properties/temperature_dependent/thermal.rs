@@ -1,31 +1,39 @@
+use aequitas::systems::si::quantities::{
+    ReciprocalTemperature, ReciprocalTemperatureSquared, ThermodynamicTemperature,
+};
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_K, ROOM_TEMPERATURE_K};
+use proteus::{
+    ConstantResponse, ConstitutiveLaw, LinearResponse, QuadraticResponse, ResponseSet,
+    TemperatureLaw,
+};
 
 use super::super::ThermalPropertyData;
 
-/// Temperature-dependent thermal properties.
+type ThermalResponses = ResponseSet<ConstantResponse, LinearResponse<f64>, QuadraticResponse<f64>>;
+type ThermalLaw = TemperatureLaw<f64, ThermalResponses>;
+
+/// Temperature-dependent thermal properties backed by the Proteus law.
 ///
 /// ## Model
+///
 /// - Conductivity: `k(T) = k₀[1 + κ₁(T − T₀) + κ₂(T − T₀)²]`
 /// - Specific heat: `c_p(T) = c₀[1 + c₁(T − T₀)]`
-/// - Diffusivity: `α(T) = k(T) / (ρ(T) c_p(T))`
+/// - Density: constant
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TemperatureDependentThermal {
-    pub base_properties: ThermalPropertyData,
-    /// Reference temperature T₀ (K)
-    pub reference_temperature: f64,
-    /// Thermal conductivity linear coefficient κ₁ (K⁻¹)
-    pub conductivity_coeff_linear: f64,
-    /// Thermal conductivity quadratic coefficient κ₂ (K⁻²)
-    pub conductivity_coeff_quadratic: f64,
-    /// Specific heat linear coefficient (K⁻¹)
-    pub specific_heat_coefficient: f64,
+    law: ThermalLaw,
+    blood_perfusion: Option<f64>,
+    blood_specific_heat: Option<f64>,
 }
 
 impl TemperatureDependentThermal {
-    /// New.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
+    /// Construct a dimensionally typed thermal response.
     ///
+    /// # Errors
+    ///
+    /// Returns an error when the reference temperature is outside
+    /// `[273, 373] K`, a response coefficient is non-finite, or Proteus rejects
+    /// the reference state.
     pub fn new(
         base_properties: ThermalPropertyData,
         reference_temperature: f64,
@@ -35,66 +43,124 @@ impl TemperatureDependentThermal {
     ) -> Result<Self, String> {
         if !(273.0..=373.0).contains(&reference_temperature) {
             return Err(format!(
-                "Reference temperature {} K is outside valid range [273, 373] K",
-                reference_temperature
+                "Reference temperature {reference_temperature} K is outside valid range [273, 373] K"
             ));
         }
+
+        let responses = ResponseSet::new(
+            ConstantResponse,
+            LinearResponse::new(ReciprocalTemperature::from_base(specific_heat_coefficient))
+                .map_err(|error| error.to_string())?,
+            QuadraticResponse::new(
+                ReciprocalTemperature::from_base(conductivity_coeff_linear),
+                ReciprocalTemperatureSquared::from_base(conductivity_coeff_quadratic),
+            )
+            .map_err(|error| error.to_string())?,
+        );
+        let law = TemperatureLaw::new(
+            *base_properties.thermophysical(),
+            ThermodynamicTemperature::from_base(reference_temperature),
+            responses,
+        )
+        .map_err(|error| error.to_string())?;
+
         Ok(Self {
-            base_properties,
-            reference_temperature,
-            conductivity_coeff_linear,
-            conductivity_coeff_quadratic,
-            specific_heat_coefficient,
+            law,
+            blood_perfusion: base_properties.blood_perfusion,
+            blood_specific_heat: base_properties.blood_specific_heat,
         })
     }
 
-    /// `k(T) = k₀[1 + κ₁(T − T₀) + κ₂(T − T₀)²]`
-    #[inline]
-    #[must_use]
-    pub fn conductivity(&self, temperature: f64) -> f64 {
-        let delta_t = temperature - self.reference_temperature;
-        let factor = (self.conductivity_coeff_quadratic * delta_t).mul_add(
-            delta_t,
-            self.conductivity_coeff_linear.mul_add(delta_t, 1.0),
-        );
-        self.base_properties.conductivity() * factor
+    /// Evaluate the complete thermal property bundle at `temperature` kelvin.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a non-physical temperature or response factor.
+    pub fn properties(&self, temperature: f64) -> Result<ThermalPropertyData, String> {
+        let temperature = ThermodynamicTemperature::from_base(temperature);
+        let thermophysical = self
+            .law
+            .properties(&temperature)
+            .map_err(|error| error.to_string())?;
+        ThermalPropertyData::from_thermophysical(
+            thermophysical,
+            self.blood_perfusion,
+            self.blood_specific_heat,
+        )
     }
 
-    /// `c_p(T) = c₀[1 + c₁(T − T₀)]`
-    #[inline]
-    #[must_use]
-    pub fn specific_heat(&self, temperature: f64) -> f64 {
-        let delta_t = temperature - self.reference_temperature;
-        self.base_properties.specific_heat() * self.specific_heat_coefficient.mul_add(delta_t, 1.0)
+    pub(super) fn properties_with_density(
+        &self,
+        temperature: f64,
+        density: f64,
+    ) -> Result<ThermalPropertyData, String> {
+        let properties = self.properties(temperature)?;
+        ThermalPropertyData::new(
+            properties.conductivity(),
+            properties.specific_heat(),
+            density,
+            self.blood_perfusion,
+            self.blood_specific_heat,
+        )
     }
 
-    /// `α(T) = k(T) / (ρ × c_p(T))`
-    #[must_use]
-    pub fn thermal_diffusivity(&self, temperature: f64, density: f64) -> f64 {
-        self.conductivity(temperature) / (density * self.specific_heat(temperature))
+    /// Evaluate thermal conductivity in W/(m·K).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a non-physical temperature or response factor.
+    pub fn conductivity(&self, temperature: f64) -> Result<f64, String> {
+        self.properties(temperature)
+            .map(|properties| properties.conductivity())
     }
 
-    /// Water properties
+    /// Evaluate specific heat capacity in J/(kg·K).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a non-physical temperature or response factor.
+    pub fn specific_heat(&self, temperature: f64) -> Result<f64, String> {
+        self.properties(temperature)
+            .map(|properties| properties.specific_heat())
+    }
+
+    /// Evaluate `α(T) = k(T) / (ρ × c_p(T))` in m²/s.
+    ///
+    /// The supplied density is the acoustic model's temperature-dependent
+    /// density, preserving the combined material contract.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for a non-physical temperature, response factor, or
+    /// acoustic density.
+    pub fn thermal_diffusivity(&self, temperature: f64, density: f64) -> Result<f64, String> {
+        self.properties_with_density(temperature, density)
+            .map(|properties| properties.thermal_diffusivity())
+    }
+
+    /// Water properties.
     #[must_use]
     pub fn water() -> Self {
-        Self {
-            base_properties: ThermalPropertyData::water(),
-            reference_temperature: ROOM_TEMPERATURE_K,
-            conductivity_coeff_linear: 0.002,
-            conductivity_coeff_quadratic: -1e-5,
-            specific_heat_coefficient: 0.0001,
-        }
+        Self::new(
+            ThermalPropertyData::water(),
+            ROOM_TEMPERATURE_K,
+            0.002,
+            -1e-5,
+            0.0001,
+        )
+        .expect("water temperature coefficients satisfy the Proteus contract")
     }
 
-    /// Soft tissue properties
+    /// Soft-tissue properties.
     #[must_use]
     pub fn soft_tissue() -> Self {
-        Self {
-            base_properties: ThermalPropertyData::soft_tissue(),
-            reference_temperature: BODY_TEMPERATURE_K,
-            conductivity_coeff_linear: 0.001,
-            conductivity_coeff_quadratic: 0.0,
-            specific_heat_coefficient: 0.0002,
-        }
+        Self::new(
+            ThermalPropertyData::soft_tissue(),
+            BODY_TEMPERATURE_K,
+            0.001,
+            0.0,
+            0.0002,
+        )
+        .expect("soft-tissue temperature coefficients satisfy the Proteus contract")
     }
 }
