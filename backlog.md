@@ -19,9 +19,16 @@
   boundary, Miri, and security gates, then exposed a moving Atlas `main`
   checkout that made the lockfile stale before compilation. The reusable
   checkout action now pins Atlas commit `58d7a6e`; a fresh matrix is required.
-- The migrated comprehensive clinical workflow is partitioned into 466/149/146/80
-  line concern leaves. Default and GPU builds plus warning-denied Clippy pass;
-  no no-op uncertainty clone, vtable path, or redundant CEUS map copy remains.
+- The migrated comprehensive clinical workflow is partitioned into 127/168/161/
+  157/106/91/60-line root and concern leaves. Default and GPU builds plus
+  warning-denied Clippy pass; no no-op uncertainty clone, vtable path, or
+  redundant CEUS map copy remains.
+- Heterogeneous report dispatch remains only at the cold report boundary;
+  callers pass a borrowed reference slice that `UncertaintyReport` retains
+  without boxes or a second vector allocation.
+- The Apollo Git patch maps Coeus's remote FFT dependency to Kwavers's
+  synchronized provider checkout, eliminating duplicate Apollo package
+  identities while retaining the committed lock.
 - Hosted merge remains the terminal transition.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress

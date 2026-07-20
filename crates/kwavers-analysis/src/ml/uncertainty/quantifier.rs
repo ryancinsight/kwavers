@@ -279,7 +279,7 @@ impl UncertaintyQuantifier {
     #[must_use]
     pub fn generate_report<'a>(
         &self,
-        results: &'a [Box<dyn UncertaintyResult>],
+        results: &'a [&'a dyn UncertaintyResult],
     ) -> UncertaintyReport<'a> {
         let mut summary = UncertaintySummary {
             mean_confidence: 0.0,
@@ -302,7 +302,7 @@ impl UncertaintyQuantifier {
         if results.is_empty() {
             return UncertaintyReport {
                 summary,
-                detailed_results: Vec::new(),
+                detailed_results: results,
                 recommendations: Vec::new(),
             };
         }
@@ -314,7 +314,7 @@ impl UncertaintyQuantifier {
 
         UncertaintyReport {
             summary,
-            detailed_results: results.iter().map(|r| r.as_ref()).collect(),
+            detailed_results: results,
             recommendations,
         }
     }

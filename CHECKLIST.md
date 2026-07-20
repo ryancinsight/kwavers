@@ -19,6 +19,10 @@
       the committed lockfile.
 - [x] Partition the touched clinical workflow example and remove its unused
       cloned/vtable uncertainty-report path.
+- [x] Borrow heterogeneous uncertainty-report inputs without caller boxes or a
+      duplicate collected reference vector.
+- [x] Consolidate direct and Coeus-transitive Apollo dependencies onto the
+      synchronized Atlas checkout.
 - [ ] Publish, pass hosted gates, and merge the integration.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor]

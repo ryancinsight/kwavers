@@ -104,6 +104,10 @@ pub struct UncertaintySummary {
 #[derive(Debug)]
 pub struct UncertaintyReport<'a> {
     pub summary: UncertaintySummary,
-    pub detailed_results: Vec<&'a dyn UncertaintyResult>,
+    /// Borrowed heterogeneous results.
+    ///
+    /// Dynamic dispatch is confined to this cold report boundary because
+    /// callers may aggregate externally implemented result types.
+    pub detailed_results: &'a [&'a dyn UncertaintyResult],
     pub recommendations: Vec<String>,
 }

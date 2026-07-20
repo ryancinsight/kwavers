@@ -56,12 +56,25 @@
 
 - Structural boundary 2026-07-20: the Tyche migration touched a 794-line
   clinical workflow example spanning modality execution, result storage, and
-  presentation. It is now a 466-line workflow root with 149/146/80-line modality,
-  presentation, and result leaves. The no-op cloned uncertainty maps and
-  `Box<dyn UncertaintyResult>` vector are deleted, and the CFL helper statically
-  dispatches over its medium. CEUS now retains the provider-owned Leto map
-  without a collect-and-reconstruct copy. Default/GPU checks and warning-denied
-  Clippy pass.
+  presentation. It is now a 127-line manifest/root with 168/161/157/106/91/
+  60-line modality, execution, presentation, clinical, result, and metric
+  leaves. The no-op cloned uncertainty maps and `Box<dyn UncertaintyResult>`
+  vector are deleted, and the CFL helper statically dispatches over its medium.
+  CEUS now retains the provider-owned Leto map without a
+  collect-and-reconstruct copy. Default/GPU checks and warning-denied Clippy
+  pass.
+
+- Reporting boundary 2026-07-20: `generate_report` required
+  `&[Box<dyn UncertaintyResult>]` and collected a second reference vector.
+  Runtime heterogeneity remains an explicit cold-boundary exception, but the
+  report now borrows `&[&dyn UncertaintyResult]` directly. A pointer-identity
+  regression proves the returned detailed-results slice is the caller's slice.
+
+- Provider identity 2026-07-20: current Coeus declares Apollo by Git while
+  Kwavers declares Apollo by synchronized path. Without an Apollo source patch,
+  Cargo resolves two `apollo-fft` identities and rewrites the lock. The patch
+  maps Apollo's Git packages to the Atlas checkout; locked metadata then
+  resolves unchanged.
 
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a

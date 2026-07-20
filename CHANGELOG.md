@@ -24,11 +24,16 @@
 - Pin hosted sibling-provider checkout to the immutable Atlas graph used by the
   lockfile. CI no longer resolves a moving `main` graph between PR publication
   and job execution.
-- Partition the touched comprehensive clinical workflow into root, modality,
-  presentation, and result concerns. Remove its unused cloned uncertainty maps
-  and `Box<dyn UncertaintyResult>` vector; its CFL helper now monomorphizes over
-  the concrete medium, and CEUS retains the provider-owned Leto perfusion map
-  without copying it through a second allocation.
+- Partition the touched comprehensive clinical workflow into root, execution,
+  modality, clinical, metrics, presentation, and result concerns. Remove its
+  unused cloned uncertainty maps and `Box<dyn UncertaintyResult>` vector; its
+  CFL helper now monomorphizes over the concrete medium, and CEUS retains the
+  provider-owned Leto perfusion map without a second allocation.
+- Borrow heterogeneous uncertainty-report inputs and detailed results as one
+  slice at the cold reporting boundary, removing caller boxes and the duplicate
+  collected reference vector.
+- Patch Apollo's Git source to the synchronized Atlas checkout so transitive
+  Coeus consumers and direct Kwavers consumers resolve one FFT provider identity.
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 

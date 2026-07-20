@@ -114,6 +114,11 @@ hephaestus-core = { path = "../hephaestus/crates/hephaestus-core" }
 hephaestus-wgpu = { path = "../hephaestus/crates/hephaestus-wgpu" }
 hephaestus-cuda = { path = "../hephaestus/crates/hephaestus-cuda" }
 
+[patch."https://github.com/ryancinsight/apollo.git"]
+apollo-fft = { path = "../apollo/crates/apollo-fft" }
+apollo-fft-macros = { path = "../apollo/crates/apollo-fft-macros" }
+apollo-leto-interop = { path = "../apollo/crates/apollo-leto-interop" }
+
 [patch."https://github.com/ryancinsight/Mnemosyne.git"]
 mnemosyne = { path = "../mnemosyne/crates/mnemosyne" }
 mnemosyne-arena = { path = "../mnemosyne/crates/mnemosyne-arena" }

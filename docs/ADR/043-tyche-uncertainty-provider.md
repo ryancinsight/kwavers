@@ -67,6 +67,13 @@ inference, Leto arrays, and uncertainty presentation remain Kwavers-owned.
   Tyche `SensitivityReport<f64, PARAMETERS>` from a borrowed
   `ParameterSpace<f64, PARAMETERS>`.
 - `MlUncertaintyConfig` gains `sensitivity_seed: tyche_core::Seed`.
+- `UncertaintyQuantifier::generate_report` borrows
+  `&[&dyn UncertaintyResult]`, and `UncertaintyReport` retains that slice
+  without requiring caller boxes or collecting a duplicate reference vector.
+  Type erasure remains confined to this cold heterogeneous reporting boundary.
+- The workspace patches Apollo's Git source to the synchronized Atlas checkout.
+  This keeps Coeus-transitive and direct FFT dependencies on one package
+  identity as Coeus adopts remote provider declarations.
 
 No compatibility wrappers or aliases preserve the superseded contracts.
 

@@ -1,8 +1,27 @@
 //! Tests for uncertainty quantification framework.
 
 use super::quantifier::UncertaintyQuantifier;
-use super::types::{MlUncertaintyConfig, MlUncertaintyMethod};
+use super::types::{
+    BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
+    UncertaintyResult,
+};
 use leto::Array3;
+
+#[derive(Debug)]
+struct ScalarUncertainty {
+    confidence_score: f64,
+    bounds: (f64, f64),
+}
+
+impl UncertaintyResult for ScalarUncertainty {
+    fn confidence_score(&self) -> f64 {
+        self.confidence_score
+    }
+
+    fn uncertainty_bounds(&self) -> (f64, f64) {
+        self.bounds
+    }
+}
 
 #[cfg(feature = "pinn")]
 struct LinearPinnPredictor;
@@ -143,4 +162,35 @@ fn test_confidence_check() {
 
     assert!(quantifier.is_confident(&uncertainty, 0.5));
     assert!(!quantifier.is_confident(&uncertainty, 0.95));
+}
+
+#[test]
+fn uncertainty_report_borrows_heterogeneous_result_slice() {
+    let quantifier = UncertaintyQuantifier::new(MlUncertaintyConfig::default()).unwrap();
+    let first = BeamformingUncertainty {
+        uncertainty_map: Array3::from_elem([1, 1, 1], 0.1),
+        confidence_score: 0.5,
+        reliability_metrics: ReliabilityMetrics {
+            signal_to_noise_ratio: 1.0,
+            contrast_to_noise_ratio: 2.0,
+            spatial_resolution: 3.0,
+        },
+    };
+    let second = ScalarUncertainty {
+        confidence_score: 1.0,
+        bounds: (0.2, 0.2),
+    };
+    let results: [&dyn UncertaintyResult; 2] = [&first, &second];
+
+    let report = quantifier.generate_report(&results);
+
+    assert!(core::ptr::eq(
+        report.detailed_results.as_ptr(),
+        results.as_ptr()
+    ));
+    assert_eq!(report.summary.mean_confidence, 0.75);
+    assert_eq!(report.summary.confidence_range, (0.5, 1.0));
+    assert_eq!(report.summary.reliability_score, 0.625);
+    assert_eq!(report.detailed_results[0].confidence_score(), 0.5);
+    assert_eq!(report.detailed_results[1].confidence_score(), 1.0);
 }

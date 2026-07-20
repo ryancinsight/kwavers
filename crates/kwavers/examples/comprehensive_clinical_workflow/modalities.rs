@@ -121,8 +121,7 @@ pub(super) fn perform_shear_wave_elastography(
     ));
     let nonlinear_analysis =
         nonlinear_inversion.reconstruct(&harmonic_field, &workflow.liver_grid)?;
-    let fibrosis_metrics =
-        workflow.calculate_fibrosis_metrics(&stiffness_map, &nonlinear_analysis)?;
+    let fibrosis_metrics = workflow.calculate_fibrosis_metrics(&stiffness_map, &nonlinear_analysis);
 
     println!(
         "SWE completed: Mean stiffness = {:.1} kPa",
@@ -150,7 +149,7 @@ pub(super) fn perform_contrast_enhanced_ultrasound(
     let perfusion_map = workflow
         .ceus_system
         .estimate_perfusion(&contrast_signal, &perfusion_model)?;
-    let perfusion_metrics = workflow.calculate_perfusion_metrics(&perfusion_map)?;
+    let perfusion_metrics = workflow.calculate_perfusion_metrics(&perfusion_map);
 
     println!(
         "CEUS completed: Peak enhancement = {:.1} dB",
