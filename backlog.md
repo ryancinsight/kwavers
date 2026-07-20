@@ -8409,3 +8409,22 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
 - Evidence: focused warning-denied Clippy and 1,743 package tests pass; hosted
   verification and SemVer evidence attach to the delivery pull request.
 - Decision: [ADR 042](docs/ADR/042-proteus-temperature-response.md).
+
+## KW-BIO-043 — Asclepius response ownership [arch] [major] — in progress
+
+- Owner: Codex; scope: CEM43, Arrhenius damage, independent-insult
+  composition, direct provider pins, consumer tests, Python bindings, and
+  documentation. Grids, treatment policy, tissue parameter catalogs, and the
+  independent bioheat validation oracle remain Kwavers-owned.
+- Acceptance oracle: production CEM43 and Arrhenius formulas exist only in
+  Asclepius; every in-scope consumer delegates through Aequitas quantities;
+  invalid observations return errors without partially updating persistent
+  state; Python remains a conversion-only PyO3 boundary; the independent
+  solver oracle still matches published 42/43/44 degree Celsius cases.
+- Dependencies: Asclepius `15b09d4`; Aequitas `be3a1ac`.
+- Risk: public duplicate response functions are removed, so the change is
+  breaking. ADR 043 owns the migration and verification decision.
+- Claimed files: response-law consumers under `kwavers-physics`,
+  `kwavers-therapy`, and `kwavers-python`; provider manifests/lock; ADR 043;
+  this item and its owner-local checklist section.
+- Decision: [ADR 043](docs/ADR/043-asclepius-response-ownership.md).

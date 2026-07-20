@@ -7304,3 +7304,17 @@ passes with `--baseline-rev main --release-type major --only-explicit-features
 --features gpu`. Leto, Gaia, and Kwavers now declare Leto/Eunomia through the
 same Git sources, and their integration roots patch those sources to local
 Atlas checkouts only for in-tree development.
+
+## Owner: Codex — Asclepius response ownership [major]
+
+- [x] Audit every production CEM43, Arrhenius, and independent-insult formula.
+- [x] Record ownership, failure atomicity, retained consumer policy, and
+      independent-oracle boundaries in ADR 043.
+- [ ] Add the direct public Asclepius dependency to each consuming crate.
+- [ ] Replace every production formula with typed Asclepius evaluation and
+      delete the superseded public analytical functions and constants.
+- [ ] Keep the solver validation implementation independent and add
+      consumer-level invalid-domain and reference-case regressions.
+- [ ] Route Python functions directly through Asclepius-backed Rust APIs.
+- [ ] Run residue scans, focused package gates, doctests, Rustdoc, dependency
+      policy, and the breaking SemVer gate.
