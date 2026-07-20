@@ -57,7 +57,7 @@ impl TemperatureDependentThermal {
             delta_t,
             self.conductivity_coeff_linear.mul_add(delta_t, 1.0),
         );
-        self.base_properties.conductivity * factor
+        self.base_properties.conductivity() * factor
     }
 
     /// `c_p(T) = c₀[1 + c₁(T − T₀)]`
@@ -65,7 +65,7 @@ impl TemperatureDependentThermal {
     #[must_use]
     pub fn specific_heat(&self, temperature: f64) -> f64 {
         let delta_t = temperature - self.reference_temperature;
-        self.base_properties.specific_heat * self.specific_heat_coefficient.mul_add(delta_t, 1.0)
+        self.base_properties.specific_heat() * self.specific_heat_coefficient.mul_add(delta_t, 1.0)
     }
 
     /// `α(T) = k(T) / (ρ × c_p(T))`

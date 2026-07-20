@@ -161,28 +161,28 @@ mod tests {
     #[test]
     fn test_tissue_constructors() {
         let liver = tissues::liver();
-        assert_eq!(liver.conductivity, 0.52);
-        assert_eq!(liver.density, DENSITY_LIVER);
+        assert_eq!(liver.conductivity(), 0.52);
+        assert_eq!(liver.density(), DENSITY_LIVER);
         assert!(liver.has_bioheat_parameters());
 
         let muscle = tissues::muscle();
-        assert_eq!(muscle.conductivity, 0.49);
-        assert_eq!(muscle.density, DENSITY_MUSCLE);
+        assert_eq!(muscle.conductivity(), 0.49);
+        assert_eq!(muscle.density(), DENSITY_MUSCLE);
         assert!(muscle.has_bioheat_parameters());
 
         let fat = tissues::fat();
-        assert_eq!(fat.conductivity, 0.21);
-        assert_eq!(fat.density, DENSITY_BREAST_FAT);
+        assert_eq!(fat.conductivity(), 0.21);
+        assert_eq!(fat.density(), DENSITY_BREAST_FAT);
         assert!(fat.has_bioheat_parameters());
 
         let tumor = tissues::tumor();
-        assert_eq!(tumor.conductivity, 0.55);
-        assert_eq!(tumor.density, DENSITY_TISSUE);
+        assert_eq!(tumor.conductivity(), 0.55);
+        assert_eq!(tumor.density(), DENSITY_TISSUE);
         assert!(tumor.has_bioheat_parameters());
 
         let soft = tissues::soft_tissue();
-        assert_eq!(soft.conductivity, 0.5);
-        assert_eq!(soft.density, DENSITY_TISSUE);
+        assert_eq!(soft.conductivity(), 0.5);
+        assert_eq!(soft.density(), DENSITY_TISSUE);
         assert!(soft.has_bioheat_parameters());
     }
 
@@ -192,7 +192,7 @@ mod tests {
         let alpha = liver.thermal_diffusivity();
 
         // α = k / (ρc) = 0.52 / (1060 * 3540) ≈ 1.39e-7 m²/s
-        let expected = liver.conductivity / (liver.density * liver.specific_heat);
+        let expected = liver.conductivity() / (liver.density() * liver.specific_heat());
         assert!((alpha - expected).abs() < 1e-12);
 
         // Should be in reasonable range for tissue (10^-8 to 10^-6 m²/s)

@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 
 [dependencies]
+aequitas = { workspace = true }
 kwavers-core = { path = "../kwavers-core" }
 kwavers-math = { path = "../kwavers-math" }
 eunomia = { workspace = true }
@@ -17,6 +18,7 @@ leto-ops = { workspace = true }
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
 moirai-parallel = { workspace = true }
+proteus = { workspace = true }
 
 [dev-dependencies]
 approx = "0.5"

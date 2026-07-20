@@ -126,9 +126,9 @@ pub fn update_properties(
         .map(|w_b| perfusion_vs_temperature(w_b, temperature));
 
     ThermalPropertyData::new(
-        conductivity_vs_temperature(base_properties.conductivity, temperature),
-        specific_heat_vs_temperature(base_properties.specific_heat, temperature),
-        base_properties.density, // Density assumed constant over typical temperature ranges
+        conductivity_vs_temperature(base_properties.conductivity(), temperature),
+        specific_heat_vs_temperature(base_properties.specific_heat(), temperature),
+        base_properties.density(), // Density assumed constant over typical temperature ranges
         new_perfusion,
         base_properties.blood_specific_heat, // Blood specific heat relatively constant
     )
@@ -196,10 +196,10 @@ mod tests {
         let props_45 = update_properties(&base, 45.0);
 
         // Conductivity should increase
-        assert!(props_45.conductivity > base.conductivity);
+        assert!(props_45.conductivity() > base.conductivity());
 
         // Specific heat should increase slightly
-        assert!(props_45.specific_heat > base.specific_heat);
+        assert!(props_45.specific_heat() > base.specific_heat());
 
         // Perfusion should decrease (approaching shutdown)
         let base_perfusion = base.blood_perfusion.unwrap();
@@ -292,7 +292,7 @@ mod tests {
         let updated = update_properties(&base, 40.0);
 
         // Density should not change with moderate temperature variations
-        assert_eq!(updated.density, base.density);
+        assert_eq!(updated.density(), base.density());
     }
 
     #[test]
@@ -312,8 +312,8 @@ mod tests {
         let elevated = update_properties(&base, 45.0);
 
         // Verify changes
-        assert!(elevated.conductivity > base.conductivity);
-        assert!(elevated.specific_heat > base.specific_heat);
+        assert!(elevated.conductivity() > base.conductivity());
+        assert!(elevated.specific_heat() > base.specific_heat());
 
         // Update back to reference temperature
         let back_to_ref = update_properties(&base, BODY_TEMPERATURE_C);
@@ -323,16 +323,16 @@ mod tests {
         // (within numerical precision)
         let ref_again = update_properties(&base, BODY_TEMPERATURE_C);
 
-        assert!((back_to_ref.conductivity - ref_again.conductivity).abs() < 1e-10);
-        assert!((back_to_ref.specific_heat - ref_again.specific_heat).abs() < 1e-10);
-        assert!((ref_again.conductivity - base.conductivity).abs() < 1e-10);
-        assert!((ref_again.specific_heat - base.specific_heat).abs() < 1e-10);
+        assert!((back_to_ref.conductivity() - ref_again.conductivity()).abs() < 1e-10);
+        assert!((back_to_ref.specific_heat() - ref_again.specific_heat()).abs() < 1e-10);
+        assert!((ref_again.conductivity() - base.conductivity()).abs() < 1e-10);
+        assert!((ref_again.specific_heat() - base.specific_heat()).abs() < 1e-10);
 
         // Verify that elevated temperature actually changed the properties
         let conductivity_change =
-            (elevated.conductivity - base.conductivity).abs() / base.conductivity;
+            (elevated.conductivity() - base.conductivity()).abs() / base.conductivity();
         let specific_heat_change =
-            (elevated.specific_heat - base.specific_heat).abs() / base.specific_heat;
+            (elevated.specific_heat() - base.specific_heat()).abs() / base.specific_heat();
 
         assert!(
             conductivity_change > 0.01,
