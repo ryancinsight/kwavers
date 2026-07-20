@@ -458,8 +458,14 @@ fn plan_to_pydict<'py>(
         "cavitation_probability",
         leto3_to_nd3(plan.cavitation_probability.clone()).to_pyarray(py),
     )?;
-    out.set_item("phases_rad", PyArray1::from_iter(py, plan.phases_rad.iter().copied()))?;
-    out.set_item("delays_s", PyArray1::from_iter(py, plan.delays_s.iter().copied()))?;
+    out.set_item(
+        "phases_rad",
+        PyArray1::from_iter(py, plan.phases_rad.iter().copied()),
+    )?;
+    out.set_item(
+        "delays_s",
+        PyArray1::from_iter(py, plan.delays_s.iter().copied()),
+    )?;
     out.set_item(
         "skull_lengths_m",
         PyArray1::from_iter(py, plan.skull_lengths_m.iter().copied()),

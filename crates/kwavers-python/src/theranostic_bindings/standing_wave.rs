@@ -137,16 +137,10 @@ pub fn run_standing_wave_suppression_py<'py>(
 
     // Element positions
     let eys: Vec<i64> = result.element_ys.iter().map(|&v| v as i64).collect();
-    dict.set_item(
-        "element_ys",
-        PyArray1::from_vec(py, eys),
-    )?;
+    dict.set_item("element_ys", PyArray1::from_vec(py, eys))?;
 
     // Time series
-    dict.set_item(
-        "swi_history",
-        PyArray1::from_vec(py, result.swi_history),
-    )?;
+    dict.set_item("swi_history", PyArray1::from_vec(py, result.swi_history))?;
     dict.set_item(
         "focal_pressure_history",
         PyArray1::from_vec(py, result.focal_pressure_history),
@@ -161,10 +155,7 @@ pub fn run_standing_wave_suppression_py<'py>(
         "initial_phases",
         PyArray1::from_vec(py, result.initial_phases),
     )?;
-    dict.set_item(
-        "final_phases",
-        PyArray1::from_vec(py, result.final_phases),
-    )?;
+    dict.set_item("final_phases", PyArray1::from_vec(py, result.final_phases))?;
 
     // Field snapshots
     let snap_iters: Vec<i64> = result
@@ -172,10 +163,7 @@ pub fn run_standing_wave_suppression_py<'py>(
         .iter()
         .map(|&v| v as i64)
         .collect();
-    dict.set_item(
-        "snapshot_iterations",
-        PyArray1::from_vec(py, snap_iters),
-    )?;
+    dict.set_item("snapshot_iterations", PyArray1::from_vec(py, snap_iters))?;
     dict.set_item(
         "snapshot_fields_re",
         leto3_to_nd3(result.snapshot_fields_re).to_pyarray(py),
