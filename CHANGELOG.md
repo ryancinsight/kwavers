@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+### Fixed
+
+- `GpuPstdSimulationAdapter` now calls the full provider output contract,
+  exposes an explicit `max_t |p|` readback, and never substitutes a final
+  pressure field for a temporal envelope. The adapter and direct GPU runner
+  share one weighted pressure-source schedule using the uploaded local sound
+  speed and BLI mask weights. Unsampled source objects and unsupported adapter
+  velocity-source assembly now fail explicitly instead of dropping inputs.
+
 ### Breaking (2026-07-17) - GPU PSTD peak-pressure output [major]
 
 - Replace the closed `PstdOutputRequest` enum with a composable request type:

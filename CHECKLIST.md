@@ -7,6 +7,9 @@
       sensor-only allocation behavior.
 - [x] Expose independently selectable final-field and peak-pressure outputs.
 - [x] Add WGPU value-semantic output-selection and envelope regressions.
+- [x] Route the simulation adapter through the explicit provider output mode,
+      retain peak pressure separately from final fields, and share the direct
+      runner's weighted local-medium pressure-source schedule.
 - [x] Correct the explicit-lossless absorption contract and scan all packed
       `B/A` coefficients before selecting nonlinear PSTD.
 - [x] Remove the obsolete CPU-reference Apollo/Leto complex-buffer conversion
@@ -15,11 +18,12 @@
 - [x] Verify source-filter and early-leapfrog CPU/GPU parity after the runner
       correction.
 - [ ] Verify the 100-step heterogeneous CPU/GPU contract, then run the
-      package GPU gate. Blocked locally while `ritk-filter` constrains
-      `apollo-fft ^0.24.0` but the shared local Apollo checkout is `0.25.0`;
-      reopen after the RITK provider pin and lock synchronize.
+      package GPU gate. Blocked locally while patched Leto and Hephaestus
+      manifests omit inherited `ndarray` and `num-complex` dependencies;
+      reopen after those provider manifests resolve, then reassess the
+      existing RITK/Apollo pin constraint.
 - [ ] Add the private consumer's explicit peak-pressure integration regression.
-- [ ] Run GPU-feature Nextest, Clippy, Rustdoc, and the consumer gate.
+- [ ] Run full GPU-feature Nextest, Clippy, Rustdoc, and the consumer gate.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review
 

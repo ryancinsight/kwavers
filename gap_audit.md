@@ -41,8 +41,10 @@
   `peak[i] >= abs(final_pressure[i])` at every voxel, with a finite-burst
   witness that strictly distinguishes the envelope from final pressure, in
   0.705 seconds.
-  Residual: the private full-wave consumer remains to be wired to the explicit
-  output API; allocation capacity remains device- and plan-dependent.
+  The simulation adapter now requests that output explicitly and retains it
+  separately from the final field. Residual: the private full-wave consumer
+  remains to be wired to the explicit output API; allocation capacity remains
+  device- and plan-dependent.
 
 - Review 2026-07-17: the ignored public GPU parity fixture compared a CPU final
   pressure volume from a plane-wave source with a GPU sensor trace from a
@@ -141,9 +143,10 @@
   power-of-two axis through 1,024 using 12 KiB of workgroup storage, and rejects
   a 2,048 axis before any provider allocation. Evidence tier: output typestate,
   compile-time storage-limit contract, and value-semantic CPU/provider GPU
-  regressions. Residual: the adapter reads only the final state, not a
-  peak-over-time pressure envelope. Per-axis FFT support does not establish
-  that a complete long-domain three-dimensional grid fits host or device memory;
+  regressions. The adapter now requests the provider peak envelope explicitly,
+  validates non-negative finite readback values, and reports that envelope in
+  its pressure statistic. Per-axis FFT support does not establish that a
+  complete long-domain three-dimensional grid fits host or device memory;
   allocation capability remains a provider/runtime constraint and must be
   validated for each treatment plan. Verification: the largest-axis WGPU
   regression passes in 0.532 seconds, the GPU-featured simulation-adapter

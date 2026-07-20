@@ -50,6 +50,7 @@
 mod medium_update;
 mod pipeline;
 mod runner;
+mod source;
 mod state;
 mod time_loop;
 
@@ -62,6 +63,7 @@ pub use runner::{
     cpml_thickness_limits, run_gpu_pstd, run_gpu_pstd_with_outputs, run_gpu_pstd_with_provider,
     run_gpu_pstd_with_provider_outputs, GpuPstdRunConfig,
 };
+pub use source::{prepare_pstd_pressure_source, PstdPressureSourceSchedule};
 pub use state::{
     PstdAutoDeviceProvider, PstdFinalFields, PstdMediumUpdateState, PstdOutputRequest,
     PstdRunInputs, PstdRunResult, PstdRunScalars, PstdRunState, PstdStateBuilder,

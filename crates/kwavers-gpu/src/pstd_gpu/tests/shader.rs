@@ -73,7 +73,7 @@ fn pstd_shader_declares_the_1024_point_shared_fft_contract() {
 fn pstd_shader_accumulates_peak_pressure_in_the_requested_output_region() {
     let src = include_str!("../shaders/pstd.wgsl");
     let peak_start = src
-        .find("fn accumulate_peak_pressure")
+        .find("fn accumulate_peak_pressure(")
         .expect("peak-pressure entry point must exist");
     let peak_block = &src[peak_start..src.len().min(peak_start + 500)];
 

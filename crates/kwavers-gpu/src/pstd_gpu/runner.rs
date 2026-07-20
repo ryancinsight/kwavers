@@ -28,7 +28,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_physics::acoustics::mechanics::absorption::power_law_db_cm_to_np_omega_m;
-use kwavers_source::{GridSource, SourceMode};
+use kwavers_source::GridSource;
 use leto::{Array2 as LetoArray2, Array3 as LetoArray3};
 use std::f64::consts::PI;
 
@@ -272,55 +272,8 @@ where
 
     let sensor_indices = collect_sensor_indices(sensor_mask)?;
 
-    let n_dim_active = [nx > 1, ny > 1, nz > 1]
-        .iter()
-        .filter(|&&d| d)
-        .count()
-        .max(1);
-    let mut source_indices: Vec<u32> = Vec::new();
-    let mut source_signals: Vec<f32> = Vec::new();
-    let mut pressure_source_correction = false;
-
-    if let (Some(p_mask), Some(p_signal)) = (&source.p_mask, &source.p_signal) {
-        let mask_flat = p_mask.as_slice_memory_order().ok_or_else(|| {
-            KwaversError::InvalidInput("p_mask must be dense row-major array".into())
-        })?;
-        if mask_flat.len() != total {
-            return Err(KwaversError::InvalidInput(format!(
-                "p_mask has {} cells but grid has {total}",
-                mask_flat.len()
-            )));
-        }
-        let mut source_weights = Vec::new();
-        for (i, &weight) in mask_flat.iter().enumerate() {
-            if weight != 0.0 {
-                source_indices.push(i as u32);
-                source_weights.push(weight);
-            }
-        }
-        let n_src = source_indices.len();
-        let n_sig_rows = p_signal.shape()[0];
-        if n_src > 0 && n_sig_rows != 1 && n_sig_rows != n_src {
-            return Err(KwaversError::InvalidInput(format!(
-                "p_signal has {n_sig_rows} rows for {n_src} pressure-source cells; expected 1 or {n_src}"
-            )));
-        }
-        pressure_source_correction = source_correction(source.p_mode, "pressure")?;
-        let n_sig_cols = p_signal.shape()[1].min(time_steps);
-        source_signals = vec![0.0f32; n_src * time_steps];
-        for (src_idx, (&flat, &weight)) in source_indices.iter().zip(&source_weights).enumerate() {
-            let sig_row = if n_sig_rows == 1 { 0 } else { src_idx };
-            let ix = flat as usize / (ny * nz);
-            let iy = (flat as usize % (ny * nz)) / nz;
-            let iz = flat as usize % nz;
-            let c0 = medium.sound_speed(ix, iy, iz);
-            let mass_source_scale = 2.0 * dt / (n_dim_active as f64 * c0 * grid.dx);
-            for step in 0..n_sig_cols {
-                source_signals[src_idx * time_steps + step] =
-                    (p_signal[[sig_row, step]] * weight * mass_source_scale) as f32;
-            }
-        }
-    }
+    let pressure_source =
+        super::prepare_pstd_pressure_source(grid, source, &c0_flat, dt, time_steps)?;
 
     let mut vel_x_indices: Vec<u32> = Vec::new();
     let mut vel_x_signals: Vec<f32> = Vec::new();
@@ -348,7 +301,8 @@ where
                 "u_signal has {n_sig_srcs} source rows for {n_vel} velocity-source cells; expected 1 or {n_vel}"
             )));
         }
-        velocity_source_correction = source_correction(source.u_mode, "velocity")?;
+        velocity_source_correction =
+            super::source::source_mode_uses_kspace_correction(source.u_mode, "velocity")?;
         let n_sig_cols = u_signal.shape()[2].min(time_steps);
         vel_x_signals = vec![0.0f32; n_vel * time_steps];
         for src_idx in 0..n_vel {
@@ -469,24 +423,14 @@ where
 
     Ok(solver.run(
         &sensor_indices,
-        &source_indices,
-        &source_signals,
-        pressure_source_correction,
+        &pressure_source.indices,
+        &pressure_source.signals,
+        pressure_source.uses_kspace_correction,
         &vel_x_indices,
         &vel_x_signals,
         velocity_source_correction,
         output_request,
     ))
-}
-
-fn source_correction(mode: SourceMode, source_kind: &str) -> KwaversResult<bool> {
-    match mode {
-        SourceMode::Additive => Ok(true),
-        SourceMode::AdditiveNoCorrection => Ok(false),
-        SourceMode::Dirichlet => Err(KwaversError::InvalidInput(format!(
-            "GPU PSTD does not support Dirichlet {source_kind} sources"
-        ))),
-    }
 }
 
 /// Whether any packed `B/A / 2` coefficient enables the nonlinear equation.
@@ -548,8 +492,7 @@ pub fn cpml_thickness_limits(nx: usize, ny: usize, nz: usize) -> (usize, usize) 
 #[cfg(test)]
 mod tests {
     use super::{
-        collect_sensor_indices, has_nonlinear_coefficient, power_law_absorption_enabled,
-        source_correction, LetoArray3, SourceMode,
+        collect_sensor_indices, has_nonlinear_coefficient, power_law_absorption_enabled, LetoArray3,
     };
 
     #[test]
@@ -581,26 +524,6 @@ mod tests {
         assert_eq!(
             error.to_string(),
             "Invalid input: GPU PSTD alpha_power must be finite and must not equal 1.0 for enabled fractional absorption; got 1"
-        );
-    }
-
-    #[test]
-    fn source_mode_selects_the_physical_correction_and_rejects_dirichlet() {
-        assert_eq!(
-            source_correction(SourceMode::Additive, "pressure")
-                .expect("additive pressure source is supported"),
-            true
-        );
-        assert_eq!(
-            source_correction(SourceMode::AdditiveNoCorrection, "velocity")
-                .expect("uncorrected velocity source is supported"),
-            false
-        );
-        let error = source_correction(SourceMode::Dirichlet, "pressure")
-            .expect_err("Dirichlet pressure source must be rejected");
-        assert_eq!(
-            error.to_string(),
-            "Invalid input: GPU PSTD does not support Dirichlet pressure sources"
         );
     }
 

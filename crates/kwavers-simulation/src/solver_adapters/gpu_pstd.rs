@@ -14,21 +14,21 @@
 //! | `run(nt)` | Builds GPU arrays, calls `GpuPstdSolver::with_auto_device` + `run()`; stores sensor traces |
 //! | `step_forward()` | Returns `Err(FeatureNotAvailable)` — batch-only arch |
 //! | `pressure_field()` | Returns the final host-read pressure field after `run()` |
+//! | `run_peak_pressure(nt)` | Downloads the provider-computed `max_t |p|` field only |
+//! | `peak_pressure_field()` | Returns the latest explicit peak-pressure readback |
 //! | `velocity_fields()` | Returns final host-read staggered velocity fields after `run()` |
 //! | `recorded_sensor_pressure()` | Returns sensor traces after `run()` completes |
-//! | `add_source(Box<dyn Source>)` | Extracts spatial mask via `Source::create_mask`; signal not set |
+//! | `add_source(Box<dyn Source>)` | Returns an explicit waveform-contract error |
 //! | `add_sensor(&GridSensorSet)` | Converts `GridPoint` list to boolean sensor mask |
 //!
 //! ## Source signal
 //!
-//! `Box<dyn Source>` carries only the spatial mask; temporal signals are not
-//! part of the `Source` trait.  Callers that need a specific source waveform
-//! must call [`GpuPstdSimulationAdapter::set_grid_source`] on the concrete
-//! adapter before boxing.  The `SimulationSolverFactory` arm for `PstdGpu`
-//! constructs the adapter with an empty source; clinical adapters (e.g.
-//! `breast_ust_fwi::dataset`) continue to call `run_gpu_pstd` directly when
-//! they need per-transmit source signals — the factory path is for callers
-//! that set up sources via `add_source` or drive source-free IC propagation.
+//! `Box<dyn Source>` does not encode the source-major sampled waveform that a
+//! GPU PSTD batch requires, so [`Solver::add_source`] rejects it rather than
+//! broadcasting or discarding an unknown source signal. Callers with a drive
+//! waveform configure [`GpuPstdSimulationAdapter::set_grid_source`] before
+//! running the batch. The factory still constructs an empty source for
+//! source-free initial-condition propagation.
 //!
 //! ## Grid constraints
 //!
@@ -45,8 +45,9 @@ use medium::GpuMediumSnapshot;
 use kwavers_boundary::cpml::{CPMLConfig, CPMLProfiles};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use kwavers_gpu::pstd_gpu::{
-    validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays,
-    PstdFinalFields, PstdOutputRequest, SolverParams, WgpuPstdStateProvider,
+    prepare_pstd_pressure_source, validate_gpu_pstd_dimensions, AbsorptionArrays, GpuPstdSolver,
+    MediumArrays, PmlArrays, PstdFinalFields, PstdOutputRequest, PstdRunResult, SolverParams,
+    WgpuPstdStateProvider,
 };
 use kwavers_grid::Grid;
 use kwavers_medium::Medium;
@@ -83,6 +84,8 @@ pub struct GpuPstdSimulationAdapter {
     pub(self) velocity_x: Array3<f64>,
     pub(self) velocity_y: Array3<f64>,
     pub(self) velocity_z: Array3<f64>,
+    /// Provider-computed `max_t |p|` from the most-recent peak-field batch.
+    pub(self) peak_pressure: Option<Array3<f64>>,
     pub(self) current_step: usize,
     pub(self) computation_time: Duration,
 }
@@ -136,6 +139,7 @@ impl GpuPstdSimulationAdapter {
             velocity_x: Array3::zeros(shape),
             velocity_y: Array3::zeros(shape),
             velocity_z: Array3::zeros(shape),
+            peak_pressure: None,
             current_step: 0,
             computation_time: Duration::ZERO,
         })
@@ -143,10 +147,40 @@ impl GpuPstdSimulationAdapter {
 
     /// Set a complete `GridSource` (mask + signal).
     ///
-    /// Bypasses the `Solver::add_source` limitation (the `Source` trait only
-    /// carries spatial masks, not temporal signals). Call before `run()`.
+    /// Bypasses the `Solver::add_source` waveform limitation. Call before
+    /// `run()`.
     pub fn set_grid_source(&mut self, source: GridSource) {
         self.source = source;
+    }
+
+    /// Run one GPU PSTD batch and retain the provider-computed temporal
+    /// pressure envelope `max_t |p|`.
+    ///
+    /// This requests only sensor traces and the peak-pressure field. It does
+    /// not download final pressure or velocity frames, because those frames are
+    /// not a valid substitute for a transient treatment envelope.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the provider cannot acquire a compatible
+    /// Hephaestus-owned device, the input source is invalid, or the requested
+    /// peak readback violates the adapter's grid/value contract.
+    pub fn run_peak_pressure(&mut self, num_steps: usize) -> KwaversResult<()> {
+        self.peak_pressure = None;
+        let result = self.run_gpu_impl(num_steps, PstdOutputRequest::with_peak_pressure())?;
+        let peak_pressure = result.peak_pressure.ok_or_else(|| {
+            KwaversError::InternalError(
+                "GPU PSTD peak-pressure request completed without an envelope readback".to_owned(),
+            )
+        })?;
+        self.store_peak_pressure(peak_pressure)
+    }
+
+    /// Return the explicit `max_t |p|` result from the most recent
+    /// [`Self::run_peak_pressure`] call.
+    #[must_use]
+    pub fn peak_pressure_field(&self) -> Option<&Array3<f64>> {
+        self.peak_pressure.as_ref()
     }
 
     fn host_field(
@@ -154,6 +188,16 @@ impl GpuPstdSimulationAdapter {
         values: Vec<f32>,
         field_name: &str,
     ) -> KwaversResult<Array3<f64>> {
+        if let Some((index, value)) = values
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, value)| !value.is_finite())
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "GPU PSTD {field_name} readback has non-finite value {value} at flat index {index}"
+            )));
+        }
         Array3::from_shape_vec(shape, values.into_iter().map(f64::from).collect()).map_err(
             |error| {
                 KwaversError::InvalidInput(format!(
@@ -182,12 +226,83 @@ impl GpuPstdSimulationAdapter {
         Ok(())
     }
 
-    /// Build all GPU arrays and run the PSTD time loop.
-    ///
-    /// Mirrors `run_gpu_pstd`'s array preparation, then calls
-    /// `GpuPstdSolver::with_auto_device` followed by `GpuPstdSolver::run`.
-    /// The GPU device is acquired once per `run()` call.
-    fn run_gpu_impl(&mut self, nt: usize) -> KwaversResult<()> {
+    fn store_peak_pressure(&mut self, peak_pressure: Vec<f32>) -> KwaversResult<()> {
+        if let Some((index, value)) = peak_pressure
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, value)| *value < 0.0)
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "GPU PSTD peak-pressure readback has negative value {value} at flat index {index}"
+            )));
+        }
+        let shape = (self.grid.nx, self.grid.ny, self.grid.nz);
+        self.peak_pressure = Some(Self::host_field(shape, peak_pressure, "peak pressure")?);
+        Ok(())
+    }
+
+    fn store_sensor_data(
+        &mut self,
+        sensor_data: &[f32],
+        sensor_count: usize,
+        time_steps: usize,
+    ) -> KwaversResult<()> {
+        let expected = sensor_count.checked_mul(time_steps).ok_or_else(|| {
+            KwaversError::InvalidInput(format!(
+                "GPU PSTD sensor result shape overflows usize: {sensor_count} sensors × {time_steps} steps"
+            ))
+        })?;
+        if sensor_data.len() != expected {
+            return Err(KwaversError::InvalidInput(format!(
+                "GPU PSTD sensor readback has {} values; expected {expected} for {sensor_count} sensors × {time_steps} steps",
+                sensor_data.len()
+            )));
+        }
+        if let Some((index, value)) = sensor_data
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, value)| !value.is_finite())
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "GPU PSTD sensor readback has non-finite value {value} at flat index {index}"
+            )));
+        }
+        self.recorded = Some(
+            Array2::from_shape_vec(
+                (sensor_count, time_steps),
+                sensor_data.iter().copied().map(f64::from).collect(),
+            )
+            .map_err(|error| {
+                KwaversError::InvalidInput(format!(
+                    "GPU PSTD sensor readback does not match the simulation grid: {error}"
+                ))
+            })?,
+        );
+        Ok(())
+    }
+
+    /// Execute one batch and return only the outputs explicitly requested from
+    /// the Hephaestus-owned GPU provider.
+    fn run_gpu_impl(
+        &mut self,
+        nt: usize,
+        output_request: PstdOutputRequest,
+    ) -> KwaversResult<PstdRunResult> {
+        if nt == 0 || !self.dt.is_finite() || self.dt <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "GPU PSTD requires time_steps > 0 and finite positive dt; got steps={nt} dt={}",
+                self.dt
+            )));
+        }
+        if self.source.u_mask.is_some() || self.source.u_signal.is_some() {
+            return Err(KwaversError::FeatureNotAvailable(
+                "GpuPstdSimulationAdapter does not expose velocity-source assembly; use run_gpu_pstd_with_outputs for velocity sources"
+                    .to_owned(),
+            ));
+        }
+
         let nx = self.grid.nx;
         let ny = self.grid.ny;
         let nz = self.grid.nz;
@@ -333,81 +448,25 @@ impl GpuPstdSimulationAdapter {
             .collect();
 
         // ── Source indices and signals ────────────────────────────────────────
-        //
-        // Mass-source scaling (Treeby & Cox 2010, Eq. 23):
-        //   scale = 2·Δt / (n_dim · c_ref · Δx_min)
-        // Applied to each source signal sample before GPU upload.
-        let mass_source_scale = {
-            let n_dim_active = [nx > 1, ny > 1, nz > 1]
-                .iter()
-                .filter(|&&d| d)
-                .count()
-                .max(1);
-            let dx_min = self.grid.dx.min(self.grid.dy).min(self.grid.dz);
-            (2.0 * dt / (n_dim_active as f64 * self.medium.c_ref * dx_min)) as f32
-        };
-
-        let (source_indices, source_signals) =
-            if let (Some(p_mask), Some(p_signal)) = (&self.source.p_mask, &self.source.p_signal) {
-                let mask_flat = p_mask.as_slice().ok_or_else(|| {
-                    KwaversError::InvalidInput("p_mask must be C-contiguous".to_owned())
-                })?;
-                let mut src_idx: Vec<u32> = Vec::new();
-                for (i, &v) in mask_flat.iter().enumerate() {
-                    if v != 0.0 {
-                        src_idx.push(i as u32);
-                    }
-                }
-                let n_src = src_idx.len();
-                let n_sig_rows = p_signal.shape()[0];
-                let n_sig_cols = p_signal.shape()[1].min(nt);
-                let mut signals = vec![0.0f32; n_src * nt];
-                for src in 0..n_src {
-                    let row = if n_sig_rows == 1 {
-                        0
-                    } else {
-                        src.min(n_sig_rows - 1)
-                    };
-                    for step in 0..n_sig_cols {
-                        signals[src * nt + step] =
-                            (p_signal[[row, step]] * mass_source_scale as f64) as f32;
-                    }
-                }
-                (src_idx, signals)
-            } else {
-                (Vec::new(), Vec::new())
-            };
+        let pressure_source =
+            prepare_pstd_pressure_source(&self.grid, &self.source, &self.medium.c0_flat, dt, nt)?;
 
         // ── Run GPU time loop ─────────────────────────────────────────────────
         let t0 = Instant::now();
         let result = gpu_solver.run(
             &sensor_indices,
-            &source_indices,
-            &source_signals,
+            &pressure_source.indices,
+            &pressure_source.signals,
+            pressure_source.uses_kspace_correction,
             &[],
             &[],
-            PstdOutputRequest::with_final_fields(),
+            false,
+            output_request,
         );
+        self.store_sensor_data(&result.sensor_data, sensor_indices.len(), nt)?;
         self.computation_time += t0.elapsed();
         self.current_step += nt;
-
-        let final_fields = result.final_fields.ok_or_else(|| {
-            KwaversError::InternalError(
-                "GPU PSTD final-field request completed without field readback".to_owned(),
-            )
-        })?;
-        self.store_final_fields(final_fields)?;
-
-        // ── Widen f32 → f64 and store ─────────────────────────────────────────
-        let n_sensors = sensor_indices.len();
-        let mut out = Array2::<f64>::zeros((n_sensors, nt));
-        for s in 0..n_sensors {
-            for t in 0..nt {
-                out[[s, t]] = f64::from(result.sensor_data[s * nt + t]);
-            }
-        }
-        self.recorded = Some(out);
-        Ok(())
+        Ok(result)
     }
 }
 
@@ -431,16 +490,12 @@ impl Solver for GpuPstdSimulationAdapter {
         Ok(())
     }
 
-    /// Extract the spatial mask from `source` and store it.
-    ///
-    /// **Signal not set**: `Box<dyn Source>` carries only the spatial mask;
-    /// temporal signals are absent from the `Source` trait.  Use
-    /// [`Self::set_grid_source`] to configure a waveform.
-    fn add_source(&mut self, source: Box<dyn Source>) -> KwaversResult<()> {
-        let mask = source.create_mask(&self.grid);
-        self.source.p_mask = Some(mask);
-        self.source.p_signal = None; // signal requires set_grid_source
-        Ok(())
+    /// Reject an unsampled source instead of silently dropping its waveform.
+    fn add_source(&mut self, _source: Box<dyn Source>) -> KwaversResult<()> {
+        Err(KwaversError::FeatureNotAvailable(
+            "GpuPstdSimulationAdapter requires a source-major sampled waveform; use set_grid_source"
+                .to_owned(),
+        ))
     }
 
     /// Convert `GridSensorSet` points into a boolean volume sensor mask.
@@ -464,7 +519,14 @@ impl Solver for GpuPstdSimulationAdapter {
     /// encoded command buffer.  Results are available via
     /// [`Self::recorded_sensor_pressure`] immediately after return.
     fn run(&mut self, num_steps: usize) -> KwaversResult<()> {
-        self.run_gpu_impl(num_steps)
+        self.peak_pressure = None;
+        let result = self.run_gpu_impl(num_steps, PstdOutputRequest::with_final_fields())?;
+        let final_fields = result.final_fields.ok_or_else(|| {
+            KwaversError::InternalError(
+                "GPU PSTD final-field request completed without field readback".to_owned(),
+            )
+        })?;
+        self.store_final_fields(final_fields)
     }
 
     /// GPU PSTD is batch-only; single-step access is not supported.
@@ -489,13 +551,13 @@ impl Solver for GpuPstdSimulationAdapter {
     }
 
     fn statistics(&self) -> SolverStatistics {
+        let reported_pressure = self.peak_pressure.as_ref().unwrap_or(&self.pressure);
         SolverStatistics {
             total_steps: self.current_step,
             current_step: self.current_step,
             computation_time: self.computation_time,
             memory_usage: self.medium.c0_flat.len() * std::mem::size_of::<f32>() * 6,
-            max_pressure: self
-                .pressure
+            max_pressure: reported_pressure
                 .iter()
                 .fold(0.0_f64, |max_pressure, &pressure| {
                     max_pressure.max(pressure.abs())

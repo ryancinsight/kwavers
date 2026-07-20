@@ -3,8 +3,9 @@
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — in-progress
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
-  ABI, `crates/kwavers-math/src/fft/mod.rs` CPU-reference FFT boundary, and
-  LeoNeuro's full-wave consumer boundary.
+  ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`,
+  `crates/kwavers-math/src/fft/mod.rs` CPU-reference FFT boundary, and the
+  downstream full-wave consumer boundary.
 - Acceptance: the provider accumulates `max_t |p|` on the GPU for every voxel,
   transfers exactly that one pressure volume when requested, and never labels a
   final pressure frame as a peak envelope. The output request supports final,
@@ -16,10 +17,16 @@
 - Decision: [`ADR-040`](docs/ADR/040-gpu-pstd-peak-pressure-output.md).
 - Evidence target: value-semantic output-selection and final-versus-peak
   invariants, a real WGPU burst regression, GPU-feature Nextest, and a
-  LeoNeuro consumer regression.
-- Current blocker: the shared RITK checkout constrains `apollo-fft ^0.24.0`
-  while its local provider checkout declares `0.25.0`, so locked Cargo metadata
-  rejects the workspace before the unchanged heterogeneous GPU contract runs.
+  downstream consumer regression.
+- Progress: the simulation adapter now requests the provider's explicit peak
+  output, retains it separately from final fields, and shares the direct
+  runner's weighted local-medium pressure-source schedule. It rejects both
+  unsampled `Source` objects and unsupported velocity-source assembly rather
+  than discarding source information. Earlier focused GPU-feature Nextest
+  passed; the source and peak-output rerun plus the full package gate are
+  blocked until the patched Leto and Hephaestus manifests again resolve their
+  inherited `ndarray` and `num-complex` dependencies. Downstream integration
+  remains after that provider-graph verification.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — review
 
