@@ -9,7 +9,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     SkullAdaptiveBenchmarkConfig, TranscranialFusPlanConfig,
 };
 use leto::Array3;
-use numpy::ToPyArray;
+use numpy::{PyArray1, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -123,27 +123,19 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     )?;
     out.set_item(
         "phases_rad",
-        numpy::ndarray::Array1::try_from(result.phases_rad)
-            .expect("invariant: contiguous phases")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, result.phases_rad.iter().copied()),
     )?;
     out.set_item(
         "delays_s",
-        numpy::ndarray::Array1::try_from(result.delays_s)
-            .expect("invariant: contiguous delays")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, result.delays_s.iter().copied()),
     )?;
     out.set_item(
         "skull_lengths_m",
-        numpy::ndarray::Array1::try_from(result.skull_lengths_m)
-            .expect("invariant: contiguous skull lengths")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, result.skull_lengths_m.iter().copied()),
     )?;
     out.set_item(
         "amplitude_weights",
-        numpy::ndarray::Array1::try_from(result.amplitude_weights)
-            .expect("invariant: contiguous amplitude weights")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, result.amplitude_weights.iter().copied()),
     )?;
     out.set_item(
         "element_positions_m",
@@ -151,9 +143,7 @@ pub fn run_transcranial_skull_adaptive_benchmark_from_ritk_ct<'py>(
     )?;
     out.set_item(
         "active_elements",
-        numpy::ndarray::Array1::try_from(placement_result.active_elements)
-            .expect("invariant: contiguous active elements")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, placement_result.active_elements.iter().copied()),
     )?;
     out.set_item(
         "focus_index",

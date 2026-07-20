@@ -5,7 +5,7 @@ use kwavers_analysis::signal_processing::doppler::{
 };
 use kwavers_physics::analytical::imaging::{self, ContrastAgentDopplerConfig};
 use numpy::ndarray::Array2;
-use numpy::{PyReadonlyArray1, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -145,24 +145,18 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
         .iter()
         .flat_map(|direction| direction.iter().copied())
         .collect();
-    let cw_velocity_m_s: numpy::ndarray::Array1<f64> = fixture
-        .cw_velocity_m_s
-        .try_into()
-        .expect("invariant: contiguous Doppler velocity");
-    let cw_power: numpy::ndarray::Array1<f64> = fixture
-        .cw_power
-        .try_into()
-        .expect("invariant: contiguous Doppler power");
-    let beam_angles_rad = numpy::ndarray::Array1::from_vec(fixture.beam_angles_rad);
-    let projected_velocity_m_s = numpy::ndarray::Array1::from_vec(fixture.projected_velocity_m_s);
+    let cw_velocity_m_s = PyArray1::from_iter(py, fixture.cw_velocity_m_s.iter().copied());
+    let cw_power = PyArray1::from_iter(py, fixture.cw_power.iter().copied());
+    let beam_angles_rad = PyArray1::from_vec(py, fixture.beam_angles_rad);
+    let projected_velocity_m_s = PyArray1::from_vec(py, fixture.projected_velocity_m_s);
     let out = PyDict::new(py);
-    out.set_item("cw_velocity_m_s", cw_velocity_m_s.to_pyarray(py))?;
-    out.set_item("cw_power", cw_power.to_pyarray(py))?;
+    out.set_item("cw_velocity_m_s", cw_velocity_m_s)?;
+    out.set_item("cw_power", cw_power)?;
     out.set_item(
         "pulsed_wave_nyquist_velocity_m_s",
         fixture.pulsed_wave_nyquist_velocity_m_s,
     )?;
-    out.set_item("beam_angles_rad", beam_angles_rad.to_pyarray(py))?;
+    out.set_item("beam_angles_rad", beam_angles_rad)?;
     out.set_item(
         "beam_directions",
         Array2::from_shape_vec((fixture.beam_directions.len(), 2), beam_direction_flat)
@@ -171,7 +165,7 @@ pub fn continuous_wave_vector_flow_fixture<'py>(
     )?;
     out.set_item(
         "projected_velocity_m_s",
-        projected_velocity_m_s.to_pyarray(py),
+        projected_velocity_m_s,
     )?;
     out.set_item(
         "true_velocity_m_s",

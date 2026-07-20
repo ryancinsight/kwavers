@@ -19,7 +19,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     run_transcranial_fus_planning, target_index_from_mask_fraction_3d,
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
-use numpy::{PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
+use numpy::{PyArray1, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -458,29 +458,15 @@ fn plan_to_pydict<'py>(
         "cavitation_probability",
         leto3_to_nd3(plan.cavitation_probability.clone()).to_pyarray(py),
     )?;
-    let phases_rad: numpy::ndarray::Array1<_> = plan
-        .phases_rad
-        .clone()
-        .try_into()
-        .expect("invariant: contiguous phases");
-    let delays_s: numpy::ndarray::Array1<_> = plan
-        .delays_s
-        .clone()
-        .try_into()
-        .expect("invariant: contiguous delays");
-    out.set_item("phases_rad", phases_rad.to_pyarray(py))?;
-    out.set_item("delays_s", delays_s.to_pyarray(py))?;
+    out.set_item("phases_rad", PyArray1::from_iter(py, plan.phases_rad.iter().copied()))?;
+    out.set_item("delays_s", PyArray1::from_iter(py, plan.delays_s.iter().copied()))?;
     out.set_item(
         "skull_lengths_m",
-        numpy::ndarray::Array1::try_from(plan.skull_lengths_m.clone())
-            .expect("invariant: contiguous skull lengths")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, plan.skull_lengths_m.iter().copied()),
     )?;
     out.set_item(
         "amplitude_weights",
-        numpy::ndarray::Array1::try_from(plan.amplitude_weights.clone())
-            .expect("invariant: contiguous amplitude weights")
-            .to_pyarray(py),
+        PyArray1::from_iter(py, plan.amplitude_weights.iter().copied()),
     )?;
     out.set_item(
         "element_positions_m",

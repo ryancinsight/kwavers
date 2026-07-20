@@ -4,6 +4,7 @@ use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 use kwavers_therapy::therapy::theranostic_guidance::{
     run_standing_wave_suppression, StandingWaveOptConfig,
 };
+use numpy::PyArray1;
 use numpy::ToPyArray;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
@@ -138,31 +139,31 @@ pub fn run_standing_wave_suppression_py<'py>(
     let eys: Vec<i64> = result.element_ys.iter().map(|&v| v as i64).collect();
     dict.set_item(
         "element_ys",
-        numpy::ndarray::Array1::from(eys).to_pyarray(py),
+        PyArray1::from_vec(py, eys),
     )?;
 
     // Time series
     dict.set_item(
         "swi_history",
-        numpy::ndarray::Array1::from(result.swi_history).to_pyarray(py),
+        PyArray1::from_vec(py, result.swi_history),
     )?;
     dict.set_item(
         "focal_pressure_history",
-        numpy::ndarray::Array1::from(result.focal_pressure_history).to_pyarray(py),
+        PyArray1::from_vec(py, result.focal_pressure_history),
     )?;
     dict.set_item(
         "objective_history",
-        numpy::ndarray::Array1::from(result.objective_history).to_pyarray(py),
+        PyArray1::from_vec(py, result.objective_history),
     )?;
 
     // Phases
     dict.set_item(
         "initial_phases",
-        numpy::ndarray::Array1::from(result.initial_phases).to_pyarray(py),
+        PyArray1::from_vec(py, result.initial_phases),
     )?;
     dict.set_item(
         "final_phases",
-        numpy::ndarray::Array1::from(result.final_phases).to_pyarray(py),
+        PyArray1::from_vec(py, result.final_phases),
     )?;
 
     // Field snapshots
@@ -173,7 +174,7 @@ pub fn run_standing_wave_suppression_py<'py>(
         .collect();
     dict.set_item(
         "snapshot_iterations",
-        numpy::ndarray::Array1::from(snap_iters).to_pyarray(py),
+        PyArray1::from_vec(py, snap_iters),
     )?;
     dict.set_item(
         "snapshot_fields_re",
