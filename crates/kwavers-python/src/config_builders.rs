@@ -29,7 +29,7 @@ use kwavers_simulation::{
 /// --------
 /// >>> pml = PmlConfig().with_size(20).with_alpha(2.0)
 /// >>> pml = PmlConfig().with_size_xyz(20, 10, 20)
-#[pyclass(name = "PmlConfig")]
+#[pyclass(name = "PmlConfig", from_py_object)]
 #[derive(Clone, Debug, Default)]
 pub struct PmlConfig {
     pub(crate) inner: KwaversPmlConfig,
@@ -124,7 +124,7 @@ impl PmlConfig {
 /// Examples
 /// --------
 /// >>> hc = HelmholtzConfig().with_frequency(1e6)  # 1 MHz
-#[pyclass(name = "HelmholtzConfig")]
+#[pyclass(name = "HelmholtzConfig", from_py_object)]
 #[derive(Clone, Debug, Default)]
 pub struct HelmholtzConfig {
     pub(crate) inner: KwaversHelmholtzConfig,
@@ -173,7 +173,7 @@ impl HelmholtzConfig {
 /// Examples
 /// --------
 /// >>> nl = NonlinearConfig().with_enabled().with_alpha_coeff(0.75)
-#[pyclass(name = "NonlinearConfig")]
+#[pyclass(name = "NonlinearConfig", from_py_object)]
 #[derive(Clone, Debug, Default)]
 pub struct NonlinearConfig {
     pub(crate) inner: KwaversNonlinearConfig,
@@ -241,7 +241,7 @@ impl NonlinearConfig {
 /// --------
 /// >>> poro = PoroelasticConfig()
 /// >>> poro = PoroelasticConfig().with_porosity(0.3).with_permeability(1e-9)
-#[pyclass(name = "PoroelasticConfig")]
+#[pyclass(name = "PoroelasticConfig", from_py_object)]
 #[derive(Clone, Debug, Default)]
 pub struct PoroelasticConfig {
     pub(crate) inner: KwaversPoroelasticConfig,
@@ -323,7 +323,7 @@ impl PoroelasticConfig {
 /// --------
 /// >>> thermal = ThermalConfig(center_frequency=1e6).with_bioheat()
 /// >>> thermal = ThermalConfig(1e6, n_acoustic_per_thermal=10)
-#[pyclass(name = "ThermalConfig")]
+#[pyclass(name = "ThermalConfig", from_py_object)]
 #[derive(Clone, Debug)]
 pub struct ThermalConfig {
     pub(crate) inner: KwaversThermalConfig,

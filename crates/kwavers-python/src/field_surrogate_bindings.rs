@@ -22,7 +22,7 @@ use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
 /// from a numpy `(nx, ny, nz)` float64 array of per-voxel peak
 /// rarefactional pressure (positive Pa), plus geometry + source
 /// metadata.
-#[pyclass(name = "FocalKernel", module = "pykwavers")]
+#[pyclass(name = "FocalKernel", module = "pykwavers", from_py_object)]
 #[derive(Clone)]
 pub struct FocalKernel {
     pub(crate) inner: KwaversFocalKernel,

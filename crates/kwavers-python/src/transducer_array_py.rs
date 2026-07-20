@@ -22,7 +22,7 @@ use crate::source_py::helpers::{apodization_to_string, parse_apodization_type};
 /// References:
 /// - Treeby & Cox (2010) k-Wave toolbox
 /// - Szabo (2014) Diagnostic Ultrasound Imaging
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct TransducerArray2D {
     /// Internal kwavers transducer array

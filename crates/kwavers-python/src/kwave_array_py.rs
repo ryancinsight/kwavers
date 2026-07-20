@@ -17,7 +17,7 @@ use crate::grid_py::Grid;
 /// >>> arr = KWaveArray()
 /// >>> arr.add_disc_element(position=(0.015, 0.015, 0.0), diameter=0.01)
 /// >>> source = Source.from_kwave_array(arr, signal)
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct KWaveArray {
     pub(crate) inner: kwavers_transducer::kwave_array::KWaveArray,

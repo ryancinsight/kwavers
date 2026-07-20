@@ -20,7 +20,7 @@ use super::array_config::PyMultiRowRingArray;
 use super::fwi_config::PyFrequencyDomainFwiConfig;
 use super::helpers::{kwavers_to_py, observations_from_stack};
 
-#[pyclass(name = "FrequencyObservation")]
+#[pyclass(name = "FrequencyObservation", from_py_object)]
 #[derive(Clone)]
 pub struct PyFrequencyObservation {
     pub(super) inner: FrequencyObservation,

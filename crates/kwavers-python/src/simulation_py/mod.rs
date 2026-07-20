@@ -62,7 +62,7 @@ use self::run::kwavers_error_to_py;
 /// - Boundary conditions: CPML (convolutional perfectly matched layers)
 ///
 /// Equivalent to k-Wave's kspaceFirstOrder3D function.
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Simulation {
     pub(crate) grid: Grid,

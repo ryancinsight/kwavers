@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 use super::helpers::{absorbing_boundary_from_thickness, make_config, parse_forward_operator};
 
-#[pyclass(name = "FrequencyDomainFwiConfig")]
+#[pyclass(name = "FrequencyDomainFwiConfig", from_py_object)]
 #[derive(Clone)]
 pub struct PyFrequencyDomainFwiConfig {
     pub(super) inner: Config,

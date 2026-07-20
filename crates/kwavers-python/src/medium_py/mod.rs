@@ -26,7 +26,7 @@ impl MediumInner {
     }
 }
 
-#[pyclass]
+#[pyclass(from_py_object)]
 #[derive(Clone)]
 pub struct Medium {
     pub(crate) inner: MediumInner,
