@@ -535,7 +535,8 @@ mod tests {
     #[test]
     fn leto_csr_to_kwavers_csr_roundtrip() {
         use super::CompressedSparseRowMatrix;
-        let kw = three_by_three_sample();        let leto_csr = leto::CsrArray::from(&kw);
+        let kw = three_by_three_sample();
+        let leto_csr = leto::CsrArray::from(&kw);
         let back = CompressedSparseRowMatrix::from(&leto_csr);
 
         assert_eq!(back.rows, kw.rows);
