@@ -21,6 +21,9 @@
   callers to a borrowed Tyche `ParameterSpace` and
   `SensitivityReport<f64, PARAMETERS>`. See ADR 043 for the complete public
   migration.
+- Pin hosted sibling-provider checkout to the immutable Atlas graph used by the
+  lockfile. CI no longer resolves a moving `main` graph between PR publication
+  and job execution.
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 

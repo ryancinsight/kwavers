@@ -15,6 +15,10 @@
   no-default checks, doctests, normal Rustdoc generation, the facade clinical
   workflow example, and source policy pass. `cargo-semver-checks` runs 223
   Analysis checks and identifies 10 major API breaks, matching ADR 043.
+- Hosted run `29781981026` proved the Tyche head's migration audits, layer
+  boundary, Miri, and security gates, then exposed a moving Atlas `main`
+  checkout that made the lockfile stale before compilation. The reusable
+  checkout action now pins Atlas commit `58d7a6e`; a fresh matrix is required.
 - Hosted merge remains the terminal transition.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress

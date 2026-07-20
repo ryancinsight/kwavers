@@ -15,6 +15,8 @@
       gates.
 - [x] Pass doctests, normal Rustdoc generation, dependency policy, residue
       scans, and Analysis semver classification.
+- [x] Pin hosted path-provider resolution to the immutable Atlas graph matching
+      the committed lockfile.
 - [ ] Publish, pass hosted gates, and merge the integration.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor]

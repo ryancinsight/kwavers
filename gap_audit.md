@@ -47,6 +47,13 @@
   clinical-imaging graph resolving path and Git Leto identities concurrently.
   Analysis semver extraction completes and reports the intended major class.
 
+- Hosted boundary 2026-07-20: run `29781981026` passed the migration audits,
+  layer boundary, Miri, and security gates but cloned a moving Atlas `main`
+  revision after the PR lockfile was generated. Every compile/test failure
+  stopped at Cargo's locked-graph check before compiling Kwavers. The shared
+  checkout action now pins Atlas commit `58d7a6e`, whose provider gitlinks match
+  the locally verified graph. Residual: the repaired hosted matrix must pass.
+
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a
   `*_at_core` generic forwarder. The canonical functions now carry the

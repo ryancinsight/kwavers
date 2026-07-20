@@ -3,9 +3,9 @@ description: Materialize the sibling Atlas providers at the coordinated Atlas re
 
 inputs:
   atlas_ref:
-    description: Atlas default branch carrying the Kwavers-compatible provider graph.
+    description: Immutable Atlas commit carrying the Kwavers-compatible provider graph.
     required: false
-    default: main
+    default: 58d7a6e1354c555949910cd8ab3f2a4e9b9608cb
 
 runs:
   using: composite
@@ -17,8 +17,12 @@ runs:
 
         workspace_parent="$(dirname "$GITHUB_WORKSPACE")"
         atlas_checkout="$RUNNER_TEMP/atlas"
-        git clone --depth 1 --branch "${{ inputs.atlas_ref }}" \
-          https://github.com/ryancinsight/atlas.git "$atlas_checkout"
+        git init --quiet "$atlas_checkout"
+        git -C "$atlas_checkout" remote add origin \
+          https://github.com/ryancinsight/atlas.git
+        git -C "$atlas_checkout" fetch --depth 1 origin \
+          "${{ inputs.atlas_ref }}"
+        git -C "$atlas_checkout" checkout --detach --quiet FETCH_HEAD
         mapfile -t providers < <(
           sed -nE 's|.*path = "\.\./([^/"]+).*|\1|p' Cargo.toml \
             | grep -v '^kwavers-' \
