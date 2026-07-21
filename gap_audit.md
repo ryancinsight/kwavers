@@ -52,7 +52,8 @@
   revision after the PR lockfile was generated. Every compile/test failure
   stopped at Cargo's locked-graph check before compiling Kwavers. The shared
   checkout action now pins Atlas commit `58d7a6e`, whose provider gitlinks match
-  the locally verified graph. Residual: the repaired hosted matrix must pass.
+  the locally verified graph. PR 298 owns the final hosted matrix and merge
+  evidence; the locked-provider boundary has no source residual.
 
 - Structural boundary 2026-07-20: the Tyche migration touched a 794-line
   clinical workflow example spanning modality execution, result storage, and

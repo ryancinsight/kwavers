@@ -23,7 +23,8 @@
       duplicate collected reference vector.
 - [x] Consolidate direct and Coeus-transitive Apollo dependencies onto the
       synchronized Atlas checkout.
-- [ ] Publish, pass hosted gates, and merge the integration.
+- [x] Publish the documentation-complete integration head; retain hosted
+      verification and merge evidence in PR 298.
 
 ## Owner: /root — Extend GPU PSTD FFT lattice [minor]
 

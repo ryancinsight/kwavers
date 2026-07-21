@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — ready-review
+## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — implemented
 
 - Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
   ensemble statistics, Tyche dependency policy, ADR 043, and synchronized
@@ -10,15 +10,17 @@
   sensitivity is const-generic, deterministic, allocation-free per sample, and
   named squared correlation; pseudo-Sobol/Morris bodies have no residue.
 - Evidence: public Tyche revision `00ce951` is the single dependency in both
-  packages; focused Analysis and PINN suites pass 13/13 and 12/12; full
-  package suites pass 718/718 and 1,251/1,251. Warning-denied Clippy,
-  no-default checks, doctests, normal Rustdoc generation, the facade clinical
-  workflow example, and source policy pass. `cargo-semver-checks` runs 223
-  Analysis checks and identifies 10 major API breaks, matching ADR 043.
-- Hosted run `29781981026` proved the Tyche head's migration audits, layer
-  boundary, Miri, and security gates, then exposed a moving Atlas `main`
-  checkout that made the lockfile stale before compilation. The reusable
-  checkout action now pins Atlas commit `58d7a6e`; a fresh matrix is required.
+  packages; focused Analysis and PINN suites pass 13/13 and 12/12. The
+  pre-closure full package suites pass 718/718 and 1,251/1,251; the final head
+  adds one value-semantic heterogeneous-report regression. Warning-denied
+  Clippy, no-default checks, doctests, normal Rustdoc generation, the facade
+  clinical workflow example, and source policy pass. `cargo-semver-checks`
+  runs 223 Analysis checks and identifies 10 major API breaks, matching ADR
+  043.
+- The reusable checkout action pins Atlas commit `58d7a6e`, eliminating the
+  moving-provider lock failure exposed by run `29781981026`. PR 298 is the
+  canonical hosted-verification and merge record for the documentation-complete
+  head.
 - The migrated comprehensive clinical workflow is partitioned into 127/168/161/
   157/106/91/60-line root and concern leaves. Default and GPU builds plus
   warning-denied Clippy pass; no no-op uncertainty clone, vtable path, or
@@ -29,7 +31,7 @@
 - The Apollo Git patch maps Coeus's remote FFT dependency to Kwavers's
   synchronized provider checkout, eliminating duplicate Apollo package
   identities while retaining the committed lock.
-- Hosted merge remains the terminal transition.
+- PR 298 retains the hosted matrix and terminal merge evidence.
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 
