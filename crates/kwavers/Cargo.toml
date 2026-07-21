@@ -341,6 +341,7 @@ harness = false
 [[bench]]
 name = "hilbert_benchmark"
 harness = false
+required-features = ["gpu"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }

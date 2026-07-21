@@ -126,9 +126,9 @@ fn bench_swe_reconstruction(c: &mut Criterion) {
 fn bench_memory_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("memory_scaling");
 
-    group.bench_function("array_allocation", |b| {
+    group.bench_function("field_allocation_and_sum", |b| {
         b.iter(|| {
-            // Simulate typical ultrasound grid allocations
+            // Measure representative field allocations across grid scales.
             let grid_sizes = [64, 128, 256];
 
             for &size in &grid_sizes {
@@ -136,7 +136,7 @@ fn bench_memory_scaling(c: &mut Criterion) {
                 let velocity_field: Array3<f64> = Array3::zeros((size, size, size));
                 let displacement_field: Array3<f64> = Array3::zeros((size, size, size));
 
-                // Simulate computation
+                // Measure a complete element-wise three-field sum.
                 let mut result = Array3::<f64>::zeros((size, size, size));
                 for i in 0..size {
                     for j in 0..size {

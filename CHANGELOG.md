@@ -27,7 +27,9 @@
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.
   Remove sleep-based PINN timing, a scalar-vs-scalar SIMD placeholder, and a
-  redundant solver comparator with dimensionally invalid output labels.
+  redundant solver comparator with dimensionally invalid output labels. Gate
+  the GPU-only Hilbert target on its actual feature and retain validation
+  results through the timed region.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.
