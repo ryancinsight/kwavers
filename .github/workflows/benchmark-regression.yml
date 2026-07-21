@@ -20,11 +20,11 @@ jobs:
   benchmark-regression:
     name: benchmark regression check
     runs-on: ubuntu-24.04
-    # The prior 17-target instrument used 23 measurement minutes after its
-    # build. Scaling that work to the complete 25-target registry and adding
-    # two observed 5m40s revision builds models 282 minutes. The 340-minute
-    # bound admits 20% hosted-runner variance without changing the instrument.
-    timeout-minutes: 340
+    # The prior 15-target plotting instrument used 23 measurement minutes
+    # after its build. Scaling that work to 21 eligible registered targets and
+    # adding two observed 5m40s revision builds models 269 minutes. The
+    # 325-minute bound admits 20% hosted-runner variance without changing it.
+    timeout-minutes: 325
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:

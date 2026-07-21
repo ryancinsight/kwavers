@@ -32,7 +32,12 @@ dedicated workflow. It checks out the PR base and head, overlays the candidate
 plotting-enabled `kwavers` Criterion suite for both revisions.
 
 The package disables automatic benchmark discovery and explicitly registers
-all 25 benchmark files as Criterion targets. Before measurement, the workflow
+all 23 retained benchmark files as Criterion targets. The cleanup deletes
+sleep-based PINN timing, a scalar-vs-scalar SIMD comparison, and a redundant
+solver comparator whose pressure norm was labeled as acoustic energy. The
+retained SIMD benchmark measures the production field-operation kernels. The
+package library and binary set `bench = false`, preventing Criterion arguments
+from reaching their libtest harnesses. Before measurement, the workflow
 requires exact equality between the sorted `benches/*.rs` stems and Cargo's
 benchmark target registry for both revisions. It invokes `cargo bench
 --benches`, so Criterion arguments reach only registered benchmark targets.
@@ -51,12 +56,13 @@ benchmarks. Missing results, benchmark-universe mismatches, malformed
 estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
-The 340-minute workflow budget is specific to this instrumented suite. The
-previous incomplete 17-target run used 31 minutes, including an eight-minute
-build, leaving 23 measurement minutes. Scaling the measurement component by
-the complete target ratio gives `23 * 25 / 17 = 33.8` minutes per run. Eight
+The 325-minute workflow budget is specific to this instrumented suite. The
+previous plotting configuration had 15 eligible registered Criterion targets
+and used 31 minutes, including an eight-minute build, leaving 23 measurement
+minutes. The retained registry has 21 plotting-eligible targets; scaling the
+measurement component gives `23 * 21 / 15 = 32.2` minutes per run. Eight
 measurements plus two 5-minute-40-second revision builds observed in
-`29797805169` model to about 282 minutes. The finite bound admits 20% hosted
+`29797805169` model to about 269 minutes. The finite bound admits 20% hosted
 runner variance without reducing samples, targets, or assertions. It does not
 alter native-test budgets.
 
