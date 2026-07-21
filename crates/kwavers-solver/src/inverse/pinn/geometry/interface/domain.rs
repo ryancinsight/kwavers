@@ -7,6 +7,10 @@ use super::{MultiRegionError, PinnGeometryInterfaceCondition};
 use kwavers_grid::geometry::{GeometricDomain, PointLocation};
 
 const INTERFACE_SEED_TAG: u64 = u64::from_le_bytes(*b"pinnintr");
+// Boundary charts and classification use at most 16 rounded arithmetic steps
+// in three dimensions. Fourfold slack covers the chart's transcendental
+// evaluations without introducing a unit-dependent absolute tolerance.
+const INTERFACE_ROUNDOFF_FACTOR: f64 = 64.0;
 
 /// Heterogeneous PINN domain with one condition between adjacent regions.
 ///
@@ -160,14 +164,18 @@ impl MultiRegionDomain {
                 seed, address, 0,
             ));
             let boundary = self.regions[pair].sample_boundary(candidate_count, pair_seed)?;
+            let tolerance = INTERFACE_ROUNDOFF_FACTOR
+                * f64::EPSILON
+                * self.regions[pair]
+                    .maximum_extent()
+                    .max(self.regions[pair + 1].maximum_extent());
             let mut accepted = 0;
             for row in 0..boundary.shape()[0] {
                 let mut point = [0.0; 3];
                 for column in 0..self.dimension {
                     point[column] = boundary[[row, column]];
                 }
-                if self.regions[pair + 1]
-                    .classify_point(&point[..self.dimension], 64.0 * f64::EPSILON)
+                if self.regions[pair + 1].classify_point(&point[..self.dimension], tolerance)
                     == PointLocation::Boundary
                 {
                     values.extend_from_slice(&point[..self.dimension]);

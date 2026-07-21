@@ -245,6 +245,13 @@ impl GeometricDomain for RectangularDomain {
         self.interior_measure()
     }
 
+    fn maximum_extent(&self) -> f64 {
+        self.lengths()[..self.dimension.as_usize()]
+            .iter()
+            .copied()
+            .fold(0.0, f64::max)
+    }
+
     fn map_unit_interior(&self, unit: &[f64], output: &mut [f64]) -> Result<(), GeometryError> {
         let dimensions = self.validate_mapping(unit, output)?;
         let mut mapped = [0.0; 3];

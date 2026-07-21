@@ -100,6 +100,11 @@ pub trait GeometricDomain: Send + Sync {
     fn normal(&self, point: &[f64], tolerance: f64) -> Option<Array1<f64>>;
     /// Length, area, or volume of the domain.
     fn measure(&self) -> f64;
+    /// Maximum active axis extent of the domain's bounding box.
+    ///
+    /// This length scale supports dimensionally consistent floating-point
+    /// tolerances without depending on the domain's absolute translation.
+    fn maximum_extent(&self) -> f64;
     /// Map one normalized point in `[0, 1)^d` into the strict interior.
     ///
     /// The output is unchanged when validation fails.

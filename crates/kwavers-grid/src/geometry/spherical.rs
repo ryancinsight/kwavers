@@ -243,6 +243,10 @@ impl GeometricDomain for SphericalDomain {
         self.interior_measure()
     }
 
+    fn maximum_extent(&self) -> f64 {
+        2.0 * self.radius
+    }
+
     fn map_unit_interior(&self, unit: &[f64], output: &mut [f64]) -> Result<(), GeometryError> {
         let dimensions = self.validate_mapping(unit, output)?;
         let radial = self.radius * Self::radial_fraction(unit[0], self.dimension);

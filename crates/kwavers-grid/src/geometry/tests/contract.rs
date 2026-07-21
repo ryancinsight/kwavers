@@ -20,6 +20,7 @@ fn rectangular_domain_classifies_each_supported_dimension() {
     let cuboid = RectangularDomain::new_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0).expect("valid cuboid");
     assert_eq!(cuboid.dimension(), GeometryDimension::Three);
     assert_within_absolute_error(cuboid.measure(), 48.0, 8.0 * f64::EPSILON);
+    assert_eq!(cuboid.maximum_extent(), 6.0);
 }
 
 #[test]
@@ -74,6 +75,7 @@ fn rectangular_mapping_is_failure_atomic_and_strictly_interior() {
 #[test]
 fn disk_and_ball_maps_follow_inverse_measure_reference_cases() {
     let disk = SphericalDomain::new_2d(1.0, -1.0, 2.0).expect("valid disk");
+    assert_eq!(disk.maximum_extent(), 4.0);
     let mut disk_point = [0.0; 2];
     disk.map_unit_interior(&[0.25, 0.0], &mut disk_point)
         .expect("valid disk coordinate");

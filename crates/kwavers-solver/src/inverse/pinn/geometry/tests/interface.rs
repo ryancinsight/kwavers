@@ -1,5 +1,5 @@
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
-use kwavers_grid::geometry::{GeometricDomain, PointLocation, RectangularDomain};
+use kwavers_grid::geometry::{GeometricDomain, PointLocation, RectangularDomain, SphericalDomain};
 use tyche_core::Seed;
 
 use super::super::{MultiRegionDomain, MultiRegionError, PinnGeometryInterfaceCondition};
@@ -107,6 +107,25 @@ fn interface_sampling_applies_the_quota_to_each_pair() {
             PointLocation::Boundary
         );
     }
+}
+
+#[test]
+fn interface_sampling_scales_roundoff_with_domain_extent() {
+    let radius = 1.0e100;
+    let ball = || -> Box<dyn GeometricDomain> {
+        Box::new(SphericalDomain::new_3d(0.0, 0.0, 0.0, radius).expect("valid large ball"))
+    };
+    let domain = MultiRegionDomain::new(
+        vec![ball(), ball()],
+        vec![0, 1],
+        vec![PinnGeometryInterfaceCondition::ElasticContinuity],
+    )
+    .expect("valid identical regions");
+
+    let points = domain
+        .sample_interface_points(1, Seed::new(5))
+        .expect("addressable interface matrix");
+    assert_eq!(points.shape(), [1, 3]);
 }
 
 #[test]
