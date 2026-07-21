@@ -90,13 +90,13 @@ impl CalibrationManager {
             let mut out = vec![0.0; ra * cb];
             for i in 0..ra {
                 for k in 0..ca {
-                    let aik = *a.get([i, k]).unwrap();
+                    let aik = *a.get([i, k]).expect("indices within matrix bounds");
                     for j in 0..cb {
-                        out[i * cb + j] += aik * *b.get([k, j]).unwrap();
+                        out[i * cb + j] += aik * *b.get([k, j]).expect("indices within matrix bounds");
                     }
                 }
             }
-            Array2::from_shape_vec([ra, cb], out).unwrap()
+            Array2::from_shape_vec([ra, cb], out).expect("shape consistent with matrix product")
         };
 
         let mat_add = |a: &Array2<f64>, b: &Array2<f64>| -> Array2<f64> {

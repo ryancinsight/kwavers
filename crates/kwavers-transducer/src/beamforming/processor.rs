@@ -322,14 +322,5 @@ mod tests {
         for t in 0..n_samples {
             assert!((out[[0, 0, t]] - std::f64::consts::SQRT_2).abs() < 1e-6);
         }
-
-        // Backward-compat alias: old name should behave identically.
-        #[allow(deprecated)]
-        let out_alias = bf
-            .mvdr_unsteered_weights_time_series(&data, 0.1)
-            .expect("Capon-uniform alias should succeed");
-        for t in 0..n_samples {
-            assert!((out_alias[[0, 0, t]] - out[[0, 0, t]]).abs() < 1e-12);
-        }
     }
 }

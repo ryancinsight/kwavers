@@ -65,21 +65,6 @@ impl ElasticWaveSolver {
         )
     }
 
-    /// Back-compat alias for [`Self::extract_recorded_velocity_components`].
-    ///
-    /// This method does **not** return displacement, despite the legacy
-    /// name; it has always returned particle velocity (m/s). The shim
-    /// is kept until callers migrate.
-    #[doc(alias = "extract_recorded_velocity_components")]
-    #[deprecated(
-        since = "0.1.1",
-        note = "Use extract_recorded_velocity_components — this method returns \
-                particle velocity (m/s), not displacement."
-    )]
-    pub fn extract_recorded_displacement_components(&self) -> VelocityComponentTraces {
-        self.extract_recorded_velocity_components()
-    }
-
     /// Borrow the full allocated sensor displacement buffer without cloning.
     #[must_use]
     pub fn recorded_data_view(&self) -> Option<ArrayView2<'_, f64>> {
