@@ -49,8 +49,8 @@ pub fn born_inversion_regularized(
     ncols: usize,
     lambda: f64,
 ) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let gr_flat = flatten_array2(g_real.as_array(), nrows, ncols);
-    let gi_flat = flatten_array2(g_imag.as_array(), nrows, ncols);
+    let gr_flat = flatten_array2(&g_real)?;
+    let gi_flat = flatten_array2(&g_imag)?;
     let yr_s = y_real
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;

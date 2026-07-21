@@ -68,6 +68,7 @@
 use pyo3::prelude::*;
 
 mod analytical_bindings;
+mod array_utils;
 mod breast_fwi_bindings;
 mod elastic_fwi_bindings;
 mod pam_bindings;

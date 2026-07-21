@@ -4,13 +4,14 @@
 //! helper from the kwavers simulation runner so old solver files can still
 //! import them from here while they are gradually migrated.
 
+use crate::array_utils::{
+    leto1_to_pyarray1, leto2_to_pyarray2, leto3_to_pyarray3, linspace_vec, vec_to_pyarray1,
+};
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_simulation::SimulationRunResult as KwaversSimulationRunResult;
 use numpy::{PyArray1, PyArray2, PyArray3};
 use pyo3::prelude::*;
 use pyo3::types::PyAny;
-
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, leto3_to_nd3};
 
 // ── Re-exports from kwavers_simulation (keeps old solver files compiling) ──
 pub use kwavers_simulation::{extract_full_grid_stats, SimulationRunResult};
@@ -193,57 +194,31 @@ pub(crate) fn build_simulation_result(
     let nz = grid.nz.max(1);
     let nx = grid.nx;
 
-    let time_vec =
-        numpy::ndarray::Array1::linspace(0.0, dt * (time_steps as f64 - 1.0), time_steps);
-    let time_array = PyArray1::from_owned_array(py, time_vec).unbind();
+    let time_vec = linspace_vec(0.0, dt * (time_steps as f64 - 1.0), time_steps);
+    let time_array = vec_to_pyarray1(py, time_vec);
 
     let final_time = dt * (time_steps as f64 - 1.0);
 
     // Sensor data
-    let n_sensors = result.sensor_data.shape()[0];
+    let sensor_data = result.sensor_data.clone();
+    let [n_sensors, n_time_steps] = sensor_data.shape();
     let (sensor_data_1d, sensor_data_2d) = if n_sensors == 1 {
-        let row = result
-            .sensor_data
-            .index_axis::<1>(0, 0)
-            .expect("sensor row 0 must exist")
-            .to_contiguous()
-            .try_into()
-            .expect("invariant: contiguous sensor row");
-        (Some(PyArray1::from_owned_array(py, row).unbind()), None)
+        let row_data = sensor_data.into_vec();
+        (Some(vec_to_pyarray1(py, row_data)), None)
     } else {
         (
             None,
-            Some(PyArray2::from_owned_array(py, leto2_to_nd2(result.sensor_data.clone())).unbind()),
+            Some(leto2_to_pyarray2(py, sensor_data)?),
         )
     };
 
     // Sampled statistics
     let (p_max, p_min, p_rms, p_final) = if let Some(ref stats) = result.stats {
-        let p_max_nd: numpy::ndarray::Array1<f64> = stats
-            .p_max
-            .clone()
-            .try_into()
-            .expect("sample p_max must convert");
-        let p_min_nd: numpy::ndarray::Array1<f64> = stats
-            .p_min
-            .clone()
-            .try_into()
-            .expect("sample p_min must convert");
-        let p_rms_nd: numpy::ndarray::Array1<f64> = stats
-            .p_rms
-            .clone()
-            .try_into()
-            .expect("sample p_rms must convert");
-        let p_final_nd: numpy::ndarray::Array1<f64> = stats
-            .p_final
-            .clone()
-            .try_into()
-            .expect("sample p_final must convert");
         (
-            Some(PyArray1::from_owned_array(py, p_max_nd).unbind()),
-            Some(PyArray1::from_owned_array(py, p_min_nd).unbind()),
-            Some(PyArray1::from_owned_array(py, p_rms_nd).unbind()),
-            Some(PyArray1::from_owned_array(py, p_final_nd).unbind()),
+            Some(leto1_to_pyarray1(py, stats.p_max.clone())?),
+            Some(leto1_to_pyarray1(py, stats.p_min.clone())?),
+            Some(leto1_to_pyarray1(py, stats.p_rms.clone())?),
+            Some(leto1_to_pyarray1(py, stats.p_final.clone())?),
         )
     } else {
         (None, None, None, None)
@@ -253,10 +228,10 @@ pub(crate) fn build_simulation_result(
     let (p_max_field, p_min_field, p_rms_field, p_final_field) =
         if let Some((ref pmax, ref pmin, ref prms, ref pfinal)) = result.full_grid_stats {
             (
-                Some(PyArray3::from_owned_array(py, leto3_to_nd3(pmax.clone())).unbind()),
-                Some(PyArray3::from_owned_array(py, leto3_to_nd3(pmin.clone())).unbind()),
-                Some(PyArray3::from_owned_array(py, leto3_to_nd3(prms.clone())).unbind()),
-                Some(PyArray3::from_owned_array(py, leto3_to_nd3(pfinal.clone())).unbind()),
+                Some(leto3_to_pyarray3(py, pmax.clone())?),
+                Some(leto3_to_pyarray3(py, pmin.clone())?),
+                Some(leto3_to_pyarray3(py, prms.clone())?),
+                Some(leto3_to_pyarray3(py, pfinal.clone())?),
             )
         } else {
             (None, None, None, None)
@@ -266,113 +241,62 @@ pub(crate) fn build_simulation_result(
     let ux = result
         .ux_data
         .as_ref()
-        .map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d.clone())).unbind());
+        .map(|d| leto2_to_pyarray2(py, d.clone()))
+        .transpose()?;
     let uy = result
         .uy_data
         .as_ref()
-        .map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d.clone())).unbind());
+        .map(|d| leto2_to_pyarray2(py, d.clone()))
+        .transpose()?;
     let uz = result
         .uz_data
         .as_ref()
-        .map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d.clone())).unbind());
+        .map(|d| leto2_to_pyarray2(py, d.clone()))
+        .transpose()?;
     let ix = result
         .ix_data
         .as_ref()
-        .map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d.clone())).unbind());
+        .map(|d| leto2_to_pyarray2(py, d.clone()))
+        .transpose()?;
     let iy = result
         .iy_data
         .as_ref()
-        .map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d.clone())).unbind());
+        .map(|d| leto2_to_pyarray2(py, d.clone()))
+        .transpose()?;
     let iz = result
         .iz_data
         .as_ref()
-        .map(|d| PyArray2::from_owned_array(py, leto2_to_nd2(d.clone())).unbind());
-    let i_avg_x = result.i_avg_x.as_ref().map(|d| {
-        PyArray1::from_owned_array(
-            py,
-            d.clone()
-                .try_into()
-                .expect("invariant: contiguous x intensity"),
-        )
-        .unbind()
-    });
-    let i_avg_y = result.i_avg_y.as_ref().map(|d| {
-        PyArray1::from_owned_array(
-            py,
-            d.clone()
-                .try_into()
-                .expect("invariant: contiguous y intensity"),
-        )
-        .unbind()
-    });
-    let i_avg_z = result.i_avg_z.as_ref().map(|d| {
-        PyArray1::from_owned_array(
-            py,
-            d.clone()
-                .try_into()
-                .expect("invariant: contiguous z intensity"),
-        )
-        .unbind()
-    });
+        .map(|d| leto2_to_pyarray2(py, d.clone()))
+        .transpose()?;
+    let i_avg_x = result
+        .i_avg_x
+        .as_ref()
+        .map(|d| leto1_to_pyarray1(py, d.clone()))
+        .transpose()?;
+    let i_avg_y = result
+        .i_avg_y
+        .as_ref()
+        .map(|d| leto1_to_pyarray1(py, d.clone()))
+        .transpose()?;
+    let i_avg_z = result
+        .i_avg_z
+        .as_ref()
+        .map(|d| leto1_to_pyarray1(py, d.clone()))
+        .transpose()?;
 
     // Velocity statistics
     let (ux_max, ux_min, ux_rms, uy_max, uy_min, uy_rms, uz_max, uz_min, uz_rms) =
         if let Some(ref vstats) = result.velocity_stats {
-            let ux_max_nd: numpy::ndarray::Array1<f64> = vstats
-                .ux_max
-                .clone()
-                .try_into()
-                .expect("ux_max must convert");
-            let ux_min_nd: numpy::ndarray::Array1<f64> = vstats
-                .ux_min
-                .clone()
-                .try_into()
-                .expect("ux_min must convert");
-            let ux_rms_nd: numpy::ndarray::Array1<f64> = vstats
-                .ux_rms
-                .clone()
-                .try_into()
-                .expect("ux_rms must convert");
-            let uy_max_nd: numpy::ndarray::Array1<f64> = vstats
-                .uy_max
-                .clone()
-                .try_into()
-                .expect("uy_max must convert");
-            let uy_min_nd: numpy::ndarray::Array1<f64> = vstats
-                .uy_min
-                .clone()
-                .try_into()
-                .expect("uy_min must convert");
-            let uy_rms_nd: numpy::ndarray::Array1<f64> = vstats
-                .uy_rms
-                .clone()
-                .try_into()
-                .expect("uy_rms must convert");
-            let uz_max_nd: numpy::ndarray::Array1<f64> = vstats
-                .uz_max
-                .clone()
-                .try_into()
-                .expect("uz_max must convert");
-            let uz_min_nd: numpy::ndarray::Array1<f64> = vstats
-                .uz_min
-                .clone()
-                .try_into()
-                .expect("uz_min must convert");
-            let uz_rms_nd: numpy::ndarray::Array1<f64> = vstats
-                .uz_rms
-                .clone()
-                .try_into()
-                .expect("uz_rms must convert");
             (
-                Some(PyArray1::from_owned_array(py, ux_max_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, ux_min_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, ux_rms_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, uy_max_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, uy_min_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, uy_rms_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, uz_max_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, uz_min_nd).unbind()),
-                Some(PyArray1::from_owned_array(py, uz_rms_nd).unbind()),
+                Some(leto1_to_pyarray1(py, vstats.ux_max.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.ux_min.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.ux_rms.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.uy_max.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.uy_min.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.uy_rms.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.uz_max.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.uz_min.clone())?),
+                Some(leto1_to_pyarray1(py, vstats.uz_rms.clone())?),
             )
         } else {
             (None, None, None, None, None, None, None, None, None)
@@ -382,18 +306,20 @@ pub(crate) fn build_simulation_result(
     let thermal_temperature = result
         .thermal_temperature
         .as_ref()
-        .map(|d| PyArray3::from_owned_array(py, leto3_to_nd3(d.clone())).unbind());
+        .map(|d| leto3_to_pyarray3(py, d.clone()))
+        .transpose()?;
     let thermal_dose = result
         .thermal_dose
         .as_ref()
-        .map(|d| PyArray3::from_owned_array(py, leto3_to_nd3(d.clone())).unbind());
+        .map(|d| leto3_to_pyarray3(py, d.clone()))
+        .transpose()?;
 
     Ok(SimulationResult {
         sensor_data_1d,
         sensor_data_2d,
         time: time_array,
         shape: (nx, ny, nz),
-        sensor_data_shape: (n_sensors, result.sensor_data.shape()[1]),
+        sensor_data_shape: (n_sensors, n_time_steps),
         time_steps,
         dt,
         final_time,

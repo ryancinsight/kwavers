@@ -10,8 +10,8 @@
 //! # References
 //! - Rayleigh (1917) Phil. Mag. 34:94; Plesset (1949) J. Appl. Mech. 16:277.
 
-use numpy::ndarray::Array1;
-use numpy::{PyArray1, ToPyArray};
+use crate::array_utils::vec_to_pyarray1;
+use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -85,8 +85,8 @@ pub fn solve_rayleigh_plesset(
         pv_pa,
     );
     Ok((
-        Array1::from(time).to_pyarray(py).into(),
-        Array1::from(radius).to_pyarray(py).into(),
-        Array1::from(rdot).to_pyarray(py).into(),
+        vec_to_pyarray1(py, time),
+        vec_to_pyarray1(py, radius),
+        vec_to_pyarray1(py, rdot),
     ))
 }

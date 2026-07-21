@@ -1,14 +1,13 @@
 //! NumPy conversion helpers for RTM bindings.
 
-use numpy::ndarray::{Array2, ArrayView2};
-use numpy::{PyArray2, ToPyArray};
+use crate::array_utils::{copy_pyarray2_to_vec, vec_to_pyarray2};
+use numpy::{PyArray2, PyReadonlyArray2};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-pub(super) fn flatten_array2(arr: ArrayView2<'_, f64>, nx: usize, nz: usize) -> Vec<f64> {
-    (0..nx)
-        .flat_map(|i| (0..nz).map(move |j| arr[[i, j]]))
-        .collect()
+pub(super) fn flatten_array2(arr: &PyReadonlyArray2<'_, f64>) -> PyResult<Vec<f64>> {
+    let (data, _) = copy_pyarray2_to_vec(arr)?;
+    Ok(data)
 }
 
 pub(super) fn array2_from_flat(
@@ -17,9 +16,7 @@ pub(super) fn array2_from_flat(
     nz: usize,
     flat: Vec<f64>,
 ) -> PyResult<Py<PyArray2<f64>>> {
-    let arr2d = Array2::from_shape_vec((nx, nz), flat)
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.to_pyarray(py).unbind())
+    vec_to_pyarray2(py, [nx, nz], flat)
 }
 
 pub(super) fn complex_field_arrays(

@@ -16,8 +16,8 @@
 //! - Keller & Miksis (1980) J. Acoust. Soc. Am. 68(2):628.
 //! - de Jong et al. (1994) Ultrasonics 32:447 (linear shell viscosity).
 
-use numpy::ndarray::Array1;
-use numpy::{PyArray1, ToPyArray};
+use crate::array_utils::vec_to_pyarray1;
+use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -107,9 +107,9 @@ pub fn solve_keller_miksis(
         c_l,
     );
     Ok((
-        Array1::from(time).to_pyarray(py).into(),
-        Array1::from(radius).to_pyarray(py).into(),
-        Array1::from(rdot).to_pyarray(py).into(),
+        vec_to_pyarray1(py, time),
+        vec_to_pyarray1(py, radius),
+        vec_to_pyarray1(py, rdot),
     ))
 }
 

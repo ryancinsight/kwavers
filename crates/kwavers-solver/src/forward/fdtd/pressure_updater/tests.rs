@@ -4,10 +4,9 @@ use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WA
 use kwavers_grid::Grid;
 use kwavers_medium::HomogeneousMedium;
 use kwavers_source::GridSource;
-use leto::Array3 as LetoArray3;
 use leto::Array3;
 
-fn leto_to_ndarray3(field: &LetoArray3<f64>) -> Array3<f64> {
+fn clone_array3(field: &Array3<f64>) -> Array3<f64> {
     let shape = field.shape();
     let mut copied = Array3::zeros((shape[0], shape[1], shape[2]));
     for (dst, src) in copied.iter_mut().zip(field.iter()) {
@@ -47,7 +46,7 @@ fn test_westervelt_correction_nonzero_after_history() {
     let mut solver = FdtdSolver::new(config, &grid, &medium, GridSource::new_empty()).unwrap();
 
     solver.fields.p.fill(1e6_f64);
-    solver.p_prev = Some(leto_to_ndarray3(&solver.fields.p));
+    solver.p_prev = Some(clone_array3(&solver.fields.p));
     solver.p_prev2 = Some(Array3::zeros((n, n, n)));
 
     let p_before = solver.fields.p[[1, 1, 1]];

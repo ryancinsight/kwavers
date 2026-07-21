@@ -20,7 +20,7 @@ use std::sync::Arc;
 use super::field_registry::FieldRegistry;
 use super::performance::PluginPerformanceMonitor;
 
-fn ndarray_mask(mask: &leto::Array3<f64>) -> Array3<f64> {
+fn clone_mask(mask: &leto::Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = mask.shape();
     Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
         .expect("plugin source mask shape must match contiguous ndarray storage")
@@ -79,7 +79,7 @@ impl PluginBasedSolver {
         boundary: Box<dyn Boundary>,
         source: Box<dyn Source>,
     ) -> Self {
-        let source_mask = ndarray_mask(&source.create_mask(&grid));
+        let source_mask = clone_mask(&source.create_mask(&grid));
         let sources = vec![source];
         let source_masks = vec![source_mask];
 
@@ -126,7 +126,7 @@ impl PluginBasedSolver {
         };
         self.field_registry.register_field(required_field)?;
 
-        let mask = ndarray_mask(&source.create_mask(&self.grid));
+        let mask = clone_mask(&source.create_mask(&self.grid));
         self.sources.push(source);
         self.source_masks.push(mask);
         Ok(())

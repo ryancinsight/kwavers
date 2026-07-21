@@ -2,9 +2,10 @@
 
 mod thermal_strain;
 
+use crate::array_utils::vec_to_pyarray1;
+use crate::array_utils::vec_to_pyarray2;
 use kwavers_physics::analytical::elastography;
-use numpy::ndarray::Array2;
-use numpy::{PyArray1, PyArray2, PyReadonlyArray1, ToPyArray};
+use numpy::{PyArray1, PyArray2, PyReadonlyArray1};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -68,7 +69,7 @@ pub fn voigt_complex_modulus(
     let result = elastography::voigt_complex_modulus(om_s, mu_pa, eta_pa_s);
     let real: Vec<f64> = result.iter().map(|c| c.re).collect();
     let imag: Vec<f64> = result.iter().map(|c| c.im).collect();
-    Ok((real.to_pyarray(py).unbind(), imag.to_pyarray(py).unbind()))
+    Ok((vec_to_pyarray1(py, real), vec_to_pyarray1(py, imag)))
 }
 
 /// Compute the springpot (fractional Kelvin) complex shear modulus.
@@ -96,7 +97,7 @@ pub fn springpot_complex_modulus(
     let result = elastography::springpot_complex_modulus(om_s, g0, alpha_exp);
     let real: Vec<f64> = result.iter().map(|c| c.re).collect();
     let imag: Vec<f64> = result.iter().map(|c| c.im).collect();
-    Ok((real.to_pyarray(py).unbind(), imag.to_pyarray(py).unbind()))
+    Ok((vec_to_pyarray1(py, real), vec_to_pyarray1(py, imag)))
 }
 
 /// Compute the Voigt shear-wave phase velocity dispersion curve.
@@ -122,7 +123,7 @@ pub fn voigt_shear_wave_dispersion(
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let result = elastography::voigt_shear_wave_dispersion(f_s, mu_pa, eta_pa_s, rho);
-    Ok(result.to_pyarray(py).unbind())
+    Ok(vec_to_pyarray1(py, result))
 }
 
 /// Compute the 2-D MRE displacement field for a harmonic shear wave.
@@ -164,9 +165,7 @@ pub fn mre_displacement_field(
         amplitude,
         penetration_depth_m,
     );
-    let arr2d = Array2::from_shape_vec((nx, nz), flat)
-        .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(arr2d.to_pyarray(py).unbind())
+    vec_to_pyarray2(py, [nx, nz], flat)
 }
 
 /// Compute the positive exponential MRE displacement envelope.
@@ -183,5 +182,5 @@ pub fn mre_displacement_envelope(
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     let envelope = elastography::mre_displacement_envelope(z_s, amplitude_m, penetration_depth_m)
         .map_err(PyValueError::new_err)?;
-    Ok(envelope.to_pyarray(py).unbind())
+    Ok(vec_to_pyarray1(py, envelope))
 }

@@ -10,7 +10,7 @@ use leto::Array4;
 use log::debug;
 use std::time::Instant;
 
-fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
+fn copy_view_into_owned(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
     for (dst_value, src_value) in dst
         .as_slice_mut()
         .expect("leto hybrid field must be contiguous")
@@ -21,7 +21,7 @@ fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView
     }
 }
 
-fn copy_leto_slice_into_ndarray(
+fn copy_owned_slice_into_view(
     dst: &mut leto::ArrayViewMut3<'_, f64>,
     src: &leto::Array3<f64>,
     region: &DomainRegion,
@@ -65,30 +65,30 @@ impl HybridSolver {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        copy_ndarray_view_into_leto(&mut self.pstd_solver.fields.p, fields.index_axis(0, p_idx)?);
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(&mut self.pstd_solver.fields.p, fields.index_axis(0, p_idx)?);
+        copy_view_into_owned(
             &mut self.pstd_solver.fields.ux,
             fields.index_axis(0, vx_idx)?,
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(
             &mut self.pstd_solver.fields.uy,
             fields.index_axis(0, vy_idx)?,
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(
             &mut self.pstd_solver.fields.uz,
             fields.index_axis(0, vz_idx)?,
         );
 
-        copy_ndarray_view_into_leto(&mut self.fdtd_solver.fields.p, fields.index_axis(0, p_idx)?);
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(&mut self.fdtd_solver.fields.p, fields.index_axis(0, p_idx)?);
+        copy_view_into_owned(
             &mut self.fdtd_solver.fields.ux,
             fields.index_axis(0, vx_idx)?,
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(
             &mut self.fdtd_solver.fields.uy,
             fields.index_axis(0, vy_idx)?,
         );
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(
             &mut self.fdtd_solver.fields.uz,
             fields.index_axis(0, vz_idx)?,
         );
@@ -117,24 +117,24 @@ impl HybridSolver {
             match region.domain_type {
                 DomainType::PSTD => {
                     let mut p_view = fields.index_axis_mut(0, p_idx)?;
-                    copy_leto_slice_into_ndarray(&mut p_view, &self.pstd_solver.fields.p, &region);
+                    copy_owned_slice_into_view(&mut p_view, &self.pstd_solver.fields.p, &region);
 
                     let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
-                    copy_leto_slice_into_ndarray(
+                    copy_owned_slice_into_view(
                         &mut vx_view,
                         &self.pstd_solver.fields.ux,
                         &region,
                     );
 
                     let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
-                    copy_leto_slice_into_ndarray(
+                    copy_owned_slice_into_view(
                         &mut vy_view,
                         &self.pstd_solver.fields.uy,
                         &region,
                     );
 
                     let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
-                    copy_leto_slice_into_ndarray(
+                    copy_owned_slice_into_view(
                         &mut vz_view,
                         &self.pstd_solver.fields.uz,
                         &region,
@@ -142,24 +142,24 @@ impl HybridSolver {
                 }
                 DomainType::FDTD => {
                     let mut p_view = fields.index_axis_mut(0, p_idx)?;
-                    copy_leto_slice_into_ndarray(&mut p_view, &self.fdtd_solver.fields.p, &region);
+                    copy_owned_slice_into_view(&mut p_view, &self.fdtd_solver.fields.p, &region);
 
                     let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
-                    copy_leto_slice_into_ndarray(
+                    copy_owned_slice_into_view(
                         &mut vx_view,
                         &self.fdtd_solver.fields.ux,
                         &region,
                     );
 
                     let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
-                    copy_leto_slice_into_ndarray(
+                    copy_owned_slice_into_view(
                         &mut vy_view,
                         &self.fdtd_solver.fields.uy,
                         &region,
                     );
 
                     let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
-                    copy_leto_slice_into_ndarray(
+                    copy_owned_slice_into_view(
                         &mut vz_view,
                         &self.fdtd_solver.fields.uz,
                         &region,

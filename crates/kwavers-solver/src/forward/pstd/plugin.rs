@@ -11,7 +11,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::Medium;
 use kwavers_source::GridSource;
 
-fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
+fn copy_view_into_owned(dst: &mut leto::Array3<f64>, src: leto::ArrayView3<'_, f64>) {
     for (dst_value, src_value) in dst
         .as_slice_mut()
         .expect("leto PSTD field must be contiguous")
@@ -22,7 +22,7 @@ fn copy_ndarray_view_into_leto(dst: &mut leto::Array3<f64>, src: leto::ArrayView
     }
 }
 
-fn copy_leto_into_ndarray(dst: &mut leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
+fn copy_owned_into_view(dst: &mut leto::ArrayViewMut3<'_, f64>, src: &leto::Array3<f64>) {
     leto_ops::zip_mut_with(dst, &src.view(), |d, s| *d = *s)
         .expect("invariant: dst and src share shape");
 }
@@ -125,7 +125,7 @@ impl crate::plugin::Plugin for PSTDPlugin {
         let vy_idx = UnifiedFieldType::VelocityY.index();
         let vz_idx = UnifiedFieldType::VelocityZ.index();
 
-        copy_ndarray_view_into_leto(
+        copy_view_into_owned(
             &mut solver.fields.p,
             fields
                 .index_axis::<3>(0, pressure_idx)
@@ -139,19 +139,19 @@ impl crate::plugin::Plugin for PSTDPlugin {
             // pressure here. Re-splitting ρ = p/c² equally every step destroys the
             // directional density information and collapses the wave amplitude
             // (the historical bug this replaces).
-            copy_ndarray_view_into_leto(
+            copy_view_into_owned(
                 &mut solver.fields.ux,
                 fields
                     .index_axis::<3>(0, vx_idx)
                     .expect("invariant: velocity-x field index within unified field array"),
             );
-            copy_ndarray_view_into_leto(
+            copy_view_into_owned(
                 &mut solver.fields.uy,
                 fields
                     .index_axis::<3>(0, vy_idx)
                     .expect("invariant: velocity-y field index within unified field array"),
             );
-            copy_ndarray_view_into_leto(
+            copy_view_into_owned(
                 &mut solver.fields.uz,
                 fields
                     .index_axis::<3>(0, vz_idx)
@@ -172,25 +172,25 @@ impl crate::plugin::Plugin for PSTDPlugin {
         solver.step_forward()?;
 
         // Sync back to global fields
-        copy_leto_into_ndarray(
+        copy_owned_into_view(
             &mut fields
                 .index_axis_mut::<3>(0, pressure_idx)
                 .expect("invariant: pressure field index within unified field array"),
             &solver.fields.p,
         );
-        copy_leto_into_ndarray(
+        copy_owned_into_view(
             &mut fields
                 .index_axis_mut::<3>(0, vx_idx)
                 .expect("invariant: velocity-x field index within unified field array"),
             &solver.fields.ux,
         );
-        copy_leto_into_ndarray(
+        copy_owned_into_view(
             &mut fields
                 .index_axis_mut::<3>(0, vy_idx)
                 .expect("invariant: velocity-y field index within unified field array"),
             &solver.fields.uy,
         );
-        copy_leto_into_ndarray(
+        copy_owned_into_view(
             &mut fields
                 .index_axis_mut::<3>(0, vz_idx)
                 .expect("invariant: velocity-z field index within unified field array"),

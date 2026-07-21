@@ -1,6 +1,6 @@
 //! PyO3 wrappers for pulse-echo RF and B-mode helpers.
 
-use crate::breast_fwi_bindings::complex_compat::{leto2_to_nd2, nd_to_leto2};
+use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, leto2_to_nd2, nd_to_leto1, nd_to_leto2};
 use kwavers_analysis::signal_processing::b_mode::envelope as core_bmode_envelope;
 use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,
@@ -56,7 +56,7 @@ pub fn simulate_receive_rf<'py>(
         ));
     }
     let sp_leto = nd_to_leto2(sp.to_owned());
-    let sa_leto: leto::Array1<f64> = sa.to_owned().into();
+    let sa_leto = nd_to_leto1(sa.to_owned());
     let ep_leto = nd_to_leto2(ep.to_owned());
     let rf = core_simulate_receive_rf(
         sp_leto.view(),
@@ -83,11 +83,9 @@ pub fn simulate_receive_rf<'py>(
 #[pyfunction]
 #[pyo3(signature = (rf,))]
 pub fn bmode_envelope(py: Python<'_>, rf: PyReadonlyArray1<f64>) -> PyResult<Py<PyArray1<f64>>> {
-    let rf_arr: leto::Array1<f64> = rf.as_array().to_owned().into();
+    let rf_arr = nd_to_leto1(rf.as_array().to_owned());
     let env = py.detach(|| core_bmode_envelope(&rf_arr));
-    let env: numpy::ndarray::Array1<f64> = env
-        .try_into()
-        .expect("invariant: contiguous pulse-echo envelope");
+    let env = leto1_to_nd1(env);
     Ok(env.to_pyarray(py).unbind())
 }
 

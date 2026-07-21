@@ -5,7 +5,7 @@ use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
 use super::Source;
-use crate::breast_fwi_bindings::complex_compat::nd_to_leto3;
+use crate::breast_fwi_bindings::complex_compat::{nd_to_leto1, nd_to_leto3};
 
 #[pymethods]
 impl Source {
@@ -56,7 +56,7 @@ impl Source {
             ));
         }
         let convert = |opt: Option<PyReadonlyArray1<f64>>| -> Option<leto::Array1<f64>> {
-            opt.map(|sig| sig.as_array().to_owned().into())
+            opt.map(|sig| nd_to_leto1(sig.as_array().to_owned()))
         };
         let mask_f64 = nd_to_leto3(mask_arr.mapv(|b| if b { 1.0 } else { 0.0 }));
         let amplitude = [&ux, &uy, &uz]

@@ -25,10 +25,8 @@ use kwavers_medium::heterogeneous::HeterogeneousFactory;
 use kwavers_source::GridSource;
 use leto::{Array2, Array3, Array4};
 
-fn ndarray_from_leto2(field: &leto::Array2<f64>) -> Array2<f64> {
-    let [nrows, ncols] = field.shape();
-    Array2::from_shape_vec([nrows, ncols], field.iter().copied().collect())
-        .expect("FWI source signal shape must match contiguous ndarray storage")
+fn clone_array2(field: &leto::Array2<f64>) -> Array2<f64> {
+    field.to_contiguous()
 }
 
 /// A boxed forward solver paired with its grid dimensions and validated time step.
@@ -364,7 +362,7 @@ impl FwiProcessor {
             }
         }
         let receiver_voxels = FwiGeometry::collect_fortran_indices(&geometry.sensor_mask);
-        Ok((source_voxels, ndarray_from_leto2(signal), receiver_voxels))
+        Ok((source_voxels, clone_array2(signal), receiver_voxels))
     }
 
     /// Forward self-adjoint model returning `(synthetic, history)`.

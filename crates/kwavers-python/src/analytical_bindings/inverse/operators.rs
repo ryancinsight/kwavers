@@ -45,7 +45,7 @@ pub fn matrix_singular_values(
     nrows: usize,
     ncols: usize,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let flat = flatten_array2(matrix.as_array(), nrows, ncols);
+    let flat = flatten_array2(&matrix)?;
     let result = inverse_mod::matrix_singular_values(&flat, nrows, ncols);
     Ok(result.to_pyarray(py).unbind())
 }
@@ -71,7 +71,7 @@ pub fn tikhonov_lcurve(
     ncols: usize,
     lambdas: PyReadonlyArray1<f64>,
 ) -> PyResult<(Py<PyArray1<f64>>, Py<PyArray1<f64>>)> {
-    let a_flat = flatten_array2(a.as_array(), nrows, ncols);
+    let a_flat = flatten_array2(&a)?;
     let b_s = b
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;

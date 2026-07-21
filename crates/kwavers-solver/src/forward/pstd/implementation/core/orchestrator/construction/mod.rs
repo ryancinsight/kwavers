@@ -26,10 +26,8 @@ use std::sync::Arc;
 
 const DENSE_CONSTRUCTION_CHUNK: usize = 4096;
 
-fn leto_to_ndarray(input: &Array3<f64>) -> leto::Array3<f64> {
-    let [nx, ny, nz] = input.shape();
-    leto::Array3::from_shape_vec([nx, ny, nz], input.iter().copied().collect())
-        .expect("Leto PSTD field shape must match ndarray boundary shape")
+fn clone_field(input: &Array3<f64>) -> leto::Array3<f64> {
+    input.to_contiguous()
 }
 
 fn apply_kappa_cosine_transform(k_mag: &mut Array3<f64>, scale: f64) {
@@ -162,7 +160,7 @@ impl PSTDSolver {
         // Populated once here; zero per-step allocation; `None` for non-CPML boundaries.
         let pml_exp = boundary.as_ref().and_then(|b| b.pml_exp_factors_owned());
 
-        let k_mag_absorption = leto_to_ndarray(&k_mag);
+        let k_mag_absorption = clone_field(&k_mag);
         let mut absorption = initialize_absorption_operators(
             &config,
             &grid,

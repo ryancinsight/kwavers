@@ -128,7 +128,7 @@ impl KuznetsovSpectralOperator {
         let mut laplacian = LetoArray3::<f64>::zeros([nx, ny, nz]);
         self.fft
             .inverse_into(&self.field_hat, &mut laplacian, &mut self.scratch_hat);
-        copy_leto_real_to_ndarray(&laplacian, laplacian_out);
+        copy_real_field(&laplacian, laplacian_out);
     }
 
     /// Compute gradient using spectral methods with pre-allocated workspace
@@ -168,13 +168,13 @@ impl KuznetsovSpectralOperator {
         let grad_x = self.fft.inverse(&self.grad_x_hat);
         let grad_y = self.fft.inverse(&self.grad_y_hat);
         let grad_z = self.fft.inverse(&self.grad_z_hat);
-        copy_leto_real_to_ndarray(&grad_x, grad_x_out);
-        copy_leto_real_to_ndarray(&grad_y, grad_y_out);
-        copy_leto_real_to_ndarray(&grad_z, grad_z_out);
+        copy_real_field(&grad_x, grad_x_out);
+        copy_real_field(&grad_y, grad_y_out);
+        copy_real_field(&grad_z, grad_z_out);
     }
 }
 
-fn copy_leto_real_to_ndarray(source: &LetoArray3<f64>, out: &mut Array3<f64>) {
+fn copy_real_field(source: &LetoArray3<f64>, out: &mut Array3<f64>) {
     let [nx, ny, nz] = source.shape();
     debug_assert_eq!(out.shape(), [nx, ny, nz]);
     for i in 0..nx {

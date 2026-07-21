@@ -3,6 +3,8 @@ use numpy::PyReadonlyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
+use crate::breast_fwi_bindings::complex_compat::nd_to_leto1;
+
 use kwavers_transducer::array_2d::{
     TransducerArray2D as KwaversTransducerArray2D, TransducerArray2DConfig,
 };
@@ -211,7 +213,7 @@ impl TransducerArray2D {
         if signal_arr.is_empty() {
             return Err(PyValueError::new_err("Signal must not be empty"));
         }
-        self.input_signal = Some(signal_arr.into());
+        self.input_signal = Some(nd_to_leto1(signal_arr));
         Ok(())
     }
 

@@ -2,7 +2,7 @@
 
 use super::arrays::{array2_from_flat, flatten_array2};
 use kwavers_physics::analytical::rtm as rtm_mod;
-use numpy::{PyArray2, PyReadonlyArray2};
+use numpy::{PyArray2, PyReadonlyArray2, PyUntypedArrayMethods};
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
@@ -34,10 +34,10 @@ pub fn rtm_imaging_condition(
     nx: usize,
     nz: usize,
 ) -> PyResult<Py<PyArray2<f64>>> {
-    let fr_flat = flatten_array2(p_fwd_real.as_array(), nx, nz);
-    let fi_flat = flatten_array2(p_fwd_imag.as_array(), nx, nz);
-    let br_flat = flatten_array2(p_bwd_real.as_array(), nx, nz);
-    let bi_flat = flatten_array2(p_bwd_imag.as_array(), nx, nz);
+    let fr_flat = flatten_array2(&p_fwd_real)?;
+    let fi_flat = flatten_array2(&p_fwd_imag)?;
+    let br_flat = flatten_array2(&p_bwd_real)?;
+    let bi_flat = flatten_array2(&p_bwd_imag)?;
     let flat = rtm_mod::rtm_imaging_condition(&fr_flat, &fi_flat, &br_flat, &bi_flat, nx, nz);
     array2_from_flat(py, nx, nz, flat)
 }
@@ -58,12 +58,13 @@ pub fn rtm_multi_frequency_fusion(
     if images.is_empty() {
         return Err(PyRuntimeError::new_err("images list must not be empty"));
     }
-    let first = images[0].as_array();
-    let (nx, nz) = first.dim();
+    let first = &images[0];
+    let shape = first.shape();
+    let (nx, nz) = (shape[0], shape[1]);
     let vecs: Vec<Vec<f64>> = images
         .iter()
-        .map(|img| flatten_array2(img.as_array(), nx, nz))
-        .collect();
+        .map(|img| flatten_array2(img))
+        .collect::<PyResult<Vec<Vec<f64>>>>()?;
     let flat = rtm_mod::rtm_multi_frequency_fusion(&vecs);
     array2_from_flat(py, nx, nz, flat)
 }

@@ -2,7 +2,6 @@
 //! velocity-component injection, and `add_source_arc` injection-mode
 //! classification by mask geometry.
 
-use leto::Array3 as LetoArray3;
 use leto::Array3;
 use moirai_parallel::{enumerate_mut_with, Adaptive};
 use std::sync::Arc;
@@ -12,14 +11,14 @@ use kwavers_core::error::KwaversResult;
 use kwavers_grid::Grid;
 use kwavers_source::{Source, SourceField, SourceInjectionMode};
 
-fn ndarray_mask(mask: &LetoArray3<f64>) -> Array3<f64> {
+fn clone_mask(mask: &Array3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = mask.shape();
     Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
         .expect("FDTD source mask shape must match contiguous ndarray storage")
 }
 
 fn apply_boundary_pressure_mask(
-    pressure: &mut LetoArray3<f64>,
+    pressure: &mut Array3<f64>,
     mask: &Array3<f64>,
     amplitude: f64,
 ) {
@@ -45,7 +44,7 @@ fn apply_boundary_pressure_mask(
 }
 
 fn apply_additive_pressure_mask(
-    pressure: &mut LetoArray3<f64>,
+    pressure: &mut Array3<f64>,
     mask: &Array3<f64>,
     amplitude: f64,
 ) {
@@ -173,7 +172,7 @@ impl GenericFdtdSolver<Array3<f64>> {
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
     pub fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
-        let mask = ndarray_mask(&source.create_mask(&self.grid));
+        let mask = clone_mask(&source.create_mask(&self.grid));
 
         // Determine injection mode once and cache it
         let mode = Self::determine_injection_mode(&mask, &self.grid);

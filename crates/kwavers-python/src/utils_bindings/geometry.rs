@@ -1,15 +1,12 @@
+use crate::array_utils::leto3_to_pyarray3;
 use crate::Grid;
 use leto::Array3 as LetoArray3;
-use numpy::ndarray::Array3 as NdArray3;
 use numpy::PyArray3;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-fn py_array3_from_leto_mask(py: Python<'_>, mask: LetoArray3<bool>) -> Py<PyArray3<bool>> {
-    let [nx, ny, nz] = mask.shape();
-    let mask_nd = NdArray3::from_shape_vec((nx, ny, nz), mask.into_vec())
-        .expect("geometry mask shape and storage length must match");
-    PyArray3::from_owned_array(py, mask_nd).into()
+fn py_array3_from_leto_mask(py: Python<'_>, mask: LetoArray3<bool>) -> PyResult<Py<PyArray3<bool>>> {
+    leto3_to_pyarray3(py, mask)
 }
 
 #[pyfunction]
@@ -27,7 +24,7 @@ fn make_disc(
         radius,
     )
     .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
-    Ok(py_array3_from_leto_mask(py, mask))
+    py_array3_from_leto_mask(py, mask)
 }
 
 #[pyfunction]
@@ -45,7 +42,7 @@ fn make_ball(
         radius,
     )
     .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
-    Ok(py_array3_from_leto_mask(py, mask))
+    py_array3_from_leto_mask(py, mask)
 }
 
 #[pyfunction]
@@ -76,7 +73,7 @@ fn make_circle(
         thickness,
     )
     .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
-    Ok(py_array3_from_leto_mask(py, mask))
+    py_array3_from_leto_mask(py, mask)
 }
 
 #[pyfunction]
@@ -95,7 +92,7 @@ fn make_line(
         end_arr,
     )
     .map_err(|e| PyRuntimeError::new_err(format!("{:?}", e)))?;
-    Ok(py_array3_from_leto_mask(py, mask))
+    py_array3_from_leto_mask(py, mask)
 }
 
 pub(super) fn register(m: &Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {

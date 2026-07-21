@@ -36,7 +36,7 @@ kwavers-diagnostics = { path = "../kwavers-diagnostics" }
 kwavers-therapy = { path = "../kwavers-therapy" }
 kwavers-gpu = { path = "../kwavers-gpu" }
 coeus-core = { workspace = true }
-leto = { workspace = true, features = ["ndarray-compat"] }
+leto = { workspace = true }
 ritk-io = { workspace = true }
 ritk-image = { workspace = true }
 eunomia = { workspace = true, features = ["numpy"] }

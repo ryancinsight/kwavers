@@ -11,7 +11,7 @@ impl PSTDSolver {
     ///
     pub(crate) fn add_source_arc(&mut self, source: Arc<dyn Source>) -> KwaversResult<()> {
         let mask_leto = source.create_mask(&self.grid);
-        let mask = ndarray_mask(&mask_leto);
+        let mask = clone_mask(&mask_leto);
         let mode = source_injection::determine_injection_mode(&mask);
 
         let grad_mask: Option<leto::Array3<f64>> = match source.source_type() {
@@ -46,7 +46,7 @@ impl PSTDSolver {
     }
 }
 
-fn ndarray_mask(mask: &leto::Array3<f64>) -> leto::Array3<f64> {
+fn clone_mask(mask: &leto::Array3<f64>) -> leto::Array3<f64> {
     let [nx, ny, nz] = mask.shape();
     leto::Array3::from_shape_vec([nx, ny, nz], mask.iter().copied().collect())
         .expect("PSTD source mask shape must match contiguous ndarray storage")

@@ -99,10 +99,8 @@ fn leto_real_field(field: LetoArray3<f64>) -> Array3<f64> {
         .expect("Leto real field length must match PSTD field shape")
 }
 
-fn ndarray_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
-    let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec([nx, ny, nz], field.into_vec())
-        .expect("Leto complex field length must match PSTD field shape")
+fn clone_complex_field(field: LetoArray3<Complex64>) -> Array3<Complex64> {
+    field.to_contiguous()
 }
 
 /// k-Space operators for PSTD spectral computations
@@ -171,7 +169,7 @@ impl PSTDKSOperators {
     ///
     pub fn forward_fft_3d(&self, input: &LetoArray3<f64>) -> KwaversResult<Array3<Complex64>> {
         let output = self.fft_processor.forward(input);
-        Ok(ndarray_complex_field(output))
+        Ok(clone_complex_field(output))
     }
     /// Inverse fft 3d.
     /// # Errors

@@ -1,13 +1,13 @@
 //! Thermal-strain elastography bindings.
 
-use crate::breast_fwi_bindings::complex_compat::{leto3_to_nd3, nd_to_leto3};
+use crate::array_utils::{leto3_to_pyarray3, pyarray3_to_leto3};
 use kwavers_physics::acoustics::imaging::modalities::elastography::thermal_strain::TrackingParams;
 use kwavers_physics::acoustics::imaging::modalities::elastography::{
     ThermalStrainConfig, ThermalStrainImager,
 };
 use kwavers_physics::analytical::elastography;
-use numpy::ndarray::Array3;
-use numpy::{PyArray3, PyReadonlyArray3, ToPyArray};
+use leto::Array3;
+use numpy::{PyArray3, PyReadonlyArray3};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
@@ -48,8 +48,8 @@ pub fn thermal_strain_rf_fixture(
     let tracked = Array3::from_shape_vec((n_lines, 1, nz), tracked)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        reference.to_pyarray(py).unbind(),
-        tracked.to_pyarray(py).unbind(),
+        leto3_to_pyarray3(py, reference)?,
+        leto3_to_pyarray3(py, tracked)?,
     ))
 }
 
@@ -132,16 +132,14 @@ pub fn thermal_strain_reconstruct(
     };
     let imager = ThermalStrainImager::new(config, tracking, sampling_rate)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let reference = nd_to_leto3(reference.as_array().to_owned());
-    let tracked = nd_to_leto3(tracked.as_array().to_owned());
+    let reference = pyarray3_to_leto3(&reference)?;
+    let tracked = pyarray3_to_leto3(&tracked)?;
     let result = imager
         .reconstruct_temperature(&reference, &tracked)
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
     Ok((
-        leto3_to_nd3(result.displacement).to_pyarray(py).unbind(),
-        leto3_to_nd3(result.strain).to_pyarray(py).unbind(),
-        leto3_to_nd3(result.temperature_change)
-            .to_pyarray(py)
-            .unbind(),
+        leto3_to_pyarray3(py, result.displacement)?,
+        leto3_to_pyarray3(py, result.strain)?,
+        leto3_to_pyarray3(py, result.temperature_change)?,
     ))
 }

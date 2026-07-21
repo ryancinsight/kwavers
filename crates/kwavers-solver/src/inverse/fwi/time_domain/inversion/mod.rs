@@ -9,10 +9,8 @@ use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
 use leto::Array3;
 
-fn ndarray_from_leto3(field: &leto::Array3<f64>) -> Array3<f64> {
-    let [nx, ny, nz] = field.shape();
-    Array3::from_shape_vec([nx, ny, nz], field.iter().copied().collect())
-        .expect("FWI source mask shape must match contiguous ndarray storage")
+fn clone_array3(field: &leto::Array3<f64>) -> Array3<f64> {
+    field.to_contiguous()
 }
 
 impl FwiProcessor {
@@ -204,7 +202,7 @@ impl FwiProcessor {
         geometry: &FwiGeometry,
         grid: &Grid,
     ) -> KwaversResult<(f64, Array3<f64>)> {
-        let source_mask = geometry.source.p_mask.as_ref().map(ndarray_from_leto3);
+        let source_mask = geometry.source.p_mask.as_ref().map(clone_array3);
 
         // Exact self-adjoint engine, lossless: reconstruct the forward field
         // backward instead of storing the O(nt·N) history.

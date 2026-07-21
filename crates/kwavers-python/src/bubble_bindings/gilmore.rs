@@ -11,10 +11,10 @@
 //! # Reference
 //! Gilmore, F. R. (1952), Caltech Hydrodynamics Lab Report 26-4.
 
+use crate::array_utils::vec_to_pyarray1;
 use kwavers_physics::acoustics::bubble_dynamics::gilmore::GilmoreSolver;
 use kwavers_physics::acoustics::bubble_dynamics::{BubbleParameters, BubbleState};
-use numpy::ndarray::Array1;
-use numpy::{PyArray1, ToPyArray};
+use numpy::PyArray1;
 use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 
@@ -114,8 +114,8 @@ pub fn solve_gilmore(
     }
 
     Ok((
-        Array1::from(time).to_pyarray(py).into(),
-        Array1::from(radius).to_pyarray(py).into(),
-        Array1::from(rdot).to_pyarray(py).into(),
+        vec_to_pyarray1(py, time),
+        vec_to_pyarray1(py, radius),
+        vec_to_pyarray1(py, rdot),
     ))
 }
