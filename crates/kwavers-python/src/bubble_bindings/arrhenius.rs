@@ -14,7 +14,7 @@
 //! - `R_gas = 8.314 J/(mol·K)` is the universal gas constant
 //! - `T(t)` [K] is the instantaneous temperature
 //!
-//! Integration is by the rectangle rule (kwavers_physics). Cell death probability follows
+//! Integration is by the rectangle rule (Asclepius). Cell death probability follows
 //! `P_death = 1 − exp(−Ω)`. Typical human tissue values:
 //! `Ea ≈ 2.77 × 10⁵ J/mol`, `A ≈ 3.1 × 10⁴³ s⁻¹` (Henriques 1947).
 //!

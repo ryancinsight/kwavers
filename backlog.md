@@ -8421,7 +8421,7 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   invalid observations return errors without partially updating persistent
   state; Python remains a conversion-only PyO3 boundary; the independent
   solver oracle still matches published 42/43/44 degree Celsius cases.
-- Dependencies: Asclepius `15b09d4`; Aequitas `be3a1ac`.
+- Dependencies: Asclepius merge `794f8c3`; Aequitas `be3a1ac`.
 - Risk: public duplicate response functions are removed, so the change is
   breaking. ADR 043 owns the migration and verification decision.
 - Evidence: one public Asclepius source is present in the dependency graph;

@@ -7319,7 +7319,7 @@ Atlas checkouts only for in-tree development.
 - [x] Run residue scans, focused package gates, doctests, Rustdoc, dependency
       policy, and the breaking SemVer gate.
 - Evidence: the dependency graph resolves one public Asclepius source at
-  `15b09d4`, directly owned by physics, therapy, and Python. Warning-denied
+  `794f8c3`, directly owned by physics, therapy, and Python. Warning-denied
   all-feature Clippy passes. Nextest run
   `e0f780a0-c8ea-4a49-acb8-b43c2a04c32c` passes 2,070/2,070 native tests with
   two skipped and a 23.9-second maximum. The focused Python contract passes
