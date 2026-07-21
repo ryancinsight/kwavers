@@ -1,11 +1,10 @@
 //! IntensityTracker implementation.
 
 use super::types::{InstantaneousIntensity, IntensityTrackerDose, TemporalIntensityMetrics};
-use kwavers_core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
-};
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use asclepius::response::thermal::Cem43;
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
-use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
@@ -214,22 +213,27 @@ impl IntensityTracker {
             ));
         }
 
-        // Update max temperature tracking
+        let increment = Cem43::canonical()
+            .increment(
+                ThermodynamicTemperature::from_base(max_temp + KELVIN_OFFSET_C),
+                Time::from_base(dt),
+            )
+            .map_err(|source| {
+                KwaversError::InvalidInput(format!(
+                    "intensity-tracker CEM43 observation is invalid: {source}"
+                ))
+            })?
+            .get()
+            .into_base()
+            / SECONDS_PER_MINUTE;
+
+        // Commit only after the response observation is fully validated.
         self.thermal_dose.max_temperature = self.thermal_dose.max_temperature.max(max_temp);
         self.thermal_dose.current_temperature = max_temp;
         self.thermal_dose.temperature_rise = (max_temp - BODY_TEMPERATURE_C).max(0.0);
 
-        // CEM43 accumulation — Sapareto & Dewey (1984), Eq. 1:
-        //   CEM43 += R^(T_ref − T) · Δt / 60   [convert s → min]
-        // where T_ref = 43°C, R = 0.5 for T ≥ 43°C, R = 0.25 for T < 43°C.
         if max_temp > BODY_TEMPERATURE_C {
-            let r = if max_temp >= THERMAL_DOSE_REFERENCE_TEMP_C {
-                THERMAL_DOSE_R_ABOVE_43C // 0.5 for T ≥ 43°C
-            } else {
-                THERMAL_DOSE_R_BELOW_43C // 0.25 for T < 43°C
-            };
-            let rate = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - max_temp);
-            self.thermal_dose.cem43 += rate * (dt / SECONDS_PER_MINUTE); // Convert s → min
+            self.thermal_dose.cem43 += increment;
         }
 
         Ok(())

@@ -64,21 +64,25 @@
 //! - Duck, F. A. (1990). Physical Properties of Tissue. Academic Press.
 
 use leto::Array3;
+use std::sync::Mutex;
 
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use asclepius::response::thermal::Cem43;
 use kwavers_core::constants::fundamental::DENSITY_WATER;
-use kwavers_core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
-    THERMAL_DOSE_THRESHOLD,
-};
+use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
-use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
+use kwavers_core::constants::thermodynamic::{
+    KELVIN_OFFSET_C, SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
+};
 use kwavers_core::constants::tissue_acoustics::{DENSITY_BLOOD, DENSITY_BRAIN};
 use kwavers_core::constants::tissue_thermal::{
     SPECIFIC_HEAT_BLOOD_PLASMA, SPECIFIC_HEAT_BRAIN_WHITE,
 };
+use kwavers_core::error::{KwaversError, KwaversResult};
 
 use crate::parallel::{
-    zip_mut_five_refs, zip_mut_three_refs, zip_three_mut_three_refs, zip_two_mut_ref,
+    zip_mut_five_refs, zip_mut_ref, zip_mut_three_refs, zip_three_mut_three_refs,
+    zip_two_mut_two_refs,
 };
 
 // ── Material constants (IT'IS v4.1 / ICRU-44 / Duck 1990) ────────────────────
@@ -103,7 +107,7 @@ const WATER_ALPHA_DB_CM_MHZ: f64 = 0.002;
 /// 1 Np/m = 8.686 dB/m; 1 dB/cm = 100 dB/m → α_Np_m = α_dB_cm·100/8.686.
 const DB_CM_TO_NP_M: f64 = 100.0 / 8.686;
 
-/// CEM43 lesion threshold [min] — Dewhirst et al. (2003).
+/// CEM43 lesion threshold in equivalent minutes — Dewhirst et al. (2003).
 const CEM43_LESION_THRESHOLD: f64 = THERMAL_DOSE_THRESHOLD;
 
 // ── Output type ──────────────────────────────────────────────────────────────
@@ -140,6 +144,10 @@ pub struct TranscranialThermalResult {
 ///
 /// # Returns
 /// [`TranscranialThermalResult`] with peak/final temperature, CEM43, and lesion mask.
+///
+/// # Errors
+///
+/// Returns an error when Asclepius rejects a temperature or time step.
 #[allow(clippy::too_many_arguments)]
 pub fn transcranial_pennes_thermal_dose(
     intensity_w_m2: &Array3<f32>,
@@ -150,7 +158,7 @@ pub fn transcranial_pennes_thermal_dose(
     sonication_s: f64,
     dt_s: f64,
     baseline_c: f64,
-) -> TranscranialThermalResult {
+) -> KwaversResult<TranscranialThermalResult> {
     let [nx, ny, nz] = intensity_w_m2.shape();
     let freq_mhz = frequency_hz * 1.0e-6;
 
@@ -205,6 +213,7 @@ pub fn transcranial_pennes_thermal_dose(
     let mut temp = Array3::<f64>::from_elem((nx, ny, nz), baseline_c);
     let mut peak = Array3::<f64>::from_elem((nx, ny, nz), baseline_c);
     let mut cem43 = Array3::<f64>::zeros((nx, ny, nz));
+    let mut cem43_increment = Array3::<f64>::zeros((nx, ny, nz));
     let steps = ((sonication_s / dt_s).ceil() as usize).max(1);
     let [dx, dy, dz] = spacing_m;
     let dx2 = dx * dx;
@@ -227,24 +236,53 @@ pub fn transcranial_pennes_thermal_dose(
                 *nt = t + dt_s * (kap.mul_add(l, hr) - pc * (t - baseline_c));
             },
         );
+        let law = Cem43::<f64>::canonical();
+        let step = Time::from_base(dt_s);
+        let failure = Mutex::new(None);
+        zip_mut_ref(
+            cem43_increment.view_mut(),
+            new_temp.view(),
+            |increment, &temperature_c| match law.increment(
+                ThermodynamicTemperature::from_base(temperature_c + KELVIN_OFFSET_C),
+                step,
+            ) {
+                Ok(exposure) => {
+                    *increment = exposure.get().into_base() / SECONDS_PER_MINUTE;
+                }
+                Err(source) => {
+                    *increment = 0.0;
+                    let mut first = failure
+                        .lock()
+                        .expect("invariant: response failure lock is never held across a panic");
+                    if first.is_none() {
+                        *first = Some(source);
+                    }
+                }
+            },
+        );
+        if let Some(source) = failure
+            .into_inner()
+            .map_err(|_| KwaversError::ConcurrencyError {
+                message: "transcranial response failure lock was poisoned".to_string(),
+            })?
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "transcranial CEM43 observation is invalid: {source}"
+            )));
+        }
         temp = new_temp;
 
         // Update peak temperature and accumulate CEM43.
-        zip_two_mut_ref(
+        zip_two_mut_two_refs(
             peak.view_mut(),
             cem43.view_mut(),
             temp.view(),
-            |p, c, &t| {
+            cem43_increment.view(),
+            |p, c, &t, &increment| {
                 if t > *p {
                     *p = t;
                 }
-                // Sapareto & Dewey (1984) CEM43 integrand, explicit Euler in time [min].
-                let r: f64 = if t >= THERMAL_DOSE_REFERENCE_TEMP_C {
-                    THERMAL_DOSE_R_ABOVE_43C
-                } else {
-                    THERMAL_DOSE_R_BELOW_43C
-                };
-                *c += (dt_s / SECONDS_PER_MINUTE) * r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - t);
+                *c += increment;
             },
         );
     }
@@ -261,12 +299,12 @@ pub fn transcranial_pennes_thermal_dose(
         },
     );
 
-    TranscranialThermalResult {
+    Ok(TranscranialThermalResult {
         peak_temperature_c: peak.mapv(|v| v as f32),
         final_temperature_c: temp.mapv(|v| v as f32),
         cem43_min: cem43.mapv(|v| v as f32),
         lesion_mask,
-    }
+    })
 }
 
 // ── Numerical helper ─────────────────────────────────────────────────────────
@@ -355,7 +393,8 @@ mod tests {
             1.0,
             0.25,
             BODY_TEMPERATURE_C,
-        );
+        )
+        .expect("valid baseline-only thermal inputs");
         for &t in result.peak_temperature_c.iter() {
             assert!(
                 (t as f64 - BODY_TEMPERATURE_C).abs() < 0.01,
@@ -384,7 +423,8 @@ mod tests {
             1.0,
             0.25,
             BODY_TEMPERATURE_C,
-        );
+        )
+        .expect("valid heterogeneous thermal inputs");
         let skull_peak = result.peak_temperature_c[[0, 0, 0]] as f64;
         let brain_peak = result.peak_temperature_c[[3, 3, 3]] as f64;
         // Skull α=15 dB/cm/MHz >> brain α=3.5 dB/cm/MHz → skull heats faster.

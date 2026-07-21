@@ -2,6 +2,25 @@
 
 ## Unreleased
 
+### Breaking (2026-07-20) - Asclepius biological responses [major]
+
+- Replace Kwavers-owned CEM43, Arrhenius damage, and independent-insult
+  formulas with direct calls to public Asclepius through Aequitas quantities.
+  Physics fields reuse caller-owned scratch storage and commit only after every
+  observation validates.
+- Remove the public `kwavers_physics::analytical::safety` CEM43, Arrhenius, and
+  combined-kill functions and the duplicate CEM43 coefficient constants. The
+  Python names remain thin PyO3 bindings but now reject empty histories,
+  invalid parameters, unequal composition lengths, and out-of-range
+  probabilities instead of truncating, clamping, or returning non-finite
+  results.
+- Make ablation kinetics construction and state updates fallible and typed.
+  Remove `ThermalDiffusionConfig::dose_reference_temperature`; the canonical
+  response reference belongs to Asclepius, while Kwavers retains clinical
+  thresholds and the independent solver validation oracle. See ADR 043.
+- Update the persistent Python GPU PSTD session to the typed `PstdRunInputs`
+  contract exposed by `kwavers-gpu` 5.0.
+
 ### Fixed
 
 - Grid and homogeneous-medium construction performance now remains in the

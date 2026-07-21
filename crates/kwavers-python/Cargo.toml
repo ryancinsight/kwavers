@@ -14,6 +14,8 @@ name = "pykwavers"
 crate-type = ["cdylib"]  # Dynamic library for Python import
 
 [dependencies]
+aequitas = { workspace = true }
+asclepius = { workspace = true }
 # Layered kwavers crates — depended on directly (no facade; ADR 011 amendment).
 # kwavers-core keeps `channels`+`registration` (flume/ritk-registration were
 # always-on in the former facade).

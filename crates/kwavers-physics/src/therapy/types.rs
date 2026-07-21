@@ -1,6 +1,11 @@
-use kwavers_core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
-use kwavers_core::constants::numerical::{MHZ_TO_HZ, MPA_TO_PA, SECONDS_PER_HOUR};
-use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use asclepius::response::thermal::Cem43;
+use kwavers_core::constants::medical::MI_LIMIT_SOFT_TISSUE;
+use kwavers_core::constants::numerical::{
+    MHZ_TO_HZ, MPA_TO_PA, SECONDS_PER_HOUR, SECONDS_PER_MINUTE,
+};
+use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
+use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
 #[derive(Debug, Clone, Default)]
@@ -13,19 +18,38 @@ pub struct DomainTreatmentMetrics {
 }
 
 impl DomainTreatmentMetrics {
-    #[must_use]
-    pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> f64 {
-        let max_dose_rate = temperature.iter().fold(0.0f64, |acc, &t| {
-            let rate = if t > THERMAL_DOSE_REFERENCE_TEMP_C {
-                (t - THERMAL_DOSE_REFERENCE_TEMP_C).exp2()
-            } else if t > BODY_TEMPERATURE_C {
-                4.0_f64.powf(t - THERMAL_DOSE_REFERENCE_TEMP_C)
-            } else {
-                0.0
-            };
-            acc.max(rate)
-        });
-        max_dose_rate * dt
+    /// Return the maximum per-voxel CEM43 increment for one time step.
+    ///
+    /// Temperatures at or below the consumer-owned body-temperature gate do
+    /// not contribute to this aggregate treatment metric.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when Asclepius rejects the time step or an absolute
+    /// temperature.
+    pub fn calculate_thermal_dose(temperature: &Array3<f64>, dt: f64) -> KwaversResult<f64> {
+        let law = Cem43::canonical();
+        let step = Time::from_base(dt);
+        let mut maximum = 0.0_f64;
+        for &temperature_c in temperature.iter() {
+            let increment = law
+                .increment(
+                    ThermodynamicTemperature::from_base(temperature_c + KELVIN_OFFSET_C),
+                    step,
+                )
+                .map_err(|source| {
+                    KwaversError::InvalidInput(format!(
+                        "treatment CEM43 observation is invalid: {source}"
+                    ))
+                })?
+                .get()
+                .into_base()
+                / SECONDS_PER_MINUTE;
+            if temperature_c > BODY_TEMPERATURE_C {
+                maximum = maximum.max(increment);
+            }
+        }
+        Ok(maximum)
     }
 
     #[must_use]
@@ -157,5 +181,29 @@ impl DomainTherapyParameters {
             return false;
         }
         true
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::DomainTreatmentMetrics;
+    use leto::Array3;
+
+    #[test]
+    fn maximum_thermal_dose_uses_canonical_equivalent_minutes() {
+        let temperature = Array3::from_shape_vec([3, 1, 1], vec![37.0, 43.0, 44.0])
+            .expect("valid temperature field");
+        let dose = DomainTreatmentMetrics::calculate_thermal_dose(&temperature, 60.0)
+            .expect("valid CEM43 observation");
+        assert_eq!(dose, 2.0);
+    }
+
+    #[test]
+    fn maximum_thermal_dose_rejects_invalid_observations() {
+        let invalid = Array3::from_elem([1, 1, 1], f64::NAN);
+        assert!(DomainTreatmentMetrics::calculate_thermal_dose(&invalid, 60.0).is_err());
+
+        let temperature = Array3::from_elem([1, 1, 1], 44.0);
+        assert!(DomainTreatmentMetrics::calculate_thermal_dose(&temperature, 0.0).is_err());
     }
 }

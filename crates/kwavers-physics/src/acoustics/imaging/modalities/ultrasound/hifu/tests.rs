@@ -89,9 +89,19 @@ fn hifu_intensity_uses_peak_pressure_half_impedance_formula(
 
 #[test]
 fn cem43_reference_temperatures_match_sapareto_dewey() {
-    assert!((thermal_dose::cem43_increment_minutes(43.0, 1.0) - 1.0).abs() < 1.0e-12);
-    assert!((thermal_dose::cem43_increment_minutes(44.0, 1.0) - 2.0).abs() < 1.0e-12);
-    assert!((thermal_dose::cem43_increment_minutes(42.0, 1.0) - 0.25).abs() < 1.0e-12);
+    let grid = Grid::new(3, 1, 1, 0.005, 0.005, 0.005).unwrap();
+    let mut thermal_dose = HifuThermalDose::new(&grid);
+    let temperatures = Array3::from_shape_vec(grid.dimensions(), vec![42.0, 43.0, 44.0])
+        .expect("test shape matches values");
+    thermal_dose
+        .add_temperature_measurement(temperatures.clone(), 0.0)
+        .unwrap();
+    thermal_dose
+        .add_temperature_measurement(temperatures, 60.0)
+        .unwrap();
+    assert_eq!(thermal_dose.dose_at(0, 0, 0), 0.25);
+    assert_eq!(thermal_dose.dose_at(1, 0, 0), 1.0);
+    assert_eq!(thermal_dose.dose_at(2, 0, 0), 2.0);
 }
 
 #[test]
@@ -99,8 +109,12 @@ fn thermal_dose_uses_seconds_and_detects_ablation_threshold() {
     let grid = Grid::new(4, 4, 4, 0.005, 0.005, 0.005).unwrap();
     let mut thermal_dose = HifuThermalDose::new(&grid);
 
-    thermal_dose.add_temperature_measurement(Array3::from_elem(grid.dimensions(), 55.0), 0.0);
-    thermal_dose.add_temperature_measurement(Array3::from_elem(grid.dimensions(), 55.0), 60.0);
+    thermal_dose
+        .add_temperature_measurement(Array3::from_elem(grid.dimensions(), 55.0), 0.0)
+        .unwrap();
+    thermal_dose
+        .add_temperature_measurement(Array3::from_elem(grid.dimensions(), 55.0), 60.0)
+        .unwrap();
 
     let dose_center = thermal_dose.dose_at(2, 2, 2);
     let expected = 4096.0;

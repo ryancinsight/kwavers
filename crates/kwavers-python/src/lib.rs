@@ -81,6 +81,7 @@ mod fft_bindings;
 mod field_surrogate_bindings;
 mod imaging_bindings;
 mod residual_gas_py;
+mod response;
 mod ritk_image;
 mod sonogenetics_bindings;
 mod theranostic_bindings;

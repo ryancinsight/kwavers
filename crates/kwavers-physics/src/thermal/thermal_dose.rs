@@ -4,32 +4,25 @@
 //! - Sapareto & Dewey (1984) "Thermal dose determination in cancer therapy"
 //! - Dewhirst et al. (2003) "Basic principles of thermal dosimetry"
 
-use kwavers_core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
-};
-use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
-use moirai_parallel::{for_each_chunk_mut_enumerated_with, Adaptive};
 
-/// CEM43 reference temperature (°C).
-///
-/// Delegates to [`kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C`].
-/// Sapareto & Dewey (1984) defined the cumulative equivalent minutes at 43 °C
-/// as the canonical thermal-dose metric for hyperthermic therapy.
-pub const CEM43_REFERENCE_TEMPERATURE_C: f64 = THERMAL_DOSE_REFERENCE_TEMP_C;
+use crate::parallel::zip_mut_ref;
+use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
 
 /// Thermal dose calculator using cumulative equivalent minutes at 43°C (CEM43)
 #[derive(Debug)]
 pub struct ThermalCEM43Grid {
     /// Cumulative thermal dose (CEM43 minutes)
     dose: Array3<f64>,
+    /// Reusable checked increments preserve failure atomicity without
+    /// allocating in the update path.
+    increments: Array3<f64>,
     /// Grid dimensions
     nx: usize,
     ny: usize,
     nz: usize,
-    /// Reference temperature for dose calculation (°C)
-    reference_temp: f64,
 }
 
 impl ThermalCEM43Grid {
@@ -38,10 +31,10 @@ impl ThermalCEM43Grid {
     pub fn new(nx: usize, ny: usize, nz: usize) -> Self {
         Self {
             dose: Array3::zeros([nx, ny, nz]),
+            increments: Array3::zeros([nx, ny, nz]),
             nx,
             ny,
             nz,
-            reference_temp: CEM43_REFERENCE_TEMPERATURE_C,
         }
     }
 
@@ -60,42 +53,18 @@ impl ThermalCEM43Grid {
             )));
         }
 
-        let dt_minutes = dt / SECONDS_PER_MINUTE;
-        let reference_temp = self.reference_temp;
-        let temperatures = temperature.as_slice().ok_or_else(|| {
-            KwaversError::InvalidInput(
-                "thermal dose update requires a dense Leto temperature field".to_string(),
-            )
-        })?;
-        let doses = self
-            .dose
-            .as_slice_mut()
-            .expect("invariant: ThermalCEM43Grid owns a dense Leto dose field");
-        const CHUNK_SIZE: usize = 1024;
+        let step = Time::from_base(dt);
+        checked_cem43_increments::<CelsiusStorage, _>(
+            self.increments.view_mut(),
+            temperature.view(),
+            step,
+            |_| true,
+        )?;
 
-        for_each_chunk_mut_enumerated_with::<Adaptive, _, _>(
-            doses,
-            CHUNK_SIZE,
-            |chunk_index, dose_chunk| {
-                let offset = chunk_index * CHUNK_SIZE;
-                // CEM43 formula: CEM43 = ∫ R^(T_ref − T) dt
-                // Sapareto & Dewey (1984): R = 0.5 for T ≥ 43°C, R = 0.25 for T < 43°C.
-                // Accumulates at all physiological temperatures above 0°C; the R=0.25
-                // exponent naturally suppresses dose at low temperatures (e.g., at 30°C:
-                // 0.25^(43-30) ≈ 1.5e-8 CEM43/min), so no temperature gate is required.
-                for (local_index, dose) in dose_chunk.iter_mut().enumerate() {
-                    let temp = temperatures[offset + local_index];
-                    if temp > 0.0 {
-                        let r = if temp >= reference_temp {
-                            THERMAL_DOSE_R_ABOVE_43C
-                        } else {
-                            THERMAL_DOSE_R_BELOW_43C
-                        };
-                        let equiv_time = dt_minutes * r.powf(reference_temp - temp);
-                        *dose += equiv_time;
-                    }
-                }
-            },
+        zip_mut_ref(
+            self.dose.view_mut(),
+            self.increments.view(),
+            |dose, &increment| *dose += increment,
         );
         Ok(())
     }
@@ -129,6 +98,7 @@ impl ThermalCEM43Grid {
     /// Reset dose accumulation
     pub fn reset(&mut self) {
         self.dose.fill(0.0);
+        self.increments.fill(0.0);
     }
 }
 
@@ -207,7 +177,6 @@ mod tests {
 
     #[test]
     fn test_canonical_cem43_constants() {
-        assert_eq!(CEM43_REFERENCE_TEMPERATURE_C, 43.0);
         assert_eq!(THERMAL_DOSE_PROTEIN_DENATURATION_CEM43, 1.0);
         assert_eq!(THERMAL_DOSE_COAGULATION_CEM43, 10_000.0);
         assert_eq!(THERMAL_DOSE_DIAGNOSTIC_SAFETY_CEM43, 0.1);
@@ -234,5 +203,18 @@ mod tests {
             format!("{error}").contains("thermal dose update requires temperature shape"),
             "unexpected error: {error}"
         );
+    }
+
+    #[test]
+    fn invalid_temperature_preserves_accumulated_dose() {
+        let mut dose_calc = ThermalCEM43Grid::new(2, 1, 1);
+        let reference = Array3::from_elem([2, 1, 1], 43.0);
+        dose_calc.update(&reference, 60.0).unwrap();
+        let before = dose_calc.get_dose().clone();
+
+        let mut invalid = Array3::from_elem([2, 1, 1], 44.0);
+        invalid[[1, 0, 0]] = f64::NAN;
+        assert!(dose_calc.update(&invalid, 60.0).is_err());
+        assert_eq!(dose_calc.get_dose(), &before);
     }
 }

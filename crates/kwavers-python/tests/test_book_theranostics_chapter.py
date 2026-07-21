@@ -75,6 +75,57 @@ def test_cem43_cumulative_binding_matches_total_dose():
     assert abs(float(cumulative[-1]) - total) <= max(abs(total), 1.0) * 1.0e-12
 
 
+def test_cem43_binding_matches_canonical_reference_cases_and_rejects_invalid_input():
+    import numpy as np
+    import pytest
+    import pykwavers as kw
+
+    temperatures_c = np.array([42.0, 43.0, 44.0], dtype=float)
+    cumulative = np.asarray(kw.cem43_cumulative(temperatures_c, 60.0))
+    np.testing.assert_array_equal(cumulative, [0.25, 1.25, 3.25])
+    assert kw.compute_cem43(temperatures_c, 60.0) == 3.25
+
+    with pytest.raises(ValueError):
+        kw.cem43_cumulative(np.array([], dtype=float), 60.0)
+    with pytest.raises(ValueError):
+        kw.cem43_cumulative(np.array([43.0]), 0.0)
+    with pytest.raises(ValueError):
+        kw.cem43_cumulative(np.array([np.nan]), 60.0)
+
+
+def test_arrhenius_and_composition_bindings_preserve_response_contracts():
+    import numpy as np
+    import pytest
+    import pykwavers as kw
+
+    temperatures_c = np.array([45.0, 50.0, 55.0], dtype=float)
+    cumulative = np.asarray(
+        kw.arrhenius_cumulative(temperatures_c, 0.5, 1.0e44, 284_000.0)
+    )
+    total = kw.arrhenius_damage_integral(temperatures_c, 0.5, 1.0e44, 284_000.0)
+    kill = np.asarray(
+        kw.arrhenius_kill_probability(temperatures_c, 0.5, 1.0e44, 284_000.0)
+    )
+
+    assert np.all(np.diff(cumulative) > 0.0)
+    assert cumulative[-1] == total
+    # The provider uses `1 - exp(-damage)` while the independent oracle uses
+    # `-expm1(-damage)`. Two transcendental roundings plus cancellation near
+    # zero are bounded here in absolute probability units.
+    np.testing.assert_allclose(
+        kill, -np.expm1(-cumulative), rtol=0.0, atol=8.0 * np.finfo(float).eps
+    )
+
+    combined = np.asarray(
+        kw.combined_kill_probability(np.array([0.2]), np.array([0.5]))
+    )
+    np.testing.assert_array_equal(combined, [0.6])
+    with pytest.raises(ValueError):
+        kw.combined_kill_probability(np.array([0.2]), np.array([]))
+    with pytest.raises(ValueError):
+        kw.combined_kill_probability(np.array([1.1]), np.array([0.5]))
+
+
 def test_closed_loop_cem43_fixture_binding_is_seeded_and_uses_cem43():
     import numpy as np
     import pykwavers as kw

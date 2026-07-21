@@ -65,6 +65,7 @@ impl GpuPstdSession {
         #[cfg(feature = "gpu")]
         {
             use crate::breast_fwi_bindings::complex_compat::leto2_to_nd2;
+            use kwavers_gpu::pstd_gpu::{PstdOutputRequest, PstdRunInputs};
 
             let total_t0 = std::time::Instant::now();
             self.last_medium_upload_ns = 0;
@@ -73,18 +74,21 @@ impl GpuPstdSession {
             let time_steps = self.time_steps;
 
             let solver_t0 = std::time::Instant::now();
-            let sensor_data_f32 = self.solver.run(
-                &self.sensor_indices,
-                &[],
-                &[],
-                &self.vel_x_indices,
-                &self.vel_x_signals,
-            );
+            let result = self.solver.run(PstdRunInputs {
+                sensor_indices: &self.sensor_indices,
+                source_indices: &[],
+                source_signals: &[],
+                pressure_source_correction: false,
+                vel_x_indices: &self.vel_x_indices,
+                vel_x_signals: &self.vel_x_signals,
+                velocity_source_correction: false,
+                output_request: PstdOutputRequest::sensor_traces(),
+            });
             self.last_solver_run_ns = solver_t0.elapsed().as_nanos() as u64;
 
             let materialize_t0 = std::time::Instant::now();
             let n_sensors = self.sensor_indices.len();
-            let out_flat: Vec<f64> = sensor_data_f32.iter().map(|&v| v as f64).collect();
+            let out_flat: Vec<f64> = result.sensor_data.iter().map(|&v| v as f64).collect();
             let out = leto::Array2::from_shape_vec((n_sensors, time_steps), out_flat)
                 .expect("sensor_data shape mismatch");
             self.last_materialize_ns = materialize_t0.elapsed().as_nanos() as u64;

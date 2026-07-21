@@ -68,7 +68,10 @@ pub fn cem43_cumulative(
     let t_s = t_celsius
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let result = safety::cem43_cumulative(t_s, dt_s);
+    let temperatures = t_s.to_vec();
+    let result = py
+        .detach(move || crate::response::thermal::cem43_cumulative(&temperatures, dt_s))
+        .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
 
@@ -90,7 +93,7 @@ pub fn closed_loop_cem43_fixture<'py>(
         target_temperature_c,
         seed,
     )
-    .map_err(PyValueError::new_err)?;
+    .map_err(|source| PyValueError::new_err(source.to_string()))?;
 
     let out = PyDict::new(py);
     out.set_item("time_s", fixture.time_s.to_pyarray(py))?;

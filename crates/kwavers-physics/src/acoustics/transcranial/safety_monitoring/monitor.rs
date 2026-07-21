@@ -3,7 +3,7 @@
 use super::types::{MechanicalIndex, SafetyThresholds, TranscranialSafetyDose};
 use kwavers_core::constants::medical::MI_LIMIT_SOFT_TISSUE;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use kwavers_core::error::KwaversResult;
+use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3;
 
 /// Safety monitoring system for tFUS
@@ -15,6 +15,8 @@ pub struct TranscranialSafetyMonitor {
     pub(crate) pressure: Array3<f64>,
     /// Thermal dose accumulation
     pub(crate) thermal_dose: TranscranialSafetyDose,
+    /// Reusable checked CEM43 increments.
+    pub(crate) thermal_dose_increments: Array3<f64>,
     /// Mechanical index
     pub(crate) mechanical_index: MechanicalIndex,
     /// Tissue perfusion rate (1/s)
@@ -49,6 +51,7 @@ impl TranscranialSafetyMonitor {
             temperature,
             pressure,
             thermal_dose,
+            thermal_dose_increments: Array3::zeros(shape),
             mechanical_index,
             _perfusion_rate: perfusion_rate,
             frequency,
@@ -66,9 +69,23 @@ impl TranscranialSafetyMonitor {
         pressure: &Array3<f64>,
         time_step: f64,
     ) -> KwaversResult<()> {
+        if temperature.shape() != self.temperature.shape() {
+            return Err(KwaversError::DimensionMismatch(format!(
+                "transcranial temperature shape {:?} does not match monitor shape {:?}",
+                temperature.shape(),
+                self.temperature.shape()
+            )));
+        }
+        if pressure.shape() != self.pressure.shape() {
+            return Err(KwaversError::DimensionMismatch(format!(
+                "transcranial pressure shape {:?} does not match monitor shape {:?}",
+                pressure.shape(),
+                self.pressure.shape()
+            )));
+        }
+        self.update_thermal_dose(temperature, time_step)?;
         self.temperature.assign(temperature);
         self.pressure.assign(pressure);
-        self.update_thermal_dose(time_step);
         self.update_mechanical_index();
         self.check_safety_limits()?;
         Ok(())

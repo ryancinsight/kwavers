@@ -1,6 +1,6 @@
 //! Control system types and enums
 
-use kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
+use kwavers_core::constants::medical::THERMAL_SAFETY_TEMPERATURE_LIMIT_C;
 use kwavers_core::constants::numerical::MPA_TO_PA;
 
 /// Control strategy for cavitation feedback
@@ -65,8 +65,8 @@ impl Default for CavitationSafetyLimits {
     fn default() -> Self {
         Self {
             max_intensity: 0.9,
-            max_temperature: THERMAL_DOSE_REFERENCE_TEMP_C, // °C
-            max_pressure: 10.0 * MPA_TO_PA,                 // Pa
+            max_temperature: THERMAL_SAFETY_TEMPERATURE_LIMIT_C, // °C
+            max_pressure: 10.0 * MPA_TO_PA,                      // Pa
             emergency_stop_threshold: 0.95,
         }
     }

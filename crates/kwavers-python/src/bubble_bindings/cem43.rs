@@ -20,15 +20,11 @@
 //!
 //! - Sapareto & Dewey (1984) Int. J. Radiat. Oncol. Biol. Phys. 10(6):787
 
-use kwavers_physics::analytical::safety::cem43_cumulative;
-use numpy::ndarray::Array1;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
-/// Compute the cumulative CEM43 thermal dose. Thin wrapper over
-/// `kwavers_physics::analytical::safety::cem43_cumulative` (single source of truth);
-/// the total dose is the last cumulative value.
+/// Compute the cumulative CEM43 thermal dose through Asclepius.
 ///
 /// Parameters
 /// ----------
@@ -39,13 +35,22 @@ use pyo3::prelude::*;
 /// -------
 /// Total CEM43 dose [min].
 #[pyfunction]
-pub fn compute_cem43(temperatures_c: PyReadonlyArray1<f64>, dt_s: f64) -> PyResult<f64> {
-    if dt_s <= 0.0 {
-        return Err(PyValueError::new_err("dt_s must be > 0"));
-    }
-    let temps = temperatures_c.as_array();
-    let cumulative = cem43_cumulative(temps.as_slice().unwrap_or(&[]), dt_s);
-    Ok(cumulative.last().copied().unwrap_or(0.0))
+pub fn compute_cem43(
+    py: Python<'_>,
+    temperatures_c: PyReadonlyArray1<f64>,
+    dt_s: f64,
+) -> PyResult<f64> {
+    let temperatures = temperatures_c
+        .as_slice()
+        .map_err(|source| PyRuntimeError::new_err(source.to_string()))?
+        .to_vec();
+    let cumulative = py
+        .detach(move || crate::response::thermal::cem43_cumulative(&temperatures, dt_s))
+        .map_err(PyValueError::new_err)?;
+    cumulative
+        .last()
+        .copied()
+        .ok_or_else(|| PyValueError::new_err("temperatures_c must not be empty"))
 }
 
 /// Compute the CEM43 rate at each temperature value.
@@ -73,17 +78,14 @@ pub fn cem43_at_temperatures<'py>(
     temperatures_c: PyReadonlyArray1<f64>,
     duration_s: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    if duration_s < 0.0 {
-        return Err(PyValueError::new_err("duration_s must be >= 0"));
-    }
-    let temps = temperatures_c.as_array();
-    // Single constant exposure of `duration_s` at each temperature: the one-step
-    // cumulative CEM43 from kwavers_physics (single source of truth for the formula).
-    let result: Array1<f64> = temps.mapv(|t| {
-        cem43_cumulative(&[t], duration_s)
-            .first()
-            .copied()
-            .unwrap_or(0.0)
-    });
+    let temperatures = temperatures_c
+        .as_slice()
+        .map_err(|source| PyRuntimeError::new_err(source.to_string()))?
+        .to_vec();
+    let result = py
+        .detach(move || {
+            crate::response::thermal::cem43_independent_exposures(&temperatures, duration_s)
+        })
+        .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).into())
 }
