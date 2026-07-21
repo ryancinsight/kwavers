@@ -33,12 +33,14 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.base.sha }}
           path: kwavers-baseline
+          persist-credentials: false
 
       - name: Checkout candidate
         uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           path: kwavers-candidate
+          persist-credentials: false
 
       - name: Checkout Atlas benchmark gate
         uses: actions/checkout@v7
@@ -46,6 +48,7 @@ jobs:
           repository: ryancinsight/atlas
           ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
           path: atlas-tool
+          persist-credentials: false
 
       - name: Checkout Atlas path dependencies
         uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
