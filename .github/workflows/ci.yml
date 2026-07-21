@@ -15,7 +15,7 @@ jobs:
     name: PINN Feature Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -35,7 +35,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -68,7 +68,7 @@ jobs:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -88,7 +88,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -112,7 +112,7 @@ jobs:
       matrix:
         rust: [stable, beta, nightly]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -132,7 +132,7 @@ jobs:
           toolchain: ${{ matrix.rust }}
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -158,7 +158,7 @@ jobs:
     name: Security Audit
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -179,7 +179,7 @@ jobs:
     name: Memory Safety (Miri)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -210,7 +210,7 @@ jobs:
     name: Performance Benchmarks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -228,7 +228,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -256,7 +256,7 @@ jobs:
     name: Code Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -280,9 +280,9 @@ jobs:
         run: cargo tarpaulin --locked -p kwavers --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v3
+        uses: codecov/codecov-action@v7
         with:
-          file: ./cobertura.xml
+          files: ./cobertura.xml
           # Coverage generation above is the reproducible source gate. Codecov
           # ingestion is an external service and may rate-limit tokenless uploads;
           # preserve the report without turning transport failure into a source failure.
@@ -292,7 +292,7 @@ jobs:
     name: PINN Convergence Analysis
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -315,7 +315,7 @@ jobs:
           tool: nextest
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry
@@ -333,7 +333,7 @@ jobs:
     name: Solver Validation Suite
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -358,7 +358,7 @@ jobs:
           tool: nextest
 
       - name: Cache cargo dependencies
-        uses: actions/cache@v3
+        uses: actions/cache@v6
         with:
           path: |
             ~/.cargo/registry

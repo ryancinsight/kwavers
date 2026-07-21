@@ -20,6 +20,7 @@ use kwavers_therapy::therapy::theranostic_guidance::{
     transcranial_pennes_thermal_dose, TranscranialFusPlanConfig,
 };
 use numpy::{PyArray1, PyReadonlyArray2, PyReadonlyArray3, ToPyArray};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 use std::path::Path;
@@ -403,18 +404,20 @@ pub fn transcranial_pennes_thermal_dose_py<'py>(
     let spacing = [spacing_m.0, spacing_m.1, spacing_m.2];
 
     // Release GIL for Pennes time-stepping.
-    let result = py.detach(|| {
-        transcranial_pennes_thermal_dose(
-            &intensity,
-            &skull,
-            &brain,
-            spacing,
-            frequency_hz,
-            sonication_s,
-            dt_s,
-            baseline_c,
-        )
-    });
+    let result = py
+        .detach(|| {
+            transcranial_pennes_thermal_dose(
+                &intensity,
+                &skull,
+                &brain,
+                spacing,
+                frequency_hz,
+                sonication_s,
+                dt_s,
+                baseline_c,
+            )
+        })
+        .map_err(|source| PyValueError::new_err(source.to_string()))?;
 
     let out = PyDict::new(py);
     out.set_item(

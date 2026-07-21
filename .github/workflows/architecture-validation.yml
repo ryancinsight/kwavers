@@ -17,7 +17,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Checkout Atlas path dependencies
       uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
@@ -35,19 +35,19 @@ jobs:
         components: rustfmt, clippy
 
     - name: Cache cargo registry
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cargo/registry
         key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Cache cargo index
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: ~/.cargo/git
         key: ${{ runner.os }}-cargo-git-${{ hashFiles('**/Cargo.lock') }}
 
     - name: Cache cargo build
-      uses: actions/cache@v4
+      uses: actions/cache@v6
       with:
         path: target
         key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
@@ -72,7 +72,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Check domain → analysis violations
       run: |
@@ -124,7 +124,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Checkout Atlas path dependencies
       uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
@@ -152,7 +152,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Checkout Atlas path dependencies
       uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
@@ -191,7 +191,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Checkout Atlas path dependencies
       uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
@@ -229,7 +229,7 @@ jobs:
           pkg-config
 
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
 
     - name: Checkout Atlas path dependencies
       uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30

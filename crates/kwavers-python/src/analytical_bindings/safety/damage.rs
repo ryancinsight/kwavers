@@ -1,8 +1,7 @@
 //! Arrhenius damage and combined kill-probability safety bindings.
 
-use kwavers_physics::analytical::safety;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
-use pyo3::exceptions::PyRuntimeError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 /// Compute the Arrhenius thermal-damage integral Ω.
@@ -20,6 +19,7 @@ use pyo3::prelude::*;
 #[pyfunction]
 #[pyo3(signature = (t_celsius, dt_s, a_per_s, ea_j_mol))]
 pub fn arrhenius_damage_integral(
+    py: Python<'_>,
     t_celsius: PyReadonlyArray1<f64>,
     dt_s: f64,
     a_per_s: f64,
@@ -28,9 +28,11 @@ pub fn arrhenius_damage_integral(
     let t_s = t_celsius
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    Ok(safety::arrhenius_damage_integral(
-        t_s, dt_s, a_per_s, ea_j_mol,
-    ))
+    let temperatures = t_s.to_vec();
+    py.detach(move || {
+        crate::response::thermal::arrhenius_damage_integral(&temperatures, dt_s, a_per_s, ea_j_mol)
+    })
+    .map_err(PyValueError::new_err)
 }
 
 /// Compute the cumulative Arrhenius thermal-damage integral Ω(t).
@@ -64,7 +66,12 @@ pub fn arrhenius_cumulative(
     let t_s = t_celsius
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let result = safety::arrhenius_cumulative(t_s, dt_s, a_per_s, ea_j_mol);
+    let temperatures = t_s.to_vec();
+    let result = py
+        .detach(move || {
+            crate::response::thermal::arrhenius_cumulative(&temperatures, dt_s, a_per_s, ea_j_mol)
+        })
+        .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
 
@@ -72,7 +79,7 @@ pub fn arrhenius_cumulative(
 ///
 /// Maps an Arrhenius thermal-damage history to a per-step kill probability; at
 /// Ω = 1 this is the Henriques (1947) 63 % criterion (1 − e⁻¹ ≈ 0.632). Thin
-/// wrapper over `kwavers_physics::analytical::safety::arrhenius_kill_probability`.
+/// adapter over the Asclepius Arrhenius response.
 ///
 /// Args:
 ///     t_celsius: Temperature time series [°C].
@@ -94,15 +101,24 @@ pub fn arrhenius_kill_probability(
     let t_s = t_celsius
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let result = safety::arrhenius_kill_probability(t_s, dt_s, a_per_s, ea_j_mol);
+    let temperatures = t_s.to_vec();
+    let result = py
+        .detach(move || {
+            crate::response::thermal::arrhenius_kill_probability(
+                &temperatures,
+                dt_s,
+                a_per_s,
+                ea_j_mol,
+            )
+        })
+        .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
 
 /// Per-voxel thermal kill probability for a steady temperature held for a fixed
 /// duration: P = 1 − exp(−A·exp(−Ea/(R·T_K))·duration). Each element of
 /// `t_celsius` is an independent voxel. Field analogue of
-/// `arrhenius_kill_probability`; thin wrapper over
-/// `kwavers_physics::analytical::safety::arrhenius_steady_kill_probability`.
+/// `arrhenius_kill_probability`; the law is evaluated by Asclepius.
 ///
 /// Args:
 ///     t_celsius: per-voxel steady temperature [°C].
@@ -124,7 +140,17 @@ pub fn arrhenius_steady_kill_probability(
     let t_s = t_celsius
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let result = safety::arrhenius_steady_kill_probability(t_s, duration_s, a_per_s, ea_j_mol);
+    let temperatures = t_s.to_vec();
+    let result = py
+        .detach(move || {
+            crate::response::thermal::arrhenius_steady_kill_probability(
+                &temperatures,
+                duration_s,
+                a_per_s,
+                ea_j_mol,
+            )
+        })
+        .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }
 
@@ -132,9 +158,8 @@ pub fn arrhenius_steady_kill_probability(
 /// biologically-effective kill probability:
 ///   P_kill = 1 − (1 − P_mech)·(1 − P_thermal)
 ///
-/// Element-wise over the shorter input length; each input clamped to [0, 1].
-/// Thin wrapper over
-/// `kwavers_physics::analytical::safety::combined_kill_probability`.
+/// Inputs must have equal lengths and every probability must lie in `[0, 1]`.
+/// Asclepius evaluates the const-generic independent-insult law.
 ///
 /// Args:
 ///     p_mech: Per-voxel mechanical (cavitation) kill probability [0, 1].
@@ -155,6 +180,12 @@ pub fn combined_kill_probability(
     let t = p_thermal
         .as_slice()
         .map_err(|e| PyRuntimeError::new_err(e.to_string()))?;
-    let result = safety::combined_kill_probability(m, t);
+    let mechanical = m.to_vec();
+    let thermal = t.to_vec();
+    let result = py
+        .detach(move || {
+            crate::response::composition::independent_kill_probability(&mechanical, &thermal)
+        })
+        .map_err(PyValueError::new_err)?;
     Ok(result.to_pyarray(py).unbind())
 }

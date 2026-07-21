@@ -1,15 +1,17 @@
 use super::field::AblationField;
 use super::kinetics::AblationKinetics;
 use super::state::AblationState;
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use asclepius::DamageIntegral;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use leto::Array3;
 
 #[test]
 fn test_kinetics_creation() {
     let kinetics = AblationKinetics::protein_denaturation();
-    assert!(kinetics.frequency_factor > 0.0);
-    assert!(kinetics.activation_energy > 0.0);
-    assert_eq!(kinetics.damage_threshold, 1.0);
+    assert!(kinetics.frequency_factor().into_base() > 0.0);
+    assert!(kinetics.activation_energy().into_base() > 0.0);
+    assert_eq!(kinetics.damage_threshold().get(), 1.0);
 }
 
 #[test]
@@ -17,9 +19,18 @@ fn test_damage_rate_temperature_dependence() {
     let kinetics = AblationKinetics::hifu_ablation();
 
     // Higher temperature should give higher damage rate
-    let rate_43c = kinetics.damage_rate(KELVIN_OFFSET_C + 43.0);
-    let rate_50c = kinetics.damage_rate(KELVIN_OFFSET_C + 50.0);
-    let rate_70c = kinetics.damage_rate(KELVIN_OFFSET_C + 70.0);
+    let rate_43c = kinetics
+        .damage_rate(ThermodynamicTemperature::from_base(KELVIN_OFFSET_C + 43.0))
+        .unwrap()
+        .into_base();
+    let rate_50c = kinetics
+        .damage_rate(ThermodynamicTemperature::from_base(KELVIN_OFFSET_C + 50.0))
+        .unwrap()
+        .into_base();
+    let rate_70c = kinetics
+        .damage_rate(ThermodynamicTemperature::from_base(KELVIN_OFFSET_C + 70.0))
+        .unwrap()
+        .into_base();
 
     assert!(rate_43c > 0.0);
     assert!(rate_50c > rate_43c); // 50°C > 43°C
@@ -27,31 +38,33 @@ fn test_damage_rate_temperature_dependence() {
 }
 
 #[test]
-fn test_damage_accumulation() {
-    let mut current_damage = 0.0;
-    let damage_rate = 0.5; // 1/s
-    let dt = 1.0; // 1 second
-
-    for _ in 0..3 {
-        current_damage = AblationKinetics::accumulated_damage(current_damage, damage_rate, dt);
-    }
-
-    // After 3 seconds at 0.5 damage/s: Ω = 1.5
-    assert!((current_damage - 1.5).abs() < 1e-6);
+fn damage_increment_matches_rate_times_step() {
+    let kinetics = AblationKinetics::hifu_ablation();
+    let temperature = ThermodynamicTemperature::from_base(KELVIN_OFFSET_C + 60.0);
+    let rate = kinetics.damage_rate(temperature).unwrap().into_base();
+    let increment = kinetics
+        .damage_increment(temperature, Time::from_base(0.25))
+        .unwrap()
+        .get();
+    let rounding = 8.0 * f64::EPSILON * increment.abs().max(f64::MIN_POSITIVE);
+    assert!((increment - rate * 0.25).abs() <= rounding);
 }
 
 #[test]
 fn test_viability_from_damage() {
-    let kinetics = AblationKinetics::default();
-
     // No damage
-    assert!((kinetics.viability(0.0) - 1.0).abs() < 1e-6);
+    assert_eq!(
+        AblationKinetics::viability(DamageIntegral::zero()).get(),
+        1.0
+    );
 
     // Ω = 1 (63.2% damage) -> e^(-1)
-    assert!((kinetics.viability(1.0) - (-1.0_f64).exp()).abs() < 1e-12);
+    let unit = DamageIntegral::new(1.0).unwrap();
+    assert!((AblationKinetics::viability(unit).get() - (-1.0_f64).exp()).abs() < 1e-12);
 
     // Ω = 5 (99.3% damage) -> e^(-5)
-    assert!((kinetics.viability(5.0) - (-5.0_f64).exp()).abs() < 1e-12);
+    let five = DamageIntegral::new(5.0).unwrap();
+    assert!((AblationKinetics::viability(five).get() - (-5.0_f64).exp()).abs() < 1e-12);
 }
 
 #[test]
@@ -59,15 +72,15 @@ fn test_ablation_threshold() {
     let kinetics = AblationKinetics::hifu_ablation();
 
     // Below threshold
-    assert!(!kinetics.is_ablated(0.5));
-    assert!(!kinetics.is_ablated(0.99));
+    assert!(!kinetics.is_ablated(DamageIntegral::new(0.5).unwrap()));
+    assert!(!kinetics.is_ablated(DamageIntegral::new(0.99).unwrap()));
 
     // At threshold
-    assert!(kinetics.is_ablated(1.0));
+    assert!(kinetics.is_ablated(DamageIntegral::new(1.0).unwrap()));
 
     // Above threshold
-    assert!(kinetics.is_ablated(1.5));
-    assert!(kinetics.is_ablated(10.0));
+    assert!(kinetics.is_ablated(DamageIntegral::new(1.5).unwrap()));
+    assert!(kinetics.is_ablated(DamageIntegral::new(10.0).unwrap()));
 }
 
 #[test]
@@ -76,18 +89,18 @@ fn test_ablation_state_update() {
     let mut state = AblationState::new(BODY_TEMPERATURE_C, &kinetics);
 
     // No damage at body temperature
-    state.update(BODY_TEMPERATURE_C, &kinetics, 1.0);
+    state.update(BODY_TEMPERATURE_C, &kinetics, 1.0).unwrap();
     assert_eq!(state.damage, 0.0);
     assert!(!state.ablated);
 
     // Damage accumulates at higher temperature
-    state.update(60.0, &kinetics, 1.0);
+    state.update(60.0, &kinetics, 1.0).unwrap();
     assert!(state.damage > 0.0);
     assert!(state.viability < 1.0);
 
     // Continuous heating
     for _ in 0..10 {
-        state.update(65.0, &kinetics, 1.0);
+        state.update(65.0, &kinetics, 1.0).unwrap();
     }
     assert!(state.ablated || state.damage > 0.0);
 }
@@ -99,10 +112,10 @@ fn test_kinetics_variants() {
     let hifu = AblationKinetics::hifu_ablation();
 
     // Different kinetics should give different damage rates at same temperature
-    let t = KELVIN_OFFSET_C + 60.0;
-    let rate_protein = protein.damage_rate(t);
-    let rate_collagen = collagen.damage_rate(t);
-    let rate_hifu = hifu.damage_rate(t);
+    let temperature = ThermodynamicTemperature::from_base(KELVIN_OFFSET_C + 60.0);
+    let rate_protein = protein.damage_rate(temperature).unwrap().into_base();
+    let rate_collagen = collagen.damage_rate(temperature).unwrap().into_base();
+    let rate_hifu = hifu.damage_rate(temperature).unwrap().into_base();
 
     // HIFU should be most aggressive
     assert!(rate_hifu > rate_protein || rate_hifu > rate_collagen);
@@ -119,7 +132,7 @@ fn test_ablation_field() {
 
     // Update multiple times
     for _ in 0..5 {
-        let _ = field.update(&temperature, 0.1);
+        field.update(&temperature, 0.1).unwrap();
     }
 
     // Center should have damage
@@ -148,10 +161,23 @@ fn test_ablation_volume_counting() {
 
     // Update until some tissue is ablated
     for _ in 0..20 {
-        let _ = field.update(&temperature, 0.1);
+        field.update(&temperature, 0.1).unwrap();
     }
 
     // Should have some ablated volume
     let ablated_vol = field.ablated_volume();
     assert!(ablated_vol > 0, "Expected ablated volume > 0");
+}
+
+#[test]
+fn invalid_field_observation_preserves_damage() {
+    let mut field = AblationField::new([2, 1, 1], AblationKinetics::hifu_ablation());
+    let heated = Array3::from_elem([2, 1, 1], 70.0);
+    field.update(&heated, 0.1).unwrap();
+    let before = field.damage().clone();
+
+    let mut invalid = heated;
+    invalid[[1, 0, 0]] = f64::NAN;
+    assert!(field.update(&invalid, 0.1).is_err());
+    assert_eq!(field.damage(), &before);
 }

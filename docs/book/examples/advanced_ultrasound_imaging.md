@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example advanced_ultrasound_imaging`  
-**Source**: [`crates/kwavers/examples/advanced_ultrasound_imaging.rs`](../../../../crates/kwavers/examples/advanced_ultrasound_imaging.rs)
+**Source**: [`crates/kwavers/examples/advanced_ultrasound_imaging.rs`](../../../crates/kwavers/examples/advanced_ultrasound_imaging.rs)
 
 ## What This Example Demonstrates
 

@@ -43,10 +43,11 @@
 //!   for tissue damage from hyperthermia." *Int J Hyperthermia* 19(3):267–294.
 
 use super::monitor::TranscranialSafetyMonitor;
-use kwavers_core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
-};
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
+use kwavers_core::error::KwaversResult;
+
+use crate::thermal::response::{checked_cem43_increments, CelsiusStorage};
 
 impl TranscranialSafetyMonitor {
     /// Update CEM43 thermal dose accumulation at each grid point.
@@ -63,29 +64,26 @@ impl TranscranialSafetyMonitor {
     /// * `dt` – Timestep in seconds. Internally converted to minutes so the
     ///   accumulated `CEM43` is in canonical equivalent-minutes (matching the
     ///   default `max_thermal_dose = 240` threshold from Sapareto & Dewey).
-    pub(crate) fn update_thermal_dose(&mut self, dt: f64) {
-        let dt_min = dt / SECONDS_PER_MINUTE;
-        let [nx, ny, nz] = self.temperature.shape();
+    pub(crate) fn update_thermal_dose(
+        &mut self,
+        temperature: &leto::Array3<f64>,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        checked_cem43_increments::<CelsiusStorage, _>(
+            self.thermal_dose_increments.view_mut(),
+            temperature.view(),
+            Time::from_base(dt),
+            |_| true,
+        )?;
+        let [nx, ny, nz] = temperature.shape();
 
         for k in 0..nz {
             for j in 0..ny {
                 for i in 0..nx {
-                    // Temperature in °C (field is stored in °C; body temperature initialised to 37.0)
-                    let temp = self.temperature[[i, j, k]];
-
-                    // Sapareto & Dewey (1984) R coefficient — step at 43 °C, not 37 °C
-                    let r: f64 = if temp >= THERMAL_DOSE_REFERENCE_TEMP_C {
-                        THERMAL_DOSE_R_ABOVE_43C // protein denaturation regime: faster accumulation
-                    } else {
-                        THERMAL_DOSE_R_BELOW_43C // sub-threshold regime: slower accumulation
-                    };
-
-                    // Instantaneous CEM43 dose rate [CEM43 min⁻¹] — Sapareto & Dewey convention
-                    let dose_rate = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - temp);
-
-                    // Accumulate CEM43 dose in equivalent minutes
+                    let increment = self.thermal_dose_increments[[i, j, k]];
+                    let dose_rate = increment * SECONDS_PER_MINUTE / dt;
                     self.thermal_dose.dose_rate[[i, j, k]] = dose_rate;
-                    self.thermal_dose.current_dose[[i, j, k]] += dose_rate * dt_min;
+                    self.thermal_dose.current_dose[[i, j, k]] += increment;
 
                     let target_dose = self.thresholds.max_thermal_dose;
                     let current_dose = self.thermal_dose.current_dose[[i, j, k]];
@@ -107,6 +105,7 @@ impl TranscranialSafetyMonitor {
                 }
             }
         }
+        Ok(())
     }
 }
 
@@ -131,7 +130,7 @@ mod tests {
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
-        let expected = 0.25_f64.powf(THERMAL_DOSE_REFERENCE_TEMP_C - BODY_TEMPERATURE_C); // 2.441e-4 CEM43/s
+        let expected = 0.25_f64.powf(43.0 - BODY_TEMPERATURE_C);
         let actual = monitor.thermal_dose.dose_rate[[0, 0, 0]];
         let rel_err = (actual - expected).abs() / expected;
         assert!(
@@ -181,7 +180,7 @@ mod tests {
 
         monitor.update_fields(&temperature, &pressure, 1.0).unwrap();
 
-        let expected = 0.5_f64.powf(THERMAL_DOSE_REFERENCE_TEMP_C - 50.0); // 128 CEM43/s
+        let expected = 0.5_f64.powf(43.0 - 50.0);
         let actual = monitor.thermal_dose.dose_rate[[0, 0, 0]];
         let rel_err = (actual - expected).abs() / expected;
         assert!(
@@ -219,5 +218,22 @@ mod tests {
             rel_err < 1e-12,
             "Accumulated CEM43 after {n_steps}s at 43°C: got {accumulated:.4}, expected {expected:.4}"
         );
+    }
+
+    #[test]
+    fn invalid_temperature_preserves_monitor_state() {
+        let mut monitor = TranscranialSafetyMonitor::new((2, 1, 1), 0.01, 650e3);
+        monitor.thresholds.max_temperature = 60.0;
+        let reference = Array3::from_elem((2, 1, 1), 43.0);
+        let pressure = Array3::zeros([2, 1, 1]);
+        monitor.update_fields(&reference, &pressure, 60.0).unwrap();
+        let dose_before = monitor.thermal_dose.current_dose.clone();
+        let temperature_before = monitor.temperature.clone();
+
+        let mut invalid = Array3::from_elem((2, 1, 1), 44.0);
+        invalid[[1, 0, 0]] = f64::NAN;
+        assert!(monitor.update_fields(&invalid, &pressure, 60.0).is_err());
+        assert_eq!(monitor.thermal_dose.current_dose, dose_before);
+        assert_eq!(monitor.temperature, temperature_before);
     }
 }

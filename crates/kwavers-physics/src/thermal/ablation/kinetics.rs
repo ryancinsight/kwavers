@@ -1,161 +1,158 @@
-//! Tissue ablation kinetics for thermal therapy
+//! Tissue-specific policy over the Asclepius Arrhenius law.
 //!
-//! Implements thermal ablation kinetics based on classical thermodynamic models
-//! for protein denaturation and subsequent tissue necrosis.
-//!
-//! # Mathematical Specifications
-//!
-//! ## Theorem 1: Arrhenius Damage Accumulation
-//! The irreversible thermal damage $\Omega$ accumulated in tissue over time $t$ obeys
-//! the Arrhenius rate equation, positing that cell death behaves as a first-order
-//! chemical reaction.
-//!
-//! $$ \Omega(t) = \int_0^t A \exp\left(-\frac{E_a}{R T(\tau)}\right) d\tau $$
-//!
-//! **Proof / Invariants:**
-//! The survival fraction of cells $S(t) / S(0)$ is modeled exponentially:
-//! $S(t) = S(0) \exp(-\Omega(t))$. Ergo, $\Omega = 1$ mathematically guarantees
-//! $1 - e^{-1} \approx 63.2\%$ cell death, establishing the threshold for irreversible
-//! protein denaturation.
-//!
-//! ## Theorem 2: Cumulative Equivalent Minutes at 43°C (CEM43)
-//! Thermal dose is normalized to equivalent minutes at 43°C (Sapareto & Dewey):
-//!
-//! $$ \text{CEM}_{43} = \int_{0}^{t} R^{43 - T(\tau)} d\tau $$
-//!
-//! Where $R$ represents the empirical compensation constant. For $T > 43^\circ\text{C}$,
-//! $R \approx 0.5$, indicating damage rate doubles for every 1°C increase.
-//!
-//! # References
-//! - Sapareto, S. A., & Dewey, W. C. (1984). "Thermal dose determination in cancer therapy". Int. J. Radiation Oncology Biol. Phys., 10(6), 787-800.
-//! - Henriques, F. C. (1947). "Studies of thermal injury". Archives of Pathology, 43(5), 489-502.
-//! - Lepock, J. R., et al. (1993). "Thermal denaturation of proteins". Int. J. Hyperthermia, 9(2), 263-270.
+//! Kwavers owns tissue parameter presets and ablation thresholds. Asclepius
+//! owns the first-order damage rate, integration, survival, and probability
+//! laws described in ADR 044.
 
-use kwavers_core::constants::fundamental::GAS_CONSTANT;
+use aequitas::systems::si::quantities::{
+    MolarEnergy, MolarHeatCapacity, ReciprocalTime, ThermodynamicTemperature, Time,
+};
+use asclepius::{response::thermal::ArrheniusDamage, DamageIntegral, Probability};
+use kwavers_core::{
+    constants::{fundamental::GAS_CONSTANT, thermodynamic::KELVIN_OFFSET_C},
+    error::{KwaversError, KwaversResult},
+};
 
-/// Ablation kinetics parameters (Arrhenius model)
-///
-/// The Arrhenius equation for thermal damage: Ω(t) = ∫A·exp(-E_a/RT)dt
-/// where:
-/// - A = frequency factor (1/s)
-/// - E_a = activation energy (J/mol)
-/// - R = universal gas constant (8.314 J/mol/K)
-/// - T = absolute temperature (K)
+/// Tissue ablation policy backed by a typed Arrhenius damage law.
 #[derive(Debug, Clone, Copy)]
 pub struct AblationKinetics {
-    /// Frequency factor [1/s] - typical: 1.0e69 to 1.0e75
-    pub frequency_factor: f64,
-    /// Activation energy [J/mol] - typical: 250,000 to 650,000 J/mol
-    pub activation_energy: f64,
-    /// Damage threshold (Ω) - typical: 1.0 for 63.2% protein denaturation
-    pub damage_threshold: f64,
-    /// Temperature at which tissue begins ablation [°C] - typical: 45-60°C
-    pub ablation_threshold: f64,
+    law: ArrheniusDamage<f64>,
+    damage_threshold: DamageIntegral<f64>,
+    ablation_threshold: ThermodynamicTemperature<f64>,
 }
 
 impl AblationKinetics {
-    /// Create custom ablation kinetics
-    #[must_use]
+    /// Construct custom ablation kinetics.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when an Arrhenius parameter, damage threshold, or
+    /// absolute ablation temperature is outside its mathematical domain.
     pub fn new(
         frequency_factor: f64,
         activation_energy: f64,
         damage_threshold: f64,
-        ablation_threshold: f64,
+        ablation_threshold_c: f64,
+    ) -> KwaversResult<Self> {
+        let law = ArrheniusDamage::new(
+            ReciprocalTime::from_base(frequency_factor),
+            MolarEnergy::from_base(activation_energy),
+            MolarHeatCapacity::from_base(GAS_CONSTANT),
+        )
+        .map_err(|source| {
+            KwaversError::InvalidInput(format!("invalid ablation kinetics: {source}"))
+        })?;
+        let damage_threshold = DamageIntegral::new(damage_threshold).map_err(|source| {
+            KwaversError::InvalidInput(format!("invalid ablation damage threshold: {source}"))
+        })?;
+        let ablation_threshold =
+            ThermodynamicTemperature::from_base(ablation_threshold_c + KELVIN_OFFSET_C);
+        law.rate(ablation_threshold).map_err(|source| {
+            KwaversError::InvalidInput(format!("invalid ablation temperature threshold: {source}"))
+        })?;
+        Ok(Self {
+            law,
+            damage_threshold,
+            ablation_threshold,
+        })
+    }
+
+    /// Protein denaturation kinetics from Henriques (1947).
+    #[must_use]
+    pub fn protein_denaturation() -> Self {
+        Self::from_validated_constants(1.0e44, 284_000.0, 1.0, 45.0)
+    }
+
+    /// Collagen denaturation kinetics from Lepock et al. (1993).
+    #[must_use]
+    pub fn collagen_denaturation() -> Self {
+        Self::from_validated_constants(1.0e44, 250_000.0, 1.0, 55.0)
+    }
+
+    /// HIFU tissue-necrosis kinetics.
+    #[must_use]
+    pub fn hifu_ablation() -> Self {
+        Self::from_validated_constants(1.0e47, 284_000.0, 1.0, 50.0)
+    }
+
+    /// Return the typed frequency factor.
+    #[must_use]
+    pub const fn frequency_factor(&self) -> ReciprocalTime<f64> {
+        self.law.frequency_factor()
+    }
+
+    /// Return the typed activation energy.
+    #[must_use]
+    pub const fn activation_energy(&self) -> MolarEnergy<f64> {
+        self.law.activation_energy()
+    }
+
+    /// Return the validated damage threshold.
+    #[must_use]
+    pub const fn damage_threshold(&self) -> DamageIntegral<f64> {
+        self.damage_threshold
+    }
+
+    /// Return the absolute ablation temperature threshold.
+    #[must_use]
+    pub const fn ablation_threshold(&self) -> ThermodynamicTemperature<f64> {
+        self.ablation_threshold
+    }
+
+    /// Evaluate the Asclepius damage rate.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when `temperature` is not finite and positive.
+    pub fn damage_rate(
+        &self,
+        temperature: ThermodynamicTemperature<f64>,
+    ) -> KwaversResult<ReciprocalTime<f64>> {
+        self.law.rate(temperature).map_err(|source| {
+            KwaversError::InvalidInput(format!("invalid ablation temperature: {source}"))
+        })
+    }
+
+    /// Evaluate one Asclepius damage increment.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when the absolute temperature or time step is invalid.
+    pub fn damage_increment(
+        &self,
+        temperature: ThermodynamicTemperature<f64>,
+        step: Time<f64>,
+    ) -> KwaversResult<DamageIntegral<f64>> {
+        self.law.increment(temperature, step).map_err(|source| {
+            KwaversError::InvalidInput(format!("invalid ablation observation: {source}"))
+        })
+    }
+
+    /// Return the viable fraction implied by accumulated damage.
+    #[must_use]
+    pub fn viability(damage: DamageIntegral<f64>) -> Probability<f64> {
+        ArrheniusDamage::survival(damage)
+    }
+
+    /// Return whether damage reaches this tissue policy's threshold.
+    #[must_use]
+    pub fn is_ablated(&self, damage: DamageIntegral<f64>) -> bool {
+        damage >= self.damage_threshold
+    }
+
+    fn from_validated_constants(
+        frequency_factor: f64,
+        activation_energy: f64,
+        damage_threshold: f64,
+        ablation_threshold_c: f64,
     ) -> Self {
-        Self {
+        Self::new(
             frequency_factor,
             activation_energy,
             damage_threshold,
-            ablation_threshold,
-        }
-    }
-
-    /// Protein denaturation kinetics (Henriques model)
-    /// Reference: Henriques (1947) - thermal injury to skin
-    /// A = 1.0e44 [1/s], E_a = 284 kJ/mol
-    #[must_use]
-    pub fn protein_denaturation() -> Self {
-        Self {
-            frequency_factor: 1.0e44,     // [1/s]
-            activation_energy: 284_000.0, // [J/mol] (67.8 kcal/mol)
-            damage_threshold: 1.0,
-            ablation_threshold: 45.0,
-        }
-    }
-
-    /// Collagen denaturation kinetics
-    /// Reference: Lepock et al. (1993) - collagen triple helix dissociation
-    /// Lower activation energy than protein, faster denaturation
-    #[must_use]
-    pub fn collagen_denaturation() -> Self {
-        Self {
-            frequency_factor: 1.0e44,     // [1/s]
-            activation_energy: 250_000.0, // [J/mol] (59.8 kcal/mol) - lower than protein
-            damage_threshold: 1.0,
-            ablation_threshold: 55.0,
-        }
-    }
-
-    /// HIFU ablation kinetics (tissue necrosis)
-    /// Reference: Sapareto & Dewey (1984) - thermal dose model
-    /// Higher frequency factor for faster ablation kinetics
-    #[must_use]
-    pub fn hifu_ablation() -> Self {
-        Self {
-            frequency_factor: 1.0e47,     // [1/s] - higher for faster tissue necrosis
-            activation_energy: 284_000.0, // [J/mol] (67.8 kcal/mol)
-            damage_threshold: 1.0,
-            ablation_threshold: 50.0,
-        }
-    }
-
-    /// Temperature-dependent damage rate
-    ///
-    /// dΩ/dt = A·exp(-E_a/RT)
-    ///
-    /// # Arguments
-    /// * `temperature` - Absolute temperature (K)
-    ///
-    /// # Returns
-    /// Damage accumulation rate [1/s]
-    #[must_use]
-    pub fn damage_rate(&self, temperature: f64) -> f64 {
-        self.frequency_factor * (-self.activation_energy / (GAS_CONSTANT * temperature)).exp()
-    }
-
-    /// Accumulated thermal damage (Ω)
-    ///
-    /// Ω(t) = ∫₀ᵗ A·exp(-E_a/RT(τ))dτ
-    ///
-    /// # Arguments
-    /// * `damage_rate` - Damage accumulation rate at current time [1/s]
-    /// * `dt` - Time step (s)
-    ///
-    /// # Returns
-    /// Accumulated damage (unitless, 0-∞)
-    /// - Ω < 1: No significant damage
-    /// - Ω = 1: 63.2% protein denaturation
-    /// - Ω > 1: Irreversible damage
-    #[must_use]
-    pub fn accumulated_damage(current_damage: f64, damage_rate: f64, dt: f64) -> f64 {
-        damage_rate.mul_add(dt, current_damage)
-    }
-
-    /// Tissue viability (thermal damage extent)
-    ///
-    /// Returns fraction of viable tissue: exp(-Ω)
-    /// - 1.0 = fully viable
-    /// - 0.37 = 63% damage (Ω=1)
-    /// - 0.0 = completely ablated
-    #[must_use]
-    pub fn viability(&self, damage: f64) -> f64 {
-        (-damage).exp()
-    }
-
-    /// Is tissue ablated?
-    #[must_use]
-    pub fn is_ablated(&self, damage: f64) -> bool {
-        damage >= self.damage_threshold
+            ablation_threshold_c,
+        )
+        .expect("invariant: published ablation preset parameters are valid")
     }
 }
 

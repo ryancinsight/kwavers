@@ -17,6 +17,7 @@ pub mod coupling;
 pub mod diffusion;
 pub mod perfusion;
 pub mod properties;
+pub(crate) mod response;
 pub mod thermal_dose;
 
 pub use ablation::{AblationField, AblationKinetics, AblationState};

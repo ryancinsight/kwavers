@@ -28,6 +28,24 @@ fn bench_grid_creation(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark homogeneous-medium construction.
+fn bench_medium_creation(c: &mut Criterion) {
+    let grid = Grid::new(20, 20, 20, 0.001, 0.001, 0.001).expect("Test grid");
+
+    c.bench_function("medium_creation", |b| {
+        b.iter(|| {
+            let medium = HomogeneousMedium::new(
+                black_box(DENSITY_WATER),
+                black_box(SOUND_SPEED_WATER),
+                black_box(0.0),
+                black_box(0.0),
+                black_box(&grid),
+            );
+            black_box(medium);
+        });
+    });
+}
+
 /// Benchmark medium property validation
 fn bench_medium_validation(c: &mut Criterion) {
     let mut group = c.benchmark_group("medium_validation");
@@ -257,6 +275,7 @@ fn bench_validation_suite(c: &mut Criterion) {
 criterion_group!(
     benches,
     bench_grid_creation,
+    bench_medium_creation,
     bench_medium_validation,
     bench_grid_indexing,
     bench_physical_constraints,

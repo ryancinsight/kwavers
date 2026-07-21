@@ -26,9 +26,7 @@
 //!    *IEEE Transactions on Biomedical Engineering*, 46(9), 1037-1043.
 //!    - Modern perfusion estimation methods
 
-use kwavers_core::constants::medical::{
-    BLOOD_SPECIFIC_HEAT, THERMAL_DOSE_REFERENCE_TEMP_C, TISSUE_PERFUSION_RATE,
-};
+use kwavers_core::constants::medical::{BLOOD_SPECIFIC_HEAT, TISSUE_PERFUSION_RATE};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_K;
 use kwavers_core::constants::tissue_acoustics::DENSITY_BLOOD;
 
@@ -59,8 +57,6 @@ pub struct ThermalDiffusionConfig {
     pub relaxation_time: f64,
     /// Enable thermal dose tracking
     pub track_thermal_dose: bool,
-    /// Reference temperature for dose calculation [°C]
-    pub dose_reference_temperature: f64,
     /// Spatial discretization order (2 or 4)
     pub spatial_order: usize,
 }
@@ -78,7 +74,6 @@ impl Default for ThermalDiffusionConfig {
             enable_hyperbolic: false,
             relaxation_time: 20.0,
             track_thermal_dose: true,
-            dose_reference_temperature: THERMAL_DOSE_REFERENCE_TEMP_C,
             spatial_order: 4,
         }
     }

@@ -6,6 +6,7 @@ use kwavers_grid::Grid;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_solver::config::{SolverConfiguration, SolverType};
 use kwavers_solver::Solver;
+use kwavers_source::NullSource;
 
 #[test]
 fn rejects_non_power_of_two_grid() {
@@ -106,6 +107,53 @@ fn final_field_readback_populates_solver_field_contract() {
 }
 
 #[test]
+fn peak_field_readback_preserves_the_provider_envelope_contract() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PstdGpu,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+    let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
+    let field_len = grid.nx * grid.ny * grid.nz;
+    let expected: Vec<f32> = (0..field_len).map(|index| index as f32 + 0.25).collect();
+
+    adapter
+        .store_peak_pressure(expected)
+        .expect("peak-pressure values match the adapter grid and are non-negative");
+
+    let peak = adapter
+        .peak_pressure_field()
+        .expect("explicit peak readback is retained separately from final pressure");
+    assert_eq!(peak[[0, 0, 0]], 0.25);
+    assert_eq!(peak[[7, 7, 7]], 511.25);
+    assert_eq!(adapter.statistics().max_pressure, 511.25);
+}
+
+#[test]
+fn peak_field_readback_rejects_negative_provider_values() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PstdGpu,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+    let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
+    let mut invalid = vec![0.0; grid.nx * grid.ny * grid.nz];
+    invalid[7] = -1.0;
+
+    let error = adapter.store_peak_pressure(invalid).unwrap_err();
+
+    assert_eq!(
+        error.to_string(),
+        "Invalid input: GPU PSTD peak-pressure readback has negative value -1 at flat index 7"
+    );
+    assert!(adapter.peak_pressure_field().is_none());
+}
+
+#[test]
 fn step_forward_returns_feature_not_available() {
     let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
     let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
@@ -119,6 +167,48 @@ fn step_forward_returns_feature_not_available() {
 
     let err = adapter.step_forward().unwrap_err();
     assert!(matches!(err, KwaversError::FeatureNotAvailable(_)));
+}
+
+#[test]
+fn add_source_rejects_an_unsampled_waveform() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PstdGpu,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+    let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
+
+    let error = adapter
+        .add_source(Box::new(NullSource::new()))
+        .expect_err("a Source trait object cannot encode GPU source-major samples");
+
+    assert_eq!(
+        error.to_string(),
+        "Feature not available: GpuPstdSimulationAdapter requires a source-major sampled waveform; use set_grid_source"
+    );
+}
+
+#[test]
+fn peak_run_rejects_zero_steps_before_device_acquisition() {
+    let grid = Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
+    let medium = HomogeneousMedium::from_minimal(DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER, &grid);
+    let config = SolverConfiguration {
+        solver_type: SolverType::PstdGpu,
+        dt: 1.0e-7,
+        ..SolverConfiguration::default()
+    };
+    let mut adapter = GpuPstdSimulationAdapter::new(&config, &grid, &medium).unwrap();
+
+    let error = adapter
+        .run_peak_pressure(0)
+        .expect_err("zero time steps violate the GPU PSTD batch contract");
+
+    assert_eq!(
+        error.to_string(),
+        "Invalid input: GPU PSTD requires time_steps > 0 and finite positive dt; got steps=0 dt=0.0000001"
+    );
 }
 
 #[test]

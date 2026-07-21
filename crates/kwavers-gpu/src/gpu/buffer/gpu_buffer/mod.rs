@@ -28,7 +28,7 @@ use kwavers_core::error::KwaversResult;
 /// # Examples
 ///
 /// ```no_run
-/// # use kwavers::gpu::buffer::{GpuBufferData, BufferUsage};
+/// # use kwavers_gpu::gpu::buffer::{BufferUsage, GpuBufferData};
 /// # async fn example(device: &wgpu::Device, queue: &wgpu::Queue) -> Result<(), Box<dyn std::error::Error>> {
 /// // Create empty buffer for compute output
 /// let buffer = GpuBufferData::create(

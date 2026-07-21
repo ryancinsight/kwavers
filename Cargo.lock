@@ -230,6 +230,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 
 [[package]]
+name = "asclepius"
+version = "0.1.0"
+dependencies = [
+ "aequitas",
+ "eunomia",
+]
+
+[[package]]
 name = "ash"
 version = "0.38.0+1.3.281"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3373,7 +3381,7 @@ dependencies = [
 
 [[package]]
 name = "kwavers-gpu"
-version = "4.1.0"
+version = "5.0.0"
 dependencies = [
  "approx",
  "bytemuck",
@@ -3511,6 +3519,7 @@ dependencies = [
  "anyhow",
  "apollo-fft",
  "approx",
+ "asclepius",
  "consus-npy",
  "eunomia",
  "kwavers-core",
@@ -3537,7 +3546,9 @@ dependencies = [
 name = "kwavers-python"
 version = "0.1.0"
 dependencies = [
+ "aequitas",
  "anyhow",
+ "asclepius",
  "coeus-core",
  "eunomia",
  "kwavers-analysis",
@@ -3691,7 +3702,9 @@ dependencies = [
 name = "kwavers-therapy"
 version = "3.0.0"
 dependencies = [
+ "aequitas",
  "approx",
+ "asclepius",
  "kwavers-analysis",
  "kwavers-core",
  "kwavers-grid",
@@ -8178,7 +8191,3 @@ checksum = "cba11ecd07cc23351500e840ae03841b7e4997923ec8e4832ee3ae199ea0b6b4"
 dependencies = [
  "zune-core",
 ]
-
-[[patch.unused]]
-name = "numpy"
-version = "0.27.1"

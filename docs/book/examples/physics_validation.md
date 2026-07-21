@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example physics_validation`  
-**Source**: [`crates/kwavers/examples/physics_validation.rs`](../../../../crates/kwavers/examples/physics_validation.rs)
+**Source**: [`crates/kwavers/examples/physics_validation.rs`](../../../crates/kwavers/examples/physics_validation.rs)
 
 ## What This Example Demonstrates
 

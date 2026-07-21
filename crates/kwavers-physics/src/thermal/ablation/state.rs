@@ -1,5 +1,10 @@
 use super::kinetics::AblationKinetics;
-use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use asclepius::DamageIntegral;
+use kwavers_core::{
+    constants::thermodynamic::KELVIN_OFFSET_C,
+    error::{KwaversError, KwaversResult},
+};
 
 /// Tissue ablation state at a point
 #[derive(Debug, Clone, Copy)]
@@ -27,27 +32,36 @@ impl AblationState {
     }
 
     /// Update ablation state with temperature change
-    pub fn update(&mut self, temperature: f64, kinetics: &AblationKinetics, dt: f64) {
-        self.temperature = temperature;
+    ///
+    /// # Errors
+    ///
+    /// Returns an error without mutating the state when the observation or
+    /// existing damage violates the Asclepius contract.
+    pub fn update(
+        &mut self,
+        temperature_c: f64,
+        kinetics: &AblationKinetics,
+        dt: f64,
+    ) -> KwaversResult<()> {
+        let temperature = ThermodynamicTemperature::from_base(temperature_c + KELVIN_OFFSET_C);
+        let increment = kinetics.damage_increment(temperature, Time::from_base(dt))?;
+        let current = DamageIntegral::new(self.damage).map_err(|source| {
+            KwaversError::InvalidInput(format!("invalid accumulated ablation damage: {source}"))
+        })?;
+        let next = if temperature >= kinetics.ablation_threshold() {
+            DamageIntegral::new(current.get() + increment.get()).map_err(|source| {
+                KwaversError::InvalidInput(format!("invalid accumulated ablation damage: {source}"))
+            })?
+        } else {
+            current
+        };
+        let viability = AblationKinetics::viability(next).get();
+        let ablated = kinetics.is_ablated(next);
 
-        // Convert to absolute temperature
-        let t_abs = temperature + KELVIN_OFFSET_C;
-
-        // Skip if below ablation threshold
-        if temperature < kinetics.ablation_threshold {
-            return;
-        }
-
-        // Calculate damage rate
-        let damage_rate = kinetics.damage_rate(t_abs);
-
-        // Accumulate damage
-        self.damage = AblationKinetics::accumulated_damage(self.damage, damage_rate, dt);
-
-        // Update viability
-        self.viability = kinetics.viability(self.damage);
-
-        // Check ablation
-        self.ablated = kinetics.is_ablated(self.damage);
+        self.temperature = temperature_c;
+        self.damage = next.get();
+        self.viability = viability;
+        self.ablated = ablated;
+        Ok(())
     }
 }

@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example theorem_validation_demo`  
-**Source**: [`crates/kwavers/examples/theorem_validation_demo.rs`](../../../../crates/kwavers/examples/theorem_validation_demo.rs)
+**Source**: [`crates/kwavers/examples/theorem_validation_demo.rs`](../../../crates/kwavers/examples/theorem_validation_demo.rs)
 
 ## What This Example Demonstrates
 

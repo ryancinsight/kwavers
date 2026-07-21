@@ -4,33 +4,22 @@
 //! cancer therapy." International Journal of Radiation Oncology Biology Physics,
 //! 10(6), 787-800.
 
-use kwavers_core::constants::numerical::SECONDS_PER_MINUTE;
+use aequitas::systems::si::quantities::Time;
 use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
 use kwavers_core::error::KwaversResult;
 use leto::Array3;
 
 use crate::parallel::zip_mut_ref;
+use crate::thermal::response::{checked_cem43_increments, KelvinStorage};
 
-/// CEM43 thermal-dose constants and damage thresholds (Sapareto & Dewey 1984),
-/// re-exported from the `kwavers-core` medical-constants SSOT.
+/// Kwavers-owned thermal-dose policy thresholds.
 pub mod thresholds {
     use kwavers_core::constants::medical::{
-        THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43, THERMAL_DOSE_REFERENCE_TEMP_C,
-        THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C, THERMAL_DOSE_THRESHOLD,
+        THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43, THERMAL_DOSE_THRESHOLD,
     };
-    /// CEM43 reference temperature [°C] — delegates to [`THERMAL_DOSE_REFERENCE_TEMP_C`].
-    ///
-    /// Sapareto & Dewey (1984), Eq. 1.
-    pub const REFERENCE_TEMPERATURE_C: f64 = THERMAL_DOSE_REFERENCE_TEMP_C;
-    /// Piecewise breakpoint for R-factor selection [°C] — same as `REFERENCE_TEMPERATURE_C`.
-    pub const BREAKPOINT_TEMPERATURE_C: f64 = THERMAL_DOSE_REFERENCE_TEMP_C;
-    /// Minimum temperature at which dose accumulates [°C] — equals normal body temperature.
+    /// Minimum Celsius temperature at which dose accumulates.
     pub const MIN_DOSE_TEMPERATURE_C: f64 =
         kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-    /// CEM43 R factor above the 43°C breakpoint — delegates to [`THERMAL_DOSE_R_ABOVE_43C`].
-    pub const R_ABOVE_BREAKPOINT: f64 = THERMAL_DOSE_R_ABOVE_43C;
-    /// CEM43 R factor below the 43°C breakpoint — delegates to [`THERMAL_DOSE_R_BELOW_43C`].
-    pub const R_BELOW_BREAKPOINT: f64 = THERMAL_DOSE_R_BELOW_43C;
     /// CEM43 threshold for irreversible necrosis — delegates to [`THERMAL_DOSE_THRESHOLD`].
     pub const NECROSIS_THRESHOLD_CEM43: f64 = THERMAL_DOSE_THRESHOLD;
     /// CEM43 threshold for reversible damage — delegates to [`THERMAL_DOSE_DAMAGE_THRESHOLD_CEM43`].
@@ -42,6 +31,7 @@ pub mod thresholds {
 #[derive(Debug)]
 pub struct ThermalDoseCalculator {
     cumulative_dose: Array3<f64>,
+    increments: Array3<f64>,
     max_dose: f64,
     max_dose_time: f64,
 }
@@ -55,6 +45,7 @@ impl ThermalDoseCalculator {
     pub fn new(shape: (usize, usize, usize)) -> Self {
         Self {
             cumulative_dose: Array3::zeros(shape),
+            increments: Array3::zeros(shape),
             max_dose: 0.0,
             max_dose_time: 0.0,
         }
@@ -69,29 +60,19 @@ impl ThermalDoseCalculator {
         dt: f64,
         current_time: f64,
     ) -> KwaversResult<()> {
-        use thresholds::{
-            BREAKPOINT_TEMPERATURE_C, MIN_DOSE_TEMPERATURE_C, REFERENCE_TEMPERATURE_C,
-            R_ABOVE_BREAKPOINT, R_BELOW_BREAKPOINT,
-        };
+        use thresholds::MIN_DOSE_TEMPERATURE_C;
 
+        let step = Time::from_base(dt);
+        checked_cem43_increments::<KelvinStorage, _>(
+            self.increments.view_mut(),
+            temperature.view(),
+            step,
+            |temp_kelvin| temp_kelvin - KELVIN_OFFSET_C > MIN_DOSE_TEMPERATURE_C,
+        )?;
         zip_mut_ref(
             self.cumulative_dose.view_mut(),
-            temperature.view(),
-            |dose, &temp_kelvin| {
-                let temp_celsius = temp_kelvin - KELVIN_OFFSET_C;
-
-                if temp_celsius > MIN_DOSE_TEMPERATURE_C {
-                    let r = if temp_celsius >= BREAKPOINT_TEMPERATURE_C {
-                        R_ABOVE_BREAKPOINT
-                    } else {
-                        R_BELOW_BREAKPOINT
-                    };
-
-                    let exponent = REFERENCE_TEMPERATURE_C - temp_celsius;
-                    let dose_increment = r.powf(exponent) * dt / SECONDS_PER_MINUTE;
-                    *dose += dose_increment;
-                }
-            },
+            self.increments.view(),
+            |dose, &increment| *dose += increment,
         );
 
         let updated_max = self.cumulative_dose.iter().copied().fold(0.0_f64, f64::max);
@@ -103,7 +84,7 @@ impl ThermalDoseCalculator {
         Ok(())
     }
 
-    /// Per-voxel accumulated CEM43 thermal dose [equivalent minutes at 43 °C].
+    /// Per-voxel accumulated CEM43 thermal dose in equivalent minutes at 43 °C.
     #[must_use]
     pub fn get_dose(&self) -> &Array3<f64> {
         &self.cumulative_dose
@@ -115,7 +96,7 @@ impl ThermalDoseCalculator {
         self.max_dose
     }
 
-    /// Simulation time [s] at which the peak dose was reached.
+    /// Simulation time in seconds at which the peak dose was reached.
     #[must_use]
     pub fn max_dose_time(&self) -> f64 {
         self.max_dose_time
@@ -161,7 +142,46 @@ impl ThermalDoseCalculator {
     /// calculator for a fresh heating history).
     pub fn reset(&mut self) {
         self.cumulative_dose.fill(0.0);
+        self.increments.fill(0.0);
         self.max_dose = 0.0;
         self.max_dose_time = 0.0;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn canonical_reference_accumulates_one_minute() {
+        let mut calculator = ThermalDoseCalculator::new((1, 1, 1));
+        let temperature = Array3::from_elem((1, 1, 1), 316.15);
+        calculator
+            .update_dose(&temperature, 60.0, 60.0)
+            .expect("valid reference observation");
+        assert_eq!(calculator.get_dose()[[0, 0, 0]], 1.0);
+    }
+
+    #[test]
+    fn rejected_observation_does_not_mutate_dose_or_maximum() {
+        let mut calculator = ThermalDoseCalculator::new((2, 1, 1));
+        let reference = Array3::from_elem((2, 1, 1), 316.15);
+        calculator
+            .update_dose(&reference, 60.0, 60.0)
+            .expect("valid reference observation");
+        let before = calculator.get_dose().clone();
+        let max_before = calculator.max_dose();
+        let time_before = calculator.max_dose_time();
+
+        let mut invalid = Array3::from_elem((2, 1, 1), 317.15);
+        invalid[[1, 0, 0]] = f64::NAN;
+        assert!(calculator.update_dose(&invalid, 60.0, 120.0).is_err());
+        assert_eq!(calculator.get_dose(), &before);
+        assert_eq!(calculator.max_dose(), max_before);
+        assert_eq!(calculator.max_dose_time(), time_before);
+
+        let wrong_shape = Array3::from_elem((1, 1, 1), 317.15);
+        assert!(calculator.update_dose(&wrong_shape, 60.0, 120.0).is_err());
+        assert_eq!(calculator.get_dose(), &before);
     }
 }

@@ -28,7 +28,6 @@ use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 
 use kwavers_core::constants::fundamental::{DENSITY_TISSUE, SOUND_SPEED_TISSUE};
-use kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
 use kwavers_core::constants::thermodynamic::{BODY_TEMPERATURE_C, KELVIN_OFFSET_C};
 use kwavers_grid::Grid as KwaversGrid;
 use kwavers_medium::HomogeneousMedium;
@@ -270,7 +269,6 @@ impl ThermalSimulation {
             enable_hyperbolic: false,
             relaxation_time: 20.0,
             track_thermal_dose: self.track_thermal_dose,
-            dose_reference_temperature: THERMAL_DOSE_REFERENCE_TEMP_C,
             spatial_order: self.spatial_order as usize,
         };
 

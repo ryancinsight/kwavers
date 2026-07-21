@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example minimal_demo`  
-**Source**: [`crates/kwavers/examples/minimal_demo.rs`](../../../../crates/kwavers/examples/minimal_demo.rs)
+**Source**: [`crates/kwavers/examples/minimal_demo.rs`](../../../crates/kwavers/examples/minimal_demo.rs)
 
 ## What This Example Demonstrates
 

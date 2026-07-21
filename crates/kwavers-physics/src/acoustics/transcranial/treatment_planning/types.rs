@@ -1,7 +1,7 @@
 //! Core data structures for transcranial treatment planning
 
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
-use kwavers_core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_DOSE_REFERENCE_TEMP_C};
+use kwavers_core::constants::medical::{MI_LIMIT_SOFT_TISSUE, THERMAL_SAFETY_TEMPERATURE_LIMIT_C};
 use leto::Array3;
 
 /// Treatment target volume in brain coordinates
@@ -88,11 +88,11 @@ pub struct TranscranialSafetyConstraints {
 impl Default for TranscranialSafetyConstraints {
     fn default() -> Self {
         Self {
-            max_skull_temp: 42.0,                          // °C
-            max_brain_temp: THERMAL_DOSE_REFERENCE_TEMP_C, // °C
-            max_mi: MI_LIMIT_SOFT_TISSUE,                  // Mechanical index limit
-            max_thermal_dose: 240.0,                       // CEM43 for brain tissue
-            min_skull_distance: 5.0,                       // mm
+            max_skull_temp: 42.0,                               // °C
+            max_brain_temp: THERMAL_SAFETY_TEMPERATURE_LIMIT_C, // °C
+            max_mi: MI_LIMIT_SOFT_TISSUE,                       // Mechanical index limit
+            max_thermal_dose: 240.0,                            // CEM43 for brain tissue
+            min_skull_distance: 5.0,                            // mm
         }
     }
 }

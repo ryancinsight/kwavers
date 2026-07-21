@@ -26,8 +26,12 @@ pub(in crate::pstd_gpu) struct StepCtx {
     pub nt: u32,
     pub nonlinear: u32,
     pub absorbing: u32,
+    pub peak_offset: u32,
+    pub record_peak_pressure: u32,
     pub n_src: usize,
     pub n_vel_x: usize,
+    pub pressure_source_correction: bool,
+    pub velocity_source_correction: bool,
     pub elem_wg: u32,
 }
 
@@ -49,6 +53,8 @@ impl StepCtx {
             nt: self.nt,
             nonlinear: self.nonlinear,
             absorbing: self.absorbing,
+            peak_offset: self.peak_offset,
+            record_peak_pressure: self.record_peak_pressure,
         }
     }
 

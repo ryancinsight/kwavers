@@ -30,34 +30,11 @@ pub const ISPPA_LIMIT: f64 = 190.0;
 /// cancer therapy." Int. J. Radiat. Oncol. Biol. Phys. 10(6), 787–800.
 pub const THERMAL_DOSE_THRESHOLD: f64 = 240.0;
 
-/// Reference temperature for the CEM43 thermal dose formula (°C).
+/// Default maximum tissue temperature for conservative therapy controls (°C).
 ///
-/// The Sapareto–Dewey formula CEM43 = ∫ R^(43−T) dt uses 43°C as the
-/// reference temperature. Above 43°C: R = 0.5; below: R = 0.25.
-///
-/// Reference: Sapareto SA, Dewey WC (1984). Int. J. Radiat. Oncol.
-/// Biol. Phys. 10(6), 787–800. DOI: 10.1016/0360-3016(84)90379-1.
-pub const THERMAL_DOSE_REFERENCE_TEMP_C: f64 = 43.0;
-
-/// CEM43 doubling constant R above the 43°C reference (dimensionless).
-///
-/// For T ≥ 43°C, each 1°C above the reference doubles the thermal dose rate.
-/// R = 0.5 means the dose accumulates at e^(43−T)·ln(0.5) per minute,
-/// which halves for each 1°C below 43°C in the above-threshold regime.
-///
-/// Reference: Sapareto SA, Dewey WC (1984). Int. J. Radiat. Oncol. Biol.
-/// Phys. 10(6), 787–800.
-pub const THERMAL_DOSE_R_ABOVE_43C: f64 = 0.5;
-
-/// CEM43 doubling constant R below the 43°C reference (dimensionless).
-///
-/// For T < 43°C, thermal damage accumulates more slowly: R = 0.25 per 1°C
-/// below 43°C (two doublings per degree, i.e., ~4× faster accumulation rate
-/// per degree than the above-threshold regime).
-///
-/// Reference: Sapareto SA, Dewey WC (1984). Int. J. Radiat. Oncol. Biol.
-/// Phys. 10(6), 787–800.
-pub const THERMAL_DOSE_R_BELOW_43C: f64 = 0.25;
+/// This is a consumer safety policy, not the CEM43 law's reference
+/// temperature. Asclepius owns the canonical CEM43 parameters.
+pub const THERMAL_SAFETY_TEMPERATURE_LIMIT_C: f64 = 43.0;
 
 /// Thermal dose threshold for reversible tissue damage (CEM43 equivalent minutes at 43°C).
 ///

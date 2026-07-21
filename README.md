@@ -91,6 +91,13 @@ Core Layer            → Fundamental types, error handling
 The module DAG is acyclic and linear (`core → math → domain → physics → solver →
 analysis → simulation → diagnostics/therapy`); each layer is now its own crate.
 
+Cross-repository foundations remain below that DAG. Public
+[Asclepius](https://github.com/ryancinsight/asclepius) owns CEM43, Arrhenius
+thermal damage, and independent-insult composition. Kwavers converts stored
+temperatures to Aequitas quantities at its boundaries and retains spatial
+fields, tissue presets, clinical thresholds, and an independent validation
+oracle. See [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
+
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports
 - **Domain Purity**: Core entities remain free of application logic
@@ -249,7 +256,8 @@ This is an active research project under development. Contributions are welcome!
 1. **Check Status**: Review [`CHECKLIST.md`](CHECKLIST.md) for current task status
 2. **Review Plans**: See [`backlog.md`](backlog.md) for planned work and [`gap_audit.md`](gap_audit.md) for known gaps
 3. **Build a crate**: `cargo check -p kwavers-core` (per-crate checks are fast post-split)
-4. **Run Tests**: `cargo test -p <crate>` or `cargo nextest run`
+4. **Run Tests**: `cargo nextest run -p <crate>`; use `cargo test -p <crate> --doc`
+   for doctests
 5. **Read Docs**: [`docs/book/`](docs/book/) for narratives, [`docs/ADR/`](docs/ADR/) for design decisions
 
 ### 📊 Development Approach

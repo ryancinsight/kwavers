@@ -14,7 +14,7 @@
 //! - `R_gas = 8.314 J/(mol·K)` is the universal gas constant
 //! - `T(t)` [K] is the instantaneous temperature
 //!
-//! Integration is by the rectangle rule (kwavers_physics). Cell death probability follows
+//! Integration is by the rectangle rule (Asclepius). Cell death probability follows
 //! `P_death = 1 − exp(−Ω)`. Typical human tissue values:
 //! `Ea ≈ 2.77 × 10⁵ J/mol`, `A ≈ 3.1 × 10⁴³ s⁻¹` (Henriques 1947).
 //!
@@ -22,18 +22,14 @@
 //!
 //! - Henriques & Moritz (1947) Am. J. Pathol. 23:695
 
-use numpy::ndarray::Array1;
 use numpy::{PyArray1, PyReadonlyArray1, ToPyArray};
-use pyo3::exceptions::PyValueError;
+use pyo3::exceptions::{PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
-
-const KELVIN_OFFSET_C: f64 = 273.15; // K↔°C boundary conversion
 
 /// Compute the cumulative Arrhenius thermal damage integral Ω(t).
 ///
-/// Thin wrapper: the Arrhenius damage physics lives in
-/// `kwavers_physics::analytical::safety::arrhenius_cumulative` (single source of
-/// truth). Here we only convert K→°C and derive the time step before delegating.
+/// Asclepius owns the Arrhenius law. This binding validates array shape and
+/// derives the uniform time step.
 ///
 /// Parameters
 /// ----------
@@ -53,30 +49,34 @@ pub fn compute_arrhenius_damage(
     ea_j_per_mol: f64,
     a_hz: f64,
 ) -> PyResult<Py<PyArray1<f64>>> {
-    let temps = temperatures_k.as_array();
-    let times = times_s.as_array();
+    let temps = temperatures_k
+        .as_slice()
+        .map_err(|source| PyRuntimeError::new_err(source.to_string()))?;
+    let times = times_s
+        .as_slice()
+        .map_err(|source| PyRuntimeError::new_err(source.to_string()))?;
     if temps.len() != times.len() {
         return Err(PyValueError::new_err(
             "temperatures_k and times_s must have the same length",
         ));
     }
-    if ea_j_per_mol < 0.0 {
-        return Err(PyValueError::new_err("ea_j_per_mol must be >= 0"));
-    }
-    if a_hz < 0.0 {
-        return Err(PyValueError::new_err("a_hz must be >= 0"));
-    }
     let n = temps.len();
     if n < 2 {
-        return Ok(Array1::<f64>::zeros(n).to_pyarray(py).into());
+        return Err(PyValueError::new_err(
+            "temperatures_k and times_s must contain at least two samples",
+        ));
     }
     let dt_s = (times[n - 1] - times[0]) / (n - 1) as f64; // uniform step
-    let celsius: Vec<f64> = temps.iter().map(|&t_k| t_k - KELVIN_OFFSET_C).collect();
-    let omega = kwavers_physics::analytical::safety::arrhenius_cumulative(
-        &celsius,
-        dt_s,
-        a_hz,
-        ea_j_per_mol,
-    );
-    Ok(Array1::from(omega).to_pyarray(py).into())
+    let temperatures = temps.to_vec();
+    let omega = py
+        .detach(move || {
+            crate::response::thermal::arrhenius_cumulative_kelvin(
+                &temperatures,
+                dt_s,
+                a_hz,
+                ea_j_per_mol,
+            )
+        })
+        .map_err(PyValueError::new_err)?;
+    Ok(omega.to_pyarray(py).into())
 }

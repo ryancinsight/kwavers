@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example performance_validation`  
-**Source**: [`crates/kwavers/examples/performance_validation.rs`](../../../../crates/kwavers/examples/performance_validation.rs)
+**Source**: [`crates/kwavers/examples/performance_validation.rs`](../../../crates/kwavers/examples/performance_validation.rs)
 
 ## What This Example Demonstrates
 

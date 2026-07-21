@@ -104,7 +104,7 @@ impl TherapyCalculator {
 
             // Update thermal dose
             self.metrics.thermal_dose +=
-                DomainTreatmentMetrics::calculate_thermal_dose(temperature, dt);
+                DomainTreatmentMetrics::calculate_thermal_dose(temperature, dt)?;
             self.metrics.update_peak_temperature(temperature);
         }
 

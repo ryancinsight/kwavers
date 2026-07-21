@@ -12,8 +12,8 @@
 //! ```text
 //! CEM43(T, Δt) = Δt × R^(43 - T)
 //!
-//! where R = 0.5 for T < 43°C
-//!           0.25 for T ≥ 43°C (accelerated damage)
+//! where R = 0.25 for T < 43°C
+//!           0.5 for T ≥ 43°C (accelerated damage)
 //! ```
 //!
 //! ## THEOREM: CEM43 for Linear Temperature Ramp
@@ -37,8 +37,11 @@ pub const R_FACTOR_SUBTHRESHOLD: f64 = 0.25;
 /// Sapareto & Dewey (1984) Table 1: R = 0.5 for T ≥ 43°C
 pub const R_FACTOR_SUPRATHRESHOLD: f64 = 0.5;
 
-/// Temperature threshold in Celsius — delegates to [`kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C`].
-pub const THRESHOLD_TEMP_C: f64 = kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
+/// Temperature threshold in Celsius.
+///
+/// This independent validation oracle intentionally owns its reference
+/// constants instead of importing the Asclepius implementation.
+pub const THRESHOLD_TEMP_C: f64 = 43.0;
 
 /// Standard damage threshold (CEM43 = 240 min)
 pub const STANDARD_DAMAGE_THRESHOLD: f64 = 240.0;

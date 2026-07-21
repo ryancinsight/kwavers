@@ -1,8 +1,8 @@
 //! GPU PSTD run tests — pressure source, velocity source, multi-source, and benchmark.
 
 use super::super::{
-    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdOutputRequest, SolverParams,
-    WgpuPstdStateProvider,
+    AbsorptionArrays, GpuPstdSolver, MediumArrays, PmlArrays, PstdOutputRequest, PstdRunInputs,
+    SolverParams, WgpuPstdStateProvider,
 };
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
@@ -64,27 +64,49 @@ fn test_gpu_pstd_run_produces_output() {
     let n = 32usize;
     let src_flat = 16 * n * n + 16 * n + 16;
     let sns_flat = 20 * n * n + 16 * n + 16;
-    let source_signals: Vec<f32> = (0..20).map(|i| i as f32 / 20.0).collect();
+    let mut source_signals = vec![0.0f32; 20];
+    source_signals[..5].copy_from_slice(&[0.0, 0.5, 1.0, 0.5, 0.0]);
 
-    let result = solver.run(
-        &[sns_flat as u32],
-        &[src_flat as u32],
-        &source_signals,
-        &[],
-        &[],
-        PstdOutputRequest::SensorTracesAndFinalFields,
-    );
+    let result = solver.run(PstdRunInputs {
+        sensor_indices: &[sns_flat as u32],
+        source_indices: &[src_flat as u32],
+        source_signals: &source_signals,
+        pressure_source_correction: true,
+        vel_x_indices: &[],
+        vel_x_signals: &[],
+        velocity_source_correction: false,
+        output_request: PstdOutputRequest::with_final_fields_and_peak_pressure(),
+    });
     let data = result.sensor_data;
     let final_fields = result
         .final_fields
         .expect("full-field request must return GPU-read final fields");
+    let peak_pressure = result
+        .peak_pressure
+        .expect("peak request must return the GPU-resident pressure envelope");
 
     assert_eq!(data.len(), 20, "sensor data length");
     assert_eq!(final_fields.pressure.len(), n * n * n);
     assert_eq!(final_fields.velocity_x.len(), n * n * n);
     assert_eq!(final_fields.velocity_y.len(), n * n * n);
     assert_eq!(final_fields.velocity_z.len(), n * n * n);
+    assert_eq!(peak_pressure.len(), n * n * n);
     assert!(final_fields.pressure.iter().all(|value| value.is_finite()));
+    assert!(peak_pressure.iter().all(|value| value.is_finite()));
+    assert!(peak_pressure.iter().all(|value| *value >= 0.0));
+    for (&peak, &final_pressure) in peak_pressure.iter().zip(&final_fields.pressure) {
+        assert!(
+            peak >= final_pressure.abs(),
+            "the temporal pressure envelope must dominate the final frame"
+        );
+    }
+    assert!(
+        peak_pressure
+            .iter()
+            .zip(&final_fields.pressure)
+            .any(|(&peak, &final_pressure)| peak > final_pressure.abs()),
+        "a finite burst must distinguish max_t |p| from the final pressure frame"
+    );
     assert!(
         final_fields.pressure.iter().any(|&value| value != 0.0),
         "a driven GPU run must not return the retired all-zero final pressure field"
@@ -111,14 +133,16 @@ fn test_gpu_pstd_1024_axis_produces_final_pressure() {
     let source_flat = (nx / 2) * ny * nz + (ny / 2) * nz + nz / 2;
     let source_signals = vec![1.0f32; 8];
 
-    let result = solver.run(
-        &[source_flat as u32],
-        &[source_flat as u32],
-        &source_signals,
-        &[],
-        &[],
-        PstdOutputRequest::SensorTracesAndFinalFields,
-    );
+    let result = solver.run(PstdRunInputs {
+        sensor_indices: &[source_flat as u32],
+        source_indices: &[source_flat as u32],
+        source_signals: &source_signals,
+        pressure_source_correction: true,
+        vel_x_indices: &[],
+        vel_x_signals: &[],
+        velocity_source_correction: false,
+        output_request: PstdOutputRequest::with_final_fields(),
+    });
     let final_fields = result
         .final_fields
         .expect("full-field request must return the largest-axis pressure field");
@@ -149,14 +173,16 @@ fn test_gpu_pstd_velocity_source_produces_output() {
     let vel_signals: Vec<f32> = (0..20).map(|i| i as f32 / 20.0).collect();
 
     let data = solver
-        .run(
-            &[sns_flat as u32],
-            &[],
-            &[],
-            &[src_flat as u32],
-            &vel_signals,
-            PstdOutputRequest::SensorTraces,
-        )
+        .run(PstdRunInputs {
+            sensor_indices: &[sns_flat as u32],
+            source_indices: &[],
+            source_signals: &[],
+            pressure_source_correction: false,
+            vel_x_indices: &[src_flat as u32],
+            vel_x_signals: &vel_signals,
+            velocity_source_correction: true,
+            output_request: PstdOutputRequest::sensor_traces(),
+        })
         .sensor_data;
 
     assert_eq!(data.len(), 20, "sensor data length");
@@ -240,14 +266,16 @@ fn test_gpu_pstd_multi_velocity_source_plane_produces_output() {
     }
 
     let data = solver
-        .run(
-            &indices,
-            &[],
-            &[],
-            &indices,
-            &vel_signals,
-            PstdOutputRequest::SensorTraces,
-        )
+        .run(PstdRunInputs {
+            sensor_indices: &indices,
+            source_indices: &[],
+            source_signals: &[],
+            pressure_source_correction: false,
+            vel_x_indices: &indices,
+            vel_x_signals: &vel_signals,
+            velocity_source_correction: true,
+            output_request: PstdOutputRequest::sensor_traces(),
+        })
         .sensor_data;
     let max_abs = data.iter().copied().map(f32::abs).fold(0.0f32, f32::max);
     eprintln!("GPU PSTD multi velocity-source sensor peak: {max_abs:.6}");
@@ -317,14 +345,16 @@ fn bench_gpu_pstd_bmode_grid() {
 
     let t0 = std::time::Instant::now();
     let data = solver
-        .run(
-            &[sns as u32],
-            &[src as u32],
-            &sigs,
-            &[],
-            &[],
-            PstdOutputRequest::SensorTraces,
-        )
+        .run(PstdRunInputs {
+            sensor_indices: &[sns as u32],
+            source_indices: &[src as u32],
+            source_signals: &sigs,
+            pressure_source_correction: true,
+            vel_x_indices: &[],
+            vel_x_signals: &[],
+            velocity_source_correction: false,
+            output_request: PstdOutputRequest::sensor_traces(),
+        })
         .sensor_data;
     let elapsed = t0.elapsed();
 

@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example pinn_training_convergence --features pinn --release`  
-**Source**: [`crates/kwavers/examples/pinn_training_convergence.rs`](../../../../crates/kwavers/examples/pinn_training_convergence.rs)
+**Source**: [`crates/kwavers/examples/pinn_training_convergence.rs`](../../../crates/kwavers/examples/pinn_training_convergence.rs)
 
 ## What This Example Demonstrates
 

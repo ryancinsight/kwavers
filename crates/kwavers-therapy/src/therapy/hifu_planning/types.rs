@@ -1,13 +1,12 @@
 use crate::safety::mechanical_index::MechanicalIndexTissueType;
 use crate::therapy::domain_types::ClinicalTherapyParameters;
+use aequitas::systems::si::quantities::{ThermodynamicTemperature, Time};
+use asclepius::response::thermal::Cem43;
 use kwavers_core::constants::acoustic_parameters::DB_TO_NP;
 use kwavers_core::constants::fundamental::{
     ACOUSTIC_ABSORPTION_TISSUE, DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM,
 };
 use kwavers_core::constants::medical::THERMAL_DOSE_THRESHOLD;
-use kwavers_core::constants::medical::{
-    THERMAL_DOSE_REFERENCE_TEMP_C, THERMAL_DOSE_R_ABOVE_43C, THERMAL_DOSE_R_BELOW_43C,
-};
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
 use kwavers_core::constants::tissue_thermal::SPECIFIC_HEAT_TISSUE;
 use kwavers_core::constants::{MHZ_TO_HZ, SECONDS_PER_MINUTE};
@@ -241,19 +240,26 @@ impl FocalSpotDoseEstimate {
         let delta_t = (heating_rate_c_per_s / PERFUSION_RATE)
             * (1.0 - (-PERFUSION_RATE * treatment_duration_s).exp());
         let peak_temperature_c = BODY_TEMPERATURE_C + delta_t;
-        let r: f64 = if peak_temperature_c >= THERMAL_DOSE_REFERENCE_TEMP_C {
-            THERMAL_DOSE_R_ABOVE_43C
-        } else {
-            THERMAL_DOSE_R_BELOW_43C
-        };
-        let dose_rate_cem43_per_min = r.powf(THERMAL_DOSE_REFERENCE_TEMP_C - peak_temperature_c);
-        let cem43 = (treatment_duration_s / SECONDS_PER_MINUTE) * dose_rate_cem43_per_min;
-        let time_to_dose_s = if peak_temperature_c >= THERMAL_DOSE_REFERENCE_TEMP_C {
-            if dose_rate_cem43_per_min > 0.0 {
-                THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate_cem43_per_min
-            } else {
-                f64::INFINITY
-            }
+        let law = Cem43::<f64>::canonical();
+        let temperature = ThermodynamicTemperature::from_base(
+            peak_temperature_c + kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C,
+        );
+        let duration = Time::from_base(treatment_duration_s);
+        let dose_rate = law.rate(temperature).map_err(|source| {
+            KwaversError::InvalidInput(format!("focal-spot CEM43 rate is invalid: {source}"))
+        })?;
+        let cem43 = law
+            .increment(temperature, duration)
+            .map_err(|source| {
+                KwaversError::InvalidInput(format!(
+                    "focal-spot CEM43 observation is invalid: {source}"
+                ))
+            })?
+            .get()
+            .into_base()
+            / SECONDS_PER_MINUTE;
+        let time_to_dose_s = if temperature >= law.reference() {
+            THERMAL_DOSE_THRESHOLD * SECONDS_PER_MINUTE / dose_rate.into_base()
         } else {
             f64::INFINITY
         };

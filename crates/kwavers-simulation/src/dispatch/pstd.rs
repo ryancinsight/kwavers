@@ -52,7 +52,6 @@ pub fn run_with_thermal(
     thermal_cfg: &ThermalConfig,
 ) -> KwaversResult<SimulationRunResult> {
     use kwavers_core::constants::fundamental::SOUND_SPEED_TISSUE;
-    use kwavers_core::constants::medical::THERMAL_DOSE_REFERENCE_TEMP_C;
     use kwavers_core::constants::thermodynamic::KELVIN_OFFSET_C;
     use kwavers_medium::HomogeneousMedium;
     use kwavers_physics::thermal::diffusion::ThermalDiffusionConfig;
@@ -78,7 +77,6 @@ pub fn run_with_thermal(
         enable_hyperbolic: false,
         relaxation_time: 20.0,
         track_thermal_dose: thermal_cfg.track_thermal_dose,
-        dose_reference_temperature: THERMAL_DOSE_REFERENCE_TEMP_C,
         spatial_order: 2,
     };
 

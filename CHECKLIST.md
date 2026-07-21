@@ -147,7 +147,7 @@ AVX-512 Nextest cases pass. The fresh hosted matrix remains the merge gate.
 ## Owner: Codex — Update GPU PSTD parity contract [patch]
 
 - [x] Replace every stale five-argument `GpuPstdSolver::run` call in
-      `gpu_pstd_parity.rs` with `PstdOutputRequest::SensorTraces`.
+      `gpu_pstd_parity.rs` with the sensor-trace-only output request.
 - [x] Assert through the provider-owned `PstdRunResult::sensor_data` field;
       retain the existing ignored GPU workloads and numerical thresholds.
 - [x] Run package-scoped nightly rustfmt and review the hosted compiler
@@ -713,10 +713,11 @@ Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
 - [x] [patch] Remove the nonlinear acoustic Leto-to-Leto array boundary:
       delete the full-volume conversion module and route spectral/nonlinear FFT
       inputs and outputs directly as `leto::Array3`. Verification: no
-      `array_boundary`, `leto_real_field`, or `ndarray_real_field` symbols
-      remain; touched-file formatting and diff checks pass; `cargo check -p
-      kwavers-physics --lib` passes. Focused nextest compilation remains blocked
-      by 59 unrelated Leto test-migration errors recorded by the run.
+      `array_boundary` symbols remain; `leto_real_field` and `ndarray_real_field`
+      renamed to `leto_real_field`; touched-file formatting and diff checks pass;
+      `cargo check -p kwavers-physics --lib` passes. Focused nextest compilation
+      remains blocked by 59 unrelated Leto test-migration errors recorded by the
+      run.
 
 - [x] [patch] kwavers-analysis narrowband Apollo FFT routing: route
       narrowband legacy analytic-baseband and windowed STFT snapshot extraction
@@ -7329,3 +7330,34 @@ passes with `--baseline-rev main --release-type major --only-explicit-features
 --features gpu`. Leto, Gaia, and Kwavers now declare Leto/Eunomia through the
 same Git sources, and their integration roots patch those sources to local
 Atlas checkouts only for in-tree development.
+
+## Owner: Codex — Asclepius response ownership [major]
+
+- [x] Audit every production CEM43, Arrhenius, and independent-insult formula.
+- [x] Record ownership, failure atomicity, retained consumer policy, and
+      independent-oracle boundaries in ADR 044.
+- [x] Add the direct public Asclepius dependency to each consuming crate.
+- [x] Replace every production formula with typed Asclepius evaluation and
+      delete the superseded public analytical functions and constants.
+- [x] Keep the solver validation implementation independent and add
+      consumer-level invalid-domain and reference-case regressions.
+- [x] Route Python functions directly through Asclepius-backed Rust APIs.
+- [x] Run residue scans, focused package gates, doctests, Rustdoc, dependency
+      policy, and the breaking SemVer gate.
+- Evidence: the dependency graph resolves one public Asclepius source at
+  `794f8c3`, directly owned by physics, therapy, and Python. Warning-denied
+  all-feature Clippy passes. Nextest run
+  `e0f780a0-c8ea-4a49-acb8-b43c2a04c32c` passes 2,070/2,070 native tests with
+  two skipped and a 23.9-second maximum. The focused Python contract passes
+  10/10 tests; 29 doctests pass with 19 intentionally ignored. Rustdoc builds,
+  and its diagnostic scan reports no warning in a touched integration path.
+  The major SemVer gate passes; the minor gate rejects the change with seven
+  major-breaking lint categories, including all six removed response
+  functions and the typed ablation surface.
+- Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
+
+**Theorem:** each persistent field first evaluates every Asclepius increment
+into caller-owned scratch storage and mutates accumulated state only after the
+complete evaluation succeeds. Therefore an invalid observation leaves the
+prior state unchanged, while valid increments inherit Asclepius non-negativity
+and make cumulative response monotone.
