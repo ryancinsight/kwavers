@@ -3,111 +3,11 @@
 //! This module implements photoacoustic coupling physics, including
 //! optical absorption, thermal expansion, and pressure wave generation.
 
-use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
-use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-
 /// Canonical Grüneisen model — temperature-dependent, literature-validated.
 ///
 /// This is the single source of truth for Grüneisen parameter evaluation in kwavers
-/// (Sprint 226 SSOT consolidation). Use this type everywhere a Grüneisen value is
-/// needed; `GruneisenParameter` is deprecated and will be removed in a future sprint.
+/// (Sprint 226 SSOT consolidation). Use this type everywhere a Grüneisen value is needed.
 pub use crate::photoacoustics::GrueneisenModel;
-
-/// Grüneisen parameter for thermoelastic coupling.
-///
-/// # Deprecated
-///
-/// Use [`GrueneisenModel`] instead. `GrueneisenModel` is the canonical, SSOT type with
-/// correct temperature dependence and literature-validated constants (Sigrist 1986;
-/// Xu & Wang 2006). This struct adds a pressure-dependence term (β ≈ 10⁻⁶ Pa⁻¹)
-/// that is negligible over physiological pressures (Wang & Wu 2012, §2.3) and
-/// diverges from the canonical water reference temperature (20 °C vs 37 °C here).
-#[deprecated(
-    since = "0.4.0",
-    note = "Use `GrueneisenModel` from `physics::photoacoustics` instead"
-)]
-///
-/// ## Not yet implemented
-///
-/// - **Nonlinear Grüneisen parameter**: Γ(T,p) = Γ₀(1 + αΔT + βΔp) with full
-///   temperature and pressure dependence (Wang & Wu 2007, Biomedical Optics).
-/// - **Acoustic saturation**: Pressure limiting at high laser fluences above 100 mJ/cm².
-/// - **Broadband signals**: Frequency-dependent optical absorption for wideband transducers.
-/// - **Confinement regime analysis**: Stress vs. thermal confinement transition logic.
-/// - **Multi-wavelength spectroscopy**: Wavelength-selective imaging for chemical specificity
-///   (Oraevsky & Karabutov 2003, Biomedical Photonics).
-#[derive(Debug, Clone)]
-pub struct GruneisenParameter {
-    /// Grüneisen parameter Γ (dimensionless)
-    pub value: f64,
-    /// Temperature dependence (dΓ/dT)
-    pub temperature_coefficient: Option<f64>,
-    /// Pressure dependence (dΓ/dP)
-    pub pressure_coefficient: Option<f64>,
-}
-
-#[allow(deprecated)]
-impl GruneisenParameter {
-    /// Create a new Grüneisen parameter
-    #[must_use]
-    pub fn new(value: f64) -> Self {
-        Self {
-            value,
-            temperature_coefficient: None,
-            pressure_coefficient: None,
-        }
-    }
-
-    /// Create with temperature dependence
-    #[must_use]
-    pub fn with_temperature_dependence(mut self, coeff: f64) -> Self {
-        self.temperature_coefficient = Some(coeff);
-        self
-    }
-
-    /// Create with pressure dependence
-    #[must_use]
-    pub fn with_pressure_dependence(mut self, coeff: f64) -> Self {
-        self.pressure_coefficient = Some(coeff);
-        self
-    }
-
-    /// Evaluate the Grüneisen parameter at the given temperature and pressure.
-    ///
-    /// ## Theorem (Sigrist & Kneubühl 1978, Eq. 4; Wang & Wu 2012, §2.3)
-    ///
-    /// Near a reference state (T₀, p₀) the Grüneisen parameter varies linearly:
-    ///
-    /// ```text
-    /// Γ(T, p) = Γ₀ · [1 + α·(T − T₀) + β·(p − p₀)]
-    /// ```
-    ///
-    /// where:
-    /// - `T₀ = BODY_TEMPERATURE_C` (37 °C) — reference temperature
-    /// - `p₀ = ATMOSPHERIC_PRESSURE` (101 325 Pa) — reference pressure
-    /// - `α` = temperature coefficient \[K⁻¹\], `None` → 0 (constant Γ)
-    /// - `β` = pressure coefficient \[Pa⁻¹\], `None` → 0 (constant Γ)
-    ///
-    /// When both coefficients are `None` the function degenerates to the
-    /// constant model `Γ(T, p) = Γ₀`, which is the correct result for a
-    /// temperature- and pressure-independent medium (e.g. homogeneous phantom).
-    ///
-    /// ## References
-    /// - Sigrist, M.W. & Kneubühl, F.K. (1978). "Laser-generated stress waves in
-    ///   solids." J. Acoust. Soc. Am. 64(6), 1652–1663. DOI: 10.1121/1.382132
-    /// - Wang, L.V. & Wu, H.-I. (2012). *Biomedical Optics: Principles and Imaging*,
-    ///   §2.3. Wiley-Interscience. ISBN 978-0-471-74304-0.
-    #[must_use]
-    pub fn get_value(&self, temperature: f64, pressure: f64) -> f64 {
-        let dt = temperature - BODY_TEMPERATURE_C; // deviation from 37 °C
-        let dp = pressure - ATMOSPHERIC_PRESSURE; // deviation from 101 325 Pa
-        self.value
-            * self.pressure_coefficient.unwrap_or(0.0).mul_add(
-                dp,
-                self.temperature_coefficient.unwrap_or(0.0).mul_add(dt, 1.0),
-            )
-    }
-}
 
 /// Optical absorption properties
 #[derive(Debug, Clone)]
@@ -278,68 +178,8 @@ impl PulsedLaser {
 }
 
 #[cfg(test)]
-#[allow(deprecated)]
 mod tests {
     use super::*;
-    use kwavers_core::constants::thermodynamic::GRUNEISEN_WATER_20C;
-
-    /// Without coefficients the model reduces to the constant Γ₀ regardless of T, p.
-    /// # Panics
-    /// - Panics if an internal precondition is violated.
-    ///
-    #[test]
-    fn test_gruneisen_constant_no_coefficients() {
-        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C);
-        // Any T and p should return Γ₀ when coefficients are None
-        let v1 = gamma.get_value(BODY_TEMPERATURE_C, ATMOSPHERIC_PRESSURE);
-        let v2 = gamma.get_value(20.0, 0.5e5);
-        let v3 = gamma.get_value(80.0, 5e5);
-        assert!((v1 - GRUNEISEN_WATER_20C).abs() < 1e-15);
-        assert!((v2 - GRUNEISEN_WATER_20C).abs() < 1e-15);
-        assert!((v3 - GRUNEISEN_WATER_20C).abs() < 1e-15);
-    }
-
-    /// Γ(T_ref, p_ref) == Γ₀ even when coefficients are set.
-    /// # Panics
-    /// - Panics if an internal precondition is violated.
-    ///
-    #[test]
-    fn test_gruneisen_reference_conditions_unchanged() {
-        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C)
-            .with_temperature_dependence(0.005)
-            .with_pressure_dependence(1e-6);
-        let v = gamma.get_value(BODY_TEMPERATURE_C, ATMOSPHERIC_PRESSURE);
-        assert!(
-            (v - GRUNEISEN_WATER_20C).abs() < 1e-15,
-            "At reference conditions Γ must equal Γ₀, got {v}"
-        );
-    }
-
-    /// α > 0 → Γ increases with temperature.
-    /// # Panics
-    /// - Panics if an internal precondition is violated.
-    ///
-    #[test]
-    fn test_gruneisen_temperature_linear() {
-        // Γ₀ = GRUNEISEN_WATER_20C (0.12), α = 0.01 K⁻¹, T = T_ref + 10 K → Γ = Γ₀ * 1.1 = 0.132
-        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C).with_temperature_dependence(0.01);
-        let v = gamma.get_value(BODY_TEMPERATURE_C + 10.0, ATMOSPHERIC_PRESSURE);
-        let expected = GRUNEISEN_WATER_20C * 1.1;
-        assert!((v - expected).abs() < 1e-12, "Expected {expected}, got {v}");
-    }
-
-    /// β > 0 → Γ increases with pressure.
-    /// # Panics
-    /// - Panics if an internal precondition is violated.
-    ///
-    #[test]
-    fn test_gruneisen_pressure_linear() {
-        // Γ₀ = GRUNEISEN_WATER_20C (0.12), β = 1e-6 Pa⁻¹, p = p_ref + 1e5 Pa → Γ = Γ₀ * 1.1 = 0.132
-        let gamma = GruneisenParameter::new(GRUNEISEN_WATER_20C).with_pressure_dependence(1e-6);
-        let v = gamma.get_value(BODY_TEMPERATURE_C, ATMOSPHERIC_PRESSURE + 1e5);
-        let expected = GRUNEISEN_WATER_20C * 1.1;
-        assert!((v - expected).abs() < 1e-12, "Expected {expected}, got {v}");
-    }
 
     #[test]
     fn test_optical_absorption() {
