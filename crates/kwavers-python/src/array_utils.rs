@@ -5,13 +5,15 @@
 //! `ndarray::Array*` type in source.
 
 use numpy::{
-    Element, PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1,
-    PyReadonlyArray2, PyReadonlyArray3, PyUntypedArrayMethods,
+    Element, PyArray1, PyArray2, PyArray3, PyArrayMethods, PyReadonlyArray1, PyReadonlyArray2,
+    PyReadonlyArray3, PyUntypedArrayMethods,
 };
 use pyo3::{exceptions::PyRuntimeError, Py, PyResult, Python};
 
 fn shape_to_array<const N: usize>(shape: &[usize]) -> [usize; N] {
-    shape.try_into().expect("shape length matches dimensionality")
+    shape
+        .try_into()
+        .expect("shape length matches dimensionality")
 }
 
 /// Copy a 1-D readonly NumPy array into a Rust `Vec`.
@@ -25,9 +27,9 @@ where
     if let Ok(slice) = array.as_slice() {
         return Ok(slice.to_vec());
     }
-    let copy = array
-        .cast_array::<T>(false)
-        .map_err(|e| PyRuntimeError::new_err(format!("failed to make 1-D array contiguous: {e}")))?;
+    let copy = array.cast_array::<T>(false).map_err(|e| {
+        PyRuntimeError::new_err(format!("failed to make 1-D array contiguous: {e}"))
+    })?;
     copy.to_vec()
         .map_err(|e| PyRuntimeError::new_err(format!("failed to read 1-D contiguous copy: {e}")))
 }
@@ -43,9 +45,9 @@ where
     if let Ok(slice) = array.as_slice() {
         return Ok((slice.to_vec(), shape));
     }
-    let copy = array
-        .cast_array::<T>(false)
-        .map_err(|e| PyRuntimeError::new_err(format!("failed to make 2-D array contiguous: {e}")))?;
+    let copy = array.cast_array::<T>(false).map_err(|e| {
+        PyRuntimeError::new_err(format!("failed to make 2-D array contiguous: {e}"))
+    })?;
     let data = copy
         .to_vec()
         .map_err(|e| PyRuntimeError::new_err(format!("failed to read 2-D contiguous copy: {e}")))?;
@@ -63,9 +65,9 @@ where
     if let Ok(slice) = array.as_slice() {
         return Ok((slice.to_vec(), shape));
     }
-    let copy = array
-        .cast_array::<T>(false)
-        .map_err(|e| PyRuntimeError::new_err(format!("failed to make 3-D array contiguous: {e}")))?;
+    let copy = array.cast_array::<T>(false).map_err(|e| {
+        PyRuntimeError::new_err(format!("failed to make 3-D array contiguous: {e}"))
+    })?;
     let data = copy
         .to_vec()
         .map_err(|e| PyRuntimeError::new_err(format!("failed to read 3-D contiguous copy: {e}")))?;
@@ -79,8 +81,7 @@ where
 {
     let data = copy_pyarray1_to_vec(array)?;
     let shape = array.shape();
-    Ok(leto::Array1::from_shape_vec(shape[0], data)
-        .expect("data length matches 1-D shape"))
+    Ok(leto::Array1::from_shape_vec(shape[0], data).expect("data length matches 1-D shape"))
 }
 
 /// Convert a 2-D readonly NumPy array into a leto 2-D array.
@@ -90,8 +91,7 @@ where
     T: Element + Copy + Clone,
 {
     let (data, shape) = copy_pyarray2_to_vec(array)?;
-    Ok(leto::Array2::from_shape_vec(shape, data)
-        .expect("data length matches 2-D shape"))
+    Ok(leto::Array2::from_shape_vec(shape, data).expect("data length matches 2-D shape"))
 }
 
 /// Convert a 3-D readonly NumPy array into a leto 3-D array.
@@ -100,8 +100,7 @@ where
     T: Element + Copy + Clone,
 {
     let (data, shape) = copy_pyarray3_to_vec(array)?;
-    Ok(leto::Array3::from_shape_vec(shape, data)
-        .expect("data length matches 3-D shape"))
+    Ok(leto::Array3::from_shape_vec(shape, data).expect("data length matches 3-D shape"))
 }
 
 /// Convert a leto 1-D array into a Python 1-D NumPy array.

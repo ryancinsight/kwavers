@@ -5,7 +5,10 @@ use numpy::PyArray3;
 use pyo3::exceptions::PyRuntimeError;
 use pyo3::prelude::*;
 
-fn py_array3_from_leto_mask(py: Python<'_>, mask: LetoArray3<bool>) -> PyResult<Py<PyArray3<bool>>> {
+fn py_array3_from_leto_mask(
+    py: Python<'_>,
+    mask: LetoArray3<bool>,
+) -> PyResult<Py<PyArray3<bool>>> {
     leto3_to_pyarray3(py, mask)
 }
 
