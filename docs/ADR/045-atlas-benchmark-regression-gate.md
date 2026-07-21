@@ -24,12 +24,12 @@ dedicated workflow. It checks out the PR base and head, overlays the candidate
 plotting-enabled `kwavers` Criterion suite for both revisions.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. One runner executes the schedule
-`A B B A B A A B`, where `A` is the base revision and `B` is the candidate.
-The two phase-reversed replications balance both revisions across positions
-whose sums and squared sums are equal. A regression is reported only when all
-four confidence intervals agree in direction and cover the same benchmark
-universe.
+pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. One runner executes
+the schedule `A B B A B A A B`, where `A` is the base revision and `B` is the
+candidate. The two phase-reversed replications balance both revisions across
+positions whose sums and squared sums are equal. A regression is reported only
+when all four confidence intervals agree in direction and cover the same
+benchmark universe.
 
 The Atlas tool derives per-comparison confidence as `1 - 0.05 / m` for `m`
 benchmarks. Missing results, benchmark-universe mismatches, malformed
