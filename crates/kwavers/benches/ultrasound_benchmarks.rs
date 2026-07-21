@@ -27,7 +27,7 @@ use kwavers_imaging::ultrasound::elastography::InversionMethod;
 use kwavers_math::fft::Complex64;
 use kwavers_medium::homogeneous::HomogeneousMedium;
 use kwavers_simulation::imaging::elastography::ShearWaveElastography;
-use kwavers_solver::forward::elastic::ElasticWaveConfig;
+use kwavers_solver::forward::elastic::{ElasticWaveConfig, ElasticWaveField};
 // Simple finite difference derivative for benchmarking
 fn compute_derivative(field: &Array1<f64>, dx: f64, derivative: &mut Array1<f64>) {
     for i in 1..field.len() - 1 {
@@ -93,26 +93,66 @@ fn bench_1d_wave_equation(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark SWE reconstruction performance
+/// Build a nonzero plane-wave snapshot for reconstruction benchmarks.
+fn manufactured_shear_wave(grid_size: usize, spacing: f64) -> ElasticWaveField {
+    let mut field = ElasticWaveField::new(grid_size, grid_size, grid_size);
+    let cells_per_axis =
+        u32::try_from(grid_size - 1).expect("benchmark grids fit within u32 dimensions");
+    let domain_length = f64::from(cells_per_axis) * spacing;
+    let wave_number = 2.0 * PI / domain_length;
+    const DISPLACEMENT_AMPLITUDE: f64 = 1e-6;
+
+    for i in 0..grid_size {
+        for j in 0..grid_size {
+            for k in 0..grid_size {
+                let diagonal_index =
+                    u32::try_from(i + j + k).expect("benchmark grid index sum fits within u32");
+                let distance = f64::from(diagonal_index) * spacing;
+                field.uz[[i, j, k]] = DISPLACEMENT_AMPLITUDE * (wave_number * distance).sin();
+            }
+        }
+    }
+
+    field
+}
+
+/// Benchmark SWE reconstruction performance.
+///
+/// Forward-wave generation has its canonical instrument in
+/// `nl_swe_performance`; this instrument isolates inversion scaling.
 fn bench_swe_reconstruction(c: &mut Criterion) {
     let mut group = c.benchmark_group("swe_reconstruction");
 
     for &grid_size in &[32, 64, 128] {
-        let grid = Grid::new(grid_size, grid_size, grid_size, 0.001, 0.001, 0.001).unwrap();
+        const SPACING: f64 = 0.001;
+        let grid = Grid::new(grid_size, grid_size, grid_size, SPACING, SPACING, SPACING).unwrap();
         let medium = HomogeneousMedium::new(1000.0, 1500.0, 0.5, 1.0, &grid);
+        let swe = ShearWaveElastography::new(
+            &grid,
+            &medium,
+            InversionMethod::TimeOfFlight,
+            ElasticWaveConfig::default(),
+        )
+        .unwrap();
+        let displacement = [manufactured_shear_wave(grid_size, SPACING)];
+
+        let reference = swe
+            .reconstruct_elasticity(&displacement)
+            .expect("manufactured shear wave must reconstruct");
+        assert_eq!(reference.shear_wave_speed.shape(), [grid_size; 3]);
+        assert!(
+            reference
+                .shear_wave_speed
+                .iter()
+                .all(|speed| speed.is_finite() && *speed > 0.0),
+            "reconstructed shear-wave speed must be finite and positive"
+        );
 
         group.bench_function(format!("swe_{}", grid_size), |b| {
             b.iter(|| {
-                let swe = ShearWaveElastography::new(
-                    &grid,
-                    &medium,
-                    InversionMethod::TimeOfFlight,
-                    ElasticWaveConfig::default(),
-                )
-                .unwrap();
-                let push_location = [grid.dx * 10.0, grid.dy * 10.0, grid.dz * 10.0];
-                let displacement = swe.generate_shear_wave(push_location).unwrap();
-                let elasticity = swe.reconstruct_elasticity(&displacement).unwrap();
+                let elasticity = swe
+                    .reconstruct_elasticity(black_box(&displacement))
+                    .expect("manufactured shear wave must reconstruct");
 
                 black_box(elasticity);
             })
@@ -126,9 +166,9 @@ fn bench_swe_reconstruction(c: &mut Criterion) {
 fn bench_memory_scaling(c: &mut Criterion) {
     let mut group = c.benchmark_group("memory_scaling");
 
-    group.bench_function("array_allocation", |b| {
+    group.bench_function("field_allocation_and_sum", |b| {
         b.iter(|| {
-            // Simulate typical ultrasound grid allocations
+            // Measure representative field allocations across grid scales.
             let grid_sizes = [64, 128, 256];
 
             for &size in &grid_sizes {
@@ -136,7 +176,7 @@ fn bench_memory_scaling(c: &mut Criterion) {
                 let velocity_field: Array3<f64> = Array3::zeros((size, size, size));
                 let displacement_field: Array3<f64> = Array3::zeros((size, size, size));
 
-                // Simulate computation
+                // Measure a complete element-wise three-field sum.
                 let mut result = Array3::<f64>::zeros((size, size, size));
                 for i in 0..size {
                     for j in 0..size {
@@ -187,69 +227,6 @@ fn bench_derivative_computation(c: &mut Criterion) {
             })
         });
     }
-
-    group.finish();
-}
-
-/// Benchmark clinical workflow performance
-fn bench_clinical_workflow(c: &mut Criterion) {
-    let mut group = c.benchmark_group("clinical_workflow");
-
-    group.bench_function("liver_fibrosis_assessment", |b| {
-        b.iter(|| {
-            // Simulate complete clinical workflow
-            let grid = Grid::new(100, 100, 80, 0.001, 0.001, 0.001).unwrap();
-            let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid); // Liver properties
-
-            // SWE workflow
-            let swe = ShearWaveElastography::new(
-                &grid,
-                &medium,
-                InversionMethod::TimeOfFlight,
-                ElasticWaveConfig::default(),
-            )
-            .unwrap();
-            let push_location = [0.025, 0.025, 0.015]; // 25mm lateral, 15mm depth
-            let displacement = swe.generate_shear_wave(push_location).unwrap();
-
-            // Reconstruct elasticity
-            let elasticity_map = swe.reconstruct_elasticity(&displacement).unwrap();
-
-            // TODO: SIMPLIFIED BENCHMARK - basic statistics only, not clinical workflow
-            // Real clinical analysis requires:
-            // - ROI (Region of Interest) selection and segmentation
-            // - Lesion detection and boundary delineation
-            // - Multi-parameter analysis (stiffness, strain ratio, dispersion)
-            // - Clinical reporting with diagnostic thresholds
-            // - Quality metrics (SNR, CNR, confidence intervals)
-            // Current: mean/std only for benchmark timing
-            let sample_count = elasticity_map.youngs_modulus.iter().count();
-            let mean_stiffness =
-                elasticity_map.youngs_modulus.iter().copied().sum::<f64>() / sample_count as f64;
-            let std_stiffness = {
-                let variance = elasticity_map
-                    .youngs_modulus
-                    .iter()
-                    .map(|&x| (x - mean_stiffness).powi(2))
-                    .sum::<f64>()
-                    / sample_count as f64;
-                variance.sqrt()
-            };
-
-            // Fibrosis staging
-            let fibrosis_stage = if mean_stiffness < 5_000.0 {
-                "F0-F1"
-            } else if mean_stiffness < 8_000.0 {
-                "F2"
-            } else if mean_stiffness < 12_000.0 {
-                "F3"
-            } else {
-                "F4"
-            };
-
-            black_box((mean_stiffness, std_stiffness, fibrosis_stage));
-        })
-    });
 
     group.finish();
 }
@@ -363,7 +340,6 @@ criterion_group!(
     bench_swe_reconstruction,
     bench_memory_scaling,
     bench_derivative_computation,
-    bench_clinical_workflow,
     bench_physics_validation,
     bench_mvdr_weights
 );

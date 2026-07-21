@@ -19,7 +19,7 @@ fn bench_pipeline_process(c: &mut Criterion) {
     let mut pipeline = RealtimeImagingPipeline::new(config).unwrap();
     pipeline.start().unwrap();
 
-    // Create a dummy RF data frame
+    // Use a deterministic synthetic RF frame.
     // Dimensions: (Tx, Rx, Samples, Frames)
     // Smallish dimensions to keep benchmark fast but realistic enough to trigger the issue
     // 4 Tx, 64 Rx, 1024 Samples, 1 Frame
@@ -45,6 +45,3 @@ fn bench_pipeline_process(c: &mut Criterion) {
 criterion_group!(benches, bench_pipeline_process);
 #[cfg(feature = "gpu")]
 criterion_main!(benches);
-
-#[cfg(not(feature = "gpu"))]
-fn main() {}

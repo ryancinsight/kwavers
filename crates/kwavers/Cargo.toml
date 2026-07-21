@@ -8,6 +8,7 @@ license = "MIT"
 repository = "https://github.com/ryancinsight/kwavers"
 keywords = ["ultrasound", "simulation", "physics", "cavitation", "sonoluminescence", "medical-imaging"]
 categories = ["science", "simulation", "medical"]
+autobenches = false
 
 # This is a workspace member - see root Cargo.toml for workspace configuration
 
@@ -279,11 +280,18 @@ required-features = []
 
 [lib]
 test = true
+bench = false
+
+[[bin]]
+name = "kwavers"
+path = "src/main.rs"
+test = true
+bench = false
 
 # BENCHMARK CONFIGURATION (Sprint 107 - P0 Priority)
 # ===================================================
 # Statistical performance benchmarks using criterion
-# Execute: cargo bench (full suite) or cargo bench --bench <name> (individual)
+# Execute: cargo bench --benches (full suite) or cargo bench --bench <name>
 # Purpose: Establish baseline metrics for optimization tracking
 # Target: Document performance characteristics per ADR-010
 
@@ -333,6 +341,7 @@ harness = false
 [[bench]]
 name = "hilbert_benchmark"
 harness = false
+required-features = ["gpu"]
 
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
@@ -365,6 +374,26 @@ harness = false
 
 [[bench]]
 name = "gpu_beamforming_benchmark"
+harness = false
+
+[[bench]]
+name = "fdtd_propagation_benchmark"
+harness = false
+
+[[bench]]
+name = "narrowband_beamforming"
+harness = false
+
+[[bench]]
+name = "nl_swe_performance"
+harness = false
+
+[[bench]]
+name = "simd_field_ops"
+harness = false
+
+[[bench]]
+name = "ultrasound_benchmarks"
 harness = false
 
 [[example]]

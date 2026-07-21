@@ -293,7 +293,7 @@ fn bench_training_epoch(c: &mut Criterion) {
                 &mut scheduler,
                 &loop_config,
             )
-            .ok();
+            .expect("benchmark PINN training must complete");
             black_box(metrics)
         });
     });
@@ -411,8 +411,3 @@ criterion_group!(
 
 #[cfg(feature = "pinn")]
 criterion_main!(benches);
-
-#[cfg(not(feature = "pinn"))]
-fn main() {
-    println!("Benchmarks require the 'pinn' feature. Run with: cargo bench --features pinn");
-}
