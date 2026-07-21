@@ -17,7 +17,7 @@ fn bench_simd_field_operations(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("add", size),
             &(&lhs, &rhs),
-            |b, (lhs, rhs)| {
+            |b, &(lhs, rhs)| {
                 b.iter(|| black_box(SimdOps::add_fields(lhs, rhs)));
             },
         );
@@ -25,7 +25,7 @@ fn bench_simd_field_operations(c: &mut Criterion) {
         group.bench_with_input(
             BenchmarkId::new("multiply", size),
             &(&lhs, &rhs),
-            |b, (lhs, rhs)| {
+            |b, &(lhs, rhs)| {
                 b.iter(|| black_box(SimdOps::multiply_fields(lhs, rhs)));
             },
         );
