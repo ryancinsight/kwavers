@@ -22,7 +22,8 @@
 
 - [x] Remove the same-run save/check classifier and its Python implementation.
 - [x] Hold the candidate benchmark instrument constant across base and head.
-- [x] Run the complete suite in phase-reversed ABBA/BAAB order on one runner.
+- [x] Run two base-first and two candidate-first pairs on isolated runners.
+- [x] Materialize both revisions at one filesystem path inside every pair.
 - [x] Derive family-wise confidence and classification from the Atlas SSOT.
 - [x] Bound the instrumented job from observed full-suite runtime without
       reducing benchmark targets, samples, or assertions.
@@ -32,7 +33,7 @@
       target selection.
 - [x] Remove feature-disabled no-op entry points and reject empty benchmark
       mains before measurement.
-- [ ] Verify the exact PR head through the hosted benchmark workflow.
+- [ ] Verify the same-path PR head through the hosted benchmark workflow.
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]
 

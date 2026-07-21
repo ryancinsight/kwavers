@@ -21,7 +21,7 @@ jobs:
     name: benchmark pair (${{ matrix.pair_id }})
     runs-on: ubuntu-24.04
     # Hosted run 29814752294 measured one complete base/head pair in about
-    # 249 minutes. Each matrix member owns one statistically independent pair,
+    # 249 minutes. Each matrix member owns one isolated, co-located pair,
     # preserving the full instrument below the unchanged 315-minute bound.
     timeout-minutes: 315
     strategy:
@@ -69,16 +69,16 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: ryancinsight/atlas
-          ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+          ref: 614914cf469f69ebd193e17c8e2c0db7dcb4a23f
           path: atlas-tool
           persist-credentials: false
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@614914cf469f69ebd193e17c8e2c0db7dcb4a23f
         with:
           manifest: kwavers-candidate/Cargo.toml
           destination: .
-          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+          atlas_ref: 614914cf469f69ebd193e17c8e2c0db7dcb4a23f
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -167,14 +167,23 @@ jobs:
             local revision="$1"
             shift
 
+            if [[ -e kwavers-measurement ]]; then
+              echo "::error::measurement path is already occupied"
+              return 1
+            fi
+
+            mv "$revision" kwavers-measurement
+            local status=0
             cargo bench \
-              --manifest-path "$revision/Cargo.toml" \
+              --manifest-path kwavers-measurement/Cargo.toml \
               --locked \
               --package kwavers \
               --features plotting \
               --benches \
               -- \
-              "$@"
+              "$@" || status=$?
+            mv kwavers-measurement "$revision"
+            return "$status"
           }
 
           rm -rf "$CARGO_TARGET_DIR/criterion"
@@ -219,7 +228,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: ryancinsight/atlas
-          ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+          ref: 614914cf469f69ebd193e17c8e2c0db7dcb4a23f
           path: atlas-tool
           persist-credentials: false
 

@@ -57,9 +57,9 @@
 - Replace the tautological single-run benchmark save/check job with the
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications
-  while holding the candidate harness constant. Four isolated pair jobs retain
-  every target and Criterion sample, then one aggregate job requires all four
-  confidence intervals to agree.
+  while holding the candidate harness and source path constant. Four isolated
+  pair jobs retain every target and Criterion sample, then one aggregate job
+  requires all four confidence intervals to agree.
 - Disable automatic libtest benchmark discovery and register all 22 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.

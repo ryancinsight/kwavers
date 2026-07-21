@@ -2,6 +2,7 @@
 
 - Status: accepted
 - Date: 2026-07-20
+- Amended: 2026-07-21
 - Change class: patch, architecture
 
 ## Context
@@ -24,12 +25,22 @@ registered with Criterion's `harness = false`. Forwarding Criterion's
 unrecognized-option error. Prior full-suite runs had silently executed those
 eight auto-discovered targets as zero-test binaries.
 
+Exact-head run `29841101698` completed all four isolated pair jobs and the
+aggregate classifier reported three replicated apparent regressions. The only
+production diff was a line wrap in an unrelated Kalman implementation, but
+base and candidate were compiled from distinct, revision-correlated checkout
+paths on every runner. Reversing execution order does not remove that path
+identity confound.
+
 ## Decision
 
 PRs that change Rust production, dependency, or benchmark inputs run a
 dedicated workflow. It checks out the PR base and head, overlays the candidate
 `crates/kwavers/benches` tree onto the base checkout, and runs the complete
-plotting-enabled `kwavers` Criterion suite for both revisions.
+plotting-enabled `kwavers` Criterion suite for both revisions. Before each
+measurement it moves the selected clean checkout into one
+`kwavers-measurement` path, runs the suite, and restores the checkout. Both
+revisions therefore compile from the same canonical path inside every pair.
 
 The package disables automatic benchmark discovery and explicitly registers
 all 22 retained benchmark files as Criterion targets. The cleanup deletes
@@ -50,11 +61,11 @@ Any unregistered, orphaned, default-harness, or empty-entry-point target fails
 before timing.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. Four isolated runners each
+pinned at `614914cf469f69ebd193e17c8e2c0db7dcb4a23f`. Four isolated runners each
 execute one complete base/head pair. Two use order `A B` and two use `B A`,
 where `A` is the base revision and `B` is the candidate. Each comparison
 therefore remains within one machine, while the phase-reversed matrix balances
-revision order and samples independent hosted-runner variation. A regression
+revision order and samples separate hosted-runner variation. A regression
 is reported only when all four confidence intervals agree in direction and
 cover the same benchmark universe.
 
@@ -82,8 +93,12 @@ It does not alter native-test budgets.
 - Run all four pairs serially on one runner: rejected after exact hosted run
   `29814752294` demonstrated an approximately 18-hour schedule against the
   finite 315-minute job bound. Each base/head comparison remains co-located;
-  independent pair runners add an observed replication dimension without
+  isolated pair runners add an observed replication dimension without
   mixing machines inside a confidence interval.
+- Compile the two revisions from distinct checkout paths: rejected after run
+  `29841101698` reported three replicated apparent regressions without a
+  semantic production delta. Path identity must not remain correlated with
+  revision identity.
 - Reduce benchmark targets or samples to retain the old timeout: rejected
   because that changes the measurement instrument.
 
@@ -92,4 +107,6 @@ It does not alter native-test budgets.
 Benchmark-relevant PRs consume four long, bounded pair jobs followed by one
 short classification job. Documentation-only PRs do not run the instrument.
 The Python gate and its duplicate threshold policy are deleted; Atlas remains
-the single source of truth for statistical classification.
+the single source of truth for statistical classification. Report artifacts
+do not encode source-path provenance, so workflow review establishes the
+same-path precondition that the classifier cannot verify.

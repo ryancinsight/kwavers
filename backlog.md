@@ -37,24 +37,28 @@
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
 - Acceptance: benchmark-relevant PRs compare their exact base and head with
-  the complete candidate Criterion instrument held constant; four isolated
-  pair jobs execute phase-reversed AB/BA replications; Atlas derives
-  family-wise confidence and fails closed on missing, mismatched, or regressed
-  results.
+  the complete candidate Criterion instrument held constant at one filesystem
+  path; four isolated pair jobs execute phase-reversed AB/BA replications;
+  Atlas derives family-wise confidence and fails closed on missing, mismatched,
+  or regressed results.
 - Decision: [`ADR-045`](docs/ADR/045-atlas-benchmark-regression-gate.md).
 - Evidence: the single-run same-baseline Python classifier is deleted. The
   dedicated workflow retains the full plotting-enabled `kwavers` benchmark
-  suite, pins Atlas classifier and provider graph `71cdc54`, and derives its
+  suite, pins Atlas classifier and provider graph `614914cf`, and derives its
   instrument budget from the observed hosted full-suite runtime. Run
   `29797805169` exposed eight auto-discovered libtest targets before
   measurement; automatic discovery is now disabled, all 22 retained Criterion
   targets are explicit, package libtest harnesses are excluded, placeholder
   instruments and unreachable no-op entries are removed, and both revisions
   must match their benchmark source registry. Exact-head run `29814752294`
-  proved that serializing all four independent pairs exceeds the finite job
+  proved that serializing all four isolated pairs exceeds the finite job
   bound; the unchanged pair measurements now execute as four matrix jobs and
-  feed one aggregate classifier.
-  Exact-head hosted execution remains the merge gate.
+  feed one aggregate classifier. Exact-head run `29841101698` completed all
+  four pairs but found three replicated apparent regressions despite no
+  semantic production delta; distinct checkout paths remained correlated with
+  revision. The workflow now moves each revision through one
+  `kwavers-measurement` path. A new exact-head hosted execution remains the
+  merge gate.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
