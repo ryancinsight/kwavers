@@ -1,8 +1,8 @@
 //! Fast Nearfield Method Performance Benchmark
 //!
 //! This benchmark compares the performance of the Fast Nearfield Method (FNM)
-//! against a simplified Rayleigh-Sommerfeld implementation to demonstrate
-//! the O(n) vs O(n²) complexity advantage.
+//! against a direct element-to-element Green-function sum to expose their
+//! different scaling behavior.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use eunomia::Complex64;
@@ -11,23 +11,18 @@ use kwavers_transducer::RectangularTransducer;
 use leto::Array2;
 use std::f64::consts::PI;
 
-/// Simplified Rayleigh-Sommerfeld implementation for comparison
+/// Direct element-to-element Green-function sum for scaling comparison.
 ///
-/// # TODO: SIMPLIFIED BENCHMARK - NOT PRODUCTION CODE
-/// This is a reference implementation for O(n²) complexity comparison only.
-/// Real Rayleigh-Sommerfeld integral requires:
-/// - Full spatial integration over transducer surface
-/// - Green's function: G(r) = (1/4π) * exp(ikr)/r with obliquity factor
-/// - Proper handling of near-field, far-field, and transition regions
-/// - Element subdivision for accurate numerical integration
-///   This simplified version is for benchmark timing purposes to demonstrate FNM speedup.
-struct RayleighSommerfeldSolver {
+/// This midpoint element sum is an O(n²) workload, not a continuum
+/// Rayleigh-Sommerfeld accuracy oracle. The benchmark makes no field-equivalence
+/// or speedup claim between the two discretizations.
+struct DirectElementSum {
     transducer: RectangularTransducer,
     c0: f64,
     rho0: f64,
 }
 
-impl RayleighSommerfeldSolver {
+impl DirectElementSum {
     fn new(transducer: RectangularTransducer, c0: f64, rho0: f64) -> Self {
         Self {
             transducer,
@@ -36,8 +31,7 @@ impl RayleighSommerfeldSolver {
         }
     }
 
-    /// Compute pressure field using direct Rayleigh-Sommerfeld integration
-    /// This is O(n²) complexity where n is the number of transducer elements
+    /// Compute the O(n²) pressure sum between element centers.
     fn compute_field(&self, velocity: &Array2<Complex64>, z: f64) -> Array2<Complex64> {
         let [n_elem_x, n_elem_y] = velocity.shape();
         let mut pressure = Array2::<Complex64>::zeros((n_elem_x, n_elem_y));
@@ -82,7 +76,7 @@ impl RayleighSommerfeldSolver {
 }
 
 fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
-    let mut group = c.benchmark_group("FNM vs Rayleigh-Sommerfeld");
+    let mut group = c.benchmark_group("FNM and direct element sum");
 
     // Test with different transducer sizes
     let transducer_sizes = vec![(8, 8), (12, 12), (16, 16)];
@@ -106,8 +100,7 @@ fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
         fnm_solver.set_transducer(transducer.clone());
         fnm_solver.set_medium(1500.0, 1000.0);
 
-        // Setup Rayleigh-Sommerfeld solver
-        let rs_solver = RayleighSommerfeldSolver::new(transducer, 1500.0, 1000.0);
+        let direct_solver = DirectElementSum::new(transducer, 1500.0, 1000.0);
 
         // Create test velocity distribution
         let velocity = Array2::<Complex64>::from_elem((nx, ny), Complex64::new(1.0, 0.0));
@@ -122,9 +115,9 @@ fn benchmark_fnm_vs_rayleigh_sommerfeld(c: &mut Criterion) {
             });
         });
 
-        group.bench_function(format!("Rayleigh-Sommerfeld_{}x{}", nx, ny), |b| {
+        group.bench_function(format!("Direct_element_sum_{}x{}", nx, ny), |b| {
             b.iter(|| {
-                black_box(rs_solver.compute_field(&velocity, z));
+                black_box(direct_solver.compute_field(&velocity, z));
             });
         });
     }

@@ -27,8 +27,11 @@
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications
   on one runner while holding the candidate harness constant.
-- Disable automatic libtest benchmark discovery and register all 25 Criterion
+- Disable automatic libtest benchmark discovery and register all 23 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
+  Exclude the package library and binary from benchmark-harness selection.
+  Remove sleep-based PINN timing, a scalar-vs-scalar SIMD placeholder, and a
+  redundant solver comparator with dimensionally invalid output labels.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.
