@@ -33,7 +33,8 @@
   Remove sleep-based PINN timing, a scalar-vs-scalar SIMD placeholder, and a
   redundant solver comparator with dimensionally invalid output labels. Gate
   the GPU-only Hilbert target on its actual feature and retain validation
-  results through the timed region.
+  results through the timed region. Remove unreachable feature-disabled
+  benchmark entry points.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.

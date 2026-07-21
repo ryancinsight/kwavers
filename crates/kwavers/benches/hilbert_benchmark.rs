@@ -45,6 +45,3 @@ fn bench_pipeline_process(c: &mut Criterion) {
 criterion_group!(benches, bench_pipeline_process);
 #[cfg(feature = "gpu")]
 criterion_main!(benches);
-
-#[cfg(not(feature = "gpu"))]
-fn main() {}
