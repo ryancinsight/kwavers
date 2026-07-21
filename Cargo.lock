@@ -232,6 +232,7 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
+source = "git+https://github.com/ryancinsight/asclepius?rev=794f8c328d72fd020b63e53ae46f6f8fd781d8df#794f8c328d72fd020b63e53ae46f6f8fd781d8df"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -3767,7 +3768,6 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 name = "leto"
 version = "0.39.0"
 dependencies = [
- "aequitas",
  "bytemuck",
  "eunomia",
  "mnemosyne",
@@ -6901,7 +6901,7 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 [[package]]
 name = "tyche-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/tyche?rev=00ce9511878236abadd94c86bdbc669b47026aed#00ce9511878236abadd94c86bdbc669b47026aed"
+source = "git+https://github.com/ryancinsight/tyche?rev=2b8fb14267a710e1438102666211494a3d6f179e#2b8fb14267a710e1438102666211494a3d6f179e"
 dependencies = [
  "eunomia",
 ]
