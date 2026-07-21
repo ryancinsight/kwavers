@@ -92,7 +92,8 @@ impl CalibrationManager {
                 for k in 0..ca {
                     let aik = *a.get([i, k]).expect("indices within matrix bounds");
                     for j in 0..cb {
-                        out[i * cb + j] += aik * *b.get([k, j]).expect("indices within matrix bounds");
+                        out[i * cb + j] +=
+                            aik * *b.get([k, j]).expect("indices within matrix bounds");
                     }
                 }
             }

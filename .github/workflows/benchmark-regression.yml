@@ -1,0 +1,255 @@
+name: benchmark regression
+
+on:
+  pull_request:
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - .cargo/**
+      - crates/**
+      - .github/workflows/benchmark-regression.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-pair:
+    name: benchmark pair (${{ matrix.pair_id }})
+    runs-on: ubuntu-24.04
+    # Hosted run 29814752294 measured one complete base/head pair in about
+    # 249 minutes. Each matrix member owns one statistically independent pair,
+    # preserving the full instrument below the unchanged 315-minute bound.
+    timeout-minutes: 315
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - pair_id: first-baseline-first
+            report_root: reports/first/baseline-first
+            first_revision: kwavers-baseline
+            second_revision: kwavers-candidate
+          - pair_id: first-candidate-first
+            report_root: reports/first/candidate-first
+            first_revision: kwavers-candidate
+            second_revision: kwavers-baseline
+          - pair_id: second-candidate-first
+            report_root: reports/second/candidate-first
+            first_revision: kwavers-candidate
+            second_revision: kwavers-baseline
+          - pair_id: second-baseline-first
+            report_root: reports/second/baseline-first
+            first_revision: kwavers-baseline
+            second_revision: kwavers-candidate
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+      FIRST_REVISION: ${{ matrix.first_revision }}
+      PAIR_ID: ${{ matrix.pair_id }}
+      REPORT_ROOT: ${{ matrix.report_root }}
+      SECOND_REVISION: ${{ matrix.second_revision }}
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: kwavers-baseline
+          persist-credentials: false
+
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: kwavers-candidate
+          persist-credentials: false
+
+      - name: Checkout Atlas benchmark gate
+        uses: actions/checkout@v7
+        with:
+          repository: ryancinsight/atlas
+          ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+          path: atlas-tool
+          persist-credentials: false
+
+      - name: Checkout Atlas path dependencies
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        with:
+          manifest: kwavers-candidate/Cargo.toml
+          destination: .
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.97.1
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+
+      - name: Normalize historical baseline lock
+        run: >-
+          cargo metadata
+          --manifest-path kwavers-baseline/Cargo.toml
+          --format-version 1
+          --all-features
+          > /dev/null
+
+      - name: Hold the candidate benchmark instrument constant
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf kwavers-baseline/crates/kwavers/benches
+          git -C kwavers-candidate archive HEAD crates/kwavers/benches \
+            | tar -x -C kwavers-baseline
+          diff --recursive --unified \
+            kwavers-baseline/crates/kwavers/benches \
+            kwavers-candidate/crates/kwavers/benches
+
+      - name: Validate complete benchmark registries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          validate_registry() {
+            local revision="$1"
+
+            diff --unified \
+              <(
+                find "$revision/crates/kwavers/benches" \
+                  -maxdepth 1 \
+                  -type f \
+                  -name '*.rs' \
+                  -printf '%f\n' \
+                  | sed 's/\.rs$//' \
+                  | LC_ALL=C sort
+              ) \
+              <(
+                cargo metadata \
+                  --manifest-path "$revision/Cargo.toml" \
+                  --locked \
+                  --no-deps \
+                  --format-version 1 \
+                  | jq --raw-output \
+                    '.packages[]
+                    | select(.name == "kwavers")
+                    | .targets[]
+                    | select(.kind | index("bench"))
+                    | .name' \
+                  | LC_ALL=C sort
+              )
+          }
+
+          validate_registry kwavers-baseline
+          validate_registry kwavers-candidate
+
+          if grep --recursive --line-number --extended-regexp \
+            'fn[[:space:]]+main[[:space:]]*\(\)[[:space:]]*\{[[:space:]]*\}' \
+            kwavers-candidate/crates/kwavers/benches; then
+            echo "::error::empty benchmark entry point"
+            exit 1
+          fi
+
+      - name: Measure phase-reversed replications
+        shell: bash
+        run: |
+          set -euo pipefail
+          gate_manifest="atlas-tool/tools/criterion-regression/Cargo.toml"
+
+          run_benches() {
+            local revision="$1"
+            shift
+
+            cargo bench \
+              --manifest-path "$revision/Cargo.toml" \
+              --locked \
+              --package kwavers \
+              --features plotting \
+              --benches \
+              -- \
+              "$@"
+          }
+
+          rm -rf "$CARGO_TARGET_DIR/criterion"
+          run_benches \
+            "$FIRST_REVISION" \
+            --save-baseline atlas-base
+
+          confidence="$(
+            cargo run \
+              --manifest-path "$gate_manifest" \
+              --locked \
+              -- \
+              required-confidence \
+              --criterion-root "$CARGO_TARGET_DIR/criterion" \
+              --baseline atlas-base
+          )"
+
+          run_benches \
+            "$SECOND_REVISION" \
+            --baseline atlas-base \
+            --confidence-level "$confidence"
+
+          mkdir -p "$(dirname "$REPORT_ROOT")"
+          mv "$CARGO_TARGET_DIR/criterion" "$REPORT_ROOT"
+          tar --create --gzip --file "$PAIR_ID.tar.gz" reports
+
+      - name: Upload replicated comparison
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: benchmark-pair-${{ matrix.pair_id }}
+          path: ${{ matrix.pair_id }}.tar.gz
+          if-no-files-found: error
+          retention-days: 1
+
+  benchmark-regression:
+    name: benchmark regression check
+    needs: benchmark-pair
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout Atlas benchmark gate
+        uses: actions/checkout@v7
+        with:
+          repository: ryancinsight/atlas
+          ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+          path: atlas-tool
+          persist-credentials: false
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.97.1
+
+      - name: Download replicated comparisons
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: benchmark-pair-*
+          path: pair-artifacts
+          merge-multiple: true
+
+      - name: Restore replicated comparisons
+        shell: bash
+        run: |
+          set -euo pipefail
+          for archive in pair-artifacts/*.tar.gz; do
+            tar --extract --gzip --file "$archive"
+          done
+
+      - name: Classify replicated comparisons
+        run: >-
+          cargo run
+          --manifest-path atlas-tool/tools/criterion-regression/Cargo.toml
+          --locked
+          --
+          check-replicated-counterbalanced
+          --first-baseline-first-root reports/first/baseline-first
+          --first-candidate-first-root reports/first/candidate-first
+          --second-baseline-first-root reports/second/baseline-first
+          --second-candidate-first-root reports/second/candidate-first
+          --baseline atlas-base
