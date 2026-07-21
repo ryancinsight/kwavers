@@ -1,5 +1,25 @@
 # Backlog / Strategy
 
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
+
+- Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
+  Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
+  synchronized public documentation. Non-goals: ML-owned residual-adaptive
+  sampling and unrelated random consumers.
+- Acceptance: rectangular, disk, and ball domains validate construction and
+  map Tyche unit designs without rejection or cardinality loss; one generic
+  collector serves counter, Latin-hypercube, and Sobol designs; the collocation
+  hot path is statically dispatched; generated matrices allocate once without
+  reallocation; local Latin-hypercube, pseudo-Sobol, and obsolete geometry
+  adaptive implementations have no residue.
+- Evidence target: analytical mapping reference cases, deterministic replay,
+  exact cardinality and domain classification, face-measure sampling law,
+  allocation counts, focused Nextest/Clippy/doctest/Rustdoc gates, dependency
+  residue scans, and public SemVer classification.
+- Decision: extend [`ADR-043`](docs/ADR/043-tyche-uncertainty-provider.md) with
+  the collocation ownership, public migration, transform proofs, and rejected
+  duplicate/rejection alternatives.
+
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
