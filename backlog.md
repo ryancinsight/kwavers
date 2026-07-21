@@ -1,5 +1,20 @@
 # Backlog / Strategy
 
+## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
+
+- Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
+  and synchronized PM evidence.
+- Acceptance: benchmark-relevant PRs compare their exact base and head with
+  the complete candidate Criterion instrument held constant; one runner
+  executes phase-reversed ABBA/BAAB replications; Atlas derives family-wise
+  confidence and fails closed on missing, mismatched, or regressed results.
+- Decision: [`ADR-045`](docs/ADR/045-atlas-benchmark-regression-gate.md).
+- Evidence: the single-run same-baseline Python classifier is deleted. The
+  dedicated workflow retains the full plotting-enabled `kwavers` benchmark
+  suite, pins Atlas classifier and provider graph `71cdc54`, and derives its
+  instrument budget from the observed hosted full-suite runtime. Exact-head
+  hosted execution remains the merge gate.
+
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
@@ -25,7 +40,7 @@
   than discarding source information. Warning-denied all-feature Clippy passes,
   and the WGPU-featured Nextest lane passes 259/259 tests, including the
   heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
-  use the Atlas-owned checkout action and provider graph pinned at `05b7f5d`;
+  use the Atlas-owned checkout action and provider graph pinned at `71cdc54`;
   direct Aequitas and Proteus revisions match that graph, and the lock contains
   one Aequitas source identity.
 - External integration requirement: the private full-wave consumer remains
@@ -51,7 +66,7 @@
   no-default checks, doctests, normal Rustdoc generation, the facade clinical
   workflow example, and source policy pass. `cargo-semver-checks` runs 223
   Analysis checks and identifies 10 major API breaks, matching ADR 043.
-- The Atlas-owned checkout action pins provider graph `05b7f5d`, eliminating
+- The Atlas-owned checkout action pins provider graph `71cdc54`, eliminating
   the moving-provider lock failure exposed by run `29781981026`. PR 298 is the
   canonical hosted-verification and merge record for the documentation-complete
   head.

@@ -20,11 +20,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -73,11 +73,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -117,11 +117,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -163,11 +163,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install cargo-deny
         run: cargo install cargo-deny
@@ -184,11 +184,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install Rust nightly with miri
         uses: dtolnay/rust-toolchain@nightly
@@ -206,52 +206,6 @@ jobs:
         run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
         continue-on-error: true
 
-  benchmarks:
-    name: Performance Benchmarks
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-
-      - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
-        with:
-          manifest: Cargo.toml
-          destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Cache cargo dependencies
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target/
-          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
-
-      - name: Run benchmarks
-        run: cargo bench --locked -p kwavers --features="plotting"
-
-      - name: Save benchmark baseline
-        run: |
-          python3 .github/scripts/check_regressions.py save \
-            --workspace . \
-            --output .benchmarks/baseline.json
-
-      - name: Check benchmark regressions
-        run: |
-          python3 .github/scripts/check_regressions.py check \
-            --workspace . \
-            --baseline .benchmarks/baseline.json \
-            --threshold-pct 15
-
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
@@ -261,11 +215,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -297,11 +251,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -338,11 +292,11 @@ jobs:
           fetch-depth: 0
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
         with:
           manifest: Cargo.toml
           destination: ..
-          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev

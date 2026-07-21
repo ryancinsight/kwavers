@@ -23,6 +23,10 @@
 
 ### Fixed
 
+- Replace the tautological single-run benchmark save/check job with the
+  Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
+  now compare the exact base and head through two phase-reversed replications
+  on one runner while holding the candidate harness constant.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.

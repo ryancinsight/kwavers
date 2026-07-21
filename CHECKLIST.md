@@ -1,5 +1,15 @@
 # Project Checklist
 
+## Owner: /root — Install Atlas benchmark oracle [patch] [arch]
+
+- [x] Remove the same-run save/check classifier and its Python implementation.
+- [x] Hold the candidate benchmark instrument constant across base and head.
+- [x] Run the complete suite in phase-reversed ABBA/BAAB order on one runner.
+- [x] Derive family-wise confidence and classification from the Atlas SSOT.
+- [x] Bound the instrumented job from observed full-suite runtime without
+      reducing benchmark targets, samples, or assertions.
+- [ ] Verify the exact PR head through the hosted benchmark workflow.
+
 ## Owner: /root — GPU PSTD peak-pressure output [major]
 
 - [x] Record the output type and retention decision in ADR 040.
@@ -24,7 +34,7 @@
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
 - [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
       reconcile `Cargo.lock` against that exact gitlink graph.
-- [x] Align direct Aequitas and Proteus revisions with Atlas `05b7f5d` and
+- [x] Align direct Aequitas and Proteus revisions with Atlas `71cdc54` and
       resolve one Aequitas source identity across the locked graph.
 - [x] Move grid and homogeneous-medium wall-clock checks out of the
       instrumented native-test lane; retain their Criterion measurements.

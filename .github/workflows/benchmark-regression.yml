@@ -1,0 +1,172 @@
+name: benchmark regression
+
+on:
+  pull_request:
+    paths:
+      - Cargo.lock
+      - Cargo.toml
+      - .cargo/**
+      - crates/**
+      - .github/workflows/benchmark-regression.yml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: benchmark-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-regression:
+    name: benchmark regression check
+    runs-on: ubuntu-24.04
+    # One hosted full-suite measurement used 31 minutes including an
+    # eight-minute build. Eight measurements plus two revision builds require
+    # about 184 minutes; 240 minutes admits 23% runner variance without
+    # changing the benchmark workload or statistical contract.
+    timeout-minutes: 240
+    env:
+      CARGO_TARGET_DIR: ${{ github.workspace }}/target
+    steps:
+      - name: Checkout baseline
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: kwavers-baseline
+
+      - name: Checkout candidate
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          path: kwavers-candidate
+
+      - name: Checkout Atlas benchmark gate
+        uses: actions/checkout@v7
+        with:
+          repository: ryancinsight/atlas
+          ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+          path: atlas-tool
+
+      - name: Checkout Atlas path dependencies
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@71cdc54c509d54e10daac1032d328d0b006a2ce5
+        with:
+          manifest: kwavers-candidate/Cargo.toml
+          destination: .
+          atlas_ref: 71cdc54c509d54e10daac1032d328d0b006a2ce5
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@1.97.1
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-kwavers-bench-${{ hashFiles('kwavers-candidate/Cargo.lock') }}
+
+      - name: Normalize historical baseline lock
+        run: >-
+          cargo metadata
+          --manifest-path kwavers-baseline/Cargo.toml
+          --format-version 1
+          --all-features
+          > /dev/null
+
+      - name: Hold the candidate benchmark instrument constant
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf kwavers-baseline/crates/kwavers/benches
+          git -C kwavers-candidate archive HEAD crates/kwavers/benches \
+            | tar -x -C kwavers-baseline
+          diff --recursive --unified \
+            kwavers-baseline/crates/kwavers/benches \
+            kwavers-candidate/crates/kwavers/benches
+
+      - name: Measure phase-reversed replications
+        shell: bash
+        run: |
+          set -euo pipefail
+          confidence=""
+          gate_manifest="atlas-tool/tools/criterion-regression/Cargo.toml"
+
+          run_benches() {
+            local revision="$1"
+            shift
+
+            cargo bench \
+              --manifest-path "$revision/Cargo.toml" \
+              --locked \
+              --package kwavers \
+              --features plotting \
+              -- \
+              "$@"
+          }
+
+          compare_pair() {
+            local report_root="$1"
+            local first_revision="$2"
+            local second_revision="$3"
+
+            rm -rf "$CARGO_TARGET_DIR/criterion"
+            run_benches \
+              "$first_revision" \
+              --save-baseline atlas-base
+
+            if [[ -z "$confidence" ]]; then
+              confidence="$(
+                cargo run \
+                  --manifest-path "$gate_manifest" \
+                  --locked \
+                  -- \
+                  required-confidence \
+                  --criterion-root "$CARGO_TARGET_DIR/criterion" \
+                  --baseline atlas-base
+              )"
+            fi
+
+            run_benches \
+              "$second_revision" \
+              --baseline atlas-base \
+              --confidence-level "$confidence"
+
+            mkdir -p "$(dirname "$report_root")"
+            mv "$CARGO_TARGET_DIR/criterion" "$report_root"
+          }
+
+          # ABBA followed by BAAB assigns baseline and candidate to positions
+          # with equal sums and squared sums, balancing constant, linear, and
+          # quadratic run-period terms on one runner.
+          compare_pair \
+            reports/first/baseline-first \
+            kwavers-baseline \
+            kwavers-candidate
+          compare_pair \
+            reports/first/candidate-first \
+            kwavers-candidate \
+            kwavers-baseline
+          compare_pair \
+            reports/second/candidate-first \
+            kwavers-candidate \
+            kwavers-baseline
+          compare_pair \
+            reports/second/baseline-first \
+            kwavers-baseline \
+            kwavers-candidate
+
+      - name: Classify replicated comparisons
+        run: >-
+          cargo run
+          --manifest-path atlas-tool/tools/criterion-regression/Cargo.toml
+          --locked
+          --
+          check-replicated-counterbalanced
+          --first-baseline-first-root reports/first/baseline-first
+          --first-candidate-first-root reports/first/candidate-first
+          --second-baseline-first-root reports/second/baseline-first
+          --second-candidate-first-root reports/second/candidate-first
+          --baseline atlas-base
