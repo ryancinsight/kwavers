@@ -41,8 +41,7 @@ from reaching their libtest harnesses. The GPU-only Hilbert pipeline declares
 its required feature instead of executing an empty fallback, and feature-gated
 targets have no unreachable no-op entry points. Before measurement, the
 workflow requires exact equality between the sorted `benches/*.rs` stems and
-Cargo's
-benchmark target registry for both revisions. It invokes `cargo bench
+Cargo's benchmark target registry for both revisions. It invokes `cargo bench
 --benches`, so Criterion arguments reach only registered benchmark targets.
 Any unregistered, orphaned, default-harness, or empty-entry-point target fails
 before timing.
@@ -61,14 +60,14 @@ estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
 The 330-minute workflow budget is specific to this instrumented suite. The
-previous plotting configuration had 14 measuring Criterion targets
-and used 31 minutes, including an eight-minute build, leaving 23 measurement
-minutes. The retained registry has 20 plotting-eligible targets; scaling the
-measurement component gives `23 * 20 / 14 = 32.9` minutes per run. Eight
-measurements plus two 5-minute-40-second revision builds observed in
-`29797805169` model to about 274 minutes. The finite bound admits 20% hosted
-runner variance without reducing samples, targets, or assertions. It does not
-alter native-test budgets.
+previous plotting configuration had 14 measuring Criterion targets and used
+31 minutes, including an eight-minute build, leaving 23 measurement minutes.
+The retained registry has 20 plotting-eligible targets; scaling the measurement
+component gives `23 * 20 / 14 = 32.9` minutes per run. Eight measurements plus
+two 5-minute-40-second revision builds observed in `29797805169` model to about
+274 minutes. The finite bound admits 20% hosted runner variance without
+reducing samples, targets, or assertions. It does not alter native-test
+budgets.
 
 ## Rejected alternatives
 
