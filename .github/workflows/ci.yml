@@ -243,6 +243,8 @@ jobs:
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
+    # Exact-head observation: 57 minutes; retain about 20% hosted-runner variance.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v7
         with:

@@ -149,6 +149,8 @@ jobs:
   test-coverage:
     name: Test Suite Coverage
     runs-on: ubuntu-latest
+    # Exact-head observation: 36m11s; retain about 20% hosted-runner variance.
+    timeout-minutes: 45
 
     steps:
     - name: Checkout repository
