@@ -5,6 +5,8 @@
 
 pub mod bayesian;
 pub mod conformal;
+mod precision;
+mod statistics;
 #[cfg(test)]
 mod tests;
 pub mod types;

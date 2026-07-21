@@ -3,10 +3,16 @@
 use super::types::{
     PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
+use super::{
+    conformal::PinnConformalPredictor, precision::restore_model_precision,
+    statistics::summarize_predictions,
+};
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array1;
+use tyche_core::Moments;
 
-use super::conformal::PinnConformalPredictor;
+// Standard-normal 97.5th percentile, rounded once to the model scalar.
+const NORMAL_95_PERCENT_TWO_SIDED: f32 = 1.959_964;
 
 /// Bayesian PINN with uncertainty quantification.
 pub struct PinnBayesianPINN<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> {
@@ -20,6 +26,7 @@ pub struct PinnBayesianPINN<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBacken
     pub conformal_predictor: Option<PinnConformalPredictor<B>>,
     /// Performance statistics.
     pub stats: UncertaintyStats,
+    uncertainty_history: Moments<f32>,
 }
 
 impl<B: coeus_ops::BackendOps<f32> + coeus_ops::CpuBackend + Default> std::fmt::Debug
@@ -47,13 +54,27 @@ where
         base_model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         config: PinnUncertaintyConfig,
     ) -> KwaversResult<Self> {
-        let mut ensemble = Vec::new();
-
-        for i in 0..config.ensemble_size {
-            let _model_idx = i;
-            let model = base_model.clone();
-            ensemble.push(model);
+        if config.ensemble_size == 0 {
+            return Err(KwaversError::InvalidInput(
+                "PINN ensemble size must be non-zero".to_owned(),
+            ));
         }
+        if !config.conformal_alpha.is_finite()
+            || config.conformal_alpha < 0.0
+            || config.conformal_alpha >= 1.0
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "PINN conformal alpha must be zero (disabled) or in (0, 1): {}",
+                config.conformal_alpha
+            )));
+        }
+        if !config.variance_threshold.is_finite() || config.variance_threshold <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "PINN variance threshold must be positive and finite: {}",
+                config.variance_threshold
+            )));
+        }
+        let ensemble = vec![base_model.clone(); config.ensemble_size];
 
         Ok(Self {
             ensemble,
@@ -61,6 +82,7 @@ where
             calibration_data: None,
             conformal_predictor: None,
             stats: UncertaintyStats::default(),
+            uncertainty_history: Moments::new(),
         })
     }
 
@@ -73,21 +95,33 @@ where
         calibration_inputs: &[Vec<f32>],
         calibration_targets: &[f32],
     ) -> KwaversResult<()> {
-        let calibration_data = calibration_inputs
-            .iter()
-            .zip(calibration_targets.iter())
-            .map(|(input, target)| (input.clone(), *target))
-            .collect();
-
-        self.calibration_data = Some(calibration_data);
+        if calibration_inputs.len() != calibration_targets.len() {
+            return Err(KwaversError::InvalidInput(
+                "Calibration inputs and targets must have same length".to_owned(),
+            ));
+        }
+        if calibration_inputs.is_empty() {
+            return Err(KwaversError::InvalidInput(
+                "Calibration data must be non-empty".to_owned(),
+            ));
+        }
 
         if self.config.conformal_alpha > 0.0 {
-            let mut cp =
-                PinnConformalPredictor::new(self.ensemble[0].clone(), self.config.conformal_alpha);
+            let model = self.ensemble.first().ok_or_else(|| {
+                KwaversError::InvalidInput("PINN ensemble must be non-empty".to_owned())
+            })?;
+            let mut cp = PinnConformalPredictor::new(model.clone(), self.config.conformal_alpha)?;
             cp.calibrate(calibration_inputs, calibration_targets)?;
             self.conformal_predictor = Some(cp);
         }
 
+        self.calibration_data = Some(
+            calibration_inputs
+                .iter()
+                .zip(calibration_targets)
+                .map(|(input, &target)| (input.clone(), target))
+                .collect(),
+        );
         Ok(())
     }
 
@@ -143,59 +177,37 @@ where
         predictions: &[Vec<f32>],
         method: PinnUncertaintyMethod,
     ) -> KwaversResult<PinnPredictionWithUncertainty> {
-        if predictions.is_empty() {
-            return Err(KwaversError::System(
-                kwavers_core::error::SystemError::InvalidOperation {
-                    operation: "uncertainty_prediction".to_string(),
-                    reason: "No predictions available".to_string(),
-                },
-            ));
-        }
-
-        let num_points = predictions[0].len();
-        let num_samples = predictions.len();
-
-        let mut means = vec![0.0; num_points];
-        let mut variances = vec![0.0; num_points];
-
-        for i in 0..num_points {
-            let mut sum = 0.0;
-            let mut sum_sq = 0.0;
-
-            for prediction in predictions {
-                let val = prediction[i];
-                sum += val;
-                sum_sq += val * val;
-            }
-
-            let mean = sum / num_samples as f32;
-            let variance = (sum_sq / num_samples as f32) - (mean * mean);
-
-            means[i] = mean;
-            variances[i] = variance.max(0.0);
-        }
+        let summary = summarize_predictions(predictions)?;
+        let mean_variance = summary.mean_variance;
+        let means = summary.means;
+        let variances = summary.variances;
 
         let stds: Vec<f32> = variances.iter().map(|v| v.sqrt()).collect();
-        let z_score = 1.96_f32; // 95% confidence
 
         let lower_bounds: Vec<f32> = means
             .iter()
             .zip(stds.iter())
-            .map(|(m, s)| m - z_score * s)
+            .map(|(mean, standard_deviation)| {
+                mean - NORMAL_95_PERCENT_TWO_SIDED * standard_deviation
+            })
             .collect();
 
         let upper_bounds: Vec<f32> = means
             .iter()
             .zip(stds.iter())
-            .map(|(m, s)| m + z_score * s)
+            .map(|(mean, standard_deviation)| {
+                mean + NORMAL_95_PERCENT_TWO_SIDED * standard_deviation
+            })
             .collect();
 
-        let entropy = self.compute_predictive_entropy(&variances);
-        let reliability = self.compute_reliability_score(&variances);
+        let entropy = self.compute_predictive_entropy(mean_variance);
+        let reliability = self.compute_reliability_score(mean_variance);
 
-        let avg_uncertainty = variances.iter().sum::<f32>() / (variances.len()) as f32;
+        self.uncertainty_history.update(mean_variance);
         self.stats.total_predictions += 1;
-        self.stats.average_uncertainty = (self.stats.average_uncertainty + avg_uncertainty) / 2.0;
+        self.stats.average_uncertainty = self.uncertainty_history.mean().map_err(|error| {
+            KwaversError::InvalidInput(format!("Uncertainty history is undefined: {error}"))
+        })?;
 
         Ok(PinnPredictionWithUncertainty {
             mean: means,
@@ -217,18 +229,27 @@ where
         model: &crate::inverse::pinn::ml::PinnWave2D<B>,
         input: &[f32],
     ) -> KwaversResult<Vec<f32>> {
-        if (input.len()) != 3 {
+        let [x, y, t] = input else {
             return Err(KwaversError::InvalidInput(
                 "Expected input to be [x, y, t]".into(),
             ));
+        };
+        if !x.is_finite() || !y.is_finite() || !t.is_finite() {
+            return Err(KwaversError::InvalidInput(
+                "PINN coordinates must be finite".into(),
+            ));
         }
-        let x = Array1::from_elem([1], input[0] as f64);
-        let y = Array1::from_elem([1], input[1] as f64);
-        let t = Array1::from_elem([1], input[2] as f64);
+        let x = Array1::from_elem([1], f64::from(*x));
+        let y = Array1::from_elem([1], f64::from(*y));
+        let t = Array1::from_elem([1], f64::from(*t));
 
-        let output = model
-            .predict(&x, &y, &t)
-            .map(|output| output.iter().map(|&v| v as f32).collect::<Vec<_>>())?;
+        let output = model.predict(&x, &y, &t).map(|output| {
+            output
+                .iter()
+                .copied()
+                .map(restore_model_precision)
+                .collect::<Vec<_>>()
+        })?;
 
         Ok(output)
     }
@@ -237,64 +258,16 @@ where
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn compute_predictive_entropy(&self, variances: &[f32]) -> f32 {
-        let avg_variance = variances.iter().sum::<f32>() / (variances.len()) as f32;
-        0.5 * (1.0 + (2.0 * std::f32::consts::PI * avg_variance).ln())
+    fn compute_predictive_entropy(&self, mean_variance: f32) -> f32 {
+        0.5 * (1.0 + (2.0 * std::f32::consts::PI * mean_variance).ln())
     }
 
     /// Compute reliability score.
     /// # Errors
     /// - Returns [`Err`] if an internal constraint is violated.
     ///
-    fn compute_reliability_score(&self, variances: &[f32]) -> f32 {
-        let avg_variance = variances.iter().sum::<f32>() / (variances.len()) as f32;
-        1.0 / (1.0 + avg_variance / self.config.variance_threshold as f32)
-    }
-
-    /// Update calibration metrics.
-    /// # Errors
-    /// - Propagates any [`crate::KwaversError`] returned by called functions.
-    ///
-    fn _update_calibration_metrics(
-        &mut self,
-        calibration_data: &[(Vec<f32>, f32)],
-    ) -> KwaversResult<()> {
-        if calibration_data.is_empty() {
-            return Ok(());
-        }
-
-        let mut abs_errors = Vec::with_capacity(calibration_data.len());
-        let mut covered = 0usize;
-
-        for (input, target) in calibration_data {
-            let prediction = self.ensemble_prediction(input)?;
-            let mean = *prediction.mean.first().ok_or_else(|| {
-                KwaversError::InvalidInput("Model returned empty prediction".into())
-            })?;
-            let std = *prediction.std.first().ok_or_else(|| {
-                KwaversError::InvalidInput("Model returned empty uncertainty".into())
-            })?;
-
-            let err = (mean - *target).abs();
-            abs_errors.push(err);
-
-            let z_score = 1.96_f32;
-            let lower = mean - z_score * std;
-            let upper = mean + z_score * std;
-            if (*target >= lower) && (*target <= upper) {
-                covered += 1;
-            }
-        }
-
-        let calibration_error = abs_errors.iter().sum::<f32>() / (abs_errors.len()) as f32;
-        let coverage_probability = covered as f32 / (calibration_data.len()) as f32;
-
-        self.stats.calibration_error = calibration_error;
-        self.stats.coverage_probability = coverage_probability;
-        self.stats.reliability_score =
-            1.0 / (1.0 + calibration_error / self.config.variance_threshold as f32);
-
-        Ok(())
+    fn compute_reliability_score(&self, mean_variance: f32) -> f32 {
+        1.0 / (1.0 + mean_variance / self.config.variance_threshold)
     }
 
     /// Get uncertainty statistics.

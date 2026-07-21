@@ -94,6 +94,54 @@
   the shared RITK checkout requires `apollo-fft ^0.24.0` while the local Apollo
   provider checkout declares `0.25.0`; no unlocked resolution or compatibility
   adapter is used.
+- Review 2026-07-20: Kwavers duplicated corrected conformal ranks and moments,
+  selected the reversed lower conformal tail in Analysis, discarded all but
+  the first interval request, and exposed squared correlation under Sobol
+  first/total names. Its nominal Morris path changed multiple parameters and
+  divided by a hard-coded count. ADR 043 assigns rank, moments, deterministic
+  Latin-hypercube sampling, and correlation screening to Tyche; the local
+  formulas and false method labels are removed. Residual: Tyche does not yet
+  provide genuine Morris or Saltelli/Sobol estimators, so those contracts stay
+  absent rather than being approximated downstream.
+
+- Verification boundary 2026-07-20: package-scoped formatting is clean, but
+  workspace-wide rustfmt hits Windows path error 206 before traversal.
+  Normal Rustdoc generation completes; strict warning-denied Rustdoc exposes
+  55 historical Analysis links and one solver link outside the changed Tyche
+  modules. Solver semver extraction is blocked by the existing all-features
+  clinical-imaging graph resolving path and Git Leto identities concurrently.
+  Analysis semver extraction completes and reports the intended major class.
+
+- Hosted boundary 2026-07-20: run `29781981026` passed the migration audits,
+  layer boundary, Miri, and security gates but cloned a moving Atlas `main`
+  revision after the PR lockfile was generated. Every compile/test failure
+  stopped at Cargo's locked-graph check before compiling Kwavers. The shared
+  Atlas-owned checkout action now pins provider graph `05b7f5d`, whose
+  provider gitlinks match the locally verified graph. PR 298 owns the final
+  hosted matrix and merge evidence; the locked-provider boundary has no source
+  residual.
+
+- Structural boundary 2026-07-20: the Tyche migration touched a 794-line
+  clinical workflow example spanning modality execution, result storage, and
+  presentation. It is now a 127-line manifest/root with 168/161/157/106/91/
+  60-line modality, execution, presentation, clinical, result, and metric
+  leaves. The no-op cloned uncertainty maps and `Box<dyn UncertaintyResult>`
+  vector are deleted, and the CFL helper statically dispatches over its medium.
+  CEUS now retains the provider-owned Leto map without a
+  collect-and-reconstruct copy. Default/GPU checks and warning-denied Clippy
+  pass.
+
+- Reporting boundary 2026-07-20: `generate_report` required
+  `&[Box<dyn UncertaintyResult>]` and collected a second reference vector.
+  Runtime heterogeneity remains an explicit cold-boundary exception, but the
+  report now borrows `&[&dyn UncertaintyResult]` directly. A pointer-identity
+  regression proves the returned detailed-results slice is the caller's slice.
+
+- Provider identity 2026-07-20: current Coeus declares Apollo by Git while
+  Kwavers declares Apollo by synchronized path. Without an Apollo source patch,
+  Cargo resolves two `apollo-fft` identities and rewrites the lock. The patch
+  maps Apollo's Git packages to the Atlas checkout; locked metadata then
+  resolves unchanged.
 
 - Review 2026-07-17: `kwavers-medium/src/wrapper.rs` duplicated each
   continuous-coordinate accessor as a `dyn Medium` function and a

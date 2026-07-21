@@ -7,19 +7,20 @@ use super::conformal_prediction::{ConformalConfig, MlConformalPredictor};
 use super::ensemble_methods::{EnsembleConfig, EnsembleQuantifier};
 #[cfg(feature = "pinn")]
 use super::predictor::PinnUncertaintyPredictor;
-use super::sensitivity_analysis::{SensitivityAnalyzer, SensitivityConfig, SensitivityIndices};
+use super::sensitivity_analysis::{
+    ParameterSpace, SensitivityAnalyzer, SensitivityConfig, SensitivityReport,
+};
 use super::types::{
     BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
     UncertaintyReport, UncertaintyResult, UncertaintySummary,
 };
 use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array3 as LetoArray3;
-#[cfg(feature = "pinn")]
-use leto::{Array1, Array2, Array3 as NdArray3};
 #[cfg(not(feature = "pinn"))]
-use leto::{Array1, Array3 as NdArray3};
+use leto::Array3 as NdArray3;
 #[cfg(feature = "pinn")]
-use std::collections::HashMap;
+use leto::{Array2, Array3 as NdArray3};
+use std::num::NonZeroU32;
 
 /// Main uncertainty quantification interface.
 #[derive(Debug)]
@@ -77,9 +78,19 @@ impl UncertaintyQuantifier {
             config.method,
             MlUncertaintyMethod::Sensitivity | MlUncertaintyMethod::Hybrid
         ) {
+            let sample_count = u32::try_from(config.num_samples)
+                .ok()
+                .and_then(NonZeroU32::new)
+                .ok_or_else(|| {
+                    KwaversError::InvalidInput(format!(
+                        "Sensitivity sample count must be in 1..={}: {}",
+                        u32::MAX,
+                        config.num_samples
+                    ))
+                })?;
             Some(SensitivityAnalyzer::new(SensitivityConfig {
-                num_samples: config.num_samples,
-                confidence_level: config.confidence_level,
+                sample_count,
+                seed: config.sensitivity_seed,
             })?)
         } else {
             None
@@ -145,15 +156,11 @@ impl UncertaintyQuantifier {
                     results.push(ensemble.quantify_uncertainty(predictor, inputs)?);
                 }
 
-                Ok(results
-                    .into_iter()
-                    .next()
-                    .unwrap_or_else(|| MlPredictionWithUncertainty {
-                        mean_prediction: Array2::zeros(inputs.shape()),
-                        uncertainty: Array2::zeros(inputs.shape()),
-                        confidence_intervals: HashMap::new(),
-                        reliability_score: 0.5,
-                    }))
+                results.into_iter().next().ok_or_else(|| {
+                    KwaversError::InvalidInput(
+                        "Hybrid uncertainty requires at least one configured method".to_owned(),
+                    )
+                })
             }
             MlUncertaintyMethod::Sensitivity => Err(KwaversError::InvalidInput(
                 "Sensitivity analysis not applicable for PINN uncertainty".to_string(),
@@ -162,15 +169,38 @@ impl UncertaintyQuantifier {
     }
 
     /// Quantify uncertainty for beamforming results.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when the image cannot support the
+    /// four-neighbor stencil, an image value is non-finite, signal quality is
+    /// not positive and finite, or uncertainty exceeds `f32` storage.
     pub fn quantify_beamforming_uncertainty(
         &self,
         beamformed_image: &LetoArray3<f32>,
         signal_quality: f64,
     ) -> KwaversResult<BeamformingUncertainty> {
         let [nx, ny, nz] = beamformed_image.shape();
+        if nx < 3 || ny < 3 || nz == 0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Beamformed image shape [{nx}, {ny}, {nz}] must be at least [3, 3, 1]"
+            )));
+        }
+        if !signal_quality.is_finite() || signal_quality <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Beamforming signal quality must be positive and finite: {signal_quality}"
+            )));
+        }
+        if let Some((index, value)) = beamformed_image
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, value)| !value.is_finite())
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "Beamformed image contains non-finite value at element {index}: {value}"
+            )));
+        }
         let mut uncertainty_map = NdArray3::zeros((nx, ny, nz));
 
         for i in 1..nx - 1 {
@@ -184,11 +214,17 @@ impl UncertaintyQuantifier {
                         beamformed_image[[i, j + 1, k]],
                     ];
 
-                    let variance = neighbors.iter().map(|&n| (n - center).powi(2)).sum::<f32>()
-                        / neighbors.len() as f32;
+                    let variance =
+                        neighbors.iter().map(|&n| (n - center).powi(2)).sum::<f32>() / 4.0;
+                    let uncertainty = f64::from(variance.sqrt()) / signal_quality;
+                    let uncertainty = uncertainty as f32;
+                    if !uncertainty.is_finite() {
+                        return Err(KwaversError::InvalidInput(format!(
+                            "Beamforming uncertainty exceeds f32 storage at [{i}, {j}, {k}]"
+                        )));
+                    }
 
-                    uncertainty_map[[i, j, k]] =
-                        (variance.sqrt() as f64 / signal_quality.max(1e-6)) as f32;
+                    uncertainty_map[[i, j, k]] = uncertainty;
                 }
             }
         }
@@ -210,14 +246,13 @@ impl UncertaintyQuantifier {
     /// # Errors
     /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
     ///
-    pub fn sensitivity_analysis(
+    pub fn sensitivity_analysis<const PARAMETERS: usize>(
         &self,
-        model_fn: impl Fn(&Array1<f64>) -> Array1<f64>,
-        parameter_ranges: &[(f64, f64)],
-        num_samples: usize,
-    ) -> KwaversResult<SensitivityIndices> {
+        model: impl Fn(&[f64; PARAMETERS]) -> f64,
+        parameter_space: &ParameterSpace<'_, f64, PARAMETERS>,
+    ) -> KwaversResult<SensitivityReport<f64, PARAMETERS>> {
         if let Some(sensitivity) = &self._sensitivity {
-            sensitivity.analyze(model_fn, parameter_ranges, num_samples)
+            sensitivity.analyze(model, parameter_space)
         } else {
             Err(KwaversError::InvalidInput(
                 "Sensitivity analysis not configured".to_owned(),
@@ -273,7 +308,7 @@ impl UncertaintyQuantifier {
     #[must_use]
     pub fn generate_report<'a>(
         &self,
-        results: &'a [Box<dyn UncertaintyResult>],
+        results: &'a [&'a dyn UncertaintyResult],
     ) -> UncertaintyReport<'a> {
         let mut summary = UncertaintySummary {
             mean_confidence: 0.0,
@@ -296,7 +331,7 @@ impl UncertaintyQuantifier {
         if results.is_empty() {
             return UncertaintyReport {
                 summary,
-                detailed_results: Vec::new(),
+                detailed_results: results,
                 recommendations: Vec::new(),
             };
         }
@@ -308,7 +343,7 @@ impl UncertaintyQuantifier {
 
         UncertaintyReport {
             summary,
-            detailed_results: results.iter().map(|r| r.as_ref()).collect(),
+            detailed_results: results,
             recommendations,
         }
     }

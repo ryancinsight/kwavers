@@ -32,7 +32,42 @@
   responsible for its explicit peak-pressure regression. Its inaccessible
   checkout does not widen or block this repository's delivery boundary.
 
-## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — review
+## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — implemented
+
+- Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
+  ensemble statistics, Tyche dependency policy, ADR 043, and synchronized
+  public documentation.
+- Acceptance: one Tyche-owned corrected rank and moments implementation serves
+  both consumers; interval results borrow scores and retain every prediction;
+  sensitivity is const-generic, deterministic, allocation-free per sample, and
+  named squared correlation; pseudo-Sobol/Morris bodies have no residue.
+- Evidence: public Tyche revision `00ce951` is the single dependency in both
+  packages; focused Analysis and PINN suites pass 13/13 and 12/12. The final
+  local all-feature Analysis suite passes 764/764, including heterogeneous
+  report borrowing, native-precision even medians, and invalid beamforming
+  boundary regressions. Review regressions require every configured confidence
+  level to identify an emitted interval and allow non-finite PINN outputs to
+  reach typed validation without a debug-only panic. Warning-denied Clippy,
+  no-default checks, doctests, normal Rustdoc generation, the facade clinical
+  workflow example, and source policy pass. `cargo-semver-checks` runs 223
+  Analysis checks and identifies 10 major API breaks, matching ADR 043.
+- The Atlas-owned checkout action pins provider graph `05b7f5d`, eliminating
+  the moving-provider lock failure exposed by run `29781981026`. PR 298 is the
+  canonical hosted-verification and merge record for the documentation-complete
+  head.
+- The migrated comprehensive clinical workflow is partitioned into 127/168/161/
+  157/106/91/60-line root and concern leaves. Default and GPU builds plus
+  warning-denied Clippy pass; no no-op uncertainty clone, vtable path, or
+  redundant CEUS map copy remains.
+- Heterogeneous report dispatch remains only at the cold report boundary;
+  callers pass a borrowed reference slice that `UncertaintyReport` retains
+  without boxes or a second vector allocation.
+- The Apollo Git patch maps Coeus's remote FFT dependency to Kwavers's
+  synchronized provider checkout, eliminating duplicate Apollo package
+  identities while retaining the committed lock.
+- PR 298 retains the hosted matrix and terminal merge evidence.
+
+## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/` and GPU PSTD
   consumer validation in `kwavers-simulation`.
@@ -8423,13 +8458,13 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   solver oracle still matches published 42/43/44 degree Celsius cases.
 - Dependencies: Asclepius merge `794f8c3`; Aequitas `be3a1ac`.
 - Risk: public duplicate response functions are removed, so the change is
-  breaking. ADR 043 owns the migration and verification decision.
+  breaking. ADR 044 owns the migration and verification decision.
 - Evidence: one public Asclepius source is present in the dependency graph;
   production residue scans retain only the independent solver oracle and test
   equations. Warning-denied all-feature Clippy, 2,070 native tests, 10 Python
   tests, 29 doctests, Rustdoc, and the major SemVer gate pass. A minor SemVer
   check reports seven major-breaking categories, confirming the classification.
 - Claimed files: response-law consumers under `kwavers-physics`,
-  `kwavers-therapy`, and `kwavers-python`; provider manifests/lock; ADR 043;
+  `kwavers-therapy`, and `kwavers-python`; provider manifests/lock; ADR 044;
   this item and its owner-local checklist section.
-- Decision: [ADR 043](docs/ADR/043-asclepius-response-ownership.md).
+- Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).

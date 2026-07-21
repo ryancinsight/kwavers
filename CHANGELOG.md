@@ -17,7 +17,7 @@
 - Make ablation kinetics construction and state updates fallible and typed.
   Remove `ThermalDiffusionConfig::dose_reference_temperature`; the canonical
   response reference belongs to Asclepius, while Kwavers retains clinical
-  thresholds and the independent solver validation oracle. See ADR 043.
+  thresholds and the independent solver validation oracle. See ADR 044.
 - Update the persistent Python GPU PSTD session to the typed `PstdRunInputs`
   contract exposed by `kwavers-gpu` 5.0.
 
@@ -58,6 +58,43 @@
   sensor-only runs retain their former allocation and transfer contract. The
   real GPU regression verifies the envelope dominates the final pressure frame
   at every voxel. `kwavers-gpu` advances from 4.1.0 to 5.0.0. See ADR 040.
+
+### Breaking (2026-07-20) - Tyche uncertainty provider [major] [arch]
+
+- Replace Analysis and PINN conformal-rank implementations with Tyche's
+  finite-sample corrected quantile. PINN miscoverage and reliability variance
+  thresholds are now `f32`, and the conformal constructor is fallible, matching
+  the model and score precision.
+- Preserve every requested prediction interval, borrow sorted calibration
+  scores through `Cow`, and represent pre-calibration distributions and
+  zero-width coverage efficiency with `Option`.
+- Replace cancellation-prone PINN second-moment variance and incorrectly
+  weighted running averages with Tyche Welford/population moments.
+- Replace runtime pseudo-Sobol maps and nondeterministic bootstrap/Morris code
+  with const-generic deterministic Tyche Latin-hypercube correlation screening.
+  Genuine Morris and Saltelli/Sobol methods remain provider work rather than
+  mislabeled Kwavers substitutes.
+- Add `MlUncertaintyConfig::sensitivity_seed`; migrate dynamic sensitivity
+  callers to a borrowed Tyche `ParameterSpace` and
+  `SensitivityReport<f64, PARAMETERS>`. See ADR 043 for the complete public
+  migration.
+- Pin hosted sibling-provider checkout to the immutable Atlas graph used by the
+  lockfile. CI no longer resolves a moving `main` graph between PR publication
+  and job execution.
+- Partition the touched comprehensive clinical workflow into root, execution,
+  modality, clinical, metrics, presentation, and result concerns. Remove its
+  unused cloned uncertainty maps and `Box<dyn UncertaintyResult>` vector; its
+  CFL helper now monomorphizes over the concrete medium, and CEUS retains the
+  provider-owned Leto perfusion map without a second allocation.
+- Borrow heterogeneous uncertainty-report inputs and detailed results as one
+  slice at the cold reporting boundary, removing caller boxes and the duplicate
+  collected reference vector.
+- Patch Apollo's Git source to the synchronized Atlas checkout so transitive
+  Coeus consumers and direct Kwavers consumers resolve one FFT provider identity.
+- Preserve the fixed 80/90/95% interval panel while adding any distinct
+  configured confidence level, and identify every batch with its exact
+  coverage probability. Non-finite PINN model outputs now reach the typed
+  validation boundary instead of tripping the finite precision invariant.
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 

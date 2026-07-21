@@ -1,4 +1,4 @@
-use crate::{core::CoreMedium, elastic::ElasticProperties, viscous::ViscousProperties};
+use crate::{core::{ArrayAccess, CoreMedium}, elastic::ElasticProperties, viscous::ViscousProperties};
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
@@ -163,6 +163,42 @@ fn test_elastic_homogeneous_rejects_unstable_speeds() {
         &grid
     )
     .is_none());
+}
+
+/// Lazy cache arrays must not be allocated in the constructor; they are
+/// realized only when `ArrayAccess` views are requested, and must contain the
+/// scalar values broadcast over the full grid shape. Updating acoustic
+/// properties must invalidate and rebuild the caches.
+#[test]
+fn lazy_cache_arrays_are_realized_on_demand_with_grid_shape() {
+    let grid = Grid::new(5, 6, 7, 1e-4, 1e-4, 1e-4).unwrap();
+    let mut medium = HomogeneousMedium::new(1000.0, 1500.0, 0.1, 1.0, &grid);
+
+    let rho_view = medium.density_array();
+    assert_eq!(rho_view.shape(), [5, 6, 7]);
+    assert!((rho_view[[2, 3, 4]] - 1000.0).abs() < 1e-12);
+
+    let c_view = medium.sound_speed_array();
+    assert_eq!(c_view.shape(), [5, 6, 7]);
+    assert!((c_view[[1, 2, 3]] - 1500.0).abs() < 1e-12);
+
+    let alpha_view = medium.absorption_array();
+    assert_eq!(alpha_view.shape(), [5, 6, 7]);
+
+    let nl_view = medium.nonlinearity_array();
+    assert_eq!(nl_view.shape(), [5, 6, 7]);
+
+    // Cache invalidation: after updating acoustic properties the new scalar
+    // values must be reflected in the rebuilt arrays.
+    medium
+        .set_acoustic_properties(0.5, 1.2, 3.0)
+        .expect("valid acoustic properties");
+    let expected_alpha = 0.5
+        * (kwavers_core::constants::REFERENCE_FREQUENCY_HZ
+            / kwavers_core::constants::MHZ_TO_HZ)
+        .powf(1.2);
+    assert!((medium.absorption_array()[[0, 0, 0]] - expected_alpha).abs() < 1e-12);
+    assert!((medium.nonlinearity_array()[[0, 0, 0]] - 3.0).abs() < 1e-12);
 }
 
 /// `set_lame_parameters` must reject non-finite, negative-μ, or negative-λ

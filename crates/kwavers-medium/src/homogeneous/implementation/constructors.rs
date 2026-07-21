@@ -5,7 +5,6 @@ use kwavers_core::constants::acoustic_parameters::{
 use kwavers_core::constants::cavitation::{
     GAS_DIFFUSION_COEFFICIENT_AIR, VISCOSITY_AIR, VISCOSITY_WATER,
 };
-use kwavers_core::constants::fundamental::ACOUSTIC_ABSORPTION_TISSUE;
 use kwavers_core::constants::fundamental::{
     ATMOSPHERIC_PRESSURE, DENSITY_TISSUE, DENSITY_WATER, SOUND_SPEED_AIR, SOUND_SPEED_TISSUE,
     SOUND_SPEED_WATER,
@@ -17,7 +16,6 @@ use kwavers_core::constants::tissue_acoustics::{
     B_OVER_A_AIR, DENSITY_AIR, DENSITY_BLOOD, SOUND_SPEED_BLOOD,
 };
 use kwavers_core::constants::BLOOD_VISCOSITY_37C;
-use kwavers_core::constants::MHZ_TO_HZ;
 use kwavers_grid::Grid;
 use leto::Array3;
 
@@ -33,12 +31,6 @@ impl HomogeneousMedium {
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
-        medium.density_cache = Array3::from_elem(shape, medium.density);
-        medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
-        let alpha = medium.absorption_alpha
-            * (medium.reference_frequency / MHZ_TO_HZ).powf(medium.absorption_power);
-        medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
         medium
     }
 
@@ -50,12 +42,6 @@ impl HomogeneousMedium {
         medium.temperature = Array3::from_elem(shape, ROOM_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
-        medium.density_cache = Array3::from_elem(shape, medium.density);
-        medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
-        let alpha = medium.absorption_alpha
-            * (medium.reference_frequency / MHZ_TO_HZ).powf(medium.absorption_power);
-        medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
         medium
     }
 
@@ -67,15 +53,9 @@ impl HomogeneousMedium {
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
-        medium.density_cache = Array3::from_elem(shape, medium.density);
-        medium.sound_speed_cache = Array3::from_elem(shape, medium.sound_speed);
         medium.viscosity = BLOOD_VISCOSITY_37C;
         medium.shear_viscosity = BLOOD_VISCOSITY_37C;
         medium.bulk_viscosity = 2.5 * BLOOD_VISCOSITY_37C;
-        let alpha = medium.absorption_alpha
-            * (medium.reference_frequency / MHZ_TO_HZ).powf(medium.absorption_power);
-        medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
         medium
     }
 
@@ -104,13 +84,10 @@ impl HomogeneousMedium {
             temperature: Array3::from_elem([grid.nx, grid.ny, grid.nz], ROOM_TEMPERATURE_K),
             bubble_radius: Array3::zeros([grid.nx, grid.ny, grid.nz]),
             bubble_velocity: Array3::zeros([grid.nx, grid.ny, grid.nz]),
-            density_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], DENSITY_AIR),
-            sound_speed_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], SOUND_SPEED_AIR),
-            absorption_cache: Array3::from_elem(
-                [grid.nx, grid.ny, grid.nz],
-                AIR_ABSORPTION_ALPHA_0 * 1.0_f64.powi(2),
-            ),
-            nonlinearity_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], B_OVER_A_AIR),
+            density_cache: super::LazyUniformArray::new(),
+            sound_speed_cache: super::LazyUniformArray::new(),
+            absorption_cache: super::LazyUniformArray::new(),
+            nonlinearity_cache: super::LazyUniformArray::new(),
             lame_lambda: DENSITY_AIR * SOUND_SPEED_AIR * SOUND_SPEED_AIR,
             lame_mu: 0.0,
             grid_shape: [grid.nx, grid.ny, grid.nz],
@@ -125,12 +102,6 @@ impl HomogeneousMedium {
         medium.temperature = Array3::from_elem(shape, ROOM_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
-        medium.density_cache = Array3::from_elem(shape, density);
-        medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
-        let alpha = medium.absorption_alpha
-            * (medium.reference_frequency / MHZ_TO_HZ).powf(medium.absorption_power);
-        medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
         medium
     }
 
@@ -147,8 +118,6 @@ impl HomogeneousMedium {
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
-        medium.density_cache = Array3::from_elem(shape, density);
-        medium.sound_speed_cache = Array3::from_elem(shape, sound_speed);
 
         let nu = poisson_ratio;
         medium.lame_lambda = youngs_modulus * nu / ((1.0 + nu) * 2.0f64.mul_add(-nu, 1.0));
@@ -159,9 +128,7 @@ impl HomogeneousMedium {
         medium.shear_viscosity = VISCOSITY_WATER;
         medium.bulk_viscosity = 2.5 * VISCOSITY_WATER;
 
-        let alpha = ACOUSTIC_ABSORPTION_TISSUE * (medium.reference_frequency / MHZ_TO_HZ).powf(1.1);
-        medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, TISSUE_NONLINEARITY_B_A);
+        medium.nonlinearity = TISSUE_NONLINEARITY_B_A;
 
         medium
     }
@@ -241,13 +208,6 @@ impl HomogeneousMedium {
         medium.temperature = Array3::from_elem(shape, BODY_TEMPERATURE_K);
         medium.bubble_radius = Array3::zeros(shape);
         medium.bubble_velocity = Array3::zeros(shape);
-        medium.density_cache = Array3::from_elem(shape, density);
-        medium.sound_speed_cache = Array3::from_elem(shape, c_compression);
-
-        let alpha = medium.absorption_alpha
-            * (medium.reference_frequency / MHZ_TO_HZ).powf(medium.absorption_power);
-        medium.absorption_cache = Array3::from_elem(shape, alpha);
-        medium.nonlinearity_cache = Array3::from_elem(shape, medium.nonlinearity);
 
         medium.lame_lambda = lambda;
         medium.lame_mu = mu;

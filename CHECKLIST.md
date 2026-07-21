@@ -35,7 +35,33 @@
 - [x] Keep the downstream consumer gate outside this public repository's
       acceptance boundary.
 
-## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review
+## Owner: /root — Integrate Tyche uncertainty ownership [major] [arch]
+
+- [x] File ADR 043 with provider boundary, public migration, proof obligations,
+      and rejected local-formula/compatibility alternatives.
+- [x] Replace both conformal ranks with Tyche corrected calibration in each
+      consumer's native score precision.
+- [x] Preserve every Analysis interval and borrow calibration scores with
+      `Cow`; represent undefined statistics with `Option`.
+- [x] Replace PINN variance and running-average formulas with Tyche moments.
+- [x] Replace pseudo-Sobol/bootstrap/Morris code with deterministic
+      const-generic Tyche correlation screening.
+- [x] Pass focused and full value-semantic tests plus warning-denied package
+      gates.
+- [x] Pass doctests, normal Rustdoc generation, dependency policy, residue
+      scans, and Analysis semver classification.
+- [x] Pin hosted path-provider resolution to the immutable Atlas graph matching
+      the committed lockfile.
+- [x] Partition the touched clinical workflow example and remove its unused
+      cloned/vtable uncertainty-report path.
+- [x] Borrow heterogeneous uncertainty-report inputs without caller boxes or a
+      duplicate collected reference vector.
+- [x] Consolidate direct and Coeus-transitive Apollo dependencies onto the
+      synchronized Atlas checkout.
+- [x] Publish the documentation-complete integration head; retain hosted
+      verification and merge evidence in PR 298.
+
+## Owner: /root — Extend GPU PSTD FFT lattice [minor]
 
 - [x] Centralize the GPU PSTD dimension contract at a 1,024-point maximum.
 - [x] Expand the shared-memory FFT and root table without changing the
@@ -7309,7 +7335,7 @@ Atlas checkouts only for in-tree development.
 
 - [x] Audit every production CEM43, Arrhenius, and independent-insult formula.
 - [x] Record ownership, failure atomicity, retained consumer policy, and
-      independent-oracle boundaries in ADR 043.
+      independent-oracle boundaries in ADR 044.
 - [x] Add the direct public Asclepius dependency to each consuming crate.
 - [x] Replace every production formula with typed Asclepius evaluation and
       delete the superseded public analytical functions and constants.
@@ -7328,7 +7354,7 @@ Atlas checkouts only for in-tree development.
   The major SemVer gate passes; the minor gate rejects the change with seven
   major-breaking lint categories, including all six removed response
   functions and the typed ablation surface.
-- Decision: [ADR 043](docs/ADR/043-asclepius-response-ownership.md).
+- Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
 
 **Theorem:** each persistent field first evaluates every Asclepius increment
 into caller-owned scratch storage and mutates accumulated state only after the
