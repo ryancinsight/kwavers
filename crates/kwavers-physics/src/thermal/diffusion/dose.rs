@@ -181,9 +181,7 @@ mod tests {
         assert_eq!(calculator.max_dose_time(), time_before);
 
         let wrong_shape = Array3::from_elem((1, 1, 1), 317.15);
-        assert!(calculator
-            .update_dose(&wrong_shape, 60.0, 120.0)
-            .is_err());
+        assert!(calculator.update_dose(&wrong_shape, 60.0, 120.0).is_err());
         assert_eq!(calculator.get_dose(), &before);
     }
 }
