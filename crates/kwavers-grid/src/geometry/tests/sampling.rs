@@ -1,10 +1,10 @@
-use approx::assert_abs_diff_eq;
 use tyche_core::{Design, Seed};
 
 use super::super::sampling::DesignSamplingExt;
 use super::super::{
     GeometricDomain, GeometryError, PointLocation, RectangularDomain, SphericalDomain,
 };
+use super::assert_within_absolute_error;
 
 #[test]
 fn all_domain_samplers_have_exact_cardinality_replay_and_membership() {
@@ -149,6 +149,6 @@ fn sampled_spherical_radial_moments_match_uniform_measure() {
     // underlying discrete uniform coordinate. Its mean differs from 1/2 by at
     // most the six-sigma Monte Carlo bound used here.
     let bound = 6.0 / (12.0 * count).sqrt();
-    assert_abs_diff_eq!(disk_mean_radius_squared, 0.5, epsilon = bound);
-    assert_abs_diff_eq!(ball_mean_radius_cubed, 0.5, epsilon = bound);
+    assert_within_absolute_error(disk_mean_radius_squared, 0.5, bound);
+    assert_within_absolute_error(ball_mean_radius_cubed, 0.5, bound);
 }

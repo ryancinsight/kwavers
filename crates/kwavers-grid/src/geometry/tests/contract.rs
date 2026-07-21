@@ -1,9 +1,8 @@
-use approx::assert_abs_diff_eq;
-
 use super::super::{
     GeometricDomain, GeometryDimension, GeometryError, PointLocation, RectangularDomain,
     SphericalDomain,
 };
+use super::assert_within_absolute_error;
 
 #[test]
 fn rectangular_domain_classifies_each_supported_dimension() {
@@ -20,7 +19,7 @@ fn rectangular_domain_classifies_each_supported_dimension() {
 
     let cuboid = RectangularDomain::new_3d(-1.0, 1.0, -2.0, 2.0, -3.0, 3.0).expect("valid cuboid");
     assert_eq!(cuboid.dimension(), GeometryDimension::Three);
-    assert_abs_diff_eq!(cuboid.measure(), 48.0, epsilon = 8.0 * f64::EPSILON);
+    assert_within_absolute_error(cuboid.measure(), 48.0, 8.0 * f64::EPSILON);
 }
 
 #[test]
@@ -78,16 +77,16 @@ fn disk_and_ball_maps_follow_inverse_measure_reference_cases() {
     let mut disk_point = [0.0; 2];
     disk.map_unit_interior(&[0.25, 0.0], &mut disk_point)
         .expect("valid disk coordinate");
-    assert_abs_diff_eq!(disk_point[0], 2.0, epsilon = 8.0 * f64::EPSILON);
-    assert_abs_diff_eq!(disk_point[1], -1.0, epsilon = 8.0 * f64::EPSILON);
+    assert_within_absolute_error(disk_point[0], 2.0, 8.0 * f64::EPSILON);
+    assert_within_absolute_error(disk_point[1], -1.0, 8.0 * f64::EPSILON);
 
     let ball = SphericalDomain::new_3d(1.0, -1.0, 3.0, 2.0).expect("valid ball");
     let mut ball_point = [0.0; 3];
     ball.map_unit_interior(&[0.125, 0.5, 0.0], &mut ball_point)
         .expect("valid ball coordinate");
-    assert_abs_diff_eq!(ball_point[0], 2.0, epsilon = 16.0 * f64::EPSILON);
-    assert_abs_diff_eq!(ball_point[1], -1.0, epsilon = 16.0 * f64::EPSILON);
-    assert_abs_diff_eq!(ball_point[2], 3.0, epsilon = 16.0 * f64::EPSILON);
+    assert_within_absolute_error(ball_point[0], 2.0, 16.0 * f64::EPSILON);
+    assert_within_absolute_error(ball_point[1], -1.0, 16.0 * f64::EPSILON);
+    assert_within_absolute_error(ball_point[2], 3.0, 16.0 * f64::EPSILON);
 }
 
 #[test]

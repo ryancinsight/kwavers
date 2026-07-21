@@ -2207,7 +2207,6 @@ name = "gaia"
 version = "0.3.0"
 dependencies = [
  "anyhow",
- "approx",
  "eunomia",
  "geometry-predicates",
  "hashbrown 0.15.5",

@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — review
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
   Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
@@ -31,6 +31,12 @@
   both grid and solver as major. Residue scans retain only the ML-owned
   `AdaptiveRefinementConfig` and the documented cold heterogeneous
   multi-region vtable.
+- Hosted PR #304 first-head evidence: the pinned Atlas checkout confirmed the
+  Gaia `approx` lock entry was stale; Cargo regenerated the one-line closure.
+  The legacy audit now passes after replacing two new `approx::` test imports
+  and one inherited provider-name doc token, without allowlist growth. The
+  inherited rustfmt drift reported by main and the PR is corrected in the
+  exact twelve files emitted by the CI formatter. Exact-head CI rerun pending.
 
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 
