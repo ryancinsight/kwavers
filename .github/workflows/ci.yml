@@ -207,8 +207,9 @@ jobs:
         continue-on-error: true
 
   benchmarks:
-    name: Performance Benchmarks
+    name: Benchmark Runtime Smoke
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
@@ -236,21 +237,8 @@ jobs:
             target/
           key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Run benchmarks
-        run: cargo bench --locked -p kwavers --features="plotting"
-
-      - name: Save benchmark baseline
-        run: |
-          python3 .github/scripts/check_regressions.py save \
-            --workspace . \
-            --output .benchmarks/baseline.json
-
-      - name: Check benchmark regressions
-        run: |
-          python3 .github/scripts/check_regressions.py check \
-            --workspace . \
-            --baseline .benchmarks/baseline.json \
-            --threshold-pct 15
+      - name: Execute every plotting-eligible Criterion target once
+        run: cargo bench --locked -p kwavers --features plotting --benches -- --test
 
   coverage:
     name: Code Coverage

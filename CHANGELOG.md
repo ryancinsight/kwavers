@@ -34,7 +34,10 @@
   Surface PINN training failures and isolate logging output in a per-run
   temporary directory. Keep the coherent narrowband Capon fixture within the
   strictly positive diagonal-loading domain so every measured solve is
-  nonsingular and produces a finite, positive spectrum.
+  nonsingular and produces a finite, positive spectrum. Replace the unbounded
+  current-run-versus-itself benchmark comparison with a 30-minute runtime
+  smoke that executes every plotting-eligible Criterion target once; the
+  cross-revision regression workflow owns statistical performance evidence.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.
