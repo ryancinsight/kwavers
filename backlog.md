@@ -159,7 +159,8 @@
 - Owner: Codex; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` and its PM
   evidence only.
 - Acceptance: ignored GPU parity tests call the provider-owned six-argument
-  `GpuPstdSolver::run` API with `SensorTraces` and consume `sensor_data`; no
+  `GpuPstdSolver::run` API with `PstdOutputRequest::sensor_traces()` and consume
+  `sensor_data`; no
   compatibility wrapper or test simplification is introduced.
 - Evidence: hosted job `87936633879` gave the exact E0061/E0308 diagnostics;
   package-scoped nightly rustfmt passes after the direct call-site migration.
@@ -8439,7 +8440,9 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   are clean. Hephaestus owns the aggregate buffer-limit mapping in merged
   commit `cf4df20`; Kwavers keeps its ordinary provider limit at 8 and requests
   24/32 only for the PSTD layouts. The remaining capability gap is a GPU
-  peak-over-time field on domains larger than 256 cells per axis. The release
+  peak-over-time field; per-axis FFT support now reaches 1,024, but whole-grid
+  provider capacity remains a per-plan constraint. KW-GPU-062 owns the peak
+  output contract. The release
   SemVer gate now passes against `main` with `--release-type major` after
   Leto, Gaia, and Kwavers declare the common Leto/Eunomia Git sources and use
   Atlas-root patches only for local integration.
@@ -8474,13 +8477,13 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   solver oracle still matches published 42/43/44 degree Celsius cases.
 - Dependencies: Asclepius merge `794f8c3`; Aequitas `be3a1ac`.
 - Risk: public duplicate response functions are removed, so the change is
-  breaking. ADR 043 owns the migration and verification decision.
+  breaking. ADR 044 owns the migration and verification decision.
 - Evidence: one public Asclepius source is present in the dependency graph;
   production residue scans retain only the independent solver oracle and test
   equations. Warning-denied all-feature Clippy, 2,070 native tests, 10 Python
   tests, 29 doctests, Rustdoc, and the major SemVer gate pass. A minor SemVer
   check reports seven major-breaking categories, confirming the classification.
 - Claimed files: response-law consumers under `kwavers-physics`,
-  `kwavers-therapy`, and `kwavers-python`; provider manifests/lock; ADR 043;
+  `kwavers-therapy`, and `kwavers-python`; provider manifests/lock; ADR 044;
   this item and its owner-local checklist section.
-- Decision: [ADR 043](docs/ADR/043-asclepius-response-ownership.md).
+- Decision: [ADR 044](docs/ADR/044-asclepius-response-ownership.md).

@@ -96,7 +96,7 @@ Cross-repository foundations remain below that DAG. Public
 thermal damage, and independent-insult composition. Kwavers converts stored
 temperatures to Aequitas quantities at its boundaries and retains spatial
 fields, tissue presets, clinical thresholds, and an independent validation
-oracle. See [ADR 043](docs/ADR/043-asclepius-response-ownership.md).
+oracle. See [ADR 044](docs/ADR/044-asclepius-response-ownership.md).
 
 Key architectural decisions:
 - **Layer Separation**: Unidirectional dependencies prevent circular imports

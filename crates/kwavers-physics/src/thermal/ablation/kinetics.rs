@@ -2,7 +2,7 @@
 //!
 //! Kwavers owns tissue parameter presets and ablation thresholds. Asclepius
 //! owns the first-order damage rate, integration, survival, and probability
-//! laws described in ADR 043.
+//! laws described in ADR 044.
 
 use aequitas::systems::si::quantities::{
     MolarEnergy, MolarHeatCapacity, ReciprocalTime, ThermodynamicTemperature, Time,
