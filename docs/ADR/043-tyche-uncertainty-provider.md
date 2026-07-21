@@ -22,11 +22,11 @@ rank implements the empirical quantile in Section 1 and Theorem 1 of
 [Angelopoulos and Bates](https://arxiv.org/abs/2107.07511):
 `ceil((n+1)(1-alpha))`, capped at `n`. Tyche ADR 0001 records the exchangeable
 rank proof at public revision
-[`00ce951`](https://github.com/ryancinsight/tyche/blob/00ce9511878236abadd94c86bdbc669b47026aed/docs/adr/0001-reproducible-study-boundary.md#conformal-coverage).
+[`2b8fb14`](https://github.com/ryancinsight/tyche/blob/2b8fb14267a710e1438102666211494a3d6f179e/docs/adr/0001-reproducible-study-boundary.md#conformal-coverage).
 
 ## Decision
 
-Kwavers depends on `tyche-core` at revision `00ce951`.
+Kwavers depends on `tyche-core` at merged revision `2b8fb14`.
 
 - Analysis computes absolute errors and even medians in prediction-native
   `f32`, then widens the completed score exactly for

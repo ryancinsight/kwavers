@@ -41,7 +41,7 @@
   both consumers; interval results borrow scores and retain every prediction;
   sensitivity is const-generic, deterministic, allocation-free per sample, and
   named squared correlation; pseudo-Sobol/Morris bodies have no residue.
-- Evidence: public Tyche revision `00ce951` is the single dependency in both
+- Evidence: public Tyche merge `2b8fb14` is the single dependency in both
   packages; focused Analysis and PINN suites pass 13/13 and 12/12. The final
   local all-feature Analysis suite passes 764/764, including heterogeneous
   report borrowing, native-precision even medians, and invalid beamforming
@@ -66,6 +66,9 @@
   synchronized provider checkout, eliminating duplicate Apollo package
   identities while retaining the committed lock.
 - PR 298 retains the hosted matrix and terminal merge evidence.
+- The combined Tyche/Asclepius consumer head passes locked all-target,
+  all-feature compile plus 51/51 cross-provider Nextest cases at merged
+  provider revisions (`2b8fb14`, `794f8c3`).
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 

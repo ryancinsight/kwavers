@@ -6901,7 +6901,7 @@ checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
 [[package]]
 name = "tyche-core"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/tyche?rev=00ce9511878236abadd94c86bdbc669b47026aed#00ce9511878236abadd94c86bdbc669b47026aed"
+source = "git+https://github.com/ryancinsight/tyche?rev=2b8fb14267a710e1438102666211494a3d6f179e#2b8fb14267a710e1438102666211494a3d6f179e"
 dependencies = [
  "eunomia",
 ]
