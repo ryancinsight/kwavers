@@ -7,7 +7,7 @@ num-complex = "0.4"
 aequitas = { version = "0.1.0", git = "https://github.com/ryancinsight/aequitas", rev = "be3a1ac91286a17aecf18f0065d2aa6b385eb67b", default-features = false, features = ["std"] }
 asclepius = { version = "0.1.0", git = "https://github.com/ryancinsight/asclepius", rev = "794f8c328d72fd020b63e53ae46f6f8fd781d8df", default-features = false, features = ["std"] }
 proteus = { version = "0.1.0", git = "https://github.com/ryancinsight/proteus", rev = "c82f50d908b7f2119a5caa29026fe7ed23b1d44f" }
-tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche", rev = "00ce9511878236abadd94c86bdbc669b47026aed" }
+tyche-core = { version = "0.1.0", git = "https://github.com/ryancinsight/tyche", rev = "2b8fb14267a710e1438102666211494a3d6f179e" }
 # External git submodules replaced by remote git dependencies (always-latest on the
 # default branch; `cargo update -p <crate>` refreshes the pinned commit in Cargo.lock).
 # These repos carry their own [workspace], so Cargo resolves their internal
@@ -153,9 +153,6 @@ hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
 
 [patch."https://github.com/ryancinsight/melinoe.git"]
 melinoe = { path = "../melinoe" }
-
-[patch."https://github.com/ryancinsight/asclepius"]
-asclepius = { path = "../asclepius/crates/asclepius" }
 
 [patch.crates-io]
 melinoe = { path = "../melinoe" }

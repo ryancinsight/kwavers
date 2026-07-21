@@ -58,7 +58,8 @@ impl CoreMedium for HomogeneousMedium {
 
 impl ArrayAccess for HomogeneousMedium {
     fn density_array(&self) -> ArrayView3<'_, f64> {
-        self.density_cache.get_or_init(self.grid_shape, self.density)
+        self.density_cache
+            .get_or_init(self.grid_shape, self.density)
     }
 
     fn sound_speed_array(&self) -> ArrayView3<'_, f64> {

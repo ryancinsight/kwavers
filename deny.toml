@@ -46,6 +46,7 @@ allow-registry = ["https://github.com/rust-lang/crates.io-index"]
 allow-git = [
     "https://github.com/NVlabs/cutile-rs",
     "https://github.com/ryancinsight/aequitas",
+    "https://github.com/ryancinsight/asclepius",
     "https://github.com/ryancinsight/consus",
     "https://github.com/ryancinsight/proteus",
     "https://github.com/ryancinsight/tyche",

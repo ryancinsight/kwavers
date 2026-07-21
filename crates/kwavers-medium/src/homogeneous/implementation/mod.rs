@@ -35,10 +35,7 @@ impl LazyUniformArray {
 
     /// Initialize with a closure so that expensive scalar computations run only
     /// on first allocation, not on every cache hit.
-    fn get_or_init_with<F: FnOnce() -> Array3<f64>>(
-        &self,
-        f: F,
-    ) -> ArrayView3<'_, f64> {
+    fn get_or_init_with<F: FnOnce() -> Array3<f64>>(&self, f: F) -> ArrayView3<'_, f64> {
         self.0.get_or_init(f).view()
     }
 }
