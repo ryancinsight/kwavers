@@ -143,24 +143,16 @@ impl HeterogeneousFactory {
         let mut alpha_power = Array3::from_elem([nx, ny, nz], 1.0_f64);
         let mut nonlinearity = Array3::zeros([nx, ny, nz]);
 
-        for i in 0..nx {
-            for j in 0..ny {
-                for k in 0..nz {
-                    let (x, y, z) = grid.indices_to_coordinates(i, j, k);
-                    sound_speed[[i, j, k]] = sound_speed_fn(x, y, z);
-                    density[[i, j, k]] = density_fn(x, y, z);
-
-                    if let Some(ref abs_fn) = absorption_fn {
-                        absorption[[i, j, k]] = abs_fn(x, y, z);
-                    }
-                    if let Some(ref yf) = alpha_power_fn {
-                        alpha_power[[i, j, k]] = yf(x, y, z);
-                    }
-                    if let Some(ref nl_fn) = nonlinearity_fn {
-                        nonlinearity[[i, j, k]] = nl_fn(x, y, z);
-                    }
-                }
-            }
+        crate::parallel::fill_from_function(&mut sound_speed, grid, &sound_speed_fn);
+        crate::parallel::fill_from_function(&mut density, grid, &density_fn);
+        if let Some(ref abs_fn) = absorption_fn {
+            crate::parallel::fill_from_function(&mut absorption, grid, abs_fn);
+        }
+        if let Some(ref yf) = alpha_power_fn {
+            crate::parallel::fill_from_function(&mut alpha_power, grid, yf);
+        }
+        if let Some(ref nl_fn) = nonlinearity_fn {
+            crate::parallel::fill_from_function(&mut nonlinearity, grid, nl_fn);
         }
 
         HeterogeneousMedium {
