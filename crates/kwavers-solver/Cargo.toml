@@ -37,7 +37,7 @@ parking_lot = "0.12"
 tracing = { version = "0.1", features = ["attributes"] }
 apollo = { workspace = true }
 eunomia = { workspace = true }
-tyche-core = { workspace = true, optional = true }
+tyche-core = { workspace = true }
 
 # coeus ML stack — required only when the `pinn` feature is enabled.
 coeus-core = { workspace = true, optional = true }
@@ -48,7 +48,7 @@ coeus-optim = { workspace = true, optional = true }
 coeus-ops = { workspace = true, optional = true }
 
 # Typed errors for the PINN training/distributed subsystem.
-thiserror = { workspace = true, optional = true }
+thiserror = { workspace = true }
 
 [features]
 # Exposes `plugin::test_support` (NullBoundary + context helpers) for downstream
@@ -56,14 +56,12 @@ thiserror = { workspace = true, optional = true }
 test-util = []
 gpu = ["kwavers-math/gpu"]
 pinn = [
-    "dep:thiserror",
     "dep:coeus-core",
     "dep:coeus-tensor",
     "dep:coeus-autograd",
     "dep:coeus-nn",
     "dep:coeus-optim",
     "dep:coeus-ops",
-    "dep:tyche-core",
 ]
 async-runtime = []
 clinical-imaging = ["dep:kwavers-imaging", "kwavers-physics/clinical-imaging"]
@@ -79,6 +77,12 @@ required-features = ["clinical-imaging"]
 
 [dev-dependencies]
 approx = "0.5"
+stats_alloc = { workspace = true }
+
+[[test]]
+name = "collocation_allocation"
+path = "tests/collocation_allocation.rs"
+required-features = ["pinn"]
 
 [lints]
 workspace = true

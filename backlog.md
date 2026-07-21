@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — review
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
   Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
@@ -19,6 +19,18 @@
 - Decision: extend [`ADR-043`](docs/ADR/043-tyche-uncertainty-provider.md) with
   the collocation ownership, public migration, transform proofs, and rejected
   duplicate/rejection alternatives.
+- Exact rebased-head evidence: grid Nextest passes 45/45, including
+  fixed-layout/output allocation and typed reservation-failure contracts;
+  solver geometry/config/allocation selection passes 21/21; Tyche sensitivity
+  passes 9/9; and all-target checks pass for all three affected packages.
+  Changed-file rustfmt, `git diff --check`, grid warning-denied Clippy, all
+  three doctest suites, and grid/solver warning-denied Rustdoc pass. Solver and
+  analysis Clippy stop only at the two pre-existing KW-LINT-047 forward-solver
+  diagnostics; analysis warning-denied Rustdoc exposes its pre-existing
+  cross-module link backlog. SemVer comparison against live main classifies
+  both grid and solver as major. Residue scans retain only the ML-owned
+  `AdaptiveRefinementConfig` and the documented cold heterogeneous
+  multi-region vtable.
 
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 

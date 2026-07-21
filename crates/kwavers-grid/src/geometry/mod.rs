@@ -1,113 +1,49 @@
-//! 🌍 **Spatial Domain Bounded Context**
+//! Validated spatial domains and reproducible point sampling.
 //!
-//! ## Ubiquitous Language
-//! - **Computational Domain**: Spatial region Ω ⊂ ℝⁿ where physics is defined
-//! - **Geometric Primitives**: Rectangles, spheres, custom shapes for domain definition
-//! - **Boundary Classification**: Interior points, boundary points, exterior regions
-//! - **Collocation Points**: Spatial locations for PDE evaluation (PINN, quadrature)
-//! - **Normal Vectors**: Outward unit normals at boundaries for boundary conditions
-//! - **Domain Measures**: Volume, area, surface area for normalization and scaling
+//! A [`GeometricDomain`] owns the transformation from the unit hypercube to
+//! its physical interior. [`sampling::DesignSamplingExt`] applies any Tyche
+//! [`tyche_core::Design`] through that transformation without materializing an
+//! intermediate design matrix.
 //!
-//! ## 🎯 Business Value
-//! The geometry bounded context enables **solver-agnostic spatial reasoning**:
-//! - **Grid Generation**: Forward solvers create computational meshes
-//! - **Collocation Sampling**: PINNs place training points strategically
-//! - **Boundary Enforcement**: All solvers apply BCs at same geometric locations
-//! - **Domain Decomposition**: Multi-region problems with interface conditions
-//!
-//! ## 📐 Mathematical Foundation
-//!
-//! A computational domain Ω ⊂ ℝⁿ requires these capabilities:
-//!
-//! ### Geometric Operations
-//! - **Membership Testing**: `x ∈ Ω` (point-in-domain classification)
-//! - **Boundary Detection**: `x ∈ ∂Ω` (boundary point identification)
-//! - **Normal Computation**: `n̂(x)` for `x ∈ ∂Ω` (outward unit normal vectors)
-//! - **Measure Calculation**: `|Ω|` (volume/area), `|∂Ω|` (surface/perimeter)
-//!
-//! ### Sampling Operations
-//! - **Interior Sampling**: Generate points `xᵢ ∈ Ω` for PDE collocation
-//! - **Boundary Sampling**: Generate points `xᵢ ∈ ∂Ω` for boundary conditions
-//! - **Stratified Sampling**: Adaptive point placement for better convergence
-//!
-//! ## 🏗️ Architecture
-//!
-//! ```text
-//! GeometricDomain (trait)
-//! ├── dimension()           ← ℝⁿ dimension
-//! ├── contains()            ← x ∈ Ω
-//! ├── classify_point()      ← Interior/Boundary/Exterior
-//! ├── bounding_box()        ← AABB for optimization
-//! ├── normal()              ← n̂(x) at boundaries
-//! ├── measure()             ← |Ω| domain measure
-//! ├── sample_interior()     ← Collocation points in Ω
-//! └── sample_boundary()     ← Boundary condition points
-//! │
-//! ├── RectangularDomain     ← [x₀,x₁] × [y₀,y₁] × [z₀,z₁]
-//! ├── SphericalDomain       ← Balls, shells, spherical sectors
-//! └── CompositeDomain       ← Union/intersection of primitives
-//! ```
-//!
-//! ## 🔄 Solver Integration
-//!
-//! ### Forward Solvers (FD/FEM/Spectral)
-//! ```rust,ignore
-//! // Use geometry to build computational grid
-//! let geometry = RectangularDomain::new_3d(0.0, 1.0, 0.0, 1.0, 0.0, 1.0);
-//! let grid = Grid::from_geometry(&geometry, dx, dy, dz);
-//!
-//! // Apply boundary conditions at geometric boundaries
-//! for boundary_point in geometry.sample_boundary(n_boundary_points) {
-//!     apply_bc(&boundary_point, &geometry.normal(&boundary_point));
-//! }
-//! ```
-//!
-//! ### Inverse Solvers (PINN/Optimization)
-//! ```rust,ignore
-//! // Sample collocation points from geometry
-//! let interior_points = geometry.sample_interior(n_collocation);
-//! let boundary_points = geometry.sample_boundary(n_boundary);
-//!
-//! // Train PINN on geometric domain
-//! pinn.train_on_domain(&geometry, interior_points, boundary_points);
-//! ```
-//!
-//! ## 🎯 Design Patterns
-//!
-//! ### Strategy Pattern for Domain Types
-//! ```rust,ignore
-//! // Same algorithms work on any geometric domain
-//! fn solve_pde_on_domain<G: GeometricDomain>(domain: &G) {
-//!     let collocation = domain.sample_interior(1000);
-//!     let boundaries = domain.sample_boundary(100);
-//!     // ... PDE solution using domain abstraction
-//! }
-//!
-//! solve_pde_on_domain(&rectangular_domain);
-//! solve_pde_on_domain(&spherical_domain);
-//! ```
-//!
-//! ### Composite Pattern for Complex Domains
-//! ```rust,ignore
-//! // Build complex domains from primitives
-//! let liver = SphericalDomain::new(center, radius);
-//! let tumor = SphericalDomain::new(tumor_center, tumor_radius);
-//! let complex_domain = CompositeDomain::union(&liver, &tumor);
-//! ```
+//! For an axis-aligned interval `[a, b]`, the affine map
+//! `x = a + u(b-a)` has constant Jacobian `b-a`. For a disk, `r = R sqrt(u)`
+//! makes `P(r <= q) = (q/R)^2`; for a ball, `r = R cbrt(u)` makes
+//! `P(r <= q) = (q/R)^3`. The angular coordinates are uniform in angle in 2-D
+//! and uniform in azimuth and `cos(theta)` in 3-D. These transforms therefore
+//! preserve the corresponding normalized area or volume measure. The radial
+//! construction follows the inverse-volume rule stated in Jonathan Goodman's
+//! Monte Carlo notes, page 19:
+//! <https://math.nyu.edu/~goodman/teaching/MonteCarlo17/notes/Week1.pdf>.
 
 use leto::{Array1, Array2};
+use tyche_core::Seed;
 
-/// Spatial dimension specification
+mod error;
+mod rectangular;
+pub mod sampling;
+mod spherical;
+#[cfg(test)]
+mod tests;
+
+pub use error::GeometryError;
+pub use rectangular::RectangularDomain;
+pub use spherical::SphericalDomain;
+
+/// Spatial dimension of a geometric domain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum GeometryDimension {
+    /// One-dimensional interval.
     One,
+    /// Two-dimensional region.
     Two,
+    /// Three-dimensional region.
     Three,
 }
 
 impl GeometryDimension {
+    /// Number of active coordinates.
     #[must_use]
-    pub fn as_usize(&self) -> usize {
+    pub const fn as_usize(&self) -> usize {
         match self {
             Self::One => 1,
             Self::Two => 2,
@@ -116,41 +52,77 @@ impl GeometryDimension {
     }
 }
 
-/// Identifies which face of the grid domain a boundary element belongs to.
+/// Face of an axis-aligned grid domain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DomainFace {
+    /// Minimum x face.
     XMin,
+    /// Maximum x face.
     XMax,
+    /// Minimum y face.
     YMin,
+    /// Maximum y face.
     YMax,
+    /// Minimum z face.
     ZMin,
+    /// Maximum z face.
     ZMax,
 }
 
-/// Point location relative to domain
+/// Point location relative to a domain.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PointLocation {
+    /// Strictly inside the domain.
     Interior,
+    /// On the domain boundary within the supplied tolerance.
     Boundary,
+    /// Outside the domain or invalid for the domain dimension.
     Exterior,
 }
 
-/// Abstract geometric domain trait
+/// Solver-independent geometric-domain contract.
 pub trait GeometricDomain: Send + Sync {
+    /// Spatial dimension.
     fn dimension(&self) -> GeometryDimension;
+    /// Whether `point` lies in the closed domain.
     fn contains(&self, point: &[f64]) -> bool;
+    /// Classify `point` using a non-negative finite boundary tolerance.
     fn classify_point(&self, point: &[f64], tolerance: f64) -> PointLocation;
+    /// Interleaved minimum/maximum coordinates of the axis-aligned enclosure.
     fn bounding_box(&self) -> Vec<f64>;
+    /// Outward unit normal for a boundary point.
     fn normal(&self, point: &[f64], tolerance: f64) -> Option<Array1<f64>>;
+    /// Length, area, or volume of the domain.
     fn measure(&self) -> f64;
-    fn sample_interior(&self, n_points: usize, seed: Option<u64>) -> Array2<f64>;
-    fn sample_boundary(&self, n_points: usize, seed: Option<u64>) -> Array2<f64>;
+    /// Map one normalized point in `[0, 1)^d` into the strict interior.
+    ///
+    /// The output is unchanged when validation fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GeometryError`] for a dimension mismatch or a non-finite or
+    /// out-of-range normalized coordinate.
+    fn map_unit_interior(&self, unit: &[f64], output: &mut [f64]) -> Result<(), GeometryError>;
+    /// Draw reproducible, independent interior points.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GeometryError`] if the output shape exceeds addressable
+    /// storage or exact output reservation fails.
+    fn sample_interior(
+        &self,
+        sample_count: usize,
+        seed: Seed,
+    ) -> Result<Array2<f64>, GeometryError>;
+    /// Draw reproducible points uniformly with respect to boundary measure.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GeometryError`] if the output shape exceeds addressable
+    /// storage or exact output reservation fails.
+    fn sample_boundary(
+        &self,
+        sample_count: usize,
+        seed: Seed,
+    ) -> Result<Array2<f64>, GeometryError>;
 }
-
-mod rectangular;
-mod spherical;
-#[cfg(test)]
-mod tests;
-
-pub use rectangular::RectangularDomain;
-pub use spherical::SphericalDomain;

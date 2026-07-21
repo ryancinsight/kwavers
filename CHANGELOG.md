@@ -2,6 +2,37 @@
 
 ## Unreleased
 
+### Breaking (2026-07-21) - Tyche collocation sampling [major] [arch]
+
+- Replace Kwavers' allocated Latin-hypercube permutation and three-dimensional
+  pseudo-Sobol implementation with Tyche's random-access const-generic designs.
+  `CollocationSampler<G>` now stores its geometric domain inline, takes an
+  explicit `tyche_core::Seed`, and returns typed geometry failures for design
+  counts outside Tyche's validated range. Boundary sampling remains owned by
+  each physical domain rather than applying a unit-cube design to an undefined
+  boundary chart.
+- Make rectangular and spherical construction fallible and private-fielded.
+  Their fixed three-coordinate storage allocates nothing, rejects non-finite,
+  unordered, unrepresentable, or non-finite-measure domains, and maps unit
+  points into the strict interior without rejection. Sampling takes a typed
+  `Seed` and returns `Result`.
+- Select rectangular boundary faces in proportion to face measure through a
+  borrowed Tyche weighted categorical distribution. Disk and ball interiors
+  use inverse-area and inverse-volume radial maps; spherical boundaries use
+  direct angular maps. Generated non-empty matrices allocate one exact-capacity
+  buffer with no reallocation or intermediate point matrix; failed exact
+  reservation returns a typed error.
+- Remove the unused geometry `AdaptiveRefinement` implementation and
+  `CollocationSamplingStrategy::AdaptiveRefinement`. The PINN ML
+  `AdaptiveCollocationSampler` remains the single residual-adaptive owner. See
+  ADR 043.
+- Remove the unused duplicate `ElasticCollocationSamplingStrategy`; elastic
+  training configuration now serializes the canonical
+  `CollocationSamplingStrategy` directly.
+- Make `MultiRegionDomain::new` fallible with typed count and dimension errors,
+  expose its validated collections through borrowed accessors, and apply the
+  requested interface-point quota independently to each adjacent region pair.
+
 ### Breaking (2026-07-20) - Asclepius biological responses [major]
 
 - Replace Kwavers-owned CEM43, Arrhenius damage, and independent-insult

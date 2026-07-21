@@ -1,10 +1,16 @@
 use super::*;
+use crate::inverse::pinn::geometry::CollocationSamplingStrategy;
 use kwavers_core::constants::fundamental::DENSITY_WATER_NOMINAL;
 
 #[test]
 fn test_default_config_valid() {
     let config = Config::default();
-    assert!(config.validate().is_ok());
+    config.validate().expect("default configuration is valid");
+    assert_eq!(
+        config.sampling_strategy,
+        CollocationSamplingStrategy::LatinHypercube
+    );
+    assert_eq!(config.n_collocation_interior, 10_000);
 }
 
 #[test]
@@ -83,14 +89,16 @@ fn test_loss_weights_default() {
 }
 
 #[test]
-fn test_sampling_strategy_equality() {
+fn canonical_sampling_strategy_round_trips_with_elastic_config() {
+    let config = Config {
+        sampling_strategy: CollocationSamplingStrategy::Sobol,
+        ..Config::default()
+    };
+    let encoded = serde_json::to_string(&config).expect("configuration serializes");
+    let decoded: Config = serde_json::from_str(&encoded).expect("configuration deserializes");
     assert_eq!(
-        ElasticCollocationSamplingStrategy::Uniform,
-        ElasticCollocationSamplingStrategy::Uniform
-    );
-    assert_ne!(
-        ElasticCollocationSamplingStrategy::Uniform,
-        ElasticCollocationSamplingStrategy::Sobol
+        decoded.sampling_strategy,
+        CollocationSamplingStrategy::Sobol
     );
 }
 

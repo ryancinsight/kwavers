@@ -2,21 +2,21 @@
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
-- [ ] Extend ADR 043 with the collocation boundary, public migration, mapping
+- [x] Extend ADR 043 with the collocation boundary, public migration, mapping
       proofs, memory contract, and rejected alternatives.
-- [ ] Validate fixed-layout rectangular and spherical domains at construction.
-- [ ] Add the generic Tyche `Design` collector and domain-separated counter
+- [x] Validate fixed-layout rectangular and spherical domains at construction.
+- [x] Add the generic Tyche `Design` collector and domain-separated counter
       streams in `kwavers-grid`.
-- [ ] Replace rectangle, disk, and ball rejection sampling with measure-correct
+- [x] Replace rectangle, disk, and ball rejection sampling with measure-correct
       direct transforms and face-measure boundary selection.
-- [ ] Replace the PINN sampler's boxed domain, local Latin-hypercube, and
+- [x] Replace the PINN sampler's boxed domain, local Latin-hypercube, and
       pseudo-Sobol implementations with generic Tyche dispatch.
-- [ ] Delete the obsolete geometry adaptive sampler and migrate all callers.
-- [ ] Prove value semantics, exact cardinality, deterministic replay, mapping
+- [x] Delete the obsolete geometry adaptive sampler and migrate all callers.
+- [x] Prove value semantics, exact cardinality, deterministic replay, mapping
       laws, and one-allocation output construction with focused tests.
-- [ ] Run focused Nextest, warning-denied Clippy, doctests, Rustdoc, dependency
+- [x] Run focused Nextest, warning-denied Clippy, doctests, Rustdoc, dependency
       and residue audits, plus public SemVer classification.
-- [ ] Synchronize README, book references, backlog, checklist, and changelog.
+- [x] Synchronize README, book references, backlog, checklist, and changelog.
 
 ## Owner: /root — Install Atlas benchmark oracle [patch] [arch]
 
