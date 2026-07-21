@@ -46,7 +46,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        with:
+          manifest: Cargo.toml
+          destination: ..
+          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -87,7 +91,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Checkout Atlas path dependencies
-        uses: ./.github/actions/checkout-atlas-path-dependencies
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        with:
+          manifest: Cargo.toml
+          destination: ..
+          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
 
       - name: Install stable toolchain
         uses: dtolnay/rust-toolchain@stable

@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example phantom_builder_demo`  
-**Source**: [`crates/kwavers/examples/phantom_builder_demo.rs`](../../../../crates/kwavers/examples/phantom_builder_demo.rs)
+**Source**: [`crates/kwavers/examples/phantom_builder_demo.rs`](../../../crates/kwavers/examples/phantom_builder_demo.rs)
 
 ## What This Example Demonstrates
 

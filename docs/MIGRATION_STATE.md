@@ -93,11 +93,11 @@ transitive dependencies. They don't affect kwavers directly.
 
 ### 2. Python Boundary (numpy crate)
 
-**Status:** Uses vendored numpy-0.27.1
+**Status:** COMPLETED — Python bindings use crates.io `numpy` 0.29 with PyO3 0.29
 
-**Impact:** Python interop works but uses vendored numpy.
+**Impact:** The thin Python boundary follows one registry dependency closure.
 
-**Resolution:** Consider using `numpy` from crates.io instead of vendoring.
+**Resolution:** The obsolete vendored 0.27 source and patch are removed.
 
 ### 3. Transitive Dependencies
 
@@ -137,9 +137,8 @@ cargo test --examples  # Passes
 ## Action Items
 
 1. **Enable ndarray-compat** on leto for boundary I/O convenience (optional)
-2. **Consider replacing** vendored numpy with crates.io version
-3. **Monitor** transitive ndarray/nalgebra dependencies for upstream updates
-4. **Document** in book examples that NIfTI I/O is boundary layer
+2. **Monitor** transitive ndarray/nalgebra dependencies for upstream updates
+3. **Document** in book examples that NIfTI I/O is boundary layer
 
 ## Historical Notes
 

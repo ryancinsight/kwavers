@@ -1,6 +1,38 @@
 # Backlog / Strategy
 
-## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
+## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
+
+- Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
+  ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`,
+  `crates/kwavers-math/src/fft/mod.rs` CPU-reference FFT boundary, and the
+  in-repository simulation consumer boundary.
+- Acceptance: the provider accumulates `max_t |p|` on the GPU for every voxel,
+  transfers exactly that one pressure volume when requested, and never labels a
+  final pressure frame as a peak envelope. The output request supports final,
+  peak, or both without allocating a peak volume for a sensor-only run. Its
+  source, lossless-absorption, and heterogeneous-nonlinearity choices match
+  the CPU PSTD contract without a host fallback. The reference FFT executes
+  directly on the shared Leto/Eunomia complex type rather than copying through
+  a duplicate facade representation.
+- Decision: [`ADR-040`](docs/ADR/040-gpu-pstd-peak-pressure-output.md).
+- Evidence target: value-semantic output-selection and final-versus-peak
+  invariants, a real WGPU burst regression, GPU-feature Nextest, and an
+  in-repository simulation-consumer regression.
+- Evidence: the simulation adapter requests the provider's explicit peak
+  output, retains it separately from final fields, and shares the direct
+  runner's weighted local-medium pressure-source schedule. It rejects both
+  unsampled `Source` objects and unsupported velocity-source assembly rather
+  than discarding source information. Warning-denied all-feature Clippy passes,
+  and the WGPU-featured Nextest lane passes 259/259 tests, including the
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
+  use the Atlas-owned checkout action and provider graph pinned at `05b7f5d`;
+  direct Aequitas and Proteus revisions match that graph, and the lock contains
+  one Aequitas source identity.
+- External integration requirement: the private full-wave consumer remains
+  responsible for its explicit peak-pressure regression. Its inaccessible
+  checkout does not widen or block this repository's delivery boundary.
+
+## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — review
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/` and GPU PSTD
   consumer validation in `kwavers-simulation`.
@@ -74,7 +106,7 @@
 - Owner: Codex; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` and its PM
   evidence only.
 - Acceptance: ignored GPU parity tests call the provider-owned six-argument
-  `GpuPstdSolver::run` API with `SensorTraces` and consume `sensor_data`; no
+  `GpuPstdSolver::run` API with `PstdOutputRequest::sensor_traces()` and consume `sensor_data`; no
   compatibility wrapper or test simplification is introduced.
 - Evidence: hosted job `87936633879` gave the exact E0061/E0308 diagnostics;
   package-scoped nightly rustfmt passes after the direct call-site migration.
@@ -8354,7 +8386,9 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   are clean. Hephaestus owns the aggregate buffer-limit mapping in merged
   commit `cf4df20`; Kwavers keeps its ordinary provider limit at 8 and requests
   24/32 only for the PSTD layouts. The remaining capability gap is a GPU
-  peak-over-time field on domains larger than 256 cells per axis. The release
+  peak-over-time field; per-axis FFT support now reaches 1,024, but whole-grid
+  provider capacity remains a per-plan constraint. KW-GPU-062 owns the peak
+  output contract. The release
   SemVer gate now passes against `main` with `--release-type major` after
   Leto, Gaia, and Kwavers declare the common Leto/Eunomia Git sources and use
   Atlas-root patches only for local integration.

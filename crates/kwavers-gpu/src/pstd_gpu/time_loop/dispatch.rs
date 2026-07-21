@@ -112,6 +112,8 @@ impl WgpuPstdState {
             nt: ctx.nt,
             nonlinear: ctx.nonlinear,
             absorbing: ctx.absorbing,
+            peak_offset: ctx.peak_offset,
+            record_peak_pressure: ctx.record_peak_pressure,
         };
         let wg_x = n_batches.min(65535);
         let wg_y = n_batches.div_ceil(65535);
@@ -219,3 +221,7 @@ impl WgpuPstdState {
         );
     }
 }
+
+#[cfg(test)]
+#[path = "dispatch_tests.rs"]
+mod tests;

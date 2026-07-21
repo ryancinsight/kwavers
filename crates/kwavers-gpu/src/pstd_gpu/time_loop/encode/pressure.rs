@@ -45,5 +45,15 @@ impl WgpuPstdState {
                 "rec",
             );
         }
+        if ctx.record_peak_pressure != 0 {
+            self.dispatch(
+                cpass,
+                &ctx.params(step, 0),
+                &self.pipelines.peak_pressure,
+                bg,
+                ew,
+                "peak_pressure",
+            );
+        }
     }
 }

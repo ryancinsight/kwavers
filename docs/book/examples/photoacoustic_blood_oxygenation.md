@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example photoacoustic_blood_oxygenation`  
-**Source**: [`crates/kwavers/examples/photoacoustic_blood_oxygenation.rs`](../../../../crates/kwavers/examples/photoacoustic_blood_oxygenation.rs)
+**Source**: [`crates/kwavers/examples/photoacoustic_blood_oxygenation.rs`](../../../crates/kwavers/examples/photoacoustic_blood_oxygenation.rs)
 
 ## What This Example Demonstrates
 

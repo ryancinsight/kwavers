@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example swe_liver_fibrosis`  
-**Source**: [`crates/kwavers/examples/swe_liver_fibrosis.rs`](../../../../crates/kwavers/examples/swe_liver_fibrosis.rs)
+**Source**: [`crates/kwavers/examples/swe_liver_fibrosis.rs`](../../../crates/kwavers/examples/swe_liver_fibrosis.rs)
 
 ## What This Example Demonstrates
 

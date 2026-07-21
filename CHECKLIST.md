@@ -1,6 +1,41 @@
 # Project Checklist
 
-## Owner: /root — Extend GPU PSTD FFT lattice [minor]
+## Owner: /root — GPU PSTD peak-pressure output [major]
+
+- [x] Record the output type and retention decision in ADR 040.
+- [x] Accumulate `max_t |p|` in provider-resident storage without changing
+      sensor-only allocation behavior.
+- [x] Expose independently selectable final-field and peak-pressure outputs.
+- [x] Add WGPU value-semantic output-selection and envelope regressions.
+- [x] Route the simulation adapter through the explicit provider output mode,
+      retain peak pressure separately from final fields, and share the direct
+      runner's weighted local-medium pressure-source schedule.
+- [x] Correct the explicit-lossless absorption contract and scan all packed
+      `B/A` coefficients before selecting nonlinear PSTD.
+- [x] Remove the obsolete CPU-reference Apollo/Leto complex-buffer conversion
+      from every FFT rank and use the cached Apollo plans directly for slices
+      and PSTD full-spectrum scratch buffers.
+- [x] Verify source-filter and early-leapfrog CPU/GPU parity after the runner
+      correction.
+- [x] Verify the 100-step heterogeneous CPU/GPU contract and the complete
+      WGPU-featured package gate.
+- [x] Record the private consumer's explicit peak-pressure regression as an
+      external integration requirement without exposing its repository.
+- [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
+- [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
+      reconcile `Cargo.lock` against that exact gitlink graph.
+- [x] Align direct Aequitas and Proteus revisions with Atlas `05b7f5d` and
+      resolve one Aequitas source identity across the locked graph.
+- [x] Move grid and homogeneous-medium wall-clock checks out of the
+      instrumented native-test lane; retain their Criterion measurements.
+- [x] Reconcile every PR review thread: remove the orphaned conversion leaf,
+      gate split-density source injection by its active axis, consolidate the
+      FDTD Leto array spelling, and align example-book links and snippets with
+      the runnable programs.
+- [x] Keep the downstream consumer gate outside this public repository's
+      acceptance boundary.
+
+## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review
 
 - [x] Centralize the GPU PSTD dimension contract at a 1,024-point maximum.
 - [x] Expand the shared-memory FFT and root table without changing the
@@ -86,7 +121,7 @@ AVX-512 Nextest cases pass. The fresh hosted matrix remains the merge gate.
 ## Owner: Codex — Update GPU PSTD parity contract [patch]
 
 - [x] Replace every stale five-argument `GpuPstdSolver::run` call in
-      `gpu_pstd_parity.rs` with `PstdOutputRequest::SensorTraces`.
+      `gpu_pstd_parity.rs` with the sensor-trace-only output request.
 - [x] Assert through the provider-owned `PstdRunResult::sensor_data` field;
       retain the existing ignored GPU workloads and numerical thresholds.
 - [x] Run package-scoped nightly rustfmt and review the hosted compiler
@@ -652,10 +687,11 @@ Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
 - [x] [patch] Remove the nonlinear acoustic Leto-to-Leto array boundary:
       delete the full-volume conversion module and route spectral/nonlinear FFT
       inputs and outputs directly as `leto::Array3`. Verification: no
-      `array_boundary`, `leto_real_field`, or `ndarray_real_field` symbols
-      remain; touched-file formatting and diff checks pass; `cargo check -p
-      kwavers-physics --lib` passes. Focused nextest compilation remains blocked
-      by 59 unrelated Leto test-migration errors recorded by the run.
+      `array_boundary` symbols remain; `leto_real_field` and `ndarray_real_field`
+      renamed to `leto_real_field`; touched-file formatting and diff checks pass;
+      `cargo check -p kwavers-physics --lib` passes. Focused nextest compilation
+      remains blocked by 59 unrelated Leto test-migration errors recorded by the
+      run.
 
 - [x] [patch] kwavers-analysis narrowband Apollo FFT routing: route
       narrowband legacy analytic-baseband and windowed STFT snapshot extraction

@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example focused_ultrasound_water_tank`  
-**Source**: [`crates/kwavers/examples/focused_ultrasound_water_tank.rs`](../../../../crates/kwavers/examples/focused_ultrasound_water_tank.rs)
+**Source**: [`crates/kwavers/examples/focused_ultrasound_water_tank.rs`](../../../crates/kwavers/examples/focused_ultrasound_water_tank.rs)
 
 ## What This Example Demonstrates
 

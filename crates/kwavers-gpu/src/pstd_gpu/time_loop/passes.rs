@@ -4,6 +4,18 @@ use super::super::{state::WgpuPstdState, PstdParams};
 use super::commands::{PstdCommandProvider, WgpuPstdCommandProvider};
 use super::encode::StepCtx;
 
+/// Bind groups required by one monomorphic PSTD time-step pass.
+pub(super) struct StepBindGroups<'a, B> {
+    pub(super) sensor: &'a B,
+    pub(super) velocity_sensor: &'a B,
+}
+
+/// Source-activity flags derived once for one PSTD time step.
+pub(super) struct SourceActivity {
+    pub(super) pressure: bool,
+    pub(super) velocity: bool,
+}
+
 /// Provider contract for PSTD compute-pass body encoding.
 pub(super) trait PstdPassProvider {
     /// Command provider whose compute-pass type this pass provider encodes into.
@@ -26,9 +38,9 @@ pub(super) trait PstdPassProvider {
         &self,
         cpass: &mut <Self::CommandProvider as PstdCommandProvider>::ComputePass<'pass>,
         ctx: &StepCtx,
-        sensor_bind_group: &Self::BindGroup,
-        velocity_sensor_bind_group: &Self::BindGroup,
+        bind_groups: StepBindGroups<'_, Self::BindGroup>,
         step: u32,
+        source_activity: SourceActivity,
     );
 }
 
@@ -70,25 +82,33 @@ impl<'solver> PstdPassProvider for WgpuPstdPassProvider<'solver> {
         &self,
         cpass: &mut <Self::CommandProvider as PstdCommandProvider>::ComputePass<'pass>,
         ctx: &StepCtx,
-        sensor_bind_group: &Self::BindGroup,
-        velocity_sensor_bind_group: &Self::BindGroup,
+        bind_groups: StepBindGroups<'_, Self::BindGroup>,
         step: u32,
+        source_activity: SourceActivity,
     ) {
         self.state
-            .encode_velocity_update(cpass, ctx, sensor_bind_group, step);
-        self.state.encode_source_injection(
+            .encode_velocity_update(cpass, ctx, bind_groups.sensor, step);
+        self.state.encode_velocity_source_injection(
             cpass,
             ctx,
-            sensor_bind_group,
-            velocity_sensor_bind_group,
+            bind_groups.sensor,
+            bind_groups.velocity_sensor,
             step,
+            source_activity.velocity,
         );
         self.state
-            .encode_nonlinear_snapshot(cpass, ctx, sensor_bind_group, step);
+            .encode_nonlinear_snapshot(cpass, ctx, bind_groups.sensor, step);
         self.state
-            .encode_density_update(cpass, ctx, sensor_bind_group, step);
+            .encode_density_update(cpass, ctx, bind_groups.sensor, step);
+        self.state.encode_pressure_source_injection(
+            cpass,
+            ctx,
+            bind_groups.sensor,
+            step,
+            source_activity.pressure,
+        );
         self.state
-            .encode_pressure_record(cpass, ctx, sensor_bind_group, step);
+            .encode_pressure_record(cpass, ctx, bind_groups.sensor, step);
     }
 }
 

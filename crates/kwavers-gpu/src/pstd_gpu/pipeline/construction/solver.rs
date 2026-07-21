@@ -233,10 +233,12 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
         let pipeline_snapshot_rho0_plus_rho = mk_pl("snapshot_rho0_plus_rho");
         let pipeline_pres_density = mk_pl("pressure_from_density");
         let pipeline_record = mk_pl("record_sensors");
+        let pipeline_peak_pressure = mk_pl("accumulate_peak_pressure");
         let pipeline_inject_src = mk_pl("inject_pressure_source");
         let pipeline_inject_vel_x = mk_pl("inject_velocity_x_source");
         let pipeline_apply_source_kappa = mk_pl("apply_source_kappa");
         let pipeline_add_kspace_to_field_ux = mk_pl("add_kspace_to_field_ux");
+        let pipeline_add_kspace_to_density = mk_pl("add_kspace_to_density");
         let pipeline_copy_field_to_k = mk_pl("copy_field_to_kspace");
 
         let absorption_pipelines = bgl_absorb.as_ref().map(|bgl_absorb| {
@@ -274,10 +276,12 @@ impl PstdStateBuilder for WgpuPstdStateProvider {
             snapshot_rho0_plus_rho: pipeline_snapshot_rho0_plus_rho,
             pres_density: pipeline_pres_density,
             record: pipeline_record,
+            peak_pressure: pipeline_peak_pressure,
             inject_src: pipeline_inject_src,
             inject_vel_x: pipeline_inject_vel_x,
             apply_source_kappa: pipeline_apply_source_kappa,
             add_kspace_to_field_ux: pipeline_add_kspace_to_field_ux,
+            add_kspace_to_density: pipeline_add_kspace_to_density,
             copy_field_to_k: pipeline_copy_field_to_k,
             absorption: absorption_pipelines,
         };
