@@ -16,6 +16,8 @@
       laws, and one-allocation output construction with focused tests.
 - [x] Run focused Nextest, warning-denied Clippy, doctests, Rustdoc, dependency
       and residue audits, plus public SemVer classification.
+- [x] Admit the registered Iris Git source required by the canonical Atlas
+      provider graph through the deny policy and reproduce the source audit.
 - [x] Synchronize README, book references, backlog, checklist, and changelog.
 
 ## Owner: /root — Install Atlas benchmark oracle [patch] [arch]

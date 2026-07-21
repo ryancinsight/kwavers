@@ -48,6 +48,7 @@ allow-git = [
     "https://github.com/ryancinsight/aequitas",
     "https://github.com/ryancinsight/asclepius",
     "https://github.com/ryancinsight/consus",
+    "https://github.com/ryancinsight/iris",
     "https://github.com/ryancinsight/proteus",
     "https://github.com/ryancinsight/tyche",
 ]

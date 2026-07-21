@@ -41,7 +41,10 @@
   `71cdc54c` while the committed lock and benchmark workflow used `614914cf`;
   those Atlas revisions differ at thirteen provider gitlinks. One local
   composite action now owns the ordinary-workflow provider pin and all sixteen
-  call sites delegate to it. Exact-head CI rerun pending.
+  call sites delegate to it. The first exact-graph security audit rejected the
+  registered Iris Git source because the source policy lagged the lock graph;
+  `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
+  pending.
 
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 

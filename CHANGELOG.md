@@ -98,7 +98,9 @@
 - Hosted workflows now materialize path dependencies through one local
   composite action pinned to the Atlas-owned checkout action and exact Atlas
   gitlink graph. `Cargo.lock` retains that graph instead of inheriting mutable
-  local provider revisions, and ordinary workflows cannot drift independently.
+  local provider revisions, ordinary workflows cannot drift independently,
+  and the supply-chain policy explicitly admits the registered Iris source in
+  that graph.
 - GPU PSTD pressure sources now inject into each split-density field only when
   that axis is spatially active, matching the host's active-axis
   normalization for singleton dimensions.
