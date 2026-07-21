@@ -169,7 +169,7 @@ pub mod beamforming;
 
 // Re-export key types for convenience
 pub use geometry::{
-    AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain,
+    CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain, MultiRegionError,
     PinnGeometryInterfaceCondition,
 };
 

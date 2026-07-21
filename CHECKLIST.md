@@ -1,10 +1,31 @@
 # Project Checklist
 
+## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
+
+- [x] Extend ADR 043 with the collocation boundary, public migration, mapping
+      proofs, memory contract, and rejected alternatives.
+- [x] Validate fixed-layout rectangular and spherical domains at construction.
+- [x] Add the generic Tyche `Design` collector and domain-separated counter
+      streams in `kwavers-grid`.
+- [x] Replace rectangle, disk, and ball rejection sampling with measure-correct
+      direct transforms and face-measure boundary selection.
+- [x] Replace the PINN sampler's boxed domain, local Latin-hypercube, and
+      pseudo-Sobol implementations with generic Tyche dispatch.
+- [x] Delete the obsolete geometry adaptive sampler and migrate all callers.
+- [x] Prove value semantics, exact cardinality, deterministic replay, mapping
+      laws, and one-allocation output construction with focused tests.
+- [x] Run focused Nextest, warning-denied Clippy, doctests, Rustdoc, dependency
+      and residue audits, plus public SemVer classification.
+- [x] Admit the registered Iris Git source required by the canonical Atlas
+      provider graph through the deny policy and reproduce the source audit.
+- [x] Synchronize README, book references, backlog, checklist, and changelog.
+
 ## Owner: /root — Install Atlas benchmark oracle [patch] [arch]
 
 - [x] Remove the same-run save/check classifier and its Python implementation.
 - [x] Hold the candidate benchmark instrument constant across base and head.
-- [x] Run the complete suite in phase-reversed ABBA/BAAB order on one runner.
+- [x] Run two base-first and two candidate-first pairs on isolated runners.
+- [x] Materialize both revisions at one filesystem path inside every pair.
 - [x] Derive family-wise confidence and classification from the Atlas SSOT.
 - [x] Bound the instrumented job from observed full-suite runtime without
       reducing benchmark targets, samples, or assertions.
@@ -14,7 +35,7 @@
       target selection.
 - [x] Remove feature-disabled no-op entry points and reject empty benchmark
       mains before measurement.
-- [ ] Verify the exact PR head through the hosted benchmark workflow.
+- [ ] Verify the same-path PR head through the hosted benchmark workflow.
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]
 
@@ -38,9 +59,10 @@
 - [x] Record the private consumer's explicit peak-pressure regression as an
       external integration requirement without exposing its repository.
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
-- [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
-      reconcile `Cargo.lock` against that exact gitlink graph.
-- [x] Align direct Aequitas and Proteus revisions with Atlas `71cdc54` and
+- [x] Route every ordinary hosted path-dependency checkout through one local
+      action pinned to the Atlas-owned action and reconcile `Cargo.lock`
+      against that exact gitlink graph.
+- [x] Align direct Aequitas and Proteus revisions with Atlas `614914cf` and
       resolve one Aequitas source identity across the locked graph.
 - [x] Move grid and homogeneous-medium wall-clock checks out of the
       instrumented native-test lane; retain their Criterion measurements.

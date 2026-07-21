@@ -120,50 +120,26 @@ impl HybridSolver {
                     copy_owned_slice_into_view(&mut p_view, &self.pstd_solver.fields.p, &region);
 
                     let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
-                    copy_owned_slice_into_view(
-                        &mut vx_view,
-                        &self.pstd_solver.fields.ux,
-                        &region,
-                    );
+                    copy_owned_slice_into_view(&mut vx_view, &self.pstd_solver.fields.ux, &region);
 
                     let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
-                    copy_owned_slice_into_view(
-                        &mut vy_view,
-                        &self.pstd_solver.fields.uy,
-                        &region,
-                    );
+                    copy_owned_slice_into_view(&mut vy_view, &self.pstd_solver.fields.uy, &region);
 
                     let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
-                    copy_owned_slice_into_view(
-                        &mut vz_view,
-                        &self.pstd_solver.fields.uz,
-                        &region,
-                    );
+                    copy_owned_slice_into_view(&mut vz_view, &self.pstd_solver.fields.uz, &region);
                 }
                 DomainType::FDTD => {
                     let mut p_view = fields.index_axis_mut(0, p_idx)?;
                     copy_owned_slice_into_view(&mut p_view, &self.fdtd_solver.fields.p, &region);
 
                     let mut vx_view = fields.index_axis_mut(0, vx_idx)?;
-                    copy_owned_slice_into_view(
-                        &mut vx_view,
-                        &self.fdtd_solver.fields.ux,
-                        &region,
-                    );
+                    copy_owned_slice_into_view(&mut vx_view, &self.fdtd_solver.fields.ux, &region);
 
                     let mut vy_view = fields.index_axis_mut(0, vy_idx)?;
-                    copy_owned_slice_into_view(
-                        &mut vy_view,
-                        &self.fdtd_solver.fields.uy,
-                        &region,
-                    );
+                    copy_owned_slice_into_view(&mut vy_view, &self.fdtd_solver.fields.uy, &region);
 
                     let mut vz_view = fields.index_axis_mut(0, vz_idx)?;
-                    copy_owned_slice_into_view(
-                        &mut vz_view,
-                        &self.fdtd_solver.fields.uz,
-                        &region,
-                    );
+                    copy_owned_slice_into_view(&mut vz_view, &self.fdtd_solver.fields.uz, &region);
                 }
                 DomainType::Hybrid => {
                     self.apply_hybrid_region_blended(fields, &region)?;

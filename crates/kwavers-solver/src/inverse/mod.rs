@@ -33,7 +33,7 @@ pub mod time_reversal;
 #[cfg(feature = "pinn")]
 pub use pinn::elastic_2d;
 pub use pinn::{
-    AdaptiveRefinement, CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain,
+    CollocationSampler, CollocationSamplingStrategy, MultiRegionDomain, MultiRegionError,
     PinnGeometryInterfaceCondition,
 };
 pub use reconstruction::{

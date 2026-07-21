@@ -1,28 +1,78 @@
 # Backlog / Strategy
 
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
+
+- Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
+  Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
+  synchronized public documentation. Non-goals: ML-owned residual-adaptive
+  sampling and unrelated random consumers.
+- Acceptance: rectangular, disk, and ball domains validate construction and
+  map Tyche unit designs without rejection or cardinality loss; one generic
+  collector serves counter, Latin-hypercube, and Sobol designs; the collocation
+  hot path is statically dispatched; generated matrices allocate once without
+  reallocation; local Latin-hypercube, pseudo-Sobol, and obsolete geometry
+  adaptive implementations have no residue.
+- Evidence target: analytical mapping reference cases, deterministic replay,
+  exact cardinality and domain classification, face-measure sampling law,
+  allocation counts, focused Nextest/Clippy/doctest/Rustdoc gates, dependency
+  residue scans, and public SemVer classification.
+- Decision: extend [`ADR-043`](docs/ADR/043-tyche-uncertainty-provider.md) with
+  the collocation ownership, public migration, transform proofs, and rejected
+  duplicate/rejection alternatives.
+- Exact rebased-head evidence: grid Nextest passes 45/45, including
+  fixed-layout/output allocation and typed reservation-failure contracts;
+  solver geometry/config/allocation selection passes 21/21; Tyche sensitivity
+  passes 9/9; and all-target checks pass for all three affected packages.
+  Changed-file rustfmt, `git diff --check`, grid warning-denied Clippy, all
+  three doctest suites, and grid/solver warning-denied Rustdoc pass. Solver and
+  analysis Clippy stop only at the two pre-existing KW-LINT-047 forward-solver
+  diagnostics; analysis warning-denied Rustdoc exposes its pre-existing
+  cross-module link backlog. SemVer comparison against live main classifies
+  both grid and solver as major. Residue scans retain only the ML-owned
+  `AdaptiveRefinementConfig` and the documented cold heterogeneous
+  multi-region vtable.
+- Hosted PR #304 first-head evidence: the pinned Atlas checkout confirmed the
+  Gaia `approx` lock entry was stale; Cargo regenerated the one-line closure.
+  The legacy audit now passes after replacing two new `approx::` test imports
+  and one inherited provider-name doc token, without allowlist growth. The
+  inherited rustfmt drift reported by main and the PR is corrected in the
+  exact twelve files emitted by the CI formatter. Replacement run
+  `29864331893` then proved the ordinary workflows still pinned Atlas
+  `71cdc54c` while the committed lock and benchmark workflow used `614914cf`;
+  those Atlas revisions differ at thirteen provider gitlinks. One local
+  composite action now owns the ordinary-workflow provider pin and all sixteen
+  call sites delegate to it. The first exact-graph security audit rejected the
+  registered Iris Git source because the source policy lagged the lock graph;
+  `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
+  pending.
+
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
 - Acceptance: benchmark-relevant PRs compare their exact base and head with
-  the complete candidate Criterion instrument held constant; four isolated
-  pair jobs execute phase-reversed AB/BA replications; Atlas derives
-  family-wise confidence and fails closed on missing, mismatched, or regressed
-  results.
+  the complete candidate Criterion instrument held constant at one filesystem
+  path; four isolated pair jobs execute phase-reversed AB/BA replications;
+  Atlas derives family-wise confidence and fails closed on missing, mismatched,
+  or regressed results.
 - Decision: [`ADR-045`](docs/ADR/045-atlas-benchmark-regression-gate.md).
 - Evidence: the single-run same-baseline Python classifier is deleted. The
   dedicated workflow retains the full plotting-enabled `kwavers` benchmark
-  suite, pins Atlas classifier and provider graph `71cdc54`, and derives its
+  suite, pins Atlas classifier and provider graph `614914cf`, and derives its
   instrument budget from the observed hosted full-suite runtime. Run
   `29797805169` exposed eight auto-discovered libtest targets before
   measurement; automatic discovery is now disabled, all 22 retained Criterion
   targets are explicit, package libtest harnesses are excluded, placeholder
   instruments and unreachable no-op entries are removed, and both revisions
   must match their benchmark source registry. Exact-head run `29814752294`
-  proved that serializing all four independent pairs exceeds the finite job
+  proved that serializing all four isolated pairs exceeds the finite job
   bound; the unchanged pair measurements now execute as four matrix jobs and
-  feed one aggregate classifier.
-  Exact-head hosted execution remains the merge gate.
+  feed one aggregate classifier. Exact-head run `29841101698` completed all
+  four pairs but found three replicated apparent regressions despite no
+  semantic production delta; distinct checkout paths remained correlated with
+  revision. The workflow now moves each revision through one
+  `kwavers-measurement` path. A new exact-head hosted execution remains the
+  merge gate.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
@@ -48,10 +98,11 @@
   unsampled `Source` objects and unsupported velocity-source assembly rather
   than discarding source information. Warning-denied all-feature Clippy passes,
   and the WGPU-featured Nextest lane passes 259/259 tests, including the
-  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
-  use the Atlas-owned checkout action and provider graph pinned at `71cdc54`;
-  direct Aequitas and Proteus revisions match that graph, and the lock contains
-  one Aequitas source identity.
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted ordinary
+  workflows use one local action pinned to the Atlas-owned checkout action and
+  provider graph at `614914cf`; direct Aequitas and Proteus revisions match
+  that graph, and the lock contains one Aequitas source identity. A replacement
+  hosted matrix remains the closure gate.
 - External integration requirement: the private full-wave consumer remains
   responsible for its explicit peak-pressure regression. Its inaccessible
   checkout does not widen or block this repository's delivery boundary.

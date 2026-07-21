@@ -83,12 +83,3 @@ pub enum ElasticPinnOptimizerType {
         tolerance: f64,
     },
 }
-
-/// Sampling strategy for collocation points.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ElasticCollocationSamplingStrategy {
-    Uniform,
-    LatinHypercube,
-    Sobol,
-    AdaptiveRefinement,
-}
