@@ -156,6 +156,31 @@ impl SphericalDomain {
         };
         fraction.min(1.0_f64.next_down())
     }
+
+    fn project_roundoff_into_interior(&self, point: &mut [f64]) {
+        let dimensions = self.dimension.as_usize();
+        if self.squared_distance(&point[..dimensions]) < self.radius * self.radius {
+            return;
+        }
+
+        // Adding a radius just below R to a translated center can round to the
+        // closed boundary. Move every non-central component by one
+        // representable value toward the center. If the rounded norm remains
+        // indistinguishable from R, the center is the guaranteed representable
+        // point in the open ball.
+        for (axis, coordinate) in point.iter_mut().enumerate().take(dimensions) {
+            *coordinate = if *coordinate > self.center[axis] {
+                coordinate.next_down()
+            } else if *coordinate < self.center[axis] {
+                coordinate.next_up()
+            } else {
+                *coordinate
+            };
+        }
+        if self.squared_distance(&point[..dimensions]) >= self.radius * self.radius {
+            point[..dimensions].copy_from_slice(&self.center[..dimensions]);
+        }
+    }
 }
 
 impl GeometricDomain for SphericalDomain {
@@ -238,6 +263,7 @@ impl GeometricDomain for SphericalDomain {
             }
             GeometryDimension::One => unreachable!("invariant: spherical domains are 2-D or 3-D"),
         }
+        self.project_roundoff_into_interior(&mut mapped);
         output.copy_from_slice(&mapped[..dimensions]);
         Ok(())
     }

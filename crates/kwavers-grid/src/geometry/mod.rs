@@ -14,6 +14,12 @@
 //! construction follows the inverse-volume rule stated in Jonathan Goodman's
 //! Monte Carlo notes, page 19:
 //! <https://math.nyu.edu/~goodman/teaching/MonteCarlo17/notes/Week1.pdf>.
+//!
+//! Floating translation can round a sub-radius spherical point onto the closed
+//! boundary. The spherical map moves each such component one representable
+//! value toward the center. If the rounded norm is still indistinguishable
+//! from the radius, it returns the center; validated positive measure proves
+//! that the center lies strictly inside the representable open ball.
 
 use leto::{Array1, Array2};
 use tyche_core::Seed;

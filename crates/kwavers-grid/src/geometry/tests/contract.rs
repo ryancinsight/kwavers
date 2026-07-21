@@ -90,6 +90,34 @@ fn disk_and_ball_maps_follow_inverse_measure_reference_cases() {
 }
 
 #[test]
+fn spherical_mapping_corrects_translated_boundary_roundoff() {
+    let center = 1.0e16;
+    let radius = 4.0;
+    let radial_unit = 1.0_f64.next_down();
+
+    let disk = SphericalDomain::new_2d(center, -center, radius).expect("valid translated disk");
+    let mut disk_point = [0.0; 2];
+    disk.map_unit_interior(&[radial_unit, 0.0], &mut disk_point)
+        .expect("valid disk coordinate");
+    assert_eq!(
+        disk.classify_point(&disk_point, 0.0),
+        PointLocation::Interior
+    );
+    assert!(disk_point[0] > center);
+
+    let ball =
+        SphericalDomain::new_3d(center, -center, center, radius).expect("valid translated ball");
+    let mut ball_point = [0.0; 3];
+    ball.map_unit_interior(&[radial_unit, 0.0, 0.0], &mut ball_point)
+        .expect("valid ball coordinate");
+    assert_eq!(
+        ball.classify_point(&ball_point, 0.0),
+        PointLocation::Interior
+    );
+    assert!(ball_point[2] > center);
+}
+
+#[test]
 fn normals_and_invalid_queries_preserve_total_classification() {
     let rectangle = RectangularDomain::new_2d(0.0, 1.0, 0.0, 1.0).expect("valid rectangle");
     let normal = rectangle.normal(&[0.0, 0.5], 0.0).expect("boundary normal");
