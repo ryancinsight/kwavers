@@ -5,12 +5,54 @@ use kwavers_core::constants::thermodynamic::THERMAL_EXPANSION_WATER_20C;
 use kwavers_core::constants::thermodynamic::{SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER};
 use kwavers_core::constants::tissue_acoustics::B_OVER_A_WATER;
 use kwavers_core::constants::{
-    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, MHZ_TO_HZ, REFERENCE_FREQUENCY_HZ, VISCOSITY_WATER,
+    AIR_POLYTROPIC_INDEX, ATMOSPHERIC_PRESSURE, REFERENCE_FREQUENCY_HZ, VISCOSITY_WATER,
     WATER_ABSORPTION_ALPHA_0, WATER_ABSORPTION_POWER, WATER_VAPOR_PRESSURE_20C,
 };
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_grid::Grid;
-use leto::Array3;
+use leto::{Array3, ArrayView3};
+use std::sync::OnceLock;
+
+/// Lazily-allocated 3D uniform array used to defer memory allocation until
+/// first access.
+///
+/// `HomogeneousMedium` uses this wrapper for its cache arrays so that the
+/// constructor does not pay the cost of allocating full-grid arrays unless a
+/// caller actually needs them (e.g. a solver that operates on array views).
+#[derive(Debug)]
+pub(super) struct LazyUniformArray(OnceLock<Array3<f64>>);
+
+impl LazyUniformArray {
+    fn new() -> Self {
+        Self(OnceLock::new())
+    }
+
+    fn get_or_init(&self, shape: [usize; 3], value: f64) -> ArrayView3<'_, f64> {
+        self.0
+            .get_or_init(|| Array3::from_elem(shape, value))
+            .view()
+    }
+
+    /// Initialize with a closure so that expensive scalar computations run only
+    /// on first allocation, not on every cache hit.
+    fn get_or_init_with<F: FnOnce() -> Array3<f64>>(
+        &self,
+        f: F,
+    ) -> ArrayView3<'_, f64> {
+        self.0.get_or_init(f).view()
+    }
+}
+
+impl Clone for LazyUniformArray {
+    fn clone(&self) -> Self {
+        let new = LazyUniformArray::new();
+        if let Some(arr) = self.0.get() {
+            // Best-effort: if already initialized, clone the cached array.
+            let _ = new.0.set(arr.clone());
+        }
+        new
+    }
+}
 
 /// Medium with uniform properties throughout the spatial domain
 #[derive(Debug, Clone)]
@@ -37,10 +79,10 @@ pub struct HomogeneousMedium {
     pub(super) temperature: Array3<f64>,
     pub(super) bubble_radius: Array3<f64>,
     pub(super) bubble_velocity: Array3<f64>,
-    pub(super) density_cache: Array3<f64>,
-    pub(super) sound_speed_cache: Array3<f64>,
-    pub(super) absorption_cache: Array3<f64>,
-    pub(super) nonlinearity_cache: Array3<f64>,
+    pub(super) density_cache: LazyUniformArray,
+    pub(super) sound_speed_cache: LazyUniformArray,
+    pub(super) absorption_cache: LazyUniformArray,
+    pub(super) nonlinearity_cache: LazyUniformArray,
     pub(super) lame_lambda: f64,
     pub(super) lame_mu: f64,
     pub(super) grid_shape: [usize; 3],
@@ -73,13 +115,10 @@ impl HomogeneousMedium {
             temperature: Array3::zeros([1, 1, 1]),
             bubble_radius: Array3::zeros([1, 1, 1]),
             bubble_velocity: Array3::zeros([1, 1, 1]),
-            density_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], density),
-            sound_speed_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], sound_speed),
-            absorption_cache: Array3::from_elem(
-                [grid.nx, grid.ny, grid.nz],
-                WATER_ABSORPTION_ALPHA_0 * 1.0_f64.powf(WATER_ABSORPTION_POWER),
-            ),
-            nonlinearity_cache: Array3::from_elem([grid.nx, grid.ny, grid.nz], B_OVER_A_WATER),
+            density_cache: LazyUniformArray::new(),
+            sound_speed_cache: LazyUniformArray::new(),
+            absorption_cache: LazyUniformArray::new(),
+            nonlinearity_cache: LazyUniformArray::new(),
             lame_lambda: density * sound_speed * sound_speed,
             lame_mu: 0.0,
             grid_shape: [grid.nx, grid.ny, grid.nz],
@@ -123,10 +162,10 @@ impl HomogeneousMedium {
         self.absorption_power = absorption_power;
         self.nonlinearity = nonlinearity;
 
-        let alpha_at_ref = self.absorption_alpha
-            * (self.reference_frequency / MHZ_TO_HZ).powf(self.absorption_power);
-        self.absorption_cache = Array3::from_elem(self.grid_shape, alpha_at_ref);
-        self.nonlinearity_cache = Array3::from_elem(self.grid_shape, self.nonlinearity);
+        // Invalidate lazy caches so the next access rebuilds them with the new
+        // scalar values.  This avoids re-allocating full-grid arrays here.
+        self.absorption_cache = LazyUniformArray::new();
+        self.nonlinearity_cache = LazyUniformArray::new();
 
         Ok(())
     }
@@ -142,7 +181,7 @@ impl HomogeneousMedium {
     /// cross-crate callers; the field itself is crate-private.)
     pub fn set_nonlinearity(&mut self, b_over_a: f64) {
         self.nonlinearity = b_over_a;
-        self.nonlinearity_cache = Array3::from_elem(self.grid_shape, b_over_a);
+        self.nonlinearity_cache = LazyUniformArray::new();
     }
 
     /// Set thermal properties on an existing homogeneous medium.
