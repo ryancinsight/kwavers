@@ -2890,6 +2890,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "469fb0b9cefa57e3ef31275ee7cacb78f2fdca44e4765491884a2b119d4eb130"
 
 [[package]]
+name = "iris"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/iris?rev=e2edd47615454111b4b0df2e68dc6076161ba457#e2edd47615454111b4b0df2e68dc6076161ba457"
+
+[[package]]
 name = "is-terminal"
 version = "0.4.17"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5923,6 +5928,7 @@ dependencies = [
  "coeus-core",
  "consus-io 0.1.0 (git+https://github.com/ryancinsight/consus?rev=ec386e3e14241343f9a1beca6921463f2b2f0fc9)",
  "gaia",
+ "iris",
  "ritk-image",
  "ritk-spatial",
  "serde_json",
