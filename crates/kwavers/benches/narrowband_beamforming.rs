@@ -310,7 +310,10 @@ fn bench_diagonal_loading_sensitivity(c: &mut Criterion) {
         prefer_time_resolution: false,
     };
 
-    for &loading in &[0.0, 1e-6, 1e-3, 1e-1] {
+    // The coherent broadside fixture has a rank-one covariance matrix, so an
+    // unloaded Capon solve is mathematically singular. Exercise four valid
+    // regularization scales instead of benchmarking an invalid configuration.
+    for &loading in &[1e-6, 1e-4, 1e-2, 1e-1] {
         let cfg = CaponSpectrumConfig {
             frequency_hz: frequency,
             sound_speed,
@@ -327,6 +330,13 @@ fn bench_diagonal_loading_sensitivity(c: &mut Criterion) {
             snapshot_selection: Some(SnapshotSelection::Auto(scenario)),
             baseband_snapshot_step_samples: None,
         };
+
+        let reference_spectrum = capon_spatial_spectrum_point(&data, &positions, candidate, &cfg)
+            .expect("loaded covariance must admit a Capon spectrum");
+        assert!(
+            reference_spectrum.is_finite() && reference_spectrum > 0.0,
+            "loaded Capon spectrum must be finite and positive"
+        );
 
         group.bench_with_input(
             BenchmarkId::new("loading", format!("{:.0e}", loading)),
