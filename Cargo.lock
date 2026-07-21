@@ -232,7 +232,6 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius?rev=794f8c328d72fd020b63e53ae46f6f8fd781d8df#794f8c328d72fd020b63e53ae46f6f8fd781d8df"
 dependencies = [
  "aequitas",
  "eunomia",

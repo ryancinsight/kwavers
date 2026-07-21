@@ -154,5 +154,8 @@ hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
 [patch."https://github.com/ryancinsight/melinoe.git"]
 melinoe = { path = "../melinoe" }
 
+[patch."https://github.com/ryancinsight/asclepius"]
+asclepius = { path = "../asclepius/crates/asclepius" }
+
 [patch.crates-io]
 melinoe = { path = "../melinoe" }
