@@ -2,15 +2,14 @@ use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use kwavers_core::log::file::CombinedLogger;
 use log::Log;
 use log::{Level, Record};
-use std::fs::{self, File};
+use std::fs::File;
 
 fn logging_benchmark(c: &mut Criterion) {
-    let file_path = "benchmark_log.txt";
-    // Ensure cleanup from previous runs
-    let _ = fs::remove_file(file_path);
+    let run_directory = tempfile::tempdir().expect("benchmark tempdir must be available");
 
     // Setup for Info logs (buffered)
-    let file_info = File::create(file_path).unwrap();
+    let file_info =
+        File::create(run_directory.path().join("info.log")).expect("benchmark log must be created");
     let logger_info = CombinedLogger::new(false, file_info);
 
     let record_info = Record::builder()
@@ -28,10 +27,9 @@ fn logging_benchmark(c: &mut Criterion) {
         })
     });
 
-    // Setup for Error logs (flushed)
-    // Re-create file/logger to reset state, although Mutex protects it.
-    let _ = fs::remove_file(file_path);
-    let file_error = File::create(file_path).unwrap();
+    // Use a separate file so buffered and flushed measurements share no state.
+    let file_error = File::create(run_directory.path().join("error.log"))
+        .expect("benchmark log must be created");
     let logger_error = CombinedLogger::new(false, file_error);
 
     let record_error = Record::builder()
@@ -48,8 +46,6 @@ fn logging_benchmark(c: &mut Criterion) {
             logger_error.log(black_box(&record_error));
         })
     });
-
-    let _ = fs::remove_file(file_path);
 }
 
 criterion_group!(benches, logging_benchmark);

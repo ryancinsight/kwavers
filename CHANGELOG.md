@@ -35,6 +35,8 @@
   the GPU-only Hilbert target on its actual feature and retain validation
   results through the timed region. Remove unreachable feature-disabled
   benchmark entry points and the non-equivalent mixed PINN/FDTD aggregate.
+  Surface PINN training failures and isolate logging output in a per-run
+  temporary directory.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.

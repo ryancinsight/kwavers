@@ -293,7 +293,7 @@ fn bench_training_epoch(c: &mut Criterion) {
                 &mut scheduler,
                 &loop_config,
             )
-            .ok();
+            .expect("benchmark PINN training must complete");
             black_box(metrics)
         });
     });
