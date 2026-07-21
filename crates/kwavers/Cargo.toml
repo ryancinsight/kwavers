@@ -85,7 +85,6 @@ once_cell = "1.19"
 flume = "0.11"
 
 # Testing utilities (minimal)
-approx = "0.5"
 
 # CONDITIONAL FEATURES (disabled by default)
 # GPU acceleration (optional). The top-level crate forwards provider features;
@@ -115,6 +114,8 @@ flate2 = { workspace = true }
 # Enable kwavers-solver's `test-util` feature so cross-crate test helpers
 # (kwavers_solver::plugin::test_support) are available to kwavers' own tests.
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
+# SIMD dispatch facade — used by the simd_wave_kernel example (Part VI).
+hermes-simd = { workspace = true }
 criterion = "0.4"
 # GIF animation support for example outputs (e.g. liver_theranostic_reconstruction)
 image = { version = "0.24", default-features = false, features = ["gif"] }
@@ -428,3 +429,12 @@ path = "examples/brain_theranostic_monitor.rs"
 [[example]]
 name = "hybrid_lesion_monitor"
 path = "examples/hybrid_lesion_monitor.rs"
+
+# Part VI — Atlas Stack Integration (migration reference examples)
+[[example]]
+name = "tiled_kspace_processing"
+path = "examples/tiled_kspace_processing.rs"
+
+[[example]]
+name = "simd_wave_kernel"
+path = "examples/simd_wave_kernel.rs"

@@ -95,10 +95,13 @@ This part documents the migration from ndarray/nalgebra to the Atlas stack crate
 - [Linear Algebra: Leto and Leto-Ops](migration_linalg.md)
 - [Geometry: Leto for Point, Vector, Isometry](migration_geometry.md)
 - [SIMD: Hermes for Vectorized Operations](migration_simd.md)
+  - [Example: SIMD Wave Kernel](examples/simd_wave_kernel.md)
 - [Memory: Mnemosyne and Themis](migration_memory.md)
 - [Concurrency: Moirai for Parallel Execution](migration_concurrency.md)
 - [FFT: Apollo for Spectral Methods](migration_fft.md)
 - [Python Integration: PyO3 and NumPy Boundary](migration_python.md)
+- [GAT Tiling: LendingIterator and Tiles](migration_gat_tiles.md)
+  - [Example: Tiled K-Space Processing](examples/tiled_kspace_processing.md)
 
 ---
 
