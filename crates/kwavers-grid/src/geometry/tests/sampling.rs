@@ -37,7 +37,7 @@ fn all_domain_samplers_have_exact_cardinality_replay_and_membership() {
             .expect("addressable replay");
         assert_eq!(boundary, boundary_replay);
         assert_eq!(boundary.shape(), [257, domain.dimension().as_usize()]);
-        let tolerance = 64.0 * f64::EPSILON * domain.measure().max(1.0);
+        let tolerance = 64.0 * f64::EPSILON * domain.maximum_extent();
         for row in 0..boundary.shape()[0] {
             let point = (0..boundary.shape()[1])
                 .map(|column| boundary[[row, column]])
