@@ -154,5 +154,4 @@ hermes-simd-core = { path = "../hermes/crates/hermes-simd-core" }
 melinoe = { path = "../melinoe" }
 
 [patch.crates-io]
-numpy = { path = "vendor/numpy-0.27.1" }
 melinoe = { path = "../melinoe" }
