@@ -67,7 +67,7 @@ impl EMFieldUtils {
             ));
         }
 
-        let components = *e_shape.last().unwrap();
+        let components = *e_shape.last().expect("invariant: EM field shape is non-empty");
         if components != 2 && components != 3 {
             return Err(format!(
                 "Field components must be 2 (2D) or 3 (3D), got {}",
