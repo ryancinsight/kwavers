@@ -82,8 +82,8 @@
   identities while retaining the committed lock.
 - PR 298 retains the hosted matrix and terminal merge evidence.
 - The combined Tyche/Asclepius consumer head passes locked all-target,
-  all-feature compile plus 51/51 cross-provider Nextest cases at merged
-  provider revisions (`2b8fb14`, `794f8c3`).
+  all-feature compile plus 144/144 cross-provider Nextest cases at merged
+  provider revisions (`2b8fb14`, `794f8c3`; runs `7e32e770` and `d7665a2e`).
 
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 
