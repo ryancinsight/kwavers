@@ -57,9 +57,10 @@
 - [x] Record the private consumer's explicit peak-pressure regression as an
       external integration requirement without exposing its repository.
 - [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
-- [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
-      reconcile `Cargo.lock` against that exact gitlink graph.
-- [x] Align direct Aequitas and Proteus revisions with Atlas `71cdc54` and
+- [x] Route every ordinary hosted path-dependency checkout through one local
+      action pinned to the Atlas-owned action and reconcile `Cargo.lock`
+      against that exact gitlink graph.
+- [x] Align direct Aequitas and Proteus revisions with Atlas `614914cf` and
       resolve one Aequitas source identity across the locked graph.
 - [x] Move grid and homogeneous-medium wall-clock checks out of the
       instrumented native-test lane; retain their Criterion measurements.

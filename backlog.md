@@ -36,7 +36,12 @@
   The legacy audit now passes after replacing two new `approx::` test imports
   and one inherited provider-name doc token, without allowlist growth. The
   inherited rustfmt drift reported by main and the PR is corrected in the
-  exact twelve files emitted by the CI formatter. Exact-head CI rerun pending.
+  exact twelve files emitted by the CI formatter. Replacement run
+  `29864331893` then proved the ordinary workflows still pinned Atlas
+  `71cdc54c` while the committed lock and benchmark workflow used `614914cf`;
+  those Atlas revisions differ at thirteen provider gitlinks. One local
+  composite action now owns the ordinary-workflow provider pin and all sixteen
+  call sites delegate to it. Exact-head CI rerun pending.
 
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 
@@ -90,10 +95,11 @@
   unsampled `Source` objects and unsupported velocity-source assembly rather
   than discarding source information. Warning-denied all-feature Clippy passes,
   and the WGPU-featured Nextest lane passes 259/259 tests, including the
-  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
-  use the Atlas-owned checkout action and provider graph pinned at `71cdc54`;
-  direct Aequitas and Proteus revisions match that graph, and the lock contains
-  one Aequitas source identity.
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted ordinary
+  workflows use one local action pinned to the Atlas-owned checkout action and
+  provider graph at `614914cf`; direct Aequitas and Proteus revisions match
+  that graph, and the lock contains one Aequitas source identity. A replacement
+  hosted matrix remains the closure gate.
 - External integration requirement: the private full-wave consumer remains
   responsible for its explicit peak-pressure regression. Its inaccessible
   checkout does not widen or block this repository's delivery boundary.
