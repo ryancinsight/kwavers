@@ -38,6 +38,9 @@
   current-run-versus-itself benchmark comparison with a 30-minute runtime
   smoke that executes every plotting-eligible Criterion target once; the
   cross-revision regression workflow owns statistical performance evidence.
+  The SWE reconstruction instrument now consumes a manufactured nonzero wave
+  snapshot and times inversion only; the canonical nonlinear SWE instrument
+  retains forward-propagation measurements.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.
