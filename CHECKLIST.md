@@ -35,7 +35,33 @@
 - [x] Keep the downstream consumer gate outside this public repository's
       acceptance boundary.
 
-## Owner: /root — Extend GPU PSTD FFT lattice [minor] — review
+## Owner: /root — Integrate Tyche uncertainty ownership [major] [arch]
+
+- [x] File ADR 043 with provider boundary, public migration, proof obligations,
+      and rejected local-formula/compatibility alternatives.
+- [x] Replace both conformal ranks with Tyche corrected calibration in each
+      consumer's native score precision.
+- [x] Preserve every Analysis interval and borrow calibration scores with
+      `Cow`; represent undefined statistics with `Option`.
+- [x] Replace PINN variance and running-average formulas with Tyche moments.
+- [x] Replace pseudo-Sobol/bootstrap/Morris code with deterministic
+      const-generic Tyche correlation screening.
+- [x] Pass focused and full value-semantic tests plus warning-denied package
+      gates.
+- [x] Pass doctests, normal Rustdoc generation, dependency policy, residue
+      scans, and Analysis semver classification.
+- [x] Pin hosted path-provider resolution to the immutable Atlas graph matching
+      the committed lockfile.
+- [x] Partition the touched clinical workflow example and remove its unused
+      cloned/vtable uncertainty-report path.
+- [x] Borrow heterogeneous uncertainty-report inputs without caller boxes or a
+      duplicate collected reference vector.
+- [x] Consolidate direct and Coeus-transitive Apollo dependencies onto the
+      synchronized Atlas checkout.
+- [x] Publish the documentation-complete integration head; retain hosted
+      verification and merge evidence in PR 298.
+
+## Owner: /root — Extend GPU PSTD FFT lattice [minor]
 
 - [x] Centralize the GPU PSTD dimension contract at a 1,024-point maximum.
 - [x] Expand the shared-memory FFT and root table without changing the
@@ -121,7 +147,7 @@ AVX-512 Nextest cases pass. The fresh hosted matrix remains the merge gate.
 ## Owner: Codex — Update GPU PSTD parity contract [patch]
 
 - [x] Replace every stale five-argument `GpuPstdSolver::run` call in
-      `gpu_pstd_parity.rs` with the sensor-trace-only output request.
+      `gpu_pstd_parity.rs` with `PstdOutputRequest::SensorTraces`.
 - [x] Assert through the provider-owned `PstdRunResult::sensor_data` field;
       retain the existing ignored GPU workloads and numerical thresholds.
 - [x] Run package-scoped nightly rustfmt and review the hosted compiler
@@ -687,11 +713,10 @@ Mnemosyne 0.4, Hephaestus 0.13, and Apollo FFT 0.15.
 - [x] [patch] Remove the nonlinear acoustic Leto-to-Leto array boundary:
       delete the full-volume conversion module and route spectral/nonlinear FFT
       inputs and outputs directly as `leto::Array3`. Verification: no
-      `array_boundary` symbols remain; `leto_real_field` and `ndarray_real_field`
-      renamed to `leto_real_field`; touched-file formatting and diff checks pass;
-      `cargo check -p kwavers-physics --lib` passes. Focused nextest compilation
-      remains blocked by 59 unrelated Leto test-migration errors recorded by the
-      run.
+      `array_boundary`, `leto_real_field`, or `ndarray_real_field` symbols
+      remain; touched-file formatting and diff checks pass; `cargo check -p
+      kwavers-physics --lib` passes. Focused nextest compilation remains blocked
+      by 59 unrelated Leto test-migration errors recorded by the run.
 
 - [x] [patch] kwavers-analysis narrowband Apollo FFT routing: route
       narrowband legacy analytic-baseband and windowed STFT snapshot extraction

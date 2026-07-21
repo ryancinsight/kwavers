@@ -1,105 +1,88 @@
-//! Tests for sensitivity analysis.
+//! Value-semantic sensitivity-screening tests.
 
-use super::analyzer::SensitivityAnalyzer;
-use super::config::SensitivityConfig;
-use leto::Array1;
+use super::{Parameter, ParameterSpace, Seed, SensitivityAnalyzer, SensitivityConfig};
+use core::num::NonZeroU32;
 
 #[test]
-fn test_sensitivity_analyzer_creation() {
+fn analyzer_preserves_validated_configuration() {
     let config = SensitivityConfig {
-        num_samples: 100,
-        confidence_level: 0.95,
+        sample_count: NonZeroU32::new(100).expect("non-zero fixture"),
+        seed: Seed::new(17),
     };
-    let analyzer = SensitivityAnalyzer::new(config).unwrap();
-    // Verify stored config fields.
-    assert_eq!(analyzer.config.num_samples, 100);
-    assert!(
-        (analyzer.config.confidence_level - 0.95).abs() < 1e-12,
-        "confidence_level must be 0.95"
-    );
+    let analyzer = SensitivityAnalyzer::new(config.clone()).unwrap();
+    assert_eq!(analyzer.config, config);
 }
 
 #[test]
-fn test_parameter_sample_generation() {
-    let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
-    let parameter_ranges = vec![(0.0, 1.0), (1.0, 2.0)];
-    let samples = analyzer
-        .generate_parameter_samples(&parameter_ranges, 10)
+fn affine_response_has_unit_squared_correlation() {
+    let analyzer = SensitivityAnalyzer::new(SensitivityConfig {
+        sample_count: NonZeroU32::new(128).expect("non-zero fixture"),
+        seed: Seed::new(23),
+    })
+    .unwrap();
+    let space =
+        ParameterSpace::new(
+            [Parameter::borrowed("amplitude", -2.0, 3.0).expect("valid parameter")],
+        )
+        .expect("valid space");
+
+    let report = analyzer
+        .analyze(|parameters| 2.0f64.mul_add(parameters[0], 0.5), &space)
         .unwrap();
 
-    assert_eq!(samples.len(), 10, "must produce exactly 10 samples");
-    for sample in &samples {
-        assert_eq!(sample.len(), 2, "each sample must have 2 parameters");
-        assert!(
-            sample[0] >= 0.0 && sample[0] <= 1.0,
-            "param_0 = {} outside [0,1]",
-            sample[0]
-        );
-        assert!(
-            sample[1] >= 1.0 && sample[1] <= 2.0,
-            "param_1 = {} outside [1,2]",
-            sample[1]
-        );
-    }
-}
-
-#[test]
-fn test_sensitivity_analysis() {
-    // f(p) = 2·p₀ + 0.5·p₁  on [0,1]²
-    // Variance decomposition (Sobol): V ∝ 4·Var(p₀) + 0.25·Var(p₁) = 4/12 + 0.25/12
-    // S₁(p₀) ≈ 4/(4.25) ≈ 0.941, S₁(p₁) ≈ 0.25/(4.25) ≈ 0.059
-    // Therefore total_sensitivity(p₀) >> total_sensitivity(p₁).
-    let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
-    let model_fn = |params: &Array1<f64>| {
-        Array1::from_vec(1, vec![2.0 * params[0] + 0.5 * params[1]]).unwrap()
-    };
-    let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
-
-    let indices = analyzer.analyze(model_fn, &parameter_ranges, 50).unwrap();
-
-    let sens0 = *indices.total.get("param_0").unwrap_or(&0.0);
-    let sens1 = *indices.total.get("param_1").unwrap_or(&0.0);
+    assert_eq!(report.sample_count(), 128);
+    let error = (report.squared_correlations()[0] - 1.0).abs();
+    // Welford correlation accumulates O(n) rounded operations on O(1) data.
     assert!(
-        sens0 >= sens1,
-        "param_0 total-sensitivity {sens0:.4} must be ≥ param_1 {sens1:.4} (ratio 4:0.25 in model)"
-    );
-    // Both indices must be non-negative (variance fractions).
-    assert!(
-        sens0 >= 0.0,
-        "total sensitivity must be non-negative, got {sens0}"
-    );
-    assert!(
-        sens1 >= 0.0,
-        "total sensitivity must be non-negative, got {sens1}"
+        error <= 512.0 * f64::EPSILON,
+        "affine one-parameter screening must satisfy r²=1; error={error:e}"
     );
 }
 
 #[test]
-fn test_morris_screening() {
-    // f(p) = p₀ + p₁: both parameters equally important, no interactions.
-    // Morris μ* should be positive for both; σ should be small (linear model).
-    let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
-    let model_fn = |params: &Array1<f64>| Array1::from_vec(1, vec![params[0] + params[1]]).unwrap();
-    let parameter_ranges = vec![(0.0, 1.0), (0.0, 1.0)];
+fn replay_is_bitwise_deterministic() {
+    let analyzer = SensitivityAnalyzer::new(SensitivityConfig {
+        sample_count: NonZeroU32::new(64).expect("non-zero fixture"),
+        seed: Seed::new(91),
+    })
+    .unwrap();
+    let space = ParameterSpace::new([
+        Parameter::borrowed("left", 0.0, 1.0).expect("valid parameter"),
+        Parameter::borrowed("right", 1.0, 2.0).expect("valid parameter"),
+    ])
+    .expect("valid space");
 
-    let results = analyzer
-        .morris_screening(model_fn, &parameter_ranges, 5, 10)
+    let first = analyzer
+        .analyze(|parameters| parameters[0] * parameters[1], &space)
+        .unwrap();
+    let second = analyzer
+        .analyze(|parameters| parameters[0] * parameters[1], &space)
         .unwrap();
 
-    assert!(
-        !results.mu.is_empty(),
-        "Morris μ must contain entries for all parameters"
+    assert_eq!(
+        first.squared_correlations().map(f64::to_bits),
+        second.squared_correlations().map(f64::to_bits)
     );
+}
+
+#[test]
+fn singleton_and_non_finite_responses_are_rejected() {
+    let singleton_error = SensitivityAnalyzer::new(SensitivityConfig {
+        sample_count: NonZeroU32::new(1).expect("non-zero fixture"),
+        seed: Seed::new(0),
+    })
+    .unwrap_err();
     assert!(
-        !results.sigma.is_empty(),
-        "Morris σ must contain entries for all parameters"
+        format!("{singleton_error:?}").contains("at least two samples"),
+        "singleton rejection must state the correlation cardinality"
     );
 
-    // For an additive model μ entries must be non-negative.
-    for (idx, &val) in results.mu.iter().enumerate() {
-        assert!(
-            val >= 0.0,
-            "Morris μ[param_{idx}] = {val} must be non-negative for an additive model"
-        );
-    }
+    let analyzer = SensitivityAnalyzer::new(SensitivityConfig::default()).unwrap();
+    let space = ParameterSpace::new([Parameter::borrowed("x", 0.0, 1.0).expect("valid parameter")])
+        .expect("valid space");
+    let finite_error = analyzer.analyze(|_| f64::NAN, &space).unwrap_err();
+    assert!(
+        format!("{finite_error:?}").contains("sample 0: NaN"),
+        "non-finite response rejection must identify the sample and value"
+    );
 }

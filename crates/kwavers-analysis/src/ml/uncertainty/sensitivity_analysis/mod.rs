@@ -1,11 +1,10 @@
-//! Variance-based global sensitivity analysis.
+//! Reproducible correlation-based global sensitivity screening.
 
 pub mod analyzer;
 pub mod config;
 #[cfg(test)]
 mod tests;
-pub mod types;
 
 pub use analyzer::SensitivityAnalyzer;
 pub use config::SensitivityConfig;
-pub use types::{MorrisResults, SensitivityIndices};
+pub use tyche_core::{Parameter, ParameterSpace, Seed, SensitivityReport};

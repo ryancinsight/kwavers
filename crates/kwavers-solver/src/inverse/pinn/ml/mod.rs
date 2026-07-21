@@ -1,8 +1,7 @@
 //! Physics-Informed Neural Networks (PINNs) for Ultrasound Simulation
 //!
-//! This module implements PINNs for solving wave equations with 1000× faster inference
-//! compared to traditional FDTD methods. PINNs embed physical laws (PDEs) directly
-//! into the neural network loss function, ensuring physics consistency.
+//! This module implements PINNs for solving wave equations. PINNs embed physical
+//! laws (PDEs) directly into the neural network loss function.
 //!
 //! ## Overview
 //!
@@ -39,28 +38,24 @@
 //!
 //! ```no_run
 //! # #[cfg(feature = "pinn")]
-//! # {
+//! # fn main() -> Result<(), kwavers_core::error::KwaversError> {
 //! use kwavers_solver::inverse::pinn::ml::{PinnWave1D, PinnConfig};
-//! use kwavers_solver::inverse::pinn::ml::fdtd_reference::FDTDConfig;
-//! use kwavers_solver::inverse::pinn::ml::validation::validate_pinn_vs_fdtd;
+//! use leto::Array1;
 //!
-//! // Create 1D wave equation PINN
-//! let device = Default::default();
-//! let config = PinnConfig::default();
-//! let mut pinn = PinnWave1D::new(config, &device)?; // 1500 m/s wave speed
+//! type Backend = coeus_core::MoiraiBackend;
 //!
-//! // Train on reference data
-//! let metrics = pinn.train(&x_points, &t_points, &reference_data, 1500.0, &device, 1000)?;
+//! let pinn = PinnWave1D::<Backend>::new(PinnConfig::for_prototyping())?;
+//! let x = Array1::from_vec([2], vec![0.0, 1.0])
+//!     .map_err(|error| kwavers_core::error::KwaversError::InternalError(error.to_string()))?;
+//! let t = Array1::from_vec([2], vec![0.0, 0.001])
+//!     .map_err(|error| kwavers_core::error::KwaversError::InternalError(error.to_string()))?;
 //!
-//! // Validate against FDTD
-//! let fdtd_config = FDTDConfig::default();
-//! let report = validate_pinn_vs_fdtd(&pinn, fdtd_config)?;
-//! println!("{}", report.summary());
-//!
-//! // Fast inference (1000× speedup)
-//! let prediction = pinn.predict(&x_points, &t_points, &device)?;
-//! # Ok::<(), kwavers_core::error::KwaversError>(())
+//! let prediction = pinn.predict(&x, &t)?;
+//! assert_eq!(prediction.shape(), [2, 1]);
+//! # Ok(())
 //! # }
+//! # #[cfg(not(feature = "pinn"))]
+//! # fn main() {}
 //! ```
 
 #[cfg(feature = "pinn")]

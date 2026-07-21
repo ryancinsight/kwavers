@@ -32,7 +32,42 @@
   responsible for its explicit peak-pressure regression. Its inaccessible
   checkout does not widen or block this repository's delivery boundary.
 
-## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — review
+## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — implemented
+
+- Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
+  ensemble statistics, Tyche dependency policy, ADR 043, and synchronized
+  public documentation.
+- Acceptance: one Tyche-owned corrected rank and moments implementation serves
+  both consumers; interval results borrow scores and retain every prediction;
+  sensitivity is const-generic, deterministic, allocation-free per sample, and
+  named squared correlation; pseudo-Sobol/Morris bodies have no residue.
+- Evidence: public Tyche revision `00ce951` is the single dependency in both
+  packages; focused Analysis and PINN suites pass 13/13 and 12/12. The final
+  local all-feature Analysis suite passes 764/764, including heterogeneous
+  report borrowing, native-precision even medians, and invalid beamforming
+  boundary regressions. Review regressions require every configured confidence
+  level to identify an emitted interval and allow non-finite PINN outputs to
+  reach typed validation without a debug-only panic. Warning-denied Clippy,
+  no-default checks, doctests, normal Rustdoc generation, the facade clinical
+  workflow example, and source policy pass. `cargo-semver-checks` runs 223
+  Analysis checks and identifies 10 major API breaks, matching ADR 043.
+- The Atlas-owned checkout action pins provider graph `05b7f5d`, eliminating
+  the moving-provider lock failure exposed by run `29781981026`. PR 298 is the
+  canonical hosted-verification and merge record for the documentation-complete
+  head.
+- The migrated comprehensive clinical workflow is partitioned into 127/168/161/
+  157/106/91/60-line root and concern leaves. Default and GPU builds plus
+  warning-denied Clippy pass; no no-op uncertainty clone, vtable path, or
+  redundant CEUS map copy remains.
+- Heterogeneous report dispatch remains only at the cold report boundary;
+  callers pass a borrowed reference slice that `UncertaintyReport` retains
+  without boxes or a second vector allocation.
+- The Apollo Git patch maps Coeus's remote FFT dependency to Kwavers's
+  synchronized provider checkout, eliminating duplicate Apollo package
+  identities while retaining the committed lock.
+- PR 298 retains the hosted matrix and terminal merge evidence.
+
+## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/` and GPU PSTD
   consumer validation in `kwavers-simulation`.
@@ -106,7 +141,7 @@
 - Owner: Codex; scope: `crates/kwavers/tests/gpu_pstd_parity.rs` and its PM
   evidence only.
 - Acceptance: ignored GPU parity tests call the provider-owned six-argument
-  `GpuPstdSolver::run` API with `PstdOutputRequest::sensor_traces()` and consume `sensor_data`; no
+  `GpuPstdSolver::run` API with `SensorTraces` and consume `sensor_data`; no
   compatibility wrapper or test simplification is introduced.
 - Evidence: hosted job `87936633879` gave the exact E0061/E0308 diagnostics;
   package-scoped nightly rustfmt passes after the direct call-site migration.
@@ -8386,9 +8421,7 @@ Burn → Coeus tensor type mismatches; that debt is outside the Batch #1 scope.
   are clean. Hephaestus owns the aggregate buffer-limit mapping in merged
   commit `cf4df20`; Kwavers keeps its ordinary provider limit at 8 and requests
   24/32 only for the PSTD layouts. The remaining capability gap is a GPU
-  peak-over-time field; per-axis FFT support now reaches 1,024, but whole-grid
-  provider capacity remains a per-plan constraint. KW-GPU-062 owns the peak
-  output contract. The release
+  peak-over-time field on domains larger than 256 cells per axis. The release
   SemVer gate now passes against `main` with `--release-type major` after
   Leto, Gaia, and Kwavers declare the common Leto/Eunomia Git sources and use
   Atlas-root patches only for local integration.

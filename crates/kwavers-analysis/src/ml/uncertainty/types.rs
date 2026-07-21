@@ -1,6 +1,7 @@
 //! Data types and traits for uncertainty quantification.
 
 use leto::Array3;
+use tyche_core::Seed;
 
 /// Uncertainty quantification methods.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -32,6 +33,8 @@ pub struct MlUncertaintyConfig {
     pub ensemble_size: usize,
     /// Calibration set size for conformal prediction.
     pub calibration_size: usize,
+    /// Reproducibility seed for sensitivity sampling.
+    pub sensitivity_seed: Seed,
 }
 
 impl Default for MlUncertaintyConfig {
@@ -43,6 +46,7 @@ impl Default for MlUncertaintyConfig {
             dropout_rate: 0.1,
             ensemble_size: 10,
             calibration_size: 1000,
+            sensitivity_seed: Seed::new(0),
         }
     }
 }
@@ -100,6 +104,10 @@ pub struct UncertaintySummary {
 #[derive(Debug)]
 pub struct UncertaintyReport<'a> {
     pub summary: UncertaintySummary,
-    pub detailed_results: Vec<&'a dyn UncertaintyResult>,
+    /// Borrowed heterogeneous results.
+    ///
+    /// Dynamic dispatch is confined to this cold report boundary because
+    /// callers may aggregate externally implemented result types.
+    pub detailed_results: &'a [&'a dyn UncertaintyResult],
     pub recommendations: Vec<String>,
 }

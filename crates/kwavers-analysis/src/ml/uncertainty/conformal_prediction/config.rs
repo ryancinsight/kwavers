@@ -1,11 +1,11 @@
-//! ConformalConfig — confidence and calibration parameters
+//! Conformal confidence and calibration parameters.
 
-/// Configuration for conformal prediction
+/// Configuration for conformal prediction.
 #[derive(Debug, Clone)]
 pub struct ConformalConfig {
-    /// Desired confidence level (0-1)
+    /// Desired confidence level in `(0, 1)`.
     pub confidence_level: f64,
-    /// Size of calibration set
+    /// Required calibration-set size.
     pub calibration_size: usize,
 }
 

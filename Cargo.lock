@@ -3291,6 +3291,7 @@ dependencies = [
  "rand 0.8.7",
  "serde",
  "tracing",
+ "tyche-core",
  "wgpu 26.0.1",
 ]
 
@@ -3679,6 +3680,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "tracing",
+ "tyche-core",
 ]
 
 [[package]]
@@ -6895,6 +6897,14 @@ name = "ttf-parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
+
+[[package]]
+name = "tyche-core"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/tyche?rev=00ce9511878236abadd94c86bdbc669b47026aed#00ce9511878236abadd94c86bdbc669b47026aed"
+dependencies = [
+ "eunomia",
+]
 
 [[package]]
 name = "typenum"
