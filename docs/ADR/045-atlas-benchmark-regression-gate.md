@@ -50,27 +50,28 @@ Any unregistered, orphaned, default-harness, or empty-entry-point target fails
 before timing.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. One runner executes
-the schedule `A B B A B A A B`, where `A` is the base revision and `B` is the
-candidate. The two phase-reversed replications balance both revisions across
-positions whose sums and squared sums are equal. A regression is reported only
-when all four confidence intervals agree in direction and cover the same
-benchmark universe.
+pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. Four isolated runners each
+execute one complete base/head pair. Two use order `A B` and two use `B A`,
+where `A` is the base revision and `B` is the candidate. Each comparison
+therefore remains within one machine, while the phase-reversed matrix balances
+revision order and samples independent hosted-runner variation. A regression
+is reported only when all four confidence intervals agree in direction and
+cover the same benchmark universe.
 
 The Atlas tool derives per-comparison confidence as `1 - 0.05 / m` for `m`
 benchmarks. Missing results, benchmark-universe mismatches, malformed
 estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
-The 315-minute workflow budget is specific to this instrumented suite. The
-previous plotting configuration had 14 measuring Criterion targets and used
-31 minutes, including an eight-minute build, leaving 23 measurement minutes.
-The retained registry has 19 plotting-eligible targets; scaling the measurement
-component gives `23 * 19 / 14 = 31.2` minutes per run. Eight measurements plus
-two 5-minute-40-second revision builds observed in `29797805169` model to about
-261 minutes. The finite bound admits 20% hosted runner variance without
-reducing samples, targets, or assertions. It does not alter native-test
-budgets.
+The 315-minute pair-job budget is specific to this instrumented suite. Exact
+hosted run `29814752294` disproved the earlier target-count model: serialized
+execution reached the job bound during the third of eight full-suite
+measurements. The first complete base/head pair took about 249 minutes,
+including builds, all 19 plotting-eligible Criterion targets, and the full
+sample counts. One matrix member now owns each pair, so the critical path is
+one observed pair instead of four serialized pairs. This preserves all eight
+measurements, targets, samples, and assertions without increasing the bound.
+It does not alter native-test budgets.
 
 ## Rejected alternatives
 
@@ -78,14 +79,17 @@ budgets.
   the same measurement.
 - Compare one base/head pair: rejected because a slowdown confined to run
   order cannot be distinguished from a production regression.
-- Split pairs across runners: rejected because cross-runner variation would
-  weaken the single-machine counterbalancing model.
+- Run all four pairs serially on one runner: rejected after exact hosted run
+  `29814752294` demonstrated an approximately 18-hour schedule against the
+  finite 315-minute job bound. Each base/head comparison remains co-located;
+  independent pair runners add an observed replication dimension without
+  mixing machines inside a confidence interval.
 - Reduce benchmark targets or samples to retain the old timeout: rejected
   because that changes the measurement instrument.
 
 ## Consequences
 
-Benchmark-relevant PRs consume a long, bounded hosted job. Documentation-only
-PRs do not run the instrument. The Python gate and its duplicate threshold
-policy are deleted; Atlas remains the single source of truth for statistical
-classification.
+Benchmark-relevant PRs consume four long, bounded pair jobs followed by one
+short classification job. Documentation-only PRs do not run the instrument.
+The Python gate and its duplicate threshold policy are deleted; Atlas remains
+the single source of truth for statistical classification.
