@@ -1,6 +1,8 @@
 //! PyO3 wrappers for pulse-echo RF and B-mode helpers.
 
-use crate::breast_fwi_bindings::complex_compat::{leto1_to_nd1, leto2_to_nd2, nd_to_leto1, nd_to_leto2};
+use crate::breast_fwi_bindings::complex_compat::{
+    leto1_to_nd1, leto2_to_nd2, nd_to_leto1, nd_to_leto2,
+};
 use kwavers_analysis::signal_processing::b_mode::envelope as core_bmode_envelope;
 use kwavers_physics::analytical::pulse_echo::{
     bmode_db_fixed_reference as core_bmode_db_fixed_reference,

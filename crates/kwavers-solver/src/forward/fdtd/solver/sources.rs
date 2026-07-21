@@ -17,11 +17,7 @@ fn clone_mask(mask: &Array3<f64>) -> Array3<f64> {
         .expect("FDTD source mask shape must match contiguous ndarray storage")
 }
 
-fn apply_boundary_pressure_mask(
-    pressure: &mut Array3<f64>,
-    mask: &Array3<f64>,
-    amplitude: f64,
-) {
+fn apply_boundary_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, amplitude: f64) {
     assert_eq!(
         pressure.shape(),
         mask.shape(),
@@ -43,11 +39,7 @@ fn apply_boundary_pressure_mask(
     }
 }
 
-fn apply_additive_pressure_mask(
-    pressure: &mut Array3<f64>,
-    mask: &Array3<f64>,
-    amplitude: f64,
-) {
+fn apply_additive_pressure_mask(pressure: &mut Array3<f64>, mask: &Array3<f64>, amplitude: f64) {
     assert_eq!(
         pressure.shape(),
         mask.shape(),

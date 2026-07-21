@@ -1,6 +1,8 @@
 //! Passive cavitation receive and coherence PyO3 wrappers.
 
-use crate::array_utils::{copy_pyarray1_to_vec, copy_pyarray2_to_vec, vec_to_pyarray1, vec_to_pyarray2};
+use crate::array_utils::{
+    copy_pyarray1_to_vec, copy_pyarray2_to_vec, vec_to_pyarray1, vec_to_pyarray2,
+};
 use kwavers_physics::analytical::cavitation;
 use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2};
 use pyo3::exceptions::{PyRuntimeError, PyValueError};

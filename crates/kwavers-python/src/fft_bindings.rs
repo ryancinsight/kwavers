@@ -161,10 +161,7 @@ pub fn demeaned_hann_power_spectrum_1d<'py>(
         power.push(spectrum[idx].norm_sqr());
     }
 
-    Ok((
-        vec_to_pyarray1(py, frequency),
-        vec_to_pyarray1(py, power),
-    ))
+    Ok((vec_to_pyarray1(py, frequency), vec_to_pyarray1(py, power)))
 }
 
 /// Register FFT binding functions into the Python module.
