@@ -1,5 +1,40 @@
 # Project Checklist
 
+## Owner: /root — GPU PSTD peak-pressure output [major]
+
+- [x] Record the output type and retention decision in ADR 040.
+- [x] Accumulate `max_t |p|` in provider-resident storage without changing
+      sensor-only allocation behavior.
+- [x] Expose independently selectable final-field and peak-pressure outputs.
+- [x] Add WGPU value-semantic output-selection and envelope regressions.
+- [x] Route the simulation adapter through the explicit provider output mode,
+      retain peak pressure separately from final fields, and share the direct
+      runner's weighted local-medium pressure-source schedule.
+- [x] Correct the explicit-lossless absorption contract and scan all packed
+      `B/A` coefficients before selecting nonlinear PSTD.
+- [x] Remove the obsolete CPU-reference Apollo/Leto complex-buffer conversion
+      from every FFT rank and use the cached Apollo plans directly for slices
+      and PSTD full-spectrum scratch buffers.
+- [x] Verify source-filter and early-leapfrog CPU/GPU parity after the runner
+      correction.
+- [x] Verify the 100-step heterogeneous CPU/GPU contract and the complete
+      WGPU-featured package gate.
+- [x] Record the private consumer's explicit peak-pressure regression as an
+      external integration requirement without exposing its repository.
+- [x] Run GPU-feature Nextest, warning-denied all-feature Clippy, and Rustdoc.
+- [x] Pin every hosted path-dependency checkout to the Atlas-owned action and
+      reconcile `Cargo.lock` against that exact gitlink graph.
+- [x] Align direct Aequitas and Proteus revisions with Atlas `05b7f5d` and
+      resolve one Aequitas source identity across the locked graph.
+- [x] Move grid and homogeneous-medium wall-clock checks out of the
+      instrumented native-test lane; retain their Criterion measurements.
+- [x] Reconcile every PR review thread: remove the orphaned conversion leaf,
+      gate split-density source injection by its active axis, consolidate the
+      FDTD Leto array spelling, and align example-book links and snippets with
+      the runnable programs.
+- [x] Keep the downstream consumer gate outside this public repository's
+      acceptance boundary.
+
 ## Owner: /root — Integrate Tyche uncertainty ownership [major] [arch]
 
 - [x] File ADR 043 with provider boundary, public migration, proof obligations,

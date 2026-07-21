@@ -1,5 +1,37 @@
 # Backlog / Strategy
 
+## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
+
+- Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
+  ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`,
+  `crates/kwavers-math/src/fft/mod.rs` CPU-reference FFT boundary, and the
+  in-repository simulation consumer boundary.
+- Acceptance: the provider accumulates `max_t |p|` on the GPU for every voxel,
+  transfers exactly that one pressure volume when requested, and never labels a
+  final pressure frame as a peak envelope. The output request supports final,
+  peak, or both without allocating a peak volume for a sensor-only run. Its
+  source, lossless-absorption, and heterogeneous-nonlinearity choices match
+  the CPU PSTD contract without a host fallback. The reference FFT executes
+  directly on the shared Leto/Eunomia complex type rather than copying through
+  a duplicate facade representation.
+- Decision: [`ADR-040`](docs/ADR/040-gpu-pstd-peak-pressure-output.md).
+- Evidence target: value-semantic output-selection and final-versus-peak
+  invariants, a real WGPU burst regression, GPU-feature Nextest, and an
+  in-repository simulation-consumer regression.
+- Evidence: the simulation adapter requests the provider's explicit peak
+  output, retains it separately from final fields, and shares the direct
+  runner's weighted local-medium pressure-source schedule. It rejects both
+  unsampled `Source` objects and unsupported velocity-source assembly rather
+  than discarding source information. Warning-denied all-feature Clippy passes,
+  and the WGPU-featured Nextest lane passes 259/259 tests, including the
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
+  use the Atlas-owned checkout action and provider graph pinned at `05b7f5d`;
+  direct Aequitas and Proteus revisions match that graph, and the lock contains
+  one Aequitas source identity.
+- External integration requirement: the private full-wave consumer remains
+  responsible for its explicit peak-pressure regression. Its inaccessible
+  checkout does not widen or block this repository's delivery boundary.
+
 ## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — implemented
 
 - Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
@@ -17,8 +49,8 @@
   normal Rustdoc generation, the facade clinical workflow example, and source
   policy pass. `cargo-semver-checks` runs 223 Analysis checks and identifies 10
   major API breaks, matching ADR 043.
-- The reusable checkout action pins Atlas commit `58d7a6e`, eliminating the
-  moving-provider lock failure exposed by run `29781981026`. PR 298 is the
+- The Atlas-owned checkout action pins provider graph `05b7f5d`, eliminating
+  the moving-provider lock failure exposed by run `29781981026`. PR 298 is the
   canonical hosted-verification and merge record for the documentation-complete
   head.
 - The migrated comprehensive clinical workflow is partitioned into 127/168/161/

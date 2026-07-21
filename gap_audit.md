@@ -29,6 +29,47 @@
 
 # Gap Audit
 
+- Review 2026-07-17: the provider-owned GPU PSTD result exposed only sensor
+  traces and optional final fields, but the treatment-planning quantity is
+  `max_t |p|`, not the final pressure frame. The WGPU path now reserves one
+  requested output volume after its trace region, clears it at run start, and
+  applies a pointwise absolute-pressure maximum after each pressure update.
+  `PstdOutputRequest` independently selects final fields and the envelope;
+  sensor-only runs allocate neither the peak tail nor its staging buffer.
+  Evidence tier: compile-time 64-byte Rust/WGSL ABI assertion, exact request
+  and layout tests, plus a real WGPU burst test proving
+  `peak[i] >= abs(final_pressure[i])` at every voxel, with a finite-burst
+  witness that strictly distinguishes the envelope from final pressure, in
+  0.705 seconds.
+  The simulation adapter now requests that output explicitly and retains it
+  separately from the final field. Residual: the private full-wave consumer
+  remains to be wired to the explicit output API; allocation capacity remains
+  device- and plan-dependent.
+
+- Review 2026-07-20: local lock regeneration inherited mutable sibling
+  Hephaestus and Gaia revisions, adding a second Aequitas source and deleting
+  packages still required by the coordinated graph. Hosted `--locked` jobs
+  rejected the mismatch before compilation. The workflows now materialize
+  every provider from Atlas merge `05b7f5d`; direct Aequitas and Proteus pins
+  match that graph, `Cargo.lock` resolves one Aequitas source identity, and the
+  consumer-local moving-`main` checkout action remains deleted.
+
+- Review 2026-07-20: Tarpaulin instrumentation made the test-suite
+  `test_grid_creation_performance` wall-clock assertion exceed its empirical
+  10 ms threshold while the constructed grid remained correct. Test-process
+  elapsed time is not a portable performance oracle. Grid and
+  homogeneous-medium construction remain measured by the Criterion
+  `testing_infrastructure` benchmark; the instrumented native test lane now
+  retains only value-semantic assertions.
+
+- Review 2026-07-20: PR review found the singleton-x pressure-source case
+  normalized its schedule over the active y/z axes but injected into all three
+  split-density fields. The WGSL entry point now gates x, y, and z injection
+  independently, with host scaling and shader-structure regressions for a
+  `1 × 2 × 2` grid. The same review removed an orphaned, uncompiled conversion
+  leaf and corrected every example-book source-link depth plus the identified
+  snippet drift.
+
 - Review 2026-07-20: Kwavers duplicated corrected conformal ranks and moments,
   selected the reversed lower conformal tail in Analysis, discarded all but
   the first interval request, and exposed squared correlation under Sobol
@@ -51,9 +92,10 @@
   layer boundary, Miri, and security gates but cloned a moving Atlas `main`
   revision after the PR lockfile was generated. Every compile/test failure
   stopped at Cargo's locked-graph check before compiling Kwavers. The shared
-  checkout action now pins Atlas commit `58d7a6e`, whose provider gitlinks match
-  the locally verified graph. PR 298 owns the final hosted matrix and merge
-  evidence; the locked-provider boundary has no source residual.
+  Atlas-owned checkout action now pins provider graph `05b7f5d`, whose
+  provider gitlinks match the locally verified graph. PR 298 owns the final
+  hosted matrix and merge evidence; the locked-provider boundary has no source
+  residual.
 
 - Structural boundary 2026-07-20: the Tyche migration touched a 794-line
   clinical workflow example spanning modality execution, result storage, and

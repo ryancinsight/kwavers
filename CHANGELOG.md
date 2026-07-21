@@ -2,6 +2,44 @@
 
 ## Unreleased
 
+### Fixed
+
+- Grid and homogeneous-medium construction performance now remains in the
+  Criterion benchmark suite. Instrumented coverage no longer evaluates
+  wall-clock assertions whose result depends on Tarpaulin overhead.
+- Direct Aequitas and Proteus revisions now match the merged Atlas graph,
+  resolving one physical-quantity source identity across Kwavers, Proteus,
+  and Hephaestus.
+- `GpuPstdSimulationAdapter` now calls the full provider output contract,
+  exposes an explicit `max_t |p|` readback, and never substitutes a final
+  pressure field for a temporal envelope. The adapter and direct GPU runner
+  share one weighted pressure-source schedule using the uploaded local sound
+  speed and BLI mask weights. Unsampled source objects and unsupported adapter
+  velocity-source assembly now fail explicitly instead of dropping inputs.
+- Python bindings now resolve crates.io `numpy` 0.29 directly. The obsolete
+  vendored 0.27 patch and its migration allowlist entries are removed.
+- Hosted workflows now materialize path dependencies through the pinned
+  Atlas-owned checkout action and exact Atlas gitlink graph. `Cargo.lock`
+  retains that graph instead of inheriting mutable local provider revisions.
+- GPU PSTD pressure sources now inject into each split-density field only when
+  that axis is spatially active, matching the host's active-axis
+  normalization for singleton dimensions.
+- Example-book source links now resolve from their actual directory. The DG
+  artifact tables and snippets, seismic FWI snippet, and transcranial NIfTI
+  pipeline now match the runnable examples.
+
+### Breaking (2026-07-17) - GPU PSTD peak-pressure output [major]
+
+- Replace the closed `PstdOutputRequest` enum with a composable request type:
+  `sensor_traces`, `with_final_fields`, `with_peak_pressure`, and
+  `with_final_fields_and_peak_pressure`. `PstdRunResult` now carries the
+  explicitly requested `max_t |p|` volume separately from optional final
+  pressure and velocity fields.
+- Accumulate the pressure envelope on the Hephaestus-acquired WGPU provider;
+  sensor-only runs retain their former allocation and transfer contract. The
+  real GPU regression verifies the envelope dominates the final pressure frame
+  at every voxel. `kwavers-gpu` advances from 4.1.0 to 5.0.0. See ADR 040.
+
 ### Breaking (2026-07-20) - Tyche uncertainty provider [major] [arch]
 
 - Replace Analysis and PINN conformal-rank implementations with Tyche's
