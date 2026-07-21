@@ -1,5 +1,19 @@
 # Project Checklist
 
+## Owner: /root — Python release wheels [patch]
+
+- [x] Make Cargo the `kwavers-python` distribution version source of truth.
+- [x] Add the pinned build-once GitHub Release and PyPI workflow.
+- [x] Document the `kwavers-python` distribution, `pykwavers` import, stable
+      ABI floor, Cargo version source, and OIDC publication contract.
+- [x] Build, install, import, and inspect a production `cp38-abi3` wheel
+      locally as `kwavers-python` 0.1.0 / `pykwavers`; the shared local GNU
+      linker retains its existing unused-static-link-argument diagnostic.
+- [x] Create the protected `pypi` environment restricted to
+      `kwavers-python-v*` tags.
+- [ ] Pass hosted CI on the exact release-automation head.
+- [ ] Register the PyPI pending trusted publisher.
+
 ## Owner: /root — Install Atlas benchmark oracle [patch] [arch]
 
 - [x] Remove the same-run save/check classifier and its Python implementation.

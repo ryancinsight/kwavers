@@ -1,0 +1,54 @@
+name: Python Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-release-${{ github.event.release.tag_name }}
+  cancel-in-progress: false
+
+jobs:
+  wheels:
+    if: startsWith(github.event.release.tag_name, 'kwavers-python-v')
+    name: Build and attach wheels
+    permissions:
+      artifact-metadata: write
+      attestations: write
+      contents: write
+      id-token: write
+    uses: ryancinsight/atlas/.github/workflows/python-wheels.yml@b20a1b494672759c39503daf5687b1de2062f9a0
+    with:
+      distribution: kwavers-python
+      import-name: pykwavers
+      manifest-path: crates/kwavers-python/Cargo.toml
+      atlas-ref: b20a1b494672759c39503daf5687b1de2062f9a0
+      tag-prefix: kwavers-python-v
+      abi3: true
+      abi3-python: "3.8"
+
+  publish:
+    if: startsWith(github.event.release.tag_name, 'kwavers-python-v')
+    name: Publish wheels to PyPI
+    needs: wheels
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/kwavers-python
+    permissions:
+      id-token: write
+    steps:
+      - name: Download validated release wheels
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: release-wheels
+          path: dist
+
+      - name: Publish wheels through PyPI Trusted Publishing
+        uses: pypa/gh-action-pypi-publish@ba38be9e461d3875417946c167d0b5f3d385a247 # v1.14.1
+        with:
+          packages-dir: dist/
+          print-hash: true

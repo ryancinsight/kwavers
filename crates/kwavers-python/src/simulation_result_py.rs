@@ -206,10 +206,7 @@ pub(crate) fn build_simulation_result(
         let row_data = sensor_data.into_vec();
         (Some(vec_to_pyarray1(py, row_data)), None)
     } else {
-        (
-            None,
-            Some(leto2_to_pyarray2(py, sensor_data)?),
-        )
+        (None, Some(leto2_to_pyarray2(py, sensor_data)?))
     };
 
     // Sampled statistics

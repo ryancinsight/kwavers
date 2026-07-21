@@ -69,6 +69,15 @@ Validation status: `pykwavers` reaches 1-to-1 PSTD parity with k-Wave /
 k-wave-python / KWave.jl on the homogeneous-water IVP benchmark (Pearson
 r ≥ 0.9999 across 1-D/2-D/3-D; see [Reference Benchmark Coverage](#reference-benchmark-coverage)).
 
+### Python Releases
+
+GitHub Releases tagged `kwavers-python-v<version>` build one locked
+Python-3.8-compatible stable-ABI wheel per operating system for Linux, Windows,
+and macOS. The workflow installs and imports each wheel as `pykwavers`, verifies
+the `kwavers-python` distribution identity and Cargo-owned version, attests and
+attaches the exact artifacts, then publishes that same wheel set to PyPI
+through OIDC Trusted Publishing.
+
 Detailed history lives in [`CHANGELOG.md`](CHANGELOG.md); current work and gaps
 are tracked in [`backlog.md`](backlog.md), [`CHECKLIST.md`](CHECKLIST.md), and
 [`gap_audit.md`](gap_audit.md).

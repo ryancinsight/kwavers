@@ -31,37 +31,19 @@ pub fn ivus_vessel_phantom<'py>(
     out.set_item("radius_m", array2(py, n, phantom.radius_m)?)?;
     out.set_item("theta_rad", array2(py, n, phantom.theta_rad)?)?;
     out.set_item("labels", array2(py, n, phantom.labels)?)?;
-    out.set_item(
-        "sound_speed_m_s",
-        array2(py, n, phantom.sound_speed_m_s)?,
-    )?;
-    out.set_item(
-        "density_kg_m3",
-        array2(py, n, phantom.density_kg_m3)?,
-    )?;
+    out.set_item("sound_speed_m_s", array2(py, n, phantom.sound_speed_m_s)?)?;
+    out.set_item("density_kg_m3", array2(py, n, phantom.density_kg_m3)?)?;
     out.set_item(
         "attenuation_db_cm_mhz",
         array2(py, n, phantom.attenuation_db_cm_mhz)?,
     )?;
-    out.set_item(
-        "backscatter",
-        array2(py, n, phantom.backscatter)?,
-    )?;
+    out.set_item("backscatter", array2(py, n, phantom.backscatter)?)?;
     out.set_item("lumen_mask", array2(py, n, phantom.lumen_mask)?)?;
     out.set_item("eel_mask", array2(py, n, phantom.eel_mask)?)?;
-    out.set_item(
-        "plaque_mask",
-        array2(py, n, phantom.plaque_mask)?,
-    )?;
-    out.set_item(
-        "fibrous_cap_mask",
-        array2(py, n, phantom.fibrous_cap_mask)?,
-    )?;
+    out.set_item("plaque_mask", array2(py, n, phantom.plaque_mask)?)?;
+    out.set_item("fibrous_cap_mask", array2(py, n, phantom.fibrous_cap_mask)?)?;
     out.set_item("lipid_mask", array2(py, n, phantom.lipid_mask)?)?;
-    out.set_item(
-        "calcium_mask",
-        array2(py, n, phantom.calcium_mask)?,
-    )?;
+    out.set_item("calcium_mask", array2(py, n, phantom.calcium_mask)?)?;
     Ok(out)
 }
 

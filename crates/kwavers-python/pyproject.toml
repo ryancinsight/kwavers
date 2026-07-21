@@ -3,8 +3,8 @@ requires = ["maturin>=1.0,<2.0"]
 build-backend = "maturin"
 
 [project]
-name = "pykwavers"
-version = "0.1.0"
+name = "kwavers-python"
+dynamic = ["version"]
 description = "Python bindings for kwavers ultrasound simulation library"
 authors = [
     {name = "Ryan Clanton PhD", email = "ryanclanton@outlook.com"}
@@ -61,7 +61,7 @@ dev = [
 
 # Full installation with all features
 full = [
-    "pykwavers[comparison,kwave,dev]",
+    "kwavers-python[comparison,kwave,dev]",
 ]
 
 [project.urls]

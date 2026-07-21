@@ -390,14 +390,8 @@ pub fn simulate_lif_neuron_py<'py>(
         .map_err(kwavers_to_py)?;
     let spike_count = trace.spike_times_s.len();
     let dict = PyDict::new(py);
-    dict.set_item(
-        "voltage_v",
-        PyArray1::from_vec(py, trace.voltage_v),
-    )?;
-    dict.set_item(
-        "spike_times_s",
-        PyArray1::from_vec(py, trace.spike_times_s),
-    )?;
+    dict.set_item("voltage_v", PyArray1::from_vec(py, trace.voltage_v))?;
+    dict.set_item("spike_times_s", PyArray1::from_vec(py, trace.spike_times_s))?;
     dict.set_item("spike_count", spike_count)?;
     Ok(dict)
 }
@@ -422,10 +416,7 @@ pub fn lif_response_probability_py<'py>(
         .detach(|| lif_response_probability(spikes, n_samples, dt_s, smoothing_sigma_s, f_max_hz))
         .map_err(kwavers_to_py)?;
     let dict = PyDict::new(py);
-    dict.set_item(
-        "spike_train",
-        PyArray1::from_vec(py, response.spike_train),
-    )?;
+    dict.set_item("spike_train", PyArray1::from_vec(py, response.spike_train))?;
     dict.set_item(
         "response_probability",
         PyArray1::from_vec(py, response.response_probability),
