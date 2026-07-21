@@ -254,18 +254,16 @@ fn bench_validation_suite(c: &mut Criterion) {
 
     group.bench_function("complete_validation", |b| {
         b.iter(|| {
-            // Simulate running all validation checks
             let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).expect("Grid");
             let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.5, 0.0, &grid);
 
-            // Property validations
-            let _ = verify_medium_properties_physically_valid(&medium, &grid);
-            let _ = verify_grid_indexing_safe(&grid);
-            let _ = is_valid_density(DENSITY_WATER);
-            let _ = is_valid_sound_speed(SOUND_SPEED_WATER);
-            let _ = is_valid_acoustic_impedance(DENSITY_WATER, SOUND_SPEED_WATER);
-
-            black_box(());
+            black_box((
+                verify_medium_properties_physically_valid(&medium, &grid),
+                verify_grid_indexing_safe(&grid),
+                is_valid_density(DENSITY_WATER),
+                is_valid_sound_speed(SOUND_SPEED_WATER),
+                is_valid_acoustic_impedance(DENSITY_WATER, SOUND_SPEED_WATER),
+            ));
         });
     });
 
