@@ -169,15 +169,38 @@ impl UncertaintyQuantifier {
     }
 
     /// Quantify uncertainty for beamforming results.
-    /// # Errors
-    /// - Returns [`Err`] if an internal constraint is violated.
     ///
+    /// # Errors
+    ///
+    /// Returns [`KwaversError::InvalidInput`] when the image cannot support the
+    /// four-neighbor stencil, an image value is non-finite, signal quality is
+    /// not positive and finite, or uncertainty exceeds `f32` storage.
     pub fn quantify_beamforming_uncertainty(
         &self,
         beamformed_image: &LetoArray3<f32>,
         signal_quality: f64,
     ) -> KwaversResult<BeamformingUncertainty> {
         let [nx, ny, nz] = beamformed_image.shape();
+        if nx < 3 || ny < 3 || nz == 0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Beamformed image shape [{nx}, {ny}, {nz}] must be at least [3, 3, 1]"
+            )));
+        }
+        if !signal_quality.is_finite() || signal_quality <= 0.0 {
+            return Err(KwaversError::InvalidInput(format!(
+                "Beamforming signal quality must be positive and finite: {signal_quality}"
+            )));
+        }
+        if let Some((index, value)) = beamformed_image
+            .iter()
+            .copied()
+            .enumerate()
+            .find(|(_, value)| !value.is_finite())
+        {
+            return Err(KwaversError::InvalidInput(format!(
+                "Beamformed image contains non-finite value at element {index}: {value}"
+            )));
+        }
         let mut uncertainty_map = NdArray3::zeros((nx, ny, nz));
 
         for i in 1..nx - 1 {
@@ -191,11 +214,17 @@ impl UncertaintyQuantifier {
                         beamformed_image[[i, j + 1, k]],
                     ];
 
-                    let variance = neighbors.iter().map(|&n| (n - center).powi(2)).sum::<f32>()
-                        / neighbors.len() as f32;
+                    let variance =
+                        neighbors.iter().map(|&n| (n - center).powi(2)).sum::<f32>() / 4.0;
+                    let uncertainty = f64::from(variance.sqrt()) / signal_quality;
+                    let uncertainty = uncertainty as f32;
+                    if !uncertainty.is_finite() {
+                        return Err(KwaversError::InvalidInput(format!(
+                            "Beamforming uncertainty exceeds f32 storage at [{i}, {j}, {k}]"
+                        )));
+                    }
 
-                    uncertainty_map[[i, j, k]] =
-                        (variance.sqrt() as f64 / signal_quality.max(1e-6)) as f32;
+                    uncertainty_map[[i, j, k]] = uncertainty;
                 }
             }
         }

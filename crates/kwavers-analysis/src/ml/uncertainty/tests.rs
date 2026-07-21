@@ -151,6 +151,40 @@ fn test_beamforming_uncertainty() {
 }
 
 #[test]
+fn beamforming_uncertainty_rejects_invalid_boundaries() {
+    let quantifier = UncertaintyQuantifier::new(MlUncertaintyConfig::default()).unwrap();
+
+    let small_image = Array3::from_elem([2, 3, 1], 1.0_f32);
+    let shape_error = quantifier
+        .quantify_beamforming_uncertainty(&small_image, 0.8)
+        .unwrap_err();
+    assert!(
+        format!("{shape_error:?}").contains("at least [3, 3, 1]"),
+        "undersized grids must report the stencil shape contract"
+    );
+
+    let image = Array3::from_elem([3, 3, 1], 1.0_f32);
+    for signal_quality in [0.0, f64::NAN] {
+        let quality_error = quantifier
+            .quantify_beamforming_uncertainty(&image, signal_quality)
+            .unwrap_err();
+        assert!(
+            format!("{quality_error:?}").contains("positive and finite"),
+            "invalid signal quality must report its domain contract"
+        );
+    }
+
+    let non_finite = Array3::from_elem([3, 3, 1], f32::NAN);
+    let value_error = quantifier
+        .quantify_beamforming_uncertainty(&non_finite, 0.8)
+        .unwrap_err();
+    assert!(
+        format!("{value_error:?}").contains("non-finite value at element 0"),
+        "invalid image values must identify their element"
+    );
+}
+
+#[test]
 fn test_confidence_check() {
     let config = MlUncertaintyConfig::default();
     let quantifier = UncertaintyQuantifier::new(config).unwrap();

@@ -28,7 +28,8 @@ rank proof at public revision
 
 Kwavers depends on `tyche-core` at revision `00ce951`.
 
-- Analysis calibrates and queries sorted `f64` scores through
+- Analysis computes absolute errors and even medians in prediction-native
+  `f32`, then widens the completed score exactly for
   `ConformalCalibrator<f64>`. Returned scores use `Cow::Borrowed`; all requested
   prediction arrays remain present in each interval family.
 - PINN conformal state stores a validated `ConformalCalibrator<f32>`. Its public
@@ -80,15 +81,17 @@ No compatibility wrappers or aliases preserve the superseded contracts.
 ## Proof and verification obligations
 
 1. Five sorted scores at 90% confidence select the fifth score, not the first.
-2. Borrowed conformity scores retain the calibration buffer address, and two
+2. An even median between adjacent `f32` values rounds in `f32` before exact
+   widening; no unrepresentable `f64` midpoint reaches prediction arithmetic.
+3. Borrowed conformity scores retain the calibration buffer address, and two
    input predictions yield two lower and two upper arrays at every level.
-3. Welford population variance returns `1` for `[10000, 10002]`, where the
+4. Welford population variance returns `1` for `[10000, 10002]`, where the
    superseded `f32` second-moment formula returns `0` by cancellation.
-4. A one-parameter affine response has squared correlation `1` within the
+5. A one-parameter affine response has squared correlation `1` within the
    `O(n epsilon)` rounding bound, and replay is bitwise deterministic.
-5. Empty, non-finite, dimension-mismatched, and uncalibrated inputs return
+6. Empty, non-finite, dimension-mismatched, and uncalibrated inputs return
    typed errors. Undefined statistics remain `None`.
-6. Package clippy, Nextest, doctests, Rustdoc, dependency audit, and public
+7. Package clippy, Nextest, doctests, Rustdoc, dependency audit, and public
    semver classification run against the delivered revision.
 
 ## Rejected alternatives

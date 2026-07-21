@@ -10,13 +10,13 @@
   sensitivity is const-generic, deterministic, allocation-free per sample, and
   named squared correlation; pseudo-Sobol/Morris bodies have no residue.
 - Evidence: public Tyche revision `00ce951` is the single dependency in both
-  packages; focused Analysis and PINN suites pass 13/13 and 12/12. The
-  pre-closure full package suites pass 718/718 and 1,251/1,251; the final head
-  adds one value-semantic heterogeneous-report regression. Warning-denied
-  Clippy, no-default checks, doctests, normal Rustdoc generation, the facade
-  clinical workflow example, and source policy pass. `cargo-semver-checks`
-  runs 223 Analysis checks and identifies 10 major API breaks, matching ADR
-  043.
+  packages; focused Analysis and PINN suites pass 13/13 and 12/12. The final
+  local all-feature Analysis suite passes 764/764, including heterogeneous
+  report borrowing, native-precision even medians, and invalid beamforming
+  boundary regressions. Warning-denied Clippy, no-default checks, doctests,
+  normal Rustdoc generation, the facade clinical workflow example, and source
+  policy pass. `cargo-semver-checks` runs 223 Analysis checks and identifies 10
+  major API breaks, matching ADR 043.
 - The reusable checkout action pins Atlas commit `58d7a6e`, eliminating the
   moving-provider lock failure exposed by run `29781981026`. PR 298 is the
   canonical hosted-verification and merge record for the documentation-complete
