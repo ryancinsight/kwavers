@@ -1,4 +1,4 @@
-# pykwavers: Python Bindings for kwavers
+# kwavers-python: Python Bindings for Kwavers
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
@@ -8,7 +8,8 @@ Python bindings for the [kwavers](https://github.com/ryancinsight/kwavers) ultra
 
 ## Overview
 
-**pykwavers** brings the performance and safety of Rust to Python-based acoustic simulations:
+The `kwavers-python` distribution imports as `pykwavers` and brings the
+performance and safety of Rust to Python-based acoustic simulations:
 
 - 🚀 **High Performance**: Rust-backed numerical kernels with zero-copy numpy integration
 - 🔒 **Memory Safe**: No segfaults, data races, or undefined behavior
@@ -37,7 +38,7 @@ Following Clean Architecture principles:
 ### From PyPI (when published)
 
 ```bash
-pip install pykwavers
+pip install kwavers-python
 ```
 
 ### From Source (Development)
@@ -56,7 +57,7 @@ maturin develop --release
 
 # Or build wheel
 maturin build --release
-pip install target/wheels/pykwavers-*.whl
+pip install target/wheels/kwavers_python-*.whl
 ```
 
 ### Optional Dependencies
@@ -71,6 +72,15 @@ pip install matplotlib pandas scipy
 # For development
 pip install pytest pytest-benchmark black ruff mypy
 ```
+
+## Releases
+
+GitHub Releases tagged `kwavers-python-v<version>` build one locked stable-ABI
+wheel per operating system for Linux, Windows, and macOS. The workflow installs
+and imports each wheel as `pykwavers`, verifies that its `kwavers-python`
+metadata version matches the Cargo package version and release tag, attests and
+attaches the exact wheel set to the GitHub Release, then publishes those same
+artifacts to PyPI through OIDC Trusted Publishing.
 
 ## Quick Start
 

@@ -1,5 +1,23 @@
 # Backlog / Strategy
 
+## KW-PYTHON-064 — Python release wheels [patch] — in-progress
+
+- Owner: `/root`; scope: `kwavers-python` distribution metadata and lock, the
+  release workflow, protected GitHub environment, distribution documentation,
+  and PyPI trusted publisher. Python binding behavior is a non-goal.
+- Acceptance: a GitHub Release tagged `kwavers-python-v<version>` builds one
+  locked Python-3.8-compatible stable-ABI wheel for each of Linux, Windows, and
+  macOS, installs and imports each wheel as `pykwavers`, validates Cargo-owned
+  distribution identity, attests and attaches the exact artifacts, then
+  publishes the same wheels to the `kwavers-python` PyPI project through OIDC.
+- Current evidence: the release workflow and synchronized distribution contract
+  are implemented, and GitHub environment `pypi` accepts only
+  `kwavers-python-v*` tags. A locked `cp38-abi3` wheel builds as
+  `kwavers-python` 0.1.0, installs into an isolated target, and imports as
+  `pykwavers`. The shared local GNU linker configuration emits its existing
+  unused static-link-argument diagnostic; hosted CI and pending-publisher
+  registration remain open.
+
 ## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
