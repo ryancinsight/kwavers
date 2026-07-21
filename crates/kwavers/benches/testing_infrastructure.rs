@@ -257,9 +257,12 @@ fn bench_validation_suite(c: &mut Criterion) {
             let grid = Grid::new(32, 32, 32, 0.001, 0.001, 0.001).expect("Grid");
             let medium = HomogeneousMedium::new(DENSITY_WATER, SOUND_SPEED_WATER, 0.5, 0.0, &grid);
 
+            verify_medium_properties_physically_valid(black_box(&medium), black_box(&grid))
+                .expect("benchmark fixture has valid medium properties");
+            verify_grid_indexing_safe(black_box(&grid))
+                .expect("benchmark fixture has valid grid bounds");
+
             black_box((
-                verify_medium_properties_physically_valid(&medium, &grid),
-                verify_grid_indexing_safe(&grid),
                 is_valid_density(DENSITY_WATER),
                 is_valid_sound_speed(SOUND_SPEED_WATER),
                 is_valid_acoustic_impedance(DENSITY_WATER, SOUND_SPEED_WATER),
