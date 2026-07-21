@@ -12,8 +12,11 @@
 - Evidence: the single-run same-baseline Python classifier is deleted. The
   dedicated workflow retains the full plotting-enabled `kwavers` benchmark
   suite, pins Atlas classifier and provider graph `71cdc54`, and derives its
-  instrument budget from the observed hosted full-suite runtime. Exact-head
-  hosted execution remains the merge gate.
+  instrument budget from the observed hosted full-suite runtime. Run
+  `29797805169` exposed eight auto-discovered libtest targets before
+  measurement; automatic discovery is now disabled, all 25 Criterion targets
+  are explicit, and both revisions must match their benchmark source registry.
+  Exact-head hosted execution remains the merge gate.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 

@@ -16,12 +16,27 @@ The benchmark suite is the measurement instrument. Comparing a historical
 harness against a candidate harness would confound instrument changes with
 production changes.
 
+The first exact-head workflow run, `29797805169`, exposed an independent
+instrument defect before measurement: eight benchmark files were
+auto-discovered as default libtest targets, while only 17 targets were
+registered with Criterion's `harness = false`. Forwarding Criterion's
+`--save-baseline` flag to the package library harness then failed with an
+unrecognized-option error. Prior full-suite runs had silently executed those
+eight auto-discovered targets as zero-test binaries.
+
 ## Decision
 
 PRs that change Rust production, dependency, or benchmark inputs run a
 dedicated workflow. It checks out the PR base and head, overlays the candidate
 `crates/kwavers/benches` tree onto the base checkout, and runs the complete
 plotting-enabled `kwavers` Criterion suite for both revisions.
+
+The package disables automatic benchmark discovery and explicitly registers
+all 25 benchmark files as Criterion targets. Before measurement, the workflow
+requires exact equality between the sorted `benches/*.rs` stems and Cargo's
+benchmark target registry for both revisions. It invokes `cargo bench
+--benches`, so Criterion arguments reach only registered benchmark targets.
+Any unregistered, orphaned, or default-harness target fails before timing.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
 pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. One runner executes
@@ -36,12 +51,14 @@ benchmarks. Missing results, benchmark-universe mismatches, malformed
 estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
-The 240-minute workflow budget is specific to this instrumented suite. One
-hosted full-suite measurement used 31 minutes, including an eight-minute
-build. Eight measurements plus two revision builds therefore model to about
-184 minutes; the finite budget admits 23% hosted-runner variance without
-reducing samples, targets, or assertions. It does not alter native-test
-budgets.
+The 340-minute workflow budget is specific to this instrumented suite. The
+previous incomplete 17-target run used 31 minutes, including an eight-minute
+build, leaving 23 measurement minutes. Scaling the measurement component by
+the complete target ratio gives `23 * 25 / 17 = 33.8` minutes per run. Eight
+measurements plus two 5-minute-40-second revision builds observed in
+`29797805169` model to about 282 minutes. The finite bound admits 20% hosted
+runner variance without reducing samples, targets, or assertions. It does not
+alter native-test budgets.
 
 ## Rejected alternatives
 

@@ -8,6 +8,8 @@
 - [x] Derive family-wise confidence and classification from the Atlas SSOT.
 - [x] Bound the instrumented job from observed full-suite runtime without
       reducing benchmark targets, samples, or assertions.
+- [x] Disable auto-discovery, register all 25 Criterion targets, and require
+      source-file/target-registry equality before measurement.
 - [ ] Verify the exact PR head through the hosted benchmark workflow.
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]

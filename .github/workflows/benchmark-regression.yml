@@ -20,11 +20,11 @@ jobs:
   benchmark-regression:
     name: benchmark regression check
     runs-on: ubuntu-24.04
-    # One hosted full-suite measurement used 31 minutes including an
-    # eight-minute build. Eight measurements plus two revision builds require
-    # about 184 minutes; 240 minutes admits 23% runner variance without
-    # changing the benchmark workload or statistical contract.
-    timeout-minutes: 240
+    # The prior 17-target instrument used 23 measurement minutes after its
+    # build. Scaling that work to the complete 25-target registry and adding
+    # two observed 5m40s revision builds models 282 minutes. The 340-minute
+    # bound admits 20% hosted-runner variance without changing the instrument.
+    timeout-minutes: 340
     env:
       CARGO_TARGET_DIR: ${{ github.workspace }}/target
     steps:
@@ -87,6 +87,43 @@ jobs:
             kwavers-baseline/crates/kwavers/benches \
             kwavers-candidate/crates/kwavers/benches
 
+      - name: Validate complete benchmark registries
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          validate_registry() {
+            local revision="$1"
+
+            diff --unified \
+              <(
+                find "$revision/crates/kwavers/benches" \
+                  -maxdepth 1 \
+                  -type f \
+                  -name '*.rs' \
+                  -printf '%f\n' \
+                  | sed 's/\.rs$//' \
+                  | LC_ALL=C sort
+              ) \
+              <(
+                cargo metadata \
+                  --manifest-path "$revision/Cargo.toml" \
+                  --locked \
+                  --no-deps \
+                  --format-version 1 \
+                  | jq --raw-output \
+                    '.packages[]
+                    | select(.name == "kwavers")
+                    | .targets[]
+                    | select(.kind | index("bench"))
+                    | .name' \
+                  | LC_ALL=C sort
+              )
+          }
+
+          validate_registry kwavers-baseline
+          validate_registry kwavers-candidate
+
       - name: Measure phase-reversed replications
         shell: bash
         run: |
@@ -103,6 +140,7 @@ jobs:
               --locked \
               --package kwavers \
               --features plotting \
+              --benches \
               -- \
               "$@"
           }
