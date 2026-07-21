@@ -43,7 +43,6 @@ gpu = ["dep:kwavers-gpu", "kwavers-gpu/gpu", "kwavers-math/gpu", "kwavers-solver
 pinn = ["kwavers-solver/pinn", "kwavers-analysis/pinn"]
 
 [dev-dependencies]
-approx = "0.5"
 tempfile = { workspace = true }
 
 [lints]

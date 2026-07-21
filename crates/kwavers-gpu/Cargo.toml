@@ -66,5 +66,5 @@ cuda-provider = ["gpu", "dep:hephaestus-cuda"]
 cuda-runtime = ["cuda-provider", "hephaestus-cuda/cuda"]
 
 [dev-dependencies]
+eunomia = { workspace = true }
 kwavers-solver = { path = "../kwavers-solver", features = ["test-util"] }
-approx = "0.5"

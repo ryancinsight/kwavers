@@ -1,5 +1,5 @@
 use super::extractor::FeatureExtractor;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_analysis::signal_processing::beamforming::neural::config::FeatureConfig;
 use leto::Array3;
 

@@ -1,5 +1,5 @@
 use super::*;
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;

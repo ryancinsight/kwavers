@@ -1,6 +1,6 @@
 use super::solver::Multilateration;
 use super::types::MultilaterationConfig;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::{SOUND_SPEED_TISSUE, SOUND_SPEED_WATER_SIM};
 
 #[test]

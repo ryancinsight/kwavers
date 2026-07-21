@@ -78,7 +78,6 @@ name = "elastic_shear_fwi_lesion"
 required-features = ["clinical-imaging"]
 
 [dev-dependencies]
-approx = "0.5"
 
 [lints]
 workspace = true

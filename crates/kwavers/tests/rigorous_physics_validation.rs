@@ -9,7 +9,7 @@
 //! - Pierce (1989) "Acoustics: An Introduction to Its Physical Principles"
 //! - Hamilton & Blackstock (1998) "Nonlinear Acoustics"
 
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::SOUND_SPEED_WATER;
 use kwavers_grid::Grid;
 use std::f64::consts::PI;

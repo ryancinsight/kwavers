@@ -3,7 +3,7 @@
 use crate::array_utils::vec_to_pyarray2;
 use kwavers_physics::analytical::imaging;
 use numpy::Element;
-use pyo3::exceptions::{PyRuntimeError, PyValueError};
+use pyo3::exceptions::PyValueError;
 use pyo3::prelude::*;
 use pyo3::types::PyDict;
 

@@ -31,7 +31,7 @@
 //! - Goodman, J.W. (2005). *Introduction to Fourier Optics*, 3rd ed. §3.3.
 //! - Koch, C. (1999). *Biophysics of Computation*. Oxford University Press.
 
-use crate::array_utils::{leto3_to_pyarray3, vec_to_pyarray1};
+use crate::array_utils::leto3_to_pyarray3;
 use kwavers_physics::acoustics::therapy::sonogenetics::{
     boltzmann_open_probability_from_tension_mn_m, coupled_channel_drive,
     gaussian_beam_pressure_field, lif_response_probability, pressure_threshold_p_open,

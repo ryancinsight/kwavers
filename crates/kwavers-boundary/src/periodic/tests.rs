@@ -1,4 +1,4 @@
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use leto::Array3;
 
 use crate::traits::BoundaryFieldType;

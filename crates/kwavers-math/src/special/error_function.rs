@@ -50,7 +50,7 @@ pub fn erf(x: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_abs_diff_eq;
+    use eunomia::assert_abs_diff_eq;
 
     /// The A&S 7.1.26 error bound.
     const ERF_AS_TOL: f64 = 1.5e-7;

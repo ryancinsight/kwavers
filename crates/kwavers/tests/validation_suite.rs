@@ -3,7 +3,7 @@
 //! This test suite validates implementations against established analytical
 //! solutions and published benchmarks from acoustic literature.
 
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_grid::Grid;
 use kwavers_physics::acoustics::bubble_dynamics::epstein_plesset::OscillationType;
 use kwavers_physics::acoustics::bubble_dynamics::{

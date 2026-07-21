@@ -1,6 +1,6 @@
 use super::chemistry::PlasmaChemistry;
 use super::reaction::{zeldovich_no_rate, PlasmaReaction};
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::ATMOSPHERIC_PRESSURE;
 
 #[test]

@@ -1,6 +1,6 @@
 use super::*;
 use crate::signal_processing::beamforming::covariance::CovariancePostProcess;
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;

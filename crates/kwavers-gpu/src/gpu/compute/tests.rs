@@ -1,5 +1,5 @@
 use super::*;
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use kwavers_core::error::KwaversError;
 use leto::Array3 as LetoArray3;
 

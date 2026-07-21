@@ -2,7 +2,7 @@ use super::extraction::{extract_stft_bin_snapshots, extract_windowed_snapshots};
 use super::types::{
     SnapshotMethod, SnapshotScenario, SnapshotSelection, StftBinConfig, WindowFunction,
 };
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::TWO_PI;
 use leto::Array3;

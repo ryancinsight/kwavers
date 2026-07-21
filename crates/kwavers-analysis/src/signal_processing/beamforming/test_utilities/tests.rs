@@ -3,7 +3,7 @@ use super::covariance::{
     create_rank_deficient_covariance, create_test_covariance, TestCovarianceBuilder,
 };
 use super::steering::create_steering_vector;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use std::f64::consts::PI;
 
 #[test]

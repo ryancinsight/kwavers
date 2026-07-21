@@ -104,7 +104,7 @@ impl FDCoefficients {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
 
     #[test]
     fn test_first_derivative_coefficients() {

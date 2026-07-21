@@ -161,7 +161,7 @@ impl AttenuationCalculator {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
     use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 
     #[test]

@@ -356,7 +356,7 @@ pub fn lif_response_probability(
 
 #[cfg(test)]
 mod tests {
-    use approx::assert_relative_eq;
+    use eunomia::assert_relative_eq;
 
     use super::*;
 

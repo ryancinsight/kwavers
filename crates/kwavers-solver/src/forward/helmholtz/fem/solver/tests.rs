@@ -1,6 +1,6 @@
 use super::config::{FemHelmholtzConfig, FemPreconditionerType};
 use super::core::FemHelmholtzSolver;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::error::KwaversError;
 use kwavers_grid::Grid;

@@ -59,7 +59,6 @@ gpu-visualization = [
 pinn = ["kwavers-solver/pinn"]
 
 [dev-dependencies]
-approx = "0.5"
 
 [lints]
 workspace = true

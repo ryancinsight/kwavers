@@ -2,7 +2,7 @@
 
 use crate::array_utils::{copy_pyarray2_to_vec, vec_to_pyarray2};
 use numpy::{PyArray2, PyReadonlyArray2};
-use pyo3::exceptions::PyRuntimeError;
+
 use pyo3::prelude::*;
 
 pub(super) fn flatten_array2(arr: &PyReadonlyArray2<'_, f64>) -> PyResult<Vec<f64>> {

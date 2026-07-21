@@ -1,7 +1,7 @@
 use super::post_process::CovariancePostProcess;
 use super::shrinkage::shrinkage_to_identity_real;
 use super::{CovarianceEstimator, SpatialSmoothingComplex};
-use approx::assert_abs_diff_eq;
+use eunomia::assert_abs_diff_eq;
 use eunomia::Complex64;
 use leto::Array2;
 

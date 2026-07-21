@@ -1,6 +1,6 @@
 use super::solver::RayleighPlessetSolver;
 use crate::acoustics::bubble_dynamics::bubble_state::{BubbleParameters, BubbleState};
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 
 #[test]
 fn test_rayleigh_plesset_equilibrium() {

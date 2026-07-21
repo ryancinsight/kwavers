@@ -5,7 +5,7 @@ use crate::forward::nonlinear::kzk::constants::{
 use crate::forward::nonlinear::kzk::KZKConfig;
 use crate::validation::measure_beam_radius;
 use apollo::Complex64;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_core::constants::fundamental::SOUND_SPEED_WATER_SIM;
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::numerical::TWO_PI;

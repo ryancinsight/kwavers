@@ -9,7 +9,7 @@
 //! - Aki & Richards, "Quantitative Seismology", 2002
 //! - Carcione, "Wave Fields in Real Media", 2007
 
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use kwavers_grid::Grid;
 
 /// Test P-wave velocity in isotropic elastic medium.

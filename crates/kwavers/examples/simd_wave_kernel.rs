@@ -75,7 +75,7 @@ fn main() {
     let mut p_super = vec![0.0_f64; N];
     elementwise_add(&p_a, &p_b, &mut p_super).expect("equal lengths");
 
-    let total_before = energy_a + energy_b;
+    let _total_before = energy_a + energy_b;
     let energy_super = dot(&p_super, &p_super).expect("equal lengths");
 
     // Cross-term means energy_super ≠ total_before; check linearity of sum instead

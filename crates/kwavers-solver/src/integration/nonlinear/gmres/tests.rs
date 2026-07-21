@@ -2,7 +2,7 @@
 
 use super::config::GMRESConfig;
 use super::solver::GMRESSolver;
-use approx::assert_relative_eq;
+use eunomia::assert_relative_eq;
 use leto::Array3;
 
 #[test]
