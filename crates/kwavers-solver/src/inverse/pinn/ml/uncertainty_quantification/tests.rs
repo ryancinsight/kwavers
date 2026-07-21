@@ -3,6 +3,8 @@
 use super::types::{
     PinnPredictionWithUncertainty, PinnUncertaintyConfig, PinnUncertaintyMethod, UncertaintyStats,
 };
+use super::PinnBayesianPINN;
+use crate::inverse::pinn::ml::{PinnConfig2D, PinnWave2D};
 
 #[test]
 fn test_uncertainty_config() {
@@ -70,4 +72,24 @@ fn test_uncertainty_stats_default() {
     assert_eq!(stats.calibration_error, 0.0);
     assert_eq!(stats.coverage_probability, 0.0);
     assert_eq!(stats.reliability_score, 0.0);
+}
+
+#[test]
+fn bayesian_constructor_rejects_undefined_reliability_scale() {
+    let model = PinnWave2D::<coeus_core::MoiraiBackend>::new(PinnConfig2D::default()).unwrap();
+    let error = PinnBayesianPINN::new(
+        &model,
+        PinnUncertaintyConfig {
+            mc_samples: 0,
+            dropout_prob: 0.0,
+            ensemble_size: 1,
+            conformal_alpha: 0.1,
+            variance_threshold: 0.0,
+        },
+    )
+    .unwrap_err();
+    assert!(
+        format!("{error:?}").contains("variance threshold must be positive and finite"),
+        "zero reliability scale must state the violated threshold contract"
+    );
 }

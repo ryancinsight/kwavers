@@ -196,12 +196,25 @@ impl CPMLProfiles {
     /// Pre-computing `pml = exp(-σ·Δt/2)` per grid index eliminates O(N)
     /// transcendental evaluations per step, replacing them with O(N) multiplications.
     fn compute_exp_factors(&mut self, dt: f64) {
-        self.pml_vel_x = self.sigma_x_sgx.mapv(|s| (-s * dt * 0.5).exp());
-        self.pml_vel_y = self.sigma_y_sgy.mapv(|s| (-s * dt * 0.5).exp());
-        self.pml_vel_z = self.sigma_z_sgz.mapv(|s| (-s * dt * 0.5).exp());
-        self.pml_den_x = self.sigma_x.mapv(|s| (-s * dt * 0.5).exp());
-        self.pml_den_y = self.sigma_y.mapv(|s| (-s * dt * 0.5).exp());
-        self.pml_den_z = self.sigma_z.mapv(|s| (-s * dt * 0.5).exp());
+        let scale = -dt * 0.5;
+        for (s, p) in self.sigma_x.iter().zip(self.pml_den_x.iter_mut()) {
+            *p = (scale * s).exp();
+        }
+        for (s, p) in self.sigma_y.iter().zip(self.pml_den_y.iter_mut()) {
+            *p = (scale * s).exp();
+        }
+        for (s, p) in self.sigma_z.iter().zip(self.pml_den_z.iter_mut()) {
+            *p = (scale * s).exp();
+        }
+        for (s, p) in self.sigma_x_sgx.iter().zip(self.pml_vel_x.iter_mut()) {
+            *p = (scale * s).exp();
+        }
+        for (s, p) in self.sigma_y_sgy.iter().zip(self.pml_vel_y.iter_mut()) {
+            *p = (scale * s).exp();
+        }
+        for (s, p) in self.sigma_z_sgz.iter().zip(self.pml_vel_z.iter_mut()) {
+            *p = (scale * s).exp();
+        }
     }
 
     fn compute_profiles(

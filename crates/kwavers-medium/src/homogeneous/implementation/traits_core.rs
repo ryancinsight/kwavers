@@ -1,4 +1,4 @@
-use leto::{ArrayView3, ArrayViewMut3};
+use leto::{Array3, ArrayView3, ArrayViewMut3};
 
 use crate::core::{ArrayAccess, CoreMedium};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
@@ -58,26 +58,35 @@ impl CoreMedium for HomogeneousMedium {
 
 impl ArrayAccess for HomogeneousMedium {
     fn density_array(&self) -> ArrayView3<'_, f64> {
-        self.density_cache.view()
+        self.density_cache.get_or_init(self.grid_shape, self.density)
     }
 
     fn sound_speed_array(&self) -> ArrayView3<'_, f64> {
-        self.sound_speed_cache.view()
+        self.sound_speed_cache
+            .get_or_init(self.grid_shape, self.sound_speed)
     }
 
     fn density_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
-        Some(self.density_cache.view_mut())
+        // A truly homogeneous medium has no per-voxel density to mutate.
+        None
     }
 
     fn sound_speed_array_mut(&mut self) -> Option<ArrayViewMut3<'_, f64>> {
-        Some(self.sound_speed_cache.view_mut())
+        // A truly homogeneous medium has no per-voxel sound speed to mutate.
+        None
     }
 
     fn absorption_array(&self) -> ArrayView3<'_, f64> {
-        self.absorption_cache.view()
+        self.absorption_cache.get_or_init_with(|| {
+            let alpha_at_ref = self.absorption_alpha
+                * (self.reference_frequency / kwavers_core::constants::MHZ_TO_HZ)
+                    .powf(self.absorption_power);
+            Array3::from_elem(self.grid_shape, alpha_at_ref)
+        })
     }
 
     fn nonlinearity_array(&self) -> ArrayView3<'_, f64> {
-        self.nonlinearity_cache.view()
+        self.nonlinearity_cache
+            .get_or_init(self.grid_shape, self.nonlinearity)
     }
 }

@@ -139,7 +139,7 @@ where
 
     #[cfg(all(not(feature = "gpu"), not(feature = "simd")))]
     fn forward_quantized_single(&mut self, input: &[f32]) -> KwaversResult<f32> {
-        let num_layers = (self.quantized_network.weights.len());
+        let num_layers = self.quantized_network.weights.len();
 
         for layer_idx in 0..num_layers {
             let weights = &self.quantized_network.weights[layer_idx];

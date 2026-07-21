@@ -1,8 +1,27 @@
 //! Tests for uncertainty quantification framework.
 
 use super::quantifier::UncertaintyQuantifier;
-use super::types::{MlUncertaintyConfig, MlUncertaintyMethod};
+use super::types::{
+    BeamformingUncertainty, MlUncertaintyConfig, MlUncertaintyMethod, ReliabilityMetrics,
+    UncertaintyResult,
+};
 use leto::Array3;
+
+#[derive(Debug)]
+struct ScalarUncertainty {
+    confidence_score: f64,
+    bounds: (f64, f64),
+}
+
+impl UncertaintyResult for ScalarUncertainty {
+    fn confidence_score(&self) -> f64 {
+        self.confidence_score
+    }
+
+    fn uncertainty_bounds(&self) -> (f64, f64) {
+        self.bounds
+    }
+}
 
 #[cfg(feature = "pinn")]
 struct LinearPinnPredictor;
@@ -32,6 +51,7 @@ fn test_uncertainty_quantifier_creation() {
         dropout_rate: 0.1,
         ensemble_size: 5,
         calibration_size: 100,
+        sensitivity_seed: tyche_core::Seed::new(0),
     };
 
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
@@ -56,6 +76,7 @@ fn test_pinn_uncertainty_uses_solver_agnostic_predictor() {
         dropout_rate: 0.1,
         ensemble_size: 2,
         calibration_size: 4,
+        sensitivity_seed: tyche_core::Seed::new(0),
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
     let inputs =
@@ -83,6 +104,7 @@ fn test_pinn_uncertainty_rejects_missing_time_column() {
         dropout_rate: 0.1,
         ensemble_size: 2,
         calibration_size: 4,
+        sensitivity_seed: tyche_core::Seed::new(0),
     };
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
     let inputs = leto::Array2::from_elem((2, 1), 1.0_f32);
@@ -129,6 +151,40 @@ fn test_beamforming_uncertainty() {
 }
 
 #[test]
+fn beamforming_uncertainty_rejects_invalid_boundaries() {
+    let quantifier = UncertaintyQuantifier::new(MlUncertaintyConfig::default()).unwrap();
+
+    let small_image = Array3::from_elem([2, 3, 1], 1.0_f32);
+    let shape_error = quantifier
+        .quantify_beamforming_uncertainty(&small_image, 0.8)
+        .unwrap_err();
+    assert!(
+        format!("{shape_error:?}").contains("at least [3, 3, 1]"),
+        "undersized grids must report the stencil shape contract"
+    );
+
+    let image = Array3::from_elem([3, 3, 1], 1.0_f32);
+    for signal_quality in [0.0, f64::NAN] {
+        let quality_error = quantifier
+            .quantify_beamforming_uncertainty(&image, signal_quality)
+            .unwrap_err();
+        assert!(
+            format!("{quality_error:?}").contains("positive and finite"),
+            "invalid signal quality must report its domain contract"
+        );
+    }
+
+    let non_finite = Array3::from_elem([3, 3, 1], f32::NAN);
+    let value_error = quantifier
+        .quantify_beamforming_uncertainty(&non_finite, 0.8)
+        .unwrap_err();
+    assert!(
+        format!("{value_error:?}").contains("non-finite value at element 0"),
+        "invalid image values must identify their element"
+    );
+}
+
+#[test]
 fn test_confidence_check() {
     let config = MlUncertaintyConfig::default();
     let quantifier = UncertaintyQuantifier::new(config).unwrap();
@@ -140,4 +196,35 @@ fn test_confidence_check() {
 
     assert!(quantifier.is_confident(&uncertainty, 0.5));
     assert!(!quantifier.is_confident(&uncertainty, 0.95));
+}
+
+#[test]
+fn uncertainty_report_borrows_heterogeneous_result_slice() {
+    let quantifier = UncertaintyQuantifier::new(MlUncertaintyConfig::default()).unwrap();
+    let first = BeamformingUncertainty {
+        uncertainty_map: Array3::from_elem([1, 1, 1], 0.1),
+        confidence_score: 0.5,
+        reliability_metrics: ReliabilityMetrics {
+            signal_to_noise_ratio: 1.0,
+            contrast_to_noise_ratio: 2.0,
+            spatial_resolution: 3.0,
+        },
+    };
+    let second = ScalarUncertainty {
+        confidence_score: 1.0,
+        bounds: (0.2, 0.2),
+    };
+    let results: [&dyn UncertaintyResult; 2] = [&first, &second];
+
+    let report = quantifier.generate_report(&results);
+
+    assert!(core::ptr::eq(
+        report.detailed_results.as_ptr(),
+        results.as_ptr()
+    ));
+    assert_eq!(report.summary.mean_confidence, 0.75);
+    assert_eq!(report.summary.confidence_range, (0.5, 1.0));
+    assert_eq!(report.summary.reliability_score, 0.625);
+    assert_eq!(report.detailed_results[0].confidence_score(), 0.5);
+    assert_eq!(report.detailed_results[1].confidence_score(), 1.0);
 }

@@ -27,10 +27,6 @@ allow = [
 confidence-threshold = 0.8
 
 [[licenses.exceptions]]
-allow = ["MPL-2.0"]
-crate = "colored@3.1.1"
-
-[[licenses.exceptions]]
 allow = ["GPL-3.0-or-later"]
 crate = "cuda-oxide@0.4.0"
 
@@ -52,4 +48,5 @@ allow-git = [
     "https://github.com/ryancinsight/aequitas",
     "https://github.com/ryancinsight/consus",
     "https://github.com/ryancinsight/proteus",
+    "https://github.com/ryancinsight/tyche",
 ]

@@ -1,5 +1,72 @@
 # Backlog / Strategy
 
+## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
+
+- Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/`, its WGPU shader
+  ABI, `crates/kwavers-simulation/src/solver_adapters/gpu_pstd.rs`,
+  `crates/kwavers-math/src/fft/mod.rs` CPU-reference FFT boundary, and the
+  in-repository simulation consumer boundary.
+- Acceptance: the provider accumulates `max_t |p|` on the GPU for every voxel,
+  transfers exactly that one pressure volume when requested, and never labels a
+  final pressure frame as a peak envelope. The output request supports final,
+  peak, or both without allocating a peak volume for a sensor-only run. Its
+  source, lossless-absorption, and heterogeneous-nonlinearity choices match
+  the CPU PSTD contract without a host fallback. The reference FFT executes
+  directly on the shared Leto/Eunomia complex type rather than copying through
+  a duplicate facade representation.
+- Decision: [`ADR-040`](docs/ADR/040-gpu-pstd-peak-pressure-output.md).
+- Evidence target: value-semantic output-selection and final-versus-peak
+  invariants, a real WGPU burst regression, GPU-feature Nextest, and an
+  in-repository simulation-consumer regression.
+- Evidence: the simulation adapter requests the provider's explicit peak
+  output, retains it separately from final fields, and shares the direct
+  runner's weighted local-medium pressure-source schedule. It rejects both
+  unsampled `Source` objects and unsupported velocity-source assembly rather
+  than discarding source information. Warning-denied all-feature Clippy passes,
+  and the WGPU-featured Nextest lane passes 259/259 tests, including the
+  heterogeneous CPU/GPU contract and real peak-envelope runs. Hosted workflows
+  use the Atlas-owned checkout action and provider graph pinned at `05b7f5d`;
+  direct Aequitas and Proteus revisions match that graph, and the lock contains
+  one Aequitas source identity.
+- External integration requirement: the private full-wave consumer remains
+  responsible for its explicit peak-pressure regression. Its inaccessible
+  checkout does not widen or block this repository's delivery boundary.
+
+## KW-UQ-062 — Integrate Tyche uncertainty ownership [major] [arch] — implemented
+
+- Owner: /root; scope: Analysis conformal/sensitivity APIs, PINN conformal and
+  ensemble statistics, Tyche dependency policy, ADR 043, and synchronized
+  public documentation.
+- Acceptance: one Tyche-owned corrected rank and moments implementation serves
+  both consumers; interval results borrow scores and retain every prediction;
+  sensitivity is const-generic, deterministic, allocation-free per sample, and
+  named squared correlation; pseudo-Sobol/Morris bodies have no residue.
+- Evidence: public Tyche revision `00ce951` is the single dependency in both
+  packages; focused Analysis and PINN suites pass 13/13 and 12/12. The final
+  local all-feature Analysis suite passes 764/764, including heterogeneous
+  report borrowing, native-precision even medians, and invalid beamforming
+  boundary regressions. Review regressions require every configured confidence
+  level to identify an emitted interval and allow non-finite PINN outputs to
+  reach typed validation without a debug-only panic. Warning-denied Clippy,
+  no-default checks, doctests, normal Rustdoc generation, the facade clinical
+  workflow example, and source policy pass. `cargo-semver-checks` runs 223
+  Analysis checks and identifies 10 major API breaks, matching ADR 043.
+- The Atlas-owned checkout action pins provider graph `05b7f5d`, eliminating
+  the moving-provider lock failure exposed by run `29781981026`. PR 298 is the
+  canonical hosted-verification and merge record for the documentation-complete
+  head.
+- The migrated comprehensive clinical workflow is partitioned into 127/168/161/
+  157/106/91/60-line root and concern leaves. Default and GPU builds plus
+  warning-denied Clippy pass; no no-op uncertainty clone, vtable path, or
+  redundant CEUS map copy remains.
+- Heterogeneous report dispatch remains only at the cold report boundary;
+  callers pass a borrowed reference slice that `UncertaintyReport` retains
+  without boxes or a second vector allocation.
+- The Apollo Git patch maps Coeus's remote FFT dependency to Kwavers's
+  synchronized provider checkout, eliminating duplicate Apollo package
+  identities while retaining the committed lock.
+- PR 298 retains the hosted matrix and terminal merge evidence.
+
 ## KW-GPU-061 — Extend GPU PSTD FFT lattice [minor] — in-progress
 
 - Owner: /root; scope: `crates/kwavers-gpu/src/pstd_gpu/` and GPU PSTD

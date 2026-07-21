@@ -1,19 +1,23 @@
-//! `SensitivityConfig` — configuration for sensitivity analysis.
+//! Reproducible sensitivity-screening configuration.
 
-/// Configuration for sensitivity analysis
-#[derive(Debug, Clone)]
+use core::num::NonZeroU32;
+use tyche_core::Seed;
+
+/// Configuration for deterministic correlation screening.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SensitivityConfig {
-    /// Number of samples for Monte Carlo analysis
-    pub num_samples: usize,
-    /// Confidence level for sensitivity indices
-    pub confidence_level: f64,
+    /// Number of Latin-hypercube samples.
+    pub sample_count: NonZeroU32,
+    /// Stable Tyche study seed.
+    pub seed: Seed,
 }
 
 impl Default for SensitivityConfig {
     fn default() -> Self {
         Self {
-            num_samples: 1000,
-            confidence_level: 0.95,
+            sample_count: NonZeroU32::new(1000)
+                .expect("invariant: the default sample count is non-zero"),
+            seed: Seed::new(0),
         }
     }
 }

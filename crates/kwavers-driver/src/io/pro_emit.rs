@@ -72,13 +72,7 @@ pub fn write_kicad_pro(basename: &str, rules: &DesignRules) -> String {
         r.min_via_drill.to_mm(), // hole-to-hole floored at the mechanical drill diameter
         r.microvia_diameter().to_mm(),
         r.microvia_drill.to_mm(),
-        // TODO(Phase 4a follow-up): the slot labelled `min_through_hole_diameter` is currently
-        // sourced from `r.min_via_drill.to_mm()`. Through-hole DIAMETER is a different physical
-        // value from via DRILL; replace with the appropriate `DesignRules` accessor (or a
-        // computation such as `min_via_drill * 1.05`) once the rules facade exposes it. Slot #4
-        // (`min_hole_to_hole`) is intentional — hole-to-hole spacing is floored at the
-        // mechanical drill diameter per the comment above.
-        r.min_via_drill.to_mm(),
+        r.via_diameter().to_mm(),
         r.min_track.to_mm(),
         r.min_annular.to_mm(),
         r.via_diameter().to_mm(),

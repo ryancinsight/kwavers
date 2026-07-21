@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=0f9d77ab00eacf4225c0c4a54c0de3c9f41999a9#0f9d77ab00eacf4225c0c4a54c0de3c9f41999a9"
+source = "git+https://github.com/ryancinsight/aequitas?rev=be3a1ac91286a17aecf18f0065d2aa6b385eb67b#be3a1ac91286a17aecf18f0065d2aa6b385eb67b"
 dependencies = [
  "eunomia",
  "typenum",
@@ -212,20 +212,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
 dependencies = [
  "num-traits",
-]
-
-[[package]]
-name = "aquamarine"
-version = "0.5.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "21cc1548309245035eb18aa7f0967da6bc65587005170c56e6ef2788a4cf3f4e"
-dependencies = [
- "include_dir",
- "itertools 0.10.5",
- "proc-macro-error",
- "proc-macro2",
- "quote",
- "syn 2.0.118",
 ]
 
 [[package]]
@@ -2213,7 +2199,6 @@ version = "0.3.0"
 dependencies = [
  "anyhow",
  "approx",
- "aquamarine",
  "eunomia",
  "geometry-predicates",
  "hashbrown 0.15.5",
@@ -2860,25 +2845,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "include_dir"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "923d117408f1e49d914f1a379a309cffe4f18c05cf4e3d12e613a15fc81bd0dd"
-dependencies = [
- "include_dir_macros",
-]
-
-[[package]]
-name = "include_dir_macros"
-version = "0.7.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "7cab85a7ed0bd5f0e76d93846e0147172bed2e2d3f859bcc33a8d9699cad1a75"
-dependencies = [
- "proc-macro2",
- "quote",
-]
-
-[[package]]
 name = "indexmap"
 version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3316,6 +3282,7 @@ dependencies = [
  "rand 0.8.7",
  "serde",
  "tracing",
+ "tyche-core",
  "wgpu 26.0.1",
 ]
 
@@ -3701,6 +3668,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "tracing",
+ "tyche-core",
 ]
 
 [[package]]
@@ -3786,6 +3754,7 @@ checksum = "7a79a3332a6609480d7d0c9eab957bca6b455b91bb84e66d19f5ff66294b85b8"
 name = "leto"
 version = "0.39.0"
 dependencies = [
+ "aequitas",
  "bytemuck",
  "eunomia",
  "mnemosyne",
@@ -5020,30 +4989,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "proc-macro-error"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "da25490ff9892aab3fcf7c36f08cfb902dd3e71ca0f9f9517bea02a73a5ce38c"
-dependencies = [
- "proc-macro-error-attr",
- "proc-macro2",
- "quote",
- "syn 1.0.109",
- "version_check",
-]
-
-[[package]]
-name = "proc-macro-error-attr"
-version = "1.0.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1be40180e52ecc98ad80b184934baf3d0d29f979574e439af5a55274b35f869"
-dependencies = [
- "proc-macro2",
- "quote",
- "version_check",
-]
-
-[[package]]
 name = "proc-macro2"
 version = "1.0.106"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5080,7 +5025,7 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus?rev=335e5297b28c334987bd18bd85a09393a90dfe5f#335e5297b28c334987bd18bd85a09393a90dfe5f"
+source = "git+https://github.com/ryancinsight/proteus?rev=c82f50d908b7f2119a5caa29026fe7ed23b1d44f#c82f50d908b7f2119a5caa29026fe7ed23b1d44f"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -6939,6 +6884,14 @@ name = "ttf-parser"
 version = "0.25.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2df906b07856748fa3f6e0ad0cbaa047052d4a7dd609e231c4f72cee8c36f31"
+
+[[package]]
+name = "tyche-core"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/tyche?rev=00ce9511878236abadd94c86bdbc669b47026aed#00ce9511878236abadd94c86bdbc669b47026aed"
+dependencies = [
+ "eunomia",
+]
 
 [[package]]
 name = "typenum"
