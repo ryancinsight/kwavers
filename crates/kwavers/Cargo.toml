@@ -280,6 +280,13 @@ required-features = []
 
 [lib]
 test = true
+bench = false
+
+[[bin]]
+name = "kwavers"
+path = "src/main.rs"
+test = true
+bench = false
 
 # BENCHMARK CONFIGURATION (Sprint 107 - P0 Priority)
 # ===================================================
@@ -369,10 +376,6 @@ name = "gpu_beamforming_benchmark"
 harness = false
 
 [[bench]]
-name = "comparative_solver_benchmark"
-harness = false
-
-[[bench]]
 name = "fdtd_propagation_benchmark"
 harness = false
 
@@ -385,16 +388,11 @@ name = "nl_swe_performance"
 harness = false
 
 [[bench]]
-name = "pinn_performance_benchmarks"
-harness = false
-required-features = ["pinn"]
-
-[[bench]]
 name = "pinn_vs_fdtd_benchmark"
 harness = false
 
 [[bench]]
-name = "simd_fdtd_benchmarks"
+name = "simd_field_ops"
 harness = false
 
 [[bench]]

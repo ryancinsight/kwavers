@@ -191,69 +191,6 @@ fn bench_derivative_computation(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark clinical workflow performance
-fn bench_clinical_workflow(c: &mut Criterion) {
-    let mut group = c.benchmark_group("clinical_workflow");
-
-    group.bench_function("liver_fibrosis_assessment", |b| {
-        b.iter(|| {
-            // Simulate complete clinical workflow
-            let grid = Grid::new(100, 100, 80, 0.001, 0.001, 0.001).unwrap();
-            let medium = HomogeneousMedium::new(1000.0, 1540.0, 0.5, 1.0, &grid); // Liver properties
-
-            // SWE workflow
-            let swe = ShearWaveElastography::new(
-                &grid,
-                &medium,
-                InversionMethod::TimeOfFlight,
-                ElasticWaveConfig::default(),
-            )
-            .unwrap();
-            let push_location = [0.025, 0.025, 0.015]; // 25mm lateral, 15mm depth
-            let displacement = swe.generate_shear_wave(push_location).unwrap();
-
-            // Reconstruct elasticity
-            let elasticity_map = swe.reconstruct_elasticity(&displacement).unwrap();
-
-            // TODO: SIMPLIFIED BENCHMARK - basic statistics only, not clinical workflow
-            // Real clinical analysis requires:
-            // - ROI (Region of Interest) selection and segmentation
-            // - Lesion detection and boundary delineation
-            // - Multi-parameter analysis (stiffness, strain ratio, dispersion)
-            // - Clinical reporting with diagnostic thresholds
-            // - Quality metrics (SNR, CNR, confidence intervals)
-            // Current: mean/std only for benchmark timing
-            let sample_count = elasticity_map.youngs_modulus.iter().count();
-            let mean_stiffness =
-                elasticity_map.youngs_modulus.iter().copied().sum::<f64>() / sample_count as f64;
-            let std_stiffness = {
-                let variance = elasticity_map
-                    .youngs_modulus
-                    .iter()
-                    .map(|&x| (x - mean_stiffness).powi(2))
-                    .sum::<f64>()
-                    / sample_count as f64;
-                variance.sqrt()
-            };
-
-            // Fibrosis staging
-            let fibrosis_stage = if mean_stiffness < 5_000.0 {
-                "F0-F1"
-            } else if mean_stiffness < 8_000.0 {
-                "F2"
-            } else if mean_stiffness < 12_000.0 {
-                "F3"
-            } else {
-                "F4"
-            };
-
-            black_box((mean_stiffness, std_stiffness, fibrosis_stage));
-        })
-    });
-
-    group.finish();
-}
-
 /// Benchmark ultrasound physics validation
 fn bench_physics_validation(c: &mut Criterion) {
     let mut group = c.benchmark_group("physics_validation");
@@ -363,7 +300,6 @@ criterion_group!(
     bench_swe_reconstruction,
     bench_memory_scaling,
     bench_derivative_computation,
-    bench_clinical_workflow,
     bench_physics_validation,
     bench_mvdr_weights
 );
