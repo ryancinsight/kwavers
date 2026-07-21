@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example real_time_3d_beamforming --features gpu`  
-**Source**: [`crates/kwavers/examples/real_time_3d_beamforming.rs`](../../../../crates/kwavers/examples/real_time_3d_beamforming.rs)
+**Source**: [`crates/kwavers/examples/real_time_3d_beamforming.rs`](../../../crates/kwavers/examples/real_time_3d_beamforming.rs)
 
 ## What This Example Demonstrates
 

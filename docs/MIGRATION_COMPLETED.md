@@ -231,11 +231,11 @@ cargo build --release      ✓ PASS
 
 ### 3. Python Boundary (numpy crate)
 
-**Status:** Uses vendored numpy-0.27.1
+**Status:** COMPLETED — Python bindings use crates.io `numpy` 0.29 with PyO3 0.29
 
-**Impact:** Python interop works but uses vendored numpy.
+**Impact:** The thin Python boundary follows one registry dependency closure.
 
-**Resolution:** Can be replaced with crates.io version if needed.
+**Resolution:** The obsolete vendored 0.27 source and patch are removed.
 
 ### 4. Transitive Dependencies
 

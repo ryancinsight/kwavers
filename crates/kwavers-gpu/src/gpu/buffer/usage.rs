@@ -6,7 +6,7 @@
 /// # Examples
 ///
 /// ```
-/// # use kwavers::gpu::buffer::BufferUsage;
+/// # use kwavers_gpu::gpu::buffer::BufferUsage;
 /// // Storage buffer that can be copied from
 /// let usage = BufferUsage::STORAGE | BufferUsage::COPY_SRC;
 /// ```

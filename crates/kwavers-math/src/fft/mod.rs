@@ -10,7 +10,6 @@ pub mod kspace;
 pub mod shift_operators;
 pub mod utils;
 
-use apollo::Complex64 as ApolloComplex64;
 pub use apollo::{
     fftfreq, fftshift, ifftshift, rfftfreq, FftPlan1D, FftPlan2D, FftPlan3D, Normalization,
     PlanCacheProvider, Shape1D, Shape2D, Shape3D,
@@ -107,26 +106,13 @@ thread_local! {
 /// Forward 1-D FFT of a real Leto array through Apollo's Leto-owned engine.
 #[must_use]
 pub fn fft_1d_array(field: &Array1<f64>) -> Array1<Complex64> {
-    let result = apollo::fft_1d_array(field);
-    let [n] = result.shape();
-    Array1::from_shape_vec(
-        [n],
-        result
-            .as_slice()
-            .expect("Apollo 1-D FFT output must be dense")
-            .iter()
-            .copied()
-            .map(from_apollo_complex)
-            .collect(),
-    )
-    .expect("Apollo 1-D FFT output length must match its shape")
+    apollo::fft_1d_array(field)
 }
 
 /// Inverse 1-D FFT of a complex Leto array, returning the real component.
 #[must_use]
 pub fn ifft_1d_array(field_hat: &Array1<Complex64>) -> Array1<f64> {
-    let apollo_data = to_apollo_complex_1d(field_hat);
-    apollo::ifft_1d_array(&apollo_data)
+    apollo::ifft_1d_array(field_hat)
 }
 
 /// Forward 1-D complex FFT, allocating output.
@@ -147,16 +133,12 @@ pub fn ifft_1d_complex(field_hat: &Array1<Complex64>) -> Array1<Complex64> {
 
 /// Forward 1-D complex FFT in place.
 pub fn fft_1d_complex_inplace(data: &mut Array1<Complex64>) {
-    let mut apollo_data = to_apollo_complex_1d(data);
-    apollo::fft_1d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_1d(&apollo_data, data);
+    apollo::fft_1d_complex_inplace(data);
 }
 
 /// Inverse 1-D complex FFT in place.
 pub fn ifft_1d_complex_inplace(data: &mut Array1<Complex64>) {
-    let mut apollo_data = to_apollo_complex_1d(data);
-    apollo::ifft_1d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_1d(&apollo_data, data);
+    apollo::ifft_1d_complex_inplace(data);
 }
 
 /// Forward 1-D complex FFT over a dense slice.
@@ -164,34 +146,28 @@ pub fn ifft_1d_complex_inplace(data: &mut Array1<Complex64>) {
 /// This preserves the Kwavers `eunomia::Complex64` boundary while Apollo
 /// owns Leto/eunomia-native execution internally.
 pub fn fft_1d_complex_slice_inplace(data: &mut [Complex64]) {
-    let mut apollo_data = to_apollo_complex_slice(data);
-    apollo::fft_1d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_slice(&apollo_data, data);
+    <f64 as PlanCacheProvider>::get_1d_plan(Shape1D { n: data.len() })
+        .forward_complex_slice_inplace(data);
 }
 
 /// Inverse 1-D complex FFT over a dense slice.
 ///
 /// This is the slice counterpart of [`ifft_1d_complex_inplace`].
 pub fn ifft_1d_complex_slice_inplace(data: &mut [Complex64]) {
-    let mut apollo_data = to_apollo_complex_slice(data);
-    apollo::ifft_1d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_slice(&apollo_data, data);
+    <f64 as PlanCacheProvider>::get_1d_plan(Shape1D { n: data.len() })
+        .inverse_complex_slice_inplace(data);
 }
 
 /// Forward 2-D FFT of a real Leto array.
 #[must_use]
 pub fn fft_2d_array(field: &Array2<f64>) -> Array2<Complex64> {
-    let mut out = field.mapv(|value| Complex64::new(value, 0.0));
-    fft_2d_complex_inplace(&mut out);
-    out
+    apollo::fft_2d_array(field)
 }
 
 /// Inverse 2-D FFT of a complex Leto array, returning the real component.
 #[must_use]
 pub fn ifft_2d_array(field_hat: &Array2<Complex64>) -> Array2<f64> {
-    let mut tmp = field_hat.clone();
-    ifft_2d_complex_inplace(&mut tmp);
-    tmp.mapv(|value| value.re)
+    apollo::ifft_2d_array(field_hat)
 }
 
 /// Forward 2-D complex FFT, allocating output.
@@ -212,34 +188,18 @@ pub fn ifft_2d_complex(field_hat: &Array2<Complex64>) -> Array2<Complex64> {
 
 /// Forward 2-D complex FFT in place.
 pub fn fft_2d_complex_inplace(data: &mut Array2<Complex64>) {
-    let mut apollo_data = to_apollo_complex_2d(data);
-    apollo::fft_2d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_2d(&apollo_data, data);
+    apollo::fft_2d_complex_inplace(data);
 }
 
 /// Inverse 2-D complex FFT in place.
 pub fn ifft_2d_complex_inplace(data: &mut Array2<Complex64>) {
-    let mut apollo_data = to_apollo_complex_2d(data);
-    apollo::ifft_2d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_2d(&apollo_data, data);
+    apollo::ifft_2d_complex_inplace(data);
 }
 
 /// Forward 3-D FFT of a real Leto array.
 #[must_use]
 pub fn fft_3d_array(field: &Array3<f64>) -> Array3<Complex64> {
-    let result = apollo::fft_3d_array(field);
-    let [nx, ny, nz] = result.shape();
-    Array3::from_shape_vec(
-        [nx, ny, nz],
-        result
-            .as_slice()
-            .expect("Apollo 3-D FFT output must be dense")
-            .iter()
-            .copied()
-            .map(from_apollo_complex)
-            .collect(),
-    )
-    .expect("Apollo 3-D FFT output length must match its shape")
+    apollo::fft_3d_array(field)
 }
 
 /// Forward 3-D FFT of a real Leto array into caller-owned storage.
@@ -257,8 +217,7 @@ pub fn fft_3d_array_into(field: &Array3<f64>, out: &mut Array3<Complex64>) {
 /// Inverse 3-D FFT of a complex Leto array, returning the real component.
 #[must_use]
 pub fn ifft_3d_array(field_hat: &Array3<Complex64>) -> Array3<f64> {
-    let apollo_data = to_apollo_complex_3d(field_hat);
-    apollo::ifft_3d_array(&apollo_data)
+    apollo::ifft_3d_array(field_hat)
 }
 
 /// Inverse 3-D FFT into caller-owned real storage.
@@ -302,16 +261,12 @@ pub fn ifft_3d_complex(field_hat: &Array3<Complex64>) -> Array3<Complex64> {
 
 /// Forward 3-D complex FFT in place.
 pub fn fft_3d_complex_inplace(data: &mut Array3<Complex64>) {
-    let mut apollo_data = to_apollo_complex_3d(data);
-    apollo::fft_3d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_3d(&apollo_data, data);
+    apollo::fft_3d_complex_inplace(data);
 }
 
 /// Inverse 3-D complex FFT in place.
 pub fn ifft_3d_complex_inplace(data: &mut Array3<Complex64>) {
-    let mut apollo_data = to_apollo_complex_3d(data);
-    apollo::ifft_3d_complex_inplace(&mut apollo_data);
-    copy_from_apollo_complex_3d(&apollo_data, data);
+    apollo::ifft_3d_complex_inplace(data);
 }
 
 /// Forward 3-D complex FFT along one axis in place.
@@ -403,7 +358,7 @@ impl Fft2dInOutExt for Fft2d {
             "Fft2dInOutExt::forward_into: shape mismatch between real input and complex output"
         );
         assign_real_to_complex_2d(field, out);
-        fft_2d_complex_inplace(out);
+        self.forward_complex_inplace(out);
     }
 
     #[inline]
@@ -424,7 +379,7 @@ impl Fft2dInOutExt for Fft2d {
             "Fft2dInOutExt::inverse_into: shape mismatch between complex input and real output"
         );
         scratch.assign(field_hat);
-        ifft_2d_complex_inplace(scratch);
+        self.inverse_complex_inplace(scratch);
         assign_complex_real_2d(scratch, out);
     }
 }
@@ -438,7 +393,7 @@ impl Fft3dInOutExt for Fft3d {
             "Fft3dInOutExt::forward_into: shape mismatch between real input and complex output"
         );
         assign_real_to_complex_3d(field, out);
-        fft_3d_complex_inplace(out);
+        self.forward_complex_inplace(out);
     }
 
     #[inline]
@@ -459,7 +414,7 @@ impl Fft3dInOutExt for Fft3d {
             "Fft3dInOutExt::inverse_into: shape mismatch between complex input and real output"
         );
         scratch.assign(field_hat);
-        ifft_3d_complex_inplace(scratch);
+        self.inverse_complex_inplace(scratch);
         assign_complex_real_3d(scratch, out);
     }
 
@@ -479,7 +434,7 @@ impl Fft3dInOutExt for Fft3d {
             }
             let full: &mut Array3<Complex64> = &mut borrow;
             assign_real_to_complex_3d(real, full);
-            fft_3d_complex_inplace(full);
+            self.forward_complex_inplace(full);
             half_out.assign(&full.slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)]).unwrap());
         });
     }
@@ -517,7 +472,7 @@ impl Fft3dInOutExt for Fft3d {
                     }
                 }
             }
-            ifft_3d_complex_inplace(full);
+            self.inverse_complex_inplace(full);
             assign_complex_real_3d(full, out);
         });
     }
@@ -525,120 +480,15 @@ impl Fft3dInOutExt for Fft3d {
     #[inline]
     fn forward(&self, real: &Array3<f64>) -> Array3<Complex64> {
         let mut out = real.mapv(|v| Complex64::new(v, 0.0));
-        fft_3d_complex_inplace(&mut out);
+        self.forward_complex_inplace(&mut out);
         out
     }
 
     #[inline]
     fn inverse(&self, spectrum: &Array3<Complex64>) -> Array3<f64> {
         let mut tmp = spectrum.clone();
-        ifft_3d_complex_inplace(&mut tmp);
+        self.inverse_complex_inplace(&mut tmp);
         tmp.mapv(|c| c.re)
-    }
-}
-
-fn to_apollo_complex(value: Complex64) -> ApolloComplex64 {
-    ApolloComplex64::new(value.re, value.im)
-}
-
-fn from_apollo_complex(value: ApolloComplex64) -> Complex64 {
-    Complex64::new(value.re, value.im)
-}
-
-fn to_apollo_complex_1d(field: &Array1<Complex64>) -> Array1<ApolloComplex64> {
-    Array1::from_shape_vec(
-        field.shape(),
-        field.iter().copied().map(to_apollo_complex).collect(),
-    )
-    .expect("Kwavers 1-D complex data must map to an Apollo array of equal length")
-}
-
-fn to_apollo_complex_slice(field: &[Complex64]) -> Array1<ApolloComplex64> {
-    Array1::from_shape_vec(
-        [field.len()],
-        field.iter().copied().map(to_apollo_complex).collect(),
-    )
-    .expect("complex slice data must map to an Apollo array of equal length")
-}
-
-fn to_apollo_complex_2d(field: &Array2<Complex64>) -> Array2<ApolloComplex64> {
-    Array2::from_shape_vec(
-        field.shape(),
-        field.iter().copied().map(to_apollo_complex).collect(),
-    )
-    .expect("Kwavers 2-D complex data must map to an Apollo array of equal shape")
-}
-
-fn to_apollo_complex_3d(field: &Array3<Complex64>) -> Array3<ApolloComplex64> {
-    Array3::from_shape_vec(
-        field.shape(),
-        field.iter().copied().map(to_apollo_complex).collect(),
-    )
-    .expect("Kwavers 3-D complex data must map to an Apollo array of equal shape")
-}
-
-fn copy_from_apollo_complex_1d(field: &Array1<ApolloComplex64>, out: &mut Array1<Complex64>) {
-    assert_eq!(
-        field.shape(),
-        out.shape(),
-        "complex 1-D FFT copy shape mismatch"
-    );
-    if let (Some(src), Some(dst)) = (field.as_slice(), out.as_slice_mut()) {
-        for (dst, &src) in dst.iter_mut().zip(src) {
-            *dst = from_apollo_complex(src);
-        }
-        return;
-    }
-
-    for ([i], &src) in field.indexed_iter() {
-        out[i] = from_apollo_complex(src);
-    }
-}
-
-fn copy_from_apollo_complex_slice(field: &Array1<ApolloComplex64>, out: &mut [Complex64]) {
-    assert_eq!(field.shape(), [out.len()]);
-    for (dst, src) in out.iter_mut().zip(
-        field
-            .as_slice()
-            .expect("Apollo Array1 from VecStorage must be contiguous"),
-    ) {
-        *dst = from_apollo_complex(*src);
-    }
-}
-
-fn copy_from_apollo_complex_2d(field: &Array2<ApolloComplex64>, out: &mut Array2<Complex64>) {
-    assert_eq!(
-        field.shape(),
-        out.shape(),
-        "complex 2-D FFT copy shape mismatch"
-    );
-    if let (Some(src), Some(dst)) = (field.as_slice(), out.as_slice_mut()) {
-        for (dst, &src) in dst.iter_mut().zip(src) {
-            *dst = from_apollo_complex(src);
-        }
-        return;
-    }
-
-    for ([i, j], &src) in field.indexed_iter() {
-        out[[i, j]] = from_apollo_complex(src);
-    }
-}
-
-fn copy_from_apollo_complex_3d(field: &Array3<ApolloComplex64>, out: &mut Array3<Complex64>) {
-    assert_eq!(
-        field.shape(),
-        out.shape(),
-        "complex 3-D FFT copy shape mismatch"
-    );
-    if let (Some(src), Some(dst)) = (field.as_slice(), out.as_slice_mut()) {
-        for (dst, &src) in dst.iter_mut().zip(src) {
-            *dst = from_apollo_complex(src);
-        }
-        return;
-    }
-
-    for ([i, j, k], &src) in field.indexed_iter() {
-        out[[i, j, k]] = from_apollo_complex(src);
     }
 }
 

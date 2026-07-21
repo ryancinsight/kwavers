@@ -93,7 +93,7 @@ fn leto_complex_field(field: &Array3<Complex64>) -> LetoArray3<Complex64> {
         .expect("PSTD complex field length must match Leto field shape")
 }
 
-fn ndarray_real_field(field: LetoArray3<f64>) -> Array3<f64> {
+fn leto_real_field(field: LetoArray3<f64>) -> Array3<f64> {
     let [nx, ny, nz] = field.shape();
     Array3::from_shape_vec([nx, ny, nz], field.into_vec())
         .expect("Leto real field length must match PSTD field shape")
@@ -179,7 +179,7 @@ impl PSTDKSOperators {
     ///
     pub fn inverse_fft_3d(&self, input: &Array3<Complex64>) -> KwaversResult<Array3<f64>> {
         let output = self.fft_processor.inverse(&leto_complex_field(input));
-        Ok(ndarray_real_field(output))
+        Ok(leto_real_field(output))
     }
 
     // ── Spectral gradient operators ──────────────────────────────────────────

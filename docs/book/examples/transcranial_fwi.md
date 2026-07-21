@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --example transcranial_fwi`  
-**Source**: [`crates/kwavers/examples/transcranial_fwi.rs`](../../../../crates/kwavers/examples/transcranial_fwi.rs)
+**Source**: [`crates/kwavers/examples/transcranial_fwi.rs`](../../../crates/kwavers/examples/transcranial_fwi.rs)
 
 ## What This Example Demonstrates
 

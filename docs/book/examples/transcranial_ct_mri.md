@@ -2,7 +2,7 @@
 
 **Crate**: `kwavers`  
 **Run**: `cargo run -p kwavers --release --example transcranial_ct_mri_reconstruction --features nifti`  
-**Source**: [`crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs`](../../../../crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs)
+**Source**: [`crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs`](../../../crates/kwavers/examples/transcranial_ct_mri_reconstruction.rs)
 
 ## What This Example Demonstrates
 
