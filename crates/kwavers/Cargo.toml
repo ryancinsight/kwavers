@@ -389,10 +389,6 @@ name = "nl_swe_performance"
 harness = false
 
 [[bench]]
-name = "pinn_vs_fdtd_benchmark"
-harness = false
-
-[[bench]]
 name = "simd_field_ops"
 harness = false
 
