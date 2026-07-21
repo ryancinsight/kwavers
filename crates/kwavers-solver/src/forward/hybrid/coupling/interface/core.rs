@@ -163,7 +163,7 @@ impl CouplingInterface {
                 if sx < nx {
                     interface_data
                         .slice_with_mut::<2>(&s![0, .., ..])
-                        .unwrap()
+                        .expect("invariant: active-plane index 0 in non-empty first axis")
                         .assign(
                             &pressure
                                 .slice_with::<2>(&s![sx, sy..ey, sz..ez])
@@ -175,7 +175,7 @@ impl CouplingInterface {
                 if sy < ny {
                     interface_data
                         .slice_with_mut::<2>(&s![.., 0, ..])
-                        .unwrap()
+                        .expect("invariant: active-plane index 0 in non-empty second axis")
                         .assign(
                             &pressure
                                 .slice_with::<2>(&s![sx..ex, sy, sz..ez])
@@ -187,7 +187,7 @@ impl CouplingInterface {
                 if sz < nz {
                     interface_data
                         .slice_with_mut::<2>(&s![.., .., 0])
-                        .unwrap()
+                        .expect("invariant: active-plane index 0 in non-empty third axis")
                         .assign(
                             &pressure
                                 .slice_with::<2>(&s![sx..ex, sy..ey, sz])
@@ -237,7 +237,7 @@ impl CouplingInterface {
                 if sx < nx && sx < ex {
                     pressure
                         .slice_with_mut::<2>(&s![sx, sy..ey, sz..ez])
-                        .unwrap()
+                        .expect("invariant: sx < nx && sx < ex checked above; target plane valid")
                         .assign(
                             &data
                                 .slice_with::<2>(&s![0, .., ..])
@@ -249,7 +249,7 @@ impl CouplingInterface {
                 if sy < ny && sy < ey {
                     pressure
                         .slice_with_mut::<2>(&s![sx..ex, sy, sz..ez])
-                        .unwrap()
+                        .expect("invariant: sy < ny && sy < ey checked above; target plane valid")
                         .assign(
                             &data
                                 .slice_with::<2>(&s![.., 0, ..])
@@ -261,7 +261,7 @@ impl CouplingInterface {
                 if sz < nz && sz < ez {
                     pressure
                         .slice_with_mut::<2>(&s![sx..ex, sy..ey, sz])
-                        .unwrap()
+                        .expect("invariant: sz < nz && sz < ez checked above; target plane valid")
                         .assign(
                             &data
                                 .slice_with::<2>(&s![.., .., 0])
@@ -300,15 +300,15 @@ impl CouplingInterface {
         match self.geometry.normal_direction {
             0 if nx > 0 => Ok(data
                 .slice_with::<3>(&s![0..1, .., ..])
-                .unwrap()
+                .expect("invariant: nx > 0 guard ensures 0..1 is valid")
                 .to_contiguous()),
             1 if ny > 0 => Ok(data
                 .slice_with::<3>(&s![.., 0..1, ..])
-                .unwrap()
+                .expect("invariant: ny > 0 guard ensures 0..1 is valid")
                 .to_contiguous()),
             2 if nz > 0 => Ok(data
                 .slice_with::<3>(&s![.., .., 0..1])
-                .unwrap()
+                .expect("invariant: nz > 0 guard ensures 0..1 is valid")
                 .to_contiguous()),
             0..=2 => Err(KwaversError::Config(ConfigError::InvalidValue {
                 parameter: "interface_plane".to_owned(),

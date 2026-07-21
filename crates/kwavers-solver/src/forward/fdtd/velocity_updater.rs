@@ -184,7 +184,7 @@ impl FdtdSolver {
                 let ux = self.fields.ux.view_mut();
                 let mut boundary = ux
                     .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: last-row ux boundary within FDTD grid");
                 boundary.fill(0.0);
             }
 
@@ -198,7 +198,7 @@ impl FdtdSolver {
                 let uy = self.fields.uy.view_mut();
                 let mut boundary = uy
                     .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: last-col uy boundary within FDTD grid");
                 boundary.fill(0.0);
             }
 
@@ -212,7 +212,7 @@ impl FdtdSolver {
                 let uz = self.fields.uz.view_mut();
                 let mut boundary = uz
                     .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: last-layer uz boundary within FDTD grid");
                 boundary.fill(0.0);
             }
         }
@@ -310,10 +310,10 @@ impl FdtdSolver {
             if let Some(ref mut dp_dx) = self.dp_dx_scratch {
                 let hi = pressure
                     .slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: nx > 1 checked above; hi-x slice valid");
                 let lo = pressure
                     .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: nx > 1 checked above; lo-x slice valid");
                 compute_forward_gradient(dp_dx.view_mut(), hi, lo, dx);
             }
         }
@@ -321,10 +321,10 @@ impl FdtdSolver {
             if let Some(ref mut dp_dy) = self.dp_dy_scratch {
                 let hi = pressure
                     .slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: ny > 1 checked above; hi-y slice valid");
                 let lo = pressure
                     .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: ny > 1 checked above; lo-y slice valid");
                 compute_forward_gradient(dp_dy.view_mut(), hi, lo, dy);
             }
         }
@@ -332,10 +332,10 @@ impl FdtdSolver {
             if let Some(ref mut dp_dz) = self.dp_dz_scratch {
                 let hi = pressure
                     .slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
-                    .unwrap();
+                    .expect("invariant: nz > 1 checked above; hi-z slice valid");
                 let lo = pressure
                     .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
-                    .unwrap();
+                    .expect("invariant: nz > 1 checked above; lo-z slice valid");
                 compute_forward_gradient(dp_dz.view_mut(), hi, lo, dz);
             }
         }
@@ -357,18 +357,18 @@ impl FdtdSolver {
                 .materials
                 .rho0
                 .slice(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dx_scratch implies nx > 1; rho left valid");
             let rho_right = self
                 .materials
                 .rho0
                 .slice(&[(1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dx_scratch implies nx > 1; rho right valid");
             update_staggered_velocity(
                 self.fields
                     .ux
                     .view_mut()
                     .slice_mut(&[(0, nx - 1, 1), (0, ny, 1), (0, nz, 1)])
-                    .unwrap(),
+                    .expect("invariant: dp_dx_scratch implies nx > 1; ux slice valid"),
                 rho_left,
                 rho_right,
                 dp_dx.view(),
@@ -379,7 +379,7 @@ impl FdtdSolver {
                 .ux
                 .view_mut()
                 .slice_mut(&[(nx - 1, nx, 1), (0, ny, 1), (0, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dx_scratch implies nx >= 1; ux boundary valid");
             boundary.fill(0.0);
         }
 
@@ -388,18 +388,18 @@ impl FdtdSolver {
                 .materials
                 .rho0
                 .slice(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dy_scratch implies ny > 1; rho front valid");
             let rho_back = self
                 .materials
                 .rho0
                 .slice(&[(0, nx, 1), (1, ny, 1), (0, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dy_scratch implies ny > 1; rho back valid");
             update_staggered_velocity(
                 self.fields
                     .uy
                     .view_mut()
                     .slice_mut(&[(0, nx, 1), (0, ny - 1, 1), (0, nz, 1)])
-                    .unwrap(),
+                    .expect("invariant: dp_dy_scratch implies ny > 1; uy slice valid"),
                 rho_front,
                 rho_back,
                 dp_dy.view(),
@@ -410,7 +410,7 @@ impl FdtdSolver {
                 .uy
                 .view_mut()
                 .slice_mut(&[(0, nx, 1), (ny - 1, ny, 1), (0, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dy_scratch implies ny >= 1; uy boundary valid");
             boundary.fill(0.0);
         }
 
@@ -419,18 +419,18 @@ impl FdtdSolver {
                 .materials
                 .rho0
                 .slice(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
-                .unwrap();
+                .expect("invariant: dp_dz_scratch implies nz > 1; rho near valid");
             let rho_far = self
                 .materials
                 .rho0
                 .slice(&[(0, nx, 1), (0, ny, 1), (1, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dz_scratch implies nz > 1; rho far valid");
             update_staggered_velocity(
                 self.fields
                     .uz
                     .view_mut()
                     .slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz - 1, 1)])
-                    .unwrap(),
+                    .expect("invariant: dp_dz_scratch implies nz > 1; uz slice valid"),
                 rho_near,
                 rho_far,
                 dp_dz.view(),
@@ -441,7 +441,7 @@ impl FdtdSolver {
                 .uz
                 .view_mut()
                 .slice_mut(&[(0, nx, 1), (0, ny, 1), (nz - 1, nz, 1)])
-                .unwrap();
+                .expect("invariant: dp_dz_scratch implies nz >= 1; uz boundary valid");
             boundary.fill(0.0);
         }
 
