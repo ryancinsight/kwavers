@@ -71,9 +71,9 @@ let energy = dot(&p, &p).unwrap();
 ## Backend selection
 
 `hermes_simd` selects the widest available SIMD backend at **runtime**:
-- AVX-512: 8 × f64 per cycle (Intel Ice Lake+)  
-- AVX2: 4 × f64 per cycle (Intel Haswell+)  
-- NEON: 2 × f64 per cycle (AArch64)  
+- AVX-512: 8 × f64 per cycle (Intel Ice Lake+)
+- AVX2: 4 × f64 per cycle (Intel Haswell+)
+- NEON: 2 × f64 per cycle (AArch64)
 - Scalar: portable fallback (identical arithmetic, no `unsafe` at call site)
 
 `kwavers` itself remains `#[forbid(unsafe_code)]`.
