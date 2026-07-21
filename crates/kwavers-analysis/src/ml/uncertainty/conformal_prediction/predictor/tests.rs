@@ -243,6 +243,43 @@ fn test_prediction_intervals_preserve_all_inputs_and_borrow_scores() {
 }
 
 #[test]
+fn configured_interval_is_emitted_when_rounded_label_collides() {
+    let configured_level = 0.954;
+    let mut predictor = MlConformalPredictor::new(ConformalConfig {
+        confidence_level: configured_level,
+        calibration_size: 1,
+    })
+    .unwrap();
+    let prediction = Array2::from_elem((1, 1), 2.0_f32);
+    let target = Array2::from_elem((1, 1), 2.25_f32);
+    predictor
+        .calibrate(
+            std::slice::from_ref(&prediction),
+            std::slice::from_ref(&target),
+        )
+        .unwrap();
+
+    let result = predictor
+        .predict_intervals(std::slice::from_ref(&prediction))
+        .unwrap();
+
+    assert_eq!(result.prediction_intervals.len(), 4);
+    assert!(
+        result.prediction_intervals.values().any(|interval| {
+            interval.confidence_level.to_bits() == result.target_coverage_probability.to_bits()
+        }),
+        "the exact configured target must identify one returned interval"
+    );
+    assert!(
+        result
+            .prediction_intervals
+            .values()
+            .any(|interval| interval.confidence_level.to_bits() == 0.95_f64.to_bits()),
+        "the fixed 95% family must remain present beside the configured target"
+    );
+}
+
+#[test]
 fn test_summary_and_zero_width_efficiency_preserve_undefined_state() {
     let mut predictor = MlConformalPredictor::new(ConformalConfig {
         confidence_level: 0.9,

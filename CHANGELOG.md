@@ -72,6 +72,10 @@
   collected reference vector.
 - Patch Apollo's Git source to the synchronized Atlas checkout so transitive
   Coeus consumers and direct Kwavers consumers resolve one FFT provider identity.
+- Preserve the fixed 80/90/95% interval panel while adding any distinct
+  configured confidence level, and identify every batch with its exact
+  coverage probability. Non-finite PINN model outputs now reach the typed
+  validation boundary instead of tripping the finite precision invariant.
 
 ### Breaking (2026-07-19) - Aequitas quantity provider [major]
 
