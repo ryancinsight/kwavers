@@ -1,4 +1,8 @@
-use crate::{core::{ArrayAccess, CoreMedium}, elastic::ElasticProperties, viscous::ViscousProperties};
+use crate::{
+    core::{ArrayAccess, CoreMedium},
+    elastic::ElasticProperties,
+    viscous::ViscousProperties,
+};
 use kwavers_core::constants::cavitation::VISCOSITY_WATER;
 use kwavers_core::constants::fundamental::{
     DENSITY_WATER, DENSITY_WATER_NOMINAL, SOUND_SPEED_AIR, SOUND_SPEED_WATER, SOUND_SPEED_WATER_SIM,
@@ -194,9 +198,8 @@ fn lazy_cache_arrays_are_realized_on_demand_with_grid_shape() {
         .set_acoustic_properties(0.5, 1.2, 3.0)
         .expect("valid acoustic properties");
     let expected_alpha = 0.5
-        * (kwavers_core::constants::REFERENCE_FREQUENCY_HZ
-            / kwavers_core::constants::MHZ_TO_HZ)
-        .powf(1.2);
+        * (kwavers_core::constants::REFERENCE_FREQUENCY_HZ / kwavers_core::constants::MHZ_TO_HZ)
+            .powf(1.2);
     assert!((medium.absorption_array()[[0, 0, 0]] - expected_alpha).abs() < 1e-12);
     assert!((medium.nonlinearity_array()[[0, 0, 0]] - 3.0).abs() < 1e-12);
 }
