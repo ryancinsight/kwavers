@@ -2,11 +2,13 @@
 
 pub(super) fn restore_model_precision(value: f64) -> f32 {
     let restored = value as f32;
-    debug_assert_eq!(
-        f64::from(restored).to_bits(),
-        value.to_bits(),
-        "invariant: PinnWave2D widens backend-native f32 outputs without arithmetic"
-    );
+    if value.is_finite() {
+        debug_assert_eq!(
+            f64::from(restored).to_bits(),
+            value.to_bits(),
+            "invariant: PinnWave2D widens backend-native f32 outputs without arithmetic"
+        );
+    }
     restored
 }
 
@@ -22,5 +24,15 @@ mod tests {
                 expected.to_bits()
             );
         }
+    }
+
+    #[test]
+    fn non_finite_model_values_reach_validation() {
+        assert!(restore_model_precision(f64::NAN).is_nan());
+        assert_eq!(restore_model_precision(f64::INFINITY), f32::INFINITY);
+        assert_eq!(
+            restore_model_precision(f64::NEG_INFINITY),
+            f32::NEG_INFINITY
+        );
     }
 }

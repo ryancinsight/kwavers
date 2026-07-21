@@ -162,7 +162,15 @@ impl MlConformalPredictor {
 
         let mut prediction_intervals = HashMap::new();
 
-        for level in INTERVAL_CONFIDENCE_LEVELS {
+        let configured_level = self.config.confidence_level;
+        let levels = INTERVAL_CONFIDENCE_LEVELS.into_iter().chain(
+            (!INTERVAL_CONFIDENCE_LEVELS
+                .iter()
+                .any(|level| level.to_bits() == configured_level.to_bits()))
+            .then_some(configured_level),
+        );
+
+        for level in levels {
             let quantile = score_to_prediction_precision(self.compute_quantile(level)?);
             let lower_bounds = predictions
                 .iter()
@@ -173,8 +181,9 @@ impl MlConformalPredictor {
                 .map(|prediction| prediction + quantile)
                 .collect();
             prediction_intervals.insert(
-                format!("{:.0}%", level * 100.0),
+                confidence_label(level),
                 PredictionIntervalBatch {
+                    confidence_level: level,
                     lower: lower_bounds,
                     upper: upper_bounds,
                 },
@@ -381,6 +390,17 @@ fn score_to_prediction_precision(score: f64) -> f32 {
         "invariant: every Analysis score is widened from f32 and Tyche selects an existing score"
     );
     narrowed
+}
+
+fn confidence_label(level: f64) -> String {
+    if INTERVAL_CONFIDENCE_LEVELS
+        .iter()
+        .any(|fixed| fixed.to_bits() == level.to_bits())
+    {
+        format!("{:.0}%", level * 100.0)
+    } else {
+        format!("{:.17}%", level * 100.0)
+    }
 }
 
 #[cfg(test)]

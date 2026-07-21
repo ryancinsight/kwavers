@@ -10,7 +10,8 @@ use std::collections::HashMap;
 pub struct ConformalResult<'scores> {
     /// Lower and upper arrays for every prediction, keyed by confidence level.
     pub prediction_intervals: HashMap<String, PredictionIntervalBatch>,
-    /// Requested marginal coverage probability.
+    /// Requested marginal coverage probability, represented by one batch's
+    /// exact [`PredictionIntervalBatch::confidence_level`].
     pub target_coverage_probability: f64,
     /// Borrowed conformity scores from calibration.
     pub conformity_scores: Cow<'scores, [f64]>,
@@ -20,6 +21,8 @@ pub struct ConformalResult<'scores> {
 #[derive(Debug)]
 #[non_exhaustive]
 pub struct PredictionIntervalBatch {
+    /// Exact marginal coverage probability represented by this batch.
+    pub confidence_level: f64,
     /// Lower endpoint arrays in input order.
     pub lower: Vec<Array2<f32>>,
     /// Upper endpoint arrays in input order.

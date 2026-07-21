@@ -83,15 +83,19 @@ No compatibility wrappers or aliases preserve the superseded contracts.
 1. Five sorted scores at 90% confidence select the fifth score, not the first.
 2. An even median between adjacent `f32` values rounds in `f32` before exact
    widening; no unrepresentable `f64` midpoint reaches prediction arithmetic.
-3. Borrowed conformity scores retain the calibration buffer address, and two
+3. The fixed confidence panel remains present and a distinct configured level
+   identifies one additional interval batch by its exact probability.
+4. Non-finite PINN model output reaches typed validation without executing the
+   finite widened-`f32` bitwise invariant.
+5. Borrowed conformity scores retain the calibration buffer address, and two
    input predictions yield two lower and two upper arrays at every level.
-4. Welford population variance returns `1` for `[10000, 10002]`, where the
+6. Welford population variance returns `1` for `[10000, 10002]`, where the
    superseded `f32` second-moment formula returns `0` by cancellation.
-5. A one-parameter affine response has squared correlation `1` within the
+7. A one-parameter affine response has squared correlation `1` within the
    `O(n epsilon)` rounding bound, and replay is bitwise deterministic.
-6. Empty, non-finite, dimension-mismatched, and uncalibrated inputs return
+8. Empty, non-finite, dimension-mismatched, and uncalibrated inputs return
    typed errors. Undefined statistics remain `None`.
-7. Package clippy, Nextest, doctests, Rustdoc, dependency audit, and public
+9. Package clippy, Nextest, doctests, Rustdoc, dependency audit, and public
    semver classification run against the delivered revision.
 
 ## Rejected alternatives
