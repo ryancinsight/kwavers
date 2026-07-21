@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Changed
+
+- [patch] Rename the unreleased Python distribution from `pykwavers` to
+  `kwavers-python` while retaining `pykwavers` as the import name. GitHub
+  Releases tagged `kwavers-python-v<version>` now build, install, attest, and
+  attach one stable-ABI wheel per operating system, then publish the exact wheel
+  set to PyPI through OIDC.
+
 ### Breaking (2026-07-20) - Asclepius biological responses [major]
 
 - Replace Kwavers-owned CEM43, Arrhenius damage, and independent-insult
