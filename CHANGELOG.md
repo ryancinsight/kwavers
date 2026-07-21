@@ -36,7 +36,18 @@
   results through the timed region. Remove unreachable feature-disabled
   benchmark entry points and the non-equivalent mixed PINN/FDTD aggregate.
   Surface PINN training failures and isolate logging output in a per-run
-  temporary directory.
+  temporary directory. Keep the coherent narrowband Capon fixture within the
+  strictly positive diagonal-loading domain so every measured solve is
+  nonsingular and produces a finite, positive spectrum. Replace the unbounded
+  current-run-versus-itself benchmark comparison with a 30-minute runtime
+  smoke that executes every plotting-eligible Criterion target once; the
+  cross-revision regression workflow owns statistical performance evidence.
+  The SWE reconstruction instrument now consumes a manufactured nonzero wave
+  snapshot and times inversion only; the canonical nonlinear SWE instrument
+  retains forward-propagation measurements. Bound the observed 57-minute
+  Tarpaulin lane at 70 minutes and the observed 36m11s serialized test lane at
+  45 minutes, preserving about 20% hosted-runner variance without inheriting
+  the six-hour Actions default.
 - Grid and homogeneous-medium construction performance now remains in the
   Criterion benchmark suite. Instrumented coverage no longer evaluates
   wall-clock assertions whose result depends on Tarpaulin overhead.

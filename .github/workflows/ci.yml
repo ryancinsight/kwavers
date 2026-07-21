@@ -206,9 +206,47 @@ jobs:
         run: cargo +nightly miri test --locked -p kwavers --lib --exclude configuration::builder::tests
         continue-on-error: true
 
+  benchmarks:
+    name: Benchmark Runtime Smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Checkout Atlas path dependencies
+        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@05b7f5def95e81497321a12c4bd26ef50d723e30
+        with:
+          manifest: Cargo.toml
+          destination: ..
+          atlas_ref: 05b7f5def95e81497321a12c4bd26ef50d723e30
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo dependencies
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target/
+          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Execute every plotting-eligible Criterion target once
+        run: cargo bench --locked -p kwavers --features plotting --benches -- --test
+
   coverage:
     name: Code Coverage
     runs-on: ubuntu-latest
+    # Exact-head observation: 57 minutes; retain about 20% hosted-runner variance.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v7
         with:
