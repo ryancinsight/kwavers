@@ -103,8 +103,3 @@ fn split_coordinates_fast(
 criterion_group!(benches, benchmark_split_coordinates);
 #[cfg(feature = "pinn")]
 criterion_main!(benches);
-
-#[cfg(not(feature = "pinn"))]
-fn main() {
-    println!("PINN feature not enabled");
-}

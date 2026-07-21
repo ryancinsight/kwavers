@@ -411,8 +411,3 @@ criterion_group!(
 
 #[cfg(feature = "pinn")]
 criterion_main!(benches);
-
-#[cfg(not(feature = "pinn"))]
-fn main() {
-    println!("Benchmarks require the 'pinn' feature. Run with: cargo bench --features pinn");
-}
