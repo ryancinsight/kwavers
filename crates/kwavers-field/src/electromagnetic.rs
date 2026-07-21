@@ -136,7 +136,7 @@ impl PoyntingVector {
             return Err("Fields must be at least 2D".to_owned());
         }
 
-        let field_components = *shape.last().unwrap();
+        let field_components = *shape.last().expect("ndim >= 2 validated");
         if field_components != 2 && field_components != 3 {
             return Err(format!(
                 "Last dimension must be 2 or 3 for field components, got {}",
