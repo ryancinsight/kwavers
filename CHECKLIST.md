@@ -12,6 +12,8 @@
       source-file/target-registry equality before measurement.
 - [x] Exclude the package library and binary libtest harnesses from benchmark
       target selection.
+- [x] Remove feature-disabled no-op entry points and reject empty benchmark
+      mains before measurement.
 - [ ] Verify the exact PR head through the hosted benchmark workflow.
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]

@@ -38,12 +38,14 @@ solver comparator whose pressure norm was labeled as acoustic energy. The
 retained SIMD benchmark measures the production field-operation kernels. The
 package library and binary set `bench = false`, preventing Criterion arguments
 from reaching their libtest harnesses. The GPU-only Hilbert pipeline declares
-its required feature instead of executing an empty fallback. Before
-measurement, the workflow requires exact equality between the sorted
-`benches/*.rs` stems and Cargo's
+its required feature instead of executing an empty fallback, and feature-gated
+targets have no unreachable no-op entry points. Before measurement, the
+workflow requires exact equality between the sorted `benches/*.rs` stems and
+Cargo's
 benchmark target registry for both revisions. It invokes `cargo bench
 --benches`, so Criterion arguments reach only registered benchmark targets.
-Any unregistered, orphaned, or default-harness target fails before timing.
+Any unregistered, orphaned, default-harness, or empty-entry-point target fails
+before timing.
 
 The workflow consumes the Atlas-owned regression classifier and provider graph
 pinned at `71cdc54c509d54e10daac1032d328d0b006a2ce5`. One runner executes

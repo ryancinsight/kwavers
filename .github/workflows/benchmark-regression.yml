@@ -124,6 +124,13 @@ jobs:
           validate_registry kwavers-baseline
           validate_registry kwavers-candidate
 
+          if grep --recursive --line-number --extended-regexp \
+            'fn[[:space:]]+main[[:space:]]*\(\)[[:space:]]*\{[[:space:]]*\}' \
+            kwavers-candidate/crates/kwavers/benches; then
+            echo "::error::empty benchmark entry point"
+            exit 1
+          fi
+
       - name: Measure phase-reversed replications
         shell: bash
         run: |
