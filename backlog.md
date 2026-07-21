@@ -14,7 +14,7 @@
   suite, pins Atlas classifier and provider graph `71cdc54`, and derives its
   instrument budget from the observed hosted full-suite runtime. Run
   `29797805169` exposed eight auto-discovered libtest targets before
-  measurement; automatic discovery is now disabled, all 23 retained Criterion
+  measurement; automatic discovery is now disabled, all 22 retained Criterion
   targets are explicit, package libtest harnesses are excluded, placeholder
   instruments and unreachable no-op entries are removed, and both revisions
   must match their benchmark source registry.
