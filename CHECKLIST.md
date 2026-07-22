@@ -6,8 +6,10 @@
 - [x] Confirm the effective stack debug-information and linker configuration.
 - [x] Recover the runtime reason for the wildcard dependency `-O3` override.
 - [x] Replace wildcard dependency `-O3` with the existing workspace `-O1`
-      policy plus targeted `-O3` exceptions for the Apollo FFT, Leto, and
-      Moirai provider closure traversed by PSTD.
+      policy across the full development dependency graph.
+- [x] Remove the PSTD provider exception by packing three-dimensional FFT
+      half-spectra through contiguous rows and reconstructing Hermitian rows
+      without general strided indexing.
 - [x] Key every CI cache containing `target/` by the development-profile
       inputs, preventing immutable `-O3` artifacts from contaminating the
       `-O1` measurement.
@@ -16,8 +18,11 @@
 - [x] Isolate ptrace coverage in a dedicated inherited profile after the exact
       `-O1` head exposed a five-minute instrumented PSTD timeout; keep its
       existing workload and timeout unchanged.
-- [ ] Verify the pinned provider graph, heavy full-grid nextest group, build
-      duration, and artifact-size delta on the exact PR head.
+- [x] Verify the pinned provider graph locally: `kwavers-math` passes 265/265
+      tests and the serialized four-binary architecture grid passes 24/24 in
+      69.640 s, with its longest test at 22.853 s.
+- [ ] Verify hosted build duration and artifact-size delta on the exact PR
+      head.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 

@@ -435,7 +435,23 @@ impl Fft3dInOutExt for Fft3d {
             let full: &mut Array3<Complex64> = &mut borrow;
             assign_real_to_complex_3d(real, full);
             self.forward_complex_inplace(full);
-            half_out.assign(&full.slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)]).unwrap());
+            if let Some(half_values) = half_out.as_slice_mut() {
+                let full_values = full
+                    .as_slice()
+                    .expect("invariant: thread-local FFT scratch is contiguous");
+                for (full_row, half_row) in full_values
+                    .chunks_exact(nz)
+                    .zip(half_values.chunks_exact_mut(nz_c))
+                {
+                    half_row.copy_from_slice(&full_row[..nz_c]);
+                }
+            } else {
+                half_out.assign(
+                    &full
+                        .slice(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
+                        .expect("invariant: validated FFT half-spectrum slice"),
+                );
+            }
         });
     }
 
@@ -459,16 +475,38 @@ impl Fft3dInOutExt for Fft3d {
                 *borrow = Array3::<Complex64>::from_elem([nx, ny, nz], Complex64::default());
             }
             let full: &mut Array3<Complex64> = &mut borrow;
-            full.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
-                .unwrap()
-                .assign(half_in);
-            for k in nz_c..nz {
-                let kk = nz - k;
+            if let Some(half_values) = half_in.as_slice() {
+                let full_values = full
+                    .as_slice_mut()
+                    .expect("invariant: thread-local FFT scratch is contiguous");
                 for i in 0..nx {
                     let ii = if i == 0 { 0 } else { nx - i };
                     for j in 0..ny {
                         let jj = if j == 0 { 0 } else { ny - j };
-                        full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
+                        let full_row_start = (i * ny + j) * nz;
+                        let half_row_start = (i * ny + j) * nz_c;
+                        full_values[full_row_start..full_row_start + nz_c]
+                            .copy_from_slice(&half_values[half_row_start..half_row_start + nz_c]);
+
+                        let mirror_row_start = (ii * ny + jj) * nz_c;
+                        for k in nz_c..nz {
+                            full_values[full_row_start + k] =
+                                half_values[mirror_row_start + nz - k].conj();
+                        }
+                    }
+                }
+            } else {
+                full.slice_mut(&[(0, nx, 1), (0, ny, 1), (0, nz_c, 1)])
+                    .expect("invariant: validated FFT half-spectrum slice")
+                    .assign(half_in);
+                for k in nz_c..nz {
+                    let kk = nz - k;
+                    for i in 0..nx {
+                        let ii = if i == 0 { 0 } else { nx - i };
+                        for j in 0..ny {
+                            let jj = if j == 0 { 0 } else { ny - j };
+                            full[[i, j, k]] = half_in[[ii, jj, kk]].conj();
+                        }
                     }
                 }
             }

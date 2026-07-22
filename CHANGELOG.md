@@ -57,10 +57,16 @@
 - Remove the wildcard dependency `-O3` override from development and test
   builds. The broad dependency graph now inherits the workspace's `-O1`
   profile, allowing Rust to share generic monomorphizations across crates.
-  The Apollo FFT, Leto, and Moirai provider closure retains targeted `-O3`
-  exceptions exercised by the unchanged 60-second PSTD regression. The
-  stack-level profile continues to keep line-table-only debug information for
-  workspace code and no dependency or build-script debug information.
+  Replace strided three-dimensional half-spectrum copies in the Kwavers FFT
+  facade with contiguous row copies and direct Hermitian reconstruction, so
+  the unchanged PSTD regression remains below 30 seconds without targeted
+  provider exceptions. The stack-level profile continues to keep
+  line-table-only debug information for workspace code and no dependency or
+  build-script debug information.
+- Serialize internally parallel full-grid simulation test processes. This
+  removes CPU oversubscription while preserving every workload, assertion,
+  and the 60-second per-test termination contract; the four-binary
+  architecture grid remains bounded to about 70 seconds locally.
 - Include `Cargo.toml` and `.cargo/config.toml` in every CI cache key that
   stores `target/`, preventing immutable caches produced under an older
   development profile from being restored into a new profile measurement.

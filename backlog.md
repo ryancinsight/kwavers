@@ -20,15 +20,13 @@
   dependency graph inherits `opt-level = 1`. Cargo documents that dependency
   optimization levels 2 and 3 prevent reuse/export of shared generic
   monomorphizations, while level 1 retains basic optimization and sharing.
-  Retain `-O3` only for the non-workspace Apollo FFT, Leto, and Moirai provider
-  closure traversed by PSTD; the unchanged full-grid tests and timeout decide
-  whether that exception set is complete. Workspace members already inherit
-  `-O1` because Cargo wildcard overrides never applied to them.
-- Local limitation: the clean worktree cannot reproduce CI's pinned provider
-  graph because its sibling paths resolve to live provider branches; current
-  Eunomia 0.7 conflicts with Aequitas' locked Eunomia 0.6 requirement. The
-  repository's pinned checkout action is therefore the authoritative build and
-  runtime oracle for this item.
+  Optimize Kwavers' contiguous FFT spectrum movement instead of retaining
+  `-O3` for Apollo FFT, Leto, or Moirai. Workspace members and every dependency
+  now use the same development optimization level.
+- Local topology: temporary linked worktrees materialize the exact provider
+  commits selected by the Atlas checkout action, including Eunomia 0.6. Cargo
+  metadata and all verification below use `--locked`; hosted CI remains the
+  authoritative clean-checkout build and artifact-size oracle.
 - First hosted profile evidence: on run `29888001830`, uncached feature-build
   steps fell from 622 s to 342 s for `minimal` (-45.0%), 650 s to 453 s for
   `pinn` (-30.3%), 847 s to 591 s for `full` (-30.2%), and 503 s to 411 s for
@@ -60,8 +58,19 @@
   `kwavers-solver` and `kwavers-math`; Cargo defines wildcard dependency
   overrides as excluding workspace members. The library suite passed 5,650
   tests in 389.448 s, but the same PSTD boundary test terminated at 60.010 s.
-  The next bounded experiment optimizes the actual non-workspace Leto and
-  Moirai execution closure in addition to Apollo FFT.
+  Exact head `73ec35245` then optimized the full non-workspace provider closure
+  and still terminated that test at 60.016 s, falsifying provider profile
+  selection as the root cause.
+- Production fix: the FFT facade now copies contiguous half-spectrum rows and
+  reconstructs Hermitian rows through direct slice indexing instead of a
+  general strided assignment and triple-indexed loop. Under broad `-O1`, the
+  unchanged 64-cubed, 300-step PSTD test passes in 18.099 s alone and 16.781 s
+  in the serialized architecture grid. `kwavers-math` passes 265/265 tests,
+  including reference C2C comparison and R2C/C2R round trips across even, odd,
+  power-of-two, and degenerate shapes. The four architecture binaries pass
+  24/24 in 69.640 s; serializing their internally parallel processes reduces
+  the longest test from 31.563 s under contention to 22.853 s without changing
+  workloads, assertions, or timeouts.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
