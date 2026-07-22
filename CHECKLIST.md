@@ -38,8 +38,8 @@
       target selection.
 - [x] Remove feature-disabled no-op entry points and reject empty benchmark
       mains before measurement.
-- [ ] Verify the bounded same-path PR head through the hosted benchmark
-      workflow.
+- [x] Verify the bounded same-path PR head through the hosted benchmark
+      workflow (`29884797777`: smoke, four AB/BA pairs, and classifier pass).
 
 ## Owner: /root — GPU PSTD peak-pressure output [major]
 

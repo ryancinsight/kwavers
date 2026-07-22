@@ -4,6 +4,7 @@
 - Date: 2026-07-20
 - Amended: 2026-07-21
 - Change class: patch, architecture
+- Closed: 2026-07-22
 
 ## Context
 
@@ -131,3 +132,18 @@ for statistical classification. Report artifacts do not encode source-path
 provenance, so workflow review establishes the same-path precondition that the
 classifier cannot verify. Long-horizon scenarios remain functional benchmark
 programs, but they are not repeated statistically on the merge-critical path.
+
+## Closure evidence
+
+The superseded workflow run `29875283986` at Tyche candidate head
+`cc382dbc2243678fef55101aa106e9f8d7ad7bbf` completed all four pairs before
+classifying 190 cases and reporting 37 replicated regressions. None belongs to
+`performance_baseline`, `critical_path_benchmarks`, or `simd_field_ops`. The
+failure therefore exercises the complete statistical universe rejected above,
+not the bounded decision.
+
+Replacement head `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes the complete
+candidate smoke, all four bounded AB/BA pair jobs in 21–23 minutes, and the
+aggregate classifier in run `29884797777`. Ordinary CI `29884797767`,
+architecture validation `29884797709`, and legacy audit `29884797739` also
+pass. PR #306 merged the checked workflow as `00d06f00e`.

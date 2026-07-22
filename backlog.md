@@ -75,8 +75,15 @@
   one revision measurement. The bounded replacement executes the full
   candidate suite once, retains unchanged samples for
   `performance_baseline`, `critical_path_benchmarks`, and `simd_field_ops`,
-  and caps every job at 30 minutes. A new exact-head hosted execution remains
-  the merge gate.
+  and caps every job at 30 minutes. The superseded exact-head run `29875283986`
+  completed all four pairs but classified all 190 long-horizon and ancillary
+  cases, reporting 37 replicated regressions outside those three canonical
+  targets. That run confirms the already-recorded full-suite scope and latency
+  defect; it does not exercise the bounded workflow. Replacement head
+  `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes full candidate smoke, all
+  four 21–23 minute AB/BA pair jobs, and aggregate classification in run
+  `29884797777`; ordinary CI `29884797767`, architecture `29884797709`, and
+  legacy audit `29884797739` also pass. PR #306 merged as `00d06f00e`.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 

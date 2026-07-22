@@ -3,6 +3,7 @@
 - Status: Accepted
 - Date: 2026-07-20
 - Change class: [major] [arch]
+- Closed: 2026-07-22
 
 ## Context
 
@@ -169,3 +170,12 @@ No compatibility wrappers or aliases preserve the superseded contracts.
 - Treating Latin-hypercube or Sobol coordinates as boundary samples either
   discards almost every point or silently falls back to another distribution;
   both violate the selected design's contract.
+
+## Closure evidence
+
+PR #304 merged the collocation boundary as `9ad18523d`. Exact candidate head
+`cc382dbc2243678fef55101aa106e9f8d7ad7bbf` passes ordinary CI
+`29875284052`, architecture validation `29875284007`, and legacy audit
+`29875283982`. The benchmark workflow failure on that head came from the
+superseded complete statistical universe and is closed by ADR 045's bounded
+replacement, whose exact head is green.
