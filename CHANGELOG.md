@@ -55,9 +55,10 @@
 ### Fixed
 
 - Remove the wildcard dependency `-O3` override from development and test
-  builds. Runtime packages now inherit the workspace's `-O1` profile,
-  retaining the basic optimization required by the numerical test workload
-  while allowing Rust to share generic monomorphizations across crates. The
+  builds. The broad dependency graph now inherits the workspace's `-O1`
+  profile, allowing Rust to share generic monomorphizations across crates.
+  `kwavers-solver`, `kwavers-math`, and `apollo-fft` retain targeted `-O3`
+  exceptions exercised by the unchanged 60-second PSTD regression. The
   stack-level profile continues to keep line-table-only debug information for
   workspace code and no dependency or build-script debug information.
 - Include `Cargo.toml` and `.cargo/config.toml` in every CI cache key that
@@ -66,6 +67,10 @@
   The architecture gate now runs the four full-grid integration binaries under
   the unchanged Nextest timeout contract and reports debug artifact bytes and
   file count in its job summary.
+- Run ptrace code coverage through a dedicated profile that inherits the
+  development settings but optimizes dependencies for instrumentation. This
+  keeps the broad ordinary dependency profile at `-O1` while preserving the
+  existing coverage workload and finite timeout for FFT-heavy full-grid tests.
 - Replace the tautological single-run benchmark save/check job with the
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications

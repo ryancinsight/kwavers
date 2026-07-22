@@ -82,6 +82,27 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 # kernels (PSTD phase-velocity, KZK conservation) ~5–10× faster than opt-level=0.
 opt-level = 1
 
+[profile.dev.package.kwavers-solver]
+# The solver owns the unchanged 64^3 PSTD regression hot path.
+opt-level = 3
+
+[profile.dev.package.kwavers-math]
+# Spectral utilities are part of the same measured full-grid hot path.
+opt-level = 3
+
+[profile.dev.package.apollo-fft]
+# PSTD dispatches provider-owned FFT kernels on every timestep.
+opt-level = 3
+
+[profile.coverage]
+inherits = "dev"
+
+[profile.coverage.package."*"]
+# Ptrace instrumentation multiplies the FFT-heavy full-grid runtime. Keep that
+# purpose-specific suite within its existing finite timeout without changing
+# the ordinary development profile, test workload, or timeout contract.
+opt-level = 3
+
 [profile.release]
 opt-level = 3
 lto = true

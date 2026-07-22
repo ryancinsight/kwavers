@@ -16,13 +16,13 @@
   contains 6,031 files and 50.95 GiB. The stack config already uses
   line-table-only workspace debug information, disables dependency and
   build-script debug information, and Kwavers already links through LLD.
-- Decision: remove `[profile.dev.package."*"] opt-level = 3` so runtime
-  packages inherit `opt-level = 1`. Cargo documents that dependency
+- Decision: remove `[profile.dev.package."*"] opt-level = 3` so the broad
+  dependency graph inherits `opt-level = 1`. Cargo documents that dependency
   optimization levels 2 and 3 prevent reuse/export of shared generic
   monomorphizations, while level 1 retains basic optimization and sharing.
-  The previous `-O3` change remains represented by the `heavy-sim`
-  concurrency group; the unchanged full-grid tests and timeout decide whether
-  `-O1` remains viable.
+  Retain `-O3` only for the measured PSTD hot path owned by `kwavers-solver`,
+  `kwavers-math`, and `apollo-fft`; the unchanged full-grid tests and timeout
+  decide whether that exception set is complete.
 - Local limitation: the clean worktree cannot reproduce CI's pinned provider
   graph because its sibling paths resolve to live provider branches; current
   Eunomia 0.7 conflicts with Aequitas' locked Eunomia 0.6 requirement. The
@@ -42,6 +42,18 @@
   profile, then records `target/debug` bytes and file count. Broad cache
   restore prefixes are removed so profile-incompatible target artifacts cannot
   enter the measurement.
+- Profile falsification: exact head `1cafb7f67` passed all pre-existing
+  non-coverage CI jobs. The ordinary `-O1` build passed 5,650
+  library tests in 568.365 s, then terminated
+  `test_plane_wave_boundary_injection_pstd` at 60 s. This falsifies broad
+  `-O1` for the solver/FFT path without justifying `-O3` for every dependency.
+  Tarpaulin's ptrace instrumentation separately varied
+  `test_plane_wave_boundary_injection_pstd` from about 315 s on the passing
+  first head to about 350 s, exceeding the unchanged 300-second response
+  timeout. Coverage now uses a dedicated profile inheriting `dev` while
+  optimizing dependencies at level 3. This restores the previously proven
+  instrumented execution regime without changing ordinary debug artifacts,
+  test inputs, assertions, or timeouts.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

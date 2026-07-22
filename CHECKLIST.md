@@ -5,13 +5,17 @@
 - [x] Measure the shared Atlas debug artifact count and size by artifact class.
 - [x] Confirm the effective stack debug-information and linker configuration.
 - [x] Recover the runtime reason for the wildcard dependency `-O3` override.
-- [x] Replace dependency `-O3` with the existing workspace `-O1` policy so
-      generic monomorphizations remain shareable.
+- [x] Replace wildcard dependency `-O3` with the existing workspace `-O1`
+      policy plus targeted `-O3` exceptions for `kwavers-solver`,
+      `kwavers-math`, and `apollo-fft`.
 - [x] Key every CI cache containing `target/` by the development-profile
       inputs, preventing immutable `-O3` artifacts from contaminating the
       `-O1` measurement.
 - [x] Add exact hosted execution of the four full-grid integration binaries
       and record the resulting debug artifact bytes and file count.
+- [x] Isolate ptrace coverage in a dedicated inherited profile after the exact
+      `-O1` head exposed a five-minute instrumented PSTD timeout; keep its
+      existing workload and timeout unchanged.
 - [ ] Verify the pinned provider graph, heavy full-grid nextest group, build
       duration, and artifact-size delta on the exact PR head.
 
