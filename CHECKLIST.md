@@ -62,8 +62,23 @@
 - [x] Verify the pinned provider graph locally: `kwavers-math` passes 266/266
       tests and the serialized four-binary architecture grid passes 24/24 in
       69.640 s, with its longest test at 22.853 s.
-- [ ] Verify hosted build duration and artifact-size delta on the exact PR
-      head.
+- [x] Verify the exact implementation head in hosted CI: all feature builds
+      complete in 7m48s–10m57s, the full architecture job completes in
+      33m06s with the PSTD regression at 24.546s, and the clean debug tree is
+      16,771,464,617 bytes across 6,109 files. Record this as the clean
+      footprint baseline because no comparable clean `-O3` footprint was
+      retained.
+- [x] Reconcile the exact Atlas provider graph to Leto 0.40, Hermes 0.4.1, and
+      one Eunomia 0.7 identity; verify locked all-feature metadata and compile,
+      then pass all 266 `kwavers-math` tests on that graph.
+- [x] Route benchmark provider checkout through the candidate's pinned action
+      so smoke and phase-reversed jobs cannot drift to a stale Atlas graph.
+- [x] Add a same-path executable-identity preflight that skips four statistical
+      pairs only when every merge-critical benchmark binary is byte-identical.
+- [x] Verify exact hosted head `04bced11b`: benchmark run `29913169741` proves
+      byte-identical merge-critical executables and completes in 12m12s without
+      launching pair jobs. Retain run `29909003760` as the exact-head evidence
+      for the unchanged differing-artifact branch.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 

@@ -64,7 +64,7 @@
   unused static-link-argument diagnostic; hosted CI and pending-publisher
   registration remain open.
 
-## KW-BUILD-065 — Bound debug build artifacts [patch] — in-progress
+## KW-BUILD-065 — Bound debug build artifacts [patch] — done
 
 - Owner: /root; scope: the Kwavers development profile, exact pinned-provider
   build/test evidence, and shared Atlas target-cache measurement. Non-goals:
@@ -88,9 +88,11 @@
   `-O3` for Apollo FFT, Leto, or Moirai. Workspace members and every dependency
   now use the same development optimization level.
 - Local topology: temporary linked worktrees materialize the exact provider
-  commits selected by the Atlas checkout action, including Eunomia 0.6. Cargo
-  metadata and all verification below use `--locked`; hosted CI remains the
-  authoritative clean-checkout build and artifact-size oracle.
+  commits selected by the Atlas checkout action. The aligned Atlas graph uses
+  Leto 0.40, Hermes 0.4.1, and one Eunomia 0.7 source identity across Coeus,
+  Hephaestus, RITK, and Kwavers. Cargo metadata and all verification below use
+  `--locked`; hosted CI remains the authoritative clean-checkout build and
+  artifact-size oracle.
 - First hosted profile evidence: on run `29888001830`, uncached feature-build
   steps fell from 622 s to 342 s for `minimal` (-45.0%), 650 s to 453 s for
   `pinn` (-30.3%), 847 s to 591 s for `full` (-30.2%), and 503 s to 411 s for
@@ -135,6 +137,34 @@
   24/24 in 69.640 s; serializing their internally parallel processes reduces
   the longest test from 31.563 s under contention to 22.853 s without changing
   workloads, assertions, or timeouts.
+- Exact hosted evidence: implementation head `905b5efbe` passes every
+  architecture job and the bounded benchmark workflow. Feature-build jobs
+  complete in 7m48s–10m57s, the full architecture job completes in 33m06s,
+  and its unchanged PSTD regression completes in 24.546 s. The clean
+  `target/debug` tree contains 16,771,464,617 bytes across 6,109 files. No
+  comparable clean `-O3` footprint was retained, so this establishes the
+  clean artifact baseline without claiming an unsupported size percentage.
+  The earlier uncached profile comparison remains the build-time oracle.
+- Exact-graph reconciliation: the post-merge provider checkout exposed a stale
+  all-feature lock closure with Eunomia 0.6 and 0.7, producing incompatible
+  `Complex` identities in the hosted benchmark compile. The Atlas gitlinks and
+  Kwavers action pin now select the single-Eunomia graph; locked all-feature
+  metadata and `cargo check -p kwavers-math --all-targets --all-features` pass,
+  and the exact merged graph passes all 266 `kwavers-math` tests in 2.117 s.
+  The benchmark workflow now resolves its smoke and phase-reversed jobs through
+  that same candidate-pinned action; its historical baseline lock is normalized
+  against the held-constant provider graph before measurement.
+- Exact-head run `29911114271` completed every bounded pair in 22m15s–22m41s,
+  then reported two replicated Grid allocation regressions even though the head
+  differed from the preceding green measured revision only in `deny.toml`.
+  The smoke job now builds the three merge-critical base/head executables from
+  the same path and compares their SHA-256 hashes. Byte-identical sets terminate
+  with that stronger proof; differing sets retain the unchanged four-pair
+  statistical instrument. Exact head `04bced11b` passes all 26 hosted checks:
+  CI `29913169738`, architecture `29913169852`, legacy audit `29913169756`,
+  and benchmark run `29913169741`. The benchmark workflow proves executable
+  identity and completes in 12m12s without pair jobs; run `29909003760` retains
+  the exact-head four-pair evidence for differing executables.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

@@ -108,6 +108,10 @@
   The architecture gate now runs the four full-grid integration binaries under
   the unchanged Nextest timeout contract and reports debug artifact bytes and
   file count in its job summary.
+- Pin hosted path-dependency checkout to the aligned Atlas graph and regenerate
+  the all-feature lock closure around Leto 0.40, Hermes 0.4.1, and one Eunomia
+  0.7 identity. This prevents incompatible provider-owned numeric types from
+  entering locked benchmark and architecture builds.
 - Run ptrace code coverage through a dedicated profile that inherits the
   development settings but optimizes dependencies for instrumentation. This
   keeps the broad ordinary dependency profile at `-O1` while preserving the
@@ -121,7 +125,11 @@
   confidence intervals to agree. A separate 30-minute candidate smoke executes
   every plotting-eligible benchmark once. Python packaging-only changes do not
   trigger the Rust performance gate, and no merge-critical benchmark job can
-  run for hours.
+  run for hours. Both smoke and comparison jobs now materialize providers
+  through the candidate's pinned checkout action, eliminating separate Atlas
+  revisions that could make locked base/head builds incomparable. The smoke job
+  also hashes same-path base/head executables for the three merge-critical
+  targets and skips statistical pairs only when all three are byte-identical.
 - Disable automatic libtest benchmark discovery and register all 22 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.
