@@ -84,6 +84,29 @@
   point-force propagation performs no coordinate division or optional force
   selection per cell. The unchanged elastic-FWI regressions complete in
   27.519 seconds and 28.734 seconds under the 30-second ordinary-test budget.
+- Remove the wildcard dependency `-O3` override from development and test
+  builds. The broad dependency graph now inherits the workspace's `-O1`
+  profile, allowing Rust to share generic monomorphizations across crates.
+  Replace strided three-dimensional half-spectrum copies in the Kwavers FFT
+  facade with contiguous row copies and direct Hermitian reconstruction, so
+  the unchanged PSTD regression remains below 30 seconds without targeted
+  provider exceptions. The stack-level profile continues to keep
+  line-table-only debug information for workspace code and no dependency or
+  build-script debug information.
+- Serialize internally parallel full-grid simulation test processes. This
+  removes CPU oversubscription while preserving every workload, assertion,
+  and the 60-second per-test termination contract; the four-binary
+  architecture grid remains bounded to about 70 seconds locally.
+- Include `Cargo.toml` and `.cargo/config.toml` in every CI cache key that
+  stores `target/`, preventing immutable caches produced under an older
+  development profile from being restored into a new profile measurement.
+  The architecture gate now runs the four full-grid integration binaries under
+  the unchanged Nextest timeout contract and reports debug artifact bytes and
+  file count in its job summary.
+- Run ptrace code coverage through a dedicated profile that inherits the
+  development settings but optimizes dependencies for instrumentation. This
+  keeps the broad ordinary dependency profile at `-O1` while preserving the
+  existing coverage workload and finite timeout for FFT-heavy full-grid tests.
 - Replace the tautological single-run benchmark save/check job with the
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications

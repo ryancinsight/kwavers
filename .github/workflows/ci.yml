@@ -40,7 +40,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-pinn-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Check PINN feature compilation
         run: cargo check --locked -p kwavers --features pinn --lib
@@ -92,7 +92,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Check formatting
         run: cargo fmt -- --check
@@ -135,7 +135,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-${{ matrix.rust }}-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Build
         run: cargo build --locked -p kwavers --release --verbose --features="plotting"
@@ -231,7 +231,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-bench-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Execute every plotting-eligible Criterion target once
         run: cargo bench --locked -p kwavers --features plotting --benches -- --test
@@ -262,7 +262,7 @@ jobs:
         run: cargo install cargo-tarpaulin
 
       - name: Generate coverage report
-        run: cargo tarpaulin --locked -p kwavers --out xml --features="plotting" --timeout 300
+        run: cargo tarpaulin --locked -p kwavers --profile coverage --out xml --features="plotting" --timeout 300
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v7
@@ -305,7 +305,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-pinn-conv-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Run convergence studies
         run: cargo nextest run --locked -p kwavers --test pinn_convergence_studies --features pinn
@@ -347,7 +347,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target/
-          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock') }}
+          key: ${{ runner.os }}-validation-cargo-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: k-Wave analytical comparison tests
         run: cargo nextest run --locked -p kwavers-solver --lib validation::kwave_comparison

@@ -59,6 +59,78 @@
   unused static-link-argument diagnostic; hosted CI and pending-publisher
   registration remain open.
 
+## KW-BUILD-065 — Bound debug build artifacts [patch] — in-progress
+
+- Owner: /root; scope: the Kwavers development profile, exact pinned-provider
+  build/test evidence, and shared Atlas target-cache measurement. Non-goals:
+  weaker numerical tests, higher nextest timeouts, a private target directory,
+  release-profile changes, or deletion of source/user data.
+- Acceptance: development dependencies use the lowest optimization level that
+  keeps all four full-grid simulation test binaries within the committed
+  60-second per-test bound; the exact PR head is warning-clean; hosted build
+  duration does not regress; and the generated dependency/artifact footprint
+  decreases without removing line-number backtraces from workspace code.
+- Baseline: `D:\atlas\target\debug\deps` contains 127,468 files and 170.34 GiB,
+  including 43.08 GiB of rlibs and 41.13 GiB of rmeta; `debug\examples`
+  contains 6,031 files and 50.95 GiB. The stack config already uses
+  line-table-only workspace debug information, disables dependency and
+  build-script debug information, and Kwavers already links through LLD.
+- Decision: remove `[profile.dev.package."*"] opt-level = 3` so the broad
+  dependency graph inherits `opt-level = 1`. Cargo documents that dependency
+  optimization levels 2 and 3 prevent reuse/export of shared generic
+  monomorphizations, while level 1 retains basic optimization and sharing.
+  Optimize Kwavers' contiguous FFT spectrum movement instead of retaining
+  `-O3` for Apollo FFT, Leto, or Moirai. Workspace members and every dependency
+  now use the same development optimization level.
+- Local topology: temporary linked worktrees materialize the exact provider
+  commits selected by the Atlas checkout action, including Eunomia 0.6. Cargo
+  metadata and all verification below use `--locked`; hosted CI remains the
+  authoritative clean-checkout build and artifact-size oracle.
+- First hosted profile evidence: on run `29888001830`, uncached feature-build
+  steps fell from 622 s to 342 s for `minimal` (-45.0%), 650 s to 453 s for
+  `pinn` (-30.3%), 847 s to 591 s for `full` (-30.2%), and 503 s to 411 s for
+  `plotting` (-18.3%) relative to the exact `-O3` head. The test job completed
+  in 29m57s versus 37m17s: the default library suite passed 5,650 tests in
+  517.008 s and the PINN library suite passed 39 tests in 2.077 s. This first
+  head restored lock-only target caches, so its release/doctest timings and
+  artifact size are not a clean profile comparison.
+- Final-head instrumentation: every CI cache containing `target/` also hashes
+  `Cargo.toml` and `.cargo/config.toml`; the architecture job executes the four
+  unchanged full-grid integration binaries through the committed Nextest
+  profile, then records `target/debug` bytes and file count. Broad cache
+  restore prefixes are removed so profile-incompatible target artifacts cannot
+  enter the measurement.
+- Profile falsification: exact head `1cafb7f67` passed all pre-existing
+  non-coverage CI jobs. The ordinary `-O1` build passed 5,650
+  library tests in 568.365 s, then terminated
+  `test_plane_wave_boundary_injection_pstd` at 60 s. This falsifies broad
+  `-O1` for the solver/FFT path without justifying `-O3` for every dependency.
+  Tarpaulin's ptrace instrumentation separately varied
+  `test_plane_wave_boundary_injection_pstd` from about 315 s on the passing
+  first head to about 350 s, exceeding the unchanged 300-second response
+  timeout. Coverage now uses a dedicated profile inheriting `dev` while
+  optimizing dependencies at level 3. This restores the previously proven
+  instrumented execution regime without changing ordinary debug artifacts,
+  test inputs, assertions, or timeouts.
+- Targeted-provider falsification: exact head `f80822a55` retained `-O3` for
+  `apollo-fft` plus the ineffective workspace-member overrides
+  `kwavers-solver` and `kwavers-math`; Cargo defines wildcard dependency
+  overrides as excluding workspace members. The library suite passed 5,650
+  tests in 389.448 s, but the same PSTD boundary test terminated at 60.010 s.
+  Exact head `73ec35245` then optimized the full non-workspace provider closure
+  and still terminated that test at 60.016 s, falsifying provider profile
+  selection as the root cause.
+- Production fix: the FFT facade now copies contiguous half-spectrum rows and
+  reconstructs Hermitian rows through direct slice indexing instead of a
+  general strided assignment and triple-indexed loop. Under broad `-O1`, the
+  unchanged 64-cubed, 300-step PSTD test passes in 18.099 s alone and 16.781 s
+  in the serialized architecture grid. `kwavers-math` passes 266/266 tests,
+  including reference C2C comparison and R2C/C2R round trips across even, odd,
+  power-of-two, and degenerate shapes. The four architecture binaries pass
+  24/24 in 69.640 s; serializing their internally parallel processes reduces
+  the longest test from 31.563 s under contention to 22.853 s without changing
+  workloads, assertions, or timeouts.
+
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,

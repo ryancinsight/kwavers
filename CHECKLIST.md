@@ -26,6 +26,31 @@
       `kwavers-python-v*` tags.
 - [ ] Pass hosted CI on the exact release-automation head.
 - [ ] Register the PyPI pending trusted publisher.
+
+## Owner: /root — Bound debug build artifacts [patch]
+
+- [x] Measure the shared Atlas debug artifact count and size by artifact class.
+- [x] Confirm the effective stack debug-information and linker configuration.
+- [x] Recover the runtime reason for the wildcard dependency `-O3` override.
+- [x] Replace wildcard dependency `-O3` with the existing workspace `-O1`
+      policy across the full development dependency graph.
+- [x] Remove the PSTD provider exception by packing three-dimensional FFT
+      half-spectra through contiguous rows and reconstructing Hermitian rows
+      without general strided indexing.
+- [x] Key every CI cache containing `target/` by the development-profile
+      inputs, preventing immutable `-O3` artifacts from contaminating the
+      `-O1` measurement.
+- [x] Add exact hosted execution of the four full-grid integration binaries
+      and record the resulting debug artifact bytes and file count.
+- [x] Isolate ptrace coverage in a dedicated inherited profile after the exact
+      `-O1` head exposed a five-minute instrumented PSTD timeout; keep its
+      existing workload and timeout unchanged.
+- [x] Verify the pinned provider graph locally: `kwavers-math` passes 266/266
+      tests and the serialized four-binary architecture grid passes 24/24 in
+      69.640 s, with its longest test at 22.853 s.
+- [ ] Verify hosted build duration and artifact-size delta on the exact PR
+      head.
+
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
 - [x] Extend ADR 043 with the collocation boundary, public migration, mapping

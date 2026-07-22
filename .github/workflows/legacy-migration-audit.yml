@@ -62,9 +62,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            cargo-ubuntu-latest-stable-
+          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Run xtask legacy-migration-audit
         id: audit
@@ -106,9 +104,7 @@ jobs:
             ~/.cargo/registry/cache/
             ~/.cargo/git/db/
             target/
-          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock') }}
-          restore-keys: |
-            cargo-ubuntu-latest-stable-
+          key: cargo-ubuntu-latest-stable-${{ hashFiles('Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
       - name: Run xtask burn-migration-audit
         id: audit

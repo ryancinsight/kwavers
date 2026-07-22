@@ -59,10 +59,11 @@ elastic-fwi = { max-threads = 1 }
 # rayon across all 24 cores. Under the default num-cpus test concurrency, N such
 # tests run at once × N rayon threads each = severe oversubscription, so each
 # crawls and the heaviest cross the 60 s per-test cap purely from contention (they
-# finish in ~40 s with adequate cores and pass in release). Capping concurrency to
-# 2 gives each ~half the machine, so all finish well inside the *unchanged* 60 s
-# cap. This is a scheduler hint — the timeout and every assertion are untouched.
-heavy-sim = { max-threads = 2 }
+# finish in ~40 s with adequate cores and pass in release). Serialising these
+# processes leaves the internally parallel solver the whole machine, so each
+# stays inside the 30 s performance budget. The timeout and assertions are
+# unchanged.
+heavy-sim = { max-threads = 1 }
 # WGPU device creation and queue polling are serialized on Windows because
 # concurrent DX12 adapter contexts can trigger a driver access violation even
 # when each test owns an independent Hephaestus device.
