@@ -65,7 +65,7 @@
   reconstructs Hermitian rows through direct slice indexing instead of a
   general strided assignment and triple-indexed loop. Under broad `-O1`, the
   unchanged 64-cubed, 300-step PSTD test passes in 18.099 s alone and 16.781 s
-  in the serialized architecture grid. `kwavers-math` passes 265/265 tests,
+  in the serialized architecture grid. `kwavers-math` passes 266/266 tests,
   including reference C2C comparison and R2C/C2R round trips across even, odd,
   power-of-two, and degenerate shapes. The four architecture binaries pass
   24/24 in 69.640 s; serializing their internally parallel processes reduces

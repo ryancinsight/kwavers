@@ -18,7 +18,7 @@
 - [x] Isolate ptrace coverage in a dedicated inherited profile after the exact
       `-O1` head exposed a five-minute instrumented PSTD timeout; keep its
       existing workload and timeout unchanged.
-- [x] Verify the pinned provider graph locally: `kwavers-math` passes 265/265
+- [x] Verify the pinned provider graph locally: `kwavers-math` passes 266/266
       tests and the serialized four-binary architecture grid passes 24/24 in
       69.640 s, with its longest test at 22.853 s.
 - [ ] Verify hosted build duration and artifact-size delta on the exact PR

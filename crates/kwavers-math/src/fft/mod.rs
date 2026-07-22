@@ -628,7 +628,7 @@ fn assign_complex_slice_real(complex_values: &[Complex64], real_values: &mut [f6
 mod r2c_optimized_tests {
     use super::{fft_3d_complex_inplace, get_fft_for_grid, Fft3dInOutExt};
     use eunomia::Complex64;
-    use leto::Array3;
+    use leto::{Array3, Layout, VecStorage};
 
     fn check_shape(nx: usize, ny: usize, nz: usize) {
         let nz_c = nz / 2 + 1;
@@ -675,5 +675,51 @@ mod r2c_optimized_tests {
         check_shape(7, 5, 9); // odd nz
         check_shape(16, 16, 16); // power-of-two cube
         check_shape(12, 1, 8); // degenerate y (2-D-like)
+    }
+
+    #[test]
+    fn strided_half_spectrum_matches_contiguous_paths() {
+        const NX: usize = 3;
+        const NY: usize = 3;
+        const NZ: usize = 4;
+        const NZ_C: usize = NZ / 2 + 1;
+
+        let fft = get_fft_for_grid(NX, NY, NZ);
+        let real = Array3::from_shape_fn([NX, NY, NZ], |[i, j, k]| {
+            (i * 37 + j * 11 + k * 5) as f64 / 17.0 - 2.0
+        });
+        let mut contiguous_half = Array3::zeros([NX, NY, NZ_C]);
+        fft.forward_r2c_into(&real, &mut contiguous_half);
+
+        // Equal first and second extents let this transposed owned layout retain
+        // the required shape while forcing the general strided fallback.
+        let row_stride = isize::try_from(NZ_C).expect("test dimensions fit isize");
+        let plane_stride = isize::try_from(NY * NZ_C).expect("test dimensions fit isize");
+        let strided_layout = Layout::new([NX, NY, NZ_C], [row_stride, plane_stride, 1], 0);
+        let mut strided_half = Array3::new(
+            strided_layout,
+            VecStorage::fill(NX * NY * NZ_C, Complex64::default()),
+        )
+        .expect("invariant: transposed test layout fits its owned storage");
+        assert!(strided_half.as_slice().is_none());
+
+        fft.forward_r2c_into(&real, &mut strided_half);
+        for (actual, expected) in strided_half.iter().zip(contiguous_half.iter()) {
+            assert_eq!(actual, expected);
+        }
+
+        let mut contiguous_real = Array3::zeros([NX, NY, NZ]);
+        let mut contiguous_scratch = Array3::zeros([NX, NY, NZ_C]);
+        fft.inverse_c2r_into(
+            &contiguous_half,
+            &mut contiguous_real,
+            &mut contiguous_scratch,
+        );
+        let mut strided_real = Array3::zeros([NX, NY, NZ]);
+        let mut strided_scratch = Array3::zeros([NX, NY, NZ_C]);
+        fft.inverse_c2r_into(&strided_half, &mut strided_real, &mut strided_scratch);
+        for (actual, expected) in strided_real.iter().zip(contiguous_real.iter()) {
+            assert_eq!(actual, expected);
+        }
     }
 }
