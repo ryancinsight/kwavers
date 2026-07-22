@@ -2,7 +2,7 @@
 
 ## Owner: Codex `/root` — Close Moirai admission workaround [patch]
 
-- [x] Point hosted provider checkout at Atlas graph `098de9b`.
+- [x] Point hosted provider checkout at Atlas graph `c982fe0`.
 - [x] Regenerate `Cargo.lock` through Cargo against merged Moirai PR #83.
 - [x] Delete the default and CI therapy-test serialization overrides.
 - [x] Pass the six unchanged therapy tests under ordinary configured Nextest.

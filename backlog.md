@@ -11,7 +11,9 @@
 - Acceptance: Cargo records `moirai-core` as a direct `moirai-parallel`
   dependency, the six tests have no dedicated serialization override, their
   unchanged values pass under the default profile, and hosted Linux locked
-  resolution succeeds against Atlas `098de9b`.
+  resolution succeeds against Atlas `c982fe0` without the inherited Reqwest
+  0.11 TLS advisory chain, and the replacement TLS graph passes the repository
+  license policy.
 - Risk/change class: `[patch]`; evidence is lock provenance, configuration
   residue scans, focused Nextest values, warning-denied static checks, and
   exact-head hosted CI.

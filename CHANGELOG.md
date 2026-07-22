@@ -4,10 +4,12 @@
 
 ### Changed
 
-- [patch] Consume Atlas provider graph `098de9b` and regenerate the locked
-  Moirai package dependency set after PR #83. Therapy tests return to ordinary
-  Nextest scheduling because saturated indexed work now executes on the caller
-  instead of failing admission.
+- [patch] Consume Atlas provider graph `c982fe0` and regenerate the locked
+  Moirai and RITK dependency sets after PRs #83 and #49. Therapy tests return
+  to ordinary Nextest scheduling because saturated indexed work now executes
+  on the caller instead of failing admission; the inherited Reqwest 0.11 TLS
+  stack is removed with RITK's Reqwest 0.13 migration. The supply-chain policy
+  records the permissive root-certificate data license used by that TLS stack.
 - [patch] Stream elastic-FWI adjoint states directly into the reverse-time
   shear-strain correlation kernel instead of retaining a second six-component
   field history. The gradient and illumination remain exact against an

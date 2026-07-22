@@ -33,7 +33,9 @@
   a downstream containment for Moirai bounded-admission failures, not a solver
   resource requirement. Moirai PR #83 now executes rejected indexed chunks on
   the caller under the same panic boundary and exposes borrowing scopes;
-  Atlas graph `098de9b` pins that merge. KW-CI-068 deletes the workaround and
+  Atlas graph `c982fe0` pins that merge and RITK's Reqwest 0.13 migration.
+  KW-CI-068 deletes the workaround, removes the inherited Reqwest 0.11 TLS
+  advisory chain, records the replacement certificate-data license, and
   re-runs the unchanged value-semantic tests under ordinary scheduling.
 - Review 2026-07-17: the provider-owned GPU PSTD result exposed only sensor
   traces and optional final fields, but the treatment-planning quantity is
