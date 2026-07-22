@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
   Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
@@ -30,7 +30,9 @@
   cross-module link backlog. SemVer comparison against live main classifies
   both grid and solver as major. Residue scans retain only the ML-owned
   `AdaptiveRefinementConfig` and the documented cold heterogeneous
-  multi-region vtable.
+  multi-region vtable. Exact-head ordinary CI `29875284052`, architecture
+  validation `29875284007`, and legacy audit `29875283982` all pass at
+  `cc382dbc2243678fef55101aa106e9f8d7ad7bbf`. PR #304 merged as `9ad18523d`.
 - Hosted PR #304 first-head evidence: the pinned Atlas checkout confirmed the
   Gaia `approx` lock entry was stale; Cargo regenerated the one-line closure.
   The legacy audit now passes after replacing two new `approx::` test imports
@@ -46,7 +48,7 @@
   `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
   pending.
 
-## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — in-progress
+## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — done
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
