@@ -150,7 +150,7 @@
   `Complex` identities in the hosted benchmark compile. The Atlas gitlinks and
   Kwavers action pin now select the single-Eunomia graph; locked all-feature
   metadata and `cargo check -p kwavers-math --all-targets --all-features` pass,
-  and the exact local graph passes all 266 `kwavers-math` tests in 2.308 s.
+  and the exact merged graph passes all 266 `kwavers-math` tests in 2.117 s.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
