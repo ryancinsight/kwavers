@@ -20,9 +20,10 @@
   dependency graph inherits `opt-level = 1`. Cargo documents that dependency
   optimization levels 2 and 3 prevent reuse/export of shared generic
   monomorphizations, while level 1 retains basic optimization and sharing.
-  Retain `-O3` only for the measured PSTD hot path owned by `kwavers-solver`,
-  `kwavers-math`, and `apollo-fft`; the unchanged full-grid tests and timeout
-  decide whether that exception set is complete.
+  Retain `-O3` only for the non-workspace Apollo FFT, Leto, and Moirai provider
+  closure traversed by PSTD; the unchanged full-grid tests and timeout decide
+  whether that exception set is complete. Workspace members already inherit
+  `-O1` because Cargo wildcard overrides never applied to them.
 - Local limitation: the clean worktree cannot reproduce CI's pinned provider
   graph because its sibling paths resolve to live provider branches; current
   Eunomia 0.7 conflicts with Aequitas' locked Eunomia 0.6 requirement. The
@@ -54,6 +55,13 @@
   optimizing dependencies at level 3. This restores the previously proven
   instrumented execution regime without changing ordinary debug artifacts,
   test inputs, assertions, or timeouts.
+- Targeted-provider falsification: exact head `f80822a55` retained `-O3` for
+  `apollo-fft` plus the ineffective workspace-member overrides
+  `kwavers-solver` and `kwavers-math`; Cargo defines wildcard dependency
+  overrides as excluding workspace members. The library suite passed 5,650
+  tests in 389.448 s, but the same PSTD boundary test terminated at 60.010 s.
+  The next bounded experiment optimizes the actual non-workspace Leto and
+  Moirai execution closure in addition to Apollo FFT.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

@@ -6,8 +6,8 @@
 - [x] Confirm the effective stack debug-information and linker configuration.
 - [x] Recover the runtime reason for the wildcard dependency `-O3` override.
 - [x] Replace wildcard dependency `-O3` with the existing workspace `-O1`
-      policy plus targeted `-O3` exceptions for `kwavers-solver`,
-      `kwavers-math`, and `apollo-fft`.
+      policy plus targeted `-O3` exceptions for the Apollo FFT, Leto, and
+      Moirai provider closure traversed by PSTD.
 - [x] Key every CI cache containing `target/` by the development-profile
       inputs, preventing immutable `-O3` artifacts from contaminating the
       `-O1` measurement.

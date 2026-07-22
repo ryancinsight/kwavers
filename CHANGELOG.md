@@ -57,7 +57,7 @@
 - Remove the wildcard dependency `-O3` override from development and test
   builds. The broad dependency graph now inherits the workspace's `-O1`
   profile, allowing Rust to share generic monomorphizations across crates.
-  `kwavers-solver`, `kwavers-math`, and `apollo-fft` retain targeted `-O3`
+  The Apollo FFT, Leto, and Moirai provider closure retains targeted `-O3`
   exceptions exercised by the unchanged 60-second PSTD regression. The
   stack-level profile continues to keep line-table-only debug information for
   workspace code and no dependency or build-script debug information.
