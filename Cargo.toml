@@ -82,19 +82,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(loom)'] }
 # kernels (PSTD phase-velocity, KZK conservation) ~5–10× faster than opt-level=0.
 opt-level = 1
 
-# Optimise *dependencies* (apollo-fft, hermes-simd, and workspace crates like
-# kwavers-solver/kwavers-math when they are dependencies of the crate under test)
-# at -O3 in dev/test builds, while the crate under active development keeps the
-# fast opt-level=1 codegen above. Dependencies are compiled once and cached, so
-# this is a one-time build cost that makes the FFT/stencil-heavy integration
-# tests (fdtd_pstd_comparison, property_based_tests) run at near-release speed,
-# clearing the 60 s per-test nextest cap without weakening any assertion. Uses the
-# default high codegen-units and no LTO, so it adds no build-time memory pressure
-# (unlike [profile.release] below, whose lto=true + codegen-units=1 is for the
-# Python wheel only and is what OOMs when building many test binaries in release).
-[profile.dev.package."*"]
-opt-level = 3
-
 [profile.release]
 opt-level = 3
 lto = true

@@ -1,5 +1,34 @@
 # Backlog / Strategy
 
+## KW-BUILD-065 — Bound debug build artifacts [patch] — in-progress
+
+- Owner: /root; scope: the Kwavers development profile, exact pinned-provider
+  build/test evidence, and shared Atlas target-cache measurement. Non-goals:
+  weaker numerical tests, higher nextest timeouts, a private target directory,
+  release-profile changes, or deletion of source/user data.
+- Acceptance: development dependencies use the lowest optimization level that
+  keeps all four full-grid simulation test binaries within the committed
+  60-second per-test bound; the exact PR head is warning-clean; hosted build
+  duration does not regress; and the generated dependency/artifact footprint
+  decreases without removing line-number backtraces from workspace code.
+- Baseline: `D:\atlas\target\debug\deps` contains 127,468 files and 170.34 GiB,
+  including 43.08 GiB of rlibs and 41.13 GiB of rmeta; `debug\examples`
+  contains 6,031 files and 50.95 GiB. The stack config already uses
+  line-table-only workspace debug information, disables dependency and
+  build-script debug information, and Kwavers already links through LLD.
+- Decision: remove `[profile.dev.package."*"] opt-level = 3` so runtime
+  packages inherit `opt-level = 1`. Cargo documents that dependency
+  optimization levels 2 and 3 prevent reuse/export of shared generic
+  monomorphizations, while level 1 retains basic optimization and sharing.
+  The previous `-O3` change remains represented by the `heavy-sim`
+  concurrency group; the unchanged full-grid tests and timeout decide whether
+  `-O1` remains viable.
+- Local limitation: the clean worktree cannot reproduce CI's pinned provider
+  graph because its sibling paths resolve to live provider branches; current
+  Eunomia 0.7 conflicts with Aequitas' locked Eunomia 0.6 requirement. The
+  repository's pinned checkout action is therefore the authoritative build and
+  runtime oracle for this item.
+
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,

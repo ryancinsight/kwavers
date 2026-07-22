@@ -1,5 +1,15 @@
 # Project Checklist
 
+## Owner: /root — Bound debug build artifacts [patch]
+
+- [x] Measure the shared Atlas debug artifact count and size by artifact class.
+- [x] Confirm the effective stack debug-information and linker configuration.
+- [x] Recover the runtime reason for the wildcard dependency `-O3` override.
+- [x] Replace dependency `-O3` with the existing workspace `-O1` policy so
+      generic monomorphizations remain shareable.
+- [ ] Verify the pinned provider graph, heavy full-grid nextest group, build
+      duration, and artifact-size delta on the exact PR head.
+
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
 - [x] Extend ADR 043 with the collocation boundary, public migration, mapping
