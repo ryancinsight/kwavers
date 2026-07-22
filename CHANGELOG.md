@@ -22,7 +22,9 @@
   the control-panel rendering surface only when its explicit `egui` feature is
   enabled instead of shipping a no-op headless method. Advance RITK to its
   Reqwest 0.13.4 transport and remove Kwavers' unused Reqwest declaration so
-  release locks no longer contain the vulnerable rustls-webpki 0.101 line.
+  release locks no longer contain the vulnerable rustls-webpki 0.101 line;
+  admit the permissive CDLA 2.0 license used by Reqwest's replacement Mozilla
+  root-certificate data.
 
 ### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
 
