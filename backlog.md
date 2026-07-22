@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-CI-068 — Close Moirai admission workaround [patch] — in progress
+## KW-CI-068 — Close Moirai admission workaround [patch] — done
 
 - Owner: Codex `/root`; last-update: 2026-07-22; scope: the canonical Atlas
   checkout revision, Cargo lock, six therapy-test scheduling overrides, and
@@ -17,6 +17,18 @@
 - Risk/change class: `[patch]`; evidence is lock provenance, configuration
   residue scans, focused Nextest values, warning-denied static checks, and
   exact-head hosted CI.
+- Evidence: implementation head `eb80ad2` passed Architecture Validation run
+  `29964349679`, CI/CD run `29964349756`, legacy-migration run `29964349739`,
+  and benchmark-regression run `29964349692`. The matrix includes locked
+  stable/beta/nightly builds and tests, full native tests and doctests, every
+  feature combination, CUDA, Miri, security, coverage, solver/PINN validation,
+  and both bounded benchmark smokes.
+- Integration: Python-portability head `b04cf397` passed Architecture
+  Validation `29963556227`, CI/CD `29963556297`, legacy-migration
+  `29963556225`, and benchmark-regression `29963556257`, then merged as default
+  `1dc60bd`. This closure rebases on that default, preserves its portability and
+  dependency graph, and replaces only provisional Atlas pin `a534313` with
+  canonical merged graph `c982fe0`.
 
 ## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — done
 

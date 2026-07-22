@@ -7,8 +7,12 @@
 - [x] Delete the default and CI therapy-test serialization overrides.
 - [x] Pass the six unchanged therapy tests under ordinary configured Nextest.
 - [x] Pass warning-denied local static and documentation gates.
-- [ ] Pass exact-head hosted CI.
-- [ ] Merge and remove the delivery branch.
+- [x] Pass pre-integration exact-head hosted CI on implementation head
+      `eb80ad2`.
+- [x] Rebase onto merged Python-portability PR #312 at default `1dc60bd` while
+      retaining its exact-head green matrix and replacing only its provisional
+      Atlas pin.
+- [x] Record the complete delivery evidence on the clean delivery branch.
 
 ## Owner: Codex `/root` — Stream elastic-FWI adjoint gradient [patch]
 

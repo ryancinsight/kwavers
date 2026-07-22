@@ -37,6 +37,13 @@
   KW-CI-068 deletes the workaround, removes the inherited Reqwest 0.11 TLS
   advisory chain, records the replacement certificate-data license, and
   re-runs the unchanged value-semantic tests under ordinary scheduling.
+  Implementation head `eb80ad2` passes exact-head architecture, CI/coverage,
+  migration-audit, and benchmark workflows (`29964349679`, `29964349756`,
+  `29964349739`, and `29964349692`). Concurrent Python-portability PR #312
+  passed its exact-head matrix (`29963556227`, `29963556297`, `29963556225`,
+  and `29963556257`) and merged as default `1dc60bd`; the closure rebases onto
+  that state and replaces its provisional `a534313` provider pin with canonical
+  merged graph `c982fe0`.
 - Review 2026-07-17: the provider-owned GPU PSTD result exposed only sensor
   traces and optional final fields, but the treatment-planning quantity is
   `max_t |p|`, not the final pressure frame. The WGPU path now reserves one
