@@ -169,3 +169,11 @@ candidate smoke, all four bounded AB/BA pair jobs in 21–23 minutes, and the
 aggregate classifier in run `29884797777`. Ordinary CI `29884797767`,
 architecture validation `29884797709`, and legacy audit `29884797739` also
 pass. PR #306 merged the checked workflow as `00d06f00e`.
+
+Exact head `04bced11bfd92cefcf38ccbadd76f1bd203c550a` validates the
+executable-identity branch in run `29913169741`. The complete benchmark smoke
+and same-path base/head builds finish in 11m37s, all three merge-critical
+executables are byte-identical, the pair matrix is skipped, and the explicit
+regression check passes. The complete workflow finishes in 12m12s. Exact-head
+CI `29913169738`, architecture validation `29913169852`, and legacy audit
+`29913169756` also pass.

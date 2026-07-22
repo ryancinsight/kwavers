@@ -64,7 +64,7 @@
   unused static-link-argument diagnostic; hosted CI and pending-publisher
   registration remain open.
 
-## KW-BUILD-065 — Bound debug build artifacts [patch] — in-progress
+## KW-BUILD-065 — Bound debug build artifacts [patch] — done
 
 - Owner: /root; scope: the Kwavers development profile, exact pinned-provider
   build/test evidence, and shared Atlas target-cache measurement. Non-goals:
@@ -160,8 +160,11 @@
   The smoke job now builds the three merge-critical base/head executables from
   the same path and compares their SHA-256 hashes. Byte-identical sets terminate
   with that stronger proof; differing sets retain the unchanged four-pair
-  statistical instrument. Hosted validation of the new identity branch remains
-  open; run `29909003760` retains the exact-head four-pair evidence.
+  statistical instrument. Exact head `04bced11b` passes all 26 hosted checks:
+  CI `29913169738`, architecture `29913169852`, legacy audit `29913169756`,
+  and benchmark run `29913169741`. The benchmark workflow proves executable
+  identity and completes in 12m12s without pair jobs; run `29909003760` retains
+  the exact-head four-pair evidence for differing executables.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

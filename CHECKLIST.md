@@ -75,9 +75,10 @@
       so smoke and phase-reversed jobs cannot drift to a stale Atlas graph.
 - [x] Add a same-path executable-identity preflight that skips four statistical
       pairs only when every merge-critical benchmark binary is byte-identical.
-- [ ] Verify the exact hosted workflow head selects the correct identity branch
-      and record its bounded duration; retain the prior exact-head pair runs as
-      evidence for the unchanged differing-artifact branch.
+- [x] Verify exact hosted head `04bced11b`: benchmark run `29913169741` proves
+      byte-identical merge-critical executables and completes in 12m12s without
+      launching pair jobs. Retain run `29909003760` as the exact-head evidence
+      for the unchanged differing-artifact branch.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
