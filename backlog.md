@@ -46,20 +46,19 @@
   `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
   pending.
 
-## KW-CI-063 — Install Atlas benchmark oracle [patch] [arch] — review
+## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — in-progress
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
 - Acceptance: benchmark-relevant PRs compare their exact base and head with
-  the complete candidate Criterion instrument held constant at one filesystem
-  path; four isolated pair jobs execute phase-reversed AB/BA replications;
-  Atlas derives family-wise confidence and fails closed on missing, mismatched,
-  or regressed results.
+  the canonical production Criterion targets held constant at one filesystem
+  path; every plotting-eligible target executes once on the candidate; four
+  isolated pair jobs finish within 30 minutes and execute phase-reversed AB/BA
+  replications; Atlas derives family-wise confidence and fails closed on
+  missing, mismatched, or regressed results.
 - Decision: [`ADR-045`](docs/ADR/045-atlas-benchmark-regression-gate.md).
 - Evidence: the single-run same-baseline Python classifier is deleted. The
-  dedicated workflow retains the full plotting-enabled `kwavers` benchmark
-  suite, pins Atlas classifier and provider graph `614914cf`, and derives its
-  instrument budget from the observed hosted full-suite runtime. Run
+  dedicated workflow pins Atlas classifier and provider graph `614914cf`. Run
   `29797805169` exposed eight auto-discovered libtest targets before
   measurement; automatic discovery is now disabled, all 22 retained Criterion
   targets are explicit, package libtest harnesses are excluded, placeholder
@@ -71,8 +70,13 @@
   four pairs but found three replicated apparent regressions despite no
   semantic production delta; distinct checkout paths remained correlated with
   revision. The workflow now moves each revision through one
-  `kwavers-measurement` path. A new exact-head hosted execution remains the
-  merge gate.
+  `kwavers-measurement` path. Run `29867760523` remained active after 157
+  minutes; `linear_swe_wave_propagation` alone requested about 32 minutes for
+  one revision measurement. The bounded replacement executes the full
+  candidate suite once, retains unchanged samples for
+  `performance_baseline`, `critical_path_benchmarks`, and `simd_field_ops`,
+  and caps every job at 30 minutes. A new exact-head hosted execution remains
+  the merge gate.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
