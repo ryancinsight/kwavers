@@ -60,6 +60,12 @@
   while allowing Rust to share generic monomorphizations across crates. The
   stack-level profile continues to keep line-table-only debug information for
   workspace code and no dependency or build-script debug information.
+- Include `Cargo.toml` and `.cargo/config.toml` in every CI cache key that
+  stores `target/`, preventing immutable caches produced under an older
+  development profile from being restored into a new profile measurement.
+  The architecture gate now runs the four full-grid integration binaries under
+  the unchanged Nextest timeout contract and reports debug artifact bytes and
+  file count in its job summary.
 - Replace the tautological single-run benchmark save/check job with the
   Atlas-owned, family-wise Criterion regression gate. Benchmark-relevant PRs
   now compare the exact base and head through two phase-reversed replications

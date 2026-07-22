@@ -28,6 +28,20 @@
   Eunomia 0.7 conflicts with Aequitas' locked Eunomia 0.6 requirement. The
   repository's pinned checkout action is therefore the authoritative build and
   runtime oracle for this item.
+- First hosted profile evidence: on run `29888001830`, uncached feature-build
+  steps fell from 622 s to 342 s for `minimal` (-45.0%), 650 s to 453 s for
+  `pinn` (-30.3%), 847 s to 591 s for `full` (-30.2%), and 503 s to 411 s for
+  `plotting` (-18.3%) relative to the exact `-O3` head. The test job completed
+  in 29m57s versus 37m17s: the default library suite passed 5,650 tests in
+  517.008 s and the PINN library suite passed 39 tests in 2.077 s. This first
+  head restored lock-only target caches, so its release/doctest timings and
+  artifact size are not a clean profile comparison.
+- Final-head instrumentation: every CI cache containing `target/` also hashes
+  `Cargo.toml` and `.cargo/config.toml`; the architecture job executes the four
+  unchanged full-grid integration binaries through the committed Nextest
+  profile, then records `target/debug` bytes and file count. Broad cache
+  restore prefixes are removed so profile-incompatible target artifacts cannot
+  enter the measurement.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

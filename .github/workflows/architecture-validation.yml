@@ -49,7 +49,7 @@ jobs:
       uses: actions/cache@v6
       with:
         path: target
-        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock', 'Cargo.toml', '.cargo/config.toml') }}
 
     - name: Check formatting
       run: cargo fmt -- --check
@@ -179,10 +179,29 @@ jobs:
         cargo nextest run --locked --workspace --exclude kwavers-python --exclude kwavers-gpu --lib --test-threads=1
         cargo nextest run --locked -p kwavers --lib --no-default-features --features pinn
 
+    - name: Run bounded full-grid simulations
+      run: >-
+        cargo nextest run --locked -p kwavers
+        --test fdtd_pstd_comparison
+        --test property_based_tests
+        --test session2_source_injection_test
+        --test test_plane_wave_injection_fixed
+
     - name: Run doc tests
       run: |
         cargo test --locked -p kwavers --doc
         cargo test --locked -p kwavers --doc --no-default-features --features full
+
+    - name: Record debug artifact footprint
+      run: |
+        debug_bytes=$(du --bytes --summarize target/debug | cut -f1)
+        debug_files=$(find target/debug -type f | wc -l)
+        {
+          echo "### Debug artifact footprint"
+          echo ""
+          echo "- Bytes: ${debug_bytes}"
+          echo "- Files: ${debug_files}"
+        } | tee -a "$GITHUB_STEP_SUMMARY"
 
   documentation:
     name: Documentation Build

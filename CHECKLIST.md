@@ -7,6 +7,11 @@
 - [x] Recover the runtime reason for the wildcard dependency `-O3` override.
 - [x] Replace dependency `-O3` with the existing workspace `-O1` policy so
       generic monomorphizations remain shareable.
+- [x] Key every CI cache containing `target/` by the development-profile
+      inputs, preventing immutable `-O3` artifacts from contaminating the
+      `-O1` measurement.
+- [x] Add exact hosted execution of the four full-grid integration binaries
+      and record the resulting debug artifact bytes and file count.
 - [ ] Verify the pinned provider graph, heavy full-grid nextest group, build
       duration, and artifact-size delta on the exact PR head.
 
