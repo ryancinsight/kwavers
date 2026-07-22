@@ -106,22 +106,22 @@ fn combine(a: f64, b: f64, e: &Tensor3, c: f64, f: &Tensor3) -> Tensor3 {
 
 /// Murnaghan elastic constants for an isotropic solid.
 ///
-/// `lambda`, `mu` are the second-order Lamé parameters [Pa]; `l`, `m`, `n` are
-/// the third-order Murnaghan constants [Pa] in the power-sum convention
+/// `lambda`, `mu` are the second-order Lamé parameters `Pa`; `l`, `m`, `n` are
+/// the third-order Murnaghan constants `Pa` in the power-sum convention
 /// (Chapter 11 §11.9.1). With `l = m = n = 0` the model is
 /// St-Venant–Kirchhoff. The pair `(m, n)` feeds the analytical acousto-elastic
 /// sensitivity `A = (m+n)/(2(λ+μ))` ([`super::elastography::acoustoelastic_sensitivity`]).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct MurnaghanConstants {
-    /// Lamé first parameter λ [Pa].
+    /// Lamé first parameter λ `Pa`.
     pub lambda: f64,
-    /// Lamé second parameter μ (shear modulus) [Pa].
+    /// Lamé second parameter μ (shear modulus) `Pa`.
     pub mu: f64,
-    /// Murnaghan third-order constant l [Pa].
+    /// Murnaghan third-order constant l `Pa`.
     pub l: f64,
-    /// Murnaghan third-order constant m [Pa].
+    /// Murnaghan third-order constant m `Pa`.
     pub m: f64,
-    /// Murnaghan third-order constant n [Pa].
+    /// Murnaghan third-order constant n `Pa`.
     pub n: f64,
 }
 
@@ -144,7 +144,7 @@ impl MurnaghanConstants {
         Self::new(lambda, mu, 0.0, 0.0, 0.0)
     }
 
-    /// Strain-energy density `W(E)` [Pa] (= [J/m³]) for the symmetric
+    /// Strain-energy density `W(E)` `Pa` (= [J/m³]) for the symmetric
     /// Green–Lagrange strain `E`.
     #[must_use]
     pub fn strain_energy(&self, e: &Tensor3) -> f64 {
@@ -160,7 +160,7 @@ impl MurnaghanConstants {
         second + third
     }
 
-    /// Second Piola–Kirchhoff stress `S = ∂W/∂E` [Pa] for the symmetric
+    /// Second Piola–Kirchhoff stress `S = ∂W/∂E` `Pa` for the symmetric
     /// Green–Lagrange strain `E`.
     #[must_use]
     pub fn second_pk_stress(&self, e: &Tensor3) -> Tensor3 {
@@ -184,7 +184,7 @@ impl MurnaghanConstants {
     }
 
     /// Apply the **finite-strain** material tangent `ℂ(E) = ∂²W/∂E² = ∂S/∂E`
-    /// to a symmetric increment `H`, returning `ℂ(E) : H` [Pa].
+    /// to a symmetric increment `H`, returning `ℂ(E) : H` `Pa`.
     ///
     /// Differentiating `S` (the power-sum form) once more:
     ///

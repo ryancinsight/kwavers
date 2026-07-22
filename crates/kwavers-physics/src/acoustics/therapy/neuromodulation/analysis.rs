@@ -26,17 +26,17 @@ use super::nice::{simulate_nice, NiceConfig};
 pub struct ThresholdQuery<M: Membrane + Clone> {
     /// Membrane model (cloned per trial pressure).
     pub membrane: M,
-    /// Resting membrane potential / initial condition [mV].
+    /// Resting membrane potential / initial condition `mV`.
     pub v_rest_mv: f64,
     /// Constant bias current density [µA/cm²].
     pub i_bias_ua_cm2: f64,
-    /// Carrier-resolved integration step [ms].
+    /// Carrier-resolved integration step `ms`.
     pub dt_ms: f64,
-    /// Sonication onset [ms].
+    /// Sonication onset `ms`.
     pub onset_ms: f64,
-    /// Sonication offset [ms].
+    /// Sonication offset `ms`.
     pub offset_ms: f64,
-    /// Total simulated duration [ms] (> offset to capture the post-stimulus AP).
+    /// Total simulated duration `ms` (> offset to capture the post-stimulus AP).
     pub t_end_ms: f64,
 }
 
@@ -62,7 +62,7 @@ impl<M: Membrane + Clone> ThresholdQuery<M> {
         cfg.is_valid() && simulate_nice(&cfg).spike_count() >= 1
     }
 
-    /// Minimum acoustic pressure amplitude [Pa] that evokes an AP, found by
+    /// Minimum acoustic pressure amplitude `Pa` that evokes an AP, found by
     /// bisection on `[p_lo, p_hi]` for `n_iter` halvings (monotonic
     /// dose–response is assumed). Returns `None` if `p_hi` does not fire (no
     /// threshold within range) or if `p_lo` already fires (threshold below range).

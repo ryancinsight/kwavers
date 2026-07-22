@@ -26,7 +26,7 @@ impl PressureFieldSeries {
     /// Construct a validated pressure-field series.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] if `snapshots` is empty or if any
+    /// Returns `KwaversError::InvalidInput` if `snapshots` is empty or if any
     /// snapshot's spatial dimensions differ from the first.
     pub fn new(snapshots: Vec<Array3<f64>>) -> KwaversResult<Self> {
         let shape = snapshots

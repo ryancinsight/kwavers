@@ -302,8 +302,8 @@ fn test_fft_absorption_energy_dissipation() {
 ///   - `self.fields.p = c₀² · (rhox + rhoy + rhoz)` (linear EOS)
 ///
 /// Mathematical invariants:
-///   - `∀ i: div_u[i] = rhox[i] + rhoy[i] + rhoz[i]`
-///   - `∀ i: p[i] = c0[i]² · div_u[i]`
+///   - `∀ i: div_u`i` = rhox`i` + rhoy`i` + rhoz`i``
+///   - `∀ i: p`i` = c0`i`² · div_u`i``
 ///
 /// These invariants cover the fused single-pass EOS path (Opt-4) — both outputs
 /// are written simultaneously by the same Zip pass.  Regression against the

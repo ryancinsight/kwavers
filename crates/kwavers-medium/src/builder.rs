@@ -16,7 +16,7 @@ pub struct MediumBuilder;
 impl MediumBuilder {
     /// Build medium instance from validated configuration
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn build(config: &DomainMediumParameters, grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         match config.medium_type {
@@ -38,7 +38,7 @@ impl MediumBuilder {
 
     /// Build homogeneous medium
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn build_homogeneous(
         density: f64,
@@ -73,7 +73,7 @@ impl MediumBuilder {
     /// the caller.
     /// # Errors
     /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn build_heterogeneous(
         config: &DomainMediumParameters,
@@ -139,17 +139,17 @@ impl MediumBuilder {
     /// layer, with optional blending at the lower boundary:
     ///
     /// - **Sharp**: step function — `p(x) = p_idx(x)`.
-    /// - **Smooth(σ)**: sigmoid blend of width σ [m] centred at `z_idx(x)`:
+    /// - **Smooth(σ)**: sigmoid blend of width σ `m` centred at `z_idx(x)`:
     ///   ```text
     ///   p(x) = p_cur·(1−t) + p_next·t,   t = ½(1 + tanh((x−z)/σ))
     ///   ```
-    /// - **Gradient(d)**: linear blend over d [m] starting at `z_idx(x)`:
+    /// - **Gradient(d)**: linear blend over d `m` starting at `z_idx(x)`:
     ///   ```text
     ///   p(x) = p_cur·(1−t) + p_next·t,   t = ((x−z)/d).clamp(0,1)
     ///   ```
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `layers` is empty or any
+    /// - Returns `KwaversError::InvalidInput` if `layers` is empty or any
     ///   layer has non-positive thickness.
     fn build_layered(layers: &[LayerParameters], grid: &Grid) -> KwaversResult<Box<dyn Medium>> {
         if layers.is_empty() {

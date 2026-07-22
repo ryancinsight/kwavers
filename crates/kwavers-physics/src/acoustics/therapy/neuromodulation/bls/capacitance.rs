@@ -54,11 +54,11 @@
 use super::super::intramembrane_cavitation::CapacitanceSource;
 use std::f64::consts::PI;
 
-/// Sonophore radius `a` [m]: half the 64 nm transmembrane-protein interspacing
+/// Sonophore radius `a` `m`: half the 64 nm transmembrane-protein interspacing
 /// (Plaksin et al. 2014).
 pub const SONOPHORE_RADIUS_M: f64 = 32.0e-9;
 
-/// Rest inter-leaflet gap `Δ` [m] (Plaksin et al. 2014).
+/// Rest inter-leaflet gap `Δ` `m` (Plaksin et al. 2014).
 pub const LEAFLET_GAP_M: f64 = 1.26e-9;
 
 /// Curved-dome bilayer membrane capacitance `C_m(Z)` [µF/cm²] (Plaksin Eq. 8).
@@ -109,19 +109,19 @@ pub fn bls_capacitance(z: f64, cm0: f64, a: f64, delta: f64) -> f64 {
 pub struct BilayerSonophore {
     /// Rest specific capacitance C_m0 [µF/cm²].
     pub cm0_uf_cm2: f64,
-    /// Sonophore radius a [m].
+    /// Sonophore radius a `m`.
     pub radius_a_m: f64,
-    /// Rest inter-leaflet gap Δ [m].
+    /// Rest inter-leaflet gap Δ `m`.
     pub gap_delta_m: f64,
-    /// Peak leaflet deflection Z_max [m].
+    /// Peak leaflet deflection Z_max `m`.
     pub deflection_amp_m: f64,
     /// Angular carrier frequency ω = 2π f [rad/ms].
     pub omega_rad_ms: f64,
 }
 
 impl BilayerSonophore {
-    /// Construct from rest capacitance [µF/cm²], carrier frequency [MHz], and
-    /// peak leaflet deflection [m], using the canonical sonophore geometry
+    /// Construct from rest capacitance [µF/cm²], carrier frequency `MHz`, and
+    /// peak leaflet deflection `m`, using the canonical sonophore geometry
     /// ([`SONOPHORE_RADIUS_M`], [`LEAFLET_GAP_M`]).
     #[must_use]
     pub fn new(cm0_uf_cm2: f64, freq_mhz: f64, deflection_amp_m: f64) -> Self {
@@ -134,7 +134,7 @@ impl BilayerSonophore {
         }
     }
 
-    /// Leaflet deflection Z(t) [m]: a non-negative once-per-cycle expansion
+    /// Leaflet deflection Z(t) `m`: a non-negative once-per-cycle expansion
     /// `Z_max·(1 − cos ωt)/2`.
     #[inline]
     #[must_use]
@@ -142,7 +142,7 @@ impl BilayerSonophore {
         0.5 * self.deflection_amp_m * (1.0 - (self.omega_rad_ms * t_ms).cos())
     }
 
-    /// Carrier period [ms].
+    /// Carrier period `ms`.
     #[inline]
     #[must_use]
     fn period_ms(&self) -> f64 {

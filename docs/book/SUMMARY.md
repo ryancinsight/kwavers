@@ -32,7 +32,6 @@
 
 - [7. Transducer Arrays and Beamforming](beamforming_and_image_formation.md)
   - [Example: Phased Array Beamforming](examples/phased_array_beamforming.md)
-  - [Example: Adaptive Beamforming](examples/adaptive_beamforming.md)
   - [Example: Adaptive Beamforming Refactored](examples/adaptive_beamforming_refactored.md)
   - [Example: Real-Time 3D Beamforming](examples/real_time_3d_beamforming.md)
 - [8. Sensors and Measurements](sensors_and_measurements.md)
@@ -77,9 +76,11 @@
   - [Example: PINN Multi-GPU Training](examples/pinn_multi_gpu_training.md)
   - [Example: PINN Real-Time Inference](examples/pinn_real_time_inference.md)
   - [Example: Validate 2D PINN](examples/validate_2d_pinn.md)
+  - [Example: Field Surrogate Demo](examples/field_surrogate_demo.md)
+  - [Example: Elastic Shear FWI Lesion](examples/elastic_shear_fwi_lesion.md)
+  - [Example: MoFi Exact Adjoint Demo](examples/mofi_exact_adjoint_demo.md)
 - [19. Validation and Benchmarking](validation_and_benchmarking.md)
-  - [Example: Literature Validation](examples/literature_validation.md)
-  - [Example: Literature Validation Safe Vectorization](examples/literature_validation_safe.md)
+  - [Example: Literature Validation](examples/literature_validation_safe.md)
   - [Example: Physics Validation](examples/physics_validation.md)
   - [Example: Performance Validation](examples/performance_validation.md)
   - [Example: Theorem Validation Demo](examples/theorem_validation_demo.md)
@@ -94,9 +95,11 @@
 - [22. Passive Acoustic Mapping](passive_acoustic_mapping.md)
 - [23. LIFU-Mediated Blood–Brain Barrier Opening](bbb_lifu_opening.md)
 - [24. Transcranial HIFU and BBB Treatment Planning](hifu_transcranial_ablation.md)
-  - [Example: Transcranial CT/MRI Reconstruction](examples/transcranial_ct_mri.md)
+  - [Example: Transcranial CT/MRI Reconstruction](examples/transcranial_ct_mri_reconstruction.md)
 - [25. Low-Intensity Ultrasound Neuromodulation](neuromodulation.md)
 - [26. Transcranial UST Brain Imaging](transcranial_ust_brain_imaging.md)
+  - [Example: Transcranial Brain FWI](examples/transcranial_brain_fwi.md)
+  - [Example: Transcranial UST Reconstruction](examples/transcranial_ust_reconstruction.md)
 - [27. Abdominal Histotripsy FWI Targeting and Lesion Monitoring](abdominal_histotripsy_fwi.md)
 - [28. Same-Device Therapeutic Ultrasound, Finite-Frequency Inverse, and RTM Monitoring](theranostic_fwi_platforms.md)
 - [29. Intravascular Ultrasound Imaging and Therapy](intravascular_ultrasound.md)
@@ -105,6 +108,9 @@
 - [32. Pancreatic Cancer Histotripsy: PDAC Treatment Planning](pancreatic_histotripsy.md)
 - [33. CMUT vs PMUT: Micromachined and Flexible Transducers for IVUS](cmut_vs_pmut.md)
 - [34. Optically-Generated Focused Ultrasound for Ultrahigh-Precision Neuromodulation](optoacoustic_focused_ultrasound.md)
+- [35. Seismic Imaging: Acoustic and Elastic Full-Waveform Inversion](seismic_imaging.md)
+  - [Example: Seismic Imaging Demo](examples/seismic_imaging_demo.md)
+  - [Example: Seismic Imaging 3D Demo](examples/seismic_imaging_3d_demo.md)
 
 ---
 
@@ -112,16 +118,16 @@
 
 This part documents the migration from ndarray/nalgebra to the Atlas stack crates:
 
-- [35. Migration Overview: ndarray/nalgebra → Leto](migration_overview.md)
-- [36. Linear Algebra: Leto and Leto-Ops](migration_linalg.md)
-- [37. Geometry: Leto for Point, Vector, Isometry](migration_geometry.md)
-- [38. SIMD: Hermes for Vectorized Operations](migration_simd.md)
+- [37. Migration Overview: ndarray/nalgebra → Leto](migration_overview.md)
+- [38. Linear Algebra: Leto and Leto-Ops](migration_linalg.md)
+- [39. Geometry: Leto for Point, Vector, Isometry](migration_geometry.md)
+- [40. SIMD: Hermes for Vectorized Operations](migration_simd.md)
   - [Example: SIMD Wave Kernel](examples/simd_wave_kernel.md)
-- [39. Memory: Mnemosyne and Themis](migration_memory.md)
-- [40. Concurrency: Moirai for Parallel Execution](migration_concurrency.md)
-- [41. FFT: Apollo for Spectral Methods](migration_fft.md)
-- [42. Python Integration: PyO3 and NumPy Boundary](migration_python.md)
-- [43. GAT Tiling: LendingIterator and Tiles](migration_gat_tiles.md)
+- [41. Memory: Mnemosyne and Themis](migration_memory.md)
+- [42. Concurrency: Moirai for Parallel Execution](migration_concurrency.md)
+- [43. FFT: Apollo for Spectral Methods](migration_fft.md)
+- [44. Python Integration: PyO3 and NumPy Boundary](migration_python.md)
+- [45. GAT Tiling: LendingIterator and Tiles](migration_gat_tiles.md)
   - [Example: Tiled K-Space Processing](examples/tiled_kspace_processing.md)
 
 ---
@@ -131,4 +137,5 @@ This part documents the migration from ndarray/nalgebra to the Atlas stack crate
 - [A. Migration Quick Reference](migration_quick_reference.md)
 - [B. Atlas Crate Dependencies](atlas_dependencies.md)
 - [C. Glossary](appendix_glossary.md)
+- [D. Parity Artefacts Archive (CI Gate Evidence)](../../../parity_artefacts/INDEX.md)
 

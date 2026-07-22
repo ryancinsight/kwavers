@@ -113,7 +113,7 @@ impl PyResidualGasField {
         .into()
     }
 
-    /// Representative residual-bubble radius [m] (shrinks with dissolution).
+    /// Representative residual-bubble radius `m` (shrinks with dissolution).
     fn representative_radius(&self) -> f64 {
         self.inner.representative_radius()
     }
@@ -123,7 +123,7 @@ impl PyResidualGasField {
         self.inner.peak_void_fraction()
     }
 
-    /// Total residual gas volume `Σ β·dV` [m³] for voxel volume `dv_m3`.
+    /// Total residual gas volume `Σ β·dV` `m³` for voxel volume `dv_m3`.
     fn total_gas_volume(&self, dv_m3: f64) -> f64 {
         self.inner.total_gas_volume(dv_m3)
     }

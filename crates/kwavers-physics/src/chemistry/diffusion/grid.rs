@@ -3,7 +3,7 @@ use crate::chemistry::ros_plasma::ros_species::ROSSpecies;
 use std::collections::HashMap;
 
 impl RadicalDiffusionSolver {
-    /// Build the logarithmic radial grid `r[j] = R_bubble * exp(j * Δξ)`.
+    /// Build the logarithmic radial grid `r`J` = R_bubble * exp(j * Δξ)`.
     #[must_use]
     pub fn radial_grid(&self) -> Vec<f64> {
         let n = self.n_points;

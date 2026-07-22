@@ -123,7 +123,7 @@ impl MultiPhysicsConservationEnforcer {
     /// (~machine-epsilon × Σ|φ_S| · V_S). See `audit_energy_conservation`.
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn conservative_interpolate(
         &self,
@@ -206,7 +206,7 @@ impl MultiPhysicsConservationEnforcer {
     ///
     /// Returns `Ok(ε_E)`, or `Err` if source energy is zero (division by zero).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn audit_energy_conservation(
         source_field: &ArrayView3<f64>,

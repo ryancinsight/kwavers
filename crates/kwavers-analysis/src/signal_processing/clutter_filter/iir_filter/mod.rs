@@ -8,13 +8,13 @@
 //!
 //! The filter implements a recursive difference equation:
 //! ```text
-//! y[n] = Σᵢ bᵢx[n-i] - Σⱼ aⱼy[n-j]
+//! y`N` = Σᵢ bᵢx[n-i] - Σⱼ aⱼy[n-j]
 //! ```
 //! where:
 //! - bᵢ are feedforward (numerator) coefficients
 //! - aⱼ are feedback (denominator) coefficients
-//! - `x[n]` is the input signal
-//! - `y[n]` is the output signal
+//! - `x`N`` is the input signal
+//! - `y`N`` is the output signal
 //!
 //! # High-Pass Filter Design
 //!
@@ -117,7 +117,7 @@ impl IirFilterConfig {
 
     /// Validate configuration parameters
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.cutoff_frequency <= 0.0 || self.cutoff_frequency >= 0.5 {
@@ -231,11 +231,11 @@ impl IirFilter {
     /// # Algorithm
     ///
     /// For each pixel:
-    /// 1. Apply forward IIR filter: `y[n] = Σbᵢx[n-i] - Σaⱼy[n-j]`
+    /// 1. Apply forward IIR filter: `y`N` = Σbᵢx[n-i] - Σaⱼy[n-j]`
     /// 2. If zero_phase enabled, reverse and filter again
     /// 3. Return filtered signal
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn filter(&self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_pixels, n_frames] = slow_time_data.shape();
@@ -278,7 +278,7 @@ impl IirFilter {
     /// Apply IIR filter to a single signal
     ///
     /// Implements the difference equation:
-    /// y[n] = Σᵢ bᵢx[n-i] - Σⱼ₌₁ aⱼy[n-j]
+    /// y`N` = Σᵢ bᵢx[n-i] - Σⱼ₌₁ aⱼy[n-j]
     fn apply_iir_filter(&self, signal: &[f64]) -> Vec<f64> {
         let n = signal.len();
         let mut output = vec![0.0; n];

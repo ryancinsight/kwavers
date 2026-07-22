@@ -6,7 +6,7 @@ use leto::ArrayView3;
 /// Compute the L-infinity update residual between two scalar fields.
 ///
 /// The metric is
-/// `||u_current - u_reference||_infinity = max_i |u_current[i] - u_reference[i]|`.
+/// `||u_current - u_reference||_infinity = max_i |u_current`i` - u_reference`i`|`.
 /// This is the contract used by fixed-point coupling: convergence requires every
 /// coupled degree of freedom to satisfy the tolerance, not only the mean update.
 ///
@@ -16,7 +16,7 @@ use leto::ArrayView3;
 /// # Errors
 ///
 /// Returns [`KwaversError::DimensionMismatch`] when field shapes differ and
-/// [`KwaversError::InvalidInput`] when a field pair produces a non-finite update.
+/// `KwaversError::InvalidInput` when a field pair produces a non-finite update.
 pub(super) fn max_abs_difference(
     current: ArrayView3<'_, f64>,
     reference: ArrayView3<'_, f64>,

@@ -74,7 +74,7 @@ impl SchwarzCoupling {
     ///
     /// Returns the maximum residual across all pairs.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn schwarz_step(
         &mut self,

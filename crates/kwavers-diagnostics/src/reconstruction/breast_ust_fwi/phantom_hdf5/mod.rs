@@ -51,7 +51,7 @@ pub struct BreastUstAliPhantomHdf5Config {
     /// Explicit dataset path. When `None`, known sound-speed dataset names are
     /// searched in deterministic order.
     pub sound_speed_dataset_path: Option<String>,
-    /// Uniform voxel spacing [m]. When `None`, spacing must be present as an
+    /// Uniform voxel spacing `m`. When `None`, spacing must be present as an
     /// HDF5 attribute on the dataset or root group.
     pub spacing_m: Option<f64>,
     /// Unit of the stored dataset values.

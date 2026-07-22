@@ -30,13 +30,13 @@ use kwavers_core::constants::fundamental::VACUUM_PERMITTIVITY;
 /// A bulk piezoelectric thickness-mode resonator.
 #[derive(Debug, Clone, Copy)]
 pub struct BulkPiezoResonator {
-    /// Plate thickness `t` \[m].
+    /// Plate thickness `t` \`m`.
     pub thickness: f64,
-    /// Electrode area `A` \[m²].
+    /// Electrode area `A` \`m²`.
     pub area: f64,
     /// Density `ρ` \[kg·m⁻³].
     pub density: f64,
-    /// Stiffened (open-circuit) elastic constant `c₃₃^D` \[Pa].
+    /// Stiffened (open-circuit) elastic constant `c₃₃^D` \`Pa`.
     pub stiffened_modulus: f64,
     /// Clamped relative permittivity `ε₃₃^S / ε₀`.
     pub clamped_rel_permittivity: f64,
@@ -68,7 +68,7 @@ impl BulkPiezoResonator {
         (self.stiffened_modulus / self.density).sqrt()
     }
 
-    /// Antiresonance (parallel, open-circuit) frequency `f_p = c_D/(2t)` \[Hz].
+    /// Antiresonance (parallel, open-circuit) frequency `f_p = c_D/(2t)` \`Hz`.
     #[must_use]
     pub fn antiresonance_frequency(&self) -> f64 {
         self.sound_speed() / (2.0 * self.thickness)
@@ -89,7 +89,7 @@ impl BulkPiezoResonator {
         (PI * f_s / (2.0 * f_p)) * (PI * (f_p - f_s) / (2.0 * f_p)).tan()
     }
 
-    /// Series resonance `f_s` \[Hz] for the configured `k_t²` and antiresonance,
+    /// Series resonance `f_s` \`Hz` for the configured `k_t²` and antiresonance,
     /// by bisection of the IEEE relation (`k_t²` decreases monotonically with `f_s`).
     #[must_use]
     pub fn resonance_frequency(&self) -> f64 {
@@ -131,7 +131,7 @@ impl BulkPiezoResonator {
     }
 
     /// Electrical input impedance \[Ω] of the free (air-loaded both faces)
-    /// thickness-mode plate at `frequency` \[Hz] — the Mason/KLM equivalent-circuit
+    /// thickness-mode plate at `frequency` \`Hz` — the Mason/KLM equivalent-circuit
     /// response.
     ///
     /// ```text
@@ -197,7 +197,7 @@ pub fn quarter_wave_match_impedance(z_source: f64, z_load: f64) -> f64 {
 pub struct AcousticLayer {
     /// Specific acoustic impedance `Z = ρ·c` \[Rayl].
     pub impedance: f64,
-    /// Layer thickness `d` \[m].
+    /// Layer thickness `d` \`m`.
     pub thickness: f64,
     /// Layer longitudinal sound speed `c` \[m·s⁻¹].
     pub sound_speed: f64,

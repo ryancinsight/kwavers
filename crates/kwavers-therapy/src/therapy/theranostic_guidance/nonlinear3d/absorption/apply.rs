@@ -13,7 +13,7 @@ impl FractionalLaplacianAbsorption {
     /// at time level `n+1` and `current`, `previous` hold the levels `n`
     /// and `n−1` (rotated-buffer convention from `forward::update_cells`).
     ///
-    /// On exit `next[i] += Δp_abs[n+1, i]`.
+    /// On exit `next`i` += Δp_abs[n+1, i]`.
     pub(crate) fn apply(&mut self, current: &[f64], previous: &[f64], next: &mut [f64]) {
         let cells = self.n * self.n * self.n;
         debug_assert_eq!(current.len(), cells);
@@ -45,7 +45,7 @@ impl FractionalLaplacianAbsorption {
     /// step.  Given the forward Jacobian
     ///
     /// ```text
-    ///   J_curr = −dt·τ·L_y      (∂Δp_abs / ∂p[n])
+    ///   J_curr = −dt·τ·L_y      (∂Δp_abs / ∂p`N`)
     ///   J_prev =  dt·τ·L_y      (∂Δp_abs / ∂p[n−1])
     /// ```
     ///

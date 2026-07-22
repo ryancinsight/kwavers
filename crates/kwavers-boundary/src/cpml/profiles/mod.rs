@@ -69,8 +69,8 @@ use leto::Array1;
 ///
 /// ## Precomputed PML factors
 ///
-/// `pml_vel_*[i] = exp(-sigma_*_sg*[i] · Δt/2)` and
-/// `pml_den_*[i] = exp(-sigma_*[i] · Δt/2)` are computed once at construction
+/// `pml_vel_*`i` = exp(-sigma_*_sg*`i` · Δt/2)` and
+/// `pml_den_*`i` = exp(-sigma_*`i` · Δt/2)` are computed once at construction
 /// from the final sigma arrays (after radial-inner-z transparency is applied).
 /// They replace per-step per-element `exp()` evaluation in the split-field PML
 /// update, reducing the per-step cost from O(N) transcendental ops to O(N)
@@ -97,17 +97,17 @@ pub struct CPMLProfiles {
     pub b_x: Array1<f64>,
     pub b_y: Array1<f64>,
     pub b_z: Array1<f64>,
-    /// `exp(-sigma_x_sgx[i] · dt/2)` — staggered PML factor for `ux`.
+    /// `exp(-sigma_x_sgx`i` · dt/2)` — staggered PML factor for `ux`.
     pub pml_vel_x: Array1<f64>,
-    /// `exp(-sigma_y_sgy[j] · dt/2)` — staggered PML factor for `uy`.
+    /// `exp(-sigma_y_sgy`J` · dt/2)` — staggered PML factor for `uy`.
     pub pml_vel_y: Array1<f64>,
-    /// `exp(-sigma_z_sgz[k] · dt/2)` — staggered PML factor for `uz`.
+    /// `exp(-sigma_z_sgz`K` · dt/2)` — staggered PML factor for `uz`.
     pub pml_vel_z: Array1<f64>,
-    /// `exp(-sigma_x[i] · dt/2)` — collocated PML factor for `rhox`.
+    /// `exp(-sigma_x`i` · dt/2)` — collocated PML factor for `rhox`.
     pub pml_den_x: Array1<f64>,
-    /// `exp(-sigma_y[j] · dt/2)` — collocated PML factor for `rhoy`.
+    /// `exp(-sigma_y`J` · dt/2)` — collocated PML factor for `rhoy`.
     pub pml_den_y: Array1<f64>,
-    /// `exp(-sigma_z[k] · dt/2)` — collocated PML factor for `rhoz`.
+    /// `exp(-sigma_z`K` · dt/2)` — collocated PML factor for `rhoz`.
     pub pml_den_z: Array1<f64>,
 }
 

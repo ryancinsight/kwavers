@@ -58,7 +58,7 @@ impl Default for OxygenationConfig {
 ///
 /// Spatial maps of oxygen saturation and hemoglobin concentrations
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn estimate_oxygenation(
     absorption_maps: &[Array3<f64>],

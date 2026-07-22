@@ -10,8 +10,8 @@
 //! the DFT pair is:
 //!
 //! ```text
-//! F[k] = Σ_{n=0}^{N-1} f[n] · exp(−2πi k n / N)
-//! f[n] = (1/N) Σ_{k=0}^{N-1} F[k] · exp(+2πi k n / N)
+//! F`K` = Σ_{n=0}^{N-1} f`N` · exp(−2πi k n / N)
+//! f`N` = (1/N) Σ_{k=0}^{N-1} F`K` · exp(+2πi k n / N)
 //! ```
 //!
 //! Spatial derivatives in the wavenumber domain become multiplications:

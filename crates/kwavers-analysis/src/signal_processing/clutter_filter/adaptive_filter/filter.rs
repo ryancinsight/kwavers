@@ -24,7 +24,7 @@ pub struct AdaptiveFilter {
 impl AdaptiveFilter {
     /// Create a new adaptive filter with the given configuration.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(config: AdaptiveFilterConfig) -> KwaversResult<Self> {
         if config.noise_floor_threshold <= 0.0 || config.noise_floor_threshold >= 1.0 {
@@ -70,8 +70,8 @@ impl AdaptiveFilter {
     ///
     /// `slow_time_data` shape: `(n_pixels, n_frames)`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn filter(&mut self, slow_time_data: &Array2<f64>) -> KwaversResult<Array2<f64>> {
         let [n_pixels, n_frames] = slow_time_data.shape();

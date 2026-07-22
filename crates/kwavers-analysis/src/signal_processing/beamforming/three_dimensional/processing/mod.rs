@@ -35,7 +35,7 @@ where
     /// - Target: <10ms per volume with GPU acceleration
     /// - Speedup: 10-100× vs CPU implementation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "gpu")]
     pub fn process_volume(
@@ -90,7 +90,7 @@ impl BeamformingProcessor3D {
     /// only to kernels that implement them; the CPU DAS kernel processes the
     /// full volume in a single Rayon-parallel pass.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(not(feature = "gpu"))]
     pub fn process_volume(
@@ -144,8 +144,8 @@ where
     /// - `Some(volume)` when a complete volume is ready
     /// - `None` if buffer is still accumulating frames
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -194,7 +194,7 @@ impl BeamformingProcessor3D {
     /// `rf_frame` must be `[channels, samples, 1]` — the same trailing-1 layout
     /// used by the GPU streaming buffer.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(not(feature = "gpu"))]
     pub fn process_streaming(

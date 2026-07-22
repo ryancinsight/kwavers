@@ -34,15 +34,15 @@ const PSTD_DATASET_CFL_LIMIT: f64 = 0.3;
 /// PSTD acquisition settings for frequency-binned breast UST data.
 #[derive(Clone, Copy, Debug)]
 pub struct BreastUstPstdDatasetConfig {
-    /// Uniform grid spacing [m] for the phantom sound-speed volume.
+    /// Uniform grid spacing `m` for the phantom sound-speed volume.
     pub spacing_m: f64,
-    /// PSTD time step [s].
+    /// PSTD time step `s`.
     pub time_step_s: f64,
     /// Number of continuous-wave cycles simulated for each frequency.
     pub cycles_per_frequency: usize,
     /// Number of trailing cycles used for the complex frequency bin.
     pub frequency_bin_cycles: usize,
-    /// Scalar pressure-source amplitude [Pa] applied to each active row source.
+    /// Scalar pressure-source amplitude `Pa` applied to each active row source.
     pub source_amplitude_pa: f64,
     /// Scalar density [kg/m^3] used with the sound-speed phantom.
     pub density_kg_m3: f64,
@@ -110,9 +110,9 @@ impl BreastUstPstdDataset {
 /// Generate multi-row ring receiver data by PSTD simulation and frequency binning.
 ///
 /// # Theorem
-/// For each receiver trace `p_r[n]`, the returned complex datum is the
+/// For each receiver trace `p_r`N``, the returned complex datum is the
 /// rectangular-quadrature first Fourier coefficient
-/// `2/M * sum_{n=n0}^{n0+M-1} p_r[n] exp(-i 2 pi f n dt)` over the configured
+/// `2/M * sum_{n=n0}^{n0+M-1} p_r`N` exp(-i 2 pi f n dt)` over the configured
 /// trailing steady-state cycles. This is the discrete frequency bin consumed by
 /// the frequency-domain FWI solver.
 ///

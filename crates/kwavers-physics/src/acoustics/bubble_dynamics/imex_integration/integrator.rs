@@ -91,7 +91,7 @@ impl BubbleIMEXIntegrator {
 
     /// Integrate bubble dynamics for one time step using IMEX
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn step(
         &mut self,

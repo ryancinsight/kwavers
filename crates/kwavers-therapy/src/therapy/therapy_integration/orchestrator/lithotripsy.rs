@@ -62,7 +62,7 @@ use super::super::state::AcousticField;
 /// - Evan et al. (1998): "Shock wave lithotripsy-induced renal injury"
 /// - Cleveland & McAteer (2012): "Physics of shock-wave lithotripsy"
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn execute_lithotripsy_step(
     lithotripsy_simulator: &mut LithotripsySimulator,

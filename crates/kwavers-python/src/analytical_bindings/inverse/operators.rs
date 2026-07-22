@@ -13,7 +13,7 @@ use pyo3::prelude::*;
 /// Args:
 ///     n: Grid points.
 ///     k: Wave number [rad/m].
-///     dx: Grid spacing [m].
+///     dx: Grid spacing `m`.
 ///
 /// Returns:
 ///     Dense ndarray of shape (n, n).

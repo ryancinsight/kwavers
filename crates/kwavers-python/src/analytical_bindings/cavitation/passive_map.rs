@@ -34,12 +34,12 @@ pub fn integrate_receiver_array_psd(
 
 /// Integrate a passive-acoustic-map emission-energy field over a sonication volume.
 ///
-/// E(V_s) = sum_{voxels in mask} max(source[v], 0) * dv_m3
+/// E(V_s) = sum_{voxels in mask} max(source`V`, 0) * dv_m3
 ///
 /// Args:
 ///     source_map: Flattened emission-energy field.
 ///     mask: Flattened V_s mask (non-zero = inside V_s), same length.
-///     dv_m3: Voxel volume [m³].
+///     dv_m3: Voxel volume `m³`.
 ///
 /// Returns:
 ///     Total emission energy collected from V_s.

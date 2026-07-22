@@ -99,7 +99,7 @@ impl SafetyController {
 
     /// Update organ dose accumulation.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn accumulate_organ_dose(
         &mut self,

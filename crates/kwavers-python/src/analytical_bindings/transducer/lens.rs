@@ -10,13 +10,13 @@ use pyo3::prelude::*;
 /// focusing delay as the phased-array delay law: τ(r) = (√(F²+r²) − F)/c_medium.
 ///
 /// Args:
-///     radii_m: Aperture radii [m].
-///     focal_length_m: Design focal length F [m].
-///     aperture_m: Lens aperture (full width) [m].
+///     radii_m: Aperture radii `m`.
+///     focal_length_m: Design focal length F `m`.
+///     aperture_m: Lens aperture (full width) `m`.
 ///     medium_sound_speed: Medium sound speed c_medium [m/s].
 ///
 /// Returns:
-///     Focusing delay τ(r) [s] at each radius (0 at centre, monotone increasing).
+///     Focusing delay τ(r) `s` at each radius (0 at centre, monotone increasing).
 #[pyfunction]
 #[pyo3(signature = (radii_m, focal_length_m, aperture_m, medium_sound_speed))]
 pub fn acoustic_lens_delay_profile(
@@ -40,12 +40,12 @@ pub fn acoustic_lens_delay_profile(
 /// r_n = √(n·λ·F + (n·λ/2)²) for n = 1, 2, … while r_n ≤ aperture_radius_m.
 ///
 /// Args:
-///     focal_length_m: Primary focal length F [m].
-///     wavelength_m: Design wavelength λ = c/f [m].
-///     aperture_radius_m: Outer aperture radius [m].
+///     focal_length_m: Primary focal length F `m`.
+///     wavelength_m: Design wavelength λ = c/f `m`.
+///     aperture_radius_m: Outer aperture radius `m`.
 ///
 /// Returns:
-///     Zone boundary radii [m], increasing.
+///     Zone boundary radii `m`, increasing.
 #[pyfunction]
 #[pyo3(signature = (focal_length_m, wavelength_m, aperture_radius_m))]
 pub fn fresnel_zone_radii(
@@ -63,8 +63,8 @@ pub fn fresnel_zone_radii(
 /// lens (Maimbourg 2020, Eq. 2): θ_y = arcsin(x/F), T_z = F − √(F²−x²).
 ///
 /// Args:
-///     x_offsets_m: Transverse focus offsets [m].
-///     focal_length_m: Transducer focal length F [m].
+///     x_offsets_m: Transverse focus offsets `m`.
+///     focal_length_m: Transducer focal length F `m`.
 ///
 /// Returns:
 ///     (theta_y_rad, t_z_m) arrays; NaN where |x| > F (unphysical).
@@ -103,14 +103,14 @@ pub fn isoplanatic_steering_curve(
 /// Eq. 1): p(M) = φ̃/(2πf₀)·1/(1/c_water − 1/c_lens) + K.
 ///
 /// Args:
-///     phase_rad: Unwrapped correction phase φ̃ at each surface point [rad].
-///     frequency_hz: Drive frequency f₀ [Hz].
+///     phase_rad: Unwrapped correction phase φ̃ at each surface point `rad`.
+///     frequency_hz: Drive frequency f₀ `Hz`.
 ///     c_water: Coupling-medium sound speed [m/s].
 ///     c_lens: Lens sound speed [m/s].
-///     min_thickness_m: Minimal castable lens thickness K [m].
+///     min_thickness_m: Minimal castable lens thickness K `m`.
 ///
 /// Returns:
-///     Lens thickness p(M) [m] at each point (min equals min_thickness_m).
+///     Lens thickness p(M) `m` at each point (min equals min_thickness_m).
 #[pyfunction]
 #[pyo3(signature = (phase_rad, frequency_hz, c_water, c_lens, min_thickness_m))]
 pub fn corrective_lens_thickness(

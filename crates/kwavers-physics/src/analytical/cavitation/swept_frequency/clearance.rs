@@ -42,9 +42,9 @@ pub fn tissue_gas_diffusion(saturation_fraction: f64) -> GasDiffusionParams {
 /// sweep.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct InterPulseClearance {
-    /// Residual radius after passive dissolution over the interval [m].
+    /// Residual radius after passive dissolution over the interval `m`.
     pub residual_radius_passive_m: f64,
-    /// Residual radius of a daughter fragment after the interval [m].
+    /// Residual radius of a daughter fragment after the interval `m`.
     pub residual_radius_swept_m: f64,
     /// Residual void fraction with no sweep ∈ [0, initial].
     pub void_fraction_passive: f64,
@@ -60,8 +60,8 @@ pub struct InterPulseClearance {
 ///
 /// # Arguments
 /// * `initial_void_fraction` – void fraction deposited by the pulse (≥ 0).
-/// * `initial_radius_m` – representative residual bubble radius `R₀` [m].
-/// * `interval_s` – inter-pulse (OFF) interval `1/PRF` [s].
+/// * `initial_radius_m` – representative residual bubble radius `R₀` `m`.
+/// * `interval_s` – inter-pulse (OFF) interval `1/PRF` `s`.
 /// * `fragment_count` – daughter-bubble multiplicity `N ≥ 1` produced by the
 ///   clearing sweep (gas-volume-conserving: `r_frag = R₀·N^(−1/3)`). `N = 1`
 ///   means no fragmentation (sweep inactive) and recovers the passive result.
@@ -137,7 +137,7 @@ pub fn inter_pulse_residual_clearance(
     }
 }
 
-/// Closed-form Epstein–Plesset dissolution time `R₀ → 0` [s] for the given
+/// Closed-form Epstein–Plesset dissolution time `R₀ → 0` `s` for the given
 /// transport parameters (surface-tension-free quasi-static limit
 /// `τ = R₀²/(2·D·L·(1−f))`), exposed for sizing the inter-pulse interval. Falls
 /// back to the model's own estimate when available.

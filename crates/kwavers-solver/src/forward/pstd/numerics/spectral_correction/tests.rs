@@ -185,7 +185,7 @@ fn test_correction_methods_consistency() {
 /// Medium: homogeneous water, c_ref=SOUND_SPEED_WATER_SIM≈1498 m/s, ρ₀=1000 kg/m³.
 /// CFL=0.25 → dt=CFL·dx/c_ref.  Stable (CFL<1); Nyquist kappa ≈ sinc(π·CFL/2) ≈ 0.983.
 ///
-/// Initial pressure: unit-amplitude Gaussian p₀[i] = exp(-((i−i_src)*dx)²/(2·σ²))
+/// Initial pressure: unit-amplitude Gaussian p₀`i` = exp(-((i−i_src)*dx)²/(2·σ²))
 /// with σ=4·dx centered at i_src=nx/2=128 (domain centre).
 ///
 /// Sensor at i_snr=128+96=224; separation L=96·dx=0.096 m.

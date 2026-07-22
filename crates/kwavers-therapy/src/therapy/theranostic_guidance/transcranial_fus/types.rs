@@ -8,19 +8,19 @@ use leto::{Array1, Array2, Array3};
 pub struct TranscranialFusPlanConfig {
     /// Number of hemispherical transducer elements.
     pub element_count: usize,
-    /// Centre frequency [Hz].
+    /// Centre frequency `Hz`.
     pub frequency_hz: f64,
-    /// Hemisphere radius [m].
+    /// Hemisphere radius `m`.
     pub radius_m: f64,
-    /// Minimum polar angle for the element cap [rad].
+    /// Minimum polar angle for the element cap `rad`.
     pub cap_min_polar_rad: f64,
-    /// Maximum polar angle for the element cap [rad].
+    /// Maximum polar angle for the element cap `rad`.
     pub cap_max_polar_rad: f64,
     /// Brain sound speed [m/s].
     pub brain_c: f64,
     /// Skull sound speed [m/s].
     pub skull_c: f64,
-    /// Desired peak pressure at focus [Pa].
+    /// Desired peak pressure at focus `Pa`.
     pub target_peak_pa: f64,
     /// Number of samples along each skull ray.
     pub samples_per_ray: usize,
@@ -30,15 +30,15 @@ pub struct TranscranialFusPlanConfig {
     pub inertial_mi_threshold: f64,
     /// Brain tissue density [kg/m³].
     pub rho_brain: f64,
-    /// Subspot raster pitch [m].
+    /// Subspot raster pitch `m`.
     pub pitch_m: f64,
     /// Mechanical index for BBB opening.
     pub mechanical_index_bbb: f64,
-    /// Total sonication time [s].
+    /// Total sonication time `s`.
     pub sonication_s: f64,
     /// Duty cycle (0, 1].
     pub duty_cycle: f64,
-    /// Focal Gaussian radius for BBB dose accumulation [m].
+    /// Focal Gaussian radius for BBB dose accumulation `m`.
     pub focal_radius_m: f64,
     /// BBB Hill model D₅₀ dose.
     pub d50: f64,
@@ -75,7 +75,7 @@ impl Default for TranscranialFusPlanConfig {
 /// All outputs produced by the transcranial FUS planning pipeline.
 #[derive(Debug)]
 pub struct TranscranialFusPlan {
-    /// Synthesised peak-positive pressure field [Pa], shape (nx, ny, nz).
+    /// Synthesised peak-positive pressure field `Pa`, shape (nx, ny, nz).
     pub pressure_pa: Array3<f32>,
     /// Time-averaged intensity I = p²/(2ρc) [W/m²].
     pub intensity_w_m2: Array3<f32>,
@@ -83,15 +83,15 @@ pub struct TranscranialFusPlan {
     pub mechanical_index: Array3<f32>,
     /// Inertial-cavitation probability (logistic in MI).
     pub cavitation_probability: Array3<f32>,
-    /// Per-element phase correction [rad].
+    /// Per-element phase correction `rad`.
     pub phases_rad: Array1<f64>,
-    /// Per-element one-way skull delay [s].
+    /// Per-element one-way skull delay `s`.
     pub delays_s: Array1<f64>,
-    /// Per-element skull path length [m].
+    /// Per-element skull path length `m`.
     pub skull_lengths_m: Array1<f64>,
     /// Per-element amplitude transmission weight.
     pub amplitude_weights: Array1<f64>,
-    /// Element positions in 3-D space [m], shape (N, 3).
+    /// Element positions in 3-D space `m`, shape (N, 3).
     pub element_positions_m: Array2<f64>,
     /// GBM subspot voxel indices, shape (M, 3).
     pub subspot_indices: Array2<usize>,
@@ -107,6 +107,6 @@ pub struct TranscranialFusPlan {
     pub focus_index: [usize; 3],
     /// Number of active elements.
     pub element_count: usize,
-    /// Operating frequency [Hz].
+    /// Operating frequency `Hz`.
     pub frequency_hz: f64,
 }

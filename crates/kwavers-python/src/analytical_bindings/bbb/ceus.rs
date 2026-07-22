@@ -13,8 +13,8 @@ use pyo3::types::PyDict;
 ///
 /// Args:
 ///     c_mb_ul_ml: MB gas concentration [µL gas / mL tissue].
-///     sigma_bs_m2: Backscatter cross-section per bubble [m²].
-///     thickness_m: Tissue layer thickness [m].
+///     sigma_bs_m2: Backscatter cross-section per bubble `m²`.
+///     thickness_m: Tissue layer thickness `m`.
 ///
 /// Returns:
 ///     Backscatter signal [arbitrary units proportional to σ_bs].

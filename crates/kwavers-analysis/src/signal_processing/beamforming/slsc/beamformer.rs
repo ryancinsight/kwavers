@@ -181,7 +181,7 @@ impl SlscBeamformer {
     /// * Coherence image with shape (height, width)
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process_grid(
         &self,
@@ -219,7 +219,7 @@ impl SlscBeamformer {
     /// # Returns
     /// * Scaled coherence values in [0, 1] range
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn create_coherence_map(
         &self,

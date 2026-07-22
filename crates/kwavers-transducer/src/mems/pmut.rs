@@ -45,7 +45,7 @@ impl PiezoFilm {
             PiezoFilm::Pzt => 1300.0,
         }
     }
-    /// Film Young's modulus \[Pa].
+    /// Film Young's modulus \`Pa`.
     #[must_use]
     pub fn youngs(self) -> f64 {
         match self {
@@ -66,11 +66,11 @@ impl PiezoFilm {
 /// A single PMUT cell: piezo film `t_p` on a passive (Si) plate `t_s`, radius `a`.
 #[derive(Debug, Clone, Copy)]
 pub struct PmutCell {
-    /// Plate radius `a` \[m].
+    /// Plate radius `a` \`m`.
     pub radius: f64,
-    /// Piezo film thickness `t_p` \[m].
+    /// Piezo film thickness `t_p` \`m`.
     pub piezo_thickness: f64,
-    /// Passive (Si) layer thickness `t_s` \[m].
+    /// Passive (Si) layer thickness `t_s` \`m`.
     pub passive_thickness: f64,
     /// Piezo film material.
     pub film: PiezoFilm,
@@ -97,13 +97,13 @@ impl PmutCell {
         }
     }
 
-    /// Total plate thickness `t_p + t_s` \[m].
+    /// Total plate thickness `t_p + t_s` \`m`.
     #[must_use]
     pub fn total_thickness(&self) -> f64 {
         self.piezo_thickness + self.passive_thickness
     }
 
-    /// Membrane area `A = π a²` \[m²].
+    /// Membrane area `A = π a²` \`m²`.
     #[must_use]
     pub fn area(&self) -> f64 {
         PI * self.radius * self.radius
@@ -129,7 +129,7 @@ impl PmutCell {
             / self.total_thickness()
     }
 
-    /// In-vacuo composite-plate resonance \[Hz].
+    /// In-vacuo composite-plate resonance \`Hz`.
     #[must_use]
     pub fn vacuum_resonance(&self) -> f64 {
         plate::vacuum_resonance(
@@ -141,7 +141,7 @@ impl PmutCell {
         )
     }
 
-    /// Immersion (fluid-loaded) resonance \[Hz].
+    /// Immersion (fluid-loaded) resonance \`Hz`.
     #[must_use]
     pub fn immersion_resonance(&self, density_fluid: f64) -> f64 {
         plate::immersion_resonance(
@@ -170,7 +170,7 @@ impl PmutCell {
         (GEOMETRIC_FACTOR * k_mat2).min(0.95)
     }
 
-    /// Dielectric self-heating power `P = π f C V_ac² tan δ` \[W].
+    /// Dielectric self-heating power `P = π f C V_ac² tan δ` \`W`.
     #[must_use]
     pub fn self_heating_power(&self, drive_voltage_ac: f64, freq: f64) -> f64 {
         PI * freq
@@ -234,7 +234,7 @@ impl PmutCell {
     }
 
     /// Peak output pressure into the fluid for an AC drive `V` (plane-wave
-    /// radiation), `p = ρ c · ω · (w/V)·V` \[Pa]. Scales with drive — the
+    /// radiation), `p = ρ c · ω · (w/V)·V` \`Pa`. Scales with drive — the
     /// transmit advantage of PMUTs for therapy.
     #[must_use]
     pub fn max_output_pressure(

@@ -5,7 +5,7 @@ use eunomia::Complex64;
 use leto::Array1;
 
 impl TheoremValidator {
-    /// Validate Parseval's theorem: `∑|x[n]|² = (1/N) ∑|X[k]|²`
+    /// Validate Parseval's theorem: `∑|x`N`|² = (1/N) ∑|X`K`|²`
     #[must_use]
     pub fn validate_parsevals_theorem(
         time_domain: &Array1<f64>,

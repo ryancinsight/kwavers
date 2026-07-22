@@ -29,7 +29,7 @@ use std::{borrow::Cow, collections::HashMap};
 /// the modality with the highest mutual information with the underlying true tissue class $T$,
 /// maximizing $I(F; T) \geq \max_k I(I_k; T)$.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.

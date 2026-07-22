@@ -12,7 +12,7 @@
 //! - `A` [s⁻¹] is the frequency factor (pre-exponential)
 //! - `Ea` [J/mol] is the activation energy
 //! - `R_gas = 8.314 J/(mol·K)` is the universal gas constant
-//! - `T(t)` [K] is the instantaneous temperature
+//! - `T(t)` `K` is the instantaneous temperature
 //!
 //! Integration is by the rectangle rule (Asclepius). Cell death probability follows
 //! `P_death = 1 − exp(−Ω)`. Typical human tissue values:
@@ -33,8 +33,8 @@ use pyo3::prelude::*;
 ///
 /// Parameters
 /// ----------
-/// temperatures_k : temperature array [K] at each time point.
-/// times_s : uniformly-spaced time array [s], same length as temperatures_k.
+/// temperatures_k : temperature array `K` at each time point.
+/// times_s : uniformly-spaced time array `s`, same length as temperatures_k.
 /// ea_j_per_mol : activation energy Ea [J/mol].
 /// a_hz : frequency factor A [s⁻¹].
 ///

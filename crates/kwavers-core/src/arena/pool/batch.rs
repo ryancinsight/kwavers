@@ -138,7 +138,7 @@ impl NumaPoolManager {
 
     /// Acquire buffer from pool on specified NUMA node, with fallback.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
     ///
     pub fn acquire_on_node(&self, node: i32) -> KwaversResult<PooledBuffer> {
         if node >= 0 && (node as usize) < self.pools.len() {

@@ -44,7 +44,7 @@ pub enum SolverType {
     /// A.2.5 respectively.
     Elastic,
     /// Pseudospectral elastic solver — drives the canonical PSTD step loop
-    /// with the [`pstd::extensions::PstdElasticPlugin`] for full elastic
+    /// with the `pstd::extensions::PstdElasticPlugin` for full elastic
     /// (μ ≥ 0) propagation. With μ = 0 reduces exactly to baseline acoustic
     /// PSTD per the plugin's acoustic-fluid-limit theorem.
     ///

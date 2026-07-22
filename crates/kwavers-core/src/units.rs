@@ -27,7 +27,7 @@ pub fn neper_per_rad_s_m_to_db_per_mhz_cm(neper: f64, power_law_exponent: f64) -
 /// wavenumber in radians per metre.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] when `frequency_hz` is negative,
+/// Returns `KwaversError::InvalidInput` when `frequency_hz` is negative,
 /// non-finite, or when `sound_speed_m_s` is not finite and positive.
 pub fn frequency_to_wavenumber(frequency_hz: f64, sound_speed_m_s: f64) -> KwaversResult<f64> {
     if !sound_speed_m_s.is_finite() || sound_speed_m_s <= 0.0 {

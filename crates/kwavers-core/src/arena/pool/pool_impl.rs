@@ -37,7 +37,7 @@ impl BufferPool {
     /// 3. Initialize Treiber stack with all buffers
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: PoolConfig) -> KwaversResult<Arc<Self>> {
         if config.capacity == 0 || config.elements == 0 {
@@ -87,7 +87,7 @@ impl BufferPool {
 
     /// Acquire a buffer from the pool (Treiber stack pop).
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
     ///
     pub fn acquire(self: &Arc<Self>) -> KwaversResult<PooledBuffer> {
         loop {

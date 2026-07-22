@@ -32,7 +32,7 @@ pub struct FieldMetrics {
 
 /// Calculate comprehensive field metrics
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn calculate_field_metrics(
     pressure_field: ArrayView3<f64>,

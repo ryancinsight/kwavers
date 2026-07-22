@@ -73,7 +73,7 @@ impl PlanarApertureGeometry {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for non-finite geometry, a non-positive
+    /// Returns `KwaversError::Config` for non-finite geometry, a non-positive
     /// radius, or a zero normal.
     pub fn disk(center_m: [f64; 3], normal: [f64; 3], radius_m: f64) -> KwaversResult<Self> {
         let normal = normalized_normal(normal)?;
@@ -90,7 +90,7 @@ impl PlanarApertureGeometry {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] unless the shape bounds are valid and
+    /// Returns `KwaversError::Config` unless the shape bounds are valid and
     /// the first axis has a nonzero projection into the aperture plane.
     pub fn oriented(
         center_m: [f64; 3],
@@ -203,7 +203,7 @@ impl PlanarAperture {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for invalid geometry or pressure.
+    /// Returns `KwaversError::Config` for invalid geometry or pressure.
     pub fn disk(
         center_m: [f64; 3],
         normal: [f64; 3],
@@ -220,7 +220,7 @@ impl PlanarAperture {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for invalid geometry or pressure.
+    /// Returns `KwaversError::Config` for invalid geometry or pressure.
     pub fn oriented(
         center_m: [f64; 3],
         normal: [f64; 3],
@@ -238,7 +238,7 @@ impl PlanarAperture {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] when either phasor component is non-finite.
+    /// Returns `KwaversError::Config` when either phasor component is non-finite.
     pub fn new(
         geometry: PlanarApertureGeometry,
         surface_pressure_pa: Complex64,
@@ -326,7 +326,7 @@ impl RayleighLayer {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for non-finite coefficients, a
+    /// Returns `KwaversError::Config` for non-finite coefficients, a
     /// non-positive wavenumber, negative attenuation, or non-positive finite
     /// thickness.
     pub fn new(
@@ -358,7 +358,7 @@ impl RayleighPropagationPath {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] unless the wavenumber is finite and
+    /// Returns `KwaversError::Config` unless the wavenumber is finite and
     /// positive and attenuation is finite and non-negative.
     pub fn homogeneous(wavenumber_rad_m: f64, attenuation_np_m: f64) -> KwaversResult<Self> {
         Self::layered(vec![RayleighLayer::new(
@@ -375,7 +375,7 @@ impl RayleighPropagationPath {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for an empty or structurally invalid
+    /// Returns `KwaversError::Config` for an empty or structurally invalid
     /// layer sequence.
     pub fn layered(layers: Vec<RayleighLayer>) -> KwaversResult<Self> {
         if layers.is_empty() {
@@ -408,7 +408,7 @@ impl RayleighPropagationPath {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] when `range_m` is not finite or is
+    /// Returns `KwaversError::Config` when `range_m` is not finite or is
     /// negative.
     pub fn propagation_terms(&self, range_m: f64) -> KwaversResult<(f64, f64)> {
         if !range_m.is_finite() || range_m < 0.0 {
@@ -448,7 +448,7 @@ impl RayleighIntegralSpec {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] unless the wavenumber is finite and
+    /// Returns `KwaversError::Config` unless the wavenumber is finite and
     /// positive, attenuation is finite and non-negative, radial order is
     /// positive, and azimuthal order is at least three.
     pub fn new(
@@ -472,7 +472,7 @@ impl RayleighIntegralSpec {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for an empty or structurally invalid
+    /// Returns `KwaversError::Config` for an empty or structurally invalid
     /// layer sequence, or invalid quadrature work.
     pub fn layered(
         layers: Vec<RayleighLayer>,
@@ -490,7 +490,7 @@ impl RayleighIntegralSpec {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::Config`] for invalid or excessive quadrature
+    /// Returns `KwaversError::Config` for invalid or excessive quadrature
     /// work.
     pub fn from_path(
         path: RayleighPropagationPath,
@@ -548,7 +548,7 @@ impl RayleighIntegralSpec {
 ///
 /// # Errors
 ///
-/// Returns [`KwaversError::Config`] if an observation coordinate is non-finite
+/// Returns `KwaversError::Config` if an observation coordinate is non-finite
 /// or the quadrature root solver fails to converge.
 pub fn rayleigh_pressure(
     points_m: &[[f64; 3]],

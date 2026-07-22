@@ -97,7 +97,7 @@ impl PennesBioheat {
     /// removing one `Array3<f64>` allocation per bioheat step.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update(
         &self,

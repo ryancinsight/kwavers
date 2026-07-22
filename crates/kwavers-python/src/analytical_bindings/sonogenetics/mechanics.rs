@@ -47,13 +47,13 @@ pub fn acoustic_dipole_contrast(density_ratio: f64) -> f64 {
     sonogenetics::acoustic_dipole_contrast(density_ratio)
 }
 
-/// One-dimensional Gor'kov primary radiation force `F = −dU/dx` [N] on a small
+/// One-dimensional Gor'kov primary radiation force `F = −dU/dx` `N` on a small
 /// sphere (Eq. 17.2), from the spatial gradients of `⟨p²⟩` and `⟨v²⟩`:
 ///
 /// `F = −(2π r³/3)·[ f₁·∂⟨p²⟩/∂x /(ρc²) − (3/2)·f₂·ρ·∂⟨v²⟩/∂x ]`.
 ///
 /// Args:
-///     radius_m: Sphere radius r [m] (r ≪ λ).
+///     radius_m: Sphere radius r `m` (r ≪ λ).
 ///     grad_pressure_sq: ∂⟨p²⟩/∂x [Pa²/m].
 ///     grad_velocity_sq: ∂⟨v²⟩/∂x [(m/s)²/m].
 ///     rho_medium: Medium density ρ [kg/m³].
@@ -62,7 +62,7 @@ pub fn acoustic_dipole_contrast(density_ratio: f64) -> f64 {
 ///     compressibility_ratio: κ̃ = κ_sphere/κ_medium.
 ///
 /// Returns:
-///     Radiation force [N].
+///     Radiation force `N`.
 #[pyfunction]
 #[pyo3(signature = (
     radius_m, grad_pressure_sq, grad_velocity_sq,
@@ -95,7 +95,7 @@ pub fn gorkov_radiation_force_1d(
 ///     mu_pa_s: Dynamic viscosity [Pa·s].
 ///     alpha_np_m: Attenuation [Np/m].
 ///     c: Sound speed [m/s].
-///     l_m: Beam propagation length [m].
+///     l_m: Beam propagation length `m`.
 ///
 /// Returns:
 ///     Streaming velocity [m/s].

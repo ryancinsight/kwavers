@@ -8,9 +8,9 @@ use pyo3::prelude::*;
 /// Compute the lateral point-spread function using a sinc² model.
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
+///     x_arr: Lateral positions `m`.
 ///     f_number: F-number (focal length / aperture).
-///     wavelength_m: Acoustic wavelength [m].
+///     wavelength_m: Acoustic wavelength `m`.
 ///
 /// Returns:
 ///     Normalised lateral PSF array.
@@ -32,9 +32,9 @@ pub fn lateral_psf_sinc2(
 /// Compute the axial point-spread function using a rectangular-spectrum model.
 ///
 /// Args:
-///     z_arr: Axial positions [m].
+///     z_arr: Axial positions `m`.
 ///     c: Sound speed [m/s].
-///     bandwidth_hz: Transducer −6 dB bandwidth [Hz].
+///     bandwidth_hz: Transducer −6 dB bandwidth `Hz`.
 ///
 /// Returns:
 ///     Normalised axial PSF array.
@@ -56,10 +56,10 @@ pub fn axial_psf_rect(
 /// Compute the plane-wave compounding lateral PSF.
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
+///     x_arr: Lateral positions `m`.
 ///     n_angles: Number of compounding angles.
 ///     f_number: F-number.
-///     wavelength_m: Wavelength [m].
+///     wavelength_m: Wavelength `m`.
 ///
 /// Returns:
 ///     Normalised compounded lateral PSF array.
@@ -85,10 +85,10 @@ pub fn pw_compounding_lateral_psf(
 ///
 /// Args:
 ///     f_number: F-number.
-///     wavelength_m: Wavelength [m].
+///     wavelength_m: Wavelength `m`.
 ///
 /// Returns:
-///     Lateral resolution [m].
+///     Lateral resolution `m`.
 #[pyfunction]
 #[pyo3(signature = (f_number, wavelength_m))]
 pub fn lateral_resolution_m(f_number: f64, wavelength_m: f64) -> PyResult<f64> {

@@ -10,7 +10,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// # Arguments
 /// * `active` — bool mask selecting which elements contribute.
 /// * `shape_nxnynz` — grid dimensions (nx, ny, nz).
-/// * `spacing_m` — voxel spacing [m].
+/// * `spacing_m` — voxel spacing `m`.
 /// * `target_index_xyz` — grid index of the focus (origin of the coordinate system).
 /// * `target_peak_pa` — desired peak pressure at the maximum point.
 /// * `chunk_size` — number of grid points processed per iteration.

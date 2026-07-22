@@ -48,7 +48,7 @@ impl BeamSteering {
 
     /// Set steering angles (azimuth and elevation in degrees)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_steering_angles(&mut self, azimuth: f64, elevation: f64) -> KwaversResult<()> {
         if azimuth.to_radians().abs() > MAX_STEERING_ANGLE

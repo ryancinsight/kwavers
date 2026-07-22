@@ -284,7 +284,7 @@ fn second_order_does_not_worsen_pstd_match() {
     );
 }
 
-/// The finite-window Born source term `-chi * (p0[n+1] - 2p0[n] + p0[n-1])`
+/// The finite-window Born source term `-chi * (p0[n+1] - 2p0`N` + p0[n-1])`
 /// is the Fréchet derivative of the production PSTD acquisition map at the
 /// homogeneous reference.  This test compares the Born increment against a
 /// small-contrast PSTD finite difference.

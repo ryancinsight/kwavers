@@ -9,13 +9,13 @@ use crate::kwave_array_py::KWaveArray;
 
 #[pymethods]
 impl Source {
-    /// Source frequency [Hz].
+    /// Source frequency `Hz`.
     #[getter]
     fn frequency(&self) -> f64 {
         self.frequency
     }
 
-    /// Source amplitude [Pa].
+    /// Source amplitude `Pa`.
     #[getter]
     fn amplitude(&self) -> f64 {
         self.amplitude

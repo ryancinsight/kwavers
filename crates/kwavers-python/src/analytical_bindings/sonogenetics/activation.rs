@@ -10,8 +10,8 @@ use pyo3::prelude::*;
 /// P(p) = p^n / (p_threshold^n + p^n)
 ///
 /// Args:
-///     pressure_arr: Pressure amplitude array [Pa].
-///     p_threshold_pa: Half-activation pressure [Pa].
+///     pressure_arr: Pressure amplitude array `Pa`.
+///     p_threshold_pa: Half-activation pressure `Pa`.
 ///     hill_n: Hill coefficient.
 ///
 /// Returns:

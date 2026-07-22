@@ -10,7 +10,7 @@ use eunomia::Complex64;
 /// attenuation follow from the complex wavenumber `k = ω √(ρ / G*)`.
 #[derive(Debug, Clone, Copy)]
 pub struct KelvinVoigtModel {
-    /// Elastic shear modulus `μ` \[Pa].
+    /// Elastic shear modulus `μ` \`Pa`.
     shear_modulus: f64,
     /// Shear viscosity `η_s` \[Pa·s].
     shear_viscosity: f64,
@@ -19,7 +19,7 @@ pub struct KelvinVoigtModel {
 }
 
 impl KelvinVoigtModel {
-    /// Create a Kelvin–Voigt model from shear modulus `μ` \[Pa], shear viscosity
+    /// Create a Kelvin–Voigt model from shear modulus `μ` \`Pa`, shear viscosity
     /// `η_s` \[Pa·s], and density `ρ` \[kg·m⁻³].
     ///
     /// Returns `None` if `μ ≤ 0`, `η_s < 0`, or `ρ ≤ 0` (unphysical).
@@ -36,19 +36,19 @@ impl KelvinVoigtModel {
         }
     }
 
-    /// Complex shear modulus `G*(ω) = μ + i ω η_s` \[Pa].
+    /// Complex shear modulus `G*(ω) = μ + i ω η_s` \`Pa`.
     #[must_use]
     pub fn complex_modulus(&self, omega: f64) -> Complex64 {
         Complex64::new(self.shear_modulus, omega * self.shear_viscosity)
     }
 
-    /// Storage (elastic) modulus `G'(ω) = μ` \[Pa].
+    /// Storage (elastic) modulus `G'(ω) = μ` \`Pa`.
     #[must_use]
     pub fn storage_modulus(&self, _omega: f64) -> f64 {
         self.shear_modulus
     }
 
-    /// Loss (viscous) modulus `G''(ω) = ω η_s` \[Pa].
+    /// Loss (viscous) modulus `G''(ω) = ω η_s` \`Pa`.
     #[must_use]
     pub fn loss_modulus(&self, omega: f64) -> f64 {
         omega * self.shear_viscosity

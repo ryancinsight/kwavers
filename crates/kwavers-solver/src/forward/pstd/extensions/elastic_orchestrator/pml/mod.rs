@@ -40,7 +40,7 @@
 //! ```
 //!
 //! The exponential factor is precomputed once at PML construction
-//! (`damping_x[i] = exp(−σ_α(x_i)·dt)`) and applied each step as a
+//! (`damping_x`i` = exp(−σ_α(x_i)·dt)`) and applied each step as a
 //! per-cell multiply. This is simpler than Berenger's split-field PML —
 //! it doesn't require splitting velocity and stress into directional
 //! sub-fields — but achieves the same exponential absorption at the cost
@@ -65,7 +65,7 @@ pub struct ElasticPml {
     /// Number of grid cells in the absorbing layer per side along each
     /// axis. `0` ⇒ no PML on that axis.
     thickness_cells: (usize, usize, usize),
-    /// `damping_x[i] = exp(−σ_x(i)·dt)` ∈ (0, 1].  Outside the absorbing
+    /// `damping_x`i` = exp(−σ_x(i)·dt)` ∈ (0, 1].  Outside the absorbing
     /// layer this is exactly 1.0.
     damping_x: Array1<f64>,
     damping_y: Array1<f64>,
@@ -149,8 +149,8 @@ impl ElasticPml {
     }
 
     /// Apply the PML damping to a real-space velocity / displacement
-    /// field, in place.  `damping_field[i, j, k] *= damping_x[i] *
-    /// damping_y[j] * damping_z[k]`.
+    /// field, in place.  `damping_field[i, j, k] *= damping_x`i` *
+    /// damping_y`J` * damping_z`K``.
     pub fn apply_to_field(&self, field: &mut Array3<f64>) {
         let dx_s = self.damping_x.as_slice().expect("damping_x contiguous");
         let dy_s = self.damping_y.as_slice().expect("damping_y contiguous");
@@ -224,8 +224,8 @@ pub(super) fn build_axis_damping(
 /// `σ_max = −(p+1) c_max ln(r0) / (2L)` (Roden & Gedney 2000 eq. 25).
 ///
 /// Returned arrays (length `n`):
-/// - `alpha[i] = exp(−σ_i · dt)` ∈ (0, 1].  Interior: `alpha = 1`.
-/// - `beta[i]  = (1 − alpha[i]) / σ_i` for σ_i > 0; otherwise `dt`.
+/// - `alpha`i` = exp(−σ_i · dt)` ∈ (0, 1].  Interior: `alpha = 1`.
+/// - `beta`i`  = (1 − alpha`i`) / σ_i` for σ_i > 0; otherwise `dt`.
 ///   Absorbs `dt` so the caller's RHS need not carry the time-step factor
 ///   (exact integrator: `f^{n+1} = alpha·f^n + beta·g`, where in the
 ///   interior α=1, β=dt → standard leapfrog).

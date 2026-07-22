@@ -46,7 +46,7 @@ impl ConvexArrayGeometry {
     /// Build from an explicit angular pitch `Δθ` \[rad\] between adjacent elements.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `radius_of_curvature ≤ 0`,
+    /// - `KwaversError::InvalidInput` if `radius_of_curvature ≤ 0`,
     ///   `num_elements == 0`, or `angular_pitch` is non-finite/`≤ 0`.
     pub fn from_angular_pitch(
         radius_of_curvature: f64,
@@ -80,7 +80,7 @@ impl ConvexArrayGeometry {
     /// The angular pitch is `Δθ = arc_pitch / R_c`.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] on the same conditions as
+    /// - `KwaversError::InvalidInput` on the same conditions as
     ///   [`Self::from_angular_pitch`], with `arc_pitch_m > 0`.
     pub fn from_arc_pitch(
         radius_of_curvature: f64,
@@ -105,7 +105,7 @@ impl ConvexArrayGeometry {
     /// single element the angular pitch is unused; a sentinel `Θ` is required `> 0`.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `num_elements < 2` (use
+    /// - `KwaversError::InvalidInput` if `num_elements < 2` (use
     ///   [`Self::from_angular_pitch`] for a single element) or `total_angle ≤ 0`.
     pub fn from_total_angle(
         radius_of_curvature: f64,
@@ -224,7 +224,7 @@ impl ConvexArrayGeometry {
     /// simultaneously. All delays are `≥ 0`.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `sound_speed` is non-finite/`≤ 0`.
+    /// - `KwaversError::InvalidInput` if `sound_speed` is non-finite/`≤ 0`.
     pub fn focusing_delays(
         &self,
         focal_point: [f64; 3],

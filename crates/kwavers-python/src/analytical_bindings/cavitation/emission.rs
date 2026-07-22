@@ -16,12 +16,12 @@ use pyo3::prelude::*;
 /// resulting spectrum is emergent, not imposed.
 ///
 /// Args:
-///     r0_m: Equilibrium radius [m].
-///     drive_amp_pa: Peak acoustic drive pressure [Pa].
-///     drive_freq_hz: Drive frequency [Hz].
+///     r0_m: Equilibrium radius `m`.
+///     drive_amp_pa: Peak acoustic drive pressure `Pa`.
+///     drive_freq_hz: Drive frequency `Hz`.
 ///     n_cycles: Number of drive cycles to simulate.
 ///     n_out: Number of uniform output samples.
-///     r_obs_m: Far-field observation distance [m].
+///     r_obs_m: Far-field observation distance `m`.
 ///     p0_pa, rho, c_liquid, mu, sigma, pv, gamma: liquid/gas properties.
 ///     thermal_effects: include gas thermodynamics + mass transfer.
 ///
@@ -102,7 +102,7 @@ pub fn simulate_bubble_emission(
 ///         simulate_bubble_emission.
 ///     chi: shell elastic compression modulus χ [N/m] (lipid ≈ 0.25–1.0).
 ///     shell_viscosity: shell shear viscosity [Pa·s] (lipid ≈ 0.5).
-///     shell_thickness: shell thickness [m] (lipid ≈ 3e-9).
+///     shell_thickness: shell thickness `m` (lipid ≈ 3e-9).
 ///     sigma_initial: unstressed shell surface tension [N/m] (≈ 0.04).
 ///     steps_per_cycle: RK4 sub-steps per drive cycle.
 ///     p0_pa, rho, c_liquid, mu, gamma: liquid/gas properties.

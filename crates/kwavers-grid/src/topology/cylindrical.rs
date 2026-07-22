@@ -50,7 +50,7 @@ impl CylindricalTopology {
 
     /// Create a cylindrical topology with custom origin
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn with_origin(
         nz: usize,
@@ -105,7 +105,7 @@ impl CylindricalTopology {
 
     /// Compute standard FFT wavenumbers
     ///
-    /// k[i] = 2π * freq[i] following FFT convention:
+    /// k`i` = 2π * freq`i` following FFT convention:
     /// [0, 1, 2, ..., N/2, -N/2+1, ..., -1] / (N * d)
     fn compute_fft_wavenumbers(n: usize, d: f64) -> Array1<f64> {
         let dk = TWO_PI / (n as f64 * d);

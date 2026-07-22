@@ -51,7 +51,7 @@ fn try_gpu_fft_plan(nx: usize, ny: usize, nz: usize) -> Option<GpuFft3d> {
 }
 
 /// Build a deterministic 1-D complex test signal of length `n`.
-/// x[k] = cos(2π·3k/n) + 0.5·sin(2π·7k/n), for k=0..n.
+/// x`K` = cos(2π·3k/n) + 0.5·sin(2π·7k/n), for k=0..n.
 fn test_signal_1d(n: usize) -> Vec<f64> {
     use std::f64::consts::TAU;
     (0..n)

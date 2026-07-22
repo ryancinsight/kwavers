@@ -40,7 +40,7 @@ impl EMFieldUtils {
     /// Checks that electric and magnetic field arrays have compatible shapes
     /// for electromagnetic wave propagation.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

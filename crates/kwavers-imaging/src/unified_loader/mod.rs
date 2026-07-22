@@ -57,8 +57,8 @@ impl std::fmt::Debug for UnifiedMedicalImageLoader {
 impl UnifiedMedicalImageLoader {
     /// Create loader from file path (auto-detect format).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if file not found or format unsupported.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if file not found or format unsupported.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn from_path(path: &str) -> KwaversResult<Self> {
         if !Path::new(path).exists() {
@@ -94,7 +94,7 @@ impl UnifiedMedicalImageLoader {
 
     /// Load medical image from the configured file path.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if no file path has been set.
+    /// - Returns `KwaversError::InvalidInput` if no file path has been set.
     ///
     pub fn load(&mut self) -> KwaversResult<Array3<f64>> {
         if self.file_path.is_empty() {
@@ -107,7 +107,7 @@ impl UnifiedMedicalImageLoader {
 
     /// Load from a custom path (overrides internal path).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if file not found.
+    /// - Returns `KwaversError::InvalidInput` if file not found.
     ///
     pub fn load_from(&mut self, path: &str) -> KwaversResult<Array3<f64>> {
         if !Path::new(path).exists() {

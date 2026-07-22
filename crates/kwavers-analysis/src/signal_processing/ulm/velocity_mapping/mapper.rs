@@ -25,7 +25,7 @@ impl VelocityMapper {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] if `pixel_size ≤ 0`, extents ≤ 0,
+    /// Returns `KwaversError::InvalidInput` if `pixel_size ≤ 0`, extents ≤ 0,
     /// or `frame_dt ≤ 0`.
     pub fn new(config: VelocityMapConfig) -> KwaversResult<Self> {
         if config.pixel_size <= 0.0 {

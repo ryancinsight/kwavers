@@ -31,11 +31,11 @@ impl RadicalDiffusionSolver {
     /// ```text
     /// λ_j = α_j · dt / 2
     ///
-    /// RHS[j] = c[j] + λ_j · (∂²c/∂ξ² + ∂c/∂ξ)   [explicit half, old c]
+    /// RHS`J` = c`J` + λ_j · (∂²c/∂ξ² + ∂c/∂ξ)   [explicit half, old c]
     ///
-    /// LHS: (1 + 2λ_j/Δξ²) · c_new[j]
+    /// LHS: (1 + 2λ_j/Δξ²) · c_new`J`
     ///      − λ_j · (1/Δξ² − 1/(2Δξ)) · c_new[j−1]
-    ///      − λ_j · (1/Δξ² + 1/(2Δξ)) · c_new[j+1] = RHS[j]
+    ///      − λ_j · (1/Δξ² + 1/(2Δξ)) · c_new[j+1] = RHS`J`
     /// ```
     ///
     /// where the `1/(2Δξ)` factor comes from the central-difference approximation
@@ -152,8 +152,8 @@ fn build_rhs(
 /// The LHS operator is `(I − λ_j · L_ξ)` where:
 ///
 /// ```text
-/// L_ξ c[j] = c[j-1]·(1/Δξ² − 1/(2Δξ))
-///            − c[j]·(2/Δξ²)
+/// L_ξ c`J` = c[j-1]·(1/Δξ² − 1/(2Δξ))
+///            − c`J`·(2/Δξ²)
 ///            + c[j+1]·(1/Δξ² + 1/(2Δξ))
 /// ```
 ///

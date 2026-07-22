@@ -37,7 +37,7 @@ pub struct NeuralBeamformingConfig {
 impl NeuralBeamformingConfig {
     /// Validate configuration parameters.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.network_architecture.len() < 2 {

@@ -54,7 +54,7 @@ impl SpatiallyVaryingAbsorption {
     }
     /// Apply frequency domain.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn apply_frequency_domain(
         &self,
@@ -79,7 +79,7 @@ impl SpatiallyVaryingAbsorption {
     }
     /// Apply directional.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn apply_directional(
         &self,
@@ -106,7 +106,7 @@ impl SpatiallyVaryingAbsorption {
     }
     /// Phase velocity field.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn phase_velocity_field(
         &self,

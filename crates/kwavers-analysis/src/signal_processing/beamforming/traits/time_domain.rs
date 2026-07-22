@@ -104,7 +104,7 @@ pub trait TimeDomainBeamformer: Beamformer<Input = f64, Output = f64> {
     ///
     /// For Hamming window:
     /// ```text
-    /// w[n] = 0.54 - 0.46·cos(2πn/(N-1))
+    /// w`N` = 0.54 - 0.46·cos(2πn/(N-1))
     /// ```
     fn apodization_weight(&self, _sensor_index: usize) -> f64 {
         1.0 // Default: uniform (rectangular) window

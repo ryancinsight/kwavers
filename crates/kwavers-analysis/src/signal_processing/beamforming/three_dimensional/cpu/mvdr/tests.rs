@@ -29,7 +29,7 @@ fn make_config(
 /// The output equals |x̄[0]| = |rf_get(0, 0, τ₀)|.
 ///
 /// ## Proof
-/// R = (1/N) Σ_n x₀[n]²  (1×1 positive scalar, call it σ²).
+/// R = (1/N) Σ_n x₀`N`²  (1×1 positive scalar, call it σ²).
 /// R_δ = σ²(1 + δ)   (loading multiplies σ² by (1+δ)).
 /// u = 1/R_δ  (1×1 inverse).
 /// denom = 1ᵀu = 1/R_δ.

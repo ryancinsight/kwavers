@@ -39,7 +39,7 @@ pub fn envelope(rf: &Array1<f64>) -> Array1<f64> {
 /// ```
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] when `dynamic_range_db ≤ 0` or the
+/// Returns `KwaversError::InvalidInput` when `dynamic_range_db ≤ 0` or the
 /// envelope is empty.
 pub fn log_compress(env: &Array1<f64>, dynamic_range_db: f64) -> KwaversResult<Array1<f64>> {
     if dynamic_range_db <= 0.0 {

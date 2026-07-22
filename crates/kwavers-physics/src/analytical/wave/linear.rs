@@ -1,14 +1,14 @@
 /// Compute the pressure field of a 1-D standing wave.
 ///
 /// ```text
-/// p(x, t) = p₀ · sin(k·x) · cos(ω·t)   [Pa]
+/// p(x, t) = p₀ · sin(k·x) · cos(ω·t)   `Pa`
 /// ```
 ///
 /// # Arguments
-/// * `p0` – peak pressure amplitude [Pa]
+/// * `p0` – peak pressure amplitude `Pa`
 /// * `k` – wavenumber [rad/m]
-/// * `x_arr` – spatial positions [m]
-/// * `omega_t` – phase `ω·t` [rad]
+/// * `x_arr` – spatial positions `m`
+/// * `omega_t` – phase `ω·t` `rad`
 #[must_use]
 #[inline]
 pub fn standing_wave_1d(p0: f64, k: f64, x_arr: &[f64], omega_t: f64) -> Vec<f64> {
@@ -19,14 +19,14 @@ pub fn standing_wave_1d(p0: f64, k: f64, x_arr: &[f64], omega_t: f64) -> Vec<f64
 /// Compute the pressure field of a 1-D plane wave.
 ///
 /// ```text
-/// p(x, t) = A · cos(k·x − ω·t)   [Pa]
+/// p(x, t) = A · cos(k·x − ω·t)   `Pa`
 /// ```
 ///
 /// # Arguments
-/// * `amplitude` – peak amplitude [Pa]
+/// * `amplitude` – peak amplitude `Pa`
 /// * `k` – wavenumber [rad/m]
-/// * `x_arr` – spatial positions [m]
-/// * `omega_t` – `ω·t` [rad]
+/// * `x_arr` – spatial positions `m`
+/// * `omega_t` – `ω·t` `rad`
 #[must_use]
 #[inline]
 pub fn plane_wave_pressure_1d(amplitude: f64, k: f64, x_arr: &[f64], omega_t: f64) -> Vec<f64> {
@@ -39,7 +39,7 @@ pub fn plane_wave_pressure_1d(amplitude: f64, k: f64, x_arr: &[f64], omega_t: f6
 /// Compute pressure and particle velocity for a 1-D progressive plane wave.
 ///
 /// ```text
-/// p(x, t) = A · cos(k·x − ω·t)       [Pa]
+/// p(x, t) = A · cos(k·x − ω·t)       `Pa`
 /// u(x, t) = p(x, t) / (ρ c)          [m/s]
 /// ```
 ///
@@ -85,11 +85,11 @@ pub fn plane_wave_pressure_velocity_1d(
 /// ```
 ///
 /// # Arguments
-/// * `x_arr` – spatial positions [m]
-/// * `center_m` – pulse center `x0` [m]
-/// * `sigma_m` – Gaussian standard deviation [m]
-/// * `wavelength_m` – carrier wavelength [m]
-/// * `amplitude_pa` – pressure amplitude [Pa]
+/// * `x_arr` – spatial positions `m`
+/// * `center_m` – pulse center `x0` `m`
+/// * `sigma_m` – Gaussian standard deviation `m`
+/// * `wavelength_m` – carrier wavelength `m`
+/// * `amplitude_pa` – pressure amplitude `Pa`
 ///
 /// # Errors
 /// Returns an error when any input is non-finite, `sigma_m <= 0`, or
@@ -137,9 +137,9 @@ pub fn gaussian_modulated_pulse_1d(
 /// book figures.
 ///
 /// # Arguments
-/// * `x_arr` – strictly increasing spatial positions [m]
-/// * `initial_pressure` – `g(x)` sampled at `x_arr` [Pa]
-/// * `shift_m` – propagation distance `c t` [m]
+/// * `x_arr` – strictly increasing spatial positions `m`
+/// * `initial_pressure` – `g(x)` sampled at `x_arr` `Pa`
+/// * `shift_m` – propagation distance `c t` `m`
 ///
 /// # Errors
 /// Returns an error when the coordinate and pressure lengths differ, the axis
@@ -182,7 +182,7 @@ pub fn dalembert_split_solution_1d(
 /// Real part of the spherical-wave Green's function (far-field).
 ///
 /// ```text
-/// p(r) = A · cos(k·r) / r   [Pa]
+/// p(r) = A · cos(k·r) / r   `Pa`
 /// ```
 ///
 /// Singularity at r = 0 is guarded: returns `f64::INFINITY` there.
@@ -212,7 +212,7 @@ pub fn spherical_wave_pressure(amplitude: f64, k: f64, r_arr: &[f64]) -> Vec<f64
 /// arrays start at one.
 ///
 /// # Arguments
-/// * `r_arr` - strictly positive finite radial distances [m]
+/// * `r_arr` - strictly positive finite radial distances `m`
 ///
 /// # Errors
 /// Returns an error when `r_arr` is empty or contains a non-finite or
@@ -289,7 +289,7 @@ pub fn transmission_pressure_coeff(z1: f64, z2: f64) -> f64 {
 /// ```
 ///
 /// # Arguments
-/// * `f_hz` – frequencies [Hz]
+/// * `f_hz` – frequencies `Hz`
 /// * `alpha0` – attenuation coefficient [Np/m/Hz^y]
 /// * `y` – power-law exponent (typically 1–2)
 ///
@@ -308,7 +308,7 @@ pub fn power_law_attenuation_np_m(f_hz: &[f64], alpha0: f64, y: f64) -> Vec<f64>
 /// ```
 ///
 /// # Arguments
-/// * `f_mhz` – frequencies [MHz]
+/// * `f_mhz` – frequencies `MHz`
 /// * `alpha0` – attenuation coefficient [dB/(cm·MHz^y)]
 /// * `y` – power-law exponent
 #[must_use]
@@ -331,7 +331,7 @@ pub fn absorption_power_law_db_cm(f_mhz: &[f64], alpha0: f64, y: f64) -> Vec<f64
 /// conductivity contributions.
 ///
 /// # Arguments
-/// * `freqs_hz` – frequencies [Hz]
+/// * `freqs_hz` – frequencies `Hz`
 /// * `delta_m2_s` – acoustic diffusivity δ [m²/s]
 /// * `c0` – small-signal sound speed [m/s]
 ///
@@ -367,9 +367,9 @@ pub fn stokes_kirchhoff_absorption_np_m(freqs_hz: &[f64], delta_m2_s: f64, c0: f
 /// suppression in the frequency domain (Harris 1978).
 ///
 /// # Arguments
-/// * `t_arr` – time sample points [s]; need not start at zero
-/// * `amplitude_pa` – peak pressure amplitude [Pa]
-/// * `freq_hz` – carrier frequency [Hz]
+/// * `t_arr` – time sample points `s`; need not start at zero
+/// * `amplitude_pa` – peak pressure amplitude `Pa`
+/// * `freq_hz` – carrier frequency `Hz`
 /// * `n_cycles` – number of cycles in the burst (positive real)
 ///
 /// # Reference
@@ -474,11 +474,11 @@ pub fn centered_hann_tone_burst_waveform(
 /// performing any PRF computation in Python.
 ///
 /// # Arguments
-/// * `t_arr` – full simulation time axis [s]
-/// * `amplitude_pa` – per-burst peak amplitude [Pa]
-/// * `freq_hz` – carrier frequency [Hz]
+/// * `t_arr` – full simulation time axis `s`
+/// * `amplitude_pa` – per-burst peak amplitude `Pa`
+/// * `freq_hz` – carrier frequency `Hz`
 /// * `n_cycles` – cycles per burst
-/// * `t_starts` – burst start times [s]; any order, duplicates allowed
+/// * `t_starts` – burst start times `s`; any order, duplicates allowed
 ///
 /// # Reference
 /// Harris (1978), *Proc. IEEE* 66, 51.

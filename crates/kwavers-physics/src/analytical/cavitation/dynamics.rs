@@ -7,13 +7,13 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// Minnaert resonance frequency of a spherical gas bubble.
 ///
 /// ```text
-/// f_M = 1/(2π·R₀) · √(3γP₀/ρ)   [Hz]
+/// f_M = 1/(2π·R₀) · √(3γP₀/ρ)   `Hz`
 /// ```
 ///
 /// # Arguments
-/// * `r0_m` – equilibrium bubble radius [m]
+/// * `r0_m` – equilibrium bubble radius `m`
 /// * `gamma` – polytropic exponent of the gas (1.4 for air)
-/// * `p0_pa` – ambient pressure [Pa]
+/// * `p0_pa` – ambient pressure `Pa`
 /// * `rho` – liquid density [kg/m³]
 ///
 /// # Reference
@@ -40,15 +40,15 @@ pub fn minnaert_resonance_hz(r0_m: f64, gamma: f64, p0_pa: f64, rho: f64) -> f64
 /// This is the algebraic inverse of [`minnaert_resonance_hz`]:
 ///
 /// ```text
-/// R₀ = 1/(2π·f_M) · √(3γP₀/ρ)   [m]
+/// R₀ = 1/(2π·f_M) · √(3γP₀/ρ)   `m`
 /// ```
 ///
 /// Returns `0` for non-finite or non-positive inputs.
 ///
 /// # Arguments
-/// * `frequency_hz` – resonance frequency [Hz]
+/// * `frequency_hz` – resonance frequency `Hz`
 /// * `gamma` – polytropic exponent of the gas (1.4 for air)
-/// * `p0_pa` – ambient pressure [Pa]
+/// * `p0_pa` – ambient pressure `Pa`
 /// * `rho` – liquid density [kg/m³]
 ///
 /// # Reference
@@ -78,7 +78,7 @@ pub fn minnaert_radius_for_frequency_m(frequency_hz: f64, gamma: f64, p0_pa: f64
 ///
 /// ```text
 /// f₀ = 1/(2π·R₀) · √( [3γ(P₀ + 2σ/R₀) − 2σ/R₀] / ρ )
-///    = 1/(2π·R₀) · √( [3γP₀ + (3γ−1)·2σ/R₀] / ρ )   [Hz]
+///    = 1/(2π·R₀) · √( [3γP₀ + (3γ−1)·2σ/R₀] / ρ )   `Hz`
 /// ```
 ///
 /// As `σ → 0` this reduces exactly to [`minnaert_resonance_hz`] (the
@@ -92,9 +92,9 @@ pub fn minnaert_radius_for_frequency_m(frequency_hz: f64, gamma: f64, p0_pa: f64
 /// destabilises the bubble — no real resonance).
 ///
 /// # Arguments
-/// * `r0_m` – equilibrium bubble radius [m]
+/// * `r0_m` – equilibrium bubble radius `m`
 /// * `gamma` – polytropic exponent of the gas (1.4 for air)
-/// * `p0_pa` – ambient pressure [Pa]
+/// * `p0_pa` – ambient pressure `Pa`
 /// * `rho` – liquid density [kg/m³]
 /// * `sigma_n_m` – surface-tension coefficient [N/m] (water ≈ 0.0725)
 ///
@@ -140,8 +140,8 @@ pub fn minnaert_resonance_corrected_hz(
 /// ```
 ///
 /// # Arguments
-/// * `r0_m` – equilibrium bubble radius [m]
-/// * `p0_pa` – ambient pressure [Pa]
+/// * `r0_m` – equilibrium bubble radius `m`
+/// * `p0_pa` – ambient pressure `Pa`
 /// * `sigma_n_m` – surface tension coefficient [N/m] (water ≈ 0.0725)
 ///
 /// # Reference
@@ -166,15 +166,15 @@ pub fn blake_threshold_pa(r0_m: f64, p0_pa: f64, sigma_n_m: f64) -> f64 {
 /// Rayleigh collapse time for a spherical cavity.
 ///
 /// ```text
-/// t_c = 0.9147 · R_max · √(ρ/P_∞)   [s]
+/// t_c = 0.9147 · R_max · √(ρ/P_∞)   `s`
 /// ```
 ///
 /// Coefficient = B(5/6, 1/2)·√(3/2)/3 where B is the beta function;
 /// evaluated as Γ(5/6)Γ(1/2)/Γ(4/3) ≈ 2.241, giving 2.241·√(3/2)/3 ≈ 0.9147.
 ///
 /// # Arguments
-/// * `rmax_m` – maximum bubble radius [m]
-/// * `p_inf_pa` – driving pressure at infinity (usually ambient) [Pa]
+/// * `rmax_m` – maximum bubble radius `m`
+/// * `p_inf_pa` – driving pressure at infinity (usually ambient) `Pa`
 /// * `rho` – liquid density [kg/m³]
 ///
 /// # Reference
@@ -206,19 +206,19 @@ pub fn rayleigh_collapse_time_s(rmax_m: f64, p_inf_pa: f64, rho: f64) -> f64 {
 /// isothermal vapor-pressure floor.
 ///
 /// # Arguments
-/// * `r0_m` – equilibrium radius [m]
+/// * `r0_m` – equilibrium radius `m`
 /// * `rdot0` – initial radial velocity [m/s]
-/// * `p_ac_pa` – acoustic pressure amplitude [Pa]
-/// * `freq_hz` – acoustic driving frequency [Hz]
-/// * `t_arr` – time array (must be uniformly spaced) [s]
-/// * `p0_pa` – ambient pressure [Pa]
+/// * `p_ac_pa` – acoustic pressure amplitude `Pa`
+/// * `freq_hz` – acoustic driving frequency `Hz`
+/// * `t_arr` – time array (must be uniformly spaced) `s`
+/// * `p0_pa` – ambient pressure `Pa`
 /// * `rho` – liquid density [kg/m³]
 /// * `sigma` – surface tension [N/m]
 /// * `mu` – dynamic viscosity [Pa·s]
 /// * `kappa` – polytropic exponent
-/// * `p_v_pa` – vapour pressure [Pa]
+/// * `p_v_pa` – vapour pressure `Pa`
 ///
-/// Returns `(R_arr [m], Ṙ_arr [m/s])`.
+/// Returns `(R_arr `m`, Ṙ_arr [m/s])`.
 ///
 /// # Reference
 /// Plesset & Prosperetti (1977), *Annu. Rev. Fluid Mech.* 9, 145.
@@ -439,9 +439,9 @@ pub fn keller_miksis_shelled_rk4(
 /// signature (associated-bundle pattern, not a long parameter chain).
 #[derive(Debug, Clone, Copy)]
 pub(crate) struct KmShellParams {
-    /// Equilibrium radius `R₀` [m].
+    /// Equilibrium radius `R₀` `m`.
     pub r0_m: f64,
-    /// Ambient pressure `P₀` [Pa].
+    /// Ambient pressure `P₀` `Pa`.
     pub p0_pa: f64,
     /// Liquid density `ρ` [kg/m³].
     pub rho: f64,
@@ -451,7 +451,7 @@ pub(crate) struct KmShellParams {
     pub mu: f64,
     /// Polytropic exponent `κ` of the non-condensable gas.
     pub kappa: f64,
-    /// Saturated vapor pressure `P_v` [Pa].
+    /// Saturated vapor pressure `P_v` `Pa`.
     pub p_v_pa: f64,
     /// Lumped Newtonian shell viscosity `ξ_s` [Pa·s·m] (de Jong 1994); 0 = bare.
     pub xi_s: f64,

@@ -81,7 +81,7 @@ impl FocalSpot {
     /// validate against the FDTD/k-space field (see `gap_audit.md` CLD-3).
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the transducer frequency,
+    /// Returns `KwaversError::InvalidInput` when the transducer frequency,
     /// focal length, aperture, power, or efficiency is outside its physical
     /// domain.
     pub fn estimate_from_transducer(transducer: &ClinicalHIFUTransducer) -> KwaversResult<Self> {
@@ -215,7 +215,7 @@ impl FocalSpotDoseEstimate {
     /// `R = 0.25` below 43 C. The returned `cem43` is in equivalent minutes.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the pressure, frequency,
+    /// Returns `KwaversError::InvalidInput` when the pressure, frequency,
     /// duty cycle, or duration is outside its physical domain.
     pub fn estimate_from_focal_spot(
         focal_spot: &FocalSpot,

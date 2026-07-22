@@ -27,10 +27,10 @@ pub use super::fields::Complex3D;
 ///
 /// # Spectral derivative operators
 ///
-/// `dkx_op[i] = i · k_x[i] · shift_x(i)` is the per-axis spectral
+/// `dkx_op`i` = i · k_x`i` · shift_x(i)` is the per-axis spectral
 /// derivative operator the kernel applies to the velocity field. For a
-/// **collocated** scheme pass `i · k_x[i]` (no shift). For a
-/// **staggered** scheme pass `i · k_x[i] · exp(− i · k_x[i] · Δx / 2)` —
+/// **collocated** scheme pass `i · k_x`i`` (no shift). For a
+/// **staggered** scheme pass `i · k_x`i` · exp(− i · k_x`i` · Δx / 2)` —
 /// matches KWave.jl `pstd_elastic_2d`'s `ddx_k_shift_neg` used during the
 /// stress update. Caller owns the choice; the kernel merely consumes the
 /// pre-built operator.
@@ -71,8 +71,8 @@ pub struct StressUpdateParams<'a> {
 ///
 /// `dkx_op` … `dkz_op` are the per-axis complex derivative operators
 /// applied to the stress field. For a **collocated** scheme pass
-/// `i · k_α[i]`. For a **staggered** scheme pass
-/// `i · k_α[i] · exp(+ i · k_α[i] · Δα / 2)` — matches KWave.jl
+/// `i · k_α`i``. For a **staggered** scheme pass
+/// `i · k_α`i` · exp(+ i · k_α`i` · Δα / 2)` — matches KWave.jl
 /// `pstd_elastic_2d`'s `ddx_k_shift_pos` used during the velocity update.
 pub struct VelocityUpdateParams<'a> {
     pub vx_fft: &'a Complex3D,

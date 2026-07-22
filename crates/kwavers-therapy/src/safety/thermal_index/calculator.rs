@@ -57,7 +57,7 @@ impl ThermalIndexCalculator {
 
     /// Calculate thermal index from acoustic power in watts.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calculate(
         &self,

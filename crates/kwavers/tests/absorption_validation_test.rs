@@ -21,8 +21,8 @@ const FIGURE_DIR: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/test-figures");
 ///
 /// where:
 /// - α₀: absorption coefficient at reference frequency [Np/m]
-/// - f: frequency [Hz]
-/// - f₀: reference frequency [Hz]
+/// - f: frequency `Hz`
+/// - f₀: reference frequency `Hz`
 /// - y: power law exponent (typically 1.0-1.5 for tissues)
 fn power_law_absorption(alpha_0: f64, frequency: f64, reference_frequency: f64, power: f64) -> f64 {
     alpha_0 * (frequency / reference_frequency).powf(power)

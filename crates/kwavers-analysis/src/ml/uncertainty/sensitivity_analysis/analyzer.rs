@@ -17,7 +17,7 @@ impl SensitivityAnalyzer {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when fewer than two samples are
+    /// Returns `KwaversError::InvalidInput` when fewer than two samples are
     /// configured because correlation is then undefined.
     pub fn new(config: SensitivityConfig) -> KwaversResult<Self> {
         if config.sample_count.get() < 2 {
@@ -36,7 +36,7 @@ impl SensitivityAnalyzer {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] for a non-finite model response
+    /// Returns `KwaversError::InvalidInput` for a non-finite model response
     /// or an invalid provider operation.
     pub fn analyze<const PARAMETERS: usize>(
         &self,

@@ -182,7 +182,7 @@ impl MUSICProcessor {
     /// Steps: covariance estimation → eigendecomposition → source number selection
     /// → noise subspace extraction → pseudospectrum → peak detection.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn run(&self, snapshots: &Array2<Complex64>) -> KwaversResult<MUSICResult> {
         let num_sensors = snapshots.shape()[0];

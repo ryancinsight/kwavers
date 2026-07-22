@@ -59,7 +59,7 @@ impl SensorRecorder {
     /// `data` must have shape `(n_sensors, next_step)`.
     /// # Errors
     /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn restore_from_checkpoint(
         &mut self,

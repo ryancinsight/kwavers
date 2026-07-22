@@ -9,9 +9,9 @@ use pyo3::prelude::*;
 /// Compute the HIFU focal pressure gain (ratio of focal to source pressure).
 ///
 /// Args:
-///     aperture_m: Transducer aperture diameter [m].
+///     aperture_m: Transducer aperture diameter `m`.
 ///     f_number: F-number.
-///     freq_hz: Frequency [Hz].
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
@@ -34,15 +34,15 @@ pub fn hifu_focal_pressure_gain(
 /// Returns a 2-D array of shape (len(r_arr), len(z_arr)) [W/m³].
 ///
 /// Args:
-///     r_arr: Radial positions [m].
-///     z_arr: Axial positions [m].
-///     freq_hz: Frequency [Hz].
-///     z_focus_m: Focal depth [m].
-///     p0_pa: Source pressure [Pa].
+///     r_arr: Radial positions `m`.
+///     z_arr: Axial positions `m`.
+///     freq_hz: Frequency `Hz`.
+///     z_focus_m: Focal depth `m`.
+///     p0_pa: Source pressure `Pa`.
 ///     c: Sound speed [m/s].
 ///     rho: Density [kg/m³].
 ///     alpha_np_m: Attenuation [Np/m].
-///     w0_m: Beam waist at focus [m].
+///     w0_m: Beam waist at focus `m`.
 ///
 /// Returns:
 ///     Power deposition ndarray [W/m³] of shape (nr, nz).
@@ -79,7 +79,7 @@ pub fn gaussian_power_deposition_2d(
 /// Acoustic intensity depth profile I(z) = I₀·exp(−2·α·z).
 ///
 /// Args:
-///     z_arr: Depth positions [m].
+///     z_arr: Depth positions `m`.
 ///     alpha_np_m: Amplitude attenuation coefficient [Np/m].
 ///     surface_intensity: Surface intensity I₀ at z=0 [W/m² or normalised].
 ///
@@ -103,7 +103,7 @@ pub fn acoustic_intensity_depth_profile(
 /// Volumetric acoustic power deposition Q(z) = 2·α·I₀·exp(−2·α·z).
 ///
 /// Args:
-///     z_arr: Depth positions [m].
+///     z_arr: Depth positions `m`.
 ///     alpha_np_m: Amplitude attenuation coefficient [Np/m].
 ///     surface_intensity: Surface intensity I₀ at z=0 [W/m²].
 ///
@@ -131,7 +131,7 @@ pub fn acoustic_power_deposition_depth_profile(
 /// wave, or ISPTA at unity duty cycle.
 ///
 /// Args:
-///     p_field: Peak pressure amplitude field [Pa], any shape, passed as 1-D.
+///     p_field: Peak pressure amplitude field `Pa`, any shape, passed as 1-D.
 ///     rho: Medium density [kg/m³].
 ///     c: Speed of sound [m/s].
 ///
@@ -155,7 +155,7 @@ pub fn acoustic_intensity_from_amplitude(
     Ok(result.to_pyarray(py).unbind())
 }
 
-/// Peak acoustic pressure amplitude from intensity: p = sqrt(2*rho*c*I) [Pa].
+/// Peak acoustic pressure amplitude from intensity: p = sqrt(2*rho*c*I) `Pa`.
 #[pyfunction]
 #[pyo3(signature = (intensity, rho, c))]
 pub fn acoustic_pressure_amplitude_from_intensity(
@@ -183,7 +183,7 @@ pub fn acoustic_pressure_amplitude_from_intensity(
 /// reshape back to (nx, ny, nz) on the Python side.
 ///
 /// Args:
-///     p_field: Pressure amplitude field [Pa], any shape, passed as 1-D.
+///     p_field: Pressure amplitude field `Pa`, any shape, passed as 1-D.
 ///     alpha_np_m: Amplitude attenuation coefficient [Np/m].
 ///     rho: Medium density [kg/m³].
 ///     c: Speed of sound [m/s].

@@ -57,7 +57,7 @@ impl ColorFlowImaging {
 
     /// Process I/Q data to generate color flow image
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process(&self, iq_data: &ArrayView3<Complex64>) -> KwaversResult<DopplerResult> {
         // Apply wall filter to remove clutter

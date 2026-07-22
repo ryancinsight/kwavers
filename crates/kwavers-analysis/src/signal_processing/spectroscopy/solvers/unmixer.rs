@@ -23,7 +23,7 @@ pub struct SpectralUnmixer {
 impl SpectralUnmixer {
     /// Create unmixer from extinction matrix
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         extinction_matrix: Array2<f64>,
@@ -76,7 +76,7 @@ impl SpectralUnmixer {
 
     /// Unmix single spectrum (one voxel)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn unmix_single(&self, absorption_spectrum: &Array1<f64>) -> Result<UnmixingResult> {
         let n_wavelengths = self.extinction_matrix.shape()[0];

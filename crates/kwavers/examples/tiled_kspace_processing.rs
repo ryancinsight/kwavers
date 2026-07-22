@@ -11,7 +11,7 @@
 //! A PSTD pressure-field update step computes
 //!
 //! ```text
-//! p_new[i] = p[i] - rho*c² * dt * div(u)
+//! p_new`i` = p`i` - rho*c² * dt * div(u)
 //! ```
 //!
 //! where `div(u)` is evaluated spectrally. When the field must also be
@@ -25,7 +25,7 @@
 //! For a partition of an N-element field into K non-overlapping tiles:
 //!
 //! ```text
-//! Σ_{k=1..K}  Σ_{j ∈ tile_k}  p[j]²  =  Σ_{j=0..N-1} p[j]²
+//! Σ_{k=1..K}  Σ_{j ∈ tile_k}  p`J`²  =  Σ_{j=0..N-1} p`J`²
 //! ```
 //!
 //! i.e., summing squared pressures tile-by-tile is identical to a single flat

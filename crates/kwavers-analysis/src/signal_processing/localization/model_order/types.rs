@@ -58,7 +58,7 @@ impl ModelOrderConfig {
     /// - M ≥ 2 (need at least 2 sensors)
     /// - Default max_sources = M - 1
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(num_sensors: usize, num_samples: usize) -> KwaversResult<Self> {
         if num_sensors < 2 {
@@ -112,7 +112,7 @@ impl ModelOrderConfig {
 
     /// Validate configuration
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.eigenvalue_threshold < 0.0 || self.eigenvalue_threshold > 1.0 {

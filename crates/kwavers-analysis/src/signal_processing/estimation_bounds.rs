@@ -32,11 +32,11 @@ use core::f64::consts::PI;
 /// Var[τ̂] ≥ 1 / (8 π² f₀² T_w · SNR)
 /// ```
 ///
-/// - `f0_hz`: signal centre frequency [Hz]
-/// - `window_s`: correlation window duration `T_w` [s]
+/// - `f0_hz`: signal centre frequency `Hz`
+/// - `window_s`: correlation window duration `T_w` `s`
 /// - `snr_linear`: echo signal-to-noise ratio (linear power ratio, **not** dB)
 ///
-/// Returns the variance [s²]. Larger bandwidth-time-SNR product → tighter bound.
+/// Returns the variance `s²`. Larger bandwidth-time-SNR product → tighter bound.
 #[must_use]
 pub fn time_delay_crlb_variance(f0_hz: f64, window_s: f64, snr_linear: f64) -> f64 {
     if !all_positive(&[f0_hz, window_s, snr_linear]) {
@@ -46,7 +46,7 @@ pub fn time_delay_crlb_variance(f0_hz: f64, window_s: f64, snr_linear: f64) -> f
     1.0 / denom
 }
 
-/// CRLB on the **standard deviation** of a time-delay estimate [s].
+/// CRLB on the **standard deviation** of a time-delay estimate `s`.
 ///
 /// `√(Var[τ̂])` from [`time_delay_crlb_variance`].
 #[must_use]
@@ -64,10 +64,10 @@ pub fn time_delay_crlb_std(f0_hz: f64, window_s: f64, snr_linear: f64) -> f64 {
 /// ```
 ///
 /// - `c_p`: longitudinal (compressional) wave speed [m/s]
-/// - `f0_hz`: centre frequency [Hz]
-/// - `window_s`: correlation window `T_w` [s]
+/// - `f0_hz`: centre frequency `Hz`
+/// - `window_s`: correlation window `T_w` `s`
 /// - `snr_linear`: echo SNR (linear)
-/// - `axial_window_m`: axial gradient baseline `Δz` [m]
+/// - `axial_window_m`: axial gradient baseline `Δz` `m`
 ///
 /// Returns the dimensionless strain standard deviation.
 #[must_use]
@@ -94,7 +94,7 @@ pub fn strain_crlb_std(
 ///
 /// - `c_s`: shear-wave speed [m/s]
 /// - `omega_rad_s`: angular drive frequency `ω = 2πf` [rad/s]
-/// - `aperture_x_m`: lateral aperture `L_x` over which the phase gradient is taken [m]
+/// - `aperture_x_m`: lateral aperture `L_x` over which the phase gradient is taken `m`
 /// - `n_temporal`: number of temporal samples `N_t` in the time-frequency analysis
 /// - `snr_v_linear`: tracking (velocity) SNR (linear)
 ///

@@ -23,9 +23,9 @@
 /// apodize by default.
 ///
 /// # Arguments
-/// * `dr_lat_m` – lateral steering offset from the mechanical focus [m]
-/// * `dr_ax_m`  – axial steering offset from the mechanical focus [m]
-/// * `f0_hz`    – drive frequency [Hz]
+/// * `dr_lat_m` – lateral steering offset from the mechanical focus `m`
+/// * `dr_ax_m`  – axial steering offset from the mechanical focus `m`
+/// * `f0_hz`    – drive frequency `Hz`
 /// * `c_m_s`    – medium sound speed [m/s]
 /// * `apodized` – whether cos θ apodization is applied
 ///

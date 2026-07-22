@@ -51,7 +51,7 @@ pub fn get_win(window: SignalWindowType, n: usize, symmetric: bool) -> Vec<f64> 
 }
 /// Apply window.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn apply_window(signal: &[f64], window: &[f64]) -> KwaversResult<Vec<f64>> {
     if signal.len() != window.len() {

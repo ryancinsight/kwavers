@@ -26,7 +26,7 @@ impl FallbackRenderer {
 
     /// Render field using CPU fallback
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn render_field(
         &self,
@@ -103,7 +103,7 @@ impl FallbackRenderer {
 
     /// Export field data to file
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn export_field(
         &self,

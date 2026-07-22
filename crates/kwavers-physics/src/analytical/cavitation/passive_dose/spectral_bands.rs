@@ -66,9 +66,9 @@ impl CavitationBandEnergies {
 /// baseline noise floor, matching clinical passive-cavitation-dose practice.
 ///
 /// # Arguments
-/// * `freqs`         – frequency axis [Hz], uniformly spaced and ascending
+/// * `freqs`         – frequency axis `Hz`, uniformly spaced and ascending
 /// * `psd`           – power spectral density at each frequency (same length)
-/// * `f0_hz`         – fundamental drive frequency [Hz]
+/// * `f0_hz`         – fundamental drive frequency `Hz`
 /// * `rel_halfwidth` – line half-window as a fraction of `f₀` (e.g. 0.05);
 ///   clamped to `(0, 0.25)` so adjacent half-harmonic windows (spacing `f₀/2`)
 ///   never overlap

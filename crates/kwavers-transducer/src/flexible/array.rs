@@ -50,7 +50,7 @@ impl FlexibleTransducerArray {
 
     /// Update geometry based on measurements
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_geometry(
         &mut self,
@@ -248,8 +248,8 @@ impl FlexibleTransducerArray {
         self.calibration_processor.get_confidence()
     }
 
-    /// Conformal delay-and-sum **focusing delays** \[s] for the array's current
-    /// (tracked, possibly deformed) geometry, focusing at `focus` \[m] in a
+    /// Conformal delay-and-sum **focusing delays** \`s` for the array's current
+    /// (tracked, possibly deformed) geometry, focusing at `focus` \`m` in a
     /// medium of sound speed `c`. Recompute after each [`update_geometry`] to
     /// keep the focus on target as the array bends.
     ///
@@ -259,7 +259,7 @@ impl FlexibleTransducerArray {
         super::beamforming::focusing_delays(&self.geometry_state.element_positions.view(), focus, c)
     }
 
-    /// Far-field **plane-wave steering delays** \[s] toward unit direction `dir`
+    /// Far-field **plane-wave steering delays** \`s` toward unit direction `dir`
     /// for the current geometry.
     #[must_use]
     pub fn steering_delays(&self, dir: [f64; 3], c: f64) -> Vec<f64> {

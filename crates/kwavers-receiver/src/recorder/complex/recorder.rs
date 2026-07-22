@@ -146,7 +146,7 @@ impl Recorder {
 
     /// Record field data at current time step
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn record_fields(
         &mut self,
@@ -319,7 +319,7 @@ impl Recorder {
 
     /// Save recorded data to file
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn save_data(&self) -> KwaversResult<()> {
         info!("Saving recorded data to {}", self.filename);

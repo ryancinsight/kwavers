@@ -127,7 +127,7 @@ pub(super) fn c2dt2_field(grid: &AcousticGrid, speed_m_s: &Array2<f64>) -> Vec<f
 /// # Stencil
 ///
 /// Fornberg (1988), Table 2, derivative order 2, stencil half-width 2:
-/// `L₄[u]ᵢ = (-u[i-2] + 16u[i-1] - 30u[i] + 16u[i+1] - u[i+2]) / (12h²)`
+/// `L₄[u]ᵢ = (-u[i-2] + 16u[i-1] - 30u`i` + 16u[i+1] - u[i+2]) / (12h²)`
 ///
 /// # CPML update
 ///

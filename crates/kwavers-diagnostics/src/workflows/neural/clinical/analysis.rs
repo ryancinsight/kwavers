@@ -8,7 +8,7 @@ impl NeuralClinicalDecisionSupport {
     /// Perform comprehensive clinical analysis: lesion detection, tissue classification,
     /// recommendations, and overall diagnostic confidence.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn analyze_clinical(
         &self,

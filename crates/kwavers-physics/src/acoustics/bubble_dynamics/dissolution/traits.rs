@@ -28,7 +28,7 @@ pub struct GasDiffusionParams {
     pub saturation_fraction: f64,
     /// Surface tension `σ` [N/m].
     pub surface_tension: f64,
-    /// Ambient pressure `P₀` [Pa].
+    /// Ambient pressure `P₀` `Pa`.
     pub ambient_pressure: f64,
 }
 
@@ -72,7 +72,7 @@ pub trait DissolutionModel: sealed::Sealed {
     /// The transport parameters this model uses.
     fn params(&self) -> &GasDiffusionParams;
 
-    /// Closed-form dissolution time `R₀ → 0` [s] when one exists for this model
+    /// Closed-form dissolution time `R₀ → 0` `s` when one exists for this model
     /// (else `None`; use the numerical integrator). The quasi-static,
     /// surface-tension-free Epstein–Plesset result is
     /// `τ = R₀² / (2·D·L·(1 − f))` for `f < 1`.

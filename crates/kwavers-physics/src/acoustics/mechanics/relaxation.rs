@@ -30,7 +30,7 @@
 /// A discrete multi-relaxation absorption spectrum `(τ_l, w_l)`.
 #[derive(Debug, Clone, PartialEq)]
 pub struct RelaxationAbsorption {
-    /// Relaxation times `τ_l` \[s] (each `> 0`).
+    /// Relaxation times `τ_l` \`s` (each `> 0`).
     tau: Vec<f64>,
     /// Relaxation weights `w_l` \[s⁻¹] (each `> 0`); set the strength of each process.
     weights: Vec<f64>,

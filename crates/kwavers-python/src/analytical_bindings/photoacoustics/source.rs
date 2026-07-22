@@ -9,16 +9,16 @@ use pyo3::types::PyDict;
 /// Compute the photoacoustic pressure signal from an absorbing sphere.
 ///
 /// Args:
-///     t_arr: Time array [s].
-///     r0_m: Sphere radius [m].
+///     t_arr: Time array `s`.
+///     r0_m: Sphere radius `m`.
 ///     gamma: Grüneisen parameter.
 ///     mua_per_m: Absorption coefficient [1/m].
 ///     c: Sound speed [m/s].
-///     r_det_m: Detector distance [m].
-///     initial_pressure_pa: Initial pressure rise [Pa].
+///     r_det_m: Detector distance `m`.
+///     initial_pressure_pa: Initial pressure rise `Pa`.
 ///
 /// Returns:
-///     Pressure signal array [Pa].
+///     Pressure signal array `Pa`.
 #[pyfunction]
 #[pyo3(signature = (t_arr, r0_m, gamma, mua_per_m, c, r_det_m, initial_pressure_pa))]
 pub fn pa_sphere_pressure_signal(

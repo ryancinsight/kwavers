@@ -44,7 +44,7 @@ impl PolynomialFilterConfig {
     /// Validate configuration parameters.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if polynomial order is 0 or exceeds 10.
+    /// - Returns `KwaversError::InvalidInput` if polynomial order is 0 or exceeds 10.
     pub fn validate(&self) -> KwaversResult<()> {
         if self.polynomial_order == 0 {
             return Err(KwaversError::InvalidInput(

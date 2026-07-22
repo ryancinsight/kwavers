@@ -36,11 +36,11 @@ impl Grid {
     /// nz : int
     ///     Number of grid points in z-direction
     /// dx : float
-    ///     Grid spacing in x-direction [m]
+    ///     Grid spacing in x-direction `m`
     /// dy : float
-    ///     Grid spacing in y-direction [m]
+    ///     Grid spacing in y-direction `m`
     /// dz : float
-    ///     Grid spacing in z-direction [m]
+    ///     Grid spacing in z-direction `m`
     ///
     /// Returns
     /// -------
@@ -78,37 +78,37 @@ impl Grid {
         self.inner.nz
     }
 
-    /// Grid spacing in x-direction [m].
+    /// Grid spacing in x-direction `m`.
     #[getter]
     fn dx(&self) -> f64 {
         self.inner.dx
     }
 
-    /// Grid spacing in y-direction [m].
+    /// Grid spacing in y-direction `m`.
     #[getter]
     fn dy(&self) -> f64 {
         self.inner.dy
     }
 
-    /// Grid spacing in z-direction [m].
+    /// Grid spacing in z-direction `m`.
     #[getter]
     fn dz(&self) -> f64 {
         self.inner.dz
     }
 
-    /// Domain size in x-direction [m].
+    /// Domain size in x-direction `m`.
     #[getter]
     fn lx(&self) -> f64 {
         self.inner.nx as f64 * self.inner.dx
     }
 
-    /// Domain size in y-direction [m].
+    /// Domain size in y-direction `m`.
     #[getter]
     fn ly(&self) -> f64 {
         self.inner.ny as f64 * self.inner.dy
     }
 
-    /// Domain size in z-direction [m].
+    /// Domain size in z-direction `m`.
     #[getter]
     fn lz(&self) -> f64 {
         self.inner.nz as f64 * self.inner.dz

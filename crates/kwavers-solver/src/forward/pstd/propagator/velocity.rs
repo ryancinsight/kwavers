@@ -334,9 +334,9 @@ impl PSTDSolver {
     /// When `self.pml_exp` is populated (CPML boundary, no Dirichlet bypass), the
     /// update is **fused** into a single dense pass per axis:
     /// ```text
-    ///   u_x^{n+1}[i,j,k] = p[i] · (p[i] · u_x^n[i,j,k] − (Δt/ρ₀) · ∂p/∂x)
+    ///   u_x^{n+1}[i,j,k] = p`i` · (p`i` · u_x^n[i,j,k] − (Δt/ρ₀) · ∂p/∂x)
     /// ```
-    /// where `p[i] = pml_vel_x[i] = exp(-σ_x_sg[i]·Δt/2)` is precomputed at
+    /// where `p`i` = pml_vel_x`i` = exp(-σ_x_sg`i`·Δt/2)` is precomputed at
     /// construction (Treeby & Cox 2010, Eq. 17).  This replaces the previous
     /// three-pass sequence (pre-PML → gradient update → post-PML) with one pass,
     /// saving 2 × N element reads/writes per velocity axis per step and eliminating
@@ -529,11 +529,11 @@ impl PSTDSolver {
     ///
     /// # Equations (split-field PML, Treeby & Cox 2010 Eq. 17)
     /// ```text
-    /// ux^{n+1}[i,k] = pml_x[i] · (pml_x[i] · ux^n − (dt/ρ₀) · ∂p/∂x)
-    /// uz^{n+1}[i,k] = pml_z[k] · (pml_z[k] · uz^n − (dt/ρ₀) · ∂p/∂r)
+    /// ux^{n+1}[i,k] = pml_x`i` · (pml_x`i` · ux^n − (dt/ρ₀) · ∂p/∂x)
+    /// uz^{n+1}[i,k] = pml_z`K` · (pml_z`K` · uz^n − (dt/ρ₀) · ∂p/∂r)
     /// ```
-    /// where `pml_x[i] = exp(-σ_x_sgx[i]·Δt/2)` (staggered-grid sigma, x-axis)
-    /// and `pml_z[k] = exp(-σ_z_sgz[k]·Δt/2)` (staggered-grid sigma, r-axis mapped to z).
+    /// where `pml_x`i` = exp(-σ_x_sgx`i`·Δt/2)` (staggered-grid sigma, x-axis)
+    /// and `pml_z`K` = exp(-σ_z_sgz`K`·Δt/2)` (staggered-grid sigma, r-axis mapped to z).
     ///
     /// **Fused path** (CPML, no Dirichlet bypass): pre-computed `pml_vel_x/z` arrays from
     /// `self.pml_exp` are applied inline — eliminates 2 `apply_pml_to_velocity()` calls

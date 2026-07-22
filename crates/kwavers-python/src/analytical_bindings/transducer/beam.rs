@@ -9,14 +9,14 @@ use pyo3::prelude::*;
 /// Compute time-delay laws for 2-D geometric focusing.
 ///
 /// Args:
-///     elem_x: Element x-positions [m].
-///     elem_z: Element z-positions [m].
-///     x_f: Focal point x-coordinate [m].
-///     z_f: Focal point z-coordinate [m].
+///     elem_x: Element x-positions `m`.
+///     elem_z: Element z-positions `m`.
+///     x_f: Focal point x-coordinate `m`.
+///     z_f: Focal point z-coordinate `m`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     Delay array [s], same length as *elem_x*.
+///     Delay array `s`, same length as *elem_x*.
 #[pyfunction]
 #[pyo3(signature = (elem_x, elem_z, x_f, z_f, c))]
 pub fn delay_law_focus_2d(
@@ -43,14 +43,14 @@ pub fn delay_law_focus_2d(
 /// (len(x_arr), len(z_arr)).
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
-///     z_arr: Axial positions [m].
-///     elem_x: Element x-positions [m].
-///     elem_z: Element z-positions [m].
-///     freq_hz: Frequency [Hz].
+///     x_arr: Lateral positions `m`.
+///     z_arr: Axial positions `m`.
+///     elem_x: Element x-positions `m`.
+///     elem_z: Element z-positions `m`.
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///     weights: Apodization weights per element.
-///     delays: Delay per element [s].
+///     delays: Delay per element `s`.
 ///
 /// Returns:
 ///     [real_nx_nz, imag_nx_nz] — list of two 2-D arrays.
@@ -104,11 +104,11 @@ pub fn beam_pattern_2d(
 /// |P(θ)| = |D(θ)| · |AF(θ)|, normalised to unit peak across the angle set.
 ///
 /// Args:
-///     theta_rad: Observation angles [rad].
+///     theta_rad: Observation angles `rad`.
 ///     k: Wave number [rad/m].
-///     d_m: Element pitch [m].
+///     d_m: Element pitch `m`.
 ///     n: Number of elements.
-///     steer_rad: Steering angle [rad].
+///     steer_rad: Steering angle `rad`.
 ///     ka_elem: Element directivity parameter k·a_elem.
 ///
 /// Returns:
@@ -136,14 +136,14 @@ pub fn beam_pattern_magnitude(
 /// Returns |p(x, z)| / max|p| as a 2-D ndarray of shape (len(x_arr), len(z_arr)).
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
-///     z_arr: Axial positions [m].
-///     elem_x: Element x-positions [m].
-///     elem_z: Element z-positions [m].
-///     freq_hz: Frequency [Hz].
+///     x_arr: Lateral positions `m`.
+///     z_arr: Axial positions `m`.
+///     elem_x: Element x-positions `m`.
+///     elem_z: Element z-positions `m`.
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///     weights: Apodization weights per element.
-///     delays: Delay per element [s].
+///     delays: Delay per element `s`.
 ///
 /// Returns:
 ///     2-D magnitude field in [0, 1].

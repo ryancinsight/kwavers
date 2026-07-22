@@ -166,7 +166,7 @@ impl VesselSegmentation {
     /// Use [`estimate_flow_velocity_from_doppler`](Self::estimate_flow_velocity_from_doppler)
     /// with measured Doppler inputs instead.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn estimate_flow_velocity(&self) -> KwaversResult<f64> {
         Err(KwaversError::InvalidInput(

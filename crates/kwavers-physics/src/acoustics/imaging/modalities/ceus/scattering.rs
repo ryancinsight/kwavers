@@ -42,7 +42,7 @@ impl NonlinearScattering {
     ///
     /// Nonlinear scattering coefficient
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_scattering(
         &self,

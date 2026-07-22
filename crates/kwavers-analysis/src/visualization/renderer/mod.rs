@@ -30,7 +30,7 @@ pub struct Renderer3D {
 impl Renderer3D {
     /// Create a new 3D renderer
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: VisualizationConfig) -> KwaversResult<Self> {
         let volume = VolumeRenderer::new(&config)?;
@@ -113,7 +113,7 @@ impl Renderer3D {
     }
     /// Render multi volume.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub async fn render_multi_volume(
         &mut self,

@@ -107,7 +107,7 @@ pub struct FunctionalUltrasoundGPS {
 impl FunctionalUltrasoundGPS {
     /// Create new brain GPS system
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(_grid: &Grid) -> KwaversResult<Self> {
         let registration = ImageRegistration::default();
@@ -126,7 +126,7 @@ impl FunctionalUltrasoundGPS {
 
     /// Register ultrasound image to brain atlas
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn register_to_atlas(
         &mut self,
@@ -155,7 +155,7 @@ impl FunctionalUltrasoundGPS {
 
     /// Segment vasculature from registered image
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn segment_vasculature(&mut self, registered_image: &LetoArray3<f64>) -> KwaversResult<()> {
         let segmentation = VesselSegmentation::segment(registered_image)?;

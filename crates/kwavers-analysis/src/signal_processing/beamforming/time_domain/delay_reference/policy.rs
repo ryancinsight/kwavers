@@ -24,8 +24,8 @@ impl DelayReference {
 
     /// Resolve the reference delay `τᵣₑ𝒻` from an absolute delay vector.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -72,7 +72,7 @@ impl DelayReference {
 
     /// Compute relative delays `Δτᵢ = τᵢ - τᵣₑ𝒻` from absolute delays.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_relative_delays(self, delays_s: &[f64]) -> KwaversResult<Vec<f64>> {
         let tau_ref = self.resolve_reference_delay_s(delays_s)?;
@@ -81,7 +81,7 @@ impl DelayReference {
 
     /// Compute alignment shifts `Δτₐₗᵢ𝓰ₙ,ᵢ = τᵣₑ𝒻 - τᵢ` from absolute delays.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_alignment_shifts(self, delays_s: &[f64]) -> KwaversResult<Vec<f64>> {
         let tau_ref = self.resolve_reference_delay_s(delays_s)?;

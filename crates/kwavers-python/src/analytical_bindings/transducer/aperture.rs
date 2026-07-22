@@ -12,10 +12,10 @@ use pyo3::prelude::*;
 ///
 /// Args:
 ///     n: Number of elements.
-///     pitch_m: Inter-element pitch [m].
+///     pitch_m: Inter-element pitch `m`.
 ///
 /// Returns:
-///     [elem_x, elem_z] — two 1-D arrays of element coordinates [m].
+///     [elem_x, elem_z] — two 1-D arrays of element coordinates `m`.
 #[pyfunction]
 #[pyo3(signature = (n, pitch_m))]
 pub fn linear_array_positions(

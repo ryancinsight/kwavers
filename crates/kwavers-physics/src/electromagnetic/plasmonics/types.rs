@@ -16,23 +16,23 @@ pub enum CouplingModel {
 pub enum PlasmonicArrayGeometry {
     /// Linear chain
     Linear {
-        /// Center-to-center particle spacing [m].
+        /// Center-to-center particle spacing `m`.
         spacing: f64,
     },
     /// 2D square lattice
     Square {
-        /// Lattice spacing along x [m].
+        /// Lattice spacing along x `m`.
         spacing_x: f64,
-        /// Lattice spacing along y [m].
+        /// Lattice spacing along y `m`.
         spacing_y: f64,
     },
     /// 3D cubic lattice
     Cubic {
-        /// Lattice spacing along x [m].
+        /// Lattice spacing along x `m`.
         spacing_x: f64,
-        /// Lattice spacing along y [m].
+        /// Lattice spacing along y `m`.
         spacing_y: f64,
-        /// Lattice spacing along z [m].
+        /// Lattice spacing along z `m`.
         spacing_z: f64,
     },
     /// Random homogeneous distribution

@@ -25,7 +25,7 @@ impl PAMProcessor {
     }
     /// Process.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process(&mut self, beamformed_data: &Array3<f64>) -> KwaversResult<Array3<f64>> {
         let shape = beamformed_data.shape();

@@ -60,15 +60,15 @@ const W_CM2_TO_MW_CM2: f64 = 1.0e3;
 /// A nested ultrasonic-neuromodulation pulse-train protocol (Blackmore Fig. 1).
 #[derive(Debug, Clone, Copy)]
 pub struct PulseTrainProtocol {
-    /// Carrier (fundamental) frequency f [Hz].
+    /// Carrier (fundamental) frequency f `Hz`.
     pub carrier_freq_hz: f64,
-    /// Pulse length PL (a.k.a. pulse duration) [s].
+    /// Pulse length PL (a.k.a. pulse duration) `s`.
     pub pulse_length_s: f64,
-    /// Pulse repetition frequency PRF [Hz].
+    /// Pulse repetition frequency PRF `Hz`.
     pub pulse_repetition_freq_hz: f64,
-    /// Burst duration BD [s] (window over which pulses repeat at PRF).
+    /// Burst duration BD `s` (window over which pulses repeat at PRF).
     pub burst_duration_s: f64,
-    /// Burst interval BI [s] (off time between consecutive bursts).
+    /// Burst interval BI `s` (off time between consecutive bursts).
     pub burst_interval_s: f64,
     /// Number of bursts N.
     pub num_bursts: u32,
@@ -89,7 +89,7 @@ impl PulseTrainProtocol {
             && self.num_bursts >= 1
     }
 
-    /// Pulse repetition period 1/PRF [s].
+    /// Pulse repetition period 1/PRF `s`.
     #[inline]
     #[must_use]
     pub fn pulse_period_s(&self) -> f64 {
@@ -117,14 +117,14 @@ impl PulseTrainProtocol {
         self.burst_duty_cycle() * self.burst_on_fraction()
     }
 
-    /// Burst repetition frequency BRF = 1 / (BD + BI) [Hz].
+    /// Burst repetition frequency BRF = 1 / (BD + BI) `Hz`.
     #[inline]
     #[must_use]
     pub fn burst_repetition_freq_hz(&self) -> f64 {
         1.0 / (self.burst_duration_s + self.burst_interval_s)
     }
 
-    /// Total experiment time TT = N · (BD + BI) [s].
+    /// Total experiment time TT = N · (BD + BI) `s`.
     #[inline]
     #[must_use]
     pub fn total_time_s(&self) -> f64 {
@@ -157,7 +157,7 @@ impl PulseTrainProtocol {
     /// [`crate::acoustics::analysis::calculate_mechanical_index`]).
     ///
     /// # Arguments
-    /// * `peak_pressure_pa` — carrier peak pressure amplitude [Pa]
+    /// * `peak_pressure_pa` — carrier peak pressure amplitude `Pa`
     /// * `density_kg_m3` — medium density ρ [kg/m³]
     /// * `sound_speed_m_s` — medium sound speed c [m/s]
     #[must_use]
@@ -230,7 +230,7 @@ pub struct PulseTrainDosimetry {
     pub mechanical_index: f64,
     /// Total duty cycle TDC [-].
     pub total_duty_cycle: f64,
-    /// Total experiment time TT [s].
+    /// Total experiment time TT `s`.
     pub total_time_s: f64,
 }
 

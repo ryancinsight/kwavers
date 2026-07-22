@@ -124,7 +124,7 @@ pub struct LithotripsySimulator {
 impl LithotripsySimulator {
     /// Create new lithotripsy simulator
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(params: LithotripsyParameters, grid: Grid) -> KwaversResult<Self> {
         // Validate stone geometry matches grid
@@ -174,7 +174,7 @@ impl LithotripsySimulator {
 
     /// Run complete lithotripsy simulation
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn run_simulation(&mut self) -> KwaversResult<&SimulationResults> {
         let initial_volume = self.calculate_stone_volume();
@@ -191,7 +191,7 @@ impl LithotripsySimulator {
     }
     /// Advance.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn advance(&mut self, dt: f64) -> KwaversResult<()> {
         if self.params.interpulse_delay <= 0.0 {

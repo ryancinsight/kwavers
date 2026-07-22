@@ -9,11 +9,11 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// using a rectangular (no) window, zero-padded to `n_fft` points.
 ///
 /// # Arguments
-/// * `r_arr` – radius time series [m]
-/// * `dt_s` – time step [s]
+/// * `r_arr` – radius time series `m`
+/// * `dt_s` – time step `s`
 /// * `n_fft` – DFT length (should be ≥ `r_arr.len()`, preferably a power of 2)
 ///
-/// Returns `(f_arr [Hz], power_arr [m²/Hz])` for non-negative frequencies.
+/// Returns `(f_arr `Hz`, power_arr [m²/Hz])` for non-negative frequencies.
 ///
 /// # Note
 /// This implements a direct O(N²) DFT, which is exact but slow for large N.

@@ -61,7 +61,7 @@ impl TranscranialSafetyMonitor {
 
     /// Update safety monitoring with new field data
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_fields(
         &mut self,

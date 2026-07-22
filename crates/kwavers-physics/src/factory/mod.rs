@@ -7,7 +7,7 @@
 //!
 //! The capability→plugin dispatcher (`PhysicsCatalog`) that turns this config
 //! into a populated `PluginManager` lives in
-//! [`crate::solver::plugin::catalog`]: it constructs concrete solver plugins,
+//! `crate::solver::plugin::catalog`: it constructs concrete solver plugins,
 //! so it depends on `solver` and belongs in the solver layer. Keeping it there
 //! (rather than here) preserves the unidirectional `solver → physics`
 //! dependency: `physics` holds the descriptors, `solver` consumes them.

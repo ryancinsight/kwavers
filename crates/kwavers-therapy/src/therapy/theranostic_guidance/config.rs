@@ -78,7 +78,7 @@ impl PassiveReconstructionMode {
     /// for [`Self::PassiveAcousticMapping`].
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] for any other name.
+    /// Returns `KwaversError::InvalidInput` for any other name.
     pub fn from_name(name: &str) -> KwaversResult<Self> {
         match name.to_ascii_lowercase().as_str() {
             "operator" | "finite_frequency" | "finite_frequency_operator" => {

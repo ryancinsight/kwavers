@@ -14,14 +14,14 @@ use pyo3::prelude::*;
 /// multi-target BBB opening.
 ///
 /// Args:
-///     elem_x: Element x-positions [m].
-///     elem_z: Element z-positions [m].
-///     spot_x: Sub-spot x-positions [m].
-///     spot_z: Sub-spot z-positions [m].
+///     elem_x: Element x-positions `m`.
+///     elem_z: Element z-positions `m`.
+///     spot_x: Sub-spot x-positions `m`.
+///     spot_z: Sub-spot z-positions `m`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     2-D delay array of shape (n_spots, n_elem) [s]; row j focuses the full
+///     2-D delay array of shape (n_spots, n_elem) `s`; row j focuses the full
 ///     aperture on sub-spot j.
 #[pyfunction]
 #[pyo3(signature = (elem_x, elem_z, spot_x, spot_z, c))]
@@ -61,14 +61,14 @@ pub fn multi_focus_delay_laws_2d(
 /// multi-spot histotripsy / multi-target BBB opening.
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
-///     z_arr: Axial positions [m].
-///     elem_x: Element x-positions [m].
-///     elem_z: Element z-positions [m].
-///     spot_x: Sub-spot x-positions [m].
-///     spot_z: Sub-spot z-positions [m].
+///     x_arr: Lateral positions `m`.
+///     z_arr: Axial positions `m`.
+///     elem_x: Element x-positions `m`.
+///     elem_z: Element z-positions `m`.
+///     spot_x: Sub-spot x-positions `m`.
+///     spot_z: Sub-spot z-positions `m`.
 ///     spot_amp: Per-spot drive amplitudes (length == n_spots).
-///     freq_hz: Frequency [Hz].
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:

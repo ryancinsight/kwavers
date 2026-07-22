@@ -130,7 +130,7 @@ fn cfl_time_step_capped_by_max_dt_for_coarse_grid() {
 /// Verify the monotone time ordering invariant of `propagate_waves`.
 ///
 /// `history[0].time == 0` (initial snapshot before any stepping).
-/// For all i ≥ 1, `history[i].time > history[i-1].time`
+/// For all i ≥ 1, `history`i`.time > history[i-1].time`
 /// (each saved frame advances simulation time by at least one step).
 /// `history.last().time > 0` (propagation advanced past t=0).
 #[test]

@@ -30,7 +30,7 @@ pub fn rmse(a: PyReadonlyArray1<f64>, b: PyReadonlyArray1<f64>) -> PyResult<f64>
     Ok(statistics::rmse(a_s, b_s))
 }
 
-/// Peak signal-to-noise ratio `PSNR = 20·log₁₀(MAX_b / RMSE(a,b))` [dB], with
+/// Peak signal-to-noise ratio `PSNR = 20·log₁₀(MAX_b / RMSE(a,b))` `dB`, with
 /// `MAX_b` the peak of the reference `b` (book §19.3, Theorem). Returns `+∞` when
 /// `a == b` (zero error).
 #[pyfunction]

@@ -9,7 +9,7 @@ use kwavers_core::error::KwaversResult;
 impl HarmonicDetector {
     /// Analyze harmonics at a single spatial point
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(crate) fn analyze_single_point(
         &self,

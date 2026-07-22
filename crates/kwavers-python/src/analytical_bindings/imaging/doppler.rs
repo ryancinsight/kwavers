@@ -16,12 +16,12 @@ use pyo3::types::PyDict;
 ///
 /// Args:
 ///     v_m_s: Scatterer velocity [m/s].
-///     theta_rad: Angle between beam and velocity vector [rad].
-///     f0_hz: Transmit centre frequency [Hz].
+///     theta_rad: Angle between beam and velocity vector `rad`.
+///     f0_hz: Transmit centre frequency `Hz`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     Doppler shift [Hz].
+///     Doppler shift `Hz`.
 #[pyfunction]
 #[pyo3(signature = (v_m_s, theta_rad, f0_hz, c))]
 pub fn doppler_frequency_shift(v_m_s: f64, theta_rad: f64, f0_hz: f64, c: f64) -> PyResult<f64> {

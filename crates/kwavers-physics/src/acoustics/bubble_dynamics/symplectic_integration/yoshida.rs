@@ -20,7 +20,7 @@ use kwavers_core::error::KwaversResult;
 ///
 /// # Arguments — same as `stormer_verlet_step`
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 #[allow(clippy::too_many_arguments)]
 pub fn yoshida4_step(

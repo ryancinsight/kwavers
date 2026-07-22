@@ -111,7 +111,7 @@ impl SafetyAuditLogger {
     ///
     /// Fields per line: `timestamp_ms`, `event_type`, `message`, `metadata`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn export_log(&self, filename: &str) -> KwaversResult<()> {
         use std::io::Write;

@@ -52,7 +52,7 @@ impl RealTimeScheduler {
 
     /// Submit a task to the scheduler
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn submit(
         &self,

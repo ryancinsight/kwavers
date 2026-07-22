@@ -141,23 +141,23 @@ pub fn delivered_histotripsy_progress(dose: &[f64], d0: f64, weibull_k: f64) -> 
 /// Borrowed inputs for rastered per-spot passive-cavitation dose accounting.
 #[derive(Clone, Copy, Debug)]
 pub struct PerSpotCavitationDoseInput<'a> {
-    /// Lateral steering offsets from the mechanical focus [m].
+    /// Lateral steering offsets from the mechanical focus `m`.
     pub lateral_offsets_m: &'a [f64],
-    /// Axial steering offsets from the mechanical focus [m].
+    /// Axial steering offsets from the mechanical focus `m`.
     pub axial_offsets_m: &'a [f64],
-    /// Target peak pressure at the mechanical focus [Pa].
+    /// Target peak pressure at the mechanical focus `Pa`.
     pub p_target_pa: f64,
-    /// Drive frequency [Hz].
+    /// Drive frequency `Hz`.
     pub f0_hz: f64,
     /// Sound speed used by the steering-efficiency model [m/s].
     pub c_m_s: f64,
-    /// Monotone pressure sweep samples [Pa].
+    /// Monotone pressure sweep samples `Pa`.
     pub pressures_pa: &'a [f64],
     /// Passive-cavitation emission power at each pressure sample.
     pub cavitation_power: &'a [f64],
     /// Number of pulses delivered at each raster spot.
     pub n_pulses_per_spot: usize,
-    /// Effective pressure that defines the prescribed per-spot dose goal [Pa].
+    /// Effective pressure that defines the prescribed per-spot dose goal `Pa`.
     pub goal_pressure_pa: f64,
     /// One-way axial attenuation coefficient for positive axial offsets [Np/m].
     pub attenuation_np_m: f64,
@@ -172,7 +172,7 @@ pub struct PerSpotCavitationDoseGrid {
     pub dose: Vec<f64>,
     /// Electronic-steering efficiency at each raster point.
     pub efficiency: Vec<f64>,
-    /// Delivered peak pressure at each raster point [Pa].
+    /// Delivered peak pressure at each raster point `Pa`.
     pub p_spot_pa: Vec<f64>,
     /// Prescribed per-spot dose goal.
     pub goal_dose: f64,
@@ -185,15 +185,15 @@ pub struct PerSpotCavitationDoseGrid {
 /// Borrowed inputs for a curve-driven passive-cavitation monitor trace.
 #[derive(Clone, Copy, Debug)]
 pub struct CavitationMonitorTraceInput<'a> {
-    /// Monotone pressure sweep samples [Pa].
+    /// Monotone pressure sweep samples `Pa`.
     pub pressures_pa: &'a [f64],
     /// Passive-cavitation emission power at each pressure sample.
     pub cavitation_power: &'a [f64],
     /// Number of controller pulses to simulate.
     pub n_pulses: usize,
-    /// Pulse repetition frequency [Hz].
+    /// Pulse repetition frequency `Hz`.
     pub prf_hz: f64,
-    /// Initial controller pressure [Pa].
+    /// Initial controller pressure `Pa`.
     pub p_start_pa: f64,
     /// Stable-emission target for the controller.
     pub target_signal: f64,
@@ -212,7 +212,7 @@ pub struct CavitationMonitorTraceInput<'a> {
 /// Passive-cavitation monitor trace with controller pressure history.
 #[derive(Clone, Debug, PartialEq)]
 pub struct CavitationMonitorTrace {
-    /// Time samples [s].
+    /// Time samples `s`.
     pub time_s: Vec<f64>,
     /// Measured cavitation signal per pulse.
     pub cavitation_signal: Vec<f64>,
@@ -227,7 +227,7 @@ pub struct CavitationMonitorTrace {
 /// Owned inputs for a simulated passive-cavitation monitor trace.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SimulatedPopulationMonitorInput {
-    /// Fundamental drive frequency [Hz].
+    /// Fundamental drive frequency `Hz`.
     pub f0_hz: f64,
     /// Shared liquid and gas parameters.
     pub medium: PopulationMedium,
@@ -235,13 +235,13 @@ pub struct SimulatedPopulationMonitorInput {
     pub n_bubbles: usize,
     /// Number of controller pulses.
     pub n_pulses: usize,
-    /// Pulse repetition frequency [Hz].
+    /// Pulse repetition frequency `Hz`.
     pub prf_hz: f64,
-    /// Initial controller pressure [Pa].
+    /// Initial controller pressure `Pa`.
     pub p_start_pa: f64,
-    /// Minimum controller pressure [Pa].
+    /// Minimum controller pressure `Pa`.
     pub p_min_pa: f64,
-    /// Maximum controller pressure [Pa].
+    /// Maximum controller pressure `Pa`.
     pub p_max_pa: f64,
     /// Stable-emission target for the controller.
     pub target_signal: f64,
@@ -253,7 +253,7 @@ pub struct SimulatedPopulationMonitorInput {
     pub goal_fraction: f64,
     /// Deterministic RNG seed for per-pulse population seeds.
     pub seed: u64,
-    /// Median equilibrium radius of the log-normal population [m].
+    /// Median equilibrium radius of the log-normal population `m`.
     pub r0_median_m: f64,
     /// Natural-log radius standard deviation.
     pub r0_sigma_ln: f64,
@@ -261,7 +261,7 @@ pub struct SimulatedPopulationMonitorInput {
     pub n_cycles: f64,
     /// Output samples per single-bubble trace.
     pub n_out: usize,
-    /// Observation distance for far-field emission [m].
+    /// Observation distance for far-field emission `m`.
     pub r_obs_m: f64,
     /// Half-width of spectral line windows as a fraction of `f0_hz`.
     pub rel_halfwidth: f64,
@@ -276,7 +276,7 @@ pub struct SimulatedPopulationMonitorInput {
 /// Simulated monitor trace with stable and broadband channels retained.
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimulatedPopulationMonitorTrace {
-    /// Time samples [s].
+    /// Time samples `s`.
     pub time_s: Vec<f64>,
     /// Stable + broadband cavitation signal per pulse.
     pub cavitation_signal: Vec<f64>,
@@ -295,7 +295,7 @@ pub struct SimulatedPopulationMonitorTrace {
 /// Borrowed inputs for closed-loop passive-cavitation sonication control.
 #[derive(Clone, Copy, Debug)]
 pub struct ClosedLoopCavitationSonicationInput<'a> {
-    /// Monotone pressure sweep samples [Pa].
+    /// Monotone pressure sweep samples `Pa`.
     pub pressures_pa: &'a [f64],
     /// Stable-cavitation emission power at each pressure sample.
     pub stable_power: &'a [f64],
@@ -303,9 +303,9 @@ pub struct ClosedLoopCavitationSonicationInput<'a> {
     pub inertial_power: &'a [f64],
     /// Number of controller bursts.
     pub n_bursts: usize,
-    /// Burst duration used for trapezoidal dose integration [s].
+    /// Burst duration used for trapezoidal dose integration `s`.
     pub burst_duration_s: f64,
-    /// Initial controller pressure [Pa].
+    /// Initial controller pressure `Pa`.
     pub p_start_pa: f64,
     /// Stable-emission target for the controller.
     pub stable_target: f64,
@@ -318,7 +318,7 @@ pub struct ClosedLoopCavitationSonicationInput<'a> {
 /// Closed-loop passive-cavitation sonication trace.
 #[derive(Clone, Debug, PartialEq)]
 pub struct ClosedLoopCavitationSonicationTrace {
-    /// Applied pressure per burst [Pa].
+    /// Applied pressure per burst `Pa`.
     pub pressure_pa: Vec<f64>,
     /// Stable-cavitation emission sampled at each applied pressure.
     pub stable_emission: Vec<f64>,
@@ -342,23 +342,23 @@ pub enum RasterPulsingSchedule {
 /// Borrowed inputs for rastered cavitation-dose pulsing with thermal memory.
 #[derive(Clone, Copy, Debug)]
 pub struct RasterPulsingInput<'a> {
-    /// Spot lateral offsets [m].
+    /// Spot lateral offsets `m`.
     pub spot_lateral_m: &'a [f64],
-    /// Spot axial offsets [m].
+    /// Spot axial offsets `m`.
     pub spot_axial_m: &'a [f64],
-    /// Target pressure at the mechanical focus [Pa].
+    /// Target pressure at the mechanical focus `Pa`.
     pub p_target_pa: f64,
-    /// Drive frequency [Hz].
+    /// Drive frequency `Hz`.
     pub f0_hz: f64,
     /// Sound speed used by the steering-efficiency model [m/s].
     pub c_m_s: f64,
-    /// Monotone cavitation-dose pressure sweep [Pa].
+    /// Monotone cavitation-dose pressure sweep `Pa`.
     pub cav_pressures_pa: &'a [f64],
     /// Cavitation dose per pulse at each pressure sample.
     pub cav_dose_per_pulse: &'a [f64],
     /// Pulses delivered per raster spot.
     pub pulses_per_spot: usize,
-    /// Pulse repetition frequency [Hz].
+    /// Pulse repetition frequency `Hz`.
     pub prf_hz: f64,
     /// Firing order.
     pub schedule: RasterPulsingSchedule,
@@ -368,13 +368,13 @@ pub struct RasterPulsingInput<'a> {
     pub attenuation_np_m: f64,
     /// Whether electronic steering uses apodized aperture compensation.
     pub apodized: bool,
-    /// Residual-bubble dissolution time [s].
+    /// Residual-bubble dissolution time `s`.
     pub tau_dissolution_s: f64,
     /// Residual-bubble shielding gain.
     pub shielding_g: f64,
-    /// Thermal relaxation time constant [s].
+    /// Thermal relaxation time constant `s`.
     pub tau_thermal_s: f64,
-    /// Temperature rise at full pressure for one pulse [K].
+    /// Temperature rise at full pressure for one pulse `K`.
     pub thermal_gain_k_per_pulse: f64,
     /// Dose threshold used for coverage.
     pub goal_dose: f64,
@@ -385,7 +385,7 @@ pub struct RasterPulsingInput<'a> {
 /// Rastered pulsing trace with compact time-series and per-spot final state.
 #[derive(Clone, Debug, PartialEq)]
 pub struct RasterPulsingTrace {
-    /// Compact time axis [s].
+    /// Compact time axis `s`.
     pub time_s: Vec<f64>,
     /// Fraction of spots at or above the dose goal.
     pub coverage: Vec<f64>,
@@ -393,15 +393,15 @@ pub struct RasterPulsingTrace {
     pub cumulative_dose: Vec<f64>,
     /// Final effective cavitation dose per spot.
     pub per_spot_dose: Vec<f64>,
-    /// Peak temperature rise per spot [K].
+    /// Peak temperature rise per spot `K`.
     pub per_spot_peak_temp_k: Vec<f64>,
     /// Steady residual-bubble shielding efficacy for repeat pulses.
     pub efficacy: f64,
-    /// Effective per-spot interval [s].
+    /// Effective per-spot interval `s`.
     pub dt_spot_s: f64,
-    /// Total treatment duration represented by the firing order [s].
+    /// Total treatment duration represented by the firing order `s`.
     pub treatment_s: f64,
-    /// Delivered pressure per spot [Pa].
+    /// Delivered pressure per spot `Pa`.
     pub p_spot_pa: Vec<f64>,
 }
 
@@ -1112,11 +1112,11 @@ pub fn cloud_erosion_validation_metrics(
 pub struct BoilingLesionPlan {
     /// Number of boiling pulses required to reach the requested coverage.
     pub pulses: usize,
-    /// Lateral lesion semi-axis [m].
+    /// Lateral lesion semi-axis `m`.
     pub lateral_radius_m: f64,
-    /// Axial lesion semi-axis [m].
+    /// Axial lesion semi-axis `m`.
     pub axial_radius_m: f64,
-    /// Single-pulse duration [ms].
+    /// Single-pulse duration `ms`.
     pub pulse_ms: f64,
 }
 

@@ -56,7 +56,7 @@ impl InterlockSystem {
     ///
     /// Returns `Ok(true)` only if all interlocks pass and no emergency stop is active.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn check_interlocks(&mut self) -> KwaversResult<bool> {
         if self.emergency_stop_active {
@@ -75,8 +75,8 @@ impl InterlockSystem {
 
     /// Enable system operation (requires all interlocks to pass).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn enable_system(&mut self) -> KwaversResult<()> {
         if !self.check_interlocks()? {

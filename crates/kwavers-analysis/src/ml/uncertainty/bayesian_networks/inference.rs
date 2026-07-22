@@ -10,7 +10,7 @@ use std::collections::HashMap;
 impl MlBayesianPINN {
     /// Quantify uncertainty for PINN predictions
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "pinn")]
     pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(
@@ -32,7 +32,7 @@ impl MlBayesianPINN {
     /// Returns mean, variance (Bessel-corrected std dev), 68% and 95% confidence
     /// intervals, and a reliability score ∈ (0, 1].
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `predictions` is empty.
+    /// - Returns `KwaversError::InvalidInput` if `predictions` is empty.
     ///
     pub(super) fn compute_prediction_statistics(
         &self,

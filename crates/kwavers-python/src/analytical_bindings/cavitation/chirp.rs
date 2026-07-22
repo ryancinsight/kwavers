@@ -208,10 +208,10 @@ pub fn inter_pulse_residual_clearance(
     ))
 }
 
-/// Epstein–Plesset dissolution time R₀ → 0 [s] for a residual tissue bubble.
+/// Epstein–Plesset dissolution time R₀ → 0 `s` for a residual tissue bubble.
 ///
 /// Returns:
-///     Dissolution time [s], or None if the bubble does not dissolve (f ≥ 1).
+///     Dissolution time `s`, or None if the bubble does not dissolve (f ≥ 1).
 #[pyfunction]
 #[pyo3(signature = (r0_m, saturation_fraction=0.7))]
 pub fn residual_dissolution_time_s(r0_m: f64, saturation_fraction: f64) -> PyResult<Option<f64>> {

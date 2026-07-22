@@ -126,7 +126,7 @@ fn read_focus_idx<R: std::io::Read + std::io::Seek>(
 /// at its stored amplitude.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] when:
+/// Returns `KwaversError::InvalidInput` when:
 /// - The file cannot be opened.
 /// - A required array is missing or has an incompatible dtype/shape.
 /// - The stored `focus_idx` falls outside `field`'s shape.
@@ -217,7 +217,7 @@ pub fn load_focal_kernel(path: &Path, target_pnp_pa: Option<f64>) -> KwaversResu
 /// corrupt fixture surfaces immediately.
 ///
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if `dir` cannot be read
+/// - Returns `KwaversError::InvalidInput` if `dir` cannot be read
 ///   or if any matching file fails to parse.
 pub fn discover_focal_kernels(dir: &Path) -> KwaversResult<Vec<FocalKernel>> {
     let entries = std::fs::read_dir(dir).map_err(|e| {

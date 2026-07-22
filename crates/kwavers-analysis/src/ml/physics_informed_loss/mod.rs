@@ -65,7 +65,7 @@ pub struct PhysicsLossConfig {
     pub lambda_physics_init: f64,
     pub sound_speed: f64,
     pub frequency: f64,
-    /// Physical grid spacing [m] (dx = dy = dz). Used to normalize the
+    /// Physical grid spacing `m` (dx = dy = dz). Used to normalize the
     /// finite-difference Laplacian to [field / m²] so that the residual
     /// ∇²u + k²u is dimensionally consistent.
     pub grid_spacing: f64,
@@ -94,7 +94,7 @@ impl Default for PhysicsLossConfig {
 impl PhysicsLossConfig {
     /// Validate configuration
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.lambda_data_init < 0.0 || self.lambda_physics_init < 0.0 {

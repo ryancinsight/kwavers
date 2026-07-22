@@ -179,7 +179,7 @@ fn normal_apply<O: LinearOperator>(
     }
 }
 
-/// Diagonal preconditioner: z[i] = r[i] / diag[i].
+/// Diagonal preconditioner: z`i` = r`i` / diag`i`.
 ///
 /// Unrolled 4-wide for FMA-compatible compiler vectorization.
 fn apply_preconditioner(r: &[f32], diag: &[f32], z: &mut [f32]) {

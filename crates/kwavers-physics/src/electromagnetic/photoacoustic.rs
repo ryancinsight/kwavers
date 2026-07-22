@@ -29,17 +29,17 @@ pub struct PulsedLaser {
 pub enum BeamProfile {
     /// Gaussian profile `exp(−r²/w²)`.
     Gaussian {
-        /// 1/e² beam radius w [m].
+        /// 1/e² beam radius w `m`.
         beam_radius: f64,
     },
     /// Uniform flat-top (top-hat) profile.
     FlatTop {
-        /// Radius of the illuminated disc [m].
+        /// Radius of the illuminated disc `m`.
         beam_radius: f64,
     },
     /// Non-diffracting Bessel beam.
     Bessel {
-        /// Radius of the central lobe [m].
+        /// Radius of the central lobe `m`.
         central_lobe_radius: f64,
     },
 }

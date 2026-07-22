@@ -47,7 +47,7 @@ impl EigenvalueSolver {
     /// Power iteration for largest eigenvalue
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn power_iteration(
         &self,
@@ -112,7 +112,7 @@ impl EigenvalueSolver {
     /// Reference: Golub & Van Loan (2013) "Matrix Computations", Algorithm 7.3.3
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn inverse_power_iteration(
         &self,

@@ -10,8 +10,8 @@ use leto::Array3;
 
 /// Beamforming-based localization using raw time-series data (SSOT compliant).
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn localize_beamforming(
     sensor_array: &SensorArray,
@@ -66,7 +66,7 @@ pub struct BeamformSearch {
 impl BeamformSearch {
     /// Create a new beamforming grid search evaluator.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         processor: BeamformingProcessor,
@@ -96,8 +96,8 @@ impl BeamformSearch {
 
     /// Perform the grid search and return the best position.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn search(
         &self,

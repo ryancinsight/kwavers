@@ -73,7 +73,7 @@ impl MicrobubbleDynamicsService {
 
     /// Convert domain state to Keller-Miksis bubble state
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn domain_to_km_state(
         bubble: &MicrobubbleState,

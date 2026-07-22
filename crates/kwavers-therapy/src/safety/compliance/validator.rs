@@ -15,7 +15,7 @@ use super::{
 impl EnhancedComplianceValidator {
     /// New.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: ComplianceConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -198,7 +198,7 @@ impl EnhancedComplianceValidator {
     }
     /// End session.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn end_session(&mut self) -> KwaversResult<SessionMetrics> {
         let elapsed = if let Some(start) = self.session_start {

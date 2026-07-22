@@ -108,8 +108,8 @@ impl NeuralLayer {
     /// assert_eq!(layer.output_size(), 32);
     /// ```
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(input_size: usize, output_size: usize) -> KwaversResult<Self> {
         if input_size == 0 || output_size == 0 {
@@ -213,7 +213,7 @@ impl NeuralLayer {
     /// - All output values in [-1, 1] (tanh bounds)
     /// # Errors
     /// - Returns [`KwaversError::DimensionMismatch`] if the precondition for mismatched array or grid dimensions is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn forward(&self, input: &Array3<f32>) -> KwaversResult<Array3<f32>> {
         let [d0, d1, d2] = input.shape();
@@ -291,7 +291,7 @@ impl NeuralLayer {
     /// update stays consistent with the current public API while remaining
     /// mathematically defined.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn adapt(&mut self, gradient: f32) -> KwaversResult<()> {
         if !gradient.is_finite() {

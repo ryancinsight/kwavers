@@ -33,7 +33,7 @@
 //! ## Grid constraints
 //!
 //! GPU PSTD requires power-of-two dimensions with each axis ≤ 1,024.
-//! Construction fails with [`KwaversError::InvalidInput`] if these are
+//! Construction fails with `KwaversError::InvalidInput` if these are
 //! violated.  `SimulationSolverFactory::create_solver(SolverType::PstdGpu,
 //! ...)` propagates that error to the caller.
 
@@ -98,7 +98,7 @@ impl GpuPstdSimulationAdapter {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] when grid dimensions are not
+    /// Returns `KwaversError::InvalidInput` when grid dimensions are not
     /// power-of-two or exceed 1,024 per axis.
     pub fn new<M: Medium>(
         config: &SolverConfiguration,

@@ -69,8 +69,8 @@ use std::f64::consts::PI;
 ///
 /// Implementors supply the instantaneous specific capacitance `C_m(t)` and its
 /// time derivative `dC_m/dt`, in the electrophysiology units used by
-/// [`super::hodgkin_huxley`] (`C_m` [µF/cm²], `t` [ms]). The two concrete
-/// sources are [`CapacitanceModulation`] (a symmetric sinusoid) and
+/// [`super::hodgkin_huxley`] (`C_m` [µF/cm²], `t` `ms`). The two concrete
+/// sources are `CapacitanceModulation` (a symmetric sinusoid) and
 /// [`super::bls::BilayerSonophore`] (the grounded curved-dome geometry of
 /// Plaksin et al. 2014, Eq. 8). [`super::nice::simulate_nice`] is generic over
 /// this trait so the membrane integration is monomorphised per source with zero
@@ -92,7 +92,7 @@ pub trait CapacitanceSource {
 ///
 /// Encapsulates the NICE capacitance waveform `C_m(t) = C_m0·(1 + ε·sin(ωt))`
 /// and its analytic time derivative, in the electrophysiology units used by
-/// [`super::hodgkin_huxley`] (`C_m` [µF/cm²], `t` [ms]).
+/// [`super::hodgkin_huxley`] (`C_m` [µF/cm²], `t` `ms`).
 #[derive(Debug, Clone, Copy)]
 pub struct CapacitanceModulation {
     /// Baseline specific capacitance C_m0 [µF/cm²].
@@ -186,14 +186,14 @@ pub const BILAYER_AREA_MODULUS_N_M: f64 = 0.24;
 /// R = 10 µm, K_A ≈ 0.24 N/m gives ε ≈ 0.2). The estimate saturates at large
 /// neuromodulation pressures where the small-strain assumption breaks down; the
 /// result is clamped to `[0, 0.99]` to keep the capacitance strictly positive in
-/// [`CapacitanceModulation`].
+/// `CapacitanceModulation`.
 ///
 /// **Evidence tier:** analytic small-strain derivation + property tests (see
 /// module-level note); not calibrated to the full bilayer-sonophore ODE.
 ///
 /// # Arguments
-/// * `peak_pressure_pa` — peak acoustic pressure amplitude [Pa]
-/// * `cell_radius_m` — membrane (cell soma) radius R [m]
+/// * `peak_pressure_pa` — peak acoustic pressure amplitude `Pa`
+/// * `cell_radius_m` — membrane (cell soma) radius R `m`
 /// * `area_modulus_n_m` — bilayer area-expansion modulus K_A [N/m]
 ///   (use [`BILAYER_AREA_MODULUS_N_M`] for the default lipid value)
 #[must_use]

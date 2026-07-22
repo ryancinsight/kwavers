@@ -10,8 +10,8 @@
 //!
 //! For each bubble track with detections at positions (x_k, z_k) at frame indices f_k:
 //! ```text
-//! v_x[k] = (x_{k+1} − x_k) / ((f_{k+1} − f_k) · Δt)   (m/s)
-//! v_z[k] = (z_{k+1} − z_k) / ((f_{k+1} − f_k) · Δt)
+//! v_x`K` = (x_{k+1} − x_k) / ((f_{k+1} − f_k) · Δt)   (m/s)
+//! v_z`K` = (z_{k+1} − z_k) / ((f_{k+1} − f_k) · Δt)
 //! ```
 //! The estimate is assigned to the segment midpoint (x̄_k, z̄_k) = ((x_k + x_{k+1})/2, ...).
 //!
@@ -19,7 +19,7 @@
 //!
 //! Each velocity estimate votes into the nearest grid cell:
 //! ```text
-//! V_x[m,n] += v_x[k]   (for all k whose midpoint falls in cell (m,n))
+//! V_x[m,n] += v_x`K`   (for all k whose midpoint falls in cell (m,n))
 //! count[m,n] += 1
 //! ⟨v_x⟩[m,n] = V_x[m,n] / count[m,n]
 //! ```

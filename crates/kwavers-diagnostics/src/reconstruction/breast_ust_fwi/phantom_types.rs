@@ -53,7 +53,7 @@ impl BreastUstPhantomStorageOrder {
 pub struct BreastUstAliPhantom {
     /// Sound-speed volume [m/s].
     pub sound_speed_m_s: Array3<f64>,
-    /// Uniform voxel spacing [m].
+    /// Uniform voxel spacing `m`.
     pub spacing_m: f64,
     /// Resolved dataset or variable path.
     pub dataset_path: String,

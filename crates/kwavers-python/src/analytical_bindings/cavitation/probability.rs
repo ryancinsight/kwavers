@@ -14,9 +14,9 @@ use pyo3::prelude::*;
 /// The erf is evaluated via Abramowitz & Stegun 7.1.26 (max error 1.5×10⁻⁷).
 ///
 /// Args:
-///     p_arr: Array of |peak negative pressure| magnitudes [Pa].
-///     p_threshold: Mean intrinsic threshold [Pa] (bovine liver, 1 MHz: 28.2 MPa).
-///     sigma_pa: Standard deviation [Pa] (bovine liver, 1 MHz: 0.96 MPa).
+///     p_arr: Array of |peak negative pressure| magnitudes `Pa`.
+///     p_threshold: Mean intrinsic threshold `Pa` (bovine liver, 1 MHz: 28.2 MPa).
+///     sigma_pa: Standard deviation `Pa` (bovine liver, 1 MHz: 0.96 MPa).
 ///
 /// Returns:
 ///     P_cav array [dimensionless, 0–1], same length as p_arr.
@@ -40,15 +40,15 @@ pub fn intrinsic_threshold_cavitation_probability(
 
 /// Frequency-dependent intrinsic cavitation threshold (Vlaisavljevich 2015 log-linear fit).
 ///
-/// p_T(f) = p_T(1 MHz) + slope * log10(f / 1 MHz)   [Pa]
+/// p_T(f) = p_T(1 MHz) + slope * log10(f / 1 MHz)   `Pa`
 ///
 /// Args:
-///     f_hz: Frequency array [Hz].
-///     p_t_1mhz_pa: Threshold at 1 MHz [Pa] (bovine liver: 28.2 MPa).
+///     f_hz: Frequency array `Hz`.
+///     p_t_1mhz_pa: Threshold at 1 MHz `Pa` (bovine liver: 28.2 MPa).
 ///     slope_pa_per_decade: Slope [Pa per decade] (bovine liver: 1.4 MPa).
 ///
 /// Returns:
-///     Threshold pressure array [Pa], same length as f_hz.
+///     Threshold pressure array `Pa`, same length as f_hz.
 ///
 /// Reference:
 ///     Vlaisavljevich et al. (2015) Ultrasound Med. Biol. 41, 1251, Table I.
@@ -106,8 +106,8 @@ pub fn cumulative_cavitation_probability(
 /// E(PRF) = exp(-max(0, PRF * tau_d - 1) * g)
 ///
 /// Args:
-///     prf_hz: Pulse repetition frequency array [Hz].
-///     bubble_dissolution_time_s: Residual-bubble dissolution time [s] (liver: ~5 ms).
+///     prf_hz: Pulse repetition frequency array `Hz`.
+///     bubble_dissolution_time_s: Residual-bubble dissolution time `s` (liver: ~5 ms).
 ///     shielding_coefficient: Exponential gain g (Macoskey 2018: ~1.2 for liver).
 ///
 /// Returns:

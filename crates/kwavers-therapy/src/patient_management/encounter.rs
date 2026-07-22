@@ -149,7 +149,7 @@ impl ClinicalEncounter {
 
     /// Close the encounter
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn close(&mut self) -> KwaversResult<()> {
         if self.status != "active" {
@@ -182,7 +182,7 @@ pub struct VitalSigns {
 impl VitalSigns {
     /// Validate vital signs are within reasonable ranges
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if let Some(hr) = self.heart_rate_bpm {

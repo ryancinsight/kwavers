@@ -33,7 +33,7 @@ impl ComplianceValidator {
 
     /// Run all compliance checks against `system_config`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate_compliance(
         &mut self,

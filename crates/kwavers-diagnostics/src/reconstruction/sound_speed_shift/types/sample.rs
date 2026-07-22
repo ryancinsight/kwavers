@@ -9,7 +9,7 @@ pub struct SoundSpeedShiftSample {
     pub transmitter: PlanarPoint,
     /// Receive point in the imaging plane.
     pub receiver: PlanarPoint,
-    /// Observed minus reference travel time [s].
+    /// Observed minus reference travel time `s`.
     pub time_shift_s: f64,
 }
 

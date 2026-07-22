@@ -69,7 +69,7 @@ impl CentralDifference6 {
     ///
     /// Interior stencil (O(Δx⁶)):
     /// ```text
-    /// dst[i] = (−f[i−3] + 9f[i−2] − 45f[i−1] + 45f[i+1] − 9f[i+2] + f[i+3]) / (60 Δx)
+    /// dst`i` = (−f[i−3] + 9f[i−2] − 45f[i−1] + 45f[i+1] − 9f[i+2] + f[i+3]) / (60 Δx)
     /// ```
     /// Near-boundary: O(Δx⁴) at i=2/n−3, O(Δx²) at i=1/n−2, O(Δx) at i=0/n−1.
     /// # Errors

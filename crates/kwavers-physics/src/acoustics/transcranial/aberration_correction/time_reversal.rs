@@ -77,7 +77,7 @@ impl TranscranialAberrationCorrection {
     ///   each transducer element.
     ///
     /// ## Returns
-    /// Phase conjugate correction `phases[i] = −arg(p(r_i))` for each element.
+    /// Phase conjugate correction `phases`i` = −arg(p(r_i))` for each element.
     ///
     /// ## Panics / Errors
     /// Returns `Err` if the `measured_field` dimensions do not match `self.grid`.

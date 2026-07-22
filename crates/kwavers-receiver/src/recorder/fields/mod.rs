@@ -21,8 +21,8 @@
 //!
 //! Velocity components are on a **staggered grid** (Yee/k-Wave convention).
 //! For an N×1×1 grid with spacing Δx:
-//! - Pressure `p[i]` lives at position `i·Δx`
-//! - Velocity `ux[i]` lives at position `(i + ½)·Δx`
+//! - Pressure `p`i`` lives at position `i·Δx`
+//! - Velocity `ux`i`` lives at position `(i + ½)·Δx`
 //!
 //! - **`VelocityX/Y/Z`**: Time series `u_α[sensor, t]`  m/s
 //! - **`VelocityMaxX/Y/Z`**: `max_t u_α[sensor]`        m/s
@@ -35,9 +35,9 @@
 //! For ux on the staggered grid (position i+½), the value at the collocated
 //! pressure position i is obtained by a half-cell backward shift in k-space:
 //! ```text
-//!   ux_ns[i] = IFFT( exp(−i·kx·Δx/2) · FFT(ux) )[i]
+//!   ux_ns`i` = IFFT( exp(−i·kx·Δx/2) · FFT(ux) )`i`
 //! ```
-//! which is equivalent to `(ux[i−1] + ux[i]) / 2` for constant-spacing grids
+//! which is equivalent to `(ux[i−1] + ux`i`) / 2` for constant-spacing grids
 //! under band-limited interpolation (Boyd 2001, §3.2).
 //!
 //! - **`VelocityNonStaggeredX/Y/Z`**: `ux_ns[sensor, t]` m/s

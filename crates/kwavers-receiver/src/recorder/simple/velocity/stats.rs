@@ -19,7 +19,7 @@ impl SensorRecorder {
 
     /// Extract ux max.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_ux_max(&self) -> Option<Array1<f64>> {
@@ -41,7 +41,7 @@ impl SensorRecorder {
 
     /// Extract ux min.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_ux_min(&self) -> Option<Array1<f64>> {
@@ -63,7 +63,7 @@ impl SensorRecorder {
 
     /// Extract ux rms.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_ux_rms(&self) -> Option<Array1<f64>> {
@@ -87,7 +87,7 @@ impl SensorRecorder {
 
     /// Extract uy max.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_uy_max(&self) -> Option<Array1<f64>> {
@@ -109,7 +109,7 @@ impl SensorRecorder {
 
     /// Extract uy min.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_uy_min(&self) -> Option<Array1<f64>> {
@@ -131,7 +131,7 @@ impl SensorRecorder {
 
     /// Extract uy rms.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_uy_rms(&self) -> Option<Array1<f64>> {
@@ -155,7 +155,7 @@ impl SensorRecorder {
 
     /// Extract uz max.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_uz_max(&self) -> Option<Array1<f64>> {
@@ -177,7 +177,7 @@ impl SensorRecorder {
 
     /// Extract uz min.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_uz_min(&self) -> Option<Array1<f64>> {
@@ -199,7 +199,7 @@ impl SensorRecorder {
 
     /// Extract uz rms.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[must_use]
     pub fn extract_uz_rms(&self) -> Option<Array1<f64>> {

@@ -33,7 +33,7 @@ impl MultiLagSlsc {
     /// # Returns
     /// * Combined coherence values
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process_multi(&self, data: &leto::Array2<Complex64>) -> KwaversResult<Array1<f64>> {
         let mut combined = Array1::zeros(data.shape()[1]);

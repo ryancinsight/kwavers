@@ -79,7 +79,7 @@ impl SpatialSmoothingComplex {
 
     /// Apply spatial smoothing: `R_smooth = (1/L) ∑ R[start..start+p, start..start+p]`.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn apply(&self, covariance: &Array2<Complex64>) -> KwaversResult<Array2<Complex64>> {
         let n = covariance.shape()[0];

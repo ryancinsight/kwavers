@@ -51,7 +51,7 @@ pub struct WavefrontAnalyzer {
 impl WavefrontAnalyzer {
     /// Create new wavefront analyzer
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(grid_spacing: f64) -> KwaversResult<Self> {
         if !grid_spacing.is_finite() || grid_spacing <= 0.0 {
@@ -68,7 +68,7 @@ impl WavefrontAnalyzer {
 
     /// Detect wavefront type from pressure field
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn detect_wavefront(
         &self,
@@ -186,7 +186,7 @@ impl WavefrontAnalyzer {
 
     /// Detect plane waves in pressure field
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn detect_plane_wave(&self, pressure_field: &Array3<f64>) -> KwaversResult<bool> {
         let analysis = self.detect_wavefront(pressure_field)?;
@@ -195,7 +195,7 @@ impl WavefrontAnalyzer {
 
     /// Estimate source distance from spherical wavefront
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn estimate_source_distance(
         &self,

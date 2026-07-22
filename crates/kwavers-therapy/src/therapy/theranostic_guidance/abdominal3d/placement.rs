@@ -8,7 +8,7 @@
 //!
 //! ### Theorem: Focused Bowl Placement
 //!
-//! Let F be the organ centroid in physical space [m] and S be the exterior skin
+//! Let F be the organ centroid in physical space `m` and S be the exterior skin
 //! point that minimises ‖S − F‖ over all boundary voxels of the body mask.
 //! Define the bowl axis d̂ = (F − S) / ‖F − S‖, focal depth `D = ‖F − S‖`,
 //! and curvature radius `R = max(D / cos(θ_max), 60 mm)`. Any point on the

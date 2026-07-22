@@ -41,7 +41,7 @@ fn triangle(s: f64) -> f64 {
 pub struct StagedSonication {
     /// Stage fraction `s ∈ [0, 1]` of each pulse through the sonication.
     pub stage: Vec<f64>,
-    /// Drive frequency `f(s)` of each pulse [Hz] — one up-down triangle.
+    /// Drive frequency `f(s)` of each pulse `Hz` — one up-down triangle.
     pub frequency_hz: Vec<f64>,
     /// Per-pulse cavitation activity = engaged nuclei fraction at `f(s)` ∈ [0, 1].
     pub cavitation_activity: Vec<f64>,

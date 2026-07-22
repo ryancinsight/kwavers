@@ -24,7 +24,7 @@ pub mod neon {
     use crate::simd_safe::auto_detect::ops;
     use leto::Array3;
 
-    /// Add two arrays element-wise: `out[i] = a[i] + b[i]`.
+    /// Add two arrays element-wise: `out`i` = a`i` + b`i``.
     ///
     /// LLVM autovectorises this loop to `FADD Vn.2D` on `-C target-cpu=native`.
     /// # Panics
@@ -35,7 +35,7 @@ pub mod neon {
         ops::add_arrays(a, b, out);
     }
 
-    /// Scale array in place: `array[i] *= scalar`.
+    /// Scale array in place: `array`i` *= scalar`.
     ///
     /// LLVM autovectorises to `FMUL Vn.2D` on `-C target-cpu=native`.
     #[inline]
@@ -43,7 +43,7 @@ pub mod neon {
         ops::scale_array(array, scalar);
     }
 
-    /// Fused multiply-add in place: `c[i] += multiplier * a[i] * b[i]`.
+    /// Fused multiply-add in place: `c`i` += multiplier * a`i` * b`i``.
     ///
     /// LLVM autovectorises to `VFMA Vn.2D` on `-C target-cpu=native`.
     ///

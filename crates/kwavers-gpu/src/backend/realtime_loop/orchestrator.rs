@@ -51,8 +51,8 @@ impl RealtimeSimulationOrchestrator {
     /// the timestep counter. Empty field sets are a valid zero-kernel step.
     ///
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     pub fn step(
         &mut self,
         fields: &mut HashMap<String, LetoArray3<f64>>,
@@ -115,7 +115,7 @@ impl RealtimeSimulationOrchestrator {
     /// Run full simulation loop.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.

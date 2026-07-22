@@ -3,7 +3,7 @@
 use super::helpers::pmut;
 use pyo3::prelude::*;
 
-/// PMUT immersion resonance [Hz] (film = "aln" | "pzt").
+/// PMUT immersion resonance `Hz` (film = "aln" | "pzt").
 #[pyfunction]
 pub fn pmut_resonance_immersion(
     film: &str,
@@ -21,7 +21,7 @@ pub fn pmut_coupling_k2(film: &str, radius: f64, t_p: f64, t_s: f64) -> PyResult
     Ok(pmut(film, radius, t_p, t_s)?.coupling_k2())
 }
 
-/// PMUT dielectric self-heating power [W].
+/// PMUT dielectric self-heating power `W`.
 #[pyfunction]
 pub fn pmut_self_heating(
     film: &str,
@@ -46,7 +46,7 @@ pub fn pmut_fractional_bandwidth(
     Ok(pmut(film, radius, t_p, t_s)?.fractional_bandwidth(density_fluid))
 }
 
-/// PMUT drive-scaled peak output pressure [Pa] (film = "aln" | "pzt").
+/// PMUT drive-scaled peak output pressure `Pa` (film = "aln" | "pzt").
 #[pyfunction]
 pub fn pmut_max_output_pressure(
     film: &str,

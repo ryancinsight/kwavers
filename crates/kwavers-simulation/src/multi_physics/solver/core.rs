@@ -52,8 +52,8 @@ impl SimulationMultiPhysicsSolver {
 
     /// Add a physics solver to the coupled system
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_solver(&mut self, solver: Box<dyn CoupledPhysicsSolver>) -> KwaversResult<()> {
         let domain = solver.domain_type();
@@ -69,7 +69,7 @@ impl SimulationMultiPhysicsSolver {
 
     /// Add coupling between two physics domains
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_coupling(
         &mut self,
@@ -230,7 +230,7 @@ impl SimulationMultiPhysicsSolver {
     ///   3. Step each solver with updated coupling forcing.
     ///   4. Compute L∞ residual. Converge or iterate.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn solve_monolithic_coupling(&mut self, dt: f64) -> KwaversResult<f64> {
         // Jacobi fixed-point iteration of the shared exchange+step sweep (steps 1–4

@@ -59,12 +59,12 @@ pub struct CloudParameters {
     pub viscosity: f64,
     /// Erosion efficiency (kg/J)
     pub erosion_efficiency: f64,
-    /// Representative cavitation drive frequency [Hz] used to size the inertial
+    /// Representative cavitation drive frequency `Hz` used to size the inertial
     /// bubble growth (R_max) via the Gilmore single-bubble solver. The
     /// rarefactional half-cycle duration ≈ 1/(2f) sets how large a bubble grows;
     /// set per modality (lithotripsy shock tail ≈ 0.25–0.5 MHz; histotripsy ≈ 1 MHz).
     pub drive_frequency: f64,
-    /// Grid cell spacing `(dx, dy, dz)` [m] — sets inter-bubble distances for the
+    /// Grid cell spacing `(dx, dy, dz)` `m` — sets inter-bubble distances for the
     /// acoustic coupling (ADR 028).
     pub cell_spacing: [f64; 3],
     /// Enable inter-bubble acoustic coupling (radiated-pressure perturbation of
@@ -74,7 +74,7 @@ pub struct CloudParameters {
     /// finite `interaction_radius` cutoff there. Off ⇒ the independent-oscillator
     /// model (ADR 027). When enabled, prefer tractable problem sizes / cutoffs.
     pub coupling_enabled: bool,
-    /// Cutoff distance [m] beyond which inter-bubble coupling is neglected, bounding
+    /// Cutoff distance `m` beyond which inter-bubble coupling is neglected, bounding
     /// the `O(active²)` coupling sum. `INFINITY` ⇒ all active pairs.
     pub interaction_radius: f64,
     /// Enable cloud-scale acoustic shielding: the incident field is attenuated by
@@ -133,7 +133,7 @@ impl Default for CloudParameters {
     }
 }
 
-/// Incompressible near-field pressure [Pa] radiated by a pulsating bubble of
+/// Incompressible near-field pressure `Pa` radiated by a pulsating bubble of
 /// radius `r`, wall velocity `r_dot`, and wall acceleration `r_ddot` at distance
 /// `d > 0`:  `p_rad = (ρ_L/d)·(r²·r̈ + 2·r·ṙ²) = (ρ_L/d)·d/dt(r²ṙ)`.
 ///
@@ -148,7 +148,7 @@ pub fn bubble_radiated_pressure(rho: f64, distance: f64, r: f64, r_dot: f64, r_d
     rho * source_strength / distance
 }
 
-/// Euclidean distance [m] between two cell positions.
+/// Euclidean distance `m` between two cell positions.
 #[inline]
 fn pair_distance(a: [f64; 3], b: [f64; 3]) -> f64 {
     ((a[0] - b[0]).powi(2) + (a[1] - b[1]).powi(2) + (a[2] - b[2]).powi(2)).sqrt()
@@ -256,11 +256,11 @@ pub struct CavitationCloudDynamics {
     parameters: CloudParameters,
     /// Seeded bubble number density per cell (#/m³)
     density_field: Array3<f64>,
-    /// Per-cell representative bubble radius `R(t)` [m]
+    /// Per-cell representative bubble radius `R(t)` `m`
     radius_field: Array3<f64>,
     /// Per-cell representative wall velocity `Ṙ(t)` [m/s]
     velocity_field: Array3<f64>,
-    /// Local pressure at the previous step [Pa] (for the `dp/dt` finite difference)
+    /// Local pressure at the previous step `Pa` (for the `dp/dt` finite difference)
     prev_total_pressure: Array3<f64>,
     /// Whether `prev_total_pressure` has been seeded by a first call
     total_seeded: bool,
@@ -406,7 +406,7 @@ impl CavitationCloudDynamics {
         out
     }
 
-    /// Position [m] of cell `(i,j,k)` from the configured cell spacing.
+    /// Position `m` of cell `(i,j,k)` from the configured cell spacing.
     #[inline]
     fn cell_position(&self, i: usize, j: usize, k: usize) -> [f64; 3] {
         let [dx, dy, dz] = self.parameters.cell_spacing;
@@ -781,7 +781,7 @@ impl CavitationCloudDynamics {
     ///   (`a > 0`); `a ≤ 0` ⇒ stable (rate `0`).
     /// - Richtmyer-Meshkov: `ȧ = k·Δv·a₀·A` [m/s] for impulsive velocity jump
     ///   `velocity_jump` `Δv` [m/s] and initial amplitude `initial_amplitude` `a₀`
-    ///   [m] (Richtmyer 1960).
+    ///   `m` (Richtmyer 1960).
     ///
     /// This returns growth **rates**; it does not evolve the interface (the
     /// nonlinear evolution remains out of scope, CLD-1).
@@ -822,7 +822,7 @@ impl CavitationCloudDynamics {
     /// (≈ Rayleigh collapse energy over a full collapse), localized per cell.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if the pressure field shape mismatches or
+    /// - `KwaversError::InvalidInput` if the pressure field shape mismatches or
     ///   `dt` is non-finite/`≤ 0`; propagates integrator errors.
     pub fn evolve_cloud(
         &mut self,
@@ -920,8 +920,8 @@ impl CavitationCloudDynamics {
         Ok(())
     }
 
-    /// Maximum radius [m] reached by a representative cloud bubble driven at
-    /// pressure amplitude `peak_pressure` [Pa] and the cloud's drive frequency,
+    /// Maximum radius `m` reached by a representative cloud bubble driven at
+    /// pressure amplitude `peak_pressure` `Pa` and the cloud's drive frequency,
     /// from the real Gilmore (1952) compressible single-bubble dynamics.
     ///
     /// This resolves the inertial growth under rarefaction (`R_max ≫ R₀` for
@@ -956,7 +956,7 @@ impl CavitationCloudDynamics {
         r_max
     }
 
-    /// Inertial (Rayleigh) collapse energy [J] of a representative bubble that
+    /// Inertial (Rayleigh) collapse energy `J` of a representative bubble that
     /// grew to `R_max` under the local rarefaction: `E = (4/3)π R_max³ (p₀ − p_v)`.
     #[must_use]
     pub fn inertial_collapse_energy(&self, peak_pressure: f64) -> f64 {
@@ -978,7 +978,7 @@ impl CavitationCloudDynamics {
         &self.density_field
     }
 
-    /// Get the per-cell representative bubble radius field `R(t)` [m].
+    /// Get the per-cell representative bubble radius field `R(t)` `m`.
     #[must_use]
     pub fn cloud_radius(&self) -> &Array3<f64> {
         &self.radius_field

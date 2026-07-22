@@ -15,7 +15,7 @@ impl BeamformingTrainer {
     /// per-epoch metrics into a JSON file.  When a Burn model is available,
     /// model weights should be saved alongside this metadata.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn save_checkpoint(&self, epoch: usize) -> KwaversResult<()> {
         let checkpoint_dir = &self.config.checkpoint_dir;

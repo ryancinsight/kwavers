@@ -118,7 +118,7 @@ pub fn compute_laplacian_spectral(field: &Array3<f64>, k_squared: &Array3<f64>) 
 ///
 /// # Algorithm
 /// 1. Copy the real field into Leto storage and run Apollo real→complex DFT into `fft_scratch`
-/// 2. `fft_scratch[i] *= −k_squared[i]` — element-wise Laplacian multiply (parallel)
+/// 2. `fft_scratch`i` *= −k_squared`i`` — element-wise Laplacian multiply (parallel)
 /// 3. Apollo complex→real IDFT, real part → `out`
 ///
 /// After return, `fft_scratch` contains the complex IDFT result (overwritten); only

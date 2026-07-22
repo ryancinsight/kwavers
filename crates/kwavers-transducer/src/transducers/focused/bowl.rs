@@ -100,7 +100,7 @@ impl BowlTransducer {
     /// Create a new bowl transducer
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: BowlConfig) -> KwaversResult<Self> {
         Self::validate_config(&config)?;
@@ -118,7 +118,7 @@ impl BowlTransducer {
     ///
     /// # Errors
     /// - Returns [`KwaversError::Validation`] when the count or bowl domain is invalid.
-    /// - Propagates any [`KwaversError`] returned by spherical-cap layout generation.
+    /// - Propagates any `KwaversError` returned by spherical-cap layout generation.
     pub fn with_element_count(config: BowlConfig, element_count: usize) -> KwaversResult<Self> {
         validate_element_count(element_count)?;
         Self::from_discretization(config, BowlDiscretization::ElementCount(element_count))

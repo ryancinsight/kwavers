@@ -32,7 +32,7 @@ impl KWaveArray {
         }
     }
 
-    /// Set the operating frequency [Hz].
+    /// Set the operating frequency `Hz`.
     fn set_frequency(&mut self, frequency: f64) {
         self.inner.set_frequency(frequency);
     }
@@ -49,7 +49,7 @@ impl KWaveArray {
     /// position : tuple[float, float, float]
     ///     Element center [x, y, z] in meters
     /// diameter : float
-    ///     Disc diameter [m]
+    ///     Disc diameter `m`
     /// focus_position : tuple[float, float, float], optional
     ///     Optional point on the beam axis defining the disc normal
     #[pyo3(signature = (position, diameter, focus_position=None))]
@@ -96,9 +96,9 @@ impl KWaveArray {
     /// position : tuple[float, float, float]
     ///     Arc center [x, y, z] in meters
     /// radius : float
-    ///     Arc radius [m]
+    ///     Arc radius `m`
     /// diameter : float
-    ///     Arc aperture diameter [m]
+    ///     Arc aperture diameter `m`
     /// start_angle : float, optional
     ///     Start angle in degrees (default: -45)
     /// end_angle : float, optional
@@ -171,9 +171,9 @@ impl KWaveArray {
     /// position : tuple[float, float, float]
     ///     Bowl center position [x, y, z] in meters
     /// radius : float
-    ///     Radius of curvature [m]
+    ///     Radius of curvature `m`
     /// diameter : float
-    ///     Bowl aperture diameter [m]
+    ///     Bowl aperture diameter `m`
     fn add_bowl_element(&mut self, position: (f64, f64, f64), radius: f64, diameter: f64) {
         self.inner.add_bowl_element(position, radius, diameter);
     }
@@ -217,12 +217,12 @@ impl KWaveArray {
         self.inner.get_element_positions()
     }
 
-    /// Compute focus delays [s] for each element to focus at a point.
+    /// Compute focus delays `s` for each element to focus at a point.
     fn get_focus_delays(&self, focus_point: (f64, f64, f64)) -> Vec<f64> {
         self.inner.get_focus_delays(focus_point)
     }
 
-    /// Compute time delays [s] for electronic focusing at a point.
+    /// Compute time delays `s` for electronic focusing at a point.
     ///
     /// Returns per-element delays such that `τᵢ = (d_max − dᵢ) / c`, where
     /// `dᵢ` is the distance from element `i` to `focus_point` and `d_max = max(dᵢ)`.

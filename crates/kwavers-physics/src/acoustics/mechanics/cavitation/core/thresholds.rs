@@ -42,7 +42,7 @@ pub enum ThresholdModel {
     Flynn,
 }
 
-/// Calculate the Blake threshold: the acoustic rarefaction amplitude [Pa] at
+/// Calculate the Blake threshold: the acoustic rarefaction amplitude `Pa` at
 /// which a gas nucleus of radius `initial_radius` undergoes unbounded growth.
 ///
 /// # Derivation (Blake 1949; Apfel 1984)
@@ -89,7 +89,7 @@ pub fn blake_threshold(
     (ambient_pressure - p_blake).max(0.0)
 }
 
-/// Blake critical radius `R_c` \[m]: the radius at which a gas nucleus of
+/// Blake critical radius `R_c` \`m`: the radius at which a gas nucleus of
 /// undeformed radius `initial_radius` crosses the static-stability saddle point
 /// and begins unbounded growth (Chapter 5 Theorem 5.3). Companion to
 /// [`blake_threshold`], which returns the pressure at the same saddle point.

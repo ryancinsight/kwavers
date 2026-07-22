@@ -174,7 +174,7 @@ fn attenuation_line_integral(
     integral
 }
 
-/// Per-element→active-voxel acoustic travel time `τ = ∫ dl / c(x)` [s] along the
+/// Per-element→active-voxel acoustic travel time `τ = ∫ dl / c(x)` `s` along the
 /// straight ray, integrating the CT-derived sound-speed map. Layout matches the
 /// attenuation integrals: `integrals[element_idx * ncols + col]`.
 fn build_element_voxel_traveltime_integrals(
@@ -205,7 +205,7 @@ fn build_element_voxel_traveltime_integrals(
     integrals
 }
 
-/// Acoustic travel time `τ = ∫ dl / c(x)` [s] along the straight segment A→B,
+/// Acoustic travel time `τ = ∫ dl / c(x)` `s` along the straight segment A→B,
 /// midpoint-sampling the CT-derived sound-speed map. For a homogeneous map this
 /// reduces exactly to `|A−B| / c`.
 pub(super) fn slowness_line_integral(

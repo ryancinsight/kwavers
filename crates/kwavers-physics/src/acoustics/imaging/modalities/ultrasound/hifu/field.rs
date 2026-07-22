@@ -39,7 +39,7 @@ struct FieldScale {
     wavenumber: f64,
 }
 
-/// Compute peak pressure amplitude [Pa] for a focused HIFU transducer.
+/// Compute peak pressure amplitude `Pa` for a focused HIFU transducer.
 ///
 /// The transducer aperture is centered laterally in the computational grid and
 /// lies on the `z = 0` plane; the geometric focus is at

@@ -581,7 +581,7 @@ impl ViscoacousticMemorySolver {
         }
     }
 
-    /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \[J]. Conserved (to leapfrog
+    /// Acoustic energy `Σ [p²/(2M_∞) + ρ|v|²/2] ΔV` \`J`. Conserved (to leapfrog
     /// round-off) for the lossless medium; decays monotonically with relaxation.
     #[must_use]
     pub fn energy(&self) -> f64 {

@@ -196,7 +196,7 @@ pub struct AcousticTherapyParams {
     /// instead of the linear Gaussian-beam estimator.
     ///
     /// By default this is `false` and the linear Gaussian beam is used.
-    /// Currently only supported for [`TherapyIntegrationModality::HIFU`].
+    /// Currently only supported for `TherapyIntegrationModality::HIFU`.
     pub use_nonlinear_field: bool,
 }
 

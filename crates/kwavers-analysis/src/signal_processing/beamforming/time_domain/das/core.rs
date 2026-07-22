@@ -67,7 +67,7 @@ fn validate_das_inputs(
 /// and [`delay_and_sum`] applies its weights during summation.
 ///
 /// # Errors
-/// - [`KwaversError::InvalidInput`] on shape/length/finiteness contract violations.
+/// - `KwaversError::InvalidInput` on shape/length/finiteness contract violations.
 pub fn align_channels(
     sensor_data: &Array3<f64>,
     sampling_frequency_hz: f64,
@@ -132,8 +132,8 @@ pub fn align_channels(
 ///
 /// Beamformed output, shape `(1, 1, n_samples)`
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn delay_and_sum(
     sensor_data: &Array3<f64>,
@@ -154,7 +154,7 @@ pub fn delay_and_sum(
 
 /// Apodized coherent sum over a delay-aligned aperture matrix.
 ///
-/// SSOT for the summation step: `output[j] = Σᵢ wᵢ · aligned[[i, j]]`, shape
+/// SSOT for the summation step: `output`J` = Σᵢ wᵢ · aligned[[i, j]]`, shape
 /// `(1, 1, n_samples)`. Shared by [`delay_and_sum`] and coherence-factor
 /// weighting so the two never drift. `weights.len()` must equal
 /// `aligned.shape()[0]` (guaranteed by [`align_channels`] validation upstream).

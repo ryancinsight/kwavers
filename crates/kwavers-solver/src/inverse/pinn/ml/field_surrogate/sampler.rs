@@ -41,7 +41,7 @@ pub struct KernelCubeSampler {
     /// sampling). Same length as `f0_phys_hz`.
     p_magnitude: Vec<f32>,
     /// Per-sample source-kernel index. Voxel `i` originated from
-    /// `kernels[group_ids[i]]`. Consumed by the per-kernel-scoped
+    /// `kernels[group_ids`i`]`. Consumed by the per-kernel-scoped
     /// peak-prominence loss (Phase C-10).
     group_ids: Vec<f32>,
     /// Number of distinct source kernels — propagated to the

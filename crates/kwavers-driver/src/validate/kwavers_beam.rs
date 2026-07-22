@@ -58,8 +58,8 @@ pub struct KwaversBeamStep {
     /// gatekeeper (no longer redundant — it can actually fail now); the consumer reads the
     /// signed magnitude AND the headroom to plan footprint bumps (`Smd2512 ⇒ Smd4527`)
     /// on a per-tile basis, or matching-cap tightening, without re-deriving
-    /// `per_tile_resistor_w[i]`. The constraint remains
-    /// `new_footprint_max_w ≥ dissipation_i`; `resistor_margin_w[i]` quantifies the
+    /// `per_tile_resistor_w`i``. The constraint remains
+    /// `new_footprint_max_w ≥ dissipation_i`; `resistor_margin_w`i`` quantifies the
     /// signed slack on it (negative entries are an explicit actionable signal).
     pub resistor_margin_w: Vec<f64>,
 }

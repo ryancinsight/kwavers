@@ -34,18 +34,18 @@ pub enum SonicationOrder {
 /// Index `k` of the flat arrays is the `k`-th fired pulse in time order.
 #[derive(Debug, Clone)]
 pub struct SonicationSchedule {
-    /// Onset time of each fired pulse [s].
+    /// Onset time of each fired pulse `s`.
     pub onset_s: Vec<f64>,
     /// Sub-spot index fired at each pulse.
     pub subspot: Vec<usize>,
     /// Repetition index (pass number over the grid) of each pulse.
     pub repetition: Vec<usize>,
-    /// Single-pulse duration [s] (the microsecond histotripsy pulse).
+    /// Single-pulse duration `s` (the microsecond histotripsy pulse).
     pub pulse_duration_s: f64,
-    /// Repetition time [s]: start of one grid pass to the next (interleaved) or
+    /// Repetition time `s`: start of one grid pass to the next (interleaved) or
     /// the per-spot dwell `n_repetitions/PRF` (sequential).
     pub repetition_time_s: f64,
-    /// Total sonication duration [s]: last pulse onset + one pulse duration.
+    /// Total sonication duration `s`: last pulse onset + one pulse duration.
     pub sonication_duration_s: f64,
     /// Number of repetitions (passes over the grid).
     pub n_repetitions: usize,
@@ -226,7 +226,7 @@ pub fn received_signal_fraction(
     (t_iface * t_iface * one_way * one_way).max(0.0)
 }
 
-/// Inverse of [`crate::acoustics`-style] cavitation lesion energy balance: the
+/// Inverse of `acoustics-style` cavitation lesion energy balance: the
 /// pulse count `N` whose accumulated inertial cavitation dose grows a lesion to
 /// radius `target_radius_m`.
 ///

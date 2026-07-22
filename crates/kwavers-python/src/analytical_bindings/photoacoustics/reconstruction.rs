@@ -11,11 +11,11 @@ use pyo3::types::PyDict;
 /// δz ≈ 0.88 * c / bandwidth
 ///
 /// Args:
-///     bandwidth_hz: Transducer bandwidth [Hz].
+///     bandwidth_hz: Transducer bandwidth `Hz`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     Axial resolution [m].
+///     Axial resolution `m`.
 #[pyfunction]
 #[pyo3(signature = (bandwidth_hz, c))]
 pub fn pa_axial_resolution(bandwidth_hz: f64, c: f64) -> PyResult<f64> {

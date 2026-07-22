@@ -33,7 +33,7 @@ fn threshold_for<M: Membrane + Clone>(
     q.threshold_pressure_pa(p_lo_pa, p_hi_pa, n_iter, &make)
 }
 
-/// Minimum acoustic pressure amplitude [Pa] that evokes a post-stimulus action
+/// Minimum acoustic pressure amplitude `Pa` that evokes a post-stimulus action
 /// potential, found by bisection with the quasi-static bilayer-sonophore source.
 #[pyfunction]
 #[pyo3(signature = (

@@ -85,7 +85,7 @@ impl TissueClassifierModel {
 
     /// Classify tissue types
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn classify(&self, features: &Array1<f32>) -> KwaversResult<usize> {
         let input = features

@@ -91,7 +91,7 @@ impl SvdClutterFilterConfig {
 
     /// Validate configuration
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.clutter_rank == 0 {
@@ -130,7 +130,7 @@ pub struct SignalSvdClutterFilter {
 impl SignalSvdClutterFilter {
     /// Create new SVD clutter filter with configuration
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: SvdClutterFilterConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -158,8 +158,8 @@ impl SignalSvdClutterFilter {
     /// 5. Reconstruct: S_filtered = UΣ_filtered V^T
     /// 6. Add back temporal means
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -335,7 +335,7 @@ impl SignalSvdClutterFilter {
     ///
     /// SCR improvement in dB
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn estimate_scr_improvement(
         &self,

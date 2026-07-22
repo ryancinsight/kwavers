@@ -104,11 +104,11 @@ pub fn integrate_receiver_array_psd(
 /// volume mask `V_s`.
 ///
 /// ```text
-///   E(V_s) = Σ_{voxels v ∈ V_s} source_map[v] · dV       [emission-energy]
+///   E(V_s) = Σ_{voxels v ∈ V_s} source_map`V` · dV       [emission-energy]
 /// ```
-/// `source_map` and `mask` are flattened 3-D fields of equal length; `mask[v]`
+/// `source_map` and `mask` are flattened 3-D fields of equal length; `mask`V``
 /// is treated as "inside `V_s`" when it is non-zero. `dv_m3` is the voxel volume
-/// `Δx·Δy·Δz` [m³]. Negative source samples are clamped to 0.
+/// `Δx·Δy·Δz` `m³`. Negative source samples are clamped to 0.
 ///
 /// Returns 0.0 if the lengths differ, are empty, or `dv_m3` is non-positive.
 #[must_use]

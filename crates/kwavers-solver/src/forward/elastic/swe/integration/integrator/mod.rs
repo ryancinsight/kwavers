@@ -25,8 +25,8 @@ const INTEGRATOR_CHUNK: usize = 4096;
 /// fails for oblique-incidence waves and grows unboundedly past NT ≈ 200.
 ///
 /// The corrected implementation pre-computes per-axis σ profiles and at each
-/// step applies the separable damping factor `exp(−σ_x[i]·dt) · exp(−σ_y[j]·dt) ·
-/// exp(−σ_z[k]·dt)` to **both** displacements `u` and velocities `v`.
+/// step applies the separable damping factor `exp(−σ_x`i`·dt) · exp(−σ_y`J`·dt) ·
+/// exp(−σ_z`K`·dt)` to **both** displacements `u` and velocities `v`.
 ///
 /// Damping `u` is necessary because the displacement field drives the stress
 /// tensor, and undamped displacement in the PML generates stress that
@@ -637,7 +637,7 @@ impl<'a> TimeIntegrator<'a> {
     /// exponentials:
     ///
     /// ```text
-    /// d(i,j,k) = exp(−σ_x[i]·dt) · exp(−σ_y[j]·dt) · exp(−σ_z[k]·dt)
+    /// d(i,j,k) = exp(−σ_x`i`·dt) · exp(−σ_y`J`·dt) · exp(−σ_z`K`·dt)
     /// ```
     ///
     /// Applied to both `{ux,uy,uz}` and `{vx,vy,vz}`. Damping the
@@ -649,7 +649,7 @@ impl<'a> TimeIntegrator<'a> {
     ///
     /// For each `(i,j,k)`:
     /// ```text
-    /// d(i,j,k) = exp(−σ_x[i]·dt) · exp(−σ_y[j]·dt) · exp(−σ_z[k]·dt)
+    /// d(i,j,k) = exp(−σ_x`i`·dt) · exp(−σ_y`J`·dt) · exp(−σ_z`K`·dt)
     /// ```
     /// All six field components at `(i,j,k)` are multiplied by the same
     /// scalar `d` and are independent of neighbouring cells → race-free.

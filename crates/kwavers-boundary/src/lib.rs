@@ -99,23 +99,23 @@ pub use types::{
 /// Precomputed per-index PML damping factors for the CPML split-field formulation.
 ///
 /// Both velocity (staggered-sigma) and density (collocated-sigma) sets are provided.
-/// Each `vel_*[i]` = `exp(-σ_sg[i] · Δt/2)` and `den_*[i]` = `exp(-σ[i] · Δt/2)`.
+/// Each `vel_*`i`` = `exp(-σ_sg`i` · Δt/2)` and `den_*`i`` = `exp(-σ`i` · Δt/2)`.
 ///
 /// The fused update `u = pml · (pml · u_old − (Δt/ρ) · grad_p)` requires only
 /// O(N) multiplications per step instead of O(N) transcendental evaluations.
 #[derive(Debug, Clone)]
 pub struct PmlExpFactors {
-    /// `exp(-σ_x_sgx[i] · Δt/2)` — staggered-grid PML factor for `ux`.
+    /// `exp(-σ_x_sgx`i` · Δt/2)` — staggered-grid PML factor for `ux`.
     pub vel_x: Array1<f64>,
-    /// `exp(-σ_y_sgy[j] · Δt/2)` — staggered-grid PML factor for `uy`.
+    /// `exp(-σ_y_sgy`J` · Δt/2)` — staggered-grid PML factor for `uy`.
     pub vel_y: Array1<f64>,
-    /// `exp(-σ_z_sgz[k] · Δt/2)` — staggered-grid PML factor for `uz`.
+    /// `exp(-σ_z_sgz`K` · Δt/2)` — staggered-grid PML factor for `uz`.
     pub vel_z: Array1<f64>,
-    /// `exp(-σ_x[i] · Δt/2)` — collocated PML factor for `rhox`.
+    /// `exp(-σ_x`i` · Δt/2)` — collocated PML factor for `rhox`.
     pub den_x: Array1<f64>,
-    /// `exp(-σ_y[j] · Δt/2)` — collocated PML factor for `rhoy`.
+    /// `exp(-σ_y`J` · Δt/2)` — collocated PML factor for `rhoy`.
     pub den_y: Array1<f64>,
-    /// `exp(-σ_z[k] · Δt/2)` — collocated PML factor for `rhoz`.
+    /// `exp(-σ_z`K` · Δt/2)` — collocated PML factor for `rhoz`.
     pub den_z: Array1<f64>,
 }
 

@@ -50,7 +50,7 @@ impl Multilateration {
     /// * `sensor_positions` - Sensor positions [[x, y, z], ...] (m)
     /// * `config` - Multilateration configuration
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid
     ///   or out-of-range input parameters is violated.
     ///
     pub fn new(
@@ -87,7 +87,7 @@ impl Multilateration {
     ///
     /// * `uncertainties` - Standard deviation of timing error at each sensor (s)
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid
     ///   or out-of-range input parameters is violated.
     ///
     pub fn set_sensor_uncertainties(&mut self, uncertainties: Vec<f64>) -> KwaversResult<()> {
@@ -119,9 +119,9 @@ impl Multilateration {
     ///
     /// * `arrival_times` - Time of arrival at each sensor (s)
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid
     ///   or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn localize(&self, arrival_times: &[f64]) -> KwaversResult<LocalizationResult> {
         if arrival_times.len() != self.num_sensors {
@@ -205,7 +205,7 @@ impl Multilateration {
     /// GDOP quantifies how sensor geometry affects localization accuracy.
     /// Lower values indicate better geometry (sensors surrounding source).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calculate_gdop(&self, source_position: &[f64; 3]) -> KwaversResult<f64> {
         let jacobian = self.compute_jacobian(source_position);

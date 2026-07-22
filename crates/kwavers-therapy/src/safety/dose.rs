@@ -29,7 +29,7 @@ impl DoseController {
 
     /// Start new treatment session.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn start_session(&mut self, patient_id: String, protocol: String) -> KwaversResult<()> {
         if self.accumulated_dose >= self.safety_limits.max_total_dose {
@@ -54,7 +54,7 @@ impl DoseController {
 
     /// Update delivered dose during treatment.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn update_dose(
         &mut self,

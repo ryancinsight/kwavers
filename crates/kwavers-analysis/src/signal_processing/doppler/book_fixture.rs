@@ -15,7 +15,7 @@ pub struct ContinuousWaveVectorFlowFixture {
     pub cw_power: Array1<f64>,
     /// Pulsed-wave Nyquist velocity for the comparison PRF [m/s].
     pub pulsed_wave_nyquist_velocity_m_s: f64,
-    /// Beam angles from the axial axis [rad].
+    /// Beam angles from the axial axis `rad`.
     pub beam_angles_rad: Vec<f64>,
     /// Normalized beam directions `(d_x, d_z)`.
     pub beam_directions: Vec<[f64; 2]>,
@@ -36,7 +36,7 @@ pub struct ContinuousWaveVectorFlowFixture {
 /// recovers a 2-D velocity vector with [`VectorFlowEstimator`].
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] for non-finite or nonpositive
+/// Returns `KwaversError::InvalidInput` for non-finite or nonpositive
 /// frequencies/rates/sound speed, zero baseband bins, non-finite velocities, or
 /// invalid/collinear beam angles.
 #[allow(clippy::too_many_arguments)]

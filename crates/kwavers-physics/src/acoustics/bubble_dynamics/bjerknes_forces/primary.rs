@@ -32,7 +32,7 @@ impl BjerknesCalculator {
     /// * `pressure_gradient` — ∂p/∂z at the bubble centre (Pa/m)
     ///
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if `bubble_radius` ≤ 0.
+    /// - Returns `KwaversError::InvalidInput` if `bubble_radius` ≤ 0.
     pub fn primary_bjerknes_force(
         &self,
         bubble_radius: f64,

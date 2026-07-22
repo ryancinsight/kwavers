@@ -21,7 +21,7 @@ pub struct BasebandSnapshotConfig {
 impl BasebandSnapshotConfig {
     /// Validate invariants (mathematically necessary).
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.sampling_frequency_hz.is_finite() || self.sampling_frequency_hz <= 0.0 {

@@ -16,12 +16,12 @@ use kwavers_core::constants::numerical::TWO_PI;
 /// Output is two flattened row-major Vecs (real, imag) of length NX × NZ.
 ///
 /// # Arguments
-/// * `x_arr`, `z_arr` – grid coordinates [m]
-/// * `elem_x`, `elem_z` – element positions [m]
-/// * `freq_hz` – frequency [Hz]
+/// * `x_arr`, `z_arr` – grid coordinates `m`
+/// * `elem_x`, `elem_z` – element positions `m`
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed [m/s]
 /// * `weights` – apodization weights (length == n_elements)
-/// * `delays` – steering delays [s] (length == n_elements)
+/// * `delays` – steering delays `s` (length == n_elements)
 #[must_use]
 #[allow(clippy::too_many_arguments)]
 pub fn beam_pattern_2d(
@@ -118,11 +118,11 @@ pub fn beam_pattern_2d_magnitude(
 /// Rust side so callers receive a ready-to-display field.
 ///
 /// # Arguments
-/// * `x_arr`, `z_arr` – grid coordinates [m]
-/// * `elem_x`, `elem_z` – element positions [m]
-/// * `spot_x`, `spot_z` – focal sub-spot positions [m]
+/// * `x_arr`, `z_arr` – grid coordinates `m`
+/// * `elem_x`, `elem_z` – element positions `m`
+/// * `spot_x`, `spot_z` – focal sub-spot positions `m`
 /// * `spot_amp` – per-spot drive amplitudes `a_j` (length == `n_spots`)
-/// * `freq_hz` – frequency [Hz]
+/// * `freq_hz` – frequency `Hz`
 /// * `c` – sound speed [m/s]
 ///
 /// # Panics

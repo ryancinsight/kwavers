@@ -23,7 +23,7 @@
 /// # Arguments
 /// * `n` – number of grid points
 /// * `k` – wavenumber [rad/m]
-/// * `dx` – grid spacing h [m]
+/// * `dx` – grid spacing h `m`
 ///
 /// # Reference
 /// Ihlenburg (1998) *Finite Element Analysis of Acoustic Scattering*, ch. 1.
@@ -97,12 +97,12 @@ pub fn matrix_singular_values(matrix_flat: &[f64], nrows: usize, ncols: usize) -
 /// (AᵀA + λI)·x = Aᵀb
 /// ```
 /// Returns `(residual_norms, solution_norms)` where:
-/// * `residual_norm[i] = ‖A·xᵢ − b‖₂`
-/// * `solution_norm[i] = ‖xᵢ‖₂`
+/// * `residual_norm`i` = ‖A·xᵢ − b‖₂`
+/// * `solution_norm`i` = ‖xᵢ‖₂`
 ///
 /// # Arguments
 /// * `a_flat` – row-major matrix A [nrows × ncols]
-/// * `b` – right-hand-side vector [nrows]
+/// * `b` – right-hand-side vector `nrows`
 /// * `nrows`, `ncols` – dimensions of A
 /// * `lambdas` – regularisation parameters (must be > 0)
 ///
@@ -244,7 +244,7 @@ pub fn gaussian_deconvolution_fixture(
 ///
 /// # Arguments
 /// * `g_real`, `g_imag` – real and imaginary parts of G [nrows × ncols, row-major]
-/// * `y_real`, `y_imag` – real and imaginary parts of observations [nrows]
+/// * `y_real`, `y_imag` – real and imaginary parts of observations `nrows`
 /// * `nrows`, `ncols` – dimensions of G
 /// * `lambda` – Tikhonov regularisation parameter
 ///
@@ -324,7 +324,7 @@ pub fn born_inversion_regularized(
 /// Convergence curve for a gradient-based inversion with geometric decay.
 ///
 /// ```text
-/// error[i] = initial_error · decay^i
+/// error`i` = initial_error · decay^i
 /// ```
 ///
 /// # Arguments

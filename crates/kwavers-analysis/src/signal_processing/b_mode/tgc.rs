@@ -11,7 +11,7 @@
 //! dB·cm⁻¹·MHz⁻¹. A reflector at depth `z` (cm) suffers round-trip attenuation
 //!
 //! ```text
-//! A(z) = 2 · a₀ · f · z   [dB],
+//! A(z) = 2 · a₀ · f · z   `dB`,
 //! ```
 //!
 //! so the compensating linear gain is `g(z) = 10^{A(z)/20}`. With axial sample
@@ -30,16 +30,16 @@ use leto::Array1;
 pub struct TgcConfig {
     /// Attenuation slope `a₀` [dB·cm⁻¹·MHz⁻¹] (soft tissue ≈ 0.5).
     pub attenuation_db_cm_mhz: f64,
-    /// Imaging frequency [MHz].
+    /// Imaging frequency `MHz`.
     pub frequency_mhz: f64,
     /// Sound speed [m/s].
     pub sound_speed: f64,
-    /// Axial sampling rate [Hz].
+    /// Axial sampling rate `Hz`.
     pub sampling_rate: f64,
 }
 
 impl TgcConfig {
-    /// Round-trip depth [m] of axial sample `i`.
+    /// Round-trip depth `m` of axial sample `i`.
     #[must_use]
     pub fn depth_m(&self, i: usize) -> f64 {
         self.sound_speed * i as f64 / (2.0 * self.sampling_rate)
@@ -62,7 +62,7 @@ impl TgcConfig {
     /// Apply TGC to an axial RF/envelope line.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when configuration values are
+    /// Returns `KwaversError::InvalidInput` when configuration values are
     /// non-positive (which would make the gain ill-defined).
     pub fn apply(&self, line: &Array1<f64>) -> KwaversResult<Array1<f64>> {
         if self.sound_speed <= 0.0 || self.sampling_rate <= 0.0 || self.frequency_mhz <= 0.0 {

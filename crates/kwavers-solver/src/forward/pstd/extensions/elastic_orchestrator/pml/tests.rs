@@ -59,7 +59,7 @@ fn damping_is_monotonic_and_in_unit_interval() {
 
 /// Apply the PML to a unit field across `n_passes` passes and verify
 /// that the cumulative attenuation in the absorbing layer matches
-/// `(damping[i])^n_passes` exactly — i.e., the per-step multiplier
+/// `(damping`i`)^n_passes` exactly — i.e., the per-step multiplier
 /// commutes with itself, as required for stable absorption.
 #[test]
 fn cumulative_attenuation_matches_per_step_multiplier_to_n() {

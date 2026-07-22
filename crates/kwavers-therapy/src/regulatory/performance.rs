@@ -74,7 +74,7 @@ impl PerformanceTest {
 
     /// Validate performance test
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if self.objective.is_empty() || self.method.is_empty() {

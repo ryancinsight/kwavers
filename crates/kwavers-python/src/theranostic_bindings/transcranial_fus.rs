@@ -166,7 +166,7 @@ pub fn run_transcranial_fus_planning_from_ritk_ct<'py>(
 /// tumor_mask : ndarray (nx, ny, nz), dtype bool
 ///     Tumour voxels for GBM subspot raster. Pass a zero array for ET VIM.
 /// spacing_m : tuple of 3 floats
-///     Voxel edge lengths [m].
+///     Voxel edge lengths `m`.
 /// target_index : tuple of 3 ints
 ///     Target (focus) voxel index (ix, iy, iz).
 #[pyfunction]
@@ -361,13 +361,13 @@ pub fn bbb_opening_from_subspots_py<'py>(
 /// brain_mask : ndarray (nx, ny, nz), dtype bool
 ///     Brain parenchyma voxels.
 /// spacing_m : tuple of 3 floats
-///     Voxel edge lengths [m].
+///     Voxel edge lengths `m`.
 /// frequency_hz : float
-///     Operating frequency [Hz] — used for α→Q conversion.
+///     Operating frequency `Hz` — used for α→Q conversion.
 /// sonication_s : float
-///     Sonication duration [s]. Default 12.0.
+///     Sonication duration `s`. Default 12.0.
 /// dt_s : float
-///     Explicit Euler time step [s]. Default 0.25.
+///     Explicit Euler time step `s`. Default 0.25.
 /// baseline_c : float
 ///     Initial and arterial blood temperature [°C]. Default 37.0.
 ///

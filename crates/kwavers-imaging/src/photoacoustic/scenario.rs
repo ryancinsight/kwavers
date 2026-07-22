@@ -17,7 +17,7 @@ pub struct PhotoacousticScenario {
 impl PhotoacousticScenario {
     /// New.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(
         grid: Grid,

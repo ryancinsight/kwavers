@@ -49,7 +49,7 @@ use leto::Array2;
 /// A single discrete point scatterer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct PointScatterer {
-    /// Position \[m].
+    /// Position \`m`.
     pub position: [f64; 3],
     /// Scattering amplitude (dimensionless reflectivity; sign carries phase).
     pub amplitude: f64,
@@ -66,11 +66,11 @@ pub struct ScattererCloud {
 pub struct RfSynthesisConfig {
     /// Sound speed `c` \[m/s].
     pub sound_speed: f64,
-    /// Sampling frequency `fs` \[Hz].
+    /// Sampling frequency `fs` \`Hz`.
     pub sampling_frequency: f64,
     /// Number of output time samples per element.
     pub num_samples: usize,
-    /// Minimum element–scatterer distance \[m]; closer scatterers are skipped to
+    /// Minimum element–scatterer distance \`m`; closer scatterers are skipped to
     /// avoid the `1/r²` singularity (a scatterer inside the element footprint is
     /// outside the far-field point model).
     pub min_distance: f64,
@@ -79,7 +79,7 @@ pub struct RfSynthesisConfig {
     /// round-trip amplitude factor `exp(−α(f₀)·2r)` evaluated at
     /// `center_frequency_hz`.
     pub attenuation_db_cm_mhz: f64,
-    /// Pulse centre frequency `f₀` \[Hz] for the power-law attenuation. Only used
+    /// Pulse centre frequency `f₀` \`Hz` for the power-law attenuation. Only used
     /// when `attenuation_db_cm_mhz > 0`.
     pub center_frequency_hz: f64,
 }
@@ -106,7 +106,7 @@ impl TransmitWavefront {
     /// Construct a plane wave whose phase front passes `origin_m` at `t = 0`.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when either coordinate is
+    /// Returns `KwaversError::InvalidInput` when either coordinate is
     /// non-finite or `direction` has zero length.
     pub fn plane(origin_m: [f64; 3], direction: [f64; 3]) -> KwaversResult<Self> {
         validate_coordinates("plane-wave origin_m", origin_m)?;
@@ -132,7 +132,7 @@ impl TransmitWavefront {
     /// Construct a spherical wave diverging from `source_m` at `t = 0`.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when `source_m` is non-finite.
+    /// Returns `KwaversError::InvalidInput` when `source_m` is non-finite.
     pub fn diverging(source_m: [f64; 3]) -> KwaversResult<Self> {
         validate_coordinates("diverging-wave source_m", source_m)?;
         Ok(Self {
@@ -144,7 +144,7 @@ impl TransmitWavefront {
     /// Arrival time at `point_m` in seconds.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] for non-finite coordinates or
+    /// Returns `KwaversError::InvalidInput` for non-finite coordinates or
     /// sound speed, a point behind a plane-wave origin, or a point at a
     /// diverging source singularity.
     pub fn arrival_time_s(&self, point_m: [f64; 3], sound_speed: f64) -> KwaversResult<f64> {
@@ -200,7 +200,7 @@ impl ScattererCloud {
     /// Build from explicit positions and matching amplitudes.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if the lengths differ.
+    /// - `KwaversError::InvalidInput` if the lengths differ.
     pub fn from_points(positions: &[[f64; 3]], amplitudes: &[f64]) -> KwaversResult<Self> {
         if positions.len() != amplitudes.len() {
             return Err(KwaversError::InvalidInput(format!(
@@ -253,7 +253,7 @@ impl ScattererCloud {
     /// receives the `pulse` (a sampled excitation at `config.sampling_frequency`).
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `sound_speed` or `sampling_frequency`
+    /// - `KwaversError::InvalidInput` if `sound_speed` or `sampling_frequency`
     ///   is non-finite/`≤ 0`, `num_samples == 0`, `pulse` is empty, or
     ///   `min_distance < 0`.
     pub fn synthesize_rf(
@@ -290,7 +290,7 @@ impl ScattererCloud {
     /// amplitude is `a/r_rx` or `a/(r_tx·r_rx)`, respectively.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] for invalid synthesis inputs or a
+    /// Returns `KwaversError::InvalidInput` for invalid synthesis inputs or a
     /// scatterer outside the selected event's physically forward domain.
     pub fn synthesize_rf_with_transmit(
         &self,

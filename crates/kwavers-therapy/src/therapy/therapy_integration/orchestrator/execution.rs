@@ -71,7 +71,7 @@ use super::super::state::AcousticField;
 /// - Thermal dose accumulation with nonlinear heating (Sapareto & Dewey 1984)
 ///
 /// Set `acoustic_params.use_nonlinear_field = true` with
-/// [`TherapyIntegrationModality::HIFU`] to use the KZK nonlinear solver
+/// `TherapyIntegrationModality::HIFU` to use the KZK nonlinear solver
 /// ([`generate_kzk_acoustic_field`]) instead of this Gaussian estimator.
 ///
 /// # References

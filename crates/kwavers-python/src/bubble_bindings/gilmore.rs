@@ -26,18 +26,18 @@ use pyo3::prelude::*;
 ///
 /// Parameters
 /// ----------
-/// r0_m : equilibrium bubble radius [m]
+/// r0_m : equilibrium bubble radius `m`
 /// rdot0_m_s : initial wall velocity [m/s]
-/// p_inf_pa : ambient far-field pressure [Pa]
-/// p_ac_pa : acoustic driving pressure amplitude [Pa]
-/// frequency_hz : driving frequency [Hz]
-/// t_end_s : integration end time [s]
+/// p_inf_pa : ambient far-field pressure `Pa`
+/// p_ac_pa : acoustic driving pressure amplitude `Pa`
+/// frequency_hz : driving frequency `Hz`
+/// t_end_s : integration end time `s`
 /// n_steps : number of RK4 steps
 /// rho : liquid density [kg/m³]
 /// sigma : surface tension [N/m]
 /// gamma : polytropic index (accepted for parity; solver uses the gas species)
 /// mu : liquid dynamic viscosity [Pa·s]
-/// pv_pa : vapour pressure [Pa]
+/// pv_pa : vapour pressure `Pa`
 /// c_l : liquid sound speed [m/s]
 ///
 /// Returns

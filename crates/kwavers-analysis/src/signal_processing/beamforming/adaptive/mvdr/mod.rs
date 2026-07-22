@@ -91,7 +91,7 @@ impl MinimumVariance {
 
     /// Apply diagonal loading to a covariance clone and validate inputs.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn loaded_covariance(
         &self,

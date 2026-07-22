@@ -51,7 +51,7 @@ impl SensorRecorder {
     /// [`RecordingMode::FinalPressure`], or [`RecordingMode::AllStatistics`].
     /// An empty slice disables statistics (equivalent to `new`).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn with_modes<M>(
         sensor_mask: Option<&M>,
@@ -118,7 +118,7 @@ impl SensorRecorder {
     /// according to `spec`.  This is the preferred entry point for any
     /// simulation that records velocity or intensity.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn with_spec<M>(
         sensor_mask: Option<&M>,
@@ -235,7 +235,7 @@ impl SensorRecorder {
     /// Returns an empty `Vec` when `sensor_mask` is `None`.
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn build_sensor_indices<M>(
         sensor_mask: Option<&M>,

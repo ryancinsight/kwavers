@@ -3,7 +3,7 @@
 use kwavers_core::constants::numerical::MHZ_TO_HZ;
 use kwavers_core::constants::SOUND_SPEED_TISSUE;
 
-/// Default center frequency of the standard medical-ultrasound linear array [Hz].
+/// Default center frequency of the standard medical-ultrasound linear array `Hz`.
 ///
 /// Single source of truth for the nominal 2.5 MHz default: both the array
 /// geometry (element pitch/width are derived from the corresponding wavelength)

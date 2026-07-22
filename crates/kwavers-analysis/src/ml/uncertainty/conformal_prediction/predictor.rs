@@ -89,7 +89,7 @@ impl MlConformalPredictor {
 
     /// Quantify uncertainty using conformal prediction
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     #[cfg(feature = "pinn")]
     pub fn quantify_uncertainty<P: PinnUncertaintyPredictor + ?Sized>(

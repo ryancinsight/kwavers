@@ -14,7 +14,7 @@ use crate::error::{KwaversError, KwaversResult};
 /// The memory must be page-aligned. No concurrent thread may access the
 /// memory during binding.
 /// # Errors
-/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+/// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
 ///
 #[cfg(target_os = "linux")]
 pub unsafe fn bind_memory_to_node(ptr: *mut u8, size: usize, node: usize) -> KwaversResult<()> {
@@ -58,7 +58,7 @@ pub unsafe fn bind_memory_to_node(_ptr: *mut u8, _size: usize, _node: usize) -> 
 }
 /// Allocate interleaved memory.
 /// # Errors
-/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+/// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
 ///
 #[cfg(target_os = "linux")]
 pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<*mut u8> {
@@ -98,7 +98,7 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
 }
 /// Allocate interleaved memory.
 /// # Errors
-/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+/// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
 ///
 #[cfg(target_os = "windows")]
 pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<*mut u8> {
@@ -201,7 +201,7 @@ pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<
 }
 /// Allocate interleaved memory.
 /// # Errors
-/// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+/// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
 ///
 #[cfg(not(any(target_os = "linux", target_os = "windows")))]
 pub fn allocate_interleaved_memory(layout: std::alloc::Layout) -> KwaversResult<*mut u8> {

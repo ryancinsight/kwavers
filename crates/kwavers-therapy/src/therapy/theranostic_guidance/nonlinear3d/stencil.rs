@@ -24,7 +24,7 @@ pub(super) struct WesterveltCellTerms {
 ///
 /// Starting from
 /// `(1 - 2 βp/(ρc²)) p_tt = c²∇²p + 2 β/(ρc²) p_t²`, the leapfrog update is
-/// `p[n+1] = 2p[n] - p[n-1] + numerator / denominator`.
+/// `p[n+1] = 2p`N` - p[n-1] + numerator / denominator`.
 /// Solving the pressure-dependent inertia term in the denominator prevents the
 /// explicit `p * p_tt` feedback loop from creating nonphysical runaway peaks at
 /// histotripsy drive while reducing exactly to the linear acoustic update when

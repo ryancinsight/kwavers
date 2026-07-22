@@ -5,7 +5,7 @@ use leto::Array3;
 ///
 /// Generates a binary mask with `true` on the circle perimeter, `false` elsewhere.
 /// # Errors
-/// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+/// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
 ///
 pub fn make_circle(
     dim: (usize, usize, usize),

@@ -40,7 +40,7 @@ impl SaftProcessor {
 
     /// Extract SAFT parameters from BeamformingAlgorithm3D::SAFT3D variant.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn from_algorithm(
         algorithm: &BeamformingAlgorithm3D,
@@ -104,7 +104,7 @@ impl SaftProcessor {
 
     /// Reconstruct a 3D volume using SAFT with carrier-phase demodulation.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn reconstruct_volume(&self, rf_data: &Array4<f32>) -> KwaversResult<Array3<f32>> {
         let start_time = std::time::Instant::now();
@@ -218,7 +218,7 @@ impl SaftProcessor {
 
     /// Validate input RF data dimensions.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub(super) fn validate_input(&self, rf_data: &Array4<f32>) -> KwaversResult<()> {
         if rf_data.is_empty() {

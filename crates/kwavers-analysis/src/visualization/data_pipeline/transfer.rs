@@ -107,7 +107,7 @@ impl FieldBuffers {
 impl DataPipeline {
     /// Create a new data pipeline
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub async fn new() -> KwaversResult<Self> {
         info!("Initializing GPU data pipeline for visualization");
@@ -160,7 +160,7 @@ impl DataPipeline {
 
     /// Transfer field data to GPU
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub async fn transfer_field(
         &mut self,

@@ -17,5 +17,5 @@ pub(super) use super::intramembrane_cavitation::{
 pub(super) use super::nice::{simulate_nice, NiceConfig};
 
 /// Shared squid-HH resting potential used across the membrane and coupling
-/// test groups [mV].
+/// test groups `mV`.
 pub(super) const V_REST: f64 = -65.0;

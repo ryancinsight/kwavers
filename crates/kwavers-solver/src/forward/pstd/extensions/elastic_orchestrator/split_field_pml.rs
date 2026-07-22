@@ -58,8 +58,8 @@ use leto::{Array1, Array3};
 /// Pre-computed per-axis exponential and integration coefficients for the
 /// split-field PML.
 ///
-/// - `alpha_α[i] = exp(−σ_α(i)·dt)` ∈ (0, 1]: multiplicative decay factor
-/// - `beta_α[i]  = (1 − alpha_α[i]) / σ_α(i)` for σ > 0, else dt: RHS
+/// - `alpha_α`i` = exp(−σ_α(i)·dt)` ∈ (0, 1]: multiplicative decay factor
+/// - `beta_α`i`  = (1 − alpha_α`i`) / σ_α(i)` for σ > 0, else dt: RHS
 ///   integration factor (absorbs the time-step in the exact integrator)
 #[derive(Debug, Clone)]
 pub struct ElasticSplitFieldPml {

@@ -65,7 +65,7 @@ fn pixel_position(cfg: &PamMonitorConfig, ix: usize, iz: usize) -> [f64; 3] {
 /// `Σ_t (Σ_i s_i[t + (τ_i − τ_min)·f_s])²`, peaking at the emission source.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on element-count/shape mismatch or
+/// Returns `KwaversError::InvalidInput` on element-count/shape mismatch or
 /// non-positive sound speed / sample rate.
 pub fn passive_acoustic_map(
     sensor_data: &Array3<f64>,
@@ -122,7 +122,7 @@ pub fn passive_acoustic_map(
 /// and for driving the monitor from the lesion centroid.
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] on non-positive sound speed/sample rate.
+/// Returns `KwaversError::InvalidInput` on non-positive sound speed/sample rate.
 pub fn synthesize_emission(
     source_m: [f64; 3],
     element_positions: &[[f64; 3]],

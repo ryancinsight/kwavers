@@ -266,7 +266,7 @@ impl PoroelasticConfig {
         Ok(slf)
     }
 
-    /// Set intrinsic permeability [m²].
+    /// Set intrinsic permeability `m²`.
     fn with_permeability(mut slf: PyRefMut<'_, Self>, perm: f64) -> PyResult<PyRefMut<'_, Self>> {
         if perm <= 0.0 {
             return Err(PyValueError::new_err("permeability must be > 0"));
@@ -336,7 +336,7 @@ impl ThermalConfig {
     /// Parameters
     /// ----------
     /// center_frequency : float
-    ///     Center frequency [Hz] for α(ω_c) evaluation (required).
+    ///     Center frequency `Hz` for α(ω_c) evaluation (required).
     /// n_acoustic_per_thermal : int, default 1
     ///     Acoustic steps per thermal update.
     /// thermal_conductivity : float, default 0.5
@@ -362,7 +362,7 @@ impl ThermalConfig {
     /// track_thermal_dose : bool, default True
     ///     Compute CEM43 dose field.
     /// dt_thermal : float or None
-    ///     Thermal time step [s]. Default: ``n_acoustic_per_thermal * dt_acoustic``.
+    ///     Thermal time step `s`. Default: ``n_acoustic_per_thermal * dt_acoustic``.
     #[new]
     #[pyo3(signature = (
         center_frequency,

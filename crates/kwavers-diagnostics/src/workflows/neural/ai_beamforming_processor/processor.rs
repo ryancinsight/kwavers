@@ -48,7 +48,7 @@ impl std::fmt::Debug for AIEnhancedBeamformingProcessor {
 impl AIEnhancedBeamformingProcessor {
     /// Create new neural beamforming processor.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         config: AIBeamformingConfig,
@@ -84,7 +84,7 @@ impl AIEnhancedBeamformingProcessor {
 
     /// Process ultrasound data with neural enhancement.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn process_ai_enhanced(
         &mut self,
@@ -178,7 +178,7 @@ impl AIEnhancedBeamformingProcessor {
 
     /// Perform real-time PINN inference for uncertainty quantification.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn perform_pinn_inference(
         &mut self,
@@ -265,7 +265,7 @@ impl AIEnhancedBeamformingProcessor {
 
     /// Update configuration.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_config(&mut self, config: AIBeamformingConfig) -> KwaversResult<()> {
         config.validate().map_err(|e| {

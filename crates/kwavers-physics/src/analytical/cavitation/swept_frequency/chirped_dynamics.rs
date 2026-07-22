@@ -19,9 +19,9 @@ use super::chirp::FrequencySweep;
 ///
 /// # Arguments
 /// * `sweep` – frequency-swept drive (carrier).
-/// * `amplitude_pa` – peak acoustic pressure `A` [Pa].
-/// * `r0_m`, `rdot0` – initial radius [m] and wall velocity [m/s].
-/// * `t_arr` – strictly increasing time samples [s].
+/// * `amplitude_pa` – peak acoustic pressure `A` `Pa`.
+/// * `r0_m`, `rdot0` – initial radius `m` and wall velocity [m/s].
+/// * `t_arr` – strictly increasing time samples `s`.
 /// * `p0_pa`, `rho`, `sigma`, `mu`, `kappa`, `p_v_pa`, `xi_s`, `c_liquid` –
 ///   ambient pressure, liquid density, surface tension, liquid viscosity,
 ///   polytropic exponent, vapor pressure, shell viscosity, sound speed.

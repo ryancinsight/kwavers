@@ -123,7 +123,7 @@ impl FieldArena {
     /// Create a new field arena.
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: ArenaConfig) -> KwaversResult<Self> {
         let total_size = config.total_memory_bytes();
@@ -171,9 +171,9 @@ impl FieldArena {
 
     /// Allocate one field slot and return a mutable slice into arena memory.
     ///
-    /// Fails with [`KwaversError::System`] when all slots are occupied.
+    /// Fails with `KwaversError::System` when all slots are occupied.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn allocate_field(&mut self) -> KwaversResult<&mut [f64]> {
         let mut state = self.allocation_state.borrow_mut();

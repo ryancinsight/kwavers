@@ -31,8 +31,8 @@ impl PatientManagementSystem {
 
     /// Register a new patient
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn register_patient(
         &mut self,
@@ -53,8 +53,8 @@ impl PatientManagementSystem {
 
     /// Update a patient's demographics
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn update_demographics(
         &mut self,
@@ -74,7 +74,7 @@ impl PatientManagementSystem {
 
     /// Register a clinical encounter
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn register_encounter(
         &mut self,
@@ -94,7 +94,7 @@ impl PatientManagementSystem {
 
     /// Complete a treatment session
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn complete_treatment_session(&mut self, plan_id: &str) -> KwaversResult<()> {
         if let Some(plan) = self.treatment_plans.get_mut(plan_id) {

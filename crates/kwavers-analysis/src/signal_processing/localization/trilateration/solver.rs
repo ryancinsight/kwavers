@@ -15,7 +15,7 @@ pub struct Trilateration {
 impl Trilateration {
     /// Create a new trilateration localizer
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn new(
         sensor_positions: Vec<[f64; 3]>,
@@ -44,8 +44,8 @@ impl Trilateration {
 
     /// Localize source from time-of-arrival measurements
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn localize(&self, arrival_times: &[f64]) -> KwaversResult<LocalizationResult> {
         if arrival_times.len() != self.num_sensors {
@@ -199,7 +199,7 @@ impl Trilateration {
 
     /// Solve 3x3 linear system Ax = b via Gaussian elimination with partial pivoting
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     fn solve_3x3(&self, a: &[[f64; 3]; 3], b: &[f64; 3]) -> KwaversResult<[f64; 3]> {
         let mut aug = [[0.0; 4]; 3];

@@ -17,7 +17,7 @@
 /// ```
 /// All `n_bubbles` per-bubble series share length `n_samples` and are laid out
 /// row-major in `emissions` (`emissions[i*n_samples + s]`). Each is placed at
-/// integer sample offset `delays[i]` and scaled by `gains[i]`, accumulating into
+/// integer sample offset `delays`i`` and scaled by `gains`i``, accumulating into
 /// an output buffer of length `out_len` (which must be at least
 /// `n_samples + max(delays)` to avoid truncation). The returned series is fed to
 /// [`super::hann_windowed_power_spectrum`] to obtain the ensemble PSD.
@@ -25,7 +25,7 @@
 /// # Arguments
 /// * `emissions` – `n_bubbles × n_samples` row-major per-bubble emission series
 /// * `n_bubbles`, `n_samples` – grid dimensions of `emissions`
-/// * `delays` – per-bubble nucleation/arrival delay [samples] (length `n_bubbles`)
+/// * `delays` – per-bubble nucleation/arrival delay `samples` (length `n_bubbles`)
 /// * `gains` – per-bubble amplitude weight (length `n_bubbles`)
 /// * `out_len` – length of the summed output buffer
 ///

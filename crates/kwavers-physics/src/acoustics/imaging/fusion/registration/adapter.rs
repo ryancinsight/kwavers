@@ -41,7 +41,7 @@ pub struct RitkRegistrationEngine {
 impl RitkRegistrationEngine {
     /// Register for method.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn register_for_method(
         &self,

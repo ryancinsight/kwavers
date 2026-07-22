@@ -22,7 +22,7 @@ pub(crate) const COMPRESSION_REFRACTIVE_COEFFICIENT: f64 = 0.02;
 /// Reference: Kim, J. Opt. Soc. Korea, 2012.
 pub(crate) const THERMAL_REFRACTIVE_COEFFICIENT: f64 = 1e-5;
 
-/// Reference temperature for thermo-optic shift [K].
+/// Reference temperature for thermo-optic shift `K`.
 ///
 /// Aliases `BUBBLE_REFERENCE_TEMPERATURE_K` (300 K, Brenner 2002) for use
 /// throughout the Cherenkov emission submodule.

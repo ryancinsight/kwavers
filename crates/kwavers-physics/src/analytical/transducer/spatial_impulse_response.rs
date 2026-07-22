@@ -62,7 +62,7 @@ impl CircularPistonSir {
     /// Create a circular-piston SIR model.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if `radius` or `sound_speed` is
+    /// - `KwaversError::InvalidInput` if `radius` or `sound_speed` is
     ///   non-finite or `≤ 0`.
     pub fn new(radius: f64, sound_speed: f64) -> KwaversResult<Self> {
         if !radius.is_finite() || radius <= 0.0 {
@@ -81,7 +81,7 @@ impl CircularPistonSir {
         })
     }
 
-    /// First-arrival time [s] at field point `(r, z)` — the nearest aperture point.
+    /// First-arrival time `s` at field point `(r, z)` — the nearest aperture point.
     #[must_use]
     pub fn first_arrival_time(&self, r: f64, z: f64) -> f64 {
         let d_min = if r <= self.radius {
@@ -92,7 +92,7 @@ impl CircularPistonSir {
         d_min / self.sound_speed
     }
 
-    /// Last-arrival time [s] at field point `(r, z)` — the farthest rim point.
+    /// Last-arrival time `s` at field point `(r, z)` — the farthest rim point.
     #[must_use]
     pub fn last_arrival_time(&self, r: f64, z: f64) -> f64 {
         (z * z + (r + self.radius).powi(2)).sqrt() / self.sound_speed
@@ -101,7 +101,7 @@ impl CircularPistonSir {
     /// Spatial impulse response `h(r, z, t)` [m/s] at a field point.
     ///
     /// `r ≥ 0` is the lateral offset from the axis, `z > 0` the axial distance,
-    /// `t` the time [s]. Returns `0` outside the support `[d_min/c, d_max/c]`.
+    /// `t` the time `s`. Returns `0` outside the support `[d_min/c, d_max/c]`.
     #[must_use]
     pub fn evaluate(&self, r: f64, z: f64, t: f64) -> f64 {
         let a = self.radius;
@@ -153,7 +153,7 @@ impl CircularPistonSir {
     /// To capture the full kernel choose `n_samples ≥ ⌈2·last_arrival_time/dt⌉`
     /// (the two-way support ends at `2·d_max/c`). The convolution integral
     /// factorizes, `∫(h⊛h)dt = (∫h dt)²`, and on-axis `∫h dt = √(z²+a²) − z`, so
-    /// `Σ_k out[k]·dt = (√(z²+a²) − z)²` — the exact normalization.
+    /// `Σ_k out`K`·dt = (√(z²+a²) − z)²` — the exact normalization.
     ///
     /// # Panics
     /// Panics if `dt ≤ 0` (a non-positive sample step is a caller bug).
@@ -191,7 +191,7 @@ impl RectangularPistonSir {
     /// Create a rectangular-piston SIR model from the **half**-widths.
     ///
     /// # Errors
-    /// - [`KwaversError::InvalidInput`] if any half-width or `sound_speed` is
+    /// - `KwaversError::InvalidInput` if any half-width or `sound_speed` is
     ///   non-finite or `≤ 0`.
     pub fn new(half_width_x: f64, half_width_y: f64, sound_speed: f64) -> KwaversResult<Self> {
         for (name, v) in [
@@ -212,7 +212,7 @@ impl RectangularPistonSir {
         })
     }
 
-    /// First-arrival time [s] at `(x, y, z)` — the nearest aperture point (the
+    /// First-arrival time `s` at `(x, y, z)` — the nearest aperture point (the
     /// projection clamped into the rectangle).
     #[must_use]
     pub fn first_arrival_time(&self, x: f64, y: f64, z: f64) -> f64 {
@@ -221,7 +221,7 @@ impl RectangularPistonSir {
         (z * z + (x - cx).powi(2) + (y - cy).powi(2)).sqrt() / self.sound_speed
     }
 
-    /// Last-arrival time [s] at `(x, y, z)` — the farthest aperture corner.
+    /// Last-arrival time `s` at `(x, y, z)` — the farthest aperture corner.
     #[must_use]
     pub fn last_arrival_time(&self, x: f64, y: f64, z: f64) -> f64 {
         let dx = (x - self.half_width_x)
@@ -236,7 +236,7 @@ impl RectangularPistonSir {
     /// Spatial impulse response `h(x, y, z, t)` [m/s] at a field point.
     ///
     /// `(x, y)` is the lateral position (projection onto the aperture plane), `z`
-    /// the axial distance, `t` the time [s]. Returns `0` outside the support.
+    /// the axial distance, `t` the time `s`. Returns `0` outside the support.
     #[must_use]
     pub fn evaluate(&self, x: f64, y: f64, z: f64, t: f64) -> f64 {
         let c = self.sound_speed;

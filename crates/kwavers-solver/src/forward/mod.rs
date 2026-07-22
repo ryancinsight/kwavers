@@ -10,7 +10,7 @@
 //! | Acoustic fluid (μ = 0)      | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`]                                                                                              |
 //! | Acoustic fluid (μ = 0)      | 4th-order FD          | Leapfrog            | [`crate::forward::fdtd::solver::GenericFdtdSolver`]                                                                                       |
 //! | Acoustic fluid (μ = 0)      | Pseudospectral (GPU)  | k-space corrected   | `kwavers_gpu::pstd_gpu::GpuPstdSolver` (consolidated into the kwavers-gpu crate) |
-//! | Elastic isotropic (μ ≥ 0)   | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`] **+ [`pstd::extensions::PstdElasticPlugin`]** — μ = 0 reduces to baseline acoustic PSTD      |
+//! | Elastic isotropic (μ ≥ 0)   | Pseudospectral (FFT)  | k-space corrected   | [`pstd::PSTDSolver`] **+ `pstd::extensions::PstdElasticPlugin`** — μ = 0 reduces to baseline acoustic PSTD      |
 //! | Elastic isotropic (μ ≥ 0)   | 4th-order FD coll.    | Velocity-Verlet     | [`elastic::swe::ElasticWaveSolver`]                                                                               |
 //! | Elastic nonlinear           | 4th-order FD          | RK / IMEX           | [`elastic::nonlinear::NonlinearElasticWaveSolver`]                                                                |
 //! | Poroelastic                 | FD                    | Leapfrog            | [`poroelastic`]                                                                                                   |
@@ -22,7 +22,7 @@
 //!
 //! Pseudospectral acoustic and pseudospectral elastic share the same FFT
 //! kernel; only the stress tensor differs (acoustic = isotropic pressure;
-//! elastic = full λ/μ stress). [`pstd::extensions::PstdElasticPlugin`]
+//! elastic = full λ/μ stress). `pstd::extensions::PstdElasticPlugin`
 //! exposes the spectral elastic stress and velocity primitives so that
 //! [`pstd::PSTDSolver`] can be extended in place rather than duplicated.
 //!

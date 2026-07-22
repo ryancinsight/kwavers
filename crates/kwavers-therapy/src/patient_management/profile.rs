@@ -76,7 +76,7 @@ pub struct PatientMedicalProfile {
 impl PatientMedicalProfile {
     /// Create a new patient profile
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(demographics: PatientDemographics) -> KwaversResult<Self> {
         demographics.validate()?;

@@ -86,7 +86,7 @@ where
     /// - Van Veen & Buckley (1988) "Beamforming: A versatile approach to spatial filtering"
     /// - Synnevåg et al. (2009) "Adaptive beamforming applied to medical ultrasound imaging"
     /// # Errors
-    /// - Returns [`KwaversError::System`] always (GPU MVDR not yet implemented).
+    /// - Returns `KwaversError::System` always (GPU MVDR not yet implemented).
     ///
     pub(super) fn process_mvdr_3d(
         &mut self,

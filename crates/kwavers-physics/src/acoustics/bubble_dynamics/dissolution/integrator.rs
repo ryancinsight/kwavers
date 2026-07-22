@@ -5,11 +5,11 @@ use super::traits::DissolutionModel;
 /// Time history of a dissolving bubble and its dissolution time.
 #[derive(Debug, Clone)]
 pub struct DissolutionTrajectory {
-    /// Time grid [s].
+    /// Time grid `s`.
     pub time: Vec<f64>,
-    /// Bubble radius `R(t)` [m].
+    /// Bubble radius `R(t)` `m`.
     pub radius: Vec<f64>,
-    /// Time at which `R` first falls to `r_dissolved` [s], or `None` if the
+    /// Time at which `R` first falls to `r_dissolved` `s`, or `None` if the
     /// bubble had not dissolved (or was growing) by `t_max`.
     pub dissolution_time: Option<f64>,
 }

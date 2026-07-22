@@ -21,9 +21,9 @@ use std::f64::consts::PI;
 /// Normalised to 1.0 at x = 0.
 ///
 /// # Arguments
-/// * `x_arr` – lateral offsets from beam axis [m]
+/// * `x_arr` – lateral offsets from beam axis `m`
 /// * `f_number` – F-number = focal_length / aperture
-/// * `wavelength_m` – acoustic wavelength λ [m]
+/// * `wavelength_m` – acoustic wavelength λ `m`
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §8.3.
@@ -49,9 +49,9 @@ pub fn lateral_psf_sinc2(x_arr: &[f64], f_number: f64, wavelength_m: f64) -> Vec
 /// Normalised to 1.0 at z = 0.
 ///
 /// # Arguments
-/// * `z_arr` – axial offsets from focal plane [m]
+/// * `z_arr` – axial offsets from focal plane `m`
 /// * `c` – sound speed [m/s]
-/// * `bandwidth_hz` – receiver −6 dB bandwidth [Hz]
+/// * `bandwidth_hz` – receiver −6 dB bandwidth `Hz`
 ///
 /// # Reference
 /// Szabo (2014) *Diagnostic Ultrasound Imaging*, §6.5.
@@ -72,15 +72,15 @@ pub fn axial_psf_rect(z_arr: &[f64], c: f64, bandwidth_hz: f64) -> Vec<f64> {
 /// Doppler frequency shift for a moving reflector.
 ///
 /// ```text
-/// Δf = 2·f₀·v·cos(θ) / c   [Hz]
+/// Δf = 2·f₀·v·cos(θ) / c   `Hz`
 /// ```
 ///
 /// Positive for motion towards the transducer (θ < π/2).
 ///
 /// # Arguments
 /// * `v_m_s` – reflector speed [m/s]
-/// * `theta_rad` – angle between flow direction and beam axis [rad]
-/// * `f0_hz` – transmit centre frequency [Hz]
+/// * `theta_rad` – angle between flow direction and beam axis `rad`
+/// * `f0_hz` – transmit centre frequency `Hz`
 /// * `c` – sound speed [m/s]
 ///
 /// # Reference
@@ -94,7 +94,7 @@ pub fn doppler_frequency_shift(v_m_s: f64, theta_rad: f64, f0_hz: f64, c: f64) -
 /// Deterministic Doppler spectrum and Kasai estimator payload.
 #[derive(Debug, Clone, PartialEq)]
 pub struct DopplerSpectrum {
-    /// Slow-time sample positions [s].
+    /// Slow-time sample positions `s`.
     pub slow_time_s: Vec<f64>,
     /// In-phase IQ component.
     pub iq_real: Vec<f64>,
@@ -104,9 +104,9 @@ pub struct DopplerSpectrum {
     pub velocity_m_s: Vec<f64>,
     /// Shifted Doppler-spectrum power.
     pub power: Vec<f64>,
-    /// True Doppler shift [Hz].
+    /// True Doppler shift `Hz`.
     pub doppler_shift_hz: f64,
-    /// Kasai-estimated Doppler shift [Hz].
+    /// Kasai-estimated Doppler shift `Hz`.
     pub estimated_shift_hz: f64,
     /// Kasai-estimated velocity [m/s].
     pub estimated_velocity_m_s: f64,
@@ -121,13 +121,13 @@ pub struct ContrastAgentDopplerConfig {
     pub n_ensemble: usize,
     /// FFT zero-padding multiplier.
     pub fft_multiplier: usize,
-    /// Pulse repetition frequency [Hz].
+    /// Pulse repetition frequency `Hz`.
     pub prf_hz: f64,
     /// Axial flow speed used for the Doppler shift [m/s].
     pub velocity_m_s: f64,
-    /// Beam-to-flow angle [rad].
+    /// Beam-to-flow angle `rad`.
     pub theta_rad: f64,
-    /// Transmit center frequency [Hz].
+    /// Transmit center frequency `Hz`.
     pub f0_hz: f64,
     /// Speed of sound [m/s].
     pub sound_speed_m_s: f64,
@@ -257,10 +257,10 @@ fn finite_tone_dft_magnitude(amplitude: f64, phase_step: f64, n_samples: usize) 
 /// ```
 ///
 /// # Arguments
-/// * `x_arr` – lateral offsets [m]
+/// * `x_arr` – lateral offsets `m`
 /// * `n_angles` – number of compounding angles
 /// * `f_number` – effective F-number for a single angle
-/// * `wavelength_m` – acoustic wavelength [m]
+/// * `wavelength_m` – acoustic wavelength `m`
 ///
 /// # Reference
 /// Montaldo et al. (2009), *IEEE Trans. Ultrason. Ferroelectr. Freq. Control*
@@ -281,7 +281,7 @@ pub fn pw_compounding_lateral_psf(
 /// −6 dB lateral resolution (Rayleigh criterion).
 ///
 /// ```text
-/// δx = 0.886 · F# · λ   [m]
+/// δx = 0.886 · F# · λ   `m`
 /// ```
 ///
 /// # Reference
@@ -301,13 +301,13 @@ pub fn lateral_resolution_m(f_number: f64, wavelength_m: f64) -> f64 {
 /// `5` fibrous cap, `6` lipid core, `7` calcium.
 #[derive(Debug, Clone)]
 pub struct IvusVesselPhantom {
-    /// Cartesian x coordinate [m].
+    /// Cartesian x coordinate `m`.
     pub x_m: Vec<f64>,
-    /// Cartesian y coordinate [m].
+    /// Cartesian y coordinate `m`.
     pub y_m: Vec<f64>,
-    /// Radius from catheter center [m].
+    /// Radius from catheter center `m`.
     pub radius_m: Vec<f64>,
-    /// Polar angle [rad].
+    /// Polar angle `rad`.
     pub theta_rad: Vec<f64>,
     /// Tissue labels.
     pub labels: Vec<u8>,
@@ -338,7 +338,7 @@ pub struct IvusVesselPhantom {
 pub struct IvusTherapyResponse {
     /// Time-averaged intensity [W/m²].
     pub intensity_w_m2: Vec<f64>,
-    /// Adiabatic temperature rise [K].
+    /// Adiabatic temperature rise `K`.
     pub temperature_rise_k: Vec<f64>,
     /// Microbubble delivery/deposition fraction [-].
     pub deposition: Vec<f64>,
@@ -346,18 +346,18 @@ pub struct IvusTherapyResponse {
     pub mechanical_index: f64,
     /// Target mean deposition divided by off-target deposition [-].
     pub target_to_offtarget_ratio: f64,
-    /// Peak adiabatic temperature rise [K].
+    /// Peak adiabatic temperature rise `K`.
     pub peak_delta_t_k: f64,
 }
 
 /// Complete IVUS therapy field payload for Chapter 30.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IvusTherapyFields {
-    /// Sector-focused peak pressure [Pa].
+    /// Sector-focused peak pressure `Pa`.
     pub pressure_pa: Vec<f64>,
     /// Time-averaged intensity [W/m²].
     pub intensity_w_m2: Vec<f64>,
-    /// Adiabatic temperature rise [K].
+    /// Adiabatic temperature rise `K`.
     pub temperature_rise_k: Vec<f64>,
     /// Microbubble delivery/deposition fraction [-].
     pub deposition: Vec<f64>,
@@ -365,7 +365,7 @@ pub struct IvusTherapyFields {
     pub mechanical_index: f64,
     /// Target mean deposition divided by off-target deposition [-].
     pub target_to_offtarget_ratio: f64,
-    /// Peak adiabatic temperature rise [K].
+    /// Peak adiabatic temperature rise `K`.
     pub peak_delta_t_k: f64,
 }
 
@@ -387,15 +387,15 @@ pub struct IvusBmodeImage {
 /// Chapter 30 IVUS scalar metrics computed from Rust-owned fields.
 #[derive(Debug, Clone, PartialEq)]
 pub struct IvusChapterMetrics {
-    /// Imaging wavelength [µm].
+    /// Imaging wavelength `µM`.
     pub imaging_wavelength_um: f64,
-    /// Therapy wavelength [mm].
+    /// Therapy wavelength `mm`.
     pub therapy_wavelength_mm: f64,
-    /// Lumen mask area [mm²].
+    /// Lumen mask area `mm²`.
     pub lumen_area_mm2: f64,
-    /// Plaque mask area [mm²].
+    /// Plaque mask area `mm²`.
     pub plaque_area_mm2: f64,
-    /// B-mode display dynamic range [dB].
+    /// B-mode display dynamic range `dB`.
     pub bmode_dynamic_range_db: f64,
     /// Mean B-mode intensity inside the lumen mask.
     pub bmode_mean_lumen_intensity: f64,

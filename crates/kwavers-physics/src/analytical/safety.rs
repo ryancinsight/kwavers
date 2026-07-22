@@ -44,7 +44,7 @@ pub fn mechanical_index(p_neg_pa: f64, f_hz: f64) -> f64 {
 ///
 /// Applies [`mechanical_index`] element-wise to every sample in `p_field`:
 /// ```text
-/// MI_i = |p_field[i]| / (1e6 · √(f_MHz))
+/// MI_i = |p_field`i`| / (1e6 · √(f_MHz))
 /// ```
 ///
 /// # Arguments
@@ -159,7 +159,7 @@ pub fn thermal_index_bone(w_mw: f64, f_mhz: f64) -> f64 {
 /// the full source power is deposited over the aperture rather than concentrated
 /// by focal absorption — so TIC carries no `f` weighting (unlike TIS/TIB).
 /// ```text
-/// TIC = W_0 [mW] / (40 [mW/cm] · D_eq [cm])
+/// TIC = W_0 [mW] / (40 [mW/cm] · D_eq `cm`)
 /// ```
 /// `W_0` is the total acoustic power at the transducer face and `D_eq` the
 /// equivalent aperture diameter `√(4·A_aprt/π)`.

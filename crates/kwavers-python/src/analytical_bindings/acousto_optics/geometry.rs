@@ -3,7 +3,7 @@
 use kwavers_physics::analytical::acousto_optics;
 use pyo3::prelude::*;
 
-/// Diffraction angle [rad] of order m from sin θₘ = m λ₀/(n Λ); NaN if evanescent.
+/// Diffraction angle `rad` of order m from sin θₘ = m λ₀/(n Λ); NaN if evanescent.
 #[pyfunction]
 #[pyo3(signature = (order, optical_wavelength_m, refractive_index, acoustic_wavelength_m))]
 pub fn diffraction_angle_rad(
@@ -28,7 +28,7 @@ pub fn diffraction_frequency_shift_hz(order: i32, acoustic_frequency_hz: f64) ->
     acousto_optics::diffraction_frequency_shift_hz(order, acoustic_frequency_hz)
 }
 
-/// Bragg angle θ_B = arcsin(λ₀/(2nΛ)) [rad]; NaN if no Bragg solution.
+/// Bragg angle θ_B = arcsin(λ₀/(2nΛ)) `rad`; NaN if no Bragg solution.
 #[pyfunction]
 #[pyo3(signature = (optical_wavelength_m, refractive_index, acoustic_wavelength_m))]
 pub fn bragg_angle_rad(

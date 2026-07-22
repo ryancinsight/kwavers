@@ -49,7 +49,7 @@ impl FresnelCalculator {
 
     /// Calculate Fresnel coefficients for given angles and polarization
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calculate(
         &self,
@@ -145,7 +145,7 @@ impl FresnelCalculator {
 
     /// Calculate reflectance (power reflection coefficient)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn reflectance(
         &self,
@@ -175,7 +175,7 @@ impl FresnelCalculator {
 
     /// Calculate transmittance (power transmission coefficient)
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn transmittance(
         &self,

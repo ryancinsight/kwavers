@@ -121,7 +121,7 @@ impl PatientTreatmentPlan {
 
     /// Mark a session as completed
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn complete_session(&mut self) -> KwaversResult<()> {
         if self.completed_sessions >= self.planned_sessions {

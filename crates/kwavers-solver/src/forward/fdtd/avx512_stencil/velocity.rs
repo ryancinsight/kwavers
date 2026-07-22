@@ -6,7 +6,7 @@
 //! ## Discretisation (Euler momentum, component `dim`)
 //!
 //! ```text
-//! u^(n+1)[i] = u^n[i] − (Δt/(ρΔx)) × (p[i+1] − p[i-1]) / 2
+//! u^(n+1)`i` = u^n`i` − (Δt/(ρΔx)) × (p[i+1] − p[i-1]) / 2
 //! ```
 //!
 //! Vectorised form (8-wide AVX-512, f64):

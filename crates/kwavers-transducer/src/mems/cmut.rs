@@ -24,13 +24,13 @@ use super::plate;
 /// A single CMUT cell (Si membrane over a vacuum gap).
 #[derive(Debug, Clone, Copy)]
 pub struct CmutCell {
-    /// Membrane radius `a` \[m].
+    /// Membrane radius `a` \`m`.
     pub radius: f64,
-    /// Membrane thickness `h` \[m].
+    /// Membrane thickness `h` \`m`.
     pub thickness: f64,
-    /// Vacuum gap `g₀` \[m].
+    /// Vacuum gap `g₀` \`m`.
     pub gap: f64,
-    /// Membrane Young's modulus `E` \[Pa].
+    /// Membrane Young's modulus `E` \`Pa`.
     pub youngs: f64,
     /// Membrane density `ρ` \[kg·m⁻³].
     pub density: f64,
@@ -59,7 +59,7 @@ impl CmutCell {
         }
     }
 
-    /// Membrane area `A = π a²` \[m²].
+    /// Membrane area `A = π a²` \`m²`.
     #[must_use]
     pub fn area(&self) -> f64 {
         PI * self.radius * self.radius
@@ -71,7 +71,7 @@ impl CmutCell {
         VACUUM_PERMITTIVITY * self.area() / self.gap
     }
 
-    /// In-vacuo membrane resonance \[Hz].
+    /// In-vacuo membrane resonance \`Hz`.
     #[must_use]
     pub fn vacuum_resonance(&self) -> f64 {
         plate::vacuum_resonance(
@@ -83,7 +83,7 @@ impl CmutCell {
         )
     }
 
-    /// Immersion (fluid-loaded) resonance \[Hz].
+    /// Immersion (fluid-loaded) resonance \`Hz`.
     #[must_use]
     pub fn immersion_resonance(&self, density_fluid: f64) -> f64 {
         plate::immersion_resonance(
@@ -102,7 +102,7 @@ impl CmutCell {
         plate::modal_stiffness(self.vacuum_resonance(), m)
     }
 
-    /// Electrostatic **collapse (pull-in) voltage** `V_c = √(8 k g₀³/(27 ε₀ A))` \[V].
+    /// Electrostatic **collapse (pull-in) voltage** `V_c = √(8 k g₀³/(27 ε₀ A))` \`V`.
     #[must_use]
     pub fn collapse_voltage(&self) -> f64 {
         let k = self.modal_stiffness();
@@ -156,7 +156,7 @@ impl CmutCell {
         Some(0.5 * (lo + hi))
     }
 
-    /// Biased operating gap `g₀(1 − u)` \[m] under DC bias (the membrane is
+    /// Biased operating gap `g₀(1 − u)` \`m` under DC bias (the membrane is
     /// pulled down by the electrostatic force). `None` once collapsed (`V ≥ V_c`).
     #[must_use]
     pub fn biased_gap(&self, bias_voltage: f64) -> Option<f64> {
@@ -172,7 +172,7 @@ impl CmutCell {
             .map(|u| self.capacitance() / (1.0 - u))
     }
 
-    /// **Spring-softened** resonance under DC bias \[Hz]: the electrostatic force
+    /// **Spring-softened** resonance under DC bias \`Hz`: the electrostatic force
     /// reduces the effective stiffness to `k_eff = k(1 − 2u/(1−u))`, so the
     /// immersion resonance drops as `f(V) = f_imm·√(k_eff/k)` and **vanishes at
     /// pull-in** (`u = 1/3`, `V = V_c`) — the classic CMUT collapse instability.
@@ -186,7 +186,7 @@ impl CmutCell {
         Some(self.immersion_resonance(density_fluid) * stiffness_ratio.sqrt())
     }
 
-    /// Dielectric self-heating power `P = π f C V_ac² tanδ` \[W] at drive `V_ac`/`freq`.
+    /// Dielectric self-heating power `P = π f C V_ac² tanδ` \`W` at drive `V_ac`/`freq`.
     #[must_use]
     pub fn self_heating_power(&self, drive_voltage_ac: f64, freq: f64) -> f64 {
         PI * freq * self.capacitance() * drive_voltage_ac * drive_voltage_ac * self.loss_tangent
@@ -234,7 +234,7 @@ impl CmutCell {
     }
 
     /// Gap-limited peak output pressure into the fluid (plane-wave radiation),
-    /// `p = ρ c · v_peak` \[Pa]. The defining transmit limitation of CMUTs for
+    /// `p = ρ c · v_peak` \`Pa`. The defining transmit limitation of CMUTs for
     /// **therapy**: output is capped by the (sub-micron) gap, not the drive.
     #[must_use]
     pub fn max_output_pressure(

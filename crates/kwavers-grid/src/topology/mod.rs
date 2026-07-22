@@ -97,7 +97,7 @@ pub trait GridTopology: Send + Sync {
 
     /// Validate that indices are within grid bounds
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     fn validate_indices(&self, indices: [usize; 3]) -> KwaversResult<()> {
         let [n0, n1, n2] = self.dimensions();

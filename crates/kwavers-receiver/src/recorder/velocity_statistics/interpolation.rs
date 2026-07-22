@@ -2,7 +2,7 @@
 //!
 //! # Theorem: Half-cell backward shift for staggered velocity
 //!
-//! On a staggered (Yee) grid, the velocity component `u_α[i]` is located at
+//! On a staggered (Yee) grid, the velocity component `u_α`i`` is located at
 //! position `(i + ½)·Δα`.  To obtain the value at the pressure-grid position
 //! `i·Δα` a half-cell backward shift by `−Δα/2` is required.  Under the
 //! band-limited interpolation assumption (field sampled at or below Nyquist)
@@ -11,7 +11,7 @@
 //! For smooth, well-sampled fields the finite-difference approximation
 //!
 //! ```text
-//!   u_ns[i] = (u[i−1] + u[i]) / 2     for i ≥ 1
+//!   u_ns`i` = (u[i−1] + u`i`) / 2     for i ≥ 1
 //!   u_ns[0] = u[0] / 2                 (ghost cell = 0 at boundary)
 //! ```
 //!
@@ -25,7 +25,7 @@
 //!
 //! ## Algorithm (axis=0 case; axes 1 and 2 are analogous)
 //!
-//! 1. `u_ns = u * 0.5`                          — every element gets u[i]/2.
+//! 1. `u_ns = u * 0.5`                          — every element gets u`i`/2.
 //! 2. `u_ns[1.., .., ..] += u[0..n-1, .., ..] * 0.5`
 //!    — add u[i-1]/2 for i ≥ 1.
 //!

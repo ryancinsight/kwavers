@@ -96,9 +96,9 @@ pub fn thermal_strain_combined_coefficient(
 ///     dc_dt: dc/dT [m/s per °C].
 ///     thermal_expansion: α_th [1/°C].
 ///     strain_window: Odd least-squares strain window length (≥ 3).
-///     sampling_rate: RF sampling rate f_s [Hz] (Δz = c₀/(2 f_s)).
-///     window_half: NCC correlation kernel half-length [samples].
-///     max_lag: NCC maximum search lag [samples].
+///     sampling_rate: RF sampling rate f_s `Hz` (Δz = c₀/(2 f_s)).
+///     window_half: NCC correlation kernel half-length `samples`.
+///     max_lag: NCC maximum search lag `samples`.
 ///
 /// Returns:
 ///     `(displacement_m, strain, temperature_change_c)`, each `[nx, ny, nz]`.

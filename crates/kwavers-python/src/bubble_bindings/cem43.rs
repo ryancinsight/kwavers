@@ -29,7 +29,7 @@ use pyo3::prelude::*;
 /// Parameters
 /// ----------
 /// temperatures_c : array of temperatures in °C at each time step.
-/// dt_s : constant time step between samples [s].
+/// dt_s : constant time step between samples `s`.
 ///
 /// Returns
 /// -------
@@ -58,7 +58,7 @@ pub fn compute_cem43(
 /// For each temperature `T_i` in `temperatures_c`, returns:
 ///
 /// ```text
-/// result[i] = R(T_i)^{43 − T_i} · duration_s / 60
+/// result`i` = R(T_i)^{43 − T_i} · duration_s / 60
 /// ```
 ///
 /// This gives the CEM43 contribution of a single exposure of `duration_s`
@@ -67,7 +67,7 @@ pub fn compute_cem43(
 /// Parameters
 /// ----------
 /// temperatures_c : 1-D array of temperatures [°C].
-/// duration_s : exposure duration for each temperature point [s].
+/// duration_s : exposure duration for each temperature point `s`.
 ///
 /// Returns
 /// -------

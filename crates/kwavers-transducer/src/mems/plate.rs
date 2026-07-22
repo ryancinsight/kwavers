@@ -31,7 +31,7 @@ pub fn flexural_rigidity(youngs: f64, thickness: f64, poisson: f64) -> f64 {
     youngs * thickness.powi(3) / (12.0 * (1.0 - poisson * poisson))
 }
 
-/// In-vacuo fundamental resonance of a clamped circular plate \[Hz].
+/// In-vacuo fundamental resonance of a clamped circular plate \`Hz`.
 #[must_use]
 pub fn vacuum_resonance(
     youngs: f64,
@@ -45,7 +45,7 @@ pub fn vacuum_resonance(
         * (youngs / (12.0 * density * (1.0 - poisson * poisson))).sqrt()
 }
 
-/// Fluid-loaded (immersion) resonance via Lamb added-mass downshift \[Hz].
+/// Fluid-loaded (immersion) resonance via Lamb added-mass downshift \`Hz`.
 #[must_use]
 pub fn immersion_resonance(
     vacuum_freq: f64,
@@ -110,7 +110,7 @@ pub fn flexible_output_factor(substrate_stiffness: f64, element_stiffness: f64) 
 }
 
 /// Plate sag across an element wrapped to radius of curvature `1/curvature`:
-/// `δ ≈ ½ κ a²` \[m] (small-deflection geometry).
+/// `δ ≈ ½ κ a²` \`m` (small-deflection geometry).
 #[must_use]
 pub fn curvature_sag(curvature: f64, radius: f64) -> f64 {
     0.5 * curvature * radius * radius

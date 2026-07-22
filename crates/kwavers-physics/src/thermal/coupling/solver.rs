@@ -85,7 +85,7 @@ impl ThermalAcousticCoupling {
     ///
     /// Each cell is the time-integral of `Q = 2·α·I` over all `update` calls.
     /// To recover power density [W/m³] divide by the cumulative `dt`; to
-    /// recover total deposited energy [J] multiply by the cell volume — this
+    /// recover total deposited energy `J` multiply by the cell volume — this
     /// type is grid-agnostic and therefore exposes only the density.
     #[must_use]
     pub fn acoustic_heat(&self) -> &Array3<f64> {

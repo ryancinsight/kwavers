@@ -49,7 +49,7 @@ impl DynamicFocusing {
 
     /// Set single focal point
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_focal_point(&mut self, x: f64, y: f64, z: f64) -> KwaversResult<()> {
         let focal_distance = z.mul_add(z, x.mul_add(x, y * y)).sqrt();
@@ -68,7 +68,7 @@ impl DynamicFocusing {
 
     /// Set multiple focal points
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn set_multiple_focal_points(&mut self, points: Vec<[f64; 3]>) -> KwaversResult<()> {
         if points.len() > MAX_FOCAL_POINTS {

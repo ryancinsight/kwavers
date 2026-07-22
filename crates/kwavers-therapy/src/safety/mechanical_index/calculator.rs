@@ -106,7 +106,7 @@ impl MechanicalIndexCalculator {
     /// ```
     /// # Errors
     /// - Returns [`KwaversError::Validation`] if the precondition for a Validation-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calculate(
         &self,
@@ -198,7 +198,7 @@ impl MechanicalIndexCalculator {
     ///
     /// Returns the worst-case MI value for safety assessment
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn calculate_max_mi(
         &self,

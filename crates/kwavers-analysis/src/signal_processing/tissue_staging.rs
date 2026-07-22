@@ -35,7 +35,7 @@ pub enum FibrosisStage {
 /// fasting (Chapter 11 Table 10.4, the `μ` column).
 pub const METAVIR_SHEAR_MODULUS_CUTOFFS_KPA: [f64; 4] = [1.7, 2.9, 4.8, 9.0];
 
-/// Classify liver fibrosis from a shear modulus `μ` \[kPa] using the METAVIR
+/// Classify liver fibrosis from a shear modulus `μ` \`kPa` using the METAVIR
 /// cut-offs. A value on a boundary is assigned to the **higher** stage
 /// (intervals are `[lower, upper)`).
 ///
@@ -87,16 +87,16 @@ pub fn classify_liver_fibrosis_from_speed(
 pub struct RoiStaging<C> {
     /// Category assigned from the ROI median modulus.
     pub category: C,
-    /// ROI median modulus \[kPa].
+    /// ROI median modulus \`kPa`.
     pub median_kpa: f64,
-    /// ROI inter-quartile range of the modulus \[kPa].
+    /// ROI inter-quartile range of the modulus \`kPa`.
     pub iqr_kpa: f64,
     /// `true` when `IQR > 0.3·median` — the ROI is heterogeneous and the single
     /// label should be treated with caution (Algorithm 11.5 step 6).
     pub heterogeneous: bool,
 }
 
-/// Stage an ROI from its modulus samples \[kPa] (Algorithm 11.5): classify the
+/// Stage an ROI from its modulus samples \`kPa` (Algorithm 11.5): classify the
 /// **median** with the organ point classifier `classify` and flag heterogeneity
 /// (`IQR > 0.3·median`). The single ROI-statistics implementation for every
 /// organ — the organ varies only through `classify` and the modulus convention
@@ -126,19 +126,19 @@ pub fn classify_roi<C>(samples_kpa: &[f64], classify: impl Fn(f64) -> C) -> Opti
 }
 
 /// Liver-fibrosis ROI staging (Algorithm 11.5): METAVIR stage of the ROI median
-/// shear modulus `μ` \[kPa] plus the heterogeneity flag.
+/// shear modulus `μ` \`kPa` plus the heterogeneity flag.
 #[must_use]
 pub fn classify_liver_roi(shear_modulus_kpa: &[f64]) -> Option<RoiStaging<FibrosisStage>> {
     classify_roi(shear_modulus_kpa, classify_liver_fibrosis)
 }
 
-/// Prostate ROI staging (§11.11.2) from shear-modulus `μ` \[kPa] samples.
+/// Prostate ROI staging (§11.11.2) from shear-modulus `μ` \`kPa` samples.
 #[must_use]
 pub fn classify_prostate_roi(shear_modulus_kpa: &[f64]) -> Option<RoiStaging<ProstateCategory>> {
     classify_roi(shear_modulus_kpa, classify_prostate)
 }
 
-/// Thyroid ROI staging (§11.11.3) from Young's-modulus `E` \[kPa] samples.
+/// Thyroid ROI staging (§11.11.3) from Young's-modulus `E` \`kPa` samples.
 #[must_use]
 pub fn classify_thyroid_roi(
     youngs_modulus_kpa: &[f64],
@@ -146,7 +146,7 @@ pub fn classify_thyroid_roi(
     classify_roi(youngs_modulus_kpa, classify_thyroid)
 }
 
-/// Breast ROI staging (§11.11.4) from `E_max` \[kPa] samples. The
+/// Breast ROI staging (§11.11.4) from `E_max` \`kPa` samples. The
 /// soft-malignancy caveat on [`classify_breast`] applies to the median category.
 #[must_use]
 pub fn classify_breast_roi(youngs_max_kpa: &[f64]) -> Option<RoiStaging<BiradsUpgradeLikelihood>> {
@@ -188,11 +188,11 @@ pub enum ProstateCategory {
     HighGradePca,
 }
 
-/// Prostate shear-modulus `μ` \[kPa] category-onset cut-offs (Table 10.5 lower
+/// Prostate shear-modulus `μ` \`kPa` category-onset cut-offs (Table 10.5 lower
 /// bounds: prostatitis 5, low-grade PCa 8, high-grade PCa 20).
 pub const PROSTATE_SHEAR_MODULUS_CUTOFFS_KPA: [f64; 3] = [5.0, 8.0, 20.0];
 
-/// Classify prostate SWE from shear modulus `μ` \[kPa] (§11.11.2). Confounded by
+/// Classify prostate SWE from shear modulus `μ` \`kPa` (§11.11.2). Confounded by
 /// zonal anatomy (stiffer transition zone), capsule artefacts, and BPH; for the
 /// peripheral zone. `μ ≤ 0`/non-finite → `Benign`.
 #[must_use]
@@ -222,11 +222,11 @@ pub enum ThyroidMalignancyRisk {
     VeryHigh,
 }
 
-/// Thyroid Young's-modulus `E` \[kPa] category-onset cut-offs (Table 10.6 lower
+/// Thyroid Young's-modulus `E` \`kPa` category-onset cut-offs (Table 10.6 lower
 /// bounds: follicular adenoma 15, papillary carcinoma 40, anaplastic 200).
 pub const THYROID_YOUNGS_MODULUS_CUTOFFS_KPA: [f64; 3] = [15.0, 40.0, 200.0];
 
-/// Classify thyroid-nodule malignancy risk from Young's modulus `E` \[kPa]
+/// Classify thyroid-nodule malignancy risk from Young's modulus `E` \`kPa`
 /// (§11.11.3). `E ≤ 0`/non-finite → `Low`.
 #[must_use]
 pub fn classify_thyroid(youngs_modulus_kpa: f64) -> ThyroidMalignancyRisk {
@@ -253,11 +253,11 @@ pub enum BiradsUpgradeLikelihood {
     High,
 }
 
-/// Breast maximum Young's-modulus `E_max` \[kPa] category-onset cut-offs
+/// Breast maximum Young's-modulus `E_max` \`kPa` category-onset cut-offs
 /// (Table 10.7: DCIS-onset 30, IDC-onset 60).
 pub const BREAST_YOUNGS_MAX_CUTOFFS_KPA: [f64; 2] = [30.0, 60.0];
 
-/// Classify breast-lesion BI-RADS upgrade likelihood from `E_max` \[kPa]
+/// Classify breast-lesion BI-RADS upgrade likelihood from `E_max` \`kPa`
 /// (§11.11.4).
 ///
 /// **Caveat:** mucinous and medullary carcinomas present as *soft* on SWE

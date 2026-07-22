@@ -18,8 +18,8 @@
 use super::super::mems::CmutCell;
 use leto::ArrayView2;
 
-/// Conformal **delay-and-sum focusing** delays \[s] for a (possibly deformed)
-/// array focusing at `focus` \[m].
+/// Conformal **delay-and-sum focusing** delays \`s` for a (possibly deformed)
+/// array focusing at `focus` \`m`.
 ///
 /// `τ_i = (d_max − d_i)/c` with `d_i = |focus − r_i|`. By construction every
 /// element's emission arrives at the focus simultaneously:
@@ -45,7 +45,7 @@ pub fn focusing_delays(positions: &ArrayView2<f64>, focus: [f64; 3], c: f64) -> 
     distances.iter().map(|&d| (d_max - d) / c).collect()
 }
 
-/// Far-field **plane-wave steering** delays \[s] toward unit direction `dir`.
+/// Far-field **plane-wave steering** delays \`s` toward unit direction `dir`.
 ///
 /// `τ_i = (p_max − r_i·d̂)/c` where `p_i = r_i·d̂` is the projection of element
 /// `i` onto the steering direction. Wavefronts then align along `dir`; the

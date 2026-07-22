@@ -116,7 +116,7 @@ use ritk_io::{load_native_dicom_series, scan_dicom_directory, DicomSeriesInfo};
 // Grid constants
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Grid spacing [m].  3 mm gives λ/3.3 resolution at 150 kHz in water.
+/// Grid spacing `m`.  3 mm gives λ/3.3 resolution at 150 kHz in water.
 ///
 /// Reference: Marsac 2017 — mean skull thickness ≈ 7 mm → at least 2 voxels
 /// through bone at 3 mm spacing.
@@ -227,7 +227,7 @@ const DEFAULT_MNI_DIR: &str = concat!(
     "/../data/mni_icbm152_2009c/mni_icbm152_nlin_sym_09c"
 );
 
-/// MNI ICBM 2009c inner-skull radius at the coronal mid-plane [mm].
+/// MNI ICBM 2009c inner-skull radius at the coronal mid-plane `mm`.
 /// The inner cortical surface is ≈ 82 mm from the brain centroid in this atlas.
 const MNI_INNER_SKULL_RADIUS_MM: f64 = 82.0;
 
@@ -482,13 +482,13 @@ fn build_skull_phantom() -> SkullPhantom {
 // Source wavelet
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Centre frequency of the Ricker source wavelet [Hz].
+/// Centre frequency of the Ricker source wavelet `Hz`.
 ///
 /// 150 kHz: λ = 10 mm in water, 3.3 × dx sampling per wavelength at 3 mm.
 /// Diagnostic ultrasound TUS range: 100–650 kHz (Marsac 2017; Guasch 2020).
 const F0_HZ: f64 = 150_000.0;
 
-/// Peak source pressure [Pa].  100 kPa is a representative clinical TUS level.
+/// Peak source pressure `Pa`.  100 kPa is a representative clinical TUS level.
 ///
 /// Reference: FDA (2008), diagnostic ultrasound guidance, Table 1.
 const P0_PA: f64 = 1.0e5;

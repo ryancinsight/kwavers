@@ -3,7 +3,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 use leto::Array1;
 /// Focus phase delays.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 /// # Panics
 /// - Panics if an internal precondition is violated.
@@ -84,7 +84,7 @@ pub fn focus_phase_delays(
 }
 /// Plane wave phase delays.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn plane_wave_phase_delays(
     element_positions: &[[f64; 3]],
@@ -162,7 +162,7 @@ pub fn plane_wave_phase_delays(
 }
 /// Spherical steering phase delays.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn spherical_steering_phase_delays(
     element_positions: &[[f64; 3]],
@@ -187,7 +187,7 @@ pub fn spherical_steering_phase_delays(
 }
 /// Calculate beam width.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn calculate_beam_width(
     aperture_size: f64,
@@ -220,7 +220,7 @@ pub fn calculate_beam_width(
 }
 /// Calculate focal zone.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 ///
 pub fn calculate_focal_zone(
     aperture_size: f64,

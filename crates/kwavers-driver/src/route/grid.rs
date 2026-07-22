@@ -328,7 +328,7 @@ impl Grid {
         self.occ.iter().filter(|&&o| o > CAPACITY).count()
     }
 
-    /// Compute a per-node over-capacity flag vector. `result[i]` is `true` iff `NodeId(i)`
+    /// Compute a per-node over-capacity flag vector. `result`i`` is `true` iff `NodeId(i)`
     /// exceeds `CAPACITY` (occupancy > 1). Used by the targeted rip-up heuristic in the
     /// PathFinder loop to identify which nets must be re-routed each iteration.
     #[must_use]

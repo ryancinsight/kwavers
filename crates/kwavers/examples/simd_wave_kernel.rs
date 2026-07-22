@@ -29,7 +29,7 @@
 //! staggered-grid velocity update is:
 //!
 //! ```text
-//! u_new[i] = u[i] + α · ∇p[i]   where  α = −Δt/ρ₀
+//! u_new`i` = u`i` + α · ∇p`i`   where  α = −Δt/ρ₀
 //! ```
 //!
 //! Therefore `||u_new||² = α² · ||∇p||²`, which the `axpy` test verifies

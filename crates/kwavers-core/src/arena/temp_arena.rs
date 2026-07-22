@@ -44,7 +44,7 @@ pub struct BumpAllocator {
 impl BumpAllocator {
     /// Create a bump allocator with `size_bytes` capacity (64-byte aligned).
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(size_bytes: usize) -> KwaversResult<Self> {
         let layout = Layout::from_size_align(size_bytes, 64).map_err(|_| {
@@ -73,9 +73,9 @@ impl BumpAllocator {
 
     /// Allocate `size` bytes with `align`-byte alignment.
     ///
-    /// Returns [`KwaversError::System`] when the pool is exhausted.
+    /// Returns `KwaversError::System` when the pool is exhausted.
     /// # Errors
-    /// - Returns [`KwaversError::System`] if the precondition for a System-class constraint is violated.
+    /// - Returns `KwaversError::System` if the precondition for a System-class constraint is violated.
     ///
     /// # Panics
     /// - Panics if `bump allocator pointer must be non-null`.
@@ -145,7 +145,7 @@ pub struct ScopedArena {
 impl ScopedArena {
     /// Create a scoped arena with the given configuration.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: ArenaConfig) -> KwaversResult<Self> {
         Ok(Self {
@@ -156,7 +156,7 @@ impl ScopedArena {
 
     /// Allocate a field; it will be freed when the arena is dropped.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn alloc_field(&mut self) -> KwaversResult<&mut [f64]> {
         let field = self.arena.allocate_field()?;

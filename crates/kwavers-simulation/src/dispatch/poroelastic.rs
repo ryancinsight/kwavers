@@ -13,7 +13,7 @@ use kwavers_core::error::KwaversResult;
 use kwavers_physics::acoustics::mechanics::poroelastic::material::PoroelasticMaterial;
 use kwavers_solver::forward::poroelastic::PoroelasticSolver;
 
-/// Fluid bulk modulus at 20 °C [Pa] — SSOT reference value.
+/// Fluid bulk modulus at 20 °C `Pa` — SSOT reference value.
 const FLUID_BULK_MODULUS_WATER: f64 = 2.25e9;
 
 /// Run a Biot poroelastic time-domain simulation.

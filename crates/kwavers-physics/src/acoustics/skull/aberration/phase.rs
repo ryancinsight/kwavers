@@ -44,7 +44,7 @@ impl AberrationCorrection<'_> {
 
     /// Compute the correction phase field `Phi_corr = -Phi(x,y,z)`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_correction_phases(&self, frequency: f64) -> KwaversResult<Array3<f64>> {
         let phases = self.compute_time_reversal_phases(frequency)?;

@@ -25,7 +25,7 @@ impl SuperResReconstructor {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] if `pixel_size ≤ 0`, extents ≤ 0,
+    /// Returns `KwaversError::InvalidInput` if `pixel_size ≤ 0`, extents ≤ 0,
     /// or if the resulting grid would have zero size.
     pub fn new(config: SuperResConfig) -> KwaversResult<Self> {
         if config.pixel_size <= 0.0 {
@@ -83,7 +83,7 @@ impl SuperResReconstructor {
     ///
     /// # Errors
     ///
-    /// Returns [`KwaversError::InvalidInput`] if `total_time_s` was not set or is ≤ 0.
+    /// Returns `KwaversError::InvalidInput` if `total_time_s` was not set or is ≤ 0.
     pub fn density_image(&self) -> KwaversResult<Array2<f64>> {
         let t = self.config.total_time_s.ok_or_else(|| {
             KwaversError::InvalidInput(

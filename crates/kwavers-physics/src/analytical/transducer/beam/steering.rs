@@ -23,11 +23,11 @@ use moirai_parallel::{map_collect_with, Adaptive};
 ///
 /// # Arguments
 /// * `n` – number of elements (matched to the uniform array)
-/// * `aperture_m` – full aperture span D [m]
+/// * `aperture_m` – full aperture span D `m`
 /// * `jitter_frac` – dither amplitude as a fraction of the element pitch
 ///
 /// # Returns
-/// Element x-positions [m], length `n`.
+/// Element x-positions `m`, length `n`.
 ///
 /// # Reference
 /// Steinberg (1976) *Principles of Aperture and Array System Design* (thinned
@@ -87,10 +87,10 @@ fn piston_directivity(theta: f64, ka: f64) -> f64 {
 /// where the array factor returns to unity at other angles are grating lobes.
 ///
 /// # Arguments
-/// * `elem_x` – element x-positions [m]
-/// * `obs_theta` – observation angles [rad], from broadside
+/// * `elem_x` – element x-positions `m`
+/// * `obs_theta` – observation angles `rad`, from broadside
 /// * `k` – wavenumber 2πf/c [rad/m]
-/// * `steer_theta` – steering angle [rad], from broadside
+/// * `steer_theta` – steering angle `rad`, from broadside
 /// * `ka_elem` – element directivity parameter k·a_elem
 ///
 /// # Returns
@@ -143,12 +143,12 @@ pub fn steered_beam_pattern_1d(
 /// steering range. The distinction is purely the element-activation pattern.
 ///
 /// # Arguments
-/// * `elem_x` – element x-positions [m]
-/// * `steer_theta` – steering-angle grid [rad]
-/// * `obs_theta` – observation-angle grid [rad] for the lobe search
+/// * `elem_x` – element x-positions `m`
+/// * `steer_theta` – steering-angle grid `rad`
+/// * `obs_theta` – observation-angle grid `rad` for the lobe search
 /// * `k` – wavenumber 2πf/c [rad/m]
 /// * `ka_elem` – element directivity parameter k·a_elem
-/// * `mainlobe_halfwidth_rad` – half-width of the main-lobe exclusion window [rad]
+/// * `mainlobe_halfwidth_rad` – half-width of the main-lobe exclusion window `rad`
 ///
 /// # Returns
 /// Grating-lobe ratio at each `steer_theta`.
@@ -194,12 +194,12 @@ pub fn steering_grating_lobe_ratio_1d(
 /// `0` if broadside itself is unsafe.
 ///
 /// # Arguments
-/// * `steer_theta` – steering-angle grid [rad] (monotonically increasing)
+/// * `steer_theta` – steering-angle grid `rad` (monotonically increasing)
 /// * `glr` – grating-lobe ratio at each `steer_theta`
 /// * `threshold` – grating-lobe safety threshold (e.g. 0.5)
 ///
 /// # Returns
-/// Safe steering half-angle [rad].
+/// Safe steering half-angle `rad`.
 ///
 /// # Panics
 /// Panics if `steer_theta` and `glr` differ in length.

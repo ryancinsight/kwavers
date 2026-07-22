@@ -21,12 +21,12 @@ use pyo3::prelude::*;
 /// receive-data → B-mode pipeline.
 ///
 /// Args:
-///     scat_pos: (n_scat, 3) scatterer positions [m].
+///     scat_pos: (n_scat, 3) scatterer positions `m`.
 ///     scat_amp: (n_scat,) reflectivity weights.
-///     elem_pos: (n_elem, 3) array element positions [m].
-///     c, fs, f0: sound speed [m/s], sampling [Hz], imaging centre frequency [Hz].
+///     elem_pos: (n_elem, 3) array element positions `m`.
+///     c, fs, f0: sound speed [m/s], sampling `Hz`, imaging centre frequency `Hz`.
 ///     frac_bw: fractional −6 dB pulse bandwidth.
-///     n_samples: RF record length [samples].
+///     n_samples: RF record length `samples`.
 ///
 /// Returns:
 ///     (n_elem, n_samples) channel RF.

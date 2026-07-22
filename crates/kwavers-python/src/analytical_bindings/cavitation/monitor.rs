@@ -490,16 +490,16 @@ pub fn per_spot_cavitation_dose_grid(
 /// [p_min_pa, p_max_pa].
 ///
 /// Args:
-///     current_p_pa: Drive pressure on the just-monitored burst [Pa].
+///     current_p_pa: Drive pressure on the just-monitored burst `Pa`.
 ///     stable_emission: Measured sub+ultra-harmonic emission this burst.
 ///     inertial_emission: Measured broadband emission this burst.
 ///     stable_target: Stable-emission set-point.
 ///     inertial_limit: Broadband-emission ceiling.
 ///     gain: Fractional pressure step per burst (>= 0).
-///     p_min_pa, p_max_pa: Drive-pressure clamp [Pa].
+///     p_min_pa, p_max_pa: Drive-pressure clamp `Pa`.
 ///
 /// Returns:
-///     Drive pressure for the next burst [Pa].
+///     Drive pressure for the next burst `Pa`.
 ///
 /// Reference:
 ///     McDannold et al. (2006) Phys. Med. Biol. 51, 793.

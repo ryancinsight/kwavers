@@ -38,7 +38,7 @@ pub struct SubmissionDocument {
 impl SubmissionDocument {
     /// Create new 510(k) submission document
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(
         manufacturer: impl Into<String>,
@@ -80,7 +80,7 @@ impl SubmissionDocument {
 
     /// Add predicate device
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_predicate(&mut self, predicate: PredicateDevice) -> KwaversResult<()> {
         predicate.validate()?;
@@ -98,7 +98,7 @@ impl SubmissionDocument {
 
     /// Add performance test
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_performance_test(&mut self, test: PerformanceTest) -> KwaversResult<()> {
         test.validate()?;
@@ -108,7 +108,7 @@ impl SubmissionDocument {
 
     /// Add clinical evidence
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn add_clinical_evidence(&mut self, evidence: ClinicalEvidence) -> KwaversResult<()> {
         evidence.validate()?;
@@ -159,8 +159,8 @@ impl SubmissionDocument {
 
     /// Validate submission completeness
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         self.device_description.validate()?;
@@ -208,7 +208,7 @@ impl SubmissionDocument {
 
     /// Mark submission as submitted
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn submit(&mut self) -> KwaversResult<()> {
         self.validate()?;

@@ -11,7 +11,7 @@ use std::collections::VecDeque;
 impl PhysicsInformedLoss {
     /// Create new physics-informed loss. Computes wave number `k = 2πf/c`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn new(config: PhysicsLossConfig) -> KwaversResult<Self> {
         config.validate()?;
@@ -157,7 +157,7 @@ impl PhysicsInformedLoss {
 
     /// Compute total loss: `L_total = λ_data(t)·L_data + λ_physics(t)·L_physics`.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn compute_total_loss(&mut self, data_loss: f64, physics_loss: f64) -> KwaversResult<f64> {
         let (lambda_data, lambda_physics) =
@@ -187,7 +187,7 @@ impl PhysicsInformedLoss {
     }
     /// Compute weight schedule.
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub(super) fn compute_weight_schedule(
         &self,

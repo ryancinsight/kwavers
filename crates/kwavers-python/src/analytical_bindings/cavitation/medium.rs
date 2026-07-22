@@ -10,11 +10,11 @@ use pyo3::prelude::*;
 /// inter-pulse shielding.
 ///
 /// Args:
-///     r0_m: equilibrium bubble radius [m].
+///     r0_m: equilibrium bubble radius `m`.
 ///     saturation_fraction: dissolved-gas saturation f = C∞/C_s (1.0 saturated).
 ///
 /// Returns:
-///     Dissolution time [s], or -1.0 if the bubble does not dissolve in the
+///     Dissolution time `s`, or -1.0 if the bubble does not dissolve in the
 ///     integration window (e.g. supersaturated/growing).
 ///
 /// Reference: Epstein & Plesset (1950) J. Chem. Phys. 18, 1505.
@@ -33,13 +33,13 @@ pub fn epstein_plesset_dissolution_time(r0_m: f64, saturation_fraction: f64) -> 
 /// gas-permeability — the coated-contrast-agent persistence time.
 ///
 /// Args:
-///     r0_m: equilibrium radius [m].
+///     r0_m: equilibrium radius `m`.
 ///     saturation_fraction: dissolved-gas saturation f.
 ///     shell_permeability_m_s: shell gas-permeation coefficient k_s [m/s]
 ///         (lipid ≈ 1e-6; k_s→∞ recovers the free bubble, k_s→0 stabilises it).
 ///
 /// Returns:
-///     Dissolution time [s], or -1.0 if it does not dissolve in the window.
+///     Dissolution time `s`, or -1.0 if it does not dissolve in the window.
 ///
 /// Reference: Sarkar, Katiyar & Jain (2009) Ann. Biomed. Eng. 37, 2196.
 #[pyfunction]

@@ -10,7 +10,7 @@ use pyo3::prelude::*;
 /// D(theta) = 2 * J1(ka*sin(theta)) / (ka*sin(theta))
 ///
 /// Args:
-///     theta_rad: Observation angles [rad].
+///     theta_rad: Observation angles `rad`.
 ///     ka: Wave-number × radius product.
 ///
 /// Returns:
@@ -32,11 +32,11 @@ pub fn circular_piston_directivity(
 /// Compute the linear-array factor as a function of angle.
 ///
 /// Args:
-///     theta_rad: Observation angles [rad].
+///     theta_rad: Observation angles `rad`.
 ///     k: Wave number [rad/m].
-///     d_m: Element pitch [m].
+///     d_m: Element pitch `m`.
 ///     n: Number of elements.
-///     steer_rad: Electronic steering angle [rad].
+///     steer_rad: Electronic steering angle `rad`.
 ///
 /// Returns:
 ///     Normalised array factor.
@@ -61,11 +61,11 @@ pub fn linear_array_factor(
 ///
 /// Args:
 ///     k: Wave number [rad/m].
-///     d_m: Element pitch [m].
-///     steer_rad: Steering angle [rad].
+///     d_m: Element pitch `m`.
+///     steer_rad: Steering angle `rad`.
 ///
 /// Returns:
-///     Array of grating-lobe angles [rad] (may be empty if none exist).
+///     Array of grating-lobe angles `rad` (may be empty if none exist).
 #[pyfunction]
 #[pyo3(signature = (k, d_m, steer_rad))]
 pub fn grating_lobe_angles(
@@ -129,14 +129,14 @@ pub fn apodization_window_response(
 /// Compute the on-axis pressure of a circular piston transducer.
 ///
 /// Args:
-///     z_arr: Axial positions [m].
-///     radius_m: Piston radius [m].
-///     freq_hz: Frequency [Hz].
-///     p0_pa: Surface pressure amplitude [Pa].
+///     z_arr: Axial positions `m`.
+///     radius_m: Piston radius `m`.
+///     freq_hz: Frequency `Hz`.
+///     p0_pa: Surface pressure amplitude `Pa`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     On-axis pressure magnitude [Pa].
+///     On-axis pressure magnitude `Pa`.
 #[pyfunction]
 #[pyo3(signature = (z_arr, radius_m, freq_hz, p0_pa, c))]
 pub fn circular_piston_onaxis(
@@ -157,15 +157,15 @@ pub fn circular_piston_onaxis(
 /// Compute the on-axis pressure of a focused-bowl (spherically focused) transducer.
 ///
 /// Args:
-///     z_arr: Axial positions [m].
-///     bowl_radius_m: Bowl aperture radius [m].
-///     focal_length_m: Geometric focal length [m].
-///     freq_hz: Frequency [Hz].
-///     p0_pa: Source pressure [Pa].
+///     z_arr: Axial positions `m`.
+///     bowl_radius_m: Bowl aperture radius `m`.
+///     focal_length_m: Geometric focal length `m`.
+///     freq_hz: Frequency `Hz`.
+///     p0_pa: Source pressure `Pa`.
 ///     c: Sound speed [m/s].
 ///
 /// Returns:
-///     On-axis pressure magnitude [Pa].
+///     On-axis pressure magnitude `Pa`.
 #[pyfunction]
 #[pyo3(signature = (z_arr, bowl_radius_m, focal_length_m, freq_hz, p0_pa, c))]
 pub fn focused_bowl_onaxis(

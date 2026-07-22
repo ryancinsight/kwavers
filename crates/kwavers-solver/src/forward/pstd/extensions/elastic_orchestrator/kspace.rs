@@ -69,7 +69,7 @@ pub(super) fn max_p_wave_speed(medium: &ElasticPstdMedium) -> f64 {
 ///
 /// `kx`, `ky`, `kz` are the raw wavenumber arrays shaped `(N_α, 1, 1)` built
 /// by `wavenumber_axis`. The full wavenumber magnitude at voxel `(i,j,k)` is
-/// `|k|² = kx[i]² + ky[j]² + kz[k]²`.
+/// `|k|² = kx`i`² + ky`J`² + kz`K`²`.
 ///
 /// At `|k| = 0` (DC mode) the sinc function returns 1.0 by L'Hôpital's
 /// rule, enforced by the `arg < 1e-12` guard.
@@ -78,8 +78,8 @@ pub(super) fn max_p_wave_speed(medium: &ElasticPstdMedium) -> f64 {
 ///
 /// Returns an `(n, 1, 1)` array (broadcast-ready for spectral derivative
 /// operators) with:
-/// - `k[i] = i · dk` for `i < n/2` (positive frequencies)
-/// - `k[i] = (i − n) · dk` for `i ≥ n/2` (negative frequencies / Nyquist)
+/// - `k`i` = i · dk` for `i < n/2` (positive frequencies)
+/// - `k`i` = (i − n) · dk` for `i ≥ n/2` (negative frequencies / Nyquist)
 ///
 /// where `dk = 2π / (n · dx)`. The DC mode (`i = 0`) has `k = 0`.
 /// For `n ≤ 1` the array is all zeros (only the DC mode exists).
@@ -101,7 +101,7 @@ pub(super) fn wavenumber_axis(n: usize, dx: f64) -> Array3<f64> {
 /// Recover the grid spacing `dx` from a precomputed complex spectral
 /// derivative operator axis shaped `(n, 1, 1)`.
 ///
-/// The axis carries `D[i] = i·k[i]·exp(±i·k[i]·dx/2)` where
+/// The axis carries `D`i` = i·k`i`·exp(±i·k`i`·dx/2)` where
 /// `k[1] = dk = 2π / (n·dx)`. Hence `|D[1]| = dk` and
 /// `dx = 2π / (n·|D[1]|)`. Returns `1.0` for degenerate axes (`n < 2` or
 /// `|D[1]| = 0`).
@@ -151,7 +151,7 @@ pub(super) fn build_kappa(
 // both the standard leapfrog path (`orchestrator.rs`) and the split-field PML
 // path (`split_field_step.rs`).
 
-/// Compute `output[i,j,k] = input[i,j,k] · op_x[i] · kappa[i,j,k]`.
+/// Compute `output[i,j,k] = input[i,j,k] · op_x`i` · kappa[i,j,k]`.
 ///
 /// `op_x` is a contiguous slice of length `nx` from a `(nx, 1, 1)` operator
 /// array. The x-axis index `i` selects the per-wavenumber multiplier.
@@ -174,7 +174,7 @@ pub(super) fn spectral_mul_x(
     }
 }
 
-/// Compute `output[i,j,k] = input[i,j,k] · op_y[j] · kappa[i,j,k]`.
+/// Compute `output[i,j,k] = input[i,j,k] · op_y`J` · kappa[i,j,k]`.
 ///
 /// `op_y` is a contiguous slice of length `ny` from a `(ny, 1, 1)` operator
 /// array indexed by the y-axis position `j`.
@@ -195,7 +195,7 @@ pub(super) fn spectral_mul_y(
     }
 }
 
-/// Compute `output[i,j,k] = input[i,j,k] · op_z[k] · kappa[i,j,k]`.
+/// Compute `output[i,j,k] = input[i,j,k] · op_z`K` · kappa[i,j,k]`.
 ///
 /// `op_z` is a contiguous slice of length `nz` from a `(nz, 1, 1)` operator
 /// array indexed by the z-axis position `k`.

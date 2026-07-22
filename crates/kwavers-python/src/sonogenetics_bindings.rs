@@ -55,7 +55,7 @@ fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
 /// For a progressive plane wave the acoustic radiation pressure is:
 ///
 /// ```text
-/// P_rad = I / c = p² / (2ρc²)   [Pa]
+/// P_rad = I / c = p² / (2ρc²)   `Pa`
 /// ```
 ///
 /// Laplace thin-shell equilibrium for a spherical cell of radius R:
@@ -69,10 +69,10 @@ fn kwavers_to_py(err: kwavers_core::error::KwaversError) -> PyErr {
 ///
 /// # Arguments
 ///
-/// - `pressure_pa`: 1-D array of peak acoustic pressure [Pa]
+/// - `pressure_pa`: 1-D array of peak acoustic pressure `Pa`
 /// - `density_kg_m3`: medium density ρ [kg/m³]
 /// - `sound_speed_m_s`: medium sound speed c [m/s]
-/// - `cell_radius_m`: cell soma radius R [m]
+/// - `cell_radius_m`: cell soma radius R `m`
 ///
 /// # Returns
 ///
@@ -109,8 +109,8 @@ pub fn compute_acoustic_membrane_tension_py<'py>(
 /// P_open = 1 / (1 + exp(-A · (ΔT − T_half) / (k_B · θ)))
 /// ```
 ///
-/// where `A` is the in-plane gating area [m²] and `θ` is the absolute
-/// temperature [K].  Phenomenological fits typically report a logistic slope
+/// where `A` is the in-plane gating area `m²` and `θ` is the absolute
+/// temperature `K`.  Phenomenological fits typically report a logistic slope
 /// `σ = k_B θ / A` [N/m] rather than `A` directly.  This binding accepts
 /// `slope_mn_m` [mN/m] and derives `A = k_B θ / (slope_mn_m × 10⁻³)`.
 ///
@@ -119,7 +119,7 @@ pub fn compute_acoustic_membrane_tension_py<'py>(
 /// - `tension_mn_m`: 1-D membrane tension array [mN/m]
 /// - `half_tension_mn_m`: tension at half-maximum activation T_half [mN/m]
 /// - `slope_mn_m`: logistic slope in tension units σ [mN/m]
-/// - `temperature_k`: absolute temperature θ [K]
+/// - `temperature_k`: absolute temperature θ `K`
 ///
 /// # Returns
 ///
@@ -161,9 +161,9 @@ pub fn boltzmann_open_probability_py<'py>(
 ///
 /// # Arguments
 ///
-/// - `radiation_pressure_pa`: 1-D acoustic radiation pressure [Pa]
-/// - `half_pressure_pa`: half-activation radiation pressure P_half [Pa]
-/// - `steepness_pa`: positive sigmoid steepness s [Pa]
+/// - `radiation_pressure_pa`: 1-D acoustic radiation pressure `Pa`
+/// - `half_pressure_pa`: half-activation radiation pressure P_half `Pa`
+/// - `steepness_pa`: positive sigmoid steepness s `Pa`
 ///
 /// # Returns
 ///
@@ -208,14 +208,14 @@ pub fn pressure_threshold_open_probability_py<'py>(
 ///
 /// # Arguments
 ///
-/// - `pressure_pa`: 1-D pressure time series or parameter sweep [Pa]
+/// - `pressure_pa`: 1-D pressure time series or parameter sweep `Pa`
 /// - `half_tensions_mn_m`: per-channel half-activation tension T_half [mN/m]
 /// - `slopes_mn_m`: per-channel logistic slope σ [mN/m]
 /// - `conductance_weights`: signed conductance weight w_k (dimensionless)
 /// - `density_kg_m3`: medium density ρ [kg/m³]
 /// - `sound_speed_m_s`: medium sound speed c [m/s]
-/// - `cell_radius_m`: cell soma radius R [m]
-/// - `temperature_k`: absolute temperature θ [K]
+/// - `cell_radius_m`: cell soma radius R `m`
+/// - `temperature_k`: absolute temperature θ `K`
 ///
 /// # Returns
 ///
@@ -224,7 +224,7 @@ pub fn pressure_threshold_open_probability_py<'py>(
 /// # Errors
 ///
 /// Returns `ValueError` if channel parameter vectors have unequal length,
-/// `temperature_k ≤ 0`, or any `slopes_mn_m[k] ≤ 0`.
+/// `temperature_k ≤ 0`, or any `slopes_mn_m`K` ≤ 0`.
 #[pyfunction]
 pub fn coupled_channel_drive_py<'py>(
     py: Python<'py>,
@@ -271,16 +271,16 @@ pub fn coupled_channel_drive_py<'py>(
 /// # Arguments
 ///
 /// - `nx`, `ny`, `nz`: grid dimensions [voxels]
-/// - `dx_m`, `dy_m`, `dz_m`: voxel spacing [m]
-/// - `peak_pressure_pa`: peak positive pressure at focus P_peak [Pa]
-/// - `lateral_fwhm_m`: lateral FWHM of the focal zone [m]
-/// - `axial_fwhm_m`: axial FWHM of the focal zone [m]
+/// - `dx_m`, `dy_m`, `dz_m`: voxel spacing `m`
+/// - `peak_pressure_pa`: peak positive pressure at focus P_peak `Pa`
+/// - `lateral_fwhm_m`: lateral FWHM of the focal zone `m`
+/// - `axial_fwhm_m`: axial FWHM of the focal zone `m`
 ///
 /// # Returns
 ///
 /// dict with keys:
-/// - `x`, `y`, `z`: 3-D coordinate arrays [m], shape (nx, ny, nz)
-/// - `pressure`: 3-D pressure amplitude field [Pa], shape (nx, ny, nz)
+/// - `x`, `y`, `z`: 3-D coordinate arrays `m`, shape (nx, ny, nz)
+/// - `pressure`: 3-D pressure amplitude field `Pa`, shape (nx, ny, nz)
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 pub fn gaussian_beam_pressure_field_py<'py>(
@@ -331,26 +331,26 @@ pub fn gaussian_beam_pressure_field_py<'py>(
 /// Forward-Euler discretisation with spike-and-reset:
 ///
 /// ```text
-/// V[n+1] = V[n] + (dt/C_m) · (−G_leak·(V[n]−E_leak) + I_ion[n])
+/// V[n+1] = V`N` + (dt/C_m) · (−G_leak·(V`N`−E_leak) + I_ion`N`)
 /// if V[n+1] ≥ V_thresh → spike, V ← V_reset, clamp for τ_ref
 /// ```
 ///
 /// # Arguments
 ///
 /// - `i_ion_a`: ion current time series [A]; length N defines the simulation duration
-/// - `dt_s`: uniform time step [s]; must be strictly positive
+/// - `dt_s`: uniform time step `s`; must be strictly positive
 /// - `capacitance_f`: membrane capacitance C_m [F]  (default 100 pF, Koch 1999)
-/// - `leak_conductance_s`: leak conductance G_leak [S]  (default 10 nS)
-/// - `leak_reversal_v`: leak reversal potential E_leak [V]  (default −65 mV)
-/// - `threshold_v`: spike threshold V_thresh [V]  (default −55 mV)
-/// - `reset_v`: post-spike reset voltage V_reset [V]  (default −65 mV)
-/// - `refractory_s`: absolute refractory period τ_ref [s]  (default 2 ms)
+/// - `leak_conductance_s`: leak conductance G_leak `s`  (default 10 nS)
+/// - `leak_reversal_v`: leak reversal potential E_leak `V`  (default −65 mV)
+/// - `threshold_v`: spike threshold V_thresh `V`  (default −55 mV)
+/// - `reset_v`: post-spike reset voltage V_reset `V`  (default −65 mV)
+/// - `refractory_s`: absolute refractory period τ_ref `s`  (default 2 ms)
 ///
 /// # Returns
 ///
 /// dict with keys:
-/// - `voltage_v`: membrane voltage trace [V], length N
-/// - `spike_times_s`: chronological spike times [s]
+/// - `voltage_v`: membrane voltage trace `V`, length N
+/// - `spike_times_s`: chronological spike times `s`
 /// - `spike_count`: total number of spikes (int)
 #[pyfunction]
 #[pyo3(signature = (

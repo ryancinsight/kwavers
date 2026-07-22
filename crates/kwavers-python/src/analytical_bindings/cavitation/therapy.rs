@@ -11,8 +11,8 @@ use pyo3::prelude::*;
 /// Args:
 ///     n_subspots: number of sub-spots in the grid.
 ///     n_repetitions: number of passes (repetitions) over the grid.
-///     pulse_duration_s: single histotripsy pulse duration [s] (microseconds).
-///     prf_hz: rate of *fired* pulses (any spot) [Hz].
+///     pulse_duration_s: single histotripsy pulse duration `s` (microseconds).
+///     prf_hz: rate of *fired* pulses (any spot) `Hz`.
 ///     interleaved: True → round-robin (one pulse per spot per repetition);
 ///         False → sequential (all repetitions at a spot before the next).
 ///

@@ -28,7 +28,7 @@ use std::collections::BinaryHeap;
 /// A bent (refracted) ray traced through a slowness field by Fermat shortest path.
 #[derive(Debug, Clone)]
 pub struct BentRay {
-    /// Total traveltime along the Fermat path [s].
+    /// Total traveltime along the Fermat path `s`.
     pub traveltime: f64,
     /// Voxel indices `(i, j)` visited along the path, source → receiver.
     pub path: Vec<(usize, usize)>,
@@ -78,7 +78,7 @@ const NEIGHBORS: [(isize, isize, f64); 8] = [
 ];
 
 /// Trace the Fermat (least-traveltime) ray from `source` to `receiver` through a
-/// 2-D `slowness` field `[s/m]` on an isotropic grid of spacing `dx` `[m]`.
+/// 2-D `slowness` field `[s/m]` on an isotropic grid of spacing `dx` ``m``.
 ///
 /// Returns the bent ray (traveltime, voxel path, and the per-voxel path-length
 /// system-matrix row). Returns `None` if either endpoint is out of bounds or the

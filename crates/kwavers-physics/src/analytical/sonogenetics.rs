@@ -15,8 +15,8 @@
 /// ```
 ///
 /// # Arguments
-/// * `pressure_arr` – acoustic pressure amplitudes [Pa]
-/// * `p_threshold_pa` – half-activation threshold pressure [Pa]
+/// * `pressure_arr` – acoustic pressure amplitudes `Pa`
+/// * `p_threshold_pa` – half-activation threshold pressure `Pa`
 /// * `hill_n` – Hill coefficient (cooperativity exponent)
 ///
 /// # Reference
@@ -114,7 +114,7 @@ pub fn acoustic_dipole_contrast(density_ratio: f64) -> f64 {
     }
 }
 
-/// Gorkov acoustic radiation potential `U` [J] of a small sphere (`r ≪ λ`, e.g.
+/// Gorkov acoustic radiation potential `U` `J` of a small sphere (`r ≪ λ`, e.g.
 /// a cell) in a field with mean-square pressure `⟨p²⟩` and velocity `⟨v²⟩`
 /// (Gorkov 1962; Yosioka–Kawasima 1955):
 ///
@@ -139,7 +139,7 @@ pub fn gorkov_potential(
     prefactor * (monopole - dipole)
 }
 
-/// One-dimensional primary acoustic radiation force `F = −dU/dx` [N] on a small
+/// One-dimensional primary acoustic radiation force `F = −dU/dx` `N` on a small
 /// sphere, from the spatial gradients of `⟨p²⟩` and `⟨v²⟩` (Yosioka–Kawasima /
 /// Gorkov, the corrected Eq. 17.2):
 ///
@@ -183,7 +183,7 @@ pub fn gorkov_radiation_force_1d(
 /// * `mu_pa_s` – dynamic viscosity [Pa·s]
 /// * `alpha_np_m` – absorption coefficient [Np/m]
 /// * `c` – sound speed [m/s]
-/// * `l_m` – streaming path length [m]
+/// * `l_m` – streaming path length `m`
 ///
 /// # Reference
 /// Eckart (1948), *Phys. Rev.* 73, 68.
@@ -218,8 +218,8 @@ pub fn acoustic_streaming_velocity(
 /// Integrated by the rectangle rule.
 ///
 /// # Arguments
-/// * `p_pa` – pressure waveform at the spatial peak [Pa]
-/// * `dt_s` – time step [s]
+/// * `p_pa` – pressure waveform at the spatial peak `Pa`
+/// * `dt_s` – time step `s`
 /// * `rho` – density [kg/m³]
 /// * `c` – sound speed [m/s]
 ///

@@ -56,7 +56,7 @@ use kwavers_core::error::{KwaversError, KwaversResult};
 /// coherently averaged over all frames (plane-wave compounding).
 ///
 /// # Errors
-/// Returns [`KwaversError::InvalidInput`] if the channel count does not match
+/// Returns `KwaversError::InvalidInput` if the channel count does not match
 /// `config.num_elements_3d`.
 // Authoritative CPU DAS kernel: the active production path under default
 // features and the differential-test reference baseline. Under `gpu`, the only

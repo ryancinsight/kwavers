@@ -63,7 +63,7 @@ impl MultimodalityFusionManager {
 
     /// Load reference image into session
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn load_reference(&mut self, session_id: &str, image_data: ImageData) -> KwaversResult<()> {
         let session = self.sessions.get_mut(session_id).ok_or_else(|| {
@@ -76,7 +76,7 @@ impl MultimodalityFusionManager {
 
     /// Load floating image into session
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn load_floating(&mut self, session_id: &str, image_data: ImageData) -> KwaversResult<()> {
         let session = self.sessions.get_mut(session_id).ok_or_else(|| {
@@ -89,7 +89,7 @@ impl MultimodalityFusionManager {
 
     /// Register images in session
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn register(&mut self, session_id: &str) -> KwaversResult<()> {
         let session = self.sessions.get_mut(session_id).ok_or_else(|| {
@@ -136,7 +136,7 @@ impl MultimodalityFusionManager {
 
     /// Perform fusion in session
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn fuse(&self, session_id: &str) -> KwaversResult<Array3<f64>> {
         let session = self.sessions.get(session_id).ok_or_else(|| {

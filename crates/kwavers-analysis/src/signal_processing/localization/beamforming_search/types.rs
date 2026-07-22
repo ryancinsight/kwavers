@@ -85,7 +85,7 @@ pub struct LocalizationBeamformSearchConfig {
 impl LocalizationBeamformSearchConfig {
     /// Validate configuration invariants.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         if !self.core.sound_speed.is_finite() || self.core.sound_speed <= 0.0 {
@@ -218,7 +218,7 @@ pub struct BeamformingLocalizationInput {
 impl BeamformingLocalizationInput {
     /// Validate invariants for the beamforming-localization input.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self, expected_sensors: usize) -> KwaversResult<()> {
         let [n_sensors, channels, n_samples] = self.sensor_data.shape();

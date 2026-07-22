@@ -46,7 +46,7 @@ impl AcousticFieldKernel<WgpuAcousticFieldProvider> {
     /// Create a WGPU-backed acoustic field kernel.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub async fn new() -> KwaversResult<Self> {
         Self::try_new()
     }
@@ -54,7 +54,7 @@ impl AcousticFieldKernel<WgpuAcousticFieldProvider> {
     /// Create a WGPU-backed acoustic field kernel synchronously.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn try_new() -> KwaversResult<Self> {
         WgpuAcousticFieldProvider::try_new().map(Self::from_provider)
     }
@@ -79,7 +79,7 @@ where
     /// Compute acoustic field propagation on GPU.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn compute_propagation(
         &self,
         pressure: &LetoArray3<f32>,
@@ -104,7 +104,7 @@ impl WgpuAcousticFieldProvider {
     /// Create a WGPU acoustic-field provider.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub async fn new() -> KwaversResult<Self> {
         Self::try_new()
     }
@@ -112,7 +112,7 @@ impl WgpuAcousticFieldProvider {
     /// Create a WGPU acoustic-field provider synchronously.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn try_new() -> KwaversResult<Self> {
         let context = GpuProviderContext::<WgpuDevice>::new()?;
 

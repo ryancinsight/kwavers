@@ -35,7 +35,7 @@
 //!   the NICE mechanism: membrane *hyperpolarisation during* sonication, net
 //!   *charge accumulation*, and a *post-stimulus action potential* with the
 //!   characteristic pulse-duration dependence (the requirement for long pulses).
-//! - [`CapacitanceModulation`] — a simpler symmetric sinusoid `C_m0(1+ε·sinωt)`
+//! - `CapacitanceModulation` — a simpler symmetric sinusoid `C_m0(1+ε·sinωt)`
 //!   whose net cycle-averaged effect is a depth-dependent (hyperpolarising)
 //!   excitability shift; useful as an analytic baseline (see [`nice`] for the
 //!   sign analysis).

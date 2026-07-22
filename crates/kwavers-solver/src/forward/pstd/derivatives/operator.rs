@@ -7,13 +7,13 @@
 //! IDFT pair in the usual convention. The **spectral derivative** is:
 //!
 //! ```text
-//! ∂u/∂x ≈ F⁻¹[ i·ω[k] · F[u] ]
+//! ∂u/∂x ≈ F⁻¹[ i·ω`K` · F[u] ]
 //! ```
 //!
 //! where the wavenumber array is (for N even):
 //! ```text
-//! ω[k] = 2πk/(N·Δx)   for k = 0, 1, …, N/2−1
-//! ω[k] = 2π(k−N)/(N·Δx) for k = N/2, …, N−1   (negative frequencies)
+//! ω`K` = 2πk/(N·Δx)   for k = 0, 1, …, N/2−1
+//! ω`K` = 2π(k−N)/(N·Δx) for k = N/2, …, N−1   (negative frequencies)
 //! ω[N/2] = 0           (Nyquist mode zeroed — no alias-free derivative exists)
 //! ```
 //!
@@ -33,7 +33,7 @@
 //! fold back at `k = 2kₘₐₓ − k'`. To prevent aliasing from corrupting the
 //! resolved modes `k ≤ kₘₐₓ/2`, zero all modes with:
 //! ```text
-//! |ω[k]| > 2π/(3Δx)   (2/3 of the Nyquist wavenumber)
+//! |ω`K`| > 2π/(3Δx)   (2/3 of the Nyquist wavenumber)
 //! ```
 //! This ensures that when two dealiased fields of bandwidth `2π/(3Δx)` are
 //! multiplied, their product has bandwidth `4π/(3Δx) < 2π/Δx = kₙᵧq`, so

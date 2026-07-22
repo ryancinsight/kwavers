@@ -138,8 +138,8 @@ pub(super) fn compute_green_function(
 /// Precompute Green's function columns for all elements through the Atlas
 /// parallel execution provider.
 ///
-/// Returns `(G_re, G_im)` each of length `n_elements`, where `G_re[i]` and
-/// `G_im[i]` are `Array2<f64>` of shape `(nx, ny)`.
+/// Returns `(G_re, G_im)` each of length `n_elements`, where `G_re`i`` and
+/// `G_im`i`` are `Array2<f64>` of shape `(nx, ny)`.
 pub(super) fn compute_all_green_functions(
     c_map: &Array2<f64>,
     damp: &Array2<f64>,

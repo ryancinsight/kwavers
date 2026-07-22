@@ -18,9 +18,9 @@ use kwavers_math::special::erf;
 /// (|ε| ≤ 1.5×10⁻⁷).
 ///
 /// # Arguments
-/// * `p_arr` – array of |peak negative pressure| values [Pa]
-/// * `p_threshold` – mean intrinsic threshold [Pa] (bovine liver, 1 MHz: 28.2 MPa)
-/// * `sigma_pa` – standard deviation [Pa] (bovine liver, 1 MHz: 0.96 MPa)
+/// * `p_arr` – array of |peak negative pressure| values `Pa`
+/// * `p_threshold` – mean intrinsic threshold `Pa` (bovine liver, 1 MHz: 28.2 MPa)
+/// * `sigma_pa` – standard deviation `Pa` (bovine liver, 1 MHz: 0.96 MPa)
 ///
 /// # Reference
 /// Maxwell et al. (2013) *Ultrasound Med. Biol.* 39, 449, Table II.
@@ -45,7 +45,7 @@ pub fn intrinsic_threshold_cavitation_probability(
 /// threshold peak negative pressure on frequency:
 ///
 /// ```text
-/// p_T(f) = p_T(1 MHz) + slope · log₁₀(f / 1 MHz)   [Pa]
+/// p_T(f) = p_T(1 MHz) + slope · log₁₀(f / 1 MHz)   `Pa`
 /// ```
 ///
 /// Canonical values for bovine liver (Vlaisavljevich et al. 2015 Table I):
@@ -53,9 +53,9 @@ pub fn intrinsic_threshold_cavitation_probability(
 /// * `slope = 1.4 MPa per decade` (over 0.25–3 MHz)
 ///
 /// # Arguments
-/// * `f_hz` – frequencies [Hz]
-/// * `p_t_1mhz_pa` – threshold at 1 MHz [Pa]
-/// * `slope_pa_per_decade` – slope [Pa] per factor-of-10 increase in frequency
+/// * `f_hz` – frequencies `Hz`
+/// * `p_t_1mhz_pa` – threshold at 1 MHz `Pa`
+/// * `slope_pa_per_decade` – slope `Pa` per factor-of-10 increase in frequency
 ///
 /// # Reference
 /// Vlaisavljevich et al. (2015), *Ultrasound Med. Biol.* 41, 1251, Table I.
@@ -83,7 +83,7 @@ pub fn frequency_dependent_intrinsic_threshold_pa(
 /// correction is a threshold *reduction* (≤ 0):
 ///
 /// ```text
-/// Δp_T(T) = −slope · max(0, T − T_ref)   [Pa]
+/// Δp_T(T) = −slope · max(0, T − T_ref)   `Pa`
 /// ```
 ///
 /// so the temperature-corrected threshold composes additively with the
@@ -171,8 +171,8 @@ pub fn cumulative_cavitation_probability(p_single: f64, n_pulses_arr: &[f64]) ->
 /// yielding an optimum near PRF ≈ 1/τ_d.
 ///
 /// # Arguments
-/// * `prf_hz` – pulse repetition frequencies [Hz]
-/// * `bubble_dissolution_time_s` – residual-bubble dissolution time τ_d [s]
+/// * `prf_hz` – pulse repetition frequencies `Hz`
+/// * `bubble_dissolution_time_s` – residual-bubble dissolution time τ_d `s`
 ///   (liver: ~5 ms; Vlaisavljevich 2015)
 /// * `shielding_coefficient` – exponential decay gain `g` (dimensionless)
 ///
@@ -197,7 +197,7 @@ pub fn prf_efficacy_factor(
 /// FDA mechanical index: peak negative pressure normalised by √(frequency).
 ///
 /// ```text
-/// MI = |P_neg| [MPa] / √(f [MHz])
+/// MI = |P_neg| [MPa] / √(f `MHz`)
 /// ```
 /// FDA safety guideline for diagnostic imaging: MI < 1.9.
 /// Histotripsy (intrinsic threshold) requires MI > 3 for microsecond pulses.
@@ -260,14 +260,14 @@ pub fn inertial_cavitation_dose(r_arr: &[f64], rdot_arr: &[f64], r0_m: f64) -> f
 /// Summing over all ICD events: `E_total = (4π/3) · P₀ · R₀³ · ICD`.
 /// Setting `E_total = σ_y · (4π/3) · R_L³` and solving for `R_L`:
 /// ```text
-/// R_L = R₀ · (P₀ · ICD / σ_y)^(1/3)   [m]
+/// R_L = R₀ · (P₀ · ICD / σ_y)^(1/3)   `m`
 /// ```
 ///
 /// # Arguments
 /// * `icd` – dimensionless inertial cavitation dose (from `inertial_cavitation_dose`)
-/// * `r0_m` – equilibrium bubble radius [m]
-/// * `p0_pa` – ambient pressure [Pa]
-/// * `tissue_yield_stress_pa` – tensile yield stress of tissue [Pa]
+/// * `r0_m` – equilibrium bubble radius `m`
+/// * `p0_pa` – ambient pressure `Pa`
+/// * `tissue_yield_stress_pa` – tensile yield stress of tissue `Pa`
 ///   (brain white matter: 1–4 kPa; Vlaisavljevich et al. 2015)
 ///
 /// # Reference

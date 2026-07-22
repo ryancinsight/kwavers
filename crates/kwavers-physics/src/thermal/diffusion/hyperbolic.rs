@@ -21,7 +21,7 @@ use std::ops::Range;
 /// (measured τ ≈ 16 s in processed tissue — the basis for the 20 s default).
 #[derive(Debug, Clone)]
 pub struct HyperbolicParameters {
-    /// Thermal relaxation time `τ` [s].
+    /// Thermal relaxation time `τ` `s`.
     pub relaxation_time: f64,
 }
 
@@ -111,7 +111,7 @@ impl CattaneoVernotte {
     /// array for each explicit Euler step.
     ///
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     pub fn update_temperature(
         &mut self,
         temperature: &mut Array3<f64>,

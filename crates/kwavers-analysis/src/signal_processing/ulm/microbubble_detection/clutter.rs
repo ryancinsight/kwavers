@@ -58,7 +58,7 @@ impl UlmSvdClutterFilter {
     /// Returns `(B, k)` where k is the tissue rank used.
     /// # Errors
     /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     pub fn filter(&self, iq_data: &Array2<f64>) -> KwaversResult<(Array2<f64>, usize)> {
         let [n_px, n_t] = iq_data.shape();

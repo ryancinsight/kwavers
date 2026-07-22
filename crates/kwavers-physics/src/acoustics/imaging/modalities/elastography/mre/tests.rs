@@ -8,7 +8,7 @@ use std::f64::consts::PI;
 const KAPPA: f64 = 1.0e4; // rad/m encoding sensitivity
 const N: usize = 8; // phase offsets over one period
 
-/// Build a 1×1×1×N stack of φ[k] = κ·A·cos(2πk/N + θ).
+/// Build a 1×1×1×N stack of φ`K` = κ·A·cos(2πk/N + θ).
 fn single_voxel_stack(amplitude: f64, theta: f64) -> Array4<f64> {
     Array4::from_shape_fn([1, 1, 1, N], |[_i, _j, _k, phase]| {
         KAPPA * amplitude * (2.0 * PI * phase as f64 / N as f64 + theta).cos()

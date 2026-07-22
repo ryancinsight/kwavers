@@ -20,9 +20,9 @@ use leto_ops::inv;
 /// # Returns
 /// `P_Capon(p)` — higher implies a more likely source / look direction.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
 /// - Returns [`KwaversError::Numerical`] if the precondition for a Numerical-class constraint is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn capon_spatial_spectrum_point(
     sensor_data: &Array3<f64>,

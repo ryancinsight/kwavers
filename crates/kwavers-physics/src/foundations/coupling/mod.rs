@@ -11,8 +11,8 @@
 //!
 //! For coupled systems of PDEs:
 //! ```text
-//! ∂u/∂t = L₁[u] + C₁₂[v]     in Ω₁  (Physics 1)
-//! ∂v/∂t = L₂[v] + C₂₁[u]     in Ω₂  (Physics 2)
+//! ∂u/∂t = L₁[u] + C₁₂`V`     in Ω₁  (Physics 1)
+//! ∂v/∂t = L₂`V` + C₂₁[u]     in Ω₂  (Physics 2)
 //! ```
 //!
 //! Conservation properties: dE/dt = 0, dP/dt = 0, dM/dt = 0

@@ -65,7 +65,7 @@ impl WavePropagationCalculator {
     /// Calculate reflection and transmission for given incident angle
     /// # Errors
     /// - Returns [`KwaversError::Physics`] if the precondition for a Physics-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal invariant assumed to hold at this call site is violated.
@@ -172,7 +172,7 @@ impl WavePropagationCalculator {
 
     /// Calculate optical Fresnel coefficients
     /// # Errors
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn calculate_optical_coefficients(
         &self,

@@ -144,7 +144,7 @@ use super::super::state::AcousticField;
 /// population density) is the intended extension.
 ///
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn update_microbubble_dynamics(
     ceus_system: &mut ContrastEnhancedUltrasound,

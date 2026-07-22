@@ -26,9 +26,9 @@ use pyo3::prelude::*;
 pub struct Source {
     /// Source type identifier
     pub(crate) source_type: String,
-    /// Frequency [Hz]
+    /// Frequency `Hz`
     pub(crate) frequency: f64,
-    /// Amplitude [Pa] or [m/s]
+    /// Amplitude `Pa` or [m/s]
     pub(crate) amplitude: f64,
     /// Position for point source
     pub(crate) position: Option<[f64; 3]>,
@@ -64,9 +64,9 @@ impl Source {
     /// grid : Grid
     ///     Computational grid
     /// frequency : float
-    ///     Source frequency [Hz]
+    ///     Source frequency `Hz`
     /// amplitude : float
-    ///     Pressure amplitude [Pa]
+    ///     Pressure amplitude `Pa`
     /// direction : tuple, optional
     ///     Propagation direction (default: [0, 0, 1] = +z)
     ///
@@ -127,9 +127,9 @@ impl Source {
     /// position : tuple
     ///     Source position [x, y, z] in meters
     /// frequency : float
-    ///     Source frequency [Hz]
+    ///     Source frequency `Hz`
     /// amplitude : float
-    ///     Pressure amplitude [Pa]
+    ///     Pressure amplitude `Pa`
     ///
     /// Returns
     /// -------
@@ -174,11 +174,11 @@ impl Source {
     /// mask : ndarray
     ///     3D spatial mask (same shape as grid)
     /// signal : ndarray
-    ///     1D time signal [Pa] or 2D matrix `[num_sources, time_steps]`
+    ///     1D time signal `Pa` or 2D matrix `[num_sources, time_steps]`
     ///     For multi-row pressure sources, rows must follow MATLAB / Fortran-
     ///     order active-point enumeration to match k-wave-python.
     /// frequency : float
-    ///     Source frequency [Hz]
+    ///     Source frequency `Hz`
     /// mode : str, optional
     ///     Source injection mode: "additive" (default), "additive_no_correction", or "dirichlet"
     #[staticmethod]
@@ -252,7 +252,7 @@ impl Source {
     /// Parameters
     /// ----------
     /// p0 : ndarray
-    ///     2D or 3D initial pressure distribution [Pa]. A 2D field is lifted
+    ///     2D or 3D initial pressure distribution `Pa`. A 2D field is lifted
     ///     to a single-slice 3D volume with `nz=1` to match the solver layout.
     #[staticmethod]
     fn from_initial_pressure(p0: &Bound<'_, PyAny>) -> PyResult<Self> {

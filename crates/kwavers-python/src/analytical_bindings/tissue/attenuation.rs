@@ -8,7 +8,7 @@ use pyo3::prelude::*;
 /// Compute frequency-dependent tissue absorption in dB/cm.
 ///
 /// Args:
-///     f_mhz: Frequency array [MHz].
+///     f_mhz: Frequency array `MHz`.
 ///     tissue: Tissue name string.
 ///
 /// Returns:
@@ -30,10 +30,10 @@ pub fn tissue_absorption_db_cm(
 /// Compute the Kramers–Kronig consistent sound speed dispersion.
 ///
 /// Args:
-///     f_hz: Frequency array [Hz].
+///     f_hz: Frequency array `Hz`.
 ///     alpha0: Attenuation coefficient [Np/m/Hz^y].
 ///     y: Power-law exponent.
-///     f_ref_hz: Reference frequency [Hz].
+///     f_ref_hz: Reference frequency `Hz`.
 ///     c_ref: Sound speed at *f_ref_hz* [m/s].
 ///
 /// Returns:

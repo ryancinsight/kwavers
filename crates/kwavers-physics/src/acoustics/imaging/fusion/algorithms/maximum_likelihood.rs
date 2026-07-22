@@ -31,7 +31,7 @@ use std::{borrow::Cow, collections::HashMap};
 /// **Theorem (EM Monotonicity):** Each EM iteration monotonically increases the likelihood $\mathcal{L}$,
 /// converging to a local maximum or saddle point of the likelihood function.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 /// # Panics
 /// - Panics if an internal invariant assumed to hold at this call site is violated.

@@ -10,7 +10,7 @@ use kwavers_core::error::KwaversResult;
 /// [`KellerMiksisModel::update_shape_stability`], which must be called
 /// once per integration timestep after this function.
 /// # Errors
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub(crate) fn calculate_acceleration(
     model: &KellerMiksisModel,

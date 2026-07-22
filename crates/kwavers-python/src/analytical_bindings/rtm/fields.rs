@@ -12,17 +12,17 @@ use pyo3::prelude::*;
 /// Returns (real_field, imag_field) each of shape (len(x_arr), len(z_arr)).
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
-///     z_arr: Axial positions [m].
-///     x_f: Focus x-coordinate [m].
-///     z_f: Focus z-coordinate [m].
-///     freq_hz: Frequency [Hz].
+///     x_arr: Lateral positions `m`.
+///     z_arr: Axial positions `m`.
+///     x_f: Focus x-coordinate `m`.
+///     z_f: Focus z-coordinate `m`.
+///     freq_hz: Frequency `Hz`.
 ///     c_brain: Brain sound speed [m/s].
-///     w0_m: Beam waist [m].
+///     w0_m: Beam waist `m`.
 ///     skull_transmission_real: Real part of skull transmission coefficient.
 ///     skull_transmission_imag: Imaginary part.
 ///     r_back: Back-wall reflection coefficient.
-///     z_back: Back-wall axial position [m].
+///     z_back: Back-wall axial position `m`.
 ///
 /// Returns:
 ///     (real_nx_nz, imag_nx_nz) tuple of 2-D arrays.
@@ -73,11 +73,11 @@ pub fn focused_gaussian_beam_2d(
 /// Returns (real_field, imag_field) each of shape (len(x_arr), len(z_arr)).
 ///
 /// Args:
-///     x_arr: Lateral positions [m].
-///     z_arr: Axial positions [m].
-///     x_f: Source x-coordinate [m].
-///     z_f: Source z-coordinate [m].
-///     freq_hz: Frequency [Hz].
+///     x_arr: Lateral positions `m`.
+///     z_arr: Axial positions `m`.
+///     x_f: Source x-coordinate `m`.
+///     z_f: Source z-coordinate `m`.
+///     freq_hz: Frequency `Hz`.
 ///     c: Sound speed in the coupling medium [m/s].
 ///
 /// Returns:

@@ -74,7 +74,7 @@ pub(super) struct WavefieldRun {
 
 /// CPML coefficient arrays along each axis (Komatitsch & Martin 2007, Eq. 8–12).
 ///
-/// `b[i]` and `a[i]` are zero in the interior and nonzero in the PML strips.
+/// `b`i`` and `a`i`` are zero in the interior and nonzero in the PML strips.
 #[derive(Clone, Debug)]
 pub(super) struct CpmlCoeffs {
     pub(super) b_x: Vec<f32>,

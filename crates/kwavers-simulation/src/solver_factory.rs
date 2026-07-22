@@ -86,7 +86,7 @@ impl SimulationSolverFactory {
     /// Create a concrete solver for a simulation.
     /// # Errors
     /// - Returns [`KwaversError::FeatureNotAvailable`] if the precondition for a FeatureNotAvailable-class constraint is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     /// # Panics
     /// - Panics if an internal precondition is violated.

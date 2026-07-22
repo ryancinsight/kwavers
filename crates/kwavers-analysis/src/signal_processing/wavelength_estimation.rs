@@ -16,8 +16,8 @@
 //!   mapping of tissue elasticity." *Med. Image Anal.* 5(4), 237–254 (LFE / local
 //!   spatial-frequency estimation).
 
-/// Estimate the dominant spatial **wavelength** \[m] of a 1-D shear-wave
-/// displacement profile `displacement` sampled at spacing `dx` \[m], by
+/// Estimate the dominant spatial **wavelength** \`m` of a 1-D shear-wave
+/// displacement profile `displacement` sampled at spacing `dx` \`m`, by
 /// autocorrelation (first post-zero-crossing peak, parabolically interpolated).
 ///
 /// Returns `None` when the input is too short (`< 8` samples), `dx ≤ 0`, the

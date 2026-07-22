@@ -29,7 +29,7 @@ impl Default for CovariancePostProcess {
 impl CovariancePostProcess {
     /// Validate.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
     ///
     pub fn validate(&self) -> KwaversResult<()> {
         match self {

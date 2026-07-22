@@ -12,7 +12,7 @@ pub struct SparseArrayOptimizer {
 impl SparseArrayOptimizer {
     /// Create new optimizer
     /// # Errors
-    /// - Returns [`KwaversError::Config`] if the precondition for a Config-class constraint is violated.
+    /// - Returns `KwaversError::Config` if the precondition for a Config-class constraint is violated.
     ///
     pub fn new(density_factor: f64) -> KwaversResult<Self> {
         if !(0.0..=1.0).contains(&density_factor) {

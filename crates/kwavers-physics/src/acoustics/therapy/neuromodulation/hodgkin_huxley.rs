@@ -21,7 +21,7 @@
 //! # Units
 //!
 //! SI-derived electrophysiology units, matching the original publication:
-//! `V` [mV], `t` [ms], `C_m` [µF/cm²], `g` [mS/cm²], `I` [µA/cm²].
+//! `V` `mV`, `t` `ms`, `C_m` [µF/cm²], `g` [mS/cm²], `I` [µA/cm²].
 //!
 //! # Rate constants
 //!
@@ -56,11 +56,11 @@ pub struct HhParams {
     pub g_k_ms_cm2: f64,
     /// Leak conductance ḡ_L [mS/cm²].
     pub g_l_ms_cm2: f64,
-    /// Na⁺ reversal potential E_Na [mV].
+    /// Na⁺ reversal potential E_Na `mV`.
     pub e_na_mv: f64,
-    /// K⁺ reversal potential E_K [mV].
+    /// K⁺ reversal potential E_K `mV`.
     pub e_k_mv: f64,
-    /// Leak reversal potential E_L [mV].
+    /// Leak reversal potential E_L `mV`.
     pub e_l_mv: f64,
 }
 
@@ -98,7 +98,7 @@ impl HhParams {
 /// Instantaneous membrane state: voltage and three gating variables.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct HhState {
-    /// Membrane potential V [mV].
+    /// Membrane potential V `mV`.
     pub v_mv: f64,
     /// Na⁺ activation gate m ∈ [0, 1].
     pub m: f64,
@@ -225,7 +225,7 @@ impl HhState {
         (dv, dm, dh, dn)
     }
 
-    /// Advance one RK4 step of duration `dt` [ms] under a *constant* capacitance
+    /// Advance one RK4 step of duration `dt` `ms` under a *constant* capacitance
     /// (`p.cm_uf_cm2`) and external current `i_ext` [µA/cm²].
     ///
     /// For the time-varying-capacitance integration used by the NICE coupling,
@@ -299,15 +299,15 @@ impl super::membrane::Membrane for HhParams {
 /// Result of a Hodgkin–Huxley simulation run.
 #[derive(Debug, Clone)]
 pub struct HhTrace {
-    /// Time samples [ms].
+    /// Time samples `ms`.
     pub time_ms: Vec<f64>,
-    /// Membrane potential samples [mV].
+    /// Membrane potential samples `mV`.
     pub voltage_mv: Vec<f64>,
     /// Membrane charge density samples `Q = C_m·V` [nC/cm²]
     /// (µF/cm²·mV = nC/cm²). For the NICE coupling this exposes the
     /// charge-accumulation that drives the post-stimulus depolarisation.
     pub charge_nc_cm2: Vec<f64>,
-    /// Spike times [ms], detected by upward crossing of `spike_threshold_mv`.
+    /// Spike times `ms`, detected by upward crossing of `spike_threshold_mv`.
     pub spike_times_ms: Vec<f64>,
 }
 
@@ -319,7 +319,7 @@ impl HhTrace {
         self.spike_times_ms.len()
     }
 
-    /// Mean firing rate [Hz] over the trace duration.
+    /// Mean firing rate `Hz` over the trace duration.
     #[must_use]
     pub fn mean_firing_rate_hz(&self) -> f64 {
         match (self.time_ms.first(), self.time_ms.last()) {
@@ -331,7 +331,7 @@ impl HhTrace {
     }
 }
 
-/// Spike-detection threshold [mV]: an action potential is counted on each upward
+/// Spike-detection threshold `mV`: an action potential is counted on each upward
 /// crossing of this level. 0 mV sits well above sub-threshold fluctuations and
 /// below the ≈ +40 mV overshoot, so each AP is counted exactly once.
 pub const SPIKE_THRESHOLD_MV: f64 = 0.0;

@@ -11,13 +11,13 @@ use pyo3::prelude::*;
 /// p(x, t) = p0 * sin(k*x) * cos(omega*t)
 ///
 /// Args:
-///     p0: Peak amplitude [Pa].
+///     p0: Peak amplitude `Pa`.
 ///     k: Wave number [rad/m].
-///     x: Spatial positions [m] (1-D array).
-///     omega_t: Phase angle omega*t [rad].
+///     x: Spatial positions `m` (1-D array).
+///     omega_t: Phase angle omega*t `rad`.
 ///
 /// Returns:
-///     Pressure array [Pa] of the same length as *x*.
+///     Pressure array `Pa` of the same length as *x*.
 #[pyfunction]
 #[pyo3(signature = (p0, k, x, omega_t))]
 pub fn standing_wave_1d(
@@ -39,13 +39,13 @@ pub fn standing_wave_1d(
 /// p(x, t) = amplitude * cos(k*x - omega*t)
 ///
 /// Args:
-///     amplitude: Amplitude [Pa].
+///     amplitude: Amplitude `Pa`.
 ///     k: Wave number [rad/m].
-///     x: Spatial positions [m].
-///     omega_t: Phase angle omega*t [rad].
+///     x: Spatial positions `m`.
+///     omega_t: Phase angle omega*t `rad`.
 ///
 /// Returns:
-///     Pressure array [Pa].
+///     Pressure array `Pa`.
 #[pyfunction]
 #[pyo3(signature = (amplitude, k, x, omega_t))]
 pub fn plane_wave_pressure_1d(
@@ -139,10 +139,10 @@ pub fn dalembert_split_solution_1d(
 /// Args:
 ///     amplitude: Source strength [Pa·m].
 ///     k: Wave number [rad/m].
-///     r: Radial distances [m].
+///     r: Radial distances `m`.
 ///
 /// Returns:
-///     Pressure array [Pa].
+///     Pressure array `Pa`.
 #[pyfunction]
 #[pyo3(signature = (amplitude, k, r))]
 pub fn spherical_wave_pressure(
@@ -211,7 +211,7 @@ pub fn transmission_pressure_coeff(z1: f64, z2: f64) -> PyResult<f64> {
 /// Compute power-law attenuation α(f) = α0 * f^y in Np/m.
 ///
 /// Args:
-///     f_hz: Frequency array [Hz].
+///     f_hz: Frequency array `Hz`.
 ///     alpha0: Attenuation coefficient at 1 Hz [Np/m/Hz^y].
 ///     y: Frequency power-law exponent.
 ///
@@ -235,7 +235,7 @@ pub fn power_law_attenuation_np_m(
 /// Compute power-law absorption α(f) = α0 * f^y in dB/(cm·MHz^y).
 ///
 /// Args:
-///     f_mhz: Frequency array [MHz].
+///     f_mhz: Frequency array `MHz`.
 ///     alpha0: Coefficient [dB/(cm·MHz^y)].
 ///     y: Power-law exponent.
 ///
@@ -262,7 +262,7 @@ pub fn absorption_power_law_db_cm(
 ///   α_SK(ω) = δ · ω² / (2 · c₀³)   [Np/m],   ω = 2πf
 ///
 /// Args:
-///     freqs_hz: Frequency array [Hz].
+///     freqs_hz: Frequency array `Hz`.
 ///     delta_m2_s: Acoustic diffusivity δ [m²/s].
 ///     c0: Small-signal sound speed [m/s].
 ///

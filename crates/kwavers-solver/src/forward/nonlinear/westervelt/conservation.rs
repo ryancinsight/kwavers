@@ -6,7 +6,7 @@
 //!
 //! ```text
 //! e(x) = p²(x) / (2·ρ₀·c₀²)    [J m⁻³]
-//! E = ∫∫∫ e(x) dV              [J]
+//! E = ∫∫∫ e(x) dV              `J`
 //! ```
 //!
 //! Kinetic energy is not tracked here because the Westervelt FDTD stores only

@@ -19,8 +19,8 @@ impl LocalizationProcessor for MUSICProcessor {
     /// This preserves the trait API without fabricating covariance snapshots or
     /// returning a placeholder error for valid time-delay localization input.
     /// # Errors
-    /// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-    /// - Propagates any [`KwaversError`] returned by called functions.
+    /// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+    /// - Propagates any `KwaversError` returned by called functions.
     ///
     fn localize(
         &self,

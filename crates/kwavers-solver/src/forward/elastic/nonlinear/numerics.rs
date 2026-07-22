@@ -11,7 +11,7 @@
 //! ## Numerical Methods
 //!
 //! All operators use second-order accurate central differences:
-//! - ∂²u/∂x² ≈ (u[i+1] - 2u[i] + u[i-1]) / Δx²
+//! - ∂²u/∂x² ≈ (u[i+1] - 2u`i` + u[i-1]) / Δx²
 //! - ∂u/∂x ≈ (u[i+1] - u[i-1]) / (2Δx)
 //!
 //! Boundary conditions are handled by returning zero for points near the boundary,

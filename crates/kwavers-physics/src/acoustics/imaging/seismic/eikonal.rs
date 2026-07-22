@@ -84,7 +84,7 @@ impl EikonalSolver {
     /// Build a solver from a sound-speed field `c` [m/s] on `grid`.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the speed field shape does not
+    /// Returns `KwaversError::InvalidInput` when the speed field shape does not
     /// match the grid or contains a non-positive speed.
     pub fn from_sound_speed(grid: &Grid, sound_speed: &Array3<f64>) -> KwaversResult<Self> {
         if sound_speed.shape() != [grid.nx, grid.ny, grid.nz] {
@@ -116,7 +116,7 @@ impl EikonalSolver {
     /// Compute the first-arrival traveltime field from a source grid point.
     ///
     /// # Errors
-    /// Returns [`KwaversError::InvalidInput`] when the source index is outside
+    /// Returns `KwaversError::InvalidInput` when the source index is outside
     /// the grid.
     pub fn solve(&self, source: (usize, usize, usize)) -> KwaversResult<Array3<f64>> {
         let [nx, ny, nz] = self.slowness.shape();

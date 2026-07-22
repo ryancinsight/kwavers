@@ -58,13 +58,13 @@ pub struct ThermalResult {
     /// CEM43 thermal dose field (nx, ny, nz) [min]. `None` if dose tracking disabled.
     #[pyo3(get)]
     pub thermal_dose: Option<Py<PyArray3<f64>>>,
-    /// Time vector (time_steps,) [s]
+    /// Time vector (time_steps,) `s`
     #[pyo3(get)]
     pub time: Py<PyArray1<f64>>,
     /// Number of time steps
     #[pyo3(get)]
     pub time_steps: usize,
-    /// Time step [s]
+    /// Time step `s`
     #[pyo3(get)]
     pub dt: f64,
 }
@@ -129,7 +129,7 @@ impl ThermalSimulation {
     /// Parameters
     /// ----------
     /// nx, ny, nz : grid point counts.
-    /// dx, dy, dz : grid spacings [m].
+    /// dx, dy, dz : grid spacings `m`.
     /// thermal_conductivity : k [W/(m·K)]. Default 0.5 (soft tissue).
     /// density : ρ [kg/m³]. Default 1000.
     /// specific_heat : c_p [J/(kg·K)]. Default 3600.
@@ -217,7 +217,7 @@ impl ThermalSimulation {
     /// Parameters
     /// ----------
     /// time_steps : number of time steps.
-    /// dt : time step [s].
+    /// dt : time step `s`.
     /// heat_source : optional ndarray (nx, ny, nz), Q [W/m³], spatially varying
     ///     constant heat source (e.g. acoustic absorption heating).
     /// sensor_mask : optional boolean ndarray (nx, ny, nz); records temperature

@@ -103,7 +103,7 @@ fn test_project_reconstruct_round_trip() {
 }
 
 /// **Legendre coefficient extraction**: projecting the k-th normalised Legendre
-/// basis function P̃_k must yield c[k] = 1 and all other |c[j]| < 1e-12.
+/// basis function P̃_k must yield c`K` = 1 and all other |c`J`| < 1e-12.
 ///
 /// ## Theorem
 ///

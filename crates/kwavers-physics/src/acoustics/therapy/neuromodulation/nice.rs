@@ -2,7 +2,7 @@
 //!
 //! This is the *Neuronal Intramembrane Cavitation Excitation* pathway (Plaksin
 //! et al. 2014): the acoustic carrier modulates the membrane capacitance
-//! ([`CapacitanceModulation`]), and the resulting charge-redistribution
+//! (`CapacitanceModulation`), and the resulting charge-redistribution
 //! (displacement) current `−V·dC_m/dt` perturbs the Hodgkin–Huxley membrane
 //! ([`super::hodgkin_huxley`]).
 //!
@@ -44,7 +44,7 @@
 //!
 //! The carrier (0.1–1 MHz) must be temporally resolved, so the integrator uses a
 //! fixed small step (default: enough for ≥ ~50 samples per carrier cycle) and the
-//! explicit RK4 right-hand side [`HhState::deriv`] evaluated with the
+//! explicit RK4 right-hand side `HhState::deriv` evaluated with the
 //! instantaneous `C_m(t)` and `dC_m/dt`. This is the direct (un-averaged)
 //! formulation; it is exact up to the RK4 truncation error and is intended for
 //! short windows (tens of ms). The cycle-averaged SONIC reduction (Lemaire et al.
@@ -70,23 +70,23 @@ pub struct NiceConfig<M: Membrane, C: CapacitanceSource> {
     /// Membrane model. Its baseline capacitance must equal
     /// `source.baseline_capacitance()`.
     pub membrane: M,
-    /// Resting membrane potential used for the self-consistent initial state [mV].
+    /// Resting membrane potential used for the self-consistent initial state `mV`.
     pub v_rest_mv: f64,
     /// Time-varying membrane capacitance driven by the acoustic carrier.
     pub source: C,
     /// Constant external (e.g. synaptic/bias) current density [µA/cm²].
     pub i_bias_ua_cm2: f64,
-    /// Integration step [ms].
+    /// Integration step `ms`.
     pub dt_ms: f64,
-    /// Sonication onset [ms]: before this the capacitance is held at baseline.
+    /// Sonication onset `ms`: before this the capacitance is held at baseline.
     pub onset_ms: f64,
-    /// Sonication offset [ms]: after this the capacitance returns to baseline.
+    /// Sonication offset `ms`: after this the capacitance returns to baseline.
     /// Action potentials evoked by the NICE mechanism typically appear *after*
     /// this time, when the accumulated membrane charge depolarises the membrane
     /// at the restored baseline capacitance — set `t_end_ms > offset_ms` to
     /// observe the post-stimulus response.
     pub offset_ms: f64,
-    /// Total simulated duration [ms].
+    /// Total simulated duration `ms`.
     pub t_end_ms: f64,
 }
 

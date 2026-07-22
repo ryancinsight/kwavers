@@ -10,7 +10,7 @@
 //! injected energy is independent of source geometry (point, line, plane).
 //!
 //! Formally: if the source occupies N active voxels, each voxel receives an
-//! amplitude scaled by 1/N so that `Σᵢ mask[i] × amplitude = amplitude`.
+//! amplitude scaled by 1/N so that `Σᵢ mask`i` × amplitude = amplitude`.
 //!
 //! Exception: a boundary-plane source (all active points share the same index
 //! on one axis and that axis is at the domain boundary) injects a plane wave

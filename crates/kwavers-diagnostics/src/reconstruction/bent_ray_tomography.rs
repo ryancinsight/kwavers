@@ -32,14 +32,14 @@ use super::bent_ray::bent_ray_path;
 use leto::Array2;
 
 /// One traveltime measurement: a source→receiver pair and its observed
-/// first-arrival traveltime \[s]. Source/receiver are grid indices `(i, j)`.
+/// first-arrival traveltime \`s`. Source/receiver are grid indices `(i, j)`.
 #[derive(Debug, Clone, Copy)]
 pub struct TraveltimeDatum {
     /// Source voxel `(i, j)`.
     pub source: (usize, usize),
     /// Receiver voxel `(i, j)`.
     pub receiver: (usize, usize),
-    /// Observed first-arrival traveltime \[s].
+    /// Observed first-arrival traveltime \`s`.
     pub traveltime: f64,
 }
 
@@ -69,7 +69,7 @@ impl Default for BentRayTomographyConfig {
 pub struct BentRayTomographyResult {
     /// Reconstructed slowness field \[s/m], same shape as the initial guess.
     pub slowness: Array2<f64>,
-    /// RMS traveltime data misfit \[s] after each outer iteration (monotone
+    /// RMS traveltime data misfit \`s` after each outer iteration (monotone
     /// non-increasing for a well-posed problem).
     pub residual_history: Vec<f64>,
 }
@@ -78,7 +78,7 @@ pub struct BentRayTomographyResult {
 /// from traveltime data, starting from `initial_slowness` and re-tracing rays
 /// through the evolving model each outer iteration.
 ///
-/// `dx` is the (isotropic) grid spacing \[m]. Measurements whose ray cannot be
+/// `dx` is the (isotropic) grid spacing \`m`. Measurements whose ray cannot be
 /// traced (out-of-bounds endpoints) are skipped. Returns the reconstructed
 /// slowness and the per-outer-iteration RMS data misfit.
 #[must_use]

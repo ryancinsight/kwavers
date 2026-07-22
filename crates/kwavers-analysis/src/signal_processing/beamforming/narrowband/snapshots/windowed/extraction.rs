@@ -13,8 +13,8 @@ use leto::{Array2, Array3};
 /// # Output
 /// `(n_sensors, n_snapshots)` complex snapshots.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 pub fn extract_windowed_snapshots(
     sensor_data: &Array3<f64>,
@@ -42,8 +42,8 @@ pub fn extract_windowed_snapshots(
 ///
 /// Each frame produces one complex snapshot across sensors.
 /// # Errors
-/// - Returns [`KwaversError::InvalidInput`] if the precondition for invalid or out-of-range input parameters is violated.
-/// - Propagates any [`KwaversError`] returned by called functions.
+/// - Returns `KwaversError::InvalidInput` if the precondition for invalid or out-of-range input parameters is violated.
+/// - Propagates any `KwaversError` returned by called functions.
 ///
 /// # Panics
 /// - Panics if an internal precondition is violated.
