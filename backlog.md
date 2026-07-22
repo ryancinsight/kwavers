@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — in-progress
+## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 
 - Owner: /root; scope: `kwavers-grid::geometry`, PINN collocation sampling,
   Tyche dependency integration, ADR 043, allocation/value-semantic tests, and
@@ -30,7 +30,9 @@
   cross-module link backlog. SemVer comparison against live main classifies
   both grid and solver as major. Residue scans retain only the ML-owned
   `AdaptiveRefinementConfig` and the documented cold heterogeneous
-  multi-region vtable.
+  multi-region vtable. Exact-head ordinary CI `29875284052`, architecture
+  validation `29875284007`, and legacy audit `29875283982` all pass at
+  `cc382dbc2243678fef55101aa106e9f8d7ad7bbf`. PR #304 merged as `9ad18523d`.
 - Hosted PR #304 first-head evidence: the pinned Atlas checkout confirmed the
   Gaia `approx` lock entry was stale; Cargo regenerated the one-line closure.
   The legacy audit now passes after replacing two new `approx::` test imports
@@ -46,7 +48,7 @@
   `deny.toml` now admits that exact first-party repository. Exact-head CI rerun
   pending.
 
-## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — in-progress
+## KW-CI-063 — Bound Atlas benchmark oracle [patch] [arch] — done
 
 - Owner: /root; scope: benchmark CI, its retired local classifier, ADR 045,
   and synchronized PM evidence.
@@ -75,8 +77,15 @@
   one revision measurement. The bounded replacement executes the full
   candidate suite once, retains unchanged samples for
   `performance_baseline`, `critical_path_benchmarks`, and `simd_field_ops`,
-  and caps every job at 30 minutes. A new exact-head hosted execution remains
-  the merge gate.
+  and caps every job at 30 minutes. The superseded exact-head run `29875283986`
+  completed all four pairs but classified all 190 long-horizon and ancillary
+  cases, reporting 37 replicated regressions outside those three canonical
+  targets. That run confirms the already-recorded full-suite scope and latency
+  defect; it does not exercise the bounded workflow. Replacement head
+  `a85aa58e5ad350f5a72483fd541337b95ed0f8de` passes full candidate smoke, all
+  four 21–23 minute AB/BA pair jobs, and aggregate classification in run
+  `29884797777`; ordinary CI `29884797767`, architecture `29884797709`, and
+  legacy audit `29884797739` also pass. PR #306 merged as `00d06f00e`.
 
 ## KW-GPU-062 — GPU PSTD peak-pressure output [major] — review
 
