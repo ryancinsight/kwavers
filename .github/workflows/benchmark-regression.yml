@@ -33,11 +33,10 @@ jobs:
           persist-credentials: false
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@614914cf469f69ebd193e17c8e2c0db7dcb4a23f
+        uses: ./kwavers-candidate/.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: kwavers-candidate/Cargo.toml
           destination: .
-          atlas_ref: 614914cf469f69ebd193e17c8e2c0db7dcb4a23f
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -116,16 +115,15 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: ryancinsight/atlas
-          ref: abbec581446868b3a6cf224844db4e179710485a
+          ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
           path: atlas-tool
           persist-credentials: false
 
       - name: Checkout Atlas path dependencies
-        uses: ryancinsight/atlas/.github/actions/checkout-path-dependencies@abbec581446868b3a6cf224844db4e179710485a
+        uses: ./kwavers-candidate/.github/actions/checkout-atlas-path-dependencies
         with:
           manifest: kwavers-candidate/Cargo.toml
           destination: .
-          atlas_ref: abbec581446868b3a6cf224844db4e179710485a
 
       - name: Install system dependencies
         run: sudo apt-get update && sudo apt-get install -y libfontconfig1-dev
@@ -289,7 +287,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: ryancinsight/atlas
-          ref: abbec581446868b3a6cf224844db4e179710485a
+          ref: 1393fd8838f3bcd548959a83daa8d9375e3b03d9
           path: atlas-tool
           persist-credentials: false
 

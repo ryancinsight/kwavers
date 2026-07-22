@@ -125,7 +125,9 @@
   confidence intervals to agree. A separate 30-minute candidate smoke executes
   every plotting-eligible benchmark once. Python packaging-only changes do not
   trigger the Rust performance gate, and no merge-critical benchmark job can
-  run for hours.
+  run for hours. Both smoke and comparison jobs now materialize providers
+  through the candidate's pinned checkout action, eliminating separate Atlas
+  revisions that could make locked base/head builds incomparable.
 - Disable automatic libtest benchmark discovery and register all 22 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.

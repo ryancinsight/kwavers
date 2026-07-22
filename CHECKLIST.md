@@ -71,6 +71,8 @@
 - [x] Reconcile the exact Atlas provider graph to Leto 0.40, Hermes 0.4.1, and
       one Eunomia 0.7 identity; verify locked all-feature metadata and compile,
       then pass all 266 `kwavers-math` tests on that graph.
+- [x] Route benchmark provider checkout through the candidate's pinned action
+      so smoke and phase-reversed jobs cannot drift to a stale Atlas graph.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
