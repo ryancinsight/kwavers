@@ -160,7 +160,12 @@ simd = []              # SIMD acceleration support
 fpu = []               # FPU acceleration support
 advanced-visualization = ["plotting"] # Advanced visualization features
 web-visualization = ["plotting"]      # Web-based visualization
-gpu-visualization = ["gpu", "plotting", "dep:egui", "kwavers-analysis/gpu-visualization"] # GPU-accelerated visualization
+# NOTE: egui removed from gpu-visualization default feature set — see
+# kwavers-analysis/Cargo.toml.  kwavers's gpu-visualization still enables
+# kwavers-analysis/gpu-visualization but egui is now opt-in via
+# kwavers-analysis's "egui" feature (which kwavers root does not enable by
+# default).
+gpu-visualization = ["gpu", "plotting", "kwavers-analysis/gpu-visualization"] # GPU-accelerated visualization
 vr-support = []        # VR headset support (future)
 # Sprint 138 - Persona Requirements
 async-runtime = ["kwavers-solver/async-runtime"]        # Retained feature gate; runtime ownership is below top-level kwavers.

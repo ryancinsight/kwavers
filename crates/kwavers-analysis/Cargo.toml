@@ -45,6 +45,10 @@ flume = { version = "0.11", optional = true }
 [features]
 gpu = ["kwavers-math/gpu", "kwavers-solver/gpu"]
 plotting = ["dep:plotly"]
+# NOTE: egui is intentionally NOT part of gpu-visualization's default feature
+# set.  On headless Linux (e.g. WSL without Wayland), the egui/winit/wgpu
+# GUI stack fails to compile (winit 0.30 lacks WSL support).  Consumers that
+# need egui (e.g. kwavers-gpu) enable it explicitly via the "egui" feature.
 gpu-visualization = [
     "gpu",
     "plotting",
@@ -53,9 +57,11 @@ gpu-visualization = [
     "dep:hephaestus-core",
     "dep:hephaestus-wgpu",
     "dep:pollster",
-    "dep:egui",
     "dep:flume",
 ]
+# Optional egui integration (must be explicitly enabled; not part of
+# gpu-visualization so headless/WSL targets can compile without it).
+egui = ["dep:egui"]
 pinn = ["kwavers-solver/pinn"]
 
 [dev-dependencies]
