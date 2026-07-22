@@ -74,7 +74,7 @@ impl ElasticWaveSolver {
         forces: &[ElasticPointForce],
     ) -> KwaversResult<Vec<ElasticWaveField>> {
         let mut history = Vec::with_capacity(n_steps);
-        self.propagate_point_forces_observing(n_steps, dt, forces, |field| {
+        self.propagate_point_forces_observing(n_steps, dt, forces, |_, field| {
             history.push(field.clone());
         })?;
         Ok(history)
@@ -110,7 +110,7 @@ impl ElasticWaveSolver {
         }
 
         let mut traces = vec![Vec::with_capacity(n_steps); receivers.len()];
-        self.propagate_point_forces_observing(n_steps, dt, forces, |field| {
+        self.propagate_point_forces_observing(n_steps, dt, forces, |_, field| {
             for (trace, &(i, j, k)) in traces.iter_mut().zip(receivers) {
                 trace.push([
                     field.ux[[i, j, k]],
@@ -122,7 +122,7 @@ impl ElasticWaveSolver {
         Ok(traces)
     }
 
-    fn propagate_point_forces_observing<F>(
+    pub(crate) fn propagate_point_forces_observing<F>(
         &self,
         n_steps: usize,
         dt: f64,
@@ -130,7 +130,7 @@ impl ElasticWaveSolver {
         mut observe: F,
     ) -> KwaversResult<()>
     where
-        F: FnMut(&ElasticWaveField),
+        F: FnMut(usize, &ElasticWaveField),
     {
         if dt <= 0.0 {
             return Err(NumericalError::InvalidOperation("dt must be positive".to_owned()).into());
@@ -163,7 +163,7 @@ impl ElasticWaveSolver {
             }
             integrator.step(&mut field, dt, None, &mut scratch)?;
             field.time += dt;
-            observe(&field);
+            observe(step, &field);
         }
         Ok(())
     }

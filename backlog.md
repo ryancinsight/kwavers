@@ -1,6 +1,6 @@
 # Backlog / Strategy
 
-## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — in-progress
+## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — review
 
 - Owner: Codex `/root`; last-update: 2026-07-22; scope:
   `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
@@ -21,6 +21,14 @@
   focused differential regression, existing analytical gradient oracles,
   configured Nextest budgets, warning-denied Clippy, doctests, and measured
   process-tree peak memory.
+- Current evidence: the independent full-history oracle is bitwise-equal to the
+  streamed gradient and illumination. The unchanged 3-D directional-gradient
+  case retains 20.44 MiB less wave-field history analytically and measured a
+  median process-tree peak of 266.25 MiB versus 286.41 MiB (−20.16 MiB, −7.0%).
+  Its three-sample median Nextest duration decreased from 1.651 s to 1.216 s
+  (−26.3%). The focused oracle, unchanged 2-D/3-D directional-gradient, and two
+  reconstruction regressions pass 5/5 in 21.486 s; warning-denied Clippy and
+  doctests pass. Hosted exact-head checks remain the delivery gate.
 
 ## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — in-progress
 

@@ -4,6 +4,11 @@
 
 ### Changed
 
+- [patch] Stream elastic-FWI adjoint states directly into the reverse-time
+  shear-strain correlation kernel instead of retaining a second six-component
+  field history. The gradient and illumination remain exact against an
+  independent full-history oracle while retained adjoint state drops from six
+  grid volumes per time step to one current field.
 - [patch] Rename the unreleased Python distribution from `pykwavers` to
   `kwavers-python` while retaining `pykwavers` as the import name. GitHub
   Releases tagged `kwavers-python-v<version>` now build, install, attest, and
