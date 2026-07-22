@@ -122,6 +122,11 @@ impl ElasticWaveSolver {
         Ok(traces)
     }
 
+    /// Propagate `n_steps` steps and observe each completed step.
+    ///
+    /// The observer receives a zero-based step index and the post-step field;
+    /// `field.time` already includes that step's `dt`. Reverse-time consumers
+    /// rely on this ordering to align forward and adjoint states.
     pub(crate) fn propagate_point_forces_observing<F>(
         &self,
         n_steps: usize,

@@ -239,6 +239,9 @@ fn accumulate_k_mu_step(
 }
 
 /// Full-history oracle for the streamed adjoint accumulator.
+///
+/// The per-voxel formula is intentionally re-expressed instead of calling the
+/// production accumulator so component-association defects remain observable.
 #[cfg(test)]
 fn k_mu_kernel_from_histories(
     fwd: &[ElasticWaveField],
