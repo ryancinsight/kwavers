@@ -1,5 +1,27 @@
 # Backlog / Strategy
 
+## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — in-progress
+
+- Owner: Codex `/root`; last-update: 2026-07-22; scope:
+  `crates/kwavers-solver/src/forward/elastic/swe/core/solver/point_force_drive.rs`,
+  `crates/kwavers-solver/src/inverse/elastography/elastic_fwi/gradient.rs`,
+  focused regressions, and synchronized PM evidence. Forward-history
+  checkpointing, FWI workload or tolerance changes, and public API changes are
+  non-goals.
+- Outcome: accumulate the elastic-FWI shear-modulus gradient while the adjoint
+  propagator runs, retaining one current adjoint field instead of cloning a
+  second complete six-component wave-field history.
+- Acceptance: the streamed gradient and illumination match the full-history
+  reference; the existing 2-D/3-D directional-gradient and reconstruction
+  contracts pass unchanged; the retained-history bound decreases by six
+  `f64` grid volumes per time step; and controlled peak-memory/runtime
+  measurements show no performance regression.
+- Risk/change class: `[patch]`; the time-index reversal and floating-point
+  accumulation order are the primary correctness risks. Verification uses a
+  focused differential regression, existing analytical gradient oracles,
+  configured Nextest budgets, warning-denied Clippy, doctests, and measured
+  process-tree peak memory.
+
 ## KW-ARCH-065 — Consolidate optical transport in Hyperion [major] [arch] — in-progress
 
 - Owner: `/root`; scope: published Hyperion integration in `kwavers-medium`,
