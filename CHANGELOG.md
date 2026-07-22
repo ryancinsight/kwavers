@@ -18,7 +18,9 @@
   by postponing annotation evaluation, and compile the legacy AVX2 module only
   for x86-64 targets so macOS ARM wheels use the existing NEON/SWAR dispatch.
   Pin all CI provider checkouts to the same Atlas graph as the release workflow
-  so locked verification resolves the committed dependency graph.
+  so locked verification resolves the committed dependency graph, and compile
+  the control-panel rendering surface only when its explicit `egui` feature is
+  enabled instead of shipping a no-op headless method.
 
 ### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
 

@@ -83,7 +83,6 @@ impl ControlPanel {
     /// Provides interactive parameter adjustment for visualization pipeline
     ///
     /// **Reference**: egui documentation (immediate mode GUI paradigm)
-    #[cfg(feature = "gpu-visualization")]
     pub fn render(&mut self, ctx: &egui::Context) {
         use egui::{CollapsingHeader, ScrollArea, Window};
 
@@ -124,7 +123,6 @@ impl ControlPanel {
             });
     }
 
-    #[cfg(feature = "gpu-visualization")]
     fn render_parameter(
         &mut self,
         ui: &mut egui::Ui,
@@ -176,14 +174,5 @@ impl ControlPanel {
         if !state.definition.description.is_empty() {
             ui.label(&state.definition.description);
         }
-    }
-
-    /// Render without GPU features (conditional compilation stub)
-    ///
-    /// Note: This is a proper conditional compilation stub for non-GPU builds.
-    /// GPU visualization requires the `gpu-visualization` feature flag.
-    #[cfg(not(feature = "gpu-visualization"))]
-    pub fn render(&mut self, _ctx: &()) {
-        log::debug!("Control panel rendering requires gpu-visualization feature");
     }
 }
