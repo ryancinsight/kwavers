@@ -8,6 +8,7 @@
 //! - Compile-time feature detection
 
 pub mod auto_detect;
+#[cfg(target_arch = "x86_64")]
 pub mod avx2;
 pub mod neon;
 pub mod operations;

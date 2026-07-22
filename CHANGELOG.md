@@ -14,6 +14,17 @@
   Releases tagged `kwavers-python-v<version>` now build, install, attest, and
   attach one stable-ABI wheel per operating system, then publish the exact wheel
   set to PyPI through OIDC.
+- [patch] Keep the Python package importable on its declared Python 3.8 floor
+  by postponing annotation evaluation, and compile the legacy AVX2 module only
+  for x86-64 targets so macOS ARM wheels use the existing NEON/SWAR dispatch.
+  Pin all CI provider checkouts to the same Atlas graph as the release workflow
+  so locked verification resolves the committed dependency graph, and compile
+  the control-panel rendering surface only when its explicit `egui` feature is
+  enabled instead of shipping a no-op headless method. Advance RITK to its
+  Reqwest 0.13.4 transport and remove Kwavers' unused Reqwest declaration so
+  release locks no longer contain the vulnerable rustls-webpki 0.101 line;
+  admit the permissive CDLA 2.0 license used by Reqwest's replacement Mozilla
+  root-certificate data.
 
 ### Breaking (2026-07-21) - Hyperion optical transport [major] [arch]
 
