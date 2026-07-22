@@ -3,6 +3,12 @@ use kwavers_core::constants::{
     OPTICAL_ABSORPTION_TISSUE_NIR, REDUCED_SCATTERING_TISSUE_NIR, SOUND_SPEED_TISSUE,
     SPECIFIC_HEAT_WATER, THERMAL_CONDUCTIVITY_WATER,
 };
+use aequitas::systems::si::quantities::ReciprocalLength;
+use hyperion::{
+    TransportError,
+    coefficient::{Absorption, InteractionCoefficient, ReducedScattering},
+    transport::DiffusionCoefficients,
+};
 use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 
 /// Physical coefficients for the coupled acoustic-optical-thermal system.
@@ -57,9 +63,13 @@ impl PhysicsCoefficients {
     }
 
     /// Optical diffusion coefficient `D = 1 / (3 * (mu_a + mu_s'))`.
-    #[must_use]
-    pub fn optical_diffusion(&self) -> f64 {
-        1.0 / (3.0 * (self.optical_absorption + self.reduced_scattering))
+    pub fn optical_diffusion(&self) -> KwaversResult<f64> {
+        Ok(self
+            .diffusion_coefficients()?
+            .diffusion_coefficient()
+            .map_err(map_transport_error)?
+            .into_quantity()
+            .into_base())
     }
 
     /// Validate the coefficient domain required by residual assembly.
@@ -80,14 +90,7 @@ impl PhysicsCoefficients {
             "PhysicsCoefficients::thermal_conductivity",
             self.thermal_conductivity,
         )?;
-        validate_nonnegative(
-            "PhysicsCoefficients::optical_absorption",
-            self.optical_absorption,
-        )?;
-        validate_nonnegative(
-            "PhysicsCoefficients::reduced_scattering",
-            self.reduced_scattering,
-        )?;
+        self.diffusion_coefficients()?;
         validate_nonnegative(
             "PhysicsCoefficients::acoustic_absorption",
             self.acoustic_absorption,
@@ -101,18 +104,26 @@ impl PhysicsCoefficients {
             }));
         }
 
-        let optical_transport = self.optical_absorption + self.reduced_scattering;
-        if optical_transport <= 0.0 {
-            return Err(KwaversError::Validation(
-                ValidationError::InvalidParameter {
-                    parameter: "PhysicsCoefficients::optical_transport".to_owned(),
-                    reason: "optical_absorption + reduced_scattering must be positive".to_owned(),
-                },
-            ));
-        }
-
         Ok(())
     }
+
+    fn diffusion_coefficients(&self) -> KwaversResult<DiffusionCoefficients<f64>> {
+        let absorption = InteractionCoefficient::<_, Absorption>::new(
+            ReciprocalLength::from_base(self.optical_absorption),
+        )
+        .map_err(map_transport_error)?;
+        let reduced = InteractionCoefficient::<_, ReducedScattering>::new(
+            ReciprocalLength::from_base(self.reduced_scattering),
+        )
+        .map_err(map_transport_error)?;
+        DiffusionCoefficients::new(absorption, reduced).map_err(map_transport_error)
+    }
+}
+
+fn map_transport_error(error: TransportError<f64>) -> KwaversError {
+    KwaversError::Validation(ValidationError::ConstraintViolation {
+        message: format!("Hyperion optical transport rejected monolithic coefficients: {error}"),
+    })
 }
 
 fn validate_positive(parameter: &str, value: f64) -> KwaversResult<()> {

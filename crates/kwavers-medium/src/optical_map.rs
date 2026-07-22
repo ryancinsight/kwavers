@@ -16,33 +16,65 @@ use leto::Array3;
 #[derive(Debug, Clone)]
 pub struct OpticalPropertyMap {
     /// Absorption coefficient map (m⁻¹)
-    pub mu_a: Array3<f64>,
+    mu_a: Array3<f64>,
 
     /// Reduced scattering coefficient map (m⁻¹)
-    pub mu_s_prime: Array3<f64>,
+    mu_s_prime: Array3<f64>,
 
     /// Refractive index map
-    pub refractive_index: Array3<f64>,
+    refractive_index: Array3<f64>,
 
     /// Grid dimensions
-    pub dimensions: GridDimensions,
+    dimensions: GridDimensions,
 }
 
 impl OpticalPropertyMap {
     /// Create a new optical property map
-    #[must_use]
+    ///
+    /// # Errors
+    ///
+    /// Returns an error when an array shape differs from `dimensions` or a
+    /// coefficient/refractive-index value is outside its physical domain.
     pub fn new(
         mu_a: Array3<f64>,
         mu_s_prime: Array3<f64>,
         refractive_index: Array3<f64>,
         dimensions: GridDimensions,
-    ) -> Self {
-        Self {
+    ) -> Result<Self, String> {
+        let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
+        if mu_a.shape() != shape
+            || mu_s_prime.shape() != shape
+            || refractive_index.shape() != shape
+        {
+            return Err(format!(
+                "Optical map arrays must have shape {shape:?}: absorption={:?}, reduced_scattering={:?}, refractive_index={:?}",
+                mu_a.shape(),
+                mu_s_prime.shape(),
+                refractive_index.shape()
+            ));
+        }
+        if mu_a.iter().any(|value| !value.is_finite() || *value < 0.0) {
+            return Err("Optical absorption map must be finite and non-negative".to_owned());
+        }
+        if mu_s_prime
+            .iter()
+            .any(|value| !value.is_finite() || *value < 0.0)
+        {
+            return Err("Reduced-scattering map must be finite and non-negative".to_owned());
+        }
+        if refractive_index
+            .iter()
+            .any(|value| !value.is_finite() || *value < 1.0)
+        {
+            return Err("Refractive-index map must be finite and at least 1.0".to_owned());
+        }
+
+        Ok(Self {
             mu_a,
             mu_s_prime,
             refractive_index,
             dimensions,
-        }
+        })
     }
 
     /// Create a homogeneous map with constant properties
@@ -50,9 +82,9 @@ impl OpticalPropertyMap {
     pub fn homogeneous(props: &OpticalPropertyData, dimensions: GridDimensions) -> Self {
         let shape = [dimensions.nx, dimensions.ny, dimensions.nz];
         Self {
-            mu_a: Array3::from_elem(shape, props.absorption_coefficient),
+            mu_a: Array3::from_elem(shape, props.absorption_coefficient()),
             mu_s_prime: Array3::from_elem(shape, props.reduced_scattering_coefficient()),
-            refractive_index: Array3::from_elem(shape, props.refractive_index),
+            refractive_index: Array3::from_elem(shape, props.refractive_index()),
             dimensions,
         }
     }
@@ -64,12 +96,15 @@ impl OpticalPropertyMap {
             return None;
         }
 
-        Some(OpticalPropertyData {
-            absorption_coefficient: self.mu_a[[i, j, k]],
-            scattering_coefficient: self.mu_s_prime[[i, j, k]] / (1.0 - 0.9), // Reconstruct from reduced
-            anisotropy: 0.9,                                                  // Default value
-            refractive_index: self.refractive_index[[i, j, k]],
-        })
+        Some(
+            OpticalPropertyData::new(
+                self.mu_a[[i, j, k]],
+                self.mu_s_prime[[i, j, k]] / (1.0 - 0.9),
+                0.9,
+                self.refractive_index[[i, j, k]],
+            )
+            .expect("invariant: optical-map constructors validate every stored value"),
+        )
     }
 
     /// Get optical properties at grid coordinates (i, j, k) with bounds checking
@@ -91,6 +126,30 @@ impl OpticalPropertyMap {
             dz,
         } = self.dimensions;
         (nx as f64) * dx * (ny as f64) * dy * (nz as f64) * dz
+    }
+
+    /// Borrow the absorption-coefficient map in inverse metres.
+    #[must_use]
+    pub const fn absorption_coefficients(&self) -> &Array3<f64> {
+        &self.mu_a
+    }
+
+    /// Borrow the reduced-scattering map in inverse metres.
+    #[must_use]
+    pub const fn reduced_scattering_coefficients(&self) -> &Array3<f64> {
+        &self.mu_s_prime
+    }
+
+    /// Borrow the refractive-index map.
+    #[must_use]
+    pub const fn refractive_indices(&self) -> &Array3<f64> {
+        &self.refractive_index
+    }
+
+    /// Return the map dimensions.
+    #[must_use]
+    pub const fn dimensions(&self) -> GridDimensions {
+        self.dimensions
     }
 }
 
@@ -256,9 +315,9 @@ impl OpticalPropertyMapBuilder {
 
     /// Set background properties
     pub fn set_background(&mut self, props: OpticalPropertyData) {
-        self.mu_a.fill(props.absorption_coefficient);
+        self.mu_a.fill(props.absorption_coefficient());
         self.mu_s_prime.fill(props.reduced_scattering_coefficient());
-        self.refractive_index.fill(props.refractive_index);
+        self.refractive_index.fill(props.refractive_index());
     }
 
     /// Add a region with specific properties
@@ -280,9 +339,9 @@ impl OpticalPropertyMapBuilder {
                     let z = k as f64 * dz;
 
                     if region.contains([x, y, z]) {
-                        self.mu_a[[i, j, k]] = props.absorption_coefficient;
+                        self.mu_a[[i, j, k]] = props.absorption_coefficient();
                         self.mu_s_prime[[i, j, k]] = props.reduced_scattering_coefficient();
-                        self.refractive_index[[i, j, k]] = props.refractive_index;
+                        self.refractive_index[[i, j, k]] = props.refractive_index();
                     }
                 }
             }
@@ -299,10 +358,10 @@ impl OpticalPropertyMapBuilder {
                     let z = k as f64 * dz;
 
                     if z >= layer.z_min && z <= layer.z_max {
-                        self.mu_a[[i, j, k]] = layer.properties.absorption_coefficient;
+                        self.mu_a[[i, j, k]] = layer.properties.absorption_coefficient();
                         self.mu_s_prime[[i, j, k]] =
                             layer.properties.reduced_scattering_coefficient();
-                        self.refractive_index[[i, j, k]] = layer.properties.refractive_index;
+                        self.refractive_index[[i, j, k]] = layer.properties.refractive_index();
                     }
                 }
             }
@@ -355,6 +414,6 @@ mod tests {
         builder.set_background(OpticalPropertyData::soft_tissue());
 
         let map = builder.build();
-        assert_eq!(map.mu_a.shape(), [10, 10, 10]);
+        assert_eq!(map.absorption_coefficients().shape(), [10, 10, 10]);
     }
 }

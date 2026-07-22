@@ -14,178 +14,102 @@ impl OpticalPropertyData {
         anisotropy: f64,
         refractive_index: f64,
     ) -> Result<Self, String> {
-        if absorption_coefficient < 0.0 {
-            return Err(format!(
-                "Absorption coefficient must be non-negative, got {}",
-                absorption_coefficient
-            ));
-        }
-        if scattering_coefficient < 0.0 {
-            return Err(format!(
-                "Scattering coefficient must be non-negative, got {}",
-                scattering_coefficient
-            ));
-        }
-        if !(-1.0..=1.0).contains(&anisotropy) {
-            return Err(format!(
-                "Anisotropy factor must be in range [-1, 1], got {}",
-                anisotropy
-            ));
-        }
-        if refractive_index < 1.0 {
-            return Err(format!(
-                "Refractive index must be ≥ 1.0 (vacuum limit), got {}",
-                refractive_index
-            ));
-        }
-        Ok(Self {
+        Self::from_si(
             absorption_coefficient,
             scattering_coefficient,
             anisotropy,
             refractive_index,
-        })
+        )
     }
 
     /// Water optical properties (visible spectrum, ~550 nm)
     #[must_use]
     pub fn water() -> Self {
-        Self {
-            absorption_coefficient: 0.01,
-            scattering_coefficient: 0.001,
-            anisotropy: 0.0,
-            refractive_index: REFRACTIVE_INDEX_WATER,
-        }
+        Self::from_si(0.01, 0.001, 0.0, REFRACTIVE_INDEX_WATER)
+            .expect("invariant: water preset satisfies optical constraints")
     }
 
     /// Soft tissue optical properties (generic, ~650 nm)
     #[must_use]
     pub fn soft_tissue() -> Self {
-        Self {
-            absorption_coefficient: 0.5,
-            scattering_coefficient: 100.0,
-            anisotropy: 0.9,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        Self::from_si(0.5, 100.0, 0.9, REFRACTIVE_INDEX_SOFT_TISSUE)
+            .expect("invariant: soft-tissue preset satisfies optical constraints")
     }
 
     /// Blood optical properties (oxygenated, ~650 nm)
     #[must_use]
     pub fn blood_oxygenated() -> Self {
-        Self {
-            absorption_coefficient: 50.0,
-            scattering_coefficient: 200.0,
-            anisotropy: 0.95,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        Self::from_si(50.0, 200.0, 0.95, REFRACTIVE_INDEX_SOFT_TISSUE)
+            .expect("invariant: oxygenated-blood preset satisfies optical constraints")
     }
 
     /// Blood optical properties (deoxygenated, ~650 nm)
     #[must_use]
     pub fn blood_deoxygenated() -> Self {
-        Self {
-            absorption_coefficient: 80.0,
-            scattering_coefficient: 200.0,
-            anisotropy: 0.95,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        Self::from_si(80.0, 200.0, 0.95, REFRACTIVE_INDEX_SOFT_TISSUE)
+            .expect("invariant: deoxygenated-blood preset satisfies optical constraints")
     }
 
     /// Tumor tissue optical properties (hypervascular, ~650 nm)
     #[must_use]
     pub fn tumor() -> Self {
-        Self {
-            absorption_coefficient: 10.0,
-            scattering_coefficient: 120.0,
-            anisotropy: 0.85,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        Self::from_si(10.0, 120.0, 0.85, REFRACTIVE_INDEX_SOFT_TISSUE)
+            .expect("invariant: tumor preset satisfies optical constraints")
     }
 
     /// Brain tissue optical properties (gray matter, ~650 nm)
     #[must_use]
     pub fn brain_gray_matter() -> Self {
-        Self {
-            absorption_coefficient: 0.8,
-            scattering_coefficient: 150.0,
-            anisotropy: 0.9,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE_NIR,
-        }
+        Self::from_si(0.8, 150.0, 0.9, REFRACTIVE_INDEX_SOFT_TISSUE_NIR)
+            .expect("invariant: gray-matter preset satisfies optical constraints")
     }
 
     /// Brain tissue optical properties (white matter, ~650 nm)
     #[must_use]
     pub fn brain_white_matter() -> Self {
-        Self {
-            absorption_coefficient: 1.0,
-            scattering_coefficient: 250.0,
-            anisotropy: 0.92,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE_NIR,
-        }
+        Self::from_si(1.0, 250.0, 0.92, REFRACTIVE_INDEX_SOFT_TISSUE_NIR)
+            .expect("invariant: white-matter preset satisfies optical constraints")
     }
 
     /// Liver tissue optical properties (~650 nm)
     #[must_use]
     pub fn liver() -> Self {
-        Self {
-            absorption_coefficient: 2.0,
-            scattering_coefficient: 120.0,
-            anisotropy: 0.88,
-            refractive_index: 1.39,
-        }
+        Self::from_si(2.0, 120.0, 0.88, 1.39)
+            .expect("invariant: liver preset satisfies optical constraints")
     }
 
     /// Muscle tissue optical properties (~650 nm)
     #[must_use]
     pub fn muscle() -> Self {
-        Self {
-            absorption_coefficient: 0.8,
-            scattering_coefficient: 100.0,
-            anisotropy: 0.85,
-            refractive_index: 1.37,
-        }
+        Self::from_si(0.8, 100.0, 0.85, 1.37)
+            .expect("invariant: muscle preset satisfies optical constraints")
     }
 
     /// Skin (epidermis) optical properties (~650 nm)
     #[must_use]
     pub fn skin_epidermis() -> Self {
-        Self {
-            absorption_coefficient: 5.0,
-            scattering_coefficient: 300.0,
-            anisotropy: 0.8,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        Self::from_si(5.0, 300.0, 0.8, REFRACTIVE_INDEX_SOFT_TISSUE)
+            .expect("invariant: epidermis preset satisfies optical constraints")
     }
 
     /// Skin (dermis) optical properties (~650 nm)
     #[must_use]
     pub fn skin_dermis() -> Self {
-        Self {
-            absorption_coefficient: 1.0,
-            scattering_coefficient: 200.0,
-            anisotropy: 0.85,
-            refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-        }
+        Self::from_si(1.0, 200.0, 0.85, REFRACTIVE_INDEX_SOFT_TISSUE)
+            .expect("invariant: dermis preset satisfies optical constraints")
     }
 
     /// Bone (cortical) optical properties (~650 nm)
     #[must_use]
     pub fn bone_cortical() -> Self {
-        Self {
-            absorption_coefficient: 5.0,
-            scattering_coefficient: 500.0,
-            anisotropy: 0.9,
-            refractive_index: 1.55,
-        }
+        Self::from_si(5.0, 500.0, 0.9, 1.55)
+            .expect("invariant: cortical-bone preset satisfies optical constraints")
     }
 
     /// Fat tissue optical properties (~650 nm)
     #[must_use]
     pub fn fat() -> Self {
-        Self {
-            absorption_coefficient: 0.3,
-            scattering_coefficient: 100.0,
-            anisotropy: 0.9,
-            refractive_index: 1.46,
-        }
+        Self::from_si(0.3, 100.0, 0.9, 1.46)
+            .expect("invariant: fat preset satisfies optical constraints")
     }
 }

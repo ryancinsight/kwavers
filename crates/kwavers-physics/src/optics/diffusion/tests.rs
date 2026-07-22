@@ -1,9 +1,10 @@
 use super::*;
+use aequitas::systems::si::units::PerMeter;
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
 use kwavers_medium::properties::OpticalPropertyData;
 
 #[test]
-fn test_optical_properties_from_domain() {
+fn material_aggregate_maps_to_hyperion_coefficients() {
     let domain_props = OpticalPropertyData::new(
         10.0,                         // absorption_coefficient
         100.0,                        // scattering_coefficient
@@ -12,46 +13,20 @@ fn test_optical_properties_from_domain() {
     )
     .unwrap();
 
-    let props = DiffusionOpticalProperties::from_domain(domain_props);
+    let coefficients = domain_props.diffusion_coefficients().unwrap();
 
-    assert_eq!(props.absorption_coefficient, 10.0);
-    // μₛ' = μₛ(1-g) = 100 * (1 - 0.9) = 10
+    assert_eq!(coefficients.absorption().in_unit::<PerMeter>(), 10.0);
     assert!(
-        (props.reduced_scattering_coefficient - 10.0).abs() < 1e-10,
+        (coefficients
+            .reduced_scattering()
+            .in_unit::<PerMeter>()
+            - 10.0)
+            .abs()
+            < 1e-10,
         "Expected: 10.0, Got: {}",
-        props.reduced_scattering_coefficient
+        coefficients.reduced_scattering().in_unit::<PerMeter>()
     );
-    assert_eq!(props.refractive_index, REFRACTIVE_INDEX_SOFT_TISSUE);
-}
-
-#[test]
-fn test_diffusion_coefficient() {
-    let props = DiffusionOpticalProperties {
-        absorption_coefficient: 10.0,
-        reduced_scattering_coefficient: 90.0,
-        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-    };
-
-    // D = 1 / (3 * (μₐ + μₛ'))
-    let expected_d = 1.0 / (3.0 * (10.0 + 90.0));
-    assert_eq!(props.diffusion_coefficient(), expected_d);
-}
-
-#[test]
-fn test_diffusion_approximation_validity() {
-    let valid_props = DiffusionOpticalProperties {
-        absorption_coefficient: 1.0,
-        reduced_scattering_coefficient: 15.0, // > 10x absorption
-        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-    };
-    assert!(valid_props.diffusion_approximation_valid());
-
-    let invalid_props = DiffusionOpticalProperties {
-        absorption_coefficient: 10.0,
-        reduced_scattering_coefficient: 20.0, // < 10x absorption
-        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-    };
-    assert!(!invalid_props.diffusion_approximation_valid());
+    assert_eq!(domain_props.refractive_index(), REFRACTIVE_INDEX_SOFT_TISSUE);
 }
 
 #[test]
@@ -70,12 +45,14 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
     use leto::Array4;
 
     let grid = kwavers_grid::Grid::new(8, 8, 8, 1.0e-3, 1.0e-3, 1.0e-3).unwrap();
-    let props = DiffusionOpticalProperties {
-        absorption_coefficient: 10.0,          // m⁻¹
-        reduced_scattering_coefficient: 1.0e3, // m⁻¹, μₛ' ≫ μₐ
-        refractive_index: REFRACTIVE_INDEX_SOFT_TISSUE,
-    };
-    let mut solver = LightDiffusion::new(&grid, props, false, false);
+    let props = OpticalPropertyData::new(
+        10.0,
+        1.0e4,
+        0.9,
+        REFRACTIVE_INDEX_SOFT_TISSUE,
+    )
+    .unwrap();
+    let mut solver = LightDiffusion::new(&grid, props, false, false).unwrap();
 
     let phi0 = 1.0_f64;
     let mut fields: Array4<f64> = Array4::from_elem((LIGHT_IDX + 1, 8, 8, 8), phi0);
@@ -85,8 +62,8 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
 
     solver.update_light(&mut fields, &source, &grid, &medium, dt);
 
-    let c_medium = SPEED_OF_LIGHT / props.refractive_index;
-    let expected = phi0 * (1.0 - dt * c_medium * props.absorption_coefficient);
+    let c_medium = SPEED_OF_LIGHT / props.refractive_index();
+    let expected = phi0 * (1.0 - dt * c_medium * props.absorption_coefficient());
     let observed = fields[[LIGHT_IDX, 4, 4, 4]];
     let rel_err = (observed - expected).abs() / expected;
     assert!(
@@ -99,9 +76,9 @@ fn uniform_fluence_decays_at_rate_c_mu_a() {
 fn test_light_diffusion_solver_initialization() {
     let grid = kwavers_grid::Grid::new(10, 10, 10, 0.001, 0.001, 0.001).unwrap();
 
-    let props = DiffusionOpticalProperties::biological_tissue();
+    let props = OpticalPropertyData::soft_tissue();
 
-    let solver = LightDiffusion::new(&grid, props, false, false);
+    let solver = LightDiffusion::new(&grid, props, false, false).unwrap();
 
     assert_eq!(solver.fluence_rate.shape(), [1, 10, 10, 10]);
     assert_eq!(solver.emission_spectrum.shape(), [10, 10, 10]);

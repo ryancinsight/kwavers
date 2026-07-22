@@ -209,7 +209,7 @@ fn main() -> Result<()> {
         for i in 0..nx {
             for j in 0..ny {
                 for k in 0..nz {
-                    absorption[[i, j, k]] = optical_map[[i, j, k]].absorption_coefficient;
+                    absorption[[i, j, k]] = optical_map[[i, j, k]].absorption_coefficient();
                 }
             }
         }

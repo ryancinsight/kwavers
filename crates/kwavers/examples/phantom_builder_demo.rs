@@ -143,7 +143,10 @@ fn demo_layered_tissue() -> Result<()> {
         if let Some(props) = phantom.get(dims.nx / 2, dims.ny / 2, k) {
             println!(
                 "    {} ({:.1} mm): μ_a = {:.2} m⁻¹, μ_s = {:.1} m⁻¹",
-                layer_name, depth_mm, props.absorption_coefficient, props.scattering_coefficient
+                layer_name,
+                depth_mm,
+                props.absorption_coefficient(),
+                props.scattering_coefficient()
             );
         }
     }

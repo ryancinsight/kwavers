@@ -412,9 +412,10 @@ fn solve_diffusion_fluence(
 }
 
 fn optical_property_map_to_array3(map: &OpticalPropertyMap) -> Array3<OpticalPropertyData> {
-    let nx = map.dimensions.nx;
-    let ny = map.dimensions.ny;
-    let nz = map.dimensions.nz;
+    let dimensions = map.dimensions();
+    let nx = dimensions.nx;
+    let ny = dimensions.ny;
+    let nz = dimensions.nz;
 
     let background = OpticalPropertyData::soft_tissue();
     let mut out = Array3::from_elem((nx, ny, nz), background);

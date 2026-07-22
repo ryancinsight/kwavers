@@ -36,7 +36,7 @@ checksum = "320119579fcad9c21884f5c4861d16174d0e06250625266f50fe6898340abefa"
 [[package]]
 name = "aequitas"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/aequitas?rev=be3a1ac91286a17aecf18f0065d2aa6b385eb67b#be3a1ac91286a17aecf18f0065d2aa6b385eb67b"
+source = "git+https://github.com/ryancinsight/aequitas?rev=cf9b2c3debabf0c08a2769fa8246908ad7cf53da#cf9b2c3debabf0c08a2769fa8246908ad7cf53da"
 dependencies = [
  "eunomia",
  "typenum",
@@ -223,7 +223,7 @@ checksum = "7c02d123df017efcdfbd739ef81735b36c5ba83ec3c59c80a9d7ecc718f92e50"
 [[package]]
 name = "asclepius"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/asclepius?rev=794f8c328d72fd020b63e53ae46f6f8fd781d8df#794f8c328d72fd020b63e53ae46f6f8fd781d8df"
+source = "git+https://github.com/ryancinsight/asclepius?rev=e85350d68a4652a80c66e98d55b94cfbdc601850#e85350d68a4652a80c66e98d55b94cfbdc601850"
 dependencies = [
  "aequitas",
  "eunomia",
@@ -2694,6 +2694,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "hyperion"
+version = "0.1.0"
+source = "git+https://github.com/ryancinsight/hyperion?rev=064a18985b4e24764d45825a06ed4ec86c9e5d28#064a18985b4e24764d45825a06ed4ec86c9e5d28"
+dependencies = [
+ "aequitas",
+ "eunomia",
+ "proteus",
+]
+
+[[package]]
 name = "iana-time-zone"
 version = "0.1.64"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3461,6 +3471,7 @@ version = "4.0.0"
 dependencies = [
  "aequitas",
  "eunomia",
+ "hyperion",
  "kwavers-core",
  "kwavers-grid",
  "kwavers-math",
@@ -3513,6 +3524,7 @@ dependencies = [
  "asclepius",
  "consus-npy",
  "eunomia",
+ "hyperion",
  "kwavers-core",
  "kwavers-field",
  "kwavers-grid",
@@ -3645,6 +3657,7 @@ dependencies = [
  "coeus-optim",
  "coeus-tensor",
  "eunomia",
+ "hyperion",
  "kwavers-boundary",
  "kwavers-core",
  "kwavers-field",
@@ -5026,7 +5039,7 @@ dependencies = [
 [[package]]
 name = "proteus"
 version = "0.1.0"
-source = "git+https://github.com/ryancinsight/proteus?rev=c82f50d908b7f2119a5caa29026fe7ed23b1d44f#c82f50d908b7f2119a5caa29026fe7ed23b1d44f"
+source = "git+https://github.com/ryancinsight/proteus?rev=a61d0e5647503e7b44e7489be373fc2b20f62785#a61d0e5647503e7b44e7489be373fc2b20f62785"
 dependencies = [
  "aequitas",
  "eunomia",

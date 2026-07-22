@@ -70,7 +70,7 @@ impl MonolithicCoupler {
                     }
                 }
                 UnifiedFieldType::LightFluence => {
-                    let d = coeff.optical_diffusion();
+                    let d = coeff.optical_diffusion()?;
                     laplacian_3d_into(&field_block, grid_dims, dx, dy, dz, &mut rate);
                     scale_inplace(&mut rate, d);
                     for (r_val, i_val) in rate.iter_mut().zip(field_block.iter()) {

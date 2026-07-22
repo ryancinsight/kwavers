@@ -6,12 +6,18 @@
 use kwavers_core::constants::fundamental::{DENSITY_WATER_NOMINAL, SOUND_SPEED_WATER_SIM};
 use kwavers_core::constants::numerical::FOUR_PI;
 use kwavers_core::constants::thermodynamic::BODY_TEMPERATURE_C;
-use kwavers_core::error::KwaversResult;
+use aequitas::systems::si::{quantities::Length, units::PerMeter};
+use hyperion::{
+    TransportError,
+    quantity::PathLength,
+    transport::DiffusionCoefficients,
+};
+use kwavers_core::error::{KwaversError, KwaversResult, ValidationError};
 use kwavers_field::EMFields;
 use kwavers_physics::electromagnetic::equations::{
     EMMaterialDistribution, ElectromagneticWaveEquation, PhotoacousticCoupling,
 };
-use kwavers_physics::electromagnetic::photoacoustic::{GrueneisenModel, OpticalAbsorption};
+use kwavers_physics::electromagnetic::photoacoustic::GrueneisenModel;
 use leto::{ArrayD, VecStorage};
 
 /// Photoacoustic solver implementation
@@ -21,7 +27,7 @@ pub struct PhotoacousticSolver<T: ElectromagneticWaveEquation> {
     /// Grüneisen parameter for thermoelastic coupling
     pub gruneisen: GrueneisenModel,
     /// Optical absorption properties
-    pub optical_properties: OpticalAbsorption,
+    pub optical_properties: DiffusionCoefficients<f64>,
     /// Initial acoustic pressure field
     pub initial_pressure: Option<ArrayD<f64, VecStorage<f64>>>,
 }
@@ -41,7 +47,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
     pub fn new(
         em_solver: T,
         gruneisen: GrueneisenModel,
-        optical_properties: OpticalAbsorption,
+        optical_properties: DiffusionCoefficients<f64>,
     ) -> Self {
         Self {
             em_solver,
@@ -60,7 +66,7 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         fluence: &ArrayD<f64, VecStorage<f64>>,
     ) -> KwaversResult<ArrayD<f64, VecStorage<f64>>> {
         let gamma = self.gruneisen.evaluate(BODY_TEMPERATURE_C);
-        let mu_a = self.optical_properties.absorption_coefficient;
+        let mu_a = self.optical_properties.absorption().in_unit::<PerMeter>();
 
         // p₀ = Γ μ_a Φ
         let mapped: Vec<f64> = fluence.iter().map(|&phi| gamma * mu_a * phi).collect();
@@ -102,10 +108,16 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
         source_position: &[f64],
         evaluation_points: &ArrayD<f64, VecStorage<f64>>,
     ) -> KwaversResult<ArrayD<f64, VecStorage<f64>>> {
-        let mu_a = self.optical_properties.absorption_coefficient;
-        let mu_s_prime = self.optical_properties.reduced_scattering;
-        let mu_eff = (3.0 * mu_a * (mu_a + mu_s_prime)).sqrt();
-        let d_coeff = 1.0 / (3.0 * (mu_a + mu_s_prime)); // diffusion coefficient
+        let effective_attenuation = self
+            .optical_properties
+            .effective_attenuation()
+            .map_err(map_transport_error)?;
+        let d_coeff = self
+            .optical_properties
+            .diffusion_coefficient()
+            .map_err(map_transport_error)?
+            .into_quantity()
+            .into_base();
         let inv_4pi_d = 1.0 / (FOUR_PI * d_coeff);
 
         let shape = evaluation_points.shape();
@@ -156,7 +168,15 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticSolver<T> {
                     // Regularise near singularity (r → 0): clamp to dx/2
                     let r_safe = r.max(dx * 0.5);
 
-                    let phi = inv_4pi_d * (-mu_eff * r_safe).exp() / r_safe;
+                    let path = PathLength::new(Length::from_base(r_safe))
+                        .map_err(map_transport_error)?;
+                    let transmission = effective_attenuation
+                        .optical_depth(path)
+                        .map_err(map_transport_error)?
+                        .transmission()
+                        .into_quantity()
+                        .into_base();
+                    let phi = inv_4pi_d * transmission / r_safe;
 
                     let linear = (i * ny + j) * nz + k;
                     // Replicate across any trailing dimensions
@@ -219,7 +239,7 @@ impl<T: ElectromagneticWaveEquation> ElectromagneticWaveEquation for Photoacoust
 
 impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolver<T> {
     fn optical_absorption(&self, _position: &[f64]) -> f64 {
-        self.optical_properties.absorption_coefficient
+        self.optical_properties.absorption().in_unit::<PerMeter>()
     }
 
     fn gruneisen_parameter(&self, _position: &[f64]) -> f64 {
@@ -227,7 +247,9 @@ impl<T: ElectromagneticWaveEquation> PhotoacousticCoupling for PhotoacousticSolv
     }
 
     fn reduced_scattering(&self, _position: &[f64]) -> f64 {
-        self.optical_properties.reduced_scattering
+        self.optical_properties
+            .reduced_scattering()
+            .in_unit::<PerMeter>()
     }
 }
 
@@ -250,7 +272,12 @@ mod tests {
 
         // Create photoacoustic solver
         let gruneisen = GrueneisenModel::constant(0.5);
-        let optical_props = OpticalAbsorption::new(10.0, 50.0, 0.9, 800e-9);
+        let optical_props = kwavers_medium::properties::OpticalPropertyData::new(
+            10.0, 500.0, 0.9, 1.4,
+        )
+        .unwrap()
+        .diffusion_coefficients()
+        .unwrap();
 
         let mut pa_solver = PhotoacousticSolver::new(em_solver, gruneisen, optical_props);
 
@@ -262,4 +289,10 @@ mod tests {
         assert!(pressure.iter().all(|&p| p > 0.0));
         assert!(pressure.iter().any(|&p| p > 10.0)); // Should be significant pressure
     }
+}
+
+fn map_transport_error(error: TransportError<f64>) -> KwaversError {
+    KwaversError::Validation(ValidationError::ConstraintViolation {
+        message: format!("Hyperion optical transport rejected solver input: {error}"),
+    })
 }

@@ -274,10 +274,10 @@ mod tests {
         assert_eq!(properties.shape(), [32, 32, 16]);
 
         // Check that we have heterogeneous properties (not all the same)
-        let first_val = properties[[0, 0, 0]].absorption_coefficient;
+        let first_val = properties[[0, 0, 0]].absorption_coefficient();
         let mut found_different = false;
         for val in properties.iter() {
-            if (val.absorption_coefficient - first_val).abs() > 1e-10 {
+            if (val.absorption_coefficient() - first_val).abs() > 1e-10 {
                 found_different = true;
                 break;
             }

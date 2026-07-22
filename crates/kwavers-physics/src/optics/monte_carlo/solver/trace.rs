@@ -1,6 +1,7 @@
 //! MCML photon tracing kernel.
 
 use super::MonteCarloSolver;
+use aequitas::systems::si::units::PerMeter;
 use rand::Rng;
 use std::sync::atomic::AtomicU64;
 
@@ -11,6 +12,7 @@ use crate::optics::monte_carlo::utils::{
     atomic_add, normalize, photon_step_to_boundary, scatter_photon,
 };
 use kwavers_core::constants::optical::REFRACTIVE_INDEX_SOFT_TISSUE;
+use kwavers_medium::properties::OpticalPropertyData;
 
 impl MonteCarloSolver {
     /// Trace one photon through the medium using the MCML algorithm.
@@ -41,7 +43,7 @@ impl MonteCarloSolver {
                 None => break,
             };
 
-            let mu_t_init = props.total_attenuation();
+            let mu_t_init = total_attenuation(props);
             if mu_t_init < 1e-12 {
                 photon.position[2] += self.grid.dz;
                 step_count += 1;
@@ -80,7 +82,7 @@ impl MonteCarloSolver {
                     let albedo = self
                         .optical_map
                         .get(ci, cj, ck)
-                        .map_or_else(|| props.albedo(), |p| p.albedo());
+                        .map_or_else(|| scattering_albedo(props), scattering_albedo);
                     let absorbed = photon.weight * (1.0 - albedo);
                     photon.weight -= absorbed;
                     if voxel_idx < absorbed_energy.len() {
@@ -106,7 +108,7 @@ impl MonteCarloSolver {
                             let n_tissue = self
                                 .optical_map
                                 .get(ci, cj, 0)
-                                .map_or(REFRACTIVE_INDEX_SOFT_TISSUE, |p| p.refractive_index);
+                                .map_or(REFRACTIVE_INDEX_SOFT_TISSUE, |p| p.refractive_index());
                             let cos_i = (-photon.direction[2]).clamp(0.0, 1.0);
                             let r = fresnel_reflectance(n_tissue, 1.0, cos_i);
                             if rng.gen::<f64>() < r {
@@ -132,7 +134,7 @@ impl MonteCarloSolver {
                                 cj = nj;
                                 ck = nk;
                                 if let Some(np) = self.optical_map.get(ci, cj, ck) {
-                                    let new_mu_t = np.total_attenuation();
+                                    let new_mu_t = total_attenuation(np);
                                     if new_mu_t > 1e-12 && mu_t_ref > 1e-12 {
                                         s_remaining *= mu_t_ref / new_mu_t;
                                         mu_t_ref = new_mu_t;
@@ -145,7 +147,7 @@ impl MonteCarloSolver {
                     }
                     Some((ni, nj, nk)) => {
                         if let Some(np) = self.optical_map.get(ni, nj, nk) {
-                            if (np.refractive_index - props.refractive_index).abs() > 1e-6 {
+                            if (np.refractive_index() - props.refractive_index()).abs() > 1e-6 {
                                 let n_hat = self.voxel_boundary_normal(
                                     photon.position,
                                     photon.direction,
@@ -156,13 +158,13 @@ impl MonteCarloSolver {
                                 apply_fresnel(
                                     &mut photon.direction,
                                     n_hat,
-                                    props.refractive_index,
-                                    np.refractive_index,
+                                    props.refractive_index(),
+                                    np.refractive_index(),
                                     rng,
                                 );
                                 photon.direction = normalize(photon.direction);
                             }
-                            let new_mu_t = np.total_attenuation();
+                            let new_mu_t = total_attenuation(np);
                             if new_mu_t > 1e-12 && mu_t_ref > 1e-12 {
                                 s_remaining *= mu_t_ref / new_mu_t;
                                 mu_t_ref = new_mu_t;
@@ -188,10 +190,28 @@ impl MonteCarloSolver {
             }
 
             if let Some(p) = self.optical_map.get(ci, cj, ck) {
-                scatter_photon(&mut photon, p.anisotropy, rng);
+                scatter_photon(&mut photon, p.anisotropy(), rng);
             }
 
             step_count += 1;
         }
     }
+}
+
+fn total_attenuation(properties: OpticalPropertyData) -> f64 {
+    properties
+        .optical_coefficients()
+        .total_attenuation()
+        .expect("invariant: OpticalPropertyData validates total attenuation")
+        .in_unit::<PerMeter>()
+}
+
+fn scattering_albedo(properties: OpticalPropertyData) -> f64 {
+    properties
+        .optical_coefficients()
+        .single_scattering_albedo()
+        .expect("invariant: OpticalPropertyData validates the coefficient sum")
+        .expect("invariant: photon interaction excludes vacuum before sampling")
+        .into_quantity()
+        .into_base()
 }

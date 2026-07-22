@@ -35,45 +35,95 @@
 //! - `-1 ≤ anisotropy ≤ 1` (dimensionless)
 //! - `refractive_index ≥ 1.0` (vacuum is lower bound)
 
-mod computed;
+mod coefficients;
 mod presets;
 #[cfg(test)]
 mod tests;
 
+use aequitas::systems::si::{quantities::ReciprocalLength, units::PerMeter};
+use hyperion::{
+    TransportError,
+    coefficient::{Absorption, InteractionCoefficient, OpticalCoefficients, Scattering},
+    quantity::Anisotropy,
+    transport::{DiffusionCoefficients, reduced_scattering},
+};
 use std::fmt;
 
 /// Canonical optical material properties
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct OpticalPropertyData {
-    /// Absorption coefficient μ_a (m⁻¹)
-    pub absorption_coefficient: f64,
-
-    /// Scattering coefficient μ_s (m⁻¹)
-    pub scattering_coefficient: f64,
-
-    /// Anisotropy factor g = ⟨cos θ⟩ (dimensionless)
-    ///
-    /// Physical range for biological tissue: 0.7-0.99 (highly forward-scattering)
-    pub anisotropy: f64,
-
-    /// Refractive index n (dimensionless)
-    ///
-    /// Ratio of light speed in vacuum to light speed in medium: n = c₀/c
-    pub refractive_index: f64,
+    coefficients: OpticalCoefficients<f64>,
+    anisotropy: Anisotropy<f64>,
+    refractive_index: f64,
 }
 
 impl fmt::Display for OpticalPropertyData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Optical(μ_a={:.2} m⁻¹, μ_s={:.1} m⁻¹, μ_s'={:.1} m⁻¹, g={:.3}, n={:.3}, δ={:.1} mm, α={:.3})",
-            self.absorption_coefficient,
-            self.scattering_coefficient,
-            self.reduced_scattering(),
-            self.anisotropy,
-            self.refractive_index,
-            self.penetration_depth() * 1000.0,
-            self.albedo()
+            "Optical(μ_a={:.2} m⁻¹, μ_s={:.1} m⁻¹, μ_s'={:.1} m⁻¹, g={:.3}, n={:.3})",
+            self.absorption_coefficient(),
+            self.scattering_coefficient(),
+            self.reduced_scattering_coefficient(),
+            self.anisotropy(),
+            self.refractive_index(),
+        )
+    }
+}
+
+impl OpticalPropertyData {
+    fn from_si(
+        absorption_coefficient: f64,
+        scattering_coefficient: f64,
+        anisotropy: f64,
+        refractive_index: f64,
+    ) -> Result<Self, String> {
+        if !refractive_index.is_finite() || refractive_index < 1.0 {
+            return Err(format!(
+                "Refractive index must be finite and at least 1.0, got {refractive_index}"
+            ));
+        }
+
+        let absorption = InteractionCoefficient::<_, Absorption>::new(
+            ReciprocalLength::from_unit::<PerMeter>(absorption_coefficient),
+        )
+        .map_err(|error| error.to_string())?;
+        let scattering = InteractionCoefficient::<_, Scattering>::new(
+            ReciprocalLength::from_unit::<PerMeter>(scattering_coefficient),
+        )
+        .map_err(|error| error.to_string())?;
+        let coefficients =
+            OpticalCoefficients::new(absorption, scattering).map_err(|error| error.to_string())?;
+        let anisotropy = Anisotropy::new(aequitas::systems::si::quantities::Dimensionless::from_base(
+            anisotropy,
+        ))
+        .map_err(|error| error.to_string())?;
+
+        reduced_scattering(scattering, anisotropy).map_err(|error| error.to_string())?;
+
+        Ok(Self {
+            coefficients,
+            anisotropy,
+            refractive_index,
+        })
+    }
+
+    /// Return the validated unreduced optical coefficient pair.
+    #[must_use]
+    pub const fn optical_coefficients(&self) -> OpticalCoefficients<f64> {
+        self.coefficients
+    }
+
+    /// Return the validated diffusion coefficient pair.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TransportError::DegenerateTransport`] for a vacuum aggregate.
+    pub fn diffusion_coefficients(&self) -> Result<DiffusionCoefficients<f64>, TransportError<f64>> {
+        DiffusionCoefficients::new(
+            *self.coefficients.absorption(),
+            reduced_scattering(*self.coefficients.scattering(), self.anisotropy)
+                .expect("invariant: construction validates reduced scattering"),
         )
     }
 }

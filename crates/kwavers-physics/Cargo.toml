@@ -32,6 +32,7 @@ rand_chacha = "0.3"
 anyhow = "1.0"
 ritk-registration = { workspace = true, optional = true }
 eunomia = { workspace = true }
+hyperion = { workspace = true }
 
 [features]
 clinical-imaging = [

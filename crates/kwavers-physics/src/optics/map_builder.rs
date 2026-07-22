@@ -101,15 +101,15 @@ pub trait OpticalPropertyMapAnalysis {
 
 impl OpticalPropertyMapAnalysis for OpticalPropertyMap {
     fn absorption_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(&self.mu_a)
+        PropertyStats::from_array(self.absorption_coefficients())
     }
 
     fn scattering_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(&self.mu_s_prime)
+        PropertyStats::from_array(self.reduced_scattering_coefficients())
     }
 
     fn refractive_index_stats(&self) -> PropertyStats {
-        PropertyStats::from_array(&self.refractive_index)
+        PropertyStats::from_array(self.refractive_indices())
     }
 }
 
@@ -144,7 +144,7 @@ mod tests {
         let map = OpticalPropertyMap::homogeneous(&props, dims);
 
         let absorption_stats = map.absorption_stats();
-        assert!((absorption_stats.mean - props.absorption_coefficient).abs() < 1e-10);
+        assert!((absorption_stats.mean - props.absorption_coefficient()).abs() < 1e-10);
         assert!((absorption_stats.std_dev).abs() < 1e-10); // Should be zero for homogeneous
     }
 
