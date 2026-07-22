@@ -127,7 +127,9 @@
   trigger the Rust performance gate, and no merge-critical benchmark job can
   run for hours. Both smoke and comparison jobs now materialize providers
   through the candidate's pinned checkout action, eliminating separate Atlas
-  revisions that could make locked base/head builds incomparable.
+  revisions that could make locked base/head builds incomparable. The smoke job
+  also hashes same-path base/head executables for the three merge-critical
+  targets and skips statistical pairs only when all three are byte-identical.
 - Disable automatic libtest benchmark discovery and register all 22 Criterion
   targets explicitly, so the full suite cannot silently skip benchmark files.
   Exclude the package library and binary from benchmark-harness selection.

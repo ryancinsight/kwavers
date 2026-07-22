@@ -2,7 +2,7 @@
 
 - Status: accepted
 - Date: 2026-07-20
-- Amended: 2026-07-21
+- Amended: 2026-07-22
 - Change class: patch, architecture
 - Closed: 2026-07-22
 
@@ -39,6 +39,13 @@ still running after 157 minutes. The retained
 `linear_swe_wave_propagation` scenario alone estimated 1,951 seconds for one
 100-sample revision measurement. The run was cancelled before classification;
 the historical 249-minute pair duration remained the expected critical path.
+
+Exact-head run `29911114271` completed the bounded four-pair instrument but
+reported replicated `grid_memory/32` and `grid_memory/128` regressions after
+the candidate changed only the supply-chain source policy from the preceding
+green measured head. That change cannot alter a merge-critical benchmark
+executable. Statistical comparison therefore supplied weaker evidence than a
+direct executable-identity check for this revision pair.
 
 ## Decision
 
@@ -78,8 +85,17 @@ registered benchmark targets.
 Any unregistered, orphaned, default-harness, or empty-entry-point target fails
 before timing.
 
+The complete smoke job compiles the three merge-critical benchmark executables
+for base and candidate from the same `kwavers-measurement` path after holding
+the candidate harness and provider graph constant. It compares SHA-256 hashes
+by target name. Byte-identical executable sets cannot contain a production-code
+performance difference, so the workflow records that stronger static evidence
+and skips the four statistical pairs. Any differing executable retains the
+full measurement path below; no workload, sample count, confidence level, or
+timeout changes.
+
 The workflow consumes the Atlas-owned regression classifier and provider graph
-pinned at `614914cf469f69ebd193e17c8e2c0db7dcb4a23f`. Four isolated runners each
+pinned at `1393fd8838f3bcd548959a83daa8d9375e3b03d9`. Four isolated runners each
 execute one complete base/head pair. Two use order `A B` and two use `B A`,
 where `A` is the base revision and `B` is the candidate. Each comparison
 therefore remains within one machine, while the phase-reversed matrix balances
@@ -92,12 +108,12 @@ benchmarks. Missing results, benchmark-universe mismatches, malformed
 estimates, and insufficient confidence fail closed. There is no empirical
 percentage threshold.
 
-Every smoke, pair, and classifier job has a 30-minute bound. Four matrix jobs
-retain two base-first and two candidate-first comparisons, so the Atlas
-classifier still requires replicated, order-balanced agreement. The bounded
-statistical universe makes the PR critical path a finite engineering gate
-rather than a multi-hour batch experiment. It does not alter native-test
-budgets.
+Every smoke, pair, and classifier job has a 30-minute bound. When executable
+hashes differ, four matrix jobs retain two base-first and two candidate-first
+comparisons, so the Atlas classifier still requires replicated, order-balanced
+agreement. The bounded statistical universe makes the PR critical path a
+finite engineering gate rather than a multi-hour batch experiment. It does not
+alter native-test budgets.
 
 ## Rejected alternatives
 
@@ -114,6 +130,10 @@ budgets.
   `29841101698` reported three replicated apparent regressions without a
   semantic production delta. Path identity must not remain correlated with
   revision identity.
+- Always run statistical pairs for byte-identical executables: rejected after
+  run `29911114271` reported two impossible production regressions. Exact
+  executable identity is stronger evidence for that case and avoids four
+  redundant 22–23 minute jobs.
 - Keep the complete statistical suite as a merge gate: rejected because an
   observed pair takes about 249 minutes and one long-horizon SWE measurement
   alone requests about 32 minutes per revision.
@@ -125,13 +145,15 @@ budgets.
 
 ## Consequences
 
-Benchmark-relevant PRs consume one complete smoke job, four bounded pair jobs,
-and one short classification job. Python packaging-only and documentation-only
-PRs do not run the Rust instrument. Atlas remains the single source of truth
-for statistical classification. Report artifacts do not encode source-path
-provenance, so workflow review establishes the same-path precondition that the
-classifier cannot verify. Long-horizon scenarios remain functional benchmark
-programs, but they are not repeated statistically on the merge-critical path.
+Benchmark-relevant PRs consume one complete smoke and executable-identity job.
+Differing merge-critical executables additionally consume four bounded pair
+jobs and one short classification job; identical sets terminate with the
+identity proof. Python packaging-only and documentation-only PRs do not run the
+Rust instrument. Atlas remains the single source of truth for statistical
+classification. Report artifacts do not encode source-path provenance, so
+workflow review establishes the same-path precondition that the classifier
+cannot verify. Long-horizon scenarios remain functional benchmark programs,
+but they are not repeated statistically on the merge-critical path.
 
 ## Closure evidence
 

@@ -73,6 +73,11 @@
       then pass all 266 `kwavers-math` tests on that graph.
 - [x] Route benchmark provider checkout through the candidate's pinned action
       so smoke and phase-reversed jobs cannot drift to a stale Atlas graph.
+- [x] Add a same-path executable-identity preflight that skips four statistical
+      pairs only when every merge-critical benchmark binary is byte-identical.
+- [ ] Verify the exact hosted workflow head selects the correct identity branch
+      and record its bounded duration; retain the prior exact-head pair runs as
+      evidence for the unchanged differing-artifact branch.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
