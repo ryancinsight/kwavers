@@ -88,9 +88,11 @@
   `-O3` for Apollo FFT, Leto, or Moirai. Workspace members and every dependency
   now use the same development optimization level.
 - Local topology: temporary linked worktrees materialize the exact provider
-  commits selected by the Atlas checkout action, including Eunomia 0.6. Cargo
-  metadata and all verification below use `--locked`; hosted CI remains the
-  authoritative clean-checkout build and artifact-size oracle.
+  commits selected by the Atlas checkout action. The aligned Atlas graph uses
+  Leto 0.40, Hermes 0.4.1, and one Eunomia 0.7 source identity across Coeus,
+  Hephaestus, RITK, and Kwavers. Cargo metadata and all verification below use
+  `--locked`; hosted CI remains the authoritative clean-checkout build and
+  artifact-size oracle.
 - First hosted profile evidence: on run `29888001830`, uncached feature-build
   steps fell from 622 s to 342 s for `minimal` (-45.0%), 650 s to 453 s for
   `pinn` (-30.3%), 847 s to 591 s for `full` (-30.2%), and 503 s to 411 s for
@@ -143,6 +145,12 @@
   comparable clean `-O3` footprint was retained, so this establishes the
   clean artifact baseline without claiming an unsupported size percentage.
   The earlier uncached profile comparison remains the build-time oracle.
+- Exact-graph reconciliation: the post-merge provider checkout exposed a stale
+  all-feature lock closure with Eunomia 0.6 and 0.7, producing incompatible
+  `Complex` identities in the hosted benchmark compile. The Atlas gitlinks and
+  Kwavers action pin now select the single-Eunomia graph; locked all-feature
+  metadata and `cargo check -p kwavers-math --all-targets --all-features` pass,
+  and the exact local graph passes all 266 `kwavers-math` tests in 2.308 s.
 
 ## KW-UQ-064 — Integrate Tyche collocation sampling [major] [arch] — done
 

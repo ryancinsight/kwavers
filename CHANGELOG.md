@@ -108,6 +108,10 @@
   The architecture gate now runs the four full-grid integration binaries under
   the unchanged Nextest timeout contract and reports debug artifact bytes and
   file count in its job summary.
+- Pin hosted path-dependency checkout to the aligned Atlas graph and regenerate
+  the all-feature lock closure around Leto 0.40, Hermes 0.4.1, and one Eunomia
+  0.7 identity. This prevents incompatible provider-owned numeric types from
+  entering locked benchmark and architecture builds.
 - Run ptrace code coverage through a dedicated profile that inherits the
   development settings but optimizes dependencies for instrumentation. This
   keeps the broad ordinary dependency profile at `-O1` while preserving the

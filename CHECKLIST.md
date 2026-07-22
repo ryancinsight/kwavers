@@ -68,6 +68,9 @@
       16,771,464,617 bytes across 6,109 files. Record this as the clean
       footprint baseline because no comparable clean `-O3` footprint was
       retained.
+- [x] Reconcile the exact Atlas provider graph to Leto 0.40, Hermes 0.4.1, and
+      one Eunomia 0.7 identity; verify locked all-feature metadata and compile,
+      then pass all 266 `kwavers-math` tests on that graph.
 
 ## Owner: /root — Integrate Tyche collocation sampling [major] [arch]
 
