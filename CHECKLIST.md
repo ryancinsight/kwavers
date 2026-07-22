@@ -1,5 +1,15 @@
 # Project Checklist
 
+## Owner: Codex `/root` — Close Moirai admission workaround [patch]
+
+- [x] Point hosted provider checkout at Atlas graph `098de9b`.
+- [x] Regenerate `Cargo.lock` through Cargo against merged Moirai PR #83.
+- [x] Delete the default and CI therapy-test serialization overrides.
+- [x] Pass the six unchanged therapy tests under ordinary configured Nextest.
+- [x] Pass warning-denied local static and documentation gates.
+- [ ] Pass exact-head hosted CI.
+- [ ] Merge and remove the delivery branch.
+
 ## Owner: Codex `/root` — Stream elastic-FWI adjoint gradient [patch]
 
 - [x] Measure the current full-adjoint-history runtime and process-tree peak

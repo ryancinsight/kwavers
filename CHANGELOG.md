@@ -4,6 +4,10 @@
 
 ### Changed
 
+- [patch] Consume Atlas provider graph `098de9b` and regenerate the locked
+  Moirai package dependency set after PR #83. Therapy tests return to ordinary
+  Nextest scheduling because saturated indexed work now executes on the caller
+  instead of failing admission.
 - [patch] Stream elastic-FWI adjoint states directly into the reverse-time
   shear-strain correlation kernel instead of retaining a second six-component
   field history. The gradient and illumination remain exact against an

@@ -29,6 +29,12 @@
 
 # Gap Audit
 
+- Review 2026-07-22: the six-test `kwavers-therapy` serialization override was
+  a downstream containment for Moirai bounded-admission failures, not a solver
+  resource requirement. Moirai PR #83 now executes rejected indexed chunks on
+  the caller under the same panic boundary and exposes borrowing scopes;
+  Atlas graph `098de9b` pins that merge. KW-CI-068 deletes the workaround and
+  re-runs the unchanged value-semantic tests under ordinary scheduling.
 - Review 2026-07-17: the provider-owned GPU PSTD result exposed only sensor
   traces and optional final fields, but the treatment-planning quantity is
   `max_t |p|`, not the final pressure frame. The WGPU path now reserves one

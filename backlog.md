@@ -1,5 +1,21 @@
 # Backlog / Strategy
 
+## KW-CI-068 — Close Moirai admission workaround [patch] — in progress
+
+- Owner: Codex `/root`; last-update: 2026-07-22; scope: the canonical Atlas
+  checkout revision, Cargo lock, six therapy-test scheduling overrides, and
+  focused value-semantic verification. Solver workloads and assertions are
+  non-goals.
+- Outcome: consume merged Moirai PR #83 and delete serialization that masked
+  bounded-admission failures under ordinary parallel Nextest execution.
+- Acceptance: Cargo records `moirai-core` as a direct `moirai-parallel`
+  dependency, the six tests have no dedicated serialization override, their
+  unchanged values pass under the default profile, and hosted Linux locked
+  resolution succeeds against Atlas `098de9b`.
+- Risk/change class: `[patch]`; evidence is lock provenance, configuration
+  residue scans, focused Nextest values, warning-denied static checks, and
+  exact-head hosted CI.
+
 ## KW-PERF-067 — Stream elastic-FWI adjoint gradient [patch] — done
 
 - Owner: Codex `/root`; last-update: 2026-07-22; scope:
